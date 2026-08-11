@@ -17,8 +17,14 @@ all-features = true
 rustdoc-args = ["--cfg", "docsrs"]
 
 [dependencies]
+model2vec-rs = { workspace = true }
+pulldown-cmark = { workspace = true }
+rmcp = { workspace = true }
 serde = { workspace = true }
+serde_json = { workspace = true }
+serde_yaml_ng = { workspace = true }
 sha2 = { workspace = true }
+tantivy = { workspace = true }
 toml_edit = { workspace = true }
 
 [dev-dependencies]
