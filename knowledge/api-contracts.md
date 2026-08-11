@@ -30,15 +30,17 @@ Every verb acts on the current directory.
   applies the whole blueprint and the `.gitignore` lines.
 - **`status`** never writes. It exits `1` on any drift, missing component, or
   pin behind this binary's registry, so CI can gate on it.
-- **`sync`** refuses to run while `workflows` is pinned anywhere other than the
-  registry default, and says to run `superdev update`. The pinned tarball
-  checksum is the only provenance superdev has for that plugin. On a fresh
+- **`sync`** refuses to run while `workflows` or `code-index` is pinned
+  anywhere other than the registry default, and says to run `superdev update`.
+  Both are downloaded by URL and verified against a checksum baked into this
+  binary beside the version, so no other version has provenance — or a URL. On a fresh
   clone it runs `mise trust` then `mise install` before any provider command,
   because the committed pins need no edit yet name tools this machine has
   never installed — and mise will not install from a config this machine has
   never trusted.
-- **`update`** rejects an explicit `workflows@<version>` for the same reason.
-  Every other capability takes an explicit version.
+- **`update`** rejects an explicit `workflows@<version>` or
+  `code-index@<version>` for the same reason. Every other capability takes an
+  explicit version.
 
 A usage error (unknown flag or subcommand) exits `2` — the npm launcher's
 smoke test relies on that code. `completions` and `man` render into a buffer

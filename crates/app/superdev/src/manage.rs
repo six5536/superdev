@@ -21,6 +21,11 @@ use superdev_core::{components, engine, registry, report};
 /// Provider name for repo-level actions no capability owns.
 const REPO_PROVIDER: &str = "superdev";
 
+/// Capabilities whose download is verified by a checksum baked in beside the
+/// version, so this binary can install the registry default and nothing else.
+/// Their components refuse to plan any other pin.
+const CHECKSUM_PINNED: [Capability; 2] = [Capability::Workflows, Capability::CodeIndex];
+
 /// The four capability-disable flags (kebab-case comes free from clap).
 #[derive(clap::Args)]
 pub struct InitArgs {
@@ -86,9 +91,9 @@ pub fn init(root: &Path, args: &InitArgs) -> Result<u8> {
 /// Report drift without changing anything. 0 in sync, 1 with work to do.
 pub fn status(root: &Path) -> Result<u8> {
     let manifest = load_manifest(root)?;
-    // Reporting a stale workflows pin is half the job of `status`, and the
-    // workflows component refuses to plan one, so plan the version this
-    // binary can provide and let the hint line carry the news.
+    // Reporting a stale checksum-verified pin is half the job of `status`, and
+    // those components refuse to plan one, so plan the version this binary can
+    // provide and let the hint line carry the news.
     let behind = behind_pins(&manifest);
     let lock = Lock::load(root)?;
     let runner = SystemRunner;
@@ -105,10 +110,11 @@ pub fn sync(root: &Path, dry_run: bool) -> Result<u8> {
     let manifest = load_manifest(root)?;
     // Unlike `status`, sync would have to act on the pin. Substituting the
     // default silently is worse than stopping.
-    if let Some((pinned, default)) = workflows_mismatch(&manifest) {
+    if let Some((capability, pinned, default)) = checksum_pin_mismatch(&manifest) {
         return Err(Error::Manifest {
             message: format!(
-                "workflows is pinned {pinned} but this superdev only supports {default} — run `superdev update`"
+                "{} is pinned {pinned} but this superdev only supports {default} — run `superdev update`",
+                capability.as_str()
             ),
         });
     }
@@ -166,10 +172,10 @@ fn parse_target(target: &str) -> Result<(Capability, Option<String>)> {
             message: format!("`{target}` names no version"),
         });
     }
-    // The superpowers tarball is verified by a checksum baked in alongside the
-    // version, so an arbitrary version has no provenance. The workflows
-    // component refuses the same thing when planning.
-    if version.is_some() && capability == Capability::Workflows {
+    // These downloads are verified by checksums baked in alongside the
+    // version, so an arbitrary version has no provenance — and no URLs. The
+    // components refuse the same thing when planning.
+    if version.is_some() && CHECKSUM_PINNED.contains(&capability) {
         let default = default_version(capability).unwrap_or_default();
         return Err(Error::Manifest {
             message: format!(
@@ -266,12 +272,13 @@ fn behind_pins(manifest: &Manifest) -> Vec<String> {
         ) else {
             continue;
         };
-        let stale = match capability {
-            Capability::Workflows => workflows_mismatch(manifest).is_some(),
-            _ => config
+        let stale = if CHECKSUM_PINNED.contains(&capability) {
+            pin_mismatch(manifest, capability).is_some()
+        } else {
+            config
                 .version
                 .as_deref()
-                .is_some_and(|pinned| is_behind(pinned, &default)),
+                .is_some_and(|pinned| is_behind(pinned, &default))
         };
         if stale {
             lines.push(format!(
@@ -284,26 +291,33 @@ fn behind_pins(manifest: &Manifest) -> Vec<String> {
     lines
 }
 
-/// The workflows pin and this binary's default, when the two differ. Only the
-/// default has a checksum baked in beside it, so any other pin — newer
-/// included — is one superdev cannot install.
-fn workflows_mismatch(manifest: &Manifest) -> Option<(String, String)> {
-    let config = manifest.capabilities.get(Capability::Workflows.as_str())?;
-    let default = default_version(Capability::Workflows)?;
+/// A checksum-pinned capability's pin and this binary's default, when the two
+/// differ. Only the default has a checksum baked in beside it, so any other
+/// pin — newer included — is one superdev cannot install.
+fn pin_mismatch(manifest: &Manifest, capability: Capability) -> Option<(String, String)> {
+    let config = manifest.capabilities.get(capability.as_str())?;
+    let default = default_version(capability)?;
     let pinned = config.version.clone();
     (pinned.as_deref() != Some(default.as_str()))
         .then(|| (pinned.unwrap_or_else(|| "(unset)".into()), default))
 }
 
-/// A copy of the manifest that can be planned: workflows back at the default.
-/// Every other pin is left alone — components accept those as given.
+/// The first checksum-pinned capability pinned off this binary's default.
+fn checksum_pin_mismatch(manifest: &Manifest) -> Option<(Capability, String, String)> {
+    CHECKSUM_PINNED.into_iter().find_map(|capability| {
+        pin_mismatch(manifest, capability).map(|(pinned, default)| (capability, pinned, default))
+    })
+}
+
+/// A copy of the manifest that can be planned: every checksum-pinned
+/// capability back at the default. Every other pin is left alone — components
+/// accept those as given.
 fn plannable(manifest: &Manifest) -> Manifest {
     let mut manifest = manifest.clone();
-    if let Some(config) = manifest
-        .capabilities
-        .get_mut(Capability::Workflows.as_str())
-    {
-        config.version = default_version(Capability::Workflows);
+    for capability in CHECKSUM_PINNED {
+        if let Some(config) = manifest.capabilities.get_mut(capability.as_str()) {
+            config.version = default_version(capability);
+        }
     }
     manifest
 }
@@ -383,12 +397,10 @@ mod tests {
             parse_target("code-index").unwrap(),
             (Capability::CodeIndex, None)
         );
-        assert_eq!(
-            parse_target("code-index@1.2.3").unwrap(),
-            (Capability::CodeIndex, Some("1.2.3".to_string()))
-        );
         assert!(parse_target("flying").is_err());
+        // Both checksum-verified capabilities refuse a hand-picked version.
         assert!(parse_target("workflows@9.9.9").is_err());
+        assert!(parse_target("code-index@9.9.9").is_err());
     }
 
     fn pin(manifest: &mut Manifest, capability: Capability, version: Option<&str>) {
@@ -400,41 +412,47 @@ mod tests {
     }
 
     #[test]
-    fn any_workflows_pin_off_the_default_is_stale() {
-        let default = default_version(Capability::Workflows).unwrap();
-        let mut manifest = Manifest::default_for("0.1.0", &[]);
-        assert_eq!(workflows_mismatch(&manifest), None);
-        assert!(behind_pins(&manifest).is_empty());
+    fn any_checksum_pin_off_the_default_is_stale() {
+        for capability in CHECKSUM_PINNED {
+            let name = capability.as_str();
+            let default = default_version(capability).unwrap();
+            let mut manifest = Manifest::default_for("0.1.0", &[]);
+            assert_eq!(pin_mismatch(&manifest, capability), None);
+            assert!(behind_pins(&manifest).is_empty());
 
-        pin(&mut manifest, Capability::Workflows, Some("1.0.0"));
-        assert_eq!(
-            workflows_mismatch(&manifest),
-            Some(("1.0.0".to_string(), default.clone()))
-        );
-        assert_eq!(
-            behind_pins(&manifest),
-            vec![format!(
-                "workflows: pinned 1.0.0, registry has {default} — run `superdev update`"
-            )]
-        );
+            pin(&mut manifest, capability, Some("1.0.0"));
+            assert_eq!(
+                pin_mismatch(&manifest, capability),
+                Some(("1.0.0".to_string(), default.clone()))
+            );
+            assert_eq!(
+                behind_pins(&manifest),
+                vec![format!(
+                    "{name}: pinned 1.0.0, registry has {default} — run `superdev update`"
+                )]
+            );
 
-        // A newer pin is not "behind", but superdev still cannot install it.
-        pin(&mut manifest, Capability::Workflows, Some("9.9.9"));
-        assert!(workflows_mismatch(&manifest).is_some());
-        pin(&mut manifest, Capability::Workflows, None);
-        assert!(behind_pins(&manifest)[0].contains("pinned (unset)"));
+            // A newer pin is not "behind", but superdev still cannot install it.
+            pin(&mut manifest, capability, Some("9.9.9"));
+            assert!(pin_mismatch(&manifest, capability).is_some());
+            assert_eq!(checksum_pin_mismatch(&manifest).unwrap().0, capability);
+            pin(&mut manifest, capability, None);
+            assert!(behind_pins(&manifest)[0].contains("pinned (unset)"));
+        }
     }
 
     #[test]
-    fn plannable_resets_only_the_workflows_pin() {
+    fn plannable_resets_every_checksum_pin() {
         let mut manifest = Manifest::default_for("0.1.0", &[]);
-        pin(&mut manifest, Capability::Workflows, Some("1.0.0"));
-        pin(&mut manifest, Capability::CodeIndex, Some("9.9.9"));
+        for capability in CHECKSUM_PINNED {
+            pin(&mut manifest, capability, Some("1.0.0"));
+        }
         let plannable = plannable(&manifest);
-        assert!(workflows_mismatch(&plannable).is_none());
+        assert!(checksum_pin_mismatch(&plannable).is_none());
+        // Pins with no checksum beside them are left exactly as written.
         assert_eq!(
-            plannable.capabilities["code-index"].version.as_deref(),
-            Some("9.9.9")
+            plannable.capabilities["knowledge"].version,
+            manifest.capabilities["knowledge"].version
         );
     }
 

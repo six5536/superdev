@@ -31,10 +31,16 @@ A capability is a slot; the tool filling it is a swappable provider.
 | Capability   | Provider          | Delivered as                    |
 |--------------|-------------------|---------------------------------|
 | `knowledge`  | `aokf`            | files embedded in the binary    |
-| `code-index` | `codegraph`       | mise pin + `mise exec -- codegraph init` |
+| `code-index` | `codegraph`       | checksummed release bundle (mise `http`) + `mise exec -- codegraph init` |
 | `workflows`  | `superpowers`     | mise pin + Claude Code plugin   |
 | `frontend`   | `frontend-design` | Claude Code plugin              |
 | `skills`     | `superdev-plugin` | slot only; no provider yet      |
+
+`workflows` and `code-index` are fetched by URL and verified against a
+checksum this binary carries beside the version, so superdev installs the
+registry version of those two and refuses any other — see
+[api-contracts](api-contracts.md). codegraph's bundles vendor their own Node,
+so a managed repo needs no node of its own.
 
 # Files in a managed repo
 

@@ -157,6 +157,13 @@ fn init_sets_up_a_fresh_repo() {
     assert!(sb.read(".gitignore").contains(".superdev/cache/"));
     assert!(sb.read(".gitignore").contains(".codegraph/"));
     assert!(sb.read(".mise.toml").contains("http:superpowers"));
+    // codegraph comes from its checksummed release bundles, not npm: the
+    // bundles vendor their own Node, so the repo needs none.
+    let pinned = sb.read(".mise.toml");
+    assert!(pinned.contains("http:codegraph"), "{pinned}");
+    assert!(pinned.contains("linux-arm64"), "{pinned}");
+    assert!(pinned.contains("sha256:"), "{pinned}");
+    assert!(!pinned.contains("npm:"), "{pinned}");
     let log = sb.log();
     assert!(log.contains("mise trust"), "log: {log}");
     assert!(log.contains("mise install"), "log: {log}");
@@ -250,20 +257,28 @@ fn scaffolds_survive_user_edits_and_sync_dry_run_changes_nothing() {
 }
 
 #[test]
-fn update_rewrites_pins_to_explicit_versions() {
+fn update_refuses_hand_picked_checksum_pinned_versions() {
     let sb = Sandbox::new();
     sb.superdev().arg("init").assert().success();
+    // Both capabilities superdev downloads by checksum ship exactly the
+    // version this binary carries digests for.
+    for target in ["code-index@9.9.9", "workflows@9.9.9"] {
+        let refused = run(sb.superdev().args(["update", target]));
+        assert_eq!(refused.code, 2, "stdout: {}", refused.stdout);
+        assert!(
+            refused.stderr.contains("registry default"),
+            "stderr: {}",
+            refused.stderr
+        );
+    }
+    assert!(!sb.read(".superdev/config.toml").contains("9.9.9"));
+    sb.superdev().args(["update", "flying"]).assert().code(2);
+    // Retargeting a capability with no explicit version still works.
     sb.superdev()
-        .args(["update", "code-index@9.9.9"])
+        .args(["update", "code-index"])
         .assert()
         .success();
-    assert!(sb.read(".superdev/config.toml").contains("9.9.9"));
-    assert!(sb.read(".mise.toml").contains("9.9.9"));
-    sb.superdev()
-        .args(["update", "workflows@9.9.9"])
-        .assert()
-        .code(2);
-    sb.superdev().args(["update", "flying"]).assert().code(2);
+    sb.superdev().arg("status").assert().success();
 }
 
 #[test]

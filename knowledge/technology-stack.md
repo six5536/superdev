@@ -38,5 +38,10 @@ set:[^cargo-toml]
   `github` backend cannot install it). The devcontainer post-create script
   wires the checkout into Claude Code as a local marketplace.[^mise-toml]
 
+superdev pins codegraph into *managed* repos the same way: the `http` backend
+against the release bundles, one checksummed URL per platform. Those bundles
+vendor their own Node, unlike the npm package, whose shim needs one on the
+host.
+
 [^cargo-toml]: Workspace manifest (dependency set)
 [^mise-toml]: Pinned tool versions

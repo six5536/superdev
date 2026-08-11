@@ -8,15 +8,15 @@ status: draft
 
 # Under consideration
 
-- **Pinning `node` in the managed repo.** A repo whose mise env has no node
-  cannot install an `npm:` tool (mise's backend shells out to `npm`) or run
-  one (the installed shim is `#!/usr/bin/env node`). Hosts with node on the
-  system PATH, or in their global mise config, never see it; a host whose node
-  comes from some other repo's config does. Whether superdev should pin `node`
-  itself, and so write a toolchain choice into the user's `.mise.toml`, is
-  open.
+Nothing yet.
 
 # Decided against
 
-Nothing yet. Record rejected ideas here with the reasoning, so they are not
-re-litigated.
+- **Pinning `node` in the managed repo.** Considered because codegraph was
+  pinned through mise's `npm:` backend, which cannot install without an `npm`
+  in the repo's mise env and produces a `#!/usr/bin/env node` shim that cannot
+  run without a node either. Rejected: pinning node writes a toolchain choice
+  into the user's `.mise.toml` to work around a packaging detail. codegraph is
+  now pinned through the `http` backend against its self-contained release
+  bundles, which vendor their own Node, so the dependency is gone rather than
+  papered over — see [architecture](architecture.md).
