@@ -1,5 +1,6 @@
 //! concept.rs — one AOKF concept file: frontmatter plus body sections.
 
+use pulldown_cmark::{Event, HeadingLevel, Options, Parser, Tag, TagEnd};
 use serde_yaml_ng::Value;
 
 /// Publication state of a concept; an absent frontmatter `status` is
@@ -38,8 +39,8 @@ pub struct Link {
     pub note: Option<String>,
 }
 
-/// A retrievable slice of a concept: the frontmatter block, or (from Task 2
-/// on) one heading's body.
+/// A retrievable slice of a concept: the root section (frontmatter, plus any
+/// body text before the first heading), or one heading's body.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Section {
     /// Headings from the document root down to this section; empty for the
@@ -98,8 +99,8 @@ pub struct ParseError {
 /// Field-level problems never fail the parse: a wrongly typed field degrades
 /// to empty or `None` and survives in [`Concept::raw`] for the validator.
 ///
-/// The body is split at headings in a later task; `sections` currently holds
-/// only the root section covering the frontmatter.
+/// `sections[0]` is the root section; the rest are one per markdown heading,
+/// in document order.
 ///
 /// # Errors
 ///
@@ -148,12 +149,11 @@ pub fn parse_concept(path: &str, text: &str) -> Result<Concept, ParseError> {
                 note: string_field(v, "note"),
             })
             .collect(),
-        sections: vec![root_section(
-            title.as_deref(),
-            description.as_deref(),
-            &tags,
+        sections: split_sections(
+            text,
             fm_end_line,
-        )],
+            &frontmatter_text(title.as_deref(), description.as_deref(), &tags),
+        ),
         title,
         description,
         tags,
@@ -181,23 +181,119 @@ fn split_frontmatter(text: &str) -> Option<(String, usize)> {
 
 /// The frontmatter's own searchable text, so a concept is findable by its
 /// title, summary and tags even when no body section matches.
-fn root_section(
-    title: Option<&str>,
-    description: Option<&str>,
-    tags: &[String],
-    end_line: usize,
-) -> Section {
+fn frontmatter_text(title: Option<&str>, description: Option<&str>, tags: &[String]) -> String {
     let mut parts: Vec<String> = Vec::new();
     parts.extend(title.map(str::to_string));
     parts.extend(description.map(str::to_string));
     if !tags.is_empty() {
         parts.push(tags.join(", "));
     }
-    Section {
+    parts.join("\n")
+}
+
+/// Split the document into the root section plus one section per heading.
+///
+/// Each section runs from its heading line to the line before the next
+/// heading, or to the end of the file. The root section covers the
+/// frontmatter and any body text preceding the first heading.
+fn split_sections(text: &str, fm_end_line: usize, frontmatter_text: &str) -> Vec<Section> {
+    let starts = line_starts(text);
+    let last_line = starts.len();
+    let body_start = starts.get(fm_end_line).copied().unwrap_or(text.len());
+    let headings = headings(&text[body_start..], body_start, &starts);
+
+    let root_end = headings.first().map_or(last_line, |(line, _)| line - 1);
+    let body = slice_lines(text, &starts, fm_end_line + 1, root_end);
+    let mut sections = vec![Section {
         heading_path: Vec::new(),
         start_line: 1,
-        end_line,
-        text: parts.join("\n"),
+        end_line: root_end,
+        text: join_non_empty(frontmatter_text, body),
+    }];
+
+    for (index, (start_line, heading_path)) in headings.iter().enumerate() {
+        let end_line = headings
+            .get(index + 1)
+            .map_or(last_line, |(next, _)| next - 1);
+        sections.push(Section {
+            heading_path: heading_path.clone(),
+            start_line: *start_line,
+            end_line,
+            text: slice_lines(text, &starts, *start_line, end_line).to_string(),
+        });
+    }
+    sections
+}
+
+/// Every heading in `body`, as its 1-based line in the whole document and its
+/// full heading path. `offset` is where `body` starts in that document.
+fn headings(body: &str, offset: usize, starts: &[usize]) -> Vec<(usize, Vec<String>)> {
+    let mut found = Vec::new();
+    let mut stack: Vec<(HeadingLevel, String)> = Vec::new();
+    // Heading text arrives as separate events between Start and End, so it is
+    // accumulated rather than read from one event.
+    let mut open: Option<(usize, HeadingLevel, String)> = None;
+    for (event, range) in Parser::new_ext(body, Options::empty()).into_offset_iter() {
+        match event {
+            Event::Start(Tag::Heading { level, .. }) => {
+                open = Some((line_of(starts, offset + range.start), level, String::new()));
+            }
+            Event::Text(t) | Event::Code(t) => {
+                if let Some((_, _, title)) = open.as_mut() {
+                    title.push_str(&t);
+                }
+            }
+            Event::End(TagEnd::Heading(_)) => {
+                if let Some((line, level, title)) = open.take() {
+                    // A heading closes every open heading at its level or
+                    // deeper, so an h1 resets the path and an h2 nests.
+                    while stack.last().is_some_and(|(open, _)| *open >= level) {
+                        stack.pop();
+                    }
+                    stack.push((level, title));
+                    found.push((line, stack.iter().map(|(_, t)| t.clone()).collect()));
+                }
+            }
+            _ => {}
+        }
+    }
+    found
+}
+
+/// Byte offset of each line, so a parser offset can be turned into a line
+/// number. A trailing newline does not start a further line.
+fn line_starts(text: &str) -> Vec<usize> {
+    let mut starts = vec![0];
+    starts.extend(
+        text.bytes()
+            .enumerate()
+            .filter(|&(i, b)| b == b'\n' && i + 1 < text.len())
+            .map(|(i, _)| i + 1),
+    );
+    starts
+}
+
+/// The 1-based line containing `offset`.
+fn line_of(starts: &[usize], offset: usize) -> usize {
+    starts.partition_point(|&start| start <= offset)
+}
+
+/// Lines `first..=last` of `text`, trailing whitespace trimmed; empty when
+/// the range is.
+fn slice_lines<'a>(text: &'a str, starts: &[usize], first: usize, last: usize) -> &'a str {
+    if first > last || first > starts.len() {
+        return "";
+    }
+    let end = starts.get(last).copied().unwrap_or(text.len());
+    text[starts[first - 1]..end].trim_end()
+}
+
+/// Join two blocks with a blank-line-free newline, dropping empty ones.
+fn join_non_empty(first: &str, second: &str) -> String {
+    match (first.is_empty(), second.is_empty()) {
+        (_, true) => first.to_string(),
+        (true, _) => second.to_string(),
+        _ => format!("{first}\n{second}"),
     }
 }
 
@@ -257,10 +353,34 @@ mod tests {
     }
 
     #[test]
-    fn frontmatter_ends_at_the_closing_fence() {
+    fn root_section_ends_before_the_first_heading() {
         let c = parse_concept("planner.md", DOC).unwrap();
-        assert_eq!(c.sections[0].end_line, 9);
+        // Frontmatter closes on line 9, `# Role` is line 11.
+        assert_eq!(c.sections[0].end_line, 10);
+        assert_eq!(c.sections.len(), 2);
+    }
+
+    #[test]
+    fn a_body_without_headings_is_all_root_section() {
+        let c = parse_concept("x.md", "---\ntype: T\n---\nbody\nmore\n").unwrap();
         assert_eq!(c.sections.len(), 1);
+        assert_eq!(c.sections[0].end_line, 5);
+        assert_eq!(c.sections[0].text, "body\nmore");
+    }
+
+    #[test]
+    fn a_deeper_heading_after_a_shallower_sibling_reopens_the_path() {
+        let doc = "---\ntype: T\n---\n### Deep\n# Top\n### Under\n";
+        let c = parse_concept("x.md", doc).unwrap();
+        let paths: Vec<&[String]> = c
+            .sections
+            .iter()
+            .map(|s| s.heading_path.as_slice())
+            .collect();
+        assert_eq!(paths[1], ["Deep".to_string()]);
+        assert_eq!(paths[2], ["Top".to_string()]);
+        assert_eq!(paths[3], ["Top".to_string(), "Under".to_string()]);
+        assert_eq!(c.sections[3].end_line, 6);
     }
 
     #[test]
@@ -315,6 +435,29 @@ mod tests {
         let e = parse_concept("x.md", "---\ntype: T\nbody\n").unwrap_err();
         assert_eq!(e.path, "x.md");
         assert!(e.message.contains("frontmatter"));
+    }
+
+    #[test]
+    fn splits_body_at_headings_with_line_ranges() {
+        let doc = "---\ntype: T\n---\nintro ignored? no — pre-heading body joins the root section\n\n# One\n\nalpha\n\n## Sub\n\nbeta\n\n# Two\n\ngamma\n";
+        let c = parse_concept("x.md", doc).unwrap();
+        let paths: Vec<Vec<String>> = c.sections.iter().map(|s| s.heading_path.clone()).collect();
+        assert_eq!(paths[0], Vec::<String>::new());
+        assert_eq!(paths[1], vec!["One"]);
+        assert_eq!(paths[2], vec!["One", "Sub"]);
+        assert_eq!(paths[3], vec!["Two"]);
+        let one = &c.sections[1];
+        assert!(one.text.contains("alpha"));
+        assert!(!one.text.contains("beta"));
+        // heading line itself is the section start
+        assert_eq!(doc.lines().nth(one.start_line - 1).unwrap(), "# One");
+    }
+
+    #[test]
+    fn headings_inside_code_fences_are_not_sections() {
+        let doc = "---\ntype: T\n---\n\n# Real\n\n```\n# not a heading\n```\n";
+        let c = parse_concept("x.md", doc).unwrap();
+        assert_eq!(c.sections.len(), 2); // root + Real
     }
 
     #[test]
