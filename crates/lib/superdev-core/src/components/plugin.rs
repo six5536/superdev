@@ -59,8 +59,10 @@ pub fn frontend_design() -> ClaudePlugin {
         provider_id: "frontend-design",
         plugin: "frontend-design",
         marketplace: Marketplace::GitHub {
+            // The repo registers itself under the name its marketplace.json
+            // declares, which is not the repo name.
             repo: "anthropics/claude-code",
-            name: "claude-code",
+            name: "claude-code-plugins",
         },
     }
 }
@@ -276,7 +278,7 @@ mod tests {
         assert!(
             descs
                 .iter()
-                .any(|d| d.contains("plugin install frontend-design@claude-code"))
+                .any(|d| d.contains("plugin install frontend-design@claude-code-plugins"))
         );
     }
 
