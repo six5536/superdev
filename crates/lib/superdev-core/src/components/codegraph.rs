@@ -40,9 +40,16 @@ impl Component for Codegraph {
             });
         }
         if !ctx.root.join(CODEGRAPH_INDEX_DIR).is_dir() {
+            // Through mise: the tool is pinned in this repo's `.mise.toml`,
+            // and mise install puts it on no PATH the running process can see.
             actions.push(Action::Run {
-                program: "codegraph".into(),
-                args: vec!["init".into()],
+                program: "mise".into(),
+                args: vec![
+                    "exec".into(),
+                    "--".into(),
+                    "codegraph".into(),
+                    "init".into(),
+                ],
                 purpose: "build the code index".into(),
                 undo: None,
                 optional: false,
@@ -79,7 +86,13 @@ mod tests {
             .map(|a| a.describe())
             .collect();
         assert!(descs.iter().any(|d| d.contains(CODEGRAPH_MISE_TOOL)));
-        assert!(descs.iter().any(|d| d.contains("codegraph init")));
+        // Never bare `codegraph`: it exists only inside the repo's mise env.
+        assert!(
+            descs
+                .iter()
+                .any(|d| d.contains("run `mise exec -- codegraph init`")),
+            "descs: {descs:?}"
+        );
     }
 
     #[test]

@@ -14,6 +14,10 @@ The invariants behind the [architecture](architecture.md):
 - **The engine is the only side-effect site.** File writes, mise edits and
   external commands happen in one place, so every one of them is journalled
   and can be rolled back.
+- **A mise-pinned tool is invoked through `mise exec`.** `mise install` puts
+  the tool on no PATH the running process can see, so a bare spawn fails
+  wherever mise is activated rather than shimmed. Tools superdev does not pin
+  — `claude`, from the user's own install — are spawned directly.
 - **Capability names are the user-facing surface; provider names are not.**
   Flags, manifest keys and lock keys say `code-index`, never `codegraph`.
   Swapping a provider must not change what a user types.

@@ -22,7 +22,9 @@ impl Sandbox {
         let bin = dir.path().join("bin");
         fs::create_dir_all(&bin).unwrap();
         // `mise where` fails until `mise install` has run, as the real mise does
-        // on a machine that has never installed the repo's pinned tools.
+        // on a machine that has never installed the repo's pinned tools. `mise
+        // exec` forwards to the fake tool, which is how a pinned tool is
+        // reached: it is on no PATH the caller can see.
         write_fake(
             &bin,
             "mise",
@@ -30,6 +32,10 @@ impl Sandbox {
 echo "mise $@" >> "$FAKE_LOG"
 case "$1" in
   install) : > "$FAKE_INSTALLED" ;;
+  exec)
+    shift
+    [ "$1" = "--" ] && shift
+    exec "$@" ;;
   where)
     [ -f "$FAKE_INSTALLED" ] || { echo "$2 is not installed" >&2; exit 1; }
     echo /tmp/fake-superpowers ;;
@@ -156,7 +162,7 @@ fn init_sets_up_a_fresh_repo() {
     assert!(log.contains("mise install"), "log: {log}");
     assert!(log.contains("claude plugin install superpowers@superpowers-dev"));
     assert!(log.contains("claude plugin install frontend-design@claude-code-plugins"));
-    assert!(log.contains("codegraph init"));
+    assert!(log.contains("mise exec -- codegraph init"), "log: {log}");
 }
 
 #[test]
@@ -192,7 +198,7 @@ fn sync_installs_committed_pins_on_a_fresh_clone() {
         .find("mise trust")
         .unwrap_or_else(|| panic!("log: {log}"));
     let plugin = log.find("claude plugin install").unwrap();
-    let index = log.find("codegraph init").unwrap();
+    let index = log.find("mise exec -- codegraph init").unwrap();
     assert!(trust < install, "log: {log}");
     assert!(install < plugin && install < index, "log: {log}");
     sb.superdev().arg("status").assert().success();

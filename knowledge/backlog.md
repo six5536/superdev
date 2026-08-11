@@ -8,7 +8,13 @@ status: draft
 
 # Under consideration
 
-Nothing yet.
+- **Pinning `node` in the managed repo.** A repo whose mise env has no node
+  cannot install an `npm:` tool (mise's backend shells out to `npm`) or run
+  one (the installed shim is `#!/usr/bin/env node`). Hosts with node on the
+  system PATH, or in their global mise config, never see it; a host whose node
+  comes from some other repo's config does. Whether superdev should pin `node`
+  itself, and so write a toolchain choice into the user's `.mise.toml`, is
+  open.
 
 # Decided against
 

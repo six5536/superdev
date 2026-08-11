@@ -122,7 +122,7 @@ versions superdev installed.
 exists (points at `sync`). Writes config.toml with every capability enabled
 at registry versions (`--no-<capability>` to disable), prints the full plan,
 applies in dependency order: mise pins → `mise trust` + `mise install` → plugins
-(marketplace add + install) → `codegraph init` → AOKF skeleton + AGENTS.md
+(marketplace add + install) → `mise exec -- codegraph init` → AOKF skeleton + AGENTS.md
 scaffold. Writes lock.toml and gitignores `.superdev/cache/`. As shipped it
 prints no commit hint.
 
