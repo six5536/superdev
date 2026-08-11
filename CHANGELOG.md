@@ -25,3 +25,7 @@ publish a version it cannot find a heading for.
 - Managed capabilities: `knowledge` (a native AOKF bundle), `code-index`
   (codegraph), `workflows` (Superpowers) and `frontend` (Anthropic's
   frontend-design plugin); each can be disabled with `init --no-<capability>`
+- `workflows` and `code-index` install from checksum-verified release
+  bundles pinned in the binary, so `update <capability>@<version>` refuses
+  an explicit version for them — bare `update` moves them to the binary's
+  pins
