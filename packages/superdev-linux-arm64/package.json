@@ -1,0 +1,31 @@
+{
+  "name": "@six5536/superdev-linux-arm64",
+  "version": "0.1.0",
+  "description": "Prebuilt superdev binary for linux-arm64.",
+  "homepage": "https://github.com/six5536/superdev#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/six5536/superdev.git",
+    "directory": "packages/superdev-linux-arm64"
+  },
+  "bugs": {
+    "url": "https://github.com/six5536/superdev/issues"
+  },
+  "author": "six5536 <10079653+six5536@users.noreply.github.com>",
+  "publishConfig": {
+    "access": "public"
+  },
+  "keywords": [
+    "cli"
+  ],
+  "os": [
+    "linux"
+  ],
+  "cpu": [
+    "arm64"
+  ],
+  "files": [
+    "bin/"
+  ],
+  "license": "MIT"
+}

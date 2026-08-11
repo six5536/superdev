@@ -1,0 +1,11 @@
+dist/
+node_modules/
+templates/
+.github/
+outputs/
+coverage/
+outputs/**
+.awa/
+*.lock
+schema/
+submodules/

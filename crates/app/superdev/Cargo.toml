@@ -1,0 +1,32 @@
+[package]
+name = "superdev"
+description = "superdev command-line tool."
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+readme.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+keywords.workspace = true
+categories.workspace = true
+
+[[bin]]
+name = "superdev"
+path = "src/main.rs"
+
+[lints.rust]
+# `coverage_nightly` is set by cargo-llvm-cov under the nightly coverage job; it
+# is an expected cfg, not a typo, on every other toolchain.
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(coverage_nightly)'] }
+
+[dependencies]
+superdev-core.workspace = true
+clap = { workspace = true }
+clap_complete = { workspace = true }
+clap_mangen = { workspace = true }
+
+[dev-dependencies]
+assert_cmd = { workspace = true }
+tempfile = { workspace = true }

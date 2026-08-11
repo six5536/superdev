@@ -1,0 +1,22 @@
+[tools]
+node = "24"
+
+python = '3.14'
+# 1.96 is the project toolchain; nightly is used only by the coverage
+# subcommand (cargo +nightly llvm-cov), which needs `coverage(off)` markers.
+rust = ['1.96', 'nightly']
+sccache = '0.15'
+zig = "0.16.0"
+cargo-binstall = "1.21.0"
+
+"npm:@anthropic-ai/claude-code" = { version = "latest", npm_args = "--ignore-scripts=false" }
+"github:rtk-ai/rtk" = "0.43.0"
+# Superpowers ships no release assets, so the github backend cannot install it;
+# the http backend pins the tag tarball and verifies the sha256, which is the
+# version lock and provenance. Bump: change the tag in the url + version, then
+# update the checksum (curl -sL <url> | sha256sum).
+"http:superpowers" = { version = "6.2.0", url = "https://github.com/obra/superpowers/archive/refs/tags/v6.2.0.tar.gz", checksum = "sha256:468246a7b4981d4c014c2b58d9ee538700ffded075279d5810059cdc1abeb5f3", strip_components = 1 }
+
+"cargo:cargo-zigbuild" = "0.22.3"
+"cargo:cargo-nextest" = "0.9.137"
+"cargo:cargo-llvm-cov" = "0.8.7"

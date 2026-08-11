@@ -1,0 +1,4 @@
+[submodule "submodules/goodbye-tinnitus"]
+	path = submodules/goodbye-tinnitus
+	url = git@github.com:six5536/goodbye-tinnitus.git
+	ignore = all

@@ -1,0 +1,27 @@
+/target
+**/*.rs.bk
+/.vs
+/.idea
+/.vscode/mise-tools
+/.playwright-mcp
+.DS_Store
+
+# WASM and TypeScript build artifacts
+*.tsbuildinfo
+/packages/*/wasm/
+/packages/*/dist/
+/packages/*/node_modules/
+/node_modules/
+
+# Staged platform binaries (built by `npm run build:<platform>`); the bin/
+# dirs are kept by .gitkeep.
+/packages/superdev-*/bin/superdev
+
+/.cache/
+*.local.json
+.mise.local.toml
+
+# Coverage artifacts (cargo-llvm-cov)
+/target/llvm-cov
+/target/llvm-cov-target
+*.profraw

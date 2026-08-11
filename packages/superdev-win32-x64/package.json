@@ -1,0 +1,31 @@
+{
+  "name": "@six5536/superdev-win32-x64",
+  "version": "0.1.0",
+  "description": "Prebuilt superdev binary for win32-x64.",
+  "homepage": "https://github.com/six5536/superdev#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/six5536/superdev.git",
+    "directory": "packages/superdev-win32-x64"
+  },
+  "bugs": {
+    "url": "https://github.com/six5536/superdev/issues"
+  },
+  "author": "six5536 <10079653+six5536@users.noreply.github.com>",
+  "publishConfig": {
+    "access": "public"
+  },
+  "keywords": [
+    "cli"
+  ],
+  "os": [
+    "win32"
+  ],
+  "cpu": [
+    "x64"
+  ],
+  "files": [
+    "bin/"
+  ],
+  "license": "MIT"
+}
