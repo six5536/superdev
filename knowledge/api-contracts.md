@@ -33,8 +33,10 @@ Every verb acts on the current directory.
 - **`sync`** refuses to run while `workflows` is pinned anywhere other than the
   registry default, and says to run `superdev update`. The pinned tarball
   checksum is the only provenance superdev has for that plugin. On a fresh
-  clone it runs `mise install` before any provider command, because the
-  committed pins need no edit yet name tools this machine has never installed.
+  clone it runs `mise trust` then `mise install` before any provider command,
+  because the committed pins need no edit yet name tools this machine has
+  never installed — and mise will not install from a config this machine has
+  never trusted.
 - **`update`** rejects an explicit `workflows@<version>` for the same reason.
   Every other capability takes an explicit version.
 

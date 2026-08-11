@@ -152,9 +152,10 @@ fn init_sets_up_a_fresh_repo() {
     assert!(sb.read(".gitignore").contains(".codegraph/"));
     assert!(sb.read(".mise.toml").contains("http:superpowers"));
     let log = sb.log();
+    assert!(log.contains("mise trust"), "log: {log}");
     assert!(log.contains("mise install"), "log: {log}");
     assert!(log.contains("claude plugin install superpowers@superpowers-dev"));
-    assert!(log.contains("claude plugin install frontend-design@claude-code"));
+    assert!(log.contains("claude plugin install frontend-design@claude-code-plugins"));
     assert!(log.contains("codegraph init"));
 }
 
@@ -186,8 +187,13 @@ fn sync_installs_committed_pins_on_a_fresh_clone() {
     let install = log
         .find("mise install")
         .unwrap_or_else(|| panic!("log: {log}"));
+    // mise refuses to install from a config it has not been told to trust.
+    let trust = log
+        .find("mise trust")
+        .unwrap_or_else(|| panic!("log: {log}"));
     let plugin = log.find("claude plugin install").unwrap();
     let index = log.find("codegraph init").unwrap();
+    assert!(trust < install, "log: {log}");
     assert!(install < plugin && install < index, "log: {log}");
     sb.superdev().arg("status").assert().success();
 }

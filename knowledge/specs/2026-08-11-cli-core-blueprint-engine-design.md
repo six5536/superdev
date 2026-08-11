@@ -121,7 +121,7 @@ versions superdev installed.
 **`superdev init`** — refuses outside a git repo or when `.superdev/`
 exists (points at `sync`). Writes config.toml with every capability enabled
 at registry versions (`--no-<capability>` to disable), prints the full plan,
-applies in dependency order: mise pins → `mise install` → plugins
+applies in dependency order: mise pins → `mise trust` + `mise install` → plugins
 (marketplace add + install) → `codegraph init` → AOKF skeleton + AGENTS.md
 scaffold. Writes lock.toml and gitignores `.superdev/cache/`. As shipped it
 prints no commit hint.

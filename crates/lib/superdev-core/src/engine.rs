@@ -54,9 +54,9 @@ pub struct ComponentReport {
     pub label: String,
     /// (action description, outcome) pairs. Mise pins come first, because they
     /// are applied as one grouped edit before any entry runs, and the entry
-    /// that contributed the first pin also carries the `mise install` that
-    /// follows them — or, when no pin edit was needed, the first entry that
-    /// runs a command does. The rest are in action order.
+    /// that contributed the first pin also carries the `mise trust` and `mise
+    /// install` that follow them — or, when no pin edit was needed, the first
+    /// entry that runs a command does. The rest are in action order.
     pub outcomes: Vec<(String, ActionOutcome)>,
 }
 
@@ -179,7 +179,7 @@ impl<'a> Session<'a> {
             .push((action.describe(), outcome));
     }
 
-    /// Apply every `SetMisePin` as one edit, then install the pinned tools.
+    /// Apply every `SetMisePin` as one edit, then trust and install.
     /// Providers run their own commands afterwards, so the tools must exist.
     ///
     /// With no pin edit planned, the tools may still be missing — a fresh
@@ -262,17 +262,29 @@ impl<'a> Session<'a> {
         self.install_pinned_tools(entry)
     }
 
+    /// Trust the config, then install. mise refuses to install from a config
+    /// it has not been told to trust, and superdev writes managed pins into
+    /// repos that have never trusted theirs. Trusting is idempotent, so it
+    /// runs every time; a failure is treated exactly like a failed install.
     fn install_pinned_tools(&mut self, entry: usize) -> bool {
-        let install = Action::Run {
+        self.run_mise(entry, "trust", "trust the repo's mise config")
+            && self.run_mise(entry, "install", "install the pinned tools")
+    }
+
+    /// Run a one-argument `mise` command the plan never contained, recording
+    /// it against `entry` as if it had.
+    fn run_mise(&mut self, entry: usize, arg: &str, purpose: &str) -> bool {
+        let args = vec![arg.to_string()];
+        let action = Action::Run {
             program: "mise".into(),
-            args: vec!["install".into()],
-            purpose: "install the pinned tools".into(),
+            args: args.clone(),
+            purpose: purpose.into(),
             undo: None,
             optional: false,
         };
-        let outcome = self.run_action("mise", &["install".to_string()], &None, false);
+        let outcome = self.run_action("mise", &args, &None, false);
         let ok = !matches!(outcome, ActionOutcome::Failed(_));
-        self.record(entry, &install, outcome);
+        self.record(entry, &action, outcome);
         ok
     }
 
@@ -623,9 +635,12 @@ mod tests {
                 .count(),
             1
         );
-        // Providers need their pinned tools installed before they run.
+        // Providers need their pinned tools installed before they run, and
+        // mise will not install from a config it has not been told to trust.
+        let trust = calls.iter().position(|c| c == "mise trust").unwrap();
         let install = calls.iter().position(|c| c == "mise install").unwrap();
         let init = calls.iter().position(|c| c == "codegraph init").unwrap();
+        assert_eq!(trust + 1, install, "calls: {calls:?}");
         assert!(
             install < init,
             "mise install must precede provider commands"
@@ -667,18 +682,77 @@ mod tests {
             .iter()
             .position(|c| c == "mise install")
             .unwrap_or_else(|| panic!("no `mise install` in {calls:?}"));
+        let trust = calls
+            .iter()
+            .position(|c| c == "mise trust")
+            .unwrap_or_else(|| panic!("no `mise trust` in {calls:?}"));
         let plugin = calls
             .iter()
             .position(|c| c == "claude plugin install superpowers")
             .unwrap();
+        assert_eq!(trust + 1, install, "calls: {calls:?}");
         assert!(install < plugin, "calls: {calls:?}");
-        // The entry that runs the command carries the install in its report.
+        // The entry that runs the command carries both steps in its report.
+        let described: Vec<&str> = result.reports[0]
+            .outcomes
+            .iter()
+            .map(|(d, _)| d.as_str())
+            .collect();
         assert!(
-            result.reports[0]
-                .outcomes
+            described
                 .iter()
-                .any(|(d, _)| d.contains("mise install"))
+                .any(|d| d.contains("mise trust") && d.contains("trust the repo's mise config")),
+            "outcomes: {described:?}"
         );
+        assert!(
+            described.iter().any(|d| d.contains("mise install")),
+            "outcomes: {described:?}"
+        );
+    }
+
+    #[test]
+    fn a_failed_trust_stops_the_run_and_unwinds_the_pin_edit() {
+        let dir = tempfile::tempdir().unwrap();
+        let fake = FakeRunner::new();
+        fake.script(
+            "mise trust",
+            Output {
+                status: 1,
+                stdout: String::new(),
+                stderr: "not trusted".into(),
+            },
+        );
+        let manifest = Manifest::default_for("0.1.0", &[]);
+        let mut lock = Lock::default();
+        let planned = vec![Planned {
+            capability: Some(crate::capability::Capability::Workflows),
+            provider: "superpowers".into(),
+            actions: vec![
+                Action::SetMisePin {
+                    tool: "http:superpowers".into(),
+                    value_toml: "\"6.2.0\"".into(),
+                },
+                Action::Run {
+                    program: "claude".into(),
+                    args: vec!["plugin".into(), "install".into(), "superpowers".into()],
+                    purpose: "install".into(),
+                    undo: None,
+                    optional: false,
+                },
+            ],
+        }];
+        let result = apply(dir.path(), &fake, &manifest, &planned, &mut lock);
+        assert!(!result.ok);
+        let calls = fake.calls();
+        assert_eq!(calls, vec!["mise trust"], "install must not follow");
+        // The pin edit is taken back, exactly as a failed install would.
+        assert!(!dir.path().join(".mise.toml").exists());
+        assert!(result.reverted.iter().any(|r| r.contains(".mise.toml")));
+        assert!(matches!(
+            result.reports[0].outcomes.last().unwrap(),
+            (d, ActionOutcome::Failed(e)) if d.contains("mise trust") && e.contains("not trusted")
+        ));
+        assert!(lock.files.is_empty());
     }
 
     #[test]
@@ -709,12 +783,22 @@ mod tests {
             )
             .ok
         );
-        assert!(!fake.calls().iter().any(|c| c == "mise install"));
+        assert!(
+            !fake
+                .calls()
+                .iter()
+                .any(|c| c == "mise install" || c == "mise trust")
+        );
 
         // A `.mise.toml` pinning only the user's own tools.
         std::fs::write(dir.path().join(".mise.toml"), "[tools]\nnode = \"24\"\n").unwrap();
         assert!(apply(dir.path(), &fake, &manifest, &[run], &mut lock).ok);
-        assert!(!fake.calls().iter().any(|c| c == "mise install"));
+        assert!(
+            !fake
+                .calls()
+                .iter()
+                .any(|c| c == "mise install" || c == "mise trust")
+        );
 
         // A managed pin, but nothing to run.
         std::fs::write(
@@ -728,7 +812,12 @@ mod tests {
             actions: vec![write_owned("a.txt")],
         };
         assert!(apply(dir.path(), &fake, &manifest, &[write_only], &mut lock).ok);
-        assert!(!fake.calls().iter().any(|c| c == "mise install"));
+        assert!(
+            !fake
+                .calls()
+                .iter()
+                .any(|c| c == "mise install" || c == "mise trust")
+        );
     }
 
     #[test]
@@ -1128,8 +1217,8 @@ mod tests {
         assert!(!result.ok);
         assert!(!dir.path().join(".mise.toml").exists());
         assert!(matches!(
-            result.reports[0].outcomes[1].1,
-            ActionOutcome::Failed(_)
+            result.reports[0].outcomes.last().unwrap(),
+            (d, ActionOutcome::Failed(_)) if d.contains("mise install")
         ));
     }
 
