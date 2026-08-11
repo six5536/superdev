@@ -8,7 +8,11 @@ status: draft
 
 # Under consideration
 
-Nothing yet.
+- **Repos that already have an agent entry point.** `init` scaffolds
+  `AGENTS.md`, so adopting superdev in a repo with an incumbent entry file —
+  goodbye-tinnitus's `CLAUDE.md`, say — leaves two of them competing. Merge,
+  migrate, or have one reference the other is an open design question for
+  sub-projects 2 and 3.
 
 # Decided against
 
