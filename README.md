@@ -21,7 +21,7 @@ instead of preloading every page of it:
 
 ```sh
 superdev mcp aokf        # serve the knowledgebase over MCP (stdio)
-superdev aokf validate   # check it against the AOKF spec; exits 1 on findings
+superdev aokf validate   # check it against the AOKF spec; exits 1 on errors
 superdev aokf index      # rebuild the search index from scratch
 ```
 

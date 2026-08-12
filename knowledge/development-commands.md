@@ -21,9 +21,8 @@ Everything is wrapped as npm scripts (defined in
   `cargo run --quiet -- aokf validate knowledge` — the binary validating this
   repo's own bundle, and the same command the Claude Code hook runs. It exits
   1 on errors; warnings alone still pass. `cargo run -- aokf index` forces a
-  full rebuild of the search
-  index, which nothing routine needs: the MCP server syncs it lazily on every
-  tool call.
+  full rebuild of the search index, which nothing routine needs: the MCP
+  server syncs it lazily on every tool call.
 - Coverage: `npm run coverage` (HTML) / `coverage:summary` /
   `coverage:check` (the ≥90%-per-crate gate; needs the nightly toolchain).
 - Packaging: `npm run test:launcher`, `npm run verify-version` (16 locations
