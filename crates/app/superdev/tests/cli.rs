@@ -369,3 +369,192 @@ fn hook_validate_ignores_payloads_without_a_file_path() {
         .assert()
         .code(0);
 }
+
+/// `init` a temp repo with only the skills capability (the others need
+/// external binaries; skills needs none, so these tests run everywhere).
+fn skills_repo() -> tempfile::TempDir {
+    let dir = tempfile::tempdir().unwrap();
+    std::fs::create_dir_all(dir.path().join(".git")).unwrap();
+    superdev()
+        .current_dir(dir.path())
+        .args([
+            "init",
+            "--no-workflows",
+            "--no-frontend",
+            "--no-code-index",
+            "--no-knowledge",
+        ])
+        .assert()
+        .success();
+    dir
+}
+
+#[test]
+fn init_materialises_the_skill_pack_and_hook() {
+    let dir = skills_repo();
+    for name in [
+        "aokf-maintain",
+        "double-check",
+        "grill-me",
+        "humanise",
+        "self-improve",
+    ] {
+        let path = dir.path().join(format!(".claude/skills/{name}/SKILL.md"));
+        assert!(path.is_file(), "missing {}", path.display());
+        assert!(
+            std::fs::read_to_string(&path)
+                .unwrap()
+                .contains("Project adaptations"),
+            "{name} lacks the PROJECT.md trailer"
+        );
+    }
+    let settings: serde_json::Value = serde_json::from_str(
+        &std::fs::read_to_string(dir.path().join(".claude/settings.json")).unwrap(),
+    )
+    .unwrap();
+    let entries = settings["hooks"]["PostToolUse"].as_array().unwrap();
+    assert!(
+        entries
+            .iter()
+            .any(|e| e.to_string().contains("superdev aokf hook validate")),
+        "settings: {settings}"
+    );
+    let lock = std::fs::read_to_string(dir.path().join(".superdev/lock.toml")).unwrap();
+    assert!(lock.contains(".claude/skills/humanise/SKILL.md"), "{lock}");
+    assert!(lock.contains("superdev-skills"), "{lock}");
+    // Straight after init there is nothing to do.
+    superdev()
+        .current_dir(dir.path())
+        .arg("status")
+        .assert()
+        .code(0);
+}
+
+#[test]
+fn init_no_skills_skips_the_pack() {
+    let dir = tempfile::tempdir().unwrap();
+    std::fs::create_dir_all(dir.path().join(".git")).unwrap();
+    superdev()
+        .current_dir(dir.path())
+        .args([
+            "init",
+            "--no-workflows",
+            "--no-frontend",
+            "--no-code-index",
+            "--no-knowledge",
+            "--no-skills",
+        ])
+        .assert()
+        .success();
+    assert!(!dir.path().join(".claude/skills").exists());
+    assert!(!dir.path().join(".claude/settings.json").exists());
+}
+
+#[test]
+fn a_drifted_skill_is_drift_until_marked_custom() {
+    let dir = skills_repo();
+    let skill = dir.path().join(".claude/skills/humanise/SKILL.md");
+    std::fs::write(&skill, "# Mine now\n").unwrap();
+    // Drift: status exits 1 and names the file.
+    let out = superdev()
+        .current_dir(dir.path())
+        .arg("status")
+        .assert()
+        .code(1);
+    let stdout = String::from_utf8_lossy(&out.get_output().stdout).into_owned();
+    assert!(stdout.contains("humanise"), "{stdout}");
+
+    // Take it over: drift becomes a chosen state.
+    let config_path = dir.path().join(".superdev/config.toml");
+    let config = std::fs::read_to_string(&config_path).unwrap();
+    std::fs::write(
+        &config_path,
+        config.replace("[skills]", "[skills]\ncustom = [\"humanise\"]"),
+    )
+    .unwrap();
+    let out = superdev()
+        .current_dir(dir.path())
+        .arg("status")
+        .assert()
+        .code(0);
+    let stdout = String::from_utf8_lossy(&out.get_output().stdout).into_owned();
+    assert!(
+        stdout.contains("skills: humanise custom, unmanaged"),
+        "{stdout}"
+    );
+
+    // sync honours the takeover and prunes the lock entry.
+    superdev()
+        .current_dir(dir.path())
+        .arg("sync")
+        .assert()
+        .code(0);
+    assert_eq!(std::fs::read_to_string(&skill).unwrap(), "# Mine now\n");
+    let lock = std::fs::read_to_string(dir.path().join(".superdev/lock.toml")).unwrap();
+    assert!(!lock.contains(".claude/skills/humanise/SKILL.md"), "{lock}");
+
+    // Back under management: the next sync restores stock.
+    let config = std::fs::read_to_string(&config_path).unwrap();
+    std::fs::write(
+        &config_path,
+        config.replace("\ncustom = [\"humanise\"]", ""),
+    )
+    .unwrap();
+    superdev()
+        .current_dir(dir.path())
+        .arg("sync")
+        .assert()
+        .code(0);
+    assert!(
+        std::fs::read_to_string(&skill)
+            .unwrap()
+            .contains("Project adaptations")
+    );
+}
+
+#[test]
+fn user_hook_entries_survive_a_sync() {
+    let dir = tempfile::tempdir().unwrap();
+    std::fs::create_dir_all(dir.path().join(".git")).unwrap();
+    std::fs::create_dir_all(dir.path().join(".claude")).unwrap();
+    std::fs::write(
+        dir.path().join(".claude/settings.json"),
+        r#"{"hooks":{"PostToolUse":[{"matcher":"Agent","hooks":[{"type":"command","command":"my-own-hook"}]}]},"permissions":{"deny":["Read(secrets/**)"]}}"#,
+    )
+    .unwrap();
+    superdev()
+        .current_dir(dir.path())
+        .args([
+            "init",
+            "--no-workflows",
+            "--no-frontend",
+            "--no-code-index",
+            "--no-knowledge",
+        ])
+        .assert()
+        .success();
+    let settings: serde_json::Value = serde_json::from_str(
+        &std::fs::read_to_string(dir.path().join(".claude/settings.json")).unwrap(),
+    )
+    .unwrap();
+    let entries = settings["hooks"]["PostToolUse"].as_array().unwrap();
+    assert_eq!(entries.len(), 2);
+    assert!(
+        entries
+            .iter()
+            .any(|e| e.to_string().contains("my-own-hook"))
+    );
+    assert_eq!(settings["permissions"]["deny"][0], "Read(secrets/**)");
+}
+
+#[test]
+fn update_skills_to_an_explicit_version_is_refused() {
+    let dir = skills_repo();
+    let out = superdev()
+        .current_dir(dir.path())
+        .args(["update", "skills@9.9.9"])
+        .assert()
+        .code(2);
+    let stderr = String::from_utf8_lossy(&out.get_output().stderr).into_owned();
+    assert!(stderr.contains("skills"), "{stderr}");
+}
