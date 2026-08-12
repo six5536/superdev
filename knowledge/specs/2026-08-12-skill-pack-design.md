@@ -75,11 +75,11 @@ step, no `claude` CLI dependency.
 
 This buys: per-repo versioning (no cross-repo shared state), teammates get
 skills and hook by cloning (no superdev on their machines), and the component
-plans only `WriteFile`/`SetJsonKey` actions — nothing optional, everything
-journalled.
+plans only `WriteFile`/`EnsureJsonArrayElement` actions — nothing optional,
+everything journalled.
 
-Canonical sources live in `crates/lib/superdev-core/assets/skills/` and
-`assets/hooks/`, embedded with `include_str!` like the other scaffold assets.
+Canonical sources live in `crates/lib/superdev-core/assets/skills/`, embedded
+with `include_str!` like the other scaffold assets.
 superdev owns only its five skill directories; the rest of `.claude/skills/`
 is the user's.
 
@@ -153,9 +153,10 @@ This repo becomes a managed repo for the skills capability only: committed
 intentionally differ here) and `lock.toml`. Skills and hook are materialised
 by `cargo run -- sync`, replacing the hand-maintained `.claude/skills/`
 copies and the hand-written hook entry. The managed hook command expects
-`superdev` on PATH, so the devcontainer gets a two-line `scripts/superdev`
-shim (added to PATH via mise) that execs `cargo run --quiet --`; the shim is
-dev tooling, never shipped. The pre-PR check list and CI gain
+`superdev` on PATH, so the devcontainer gets a `scripts/superdev` shim that
+resolves its own symlink chain and execs `cargo run --quiet --` against this
+tree; it is installed with `ln -sf` into `~/.local/bin`, and it is dev
+tooling, never shipped. The pre-PR check list and CI gain
 `cargo run -- status`, so asset drift fails the build through the product's
 own drift detection instead of a parity test.
 
