@@ -226,6 +226,43 @@ async fn read_whole_and_section() {
 }
 
 #[tokio::test]
+async fn read_of_an_unparseable_file_reports_the_parse_error() {
+    let repo = fixture();
+    std::fs::write(
+        repo.path().join("knowledge/notes/torn.md"),
+        "type: Reference\nid: torn\n",
+    )
+    .unwrap();
+    let client = serve_and_client(repo.path()).await;
+
+    let result = call(
+        &client,
+        "aokf_read",
+        serde_json::json!({"id": "notes/torn.md"}),
+    )
+    .await;
+    let text = text_of(&result);
+    assert_eq!(result.is_error, Some(true), "{text}");
+    assert!(text.contains("notes/torn.md"), "{text}");
+    assert!(text.contains("does not parse"), "{text}");
+    assert!(text.contains("no frontmatter"), "{text}");
+    // The near-miss list is what this replaces.
+    assert!(!text.contains("did you mean"), "{text}");
+
+    // A `/`-rooted path names the same file.
+    let rooted = text_of(
+        &call(
+            &client,
+            "aokf_read",
+            serde_json::json!({"id": "/knowledge/notes/torn.md"}),
+        )
+        .await,
+    );
+    assert!(rooted.contains("does not parse"), "{rooted}");
+    client.cancel().await.unwrap();
+}
+
+#[tokio::test]
 async fn graph_map_and_neighbours() {
     let repo = fixture();
     let client = serve_and_client(repo.path()).await;

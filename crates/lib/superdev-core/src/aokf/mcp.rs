@@ -159,7 +159,8 @@ impl AokfServer {
         let _guard = self.exclusive();
         let (bundle, _, _) = self.sync().map_err(|e| e.to_string())?;
         let graph = Graph::build(&bundle);
-        let identity = resolve(&graph, &args.id)?;
+        let identity = resolve(&graph, &args.id)
+            .map_err(|e| broken_file_error(&bundle, &args.id).unwrap_or(e))?;
         let concept =
             concept_of(&bundle, &identity).ok_or_else(|| format!("no concept for `{identity}`"))?;
         Ok(text(render_concept(
@@ -275,6 +276,20 @@ fn resolve(graph: &Graph, id: &str) -> std::result::Result<String, String> {
         _ => String::new(),
     };
     Err(format!("unknown id `{id}`{candidates}"))
+}
+
+/// The parse failure for a path that names a file the bundle could not read.
+///
+/// Such a file has no id and no path entry, so `resolve` calls it unknown and
+/// offers near misses. The caller asked for a file that is right there; say why
+/// it cannot be served instead.
+fn broken_file_error(bundle: &Bundle, asked: &str) -> Option<String> {
+    let asked = asked.trim_start_matches('/').replace('\\', "/");
+    bundle
+        .broken
+        .iter()
+        .find(|e| asked == e.path || asked.ends_with(&format!("/{}", e.path)))
+        .map(|e| format!("`{}` does not parse: {}", e.path, e.message))
 }
 
 /// The concept behind an identity: its `id`, or its path when it has none.

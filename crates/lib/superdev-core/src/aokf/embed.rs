@@ -121,7 +121,7 @@ fn download_model(dir: &Path) -> Result<()> {
         })?;
         // Write beside the target and rename, so an interrupted download never
         // leaves a truncated file that later runs treat as cached.
-        let partial = dir.join(format!("{file}.partial"));
+        let partial = partial_path(dir, file);
         let mut out = std::fs::File::create(&partial).map_err(|e| Error::Io {
             path: partial.clone(),
             source: e,
@@ -136,6 +136,16 @@ fn download_model(dir: &Path) -> Result<()> {
         })?;
     }
     Ok(())
+}
+
+/// Scratch file a download writes before renaming onto `file`.
+///
+/// The pid suffix keeps two processes that warm the cache at the same time off
+/// each other's scratch file. Sharing one would let a half-written copy be
+/// renamed into place and cached as good, leaving that machine on lexical-only
+/// search for ever.
+fn partial_path(dir: &Path, file: &str) -> PathBuf {
+    dir.join(format!("{file}.partial.{}", std::process::id()))
 }
 
 /// Where [`LOCAL_MODEL`] at [`LOCAL_MODEL_REVISION`] is cached.
@@ -383,6 +393,20 @@ mod tests {
         );
         let err = cache_root_from(None, None, None).unwrap_err();
         assert!(err.to_string().contains("XDG_CACHE_HOME"));
+    }
+
+    #[test]
+    fn partial_path_is_process_scoped_and_per_file() {
+        let dir = Path::new("/cache");
+        let a = partial_path(dir, "model.safetensors");
+        assert_eq!(a.parent().unwrap(), dir);
+        let name = a.file_name().unwrap().to_str().unwrap();
+        assert_eq!(
+            name,
+            format!("model.safetensors.partial.{}", std::process::id())
+        );
+        // Two files downloaded by one process still get separate scratch files.
+        assert_ne!(a, partial_path(dir, "config.json"));
     }
 
     #[test]
