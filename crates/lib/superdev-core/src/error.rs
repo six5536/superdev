@@ -14,7 +14,8 @@ pub enum Error {
         /// Underlying error.
         source: io::Error,
     },
-    /// A TOML file failed to parse or serialise.
+    /// A structured config file failed to parse or serialise. Named for TOML,
+    /// which is most of them; it also carries JSON failures (`.mcp.json`).
     Toml {
         /// File concerned.
         path: PathBuf,

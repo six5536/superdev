@@ -15,6 +15,13 @@ macro_rules! asset {
 /// The one asset carrying a `{name}` token, replaced with the repo's name.
 const NAMED_ASSET: &str = "knowledge/manifest.aokf.yaml";
 
+/// Where agent tools find MCP servers, and superdev's key inside it. The file
+/// is shared with the user's own servers, so only this key is managed.
+const MCP_PATH: &str = ".mcp.json";
+const MCP_POINTER: &str = "mcpServers.superdev-aokf";
+/// The registration itself: the installed binary serving this repo's bundle.
+const MCP_VALUE: &str = r#"{"command":"superdev","args":["mcp","aokf"]}"#;
+
 /// (target path, asset content, ownership, reason)
 const FILES: &[(&str, &str, Ownership, &str)] = &[
     (
@@ -114,8 +121,33 @@ impl Component for Aokf {
                 });
             }
         }
+        if mcp_registration_missing(ctx.root) {
+            actions.push(Action::SetJsonKey {
+                path: MCP_PATH.to_string(),
+                pointer: MCP_POINTER.to_string(),
+                value_json: MCP_VALUE.to_string(),
+            });
+        }
         Ok(actions)
     }
+}
+
+/// True when `.mcp.json` does not already carry superdev's entry. Compares the
+/// parsed values, so reformatting or reordering the file is not drift. An
+/// unreadable or malformed file counts as missing: the engine reports why.
+fn mcp_registration_missing(root: &std::path::Path) -> bool {
+    let wanted: serde_json::Value =
+        serde_json::from_str(MCP_VALUE).expect("the registration literal is valid JSON");
+    let current = std::fs::read_to_string(root.join(MCP_PATH))
+        .ok()
+        .and_then(|text| serde_json::from_str::<serde_json::Value>(&text).ok())
+        .and_then(|root| {
+            MCP_POINTER
+                .split('.')
+                .try_fold(&root, |value, segment| value.get(segment))
+                .cloned()
+        });
+    current.as_ref() != Some(&wanted)
 }
 
 #[cfg(test)]
@@ -146,8 +178,9 @@ mod tests {
         let actions = plan_in(dir.path());
         let paths: Vec<&str> = actions
             .iter()
-            .map(|a| match a {
-                Action::WriteFile { path, .. } => path.as_str(),
+            .filter_map(|a| match a {
+                Action::WriteFile { path, .. } => Some(path.as_str()),
+                Action::SetJsonKey { .. } => None,
                 other => panic!("unexpected action {other:?}"),
             })
             .collect();
@@ -183,10 +216,20 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         // Simulate a previous apply: write everything as planned.
         for a in plan_in(dir.path()) {
-            if let Action::WriteFile { path, content, .. } = a {
-                let p = dir.path().join(path);
-                std::fs::create_dir_all(p.parent().unwrap()).unwrap();
-                std::fs::write(p, content).unwrap();
+            match a {
+                Action::WriteFile { path, content, .. } => {
+                    let p = dir.path().join(path);
+                    std::fs::create_dir_all(p.parent().unwrap()).unwrap();
+                    std::fs::write(p, content).unwrap();
+                }
+                Action::SetJsonKey {
+                    path, value_json, ..
+                } => {
+                    let json =
+                        format!("{{ \"mcpServers\": {{ \"superdev-aokf\": {value_json} }} }}");
+                    std::fs::write(dir.path().join(path), json).unwrap();
+                }
+                other => panic!("unexpected action {other:?}"),
             }
         }
         assert!(plan_in(dir.path()).is_empty());
@@ -208,6 +251,54 @@ mod tests {
             })
             .collect();
         assert_eq!(paths, vec![".agents/aokf/SPEC.md".to_string()]);
+    }
+
+    #[test]
+    fn plans_mcp_registration_when_missing_and_not_when_present() {
+        let dir = tempfile::tempdir().unwrap();
+        let registration = plan_in(dir.path())
+            .into_iter()
+            .find(|a| matches!(a, Action::SetJsonKey { .. }))
+            .expect("a fresh repo registers the MCP server");
+        assert_eq!(
+            registration,
+            Action::SetJsonKey {
+                path: MCP_PATH.into(),
+                pointer: MCP_POINTER.into(),
+                value_json: MCP_VALUE.into(),
+            }
+        );
+
+        // The same entry, written differently: key order and whitespace are
+        // not drift, because the comparison is semantic.
+        std::fs::write(
+            dir.path().join(MCP_PATH),
+            "{\n  \"mcpServers\": {\n    \"superdev-aokf\": {\n      \"args\": [\"mcp\", \"aokf\"],\n      \"command\": \"superdev\"\n    }\n  }\n}\n",
+        )
+        .unwrap();
+        assert!(
+            !plan_in(dir.path())
+                .iter()
+                .any(|a| matches!(a, Action::SetJsonKey { .. }))
+        );
+
+        // A different command is drift; so is an unparseable file.
+        std::fs::write(
+            dir.path().join(MCP_PATH),
+            "{\"mcpServers\":{\"superdev-aokf\":{\"command\":\"old\"}}}",
+        )
+        .unwrap();
+        assert!(
+            plan_in(dir.path())
+                .iter()
+                .any(|a| matches!(a, Action::SetJsonKey { .. }))
+        );
+        std::fs::write(dir.path().join(MCP_PATH), "not json").unwrap();
+        assert!(
+            plan_in(dir.path())
+                .iter()
+                .any(|a| matches!(a, Action::SetJsonKey { .. }))
+        );
     }
 
     #[test]

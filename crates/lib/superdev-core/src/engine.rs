@@ -308,6 +308,11 @@ impl<'a> Session<'a> {
                     ..
                 } => self.write_action(path, content, *ownership, &mut written),
                 Action::EnsureLine { path, line, .. } => self.ensure_line(path, line),
+                Action::SetJsonKey {
+                    path,
+                    pointer,
+                    value_json,
+                } => self.set_json_key(path, pointer, value_json, &mut written),
                 Action::Run {
                     program,
                     args,
@@ -410,6 +415,43 @@ impl<'a> Session<'a> {
             Ok(()) => ActionOutcome::Applied { note: None },
             Err(e) => ActionOutcome::Failed(e.to_string()),
         }
+    }
+
+    /// Merge one key into a JSON file, hashing the value into the lock the way
+    /// a mise pin is hashed: superdev owns the key, not the file.
+    fn set_json_key(
+        &mut self,
+        path: &str,
+        pointer: &str,
+        value_json: &str,
+        written: &mut Vec<(String, String)>,
+    ) -> ActionOutcome {
+        let full = self.root.join(path);
+        let existing = match read_text(&full) {
+            Ok(existing) => existing,
+            Err(e) => return ActionOutcome::Failed(e.to_string()),
+        };
+        // Edit in memory first, so a malformed file is left as the user wrote it.
+        let edited = edit_json_key(
+            path,
+            existing.as_deref().unwrap_or("{}"),
+            pointer,
+            value_json,
+        );
+        let (content, value) = match edited {
+            Ok(edited) => edited,
+            Err(e) => return ActionOutcome::Failed(e.to_string()),
+        };
+        self.journal.push(Undo::RestoreFile {
+            path: path.to_string(),
+            prior: existing,
+        });
+        if let Err(e) = write_file(&full, &content) {
+            return ActionOutcome::Failed(e.to_string());
+        }
+        // Hash the canonical value, so layout changes never read as drift.
+        written.push((format!("{path}:{pointer}"), sha256_hex(value.as_bytes())));
+        ActionOutcome::Applied { note: None }
     }
 
     fn run_action(
@@ -536,6 +578,50 @@ fn read_text(path: &Path) -> Result<Option<String>> {
             source: e,
         }),
     }
+}
+
+/// Set one dotted key path in a JSON document, creating missing objects on the
+/// way. Returns the file content to write and the canonical value text, which
+/// is what the lock hashes.
+///
+/// Every other key survives; their order does not, because serde_json sorts
+/// object keys on the way out.
+fn edit_json_key(
+    path: &str,
+    json: &str,
+    pointer: &str,
+    value_json: &str,
+) -> Result<(String, String)> {
+    let bad = |message: String| Error::Toml {
+        path: path.into(),
+        message,
+    };
+    let mut root: serde_json::Value = serde_json::from_str(json).map_err(|e| bad(e.to_string()))?;
+    let value: serde_json::Value = serde_json::from_str(value_json)
+        .map_err(|e| bad(format!("invalid value `{value_json}`: {e}")))?;
+
+    let mut segments: Vec<&str> = pointer.split('.').collect();
+    let key = segments.pop().expect("split yields at least one segment");
+    // Names the container the walk is standing in, for the error message.
+    let mut container = "the root".to_string();
+    let mut cursor = &mut root;
+    for segment in segments {
+        cursor = match cursor.as_object_mut() {
+            Some(map) => map
+                .entry(segment)
+                .or_insert_with(|| serde_json::Value::Object(serde_json::Map::new())),
+            None => return Err(bad(format!("{container} is not a JSON object"))),
+        };
+        container = format!("`{segment}`");
+    }
+    match cursor.as_object_mut() {
+        Some(map) => map.insert(key.to_string(), value.clone()),
+        None => return Err(bad(format!("{container} is not a JSON object"))),
+    };
+
+    let mut content = serde_json::to_string_pretty(&root).expect("a parsed value re-serialises");
+    content.push('\n');
+    Ok((content, value.to_string()))
 }
 
 fn write_file(path: &Path, content: &str) -> Result<()> {
@@ -958,6 +1044,138 @@ mod tests {
             "tools = 3\n"
         );
         assert!(lock.files.is_empty());
+    }
+
+    /// The registration the aokf provider plans, used by the JSON tests.
+    fn set_mcp_key() -> Action {
+        Action::SetJsonKey {
+            path: ".mcp.json".into(),
+            pointer: "mcpServers.superdev-aokf".into(),
+            value_json: r#"{"command":"superdev","args":["mcp","aokf"]}"#.into(),
+        }
+    }
+
+    #[test]
+    fn set_json_key_merges_and_preserves_other_servers() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::write(
+            dir.path().join(".mcp.json"),
+            "{\n  \"mcpServers\": { \"other\": { \"command\": \"othersrv\" } },\n  \"extra\": true\n}\n",
+        )
+        .unwrap();
+        let fake = FakeRunner::new();
+        let manifest = Manifest::default_for("0.1.0", &[]);
+        let mut lock = Lock::default();
+        let planned = vec![Planned {
+            capability: Some(crate::capability::Capability::Knowledge),
+            provider: "aokf".into(),
+            actions: vec![set_mcp_key()],
+        }];
+        let result = apply(dir.path(), &fake, &manifest, &planned, &mut lock);
+        assert!(result.ok);
+        let text = std::fs::read_to_string(dir.path().join(".mcp.json")).unwrap();
+        assert!(text.ends_with("}\n"), "{text}");
+        let written: serde_json::Value = serde_json::from_str(&text).unwrap();
+        assert_eq!(written["mcpServers"]["other"]["command"], "othersrv");
+        assert_eq!(written["extra"], true);
+        assert_eq!(
+            written["mcpServers"]["superdev-aokf"]["command"],
+            "superdev"
+        );
+        assert_eq!(written["mcpServers"]["superdev-aokf"]["args"][1], "aokf");
+        assert!(
+            lock.files
+                .contains_key(".mcp.json:mcpServers.superdev-aokf"),
+            "lock: {:?}",
+            lock.files
+        );
+    }
+
+    #[test]
+    fn set_json_key_creates_the_file_when_absent() {
+        let dir = tempfile::tempdir().unwrap();
+        let fake = FakeRunner::new();
+        let manifest = Manifest::default_for("0.1.0", &[]);
+        let mut lock = Lock::default();
+        let planned = vec![Planned {
+            capability: Some(crate::capability::Capability::Knowledge),
+            provider: "aokf".into(),
+            actions: vec![set_mcp_key()],
+        }];
+        let result = apply(dir.path(), &fake, &manifest, &planned, &mut lock);
+        assert!(result.ok);
+        let written: serde_json::Value =
+            serde_json::from_str(&std::fs::read_to_string(dir.path().join(".mcp.json")).unwrap())
+                .unwrap();
+        assert_eq!(
+            written["mcpServers"]["superdev-aokf"],
+            serde_json::json!({ "command": "superdev", "args": ["mcp", "aokf"] })
+        );
+    }
+
+    #[test]
+    fn malformed_mcp_json_fails_cleanly() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::write(dir.path().join(".mcp.json"), "not json\n").unwrap();
+        let fake = FakeRunner::new();
+        let manifest = Manifest::default_for("0.1.0", &[]);
+        let mut lock = Lock::default();
+        let planned = vec![Planned {
+            capability: Some(crate::capability::Capability::Knowledge),
+            provider: "aokf".into(),
+            actions: vec![write_owned("created.txt"), set_mcp_key()],
+        }];
+        let result = apply(dir.path(), &fake, &manifest, &planned, &mut lock);
+        assert!(!result.ok);
+        let (description, outcome) = &result.reports[0].outcomes[1];
+        assert_eq!(description, "set mcpServers.superdev-aokf in .mcp.json");
+        let ActionOutcome::Failed(message) = outcome else {
+            panic!("expected a failure, got {outcome:?}");
+        };
+        assert!(message.starts_with(".mcp.json:"), "{message}");
+        // The user's file is left exactly as they wrote it, and the earlier
+        // write in the same run is taken back.
+        assert_eq!(
+            std::fs::read_to_string(dir.path().join(".mcp.json")).unwrap(),
+            "not json\n"
+        );
+        assert!(!dir.path().join("created.txt").exists());
+        assert!(result.reverted.iter().any(|r| r.contains("created.txt")));
+        assert!(lock.files.is_empty());
+    }
+
+    #[test]
+    fn a_json_key_path_through_a_non_object_fails() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::write(dir.path().join(".mcp.json"), "{ \"mcpServers\": 3 }").unwrap();
+        let fake = FakeRunner::new();
+        let manifest = Manifest::default_for("0.1.0", &[]);
+        let mut lock = Lock::default();
+        let planned = vec![Planned {
+            capability: Some(crate::capability::Capability::Knowledge),
+            provider: "aokf".into(),
+            actions: vec![set_mcp_key()],
+        }];
+        let result = apply(dir.path(), &fake, &manifest, &planned, &mut lock);
+        assert!(!result.ok);
+        let (_, outcome) = &result.reports[0].outcomes[0];
+        let ActionOutcome::Failed(message) = outcome else {
+            panic!("expected a failure, got {outcome:?}");
+        };
+        assert_eq!(message, ".mcp.json: `mcpServers` is not a JSON object");
+        assert_eq!(
+            std::fs::read_to_string(dir.path().join(".mcp.json")).unwrap(),
+            "{ \"mcpServers\": 3 }"
+        );
+
+        // A file whose root is not an object at all.
+        std::fs::write(dir.path().join(".mcp.json"), "[]").unwrap();
+        let result = apply(dir.path(), &fake, &manifest, &planned, &mut lock);
+        assert!(!result.ok);
+        let (_, ActionOutcome::Failed(message)) = &result.reports[0].outcomes[0] else {
+            panic!("expected a failure");
+        };
+        assert_eq!(message, ".mcp.json: the root is not a JSON object");
     }
 
     #[test]

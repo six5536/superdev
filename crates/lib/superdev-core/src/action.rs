@@ -40,6 +40,16 @@ pub enum Action {
         /// Value as a TOML fragment, e.g. `"6.2.0"` or an inline table.
         value_toml: String,
     },
+    /// Set one top-level key path in a JSON file, preserving all other content.
+    /// Creates the file (`{}`-rooted) when absent. Used for .mcp.json.
+    SetJsonKey {
+        /// Target path (repo-relative).
+        path: String,
+        /// Dotted key path, e.g. `mcpServers.superdev-aokf`.
+        pointer: String,
+        /// The value to set, as a JSON string.
+        value_json: String,
+    },
     /// Run an external command in the repo root.
     Run {
         /// Program name.
@@ -64,6 +74,7 @@ impl Action {
                 format!("ensure {path} contains `{line}`")
             }
             Action::SetMisePin { tool, .. } => format!("pin {tool} in .mise.toml"),
+            Action::SetJsonKey { path, pointer, .. } => format!("set {pointer} in {path}"),
             Action::Run {
                 program,
                 args,
@@ -114,5 +125,12 @@ mod tests {
             a.describe(),
             "ensure .gitignore contains `.superdev/cache/`"
         );
+
+        let a = Action::SetJsonKey {
+            path: ".mcp.json".into(),
+            pointer: "mcpServers.superdev-aokf".into(),
+            value_json: "{}".into(),
+        };
+        assert_eq!(a.describe(), "set mcpServers.superdev-aokf in .mcp.json");
     }
 }

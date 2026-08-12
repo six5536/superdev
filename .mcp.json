@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "superdev-aokf": {
+      "command": "cargo",
+      "args": ["run", "--quiet", "--", "mcp", "aokf"]
+    }
+  }
+}

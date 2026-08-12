@@ -154,6 +154,9 @@ fn init_sets_up_a_fresh_repo() {
     assert!(repo.join(".superdev/lock.toml").is_file());
     assert!(repo.join("AGENTS.md").is_file());
     assert!(repo.join(".agents/aokf/SPEC.md").is_file());
+    let mcp = sb.read(".mcp.json");
+    assert!(mcp.contains("\"superdev-aokf\""), "{mcp}");
+    assert!(mcp.contains("\"mcp\""), "{mcp}");
     assert!(sb.read(".gitignore").contains(".superdev/cache/"));
     assert!(sb.read(".gitignore").contains(".codegraph/"));
     assert!(sb.read(".mise.toml").contains("http:superpowers"));
