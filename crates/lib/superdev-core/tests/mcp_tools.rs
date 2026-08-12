@@ -165,6 +165,25 @@ async fn search_returns_locators() {
 }
 
 #[tokio::test]
+async fn an_absurd_limit_is_answered_not_aborted() {
+    let repo = fixture();
+    let client = serve_and_client(repo.path()).await;
+
+    // Retrieval widens the limit before tantivy allocates against it, so an
+    // unbounded one takes the process down with it.
+    let result = call(
+        &client,
+        "aokf_search",
+        serde_json::json!({"query": "planning stage", "limit": u32::MAX}),
+    )
+    .await;
+    let text = text_of(&result);
+    assert_ne!(result.is_error, Some(true), "{text}");
+    assert!(text.contains("module-a.md:"), "{text}");
+    client.cancel().await.unwrap();
+}
+
+#[tokio::test]
 async fn read_whole_and_section() {
     let repo = fixture();
     let client = serve_and_client(repo.path()).await;
@@ -186,6 +205,18 @@ async fn read_whole_and_section() {
     );
     assert!(section.contains("[Role]"), "{section}");
     assert!(!section.contains("Caveats"), "{section}");
+
+    // `(root)` is the label every locator line shows, so it has to resolve.
+    let root = text_of(
+        &call(
+            &client,
+            "aokf_read",
+            serde_json::json!({"id": "module-a", "heading": "(root)"}),
+        )
+        .await,
+    );
+    assert!(root.contains("[(root)]"), "{root}");
+    assert!(!root.contains("[Role]"), "{root}");
 
     let unknown = call(&client, "aokf_read", serde_json::json!({"id": "module"})).await;
     let text = text_of(&unknown);

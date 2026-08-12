@@ -32,6 +32,11 @@ const WARNING_CAP: usize = 10;
 /// Conformance level the overview grades the bundle at.
 const CHECKED_LEVEL: u8 = 2;
 
+/// Most hits one search may ask for. Retrieval widens the caller's limit
+/// before tantivy pre-allocates against it, so an unbounded `limit` is an
+/// allocation failure — and an abort under the release profile.
+const MAX_LIMIT: usize = 50;
+
 /// What a tool returns: text, or a message the client shows as a tool error.
 type ToolResult = std::result::Result<CallToolResult, String>;
 
@@ -47,6 +52,12 @@ pub struct AokfServer {
     /// search. The same instance must reach every search, or the index's
     /// vectors go unused.
     embedder: Option<Box<dyn Embedder>>,
+    /// One tool call at a time. rmcp runs each request as its own task, and a
+    /// call holds an [`Index`] open across its whole body while another call's
+    /// sync may delete and rebuild the index directory underneath it — and two
+    /// syncs would contend on tantivy's writer lock regardless. The bodies are
+    /// blocking work by design, so a plain mutex is the whole answer.
+    tool_lock: std::sync::Mutex<()>,
     tool_router: ToolRouter<AokfServer>,
 }
 
@@ -113,6 +124,7 @@ impl AokfServer {
             repo_root,
             index_dir,
             embedder,
+            tool_lock: std::sync::Mutex::new(()),
             tool_router: AokfServer::tool_router(),
         }
     }
@@ -121,11 +133,10 @@ impl AokfServer {
     /// with a `path:start-end` locator to read next.
     #[tool]
     async fn aokf_search(&self, Parameters(args): Parameters<SearchArgs>) -> ToolResult {
+        let _guard = self.exclusive();
         let (bundle, index, stats) = self.sync().map_err(|e| e.to_string())?;
         let opts = SearchOpts {
-            limit: args
-                .limit
-                .map_or(SearchOpts::default().limit, |n| n as usize),
+            limit: hit_limit(args.limit),
             kinds: args.types.unwrap_or_default(),
             tags: args.tags.unwrap_or_default(),
         };
@@ -145,6 +156,7 @@ impl AokfServer {
     /// Read one concept whole, or one of its sections.
     #[tool]
     async fn aokf_read(&self, Parameters(args): Parameters<ReadArgs>) -> ToolResult {
+        let _guard = self.exclusive();
         let (bundle, _, _) = self.sync().map_err(|e| e.to_string())?;
         let graph = Graph::build(&bundle);
         let identity = resolve(&graph, &args.id)?;
@@ -161,6 +173,7 @@ impl AokfServer {
     /// in both directions.
     #[tool]
     async fn aokf_graph(&self, Parameters(args): Parameters<GraphArgs>) -> ToolResult {
+        let _guard = self.exclusive();
         let (bundle, _, _) = self.sync().map_err(|e| e.to_string())?;
         let graph = Graph::build(&bundle);
         let Some(id) = args.id else {
@@ -177,6 +190,7 @@ impl AokfServer {
     /// validation found wrong.
     #[tool]
     async fn aokf_overview(&self) -> ToolResult {
+        let _guard = self.exclusive();
         let (bundle, _, stats) = self.sync().map_err(|e| e.to_string())?;
         Ok(text(render_overview(&bundle, &stats, &self.repo_root)))
     }
@@ -204,6 +218,14 @@ impl AokfServer {
         Ok(())
     }
 
+    /// Take the tool lock for the rest of the call, so no two calls touch the
+    /// index at once. Poisoning carries no bad state: the lock guards nothing.
+    fn exclusive(&self) -> std::sync::MutexGuard<'_, ()> {
+        self.tool_lock
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+    }
+
     /// Reload the bundle and bring the index up to date — the freshness rule,
     /// run once per tool call.
     fn sync(&self) -> crate::error::Result<(Bundle, Index, SyncStats)> {
@@ -223,6 +245,14 @@ impl ServerHandler for AokfServer {
              read one, and aokf_graph to follow links.",
         )
     }
+}
+
+/// The caller's `limit`, bounded to something the retrieval stage can
+/// allocate for. Zero would return nothing at all, which no caller means.
+fn hit_limit(requested: Option<u32>) -> usize {
+    requested.map_or(SearchOpts::default().limit, |n| {
+        (n as usize).clamp(1, MAX_LIMIT)
+    })
 }
 
 /// One text block, the only shape these tools return.
@@ -446,6 +476,11 @@ fn render_concept(
 /// segment, case-insensitively.
 fn matches_heading(heading_path: &[String], wanted: &str) -> bool {
     let wanted = wanted.trim().to_lowercase();
+    if heading_path.is_empty() {
+        // The label the error message and every locator line advertise, so
+        // asking for it back has to work.
+        return wanted.is_empty() || wanted == "(root)";
+    }
     heading_path.join(" > ").to_lowercase() == wanted
         || heading_path
             .last()
@@ -498,14 +533,12 @@ fn render_neighbours(bundle: &Bundle, identity: &str, hops: &[Edge]) -> String {
         let unresolved = if edge.resolved { "" } else { "  [unresolved]" };
         if edge.synthesised {
             // The hop carries the inverse rel; inverting it back states the
-            // edge as the other concept declared it.
+            // edge as the other concept declared it. The tail summary quotes
+            // the rel the lines show, not the stored one.
+            let declared = inverse_rel(rel);
             (
-                format!(
-                    "<--{}-- {}{unresolved}",
-                    inverse_rel(rel),
-                    named(&edge.to, target)
-                ),
-                edge.rel.clone(),
+                format!("<--{declared}-- {}{unresolved}", named(&edge.to, target)),
+                declared.to_string(),
             )
         } else {
             (
@@ -706,6 +739,44 @@ mod tests {
         let error = render_concept(concept, "alpha", Some("Nope")).unwrap_err();
         assert!(error.contains("no heading `Nope`"));
         assert!(error.contains("(root), Role, Notes"));
+    }
+
+    #[test]
+    fn the_root_section_answers_to_the_label_it_advertises() {
+        let (bundle, _dir) = bundle_with(&[("alpha.md", ALPHA)]);
+        let concept = concept_of(&bundle, "alpha").unwrap();
+        for wanted in ["(root)", " (ROOT) ", ""] {
+            let rendered = render_concept(concept, "alpha", Some(wanted)).unwrap();
+            assert!(rendered.contains("[(root)]"), "{wanted}");
+            assert!(!rendered.contains("[Role]"), "{wanted}");
+        }
+    }
+
+    #[test]
+    fn a_capped_incoming_group_summarises_the_rels_it_showed() {
+        let hops: Vec<Edge> = (0..35)
+            .map(|i| Edge {
+                from: "beta".to_string(),
+                rel: "depended-on-by".to_string(),
+                to: format!("alpha-{i}"),
+                note: None,
+                resolved: true,
+                synthesised: true,
+            })
+            .collect();
+        let (bundle, _dir) = bundle_with(&[("beta.md", BETA)]);
+        let rendered = render_neighbours(&bundle, "beta", &hops);
+        assert!(rendered.contains("<--depends-on-- alpha-0"));
+        assert!(rendered.contains("+5 more (rels: depends-on)"));
+    }
+
+    #[test]
+    fn a_search_limit_is_bounded_at_both_ends() {
+        assert_eq!(hit_limit(None), SearchOpts::default().limit);
+        assert_eq!(hit_limit(Some(3)), 3);
+        // Zero would answer nothing; the ceiling keeps retrieval allocatable.
+        assert_eq!(hit_limit(Some(0)), 1);
+        assert_eq!(hit_limit(Some(u32::MAX)), MAX_LIMIT);
     }
 
     #[test]
