@@ -8,6 +8,12 @@ status: draft
 
 # Under consideration
 
+- **A knowledge-capture skill.** The write-side complement to the search-first
+  AGENTS.md: teach agents when and how to record durable learnings in the
+  bundle mid-task — concept placement, links, sources. Judged a good idea
+  during the skill-pack design
+  ([spec](specs/2026-08-12-skill-pack-design.md)) and deferred to the
+  knowledge-upkeep sub-project.
 - **Repos that already have an agent entry point.** `init` scaffolds
   `AGENTS.md`, so adopting superdev in a repo with an incumbent entry file —
   goodbye-tinnitus's `CLAUDE.md`, say — leaves two of them competing. Merge,
