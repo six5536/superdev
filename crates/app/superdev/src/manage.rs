@@ -21,12 +21,17 @@ use superdev_core::{components, engine, registry, report};
 /// Provider name for repo-level actions no capability owns.
 const REPO_PROVIDER: &str = "superdev";
 
-/// Capabilities whose download is verified by a checksum baked in beside the
-/// version, so this binary can install the registry default and nothing else.
-/// Their components refuse to plan any other pin.
-const CHECKSUM_PINNED: [Capability; 2] = [Capability::Workflows, Capability::CodeIndex];
+/// Capabilities whose version is this binary's to decide — a checksum baked
+/// in beside the version, or content embedded in the binary itself — so
+/// superdev can install the registry default and nothing else. Their
+/// components refuse to plan any other pin.
+const BINARY_PINNED: [Capability; 3] = [
+    Capability::Workflows,
+    Capability::CodeIndex,
+    Capability::Skills,
+];
 
-/// The four capability-disable flags (kebab-case comes free from clap).
+/// The five capability-disable flags (kebab-case comes free from clap).
 #[derive(clap::Args)]
 pub struct InitArgs {
     /// Skip the prompting/workflow skills
@@ -35,6 +40,9 @@ pub struct InitArgs {
     /// Skip the frontend design workflows
     #[arg(long)]
     pub no_frontend: bool,
+    /// Skip the superdev skill pack
+    #[arg(long)]
+    pub no_skills: bool,
     /// Skip the code index
     #[arg(long)]
     pub no_code_index: bool,
@@ -48,6 +56,7 @@ impl InitArgs {
         let flags = [
             (self.no_workflows, Capability::Workflows),
             (self.no_frontend, Capability::Frontend),
+            (self.no_skills, Capability::Skills),
             (self.no_code_index, Capability::CodeIndex),
             (self.no_knowledge, Capability::Knowledge),
         ];
@@ -172,14 +181,14 @@ fn parse_target(target: &str) -> Result<(Capability, Option<String>)> {
             message: format!("`{target}` names no version"),
         });
     }
-    // These downloads are verified by checksums baked in alongside the
-    // version, so an arbitrary version has no provenance — and no URLs. The
+    // This binary decides these versions: it carries the checksum, or the
+    // content itself. Any other version has no provenance — and no URLs. The
     // components refuse the same thing when planning.
-    if version.is_some() && CHECKSUM_PINNED.contains(&capability) {
+    if version.is_some() && BINARY_PINNED.contains(&capability) {
         let default = default_version(capability).unwrap_or_default();
         return Err(Error::Manifest {
             message: format!(
-                "{} version must match the registry default {default} — the pinned checksum is the provenance",
+                "{} version must match the registry default {default} — this binary is the provenance",
                 capability.as_str()
             ),
         });
@@ -272,7 +281,7 @@ fn behind_pins(manifest: &Manifest) -> Vec<String> {
         ) else {
             continue;
         };
-        let stale = if CHECKSUM_PINNED.contains(&capability) {
+        let stale = if BINARY_PINNED.contains(&capability) {
             pin_mismatch(manifest, capability).is_some()
         } else {
             config
@@ -304,7 +313,7 @@ fn pin_mismatch(manifest: &Manifest, capability: Capability) -> Option<(String, 
 
 /// The first checksum-pinned capability pinned off this binary's default.
 fn checksum_pin_mismatch(manifest: &Manifest) -> Option<(Capability, String, String)> {
-    CHECKSUM_PINNED.into_iter().find_map(|capability| {
+    BINARY_PINNED.into_iter().find_map(|capability| {
         pin_mismatch(manifest, capability).map(|(pinned, default)| (capability, pinned, default))
     })
 }
@@ -314,7 +323,7 @@ fn checksum_pin_mismatch(manifest: &Manifest) -> Option<(Capability, String, Str
 /// accept those as given.
 fn plannable(manifest: &Manifest) -> Manifest {
     let mut manifest = manifest.clone();
-    for capability in CHECKSUM_PINNED {
+    for capability in BINARY_PINNED {
         if let Some(config) = manifest.capabilities.get_mut(capability.as_str()) {
             config.version = default_version(capability);
         }
@@ -401,6 +410,7 @@ mod tests {
         // Both checksum-verified capabilities refuse a hand-picked version.
         assert!(parse_target("workflows@9.9.9").is_err());
         assert!(parse_target("code-index@9.9.9").is_err());
+        assert!(parse_target("skills@9.9.9").is_err());
     }
 
     fn pin(manifest: &mut Manifest, capability: Capability, version: Option<&str>) {
@@ -413,7 +423,7 @@ mod tests {
 
     #[test]
     fn any_checksum_pin_off_the_default_is_stale() {
-        for capability in CHECKSUM_PINNED {
+        for capability in BINARY_PINNED {
             let name = capability.as_str();
             let default = default_version(capability).unwrap();
             let mut manifest = Manifest::default_for("0.1.0", &[]);
@@ -444,7 +454,7 @@ mod tests {
     #[test]
     fn plannable_resets_every_checksum_pin() {
         let mut manifest = Manifest::default_for("0.1.0", &[]);
-        for capability in CHECKSUM_PINNED {
+        for capability in BINARY_PINNED {
             pin(&mut manifest, capability, Some("1.0.0"));
         }
         let plannable = plannable(&manifest);

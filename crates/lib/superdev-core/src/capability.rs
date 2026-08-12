@@ -8,7 +8,7 @@ pub enum Capability {
     Workflows,
     /// Frontend design workflows (Anthropic plugin).
     Frontend,
-    /// superdev's own skill pack plugin (slot; sub-project 3).
+    /// superdev's own skill pack, shipped as owned repo files.
     Skills,
     /// Pre-indexed code knowledge graph.
     CodeIndex,

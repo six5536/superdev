@@ -26,6 +26,10 @@ pub struct CapabilityConfig {
     /// bundled local model.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub embeddings: Option<EmbeddingsConfig>,
+    /// Skills released from management: superdev stops writing them and
+    /// `status` reports them as custom. Only meaningful for `skills`.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub custom: Vec<String>,
 }
 
 /// The manifest: blueprint version plus one table per enabled capability.
@@ -51,6 +55,7 @@ impl Manifest {
                         provider: e.provider.to_string(),
                         version: e.version.map(str::to_string),
                         embeddings: None,
+                        custom: Vec::new(),
                     },
                 )
             })
@@ -113,7 +118,10 @@ mod tests {
     fn default_manifest_round_trips() {
         let m = Manifest::default_for("0.1.0", &[Capability::CodeIndex]);
         assert!(!m.capabilities.contains_key("code-index"));
-        assert!(!m.capabilities.contains_key("skills")); // unavailable slot never defaults on
+        assert_eq!(
+            m.capabilities["skills"].version.as_deref(),
+            Some(env!("CARGO_PKG_VERSION"))
+        );
         assert_eq!(
             m.capabilities["workflows"].version.as_deref(),
             Some("6.2.0")
@@ -142,6 +150,14 @@ mod tests {
             provider: "openai".into(),
             model: "text-embedding-3-small".into(),
         });
+        assert_eq!(Manifest::parse(&m.to_toml()).unwrap(), m);
+    }
+
+    #[test]
+    fn custom_skills_survive_a_round_trip_and_stay_optional() {
+        let mut m = Manifest::default_for("0.1.0", &[]);
+        assert!(!m.to_toml().contains("custom"));
+        m.capabilities.get_mut("skills").unwrap().custom = vec!["humanise".into()];
         assert_eq!(Manifest::parse(&m.to_toml()).unwrap(), m);
     }
 

@@ -38,9 +38,9 @@ const ENTRIES: [RegistryEntry; 5] = [
     },
     RegistryEntry {
         capability: Capability::Skills,
-        provider: "superdev-plugin",
-        version: None,
-        available: false,
+        provider: "superdev-skills",
+        version: Some(env!("CARGO_PKG_VERSION")),
+        available: true,
     },
     RegistryEntry {
         capability: Capability::CodeIndex,
@@ -142,11 +142,13 @@ mod tests {
     }
 
     #[test]
-    fn skills_slot_is_unavailable() {
+    fn skills_slot_ships_at_the_binary_version() {
         let skills = entries()
             .iter()
             .find(|e| e.capability == Capability::Skills)
             .unwrap();
-        assert!(!skills.available);
+        assert!(skills.available);
+        assert_eq!(skills.provider, "superdev-skills");
+        assert_eq!(skills.version, Some(env!("CARGO_PKG_VERSION")));
     }
 }
