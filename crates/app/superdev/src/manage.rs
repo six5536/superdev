@@ -111,6 +111,9 @@ pub fn status(root: &Path) -> Result<u8> {
     for line in &behind {
         out(line)?;
     }
+    for line in &custom_lines(&manifest) {
+        out(line)?;
+    }
     Ok(u8::from(has_actions(&planned) || !behind.is_empty()))
 }
 
@@ -128,13 +131,20 @@ pub fn sync(root: &Path, dry_run: bool) -> Result<u8> {
         });
     }
     let mut lock = Lock::load(root)?;
+    let pruned = prune_custom_skills(&manifest, &mut lock);
     let runner = SystemRunner;
     let planned = plan_all(root, &runner, &manifest, &lock)?;
     print_plan(&planned)?;
     for line in &behind_pins(&manifest) {
         out(line)?;
     }
-    if dry_run || !has_actions(&planned) {
+    if dry_run {
+        return Ok(0);
+    }
+    if !has_actions(&planned) {
+        if pruned {
+            lock.save(root)?;
+        }
         return Ok(0);
     }
     apply_and_report(root, &runner, &manifest, &planned, &mut lock)
@@ -298,6 +308,39 @@ fn behind_pins(manifest: &Manifest) -> Vec<String> {
         }
     }
     lines
+}
+
+/// Remove released skills' hashes from the lock: a custom skill is the
+/// user's file, and a stale hash would misread their next edit as drift
+/// against superdev content. True when anything was removed.
+fn prune_custom_skills(manifest: &Manifest, lock: &mut Lock) -> bool {
+    let Some(config) = manifest.capabilities.get(Capability::Skills.as_str()) else {
+        return false;
+    };
+    let mut pruned = false;
+    for name in &config.custom {
+        pruned |= lock
+            .files
+            .remove(&format!(".claude/skills/{name}/SKILL.md"))
+            .is_some();
+    }
+    pruned
+}
+
+/// One line per skill released to the user, so custom state stays visible
+/// without reading the manifest.
+fn custom_lines(manifest: &Manifest) -> Vec<String> {
+    manifest
+        .capabilities
+        .get(Capability::Skills.as_str())
+        .map(|config| {
+            config
+                .custom
+                .iter()
+                .map(|name| format!("skills: {name} custom, unmanaged"))
+                .collect()
+        })
+        .unwrap_or_default()
 }
 
 /// A checksum-pinned capability's pin and this binary's default, when the two
@@ -464,6 +507,38 @@ mod tests {
             plannable.capabilities["knowledge"].version,
             manifest.capabilities["knowledge"].version
         );
+    }
+
+    #[test]
+    fn custom_skills_are_pruned_from_the_lock_and_reported() {
+        let mut manifest = Manifest::default_for("0.1.0", &[]);
+        manifest.capabilities.get_mut("skills").unwrap().custom =
+            vec!["humanise".into(), "grill-me".into()];
+        let mut lock = Lock::default();
+        lock.files
+            .insert(".claude/skills/humanise/SKILL.md".into(), "hash-a".into());
+        lock.files.insert(
+            ".claude/skills/double-check/SKILL.md".into(),
+            "hash-b".into(),
+        );
+        assert!(prune_custom_skills(&manifest, &mut lock));
+        assert!(!lock.files.contains_key(".claude/skills/humanise/SKILL.md"));
+        assert!(
+            lock.files
+                .contains_key(".claude/skills/double-check/SKILL.md")
+        );
+        // Nothing left to prune: reports no change.
+        assert!(!prune_custom_skills(&manifest, &mut lock));
+
+        assert_eq!(
+            custom_lines(&manifest),
+            vec![
+                "skills: humanise custom, unmanaged".to_string(),
+                "skills: grill-me custom, unmanaged".to_string(),
+            ]
+        );
+        let no_skills = Manifest::default_for("0.1.0", &[Capability::Skills]);
+        assert!(custom_lines(&no_skills).is_empty());
     }
 
     #[test]
