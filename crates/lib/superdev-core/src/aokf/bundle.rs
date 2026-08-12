@@ -3,6 +3,8 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
+use serde_yaml_ng::Value;
+
 use super::concept::{Concept, ParseError, parse_concept};
 use crate::error::{Error, Result};
 
@@ -14,8 +16,13 @@ pub struct Bundle {
     pub root: PathBuf,
     /// The root `manifest.aokf.yaml`, when it exists and parses.
     pub manifest: Option<BundleManifest>,
+    /// Why the manifest did not parse; `None` when it parsed or is absent.
+    pub manifest_error: Option<String>,
     /// Concepts that parsed, sorted by bundle-relative path.
     pub concepts: Vec<Concept>,
+    /// The reserved `index.md` files — bundle-relative path and full text —
+    /// sorted by path. Not concepts, but the validator checks their entries.
+    pub indexes: Vec<(String, String)>,
     /// Files that did not parse, sorted by bundle-relative path.
     pub broken: Vec<ParseError>,
 }
@@ -27,6 +34,9 @@ pub struct BundleManifest {
     pub aokf: Option<String>,
     /// Bundle name.
     pub name: Option<String>,
+    /// The whole document, for checks the typed fields drop — stamped keys,
+    /// and a manifest that is not a mapping at all.
+    pub raw: Value,
 }
 
 /// Load every concept under `dir`, recursively.
@@ -46,33 +56,48 @@ pub fn load_bundle(dir: &Path) -> Result<Bundle> {
         source: e,
     })?;
 
+    let (concept_paths, index_paths) = markdown_files(&root)?;
     let mut concepts = Vec::new();
     let mut broken = Vec::new();
-    for path in concept_files(&root)? {
+    for path in concept_paths {
         let relative = relative_path(&root, &path);
-        let text = fs::read_to_string(&path).map_err(|e| Error::Io {
-            path: path.clone(),
-            source: e,
-        })?;
-        match parse_concept(&relative, &text) {
+        match parse_concept(&relative, &read(&path)?) {
             Ok(concept) => concepts.push(concept),
             Err(e) => broken.push(e),
         }
     }
+    let mut indexes = Vec::new();
+    for path in index_paths {
+        indexes.push((relative_path(&root, &path), read(&path)?));
+    }
     concepts.sort_by(|a, b| a.path.cmp(&b.path));
     broken.sort_by(|a, b| a.path.cmp(&b.path));
+    indexes.sort_by(|(a, _), (b, _)| a.cmp(b));
 
+    let (manifest, manifest_error) = load_manifest(&root)?;
     Ok(Bundle {
-        manifest: load_manifest(&root)?,
         root,
+        manifest,
+        manifest_error,
         concepts,
+        indexes,
         broken,
     })
 }
 
-/// Every non-reserved `.md` file under `root`, in directory-walk order.
-fn concept_files(root: &Path) -> Result<Vec<PathBuf>> {
+/// Read a file, naming it in the error.
+fn read(path: &Path) -> Result<String> {
+    fs::read_to_string(path).map_err(|e| Error::Io {
+        path: path.to_path_buf(),
+        source: e,
+    })
+}
+
+/// Every `.md` file under `root`, as (concepts, `index.md` files), in
+/// directory-walk order.
+fn markdown_files(root: &Path) -> Result<(Vec<PathBuf>, Vec<PathBuf>)> {
     let mut files = Vec::new();
+    let mut indexes = Vec::new();
     let mut dirs = vec![root.to_path_buf()];
     while let Some(dir) = dirs.pop() {
         let entries = fs::read_dir(&dir).map_err(|e| Error::Io {
@@ -95,30 +120,37 @@ fn concept_files(root: &Path) -> Result<Vec<PathBuf>> {
             })?;
             if file_type.is_dir() {
                 dirs.push(path);
-            } else if name.ends_with(".md") && name != "index.md" {
+            } else if name == "index.md" {
+                indexes.push(path);
+            } else if name.ends_with(".md") {
                 files.push(path);
             }
         }
     }
-    Ok(files)
+    Ok((files, indexes))
 }
 
-/// Read the root manifest. A manifest that does not parse reads as absent;
-/// the validator reports it from the file itself.
-fn load_manifest(root: &Path) -> Result<Option<BundleManifest>> {
+/// Read the root manifest, returning it and the reason it did not parse. A
+/// manifest that does not parse reads as absent, so a consumer sees no
+/// half-read manifest; the validator reports the reason.
+fn load_manifest(root: &Path) -> Result<(Option<BundleManifest>, Option<String>)> {
     let path = root.join("manifest.aokf.yaml");
     let text = match fs::read_to_string(&path) {
         Ok(text) => text,
-        Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(None),
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok((None, None)),
         Err(e) => return Err(Error::Io { path, source: e }),
     };
-    let Ok(value) = serde_yaml_ng::from_str::<serde_yaml_ng::Value>(&text) else {
-        return Ok(None);
-    };
-    Ok(Some(BundleManifest {
-        aokf: value["aokf"].as_str().map(str::to_string),
-        name: value["name"].as_str().map(str::to_string),
-    }))
+    match serde_yaml_ng::from_str::<Value>(&text) {
+        Ok(raw) => Ok((
+            Some(BundleManifest {
+                aokf: raw["aokf"].as_str().map(str::to_string),
+                name: raw["name"].as_str().map(str::to_string),
+                raw,
+            }),
+            None,
+        )),
+        Err(e) => Ok((None, Some(e.to_string()))),
+    }
 }
 
 /// `path` relative to the bundle root, with forward slashes on every
@@ -172,10 +204,33 @@ mod tests {
     }
 
     #[test]
-    fn an_unparseable_manifest_reads_as_absent() {
+    fn an_unparseable_manifest_reads_as_absent_but_reports_why() {
         let dir = tempfile::tempdir().unwrap();
         std::fs::write(dir.path().join("manifest.aokf.yaml"), "aokf: [unclosed\n").unwrap();
-        assert!(load_bundle(dir.path()).unwrap().manifest.is_none());
+        let b = load_bundle(dir.path()).unwrap();
+        assert!(b.manifest.is_none());
+        assert!(b.manifest_error.is_some());
+    }
+
+    #[test]
+    fn index_files_are_kept_with_their_text() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::create_dir(dir.path().join("sub")).unwrap();
+        std::fs::write(dir.path().join("index.md"), "# Index\n\n* [a](a.md)\n").unwrap();
+        std::fs::write(dir.path().join("sub/index.md"), "# Sub\n").unwrap();
+        let b = load_bundle(dir.path()).unwrap();
+        let paths: Vec<&str> = b.indexes.iter().map(|(p, _)| p.as_str()).collect();
+        assert_eq!(paths, vec!["index.md", "sub/index.md"]);
+        assert!(b.indexes[0].1.contains("[a](a.md)"));
+    }
+
+    #[test]
+    fn a_manifest_that_is_not_a_mapping_keeps_its_raw_value() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::write(dir.path().join("manifest.aokf.yaml"), "- one\n").unwrap();
+        let b = load_bundle(dir.path()).unwrap();
+        assert!(b.manifest_error.is_none());
+        assert!(b.manifest.unwrap().raw.is_sequence());
     }
 
     #[test]

@@ -78,8 +78,11 @@ pub struct Concept {
     /// Typed edges to other concepts.
     pub links: Vec<Link>,
     /// The whole frontmatter, unmodified, for checks the typed fields drop —
-    /// unknown keys, `stamped` fields, wrongly typed values.
+    /// unknown keys, `stamped` fields, wrongly typed values. Always a mapping.
     pub raw: Value,
+    /// Everything after the frontmatter, verbatim. The validator reads links
+    /// and footnotes from it, so it must carry no frontmatter-derived text.
+    pub body: String,
     /// Retrievable slices of the document.
     pub sections: Vec<Section>,
 }
@@ -104,8 +107,8 @@ pub struct ParseError {
 ///
 /// # Errors
 ///
-/// Returns [`ParseError`] when the file has no frontmatter block, or when
-/// that block is not valid YAML.
+/// Returns [`ParseError`] when the file has no frontmatter block, when that
+/// block is not valid YAML, or when it is not a mapping.
 pub fn parse_concept(path: &str, text: &str) -> Result<Concept, ParseError> {
     let error = |message: String| ParseError {
         path: path.to_string(),
@@ -115,6 +118,9 @@ pub fn parse_concept(path: &str, text: &str) -> Result<Concept, ParseError> {
         error("no frontmatter: expected a `---` line, then a closing `---`".into())
     })?;
     let raw: Value = serde_yaml_ng::from_str(&yaml).map_err(|e| error(e.to_string()))?;
+    if !raw.is_mapping() {
+        return Err(error("frontmatter is not a mapping".into()));
+    }
 
     let title = string_field(&raw, "title");
     let description = string_field(&raw, "description");
@@ -154,11 +160,18 @@ pub fn parse_concept(path: &str, text: &str) -> Result<Concept, ParseError> {
             fm_end_line,
             &frontmatter_text(title.as_deref(), description.as_deref(), &tags),
         ),
+        body: body_after(text, fm_end_line).to_string(),
         title,
         description,
         tags,
         raw,
     })
+}
+
+/// Everything after the frontmatter's closing `---`.
+fn body_after(text: &str, fm_end_line: usize) -> &str {
+    let starts = line_starts(text);
+    &text[starts.get(fm_end_line).copied().unwrap_or(text.len())..]
 }
 
 /// Split off the frontmatter block, returning its YAML text and the 1-based
@@ -458,6 +471,20 @@ mod tests {
         let doc = "---\ntype: T\n---\n\n# Real\n\n```\n# not a heading\n```\n";
         let c = parse_concept("x.md", doc).unwrap();
         assert_eq!(c.sections.len(), 2); // root + Real
+    }
+
+    #[test]
+    fn frontmatter_that_is_not_a_mapping_is_a_parse_error() {
+        for text in ["---\n- one\n---\nb\n", "---\n---\nb\n"] {
+            let e = parse_concept("x.md", text).unwrap_err();
+            assert_eq!(e.message, "frontmatter is not a mapping");
+        }
+    }
+
+    #[test]
+    fn the_body_is_kept_verbatim() {
+        let c = parse_concept("x.md", "---\ntype: T\ntitle: T\n---\n# H\n\n[a](a.md)\n").unwrap();
+        assert_eq!(c.body, "# H\n\n[a](a.md)\n");
     }
 
     #[test]
