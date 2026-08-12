@@ -1,0 +1,14 @@
+{
+  "concepts": 2,
+  "checked_level": 2,
+  "achieved_level": 1,
+  "passed": false,
+  "findings": [
+    {
+      "severity": "error",
+      "error_at_level": 2,
+      "file": "alpha.md",
+      "message": "links[0] `to: beta` has no mirroring body link"
+    }
+  ]
+}

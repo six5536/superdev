@@ -1,0 +1,44 @@
+{
+  "concepts": 1,
+  "checked_level": 2,
+  "achieved_level": 1,
+  "passed": false,
+  "findings": [
+    {
+      "severity": "warning",
+      "error_at_level": null,
+      "file": "alpha.md",
+      "message": "broken body link: ghost.md"
+    },
+    {
+      "severity": "warning",
+      "error_at_level": null,
+      "file": "alpha.md",
+      "message": "`resource` path does not exist: /nowhere.rs"
+    },
+    {
+      "severity": "warning",
+      "error_at_level": null,
+      "file": "alpha.md",
+      "message": "sources[0].resource does not exist: /also-missing.rs"
+    },
+    {
+      "severity": "error",
+      "error_at_level": 2,
+      "file": "alpha.md",
+      "message": "links[0] `to: nowhere-at-all` resolves to no concept id or path"
+    },
+    {
+      "severity": "error",
+      "error_at_level": 2,
+      "file": "alpha.md",
+      "message": "links[1] `to: /ghost.md` resolves to no concept id or path"
+    },
+    {
+      "severity": "warning",
+      "error_at_level": null,
+      "file": "index.md",
+      "message": "index entry points at missing file: ghost.md"
+    }
+  ]
+}

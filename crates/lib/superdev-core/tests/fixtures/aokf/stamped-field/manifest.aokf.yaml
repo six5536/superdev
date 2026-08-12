@@ -1,0 +1,5 @@
+aokf: "0.1"
+name: parity-stamped-field
+producer: exporter/1.0
+generated: { by: process:export, at: "2026-08-04T09:00:00Z" }
+counts: 1

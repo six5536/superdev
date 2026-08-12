@@ -1,0 +1,26 @@
+{
+  "concepts": 3,
+  "checked_level": 2,
+  "achieved_level": -1,
+  "passed": false,
+  "findings": [
+    {
+      "severity": "error",
+      "error_at_level": 0,
+      "file": "blank-type.md",
+      "message": "missing or empty required field `type`"
+    },
+    {
+      "severity": "error",
+      "error_at_level": 0,
+      "file": "empty-type.md",
+      "message": "missing or empty required field `type`"
+    },
+    {
+      "severity": "error",
+      "error_at_level": 0,
+      "file": "no-type.md",
+      "message": "missing or empty required field `type`"
+    }
+  ]
+}
