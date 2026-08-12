@@ -6,7 +6,12 @@ set -euo pipefail
 
 root="${CLAUDE_PROJECT_DIR:-$(cd "$(dirname "$0")/../../.." && pwd)}"
 
-path="$(python3 -c 'import json,sys; print(json.load(sys.stdin).get("tool_input",{}).get("file_path",""))' 2>/dev/null || true)"
+# No `|| true`: a missing python3 or unparseable payload must fail loudly,
+# because a silent skip here silently stops validating the bundle.
+if ! path="$(python3 -c 'import json,sys; print(json.load(sys.stdin).get("tool_input",{}).get("file_path",""))')"; then
+  echo "AOKF validation hook: could not read the tool payload (python3 missing or malformed JSON on stdin)." >&2
+  exit 2
+fi
 case "$path" in
   "$root"/knowledge/*|knowledge/*) ;;
   *) exit 0 ;;
