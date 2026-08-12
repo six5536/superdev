@@ -74,7 +74,9 @@ pub fn init(root: &Path, args: &InitArgs) -> Result<u8> {
             message: "not a git repository — run `git init` first".into(),
         });
     }
-    if root.join(".superdev").exists() {
+    // The manifest, not the directory: the knowledge tools create
+    // `.superdev/cache/` in repos that were never initialised.
+    if root.join(CONFIG_PATH).is_file() {
         return Err(Error::Manifest {
             message: "already initialised — run `superdev sync`".into(),
         });

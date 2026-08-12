@@ -451,6 +451,45 @@ fn init_no_skills_skips_the_pack() {
 }
 
 #[test]
+fn init_ignores_a_cache_left_by_the_knowledge_tools() {
+    // `superdev mcp aokf` writes .superdev/cache/ in repos it never initialised.
+    // Only the manifest means initialised.
+    let dir = tempfile::tempdir().unwrap();
+    std::fs::create_dir_all(dir.path().join(".git")).unwrap();
+    std::fs::create_dir_all(dir.path().join(".superdev/cache/aokf-index")).unwrap();
+    superdev()
+        .current_dir(dir.path())
+        .args([
+            "init",
+            "--no-workflows",
+            "--no-frontend",
+            "--no-code-index",
+            "--no-knowledge",
+        ])
+        .assert()
+        .success();
+    assert!(dir.path().join(".superdev/config.toml").is_file());
+}
+
+#[test]
+fn init_refuses_when_the_manifest_exists() {
+    let dir = skills_repo();
+    let out = superdev()
+        .current_dir(dir.path())
+        .args([
+            "init",
+            "--no-workflows",
+            "--no-frontend",
+            "--no-code-index",
+            "--no-knowledge",
+        ])
+        .assert()
+        .code(2);
+    let stderr = String::from_utf8_lossy(&out.get_output().stderr).into_owned();
+    assert!(stderr.contains("already initialised"), "{stderr}");
+}
+
+#[test]
 fn a_drifted_skill_is_drift_until_marked_custom() {
     let dir = skills_repo();
     let skill = dir.path().join(".claude/skills/humanise/SKILL.md");
