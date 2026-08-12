@@ -16,6 +16,11 @@ categories.workspace = true
 all-features = true
 rustdoc-args = ["--cfg", "docsrs"]
 
+[lints.rust]
+# `coverage_nightly` is set by cargo-llvm-cov under the nightly coverage job; it
+# is an expected cfg, not a typo, on every other toolchain.
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(coverage_nightly)'] }
+
 [dependencies]
 model2vec-rs = { workspace = true }
 pulldown-cmark = { workspace = true }
@@ -26,6 +31,7 @@ serde_yaml_ng = { workspace = true }
 sha2 = { workspace = true }
 tantivy = { workspace = true }
 toml_edit = { workspace = true }
+ureq = { workspace = true }
 
 [dev-dependencies]
 tempfile = { workspace = true }

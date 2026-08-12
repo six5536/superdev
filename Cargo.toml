@@ -33,6 +33,9 @@ serde_yaml_ng = "0.10.0"
 sha2 = "0.11.0"
 tantivy = "0.26.1"
 toml_edit = { version = "0.25.13", features = ["serde"] }
+# Already in the tree as model2vec-rs → hf-hub's HTTP client; pinned to the
+# version that resolves there so declaring it adds nothing to the build.
+ureq = { version = "2.12.1", features = ["json"] }
 
 # Dev dependencies
 assert_cmd = "2.2"

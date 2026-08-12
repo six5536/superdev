@@ -2109,6 +2109,7 @@ dependencies = [
  "tantivy",
  "tempfile",
  "toml_edit",
+ "ureq",
 ]
 
 [[package]]

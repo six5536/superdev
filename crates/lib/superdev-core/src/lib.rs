@@ -6,6 +6,10 @@
 //! actions run, and it rolls the run back when one fails. The binary in
 //! `crates/app/superdev` parses arguments and calls in here; the two release
 //! in lockstep.
+// Under the nightly coverage job (cargo-llvm-cov sets `coverage_nightly`), enable
+// the attribute used to exclude genuinely untestable glue from coverage. Inert on
+// the stable toolchain used for normal builds and tests.
+#![cfg_attr(coverage_nightly, feature(coverage_attribute))]
 #![warn(missing_docs)]
 
 pub mod action;

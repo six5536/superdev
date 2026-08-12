@@ -6,6 +6,7 @@ use std::path::Path;
 
 use serde::{Deserialize, Serialize};
 
+use crate::aokf::embed::EmbeddingsConfig;
 use crate::capability::Capability;
 use crate::error::{Error, Result};
 use crate::registry;
@@ -21,6 +22,10 @@ pub struct CapabilityConfig {
     /// Version pin; None when the source manages versions.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub version: Option<String>,
+    /// Embedding provider for capabilities that index text. Absent = the
+    /// bundled local model.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub embeddings: Option<EmbeddingsConfig>,
 }
 
 /// The manifest: blueprint version plus one table per enabled capability.
@@ -45,6 +50,7 @@ impl Manifest {
                     CapabilityConfig {
                         provider: e.provider.to_string(),
                         version: e.version.map(str::to_string),
+                        embeddings: None,
                     },
                 )
             })
@@ -126,6 +132,17 @@ mod tests {
             m.capabilities["code-index"].version.as_deref(),
             Some("1.2.3")
         );
+    }
+
+    #[test]
+    fn embeddings_survive_a_round_trip_and_stay_optional() {
+        let mut m = Manifest::default_for("0.1.0", &[]);
+        assert!(!m.to_toml().contains("embeddings"));
+        m.capabilities.get_mut("knowledge").unwrap().embeddings = Some(EmbeddingsConfig {
+            provider: "openai".into(),
+            model: "text-embedding-3-small".into(),
+        });
+        assert_eq!(Manifest::parse(&m.to_toml()).unwrap(), m);
     }
 
     #[test]

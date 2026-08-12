@@ -35,6 +35,11 @@ pub enum Error {
         /// What is wrong.
         message: String,
     },
+    /// An embedding model could not be loaded or called.
+    Embedding {
+        /// What failed, and where.
+        message: String,
+    },
 }
 
 /// Alias used across the crate.
@@ -60,6 +65,7 @@ impl fmt::Display for Error {
                 }
             }
             Error::Manifest { message } => write!(f, "manifest: {message}"),
+            Error::Embedding { message } => write!(f, "embedding: {message}"),
         }
     }
 }
@@ -121,6 +127,14 @@ mod tests {
             }
             .to_string(),
             "manifest: no name"
+        );
+
+        assert_eq!(
+            Error::Embedding {
+                message: "OPENAI_API_KEY is not set".into()
+            }
+            .to_string(),
+            "embedding: OPENAI_API_KEY is not set"
         );
     }
 }
