@@ -35,8 +35,8 @@ Five skills, absorbed from goodbye-tinnitus and this repo:
 | aokf-maintain | this repo | validator command generalised, below |
 
 Plus the PostToolUse validation hook: after any Edit/Write under
-`knowledge/`, run `superdev aokf validate knowledge --level 2` and block on
-errors — the hook managed repos lacked until now.
+`knowledge/`, validate the bundle and block on errors — the hook managed
+repos lacked until now.
 
 Excluded: playwright-cli (browser automation belongs with the frontend
 capability's territory, not the skill pack). A knowledge-capture skill —
@@ -119,16 +119,20 @@ settings entry are always owned — infrastructure, not prose.
 
 # The hook
 
-- Script at `.superdev/hooks/aokf-validate.sh` (committed, owned).
-- Registered in `.claude/settings.json`. Hook entries live in an array, so
-  this is the array-element analogue of the `.mcp.json` key merge: superdev
-  finds its own PostToolUse entry by content, adds or updates it, and leaves
-  the user's entries untouched.
-- Gates: paths outside `knowledge/` exit 0. Inside the bundle it validates
-  and exits 2 with findings on failure. An unreadable payload or a missing
-  binary is a loud exit 2, never a silent skip.
-- The binary is `${SUPERDEV_BIN:-superdev}`, so source checkouts and CI can
-  point the hook at `cargo run --quiet --`.
+- A plumbing subcommand, not a script: `superdev aokf hook validate` reads
+  the PostToolUse payload from stdin, exits 0 unless the edited path is
+  under `knowledge/`, and otherwise validates in-process, printing findings
+  to stderr and exiting 2 to block. No bash, no python3 — the same command
+  works on every platform superdev ships for. `hook` is a subcommand group;
+  future hooks get their own verbs beside `validate`.
+- Registered in `.claude/settings.json` with the literal command
+  `superdev aokf hook validate`. Hook entries live in an array, so this is
+  the array-element analogue of the `.mcp.json` key merge: superdev finds
+  its own PostToolUse entry by content, adds or updates it, and leaves the
+  user's entries untouched.
+- An unreadable payload is a loud exit 2, never a silent skip. A missing
+  binary surfaces as the hook command failing (command not found) — softer
+  than exit 2, but such a machine cannot run any superdev verb anyway.
 
 # Engine integration
 
@@ -148,8 +152,10 @@ This repo becomes a managed repo for the skills capability only: committed
 `.superdev/config.toml` (other capabilities off — their repo-side files
 intentionally differ here) and `lock.toml`. Skills and hook are materialised
 by `cargo run -- sync`, replacing the hand-maintained `.claude/skills/`
-copies and the hand-written hook entry; `SUPERDEV_BIN` in the settings `env`
-block points the shipped hook at cargo. The pre-PR check list and CI gain
+copies and the hand-written hook entry. The managed hook command expects
+`superdev` on PATH, so the devcontainer gets a two-line `scripts/superdev`
+shim (added to PATH via mise) that execs `cargo run --quiet --`; the shim is
+dev tooling, never shipped. The pre-PR check list and CI gain
 `cargo run -- status`, so asset drift fails the build through the product's
 own drift detection instead of a parity test.
 
@@ -157,8 +163,8 @@ own drift detection instead of a parity test.
 
 - Component unit tests: plan on missing/drifted/converged files, `custom`
   exclusion from plan and lock, `update skills@<version>` refusal.
-- Hook script tests with stubbed payloads: non-knowledge path exits 0,
-  broken bundle blocks, missing binary blocks loudly.
+- Hook subcommand tests with stubbed payloads: non-knowledge path exits 0,
+  broken bundle exits 2 with findings, malformed payload exits 2 loudly.
 - Registry test asserts the skills slot is available.
 - CLI integration tests cover the capability in init/status/sync golden
   paths; `status` on this repo stays clean in CI.
