@@ -2,7 +2,7 @@
 type: Convention
 id: error-handling
 title: Error Handling & Logging
-description: Exit codes, the broken-pipe rule, why MCP tool failures never end the process, and how a failed apply reports what it could not undo.
+description: Exit codes, the broken-pipe rule, the validation hook's blocking exit 2, why MCP tool failures never end the process, and how a failed apply reports what it could not undo.
 status: stable
 resource: /crates/app/superdev/src/main.rs
 ---
@@ -15,7 +15,8 @@ resource: /crates/app/superdev/src/main.rs
   `aokf validate` found errors in the bundle. CI gates on both.
 - `2` — usage error (clap), a hard failure, or an I/O failure, rendered as
   `error: <message>` on stderr. A failed `sync` or `init` exits `2`, as does
-  `mcp aokf` when it cannot start.
+  `mcp aokf` when it cannot start. The validation hook uses `2` for its own
+  purpose — see below.
 
 A closed stdout pipe is the one I/O failure that is not an error: a reader
 that stops early (`| head`, a pager quit) ends the run at `0`, silently.
@@ -24,6 +25,21 @@ that stops early (`| head`, a pager quit) ends the run at `0`, silently.
 that everything gating on the old script's exit code — the hook,
 `npm run check:aokf`, CI — gates the same way on the binary. See
 [development-commands](development-commands.md).
+
+# The validation hook
+
+`aokf hook validate` speaks Claude Code's hook protocol instead. It exits `0`
+whenever Claude Code should let the edit through: the payload names no file, or
+names one outside `knowledge/`, or names one the bundle still validates
+against. Otherwise the findings go to stderr and it exits `2`, which Claude
+Code hands back to the agent as a blocking error. A payload it cannot read or
+parse is a loud `2` too — skipping silently would silently stop validating the
+bundle.
+
+A missing `superdev` on PATH never reaches any of that: the hook command fails
+to start, which Claude Code reports as a failed command rather than a block.
+Softer than exit `2`, and a machine without the binary cannot run any superdev
+verb anyway.
 
 # MCP tools never exit
 

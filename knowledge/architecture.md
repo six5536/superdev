@@ -49,13 +49,20 @@ A capability is a slot; the tool filling it is a swappable provider.
 | `code-index` | `codegraph`       | checksummed release bundle (mise `http`) + `mise exec -- codegraph init` |
 | `workflows`  | `superpowers`     | mise pin + Claude Code plugin   |
 | `frontend`   | `frontend-design` | Claude Code plugin              |
-| `skills`     | `superdev-plugin` | slot only; no provider yet      |
+| `skills`     | `superdev-skills` | owned files in the repo         |
 
 `workflows` and `code-index` are fetched by URL and verified against a
 checksum this binary carries beside the version, so superdev installs the
 registry version of those two and refuses any other — see
 [api-contracts](api-contracts.md). codegraph's bundles vendor their own Node,
 so a managed repo needs no node of its own.
+
+`skills` refuses any other version for a different reason: the five skill
+files are embedded in the binary, which makes this binary the provenance.
+Nothing is installed. `sync` writes them to `.claude/skills/<name>/SKILL.md`
+and merges one PostToolUse entry into `.claude/settings.json`; Claude Code
+reads both natively, so a teammate who clones the repo gets the pack and the
+validation hook without installing superdev.
 
 # Files in a managed repo
 

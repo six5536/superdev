@@ -12,7 +12,8 @@ resource: /crates/app/superdev/src/main.rs
 ```
 superdev                     print help, exit 0
 superdev init                set this repo up; --no-knowledge, --no-code-index,
-                             --no-workflows, --no-frontend disable a capability
+                             --no-workflows, --no-frontend, --no-skills each
+                             disable a capability
 superdev status              report drift; exit 1 when there is work to do
 superdev sync                re-apply the blueprint; --dry-run prints the plan only
 superdev update [TARGET]     move pins to this binary's defaults, then sync;
@@ -22,6 +23,8 @@ superdev aokf validate [PATH]
                              on errors. --level 0..2 (default 2), --json,
                              --repo-root <DIR> for `/`-rooted paths
 superdev aokf index [PATH]   rebuild the search index from scratch
+superdev aokf hook validate  the Claude Code PostToolUse hook: payload on
+                             stdin, validate when the edit touched the bundle
 superdev mcp aokf            serve the bundle to agents over MCP on stdio
 superdev completions <SHELL> write a completion script to stdout
                              (bash | zsh | fish | powershell | elvish)
@@ -32,23 +35,29 @@ superdev man                 (hidden; roff to stdout, for packaging)
 Every verb acts on the current directory.
 
 - **`init`** refuses a directory that is not a git repo, and refuses a re-run
-  once `.superdev/` exists (it points at `sync`). It writes the manifest, then
-  applies the whole blueprint and the `.gitignore` lines.
+  once `.superdev/config.toml` exists (it points at `sync`). The guard is the
+  manifest rather than the directory, because the knowledge verbs create
+  `.superdev/cache/` in repos that were never initialised. It writes the
+  manifest, then applies the whole blueprint and the `.gitignore` lines.
 - **`status`** never writes. It exits `1` on any drift, missing component, or
-  pin behind this binary's registry, so CI can gate on it.
-- **`sync`** refuses to run while `workflows` or `code-index` is pinned
-  anywhere other than the registry default, and says to run `superdev update`.
-  Both are downloaded by URL and verified against a checksum baked into this
-  binary beside the version, so no other version has provenance — or a URL. On a fresh
-  clone it runs `mise trust` then `mise install` before any provider command,
-  because the committed pins need no edit yet name tools this machine has
-  never installed — and mise will not install from a config this machine has
-  never trusted.
-- **`update`** rejects an explicit `workflows@<version>` or
-  `code-index@<version>` for the same reason. Every other capability takes an
-  explicit version.
+  pin behind this binary's registry, so CI can gate on it. Each skill released
+  by `[skills] custom` prints as `skills: <name> custom, unmanaged` — a
+  released skill is the user's file, not drift, so it leaves the code alone.
+- **`sync`** refuses to run while `workflows`, `code-index` or `skills` is
+  pinned anywhere other than the registry default, and says to run
+  `superdev update`. The first two are downloaded by URL and verified against a
+  checksum baked into this binary beside the version, so no other version has
+  provenance — or a URL; the skill pack's content is embedded in the binary, so
+  the binary is its provenance. On a fresh clone it runs `mise trust` then
+  `mise install` before any provider command, because the committed pins need no
+  edit yet name tools this machine has never installed — and mise will not
+  install from a config this machine has never trusted.
+- **`update`** rejects an explicit `workflows@<version>`,
+  `code-index@<version>` or `skills@<version>` for the same reason. Every other
+  capability takes an explicit version.
 
-Both knowledge verbs default `PATH` to `knowledge/`. The search index lives in
+`aokf validate` and `aokf index` default `PATH` to `knowledge/`; the hook
+always reads the bundle at `knowledge/`. The search index lives in
 `.superdev/cache/aokf-index/`; `aokf index` and the server use it, `aokf
 validate` never opens it.
 
@@ -59,6 +68,11 @@ validate` never opens it.
 - **`aokf index`** forces a full rebuild. Nothing else needs it: the server
   syncs lazily on every tool call. It says so when no embedding model loaded
   and the index is lexical-only.
+- **`aokf hook validate`** reads the PostToolUse payload from stdin and exits
+  `0` unless the edited path is under the bundle. Then it validates in-process
+  and, on errors, prints them to stderr and exits `2` — which Claude Code hands
+  back to the agent as a blocking error. It resolves the repo from
+  `CLAUDE_PROJECT_DIR` when Claude Code sets it, else the working directory.
 - **`mcp aokf`** serves one stdio client and exits `0` when that client closes
   stdin. A missing bundle or an unusable index directory fails at startup
   rather than at every tool call, because a client cannot act on the latter.

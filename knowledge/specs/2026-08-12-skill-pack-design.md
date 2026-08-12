@@ -3,7 +3,7 @@ type: Spec
 id: spec-skill-pack
 title: Skill Pack
 description: Design for the skills capability — five skills and the validation hook shipped as owned repo files, with a PROJECT.md extension layer and a per-skill custom opt-out.
-status: draft
+status: stable
 links:
   - rel: relates-to
     to: spec-cli-core-blueprint-engine

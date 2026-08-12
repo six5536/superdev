@@ -2,7 +2,7 @@
 type: Procedure
 id: development-procedure
 title: Development Procedure
-description: Setup, the spec-and-plan change workflow, what to run before a PR, and how this repo serves and searches its own knowledgebase.
+description: Setup, the spec-and-plan change workflow, what to run before a PR, how this repo manages its own skills, and how it serves and searches its own knowledgebase.
 status: stable
 sources:
   - id: contributing
@@ -28,18 +28,33 @@ no Node.
 4. Before a PR, run the full CI-equivalent check list (see
    [development-commands](development-commands.md)) and meet
    [definition-of-done](definition-of-done.md). CI runs tests on macOS and
-   Windows, and the coverage gate on Linux.
+   Windows, the blueprint-drift check on every platform, and the coverage gate
+   on Linux.
+
+# This repo manages its own skills
+
+superdev fills the `skills` capability here and nothing else: committed
+`.superdev/config.toml` and `.superdev/lock.toml`, with `cargo run -- sync`
+writing the five skills and the PostToolUse hook entry. The other capabilities
+are off, because their repo-side files intentionally differ here.
+`npm run check:blueprint` is what catches drift in the shipped skill assets —
+in the pre-PR list and in CI, through the product's own drift detection rather
+than a parity test.
+
+The managed hook entry names a bare `superdev`, and this repo has no installed
+copy. `scripts/superdev` execs `cargo run` against this tree; symlink it onto
+your PATH once, as [CONTRIBUTING](/CONTRIBUTING.md) says.
 
 # Working with this repo's knowledgebase
 
 The bundle is served to agents over MCP, and this repo has no installed
 `superdev` to serve it, so everything points at the working tree instead:
-`.mcp.json` runs `cargo run --quiet -- mcp aokf`, and both the Claude Code
-validation hook and `npm run check:aokf` run
-`cargo run --quiet -- aokf validate knowledge`. Compilation is cached, so the
-cost after the first build is negligible — and every check tests the code you
-are editing rather than a binary from last month. A managed repo names its
-installed `superdev` instead, and gets no hook at all.
+`.mcp.json` runs `cargo run --quiet -- mcp aokf`, and `npm run check:aokf`
+runs `cargo run --quiet -- aokf validate knowledge`. Compilation is cached, so
+the cost after the first build is negligible — and every check tests the code
+you are editing rather than a binary from last month. A managed repo names its
+installed `superdev` in both places, and gets the same validation hook this one
+does.
 
 One search trap: specs and plans quote the question you are asking, at length,
 in prose. A search for behaviour will happily return the spec that proposed it

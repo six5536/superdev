@@ -19,10 +19,14 @@ Everything is wrapped as npm scripts (defined in
   `check:aokf`).
 - Knowledgebase: `npm run check:aokf` is
   `cargo run --quiet -- aokf validate knowledge` — the binary validating this
-  repo's own bundle, and the same command the Claude Code hook runs. It exits
-  1 on errors; warnings alone still pass. `cargo run -- aokf index` forces a
-  full rebuild of the search index, which nothing routine needs: the MCP
-  server syncs it lazily on every tool call.
+  repo's own bundle. It exits 1 on errors; warnings alone still pass. The
+  Claude Code hook checks the same bundle by a different route,
+  `superdev aokf hook validate`. `cargo run -- aokf index` forces a full
+  rebuild of the search index, which nothing routine needs: the MCP server
+  syncs it lazily on every tool call.
+- Blueprint: `npm run check:blueprint` is `cargo run --quiet -- status` — the
+  superdev-owned files here (the five skills and the hook entry) still match
+  the blueprint. It exits 1 on drift, so CI gates on it.
 - Coverage: `npm run coverage` (HTML) / `coverage:summary` /
   `coverage:check` (the ≥90%-per-crate gate; needs the nightly toolchain).
 - Packaging: `npm run test:launcher`, `npm run verify-version` (16 locations

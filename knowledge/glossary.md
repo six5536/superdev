@@ -2,7 +2,7 @@
 type: Glossary
 id: glossary
 title: Domain Glossary
-description: The terms the blueprint engine uses — blueprint, capability, provider, component, owned file, scaffold — plus the search terms section, locator, hybrid search and RRF.
+description: The terms the blueprint engine uses — blueprint, capability, provider, component, owned file, scaffold, skill pack, PROJECT.md layer, custom skill — plus the search terms section, locator, hybrid search and RRF.
 status: stable
 ---
 
@@ -21,6 +21,16 @@ status: stable
   The embedded AOKF spec and validator are owned.
 - **Scaffold** — a file superdev writes once and never touches again, such as
   `AGENTS.md`. It is the user's from the moment it exists, so it cannot drift.
+- **Skill pack** — the five skills the `skills` capability ships as owned files
+  under `.claude/skills/`, embedded in the binary and versioned with it. Claude
+  Code loads them from there natively, so there is nothing to install.
+- **PROJECT.md layer** — a `PROJECT.md` beside a shipped skill. Every SKILL.md
+  ends with a trailer telling the agent to read it and let it win on conflict,
+  so a project extends a stock skill without forking it. superdev never writes
+  or tracks the file.
+- **Custom skill** — a skill named in `[skills] custom` and thereby released
+  from management: superdev stops writing it, drops its hash from the lock, and
+  `status` reports it as unmanaged rather than drifted.
 
 Terms from the knowledge-serving side:
 

@@ -10,5 +10,6 @@
 - [ ] `cargo test --doc --workspace` passes
 - [ ] `npm run test:launcher` and `npm run verify-version` pass
 - [ ] `npm run check:aokf` passes (if `knowledge/` changed)
+- [ ] `npm run check:blueprint` passes (no drift from the blueprint)
 - [ ] `npm run coverage:check` passes (per-crate line coverage >= 90%)
 - [ ] Docs updated (README / knowledge / rustdoc) where behaviour changed

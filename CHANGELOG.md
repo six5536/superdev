@@ -23,8 +23,9 @@ publish a version it cannot find a heading for.
   (what was applied, with hashes of superdev-owned files), plus a gitignored
   `.superdev/cache/` for backups
 - Managed capabilities: `knowledge` (a native AOKF bundle), `code-index`
-  (codegraph), `workflows` (Superpowers) and `frontend` (Anthropic's
-  frontend-design plugin); each can be disabled with `init --no-<capability>`
+  (codegraph), `workflows` (Superpowers), `frontend` (Anthropic's
+  frontend-design plugin) and `skills` (superdev's own pack, below); each can
+  be disabled with `init --no-<capability>`
 - `workflows` and `code-index` install from checksum-verified release
   bundles pinned in the binary, so `update <capability>@<version>` refuses
   an explicit version for them — bare `update` moves them to the binary's
@@ -44,6 +45,17 @@ publish a version it cannot find a heading for.
 - `init` registers the server in `.mcp.json` under
   `mcpServers.superdev-aokf`, merging into whatever servers are already
   there
+- The `skills` capability: five skills (aokf-maintain, double-check,
+  grill-me, humanise, self-improve) written into `.claude/skills/` as
+  superdev-owned files, plus a PostToolUse hook in `.claude/settings.json`
+  that runs `superdev aokf hook validate` and blocks edits that break the
+  bundle. Claude Code loads both natively — nothing to install
+- Per-skill customisation: a `PROJECT.md` beside a skill extends it and is
+  never touched; `custom = ["<name>"]` under `[skills]` releases a skill
+  from management entirely. The pack's version is the binary's, so
+  `update skills@<version>` is refused like the other pinned capabilities
+- `superdev aokf hook validate`: the hook as a subcommand — payload on
+  stdin, validates in-process, works on every platform superdev ships for
 
 ### Changed
 
