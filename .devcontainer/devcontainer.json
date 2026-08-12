@@ -10,7 +10,8 @@
   "containerEnv": {
     "SCCACHE_DIR": "/home/vscode/.cache/sccache",
     "CONTAINER_WORKSPACE_FOLDER": "${containerWorkspaceFolder}",
-    "CLAUDE_CONFIG_DIR": "/home/vscode/.claude"
+    "CLAUDE_CONFIG_DIR": "/home/vscode/.claude",
+    "ENTIRE_TOKEN_STORE": "file"
   },
   "mounts": [
     // Keep high-churn build artifacts on a local named volume instead virtiofs workspace share

@@ -20,3 +20,6 @@ cargo-binstall = "1.21.0"
 "cargo:cargo-zigbuild" = "0.22.3"
 "cargo:cargo-nextest" = "0.9.137"
 "cargo:cargo-llvm-cov" = "0.8.7"
+
+[env]
+ENTIRE_TOKEN_STORE = "file"
