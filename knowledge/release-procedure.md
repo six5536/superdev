@@ -17,9 +17,9 @@ Releases are tag-driven; the authoritative walkthrough is
    before cutting a release. `npm run release` and the release workflow both
    refuse a version with no section; the section becomes the GitHub release
    notes.
-2. **`npm run release X.Y.Z`** sets the version everywhere in lockstep (16
-   locations including both lockfiles), verifies, commits, and tags — it
-   never pushes.
+2. **`npm run release X.Y.Z`** sets the version everywhere in lockstep (18
+   locations, including both lockfiles and this repo's own skills pin in
+   `.superdev/`), verifies, commits, and tags — it never pushes.
 3. **Review, then `git push --follow-tags`.** Pushing the tag triggers the
    publish, which cannot be undone (crates.io never; npm after 72 hours).
 4. The workflow verifies, runs the full check gate, cross-builds, dry-runs

@@ -14,6 +14,13 @@ status: draft
   during the skill-pack design
   ([spec](specs/2026-08-12-skill-pack-design.md)) and deferred to the
   knowledge-upkeep sub-project.
+- **Gating the AOKF hook on the knowledge capability.** The hook validates any
+  edit under `knowledge/`, and its settings entry ships with the skills
+  capability. A repo initialised `--no-knowledge` with skills on therefore
+  blocks edits to its own unrelated `knowledge/` directory, and the only escape
+  is `--no-skills`. As designed
+  ([spec](specs/2026-08-12-skill-pack-design.md)); a refinement would gate the
+  hook on the knowledge capability or on a bundle marker.
 - **Repos that already have an agent entry point.** `init` scaffolds
   `AGENTS.md`, so adopting superdev in a repo with an incumbent entry file —
   goodbye-tinnitus's `CLAUDE.md`, say — leaves two of them competing. Merge,

@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 // Set one version across the whole project in lockstep: the Cargo workspace
 // version (and the internal superdev-core dep), every package.json under
-// packages/, and the launcher's pinned optionalDependencies.
+// packages/, the launcher's pinned optionalDependencies, and this repo's own
+// skills pin in .superdev/.
 //
 // Usage: node scripts/set-version.mjs <version>
 
@@ -49,6 +50,22 @@ for (const name of readdirSync(pkgsDir)) {
   writeFileSync(p, JSON.stringify(json, null, 2) + "\n");
 }
 
+// This repo is itself a superdev-managed repo, and the skills component's
+// version comes from CARGO_PKG_VERSION. Left unbumped, the pin in .superdev
+// falls behind the compiled registry and `superdev status` reports drift.
+for (const [file, re] of [
+  [".superdev/config.toml", /(\[skills\][^[]*?version = ")[^"]*(")/],
+  [".superdev/lock.toml", /(\[components\.skills\][^[]*?version = ")[^"]*(")/],
+]) {
+  const p = join(root, file);
+  const text = readFileSync(p, "utf8");
+  if (!re.test(text)) {
+    console.error(`could not find the skills version in ${file}`);
+    process.exit(1);
+  }
+  writeFileSync(p, text.replace(re, `$1${version}$2`));
+}
+
 // Lockfiles record the workspace members' own versions, so they go stale on a
 // bump. Left stale, `cargo publish --locked` fails and `npm ci` refuses to
 // install. Refresh both rather than leave that for the release to discover.
@@ -65,4 +82,6 @@ const run = (cmd, args) => {
 run("cargo", ["update", "--workspace", "--offline"]);
 run("npm", ["install", "--package-lock-only", "--ignore-scripts", "--silent"]);
 
-console.log(`set version to ${version} across Cargo workspace, packages/, and both lockfiles`);
+console.log(
+  `set version to ${version} across Cargo workspace, packages/, .superdev/, and both lockfiles`,
+);

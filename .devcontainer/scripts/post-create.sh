@@ -12,6 +12,12 @@ sudo chown -R vscode:vscode ${CONTAINER_WORKSPACE_FOLDER} 2>/dev/null || true
 mise install
 mise exec -- npm install
 
+# The Claude Code validation hook this repo installs calls a bare `superdev`.
+# Link the dev shim so it resolves to the working tree; without it the hook
+# fails with command-not-found and validation goes silently unenforced.
+mkdir -p "$HOME/.local/bin"
+ln -sf "${CONTAINER_WORKSPACE_FOLDER}/scripts/superdev" "$HOME/.local/bin/superdev"
+
 # Submodules are consumed read-only: init them, then break each push URL so an
 # accidental `git push` from inside one fails loudly. (The push URL is local
 # config, so it must be reapplied per clone.)

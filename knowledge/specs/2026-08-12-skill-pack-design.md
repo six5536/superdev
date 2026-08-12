@@ -114,8 +114,8 @@ layer, or entirely yours:
    custom rather than drifted. Removing it from the list restores stock on
    the next sync. To remove a skill entirely, mark it custom and delete it.
 
-`init --no-skills` disables the whole capability. The hook script and its
-settings entry are always owned — infrastructure, not prose.
+`init --no-skills` disables the whole capability. The hook's settings entry is
+always owned — infrastructure, not prose.
 
 # The hook
 

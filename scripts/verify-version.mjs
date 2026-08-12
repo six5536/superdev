@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 // Assert that one version is used consistently everywhere: the Cargo workspace,
 // the internal superdev-core pin, every package.json under packages/, the
-// launcher's optionalDependencies, and both lockfiles.
+// launcher's optionalDependencies, this repo's own skills pin in .superdev/,
+// and both lockfiles.
 //
 // Usage: node scripts/verify-version.mjs [expected-version]
 //
@@ -66,6 +67,20 @@ for (const [key, entry] of Object.entries(npmLock.packages ?? {})) {
   if (key.startsWith("packages/") && entry.version) {
     record(`package-lock.json ${key}`, entry.version);
   }
+}
+
+// --- .superdev: this repo's own skills pin ----------------------------------
+// The skills component's version is CARGO_PKG_VERSION, so a pin left behind by
+// a bump makes `superdev status` report drift.
+for (const [file, label, re] of [
+  [".superdev/config.toml", "[skills] version", /\[skills\][^[]*?version = "([^"]*)"/],
+  [
+    ".superdev/lock.toml",
+    "[components.skills] version",
+    /\[components\.skills\][^[]*?version = "([^"]*)"/,
+  ],
+]) {
+  record(`${file} ${label}`, readFileSync(join(root, file), "utf8").match(re)?.[1]);
 }
 
 // --- Verdict ----------------------------------------------------------------
