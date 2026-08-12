@@ -24,12 +24,6 @@ const FILES: &[(&str, &str, Ownership, &str)] = &[
         "AOKF specification",
     ),
     (
-        ".agents/aokf/tools/validator.py",
-        asset!("agents/aokf/tools/validator.py"),
-        Ownership::Owned,
-        "AOKF validator",
-    ),
-    (
         ".agents/VALIDATION.md",
         asset!("agents/VALIDATION.md"),
         Ownership::Owned,
@@ -101,7 +95,7 @@ impl Component for Aokf {
         let mut actions = Vec::new();
         for (path, content, ownership, reason) in FILES {
             // Every other asset is shipped verbatim: a stray `{name}` in prose
-            // or in the validator's source is not a placeholder.
+            // is not a placeholder.
             let content = match *path {
                 NAMED_ASSET => content.replace("{name}", &repo_name),
                 _ => (*content).to_string(),

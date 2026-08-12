@@ -12,7 +12,8 @@ case "$path" in
   *) exit 0 ;;
 esac
 
-if ! out="$(python3 "$root/.agents/aokf/tools/validator.py" "$root/knowledge" --level 2 2>&1)"; then
+if ! out="$(cargo run --quiet --manifest-path "$root/Cargo.toml" -- \
+  aokf validate "$root/knowledge" --level 2 --repo-root "$root" 2>&1)"; then
   echo "AOKF validation failed after editing $path — fix before continuing:" >&2
   echo "$out" >&2
   exit 2

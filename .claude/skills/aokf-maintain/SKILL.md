@@ -20,10 +20,10 @@ the next phase uses.
 
 # Phase 1 — deterministic checks
 
-Run the reference validator first:
+Run the validator first:
 
 ```
-python3 .agents/aokf/tools/validator.py knowledge
+cargo run --quiet -- aokf validate knowledge
 ```
 
 It performs the SPEC §10 document check and grades the §11 conformance

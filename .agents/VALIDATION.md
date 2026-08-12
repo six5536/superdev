@@ -4,7 +4,7 @@ After any change under `knowledge/`, run the AOKF validator and fix every
 error before moving on:
 
 ```
-python3 .agents/aokf/tools/validator.py knowledge
+cargo run --quiet -- aokf validate knowledge
 ```
 
 It checks the bundle against `.agents/aokf/SPEC.md` (document check plus the

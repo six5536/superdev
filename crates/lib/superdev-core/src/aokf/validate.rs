@@ -1,9 +1,10 @@
 //! validate.rs — the document check of SPEC §10 and the conformance ladder
 //! of SPEC §11.
 //!
-//! A behavioural port of `.agents/aokf/tools/validator.py`: the same
-//! findings, at the same levels, in the same order. Where the two differ,
-//! the divergence is noted at the check.
+//! A behavioural port of the Python reference validator that this replaced:
+//! the same findings, at the same levels, in the same order. Where the two
+//! differ, the divergence is noted at the check. `tests/validator_parity.rs`
+//! holds the reference behaviour as goldens.
 
 use std::collections::{BTreeSet, HashMap, HashSet};
 use std::path::{Path, PathBuf};

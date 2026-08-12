@@ -18,7 +18,7 @@ Everything is wrapped as npm scripts (defined in
   over cargo (`test` is `cargo nextest run --workspace` followed by
   `check:aokf`).
 - Knowledgebase: `npm run check:aokf` validates the `knowledge/` AOKF bundle
-  with `.agents/aokf/tools/validator.py`.
+  with the binary's own `aokf validate`.
 - Coverage: `npm run coverage` (HTML) / `coverage:summary` /
   `coverage:check` (the ≥90%-per-crate gate; needs the nightly toolchain).
 - Packaging: `npm run test:launcher`, `npm run verify-version` (16 locations

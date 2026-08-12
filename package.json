@@ -15,7 +15,7 @@
         "dev": "cargo run -p superdev --",
         "test": "cargo nextest run --workspace && npm run check:aokf",
         "check": "cargo check --workspace --tests",
-        "check:aokf": "python3 .agents/aokf/tools/validator.py knowledge",
+        "check:aokf": "cargo run --quiet -- aokf validate knowledge",
         "lint": "cargo clippy --workspace",
         "fmt": "cargo fmt --all",
         "coverage": "cargo +nightly llvm-cov nextest --workspace --html",
