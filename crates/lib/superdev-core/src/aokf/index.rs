@@ -5,14 +5,22 @@
 //! Everything lives under one directory, treated as a cache: when anything
 //! about it is unusable or out of date, it is rebuilt from the bundle rather
 //! than repaired.
+//!
+//! Retrieval runs both stores and fuses their rankings; [`Index::search`] is
+//! the whole of the read side.
 
-use std::collections::{BTreeMap, HashSet};
+use std::collections::{BTreeMap, HashMap, HashSet};
 use std::fs;
 use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
-use tantivy::schema::{Field, INDEXED, STORED, STRING, Schema, TEXT};
-use tantivy::{Index as Tantivy, IndexReader, IndexWriter, ReloadPolicy, TantivyDocument, Term};
+use tantivy::collector::{DocSetCollector, TopDocs};
+use tantivy::query::{BooleanQuery, Query, QueryParser, TermQuery};
+use tantivy::schema::{Field, INDEXED, IndexRecordOption, STORED, STRING, Schema, TEXT};
+use tantivy::{
+    DocAddress, Index as Tantivy, IndexReader, IndexWriter, ReloadPolicy, Searcher,
+    TantivyDocument, Term,
+};
 
 use super::bundle::Bundle;
 use super::concept::Concept;
@@ -30,6 +38,23 @@ const WRITER_HEAP_BYTES: usize = 50_000_000;
 const TANTIVY_SUBDIR: &str = "tantivy";
 const VECTORS_FILE: &str = "vectors.bin";
 const MANIFEST_FILE: &str = "manifest.json";
+
+/// Hits [`SearchOpts::limit`] defaults to.
+const DEFAULT_LIMIT: usize = 8;
+
+/// How many candidates each retrieval list offers the fusion, as a multiple
+/// of the caller's limit. A section ranked low in one list can still win on
+/// agreement, but only if it is in the list at all.
+const CANDIDATE_FACTOR: usize = 4;
+
+/// Reciprocal rank fusion's damping constant, at the value the method was
+/// published with. It sets how much a top rank is worth: at 60 the gap
+/// between rank 0 and rank 1 is small, so agreement between the two lists
+/// outweighs either one's ordering.
+const RRF_K: f32 = 60.0;
+
+/// Longest snippet, in characters.
+const SNIPPET_CHARS: usize = 200;
 
 /// Where the index lives: `.superdev/cache/aokf-index` in normal use.
 ///
@@ -49,6 +74,82 @@ pub struct SyncStats {
     pub full_rebuild: bool,
     /// No embedder, so the index carries no vectors and search is lexical.
     pub lexical_only: bool,
+}
+
+/// One search result: where the section is, and how well it answered.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Hit {
+    /// Bundle-relative path of the concept file.
+    pub path: String,
+    /// The concept's frontmatter `id`, when it has one.
+    pub concept_id: Option<String>,
+    /// Headings from the document root down to this section; empty for the
+    /// root section.
+    pub heading_path: Vec<String>,
+    /// First line of the section, 1-based and inclusive.
+    pub start_line: usize,
+    /// Last line of the section, 1-based and inclusive.
+    pub end_line: usize,
+    /// The section's opening text, whitespace collapsed onto one line and cut
+    /// to roughly 200 characters.
+    pub snippet: String,
+    /// Fused score. Comparable within one result list and nowhere else.
+    pub score: f32,
+}
+
+/// What to retrieve, beyond the query text.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SearchOpts {
+    /// Most hits to return.
+    pub limit: usize,
+    /// Keep only these concept `type`s; empty means every type.
+    pub kinds: Vec<String>,
+    /// Keep only concepts carrying one of these tags; empty means every tag.
+    pub tags: Vec<String>,
+}
+
+impl Default for SearchOpts {
+    fn default() -> Self {
+        SearchOpts {
+            limit: DEFAULT_LIMIT,
+            kinds: Vec::new(),
+            tags: Vec::new(),
+        }
+    }
+}
+
+/// Identifies one section across both stores: a tantivy document carries the
+/// path and the ordinal, a vector record the path's hash and the same
+/// ordinal.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub(crate) struct DocKey {
+    path_hash: u64,
+    ordinal: u32,
+}
+
+/// The stored fields of one section document, read once and reused.
+#[derive(Debug, Clone)]
+struct SectionDoc {
+    path: String,
+    concept_id: Option<String>,
+    heading_path: Vec<String>,
+    start_line: usize,
+    end_line: usize,
+    snippet: String,
+}
+
+impl SectionDoc {
+    fn hit(&self, score: f32) -> Hit {
+        Hit {
+            path: self.path.clone(),
+            concept_id: self.concept_id.clone(),
+            heading_path: self.heading_path.clone(),
+            start_line: self.start_line,
+            end_line: self.end_line,
+            snippet: self.snippet.clone(),
+            score,
+        }
+    }
 }
 
 /// An open index: a tantivy reader over the section documents, plus the
@@ -110,6 +211,150 @@ impl Index {
     /// The embedder the vectors were built with; `None` when lexical-only.
     pub fn model_id(&self) -> Option<&str> {
         self.manifest.model_id.as_deref()
+    }
+
+    /// Hybrid search over the indexed sections.
+    ///
+    /// Lexical retrieval always runs: BM25 over the section text, terms ANDed,
+    /// re-run as a disjunction only when the conjunction finds nothing.
+    /// Semantic retrieval — cosine over the section vectors — joins it when
+    /// the index has vectors and `embedder` is the one that built them; pass
+    /// the embedder the sync used. Anything else, including `None`, leaves
+    /// search lexical.
+    ///
+    /// [`SearchOpts::kinds`] and [`SearchOpts::tags`] filter both lists before
+    /// they are fused by reciprocal rank fusion, so a filtered concept cannot
+    /// re-enter through the other list.
+    ///
+    /// The result is a flat list, best first; grouping by concept belongs to
+    /// the caller.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Error::Index`] when tantivy fails, and whatever the embedder
+    /// returns for the query.
+    pub fn search(
+        &self,
+        query: &str,
+        embedder: Option<&dyn Embedder>,
+        opts: &SearchOpts,
+    ) -> Result<Vec<Hit>> {
+        if opts.limit == 0 {
+            return Ok(Vec::new());
+        }
+        let searcher = self.reader.searcher();
+        let (_, fields) = schema();
+        // Every pass that reads a document keeps it here, so the last step
+        // re-reads only the sections semantic retrieval found on its own.
+        let mut docs: HashMap<DocKey, SectionDoc> = HashMap::new();
+
+        let lexical = lexical_keys(&searcher, &fields, query, opts, &mut docs)?;
+        let semantic = self.semantic_keys(&searcher, &fields, query, embedder, opts, &mut docs)?;
+        let mut fused = rrf(&[lexical, semantic]);
+        fused.truncate(opts.limit);
+
+        self.read_missing(&searcher, &fields, &fused, &mut docs)?;
+        Ok(fused
+            .into_iter()
+            .filter_map(|(key, score)| docs.get(&key).map(|doc| doc.hit(score)))
+            .collect())
+    }
+
+    /// The semantic candidates: sections whose vector points the same way as
+    /// the query's, best first.
+    ///
+    /// Empty — leaving search lexical — without an embedder, without vectors,
+    /// or when the embedder is not the one the vectors were built with, since
+    /// two models' vectors say nothing about each other.
+    fn semantic_keys(
+        &self,
+        searcher: &Searcher,
+        fields: &Fields,
+        query: &str,
+        embedder: Option<&dyn Embedder>,
+        opts: &SearchOpts,
+        docs: &mut HashMap<DocKey, SectionDoc>,
+    ) -> Result<Vec<DocKey>> {
+        let Some(embedder) = embedder else {
+            return Ok(Vec::new());
+        };
+        if self.vectors.is_empty() || self.manifest.model_id != Some(embedder.model_id()) {
+            return Ok(Vec::new());
+        }
+        let embedded = embedder.embed(&[query.to_string()])?;
+        let Some(query_vector) = embedded.first() else {
+            return Ok(Vec::new());
+        };
+        // Only built when something is filtered, because it reads every
+        // document the filter matches.
+        let allowed = match filter_query(fields, opts) {
+            Some(filter) => Some(collect_keys(searcher, fields, filter.as_ref(), docs)?),
+            None => None,
+        };
+
+        let mut scored: Vec<(DocKey, f32)> = self
+            .vectors
+            .iter()
+            .filter(|record| record.vector.len() == query_vector.len())
+            .map(|record| {
+                let key = DocKey {
+                    path_hash: record.path_hash,
+                    ordinal: record.ordinal,
+                };
+                (key, cosine(&record.vector, query_vector))
+            })
+            // A similarity at or below zero is not evidence of anything; such
+            // a record would only add noise to the fusion.
+            .filter(|(key, score)| {
+                *score > 0.0 && allowed.as_ref().is_none_or(|allowed| allowed.contains(key))
+            })
+            .collect();
+        // The key breaks ties, so the ranking never depends on the order the
+        // vector file happens to be in.
+        scored.sort_by(|a, b| b.1.total_cmp(&a.1).then(a.0.cmp(&b.0)));
+        scored.truncate(candidates(opts));
+        Ok(scored.into_iter().map(|(key, _)| key).collect())
+    }
+
+    /// Read the documents behind `fused` that no earlier pass read — the
+    /// sections only semantic retrieval found. A vector record knows its
+    /// path's hash and its ordinal, which together name exactly one document.
+    fn read_missing(
+        &self,
+        searcher: &Searcher,
+        fields: &Fields,
+        fused: &[(DocKey, f32)],
+        docs: &mut HashMap<DocKey, SectionDoc>,
+    ) -> Result<()> {
+        let missing: Vec<&DocKey> = fused
+            .iter()
+            .map(|(key, _)| key)
+            .filter(|key| !docs.contains_key(key))
+            .collect();
+        if missing.is_empty() {
+            return Ok(());
+        }
+        let by_hash: HashMap<u64, &String> = self
+            .manifest
+            .files
+            .keys()
+            .map(|path| (path_hash(path), path))
+            .collect();
+        let clauses: Vec<Box<dyn Query>> = missing
+            .into_iter()
+            .filter_map(|key| {
+                let path = by_hash.get(&key.path_hash)?;
+                Some(Box::new(BooleanQuery::intersection(vec![
+                    term_query(Term::from_field_text(fields.path, path)),
+                    term_query(Term::from_field_u64(fields.ordinal, u64::from(key.ordinal))),
+                ])) as Box<dyn Query>)
+            })
+            .collect();
+        if clauses.is_empty() {
+            return Ok(());
+        }
+        collect_keys(searcher, fields, &BooleanQuery::union(clauses), docs)?;
+        Ok(())
     }
 }
 
@@ -525,6 +770,174 @@ fn read_vectors(path: &Path) -> Option<Vec<VectorRecord>> {
     Some(records)
 }
 
+/// The lexical candidates: BM25 over the section text, best first.
+///
+/// The query is parsed twice at most — all terms required, then any term —
+/// because a user's phrasing usually names more than one section's worth of
+/// words, and an empty answer is worse than a loose one.
+fn lexical_keys(
+    searcher: &Searcher,
+    fields: &Fields,
+    query: &str,
+    opts: &SearchOpts,
+    docs: &mut HashMap<DocKey, SectionDoc>,
+) -> Result<Vec<DocKey>> {
+    let filter = filter_query(fields, opts);
+    let mut conjunction = QueryParser::for_index(searcher.index(), vec![fields.text]);
+    conjunction.set_conjunction_by_default();
+    let disjunction = QueryParser::for_index(searcher.index(), vec![fields.text]);
+
+    for parser in [&conjunction, &disjunction] {
+        // Lenient, because the query is prose a user typed, not a query
+        // language: an unbalanced quote should still search for the words.
+        let (parsed, _) = parser.parse_query_lenient(query);
+        let query: Box<dyn Query> = match &filter {
+            Some(filter) => Box::new(BooleanQuery::intersection(vec![parsed, filter.box_clone()])),
+            None => parsed,
+        };
+        let top = searcher
+            .search(
+                &query,
+                &TopDocs::with_limit(candidates(opts)).order_by_score(),
+            )
+            .map_err(index_error)?;
+        if top.is_empty() {
+            continue;
+        }
+        let mut keys = Vec::with_capacity(top.len());
+        for (_, address) in top {
+            let (key, doc) = read_doc(searcher, fields, address)?;
+            docs.insert(key, doc);
+            keys.push(key);
+        }
+        return Ok(keys);
+    }
+    Ok(Vec::new())
+}
+
+/// Reciprocal rank fusion: each list gives a section `1 / (k + rank)`, and the
+/// scores add up.
+///
+/// Rank is what fuses, never score: BM25 and cosine are on unrelated scales,
+/// so the only comparable thing the two lists produce is their ordering.
+pub(crate) fn rrf(lists: &[Vec<DocKey>]) -> Vec<(DocKey, f32)> {
+    let mut scores: HashMap<DocKey, f32> = HashMap::new();
+    let mut order: Vec<DocKey> = Vec::new();
+    for list in lists {
+        for (rank, key) in list.iter().enumerate() {
+            let score = 1.0 / (RRF_K + rank as f32);
+            scores
+                .entry(*key)
+                .and_modify(|total| *total += score)
+                .or_insert_with(|| {
+                    order.push(*key);
+                    score
+                });
+        }
+    }
+    let mut scored: Vec<(DocKey, f32)> = order.iter().map(|key| (*key, scores[key])).collect();
+    // A stable sort, so sections on equal scores keep the order the lists
+    // first offered them in.
+    scored.sort_by(|a, b| b.1.total_cmp(&a.1));
+    scored
+}
+
+/// The `kinds`/`tags` filter as a query: any of the kinds, and any of the
+/// tags. `None` when nothing was filtered.
+fn filter_query(fields: &Fields, opts: &SearchOpts) -> Option<Box<dyn Query>> {
+    let any = |field: Field, values: &[String]| -> Option<Box<dyn Query>> {
+        let clauses: Vec<Box<dyn Query>> = values
+            .iter()
+            .map(|value| term_query(Term::from_field_text(field, value)))
+            .collect();
+        (!clauses.is_empty()).then(|| Box::new(BooleanQuery::union(clauses)) as Box<dyn Query>)
+    };
+    let groups: Vec<Box<dyn Query>> = [any(fields.kind, &opts.kinds), any(fields.tags, &opts.tags)]
+        .into_iter()
+        .flatten()
+        .collect();
+    (!groups.is_empty()).then(|| Box::new(BooleanQuery::intersection(groups)) as Box<dyn Query>)
+}
+
+/// Every document `query` matches, keyed and cached. Unscored: the caller
+/// wants the set, not a ranking.
+fn collect_keys(
+    searcher: &Searcher,
+    fields: &Fields,
+    query: &dyn Query,
+    docs: &mut HashMap<DocKey, SectionDoc>,
+) -> Result<HashSet<DocKey>> {
+    let mut keys = HashSet::new();
+    for address in searcher
+        .search(query, &DocSetCollector)
+        .map_err(index_error)?
+    {
+        let (key, doc) = read_doc(searcher, fields, address)?;
+        docs.insert(key, doc);
+        keys.insert(key);
+    }
+    Ok(keys)
+}
+
+/// Read one section document's stored fields.
+fn read_doc(
+    searcher: &Searcher,
+    fields: &Fields,
+    address: DocAddress,
+) -> Result<(DocKey, SectionDoc)> {
+    // Scoped: the trait's `as_str` would otherwise shadow `String::as_str`
+    // for the rest of the module.
+    use tantivy::schema::Value as _;
+
+    let doc: TantivyDocument = searcher.doc(address).map_err(index_error)?;
+    let text = |field| doc.get_first(field).and_then(|value| value.as_str());
+    let number = |field| doc.get_first(field).and_then(|value| value.as_u64());
+    let path = text(fields.path).unwrap_or_default().to_string();
+    let key = DocKey {
+        path_hash: path_hash(&path),
+        ordinal: number(fields.ordinal).unwrap_or_default() as u32,
+    };
+    let section = SectionDoc {
+        concept_id: text(fields.concept_id).map(str::to_string),
+        heading_path: text(fields.heading_path)
+            .filter(|joined| !joined.is_empty())
+            .map(|joined| joined.split(" > ").map(str::to_string).collect())
+            .unwrap_or_default(),
+        start_line: number(fields.start_line).unwrap_or_default() as usize,
+        end_line: number(fields.end_line).unwrap_or_default() as usize,
+        snippet: snippet(text(fields.text).unwrap_or_default()),
+        path,
+    };
+    Ok((key, section))
+}
+
+/// A section's opening text on one line, cut to [`SNIPPET_CHARS`].
+fn snippet(text: &str) -> String {
+    let single = text.split_whitespace().collect::<Vec<&str>>().join(" ");
+    match single.char_indices().nth(SNIPPET_CHARS) {
+        Some((at, _)) => format!("{}…", single[..at].trim_end()),
+        None => single,
+    }
+}
+
+/// Cosine similarity. The embedders normalise, which makes this a dot
+/// product, but nothing enforces that, so the norms are computed.
+fn cosine(a: &[f32], b: &[f32]) -> f32 {
+    let dot: f32 = a.iter().zip(b).map(|(x, y)| x * y).sum();
+    let norm = |v: &[f32]| v.iter().map(|x| x * x).sum::<f32>().sqrt();
+    let scale = norm(a) * norm(b);
+    if scale == 0.0 { 0.0 } else { dot / scale }
+}
+
+/// How many candidates one retrieval list may offer.
+fn candidates(opts: &SearchOpts) -> usize {
+    opts.limit.saturating_mul(CANDIDATE_FACTOR)
+}
+
+fn term_query(term: Term) -> Box<dyn Query> {
+    Box::new(TermQuery::new(term, IndexRecordOption::Basic))
+}
+
 fn index_error(e: impl std::fmt::Display) -> Error {
     Error::Index {
         message: e.to_string(),
@@ -562,6 +975,233 @@ mod tests {
     /// Re-read the bundle after a test edits it on disk.
     fn reload(dir: &Path) -> Bundle {
         load_bundle(&dir.join("bundle")).unwrap()
+    }
+
+    /// Two concepts with no shared vocabulary: `release` owns "tag-driven
+    /// pipeline", `testing` owns "nextest".
+    const RELEASE: &str = "---\ntype: Reference\nid: release\ntags: [process]\n---\nReleases are cut from main.\n\n# Pipeline\n\nThe release pipeline is tag-driven: pushing a tag triggers the publish.\n";
+    const TESTING: &str = "---\ntype: Spec\nid: testing\ntags: [quality]\n---\nTests run under nextest.\n\n# Layers\n\nUnit tests and end-to-end tests, run on every commit.\n";
+
+    /// An index over [`RELEASE`] and [`TESTING`]. The tempdir comes back with
+    /// it: dropping it would delete the index under the reader.
+    fn search_fixture(embedder: Option<&dyn Embedder>) -> (TempDir, Index) {
+        let dir = tempfile::tempdir().unwrap();
+        let bundle_dir = dir.path().join("bundle");
+        fs::create_dir(&bundle_dir).unwrap();
+        fs::write(bundle_dir.join("release.md"), RELEASE).unwrap();
+        fs::write(bundle_dir.join("testing.md"), TESTING).unwrap();
+        let bundle = load_bundle(&bundle_dir).unwrap();
+        let (index, _) =
+            Index::open_and_sync(&IndexDir(dir.path().join("idx")), &bundle, embedder).unwrap();
+        (dir, index)
+    }
+
+    #[test]
+    fn lexical_search_finds_the_right_section() {
+        let (_dir, idx) = search_fixture(None);
+        let hits = idx
+            .search("tag-driven release pipeline", None, &SearchOpts::default())
+            .unwrap();
+        // Only the Pipeline section carries every term, so the AND pass
+        // answers the query on its own.
+        assert_eq!(hits.len(), 1);
+        assert_eq!(hits[0].concept_id.as_deref(), Some("release"));
+        assert_eq!(hits[0].path, "release.md");
+        assert_eq!(hits[0].heading_path, vec!["Pipeline".to_string()]);
+        assert!(hits[0].start_line > 0 && hits[0].end_line >= hits[0].start_line);
+        // The heading line through to the end of the file.
+        assert_eq!((hits[0].start_line, hits[0].end_line), (8, 10));
+        assert!(hits[0].snippet.contains("tag-driven"));
+        assert!(!hits[0].snippet.contains('\n'));
+
+        // A caller that asks for nothing gets nothing.
+        let none = SearchOpts {
+            limit: 0,
+            ..SearchOpts::default()
+        };
+        assert!(idx.search("release", None, &none).unwrap().is_empty());
+    }
+
+    /// Body-only concepts, so a section's text is exactly its one body line
+    /// and a query can be made byte-identical to it.
+    const EXACT: &str = "---\ntype: Note\nid: exact\n---\nzephyr quartz lantern meadow\n";
+    const DENSE: &str = "---\ntype: Note\nid: dense\n---\nzephyr zephyr zephyr quartz quartz quartz lantern lantern lantern meadow meadow meadow\n";
+
+    #[test]
+    fn semantic_contributes_when_vectors_exist() {
+        let dir = tempfile::tempdir().unwrap();
+        let bundle_dir = dir.path().join("bundle");
+        fs::create_dir(&bundle_dir).unwrap();
+        fs::write(bundle_dir.join("exact.md"), EXACT).unwrap();
+        fs::write(bundle_dir.join("dense.md"), DENSE).unwrap();
+        let bundle = load_bundle(&bundle_dir).unwrap();
+        let (idx, _) = Index::open_and_sync(
+            &IndexDir(dir.path().join("idx")),
+            &bundle,
+            Some(&FakeEmbedder),
+        )
+        .unwrap();
+
+        // The embedder hashes whole texts, so cosine here is an exact-text
+        // test: the query is `exact`'s only section verbatim, and `dense` —
+        // the same words three times over — points somewhere else entirely.
+        let query = "zephyr quartz lantern meadow";
+        let dense_text = &bundle.concepts[0].sections[0].text;
+        assert_eq!(bundle.concepts[0].id.as_deref(), Some("dense"));
+        let vectors = FakeEmbedder
+            .embed(&[query.to_string(), dense_text.clone()])
+            .unwrap();
+        let cosine: f32 = vectors[0].iter().zip(&vectors[1]).map(|(a, b)| a * b).sum();
+        assert!(
+            cosine <= 0.0,
+            "fixture assumes `dense` is far off: {cosine}"
+        );
+
+        // `dense` repeats every term, so it leads BM25; `exact` trails it
+        // there but tops the semantic list. Two ranks beat one.
+        let hits = idx
+            .search(query, Some(&FakeEmbedder), &SearchOpts::default())
+            .unwrap();
+        assert_eq!(hits.len(), 2);
+        assert_eq!(hits[0].concept_id.as_deref(), Some("exact"));
+        assert_eq!(hits[1].concept_id.as_deref(), Some("dense"));
+        assert!(hits[0].score > hits[1].score);
+        assert!((hits[0].score - (1.0 / 60.0 + 1.0 / 61.0)).abs() < 1e-6);
+        assert!((hits[1].score - 1.0 / 60.0).abs() < 1e-6);
+
+        // Lexical alone reverses them, which is what the semantic list had to
+        // overturn.
+        let lexical = idx.search(query, None, &SearchOpts::default()).unwrap();
+        assert_eq!(lexical[0].concept_id.as_deref(), Some("dense"));
+        // An embedder the index was not built with is ignored: its vectors
+        // cannot be compared with the stored ones.
+        let mismatched = idx
+            .search(query, Some(&RaggedEmbedder), &SearchOpts::default())
+            .unwrap();
+        assert_eq!(mismatched, lexical);
+    }
+
+    #[test]
+    fn filters_restrict_kinds_and_tags() {
+        let (_dir, idx) = search_fixture(Some(&FakeEmbedder));
+        let opts = |kinds: &[&str], tags: &[&str]| SearchOpts {
+            kinds: kinds.iter().map(|s| (*s).to_string()).collect(),
+            tags: tags.iter().map(|s| (*s).to_string()).collect(),
+            ..SearchOpts::default()
+        };
+        let search = |opts: &SearchOpts| {
+            idx.search("release pipeline tests layers", Some(&FakeEmbedder), opts)
+                .unwrap()
+        };
+
+        // Unfiltered, both concepts answer.
+        let all = search(&SearchOpts::default());
+        assert!(all.iter().any(|h| h.path == "release.md"));
+        assert!(all.iter().any(|h| h.path == "testing.md"));
+
+        // Filters apply to the semantic list as well as the lexical one, so a
+        // vectored index cannot smuggle an excluded concept back in.
+        let spec = search(&opts(&["Spec"], &[]));
+        assert!(!spec.is_empty());
+        assert!(spec.iter().all(|h| h.path == "testing.md"));
+        let process = search(&opts(&[], &["process"]));
+        assert!(!process.is_empty());
+        assert!(process.iter().all(|h| h.path == "release.md"));
+
+        // Kinds and tags are ANDed: no Spec is tagged `process`.
+        assert!(search(&opts(&["Spec"], &["process"])).is_empty());
+        // An unknown value matches nothing rather than everything.
+        assert!(search(&opts(&["Nope"], &[])).is_empty());
+    }
+
+    #[test]
+    fn fusion_maths() {
+        let key = |path_hash| DocKey {
+            path_hash,
+            ordinal: 0,
+        };
+        let (both, single, tail) = (key(1), key(2), key(3));
+        let scored = rrf(&[vec![both, tail], vec![single, both]]);
+        assert_eq!(scored.len(), 3);
+        // Ranks 0 and 1 across the two lists.
+        assert_eq!(scored[0].0, both);
+        assert!((scored[0].1 - (1.0 / 60.0 + 1.0 / 61.0)).abs() < 1e-6);
+        // Rank 0 of one list only.
+        assert_eq!(scored[1].0, single);
+        assert!((scored[1].1 - 1.0 / 60.0).abs() < 1e-6);
+        assert_eq!(scored[2].0, tail);
+        assert!((scored[2].1 - 1.0 / 61.0).abs() < 1e-6);
+        assert!(rrf(&[]).is_empty());
+    }
+
+    #[test]
+    fn a_query_no_section_answers_in_full_falls_back_to_or() {
+        let (_dir, idx) = search_fixture(None);
+        // No section carries both terms, so the AND pass finds nothing and the
+        // OR pass answers.
+        let hits = idx
+            .search("pipeline nextest", None, &SearchOpts::default())
+            .unwrap();
+        assert_eq!(hits.len(), 2);
+        let mut ids: Vec<&str> = hits
+            .iter()
+            .filter_map(|h| h.concept_id.as_deref())
+            .collect();
+        ids.sort_unstable();
+        assert_eq!(ids, vec!["release", "testing"]);
+        // A word in neither concept finds nothing rather than everything.
+        assert!(
+            idx.search("kryptonite", None, &SearchOpts::default())
+                .unwrap()
+                .is_empty()
+        );
+    }
+
+    #[test]
+    fn a_semantic_hit_joins_back_to_its_section() {
+        let (_dir, idx) = search_fixture(Some(&FakeEmbedder));
+        // No section carries this word, so lexical retrieval returns nothing
+        // and every hit comes from the vector store — each one looked up by
+        // its path hash and ordinal.
+        assert!(
+            idx.search("kryptonite", None, &SearchOpts::default())
+                .unwrap()
+                .is_empty()
+        );
+        let hits = idx
+            .search("kryptonite", Some(&FakeEmbedder), &SearchOpts::default())
+            .unwrap();
+
+        // Three of the four sections; the fourth's vector points away from the
+        // query, and a cosine at or below zero is not a hit.
+        assert_eq!(hits.len(), 3);
+        assert!(
+            hits.iter()
+                .all(|h| h.heading_path != vec!["Pipeline".to_string()])
+        );
+        // Every field of a semantic-only hit comes from the joined document.
+        assert_eq!(hits[0].path, "testing.md");
+        assert_eq!(hits[0].concept_id.as_deref(), Some("testing"));
+        assert_eq!(hits[0].heading_path, vec!["Layers".to_string()]);
+        assert_eq!((hits[0].start_line, hits[0].end_line), (8, 10));
+        assert!(hits[0].snippet.contains("Unit tests"));
+        // A root section has no heading path.
+        assert_eq!(hits[1].heading_path, Vec::<String>::new());
+        assert_eq!(hits[1].start_line, 1);
+        // One list, so the scores are the bare reciprocal ranks.
+        assert!((hits[0].score - 1.0 / 60.0).abs() < 1e-6);
+        assert!((hits[2].score - 1.0 / 62.0).abs() < 1e-6);
+    }
+
+    #[test]
+    fn snippets_are_one_line_and_bounded() {
+        let long = format!("# Heading\n\n{}", "word ".repeat(80));
+        let short = snippet(&long);
+        assert!(short.chars().count() <= 201);
+        assert!(short.ends_with('…'));
+        assert!(!short.contains('\n'));
+        // Whitespace of every kind collapses to single spaces.
+        assert_eq!(snippet("  a\n\n\tb  "), "a b");
     }
 
     #[test]
@@ -667,6 +1307,13 @@ mod tests {
         // Only alpha's two sections survive, in both stores.
         assert_eq!(index.section_count(), 2);
         assert_eq!(index.vector_count(), 2);
+        // And beta's text no longer answers a query made of it.
+        assert!(
+            index
+                .search("Beta has no headings at all", None, &SearchOpts::default())
+                .unwrap()
+                .is_empty()
+        );
     }
 
     #[test]

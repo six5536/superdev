@@ -15,5 +15,5 @@ pub use embed::{
     embedder_from,
 };
 pub use graph::{Edge, Graph, UnknownId, inverse_rel};
-pub use index::{Index, IndexDir, SCHEMA_VERSION, SyncStats};
+pub use index::{Hit, Index, IndexDir, SCHEMA_VERSION, SearchOpts, SyncStats};
 pub use validate::{Finding, Report, validate};
