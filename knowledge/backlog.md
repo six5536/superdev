@@ -22,10 +22,12 @@ status: draft
   ([spec](specs/2026-08-12-skill-pack-design.md)); a refinement would gate the
   hook on the knowledge capability or on a bundle marker.
 - **Repos that already have an agent entry point.** `init` scaffolds
-  `AGENTS.md`, so adopting superdev in a repo with an incumbent entry file —
-  goodbye-tinnitus's `CLAUDE.md`, say — leaves two of them competing. Merge,
-  migrate, or have one reference the other is an open design question for
-  sub-projects 2 and 3.
+  `AGENTS.md`, so adopting superdev in a repo with an incumbent entry file
+  leaves two of them competing. Adopting goodbye-tinnitus made this concrete:
+  a 638-byte scaffold `AGENTS.md` now sits beside its 9.9 kB `CLAUDE.md`, and
+  neither mentions the other. Merge, migrate, or cross-reference is a design
+  question deferred to the knowledge-upkeep sub-project, where the rest of the
+  entry-point and migration work lives.
 
 # Decided against
 

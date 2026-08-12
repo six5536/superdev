@@ -57,6 +57,12 @@ publish a version it cannot find a heading for.
 - `superdev aokf hook validate`: the hook as a subcommand — payload on
   stdin, validates in-process, works on every platform superdev ships for
 
+### Added
+
+- `init` adopts a repo's existing skills: one already sitting under a pack
+  name, with content of its own, is released into `[skills] custom` and
+  reported, instead of being overwritten and backed up
+
 ### Fixed
 
 - `sync` no longer installs the repo's whole toolchain. `mise install` and

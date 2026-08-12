@@ -65,6 +65,11 @@ of the plan and out of the lock, and `status` prints it as unmanaged rather
 than drifted. Delete the name to get stock content back on the next sync. A
 name that is not one of the five shipped skills fails the plan.
 
+`init` seeds that list: a repo that already has a skill under a pack name,
+with content of its own, keeps it — the name goes into `custom` and the
+adoption reports it. Content byte-identical to the shipped skill is superdev's
+own text and is left managed.
+
 One table per enabled capability, keyed by the capability name — an absent
 table means disabled, which is what `init --no-<capability>` produces. An
 unknown capability name is rejected. `version` is omitted where the source

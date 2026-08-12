@@ -431,6 +431,52 @@ fn init_materialises_the_skill_pack_and_hook() {
 }
 
 #[test]
+fn adopting_a_repo_with_its_own_skills_keeps_them() {
+    // goodbye-tinnitus's case: skills of the same name, written before the
+    // pack existed. Adoption must not replace work superdev never wrote.
+    let dir = tempfile::tempdir().unwrap();
+    std::fs::create_dir_all(dir.path().join(".git")).unwrap();
+    let theirs = dir.path().join(".claude/skills/humanise/SKILL.md");
+    std::fs::create_dir_all(theirs.parent().unwrap()).unwrap();
+    std::fs::write(&theirs, "# Ours, thanks\n").unwrap();
+
+    let out = superdev()
+        .current_dir(dir.path())
+        .args([
+            "init",
+            "--no-workflows",
+            "--no-frontend",
+            "--no-code-index",
+            "--no-knowledge",
+        ])
+        .assert()
+        .success();
+    let stdout = String::from_utf8_lossy(&out.get_output().stdout).into_owned();
+    assert!(stdout.contains("kept your humanise"), "{stdout}");
+
+    // Their file survives; the rest of the pack lands; the manifest records it.
+    assert_eq!(
+        std::fs::read_to_string(&theirs).unwrap(),
+        "# Ours, thanks\n"
+    );
+    assert!(
+        dir.path()
+            .join(".claude/skills/double-check/SKILL.md")
+            .is_file()
+    );
+    let config = std::fs::read_to_string(dir.path().join(".superdev/config.toml")).unwrap();
+    assert!(config.contains("custom = [\"humanise\"]"), "{config}");
+    // No drift, and no lock hash claiming their file as superdev's.
+    superdev()
+        .current_dir(dir.path())
+        .arg("status")
+        .assert()
+        .code(0);
+    let lock = std::fs::read_to_string(dir.path().join(".superdev/lock.toml")).unwrap();
+    assert!(!lock.contains(".claude/skills/humanise/SKILL.md"), "{lock}");
+}
+
+#[test]
 fn init_no_skills_skips_the_pack() {
     let dir = tempfile::tempdir().unwrap();
     std::fs::create_dir_all(dir.path().join(".git")).unwrap();

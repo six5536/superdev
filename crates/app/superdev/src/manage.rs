@@ -11,6 +11,7 @@ use superdev_core::action::Action;
 use superdev_core::capability::Capability;
 use superdev_core::component::Ctx;
 use superdev_core::components::codegraph::CODEGRAPH_INDEX_DIR;
+use superdev_core::components::skillpack;
 use superdev_core::engine::Planned;
 use superdev_core::error::{Error, Result};
 use superdev_core::lock::Lock;
@@ -81,8 +82,12 @@ pub fn init(root: &Path, args: &InitArgs) -> Result<u8> {
             message: "already initialised — run `superdev sync`".into(),
         });
     }
-    let manifest = Manifest::default_for(superdev_core::version(), &args.disabled());
+    let mut manifest = Manifest::default_for(superdev_core::version(), &args.disabled());
+    let adopted = adopt_existing_skills(root, &mut manifest);
     manifest.save(root)?;
+    for line in &adopted {
+        out(line)?;
+    }
     let mut lock = Lock::default();
     let runner = SystemRunner;
     let planned = plan_all(root, &runner, &manifest, &lock)?;
@@ -312,6 +317,29 @@ fn behind_pins(manifest: &Manifest) -> Vec<String> {
     lines
 }
 
+/// Release, at adoption time, every pack skill the repo already has under its
+/// own name and with its own content. Overwriting those would replace work
+/// superdev never wrote with a backup the user has to go looking for; marking
+/// them custom keeps the file and hands the choice back. Returns the lines to
+/// print. Only `init` calls this — later syncs honour the list as written.
+fn adopt_existing_skills(root: &Path, manifest: &mut Manifest) -> Vec<String> {
+    let Some(config) = manifest.capabilities.get_mut(Capability::Skills.as_str()) else {
+        return Vec::new();
+    };
+    for (name, shipped) in skillpack::SKILLS {
+        let existing = fs::read_to_string(root.join(format!(".claude/skills/{name}/SKILL.md")));
+        // Identical content is superdev's own text already: nothing to keep.
+        if existing.is_ok_and(|existing| existing != shipped) {
+            config.custom.push(name.to_string());
+        }
+    }
+    config
+        .custom
+        .iter()
+        .map(|name| format!("skills: kept your {name} — marked custom in {CONFIG_PATH}"))
+        .collect()
+}
+
 /// Remove released skills' hashes from the lock: a custom skill is the
 /// user's file, and a stale hash would misread their next edit as drift
 /// against superdev content. True when anything was removed.
@@ -444,6 +472,42 @@ fn out(s: &str) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn adoption_keeps_the_repos_own_skills_and_ignores_identical_ones() {
+        let dir = tempfile::tempdir().unwrap();
+        let write = |name: &str, body: &str| {
+            let path = dir.path().join(format!(".claude/skills/{name}/SKILL.md"));
+            std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+            std::fs::write(path, body).unwrap();
+        };
+        // Theirs, under one of our names.
+        write("humanise", "# Ours, thanks\n");
+        // Already superdev's own text: nothing of the user's to keep.
+        let (_, shipped) = skillpack::SKILLS
+            .iter()
+            .find(|(name, _)| *name == "grill-me")
+            .unwrap();
+        write("grill-me", shipped);
+
+        let mut manifest = Manifest::default_for("0.1.0", &[]);
+        let lines = adopt_existing_skills(dir.path(), &mut manifest);
+        assert_eq!(manifest.capabilities["skills"].custom, ["humanise"]);
+        assert_eq!(
+            lines,
+            vec![format!(
+                "skills: kept your humanise — marked custom in {CONFIG_PATH}"
+            )]
+        );
+
+        // Nothing to adopt in an empty repo, or with skills disabled.
+        let empty = tempfile::tempdir().unwrap();
+        let mut manifest = Manifest::default_for("0.1.0", &[]);
+        assert!(adopt_existing_skills(empty.path(), &mut manifest).is_empty());
+        assert!(manifest.capabilities["skills"].custom.is_empty());
+        let mut off = Manifest::default_for("0.1.0", &[Capability::Skills]);
+        assert!(adopt_existing_skills(dir.path(), &mut off).is_empty());
+    }
 
     #[test]
     fn parses_update_targets() {

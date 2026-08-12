@@ -38,7 +38,9 @@ Every verb acts on the current directory.
   once `.superdev/config.toml` exists (it points at `sync`). The guard is the
   manifest rather than the directory, because the knowledge verbs create
   `.superdev/cache/` in repos that were never initialised. It writes the
-  manifest, then applies the whole blueprint and the `.gitignore` lines.
+  manifest, then applies the whole blueprint and the `.gitignore` lines. Skills
+  the repo already has under a pack name are released into `[skills] custom`
+  first, so adoption never overwrites work superdev did not write.
 - **`status`** never writes. It exits `1` on any drift, missing component, or
   pin behind this binary's registry, so CI can gate on it. Each skill released
   by `[skills] custom` prints as `skills: <name> custom, unmanaged` — a
