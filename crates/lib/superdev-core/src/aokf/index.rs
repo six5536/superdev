@@ -181,7 +181,7 @@ fn sync(
     embedder: Option<&dyn Embedder>,
     force: bool,
 ) -> Result<(Index, SyncStats)> {
-    let files = file_hashes(bundle)?;
+    let files = file_hashes(bundle);
     let model_id = embedder.map(|e| e.model_id());
     if !force
         && let Some(stored) = read_manifest(&dir.0)
@@ -293,25 +293,39 @@ fn update(
         .collect();
 
     if !changed.is_empty() || !removed.is_empty() {
+        let touched: HashSet<u64> = changed
+            .iter()
+            .map(|c| c.path.as_str())
+            .chain(removed.iter().map(|path| path.as_str()))
+            .map(path_hash)
+            .collect();
+        // The vector file has no delete, so it is rewritten whole: keep the
+        // records of untouched files, embed the changed ones afresh.
+        let fresh = embed_concepts(embedder, &changed)?;
+        vectors.retain(|record| !touched.contains(&record.path_hash));
+        // Vectors of two widths cannot share one file, and the write would
+        // fail after the tantivy commit — past the point where the caller
+        // could still fall back. Rebuild instead, before writing anything.
+        if let (Some(kept), Some(new)) = (vectors.first(), fresh.first())
+            && kept.vector.len() != new.vector.len()
+        {
+            return Ok(None);
+        }
+
         let writer: IndexWriter = tantivy.writer(WRITER_HEAP_BYTES).map_err(index_error)?;
-        let mut touched: HashSet<u64> = HashSet::new();
         for path in changed
             .iter()
             .map(|c| &c.path)
             .chain(removed.iter().copied())
         {
             writer.delete_term(Term::from_field_text(fields.path, path));
-            touched.insert(path_hash(path));
         }
         for concept in &changed {
             add_concept(&writer, &fields, concept)?;
         }
         commit(writer)?;
 
-        // The vector file has no delete, so it is rewritten whole: keep the
-        // records of untouched files, embed the changed ones afresh.
-        vectors.retain(|record| !touched.contains(&record.path_hash));
-        vectors.extend(embed_concepts(embedder, &changed)?);
+        vectors.extend(fresh);
         vectors.sort_by_key(|record| (record.path_hash, record.ordinal));
         write_vectors(&root.join(VECTORS_FILE), &vectors)?;
         // The reader only reloads when told to, and it was built before the
@@ -429,15 +443,17 @@ fn path_hash(path: &str) -> u64 {
     u64::from_str_radix(&hex[..16], 16).unwrap_or_default()
 }
 
-/// sha256 of every concept file, keyed by bundle-relative path.
-fn file_hashes(bundle: &Bundle) -> Result<BTreeMap<String, String>> {
-    let mut hashes = BTreeMap::new();
-    for concept in &bundle.concepts {
-        let path = bundle.root.join(&concept.path);
-        let bytes = fs::read(&path).map_err(|source| Error::Io { path, source })?;
-        hashes.insert(concept.path.clone(), sha256_hex(&bytes));
-    }
-    Ok(hashes)
+/// The hash of every concept as parsed, keyed by bundle-relative path.
+///
+/// These come from the load, not from a fresh read: re-reading here would let
+/// a write between load and sync record the new hash against the old content,
+/// which no later sync could ever notice.
+fn file_hashes(bundle: &Bundle) -> BTreeMap<String, String> {
+    bundle
+        .concepts
+        .iter()
+        .map(|c| (c.path.clone(), c.content_hash.clone()))
+        .collect()
 }
 
 /// Read `manifest.json`. A missing or unreadable manifest reads as absent,
@@ -567,6 +583,37 @@ mod tests {
     }
 
     #[test]
+    fn stored_vectors_round_trip_intact() {
+        let (dir, bundle) = fixture();
+        let idx = IndexDir(dir.path().join("idx"));
+        Index::open_and_sync(&idx, &bundle, Some(&FakeEmbedder)).unwrap();
+
+        // Read the file back through the codec and check one known record end
+        // to end: a transposed field or a flipped byte order would show here
+        // and nowhere else.
+        let records = read_vectors(&idx.0.join("vectors.bin")).unwrap();
+        assert_eq!(records.len(), 3);
+        let beta = &bundle.concepts[1];
+        assert_eq!(beta.path, "beta.md");
+        let record = records
+            .iter()
+            .find(|r| r.path_hash == path_hash("beta.md") && r.ordinal == 0)
+            .expect("beta's only section");
+        let expected = FakeEmbedder
+            .embed(&[beta.sections[0].text.clone()])
+            .unwrap();
+        assert_eq!(record.vector, expected[0]);
+        // Two files, three sections: alpha owns the other two ordinals.
+        let mut alpha: Vec<u32> = records
+            .iter()
+            .filter(|r| r.path_hash == path_hash("alpha.md"))
+            .map(|r| r.ordinal)
+            .collect();
+        alpha.sort_unstable();
+        assert_eq!(alpha, vec![0, 1]);
+    }
+
+    #[test]
     fn unchanged_bundle_syncs_nothing() {
         let (dir, bundle) = fixture();
         let idx = IndexDir(dir.path().join("idx"));
@@ -662,6 +709,90 @@ mod tests {
         fs::write(idx.0.join("manifest.json"), "{ not json").unwrap();
         let (_, stats) = Index::open_and_sync(&idx, &bundle, Some(&FakeEmbedder)).unwrap();
         assert!(stats.full_rebuild);
+    }
+
+    /// Names itself as [`FakeEmbedder`] does, so the manifest gate lets an
+    /// incremental sync through, but embeds twice as wide.
+    struct WiderEmbedder;
+
+    impl Embedder for WiderEmbedder {
+        fn model_id(&self) -> String {
+            "fake:8".into()
+        }
+
+        fn embed(&self, texts: &[String]) -> Result<Vec<Vec<f32>>> {
+            Ok(texts.iter().map(|_| vec![0.25; 16]).collect())
+        }
+    }
+
+    #[test]
+    fn a_change_of_vector_width_rebuilds_rather_than_failing() {
+        let (dir, bundle) = fixture();
+        let idx = IndexDir(dir.path().join("idx"));
+        let (first, _) = Index::open_and_sync(&idx, &bundle, Some(&FakeEmbedder)).unwrap();
+        drop(first);
+
+        // One changed file, so the sync would mix kept 8-wide records with
+        // fresh 16-wide ones.
+        fs::write(
+            dir.path().join("bundle/alpha.md"),
+            format!("{ALPHA}\nA newly written line.\n"),
+        )
+        .unwrap();
+        let edited = reload(dir.path());
+        let (index, stats) = Index::open_and_sync(&idx, &edited, Some(&WiderEmbedder)).unwrap();
+        assert!(stats.full_rebuild);
+        assert_eq!(stats.reindexed, 2);
+        assert_eq!(index.vector_count(), 3);
+        // Every record is the new width, so nothing of the old index survived.
+        let records = read_vectors(&idx.0.join("vectors.bin")).unwrap();
+        assert!(records.iter().all(|r| r.vector.len() == 16));
+    }
+
+    #[test]
+    fn gaining_an_embedder_forces_a_full_rebuild() {
+        let (dir, bundle) = fixture();
+        let idx = IndexDir(dir.path().join("idx"));
+        let (first, stats) = Index::open_and_sync(&idx, &bundle, None).unwrap();
+        assert!(stats.lexical_only);
+        assert_eq!(first.vector_count(), 0);
+        drop(first);
+
+        let (index, stats) = Index::open_and_sync(&idx, &bundle, Some(&FakeEmbedder)).unwrap();
+        assert!(stats.full_rebuild);
+        assert!(!stats.lexical_only);
+        assert_eq!(stats.reindexed, 2);
+        assert_eq!(index.vector_count(), 3);
+        assert_eq!(index.model_id(), Some("fake:8"));
+    }
+
+    #[test]
+    fn an_index_from_another_schema_version_is_rebuilt() {
+        let (dir, bundle) = fixture();
+        let idx = IndexDir(dir.path().join("idx"));
+        let (first, _) = Index::open_and_sync(&idx, &bundle, Some(&FakeEmbedder)).unwrap();
+        drop(first);
+
+        let manifest = idx.0.join("manifest.json");
+        let text = fs::read_to_string(&manifest).unwrap();
+        fs::write(
+            &manifest,
+            text.replace(
+                &format!("\"schema_version\": {SCHEMA_VERSION}"),
+                "\"schema_version\": 99",
+            ),
+        )
+        .unwrap();
+        assert!(fs::read_to_string(&manifest).unwrap().contains("99"));
+
+        let (index, stats) = Index::open_and_sync(&idx, &bundle, Some(&FakeEmbedder)).unwrap();
+        assert!(stats.full_rebuild);
+        assert_eq!(stats.reindexed, 2);
+        assert_eq!(index.section_count(), 3);
+        assert_eq!(
+            read_manifest(&idx.0).unwrap().schema_version,
+            SCHEMA_VERSION
+        );
     }
 
     /// Returns one vector per text, but of two different widths.

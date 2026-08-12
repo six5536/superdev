@@ -3,6 +3,8 @@
 use pulldown_cmark::{Event, HeadingLevel, Options, Parser, Tag, TagEnd};
 use serde_yaml_ng::Value;
 
+use crate::lock::sha256_hex;
+
 /// Publication state of a concept; an absent frontmatter `status` is
 /// [`Status::Stable`], as the spec requires.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -59,6 +61,10 @@ pub struct Section {
 pub struct Concept {
     /// Bundle-relative path, forward slashes.
     pub path: String,
+    /// sha256 of the exact text this concept was parsed from. The index
+    /// compares it against the hash it stored, so staleness is judged against
+    /// the bytes that were parsed, never against a later re-read of the file.
+    pub content_hash: String,
     /// Frontmatter `type`; empty when absent, which the validator flags.
     pub kind: String,
     /// Stable identity slug.
@@ -131,6 +137,7 @@ pub fn parse_concept(path: &str, text: &str) -> Result<Concept, ParseError> {
 
     Ok(Concept {
         path: path.to_string(),
+        content_hash: sha256_hex(text.as_bytes()),
         kind: string_field(&raw, "type").unwrap_or_default(),
         id: string_field(&raw, "id"),
         status: match raw["status"].as_str() {
@@ -336,6 +343,9 @@ mod tests {
         assert_eq!(c.links.len(), 1);
         assert_eq!(c.links[0].rel.as_deref(), Some("depends-on"));
         assert!(matches!(c.status, Status::Stable));
+        // The hash covers the text parsed, so the index never has to re-read
+        // the file to learn what it indexed.
+        assert_eq!(c.content_hash, sha256_hex(DOC.as_bytes()));
     }
 
     #[test]
