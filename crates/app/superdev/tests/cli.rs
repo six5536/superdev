@@ -1,6 +1,15 @@
 //! End-to-end tests for the skeleton CLI: the real binary, real exit codes.
 
+use std::io::{BufRead, BufReader, Write};
+use std::path::Path;
+use std::process::Stdio;
+use std::sync::mpsc;
+use std::time::Duration;
+
 use assert_cmd::Command;
+
+/// The repository root: where `aokf validate` finds the live `knowledge/`.
+const REPO_ROOT: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../../..");
 
 fn superdev() -> Command {
     Command::cargo_bin("superdev").unwrap()
@@ -70,4 +79,191 @@ fn unknown_shell_is_a_usage_error() {
         .args(["completions", "notashell"])
         .assert()
         .code(2);
+}
+
+#[test]
+fn aokf_validate_passes_the_live_bundle() {
+    superdev()
+        // workspace root, so `aokf validate` resolves <cwd>/knowledge
+        .current_dir(REPO_ROOT)
+        .args(["aokf", "validate"])
+        .assert()
+        .success();
+}
+
+#[test]
+fn aokf_validate_fails_a_broken_bundle_with_exit_1() {
+    let dir = tempfile::tempdir().unwrap();
+    std::fs::create_dir(dir.path().join("kb")).unwrap();
+    std::fs::write(
+        dir.path().join("kb/a.md"),
+        "---\ntype: T\nid: dup\n---\nx\n",
+    )
+    .unwrap();
+    std::fs::write(
+        dir.path().join("kb/b.md"),
+        "---\ntype: T\nid: dup\n---\nx\n",
+    )
+    .unwrap();
+    superdev()
+        .current_dir(dir.path())
+        .args(["aokf", "validate", "kb"])
+        .assert()
+        .code(1);
+}
+
+#[test]
+fn aokf_validate_json_is_machine_readable() {
+    let out = superdev()
+        .current_dir(REPO_ROOT)
+        .args(["aokf", "validate", "--json"])
+        .assert()
+        .success();
+    let report: serde_json::Value = serde_json::from_slice(&out.get_output().stdout).unwrap();
+    assert!(report["findings"].is_array(), "no findings array: {report}");
+    assert_eq!(report["passed"], serde_json::json!(true));
+    // The bundle path is the CLI's to add: core omits it.
+    let bundle = report["bundle"].as_str().unwrap();
+    assert!(bundle.ends_with("knowledge"), "unexpected bundle: {bundle}");
+}
+
+#[test]
+fn aokf_index_rebuilds_and_reports_lexical_only() {
+    let dir = tempfile::tempdir().unwrap();
+    write_fixture_bundle(dir.path());
+    // A manifest with no `[knowledge.embeddings]` table: the embedder comes
+    // from the local default, which the blocked cache stops loading.
+    std::fs::create_dir(dir.path().join(".superdev")).unwrap();
+    std::fs::write(
+        dir.path().join(".superdev/config.toml"),
+        "blueprint = \"0.1.0\"\n\n[knowledge]\nprovider = \"aokf\"\n",
+    )
+    .unwrap();
+    // A file that cannot be parsed leaves the bundle silently, so `index` says so.
+    std::fs::write(dir.path().join("knowledge/bad.md"), "no frontmatter here\n").unwrap();
+    let out = superdev()
+        .current_dir(dir.path())
+        .env("XDG_CACHE_HOME", blocked_model_cache(dir.path()))
+        .args(["aokf", "index"])
+        .assert()
+        .success();
+    let stdout = String::from_utf8_lossy(&out.get_output().stdout).into_owned();
+    assert!(stdout.contains("1 concept"), "no concept count: {stdout}");
+    assert!(stdout.contains("lexical"), "no lexical-only note: {stdout}");
+    assert!(
+        stdout.contains("skipped 1"),
+        "no broken-file note: {stdout}"
+    );
+    assert!(dir.path().join(".superdev/cache/aokf-index").is_dir());
+}
+
+#[test]
+fn mcp_without_a_bundle_fails_at_startup() {
+    let dir = tempfile::tempdir().unwrap();
+    let out = superdev()
+        .current_dir(dir.path())
+        .args(["mcp", "aokf"])
+        .assert()
+        .code(2);
+    let stderr = String::from_utf8_lossy(&out.get_output().stderr).into_owned();
+    assert!(stderr.contains("no AOKF bundle"), "unexpected: {stderr}");
+}
+
+#[test]
+fn mcp_with_an_unusable_index_dir_fails_at_startup() {
+    let dir = tempfile::tempdir().unwrap();
+    write_fixture_bundle(dir.path());
+    // A file where the index directory belongs: the startup sync cannot write it.
+    std::fs::create_dir_all(dir.path().join(".superdev/cache")).unwrap();
+    std::fs::write(dir.path().join(".superdev/cache/aokf-index"), "").unwrap();
+    superdev()
+        .current_dir(dir.path())
+        .env("XDG_CACHE_HOME", blocked_model_cache(dir.path()))
+        .args(["mcp", "aokf"])
+        .assert()
+        .code(2);
+}
+
+/// One `initialize`, the `initialized` notification, and one tool call, as raw
+/// JSON-RPC — a smoke test needs no client library.
+const MCP_REQUESTS: &str = concat!(
+    r#"{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"cli-test","version":"0"}}}"#,
+    "\n",
+    r#"{"jsonrpc":"2.0","method":"notifications/initialized"}"#,
+    "\n",
+    r#"{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"aokf_overview","arguments":{}}}"#,
+    "\n",
+);
+
+#[test]
+fn mcp_server_initialises_over_stdio() {
+    let dir = tempfile::tempdir().unwrap();
+    write_fixture_bundle(dir.path());
+    let mut child = std::process::Command::new(assert_cmd::cargo::cargo_bin("superdev"))
+        .args(["mcp", "aokf"])
+        .current_dir(dir.path())
+        .env("XDG_CACHE_HOME", blocked_model_cache(dir.path()))
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .spawn()
+        .unwrap();
+    let mut stdin = child.stdin.take().unwrap();
+    stdin.write_all(MCP_REQUESTS.as_bytes()).unwrap();
+    stdin.flush().unwrap();
+
+    // Read on a second thread: a server that never answers must fail the test,
+    // not hang the run.
+    let stdout = child.stdout.take().unwrap();
+    let (tx, rx) = mpsc::channel();
+    std::thread::spawn(move || {
+        for line in BufReader::new(stdout).lines().map_while(Result::ok) {
+            if tx.send(line).is_err() {
+                return;
+            }
+        }
+    });
+    let mut replies: Vec<String> = Vec::new();
+    while !replies.iter().any(|line| line.contains("\"id\":2")) {
+        match rx.recv_timeout(Duration::from_secs(60)) {
+            Ok(line) => replies.push(line),
+            Err(e) => {
+                let _ = child.kill();
+                panic!("no reply to the tool call ({e}): {replies:?}");
+            }
+        }
+    }
+    // Closing stdin is how a client disconnects; the server must exit cleanly.
+    drop(stdin);
+    let status = child.wait().unwrap();
+    assert!(status.success(), "server exited {status}");
+    let replies = replies.join("\n");
+    assert!(replies.contains("\"result\""), "no result in: {replies}");
+    assert!(
+        replies.contains("fixture-knowledge"),
+        "no bundle name in: {replies}"
+    );
+}
+
+/// A one-concept bundle under `<dir>/knowledge`.
+fn write_fixture_bundle(dir: &Path) {
+    let bundle = dir.join("knowledge");
+    std::fs::create_dir(&bundle).unwrap();
+    std::fs::write(
+        bundle.join("manifest.aokf.yaml"),
+        "aokf: \"0.1\"\nname: fixture-knowledge\n",
+    )
+    .unwrap();
+    std::fs::write(
+        bundle.join("module.md"),
+        "---\ntype: Module\nid: module-a\ntitle: Module A\n---\n\n# Role\n\nIt plans.\n",
+    )
+    .unwrap();
+}
+
+/// A cache root that is a regular file, so the local embedding model cannot be
+/// downloaded into it: these tests stay offline and lexical-only.
+fn blocked_model_cache(dir: &Path) -> std::path::PathBuf {
+    let path = dir.join("no-model-cache");
+    std::fs::write(&path, "").unwrap();
+    path
 }

@@ -1,0 +1,191 @@
+//! aokf_cli.rs — the `aokf` and `mcp` verbs over the knowledge bundle.
+//!
+//! Parsing, path defaults and printed output only; the bundle work is all
+//! `superdev-core`'s.
+
+use std::io::{self, Write};
+use std::path::{Path, PathBuf};
+
+use superdev_core::aokf::{
+    AokfServer, EmbeddingsConfig, Index, IndexDir, embedder_from, load_bundle, validate,
+};
+use superdev_core::capability::Capability;
+use superdev_core::error::{Error, Result};
+use superdev_core::manifest::{CONFIG_PATH, Manifest};
+
+/// Bundle directory when the caller names none, relative to the repo root.
+const BUNDLE_DIR: &str = "knowledge";
+
+/// Where the search index lives, relative to the repo root. It is machine
+/// state: `.superdev/cache/` is gitignored by `init`.
+const INDEX_DIR: &str = ".superdev/cache/aokf-index";
+
+/// Conformance level `validate` grades at when the caller names none.
+const DEFAULT_LEVEL: u8 = 2;
+
+/// Serve a project subsystem over MCP.
+#[derive(clap::Subcommand)]
+pub enum McpCommand {
+    /// Serve the AOKF bundle over stdio
+    Aokf,
+}
+
+/// Work on the AOKF knowledge bundle.
+#[derive(clap::Subcommand)]
+pub enum AokfCommand {
+    /// Validate the bundle against the AOKF spec
+    Validate {
+        /// Bundle directory (default: `knowledge`)
+        path: Option<PathBuf>,
+        /// Conformance level to grade at (default: 2)
+        #[arg(long, value_parser = clap::value_parser!(u8).range(0..=2))]
+        level: Option<u8>,
+        /// Emit JSON instead of text
+        #[arg(long)]
+        json: bool,
+        /// Repository root for `/`-rooted paths (default: this repo)
+        #[arg(long)]
+        repo_root: Option<PathBuf>,
+    },
+    /// Rebuild the search index from scratch
+    Index {
+        /// Bundle directory (default: `knowledge`)
+        path: Option<PathBuf>,
+    },
+}
+
+/// Serve the bundle over stdio until the client disconnects.
+pub fn run_mcp(cmd: &McpCommand, root: &Path) -> Result<u8> {
+    match cmd {
+        McpCommand::Aokf => {
+            let bundle_dir = bundle_dir(root, None);
+            // Fail at startup rather than answer every tool call with the same
+            // error: a client has no way to act on the latter.
+            if !bundle_dir.is_dir() {
+                return Err(Error::Io {
+                    path: bundle_dir,
+                    source: io::Error::new(
+                        io::ErrorKind::NotFound,
+                        "no AOKF bundle here — run `superdev init`",
+                    ),
+                });
+            }
+            let embedder = embedder(root)?;
+            let index_dir = IndexDir(root.join(INDEX_DIR));
+            // Sync before serving, so an unreadable bundle or an unwritable
+            // index directory ends the process instead of failing every tool
+            // call. It also warms the index for the client's first question.
+            let (index, _) =
+                Index::open_and_sync(&index_dir, &load_bundle(&bundle_dir)?, embedder.as_deref())?;
+            // Never hold an index open across the rebuild a tool call may do.
+            drop(index);
+            let server = AokfServer::new(bundle_dir, root.to_path_buf(), index_dir, embedder);
+            // One stdio client, and the server serialises its own tool calls:
+            // a current-thread runtime is all this needs. Timers are not
+            // optional — rmcp's request timeouts panic without them.
+            let runtime = tokio::runtime::Builder::new_current_thread()
+                .enable_time()
+                .build()
+                .map_err(io_error)?;
+            runtime.block_on(server.serve_stdio())?;
+            Ok(0)
+        }
+    }
+}
+
+/// Validate or index the bundle.
+pub fn run_aokf(cmd: &AokfCommand, root: &Path) -> Result<u8> {
+    match cmd {
+        AokfCommand::Validate {
+            path,
+            level,
+            json,
+            repo_root,
+        } => {
+            let bundle_dir = bundle_dir(root, path.as_deref());
+            let bundle = load_bundle(&bundle_dir)?;
+            let repo_root = repo_root
+                .as_deref()
+                .map_or_else(|| root.to_path_buf(), |p| root.join(p));
+            let report = validate(&bundle, &repo_root, level.unwrap_or(DEFAULT_LEVEL));
+            if *json {
+                let mut value = report.to_json();
+                // The bundle path is the caller's string, so core leaves the
+                // key to the caller. The reference validator emits it.
+                if let Some(object) = value.as_object_mut() {
+                    object.insert("bundle".into(), bundle_dir.display().to_string().into());
+                }
+                let rendered = serde_json::to_string_pretty(&value)
+                    .map_err(|e| io_error(io::Error::other(e)))?;
+                out(&rendered)?;
+            } else {
+                out(&format!(
+                    "AOKF validator — bundle: {}",
+                    bundle_dir.display()
+                ))?;
+                out(report.render_human().trim_end_matches('\n'))?;
+            }
+            Ok(u8::from(!report.passed()))
+        }
+        AokfCommand::Index { path } => {
+            let bundle = load_bundle(&bundle_dir(root, path.as_deref()))?;
+            let index_dir = IndexDir(root.join(INDEX_DIR));
+            let (index, stats) =
+                Index::force_rebuild(&index_dir, &bundle, embedder(root)?.as_deref())?;
+            out(&format!(
+                "indexed {} concept(s), {} section(s) in {}",
+                stats.reindexed,
+                index.section_count(),
+                index_dir.0.display()
+            ))?;
+            if stats.lexical_only {
+                // embedder_from swallows a local-model load failure; without
+                // this line the user would never learn search lost its vectors.
+                out("search: lexical only — no embedding model loaded")?;
+            }
+            if !bundle.broken.is_empty() {
+                out(&format!(
+                    "skipped {} unparseable file(s) — run `superdev aokf validate`",
+                    bundle.broken.len()
+                ))?;
+            }
+            Ok(0)
+        }
+    }
+}
+
+/// The bundle to work on: what the caller named, else `<root>/knowledge`.
+fn bundle_dir(root: &Path, path: Option<&Path>) -> PathBuf {
+    path.map_or_else(|| root.join(BUNDLE_DIR), |path| root.join(path))
+}
+
+/// The embedder the manifest asks for, or the local default when the repo has
+/// no manifest. A local model that will not load yields `None`, which leaves
+/// search lexical.
+fn embedder(root: &Path) -> Result<Option<Box<dyn superdev_core::aokf::Embedder>>> {
+    embedder_from(embeddings(root)?.as_ref())
+}
+
+/// The knowledge capability's `[knowledge.embeddings]` table, when there is one.
+fn embeddings(root: &Path) -> Result<Option<EmbeddingsConfig>> {
+    if !root.join(CONFIG_PATH).is_file() {
+        return Ok(None);
+    }
+    Ok(Manifest::load(root)?
+        .capabilities
+        .get(Capability::Knowledge.as_str())
+        .and_then(|config| config.embeddings.clone()))
+}
+
+/// The one stdout path, so `main` can keep BrokenPipe a success.
+fn out(s: &str) -> Result<()> {
+    writeln!(io::stdout(), "{s}").map_err(io_error)
+}
+
+/// Failures on the stdout path carry `-`, so `main` can spot a broken pipe.
+fn io_error(source: io::Error) -> Error {
+    Error::Io {
+        path: "-".into(),
+        source,
+    }
+}

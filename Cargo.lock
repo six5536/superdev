@@ -2092,8 +2092,10 @@ dependencies = [
  "clap",
  "clap_complete",
  "clap_mangen",
+ "serde_json",
  "superdev-core",
  "tempfile",
+ "tokio",
 ]
 
 [[package]]

@@ -1,14 +1,15 @@
 //! superdev CLI entry point.
 //!
-//! Argument parsing and exit codes only: the verbs live in [`manage`], the
-//! domain logic in `superdev-core`. `completions` and the hidden `man` are
-//! the plumbing the release pipeline needs.
+//! Argument parsing and exit codes only: the verbs live in [`manage`] and
+//! [`aokf_cli`], the domain logic in `superdev-core`. `completions` and the
+//! hidden `man` are the plumbing the release pipeline needs.
 // Under the nightly coverage job (cargo-llvm-cov sets `coverage_nightly`), enable
 // the attribute used to exclude genuinely untestable glue from coverage. Inert on
 // the stable toolchain used for normal builds and tests.
 #![cfg_attr(coverage_nightly, feature(coverage_attribute))]
 #![warn(missing_docs)]
 
+mod aokf_cli;
 mod manage;
 
 use std::io::{self, Write};
@@ -43,6 +44,12 @@ enum Command {
         /// Capability to update, optionally `<capability>@<version>`
         target: Option<String>,
     },
+    /// Serve project subsystems over MCP
+    #[command(subcommand)]
+    Mcp(aokf_cli::McpCommand),
+    /// AOKF knowledgebase commands
+    #[command(subcommand)]
+    Aokf(aokf_cli::AokfCommand),
     /// Write a completion script for the given shell to stdout
     Completions {
         /// Shell to generate completions for
@@ -75,6 +82,8 @@ fn run(cli: &Cli) -> Result<u8> {
         Some(Command::Status) => manage::status(&root()?),
         Some(Command::Sync { dry_run }) => manage::sync(&root()?, *dry_run),
         Some(Command::Update { target }) => manage::update(&root()?, target.as_deref()),
+        Some(Command::Mcp(cmd)) => aokf_cli::run_mcp(cmd, &root()?),
+        Some(Command::Aokf(cmd)) => aokf_cli::run_aokf(cmd, &root()?),
         Some(Command::Completions { shell }) => {
             // Render into a buffer first: clap_complete panics rather than
             // returning an error when a write fails.
