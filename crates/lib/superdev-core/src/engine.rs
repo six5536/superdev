@@ -236,7 +236,13 @@ impl<'a> Session<'a> {
             self.pins[entry].push((mise::pin_lock_key(tool), sha256_hex(value.as_bytes())));
             self.record(entry, action, ActionOutcome::Applied { note: None });
         }
-        self.install_pinned_tools(first)
+        // Install what this run pinned plus every managed pin the file already
+        // carried: an untouched pin may still be missing on this machine.
+        let mut tools: Vec<String> = pins.iter().map(|&(.., tool, _)| tool.to_string()).collect();
+        tools.extend(managed_pins_in(&content));
+        tools.sort_unstable();
+        tools.dedup();
+        self.install_pinned_tools(first, &tools)
     }
 
     /// Install the pins `.mise.toml` already carries, when a provider is about
@@ -253,28 +259,35 @@ impl<'a> Session<'a> {
         };
         // An unparseable file pins nothing superdev can claim; leave it to the
         // component that reads it to report the problem.
-        let pinned = crate::components::MANAGED_MISE_TOOLS
-            .iter()
-            .any(|tool| matches!(mise::current_pin(&content, tool), Ok(Some(_))));
-        if !pinned {
+        let pinned = managed_pins_in(&content);
+        if pinned.is_empty() {
             return true;
         }
-        self.install_pinned_tools(entry)
+        self.install_pinned_tools(entry, &pinned)
     }
 
-    /// Trust the config, then install. mise refuses to install from a config
-    /// it has not been told to trust, and superdev writes managed pins into
-    /// repos that have never trusted theirs. Trusting is idempotent, so it
-    /// runs every time; a failure is treated exactly like a failed install.
-    fn install_pinned_tools(&mut self, entry: usize) -> bool {
-        self.run_mise(entry, "trust", "trust the repo's mise config")
-            && self.run_mise(entry, "install", "install the pinned tools")
+    /// Trust the config, then install — naming the tools. mise refuses to
+    /// install from a config it has not been told to trust, and superdev
+    /// writes managed pins into repos that have never trusted theirs.
+    /// Trusting is idempotent, so it runs every time; a failure is treated
+    /// exactly like a failed install.
+    ///
+    /// A bare `mise install` would install every tool the repo pins, tying
+    /// superdev's success to toolchains it does not manage: one unrelated pin
+    /// that cannot build on this machine would fail the whole apply.
+    fn install_pinned_tools(&mut self, entry: usize, tools: &[String]) -> bool {
+        if !self.run_mise(entry, &["trust".into()], "trust the repo's mise config") {
+            return false;
+        }
+        let mut args = vec!["install".to_string()];
+        args.extend(tools.iter().cloned());
+        self.run_mise(entry, &args, "install the pinned tools")
     }
 
-    /// Run a one-argument `mise` command the plan never contained, recording
-    /// it against `entry` as if it had.
-    fn run_mise(&mut self, entry: usize, arg: &str, purpose: &str) -> bool {
-        let args = vec![arg.to_string()];
+    /// Run a `mise` command the plan never contained, recording it against
+    /// `entry` as if it had.
+    fn run_mise(&mut self, entry: usize, args: &[String], purpose: &str) -> bool {
+        let args = args.to_vec();
         let action = Action::Run {
             program: "mise".into(),
             args: args.clone(),
@@ -600,6 +613,16 @@ impl<'a> Session<'a> {
     }
 }
 
+/// The superdev-managed tools `.mise.toml` pins, in registry order. Naming
+/// them is what keeps `mise install` off the repo's own toolchain.
+fn managed_pins_in(content: &str) -> Vec<String> {
+    crate::components::MANAGED_MISE_TOOLS
+        .iter()
+        .filter(|tool| matches!(mise::current_pin(content, tool), Ok(Some(_))))
+        .map(|tool| (*tool).to_string())
+        .collect()
+}
+
 /// A missing program is a skip for optional actions, a failure otherwise.
 fn missing_or_failed(program: &str, error: Error, optional: bool) -> ActionOutcome {
     if optional && matches!(error, Error::Command { status: None, .. }) {
@@ -818,17 +841,21 @@ mod tests {
         assert!(mise.contains("http:superpowers"));
         assert!(mise.contains("npm:codegraph"));
         let calls = fake.calls();
+        // One install, naming every pin this run wrote — and nothing else.
         assert_eq!(
             calls
                 .iter()
-                .filter(|c| c.as_str() == "mise install")
-                .count(),
-            1
+                .filter(|c| c.starts_with("mise install"))
+                .collect::<Vec<_>>(),
+            vec!["mise install http:superpowers npm:codegraph"]
         );
         // Providers need their pinned tools installed before they run, and
         // mise will not install from a config it has not been told to trust.
         let trust = calls.iter().position(|c| c == "mise trust").unwrap();
-        let install = calls.iter().position(|c| c == "mise install").unwrap();
+        let install = calls
+            .iter()
+            .position(|c| c.starts_with("mise install"))
+            .unwrap();
         let init = calls.iter().position(|c| c == "codegraph init").unwrap();
         assert_eq!(trust + 1, install, "calls: {calls:?}");
         assert!(
@@ -870,8 +897,8 @@ mod tests {
         let calls = fake.calls();
         let install = calls
             .iter()
-            .position(|c| c == "mise install")
-            .unwrap_or_else(|| panic!("no `mise install` in {calls:?}"));
+            .position(|c| c == "mise install http:superpowers")
+            .unwrap_or_else(|| panic!("no targeted `mise install` in {calls:?}"));
         let trust = calls
             .iter()
             .position(|c| c == "mise trust")
@@ -898,6 +925,44 @@ mod tests {
             described.iter().any(|d| d.contains("mise install")),
             "outcomes: {described:?}"
         );
+    }
+
+    #[test]
+    fn install_never_names_the_repos_own_tools() {
+        let dir = tempfile::tempdir().unwrap();
+        // A repo with a rich toolchain of its own, one entry of which cannot
+        // build on this machine. Installing it is not superdev's business.
+        std::fs::write(
+            dir.path().join(".mise.toml"),
+            "[tools]\nnode = \"24.15\"\n\"cargo:cargo-ndk\" = '4.1.2'\n",
+        )
+        .unwrap();
+        let fake = FakeRunner::new();
+        let manifest = Manifest::default_for("0.1.0", &[]);
+        let mut lock = Lock::default();
+        let planned = vec![Planned {
+            capability: Some(crate::capability::Capability::Workflows),
+            provider: "superpowers".into(),
+            actions: vec![Action::SetMisePin {
+                tool: "http:superpowers".into(),
+                value_toml: "\"6.2.0\"".into(),
+            }],
+        }];
+        let result = apply(dir.path(), &fake, &manifest, &planned, &mut lock);
+        assert!(result.ok);
+        let installs: Vec<String> = fake
+            .calls()
+            .into_iter()
+            .filter(|c| c.starts_with("mise install"))
+            .collect();
+        assert_eq!(
+            installs,
+            vec!["mise install http:superpowers"],
+            "superdev installs its own pins, never the repo's"
+        );
+        // The user's tools stay in the file, untouched and uninstalled.
+        let mise = std::fs::read_to_string(dir.path().join(".mise.toml")).unwrap();
+        assert!(mise.contains("cargo:cargo-ndk"));
     }
 
     #[test]
