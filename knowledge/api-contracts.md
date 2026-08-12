@@ -51,7 +51,9 @@ Every verb acts on the current directory.
   the binary is its provenance. On a fresh clone it runs `mise trust` then
   `mise install` before any provider command, because the committed pins need no
   edit yet name tools this machine has never installed — and mise will not
-  install from a config this machine has never trusted.
+  install from a config this machine has never trusted. That install names
+  superdev's own tools, so a repo pin superdev knows nothing about can never
+  fail the run.
 - **`update`** rejects an explicit `workflows@<version>`,
   `code-index@<version>` or `skills@<version>` for the same reason. Every other
   capability takes an explicit version.

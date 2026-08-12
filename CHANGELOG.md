@@ -57,6 +57,13 @@ publish a version it cannot find a heading for.
 - `superdev aokf hook validate`: the hook as a subcommand — payload on
   stdin, validates in-process, works on every platform superdev ships for
 
+### Fixed
+
+- `sync` no longer installs the repo's whole toolchain. `mise install` and
+  `mise exec` now name superdev's own pinned tools, so an unrelated pin that
+  cannot build on this machine no longer fails the entire apply — found
+  adopting superdev in a repo pinning `cargo:cargo-ndk`
+
 ### Changed
 
 - The AOKF validator is now the binary's own `aokf validate`; the bundled

@@ -46,7 +46,7 @@ A capability is a slot; the tool filling it is a swappable provider.
 | Capability   | Provider          | Delivered as                    |
 |--------------|-------------------|---------------------------------|
 | `knowledge`  | `aokf`            | files embedded in the binary    |
-| `code-index` | `codegraph`       | checksummed release bundle (mise `http`) + `mise exec -- codegraph init` |
+| `code-index` | `codegraph`       | checksummed release bundle (mise `http`) + `mise exec http:codegraph -- codegraph init` |
 | `workflows`  | `superpowers`     | mise pin + Claude Code plugin   |
 | `frontend`   | `frontend-design` | Claude Code plugin              |
 | `skills`     | `superdev-skills` | owned files in the repo         |
