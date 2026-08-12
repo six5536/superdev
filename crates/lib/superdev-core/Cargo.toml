@@ -34,4 +34,8 @@ toml_edit = { workspace = true }
 ureq = { workspace = true }
 
 [dev-dependencies]
+# `client` drives the MCP server from the in-process integration test; the
+# library itself needs only the server half.
+rmcp = { workspace = true, features = ["client"] }
 tempfile = { workspace = true }
+tokio = { workspace = true, features = ["macros", "rt", "io-util"] }

@@ -45,6 +45,11 @@ pub enum Error {
         /// What failed.
         message: String,
     },
+    /// The MCP server could not start or could not run to completion.
+    Mcp {
+        /// What failed.
+        message: String,
+    },
 }
 
 /// Alias used across the crate.
@@ -72,6 +77,7 @@ impl fmt::Display for Error {
             Error::Manifest { message } => write!(f, "manifest: {message}"),
             Error::Embedding { message } => write!(f, "embedding: {message}"),
             Error::Index { message } => write!(f, "index: {message}"),
+            Error::Mcp { message } => write!(f, "mcp: {message}"),
         }
     }
 }
@@ -149,6 +155,14 @@ mod tests {
             }
             .to_string(),
             "index: no such directory"
+        );
+
+        assert_eq!(
+            Error::Mcp {
+                message: "transport closed".into()
+            }
+            .to_string(),
+            "mcp: transport closed"
         );
     }
 }

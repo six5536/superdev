@@ -40,6 +40,9 @@ ureq = { version = "2.12.1", features = ["json"] }
 # Dev dependencies
 assert_cmd = "2.2"
 tempfile = "3.27.0"
+# Already in the tree as rmcp's runtime; pinned to the version that resolves
+# there so declaring it adds nothing to the build.
+tokio = "1.53.1"
 
 # Internal crates
 superdev-core = { path = "crates/lib/superdev-core", version = "0.1.0" }

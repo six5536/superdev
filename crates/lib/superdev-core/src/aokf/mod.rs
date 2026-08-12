@@ -6,6 +6,7 @@ pub mod concept;
 pub mod embed;
 pub mod graph;
 pub mod index;
+pub mod mcp;
 pub mod validate;
 
 pub use bundle::{Bundle, BundleManifest, load_bundle};
@@ -16,4 +17,5 @@ pub use embed::{
 };
 pub use graph::{Edge, Graph, UnknownId, inverse_rel};
 pub use index::{Hit, Index, IndexDir, SCHEMA_VERSION, SearchOpts, SyncStats};
+pub use mcp::AokfServer;
 pub use validate::{Finding, Report, validate};
