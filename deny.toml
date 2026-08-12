@@ -23,7 +23,7 @@ allow = [
   "CC0-1.0",
   # CDLA-Permissive-2.0 covers data, not code, and attaches no obligations to
   # recipients. It reaches us as `webpki-roots` — Mozilla's root certificate
-  # set, pulled in by the model2vec-rs download path.
+  # set, pulled in by `ureq`'s TLS stack on the model download path.
   "CDLA-Permissive-2.0",
   "Zlib",
   # MPL-2.0 is weak, file-level copyleft: obligations attach only to MPL files
