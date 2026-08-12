@@ -104,7 +104,9 @@ impl Graph {
     /// plus the inverse of every declared edge pointing at it.
     ///
     /// A declared edge outranks the inverse synthesised from its mirror, so a
-    /// pair declared from both sides yields one hop, not two.
+    /// pair declared from both sides yields one hop, not two. A self-loop
+    /// appears once, in its declared direction: an inverse of it would be a
+    /// second line about the same node.
     ///
     /// # Errors
     ///
@@ -288,6 +290,28 @@ mod tests {
             assert_eq!(hops.len(), 1, "{id}");
             assert!(!hops[0].synthesised, "{id}");
         }
+    }
+
+    #[test]
+    fn a_self_loop_appears_once_without_a_synthesised_inverse() {
+        let loop_doc =
+            "---\ntype: T\nid: solo\nlinks:\n  - rel: references\n    to: solo\n---\nbody\n";
+        let g = Graph::build(&bundle_with(&[("solo.md", loop_doc)]));
+        let hops = g.neighbours("solo").unwrap();
+        assert_eq!(hops.len(), 1);
+        assert_eq!(hops[0].rel, "references");
+        assert!(!hops[0].synthesised);
+    }
+
+    #[test]
+    fn a_link_without_a_rel_synthesises_relates_to() {
+        let no_rel = "---\ntype: T\nid: alpha\nlinks:\n  - to: beta\n---\nbody\n";
+        let g = Graph::build(&bundle_with(&[("a.md", no_rel), ("beta.md", B)]));
+        assert_eq!(g.edge_map()[0].rel, "");
+        let hops = g.neighbours("beta").unwrap();
+        assert_eq!(hops.len(), 1);
+        assert_eq!(hops[0].rel, "relates-to");
+        assert!(hops[0].synthesised);
     }
 
     #[test]
