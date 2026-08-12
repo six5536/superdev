@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+# Dev shim: run the working-tree superdev. The managed hook entry says
+# `superdev aokf hook validate`, and this repo has no installed binary —
+# symlink this file into a PATH directory (see CONTRIBUTING).
+set -euo pipefail
+
+# Resolve the symlink chain: the repo root is relative to the real file, not
+# to the symlink on PATH. (`readlink -f` is not portable to older macOS.)
+src="${BASH_SOURCE[0]}"
+while [ -L "$src" ]; do
+  dir="$(cd -P "$(dirname "$src")" && pwd)"
+  src="$(readlink "$src")"
+  case "$src" in /*) ;; *) src="$dir/$src" ;; esac
+done
+root="$(cd -P "$(dirname "$src")/.." && pwd)"
+
+exec cargo run --quiet --manifest-path "$root/Cargo.toml" -- "$@"

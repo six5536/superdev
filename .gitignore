@@ -22,7 +22,9 @@
 .mise.local.toml
 
 # Machine state from dogfooding superdev on itself (search index, backups).
-/.superdev/cache/
+# Spelled without a leading slash: that is the literal the `repo` component
+# looks for, and it re-appends the entry otherwise.
+.superdev/cache/
 
 # Coverage artifacts (cargo-llvm-cov)
 /target/llvm-cov

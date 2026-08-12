@@ -1,3 +1,8 @@
 # The AOKF parity fixtures are parsed byte-for-byte and compared against
 # golden output, so their line endings must survive a Windows checkout.
 crates/lib/superdev-core/tests/fixtures/** -text
+
+# superdev-owned files are compared byte-for-byte against content embedded
+# in the binary, so their line endings must survive a Windows checkout.
+.claude/skills/** -text
+crates/lib/superdev-core/assets/** -text

@@ -81,6 +81,9 @@ jobs:
         if: runner.os != 'Windows'
         run: npm run check:aokf
 
+      - name: Blueprint drift
+        run: cargo run --quiet -- status
+
   coverage:
     # Runs the full test suite on ubuntu under instrumentation and enforces the
     # per-crate line-coverage gate. Uses nightly so the `coverage(off)` markers on

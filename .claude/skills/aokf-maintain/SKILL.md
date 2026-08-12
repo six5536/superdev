@@ -23,8 +23,11 @@ the next phase uses.
 Run the validator first:
 
 ```
-cargo run --quiet -- aokf validate knowledge
+superdev aokf validate knowledge
 ```
+
+(In the superdev source repo itself, which has no installed binary, use
+`cargo run --quiet -- aokf validate knowledge`.)
 
 It performs the SPEC §10 document check and grades the §11 conformance
 ladder: frontmatter and `type`, slug-valid unique `id`s, no stamped
@@ -40,8 +43,8 @@ script in the job tmp dir is fine); don't eyeball them:
 1. `knowledge/index.md` lists every concept, and each entry's text
    matches the concept's `description` (the index lowercases the first
    word; ignore that difference).
-2. The core-concepts list in `AGENTS.md` references only files that
-   exist.
+2. Every file `AGENTS.md` references (its `@`-imports and links)
+   exists.
 3. Flag lapsed verification: a `verified.at` older than the file's last
    content change (`git log -1 --format=%cI -- <file>`) confers no
    trust. Report it; do not touch the field.
@@ -52,7 +55,7 @@ reference, not the target.
 
 # Phase 2 — accuracy against the code
 
-The code is canonical (see `knowledge/coding-standards.md`). For each
+The code is canonical. For each
 concept, compare its last content change against its `resource` and
 repo-path `sources`:
 
@@ -98,3 +101,9 @@ but needs a human (lapsed verifications, code-vs-doc conflicts, judgement
 calls), and anything intentionally left alone. Leave changes uncommitted
 unless the user asked for a commit; if they did, commit as `docs:` per
 Conventional Commits.
+
+## Project adaptations
+
+If a `PROJECT.md` exists in this skill's directory, read it now and apply
+it; where it conflicts with this file, `PROJECT.md` wins. If absent,
+continue.

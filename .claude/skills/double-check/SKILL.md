@@ -10,3 +10,9 @@ If last work was an implementation from a plan or design, check each aspect has 
 If last work was implementation or documentation, check for completeness, correctness, and potential issues.
 
 If double-check was just completed, triple-check, and so on, until you are confident in the work.
+
+## Project adaptations
+
+If a `PROJECT.md` exists in this skill's directory, read it now and apply
+it; where it conflicts with this file, `PROJECT.md` wins. If absent,
+continue.

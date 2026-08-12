@@ -127,3 +127,9 @@ After:
 3. Could the first sentence be deleted with no loss? Delete it.
 4. Does it end by summarising itself? Stop earlier.
 5. Read it aloud: would a person actually say this to a colleague?
+
+## Project adaptations
+
+If a `PROJECT.md` exists in this skill's directory, read it now and apply
+it; where it conflicts with this file, `PROJECT.md` wins. If absent,
+continue.

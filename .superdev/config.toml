@@ -1,0 +1,5 @@
+blueprint = "0.1.0"
+
+[skills]
+provider = "superdev-skills"
+version = "0.1.0"

@@ -35,6 +35,14 @@ fatal.
 A plain `cargo build` needs no Node; Node is only needed for the npm packages
 and the repo scripts.
 
+This repo manages its own skills with superdev, and the Claude Code validation
+hook it installs calls a bare `superdev`. Link the dev shim so that resolves to
+your working tree:
+
+```sh
+ln -sf "$PWD/scripts/superdev" ~/.local/bin/superdev
+```
+
 ## Everyday commands
 
 All wrapped as npm scripts (see `package.json`):
@@ -43,6 +51,7 @@ All wrapped as npm scripts (see `package.json`):
 npm run build           # cargo build --workspace
 npm run test            # cargo nextest run --workspace, then check:aokf
 npm run check:aokf      # validate the knowledge/ AOKF bundle
+npm run check:blueprint # the superdev-owned files match the blueprint
 npm run lint            # cargo clippy --workspace
 npm run fmt             # cargo fmt --all
 npm run check           # cargo check --workspace --tests
@@ -82,6 +91,7 @@ RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps
 npm run test:launcher
 npm run verify-version
 npm run check:aokf
+npm run check:blueprint
 npm run coverage:check     # slow; needs the nightly toolchain
 ```
 
