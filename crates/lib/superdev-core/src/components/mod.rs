@@ -4,6 +4,7 @@ pub mod aokf;
 pub mod codegraph;
 pub mod mise;
 pub mod plugin;
+pub mod skillpack;
 
 use crate::component::Component;
 use crate::manifest::Manifest;
@@ -20,6 +21,7 @@ pub fn enabled(manifest: &Manifest) -> Vec<Box<dyn Component>> {
     let all: Vec<Box<dyn Component>> = vec![
         Box::new(plugin::superpowers()),
         Box::new(plugin::frontend_design()),
+        Box::new(skillpack::SkillPack),
         Box::new(codegraph::Codegraph),
         Box::new(aokf::Aokf),
     ];
@@ -38,7 +40,7 @@ mod tests {
     fn enabled_skips_disabled_capabilities() {
         let manifest = Manifest::default_for("0.1.0", &[Capability::CodeIndex]);
         let components = enabled(&manifest);
-        assert_eq!(components.len(), 3);
+        assert_eq!(components.len(), 4);
         assert!(
             components
                 .iter()
