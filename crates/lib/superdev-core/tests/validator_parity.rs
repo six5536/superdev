@@ -2,18 +2,19 @@
 //! validator, one fixture bundle per failure class.
 //!
 //! Each `tests/fixtures/aokf/<case>/` bundle has a `<case>.golden.json`
-//! holding the output of `.agents/aokf/tools/validator.py` for it. The
-//! goldens are the record of the reference behaviour once that script is
-//! deleted, so regenerate them only against a validator you trust:
+//! holding the output of `.agents/aokf/tools/validator.py` for it. That script
+//! is gone; the goldens are the only remaining record of the behaviour it
+//! defined, and there is nothing left to regenerate them from. Each was
+//! captured as:
 //!
 //! ```sh
-//! for d in crates/lib/superdev-core/tests/fixtures/aokf/*/; do
-//!   name=$(basename "$d")
-//!   python3 .agents/aokf/tools/validator.py "$d" --json --repo-root "$d" \
-//!     | jq 'del(.bundle)' \
-//!     > "crates/lib/superdev-core/tests/fixtures/aokf/$name.golden.json"
-//! done
+//! python3 .agents/aokf/tools/validator.py "$d" --json --repo-root "$d" \
+//!   | jq 'del(.bundle)'
 //! ```
+//!
+//! Treat a golden as fixed. Editing one changes the contract these tests
+//! exist to hold, so it needs the same argument a deliberate behaviour change
+//! would.
 //!
 //! Two normalisations, and nothing else:
 //!

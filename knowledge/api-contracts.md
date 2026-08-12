@@ -19,7 +19,7 @@ superdev update [TARGET]     move pins to this binary's defaults, then sync;
                              TARGET is `<capability>[@<version>]`
 superdev aokf validate [PATH]
                              check the bundle against the AOKF spec; exit 1
-                             on findings. --level 0..2 (default 2), --json,
+                             on errors. --level 0..2 (default 2), --json,
                              --repo-root <DIR> for `/`-rooted paths
 superdev aokf index [PATH]   rebuild the search index from scratch
 superdev mcp aokf            serve the bundle to agents over MCP on stdio
@@ -48,12 +48,14 @@ Every verb acts on the current directory.
   `code-index@<version>` for the same reason. Every other capability takes an
   explicit version.
 
-Both knowledge verbs default `PATH` to `knowledge/` and keep the search index
-in `.superdev/cache/aokf-index/`.
+Both knowledge verbs default `PATH` to `knowledge/`. The search index lives in
+`.superdev/cache/aokf-index/`; `aokf index` and the server use it, `aokf
+validate` never opens it.
 
 - **`aokf validate`** prints findings as text, or as the reference validator's
   JSON under `--json` — same keys, same `bundle` key, same exit codes, so
-  anything scripted against the old Python validator still works.
+  anything scripted against the old Python validator still works. Warnings
+  alone exit `0`; only an error at or below the graded level exits `1`.
 - **`aokf index`** forces a full rebuild. Nothing else needs it: the server
   syncs lazily on every tool call. It says so when no embedding model loaded
   and the index is lexical-only.
@@ -78,12 +80,14 @@ snippet, score — so the next call can read exactly what matched.
   grouped by source. With `id`: that concept's single-hop neighbours in both
   directions. Each group caps at 30 lines and then says how many it dropped.
 - **`aokf_overview`** — the bundle name, its concept count, the directory tree
-  with each concept's id and description, and the validation findings when the
-  bundle currently fails.
+  with each concept's id and description, and every validation finding,
+  warnings included, whenever there is one.
 
 A tool failure is an MCP error payload, never a process exit: an unknown id
 comes back with near-miss candidates, and a bundle that fails validation still
-indexes and serves — agents need search most while fixing one.
+indexes and serves — agents need search most while fixing one. Reading a file
+the parser choked on quotes the parse error instead of guessing at near
+misses.
 
 A usage error (unknown flag or subcommand) exits `2` — the npm launcher's
 smoke test relies on that code. `completions` and `man` render into a buffer

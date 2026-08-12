@@ -32,13 +32,14 @@ set:[^cargo-toml]
   server; `tantivy` for the BM25 index; `model2vec-rs` for local static
   embeddings; `serde_yaml_ng` to parse concept frontmatter; `pulldown-cmark`
   to split bodies into sections at their headings; `serde_json` for MCP
-  payloads, the validator's `--json`, and `.mcp.json` editing. `ureq` is
-  declared for the model download and the OpenAI calls, but pinned to the
-  version `model2vec-rs` already pulls in, so it adds nothing to the build.
+  payloads, the validator's `--json`, and `.mcp.json` editing; `ureq` for the
+  model download and the OpenAI calls. `model2vec-rs` runs `local-only`, so it
+  brings no HTTP stack of its own and `ureq` is the tree's only client. `tokio`
+  runs the MCP server's async transport in the binary, pinned to the version
+  `rmcp` already resolves.
 - **Rust (dev)**: `assert_cmd` for CLI tests, `tempfile` for the throwaway
-  repos the component and engine tests work in, `tokio` and `rmcp`'s `client`
-  feature to drive the server in-process — both pinned to versions already in
-  the tree.
+  repos the component and engine tests work in, and `rmcp`'s `client` feature
+  (with `tokio`) to drive the server in-process.
 - **Tooling** (pinned in `.mise.toml`): `cargo-zigbuild` and `zig` (the cross
   C compiler for the musl targets), `cargo-nextest`, `cargo-llvm-cov`.
 - **Agent tooling**: the [Superpowers](https://github.com/obra/superpowers)
@@ -53,8 +54,8 @@ machine into the user cache ([configuration](configuration.md)). Every crate
 above is pure Rust, which is the point — the static-musl release builds rule
 out anything wanting an ONNX runtime or a C toolchain. `cargo-deny`'s allow
 list gained `CDLA-Permissive-2.0` for this: it arrives as `webpki-roots`,
-Mozilla's root certificates on the download path, and licenses data rather
-than code ([deny.toml](/deny.toml)).
+Mozilla's root certificates behind `ureq`'s TLS on the download path, and
+licenses data rather than code ([deny.toml](/deny.toml)).
 
 superdev pins codegraph into *managed* repos the same way: the `http` backend
 against the release bundles, one checksummed URL per platform. Those bundles

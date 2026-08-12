@@ -36,7 +36,7 @@ publish a version it cannot find a heading for.
   no model is available. The index sits in `.superdev/cache/aokf-index/` and
   re-syncs lazily on every call, so edits are visible to the next question
 - `superdev aokf validate` and `superdev aokf index`: validate the bundle
-  against the AOKF spec (exit 1 on findings, `--json`, `--level`,
+  against the AOKF spec (exit 1 on errors, `--json`, `--level`,
   `--repo-root`) and force a full index rebuild
 - Optional `[knowledge.embeddings]` in `.superdev/config.toml` to embed
   through an API instead of the local model; the key comes from the
