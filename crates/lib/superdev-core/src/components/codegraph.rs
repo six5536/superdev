@@ -76,10 +76,14 @@ impl Component for Codegraph {
         if !ctx.root.join(CODEGRAPH_INDEX_DIR).is_dir() {
             // Through mise: the tool is pinned in this repo's `.mise.toml`,
             // and mise install puts it on no PATH the running process can see.
+            // Naming the tool keeps mise from installing the repo's whole
+            // toolchain first — one unbuildable pin of the user's would
+            // otherwise fail this run.
             actions.push(Action::Run {
                 program: "mise".into(),
                 args: vec![
                     "exec".into(),
+                    CODEGRAPH_MISE_TOOL.into(),
                     "--".into(),
                     "codegraph".into(),
                     "init".into(),
@@ -133,7 +137,7 @@ mod tests {
         assert!(
             descs
                 .iter()
-                .any(|d| d.contains("run `mise exec -- codegraph init`")),
+                .any(|d| d.contains("run `mise exec http:codegraph -- codegraph init`")),
             "descs: {descs:?}"
         );
     }

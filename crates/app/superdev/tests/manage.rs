@@ -33,7 +33,9 @@ echo "mise $@" >> "$FAKE_LOG"
 case "$1" in
   install) : > "$FAKE_INSTALLED" ;;
   exec)
+    # `mise exec [TOOL...] -- CMD`: skip the tools superdev names.
     shift
+    while [ $# -gt 0 ] && [ "$1" != "--" ]; do shift; done
     [ "$1" = "--" ] && shift
     exec "$@" ;;
   where)
@@ -172,7 +174,10 @@ fn init_sets_up_a_fresh_repo() {
     assert!(log.contains("mise install"), "log: {log}");
     assert!(log.contains("claude plugin install superpowers@superpowers-dev"));
     assert!(log.contains("claude plugin install frontend-design@claude-code-plugins"));
-    assert!(log.contains("mise exec -- codegraph init"), "log: {log}");
+    assert!(
+        log.contains("mise exec http:codegraph -- codegraph init"),
+        "log: {log}"
+    );
 }
 
 #[test]
@@ -208,7 +213,9 @@ fn sync_installs_committed_pins_on_a_fresh_clone() {
         .find("mise trust")
         .unwrap_or_else(|| panic!("log: {log}"));
     let plugin = log.find("claude plugin install").unwrap();
-    let index = log.find("mise exec -- codegraph init").unwrap();
+    let index = log
+        .find("mise exec http:codegraph -- codegraph init")
+        .unwrap();
     assert!(trust < install, "log: {log}");
     assert!(install < plugin && install < index, "log: {log}");
     sb.superdev().arg("status").assert().success();
