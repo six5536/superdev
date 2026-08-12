@@ -3,7 +3,7 @@
 //! Parsing, path defaults and printed output only; the bundle work is all
 //! `superdev-core`'s.
 
-use std::io::{self, Write};
+use std::io::{self, Read, Write};
 use std::path::{Path, PathBuf};
 
 use superdev_core::aokf::{
@@ -52,6 +52,16 @@ pub enum AokfCommand {
         /// Bundle directory (default: `knowledge`)
         path: Option<PathBuf>,
     },
+    /// Claude Code hook plumbing (reads the hook payload from stdin)
+    #[command(subcommand)]
+    Hook(HookCommand),
+}
+
+/// One verb per hook, so future hooks slot in beside `validate`.
+#[derive(clap::Subcommand)]
+pub enum HookCommand {
+    /// PostToolUse: validate the bundle after an Edit/Write under knowledge/
+    Validate,
 }
 
 /// Serve the bundle over stdio until the client disconnects.
@@ -151,7 +161,48 @@ pub fn run_aokf(cmd: &AokfCommand, root: &Path) -> Result<u8> {
             }
             Ok(0)
         }
+        AokfCommand::Hook(HookCommand::Validate) => hook_validate(root),
     }
+}
+
+/// The PostToolUse hook body. Exit 0 unless the payload names a path under
+/// the bundle; then validate and exit 2 with findings on errors, which
+/// Claude Code feeds back to the agent as a blocking error. An unreadable
+/// payload is a loud exit 2 — a silent skip here silently stops validating
+/// the bundle.
+fn hook_validate(root: &Path) -> Result<u8> {
+    // Hooks run with the project as the working directory, but Claude Code
+    // also names it explicitly; prefer the explicit form.
+    let root =
+        std::env::var_os("CLAUDE_PROJECT_DIR").map_or_else(|| root.to_path_buf(), PathBuf::from);
+    let mut payload = String::new();
+    if let Err(e) = io::stdin().read_to_string(&mut payload) {
+        eprintln!("aokf hook: could not read the tool payload from stdin: {e}");
+        return Ok(2);
+    }
+    let parsed: serde_json::Value = match serde_json::from_str(&payload) {
+        Ok(parsed) => parsed,
+        Err(e) => {
+            eprintln!("aokf hook: malformed tool payload on stdin: {e}");
+            return Ok(2);
+        }
+    };
+    let Some(file_path) = parsed["tool_input"]["file_path"].as_str() else {
+        // Not a file edit: nothing to validate.
+        return Ok(0);
+    };
+    let bundle = root.join(BUNDLE_DIR);
+    let edited = Path::new(file_path);
+    if !edited.starts_with(&bundle) && !edited.starts_with(BUNDLE_DIR) {
+        return Ok(0);
+    }
+    let report = validate(&load_bundle(&bundle)?, &root, DEFAULT_LEVEL);
+    if report.passed() {
+        return Ok(0);
+    }
+    eprintln!("AOKF validation failed after editing {file_path} — fix before continuing:");
+    eprintln!("{}", report.render_human().trim_end_matches('\n'));
+    Ok(2)
 }
 
 /// The bundle to work on: what the caller named, else `<root>/knowledge`.

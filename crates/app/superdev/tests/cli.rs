@@ -267,3 +267,105 @@ fn blocked_model_cache(dir: &Path) -> std::path::PathBuf {
     std::fs::write(&path, "").unwrap();
     path
 }
+
+/// A repo with a `knowledge/` bundle: valid (level-2 clean) or broken.
+fn hook_repo(valid: bool) -> tempfile::TempDir {
+    let dir = tempfile::tempdir().unwrap();
+    let k = dir.path().join("knowledge");
+    std::fs::create_dir_all(&k).unwrap();
+    std::fs::write(
+        k.join("manifest.aokf.yaml"),
+        "aokf: \"0.1\"\nname: fixture\n",
+    )
+    .unwrap();
+    let concept = if valid {
+        "---\ntype: Note\nid: alpha\n---\n\nBody.\n"
+    } else {
+        "---\nid: alpha\n---\n\nMissing type.\n"
+    };
+    std::fs::write(k.join("alpha.md"), concept).unwrap();
+    dir
+}
+
+fn hook_payload(dir: &Path, rel: &str) -> String {
+    serde_json::json!({
+        "tool_input": { "file_path": dir.join(rel) }
+    })
+    .to_string()
+}
+
+#[test]
+fn hook_validate_blocks_an_edit_that_broke_the_bundle() {
+    let repo = hook_repo(false);
+    let out = superdev()
+        .args(["aokf", "hook", "validate"])
+        .env("CLAUDE_PROJECT_DIR", repo.path())
+        .write_stdin(hook_payload(repo.path(), "knowledge/alpha.md"))
+        .assert()
+        .code(2);
+    let stderr = String::from_utf8_lossy(&out.get_output().stderr).into_owned();
+    assert!(
+        stderr.contains("AOKF validation failed after editing"),
+        "stderr: {stderr}"
+    );
+    assert!(stderr.contains("alpha.md"), "stderr: {stderr}");
+}
+
+#[test]
+fn hook_validate_passes_a_clean_bundle() {
+    let repo = hook_repo(true);
+    superdev()
+        .args(["aokf", "hook", "validate"])
+        .env("CLAUDE_PROJECT_DIR", repo.path())
+        .write_stdin(hook_payload(repo.path(), "knowledge/alpha.md"))
+        .assert()
+        .code(0);
+}
+
+#[test]
+fn hook_validate_ignores_paths_outside_the_bundle() {
+    // Even a broken bundle: an edit elsewhere is not the hook's business.
+    let repo = hook_repo(false);
+    superdev()
+        .args(["aokf", "hook", "validate"])
+        .env("CLAUDE_PROJECT_DIR", repo.path())
+        .write_stdin(hook_payload(repo.path(), "src/main.rs"))
+        .assert()
+        .code(0);
+}
+
+#[test]
+fn hook_validate_falls_back_to_the_working_directory() {
+    let repo = hook_repo(false);
+    superdev()
+        .current_dir(repo.path())
+        .args(["aokf", "hook", "validate"])
+        .env_remove("CLAUDE_PROJECT_DIR")
+        .write_stdin(hook_payload(repo.path(), "knowledge/alpha.md"))
+        .assert()
+        .code(2);
+}
+
+#[test]
+fn hook_validate_is_loud_on_a_malformed_payload() {
+    let repo = hook_repo(true);
+    let out = superdev()
+        .args(["aokf", "hook", "validate"])
+        .env("CLAUDE_PROJECT_DIR", repo.path())
+        .write_stdin("not json")
+        .assert()
+        .code(2);
+    let stderr = String::from_utf8_lossy(&out.get_output().stderr).into_owned();
+    assert!(stderr.contains("malformed"), "stderr: {stderr}");
+}
+
+#[test]
+fn hook_validate_ignores_payloads_without_a_file_path() {
+    let repo = hook_repo(false);
+    superdev()
+        .args(["aokf", "hook", "validate"])
+        .env("CLAUDE_PROJECT_DIR", repo.path())
+        .write_stdin(r#"{"tool_input":{}}"#)
+        .assert()
+        .code(0);
+}
