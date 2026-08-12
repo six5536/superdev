@@ -313,6 +313,14 @@ impl<'a> Session<'a> {
                     pointer,
                     value_json,
                 } => self.set_json_key(path, pointer, value_json, &mut written),
+                Action::EnsureJsonArrayElement {
+                    path,
+                    pointer,
+                    marker,
+                    value_json,
+                } => {
+                    self.ensure_json_array_element(path, pointer, marker, value_json, &mut written)
+                }
                 Action::Run {
                     program,
                     args,
@@ -451,6 +459,48 @@ impl<'a> Session<'a> {
         }
         // Hash the canonical value, so layout changes never read as drift.
         written.push((format!("{path}:{pointer}"), sha256_hex(value.as_bytes())));
+        ActionOutcome::Applied { note: None }
+    }
+
+    /// Merge one array element into a JSON file. Superdev owns the element
+    /// its marker finds — replaced in place, appended when absent — and the
+    /// lock hashes the canonical element, not the file.
+    fn ensure_json_array_element(
+        &mut self,
+        path: &str,
+        pointer: &str,
+        marker: &str,
+        value_json: &str,
+        written: &mut Vec<(String, String)>,
+    ) -> ActionOutcome {
+        let full = self.root.join(path);
+        let existing = match read_text(&full) {
+            Ok(existing) => existing,
+            Err(e) => return ActionOutcome::Failed(e.to_string()),
+        };
+        // Edit in memory first, so a malformed file is left as the user wrote it.
+        let edited = edit_json_array_element(
+            path,
+            existing.as_deref().unwrap_or("{}"),
+            pointer,
+            marker,
+            value_json,
+        );
+        let (content, value) = match edited {
+            Ok(edited) => edited,
+            Err(e) => return ActionOutcome::Failed(e.to_string()),
+        };
+        self.journal.push(Undo::RestoreFile {
+            path: path.to_string(),
+            prior: existing,
+        });
+        if let Err(e) = write_file(&full, &content) {
+            return ActionOutcome::Failed(e.to_string());
+        }
+        written.push((
+            format!("{path}:{pointer}[{marker}]"),
+            sha256_hex(value.as_bytes()),
+        ));
         ActionOutcome::Applied { note: None }
     }
 
@@ -618,6 +668,60 @@ fn edit_json_key(
         Some(map) => map.insert(key.to_string(), value.clone()),
         None => return Err(bad(format!("{container} is not a JSON object"))),
     };
+
+    let mut content = serde_json::to_string_pretty(&root).expect("a parsed value re-serialises");
+    content.push('\n');
+    Ok((content, value.to_string()))
+}
+
+/// Ensure the array at a dotted key path contains `value_json`: the first
+/// element whose serialised form contains `marker` is replaced, else the
+/// element is appended. Missing objects on the way — and the array itself —
+/// are created. Returns the file content to write and the canonical element
+/// text, which is what the lock hashes.
+fn edit_json_array_element(
+    path: &str,
+    json: &str,
+    pointer: &str,
+    marker: &str,
+    value_json: &str,
+) -> Result<(String, String)> {
+    let bad = |message: String| Error::Toml {
+        path: path.into(),
+        message,
+    };
+    let mut root: serde_json::Value = serde_json::from_str(json).map_err(|e| bad(e.to_string()))?;
+    let value: serde_json::Value = serde_json::from_str(value_json)
+        .map_err(|e| bad(format!("invalid value `{value_json}`: {e}")))?;
+
+    let mut container = "the root".to_string();
+    let mut segment_name = "the root";
+    let mut cursor = &mut root;
+    for segment in pointer.split('.') {
+        cursor = match cursor.as_object_mut() {
+            Some(map) => map
+                .entry(segment)
+                .or_insert_with(|| serde_json::Value::Object(serde_json::Map::new())),
+            None => return Err(bad(format!("{container} is not a JSON object"))),
+        };
+        container = format!("`{segment}`");
+        segment_name = segment;
+    }
+    // The walk mints an empty object for a missing final segment; the pointer
+    // names an array, so turn that placeholder into one.
+    if cursor.as_object().is_some_and(serde_json::Map::is_empty) {
+        *cursor = serde_json::Value::Array(Vec::new());
+    }
+    let Some(items) = cursor.as_array_mut() else {
+        return Err(bad(format!("`{segment_name}` is not a JSON array")));
+    };
+    match items
+        .iter_mut()
+        .find(|item| item.to_string().contains(marker))
+    {
+        Some(item) => *item = value.clone(),
+        None => items.push(value.clone()),
+    }
 
     let mut content = serde_json::to_string_pretty(&root).expect("a parsed value re-serialises");
     content.push('\n');
@@ -1176,6 +1280,161 @@ mod tests {
             panic!("expected a failure");
         };
         assert_eq!(message, ".mcp.json: the root is not a JSON object");
+    }
+
+    /// The hook registration the skills provider plans, used by the array tests.
+    fn ensure_hook() -> Action {
+        Action::EnsureJsonArrayElement {
+            path: ".claude/settings.json".into(),
+            pointer: "hooks.PostToolUse".into(),
+            marker: "superdev aokf hook validate".into(),
+            value_json: r#"{"matcher":"Edit|Write","hooks":[{"type":"command","command":"superdev aokf hook validate"}]}"#.into(),
+        }
+    }
+
+    #[test]
+    fn ensure_array_element_appends_and_preserves_user_entries() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::create_dir_all(dir.path().join(".claude")).unwrap();
+        std::fs::write(
+            dir.path().join(".claude/settings.json"),
+            "{\n  \"hooks\": { \"PostToolUse\": [ { \"matcher\": \"Agent\", \"hooks\": [] } ] },\n  \"permissions\": { \"deny\": [] }\n}\n",
+        )
+        .unwrap();
+        let fake = FakeRunner::new();
+        let manifest = Manifest::default_for("0.1.0", &[]);
+        let mut lock = Lock::default();
+        let planned = vec![Planned {
+            capability: Some(crate::capability::Capability::Skills),
+            provider: "superdev-skills".into(),
+            actions: vec![ensure_hook()],
+        }];
+        let result = apply(dir.path(), &fake, &manifest, &planned, &mut lock);
+        assert!(result.ok);
+        let text = std::fs::read_to_string(dir.path().join(".claude/settings.json")).unwrap();
+        let written: serde_json::Value = serde_json::from_str(&text).unwrap();
+        let entries = written["hooks"]["PostToolUse"].as_array().unwrap();
+        assert_eq!(entries.len(), 2);
+        assert_eq!(entries[0]["matcher"], "Agent");
+        assert_eq!(
+            entries[1]["hooks"][0]["command"],
+            "superdev aokf hook validate"
+        );
+        assert!(written["permissions"].is_object());
+        assert!(
+            lock.files.contains_key(
+                ".claude/settings.json:hooks.PostToolUse[superdev aokf hook validate]"
+            ),
+            "lock: {:?}",
+            lock.files
+        );
+    }
+
+    #[test]
+    fn ensure_array_element_replaces_a_stale_superdev_entry() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::create_dir_all(dir.path().join(".claude")).unwrap();
+        // A prior release's entry: same marker, different matcher.
+        std::fs::write(
+            dir.path().join(".claude/settings.json"),
+            r#"{"hooks":{"PostToolUse":[{"matcher":"Write","hooks":[{"type":"command","command":"superdev aokf hook validate"}]}]}}"#,
+        )
+        .unwrap();
+        let fake = FakeRunner::new();
+        let manifest = Manifest::default_for("0.1.0", &[]);
+        let mut lock = Lock::default();
+        let planned = vec![Planned {
+            capability: Some(crate::capability::Capability::Skills),
+            provider: "superdev-skills".into(),
+            actions: vec![ensure_hook()],
+        }];
+        let result = apply(dir.path(), &fake, &manifest, &planned, &mut lock);
+        assert!(result.ok);
+        let written: serde_json::Value = serde_json::from_str(
+            &std::fs::read_to_string(dir.path().join(".claude/settings.json")).unwrap(),
+        )
+        .unwrap();
+        let entries = written["hooks"]["PostToolUse"].as_array().unwrap();
+        assert_eq!(entries.len(), 1, "replaced, not duplicated");
+        assert_eq!(entries[0]["matcher"], "Edit|Write");
+    }
+
+    #[test]
+    fn ensure_array_element_creates_the_file_and_path_when_absent() {
+        let dir = tempfile::tempdir().unwrap();
+        let fake = FakeRunner::new();
+        let manifest = Manifest::default_for("0.1.0", &[]);
+        let mut lock = Lock::default();
+        let planned = vec![Planned {
+            capability: Some(crate::capability::Capability::Skills),
+            provider: "superdev-skills".into(),
+            actions: vec![ensure_hook()],
+        }];
+        let result = apply(dir.path(), &fake, &manifest, &planned, &mut lock);
+        assert!(result.ok);
+        let written: serde_json::Value = serde_json::from_str(
+            &std::fs::read_to_string(dir.path().join(".claude/settings.json")).unwrap(),
+        )
+        .unwrap();
+        assert_eq!(
+            written["hooks"]["PostToolUse"][0]["hooks"][0]["command"],
+            "superdev aokf hook validate"
+        );
+    }
+
+    #[test]
+    fn ensure_array_element_rejects_a_non_array_pointer() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::create_dir_all(dir.path().join(".claude")).unwrap();
+        std::fs::write(
+            dir.path().join(".claude/settings.json"),
+            r#"{"hooks":{"PostToolUse":{"matcher":"Edit"}}}"#,
+        )
+        .unwrap();
+        let fake = FakeRunner::new();
+        let manifest = Manifest::default_for("0.1.0", &[]);
+        let mut lock = Lock::default();
+        let planned = vec![Planned {
+            capability: Some(crate::capability::Capability::Skills),
+            provider: "superdev-skills".into(),
+            actions: vec![ensure_hook()],
+        }];
+        let result = apply(dir.path(), &fake, &manifest, &planned, &mut lock);
+        assert!(!result.ok);
+        let (_, ActionOutcome::Failed(message)) = &result.reports[0].outcomes[0] else {
+            panic!("expected a failure");
+        };
+        assert_eq!(
+            message,
+            ".claude/settings.json: `PostToolUse` is not a JSON array"
+        );
+        // The user's file is left exactly as they wrote it.
+        assert_eq!(
+            std::fs::read_to_string(dir.path().join(".claude/settings.json")).unwrap(),
+            r#"{"hooks":{"PostToolUse":{"matcher":"Edit"}}}"#
+        );
+        assert!(lock.files.is_empty());
+    }
+
+    #[test]
+    fn ensure_array_element_on_a_malformed_file_fails_cleanly() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::create_dir_all(dir.path().join(".claude")).unwrap();
+        std::fs::write(dir.path().join(".claude/settings.json"), "not json\n").unwrap();
+        let fake = FakeRunner::new();
+        let manifest = Manifest::default_for("0.1.0", &[]);
+        let mut lock = Lock::default();
+        let planned = vec![Planned {
+            capability: Some(crate::capability::Capability::Skills),
+            provider: "superdev-skills".into(),
+            actions: vec![ensure_hook()],
+        }];
+        let result = apply(dir.path(), &fake, &manifest, &planned, &mut lock);
+        assert!(!result.ok);
+        assert_eq!(
+            std::fs::read_to_string(dir.path().join(".claude/settings.json")).unwrap(),
+            "not json\n"
+        );
     }
 
     #[test]

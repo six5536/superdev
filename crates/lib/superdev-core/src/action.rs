@@ -50,6 +50,19 @@ pub enum Action {
         /// The value to set, as a JSON string.
         value_json: String,
     },
+    /// Ensure a JSON array carries one superdev-owned element, found by
+    /// marker; every other element is the user's. Creates the file and the
+    /// path to the array when absent. Used for .claude/settings.json hooks.
+    EnsureJsonArrayElement {
+        /// Target path (repo-relative).
+        path: String,
+        /// Dotted key path to the array, e.g. `hooks.PostToolUse`.
+        pointer: String,
+        /// Substring identifying superdev's element among the array's entries.
+        marker: String,
+        /// The desired element, as a JSON string.
+        value_json: String,
+    },
     /// Run an external command in the repo root.
     Run {
         /// Program name.
@@ -75,6 +88,12 @@ impl Action {
             }
             Action::SetMisePin { tool, .. } => format!("pin {tool} in .mise.toml"),
             Action::SetJsonKey { path, pointer, .. } => format!("set {pointer} in {path}"),
+            Action::EnsureJsonArrayElement {
+                path,
+                pointer,
+                marker,
+                ..
+            } => format!("ensure {path} {pointer} has the `{marker}` entry"),
             Action::Run {
                 program,
                 args,
@@ -132,5 +151,16 @@ mod tests {
             value_json: "{}".into(),
         };
         assert_eq!(a.describe(), "set mcpServers.superdev-aokf in .mcp.json");
+
+        let a = Action::EnsureJsonArrayElement {
+            path: ".claude/settings.json".into(),
+            pointer: "hooks.PostToolUse".into(),
+            marker: "superdev aokf hook validate".into(),
+            value_json: "{}".into(),
+        };
+        assert_eq!(
+            a.describe(),
+            "ensure .claude/settings.json hooks.PostToolUse has the `superdev aokf hook validate` entry"
+        );
     }
 }
