@@ -5,6 +5,7 @@ pub mod bundle;
 pub mod concept;
 pub mod embed;
 pub mod graph;
+pub mod index;
 pub mod validate;
 
 pub use bundle::{Bundle, BundleManifest, load_bundle};
@@ -14,4 +15,5 @@ pub use embed::{
     embedder_from,
 };
 pub use graph::{Edge, Graph, UnknownId, inverse_rel};
+pub use index::{Index, IndexDir, SCHEMA_VERSION, SyncStats};
 pub use validate::{Finding, Report, validate};

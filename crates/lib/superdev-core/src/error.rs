@@ -40,6 +40,11 @@ pub enum Error {
         /// What failed, and where.
         message: String,
     },
+    /// The search index could not be built, read or written.
+    Index {
+        /// What failed.
+        message: String,
+    },
 }
 
 /// Alias used across the crate.
@@ -66,6 +71,7 @@ impl fmt::Display for Error {
             }
             Error::Manifest { message } => write!(f, "manifest: {message}"),
             Error::Embedding { message } => write!(f, "embedding: {message}"),
+            Error::Index { message } => write!(f, "index: {message}"),
         }
     }
 }
@@ -135,6 +141,14 @@ mod tests {
             }
             .to_string(),
             "embedding: OPENAI_API_KEY is not set"
+        );
+
+        assert_eq!(
+            Error::Index {
+                message: "no such directory".into()
+            }
+            .to_string(),
+            "index: no such directory"
         );
     }
 }
