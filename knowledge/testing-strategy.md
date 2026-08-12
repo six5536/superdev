@@ -24,10 +24,23 @@ gate are in [CONTRIBUTING](/CONTRIBUTING.md).[^contributing]
   rollback. No test shells out to a real tool.
 - **CLI end-to-end.** Invoke the real binary (`assert_cmd`) against every
   surface: `--version`, help, completions per shell, `man`, usage-error exit
-  codes, and the manage verbs (`init` → clean `status` → tamper → `status`
-  exits 1 → `sync` repairs). The manage tests put fake `mise`, `claude` and
+  codes, the manage verbs (`init` → clean `status` → tamper → `status`
+  exits 1 → `sync` repairs), `aokf validate`'s three exit codes and its JSON,
+  `aokf index`, and `mcp aokf`'s startup
+  failures. The manage tests put fake `mise`, `claude` and
   `codegraph` on `PATH` as shell scripts, so they are unix-only; Windows runs
   the rest.
+- **Validator parity.** One fixture bundle per failure class under
+  `tests/fixtures/aokf/`, each with a `.golden.json` captured from the Python
+  validator before that script was deleted. The Rust output is compared to it
+  verbatim, bar two documented normalisations. Those goldens are now the only
+  record of the reference behaviour, so they are regenerated only against a
+  validator worth trusting.
+- **MCP integration.** A real rmcp client drives all four tools over an
+  in-process duplex pipe against fixture bundles — the transport is the only
+  thing stubbed. Assertions cover locators, line numbers, group truncation and
+  the lexical-only degradation. A `FakeEmbedder` keeps vector results
+  deterministic; no test downloads the real model.
 - **npm launcher.** A JS test that resolves + spawns a stub binary, and
   errors cleanly when no platform package matches.
 - **Release smoke.** `scripts/release-smoke.mjs` runs a compiled release
@@ -39,7 +52,9 @@ gate are in [CONTRIBUTING](/CONTRIBUTING.md).[^contributing]
   its runner can execute and the second where the package matches the host;
   locally: `npm run smoke` / `npm run smoke:launcher`.
 - **Manage smoke (manual).** `npm run smoke:manage` runs a real `init` and
-  `status` in a scratch repo against the real mise, claude and codegraph.
+  `status` in a scratch repo against the real mise, claude and codegraph, then
+  `aokf validate` and `aokf index` over the bundle that `init` just wrote.
+  This is the only place the real embedding model is downloaded and loaded.
   Devcontainer-only and never in CI: it needs the network and Claude auth.
 
 Domain logic in `superdev-core` carries the bulk of the tests as pure units —

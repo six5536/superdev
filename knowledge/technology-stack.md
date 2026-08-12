@@ -28,8 +28,17 @@ set:[^cargo-toml]
   manifest and lock types; `toml_edit` to read them and to edit `.mise.toml`
   in place, preserving the user's layout and comments; `sha2` for the sha256
   hashes that detect drift in superdev-owned files.
+- **Rust (knowledge side)**: `rmcp` (the official Rust MCP SDK) for the stdio
+  server; `tantivy` for the BM25 index; `model2vec-rs` for local static
+  embeddings; `serde_yaml_ng` to parse concept frontmatter; `pulldown-cmark`
+  to split bodies into sections at their headings; `serde_json` for MCP
+  payloads, the validator's `--json`, and `.mcp.json` editing. `ureq` is
+  declared for the model download and the OpenAI calls, but pinned to the
+  version `model2vec-rs` already pulls in, so it adds nothing to the build.
 - **Rust (dev)**: `assert_cmd` for CLI tests, `tempfile` for the throwaway
-  repos the component and engine tests work in.
+  repos the component and engine tests work in, `tokio` and `rmcp`'s `client`
+  feature to drive the server in-process — both pinned to versions already in
+  the tree.
 - **Tooling** (pinned in `.mise.toml`): `cargo-zigbuild` and `zig` (the cross
   C compiler for the musl targets), `cargo-nextest`, `cargo-llvm-cov`.
 - **Agent tooling**: the [Superpowers](https://github.com/obra/superpowers)
@@ -37,6 +46,15 @@ set:[^cargo-toml]
   tarball + sha256 checksum — Superpowers publishes no release assets, so the
   `github` backend cannot install it). The devcontainer post-create script
   wires the checkout into Claude Code as a local marketplace.[^mise-toml]
+
+The embedding model is pinned like a dependency:
+`minishlab/potion-retrieval-32M`, at commit `6fc8051…`, fetched once per
+machine into the user cache ([configuration](configuration.md)). Every crate
+above is pure Rust, which is the point — the static-musl release builds rule
+out anything wanting an ONNX runtime or a C toolchain. `cargo-deny`'s allow
+list gained `CDLA-Permissive-2.0` for this: it arrives as `webpki-roots`,
+Mozilla's root certificates on the download path, and licenses data rather
+than code ([deny.toml](/deny.toml)).
 
 superdev pins codegraph into *managed* repos the same way: the `http` backend
 against the release bundles, one checksummed URL per platform. Those bundles

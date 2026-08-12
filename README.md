@@ -16,6 +16,21 @@ Claude Code plugins superdev expects, then records the result in
 `--no-frontend` to leave a capability out. Everything it owns can be repaired
 by re-running `sync`.
 
+It also registers an MCP server for the knowledgebase, so agents search it
+instead of preloading every page of it:
+
+```sh
+superdev mcp aokf        # serve the knowledgebase over MCP (stdio)
+superdev aokf validate   # check it against the AOKF spec; exits 1 on findings
+superdev aokf index      # rebuild the search index from scratch
+```
+
+The server offers four read-only tools — search, read, graph, overview — and
+keeps itself current: every call re-hashes the bundle and reindexes only what
+changed. Search is hybrid, combining a BM25 index with a small embedding model
+downloaded once per machine, and falls back to keyword-only if that model is
+unavailable.
+
 superdev is opinionated for one stack — Claude Code, mise and AOKF — and is
 still under construction. Nothing is published yet.
 

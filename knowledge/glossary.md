@@ -2,7 +2,7 @@
 type: Glossary
 id: glossary
 title: Domain Glossary
-description: The terms the blueprint engine uses — blueprint, capability, provider, component, owned file, scaffold.
+description: The terms the blueprint engine uses — blueprint, capability, provider, component, owned file, scaffold — plus the search terms section, locator, hybrid search and RRF.
 status: stable
 ---
 
@@ -21,6 +21,20 @@ status: stable
   The embedded AOKF spec and validator are owned.
 - **Scaffold** — a file superdev writes once and never touches again, such as
   `AGENTS.md`. It is the user's from the moment it exists, so it cannot drift.
+
+Terms from the knowledge-serving side:
+
+- **Section** — the unit of retrieval: one heading's body, or the root section
+  (frontmatter plus anything before the first heading). A concept is indexed,
+  searched and returned section by section, never whole.
+- **Locator** — what a hit carries so it can be read next: bundle-relative
+  path, concept id, heading path, line range, snippet, score.
+- **Hybrid search** — running the lexical index and the vector index over the
+  same sections and merging the two rankings. Exact terms are found by BM25,
+  paraphrases by the embeddings; neither alone covers both.
+- **Reciprocal rank fusion (RRF)** — how those two rankings merge: each list
+  contributes `1/(60 + rank)` per section and the sums are sorted. It needs no
+  score calibration between BM25 and cosine, which is the whole reason for it.
 
 The files these terms describe are in [configuration](configuration.md); the
 layering is in [architecture](architecture.md).

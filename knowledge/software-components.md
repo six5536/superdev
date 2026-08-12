@@ -28,15 +28,32 @@ All domain logic; no argument parsing. One module per concern:
 - `engine` — applies a plan, journals every side effect, unwinds on failure.
 - `runner` — the process seam; `report` — plan and apply rendering; `error` —
   the crate's error type.
-- The AOKF spec, validator and agent files the `knowledge` capability writes
-  ship as `assets/`, embedded at compile time.
+- `aokf` — the read side of the knowledge bundle, one module per stage:
+  `concept` (frontmatter and section parsing), `bundle` (loading, reserved-file
+  rules), `validate` (document check and conformance ladder), `graph` (link
+  resolution and inverse synthesis), `embed` (the embedding providers),
+  `index` (tantivy plus the vector store), `mcp` (the server).
+- The AOKF spec and agent files the `knowledge` capability writes ship as
+  `assets/`, embedded at compile time.
+
+The MCP server exposes four read-only tools over stdio — `aokf_search`,
+`aokf_read`, `aokf_graph`, `aokf_overview` (see
+[api-contracts](api-contracts.md)). It holds one index directory and
+serialises its own tool calls with a mutex: a call keeps the index open across
+its whole body while another call's sync could delete and rebuild that
+directory underneath it. Search is hybrid — tantivy BM25 and cosine over
+section embeddings, fused by reciprocal rank fusion — and drops to lexical-only
+when no model loads.
 
 # `crates/app/superdev` (binary)
 
 Depends on `superdev-core`. Binary name `superdev`. `main.rs` is clap parsing
 and exit codes; `manage.rs` holds the `init`, `status`, `sync` and `update`
 verbs — plan, print, apply, and the repo-level `.gitignore` entries no
-capability owns. Also present is the plumbing the release pipeline needs:
+capability owns. `aokf_cli.rs` holds `aokf validate`, `aokf index` and
+`mcp aokf`: path defaults, printed output, and the current-thread tokio
+runtime the server blocks on. Also present is the plumbing the release
+pipeline needs:
 `--version`, `completions` (clap_complete), and a hidden `man` subcommand
 (clap_mangen). The CLI contract is in [api-contracts](api-contracts.md).
 

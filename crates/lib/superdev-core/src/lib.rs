@@ -3,9 +3,14 @@
 //! A managed repo is described by a manifest of [`capability`] slots, each
 //! filled by a [`component`] that observes the repo and returns the
 //! [`action`]s needed to match it. The [`engine`] is the only place those
-//! actions run, and it rolls the run back when one fails. The binary in
-//! `crates/app/superdev` parses arguments and calls in here; the two release
-//! in lockstep.
+//! actions run, and it rolls the run back when one fails.
+//!
+//! [`aokf`] is the other half, and reads rather than writes: it parses the
+//! knowledge bundle the `knowledge` capability installs, validates it,
+//! indexes it for hybrid search, and serves it to agents over MCP.
+//!
+//! The binary in `crates/app/superdev` parses arguments and calls in here;
+//! the two release in lockstep.
 // Under the nightly coverage job (cargo-llvm-cov sets `coverage_nightly`), enable
 // the attribute used to exclude genuinely untestable glue from coverage. Inert on
 // the stable toolchain used for normal builds and tests.

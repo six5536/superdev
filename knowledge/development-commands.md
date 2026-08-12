@@ -17,8 +17,12 @@ Everything is wrapped as npm scripts (defined in
 - Dailies: `npm run build` / `test` / `lint` / `fmt` / `check` — thin wrappers
   over cargo (`test` is `cargo nextest run --workspace` followed by
   `check:aokf`).
-- Knowledgebase: `npm run check:aokf` validates the `knowledge/` AOKF bundle
-  with the binary's own `aokf validate`.
+- Knowledgebase: `npm run check:aokf` is
+  `cargo run --quiet -- aokf validate knowledge` — the binary validating this
+  repo's own bundle, and the same command the Claude Code hook runs. It exits
+  1 on findings. `cargo run -- aokf index` forces a full rebuild of the search
+  index, which nothing routine needs: the MCP server syncs it lazily on every
+  tool call.
 - Coverage: `npm run coverage` (HTML) / `coverage:summary` /
   `coverage:check` (the ≥90%-per-crate gate; needs the nightly toolchain).
 - Packaging: `npm run test:launcher`, `npm run verify-version` (16 locations
@@ -29,7 +33,8 @@ Everything is wrapped as npm scripts (defined in
   npm-packs the launcher plus the host's platform package and runs the real
   binary through the shim. Release CI runs both per buildable target.
   `npm run smoke:manage` is manual only: a real `init` and `status` in a
-  scratch repo against the real mise, claude and codegraph.
+  scratch repo against the real mise, claude and codegraph, then `aokf
+  validate` and `aokf index` — the one run that downloads the embedding model.
 
 Two traps:
 

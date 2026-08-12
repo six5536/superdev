@@ -3,7 +3,7 @@ type: Spec
 id: spec-aokf-mcp-server
 title: AOKF MCP Server
 description: Design for the read-side AOKF MCP server — hybrid search, graph, the Rust validator, and the search-first AGENTS.md switchover.
-status: draft
+status: stable
 links:
   - rel: relates-to
     to: spec-cli-core-blueprint-engine

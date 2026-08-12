@@ -2,7 +2,7 @@
 type: Convention
 id: error-handling
 title: Error Handling & Logging
-description: Exit codes, the broken-pipe rule, and how a failed apply reports what it could not undo.
+description: Exit codes, the broken-pipe rule, why MCP tool failures never end the process, and how a failed apply reports what it could not undo.
 status: stable
 resource: /crates/app/superdev/src/main.rs
 ---
@@ -10,13 +10,30 @@ resource: /crates/app/superdev/src/main.rs
 # Exit codes
 
 - `0` — success.
-- `1` — `status` found work to do: drift, a missing component, or a pin behind
-  the registry. Not an error; CI gates on it.
+- `1` — a check found something, not an error: `status` found work to do
+  (drift, a missing component, or a pin behind the registry), or
+  `aokf validate` found errors in the bundle. CI gates on both.
 - `2` — usage error (clap), a hard failure, or an I/O failure, rendered as
-  `error: <message>` on stderr. A failed `sync` or `init` exits `2`.
+  `error: <message>` on stderr. A failed `sync` or `init` exits `2`, as does
+  `mcp aokf` when it cannot start.
 
 A closed stdout pipe is the one I/O failure that is not an error: a reader
 that stops early (`| head`, a pager quit) ends the run at `0`, silently.
+
+`aokf validate`'s three codes are the Python validator's, kept identical so
+that everything gating on the old script's exit code — the hook,
+`npm run check:aokf`, CI — gates the same way on the binary. See
+[development-commands](development-commands.md).
+
+# MCP tools never exit
+
+Inside `mcp aokf` a failure is a tool error payload, and the process keeps
+serving. An unknown id, a file the parser choked on, an embedding model that
+will not load — each answers the one call that hit it and leaves the session
+alive, because the client's next question may well be answerable. The startup
+checks are the exception: they run before any client is listening. Search with
+no model degrades to lexical-only with a warning in the response, never an
+error.
 
 # Failed applies
 

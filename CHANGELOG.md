@@ -29,3 +29,27 @@ publish a version it cannot find a heading for.
   bundles pinned in the binary, so `update <capability>@<version>` refuses
   an explicit version for them — bare `update` moves them to the binary's
   pins
+- `superdev mcp aokf`: an MCP server over the knowledge bundle with four
+  read-only tools — `aokf_search`, `aokf_read`, `aokf_graph` and
+  `aokf_overview`. Search is hybrid (BM25 plus a pinned local embedding
+  model, fused by reciprocal rank fusion) and degrades to lexical-only when
+  no model is available. The index sits in `.superdev/cache/aokf-index/` and
+  re-syncs lazily on every call, so edits are visible to the next question
+- `superdev aokf validate` and `superdev aokf index`: validate the bundle
+  against the AOKF spec (exit 1 on findings, `--json`, `--level`,
+  `--repo-root`) and force a full index rebuild
+- Optional `[knowledge.embeddings]` in `.superdev/config.toml` to embed
+  through an API instead of the local model; the key comes from the
+  environment, never the file
+- `init` registers the server in `.mcp.json` under
+  `mcpServers.superdev-aokf`, merging into whatever servers are already
+  there
+
+### Changed
+
+- The AOKF validator is now the binary's own `aokf validate`; the bundled
+  Python `validator.py` is deleted, and the validation hook, `check:aokf`
+  and CI all call the Rust one. Findings, JSON and exit codes are unchanged
+- AGENTS.md no longer preloads every concept in the knowledgebase. It keeps
+  `knowledge/index.md` as the map and tells agents to search the MCP server
+  for the rest

@@ -21,6 +21,9 @@
 *.local.json
 .mise.local.toml
 
+# Machine state from dogfooding superdev on itself (search index, backups).
+/.superdev/cache/
+
 # Coverage artifacts (cargo-llvm-cov)
 /target/llvm-cov
 /target/llvm-cov-target

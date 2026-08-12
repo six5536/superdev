@@ -2,7 +2,7 @@
 type: Reference
 id: configuration
 title: Configuration & Environments
-description: The .superdev directory — the config.toml manifest, the lock file, and the gitignored cache.
+description: The .superdev directory — the config.toml manifest, the lock file and the gitignored cache — plus the embeddings opt-in, .mcp.json and the user-level model cache.
 status: stable
 resource: /crates/lib/superdev-core/src/manifest.rs
 ---
@@ -32,6 +32,20 @@ provider = "superpowers"
 version = "6.2.0"
 ```
 
+An optional sub-table opts the knowledge bundle out of the local embedding
+model and onto an API:
+
+```toml
+[knowledge.embeddings]
+provider = "openai"              # the only provider implemented
+model = "text-embedding-3-small"
+```
+
+The API key comes from `OPENAI_API_KEY` and never from the file. The recorded
+model id is part of the index manifest, so switching provider rebuilds the
+index by itself. Absent the table, embedding is local and offline after the
+first download.
+
 One table per enabled capability, keyed by the capability name — an absent
 table means disabled, which is what `init --no-<capability>` produces. An
 unknown capability name is rejected. `version` is omitted where the source
@@ -50,7 +64,24 @@ edited by hand, and say so (after backing it up).
 # `cache/`
 
 Machine state, gitignored by `init`: backups of overwritten files under
-`backup/<timestamp>/` today, and the search index later. Deleting it is safe.
+`backup/<timestamp>/`, and the search index under `aokf-index/` (tantivy, the
+section vectors, and a manifest of per-file hashes, schema version and model
+id). Deleting it is safe — the next tool call rebuilds it.
+
+# Outside the repo
+
+- `.mcp.json` at the repo root registers the MCP server under
+  `mcpServers.superdev-aokf`. The file is shared with the user's own servers,
+  so superdev manages and hashes that one key and leaves the rest alone, the
+  same rule it applies to `.mise.toml`. A managed repo gets
+  `superdev mcp aokf`; this repo, which has no installed binary, gets
+  `cargo run --quiet -- mcp aokf`.
+- The local embedding model lives in the *user* cache, not the repo:
+  `$XDG_CACHE_HOME` (else `%LOCALAPPDATA%`, else `~/.cache`) +
+  `/superdev/models/<model>/<revision>/`. Revision-scoped, so a pin bump
+  downloads afresh instead of overwriting. One ~130 MB download serves every
+  repo on the machine; see [technology-stack](technology-stack.md) for the pin
+  itself.
 
 The capability set is in [architecture](architecture.md); the file-ownership
 rules that decide what gets hashed are in [glossary](glossary.md).
