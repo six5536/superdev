@@ -29,6 +29,14 @@ status: draft
   question deferred to the knowledge-upkeep sub-project, where the rest of the
   entry-point and migration work lives.
 
+- **Comment-preserving manifest stamping.** `sync` rewrites `config.toml`
+  through the whole-file `Manifest::save` when it stamps the blueprint
+  version, dropping any hand-written comments — the rewrite `update` always
+  did, now implicit in every post-upgrade sync. A targeted `toml_edit` edit
+  of the one key would keep a hand-editable file's comments. Raised in the
+  blueprint-migrations final review
+  ([spec](specs/2026-08-12-blueprint-migrations-design.md)).
+
 # Decided against
 
 - **Pinning `node` in the managed repo.** Considered because codegraph was
