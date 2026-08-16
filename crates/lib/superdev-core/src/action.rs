@@ -63,6 +63,26 @@ pub enum Action {
         /// The desired element, as a JSON string.
         value_json: String,
     },
+    /// Delete a file superdev previously wrote.
+    RemoveFile {
+        /// Target path.
+        path: String,
+        /// Short human reason, shown in plans.
+        reason: String,
+    },
+    /// Drop one `[tools]` key from `.mise.toml`, preserving the rest.
+    RemoveMisePin {
+        /// Tool key, e.g. `http:superpowers`.
+        tool: String,
+    },
+    /// Drop one key path from a JSON file, preserving all other content. The
+    /// pointer may end in `[marker]` to name a superdev-owned array element.
+    RemoveJsonKey {
+        /// Target path (repo-relative).
+        path: String,
+        /// Dotted key path, e.g. `mcpServers.superdev-aokf`.
+        pointer: String,
+    },
     /// Run an external command in the repo root.
     Run {
         /// Program name.
@@ -94,6 +114,9 @@ impl Action {
                 marker,
                 ..
             } => format!("ensure {path} {pointer} has the `{marker}` entry"),
+            Action::RemoveFile { path, reason } => format!("remove {path} ({reason})"),
+            Action::RemoveMisePin { tool } => format!("unpin {tool} in .mise.toml"),
+            Action::RemoveJsonKey { path, pointer } => format!("remove {pointer} from {path}"),
             Action::Run {
                 program,
                 args,
@@ -161,6 +184,27 @@ mod tests {
         assert_eq!(
             a.describe(),
             "ensure .claude/settings.json hooks.PostToolUse has the `superdev aokf hook validate` entry"
+        );
+
+        let a = Action::RemoveFile {
+            path: ".claude/skills/humanise/SKILL.md".into(),
+            reason: "no longer in the blueprint".into(),
+        };
+        assert_eq!(
+            a.describe(),
+            "remove .claude/skills/humanise/SKILL.md (no longer in the blueprint)"
+        );
+        let a = Action::RemoveMisePin {
+            tool: "http:codegraph".into(),
+        };
+        assert_eq!(a.describe(), "unpin http:codegraph in .mise.toml");
+        let a = Action::RemoveJsonKey {
+            path: ".mcp.json".into(),
+            pointer: "mcpServers.superdev-aokf".into(),
+        };
+        assert_eq!(
+            a.describe(),
+            "remove mcpServers.superdev-aokf from .mcp.json"
         );
     }
 }

@@ -94,6 +94,18 @@ pub fn set_pin(mise_toml: &str, tool: &str, value_toml: &str) -> Result<String> 
     Ok(doc.to_string())
 }
 
+/// Remove one `[tools]` key, preserving everything else. `None` when the tool
+/// is not pinned. An emptied `[tools]` table stays: guessing which empty
+/// containers a user wants gone is worse than the residue.
+pub fn remove_pin(mise_toml: &str, tool: &str) -> Result<Option<String>> {
+    let mut doc = parse(mise_toml)?;
+    let removed = doc
+        .get_mut("tools")
+        .and_then(Item::as_table_like_mut)
+        .and_then(|tools| tools.remove(tool));
+    Ok(removed.map(|_| doc.to_string()))
+}
+
 /// Lock `files` key under which a managed pin's value hash is recorded.
 pub fn pin_lock_key(tool: &str) -> String {
     format!(".mise.toml:{tool}")
@@ -148,6 +160,23 @@ mod tests {
             current_pin(&out, "node").unwrap().as_deref(),
             Some("\"24\"")
         );
+    }
+
+    #[test]
+    fn remove_pin_takes_one_key_and_leaves_the_rest() {
+        let with = set_pin(SAMPLE, "http:codegraph", "\"1.5.0\"").unwrap();
+        let out = remove_pin(&with, "http:codegraph").unwrap().unwrap();
+        assert_eq!(current_pin(&out, "http:codegraph").unwrap(), None);
+        assert!(out.contains("# my tools"));
+        assert!(out.contains("node = \"24\" # keep"));
+        // Not pinned: nothing to write.
+        assert!(remove_pin(SAMPLE, "http:codegraph").unwrap().is_none());
+        // The emptied [tools] table stays.
+        let only = set_pin("", "http:codegraph", "\"1.5.0\"").unwrap();
+        let out = remove_pin(&only, "http:codegraph").unwrap().unwrap();
+        assert!(out.contains("[tools]"), "{out}");
+        // Malformed file: an error, never a guess.
+        assert!(remove_pin("[tools\n", "http:codegraph").is_err());
     }
 
     #[test]
