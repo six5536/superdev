@@ -104,6 +104,26 @@ mod tests {
     }
 
     #[test]
+    fn a_0_1_0_lock_reads_unchanged() {
+        let toml = r#"[components.skills]
+provider = "superdev-skills"
+version = "0.1.0"
+
+[files]
+".agents/aokf/SPEC.md" = "aaaa"
+".mise.toml:http:superpowers" = "bbbb"
+".claude/settings.json:hooks.PostToolUse[superdev aokf hook validate]" = "cccc"
+"#;
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::create_dir(dir.path().join(".superdev")).unwrap();
+        std::fs::write(dir.path().join(LOCK_PATH), toml).unwrap();
+        let lock = Lock::load(dir.path()).unwrap();
+        assert_eq!(lock.components["skills"].provider, "superdev-skills");
+        assert_eq!(lock.files[".mise.toml:http:superpowers"], "bbbb");
+        assert_eq!(lock.files.len(), 3);
+    }
+
+    #[test]
     fn io_and_parse_failures_surface_the_path() {
         let dir = tempfile::tempdir().unwrap();
         std::fs::create_dir(dir.path().join(".superdev")).unwrap();
