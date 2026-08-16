@@ -310,6 +310,7 @@ impl<'a> Session<'a> {
         lock: &mut Lock,
     ) -> bool {
         let mut written = Vec::new();
+        let mut removed: Vec<String> = Vec::new();
         for action in &entry.actions {
             let outcome = match action {
                 // Pins were applied as one grouped edit before any entry ran.
@@ -341,10 +342,10 @@ impl<'a> Session<'a> {
                     optional,
                     ..
                 } => self.run_action(program, args, undo, *optional),
-                Action::RemoveFile { .. }
-                | Action::RemoveMisePin { .. }
-                | Action::RemoveJsonKey { .. } => {
-                    ActionOutcome::Failed("removal actions are wired in the next commit".into())
+                Action::RemoveFile { path, .. } => self.remove_file(path, &mut removed),
+                Action::RemoveMisePin { tool } => self.remove_mise_pin(tool, &mut removed),
+                Action::RemoveJsonKey { path, pointer } => {
+                    self.remove_json_key(path, pointer, &mut removed)
                 }
             };
             let failed = matches!(outcome, ActionOutcome::Failed(_));
@@ -358,6 +359,9 @@ impl<'a> Session<'a> {
             .chain(written)
         {
             lock.files.insert(key, hash);
+        }
+        for key in removed {
+            lock.files.remove(&key);
         }
         if let Some(capability) = entry.capability {
             lock.components.insert(
@@ -437,6 +441,122 @@ impl<'a> Session<'a> {
         }
         next.push_str(line);
         next.push('\n');
+        match write_file(&full, &next) {
+            Ok(()) => ActionOutcome::Applied { note: None },
+            Err(e) => ActionOutcome::Failed(e.to_string()),
+        }
+    }
+
+    /// Remove an owned file the blueprint dropped. The lock key is released
+    /// even when the removal is skipped: gone or user-changed, the file is no
+    /// longer superdev's.
+    fn remove_file(&mut self, path: &str, removed: &mut Vec<String>) -> ActionOutcome {
+        removed.push(path.to_string());
+        let full = self.root.join(path);
+        let existing = match read_text(&full) {
+            Ok(existing) => existing,
+            Err(e) => return ActionOutcome::Failed(e.to_string()),
+        };
+        let Some(content) = existing else {
+            return ActionOutcome::Skipped("already gone".into());
+        };
+        // Re-check at apply time: an edit between plan and apply is the
+        // user's, and superdev takes back only what it wrote.
+        if self.prior_hashes.get(path) != Some(&sha256_hex(content.as_bytes())) {
+            return ActionOutcome::Skipped(
+                "changed since superdev wrote it — left in place".into(),
+            );
+        }
+        let backup = self
+            .root
+            .join(BACKUP_DIR)
+            .join(self.stamp.to_string())
+            .join(path);
+        if let Err(e) = write_file(&backup, &content) {
+            return ActionOutcome::Failed(e.to_string());
+        }
+        self.journal.push(Undo::RestoreFile {
+            path: path.to_string(),
+            prior: Some(content),
+        });
+        match fs::remove_file(&full) {
+            Ok(()) => ActionOutcome::Applied { note: None },
+            Err(e) => ActionOutcome::Failed(e.to_string()),
+        }
+    }
+
+    /// Remove a managed pin. Journals the whole file: removing a pin is a
+    /// file rewrite.
+    fn remove_mise_pin(&mut self, tool: &str, removed: &mut Vec<String>) -> ActionOutcome {
+        let key = mise::pin_lock_key(tool);
+        removed.push(key.clone());
+        let path = self.root.join(".mise.toml");
+        let existing = match read_text(&path) {
+            Ok(existing) => existing,
+            Err(e) => return ActionOutcome::Failed(e.to_string()),
+        };
+        let Some(content) = existing else {
+            return ActionOutcome::Skipped("already gone".into());
+        };
+        let value = match mise::current_pin(&content, tool) {
+            Ok(Some(value)) => value,
+            Ok(None) => return ActionOutcome::Skipped("already gone".into()),
+            Err(e) => return ActionOutcome::Failed(e.to_string()),
+        };
+        if self.prior_hashes.get(&key) != Some(&sha256_hex(value.as_bytes())) {
+            return ActionOutcome::Skipped(
+                "changed since superdev wrote it — left in place".into(),
+            );
+        }
+        let next = match mise::remove_pin(&content, tool) {
+            Ok(next) => next.expect("the pin is present"),
+            Err(e) => return ActionOutcome::Failed(e.to_string()),
+        };
+        self.journal.push(Undo::RestoreFile {
+            path: ".mise.toml".into(),
+            prior: Some(content),
+        });
+        match write_file(&path, &next) {
+            Ok(()) => ActionOutcome::Applied { note: None },
+            Err(e) => ActionOutcome::Failed(e.to_string()),
+        }
+    }
+
+    /// Remove a managed JSON key or array element. Journals the whole file.
+    fn remove_json_key(
+        &mut self,
+        path: &str,
+        pointer: &str,
+        removed: &mut Vec<String>,
+    ) -> ActionOutcome {
+        let key = format!("{path}:{pointer}");
+        removed.push(key.clone());
+        let full = self.root.join(path);
+        let existing = match read_text(&full) {
+            Ok(existing) => existing,
+            Err(e) => return ActionOutcome::Failed(e.to_string()),
+        };
+        let Some(content) = existing else {
+            return ActionOutcome::Skipped("already gone".into());
+        };
+        let value = match json_value_at(path, &content, pointer) {
+            Ok(Some(value)) => value,
+            Ok(None) => return ActionOutcome::Skipped("already gone".into()),
+            Err(e) => return ActionOutcome::Failed(e.to_string()),
+        };
+        if self.prior_hashes.get(&key) != Some(&sha256_hex(value.as_bytes())) {
+            return ActionOutcome::Skipped(
+                "changed since superdev wrote it — left in place".into(),
+            );
+        }
+        let (next, _) = match remove_json_pointer(path, &content, pointer) {
+            Ok(edited) => edited.expect("the entry is present"),
+            Err(e) => return ActionOutcome::Failed(e.to_string()),
+        };
+        self.journal.push(Undo::RestoreFile {
+            path: path.to_string(),
+            prior: Some(content),
+        });
         match write_file(&full, &next) {
             Ok(()) => ActionOutcome::Applied { note: None },
             Err(e) => ActionOutcome::Failed(e.to_string()),
@@ -758,8 +878,6 @@ fn edit_json_array_element(
 
 /// Split a lock-style pointer into dotted segments and the optional trailing
 /// `[marker]` naming an array element.
-// Called by the removal executor, which lands in the next commit.
-#[allow(dead_code)]
 pub(crate) fn parse_pointer(pointer: &str) -> (Vec<&str>, Option<&str>) {
     match pointer.split_once('[') {
         Some((dotted, rest)) => (
@@ -773,7 +891,6 @@ pub(crate) fn parse_pointer(pointer: &str) -> (Vec<&str>, Option<&str>) {
 /// The canonical value text at `pointer`: the object key's value, or the
 /// array element whose serialised form contains the marker — the same rule
 /// `edit_json_array_element` matches by. `Ok(None)` when absent.
-#[allow(dead_code)]
 pub(crate) fn json_value_at(path: &str, json: &str, pointer: &str) -> Result<Option<String>> {
     let root: serde_json::Value = serde_json::from_str(json).map_err(|e| Error::Toml {
         path: path.into(),
@@ -798,7 +915,6 @@ pub(crate) fn json_value_at(path: &str, json: &str, pointer: &str) -> Result<Opt
 
 /// Remove the entry `pointer` names. Returns the new file content and the
 /// removed canonical value; `Ok(None)` when absent. Empty parents stay.
-#[allow(dead_code)]
 pub(crate) fn remove_json_pointer(
     path: &str,
     json: &str,
@@ -2004,5 +2120,192 @@ mod tests {
             std::fs::read(dir.path().join("bin.dat")).unwrap(),
             [0xff, 0xfe]
         );
+    }
+
+    #[test]
+    fn remove_file_backs_up_journals_and_releases_the_lock_key() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::write(dir.path().join("old.txt"), "superdev content").unwrap();
+        let fake = FakeRunner::new();
+        let manifest = Manifest::default_for("0.1.0", &[]);
+        let mut lock = Lock::default();
+        lock.files
+            .insert("old.txt".into(), sha256_hex(b"superdev content"));
+        let planned = vec![Planned {
+            capability: None,
+            provider: "superdev".into(),
+            actions: vec![Action::RemoveFile {
+                path: "old.txt".into(),
+                reason: "no longer in the blueprint".into(),
+            }],
+        }];
+        let result = apply(dir.path(), &fake, &manifest, &planned, &mut lock);
+        assert!(result.ok);
+        assert!(!dir.path().join("old.txt").exists());
+        assert!(!lock.files.contains_key("old.txt"));
+        let backups: Vec<_> = std::fs::read_dir(dir.path().join(BACKUP_DIR))
+            .unwrap()
+            .map(|e| e.unwrap().path().join("old.txt"))
+            .collect();
+        assert_eq!(backups.len(), 1);
+        assert_eq!(
+            std::fs::read_to_string(&backups[0]).unwrap(),
+            "superdev content"
+        );
+    }
+
+    #[test]
+    fn remove_file_skips_the_gone_and_the_user_changed() {
+        let dir = tempfile::tempdir().unwrap();
+        let fake = FakeRunner::new();
+        let manifest = Manifest::default_for("0.1.0", &[]);
+        let remove = |path: &str| Planned {
+            capability: None,
+            provider: "superdev".into(),
+            actions: vec![Action::RemoveFile {
+                path: path.into(),
+                reason: "no longer in the blueprint".into(),
+            }],
+        };
+        // Already gone: skipped, key released.
+        let mut lock = Lock::default();
+        lock.files.insert("gone.txt".into(), sha256_hex(b"x"));
+        let result = apply(
+            dir.path(),
+            &fake,
+            &manifest,
+            &[remove("gone.txt")],
+            &mut lock,
+        );
+        assert!(result.ok);
+        assert_eq!(
+            result.reports[0].outcomes[0].1,
+            ActionOutcome::Skipped("already gone".into())
+        );
+        assert!(!lock.files.contains_key("gone.txt"));
+        // Changed since planning: left in place, key released.
+        std::fs::write(dir.path().join("mine.txt"), "edited by hand").unwrap();
+        let mut lock = Lock::default();
+        lock.files
+            .insert("mine.txt".into(), sha256_hex(b"superdev content"));
+        let result = apply(
+            dir.path(),
+            &fake,
+            &manifest,
+            &[remove("mine.txt")],
+            &mut lock,
+        );
+        assert!(result.ok);
+        assert_eq!(
+            result.reports[0].outcomes[0].1,
+            ActionOutcome::Skipped("changed since superdev wrote it — left in place".into())
+        );
+        assert!(dir.path().join("mine.txt").exists());
+        assert!(!lock.files.contains_key("mine.txt"));
+    }
+
+    #[test]
+    fn remove_mise_pin_and_json_key_rewrite_only_their_entry() {
+        let dir = tempfile::tempdir().unwrap();
+        let mise_toml =
+            mise::set_pin("[tools]\nnode = \"24\"\n", "http:codegraph", "\"1.5.0\"").unwrap();
+        std::fs::write(dir.path().join(".mise.toml"), &mise_toml).unwrap();
+        std::fs::write(
+            dir.path().join(".mcp.json"),
+            r#"{"mcpServers":{"superdev-aokf":{"command":"superdev","args":["mcp","aokf"]},"mine":{"command":"me"}}}"#,
+        )
+        .unwrap();
+        let fake = FakeRunner::new();
+        let manifest = Manifest::default_for("0.1.0", &[]);
+        let mut lock = Lock::default();
+        let pin_value = mise::current_pin(&mise_toml, "http:codegraph")
+            .unwrap()
+            .unwrap();
+        lock.files.insert(
+            mise::pin_lock_key("http:codegraph"),
+            sha256_hex(pin_value.as_bytes()),
+        );
+        let mcp_value: serde_json::Value =
+            serde_json::from_str(r#"{"command":"superdev","args":["mcp","aokf"]}"#).unwrap();
+        lock.files.insert(
+            ".mcp.json:mcpServers.superdev-aokf".into(),
+            sha256_hex(mcp_value.to_string().as_bytes()),
+        );
+        let planned = vec![Planned {
+            capability: None,
+            provider: "superdev".into(),
+            actions: vec![
+                Action::RemoveMisePin {
+                    tool: "http:codegraph".into(),
+                },
+                Action::RemoveJsonKey {
+                    path: ".mcp.json".into(),
+                    pointer: "mcpServers.superdev-aokf".into(),
+                },
+            ],
+        }];
+        let result = apply(dir.path(), &fake, &manifest, &planned, &mut lock);
+        assert!(result.ok, "{:?}", result.reports);
+        let mise_after = std::fs::read_to_string(dir.path().join(".mise.toml")).unwrap();
+        assert_eq!(
+            mise::current_pin(&mise_after, "http:codegraph").unwrap(),
+            None
+        );
+        assert!(mise_after.contains("node = \"24\""));
+        let mcp: serde_json::Value =
+            serde_json::from_str(&std::fs::read_to_string(dir.path().join(".mcp.json")).unwrap())
+                .unwrap();
+        assert!(mcp["mcpServers"].get("superdev-aokf").is_none());
+        assert_eq!(mcp["mcpServers"]["mine"]["command"], "me");
+        assert!(lock.files.is_empty());
+        // No installs follow a removal.
+        assert!(fake.calls().is_empty());
+    }
+
+    #[test]
+    fn a_later_failure_restores_a_removed_file() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::write(dir.path().join("old.txt"), "superdev content").unwrap();
+        let fake = FakeRunner::new();
+        fake.script(
+            "codegraph init",
+            Output {
+                status: 1,
+                stdout: String::new(),
+                stderr: "boom".into(),
+            },
+        );
+        let manifest = Manifest::default_for("0.1.0", &[]);
+        let mut lock = Lock::default();
+        lock.files
+            .insert("old.txt".into(), sha256_hex(b"superdev content"));
+        let planned = vec![
+            Planned {
+                capability: None,
+                provider: "superdev".into(),
+                actions: vec![Action::RemoveFile {
+                    path: "old.txt".into(),
+                    reason: "no longer in the blueprint".into(),
+                }],
+            },
+            Planned {
+                capability: Some(crate::capability::Capability::CodeIndex),
+                provider: "codegraph".into(),
+                actions: vec![Action::Run {
+                    program: "codegraph".into(),
+                    args: vec!["init".into()],
+                    purpose: "index".into(),
+                    undo: None,
+                    optional: false,
+                }],
+            },
+        ];
+        let result = apply(dir.path(), &fake, &manifest, &planned, &mut lock);
+        assert!(!result.ok);
+        assert_eq!(
+            std::fs::read_to_string(dir.path().join("old.txt")).unwrap(),
+            "superdev content"
+        );
+        assert!(result.reverted.iter().any(|r| r.contains("old.txt")));
     }
 }
