@@ -2,7 +2,7 @@
 
 use crate::action::Action;
 use crate::capability::Capability;
-use crate::component::{Component, Ctx};
+use crate::component::{Claim, Component, Ctx};
 use crate::error::{Error, Result};
 use crate::registry::{self, CODEGRAPH_PLATFORMS};
 
@@ -94,6 +94,10 @@ impl Component for Codegraph {
             });
         }
         Ok(actions)
+    }
+
+    fn owned(&self, _ctx: &Ctx<'_>) -> Vec<Claim> {
+        vec![Claim::MisePin(CODEGRAPH_MISE_TOOL.to_string())]
     }
 }
 

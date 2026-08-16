@@ -3,7 +3,7 @@
 
 use crate::action::{Action, Ownership};
 use crate::capability::Capability;
-use crate::component::{Component, Ctx};
+use crate::component::{Claim, Component, Ctx};
 use crate::error::Result;
 
 macro_rules! asset {
@@ -129,6 +129,19 @@ impl Component for Aokf {
             });
         }
         Ok(actions)
+    }
+
+    fn owned(&self, _ctx: &Ctx<'_>) -> Vec<Claim> {
+        let mut claims: Vec<Claim> = FILES
+            .iter()
+            .filter(|(_, _, ownership, _)| *ownership == Ownership::Owned)
+            .map(|(path, ..)| Claim::File((*path).to_string()))
+            .collect();
+        claims.push(Claim::JsonKey {
+            path: MCP_PATH.into(),
+            pointer: MCP_POINTER.into(),
+        });
+        claims
     }
 }
 

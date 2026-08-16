@@ -2,7 +2,7 @@
 
 use crate::action::Action;
 use crate::capability::Capability;
-use crate::component::{Component, Ctx};
+use crate::component::{Claim, Component, Ctx};
 use crate::error::{Error, Result};
 use crate::registry::{self, SUPERPOWERS_CHECKSUM, SUPERPOWERS_URL};
 
@@ -169,6 +169,13 @@ impl Component for ClaudePlugin {
             actions.extend(self.install_actions());
         }
         Ok(actions)
+    }
+
+    fn owned(&self, _ctx: &Ctx<'_>) -> Vec<Claim> {
+        match &self.marketplace {
+            Marketplace::MiseTool { tool, .. } => vec![Claim::MisePin((*tool).to_string())],
+            Marketplace::GitHub { .. } => Vec::new(),
+        }
     }
 }
 

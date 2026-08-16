@@ -4,7 +4,7 @@
 
 use crate::action::{Action, Ownership};
 use crate::capability::Capability;
-use crate::component::{Component, Ctx};
+use crate::component::{Claim, Component, Ctx};
 use crate::error::{Error, Result};
 use crate::registry;
 
@@ -107,6 +107,23 @@ impl Component for SkillPack {
         }
         actions.extend(self.hook_action(ctx));
         Ok(actions)
+    }
+
+    fn owned(&self, ctx: &Ctx<'_>) -> Vec<Claim> {
+        let custom = ctx
+            .config(Capability::Skills)
+            .map(|c| c.custom.as_slice())
+            .unwrap_or_default();
+        let mut claims: Vec<Claim> = SKILLS
+            .iter()
+            .filter(|(name, _)| !custom.iter().any(|c| c == name))
+            .map(|(name, _)| Claim::File(format!(".claude/skills/{name}/SKILL.md")))
+            .collect();
+        claims.push(Claim::JsonKey {
+            path: SETTINGS_PATH.into(),
+            pointer: format!("{HOOK_POINTER}[{HOOK_MARKER}]"),
+        });
+        claims
     }
 }
 
@@ -279,6 +296,27 @@ mod tests {
         let actions = SkillPack.plan(&ctx).unwrap();
         assert_eq!(actions.len(), 1);
         assert!(actions[0].describe().contains("hooks.PostToolUse"));
+    }
+
+    #[test]
+    fn owned_omits_custom_skills_but_keeps_the_hook() {
+        use crate::component::Claim;
+        let dir = tempfile::tempdir().unwrap();
+        let (mut manifest, lock) = ctx_parts();
+        manifest.capabilities.get_mut("skills").unwrap().custom = vec!["humanise".into()];
+        let fake = FakeRunner::new();
+        let ctx = Ctx {
+            root: dir.path(),
+            runner: &fake,
+            manifest: &manifest,
+            lock: &lock,
+        };
+        let keys: Vec<String> = SkillPack.owned(&ctx).iter().map(Claim::lock_key).collect();
+        assert!(!keys.iter().any(|k| k.contains("humanise")), "{keys:?}");
+        assert!(keys.contains(&".claude/skills/grill-me/SKILL.md".to_string()));
+        assert!(keys.contains(
+            &".claude/settings.json:hooks.PostToolUse[superdev aokf hook validate]".to_string()
+        ));
     }
 
     #[test]

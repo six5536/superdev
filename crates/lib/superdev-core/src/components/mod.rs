@@ -37,6 +37,40 @@ mod tests {
     use crate::manifest::Manifest;
 
     #[test]
+    fn owned_matches_what_apply_locks() {
+        use crate::component::{Claim, Ctx};
+        use crate::engine::{self, Planned};
+        use crate::lock::Lock;
+        use crate::runner::FakeRunner;
+        use std::collections::BTreeSet;
+
+        let manifest = Manifest::default_for(env!("CARGO_PKG_VERSION"), &[]);
+        for component in enabled(&manifest) {
+            let dir = tempfile::tempdir().unwrap();
+            let fake = FakeRunner::new();
+            let empty = Lock::default();
+            let ctx = Ctx {
+                root: dir.path(),
+                runner: &fake,
+                manifest: &manifest,
+                lock: &empty,
+            };
+            let planned = vec![Planned {
+                capability: Some(component.capability()),
+                provider: component.provider().to_string(),
+                actions: component.plan(&ctx).unwrap(),
+            }];
+            let mut lock = Lock::default();
+            let result = engine::apply(dir.path(), &fake, &manifest, &planned, &mut lock);
+            assert!(result.ok, "{}: apply failed", component.provider());
+            let claimed: BTreeSet<String> =
+                component.owned(&ctx).iter().map(Claim::lock_key).collect();
+            let locked: BTreeSet<String> = lock.files.keys().cloned().collect();
+            assert_eq!(claimed, locked, "{}", component.provider());
+        }
+    }
+
+    #[test]
     fn enabled_skips_disabled_capabilities() {
         let manifest = Manifest::default_for("0.1.0", &[Capability::CodeIndex]);
         let components = enabled(&manifest);
