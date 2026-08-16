@@ -16,7 +16,8 @@ resource: /crates/app/superdev/src/main.rs
 - `2` — usage error (clap), a hard failure, or an I/O failure, rendered as
   `error: <message>` on stderr. A failed `sync` or `init` exits `2`, as does
   `mcp aokf` when it cannot start. The validation hook uses `2` for its own
-  purpose — see below.
+  purpose — see below. `status` reaches `2` in one case: an orphaned lock entry
+  it cannot read, because the engine never guesses about content it cannot see.
 
 A closed stdout pipe is the one I/O failure that is not an error: a reader
 that stops early (`| head`, a pager quit) ends the run at `0`, silently.

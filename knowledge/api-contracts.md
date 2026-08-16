@@ -38,13 +38,19 @@ Every verb acts on the current directory.
   once `.superdev/config.toml` exists (it points at `sync`). The guard is the
   manifest rather than the directory, because the knowledge verbs create
   `.superdev/cache/` in repos that were never initialised. It writes the
-  manifest, then applies the whole blueprint and the `.gitignore` lines. Skills
-  the repo already has under a pack name are released into `[skills] custom`
-  first, so adoption never overwrites work superdev did not write.
-- **`status`** never writes. It exits `1` on any drift, missing component, or
-  pin behind this binary's registry, so CI can gate on it. Each skill released
-  by `[skills] custom` prints as `skills: <name> custom, unmanaged` — a
-  released skill is the user's file, not drift, so it leaves the code alone.
+  manifest, then applies the whole blueprint and the `.gitignore` lines. It
+  also ensures `CLAUDE.md` contains the line `@AGENTS.md`, appended to an
+  existing file or created as a one-line file: Claude Code reads only
+  `CLAUDE.md`, and that line is what makes it load the canonical entry point.
+  Skills the repo already has under a pack name are released into
+  `[skills] custom` first, so adoption never overwrites work superdev did not
+  write.
+- **`status`** never writes. It exits `1` on any drift, missing component,
+  planned removal, or pin behind this binary's registry, so CI can gate on it.
+  Each skill released by `[skills] custom` prints as
+  `skills: <name> custom, unmanaged` — a released skill is the user's file, not
+  drift, so it leaves the code alone. Released orphans and the
+  blueprint-version line print as reports and never affect the exit code.
 - **`sync`** refuses to run while `workflows`, `code-index` or `skills` is
   pinned anywhere other than the registry default, and says to run
   `superdev update`. The first two are downloaded by URL and verified against a
@@ -55,7 +61,10 @@ Every verb acts on the current directory.
   edit yet name tools this machine has never installed — and mise will not
   install from a config this machine has never trusted. That install names
   superdev's own tools, so a repo pin superdev knows nothing about can never
-  fail the run.
+  fail the run. Orphan removals run after every write, so a rename whose write
+  fails rolls back before anything is deleted; an orphan the user has edited is
+  released instead of removed. A successful run stamps this binary's version as
+  the manifest's `blueprint`.
 - **`update`** rejects an explicit `workflows@<version>`,
   `code-index@<version>` or `skills@<version>` for the same reason. Every other
   capability takes an explicit version.

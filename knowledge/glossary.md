@@ -2,7 +2,7 @@
 type: Glossary
 id: glossary
 title: Domain Glossary
-description: The terms the blueprint engine uses — blueprint, capability, provider, component, owned file, scaffold, skill pack, PROJECT.md layer, custom skill — plus the search terms section, locator, hybrid search and RRF.
+description: The terms the blueprint engine uses — blueprint, capability, provider, component, owned file, scaffold, skill pack, PROJECT.md layer, custom skill, claim, orphan — plus the search terms section, locator, hybrid search and RRF.
 status: stable
 ---
 
@@ -31,6 +31,12 @@ status: stable
 - **Custom skill** — a skill named in `[skills] custom` and thereby released
   from management: superdev stops writing it, drops its hash from the lock, and
   `status` reports it as unmanaged rather than drifted.
+- **Claim** — a typed lock entry a component declares it owns: a file, a
+  `.mise.toml` pin, or a managed JSON key. The orphan pass subtracts the live
+  claims from the lock, which is how a migration is derived.
+- **Orphan** — a lock entry no live claim covers. `sync` removes it when its
+  content still hashes to the locked value, and otherwise releases it: left in
+  place, dropped from the lock, reported once.
 
 Terms from the knowledge-serving side:
 

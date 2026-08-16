@@ -71,3 +71,13 @@ what superdev last applied; both are committed. `.superdev/cache/` holds
 machine state and is gitignored. Their shape is in
 [configuration](configuration.md); the code implementing them is listed in
 [software-components](software-components.md).
+
+Two things superdev keeps are lines in files it does not own: the `.gitignore`
+entries for the cache, and `@AGENTS.md` in `CLAUDE.md` — the line that makes
+Claude Code load the canonical entry point at all. Both are added when missing,
+never rewritten and never hashed, so neither can drift or be orphaned; delete
+one and the next `sync` puts it back.
+
+Migrations are derived, not scripted: what the lock records minus what the
+components claim is what `sync` removes, so a dropped file, a rename's old copy
+and a disabled capability's pins all follow one rule.

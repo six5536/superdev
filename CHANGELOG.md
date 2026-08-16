@@ -62,6 +62,14 @@ publish a version it cannot find a heading for.
 - `init` adopts a repo's existing skills: one already sitting under a pack
   name, with content of its own, is released into `[skills] custom` and
   reported, instead of being overwritten and backed up
+- Blueprint migrations: `sync` now removes what the blueprint no longer
+  ships — dropped files, renamed paths' old copies, a disabled capability's
+  pins and registrations. Unmodified leftovers are removed with a backup;
+  user-edited ones are left in place, released from the lock, and reported
+- `sync` ensures `CLAUDE.md` imports `AGENTS.md` (`@AGENTS.md`), so Claude
+  Code actually loads the managed entry point
+- `blueprint` in `.superdev/config.toml` now records the version last
+  applied: `sync` stamps it, `status` reports a difference without failing
 
 ### Fixed
 

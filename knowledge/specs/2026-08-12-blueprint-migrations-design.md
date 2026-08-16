@@ -3,7 +3,7 @@ type: Spec
 id: spec-blueprint-migrations
 title: Blueprint Migrations
 description: Design for evolving a managed repo — components declare what they own, the lock's leftovers are pruned or released, and CLAUDE.md imports AGENTS.md so Claude Code reads it at all.
-status: draft
+status: stable
 links:
   - rel: relates-to
     to: spec-cli-core-blueprint-engine

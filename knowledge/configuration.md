@@ -11,11 +11,12 @@ Everything superdev keeps in a managed repo lives under `.superdev/`.
 
 # `config.toml` — the manifest
 
-What the repo wants. Committed and hand-editable; superdev only rewrites it on
-`update`. `init` writes it from the registry defaults.
+What the repo wants. Committed and hand-editable; superdev rewrites it on
+`update` and to stamp `blueprint`. `init` writes it from the registry
+defaults.
 
 ```toml
-blueprint = "0.1.0"      # the superdev version that wrote this
+blueprint = "0.1.0"      # the superdev version last applied
 
 [code-index]
 provider = "codegraph"
@@ -35,6 +36,12 @@ version = "0.1.0"
 provider = "superpowers"
 version = "6.2.0"
 ```
+
+`blueprint` is the version last applied, not the version that wrote the file.
+A successful `sync` stamps this binary's version, rewriting `config.toml` only
+when the value changes; `--dry-run` never stamps. `status` prints
+`blueprint <a>, binary <b> — sync will update it` and leaves the exit code
+alone, so a binary upgrade that changes nothing keeps CI green.
 
 An optional sub-table opts the knowledge bundle out of the local embedding
 model and onto an API:
@@ -86,6 +93,16 @@ superdev owns. Entries superdev merges into a shared file are hashed under
 found by comparing a file against the content the blueprint wants, not against
 the lock; the hashes are what lets an apply tell that the file it just
 overwrote had been edited by hand, and say so (after backing it up).
+
+An entry no component claims any more is an orphan, and `sync` prunes it.
+Content that still hashes to the locked value is superdev's own residue: it is
+removed, backed up like any overwrite, and restored if a later step fails.
+Content the user changed is left exactly where it is, dropped from the lock,
+and reported once as `orphan: <key> changed since superdev wrote it — left in
+place, released from the lock`. An entry whose target is already gone leaves
+the lock silently; one that cannot be read fails the run. Pins and merged JSON
+keys are pruned the same way, and a disabled capability's `components` record
+goes with its files.
 
 # `cache/`
 
