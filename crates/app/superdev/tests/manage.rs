@@ -141,6 +141,23 @@ fn run(cmd: &mut Command) -> Run {
     }
 }
 
+/// Drop one `[table]` and its keys from a TOML manifest, leaving every other
+/// line as it stands: the hand edit that turns a capability off.
+fn remove_table(toml: &str, table: &str) -> String {
+    let mut out = String::new();
+    let mut skipping = false;
+    for line in toml.lines() {
+        if line.trim_start().starts_with('[') {
+            skipping = line.trim() == table;
+        }
+        if !skipping {
+            out.push_str(line);
+            out.push('\n');
+        }
+    }
+    out
+}
+
 fn write_fake(bin: &Path, name: &str, body: &str) {
     let p = bin.join(name);
     fs::write(&p, body).unwrap();
@@ -326,5 +343,45 @@ fn sync_refuses_a_stale_workflows_pin() {
     );
     // `update` is the way out, and it leaves the repo in sync again.
     sb.superdev().arg("update").assert().success();
+    sb.superdev().arg("status").assert().success();
+}
+
+#[test]
+fn disabling_code_index_unpins_codegraph_and_keeps_user_pins() {
+    let sb = Sandbox::new();
+    sb.superdev().arg("init").assert().success();
+
+    // A pin of the user's own, in the file superdev shares with them.
+    let mise = sb.read(".mise.toml");
+    assert!(mise.contains("[tools]"), "{mise}");
+    sb.write(
+        ".mise.toml",
+        &mise.replace("[tools]", "[tools]\nnode = \"24\""),
+    );
+
+    let config = sb.read(".superdev/config.toml");
+    let edited = remove_table(&config, "[code-index]");
+    assert!(!edited.contains("codegraph"), "{edited}");
+    sb.write(".superdev/config.toml", &edited);
+
+    let dirty = run(sb.superdev().arg("status"));
+    assert_eq!(dirty.code, 1, "stdout: {}", dirty.stdout);
+    assert!(
+        dirty.stdout.contains("unpin http:codegraph in .mise.toml"),
+        "stdout: {}",
+        dirty.stdout
+    );
+
+    let synced = run(sb.superdev().arg("sync"));
+    assert_eq!(synced.code, 0, "stderr: {}", synced.stderr);
+    // Only superdev's own pin goes: the user's and the other capability's stay.
+    let mise = sb.read(".mise.toml");
+    assert!(!mise.contains("http:codegraph"), "{mise}");
+    assert!(mise.contains("node = \"24\""), "{mise}");
+    assert!(mise.contains("http:superpowers"), "{mise}");
+    let lock = sb.read(".superdev/lock.toml");
+    assert!(!lock.contains(".mise.toml:http:codegraph"), "{lock}");
+    assert!(!lock.contains("[components.code-index]"), "{lock}");
+    assert!(lock.contains(".mise.toml:http:superpowers"), "{lock}");
     sb.superdev().arg("status").assert().success();
 }

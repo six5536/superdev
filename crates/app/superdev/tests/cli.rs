@@ -1,7 +1,7 @@
 //! End-to-end tests for the skeleton CLI: the real binary, real exit codes.
 
 use std::io::{BufRead, BufReader, Write};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::process::Stdio;
 use std::sync::mpsc;
 use std::time::Duration;
@@ -642,4 +642,214 @@ fn update_skills_to_an_explicit_version_is_refused() {
         .code(2);
     let stderr = String::from_utf8_lossy(&out.get_output().stderr).into_owned();
     assert!(stderr.contains("skills"), "{stderr}");
+}
+
+/// `init` an existing repo with the two capabilities that need no external
+/// binary: skills and knowledge. Nothing here plans a `Run` action.
+fn init_local(root: &Path) {
+    superdev()
+        .current_dir(root)
+        .args(["init", "--no-workflows", "--no-frontend", "--no-code-index"])
+        .assert()
+        .success();
+}
+
+/// A fresh git repo, initialised the same way.
+fn local_repo() -> tempfile::TempDir {
+    let dir = tempfile::tempdir().unwrap();
+    std::fs::create_dir_all(dir.path().join(".git")).unwrap();
+    init_local(dir.path());
+    dir
+}
+
+/// Drop one `[table]` and its keys from a TOML manifest, leaving every other
+/// line as it stands: the hand edit that turns a capability off.
+fn remove_table(toml: &str, table: &str) -> String {
+    let mut out = String::new();
+    let mut skipping = false;
+    for line in toml.lines() {
+        if line.trim_start().starts_with('[') {
+            skipping = line.trim() == table;
+        }
+        if !skipping {
+            out.push_str(line);
+            out.push('\n');
+        }
+    }
+    out
+}
+
+/// The one timestamped directory a run's backups sit under.
+fn backup_dir(root: &Path) -> PathBuf {
+    let mut stamps: Vec<PathBuf> = std::fs::read_dir(root.join(".superdev/cache/backup"))
+        .unwrap()
+        .map(|e| e.unwrap().path())
+        .collect();
+    assert_eq!(stamps.len(), 1, "expected one backup stamp: {stamps:?}");
+    stamps.pop().unwrap()
+}
+
+fn stdout_of(out: &assert_cmd::assert::Assert) -> String {
+    String::from_utf8_lossy(&out.get_output().stdout).into_owned()
+}
+
+#[test]
+fn disabling_skills_sweeps_them_and_releases_the_users_edit() {
+    let dir = local_repo();
+    let root = dir.path();
+    // The bytes superdev shipped, trailer and all: what the backup must hold.
+    let shipped = std::fs::read_to_string(root.join(".claude/skills/grill-me/SKILL.md")).unwrap();
+    let humanise = root.join(".claude/skills/humanise/SKILL.md");
+    std::fs::write(&humanise, "mine now\n").unwrap();
+
+    // Turn the capability off by hand, the way a user would: the rest of the
+    // manifest stays byte-for-byte.
+    let config_path = root.join(".superdev/config.toml");
+    let config = std::fs::read_to_string(&config_path).unwrap();
+    let edited = remove_table(&config, "[skills]");
+    assert!(edited.contains("[knowledge]"), "{edited}");
+    assert!(edited.contains("blueprint = "), "{edited}");
+    assert!(!edited.contains("superdev-skills"), "{edited}");
+    std::fs::write(&config_path, &edited).unwrap();
+
+    let out = superdev().current_dir(root).arg("status").assert().code(1);
+    let stdout = stdout_of(&out);
+    assert!(
+        stdout.contains("remove .claude/skills/grill-me/SKILL.md (no longer in the blueprint)"),
+        "{stdout}"
+    );
+    assert!(
+        stdout.contains(
+            "orphan: .claude/skills/humanise/SKILL.md changed since superdev wrote it — left in place, released from the lock"
+        ),
+        "{stdout}"
+    );
+
+    superdev().current_dir(root).arg("sync").assert().code(0);
+
+    // What superdev wrote goes, with a backup; what the user wrote stays.
+    assert!(!root.join(".claude/skills/grill-me/SKILL.md").exists());
+    assert_eq!(
+        std::fs::read_to_string(backup_dir(root).join(".claude/skills/grill-me/SKILL.md")).unwrap(),
+        shipped
+    );
+    assert_eq!(std::fs::read_to_string(&humanise).unwrap(), "mine now\n");
+
+    // The hook entry goes with the pack, and the file is still valid JSON.
+    let settings: serde_json::Value =
+        serde_json::from_str(&std::fs::read_to_string(root.join(".claude/settings.json")).unwrap())
+            .unwrap();
+    assert!(
+        !settings["hooks"]["PostToolUse"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|e| e.to_string().contains("superdev aokf hook validate")),
+        "settings: {settings}"
+    );
+
+    let lock = std::fs::read_to_string(root.join(".superdev/lock.toml")).unwrap();
+    assert!(!lock.contains(".claude/skills/"), "{lock}");
+    assert!(!lock.contains("hooks.PostToolUse"), "{lock}");
+    assert!(!lock.contains("[components.skills]"), "{lock}");
+    // The capability still enabled keeps its record: the sweep is targeted.
+    assert!(lock.contains(".agents/aokf/SPEC.md"), "{lock}");
+    assert!(lock.contains("[components.knowledge]"), "{lock}");
+
+    // A settled state is not drift.
+    superdev().current_dir(root).arg("status").assert().code(0);
+}
+
+#[test]
+fn claude_md_import_is_created_appended_and_restored() {
+    // A: no CLAUDE.md at all — superdev writes one holding just the import.
+    let fresh = local_repo();
+    assert_eq!(
+        std::fs::read_to_string(fresh.path().join("CLAUDE.md")).unwrap(),
+        "@AGENTS.md\n"
+    );
+
+    // B: a CLAUDE.md of the user's own — the line is appended, their text intact.
+    let dir = tempfile::tempdir().unwrap();
+    std::fs::create_dir_all(dir.path().join(".git")).unwrap();
+    let claude = dir.path().join("CLAUDE.md");
+    std::fs::write(&claude, "# House rules\n").unwrap();
+    init_local(dir.path());
+    assert_eq!(
+        std::fs::read_to_string(&claude).unwrap(),
+        "# House rules\n@AGENTS.md\n"
+    );
+
+    // C: the line deleted — the same bargain as the .gitignore lines, added
+    //    back when missing.
+    std::fs::write(&claude, "# House rules\n").unwrap();
+    superdev()
+        .current_dir(dir.path())
+        .arg("status")
+        .assert()
+        .code(1);
+    superdev()
+        .current_dir(dir.path())
+        .arg("sync")
+        .assert()
+        .code(0);
+    assert_eq!(
+        std::fs::read_to_string(&claude).unwrap(),
+        "# House rules\n@AGENTS.md\n"
+    );
+
+    // D: settled — no drift, and no second copy of the line.
+    superdev()
+        .current_dir(dir.path())
+        .arg("status")
+        .assert()
+        .code(0);
+    assert_eq!(
+        std::fs::read_to_string(&claude).unwrap(),
+        "# House rules\n@AGENTS.md\n"
+    );
+}
+
+#[test]
+fn a_stale_blueprint_reports_on_status_and_sync_stamps_it() {
+    let dir = local_repo();
+    let config_path = dir.path().join(".superdev/config.toml");
+    let current = format!("blueprint = \"{}\"", env!("CARGO_PKG_VERSION"));
+    let config = std::fs::read_to_string(&config_path).unwrap();
+    std::fs::write(
+        &config_path,
+        config.replace(&current, "blueprint = \"0.0.1\""),
+    )
+    .unwrap();
+
+    // An older blueprint is news, not drift: the repo is converged.
+    let out = superdev()
+        .current_dir(dir.path())
+        .arg("status")
+        .assert()
+        .code(0);
+    let stdout = stdout_of(&out);
+    assert!(
+        stdout.contains(&format!(
+            "blueprint 0.0.1, binary {} — sync will update it",
+            env!("CARGO_PKG_VERSION")
+        )),
+        "{stdout}"
+    );
+
+    superdev()
+        .current_dir(dir.path())
+        .arg("sync")
+        .assert()
+        .code(0);
+    let stamped = std::fs::read_to_string(&config_path).unwrap();
+    assert!(stamped.contains(&current), "{stamped}");
+
+    let out = superdev()
+        .current_dir(dir.path())
+        .arg("status")
+        .assert()
+        .code(0);
+    let stdout = stdout_of(&out);
+    assert!(!stdout.contains("sync will update it"), "{stdout}");
 }
