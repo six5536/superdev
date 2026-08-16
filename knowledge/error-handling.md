@@ -11,8 +11,9 @@ resource: /crates/app/superdev/src/main.rs
 
 - `0` — success.
 - `1` — a check found something, not an error: `status` found work to do
-  (drift, a missing component, or a pin behind the registry), or
-  `aokf validate` found errors in the bundle. CI gates on both.
+  (drift, a missing component, an orphaned lock entry to sweep, or a pin behind
+  the registry), or `aokf validate` found errors in the bundle. CI gates on
+  both.
 - `2` — usage error (clap), a hard failure, or an I/O failure, rendered as
   `error: <message>` on stderr. A failed `sync` or `init` exits `2`, as does
   `mcp aokf` when it cannot start. The validation hook uses `2` for its own
