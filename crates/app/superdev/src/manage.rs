@@ -9,7 +9,7 @@ use std::path::Path;
 
 use superdev_core::action::Action;
 use superdev_core::capability::Capability;
-use superdev_core::component::Ctx;
+use superdev_core::component::{Claim, Ctx};
 use superdev_core::components::codegraph::CODEGRAPH_INDEX_DIR;
 use superdev_core::components::skillpack;
 use superdev_core::engine::Planned;
@@ -17,7 +17,7 @@ use superdev_core::error::{Error, Result};
 use superdev_core::lock::Lock;
 use superdev_core::manifest::{CONFIG_PATH, Manifest};
 use superdev_core::runner::{CommandRunner, SystemRunner};
-use superdev_core::{components, engine, registry, report};
+use superdev_core::{components, engine, orphan, registry, report};
 
 /// Provider name for repo-level actions no capability owns.
 const REPO_PROVIDER: &str = "superdev";
@@ -90,7 +90,7 @@ pub fn init(root: &Path, args: &InitArgs) -> Result<u8> {
     }
     let mut lock = Lock::default();
     let runner = SystemRunner;
-    let planned = plan_all(root, &runner, &manifest, &lock)?;
+    let (planned, _) = plan_all(root, &runner, &manifest, &lock)?;
     print_plan(&planned)?;
     let outcome = apply_and_report(root, &runner, &manifest, &planned, &mut lock);
     if outcome.is_err() {
@@ -111,14 +111,20 @@ pub fn status(root: &Path) -> Result<u8> {
     // those components refuse to plan one, so plan the version this binary can
     // provide and let the hint line carry the news.
     let behind = behind_pins(&manifest);
-    let lock = Lock::load(root)?;
+    let mut lock = Lock::load(root)?;
+    // In memory only — status never writes. Unpruned, a skill just marked
+    // custom would read as an orphan and plan its own deletion.
+    prune_custom_skills(&manifest, &mut lock);
     let runner = SystemRunner;
-    let planned = plan_all(root, &runner, &plannable(&manifest), &lock)?;
+    let (planned, orphans) = plan_all(root, &runner, &plannable(&manifest), &lock)?;
     print_plan(&planned)?;
     for line in &behind {
         out(line)?;
     }
     for line in &custom_lines(&manifest) {
+        out(line)?;
+    }
+    for line in &orphans.released_lines() {
         out(line)?;
     }
     Ok(u8::from(has_actions(&planned) || !behind.is_empty()))
@@ -138,18 +144,39 @@ pub fn sync(root: &Path, dry_run: bool) -> Result<u8> {
         });
     }
     let mut lock = Lock::load(root)?;
-    let pruned = prune_custom_skills(&manifest, &mut lock);
+    // Before planning: a skill just marked custom still has its lock entry,
+    // and unpruned an unmodified one would read as an orphan and be deleted —
+    // the opposite of what marking it custom asked for.
+    let mut lock_changed = prune_custom_skills(&manifest, &mut lock);
     let runner = SystemRunner;
-    let planned = plan_all(root, &runner, &manifest, &lock)?;
+    let (planned, orphans) = plan_all(root, &runner, &manifest, &lock)?;
     print_plan(&planned)?;
     for line in &behind_pins(&manifest) {
+        out(line)?;
+    }
+    for line in &orphans.released_lines() {
         out(line)?;
     }
     if dry_run {
         return Ok(0);
     }
+    // Released and gone orphans leave the lock without an action, and a
+    // disabled capability's applied record goes with its files.
+    for key in orphans.released.iter().chain(orphans.gone.iter()) {
+        lock_changed |= lock.files.remove(key).is_some();
+    }
+    let disabled: Vec<String> = lock
+        .components
+        .keys()
+        .filter(|name| !manifest.capabilities.contains_key(*name))
+        .cloned()
+        .collect();
+    for name in disabled {
+        lock.components.remove(&name);
+        lock_changed = true;
+    }
     if !has_actions(&planned) {
-        if pruned {
+        if lock_changed {
             lock.save(root)?;
         }
         return Ok(0);
@@ -232,13 +259,14 @@ fn load_manifest(root: &Path) -> Result<Manifest> {
     Manifest::load(root)
 }
 
-/// Every component's plan, behind the repo-level entry.
+/// Every component's plan, behind the repo-level entry, with the orphan pass
+/// last.
 fn plan_all(
     root: &Path,
     runner: &dyn CommandRunner,
     manifest: &Manifest,
     lock: &Lock,
-) -> Result<Vec<Planned>> {
+) -> Result<(Vec<Planned>, orphan::OrphanPlan)> {
     let components = components::enabled(manifest);
     let ctx = Ctx {
         root,
@@ -249,7 +277,18 @@ fn plan_all(
     let mut planned = Vec::new();
     planned.extend(repo_entry(root, manifest)?);
     planned.extend(engine::plan(&components, &ctx)?);
-    Ok(planned)
+    let claims: Vec<Claim> = components.iter().flat_map(|c| c.owned(&ctx)).collect();
+    let orphans = orphan::plan(root, lock, &claims)?;
+    // Last, so removals run after every component write: a rename whose
+    // write fails rolls back before anything is deleted.
+    if !orphans.actions.is_empty() {
+        planned.push(Planned {
+            capability: None,
+            provider: REPO_PROVIDER.into(),
+            actions: orphans.actions.clone(),
+        });
+    }
+    Ok((planned, orphans))
 }
 
 /// The ignore lines no capability owns: superdev's machine state, and the
@@ -473,6 +512,25 @@ fn out(s: &str) -> Result<()> {
 mod tests {
     use super::*;
 
+    /// Core's own fake is test-only inside that crate, so planning here needs
+    /// its own seam: every command succeeds emptily.
+    struct QuietRunner;
+
+    impl CommandRunner for QuietRunner {
+        fn run(
+            &self,
+            _program: &str,
+            _args: &[String],
+            _cwd: &Path,
+        ) -> Result<superdev_core::runner::Output> {
+            Ok(superdev_core::runner::Output {
+                status: 0,
+                stdout: String::new(),
+                stderr: String::new(),
+            })
+        }
+    }
+
     #[test]
     fn adoption_keeps_the_repos_own_skills_and_ignores_identical_ones() {
         let dir = tempfile::tempdir().unwrap();
@@ -605,6 +663,37 @@ mod tests {
         );
         let no_skills = Manifest::default_for("0.1.0", &[Capability::Skills]);
         assert!(custom_lines(&no_skills).is_empty());
+    }
+
+    #[test]
+    fn plan_all_puts_the_orphan_entry_last_and_reports_released() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::create_dir_all(dir.path().join(".git")).unwrap();
+        let manifest = Manifest::default_for(superdev_core::version(), &[]);
+        let mut lock = Lock::default();
+        // An unmodified leftover and a user-edited one, under no live claim.
+        std::fs::write(dir.path().join("stale.txt"), "superdev's").unwrap();
+        lock.files.insert(
+            "stale.txt".into(),
+            superdev_core::lock::sha256_hex(b"superdev's"),
+        );
+        std::fs::write(dir.path().join("theirs.txt"), "edited").unwrap();
+        lock.files.insert(
+            "theirs.txt".into(),
+            superdev_core::lock::sha256_hex(b"superdev's"),
+        );
+        let fake = QuietRunner;
+        let (planned, orphans) = plan_all(dir.path(), &fake, &manifest, &lock).unwrap();
+        let last = planned.last().unwrap();
+        assert!(last.capability.is_none());
+        assert!(
+            last.actions
+                .iter()
+                .any(|a| a.describe().contains("remove stale.txt")),
+            "{:?}",
+            last.actions
+        );
+        assert_eq!(orphans.released, vec!["theirs.txt".to_string()]);
     }
 
     #[test]
