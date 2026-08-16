@@ -127,6 +127,9 @@ pub fn status(root: &Path) -> Result<u8> {
     for line in &orphans.released_lines() {
         out(line)?;
     }
+    if let Some(line) = blueprint_line(&manifest) {
+        out(&line)?;
+    }
     Ok(u8::from(has_actions(&planned) || !behind.is_empty()))
 }
 
@@ -179,9 +182,10 @@ pub fn sync(root: &Path, dry_run: bool) -> Result<u8> {
         if lock_changed {
             lock.save(root)?;
         }
-        return Ok(0);
+        return stamp_blueprint(root, &manifest);
     }
-    apply_and_report(root, &runner, &manifest, &planned, &mut lock)
+    apply_and_report(root, &runner, &manifest, &planned, &mut lock)?;
+    stamp_blueprint(root, &manifest)
 }
 
 /// Move version pins to this binary's defaults (or to an explicit version),
@@ -456,6 +460,29 @@ fn is_behind(pinned: &str, default: &str) -> bool {
     key(pinned) < key(default)
 }
 
+/// The blueprint-version report: informational, never the exit code. A
+/// settled repo under a newer binary is not drift.
+fn blueprint_line(manifest: &Manifest) -> Option<String> {
+    (manifest.blueprint != superdev_core::version()).then(|| {
+        format!(
+            "blueprint {}, binary {} — sync will update it",
+            manifest.blueprint,
+            superdev_core::version()
+        )
+    })
+}
+
+/// Record this binary's version as the blueprint last applied. Rewrites
+/// config.toml only when the value changes.
+fn stamp_blueprint(root: &Path, manifest: &Manifest) -> Result<u8> {
+    if manifest.blueprint != superdev_core::version() {
+        let mut manifest = manifest.clone();
+        manifest.blueprint = superdev_core::version().to_string();
+        manifest.save(root)?;
+    }
+    Ok(0)
+}
+
 fn has_actions(planned: &[Planned]) -> bool {
     planned.iter().any(|p| !p.actions.is_empty())
 }
@@ -694,6 +721,39 @@ mod tests {
             last.actions
         );
         assert_eq!(orphans.released, vec!["theirs.txt".to_string()]);
+    }
+
+    #[test]
+    fn the_blueprint_line_reports_only_a_difference() {
+        let mut manifest = Manifest::default_for(superdev_core::version(), &[]);
+        assert_eq!(blueprint_line(&manifest), None);
+        manifest.blueprint = "0.0.1".into();
+        assert_eq!(
+            blueprint_line(&manifest),
+            Some(format!(
+                "blueprint 0.0.1, binary {} — sync will update it",
+                superdev_core::version()
+            ))
+        );
+    }
+
+    #[test]
+    fn stamping_rewrites_only_a_stale_blueprint() {
+        let dir = tempfile::tempdir().unwrap();
+        let manifest = Manifest::default_for("0.0.1", &[]);
+        manifest.save(dir.path()).unwrap();
+        assert_eq!(stamp_blueprint(dir.path(), &manifest).unwrap(), 0);
+        let stamped = Manifest::load(dir.path()).unwrap();
+        assert_eq!(stamped.blueprint, superdev_core::version());
+        // Already current: the file is left untouched. Marked with a comment
+        // `save` would drop, since mtime here cannot resolve two writes a
+        // microsecond apart.
+        let path = dir.path().join(CONFIG_PATH);
+        let before = format!("{}# untouched\n", std::fs::read_to_string(&path).unwrap());
+        std::fs::write(&path, &before).unwrap();
+        assert_eq!(stamp_blueprint(dir.path(), &stamped).unwrap(), 0);
+        let after = std::fs::read_to_string(&path).unwrap();
+        assert_eq!(before, after, "no rewrite when the value is current");
     }
 
     #[test]
