@@ -22,6 +22,12 @@ const MCP_POINTER: &str = "mcpServers.superdev-aokf";
 /// The registration itself: the installed binary serving this repo's bundle.
 const MCP_VALUE: &str = r#"{"command":"superdev","args":["mcp","aokf"]}"#;
 
+/// Claude Code reads CLAUDE.md, not AGENTS.md: without this import, every
+/// rule superdev writes into AGENTS.md is invisible to it. Behaves like the
+/// .gitignore lines — added when missing, never rewritten, never locked.
+const CLAUDE_ENTRY_PATH: &str = "CLAUDE.md";
+const CLAUDE_ENTRY_LINE: &str = "@AGENTS.md";
+
 /// (target path, asset content, ownership, reason)
 const FILES: &[(&str, &str, Ownership, &str)] = &[
     (
@@ -121,6 +127,15 @@ impl Component for Aokf {
                 });
             }
         }
+        let claude = std::fs::read_to_string(ctx.root.join(CLAUDE_ENTRY_PATH)).unwrap_or_default();
+        // Exact whole-line match, the same rule the engine applies.
+        if !claude.lines().any(|l| l == CLAUDE_ENTRY_LINE) {
+            actions.push(Action::EnsureLine {
+                path: CLAUDE_ENTRY_PATH.into(),
+                line: CLAUDE_ENTRY_LINE.into(),
+                reason: "make Claude Code read AGENTS.md".into(),
+            });
+        }
         if mcp_registration_missing(ctx.root) {
             actions.push(Action::SetJsonKey {
                 path: MCP_PATH.to_string(),
@@ -193,7 +208,7 @@ mod tests {
             .iter()
             .filter_map(|a| match a {
                 Action::WriteFile { path, .. } => Some(path.as_str()),
-                Action::SetJsonKey { .. } => None,
+                Action::SetJsonKey { .. } | Action::EnsureLine { .. } => None,
                 other => panic!("unexpected action {other:?}"),
             })
             .collect();
@@ -242,6 +257,13 @@ mod tests {
                         format!("{{ \"mcpServers\": {{ \"superdev-aokf\": {value_json} }} }}");
                     std::fs::write(dir.path().join(path), json).unwrap();
                 }
+                Action::EnsureLine { path, line, .. } => {
+                    let p = dir.path().join(path);
+                    let mut content = std::fs::read_to_string(&p).unwrap_or_default();
+                    content.push_str(&line);
+                    content.push('\n');
+                    std::fs::write(p, content).unwrap();
+                }
                 other => panic!("unexpected action {other:?}"),
             }
         }
@@ -264,6 +286,44 @@ mod tests {
             })
             .collect();
         assert_eq!(paths, vec![".agents/aokf/SPEC.md".to_string()]);
+    }
+
+    #[test]
+    fn claude_md_gets_the_agents_import() {
+        // No CLAUDE.md at all: plan the line (the engine creates the file).
+        let dir = tempfile::tempdir().unwrap();
+        let ensure = plan_in(dir.path()).into_iter().find_map(|a| match a {
+            Action::EnsureLine { path, line, .. } => Some((path, line)),
+            _ => None,
+        });
+        assert_eq!(
+            ensure,
+            Some(("CLAUDE.md".to_string(), "@AGENTS.md".to_string()))
+        );
+
+        // A CLAUDE.md of the user's own: plan the append, touch nothing else.
+        std::fs::write(dir.path().join("CLAUDE.md"), "# My rules\n").unwrap();
+        assert!(
+            plan_in(dir.path())
+                .iter()
+                .any(|a| matches!(a, Action::EnsureLine { .. }))
+        );
+
+        // The line present (anywhere, exact whole-line): nothing to plan.
+        std::fs::write(dir.path().join("CLAUDE.md"), "# My rules\n@AGENTS.md\n").unwrap();
+        assert!(
+            !plan_in(dir.path())
+                .iter()
+                .any(|a| matches!(a, Action::EnsureLine { .. }))
+        );
+
+        // A substring is not the line: `see @AGENTS.md` does not satisfy it.
+        std::fs::write(dir.path().join("CLAUDE.md"), "see @AGENTS.md inline\n").unwrap();
+        assert!(
+            plan_in(dir.path())
+                .iter()
+                .any(|a| matches!(a, Action::EnsureLine { .. }))
+        );
     }
 
     #[test]
