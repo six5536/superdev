@@ -198,6 +198,21 @@ fn init_sets_up_a_fresh_repo() {
     // a collaborator gets them from git alone.
     assert_eq!(sb.read(".claude/skills/tdd/SKILL.md"), "upstream skill\n");
     assert!(repo.join(".claude/skills/handoff/SKILL.md").is_file());
+    // Attribution is what tells a materialised file from a skill-pack one, so
+    // the lock must name workflows as the owner of each.
+    let lock = sb.read(".superdev/lock.toml");
+    let owners = lock
+        .split("[owners]")
+        .nth(1)
+        .unwrap_or_else(|| panic!("lock: {lock}"));
+    for skill in ["tdd", "code-review", "handoff"] {
+        assert!(
+            owners.contains(&format!(
+                "\".claude/skills/{skill}/SKILL.md\" = \"workflows\""
+            )),
+            "lock: {lock}"
+        );
+    }
     // codegraph comes from its checksummed release bundles, not npm: the
     // bundles vendor their own Node, so the repo needs none.
     let pinned = sb.read(".mise.toml");
@@ -212,6 +227,9 @@ fn init_sets_up_a_fresh_repo() {
         log.contains("mise where http:mattpocock-skills"),
         "log: {log}"
     );
+    // Nothing is installed at user level for workflows any more: the default
+    // provider copies files in instead of installing a Claude plugin.
+    assert!(!log.contains("plugin install superpowers"), "log: {log}");
     assert!(log.contains("claude plugin install frontend-design@claude-code-plugins"));
     assert!(
         log.contains("mise exec http:codegraph -- codegraph init"),

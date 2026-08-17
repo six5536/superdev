@@ -131,6 +131,21 @@ mod tests {
                 .collect();
             let locked: BTreeSet<String> = lock.files.keys().cloned().collect();
             assert_eq!(claimed, locked, "{}", component.provider());
+
+            // Both sets above come out of the same apply. For the one component
+            // whose claims are lock-derived, anchor them to the fixture instead,
+            // so the test carries an expectation the code cannot move.
+            if component.provider() == "mattpocock-skills" {
+                let expected: BTreeSet<String> = [
+                    ".mise.toml:http:mattpocock-skills".to_string(),
+                    ".claude/skills/alpha/SKILL.md".to_string(),
+                    ".claude/skills/beta/SKILL.md".to_string(),
+                    ".claude/skills/gamma/SKILL.md".to_string(),
+                ]
+                .into_iter()
+                .collect();
+                assert_eq!(claimed, expected);
+            }
         }
     }
 
