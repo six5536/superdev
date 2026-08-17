@@ -83,6 +83,17 @@ pub enum Action {
         /// Dotted key path, e.g. `mcpServers.superdev-aokf`.
         pointer: String,
     },
+    /// Copy the workflows provider's pinned checkout into `.claude/skills/`,
+    /// one owned file at a time, attributed in the lock. The checkout is
+    /// resolved through mise at apply time, so planning needs no checkout.
+    MaterialiseSkills {
+        /// mise tool key holding the checkout, e.g. `http:mattpocock-skills`.
+        tool: String,
+        /// Checkout-relative directories each holding skill directories.
+        source_dirs: Vec<String>,
+        /// Skill names released to the user; never written, never attributed.
+        custom: Vec<String>,
+    },
     /// Run an external command in the repo root.
     Run {
         /// Program name.
@@ -117,6 +128,9 @@ impl Action {
             Action::RemoveFile { path, reason } => format!("remove {path} ({reason})"),
             Action::RemoveMisePin { tool } => format!("unpin {tool} in .mise.toml"),
             Action::RemoveJsonKey { path, pointer } => format!("remove {pointer} from {path}"),
+            Action::MaterialiseSkills { tool, .. } => {
+                format!("materialise {tool} skills into .claude/skills/")
+            }
             Action::Run {
                 program,
                 args,
