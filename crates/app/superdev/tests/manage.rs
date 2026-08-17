@@ -173,6 +173,30 @@ fn remove_table(toml: &str, table: &str) -> String {
     out
 }
 
+/// One `[table]`'s keys, up to the next header. Panics when the table is
+/// missing, which is the same failure the caller's assertion would report.
+fn table<'a>(toml: &'a str, header: &str) -> &'a str {
+    let rest = toml
+        .split_once(header)
+        .unwrap_or_else(|| panic!("no {header} in: {toml}"))
+        .1;
+    rest.split_once("\n[").map_or(rest, |(keys, _)| keys)
+}
+
+/// The lock's record of what the last apply installed for workflows.
+fn applied_workflows(lock: &str) -> &str {
+    table(lock, "[components.workflows]")
+}
+
+/// The backed-up copy of `rel`, searched across the per-run stamp directories
+/// the engine names by clock time.
+fn backup_of(sb: &Sandbox, rel: &str) -> Option<String> {
+    fs::read_dir(sb.repo().join(".superdev/cache/backup"))
+        .ok()?
+        .filter_map(|stamp| fs::read_to_string(stamp.ok()?.path().join(rel)).ok())
+        .next()
+}
+
 fn write_fake(bin: &Path, name: &str, body: &str) {
     let p = bin.join(name);
     fs::write(&p, body).unwrap();
@@ -235,6 +259,149 @@ fn init_sets_up_a_fresh_repo() {
         log.contains("mise exec http:codegraph -- codegraph init"),
         "log: {log}"
     );
+}
+
+#[test]
+fn init_materialises_the_default_workflows_provider() {
+    let sb = Sandbox::new();
+    let init = run(sb.superdev().arg("init"));
+    assert_eq!(init.code, 0, "stderr: {}", init.stderr);
+    // The pin, the materialised content, the owner attributions and the
+    // absence of a plugin install are asserted in `init_sets_up_a_fresh_repo`.
+    // What only shows here: which provider the apply recorded, and the hint
+    // for the one upstream step superdev cannot run for you.
+    let lock = sb.read(".superdev/lock.toml");
+    assert!(
+        applied_workflows(&lock).contains("provider = \"mattpocock-skills\""),
+        "lock: {lock}"
+    );
+    assert!(
+        init.stdout.contains(
+            "workflows: run /setup-matt-pocock-skills in Claude Code to finish configuring"
+        ),
+        "stdout: {}",
+        init.stdout
+    );
+    sb.superdev().arg("status").assert().success();
+}
+
+#[test]
+fn init_with_superpowers_reproduces_the_plugin_flow() {
+    let sb = Sandbox::new();
+    let init = run(sb
+        .superdev()
+        .args(["init", "--workflows-provider", "superpowers"]));
+    assert_eq!(init.code, 0, "stderr: {}", init.stderr);
+    // The marketplace-add and plugin-install calls are asserted in
+    // `disabling_code_index_unpins_codegraph_and_keeps_user_pins`, which inits
+    // on this provider. What only shows here is what the plugin flow does
+    // *not* do, and what the manifest records.
+    let mise = sb.read(".mise.toml");
+    assert!(mise.contains("http:superpowers"), "{mise}");
+    assert!(!mise.contains("http:mattpocock-skills"), "{mise}");
+    assert!(!sb.repo().join(".claude/skills/tdd").exists());
+    let config = sb.read(".superdev/config.toml");
+    let workflows = table(&config, "[workflows]");
+    assert!(workflows.contains("provider = \"superpowers\""), "{config}");
+    assert!(workflows.contains("version = \"6.2.0\""), "{config}");
+    sb.superdev().arg("status").assert().success();
+}
+
+#[test]
+fn update_provider_switches_and_sweeps_both_directions() {
+    let sb = Sandbox::new();
+    sb.superdev()
+        .args(["init", "--workflows-provider", "superpowers"])
+        .assert()
+        .success();
+
+    let onto_files =
+        run(sb
+            .superdev()
+            .args(["update", "workflows", "--provider", "mattpocock-skills"]));
+    assert_eq!(onto_files.code, 0, "stderr: {}", onto_files.stderr);
+    assert!(
+        onto_files
+            .stdout
+            .contains("unpin http:superpowers in .mise.toml"),
+        "stdout: {}",
+        onto_files.stdout
+    );
+    // The plugin is a user-level install superdev cannot take back, and the
+    // knowledge scaffold's import names the old provider: both are the user's
+    // to finish.
+    assert!(
+        onto_files
+            .stdout
+            .contains("claude plugin uninstall superpowers"),
+        "stdout: {}",
+        onto_files.stdout
+    );
+    assert!(
+        onto_files
+            .stdout
+            .contains("update the .agents import in AGENTS.md"),
+        "stdout: {}",
+        onto_files.stdout
+    );
+    let mise = sb.read(".mise.toml");
+    assert!(!mise.contains("http:superpowers"), "{mise}");
+    assert!(mise.contains("http:mattpocock-skills"), "{mise}");
+    assert_eq!(sb.read(".claude/skills/tdd/SKILL.md"), "upstream skill\n");
+    let lock = sb.read(".superdev/lock.toml");
+    assert!(!lock.contains(".mise.toml:http:superpowers"), "{lock}");
+    sb.superdev().arg("status").assert().success();
+
+    // And back. The materialised set is superdev's own, so the switch sweeps
+    // it rather than leaving two providers' skills side by side.
+    let onto_plugin = run(sb
+        .superdev()
+        .args(["update", "workflows", "--provider", "superpowers"]));
+    assert_eq!(onto_plugin.code, 0, "stderr: {}", onto_plugin.stderr);
+    for skill in ["tdd", "code-review", "handoff"] {
+        assert!(
+            !sb.repo()
+                .join(format!(".claude/skills/{skill}/SKILL.md"))
+                .exists(),
+            "{skill} survived the switch"
+        );
+    }
+    // Swept, not shredded: the removal leaves the file under the cache, so a
+    // switch made by mistake costs nothing.
+    assert_eq!(
+        backup_of(&sb, ".claude/skills/tdd/SKILL.md"),
+        Some("upstream skill\n".to_string())
+    );
+    let lock = sb.read(".superdev/lock.toml");
+    assert!(!lock.contains("[owners]"), "{lock}");
+    let mise = sb.read(".mise.toml");
+    assert!(!mise.contains("http:mattpocock-skills"), "{mise}");
+    assert!(mise.contains("http:superpowers"), "{mise}");
+    sb.superdev().arg("status").assert().success();
+}
+
+#[test]
+fn a_stale_custom_name_reports_instead_of_failing() {
+    let sb = Sandbox::new();
+    sb.superdev().arg("init").assert().success();
+    let config = sb.read(".superdev/config.toml");
+    assert!(config.contains("[skills]"), "{config}");
+    sb.write(
+        ".superdev/config.toml",
+        &config.replace("[skills]\n", "[skills]\ncustom = [\"not-a-skill\"]\n"),
+    );
+    // A name that matches no shipped skill releases nothing, so it is a
+    // report, not an error: the repo is still exactly what the blueprint wants.
+    let stale = run(sb.superdev().arg("status"));
+    assert_eq!(stale.code, 0, "stdout: {}", stale.stdout);
+    assert!(
+        stale
+            .stdout
+            .contains("skills: custom names unknown skill 'not-a-skill' — no effect"),
+        "stdout: {}",
+        stale.stdout
+    );
+    sb.superdev().arg("sync").assert().success();
 }
 
 #[test]

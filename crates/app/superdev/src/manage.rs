@@ -23,6 +23,11 @@ use superdev_core::{components, engine, orphan, registry, report};
 /// Provider name for repo-level actions no capability owns.
 const REPO_PROVIDER: &str = "superdev";
 
+/// Printed after a materialisation: the upstream setup skill is interactive,
+/// so it is the one step superdev cannot run for the user.
+const SETUP_HINT: &str =
+    "workflows: run /setup-matt-pocock-skills in Claude Code to finish configuring";
+
 /// Capabilities whose version is this binary's to decide — a checksum baked
 /// in beside the version, or content embedded in the binary itself — so
 /// superdev can install the registry default and nothing else. Their
@@ -117,6 +122,7 @@ pub fn init(root: &Path, args: &InitArgs) -> Result<u8> {
     let runner = SystemRunner;
     let (planned, _) = plan_all(root, &runner, &manifest, &lock)?;
     print_plan(&planned)?;
+    let materialising = materialises(&planned);
     let outcome = apply_and_report(root, &runner, &manifest, &planned, &mut lock);
     if outcome.is_err() {
         // The manifest is written before the apply and deliberately kept: it is
@@ -125,6 +131,8 @@ pub fn init(root: &Path, args: &InitArgs) -> Result<u8> {
         let _ = out(&format!(
             "left in place: {CONFIG_PATH} — `superdev sync` can resume from it"
         ));
+    } else if materialising {
+        out(SETUP_HINT)?;
     }
     outcome
 }
@@ -182,11 +190,7 @@ pub fn sync(root: &Path, dry_run: bool) -> Result<u8> {
     let runner = SystemRunner;
     let (planned, orphans) = plan_all(root, &runner, &manifest, &lock)?;
     print_plan(&planned)?;
-    let materialising = planned.iter().any(|p| {
-        p.actions
-            .iter()
-            .any(|a| matches!(a, Action::MaterialiseSkills { .. }))
-    });
+    let materialising = materialises(&planned);
     for line in &behind_pins(&manifest) {
         out(line)?;
     }
@@ -223,7 +227,7 @@ pub fn sync(root: &Path, dry_run: bool) -> Result<u8> {
     }
     apply_and_report(root, &runner, &manifest, &planned, &mut lock)?;
     if materialising {
-        out("workflows: run /setup-matt-pocock-skills in Claude Code to finish configuring")?;
+        out(SETUP_HINT)?;
     }
     stamp_blueprint(root, &manifest)
 }
@@ -646,6 +650,15 @@ fn stamp_blueprint(root: &Path, manifest: &Manifest) -> Result<u8> {
 
 fn has_actions(planned: &[Planned]) -> bool {
     planned.iter().any(|p| !p.actions.is_empty())
+}
+
+/// Whether the plan copies an upstream skill set into the repo.
+fn materialises(planned: &[Planned]) -> bool {
+    planned.iter().any(|p| {
+        p.actions
+            .iter()
+            .any(|a| matches!(a, Action::MaterialiseSkills { .. }))
+    })
 }
 
 /// Apply, print the report, and keep the lock only when the run succeeded.
