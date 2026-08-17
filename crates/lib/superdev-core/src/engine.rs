@@ -21,6 +21,9 @@ use crate::runner::CommandRunner;
 const BACKUP_DIR: &str = ".superdev/cache/backup";
 /// Argument form resolved to a mise tool's install path.
 const MISE_WHERE: &str = "{mise-where:";
+/// Skip reason for a removal target that is already absent. Named, because
+/// reconciliation reads it back to tell a swept file from a released one.
+const ALREADY_GONE: &str = "already gone";
 
 /// One component's planned changes.
 #[derive(Debug, Clone)]
@@ -500,7 +503,7 @@ impl<'a> Session<'a> {
             Err(e) => return ActionOutcome::Failed(e.to_string()),
         };
         let Some(content) = existing else {
-            return ActionOutcome::Skipped("already gone".into());
+            return ActionOutcome::Skipped(ALREADY_GONE.into());
         };
         // Re-check at apply time: an edit between plan and apply is the
         // user's, and superdev takes back only what it wrote.
@@ -647,7 +650,7 @@ impl<'a> Session<'a> {
         for key in stale {
             match self.remove_file(&key, effects.removed) {
                 ActionOutcome::Applied { .. } => swept += 1,
-                ActionOutcome::Skipped(reason) if reason == "already gone" => {}
+                ActionOutcome::Skipped(reason) if reason == ALREADY_GONE => {}
                 ActionOutcome::Skipped(_) => released += 1,
                 ActionOutcome::Failed(e) => return ActionOutcome::Failed(e),
             }
@@ -670,11 +673,11 @@ impl<'a> Session<'a> {
             Err(e) => return ActionOutcome::Failed(e.to_string()),
         };
         let Some(content) = existing else {
-            return ActionOutcome::Skipped("already gone".into());
+            return ActionOutcome::Skipped(ALREADY_GONE.into());
         };
         let value = match mise::current_pin(&content, tool) {
             Ok(Some(value)) => value,
-            Ok(None) => return ActionOutcome::Skipped("already gone".into()),
+            Ok(None) => return ActionOutcome::Skipped(ALREADY_GONE.into()),
             Err(e) => return ActionOutcome::Failed(e.to_string()),
         };
         if self.prior_hashes.get(&key) != Some(&sha256_hex(value.as_bytes())) {
@@ -711,11 +714,11 @@ impl<'a> Session<'a> {
             Err(e) => return ActionOutcome::Failed(e.to_string()),
         };
         let Some(content) = existing else {
-            return ActionOutcome::Skipped("already gone".into());
+            return ActionOutcome::Skipped(ALREADY_GONE.into());
         };
         let value = match json_value_at(path, &content, pointer) {
             Ok(Some(value)) => value,
-            Ok(None) => return ActionOutcome::Skipped("already gone".into()),
+            Ok(None) => return ActionOutcome::Skipped(ALREADY_GONE.into()),
             Err(e) => return ActionOutcome::Failed(e.to_string()),
         };
         if self.prior_hashes.get(&key) != Some(&sha256_hex(value.as_bytes())) {
@@ -2602,6 +2605,19 @@ mod tests {
         }];
         let result = apply(dir.path(), &fake, &manifest, &planned, &mut lock);
         assert!(result.ok, "{:?}", result.reports);
+        // alpha's two files and gamma's one; old swept, mine released.
+        let materialised = result.reports[0]
+            .outcomes
+            .iter()
+            .find(|(d, _)| d.starts_with("materialise"))
+            .map(|(_, o)| o.clone())
+            .unwrap_or_else(|| panic!("outcomes: {:?}", result.reports[0].outcomes));
+        assert_eq!(
+            materialised,
+            ActionOutcome::Applied {
+                note: Some("wrote 3, kept 0, removed 1, released 1".into())
+            }
+        );
         // Dropped and unmodified: deleted, with a backup.
         assert!(!dir.path().join(".claude/skills/old/SKILL.md").exists());
         // User-edited: left in place, released from the lock.
