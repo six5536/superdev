@@ -23,8 +23,11 @@ All domain logic; no argument parsing. One module per concern:
 - `manifest` / `lock` — `.superdev/config.toml` and `.superdev/lock.toml`.
 - `component` — the provider trait (`plan` observes and returns actions);
   `action` — the action enum and file ownership.
-- `components::{aokf, plugin, mattskills, codegraph, mise, skillpack}` — the
-  providers, plus the targeted `.mise.toml` editing they share.
+- `components::{aokf, plugin, mattskills, codegraph, mise, pin, skillpack}` —
+  the providers, plus the targeted `.mise.toml` editing and the
+  registry-locked pin planning they share.
+- `pipeline` — the verb pipeline between manifest and engine: `plan_repo`
+  and `apply_repo`, owning the prune-before-plan and orphans-last ordering.
 - `engine` — applies a plan, journals every side effect, unwinds on failure;
   `orphan` — plans the sweep of lock entries no live claim covers.
 - `runner` — the process seam; `report` — plan and apply rendering; `error` —
@@ -52,8 +55,8 @@ when no model loads.
 
 Depends on `superdev-core`. Binary name `superdev`. `main.rs` is clap parsing
 and exit codes; `manage.rs` holds the `init`, `status`, `sync` and `update`
-verbs — plan, print, apply, and the repo-level `.gitignore` entries no
-capability owns. `aokf_cli.rs` holds `aokf validate`, `aokf index` and
+verbs — each loads, calls the core pipeline, renders its lines and turns
+its facts into an exit code. `aokf_cli.rs` holds `aokf validate`, `aokf index` and
 `mcp aokf`: path defaults, printed output, and the current-thread tokio
 runtime the server blocks on. Also present is the plumbing the release
 pipeline needs:
