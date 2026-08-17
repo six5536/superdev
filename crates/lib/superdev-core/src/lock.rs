@@ -32,6 +32,11 @@ pub struct Lock {
     /// (`.mise.toml:<tool>` for managed mise keys).
     #[serde(default)]
     pub files: BTreeMap<String, String>,
+    /// Which capability materialised each `files` entry, for entries copied
+    /// from a provider checkout rather than embedded content. Everything
+    /// else never appears here.
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub owners: BTreeMap<String, String>,
 }
 
 /// Lowercase-hex sha256.
@@ -121,6 +126,24 @@ version = "0.1.0"
         assert_eq!(lock.components["skills"].provider, "superdev-skills");
         assert_eq!(lock.files[".mise.toml:http:superpowers"], "bbbb");
         assert_eq!(lock.files.len(), 3);
+        assert!(lock.owners.is_empty());
+    }
+
+    #[test]
+    fn owners_round_trip_and_stay_optional() {
+        let dir = tempfile::tempdir().unwrap();
+        let mut lock = Lock::default();
+        lock.files
+            .insert(".claude/skills/tdd/SKILL.md".into(), sha256_hex(b"x"));
+        lock.owners
+            .insert(".claude/skills/tdd/SKILL.md".into(), "workflows".into());
+        lock.save(dir.path()).unwrap();
+        assert_eq!(Lock::load(dir.path()).unwrap(), lock);
+        // Without owners the table is absent entirely.
+        let plain = Lock::default();
+        plain.save(dir.path()).unwrap();
+        let text = std::fs::read_to_string(dir.path().join(LOCK_PATH)).unwrap();
+        assert!(!text.contains("owners"), "{text}");
     }
 
     #[test]

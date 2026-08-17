@@ -362,6 +362,7 @@ impl<'a> Session<'a> {
         }
         for key in removed {
             lock.files.remove(&key);
+            lock.owners.remove(&key);
         }
         if let Some(capability) = entry.capability {
             lock.components.insert(

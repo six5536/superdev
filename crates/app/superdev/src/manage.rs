@@ -167,6 +167,7 @@ pub fn sync(root: &Path, dry_run: bool) -> Result<u8> {
     // disabled capability's applied record goes with its files.
     for key in orphans.released.iter().chain(orphans.gone.iter()) {
         lock_changed |= lock.files.remove(key).is_some();
+        lock.owners.remove(key);
     }
     let disabled: Vec<String> = lock
         .components
@@ -399,10 +400,9 @@ fn prune_custom_skills(manifest: &Manifest, lock: &mut Lock) -> bool {
     };
     let mut pruned = false;
     for name in &config.custom {
-        pruned |= lock
-            .files
-            .remove(&format!(".claude/skills/{name}/SKILL.md"))
-            .is_some();
+        let key = format!(".claude/skills/{name}/SKILL.md");
+        pruned |= lock.files.remove(&key).is_some();
+        lock.owners.remove(&key);
     }
     pruned
 }
