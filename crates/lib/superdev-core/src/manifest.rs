@@ -54,7 +54,7 @@ impl Manifest {
                     e.capability.as_str().to_string(),
                     CapabilityConfig {
                         provider: e.provider.to_string(),
-                        version: e.version.map(str::to_string),
+                        version: e.version.map(|p| p.version.to_string()),
                         embeddings: None,
                         custom: Vec::new(),
                     },

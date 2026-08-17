@@ -3,8 +3,8 @@
 use crate::action::Action;
 use crate::capability::Capability;
 use crate::component::{Claim, Component, Ctx};
-use crate::error::{Error, Result};
-use crate::registry::{self, CODEGRAPH_PLATFORMS};
+use crate::error::Result;
+use crate::registry::CODEGRAPH_PLATFORMS;
 
 /// mise `[tools]` key for codegraph.
 pub const CODEGRAPH_MISE_TOOL: &str = "http:codegraph";
@@ -40,36 +40,21 @@ impl Component for Codegraph {
     }
 
     fn plan(&self, ctx: &Ctx<'_>) -> Result<Vec<Action>> {
-        let config = ctx
-            .config(Capability::CodeIndex)
-            .expect("planned only when enabled");
-        let version = config.version.clone().expect("registry pins codegraph");
-        let default = registry::entry_for(Capability::CodeIndex, "codegraph")
+        // The registry entry only feeds the pin value; `planned_pin` owns the
+        // version validation, like the other pinned components.
+        let version = crate::registry::entry_for(Capability::CodeIndex, "codegraph")
             .and_then(|e| e.version)
-            .expect("registry pins codegraph");
-        if version != default {
-            return Err(Error::Manifest {
-                message: format!(
-                    "code-index version must match the registry default {default} — the pinned checksum is the provenance"
-                ),
-            });
-        }
+            .expect("registry pins codegraph")
+            .version;
         let mut actions = Vec::new();
-        let value = pin_value(&version);
-        let current = match std::fs::read_to_string(ctx.root.join(".mise.toml")) {
-            Ok(s) => super::mise::current_pin(&s, CODEGRAPH_MISE_TOOL)?,
-            Err(_) => None,
-        };
-        // Round-trip the desired value so layout differences never read as
-        // drift: the pin is an inline table, which toml_edit renders its way.
-        let desired = super::mise::set_pin("", CODEGRAPH_MISE_TOOL, &value)
-            .and_then(|s| super::mise::current_pin(&s, CODEGRAPH_MISE_TOOL))?
-            .expect("pin just set");
-        if current.as_deref() != Some(desired.as_str()) {
-            actions.push(Action::SetMisePin {
-                tool: CODEGRAPH_MISE_TOOL.into(),
-                value_toml: value,
-            });
+        if let Some(pin) = super::pin::planned_pin(
+            ctx,
+            Capability::CodeIndex,
+            "codegraph",
+            CODEGRAPH_MISE_TOOL,
+            &pin_value(version),
+        )? {
+            actions.push(pin);
         }
         if !ctx.root.join(CODEGRAPH_INDEX_DIR).is_dir() {
             // Through mise: the tool is pinned in this repo's `.mise.toml`,

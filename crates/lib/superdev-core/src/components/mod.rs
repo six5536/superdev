@@ -4,6 +4,7 @@ pub mod aokf;
 pub mod codegraph;
 pub mod mattskills;
 pub mod mise;
+pub mod pin;
 pub mod plugin;
 pub mod skillpack;
 

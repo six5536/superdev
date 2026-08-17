@@ -33,7 +33,7 @@ from the [managed-entry plan](2026-08-17-managed-entry-interface.md):
 `owned()` is the items' claims collected, `plan()` is
 read-compare-emit. EnsureLine items carry no claim (never locked).
 Pins stay with the
-[checksum-pin planner](2026-08-17-checksum-pin-planner.md)'s
+checksum-pin planner's (landed 2026-08-17)
 `planned_pin`; commands stay hand-written.
 
 # Tasks
@@ -61,7 +61,7 @@ with byte-identical plans on the fixture repos.
 
 # Sequencing
 
-After [one checksum-pin planner](2026-08-17-checksum-pin-planner.md)
+After the checksum-pin planner (landed 2026-08-17)
 (the pin blocks it would otherwise duplicate are gone) and preferably
 after the [verb pipeline](2026-08-17-verb-pipeline-in-core.md) (the
 `manage.rs:391` predicate copy has moved to core by then). Delete this

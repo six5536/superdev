@@ -12,6 +12,7 @@ use superdev_core::capability::Capability;
 use superdev_core::component::{Claim, Ctx};
 use superdev_core::components::codegraph::CODEGRAPH_INDEX_DIR;
 use superdev_core::components::mattskills;
+use superdev_core::components::pin;
 use superdev_core::components::skillpack;
 use superdev_core::engine::Planned;
 use superdev_core::error::{Error, Result};
@@ -27,16 +28,6 @@ const REPO_PROVIDER: &str = "superdev";
 /// so it is the one step superdev cannot run for the user.
 const SETUP_HINT: &str =
     "workflows: run /setup-matt-pocock-skills in Claude Code to finish configuring";
-
-/// Capabilities whose version is this binary's to decide — a checksum baked
-/// in beside the version, or content embedded in the binary itself — so
-/// superdev can install the registry default and nothing else. Their
-/// components refuse to plan any other pin.
-const BINARY_PINNED: [Capability; 3] = [
-    Capability::Workflows,
-    Capability::CodeIndex,
-    Capability::Skills,
-];
 
 /// The five capability-disable flags (kebab-case comes free from clap).
 #[derive(clap::Args)]
@@ -110,7 +101,7 @@ pub fn init(root: &Path, args: &InitArgs) -> Result<u8> {
     ) {
         let entry = registry::entry_for(Capability::Workflows, id).expect("validated above");
         config.provider = entry.provider.to_string();
-        config.version = entry.version.map(str::to_string);
+        config.version = entry.version.map(|p| p.version.to_string());
     }
     let mut adopted = adopt_existing_skills(root, &mut manifest);
     adopted.extend(adopt_existing_mattskills(root, &mut manifest));
@@ -174,7 +165,7 @@ pub fn sync(root: &Path, dry_run: bool) -> Result<u8> {
     let manifest = load_manifest(root)?;
     // Unlike `status`, sync would have to act on the pin. Substituting the
     // default silently is worse than stopping.
-    if let Some((capability, pinned, default)) = checksum_pin_mismatch(&manifest) {
+    if let Some((capability, pinned, default)) = locked_pin_mismatch(&manifest) {
         return Err(Error::Manifest {
             message: format!(
                 "{} is pinned {pinned} but this superdev only supports {default} — run `superdev update`",
@@ -243,7 +234,7 @@ pub fn update(root: &Path, target: Option<&str>, provider: Option<&str>) -> Resu
             });
         }
         (Some(target), provider) => {
-            let (capability, version) = parse_target(target)?;
+            let (capability, version) = parse_target(&manifest, target)?;
             if let Some(id) = provider
                 && registry::entry_for(capability, id).is_none()
             {
@@ -265,7 +256,7 @@ pub fn update(root: &Path, target: Option<&str>, provider: Option<&str>) -> Resu
             if let Some(id) = provider {
                 let entry = registry::entry_for(capability, id).expect("validated above");
                 config.provider = entry.provider.to_string();
-                config.version = entry.version.map(str::to_string);
+                config.version = entry.version.map(|p| p.version.to_string());
             } else {
                 config.version = version.or(fallback);
             }
@@ -284,7 +275,7 @@ pub fn update(root: &Path, target: Option<&str>, provider: Option<&str>) -> Resu
 }
 
 /// Split `<capability>[@<version>]`, rejecting what cannot be pinned by hand.
-fn parse_target(target: &str) -> Result<(Capability, Option<String>)> {
+fn parse_target(manifest: &Manifest, target: &str) -> Result<(Capability, Option<String>)> {
     let (name, version) = match target.split_once('@') {
         Some((name, version)) => (name, Some(version.to_string())),
         None => (target, None),
@@ -297,26 +288,29 @@ fn parse_target(target: &str) -> Result<(Capability, Option<String>)> {
             message: format!("`{target}` names no version"),
         });
     }
-    // This binary decides these versions: it carries the checksum, or the
-    // content itself. Any other version has no provenance — and no URLs. The
-    // components refuse the same thing when planning.
-    if version.is_some() && BINARY_PINNED.contains(&capability) {
-        let default = default_version(capability).unwrap_or_default();
+    // A registry-pinned version is this binary's to decide: the pin carries
+    // its provenance, so any other version cannot be verified. The components
+    // refuse the same thing when planning.
+    if version.is_some()
+        && let Some(pinned) = selected_pin(manifest, capability)
+    {
         return Err(Error::Manifest {
-            message: format!(
-                "{} version must match the registry default {default} — this binary is the provenance",
-                capability.as_str()
-            ),
+            message: pin::refusal_message(capability, pinned),
         });
     }
     Ok((capability, version))
 }
 
-/// This binary's default version for `capability`, when it pins one.
-fn default_version(capability: Capability) -> Option<String> {
-    registry::default_entry(capability)
+/// The pin for the provider the manifest names, falling back to the default
+/// entry when the capability is not enabled or names a provider the registry
+/// lacks. None means the version floats.
+fn selected_pin(manifest: &Manifest, capability: Capability) -> Option<registry::Pinned> {
+    manifest
+        .capabilities
+        .get(capability.as_str())
+        .and_then(|c| registry::entry_for(capability, &c.provider))
+        .unwrap_or_else(|| registry::default_entry(capability))
         .version
-        .map(str::to_string)
 }
 
 /// The registry version for the provider the manifest names, when both exist.
@@ -324,7 +318,7 @@ fn registry_version(manifest: &Manifest, capability: Capability) -> Option<Strin
     let config = manifest.capabilities.get(capability.as_str())?;
     registry::entry_for(capability, &config.provider)?
         .version
-        .map(str::to_string)
+        .map(|p| p.version.to_string())
 }
 
 /// The manifest, with the missing-file case named for what it means.
@@ -409,27 +403,15 @@ fn repo_entry(root: &Path, manifest: &Manifest) -> Result<Option<Planned>> {
 fn behind_pins(manifest: &Manifest) -> Vec<String> {
     let mut lines = Vec::new();
     for capability in Capability::ALL {
-        let (Some(config), Some(default)) = (
-            manifest.capabilities.get(capability.as_str()),
-            registry_version(manifest, capability),
-        ) else {
+        // Every registry-pinned version is locked to the default, so stale
+        // means mismatched — there is no is-it-older question to ask.
+        let Some((pinned, default)) = pin_mismatch(manifest, capability) else {
             continue;
         };
-        let stale = if BINARY_PINNED.contains(&capability) {
-            pin_mismatch(manifest, capability).is_some()
-        } else {
-            config
-                .version
-                .as_deref()
-                .is_some_and(|pinned| is_behind(pinned, &default))
-        };
-        if stale {
-            lines.push(format!(
-                "{}: pinned {}, registry has {default} — run `superdev update`",
-                capability.as_str(),
-                config.version.as_deref().unwrap_or("(unset)")
-            ));
-        }
+        lines.push(format!(
+            "{}: pinned {pinned}, registry has {default} — run `superdev update`",
+            capability.as_str()
+        ));
     }
     lines
 }
@@ -583,9 +565,10 @@ fn switch_lines(manifest: &Manifest, lock: &Lock) -> Vec<String> {
     lines
 }
 
-/// A checksum-pinned capability's pin and this binary's default, when the two
-/// differ. Only the default has a checksum baked in beside it, so any other
-/// pin — newer included — is one superdev cannot install.
+/// A registry-locked capability's pin and this binary's default, when the two
+/// differ. Only the default has provenance — a checksum baked in beside it,
+/// or the content itself — so any other pin, newer included, is one superdev
+/// cannot install.
 fn pin_mismatch(manifest: &Manifest, capability: Capability) -> Option<(String, String)> {
     let config = manifest.capabilities.get(capability.as_str())?;
     let default = registry_version(manifest, capability)?;
@@ -594,19 +577,19 @@ fn pin_mismatch(manifest: &Manifest, capability: Capability) -> Option<(String, 
         .then(|| (pinned.unwrap_or_else(|| "(unset)".into()), default))
 }
 
-/// The first checksum-pinned capability pinned off this binary's default.
-fn checksum_pin_mismatch(manifest: &Manifest) -> Option<(Capability, String, String)> {
-    BINARY_PINNED.into_iter().find_map(|capability| {
+/// The first registry-locked capability pinned off this binary's default.
+fn locked_pin_mismatch(manifest: &Manifest) -> Option<(Capability, String, String)> {
+    Capability::ALL.into_iter().find_map(|capability| {
         pin_mismatch(manifest, capability).map(|(pinned, default)| (capability, pinned, default))
     })
 }
 
-/// A copy of the manifest that can be planned: every checksum-pinned
-/// capability back at the default. Every other pin is left alone — components
-/// accept those as given.
+/// A copy of the manifest that can be planned: every registry-locked
+/// capability back at the default. Unpinned capabilities are left alone —
+/// components accept those as given.
 fn plannable(manifest: &Manifest) -> Manifest {
     let mut plannable = manifest.clone();
-    for capability in BINARY_PINNED {
+    for capability in Capability::ALL {
         // No entry means an unknown provider; leave the pin and let the
         // resolution error say so.
         let Some(version) = registry_version(manifest, capability) else {
@@ -617,19 +600,6 @@ fn plannable(manifest: &Manifest) -> Manifest {
         }
     }
     plannable
-}
-
-/// Compare dotted versions component by component. A deliberate pin ahead of
-/// the registry is not drift, so plain inequality will not do.
-fn is_behind(pinned: &str, default: &str) -> bool {
-    // Numbers order numerically; anything else falls back to text, so an odd
-    // version still gets a stable answer instead of a panic.
-    let key = |v: &str| {
-        v.split('.')
-            .map(|part| (part.parse::<u64>().ok(), part.to_string()))
-            .collect::<Vec<_>>()
-    };
-    key(pinned) < key(default)
 }
 
 /// The blueprint-version report: informational, never the exit code. A
@@ -815,15 +785,31 @@ mod tests {
 
     #[test]
     fn parses_update_targets() {
+        let manifest = Manifest::default_for("0.1.0", &[]);
         assert_eq!(
-            parse_target("code-index").unwrap(),
+            parse_target(&manifest, "code-index").unwrap(),
             (Capability::CodeIndex, None)
         );
-        assert!(parse_target("flying").is_err());
-        // Both checksum-verified capabilities refuse a hand-picked version.
-        assert!(parse_target("workflows@9.9.9").is_err());
-        assert!(parse_target("code-index@9.9.9").is_err());
-        assert!(parse_target("skills@9.9.9").is_err());
+        assert!(parse_target(&manifest, "flying").is_err());
+        // Every registry-pinned capability refuses a hand-picked version.
+        let err = parse_target(&manifest, "workflows@9.9.9")
+            .unwrap_err()
+            .to_string();
+        assert!(err.contains("run `superdev update workflows`"), "{err}");
+        assert!(parse_target(&manifest, "code-index@9.9.9").is_err());
+        assert!(parse_target(&manifest, "skills@9.9.9").is_err());
+    }
+
+    /// Every capability whose default entry is registry-locked, derived so
+    /// no test re-encodes the list the registry owns.
+    fn locked_capabilities() -> Vec<Capability> {
+        let locked: Vec<Capability> = registry::entries()
+            .iter()
+            .filter(|e| e.default && e.version.is_some())
+            .map(|e| e.capability)
+            .collect();
+        assert!(!locked.is_empty());
+        locked
     }
 
     fn pin(manifest: &mut Manifest, capability: Capability, version: Option<&str>) {
@@ -835,10 +821,14 @@ mod tests {
     }
 
     #[test]
-    fn any_checksum_pin_off_the_default_is_stale() {
-        for capability in BINARY_PINNED {
+    fn any_locked_pin_off_the_default_is_stale() {
+        for capability in locked_capabilities() {
             let name = capability.as_str();
-            let default = default_version(capability).unwrap();
+            let default = registry::default_entry(capability)
+                .version
+                .unwrap()
+                .version
+                .to_string();
             let mut manifest = Manifest::default_for("0.1.0", &[]);
             assert_eq!(pin_mismatch(&manifest, capability), None);
             assert!(behind_pins(&manifest).is_empty());
@@ -858,20 +848,20 @@ mod tests {
             // A newer pin is not "behind", but superdev still cannot install it.
             pin(&mut manifest, capability, Some("9.9.9"));
             assert!(pin_mismatch(&manifest, capability).is_some());
-            assert_eq!(checksum_pin_mismatch(&manifest).unwrap().0, capability);
+            assert_eq!(locked_pin_mismatch(&manifest).unwrap().0, capability);
             pin(&mut manifest, capability, None);
             assert!(behind_pins(&manifest)[0].contains("pinned (unset)"));
         }
     }
 
     #[test]
-    fn plannable_resets_every_checksum_pin() {
+    fn plannable_resets_every_locked_pin() {
         let mut manifest = Manifest::default_for("0.1.0", &[]);
-        for capability in BINARY_PINNED {
+        for capability in locked_capabilities() {
             pin(&mut manifest, capability, Some("1.0.0"));
         }
         let plannable = plannable(&manifest);
-        assert!(checksum_pin_mismatch(&plannable).is_none());
+        assert!(locked_pin_mismatch(&plannable).is_none());
         // Pins with no checksum beside them are left exactly as written.
         assert_eq!(
             plannable.capabilities["knowledge"].version,
@@ -1081,13 +1071,5 @@ mod tests {
         assert_eq!(stamp_blueprint(dir.path(), &stamped).unwrap(), 0);
         let after = std::fs::read_to_string(&path).unwrap();
         assert_eq!(before, after, "no rewrite when the value is current");
-    }
-
-    #[test]
-    fn only_older_pins_read_as_behind() {
-        assert!(is_behind("1.4.9", "1.5.0"));
-        assert!(!is_behind("1.5.0", "1.5.0"));
-        assert!(!is_behind("9.9.9", "1.5.0"));
-        assert!(is_behind("1.10", "1.10.0"));
     }
 }

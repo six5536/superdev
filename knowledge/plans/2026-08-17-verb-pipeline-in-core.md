@@ -56,9 +56,10 @@ sync never writes the manifest.
    `SETUP_HINT`. Dry-run never reaches it (the verb stops after
    printing the plan).
 3. Move the version-policy cluster (`behind_pins`, `pin_mismatch`,
-   `checksum_pin_mismatch`, `plannable`) into `pipeline.rs`, on the
+   `locked_pin_mismatch`, `plannable`, `selected_pin`) into
+   `pipeline.rs`, on the
    registry queries the
-   [checksum-pin planner](2026-08-17-checksum-pin-planner.md)
+   checksum-pin planner (landed 2026-08-17)
    introduced. `parse_target` stays in the binary (CLI parsing) using
    those queries.
 4. Move `adopt_existing_skills` into `components/skillpack.rs` and
@@ -84,7 +85,7 @@ byte-identical for the fixture repos.
 
 # Sequencing
 
-After [one checksum-pin planner](2026-08-17-checksum-pin-planner.md)
+After the checksum-pin planner (landed 2026-08-17)
 (smaller moves). The [runner seam](2026-08-17-runner-seam-for-verbs.md)
 lands immediately after — `plan_repo`/`apply_repo` taking
 `&dyn CommandRunner` is what it needs. Delete this file in the commit

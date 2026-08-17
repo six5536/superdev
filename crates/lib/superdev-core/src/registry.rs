@@ -23,6 +23,38 @@ pub const MATTSKILLS_URL: &str =
 pub const MATTSKILLS_CHECKSUM: &str =
     "sha256:238fac54d0f53d3e2d0501c1b38c9c0e4e9bc26f6b057b53a7328ea15d43b66f";
 
+/// Why a pinned version is locked to the registry default: what this binary
+/// carries as the version's provenance. A version the binary cannot vouch for
+/// is refused.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Provenance {
+    /// The binary carries the artefact's checksum.
+    Checksum,
+    /// The binary carries the content itself.
+    Embedded,
+}
+
+impl Provenance {
+    /// The noun the refusal message names as the provenance.
+    pub fn describe(self) -> &'static str {
+        match self {
+            Provenance::Checksum => "pinned checksum",
+            Provenance::Embedded => "embedded content",
+        }
+    }
+}
+
+/// A version this binary pins. Every pin carries its provenance — a pin the
+/// binary cannot vouch for is unrepresentable, which is why pinned versions
+/// are locked to the registry default.
+#[derive(Debug, Clone, Copy)]
+pub struct Pinned {
+    /// The pinned version string.
+    pub version: &'static str,
+    /// Why the version is locked.
+    pub provenance: Provenance,
+}
+
 /// One (capability, provider) pair and the version superdev ships for it.
 #[derive(Debug, Clone, Copy)]
 pub struct RegistryEntry {
@@ -31,7 +63,7 @@ pub struct RegistryEntry {
     /// Provider id.
     pub provider: &'static str,
     /// Pinned version, when superdev pins one (None = managed by the source).
-    pub version: Option<&'static str>,
+    pub version: Option<Pinned>,
     /// False for slots whose provider does not exist yet.
     pub available: bool,
     /// The provider init picks when the user names none. Exactly one per capability.
@@ -42,14 +74,20 @@ const ENTRIES: [RegistryEntry; 6] = [
     RegistryEntry {
         capability: Capability::Workflows,
         provider: "superpowers",
-        version: Some("6.2.0"),
+        version: Some(Pinned {
+            version: "6.2.0",
+            provenance: Provenance::Checksum,
+        }),
         available: true,
         default: false,
     },
     RegistryEntry {
         capability: Capability::Workflows,
         provider: "mattpocock-skills",
-        version: Some("1.2.3"),
+        version: Some(Pinned {
+            version: "1.2.3",
+            provenance: Provenance::Checksum,
+        }),
         available: true,
         default: true,
     },
@@ -63,14 +101,20 @@ const ENTRIES: [RegistryEntry; 6] = [
     RegistryEntry {
         capability: Capability::Skills,
         provider: "superdev-skills",
-        version: Some(env!("CARGO_PKG_VERSION")),
+        version: Some(Pinned {
+            version: env!("CARGO_PKG_VERSION"),
+            provenance: Provenance::Embedded,
+        }),
         available: true,
         default: true,
     },
     RegistryEntry {
         capability: Capability::CodeIndex,
         provider: "codegraph",
-        version: Some(CODEGRAPH_VERSION),
+        version: Some(Pinned {
+            version: CODEGRAPH_VERSION,
+            provenance: Provenance::Checksum,
+        }),
         available: true,
         default: true,
     },
@@ -181,12 +225,12 @@ mod tests {
             default_entry(Capability::Workflows).provider,
             "mattpocock-skills"
         );
-        assert_eq!(
-            entry_for(Capability::Workflows, "superpowers")
-                .unwrap()
-                .version,
-            Some("6.2.0")
-        );
+        let superpowers = entry_for(Capability::Workflows, "superpowers")
+            .unwrap()
+            .version
+            .unwrap();
+        assert_eq!(superpowers.version, "6.2.0");
+        assert_eq!(superpowers.provenance, Provenance::Checksum);
         assert!(entry_for(Capability::Workflows, "flying").is_none());
         assert_eq!(providers_for(Capability::Knowledge), vec!["aokf"]);
     }
@@ -218,6 +262,8 @@ mod tests {
             .unwrap();
         assert!(skills.available);
         assert_eq!(skills.provider, "superdev-skills");
-        assert_eq!(skills.version, Some(env!("CARGO_PKG_VERSION")));
+        let pinned = skills.version.unwrap();
+        assert_eq!(pinned.version, env!("CARGO_PKG_VERSION"));
+        assert_eq!(pinned.provenance, Provenance::Embedded);
     }
 }

@@ -3,7 +3,7 @@
 use crate::action::Action;
 use crate::capability::Capability;
 use crate::component::{Claim, Component, Ctx};
-use crate::error::{Error, Result};
+use crate::error::Result;
 use crate::registry::{self, SUPERPOWERS_CHECKSUM, SUPERPOWERS_URL};
 
 /// Where a plugin's marketplace comes from.
@@ -83,40 +83,16 @@ impl ClaudePlugin {
         let Marketplace::MiseTool { tool, .. } = &self.marketplace else {
             return Ok(None);
         };
-        let config = ctx
-            .config(self.capability)
-            .expect("planned only when enabled");
         // By provider, not by capability alone: workflows has more than one
         // entry, and only this plugin's pin belongs in this fragment.
         let default = registry::entry_for(self.capability, self.provider_id)
             .and_then(|e| e.version)
-            .expect("registry pins superpowers");
-        if config.version.as_deref() != Some(default) {
-            return Err(Error::Manifest {
-                message: format!(
-                    "{} version must match the registry default {default} — the pinned checksum is the provenance",
-                    self.capability.as_str()
-                ),
-            });
-        }
+            .expect("registry pins superpowers")
+            .version;
         let value = format!(
             "{{ version = \"{default}\", url = \"{SUPERPOWERS_URL}\", checksum = \"{SUPERPOWERS_CHECKSUM}\", strip_components = 1 }}"
         );
-        let current = match std::fs::read_to_string(ctx.root.join(".mise.toml")) {
-            Ok(s) => super::mise::current_pin(&s, tool)?,
-            Err(_) => None,
-        };
-        // Round-trip the desired value so layout differences never read as drift.
-        let desired = super::mise::set_pin("", tool, &value)
-            .and_then(|s| super::mise::current_pin(&s, tool))?
-            .expect("pin just set");
-        if current.as_deref() == Some(desired.as_str()) {
-            return Ok(None);
-        }
-        Ok(Some(Action::SetMisePin {
-            tool: tool.to_string(),
-            value_toml: value,
-        }))
+        super::pin::planned_pin(ctx, self.capability, self.provider_id, tool, &value)
     }
 
     fn install_actions(&self) -> Vec<Action> {

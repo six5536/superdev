@@ -5,7 +5,7 @@
 use crate::action::Action;
 use crate::capability::Capability;
 use crate::component::{Claim, Component, Ctx};
-use crate::error::{Error, Result};
+use crate::error::Result;
 use crate::registry::{self, MATTSKILLS_CHECKSUM, MATTSKILLS_URL};
 
 /// mise `[tools]` key for the pinned checkout.
@@ -51,7 +51,8 @@ pub struct MattSkills;
 fn pin_value() -> String {
     let version = registry::entry_for(Capability::Workflows, "mattpocock-skills")
         .and_then(|e| e.version)
-        .expect("registry pins mattpocock-skills");
+        .expect("registry pins mattpocock-skills")
+        .version;
     format!(
         "{{ version = \"{version}\", url = \"{MATTSKILLS_URL}\", checksum = \"{MATTSKILLS_CHECKSUM}\", strip_components = 1 }}"
     )
@@ -70,31 +71,15 @@ impl Component for MattSkills {
         let config = ctx
             .config(Capability::Workflows)
             .expect("planned only when enabled");
-        let default = registry::entry_for(Capability::Workflows, "mattpocock-skills")
-            .and_then(|e| e.version)
-            .expect("registry pins mattpocock-skills");
-        if config.version.as_deref() != Some(default) {
-            return Err(Error::Manifest {
-                message: format!(
-                    "workflows version must match the registry default {default} — the pinned checksum is the provenance"
-                ),
-            });
-        }
         let mut actions = Vec::new();
-        let value = pin_value();
-        let current = match std::fs::read_to_string(ctx.root.join(".mise.toml")) {
-            Ok(s) => super::mise::current_pin(&s, MATTSKILLS_MISE_TOOL)?,
-            Err(_) => None,
-        };
-        // Round-trip the desired value so layout differences never read as drift.
-        let desired = super::mise::set_pin("", MATTSKILLS_MISE_TOOL, &value)
-            .and_then(|s| super::mise::current_pin(&s, MATTSKILLS_MISE_TOOL))?
-            .expect("pin just set");
-        if current.as_deref() != Some(desired.as_str()) {
-            actions.push(Action::SetMisePin {
-                tool: MATTSKILLS_MISE_TOOL.into(),
-                value_toml: value,
-            });
+        if let Some(pin) = super::pin::planned_pin(
+            ctx,
+            Capability::Workflows,
+            "mattpocock-skills",
+            MATTSKILLS_MISE_TOOL,
+            &pin_value(),
+        )? {
+            actions.push(pin);
         }
         if refresh_due(ctx, config) {
             actions.push(Action::MaterialiseSkills {

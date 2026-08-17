@@ -5,8 +5,7 @@
 use crate::action::{Action, Ownership};
 use crate::capability::Capability;
 use crate::component::{Claim, Component, Ctx};
-use crate::error::{Error, Result};
-use crate::registry;
+use crate::error::Result;
 
 macro_rules! asset {
     ($rel:literal) => {
@@ -69,16 +68,7 @@ impl Component for SkillPack {
         let config = ctx
             .config(Capability::Skills)
             .expect("planned only when enabled");
-        let default = registry::entry_for(Capability::Skills, "superdev-skills")
-            .and_then(|e| e.version)
-            .expect("registry pins the skill pack");
-        if config.version.as_deref() != Some(default) {
-            return Err(Error::Manifest {
-                message: format!(
-                    "skills version must match this binary ({default}) — the embedded content is the provenance"
-                ),
-            });
-        }
+        super::pin::require_registry_default(ctx, Capability::Skills, "superdev-skills")?;
         let mut actions = Vec::new();
         for (name, content) in SKILLS {
             if config.custom.iter().any(|c| c == name) {
