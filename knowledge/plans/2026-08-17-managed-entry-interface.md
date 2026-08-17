@@ -2,7 +2,7 @@
 type: Plan
 id: plan-managed-entry
 title: Managed-Entry Interface
-description: One managed-entry interface with file, pin and JSON adapters; one drift-guarded removal driver replaces three appliers and the orphan arms.
+description: Claim gains the per-shape operations and one removal action; one drift-guarded removal driver replaces three appliers and the orphan arms.
 status: draft
 ---
 
@@ -48,11 +48,11 @@ plan→apply gap.
    `Action::Remove { claim, reason }`; `describe()` derives today's
    exact wordings from the shape. Verify plan/apply report strings stay
    byte-identical.
-3. One drift-guarded removal applier in `engine/mod.rs` using
-   `tx.remove_if_unchanged` semantics: read via `Claim` → absent ⇒
-   already-gone skip → hash mismatch ⇒ released skip → remove (file
-   delete vs shared-file rewrite stays a visible match in this one
-   place). Delete the three old appliers.
+3. One drift-guarded removal applier in `engine/mod.rs` — the guard's
+   only home, for all three shapes: read via `Claim` → absent ⇒
+   already-gone skip → hash mismatch ⇒ released skip → remove via Tx's
+   plain journaled operations (file delete vs shared-file rewrite stays
+   a visible match in this one place). Delete the three old appliers.
 4. Rewrite `orphan.rs` onto the `Claim` methods, deleting its
    `classify`/`current_value`/`removal` trio and the lock-key string
    parsing.

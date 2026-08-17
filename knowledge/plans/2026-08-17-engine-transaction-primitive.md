@@ -37,11 +37,13 @@ move by ownership handoff, not index arithmetic.
 # Tasks
 
 1. `engine/tx.rs`: extract `Tx` from `Session` —
-   `tx.write(path, content)`,
-   `tx.remove_if_unchanged(path, prior_hash)`,
+   `tx.write(path, content)`, `tx.remove(path)`,
    `tx.record_command_undo(program, args)`,
    `tx.mark_irreversible(line)`, and `unwind`. Backup-dir and stamp
-   management come with it.
+   management come with it. Tx stays dumb: the drift guards ("changed
+   since superdev wrote it") remain in the appliers, so the
+   [managed-entry plan](2026-08-17-managed-entry-interface.md) can
+   collapse them into its one driver without moving them twice.
 2. Rewrite the appliers in `engine/mod.rs` as content computation
    calling `Tx` — the six whose bodies are the shared read → backup →
    journal → write ritual collapse to their 3–6 variant-specific lines.
@@ -75,5 +77,4 @@ e2e tests and the apply reports are byte-identical.
 
 Before the
 [managed-entry interface](2026-08-17-managed-entry-interface.md), whose
-removal driver wants `remove_if_unchanged`. Independent of the verb
-track. Delete this file in the commit that completes the work.
+removal driver builds on `Tx`. Independent of the verb track. Delete this file in the commit that completes the work.

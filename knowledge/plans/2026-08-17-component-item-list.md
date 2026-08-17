@@ -55,7 +55,8 @@ Pins stay with the
 # Done
 
 A new static component is data plus one list test. The consistency test
-covers only `mattskills`. `npm test` and `npm run check:blueprint` pass
+covers only the hand-written components (`plugin`, `codegraph`,
+`mattskills`). `npm test` and `npm run check:blueprint` pass
 with byte-identical plans on the fixture repos.
 
 # Sequencing

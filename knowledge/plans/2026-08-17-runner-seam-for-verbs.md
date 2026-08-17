@@ -2,7 +2,7 @@
 type: Plan
 id: plan-runner-seam
 title: Runner Seam for the Verbs
-description: Verbs take a CommandRunner; FakeRunner is exported and the unix-only shell-fake sandbox shrinks to smoke tests.
+description: Orchestration tests move to core through the pipeline's CommandRunner seam; the unix-only shell-fake sandbox shrinks to four smoke journeys.
 status: draft
 ---
 
@@ -41,10 +41,10 @@ test ever materialises.
    switching) to core pipeline tests against the crate-internal
    `FakeRunner` — e.g. `sync_installs_committed_pins_on_a_fresh_clone`
    (`tests/manage.rs:421`) already has a 40-line twin at
-   `engine.rs:1288`; keep one of each pair.
-2. Delete `QuietRunner` (`manage.rs:725`); its tests move to core with
-   the pipeline.
-3. Shrink `tests/manage.rs` to four smoke journeys of the real
+   `engine.rs:1288`; keep one of each pair. (`QuietRunner` is already
+   gone — the [verb pipeline](2026-08-17-verb-pipeline-in-core.md)
+   deletes it when its tests move.)
+2. Shrink `tests/manage.rs` to four smoke journeys of the real
    `SystemRunner` wiring (cap 5, file stays `#![cfg(unix)]`):
    init happy path with hints; fresh-clone sync installs committed
    pins; workflows provider switch e2e; orphan sweep e2e.

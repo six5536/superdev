@@ -2,7 +2,7 @@
 type: Plan
 id: plan-checksum-pin
 title: One Checksum-Pin Planner
-description: One planned_pin helper replaces three copied pin blocks; the registry owns the binary-pinned flag.
+description: One planned_pin helper replaces three copied pin blocks; every registry pin carries its provenance.
 status: draft
 ---
 
@@ -62,8 +62,8 @@ one — a pin without provenance is unrepresentable.
 
 # Done
 
-`rg "is the provenance" crates` matches one function. `BINARY_PINNED`
-and `is_behind` are gone. `npm test` and `npm run check:blueprint`
+The refusal message template exists in one function; no component
+carries its own copy. `BINARY_PINNED` and `is_behind` are gone. `npm test` and `npm run check:blueprint`
 pass. Only intended behaviour change: the reworded refusal messages
 (task 4); plans byte-identical on the fixture repos.
 

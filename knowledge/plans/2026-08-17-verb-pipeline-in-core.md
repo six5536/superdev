@@ -71,7 +71,8 @@ sync never writes the manifest.
 6. Move the manage.rs unit tests covering moved logic into core; they
    use the crate-internal `FakeRunner` (visible to core unit tests
    today — no dependency on the
-   [runner seam](2026-08-17-runner-seam-for-verbs.md) plan). Binary
+   [runner seam](2026-08-17-runner-seam-for-verbs.md) plan). Delete
+   `QuietRunner` (`manage.rs:725`) — dead once its tests move. Binary
    tests keep flag parsing and rendering.
 
 # Done
