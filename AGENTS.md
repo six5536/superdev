@@ -8,7 +8,7 @@ Read the AOKF specification:
 @.agents/CODING.md
 @.agents/PROSE.md
 @.agents/VALIDATION.md
-@.agents/SUPERPOWERS.md
+@.agents/MATT-POCOCK-SKILLS.md
 
 ## Canonical Project Knowledge
 

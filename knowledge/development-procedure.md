@@ -2,7 +2,7 @@
 type: Procedure
 id: development-procedure
 title: Development Procedure
-description: Setup, the spec-and-plan change workflow, what to run before a PR, how this repo manages its own skills, and how it serves and searches its own knowledgebase.
+description: Setup, the spec-and-plan change workflow, what to run before a PR, how this repo manages its own skills and workflows, and how it serves and searches its own knowledgebase.
 status: stable
 sources:
   - id: contributing
@@ -16,11 +16,13 @@ no Node.
 
 # Workflow
 
-1. Significant changes follow the Superpowers flow with this project's
-   overrides ([SUPERPOWERS.md](/.agents/SUPERPOWERS.md)): brainstorm a spec
-   into `knowledge/specs/` (permanent decision record), then write an
-   implementation plan into `knowledge/plans/` (ephemeral — deleted in the
-   commit that completes the work).
+1. Significant changes follow the mattpocock/skills flow with this
+   project's overrides
+   ([MATT-POCOCK-SKILLS.md](/.agents/MATT-POCOCK-SKILLS.md)): grill the
+   requirements and write the spec into `knowledge/specs/` (permanent
+   decision record) with `to-spec`, then break it into an implementation
+   plan in `knowledge/plans/` (ephemeral — deleted in the commit that
+   completes the work) with `to-tickets` or `wayfinder`.
 2. Implement with focused commits, using
    [Conventional Commits](https://www.conventionalcommits.org/) (`feat:`,
    `fix:`, `docs:`, `test:`, `refactor:`, `chore:`).
@@ -33,10 +35,11 @@ no Node.
 
 # This repo manages its own skills
 
-superdev fills the `skills` capability here and nothing else: committed
+superdev fills the `skills` and `workflows` capabilities here: committed
 `.superdev/config.toml` and `.superdev/lock.toml`, with `cargo run -- sync`
-writing the four skills and the PostToolUse hook entry. The other capabilities
-are off, because their repo-side files intentionally differ here.
+writing the four pack skills, the PostToolUse hook entry, and the
+materialised mattpocock-skills set. The other capabilities are off, because
+their repo-side files intentionally differ here.
 `npm run check:blueprint` is what catches drift in the shipped skill assets —
 in the pre-PR list and in CI, through the product's own drift detection rather
 than a parity test.
