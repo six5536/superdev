@@ -23,9 +23,10 @@ All domain logic; no argument parsing. One module per concern:
 - `manifest` / `lock` — `.superdev/config.toml` and `.superdev/lock.toml`.
 - `component` — the provider trait (`plan` observes and returns actions);
   `action` — the action enum and file ownership.
-- `components::{aokf, plugin, codegraph, mise, skillpack}` — the providers,
-  plus the targeted `.mise.toml` editing they share.
-- `engine` — applies a plan, journals every side effect, unwinds on failure.
+- `components::{aokf, plugin, mattskills, codegraph, mise, skillpack}` — the
+  providers, plus the targeted `.mise.toml` editing they share.
+- `engine` — applies a plan, journals every side effect, unwinds on failure;
+  `orphan` — plans the sweep of lock entries no live claim covers.
 - `runner` — the process seam; `report` — plan and apply rendering; `error` —
   the crate's error type.
 - `aokf` — the read side of the knowledge bundle, one module per stage:
@@ -33,9 +34,10 @@ All domain logic; no argument parsing. One module per concern:
   rules), `validate` (document check and conformance ladder), `graph` (link
   resolution and inverse synthesis), `embed` (the embedding providers),
   `index` (tantivy plus the vector store), `mcp` (the server).
-- The AOKF spec and agent files the `knowledge` capability writes, and the five
+- The AOKF spec and agent files the `knowledge` capability writes, and the four
   SKILL.md files the `skills` capability writes, ship as `assets/`, embedded at
-  compile time.
+  compile time. The mattpocock-skills files are not embedded: they come from
+  the checksummed checkout at sync time.
 
 The MCP server exposes four read-only tools over stdio — `aokf_search`,
 `aokf_read`, `aokf_graph`, `aokf_overview` (see

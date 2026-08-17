@@ -35,9 +35,11 @@ status: stable
   ends with a trailer telling the agent to read it and let it win on conflict,
   so a project extends a stock skill without forking it. superdev never writes
   or tracks the file.
-- **Custom skill** — a skill named in `[skills] custom` and thereby released
-  from management: superdev stops writing it, drops its hash from the lock, and
-  `status` reports it as unmanaged rather than drifted.
+- **Custom skill** — a skill named in a capability's `custom` list
+  (`[skills]` or `[workflows]`) and thereby released from management:
+  superdev stops writing it, drops its hashes from the lock, and `status`
+  reports it as unmanaged rather than drifted. A name the capability no
+  longer ships reports as having no effect instead of failing.
 - **Claim** — a typed lock entry a component declares it owns: a file, a
   `.mise.toml` pin, or a managed JSON key. The orphan pass subtracts the live
   claims from the lock, which is how a migration is derived.

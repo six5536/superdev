@@ -18,6 +18,8 @@ A change is done when (the enforced form is the
 - Line coverage stays ≥ 90% **per crate** — see
   [testing-strategy](testing-strategy.md).
 - Launcher and version-consistency checks pass.
+- The bundle validates (`npm run check:aokf`, when `knowledge/` changed) and
+  the repo matches its own blueprint (`npm run check:blueprint`).
 - Documentation is updated wherever behaviour changed: README, this
   knowledgebase, rustdoc.
 - New behaviour carries tests at the appropriate layer; bug fixes carry a

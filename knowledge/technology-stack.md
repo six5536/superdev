@@ -42,11 +42,14 @@ set:[^cargo-toml]
   (with `tokio`) to drive the server in-process.
 - **Tooling** (pinned in `.mise.toml`): `cargo-zigbuild` and `zig` (the cross
   C compiler for the musl targets), `cargo-nextest`, `cargo-llvm-cov`.
-- **Agent tooling**: the [Superpowers](https://github.com/obra/superpowers)
-  Claude Code plugin, pinned in `.mise.toml` via the `http` backend (tag
-  tarball + sha256 checksum — Superpowers publishes no release assets, so the
-  `github` backend cannot install it). The devcontainer post-create script
-  wires the checkout into Claude Code as a local marketplace.[^mise-toml]
+- **Agent tooling**: this repo's workflow skills are the managed
+  `http:mattpocock-skills` checkout, materialised into `.claude/skills/` by
+  superdev itself. The [Superpowers](https://github.com/obra/superpowers)
+  Claude Code plugin stays pinned beside it via the `http` backend (tag
+  tarball + sha256 checksum — Superpowers publishes no release assets, so
+  the `github` backend cannot install it); the devcontainer post-create
+  script wires that checkout into Claude Code as a local
+  marketplace.[^mise-toml]
 
 The embedding model is pinned like a dependency:
 `minishlab/potion-retrieval-32M`, at commit `6fc8051…`, fetched once per

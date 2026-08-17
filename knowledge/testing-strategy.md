@@ -28,8 +28,9 @@ gate are in [CONTRIBUTING](/CONTRIBUTING.md).[^contributing]
   exits 1 → `sync` repairs), `aokf validate`'s three exit codes and its JSON,
   `aokf index`, and `mcp aokf`'s startup
   failures. The manage tests put fake `mise`, `claude` and
-  `codegraph` on `PATH` as shell scripts, so they are unix-only; Windows runs
-  the rest.
+  `codegraph` on `PATH` as shell scripts — `mise where` answers with a
+  fixture skills checkout, so materialisation runs against real files — and
+  are therefore unix-only; Windows runs the rest.
 - **Validator parity.** One fixture bundle per failure class under
   `tests/fixtures/aokf/`, each with a `.golden.json` captured from the Python
   validator before that script was deleted. The Rust output is compared to it
