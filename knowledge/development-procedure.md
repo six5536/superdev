@@ -35,7 +35,7 @@ no Node.
 
 superdev fills the `skills` capability here and nothing else: committed
 `.superdev/config.toml` and `.superdev/lock.toml`, with `cargo run -- sync`
-writing the five skills and the PostToolUse hook entry. The other capabilities
+writing the four skills and the PostToolUse hook entry. The other capabilities
 are off, because their repo-side files intentionally differ here.
 `npm run check:blueprint` is what catches drift in the shipped skill assets —
 in the pre-PR list and in CI, through the product's own drift detection rather
