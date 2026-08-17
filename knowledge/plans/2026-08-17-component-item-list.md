@@ -63,6 +63,6 @@ with byte-identical plans on the fixture repos.
 
 After the checksum-pin planner (landed 2026-08-17)
 (the pin blocks it would otherwise duplicate are gone) and preferably
-after the [verb pipeline](2026-08-17-verb-pipeline-in-core.md) (the
-`manage.rs:391` predicate copy has moved to core by then). Delete this
+after the verb pipeline (landed 2026-08-17; the exact-whole-line
+predicate copy now lives in core's pipeline.rs). Delete this
 file in the commit that completes the work.

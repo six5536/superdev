@@ -31,6 +31,38 @@ pub const HOOK_MARKER: &str = "superdev aokf hook validate";
 /// The registration itself: validate the bundle after an Edit/Write.
 pub const HOOK_ELEMENT: &str = r#"{"matcher":"Edit|Write","hooks":[{"type":"command","command":"superdev aokf hook validate"}]}"#;
 
+/// Release, at adoption time, every pack skill the repo already has under its
+/// own name and with its own content. Overwriting those would replace work
+/// superdev never wrote with a backup the user has to go looking for; marking
+/// them custom keeps the file and hands the choice back. Returns the lines to
+/// print. Only `init` calls this — later syncs honour the list as written.
+pub(crate) fn adopt_existing(
+    root: &std::path::Path,
+    manifest: &mut crate::manifest::Manifest,
+) -> Vec<String> {
+    let Some(config) = manifest.capabilities.get_mut(Capability::Skills.as_str()) else {
+        return Vec::new();
+    };
+    for (name, shipped) in SKILLS {
+        let existing =
+            std::fs::read_to_string(root.join(format!(".claude/skills/{name}/SKILL.md")));
+        // Identical content is superdev's own text already: nothing to keep.
+        if existing.is_ok_and(|existing| existing != shipped) {
+            config.custom.push(name.to_string());
+        }
+    }
+    config
+        .custom
+        .iter()
+        .map(|name| {
+            format!(
+                "skills: kept your {name} — marked custom in {}",
+                crate::manifest::CONFIG_PATH
+            )
+        })
+        .collect()
+}
+
 /// The superdev skill pack provider.
 pub struct SkillPack;
 
@@ -303,5 +335,42 @@ mod tests {
     fn reports_its_slot_and_provider() {
         assert_eq!(SkillPack.capability(), Capability::Skills);
         assert_eq!(SkillPack.provider(), "superdev-skills");
+    }
+
+    #[test]
+    fn adoption_keeps_the_repos_own_skills_and_ignores_identical_ones() {
+        let dir = tempfile::tempdir().unwrap();
+        let write = |name: &str, body: &str| {
+            let path = dir.path().join(format!(".claude/skills/{name}/SKILL.md"));
+            std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+            std::fs::write(path, body).unwrap();
+        };
+        // Theirs, under one of our names.
+        write("humanise", "# Ours, thanks\n");
+        // Already superdev's own text: nothing of the user's to keep.
+        let (_, shipped) = SKILLS
+            .iter()
+            .find(|(name, _)| *name == "double-check")
+            .unwrap();
+        write("double-check", shipped);
+
+        let mut manifest = Manifest::default_for("0.1.0", &[]);
+        let lines = adopt_existing(dir.path(), &mut manifest);
+        assert_eq!(manifest.capabilities["skills"].custom, ["humanise"]);
+        assert_eq!(
+            lines,
+            vec![format!(
+                "skills: kept your humanise — marked custom in {}",
+                crate::manifest::CONFIG_PATH
+            )]
+        );
+
+        // Nothing to adopt in an empty repo, or with skills disabled.
+        let empty = tempfile::tempdir().unwrap();
+        let mut manifest = Manifest::default_for("0.1.0", &[]);
+        assert!(adopt_existing(empty.path(), &mut manifest).is_empty());
+        assert!(manifest.capabilities["skills"].custom.is_empty());
+        let mut off = Manifest::default_for("0.1.0", &[crate::capability::Capability::Skills]);
+        assert!(adopt_existing(dir.path(), &mut off).is_empty());
     }
 }

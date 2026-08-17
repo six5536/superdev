@@ -44,6 +44,42 @@ pub const MATTSKILLS_SKILLS: [&str; 25] = [
     "writing-for-agents",
 ];
 
+/// Release, at init time, every mattpocock-skills upstream skill directory
+/// the repo already has. The checkout does not exist yet, so unlike the
+/// skill pack's adoption there is no content to compare — any existing
+/// directory counts, and the report says what to do if the user wants it
+/// managed instead. Only `init` calls this — later syncs honour the list as
+/// written. A no-op off the mattpocock-skills provider.
+pub(crate) fn adopt_existing(
+    root: &std::path::Path,
+    manifest: &mut crate::manifest::Manifest,
+) -> Vec<String> {
+    let Some(config) = manifest
+        .capabilities
+        .get_mut(Capability::Workflows.as_str())
+    else {
+        return Vec::new();
+    };
+    if config.provider != "mattpocock-skills" {
+        return Vec::new();
+    }
+    for name in MATTSKILLS_SKILLS {
+        if root.join(format!(".claude/skills/{name}")).is_dir() {
+            config.custom.push(name.to_string());
+        }
+    }
+    config
+        .custom
+        .iter()
+        .map(|name| {
+            format!(
+                "workflows: kept your {name} — marked custom in {}",
+                crate::manifest::CONFIG_PATH
+            )
+        })
+        .collect()
+}
+
 /// The mattpocock-skills provider.
 pub struct MattSkills;
 
@@ -256,5 +292,29 @@ mod tests {
                 _ => None,
             });
         assert_eq!(custom.unwrap(), vec!["grill-me".to_string()]);
+    }
+
+    #[test]
+    fn adoption_marks_existing_upstream_skill_dirs_custom() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::create_dir_all(dir.path().join(".claude/skills/tdd")).unwrap();
+        std::fs::write(dir.path().join(".claude/skills/tdd/SKILL.md"), "mine").unwrap();
+        let mut manifest = Manifest::default_for("0.1.0", &[]);
+        let workflows = manifest.capabilities.get_mut("workflows").unwrap();
+        workflows.provider = "mattpocock-skills".into();
+        let lines = adopt_existing(dir.path(), &mut manifest);
+        assert_eq!(manifest.capabilities["workflows"].custom, ["tdd"]);
+        assert_eq!(
+            lines,
+            vec!["workflows: kept your tdd — marked custom in .superdev/config.toml".to_string()]
+        );
+        // A superpowers manifest adopts nothing.
+        let mut superpowers = Manifest::default_for("0.1.0", &[]);
+        superpowers
+            .capabilities
+            .get_mut("workflows")
+            .unwrap()
+            .provider = "superpowers".into();
+        assert!(adopt_existing(dir.path(), &mut superpowers).is_empty());
     }
 }

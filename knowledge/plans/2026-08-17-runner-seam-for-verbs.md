@@ -7,8 +7,7 @@ status: draft
 ---
 
 From the 2026-08-17 architecture review, candidate 5 (Strong). Completes
-the verb track after the
-[verb pipeline](2026-08-17-verb-pipeline-in-core.md).
+the verb track after the verb pipeline (landed 2026-08-17).
 
 # Friction
 
@@ -28,7 +27,7 @@ this makes it two, and real.
 
 Narrower than first drafted. The app's e2e tests spawn the real binary,
 so no in-process runner can reach them — the seam pays off only in
-core, which the [verb pipeline](2026-08-17-verb-pipeline-in-core.md)
+core, which the verb pipeline (landed 2026-08-17)
 delivers by taking `&dyn CommandRunner`. No `test-util` export:
 `FakeRunner` stays crate-internal (it already answers `mise where`
 with a scripted fixture path); revisit only if an app-side in-process
@@ -42,8 +41,7 @@ test ever materialises.
    `FakeRunner` — e.g. `sync_installs_committed_pins_on_a_fresh_clone`
    (`tests/manage.rs:421`) already has a 40-line twin at
    `engine.rs:1288`; keep one of each pair. (`QuietRunner` is already
-   gone — the [verb pipeline](2026-08-17-verb-pipeline-in-core.md)
-   deletes it when its tests move.)
+   gone — the verb pipeline deleted it when its tests moved.)
 2. Shrink `tests/manage.rs` to four smoke journeys of the real
    `SystemRunner` wiring (cap 5, file stays `#![cfg(unix)]`):
    init happy path with hints; fresh-clone sync installs committed
@@ -57,7 +55,6 @@ asserts. `npm test` passes on the CI matrix.
 
 # Sequencing
 
-Strictly after the
-[verb pipeline](2026-08-17-verb-pipeline-in-core.md), which introduces
+Strictly after the verb pipeline (landed 2026-08-17), which introduced
 the runner-parameterised entries this plan tests through. Delete this
 file in the commit that completes the work.

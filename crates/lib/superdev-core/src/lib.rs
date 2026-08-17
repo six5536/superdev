@@ -27,6 +27,7 @@ pub mod error;
 pub mod lock;
 pub mod manifest;
 pub mod orphan;
+pub mod pipeline;
 pub mod registry;
 pub mod report;
 pub mod runner;
