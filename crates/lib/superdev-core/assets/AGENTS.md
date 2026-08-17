@@ -8,7 +8,7 @@ Read the AOKF specification:
 @.agents/CODING.md
 @.agents/PROSE.md
 @.agents/VALIDATION.md
-@.agents/SUPERPOWERS.md
+{workflows_overrides}
 
 ## Canonical Project Knowledge
 
