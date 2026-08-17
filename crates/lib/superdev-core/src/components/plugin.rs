@@ -86,9 +86,9 @@ impl ClaudePlugin {
         let config = ctx
             .config(self.capability)
             .expect("planned only when enabled");
-        let default = registry::entries()
-            .iter()
-            .find(|e| e.capability == self.capability)
+        // By provider, not by capability alone: workflows has more than one
+        // entry, and only this plugin's pin belongs in this fragment.
+        let default = registry::entry_for(self.capability, self.provider_id)
             .and_then(|e| e.version)
             .expect("registry pins superpowers");
         if config.version.as_deref() != Some(default) {

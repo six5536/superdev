@@ -70,9 +70,7 @@ impl Component for SkillPack {
         let config = ctx
             .config(Capability::Skills)
             .expect("planned only when enabled");
-        let default = registry::entries()
-            .iter()
-            .find(|e| e.capability == Capability::Skills)
+        let default = registry::entry_for(Capability::Skills, "superdev-skills")
             .and_then(|e| e.version)
             .expect("registry pins the skill pack");
         if config.version.as_deref() != Some(default) {

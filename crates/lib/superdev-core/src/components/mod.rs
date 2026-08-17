@@ -2,6 +2,7 @@
 
 pub mod aokf;
 pub mod codegraph;
+pub mod mattskills;
 pub mod mise;
 pub mod plugin;
 pub mod skillpack;
@@ -14,8 +15,9 @@ use crate::registry;
 
 /// Every mise `[tools]` key superdev pins. A repo carrying any of them needs
 /// `mise install` before a provider command can resolve its tool.
-pub const MANAGED_MISE_TOOLS: [&str; 2] = [
+pub const MANAGED_MISE_TOOLS: [&str; 3] = [
     plugin::SUPERPOWERS_MISE_TOOL,
+    mattskills::MATTSKILLS_MISE_TOOL,
     codegraph::CODEGRAPH_MISE_TOOL,
 ];
 
@@ -52,6 +54,7 @@ pub fn enabled(manifest: &Manifest) -> Result<Vec<Box<dyn Component>>> {
 fn component_for(capability: Capability, provider: &str) -> Box<dyn Component> {
     match (capability, provider) {
         (Capability::Workflows, "superpowers") => Box::new(plugin::superpowers()),
+        (Capability::Workflows, "mattpocock-skills") => Box::new(mattskills::MattSkills),
         (Capability::Frontend, _) => Box::new(plugin::frontend_design()),
         (Capability::Skills, _) => Box::new(skillpack::SkillPack),
         (Capability::CodeIndex, _) => Box::new(codegraph::Codegraph),
@@ -112,6 +115,21 @@ mod tests {
             "{err}"
         );
         assert!(enabled(&Manifest::default_for("0.1.0", &[])).is_ok());
+    }
+
+    #[test]
+    fn the_workflows_provider_resolves_from_the_manifest() {
+        let mut manifest = Manifest::default_for("0.1.0", &[]);
+        let workflows = manifest.capabilities.get_mut("workflows").unwrap();
+        workflows.provider = "mattpocock-skills".into();
+        workflows.version = Some("1.2.3".into());
+        let components = enabled(&manifest).unwrap();
+        assert!(
+            components
+                .iter()
+                .any(|c| c.provider() == "mattpocock-skills")
+        );
+        assert!(!components.iter().any(|c| c.provider() == "superpowers"));
     }
 
     #[test]

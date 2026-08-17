@@ -10,6 +10,19 @@ pub const SUPERPOWERS_URL: &str =
 pub const SUPERPOWERS_CHECKSUM: &str =
     "sha256:468246a7b4981d4c014c2b58d9ee538700ffded075279d5810059cdc1abeb5f3";
 
+/// Source tarball for the pinned mattpocock/skills release (mise `http` backend).
+pub const MATTSKILLS_URL: &str =
+    "https://github.com/mattpocock/skills/archive/refs/tags/v1.2.3.tar.gz";
+/// sha256 of that tarball.
+///
+/// Bump: refresh the version, url, checksum and `MATTSKILLS_SKILLS` together,
+/// then audit the new tarball's `skills/engineering` and `skills/productivity`
+/// trees — every file must be UTF-8 text and non-executable, because
+/// materialisation reads text and does not preserve modes. v1.2.3 was audited
+/// clean at 76 files.
+pub const MATTSKILLS_CHECKSUM: &str =
+    "sha256:238fac54d0f53d3e2d0501c1b38c9c0e4e9bc26f6b057b53a7328ea15d43b66f";
+
 /// One (capability, provider) pair and the version superdev ships for it.
 #[derive(Debug, Clone, Copy)]
 pub struct RegistryEntry {
@@ -25,13 +38,20 @@ pub struct RegistryEntry {
     pub default: bool,
 }
 
-const ENTRIES: [RegistryEntry; 5] = [
+const ENTRIES: [RegistryEntry; 6] = [
     RegistryEntry {
         capability: Capability::Workflows,
         provider: "superpowers",
         version: Some("6.2.0"),
         available: true,
         default: true,
+    },
+    RegistryEntry {
+        capability: Capability::Workflows,
+        provider: "mattpocock-skills",
+        version: Some("1.2.3"),
+        available: true,
+        default: false,
     },
     RegistryEntry {
         capability: Capability::Frontend,

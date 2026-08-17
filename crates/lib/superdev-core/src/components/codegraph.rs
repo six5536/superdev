@@ -44,9 +44,7 @@ impl Component for Codegraph {
             .config(Capability::CodeIndex)
             .expect("planned only when enabled");
         let version = config.version.clone().expect("registry pins codegraph");
-        let default = registry::entries()
-            .iter()
-            .find(|e| e.capability == Capability::CodeIndex)
+        let default = registry::entry_for(Capability::CodeIndex, "codegraph")
             .and_then(|e| e.version)
             .expect("registry pins codegraph");
         if version != default {

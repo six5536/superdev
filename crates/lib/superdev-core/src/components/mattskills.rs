@@ -1,0 +1,275 @@
+//! components/mattskills.rs — the workflows capability via mattpocock/skills,
+//! materialised into the repo as owned files. A collaborator gets working
+//! skills from git alone; nothing is installed at user level.
+
+use crate::action::Action;
+use crate::capability::Capability;
+use crate::component::{Claim, Component, Ctx};
+use crate::error::{Error, Result};
+use crate::registry::{self, MATTSKILLS_CHECKSUM, MATTSKILLS_URL};
+
+/// mise `[tools]` key for the pinned checkout.
+pub const MATTSKILLS_MISE_TOOL: &str = "http:mattpocock-skills";
+
+/// Checkout directories holding one skill directory each.
+const SOURCE_DIRS: [&str; 2] = ["skills/engineering", "skills/productivity"];
+
+/// Upstream skill names at the pinned version, for init adoption and custom
+/// reporting. Refresh together with the version, url and checksum.
+pub const MATTSKILLS_SKILLS: [&str; 25] = [
+    "ask-matt",
+    "code-review",
+    "codebase-design",
+    "diagnosing-bugs",
+    "domain-modeling",
+    "grill-with-docs",
+    "implement",
+    "improve-codebase-architecture",
+    "prototype",
+    "research",
+    "resolving-merge-conflicts",
+    "setup-matt-pocock-skills",
+    "tdd",
+    "to-spec",
+    "to-tickets",
+    "triage",
+    "wayfinder",
+    "wizard",
+    "grill-me",
+    "grilling",
+    "handoff",
+    "teach",
+    "to-questionnaire",
+    "wait-what",
+    "writing-for-agents",
+];
+
+/// The mattpocock-skills provider.
+pub struct MattSkills;
+
+/// The `.mise.toml` value for the pinned release.
+fn pin_value() -> String {
+    let version = registry::entry_for(Capability::Workflows, "mattpocock-skills")
+        .and_then(|e| e.version)
+        .expect("registry pins mattpocock-skills");
+    format!(
+        "{{ version = \"{version}\", url = \"{MATTSKILLS_URL}\", checksum = \"{MATTSKILLS_CHECKSUM}\", strip_components = 1 }}"
+    )
+}
+
+impl Component for MattSkills {
+    fn capability(&self) -> Capability {
+        Capability::Workflows
+    }
+
+    fn provider(&self) -> &'static str {
+        "mattpocock-skills"
+    }
+
+    fn plan(&self, ctx: &Ctx<'_>) -> Result<Vec<Action>> {
+        let config = ctx
+            .config(Capability::Workflows)
+            .expect("planned only when enabled");
+        let default = registry::entry_for(Capability::Workflows, "mattpocock-skills")
+            .and_then(|e| e.version)
+            .expect("registry pins mattpocock-skills");
+        if config.version.as_deref() != Some(default) {
+            return Err(Error::Manifest {
+                message: format!(
+                    "workflows version must match the registry default {default} — the pinned checksum is the provenance"
+                ),
+            });
+        }
+        let mut actions = Vec::new();
+        let value = pin_value();
+        let current = match std::fs::read_to_string(ctx.root.join(".mise.toml")) {
+            Ok(s) => super::mise::current_pin(&s, MATTSKILLS_MISE_TOOL)?,
+            Err(_) => None,
+        };
+        // Round-trip the desired value so layout differences never read as drift.
+        let desired = super::mise::set_pin("", MATTSKILLS_MISE_TOOL, &value)
+            .and_then(|s| super::mise::current_pin(&s, MATTSKILLS_MISE_TOOL))?
+            .expect("pin just set");
+        if current.as_deref() != Some(desired.as_str()) {
+            actions.push(Action::SetMisePin {
+                tool: MATTSKILLS_MISE_TOOL.into(),
+                value_toml: value,
+            });
+        }
+        if refresh_due(ctx, config) {
+            actions.push(Action::MaterialiseSkills {
+                tool: MATTSKILLS_MISE_TOOL.into(),
+                source_dirs: SOURCE_DIRS.iter().map(|d| (*d).to_string()).collect(),
+                custom: config.custom.clone(),
+            });
+        }
+        Ok(actions)
+    }
+
+    fn owned(&self, ctx: &Ctx<'_>) -> Vec<Claim> {
+        let mut claims = vec![Claim::MisePin(MATTSKILLS_MISE_TOOL.to_string())];
+        claims.extend(
+            ctx.lock
+                .owners
+                .iter()
+                .filter(|(_, owner)| owner.as_str() == Capability::Workflows.as_str())
+                .map(|(key, _)| Claim::File(key.clone())),
+        );
+        claims
+    }
+}
+
+/// Whether the materialised set needs refreshing — all answered from the
+/// lock and the working tree, so `status` needs neither network nor checkout.
+fn refresh_due(ctx: &Ctx<'_>, config: &crate::manifest::CapabilityConfig) -> bool {
+    let applied = ctx.lock.components.get(Capability::Workflows.as_str());
+    let recorded =
+        applied.is_some_and(|a| a.provider == "mattpocock-skills" && a.version == config.version);
+    let attributed: Vec<&String> = ctx
+        .lock
+        .owners
+        .iter()
+        .filter(|(_, owner)| owner.as_str() == Capability::Workflows.as_str())
+        .map(|(key, _)| key)
+        .collect();
+    if !recorded || attributed.is_empty() {
+        return true;
+    }
+    attributed.into_iter().any(|key| {
+        // A hand-edited lock can drop the hash; refresh rather than panic.
+        let Some(locked) = ctx.lock.files.get(key) else {
+            return true;
+        };
+        match std::fs::read_to_string(ctx.root.join(key)) {
+            Ok(content) => crate::lock::sha256_hex(content.as_bytes()) != *locked,
+            Err(_) => true,
+        }
+    })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::action::Action;
+    use crate::component::{Claim, Component, Ctx};
+    use crate::lock::Lock;
+    use crate::manifest::Manifest;
+    use crate::runner::FakeRunner;
+
+    fn ctx_parts() -> (Manifest, Lock) {
+        let mut manifest = Manifest::default_for("0.1.0", &[]);
+        let workflows = manifest.capabilities.get_mut("workflows").unwrap();
+        workflows.provider = "mattpocock-skills".into();
+        workflows.version = Some("1.2.3".into());
+        (manifest, Lock::default())
+    }
+
+    #[test]
+    fn a_fresh_repo_plans_pin_and_materialise() {
+        let dir = tempfile::tempdir().unwrap();
+        let (manifest, lock) = ctx_parts();
+        let fake = FakeRunner::new();
+        let ctx = Ctx {
+            root: dir.path(),
+            runner: &fake,
+            manifest: &manifest,
+            lock: &lock,
+        };
+        let descs: Vec<String> = MattSkills
+            .plan(&ctx)
+            .unwrap()
+            .iter()
+            .map(|a| a.describe())
+            .collect();
+        assert!(
+            descs
+                .iter()
+                .any(|d| d.contains("pin http:mattpocock-skills")),
+            "{descs:?}"
+        );
+        assert!(
+            descs.contains(
+                &"materialise http:mattpocock-skills skills into .claude/skills/".to_string()
+            ),
+            "{descs:?}"
+        );
+        assert!(fake.calls().is_empty(), "planning must run nothing");
+    }
+
+    #[test]
+    fn a_converged_repo_plans_nothing_and_owns_its_files() {
+        let dir = tempfile::tempdir().unwrap();
+        let (manifest, mut lock) = ctx_parts();
+        std::fs::write(
+            dir.path().join(".mise.toml"),
+            crate::components::mise::set_pin("", MATTSKILLS_MISE_TOOL, &pin_value()).unwrap(),
+        )
+        .unwrap();
+        let skill = dir.path().join(".claude/skills/tdd/SKILL.md");
+        std::fs::create_dir_all(skill.parent().unwrap()).unwrap();
+        std::fs::write(&skill, "tdd content").unwrap();
+        lock.files.insert(
+            ".claude/skills/tdd/SKILL.md".into(),
+            crate::lock::sha256_hex(b"tdd content"),
+        );
+        lock.owners
+            .insert(".claude/skills/tdd/SKILL.md".into(), "workflows".into());
+        lock.components.insert(
+            "workflows".into(),
+            crate::lock::LockedComponent {
+                provider: "mattpocock-skills".into(),
+                version: Some("1.2.3".into()),
+            },
+        );
+        let fake = FakeRunner::new();
+        let ctx = Ctx {
+            root: dir.path(),
+            runner: &fake,
+            manifest: &manifest,
+            lock: &lock,
+        };
+        assert!(MattSkills.plan(&ctx).unwrap().is_empty());
+        let keys: Vec<String> = MattSkills.owned(&ctx).iter().map(Claim::lock_key).collect();
+        assert!(keys.contains(&".mise.toml:http:mattpocock-skills".to_string()));
+        assert!(keys.contains(&".claude/skills/tdd/SKILL.md".to_string()));
+
+        // Drift in one materialised file replans the refresh.
+        std::fs::write(&skill, "edited").unwrap();
+        let actions = MattSkills.plan(&ctx).unwrap();
+        assert_eq!(actions.len(), 1);
+        assert!(actions[0].describe().contains("materialise"), "{actions:?}");
+    }
+
+    #[test]
+    fn a_foreign_version_pin_is_rejected_and_custom_rides_the_action() {
+        let dir = tempfile::tempdir().unwrap();
+        let (mut manifest, lock) = ctx_parts();
+        manifest.capabilities.get_mut("workflows").unwrap().version = Some("9.9.9".into());
+        let fake = FakeRunner::new();
+        let ctx = Ctx {
+            root: dir.path(),
+            runner: &fake,
+            manifest: &manifest,
+            lock: &lock,
+        };
+        assert!(MattSkills.plan(&ctx).is_err());
+
+        let (mut manifest, lock) = ctx_parts();
+        manifest.capabilities.get_mut("workflows").unwrap().custom = vec!["grill-me".into()];
+        let ctx = Ctx {
+            root: dir.path(),
+            runner: &fake,
+            manifest: &manifest,
+            lock: &lock,
+        };
+        let custom = MattSkills
+            .plan(&ctx)
+            .unwrap()
+            .into_iter()
+            .find_map(|a| match a {
+                Action::MaterialiseSkills { custom, .. } => Some(custom),
+                _ => None,
+            });
+        assert_eq!(custom.unwrap(), vec!["grill-me".to_string()]);
+    }
+}
