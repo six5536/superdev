@@ -33,7 +33,7 @@ no Node.
    Windows, the blueprint-drift check on every platform, and the coverage gate
    on Linux.
 
-# This repo manages its own skills
+# This repo manages its own skills and workflows
 
 superdev fills the `skills` and `workflows` capabilities here: committed
 `.superdev/config.toml` and `.superdev/lock.toml`, with `cargo run -- sync`

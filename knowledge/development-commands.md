@@ -25,8 +25,9 @@ Everything is wrapped as npm scripts (defined in
   rebuild of the search index, which nothing routine needs: the MCP server
   syncs it lazily on every tool call.
 - Blueprint: `npm run check:blueprint` is `cargo run --quiet -- status` — the
-  superdev-owned files here (the four skills and the hook entry) still match
-  the blueprint. It exits 1 on drift, so CI gates on it.
+  superdev-owned files here (the four pack skills, the hook entry, and the
+  materialised mattpocock-skills set) still match the blueprint. It exits 1
+  on drift, so CI gates on it.
 - Coverage: `npm run coverage` (HTML) / `coverage:summary` /
   `coverage:check` (the ≥90%-per-crate gate; needs the nightly toolchain).
 - Packaging: `npm run test:launcher`, `npm run verify-version` (16 locations
