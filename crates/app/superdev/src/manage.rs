@@ -11,6 +11,7 @@ use superdev_core::action::Action;
 use superdev_core::capability::Capability;
 use superdev_core::component::{Claim, Ctx};
 use superdev_core::components::codegraph::CODEGRAPH_INDEX_DIR;
+use superdev_core::components::mattskills;
 use superdev_core::components::skillpack;
 use superdev_core::engine::Planned;
 use superdev_core::error::{Error, Result};
@@ -106,7 +107,8 @@ pub fn init(root: &Path, args: &InitArgs) -> Result<u8> {
         config.provider = entry.provider.to_string();
         config.version = entry.version.map(str::to_string);
     }
-    let adopted = adopt_existing_skills(root, &mut manifest);
+    let mut adopted = adopt_existing_skills(root, &mut manifest);
+    adopted.extend(adopt_existing_mattskills(root, &mut manifest));
     manifest.save(root)?;
     for line in &adopted {
         out(line)?;
@@ -135,9 +137,9 @@ pub fn status(root: &Path) -> Result<u8> {
     // provide and let the hint line carry the news.
     let behind = behind_pins(&manifest);
     let mut lock = Lock::load(root)?;
-    // In memory only — status never writes. Unpruned, a skill just marked
-    // custom would read as an orphan and plan its own deletion.
-    prune_custom_skills(&manifest, &mut lock);
+    // In memory only — status never writes. Unpruned, a skill or workflow
+    // just marked custom would read as an orphan and plan its own deletion.
+    prune_custom(&manifest, &mut lock);
     let runner = SystemRunner;
     let (planned, orphans) = plan_all(root, &runner, &plannable(&manifest), &lock)?;
     print_plan(&planned)?;
@@ -145,6 +147,9 @@ pub fn status(root: &Path) -> Result<u8> {
         out(line)?;
     }
     for line in &custom_lines(&manifest) {
+        out(line)?;
+    }
+    for line in &switch_lines(&manifest, &lock) {
         out(line)?;
     }
     for line in &orphans.released_lines() {
@@ -170,17 +175,25 @@ pub fn sync(root: &Path, dry_run: bool) -> Result<u8> {
         });
     }
     let mut lock = Lock::load(root)?;
-    // Before planning: a skill just marked custom still has its lock entry,
-    // and unpruned an unmodified one would read as an orphan and be deleted —
-    // the opposite of what marking it custom asked for.
-    let mut lock_changed = prune_custom_skills(&manifest, &mut lock);
+    // Before planning: a skill or workflow just marked custom still has its
+    // lock entry, and unpruned an unmodified one would read as an orphan and
+    // be deleted — the opposite of what marking it custom asked for.
+    let mut lock_changed = prune_custom(&manifest, &mut lock);
     let runner = SystemRunner;
     let (planned, orphans) = plan_all(root, &runner, &manifest, &lock)?;
     print_plan(&planned)?;
+    let materialising = planned.iter().any(|p| {
+        p.actions
+            .iter()
+            .any(|a| matches!(a, Action::MaterialiseSkills { .. }))
+    });
     for line in &behind_pins(&manifest) {
         out(line)?;
     }
     for line in &orphans.released_lines() {
+        out(line)?;
+    }
+    for line in &switch_lines(&manifest, &lock) {
         out(line)?;
     }
     if dry_run {
@@ -209,6 +222,9 @@ pub fn sync(root: &Path, dry_run: bool) -> Result<u8> {
         return stamp_blueprint(root, &manifest);
     }
     apply_and_report(root, &runner, &manifest, &planned, &mut lock)?;
+    if materialising {
+        out("workflows: run /setup-matt-pocock-skills in Claude Code to finish configuring")?;
+    }
     stamp_blueprint(root, &manifest)
 }
 
@@ -437,36 +453,123 @@ fn adopt_existing_skills(root: &Path, manifest: &mut Manifest) -> Vec<String> {
         .collect()
 }
 
-/// Remove released skills' hashes from the lock: a custom skill is the
-/// user's file, and a stale hash would misread their next edit as drift
-/// against superdev content. True when anything was removed.
-fn prune_custom_skills(manifest: &Manifest, lock: &mut Lock) -> bool {
-    let Some(config) = manifest.capabilities.get(Capability::Skills.as_str()) else {
-        return false;
+/// Release, at init time, every mattpocock-skills upstream skill directory
+/// the repo already has. The checkout does not exist yet, so unlike
+/// `adopt_existing_skills` there is no content to compare — any existing
+/// directory counts, and the report says what to do if the user wants it
+/// managed instead. Only `init` calls this — later syncs honour the list as
+/// written. A no-op off the mattpocock-skills provider.
+fn adopt_existing_mattskills(root: &Path, manifest: &mut Manifest) -> Vec<String> {
+    let Some(config) = manifest
+        .capabilities
+        .get_mut(Capability::Workflows.as_str())
+    else {
+        return Vec::new();
     };
+    if config.provider != "mattpocock-skills" {
+        return Vec::new();
+    }
+    for name in mattskills::MATTSKILLS_SKILLS {
+        if root.join(format!(".claude/skills/{name}")).is_dir() {
+            config.custom.push(name.to_string());
+        }
+    }
+    config
+        .custom
+        .iter()
+        .map(|name| format!("workflows: kept your {name} — marked custom in {CONFIG_PATH}"))
+        .collect()
+}
+
+/// Remove released skills' and workflows' hashes from the lock: a custom
+/// name is the user's file, and a stale hash would misread their next edit
+/// as drift against superdev content. True when anything was removed.
+fn prune_custom(manifest: &Manifest, lock: &mut Lock) -> bool {
     let mut pruned = false;
-    for name in &config.custom {
-        let key = format!(".claude/skills/{name}/SKILL.md");
-        pruned |= lock.files.remove(&key).is_some();
-        lock.owners.remove(&key);
+    if let Some(config) = manifest.capabilities.get(Capability::Skills.as_str()) {
+        for name in &config.custom {
+            let key = format!(".claude/skills/{name}/SKILL.md");
+            pruned |= lock.files.remove(&key).is_some();
+            lock.owners.remove(&key);
+        }
+    }
+    if let Some(config) = manifest.capabilities.get(Capability::Workflows.as_str()) {
+        for name in &config.custom {
+            let prefix = format!(".claude/skills/{name}/");
+            let keys: Vec<String> = lock
+                .files
+                .keys()
+                .filter(|key| key.starts_with(&prefix))
+                .cloned()
+                .collect();
+            for key in keys {
+                pruned |= lock.files.remove(&key).is_some();
+                lock.owners.remove(&key);
+            }
+        }
     }
     pruned
 }
 
-/// One line per skill released to the user, so custom state stays visible
-/// without reading the manifest.
+/// One line per skill or workflow skill released to the user, so custom
+/// state stays visible without reading the manifest. Flags a custom name
+/// that names no shipped skill, since marking it custom has no effect.
 fn custom_lines(manifest: &Manifest) -> Vec<String> {
-    manifest
+    let mut lines = Vec::new();
+    if let Some(config) = manifest.capabilities.get(Capability::Skills.as_str()) {
+        for name in &config.custom {
+            lines.push(
+                if skillpack::SKILLS.iter().any(|(known, _)| known == name) {
+                    format!("skills: {name} custom, unmanaged")
+                } else {
+                    format!("skills: custom names unknown skill '{name}' — no effect")
+                },
+            );
+        }
+    }
+    if let Some(config) = manifest.capabilities.get(Capability::Workflows.as_str())
+        && config.provider == "mattpocock-skills"
+    {
+        for name in &config.custom {
+            lines.push(if mattskills::MATTSKILLS_SKILLS.contains(&name.as_str()) {
+                format!("workflows: {name} custom, unmanaged")
+            } else {
+                format!("workflows: custom names unknown skill '{name}' — no effect")
+            });
+        }
+    }
+    lines
+}
+
+/// When the lock's applied workflows provider differs from the manifest's:
+/// what the switch left behind. Empty when the lock has no workflows record,
+/// or when the recorded provider already matches.
+fn switch_lines(manifest: &Manifest, lock: &Lock) -> Vec<String> {
+    let Some(applied) = lock.components.get(Capability::Workflows.as_str()) else {
+        return Vec::new();
+    };
+    let Some(config) = manifest.capabilities.get(Capability::Workflows.as_str()) else {
+        return Vec::new();
+    };
+    if applied.provider == config.provider {
+        return Vec::new();
+    }
+    let mut lines = Vec::new();
+    if manifest
         .capabilities
-        .get(Capability::Skills.as_str())
-        .map(|config| {
-            config
-                .custom
-                .iter()
-                .map(|name| format!("skills: {name} custom, unmanaged"))
-                .collect()
-        })
-        .unwrap_or_default()
+        .contains_key(Capability::Knowledge.as_str())
+    {
+        lines.push(
+            "workflows: update the .agents import in AGENTS.md for the new provider".to_string(),
+        );
+    }
+    if applied.provider == "superpowers" {
+        lines.push(
+            "workflows: superpowers plugin left installed — `claude plugin uninstall superpowers` removes it"
+                .to_string(),
+        );
+    }
+    lines
 }
 
 /// A checksum-pinned capability's pin and this binary's default, when the two
@@ -768,24 +871,122 @@ mod tests {
             ".claude/skills/double-check/SKILL.md".into(),
             "hash-b".into(),
         );
-        assert!(prune_custom_skills(&manifest, &mut lock));
+        assert!(prune_custom(&manifest, &mut lock));
         assert!(!lock.files.contains_key(".claude/skills/humanise/SKILL.md"));
         assert!(
             lock.files
                 .contains_key(".claude/skills/double-check/SKILL.md")
         );
         // Nothing left to prune: reports no change.
-        assert!(!prune_custom_skills(&manifest, &mut lock));
+        assert!(!prune_custom(&manifest, &mut lock));
 
         assert_eq!(
             custom_lines(&manifest),
             vec![
                 "skills: humanise custom, unmanaged".to_string(),
-                "skills: grill-me custom, unmanaged".to_string(),
+                "skills: custom names unknown skill 'grill-me' — no effect".to_string(),
             ]
         );
         let no_skills = Manifest::default_for("0.1.0", &[Capability::Skills]);
         assert!(custom_lines(&no_skills).is_empty());
+    }
+
+    #[test]
+    fn adoption_marks_existing_upstream_skill_dirs_custom() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::create_dir_all(dir.path().join(".claude/skills/tdd")).unwrap();
+        std::fs::write(dir.path().join(".claude/skills/tdd/SKILL.md"), "mine").unwrap();
+        let mut manifest = Manifest::default_for("0.1.0", &[]);
+        let workflows = manifest.capabilities.get_mut("workflows").unwrap();
+        workflows.provider = "mattpocock-skills".into();
+        let lines = adopt_existing_mattskills(dir.path(), &mut manifest);
+        assert_eq!(manifest.capabilities["workflows"].custom, ["tdd"]);
+        assert_eq!(
+            lines,
+            vec!["workflows: kept your tdd — marked custom in .superdev/config.toml".to_string()]
+        );
+        // A superpowers manifest adopts nothing.
+        let mut superpowers = Manifest::default_for("0.1.0", &[]);
+        assert!(adopt_existing_mattskills(dir.path(), &mut superpowers).is_empty());
+    }
+
+    #[test]
+    fn workflows_custom_entries_prune_files_and_owners() {
+        let mut manifest = Manifest::default_for("0.1.0", &[]);
+        let workflows = manifest.capabilities.get_mut("workflows").unwrap();
+        workflows.provider = "mattpocock-skills".into();
+        workflows.custom = vec!["tdd".into()];
+        let mut lock = Lock::default();
+        for key in [
+            ".claude/skills/tdd/SKILL.md",
+            ".claude/skills/tdd/refs/A.md",
+        ] {
+            lock.files.insert(key.into(), "h".into());
+            lock.owners.insert(key.into(), "workflows".into());
+        }
+        lock.files
+            .insert(".claude/skills/wizard/SKILL.md".into(), "h".into());
+        lock.owners
+            .insert(".claude/skills/wizard/SKILL.md".into(), "workflows".into());
+        assert!(prune_custom(&manifest, &mut lock));
+        assert!(!lock.files.keys().any(|k| k.contains("/tdd/")));
+        assert!(!lock.owners.keys().any(|k| k.contains("/tdd/")));
+        assert!(lock.files.contains_key(".claude/skills/wizard/SKILL.md"));
+    }
+
+    #[test]
+    fn custom_lines_and_switch_lines_report() {
+        let mut manifest = Manifest::default_for("0.1.0", &[]);
+        let workflows = manifest.capabilities.get_mut("workflows").unwrap();
+        workflows.provider = "mattpocock-skills".into();
+        workflows.custom = vec!["tdd".into(), "flying".into()];
+        manifest.capabilities.get_mut("skills").unwrap().custom =
+            vec!["humanise".into(), "grill-me".into()];
+        let lines = custom_lines(&manifest);
+        assert!(lines.contains(&"workflows: tdd custom, unmanaged".to_string()));
+        assert!(
+            lines.contains(
+                &"workflows: custom names unknown skill 'flying' — no effect".to_string()
+            )
+        );
+        assert!(lines.contains(&"skills: humanise custom, unmanaged".to_string()));
+        assert!(
+            lines
+                .contains(&"skills: custom names unknown skill 'grill-me' — no effect".to_string())
+        );
+
+        let mut lock = Lock::default();
+        lock.components.insert(
+            "workflows".into(),
+            superdev_core::lock::LockedComponent {
+                provider: "superpowers".into(),
+                version: Some("6.2.0".into()),
+            },
+        );
+        let lines = switch_lines(&manifest, &lock);
+        assert!(
+            lines
+                .iter()
+                .any(|l| l.contains("claude plugin uninstall superpowers")),
+            "{lines:?}"
+        );
+        assert!(
+            lines
+                .iter()
+                .any(|l| l.contains("update the .agents import")),
+            "{lines:?}"
+        );
+        // No switch, no lines.
+        assert!(switch_lines(&manifest, &Lock::default()).is_empty());
+        let mut same = Lock::default();
+        same.components.insert(
+            "workflows".into(),
+            superdev_core::lock::LockedComponent {
+                provider: "mattpocock-skills".into(),
+                version: Some("1.2.3".into()),
+            },
+        );
+        assert!(switch_lines(&manifest, &same).is_empty());
     }
 
     #[test]
