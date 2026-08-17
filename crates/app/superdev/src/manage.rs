@@ -583,9 +583,9 @@ mod tests {
         // Already superdev's own text: nothing of the user's to keep.
         let (_, shipped) = skillpack::SKILLS
             .iter()
-            .find(|(name, _)| *name == "grill-me")
+            .find(|(name, _)| *name == "double-check")
             .unwrap();
-        write("grill-me", shipped);
+        write("double-check", shipped);
 
         let mut manifest = Manifest::default_for("0.1.0", &[]);
         let lines = adopt_existing_skills(dir.path(), &mut manifest);

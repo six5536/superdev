@@ -392,13 +392,7 @@ fn skills_repo() -> tempfile::TempDir {
 #[test]
 fn init_materialises_the_skill_pack_and_hook() {
     let dir = skills_repo();
-    for name in [
-        "aokf-maintain",
-        "double-check",
-        "grill-me",
-        "humanise",
-        "self-improve",
-    ] {
+    for name in ["aokf-maintain", "double-check", "humanise", "self-improve"] {
         let path = dir.path().join(format!(".claude/skills/{name}/SKILL.md"));
         assert!(path.is_file(), "missing {}", path.display());
         assert!(
@@ -698,7 +692,8 @@ fn disabling_skills_sweeps_them_and_releases_the_users_edit() {
     let dir = local_repo();
     let root = dir.path();
     // The bytes superdev shipped, trailer and all: what the backup must hold.
-    let shipped = std::fs::read_to_string(root.join(".claude/skills/grill-me/SKILL.md")).unwrap();
+    let shipped =
+        std::fs::read_to_string(root.join(".claude/skills/double-check/SKILL.md")).unwrap();
     let humanise = root.join(".claude/skills/humanise/SKILL.md");
     std::fs::write(&humanise, "mine now\n").unwrap();
 
@@ -715,7 +710,7 @@ fn disabling_skills_sweeps_them_and_releases_the_users_edit() {
     let out = superdev().current_dir(root).arg("status").assert().code(1);
     let stdout = stdout_of(&out);
     assert!(
-        stdout.contains("remove .claude/skills/grill-me/SKILL.md (no longer in the blueprint)"),
+        stdout.contains("remove .claude/skills/double-check/SKILL.md (no longer in the blueprint)"),
         "{stdout}"
     );
     assert!(
@@ -728,9 +723,10 @@ fn disabling_skills_sweeps_them_and_releases_the_users_edit() {
     superdev().current_dir(root).arg("sync").assert().code(0);
 
     // What superdev wrote goes, with a backup; what the user wrote stays.
-    assert!(!root.join(".claude/skills/grill-me/SKILL.md").exists());
+    assert!(!root.join(".claude/skills/double-check/SKILL.md").exists());
     assert_eq!(
-        std::fs::read_to_string(backup_dir(root).join(".claude/skills/grill-me/SKILL.md")).unwrap(),
+        std::fs::read_to_string(backup_dir(root).join(".claude/skills/double-check/SKILL.md"))
+            .unwrap(),
         shipped
     );
     assert_eq!(std::fs::read_to_string(&humanise).unwrap(), "mine now\n");

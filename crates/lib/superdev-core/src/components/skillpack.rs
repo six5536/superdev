@@ -15,10 +15,9 @@ macro_rules! asset {
 }
 
 /// The pack: (skill name, embedded SKILL.md).
-pub const SKILLS: [(&str, &str); 5] = [
+pub const SKILLS: [(&str, &str); 4] = [
     ("aokf-maintain", asset!("skills/aokf-maintain/SKILL.md")),
     ("double-check", asset!("skills/double-check/SKILL.md")),
-    ("grill-me", asset!("skills/grill-me/SKILL.md")),
     ("humanise", asset!("skills/humanise/SKILL.md")),
     ("self-improve", asset!("skills/self-improve/SKILL.md")),
 ];
@@ -79,13 +78,6 @@ impl Component for SkillPack {
                     "skills version must match this binary ({default}) — the embedded content is the provenance"
                 ),
             });
-        }
-        for name in &config.custom {
-            if !SKILLS.iter().any(|(known, _)| known == name) {
-                return Err(Error::Manifest {
-                    message: format!("[skills] custom names unknown skill `{name}`"),
-                });
-            }
         }
         let mut actions = Vec::new();
         for (name, content) in SKILLS {
@@ -165,7 +157,7 @@ mod tests {
             lock: &lock,
         };
         let actions = SkillPack.plan(&ctx).unwrap();
-        assert_eq!(actions.len(), 6);
+        assert_eq!(actions.len(), 5);
         let descs: Vec<String> = actions.iter().map(|a| a.describe()).collect();
         for (name, _) in SKILLS {
             assert!(
@@ -243,10 +235,11 @@ mod tests {
     }
 
     #[test]
-    fn an_unknown_custom_name_is_rejected() {
+    fn an_unknown_custom_name_is_ignored_by_planning() {
         let dir = tempfile::tempdir().unwrap();
+        converge(dir.path());
         let (mut manifest, lock) = ctx_parts();
-        manifest.capabilities.get_mut("skills").unwrap().custom = vec!["humanize".into()];
+        manifest.capabilities.get_mut("skills").unwrap().custom = vec!["grill-me".into()];
         let fake = FakeRunner::new();
         let ctx = Ctx {
             root: dir.path(),
@@ -254,8 +247,7 @@ mod tests {
             manifest: &manifest,
             lock: &lock,
         };
-        let err = SkillPack.plan(&ctx).unwrap_err();
-        assert!(err.to_string().contains("humanize"), "{err}");
+        assert!(SkillPack.plan(&ctx).unwrap().is_empty());
     }
 
     #[test]
@@ -311,7 +303,7 @@ mod tests {
         };
         let keys: Vec<String> = SkillPack.owned(&ctx).iter().map(Claim::lock_key).collect();
         assert!(!keys.iter().any(|k| k.contains("humanise")), "{keys:?}");
-        assert!(keys.contains(&".claude/skills/grill-me/SKILL.md".to_string()));
+        assert!(keys.contains(&".claude/skills/double-check/SKILL.md".to_string()));
         assert!(keys.contains(
             &".claude/settings.json:hooks.PostToolUse[superdev aokf hook validate]".to_string()
         ));
