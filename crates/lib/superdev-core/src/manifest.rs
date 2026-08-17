@@ -27,7 +27,8 @@ pub struct CapabilityConfig {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub embeddings: Option<EmbeddingsConfig>,
     /// Skills released from management: superdev stops writing them and
-    /// `status` reports them as custom. Only meaningful for `skills`.
+    /// `status` reports them as custom. Honoured by `skills` and `workflows`,
+    /// which both materialise into `.claude/skills/`.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub custom: Vec<String>,
 }

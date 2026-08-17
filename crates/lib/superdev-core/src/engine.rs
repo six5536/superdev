@@ -3,7 +3,7 @@
 //! Every side effect is journalled as it happens, so the first failure can
 //! unwind the run instead of leaving the repo half-changed.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
 use std::path::Path;
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -154,6 +154,9 @@ struct Session<'a> {
     prior_hashes: BTreeMap<String, String>,
     /// Lock attribution as of the start of the run, for reconciliation.
     prior_owners: BTreeMap<String, String>,
+    /// Lock keys earlier entries wrote in this run. Removals were planned
+    /// against the pre-run state, so a later one must not drop them.
+    written_keys: BTreeSet<String>,
     /// Pin hashes each entry earned, held until the entry completes.
     pins: Vec<Vec<(String, String)>>,
     reports: Vec<ComponentReport>,
@@ -176,6 +179,7 @@ impl<'a> Session<'a> {
             irreversible: Vec::new(),
             prior_hashes: lock.files.clone(),
             prior_owners: lock.owners.clone(),
+            written_keys: BTreeSet::new(),
             pins: vec![Vec::new(); planned.len()],
             reports: planned
                 .iter()
@@ -391,12 +395,14 @@ impl<'a> Session<'a> {
                 return false;
             }
         }
-        for (key, hash) in std::mem::take(&mut self.pins[index])
+        let keys: Vec<String> = std::mem::take(&mut self.pins[index])
             .into_iter()
             .chain(written)
-        {
-            lock.files.insert(key, hash);
-        }
+            .map(|(key, hash)| {
+                lock.files.insert(key.clone(), hash);
+                key
+            })
+            .collect();
         // Before the removals, so a reconciled removal wins over an
         // attribution the same entry recorded.
         for key in attributed {
@@ -405,9 +411,16 @@ impl<'a> Session<'a> {
             }
         }
         for key in removed {
+            // An earlier entry rewrote this file in this same run: the removal
+            // was planned against the old state and would strand the fresh
+            // file, unlocked and unowned, until some later run noticed.
+            if self.written_keys.contains(&key) {
+                continue;
+            }
             lock.files.remove(&key);
             lock.owners.remove(&key);
         }
+        self.written_keys.extend(keys);
         if let Some(capability) = entry.capability {
             lock.components.insert(
                 capability.as_str().to_string(),
@@ -2751,5 +2764,52 @@ mod tests {
             std::fs::read_to_string(dir.path().join(".claude/skills/beta/SKILL.md")).unwrap(),
             "beta v1"
         );
+    }
+
+    /// A provider switch in one run: the old skill pack's file is orphaned
+    /// (the orphan entry is planned last, from pre-run claims) while the new
+    /// provider materialises the very same path. The materialise must win.
+    #[test]
+    fn a_materialised_key_survives_the_same_runs_orphan_removal() {
+        let checkout = fake_checkout();
+        let dir = tempfile::tempdir().unwrap();
+        let key = ".claude/skills/alpha/SKILL.md";
+        // The old pack's file, on disk and in the lock, unowned.
+        std::fs::create_dir_all(dir.path().join(".claude/skills/alpha")).unwrap();
+        std::fs::write(dir.path().join(key), "pack alpha").unwrap();
+        let mut lock = Lock::default();
+        lock.files.insert(key.into(), sha256_hex(b"pack alpha"));
+        let fake = where_scripted(checkout.path());
+        let manifest = Manifest::default_for("0.1.0", &[]);
+        let planned = vec![
+            Planned {
+                capability: Some(crate::capability::Capability::Workflows),
+                provider: "mattpocock-skills".into(),
+                actions: vec![materialise_action(&[])],
+            },
+            Planned {
+                capability: None,
+                provider: "orphan".into(),
+                actions: vec![Action::RemoveFile {
+                    path: key.into(),
+                    reason: "no longer claimed".into(),
+                }],
+            },
+        ];
+        let result = apply(dir.path(), &fake, &manifest, &planned, &mut lock);
+        assert!(result.ok, "{:?}", result.reports);
+        // The orphan still reports the skip: the file it saw is not the one
+        // it planned against.
+        assert_eq!(
+            result.reports[1].outcomes[0].1,
+            ActionOutcome::Skipped("changed since superdev wrote it — left in place".into())
+        );
+        // …but the fresh file stays managed.
+        assert_eq!(
+            std::fs::read_to_string(dir.path().join(key)).unwrap(),
+            "alpha v1"
+        );
+        assert_eq!(lock.files[key], sha256_hex(b"alpha v1"));
+        assert_eq!(lock.owners[key], "workflows");
     }
 }

@@ -500,10 +500,17 @@ fn prune_custom(manifest: &Manifest, lock: &mut Lock) -> bool {
     if let Some(config) = manifest.capabilities.get(Capability::Workflows.as_str()) {
         for name in &config.custom {
             let prefix = format!(".claude/skills/{name}/");
+            // Attribution decides, not the path: the skill pack writes under
+            // the same directory, and a pack name listed here must not
+            // release the pack's file.
             let keys: Vec<String> = lock
                 .files
                 .keys()
-                .filter(|key| key.starts_with(&prefix))
+                .filter(|key| {
+                    key.starts_with(&prefix)
+                        && lock.owners.get(*key).map(String::as_str)
+                            == Some(Capability::Workflows.as_str())
+                })
                 .cloned()
                 .collect();
             for key in keys {
@@ -933,8 +940,11 @@ mod tests {
         let mut manifest = Manifest::default_for("0.1.0", &[]);
         let workflows = manifest.capabilities.get_mut("workflows").unwrap();
         workflows.provider = "mattpocock-skills".into();
-        workflows.custom = vec!["tdd".into()];
+        workflows.custom = vec!["tdd".into(), "humanise".into()];
         let mut lock = Lock::default();
+        // A skill-pack file: same directory, no workflows attribution.
+        lock.files
+            .insert(".claude/skills/humanise/SKILL.md".into(), "h".into());
         for key in [
             ".claude/skills/tdd/SKILL.md",
             ".claude/skills/tdd/refs/A.md",
@@ -950,6 +960,8 @@ mod tests {
         assert!(!lock.files.keys().any(|k| k.contains("/tdd/")));
         assert!(!lock.owners.keys().any(|k| k.contains("/tdd/")));
         assert!(lock.files.contains_key(".claude/skills/wizard/SKILL.md"));
+        // The pack owns humanise, so the workflows custom list cannot release it.
+        assert!(lock.files.contains_key(".claude/skills/humanise/SKILL.md"));
     }
 
     #[test]
