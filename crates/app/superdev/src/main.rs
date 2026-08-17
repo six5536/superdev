@@ -43,6 +43,9 @@ enum Command {
     Update {
         /// Capability to update, optionally `<capability>@<version>`
         target: Option<String>,
+        /// Provider to switch the target capability to
+        #[arg(long, value_name = "ID")]
+        provider: Option<String>,
     },
     /// Serve project subsystems over MCP
     #[command(subcommand)]
@@ -81,7 +84,9 @@ fn run(cli: &Cli) -> Result<u8> {
         Some(Command::Init(args)) => manage::init(&root()?, args),
         Some(Command::Status) => manage::status(&root()?),
         Some(Command::Sync { dry_run }) => manage::sync(&root()?, *dry_run),
-        Some(Command::Update { target }) => manage::update(&root()?, target.as_deref()),
+        Some(Command::Update { target, provider }) => {
+            manage::update(&root()?, target.as_deref(), provider.as_deref())
+        }
         Some(Command::Mcp(cmd)) => aokf_cli::run_mcp(cmd, &root()?),
         Some(Command::Aokf(cmd)) => aokf_cli::run_aokf(cmd, &root()?),
         Some(Command::Completions { shell }) => {

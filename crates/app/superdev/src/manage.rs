@@ -50,6 +50,9 @@ pub struct InitArgs {
     /// Skip the knowledgebase scaffold
     #[arg(long)]
     pub no_knowledge: bool,
+    /// Workflows provider (default: the registry default)
+    #[arg(long, value_name = "ID", conflicts_with = "no_workflows")]
+    pub workflows_provider: Option<String>,
 }
 
 impl InitArgs {
@@ -82,7 +85,27 @@ pub fn init(root: &Path, args: &InitArgs) -> Result<u8> {
             message: "already initialised — run `superdev sync`".into(),
         });
     }
+    if let Some(id) = &args.workflows_provider
+        && registry::entry_for(Capability::Workflows, id).is_none()
+    {
+        return Err(Error::Manifest {
+            message: format!(
+                "workflows provider must be one of: {}",
+                registry::providers_for(Capability::Workflows).join(", ")
+            ),
+        });
+    }
     let mut manifest = Manifest::default_for(superdev_core::version(), &args.disabled());
+    if let (Some(id), Some(config)) = (
+        &args.workflows_provider,
+        manifest
+            .capabilities
+            .get_mut(Capability::Workflows.as_str()),
+    ) {
+        let entry = registry::entry_for(Capability::Workflows, id).expect("validated above");
+        config.provider = entry.provider.to_string();
+        config.version = entry.version.map(str::to_string);
+    }
     let adopted = adopt_existing_skills(root, &mut manifest);
     manifest.save(root)?;
     for line in &adopted {
@@ -191,20 +214,43 @@ pub fn sync(root: &Path, dry_run: bool) -> Result<u8> {
 
 /// Move version pins to this binary's defaults (or to an explicit version),
 /// then sync.
-pub fn update(root: &Path, target: Option<&str>) -> Result<u8> {
+pub fn update(root: &Path, target: Option<&str>, provider: Option<&str>) -> Result<u8> {
     let mut manifest = load_manifest(root)?;
-    match target {
-        Some(target) => {
+    match (target, provider) {
+        (None, Some(_)) => {
+            return Err(Error::Manifest {
+                message: "--provider needs a capability target".into(),
+            });
+        }
+        (Some(target), provider) => {
             let (capability, version) = parse_target(target)?;
+            if let Some(id) = provider
+                && registry::entry_for(capability, id).is_none()
+            {
+                return Err(Error::Manifest {
+                    message: format!(
+                        "{} provider must be one of: {}",
+                        capability.as_str(),
+                        registry::providers_for(capability).join(", ")
+                    ),
+                });
+            }
+            let fallback = registry_version(&manifest, capability);
             let config = manifest
                 .capabilities
                 .get_mut(capability.as_str())
                 .ok_or_else(|| Error::Manifest {
                     message: format!("`{}` is not enabled", capability.as_str()),
                 })?;
-            config.version = version.or_else(|| default_version(capability));
+            if let Some(id) = provider {
+                let entry = registry::entry_for(capability, id).expect("validated above");
+                config.provider = entry.provider.to_string();
+                config.version = entry.version.map(str::to_string);
+            } else {
+                config.version = version.or(fallback);
+            }
         }
-        None => {
+        (None, None) => {
             for capability in Capability::ALL {
                 let version = registry_version(&manifest, capability);
                 if let Some(config) = manifest.capabilities.get_mut(capability.as_str()) {
@@ -604,6 +650,44 @@ mod tests {
         assert!(manifest.capabilities["skills"].custom.is_empty());
         let mut off = Manifest::default_for("0.1.0", &[Capability::Skills]);
         assert!(adopt_existing_skills(dir.path(), &mut off).is_empty());
+    }
+
+    #[test]
+    fn init_args_carry_a_validated_workflows_provider() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::create_dir_all(dir.path().join(".git")).unwrap();
+        let args = InitArgs {
+            no_workflows: false,
+            no_frontend: true,
+            no_skills: true,
+            no_code_index: true,
+            no_knowledge: true,
+            workflows_provider: Some("flying".into()),
+        };
+        let err = init(dir.path(), &args).unwrap_err().to_string();
+        assert!(err.contains("workflows provider must be one of"), "{err}");
+        assert!(
+            !dir.path().join(CONFIG_PATH).exists(),
+            "nothing written on error"
+        );
+    }
+
+    #[test]
+    fn update_provider_rules() {
+        let dir = tempfile::tempdir().unwrap();
+        let manifest = Manifest::default_for(superdev_core::version(), &[]);
+        manifest.save(dir.path()).unwrap();
+        let err = update(dir.path(), None, Some("superpowers"))
+            .unwrap_err()
+            .to_string();
+        assert!(
+            err.contains("--provider needs a capability target"),
+            "{err}"
+        );
+        let err = update(dir.path(), Some("workflows"), Some("flying"))
+            .unwrap_err()
+            .to_string();
+        assert!(err.contains("workflows provider must be one of"), "{err}");
     }
 
     #[test]
