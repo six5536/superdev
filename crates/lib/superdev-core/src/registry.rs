@@ -10,17 +10,19 @@ pub const SUPERPOWERS_URL: &str =
 pub const SUPERPOWERS_CHECKSUM: &str =
     "sha256:468246a7b4981d4c014c2b58d9ee538700ffded075279d5810059cdc1abeb5f3";
 
-/// One capability's default provider and version.
+/// One (capability, provider) pair and the version superdev ships for it.
 #[derive(Debug, Clone, Copy)]
 pub struct RegistryEntry {
     /// Slot this entry fills.
     pub capability: Capability,
-    /// Default provider id.
+    /// Provider id.
     pub provider: &'static str,
     /// Pinned version, when superdev pins one (None = managed by the source).
     pub version: Option<&'static str>,
     /// False for slots whose provider does not exist yet.
     pub available: bool,
+    /// The provider init picks when the user names none. Exactly one per capability.
+    pub default: bool,
 }
 
 const ENTRIES: [RegistryEntry; 5] = [
@@ -29,30 +31,35 @@ const ENTRIES: [RegistryEntry; 5] = [
         provider: "superpowers",
         version: Some("6.2.0"),
         available: true,
+        default: true,
     },
     RegistryEntry {
         capability: Capability::Frontend,
         provider: "frontend-design",
         version: None,
         available: true,
+        default: true,
     },
     RegistryEntry {
         capability: Capability::Skills,
         provider: "superdev-skills",
         version: Some(env!("CARGO_PKG_VERSION")),
         available: true,
+        default: true,
     },
     RegistryEntry {
         capability: Capability::CodeIndex,
         provider: "codegraph",
         version: Some(CODEGRAPH_VERSION),
         available: true,
+        default: true,
     },
     RegistryEntry {
         capability: Capability::Knowledge,
         provider: "aokf",
         version: None,
         available: true,
+        default: true,
     },
 ];
 
@@ -105,8 +112,32 @@ pub const CODEGRAPH_PLATFORMS: [(&str, &str, &str); 6] = [
 ];
 
 /// The registry, in canonical apply order.
-pub fn entries() -> &'static [RegistryEntry; 5] {
+pub fn entries() -> &'static [RegistryEntry] {
     &ENTRIES
+}
+
+/// The entry `init` uses for `capability` when no provider is named.
+pub fn default_entry(capability: Capability) -> &'static RegistryEntry {
+    ENTRIES
+        .iter()
+        .find(|e| e.capability == capability && e.default)
+        .expect("every capability has a default entry")
+}
+
+/// The entry for a (capability, provider) pair, when the registry has one.
+pub fn entry_for(capability: Capability, provider: &str) -> Option<&'static RegistryEntry> {
+    ENTRIES
+        .iter()
+        .find(|e| e.capability == capability && e.provider == provider)
+}
+
+/// Valid provider ids for `capability`, in registry order.
+pub fn providers_for(capability: Capability) -> Vec<&'static str> {
+    ENTRIES
+        .iter()
+        .filter(|e| e.capability == capability && e.available)
+        .map(|e| e.provider)
+        .collect()
 }
 
 #[cfg(test)]
@@ -115,11 +146,26 @@ mod tests {
     use crate::capability::Capability;
 
     #[test]
-    fn covers_every_capability_once() {
-        let entries = entries();
+    fn one_default_per_capability_and_lookups_resolve() {
         for c in Capability::ALL {
-            assert_eq!(entries.iter().filter(|e| e.capability == c).count(), 1);
+            assert_eq!(
+                entries()
+                    .iter()
+                    .filter(|e| e.capability == c && e.default)
+                    .count(),
+                1,
+                "{c:?}"
+            );
         }
+        assert_eq!(default_entry(Capability::Workflows).provider, "superpowers");
+        assert_eq!(
+            entry_for(Capability::Workflows, "superpowers")
+                .unwrap()
+                .version,
+            Some("6.2.0")
+        );
+        assert!(entry_for(Capability::Workflows, "flying").is_none());
+        assert_eq!(providers_for(Capability::Knowledge), vec!["aokf"]);
     }
 
     #[test]

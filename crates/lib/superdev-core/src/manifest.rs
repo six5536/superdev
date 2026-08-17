@@ -47,7 +47,7 @@ impl Manifest {
     pub fn default_for(blueprint: &str, disabled: &[Capability]) -> Manifest {
         let capabilities = registry::entries()
             .iter()
-            .filter(|e| e.available && !disabled.contains(&e.capability))
+            .filter(|e| e.available && e.default && !disabled.contains(&e.capability))
             .map(|e| {
                 (
                     e.capability.as_str().to_string(),

@@ -6,8 +6,11 @@ pub mod mise;
 pub mod plugin;
 pub mod skillpack;
 
+use crate::capability::Capability;
 use crate::component::Component;
+use crate::error::{Error, Result};
 use crate::manifest::Manifest;
+use crate::registry;
 
 /// Every mise `[tools]` key superdev pins. A repo carrying any of them needs
 /// `mise install` before a provider command can resolve its tool.
@@ -16,18 +19,45 @@ pub const MANAGED_MISE_TOOLS: [&str; 2] = [
     codegraph::CODEGRAPH_MISE_TOOL,
 ];
 
-/// Every enabled component, in canonical apply order.
-pub fn enabled(manifest: &Manifest) -> Vec<Box<dyn Component>> {
-    let all: Vec<Box<dyn Component>> = vec![
-        Box::new(plugin::superpowers()),
-        Box::new(plugin::frontend_design()),
-        Box::new(skillpack::SkillPack),
-        Box::new(codegraph::Codegraph),
-        Box::new(aokf::Aokf),
-    ];
-    all.into_iter()
-        .filter(|c| manifest.capabilities.contains_key(c.capability().as_str()))
-        .collect()
+/// Every enabled component, in canonical apply order, resolved from the
+/// manifest's provider choices. Until this resolution existed, the
+/// manifest's `provider` field was recorded but never read.
+pub fn enabled(manifest: &Manifest) -> Result<Vec<Box<dyn Component>>> {
+    // Validate first, so `component_for` only ever sees a pair the registry has.
+    for (name, config) in &manifest.capabilities {
+        let capability = Capability::parse(name).expect("manifest rejects unknown capabilities");
+        if registry::entry_for(capability, &config.provider).is_none() {
+            return Err(Error::Manifest {
+                message: format!(
+                    "{name} provider must be one of: {}",
+                    registry::providers_for(capability).join(", ")
+                ),
+            });
+        }
+    }
+    let mut components: Vec<Box<dyn Component>> = Vec::new();
+    for entry in registry::entries() {
+        let Some(config) = manifest.capabilities.get(entry.capability.as_str()) else {
+            continue;
+        };
+        if config.provider != entry.provider {
+            continue;
+        }
+        components.push(component_for(entry.capability, entry.provider));
+    }
+    Ok(components)
+}
+
+/// The component implementing a known (capability, provider) pair.
+fn component_for(capability: Capability, provider: &str) -> Box<dyn Component> {
+    match (capability, provider) {
+        (Capability::Workflows, "superpowers") => Box::new(plugin::superpowers()),
+        (Capability::Frontend, _) => Box::new(plugin::frontend_design()),
+        (Capability::Skills, _) => Box::new(skillpack::SkillPack),
+        (Capability::CodeIndex, _) => Box::new(codegraph::Codegraph),
+        (Capability::Knowledge, _) => Box::new(aokf::Aokf),
+        _ => unreachable!("resolved from the registry"),
+    }
 }
 
 #[cfg(test)]
@@ -45,7 +75,7 @@ mod tests {
         use std::collections::BTreeSet;
 
         let manifest = Manifest::default_for(env!("CARGO_PKG_VERSION"), &[]);
-        for component in enabled(&manifest) {
+        for component in enabled(&manifest).unwrap() {
             let dir = tempfile::tempdir().unwrap();
             let fake = FakeRunner::new();
             let empty = Lock::default();
@@ -71,9 +101,23 @@ mod tests {
     }
 
     #[test]
+    fn enabled_rejects_an_unknown_provider() {
+        let mut manifest = Manifest::default_for("0.1.0", &[]);
+        manifest.capabilities.get_mut("workflows").unwrap().provider = "flying".into();
+        // `err()`, not `unwrap_err()`: the Ok side holds trait objects that
+        // cannot be Debug-printed.
+        let err = enabled(&manifest).err().unwrap().to_string();
+        assert!(
+            err.contains("workflows provider must be one of: superpowers"),
+            "{err}"
+        );
+        assert!(enabled(&Manifest::default_for("0.1.0", &[])).is_ok());
+    }
+
+    #[test]
     fn enabled_skips_disabled_capabilities() {
         let manifest = Manifest::default_for("0.1.0", &[Capability::CodeIndex]);
-        let components = enabled(&manifest);
+        let components = enabled(&manifest).unwrap();
         assert_eq!(components.len(), 4);
         assert!(
             components

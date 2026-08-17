@@ -205,8 +205,9 @@ pub fn update(root: &Path, target: Option<&str>) -> Result<u8> {
         }
         None => {
             for capability in Capability::ALL {
+                let version = registry_version(&manifest, capability);
                 if let Some(config) = manifest.capabilities.get_mut(capability.as_str()) {
-                    config.version = default_version(capability);
+                    config.version = version;
                 }
             }
         }
@@ -246,10 +247,16 @@ fn parse_target(target: &str) -> Result<(Capability, Option<String>)> {
 
 /// This binary's default version for `capability`, when it pins one.
 fn default_version(capability: Capability) -> Option<String> {
-    registry::entries()
-        .iter()
-        .find(|e| e.capability == capability)
-        .and_then(|e| e.version)
+    registry::default_entry(capability)
+        .version
+        .map(str::to_string)
+}
+
+/// The registry version for the provider the manifest names, when both exist.
+fn registry_version(manifest: &Manifest, capability: Capability) -> Option<String> {
+    let config = manifest.capabilities.get(capability.as_str())?;
+    registry::entry_for(capability, &config.provider)?
+        .version
         .map(str::to_string)
 }
 
@@ -271,7 +278,7 @@ fn plan_all(
     manifest: &Manifest,
     lock: &Lock,
 ) -> Result<(Vec<Planned>, orphan::OrphanPlan)> {
-    let components = components::enabled(manifest);
+    let components = components::enabled(manifest)?;
     let ctx = Ctx {
         root,
         runner,
@@ -337,7 +344,7 @@ fn behind_pins(manifest: &Manifest) -> Vec<String> {
     for capability in Capability::ALL {
         let (Some(config), Some(default)) = (
             manifest.capabilities.get(capability.as_str()),
-            default_version(capability),
+            registry_version(manifest, capability),
         ) else {
             continue;
         };
@@ -421,7 +428,7 @@ fn custom_lines(manifest: &Manifest) -> Vec<String> {
 /// pin — newer included — is one superdev cannot install.
 fn pin_mismatch(manifest: &Manifest, capability: Capability) -> Option<(String, String)> {
     let config = manifest.capabilities.get(capability.as_str())?;
-    let default = default_version(capability)?;
+    let default = registry_version(manifest, capability)?;
     let pinned = config.version.clone();
     (pinned.as_deref() != Some(default.as_str()))
         .then(|| (pinned.unwrap_or_else(|| "(unset)".into()), default))
@@ -438,13 +445,18 @@ fn checksum_pin_mismatch(manifest: &Manifest) -> Option<(Capability, String, Str
 /// capability back at the default. Every other pin is left alone — components
 /// accept those as given.
 fn plannable(manifest: &Manifest) -> Manifest {
-    let mut manifest = manifest.clone();
+    let mut plannable = manifest.clone();
     for capability in BINARY_PINNED {
-        if let Some(config) = manifest.capabilities.get_mut(capability.as_str()) {
-            config.version = default_version(capability);
+        // No entry means an unknown provider; leave the pin and let the
+        // resolution error say so.
+        let Some(version) = registry_version(manifest, capability) else {
+            continue;
+        };
+        if let Some(config) = plannable.capabilities.get_mut(capability.as_str()) {
+            config.version = Some(version);
         }
     }
-    manifest
+    plannable
 }
 
 /// Compare dotted versions component by component. A deliberate pin ahead of

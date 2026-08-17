@@ -1766,7 +1766,7 @@ mod tests {
             manifest: &manifest,
             lock: &lock,
         };
-        let components = crate::components::enabled(&manifest);
+        let components = crate::components::enabled(&manifest).unwrap();
         let planned = plan(&components, &ctx).unwrap();
         assert_eq!(planned.len(), components.len());
         assert_eq!(planned[0].provider, "superpowers");
@@ -1782,7 +1782,7 @@ mod tests {
             manifest: &broken,
             lock: &lock,
         };
-        assert!(plan(&crate::components::enabled(&broken), &ctx).is_err());
+        assert!(plan(&crate::components::enabled(&broken).unwrap(), &ctx).is_err());
     }
 
     #[test]
