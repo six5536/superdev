@@ -26,26 +26,39 @@ sentinel plumbing (`probe`, the `unreachable!` at `:646`). The engine
 also doubles as the pure-utils home: `orphan.rs:13` imports
 `json_value_at` and `read_text` from the effector module.
 
+# Design (settled by grilling, 2026-08-17)
+
+`Tx` owns the whole journal — backups, both `Undo` variants
+(`RestoreFile`, `RunCommand`), the irreversible list, and unwind — so
+replay ordering holds by construction. `Session` keeps lock bookkeeping
+and reports. `engine.rs` becomes an `engine/` directory. Pin effects
+move by ownership handoff, not index arithmetic.
+
 # Tasks
 
-1. Extract a `Tx` type owning backup-dir management, journal, and
-   unwind: `tx.write(path, content)`,
-   `tx.remove_if_unchanged(path, prior_hash)`, plus the run/record hook
-   commands need. Scope note: file operations first; command journalling
-   moves only if it falls out naturally.
-2. Rewrite the appliers as content computation calling `Tx` — the six
-   whose bodies are the shared read → backup → journal → write ritual
-   collapse to their 3–6 variant-specific lines.
-3. Move the mise pin policy into its own module using `Tx`. Open
-   question for execution: replace the entry-index arithmetic with
-   explicit attribution.
-4. Move `materialise_skills` into its own module using `Tx`; delete the
-   sentinel plumbing.
-5. Move the pure utilities (the JSON mini-library, `read_text`,
-   `collect_files`) out of the engine so `orphan.rs` stops importing
-   from the effector.
-6. Split the in-file tests along the same seams: rollback tested once
-   against `Tx`; pin ordering without temp files; materialise without
+1. `engine/tx.rs`: extract `Tx` from `Session` —
+   `tx.write(path, content)`,
+   `tx.remove_if_unchanged(path, prior_hash)`,
+   `tx.record_command_undo(program, args)`,
+   `tx.mark_irreversible(line)`, and `unwind`. Backup-dir and stamp
+   management come with it.
+2. Rewrite the appliers in `engine/mod.rs` as content computation
+   calling `Tx` — the six whose bodies are the shared read → backup →
+   journal → write ritual collapse to their 3–6 variant-specific lines.
+3. `engine/pins.rs`: the mise pin policy. `apply_pins` returns
+   per-entry `PinEffects`; the apply loop hands each entry its own
+   effects at completion and a `&mut ComponentReport` for the
+   trust/install commands it fabricates. The
+   `pins: Vec<Vec<(String, String)>>` parallel structure goes; reports
+   stay byte-identical.
+4. `engine/materialise.rs`: `materialise_skills` using `Tx` directly;
+   delete the sentinel plumbing (`probe`, the `unreachable!` at
+   `engine.rs:646`).
+5. New pure modules at the crate root: `json_edit.rs` (the JSON pointer
+   mini-library) and `fsutil.rs` (`read_text`, `collect_files`), so
+   `orphan.rs` imports purity, not the effector.
+6. Split the in-file tests along the same seams: rollback once against
+   `Tx`; pin ordering without temp files; materialise without
    exercising unrelated appliers.
 
 The public `engine::plan`/`engine::apply` interface does not change.
@@ -54,9 +67,9 @@ it (planning needs no checkout); only the code moves.
 
 # Done
 
-One `journal.push(Undo::RestoreFile…)` site, inside `Tx`. `engine.rs`
-under ~600 code lines. `npm test` passes; the unwind e2e tests pass
-unchanged.
+One `journal.push(Undo::RestoreFile…)` site, inside `Tx`. No module
+under `engine/` over ~400 code lines. `npm test` passes; the unwind
+e2e tests and the apply reports are byte-identical.
 
 # Sequencing
 

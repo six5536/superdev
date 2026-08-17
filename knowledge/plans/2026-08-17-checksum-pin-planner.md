@@ -23,31 +23,49 @@ way as `BINARY_PINNED` (`manage.rs:35`) — the same fact in two places
 with no compiler tying them. Deletion test: any copy deleted reappears
 from its siblings.
 
+# Design (settled by grilling, 2026-08-17)
+
+[Provenance](../glossary.md) is the domain term: why a pinned version is
+locked to the registry default. Every version the registry pins carries
+one — a pin without provenance is unrepresentable.
+
 # Tasks
 
-1. Add a flag to `RegistryEntry` (working name `binary_pinned`; final
-   name at execution) marking entries whose version must match the
-   registry default. Set it on both `workflows` entries, `code-index`
-   and `skills`. Expose a registry query for it.
-2. Extract one helper — working shape
-   `planned_pin(ctx, capability, tool, value) -> Result<Option<Action>>`
-   — absorbing the refusal message, the `.mise.toml` read, the
-   round-trip normalisation and the compare. Home: beside the existing
-   mise editing seam (`components/mise.rs`) or `component.rs`; decide at
-   execution.
-3. Replace the three copies with calls; give `skillpack.rs` the shared
-   refusal (it has no pin).
-4. Replace `BINARY_PINNED` and its users (`plannable`, `parse_target`,
-   `behind_pins` in `manage.rs`) with the registry query.
-5. Collapse the four per-component "foreign version is rejected" tests
+1. Registry: fuse version and provenance —
+   `version: Option<Pinned>` with
+   `Pinned { version: &'static str, provenance: Provenance }`,
+   `Provenance::{Checksum, Embedded}`. Checksum for both `workflows`
+   entries and `code-index`; Embedded for `skills`. Delete `is_behind`
+   and its `behind_pins` else-branch: unreachable today (every
+   versioned entry is locked) and structurally dead once fused.
+2. New `components/pin.rs`, using `components/mise.rs` underneath:
+   `require_registry_default(ctx, capability, provider) ->
+   Result<&'static str>` (the refusal; message derives from the
+   provenance variant) and
+   `planned_pin(ctx, capability, provider, tool, value_toml) ->
+   Result<Option<Action>>` (calls it, then read → round-trip
+   normalisation → compare → `SetMisePin`).
+3. Replace the three pin blocks (`plugin.rs:82–120`,
+   `mattskills.rs:73–98`, `codegraph.rs:43–73`) with `planned_pin`
+   calls; `skillpack.rs` calls `require_registry_default`.
+4. Unified refusal message, all four sites: `{capability} version must
+   match the registry default {default} — the {pinned checksum |
+   embedded content} is the provenance — run `superdev update
+   {capability}``. This rewords skillpack's prefix and adds the update
+   hint everywhere; update the affected assertions.
+5. Replace `BINARY_PINNED` and its users (`plannable`, `parse_target`,
+   `behind_pins`, `checksum_pin_mismatch`) with a registry query
+   against the manifest's selected provider's entry.
+6. Collapse the four per-component "foreign version is rejected" tests
    and `parses_update_targets` / `plannable_resets_every_checksum_pin`
    into one helper suite plus thin per-component wiring checks.
 
 # Done
 
-`rg "must match the registry default" crates/lib` matches the helper
-once. `BINARY_PINNED` is gone. `npm test` and `npm run check:blueprint`
-pass; no behaviour change (same messages, same plans).
+`rg "is the provenance" crates` matches one function. `BINARY_PINNED`
+and `is_behind` are gone. `npm test` and `npm run check:blueprint`
+pass. Only intended behaviour change: the reworded refusal messages
+(task 4); plans byte-identical on the fixture repos.
 
 # Sequencing
 

@@ -2,7 +2,7 @@
 type: Glossary
 id: glossary
 title: Domain Glossary
-description: The terms the blueprint engine uses — blueprint, capability, provider, component, owned file, scaffold, skill pack, materialised skill, PROJECT.md layer, custom skill, claim, orphan — plus the search terms section, locator, hybrid search and RRF.
+description: The terms the blueprint engine uses — blueprint, capability, provider, provenance, component, owned file, scaffold, skill pack, materialised skill, PROJECT.md layer, custom skill, claim, orphan — plus the search terms section, locator, hybrid search and RRF.
 status: stable
 ---
 
@@ -17,6 +17,10 @@ status: stable
   and flags one as the default; the manifest's `provider` field selects among
   them, so a capability's implementation changes without its user-facing name
   changing. `workflows` is the only slot with more than one entry.
+- **Provenance** — why a pinned version is locked to the registry default:
+  the binary carries either the checksum of the fetched artefact or the
+  embedded content itself, so a version the binary cannot vouch for is
+  refused.
 - **Component** — the code implementing one provider. It observes the repo,
   compares against the manifest, and returns actions; it never applies them.
 - **Owned file** — a file superdev writes and keeps current, hashed into

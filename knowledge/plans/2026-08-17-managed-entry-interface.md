@@ -28,29 +28,44 @@ Adding a fourth shape touches ~9 sites across 4 files. Deletion test:
 any one removal applier deleted reappears near-verbatim from its
 siblings.
 
+# Design (settled by grilling, 2026-08-17)
+
+`Claim` is the interface — it already models the three shapes; no new
+trait. It gains the per-shape operations, and the three removal `Action`
+variants collapse into one `Action::Remove { claim, reason }`, so the
+engine has one removal arm by construction. The drift check stays at
+both plan time and apply time — same helper, two calls, guarding the
+plan→apply gap.
+
 # Tasks
 
-1. Define the shape interface — extend `Claim` or introduce a
-   `ManagedEntry` enum; run design-it-twice on this at execution.
-   Per-shape operations: `read_current(root)`, `remove(content)`;
-   `lock_key()`/`parse_key()` live together so encode and decode meet
-   at one seam.
-2. One drift-guarded removal driver in the engine using
-   `tx.remove_if_unchanged`: record key → read → absent ⇒ already-gone
-   skip → hash mismatch ⇒ released skip → journal + remove. One arm per
-   shape for the shape-specific step only.
-3. Collapse the three engine removal appliers onto the driver.
-4. Rewrite `orphan.rs` `classify`/`current_value`/`removal` against the
-   shape interface, deleting its parse-the-key logic.
-5. Tests: released/gone/removed classification once against the
-   interface; one small adapter test per shape; the orphan-sweep e2e
-   stays as-is.
+1. Methods on `Claim` (in `component.rs`, importing the pure
+   `mise`/`json_edit` helpers): `parse_key` (moved from
+   `orphan::classify`, beside `lock_key` so encode and decode meet at
+   one seam), `read_current(root)` (absorbing `orphan::current_value`),
+   and the remove-from-content operation for the shared-file shapes.
+2. Collapse `RemoveFile`/`RemoveMisePin`/`RemoveJsonKey` into
+   `Action::Remove { claim, reason }`; `describe()` derives today's
+   exact wordings from the shape. Verify plan/apply report strings stay
+   byte-identical.
+3. One drift-guarded removal applier in `engine/mod.rs` using
+   `tx.remove_if_unchanged` semantics: read via `Claim` → absent ⇒
+   already-gone skip → hash mismatch ⇒ released skip → remove (file
+   delete vs shared-file rewrite stays a visible match in this one
+   place). Delete the three old appliers.
+4. Rewrite `orphan.rs` onto the `Claim` methods, deleting its
+   `classify`/`current_value`/`removal` trio and the lock-key string
+   parsing.
+5. Tests: released/gone/removed classification once against the `Claim`
+   interface; one small per-shape test; the orphan-sweep e2e stays
+   as-is.
 
 # Done
 
-The six-step removal ritual exists once. `orphan.rs` contains no lock-key
-string parsing. A grep for the "changed since superdev wrote it" guard
-matches one site. `npm test` passes; orphan e2e unchanged.
+The six-step removal ritual exists once. `orphan.rs` contains no
+lock-key string parsing. A grep for the "changed since superdev wrote
+it" guard matches one site. `npm test` passes; orphan e2e and report
+strings unchanged.
 
 # Sequencing
 

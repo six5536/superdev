@@ -25,22 +25,32 @@ line predicate exists three times (`aokf.rs:174`, `manage.rs:391`,
 irreducible, but the per-file diffing and plan/owned bookkeeping would
 reappear in every future component.
 
+# Design (settled by grilling, 2026-08-17)
+
+`ManagedItem` covers the four declarative kinds — OwnedFile, Scaffold,
+EnsureLine, JsonEntry — and the claim-shaped kinds embed the `Claim`
+from the [managed-entry plan](2026-08-17-managed-entry-interface.md):
+`owned()` is the items' claims collected, `plan()` is
+read-compare-emit. EnsureLine items carry no claim (never locked).
+Pins stay with the
+[checksum-pin planner](2026-08-17-checksum-pin-planner.md)'s
+`planned_pin`; commands stay hand-written.
+
 # Tasks
 
-1. Define `ManagedItem` — path + content source + ownership
-   (Owned/Scaffold), or pin + value — and one driver deriving both
-   `plan` and `owned` from a component's item list. Run design-it-twice
-   on the item shape; the risk is a shape too narrow for the next real
-   component.
-2. Port the static components (`aokf`, `skillpack`; `plugin` and
-   `codegraph` for their non-pin parts) to declarative lists.
-   `mattskills` keeps its hand-written pair — its state is genuinely
-   dynamic.
+1. Define `ManagedItem` and one driver deriving both `plan` and
+   `owned` from a component's item list (`items(ctx)` — the list is
+   ctx-dependent: skillpack filters custom names).
+2. Port `aokf` and `skillpack` to declarative lists — after Q1's kinds
+   their `plan()` is fully derived, no hand-written remainder.
+   `plugin`, `codegraph` and `mattskills` keep hand-written pairs:
+   their remainders are commands or genuinely dynamic state.
 3. Absorb the exact-whole-line predicate into one home the driver and
    the engine's `ensure_line` share.
-4. Shrink `owned_matches_what_apply_locks` to the dynamic components
-   only; static components' consistency is true by construction.
-   Per-component tests assert the item list, not repo simulations.
+4. Shrink `owned_matches_what_apply_locks` to the hand-written
+   components (`plugin`, `codegraph`, `mattskills`); ported components'
+   consistency is true by construction. Per-component tests assert the
+   item list, not repo simulations.
 
 # Done
 
