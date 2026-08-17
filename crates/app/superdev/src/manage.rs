@@ -907,6 +907,11 @@ mod tests {
         );
         // A superpowers manifest adopts nothing.
         let mut superpowers = Manifest::default_for("0.1.0", &[]);
+        superpowers
+            .capabilities
+            .get_mut("workflows")
+            .unwrap()
+            .provider = "superpowers".into();
         assert!(adopt_existing_mattskills(dir.path(), &mut superpowers).is_empty());
     }
 

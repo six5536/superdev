@@ -1966,7 +1966,7 @@ mod tests {
         let components = crate::components::enabled(&manifest).unwrap();
         let planned = plan(&components, &ctx).unwrap();
         assert_eq!(planned.len(), components.len());
-        assert_eq!(planned[0].provider, "superpowers");
+        assert_eq!(planned[0].provider, "mattpocock-skills");
         assert!(planned.iter().all(|p| p.capability.is_some()));
         assert!(planned.iter().any(|p| !p.actions.is_empty()));
 

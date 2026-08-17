@@ -122,9 +122,10 @@ mod tests {
             m.capabilities["skills"].version.as_deref(),
             Some(env!("CARGO_PKG_VERSION"))
         );
+        assert_eq!(m.capabilities["workflows"].provider, "mattpocock-skills");
         assert_eq!(
             m.capabilities["workflows"].version.as_deref(),
-            Some("6.2.0")
+            Some("1.2.3")
         );
         let parsed = Manifest::parse(&m.to_toml()).unwrap();
         assert_eq!(parsed, m);

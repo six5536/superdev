@@ -44,14 +44,14 @@ const ENTRIES: [RegistryEntry; 6] = [
         provider: "superpowers",
         version: Some("6.2.0"),
         available: true,
-        default: true,
+        default: false,
     },
     RegistryEntry {
         capability: Capability::Workflows,
         provider: "mattpocock-skills",
         version: Some("1.2.3"),
         available: true,
-        default: false,
+        default: true,
     },
     RegistryEntry {
         capability: Capability::Frontend,
@@ -177,7 +177,10 @@ mod tests {
                 "{c:?}"
             );
         }
-        assert_eq!(default_entry(Capability::Workflows).provider, "superpowers");
+        assert_eq!(
+            default_entry(Capability::Workflows).provider,
+            "mattpocock-skills"
+        );
         assert_eq!(
             entry_for(Capability::Workflows, "superpowers")
                 .unwrap()

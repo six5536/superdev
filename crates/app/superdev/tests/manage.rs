@@ -21,6 +21,17 @@ impl Sandbox {
         fs::create_dir_all(repo.join(".git")).unwrap(); // presence is all superdev checks
         let bin = dir.path().join("bin");
         fs::create_dir_all(&bin).unwrap();
+        // What `mise where http:mattpocock-skills` resolves to: a stand-in for
+        // the unpacked upstream tarball the workflows materialiser copies from.
+        for rel in [
+            "skills/engineering/tdd/SKILL.md",
+            "skills/engineering/code-review/SKILL.md",
+            "skills/productivity/handoff/SKILL.md",
+        ] {
+            let p = dir.path().join("checkout").join(rel);
+            fs::create_dir_all(p.parent().unwrap()).unwrap();
+            fs::write(p, "upstream skill\n").unwrap();
+        }
         // `mise where` fails until `mise install` has run, as the real mise does
         // on a machine that has never installed the repo's pinned tools. `mise
         // exec` forwards to the fake tool, which is how a pinned tool is
@@ -40,7 +51,10 @@ case "$1" in
     exec "$@" ;;
   where)
     [ -f "$FAKE_INSTALLED" ] || { echo "$2 is not installed" >&2; exit 1; }
-    echo /tmp/fake-superpowers ;;
+    case "$2" in
+      http:mattpocock-skills) echo "$FAKE_CHECKOUT" ;;
+      *) echo /tmp/fake-superpowers ;;
+    esac ;;
 esac
 exit 0
 "#,
@@ -85,7 +99,8 @@ exit 0
             .env("PATH", path)
             .env("FAKE_LOG", self.dir.path().join("calls.log"))
             .env("FAKE_PLUGINS", self.dir.path().join("plugins.txt"))
-            .env("FAKE_INSTALLED", self.dir.path().join("installed"));
+            .env("FAKE_INSTALLED", self.dir.path().join("installed"))
+            .env("FAKE_CHECKOUT", self.dir.path().join("checkout"));
         cmd
     }
 
@@ -117,7 +132,7 @@ exit 0
         let config = self.read(".superdev/config.toml");
         self.write(
             ".superdev/config.toml",
-            &config.replace("version = \"6.2.0\"", &format!("version = \"{version}\"")),
+            &config.replace("version = \"1.2.3\"", &format!("version = \"{version}\"")),
         );
         assert!(self.read(".superdev/config.toml").contains(version));
     }
@@ -178,7 +193,11 @@ fn init_sets_up_a_fresh_repo() {
     assert!(mcp.contains("\"mcp\""), "{mcp}");
     assert!(sb.read(".gitignore").contains(".superdev/cache/"));
     assert!(sb.read(".gitignore").contains(".codegraph/"));
-    assert!(sb.read(".mise.toml").contains("http:superpowers"));
+    assert!(sb.read(".mise.toml").contains("http:mattpocock-skills"));
+    // The default workflows provider materialises its skills into the repo, so
+    // a collaborator gets them from git alone.
+    assert_eq!(sb.read(".claude/skills/tdd/SKILL.md"), "upstream skill\n");
+    assert!(repo.join(".claude/skills/handoff/SKILL.md").is_file());
     // codegraph comes from its checksummed release bundles, not npm: the
     // bundles vendor their own Node, so the repo needs none.
     let pinned = sb.read(".mise.toml");
@@ -189,7 +208,10 @@ fn init_sets_up_a_fresh_repo() {
     let log = sb.log();
     assert!(log.contains("mise trust"), "log: {log}");
     assert!(log.contains("mise install"), "log: {log}");
-    assert!(log.contains("claude plugin install superpowers@superpowers-dev"));
+    assert!(
+        log.contains("mise where http:mattpocock-skills"),
+        "log: {log}"
+    );
     assert!(log.contains("claude plugin install frontend-design@claude-code-plugins"));
     assert!(
         log.contains("mise exec http:codegraph -- codegraph init"),
@@ -318,7 +340,7 @@ fn a_stale_workflows_pin_makes_status_dirty() {
     assert!(
         stale
             .stdout
-            .contains("workflows: pinned 1.0.0, registry has 6.2.0"),
+            .contains("workflows: pinned 1.0.0, registry has 1.2.3"),
         "stdout: {}",
         stale.stdout
     );
@@ -349,7 +371,18 @@ fn sync_refuses_a_stale_workflows_pin() {
 #[test]
 fn disabling_code_index_unpins_codegraph_and_keeps_user_pins() {
     let sb = Sandbox::new();
-    sb.superdev().arg("init").assert().success();
+    // On superpowers, so the plugin-installing workflows provider stays covered
+    // end to end alongside the default materialising one.
+    sb.superdev()
+        .args(["init", "--workflows-provider", "superpowers"])
+        .assert()
+        .success();
+    let log = sb.log();
+    assert!(
+        log.contains("claude plugin marketplace add /tmp/fake-superpowers"),
+        "log: {log}"
+    );
+    assert!(log.contains("claude plugin install superpowers@superpowers-dev"));
 
     // A pin of the user's own, in the file superdev shares with them.
     let mise = sb.read(".mise.toml");

@@ -77,10 +77,30 @@ mod tests {
         use crate::runner::FakeRunner;
         use std::collections::BTreeSet;
 
+        // The workflows component materialises from a checkout; only it reads this.
+        let checkout = tempfile::tempdir().unwrap();
+        for rel in [
+            "skills/engineering/alpha/SKILL.md",
+            "skills/engineering/beta/SKILL.md",
+            "skills/productivity/gamma/SKILL.md",
+        ] {
+            let p = checkout.path().join(rel);
+            std::fs::create_dir_all(p.parent().unwrap()).unwrap();
+            std::fs::write(p, "skill body").unwrap();
+        }
+
         let manifest = Manifest::default_for(env!("CARGO_PKG_VERSION"), &[]);
         for component in enabled(&manifest).unwrap() {
             let dir = tempfile::tempdir().unwrap();
             let fake = FakeRunner::new();
+            fake.script(
+                "mise where http:mattpocock-skills",
+                crate::runner::Output {
+                    status: 0,
+                    stdout: format!("{}\n", checkout.path().display()),
+                    stderr: String::new(),
+                },
+            );
             let empty = Lock::default();
             let ctx = Ctx {
                 root: dir.path(),
@@ -96,8 +116,19 @@ mod tests {
             let mut lock = Lock::default();
             let result = engine::apply(dir.path(), &fake, &manifest, &planned, &mut lock);
             assert!(result.ok, "{}: apply failed", component.provider());
-            let claimed: BTreeSet<String> =
-                component.owned(&ctx).iter().map(Claim::lock_key).collect();
+            // `owned` reads the lock, as it does in production, where the lock
+            // on disk is the previous apply's output.
+            let after = Ctx {
+                root: dir.path(),
+                runner: &fake,
+                manifest: &manifest,
+                lock: &lock,
+            };
+            let claimed: BTreeSet<String> = component
+                .owned(&after)
+                .iter()
+                .map(Claim::lock_key)
+                .collect();
             let locked: BTreeSet<String> = lock.files.keys().cloned().collect();
             assert_eq!(claimed, locked, "{}", component.provider());
         }

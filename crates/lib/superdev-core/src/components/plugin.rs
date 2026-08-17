@@ -189,8 +189,14 @@ mod tests {
     use crate::runner::FakeRunner;
     use crate::runner::Output;
 
+    /// The default workflows provider is mattpocock-skills, so these tests name
+    /// superpowers explicitly rather than inherit whatever the registry defaults to.
     fn ctx_parts() -> (Manifest, Lock) {
-        (Manifest::default_for("0.1.0", &[]), Lock::default())
+        let mut manifest = Manifest::default_for("0.1.0", &[]);
+        let workflows = manifest.capabilities.get_mut("workflows").unwrap();
+        workflows.provider = "superpowers".into();
+        workflows.version = Some("6.2.0".into());
+        (manifest, Lock::default())
     }
 
     /// A `.mise.toml` pinning Superpowers, written in a deliberately different
