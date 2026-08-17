@@ -57,10 +57,13 @@ list gained `CDLA-Permissive-2.0` for this: it arrives as `webpki-roots`,
 Mozilla's root certificates behind `ureq`'s TLS on the download path, and
 licenses data rather than code ([deny.toml](/deny.toml)).
 
-superdev pins codegraph into *managed* repos the same way: the `http` backend
-against the release bundles, one checksummed URL per platform. Those bundles
-vendor their own Node, unlike the npm package, whose shim needs one on the
-host.
+superdev pins its providers into *managed* repos the same way: the `http`
+backend against a checksummed URL. codegraph gets one release bundle per
+platform; those bundles vendor their own Node, unlike the npm package, whose
+shim needs one on the host. Each workflows provider gets one tag tarball —
+`http:mattpocock-skills` at 1.2.3, the default, from
+[Matt Pocock's skills repository](https://github.com/mattpocock/skills) under
+MIT, or `http:superpowers` at 6.2.0.
 
 [^cargo-toml]: Workspace manifest (dependency set)
 [^mise-toml]: Pinned tool versions

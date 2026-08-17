@@ -70,6 +70,14 @@ publish a version it cannot find a heading for.
   Code actually loads the managed entry point
 - `blueprint` in `.superdev/config.toml` now records the version last
   applied: `sync` stamps it, `status` reports a difference without failing
+- Workflows provider selection: the manifest's `provider` field is now
+  honoured, `init --workflows-provider <id>` and
+  `update workflows --provider <id>` choose between `mattpocock-skills`
+  (the new default — materialised into `.claude/skills/` as repo files, so
+  collaborators need nothing installed) and `superpowers` (the plugin flow,
+  unchanged). Switching sweeps the old provider's pin and files
+- The knowledge scaffold's framework override now matches the workflows
+  provider: `.agents/SUPERPOWERS.md` or `.agents/MATT-POCOCK-SKILLS.md`
 
 ### Fixed
 
@@ -86,3 +94,10 @@ publish a version it cannot find a heading for.
 - AGENTS.md no longer preloads every concept in the knowledgebase. It keeps
   `knowledge/index.md` as the map and tells agents to search the MCP server
   for the rest
+
+### Removed
+
+- The skill pack's `grill-me` — the default workflows provider ships its
+  own; the next sync sweeps the packaged copy (a user-edited copy is left
+  in place and released). A `[skills] custom` name that is no longer in
+  the pack now reports instead of failing the plan

@@ -47,9 +47,21 @@ A capability is a slot; the tool filling it is a swappable provider.
 |--------------|-------------------|---------------------------------|
 | `knowledge`  | `aokf`            | files embedded in the binary    |
 | `code-index` | `codegraph`       | checksummed release bundle (mise `http`) + `mise exec http:codegraph -- codegraph init` |
+| `workflows`  | `mattpocock-skills` (default) | mise pin + owned files under `.claude/skills/` |
 | `workflows`  | `superpowers`     | mise pin + Claude Code plugin   |
 | `frontend`   | `frontend-design` | Claude Code plugin              |
 | `skills`     | `superdev-skills` | owned files in the repo         |
+
+The registry holds one entry per (capability, provider) pair — its version, its
+checksum where it has one, and whether it is the default — and the manifest's
+`provider` field picks among them. `workflows` is the only capability with a
+choice; an id no entry matches fails with `workflows provider must be one of:
+superpowers, mattpocock-skills`.
+
+The default is repo-owned deliberately. `mattpocock-skills` copies the pinned
+checkout's skills into `.claude/skills/` as committed files, so a collaborator
+who clones the repo has them from git alone; `superpowers` needs a per-user
+`claude plugin install` on every machine, which is what makes it the secondary.
 
 `workflows` and `code-index` are fetched by URL and verified against a
 checksum this binary carries beside the version, so superdev installs the
@@ -57,7 +69,7 @@ registry version of those two and refuses any other — see
 [api-contracts](api-contracts.md). codegraph's bundles vendor their own Node,
 so a managed repo needs no node of its own.
 
-`skills` refuses any other version for a different reason: the five skill
+`skills` refuses any other version for a different reason: the four skill
 files are embedded in the binary, which makes this binary the provenance.
 Nothing is installed. `sync` writes them to `.claude/skills/<name>/SKILL.md`
 and merges one PostToolUse entry into `.claude/settings.json`; Claude Code

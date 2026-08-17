@@ -3,7 +3,7 @@ type: Spec
 id: spec-workflows-provider-default
 title: Workflows Provider Default
 description: Design for defaulting the workflows capability to mattpocock-skills as materialised repo files, with superpowers kept as a supported plugin-based secondary.
-status: draft
+status: stable
 links:
   - rel: relates-to
     to: spec-cli-core-blueprint-engine

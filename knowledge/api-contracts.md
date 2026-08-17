@@ -13,11 +13,14 @@ resource: /crates/app/superdev/src/main.rs
 superdev                     print help, exit 0
 superdev init                set this repo up; --no-knowledge, --no-code-index,
                              --no-workflows, --no-frontend, --no-skills each
-                             disable a capability
+                             disable a capability;
+                             --workflows-provider <ID> picks the workflows
+                             provider
 superdev status              report drift; exit 1 when there is work to do
 superdev sync                re-apply the blueprint; --dry-run prints the plan only
 superdev update [TARGET]     move pins to this binary's defaults, then sync;
-                             TARGET is `<capability>[@<version>]`
+                             TARGET is `<capability>[@<version>]`;
+                             --provider <ID> switches TARGET's provider
 superdev aokf validate [PATH]
                              check the bundle against the AOKF spec; exit 1
                              on errors. --level 0..2 (default 2), --json,
@@ -43,13 +46,17 @@ Every verb acts on the current directory.
   existing file or created as a one-line file: Claude Code reads only
   `CLAUDE.md`, and that line is what makes it load the canonical entry point.
   Skills the repo already has under a pack name are released into
-  `[skills] custom` first, so adoption never overwrites work superdev did not
-  write.
+  `[skills] custom` — or, for the workflows provider's own names, into
+  `[workflows] custom` — first, so adoption never overwrites work superdev did
+  not write. `--workflows-provider <id>` is checked against the registry before
+  anything is written and conflicts with `--no-workflows`; absent, the registry
+  default applies.
 - **`status`** never writes. It exits `1` on any drift, missing component,
   planned removal, or pin behind this binary's registry, so CI can gate on it.
   Each skill released by `[skills] custom` prints as
-  `skills: <name> custom, unmanaged` — a released skill is the user's file, not
-  drift, so it leaves the code alone. Released orphans and the
+  `skills: <name> custom, unmanaged`, and each one released by
+  `[workflows] custom` the same way under its own capability name — a released
+  skill is the user's file, not drift, so it leaves the code alone. Released orphans and the
   blueprint-version line print as reports and never affect the exit code.
 - **`sync`** refuses to run while `workflows`, `code-index` or `skills` is
   pinned anywhere other than the registry default, and says to run
@@ -67,7 +74,25 @@ Every verb acts on the current directory.
   the manifest's `blueprint`.
 - **`update`** rejects an explicit `workflows@<version>`,
   `code-index@<version>` or `skills@<version>` for the same reason. Every other
-  capability takes an explicit version.
+  capability takes an explicit version. `--provider <id>` is the only CLI path
+  that switches a provider: it needs a capability target, rewrites that
+  capability's provider and sets its version to the new provider's registry
+  default, then syncs. Bare `update` moves versions and leaves every provider
+  alone.
+- **`workflows`** has two providers, both pinned by this binary's checksums.
+  `mattpocock-skills` materialises the pinned checkout's `skills/engineering`
+  and `skills/productivity` directories into `.claude/skills/<name>/` as owned
+  files, attributed to `workflows` in the lock and committed, so a collaborator
+  needs nothing installed. `superpowers` keeps the plugin flow, installed per
+  machine. After a materialisation — at `init` as well as `sync` — the run
+  prints `workflows: run /setup-matt-pocock-skills in Claude Code to finish
+  configuring`; the upstream setup skill is interactive, so it is the one step
+  superdev cannot take. A provider switch adds two more report lines: update
+  the `.agents` import in AGENTS.md (only where `knowledge` is enabled), and,
+  leaving superpowers, that the user-level plugin is still installed and
+  `claude plugin uninstall superpowers` removes it. The materialisation and the
+  sweep of the old provider are planned actions, so `status` exits `1` while
+  either is pending; every line above is a report and moves no exit code.
 
 `aokf validate` and `aokf index` default `PATH` to `knowledge/`; the hook
 always reads the bundle at `knowledge/`. The search index lives in

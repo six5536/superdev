@@ -2,7 +2,7 @@
 type: Glossary
 id: glossary
 title: Domain Glossary
-description: The terms the blueprint engine uses — blueprint, capability, provider, component, owned file, scaffold, skill pack, PROJECT.md layer, custom skill, claim, orphan — plus the search terms section, locator, hybrid search and RRF.
+description: The terms the blueprint engine uses — blueprint, capability, provider, component, owned file, scaffold, skill pack, materialised skill, PROJECT.md layer, custom skill, claim, orphan — plus the search terms section, locator, hybrid search and RRF.
 status: stable
 ---
 
@@ -13,7 +13,10 @@ status: stable
   `code-index`, `workflows`, `frontend`, `skills`. Capability names are what
   users type; see [architectural-rules](architectural-rules.md).
 - **Provider** — the tool that fills a capability, e.g. `codegraph` for
-  `code-index`. Swappable without changing the user-facing surface.
+  `code-index`. The registry carries one entry per (capability, provider) pair
+  and flags one as the default; the manifest's `provider` field selects among
+  them, so a capability's implementation changes without its user-facing name
+  changing. `workflows` is the only slot with more than one entry.
 - **Component** — the code implementing one provider. It observes the repo,
   compares against the manifest, and returns actions; it never applies them.
 - **Owned file** — a file superdev writes and keeps current, hashed into
@@ -21,9 +24,13 @@ status: stable
   The embedded AOKF spec and validator are owned.
 - **Scaffold** — a file superdev writes once and never touches again, such as
   `AGENTS.md`. It is the user's from the moment it exists, so it cannot drift.
-- **Skill pack** — the five skills the `skills` capability ships as owned files
+- **Skill pack** — the four skills the `skills` capability ships as owned files
   under `.claude/skills/`, embedded in the binary and versioned with it. Claude
   Code loads them from there natively, so there is nothing to install.
+- **Materialised skill** — a skill copied out of a pinned provider checkout
+  into `.claude/skills/<name>/` as owned files, with the lock recording which
+  capability put it there. The names come from upstream rather than the binary,
+  which is what the attribution is for.
 - **PROJECT.md layer** — a `PROJECT.md` beside a shipped skill. Every SKILL.md
   ends with a trailer telling the agent to read it and let it win on conflict,
   so a project extends a stock skill without forking it. superdev never writes

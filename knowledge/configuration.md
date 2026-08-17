@@ -2,7 +2,7 @@
 type: Reference
 id: configuration
 title: Configuration & Environments
-description: The .superdev directory — the config.toml manifest, the lock file and the gitignored cache — plus the embeddings opt-in, the skills custom list, the .mcp.json and .claude/settings.json merges, and the user-level model cache.
+description: The .superdev directory — the config.toml manifest, the lock file with its owners table, and the gitignored cache — plus the workflows provider choice, the embeddings opt-in, the custom lists, the .mcp.json and .claude/settings.json merges, and the user-level model cache.
 status: stable
 resource: /crates/lib/superdev-core/src/manifest.rs
 ---
@@ -33,8 +33,8 @@ provider = "superdev-skills"
 version = "0.1.0"
 
 [workflows]
-provider = "superpowers"
-version = "6.2.0"
+provider = "mattpocock-skills"
+version = "1.2.3"
 ```
 
 `blueprint` is the version last applied, not the version that wrote the file.
@@ -42,6 +42,14 @@ A successful `sync` stamps this binary's version, rewriting `config.toml` only
 when the value changes; `--dry-run` never stamps. `status` prints
 `blueprint <a>, binary <b> — sync will update it` and leaves the exit code
 alone, so a binary upgrade that changes nothing keeps CI green.
+
+`provider` names the implementation filling the slot. `workflows` is the only
+capability that offers a choice: `mattpocock-skills` (the default, materialised
+into `.claude/skills/` as committed files) or `superpowers` (the Claude Code
+plugin, installed per machine). Any other id fails with `workflows provider
+must be one of: superpowers, mattpocock-skills`. `version` follows the
+provider, so the two move together — set by `init --workflows-provider <id>`,
+by `update workflows --provider <id>`, or by editing both fields here.
 
 An optional sub-table opts the knowledge bundle out of the local embedding
 model and onto an API:
@@ -70,12 +78,19 @@ custom = ["humanise"]
 A released skill keeps whatever content it has as a starting point, drops out
 of the plan and out of the lock, and `status` prints it as unmanaged rather
 than drifted. Delete the name to get stock content back on the next sync. A
-name that is not one of the five shipped skills fails the plan.
+name that is not one of the four shipped skills reports `skills: custom names
+unknown skill '<name>' — no effect` and changes nothing, so a pack that drops
+a skill does not break a repo that had marked it custom.
 
 `init` seeds that list: a repo that already has a skill under a pack name,
 with content of its own, keeps it — the name goes into `custom` and the
 adoption reports it. Content byte-identical to the shipped skill is superdev's
 own text and is left managed.
+
+`[workflows] custom` releases a materialised skill the same way, under the
+`mattpocock-skills` provider, with the same `init` adoption and the same
+`workflows: custom names unknown skill '<name>' — no effect` line for a name
+upstream does not ship.
 
 One table per enabled capability, keyed by the capability name — an absent
 table means disabled, which is what `init --no-<capability>` produces. An
@@ -93,6 +108,14 @@ superdev owns. Entries superdev merges into a shared file are hashed under
 found by comparing a file against the content the blueprint wants, not against
 the lock; the hashes are what lets an apply tell that the file it just
 overwrote had been edited by hand, and say so (after backing it up).
+
+An `owners` table names the capability that materialised each entry copied
+from a provider checkout — the `mattpocock-skills` skills, today. That is what
+lets the workflows component claim files whose names come from upstream rather
+than from the binary, so a skill the next release drops becomes an unclaimed
+entry and a provider switch sweeps the whole set. The table is absent when
+nothing is materialised, and an entry without an owner behaves exactly as it
+did before the table existed.
 
 An entry no component claims any more is an orphan, and `sync` prunes it.
 Content that still hashes to the locked value is superdev's own residue: it is
@@ -125,9 +148,10 @@ id). Deleting it is safe — the next tool call rebuilds it.
   it, and leaves the user's hooks alone. Both files are re-serialised whole on
   write, so key order is not preserved; the lock hashes the merged value, not
   the file, so a reformat is not drift.
-- `.claude/skills/<name>/SKILL.md` holds the five shipped skills as owned
-  files. A `PROJECT.md` beside one extends it — superdev never writes, hashes
-  or reads that file, so a project layer survives every sync.
+- `.claude/skills/<name>/SKILL.md` holds the four shipped skills as owned
+  files, alongside whatever the workflows provider materialises there. A
+  `PROJECT.md` beside one extends it — superdev never writes, hashes or reads
+  that file, so a project layer survives every sync.
 - The local embedding model lives in the *user* cache, not the repo:
   `$XDG_CACHE_HOME` (else `%LOCALAPPDATA%`, else `~/.cache`) +
   `/superdev/models/<model>/<revision>/`. Revision-scoped, so a pin bump
