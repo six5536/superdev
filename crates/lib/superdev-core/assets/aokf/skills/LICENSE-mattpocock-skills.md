@@ -5,6 +5,7 @@ These skills are copied and modified from
 Skills in this directory not on this list are superdev's own.
 
 - domain-modeling
+- grill-me (merges upstream grill-me and grill-with-docs)
 - grilling
 
 MIT licence of the original work:
