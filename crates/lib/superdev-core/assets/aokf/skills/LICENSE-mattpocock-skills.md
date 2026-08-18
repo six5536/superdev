@@ -4,6 +4,7 @@ These skills are copied and modified from
 <https://github.com/mattpocock/skills>, used under the MIT licence below.
 Skills in this directory not on this list are superdev's own.
 
+- ask-way (derived from upstream ask-matt)
 - code-review
 - codebase-design
 - diagnosing-bugs
@@ -18,6 +19,7 @@ Skills in this directory not on this list are superdev's own.
 - research
 - resolving-merge-conflicts
 - tdd
+- teach
 - to-questionnaire
 - to-spec
 - triage
