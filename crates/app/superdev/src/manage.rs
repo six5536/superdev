@@ -330,6 +330,29 @@ mod tests {
     }
 
     #[test]
+    fn init_refuses_reruns_and_non_git_dirs() {
+        let args = InitArgs {
+            no_workflows: false,
+            no_frontend: false,
+            no_skills: false,
+            no_code_index: false,
+            no_knowledge: false,
+            workflows_provider: None,
+        };
+        // Both guards fire before anything is planned or run.
+        let plain = tempfile::tempdir().unwrap();
+        let err = init(plain.path(), &args).unwrap_err().to_string();
+        assert!(err.contains("git"), "{err}");
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::create_dir_all(dir.path().join(".git")).unwrap();
+        Manifest::default_for("0.1.0", &[])
+            .save(dir.path())
+            .unwrap();
+        let err = init(dir.path(), &args).unwrap_err().to_string();
+        assert!(err.contains("sync"), "{err}");
+    }
+
+    #[test]
     fn update_provider_rules() {
         let dir = tempfile::tempdir().unwrap();
         let manifest = Manifest::default_for(superdev_core::version(), &[]);

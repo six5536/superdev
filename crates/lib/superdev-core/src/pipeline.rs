@@ -586,6 +586,77 @@ mod tests {
         assert!(plan.behind_lines()[0].starts_with("skills: pinned 0.0.1"));
     }
 
+    /// Every planned action description, flattened for substring asserts.
+    fn plan_descs(plan: &RepoPlan) -> Vec<String> {
+        plan.planned()
+            .iter()
+            .flat_map(|p| p.actions.iter().map(|a| a.describe()))
+            .collect()
+    }
+
+    #[test]
+    fn workflows_provider_selects_materialise_or_plugin_flow() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::create_dir_all(dir.path().join(".git")).unwrap();
+        let fake = FakeRunner::new();
+
+        // The default provider copies files in; nothing is installed at user
+        // level, so no plugin action may appear.
+        let manifest = Manifest::default_for(crate::version(), &[]);
+        let plan = plan_repo(
+            dir.path(),
+            &fake,
+            &manifest,
+            &Lock::default(),
+            PlanMode::Sync,
+        )
+        .unwrap();
+        let descs = plan_descs(&plan);
+        assert!(
+            descs
+                .iter()
+                .any(|d| d.contains("materialise http:mattpocock-skills")),
+            "{descs:?}"
+        );
+        assert!(
+            descs
+                .iter()
+                .any(|d| d.contains("pin http:mattpocock-skills"))
+        );
+        assert!(
+            !descs
+                .iter()
+                .any(|d| d.contains("plugin install superpowers")),
+            "{descs:?}"
+        );
+
+        // The secondary provider installs its plugin and materialises nothing.
+        let mut manifest = Manifest::default_for(crate::version(), &[]);
+        let workflows = manifest.capabilities.get_mut("workflows").unwrap();
+        workflows.provider = "superpowers".into();
+        workflows.version = Some("6.2.0".into());
+        let plan = plan_repo(
+            dir.path(),
+            &fake,
+            &manifest,
+            &Lock::default(),
+            PlanMode::Sync,
+        )
+        .unwrap();
+        let descs = plan_descs(&plan);
+        assert!(descs.iter().any(|d| d.contains("pin http:superpowers")));
+        assert!(
+            descs
+                .iter()
+                .any(|d| d.contains("plugin install superpowers@superpowers-dev")),
+            "{descs:?}"
+        );
+        assert!(
+            !descs.iter().any(|d| d.contains("materialise")),
+            "{descs:?}"
+        );
+    }
+
     #[test]
     fn custom_skills_are_pruned_from_the_lock_and_reported() {
         let mut manifest = Manifest::default_for("0.1.0", &[]);

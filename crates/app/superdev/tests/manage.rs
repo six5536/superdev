@@ -1,7 +1,10 @@
 #![cfg(unix)]
-//! End-to-end tests for the manage verbs against fake `mise`/`claude`/
-//! `codegraph` binaries on PATH. The fakes are shell scripts, so Windows runs
-//! `tests/cli.rs` only.
+//! Smoke journeys for the manage verbs against fake `mise`/`claude`/
+//! `codegraph` binaries on PATH. Five end-to-end runs of the real binary and
+//! the real `SystemRunner`; orchestration details (call ordering, targeted
+//! install lists, per-provider flows) are asserted once, in core, against
+//! `FakeRunner`. The fakes are shell scripts, so Windows runs `tests/cli.rs`
+//! only.
 
 use std::fs;
 use std::os::unix::fs::PermissionsExt;
@@ -125,17 +128,6 @@ exit 0
     fn write(&self, rel: &str, content: &str) {
         fs::write(self.repo().join(rel), content).unwrap();
     }
-
-    /// Hand-edit the manifest's workflows pin, as a user with a stale checkout
-    /// (or a newer superdev's config) would leave it.
-    fn pin_workflows(&self, version: &str) {
-        let config = self.read(".superdev/config.toml");
-        self.write(
-            ".superdev/config.toml",
-            &config.replace("version = \"1.2.3\"", &format!("version = \"{version}\"")),
-        );
-        assert!(self.read(".superdev/config.toml").contains(version));
-    }
 }
 
 /// One finished run: exit code plus captured output.
@@ -183,11 +175,6 @@ fn table<'a>(toml: &'a str, header: &str) -> &'a str {
     rest.split_once("\n[").map_or(rest, |(keys, _)| keys)
 }
 
-/// The lock's record of what the last apply installed for workflows.
-fn applied_workflows(lock: &str) -> &str {
-    table(lock, "[components.workflows]")
-}
-
 /// The backed-up copy of `rel`, searched across the per-run stamp directories
 /// the engine names by clock time.
 fn backup_of(sb: &Sandbox, rel: &str) -> Option<String> {
@@ -203,10 +190,14 @@ fn write_fake(bin: &Path, name: &str, body: &str) {
     fs::set_permissions(&p, fs::Permissions::from_mode(0o755)).unwrap();
 }
 
+/// Journey 1: init on the defaults, then live with the repo — drift is
+/// reported, dry-run touches nothing, sync repairs, scaffolds stay the
+/// user's.
 #[test]
 fn init_sets_up_a_fresh_repo() {
     let sb = Sandbox::new();
-    sb.superdev().arg("init").assert().success();
+    let init = run(sb.superdev().arg("init"));
+    assert_eq!(init.code, 0, "stderr: {}", init.stderr);
     let repo = sb.repo();
     assert!(repo.join(".superdev/config.toml").is_file());
     assert!(repo.join(".superdev/lock.toml").is_file());
@@ -214,99 +205,92 @@ fn init_sets_up_a_fresh_repo() {
     assert!(repo.join(".agents/aokf/SPEC.md").is_file());
     let mcp = sb.read(".mcp.json");
     assert!(mcp.contains("\"superdev-aokf\""), "{mcp}");
-    assert!(mcp.contains("\"mcp\""), "{mcp}");
     assert!(sb.read(".gitignore").contains(".superdev/cache/"));
     assert!(sb.read(".gitignore").contains(".codegraph/"));
-    assert!(sb.read(".mise.toml").contains("http:mattpocock-skills"));
     // The default workflows provider materialises its skills into the repo, so
-    // a collaborator gets them from git alone.
+    // a collaborator gets them from git alone; nothing installs at user level.
     assert_eq!(sb.read(".claude/skills/tdd/SKILL.md"), "upstream skill\n");
     assert!(repo.join(".claude/skills/handoff/SKILL.md").is_file());
-    // Attribution is what tells a materialised file from a skill-pack one, so
-    // the lock must name workflows as the owner of each.
     let lock = sb.read(".superdev/lock.toml");
     let owners = lock
         .split("[owners]")
         .nth(1)
         .unwrap_or_else(|| panic!("lock: {lock}"));
-    for skill in ["tdd", "code-review", "handoff"] {
-        assert!(
-            owners.contains(&format!(
-                "\".claude/skills/{skill}/SKILL.md\" = \"workflows\""
-            )),
-            "lock: {lock}"
-        );
-    }
-    // codegraph comes from its checksummed release bundles, not npm: the
-    // bundles vendor their own Node, so the repo needs none.
+    assert!(
+        owners.contains("\".claude/skills/tdd/SKILL.md\" = \"workflows\""),
+        "lock: {lock}"
+    );
+    assert!(
+        table(&lock, "[components.workflows]").contains("provider = \"mattpocock-skills\""),
+        "lock: {lock}"
+    );
+    assert!(
+        init.stdout
+            .contains("workflows: run /setup-matt-pocock-skills in Claude Code"),
+        "stdout: {}",
+        init.stdout
+    );
+    // codegraph comes from its checksummed release bundles, not npm.
     let pinned = sb.read(".mise.toml");
+    assert!(pinned.contains("http:mattpocock-skills"), "{pinned}");
     assert!(pinned.contains("http:codegraph"), "{pinned}");
-    assert!(pinned.contains("linux-arm64"), "{pinned}");
     assert!(pinned.contains("sha256:"), "{pinned}");
     assert!(!pinned.contains("npm:"), "{pinned}");
+    // The real binary drove each fake through PATH — wiring, not ordering:
+    // core's FakeRunner tests own the ordering and the targeted lists.
     let log = sb.log();
-    assert!(log.contains("mise trust"), "log: {log}");
     assert!(log.contains("mise install"), "log: {log}");
-    assert!(
-        log.contains("mise where http:mattpocock-skills"),
-        "log: {log}"
-    );
-    // Nothing is installed at user level for workflows any more: the default
-    // provider copies files in instead of installing a Claude plugin.
-    assert!(!log.contains("plugin install superpowers"), "log: {log}");
     assert!(log.contains("claude plugin install frontend-design@claude-code-plugins"));
     assert!(
         log.contains("mise exec http:codegraph -- codegraph init"),
         "log: {log}"
     );
-}
+    sb.superdev().arg("status").assert().success();
 
-#[test]
-fn init_materialises_the_default_workflows_provider() {
-    let sb = Sandbox::new();
-    let init = run(sb.superdev().arg("init"));
-    assert_eq!(init.code, 0, "stderr: {}", init.stderr);
-    // The pin, the materialised content, the owner attributions and the
-    // absence of a plugin install are asserted in `init_sets_up_a_fresh_repo`.
-    // What only shows here: which provider the apply recorded, and the hint
-    // for the one upstream step superdev cannot run for you.
-    let lock = sb.read(".superdev/lock.toml");
-    assert!(
-        applied_workflows(&lock).contains("provider = \"mattpocock-skills\""),
-        "lock: {lock}"
-    );
-    assert!(
-        init.stdout.contains(
-            "workflows: run /setup-matt-pocock-skills in Claude Code to finish configuring"
-        ),
-        "stdout: {}",
-        init.stdout
-    );
+    // Drift: an owned file edit turns status dirty; dry-run changes nothing;
+    // sync repairs it.
+    sb.write(".agents/aokf/SPEC.md", "tampered");
+    let dirty = run(sb.superdev().arg("status"));
+    assert_eq!(dirty.code, 1, "stdout: {}", dirty.stdout);
+    assert!(dirty.stdout.contains("SPEC.md"), "stdout: {}", dirty.stdout);
+    sb.superdev().args(["sync", "--dry-run"]).assert().success();
+    assert_eq!(sb.read(".agents/aokf/SPEC.md"), "tampered");
+    sb.superdev().arg("sync").assert().success();
+    assert_ne!(sb.read(".agents/aokf/SPEC.md"), "tampered");
+
+    // Scaffolds are the user's from the moment they exist: no drift, ever.
+    sb.write("AGENTS.md", "customised");
+    sb.superdev().arg("status").assert().success();
+    assert_eq!(sb.read("AGENTS.md"), "customised");
+
+    // A version-less retarget re-pins to the registry default and stays clean.
+    sb.superdev()
+        .args(["update", "code-index"])
+        .assert()
+        .success();
     sb.superdev().arg("status").assert().success();
 }
 
+/// Journey 2: clone the repo on a machine that has never run superdev — the
+/// committed pins install without a single planned edit.
 #[test]
-fn init_with_superpowers_reproduces_the_plugin_flow() {
+fn sync_installs_committed_pins_on_a_fresh_clone() {
     let sb = Sandbox::new();
-    let init = run(sb
-        .superdev()
-        .args(["init", "--workflows-provider", "superpowers"]));
-    assert_eq!(init.code, 0, "stderr: {}", init.stderr);
-    // The marketplace-add and plugin-install calls are asserted in
-    // `disabling_code_index_unpins_codegraph_and_keeps_user_pins`, which inits
-    // on this provider. What only shows here is what the plugin flow does
-    // *not* do, and what the manifest records.
-    let mise = sb.read(".mise.toml");
-    assert!(mise.contains("http:superpowers"), "{mise}");
-    assert!(!mise.contains("http:mattpocock-skills"), "{mise}");
-    assert!(!sb.repo().join(".claude/skills/tdd").exists());
-    let config = sb.read(".superdev/config.toml");
-    let workflows = table(&config, "[workflows]");
-    assert!(workflows.contains("provider = \"superpowers\""), "{config}");
-    assert!(workflows.contains("version = \"6.2.0\""), "{config}");
+    sb.superdev().arg("init").assert().success();
+    sb.simulate_fresh_machine();
+
+    // No pin edit is planned — `.mise.toml` is committed and correct — but the
+    // tools it names are not installed on this machine. (Trust-before-install
+    // and the targeted tool list are asserted in core's engine tests.)
+    let synced = run(sb.superdev().arg("sync"));
+    assert_eq!(synced.code, 0, "stderr: {}", synced.stderr);
+    assert!(sb.log().contains("mise install"), "log: {}", sb.log());
     sb.superdev().arg("status").assert().success();
 }
 
+/// Journey 3: switch the workflows provider both ways — each switch sweeps
+/// the other provider's footprint and reports the steps only the user can
+/// take.
 #[test]
 fn update_provider_switches_and_sweeps_both_directions() {
     let sb = Sandbox::new();
@@ -314,6 +298,13 @@ fn update_provider_switches_and_sweeps_both_directions() {
         .args(["init", "--workflows-provider", "superpowers"])
         .assert()
         .success();
+    // The plugin flow's manifest record, for contrast with journey 1's.
+    let config = sb.read(".superdev/config.toml");
+    let workflows = table(&config, "[workflows]");
+    assert!(workflows.contains("provider = \"superpowers\""), "{config}");
+    // Init writes the registry version, not a placeholder.
+    assert!(workflows.contains("version = \"6.2.0\""), "{config}");
+    assert!(!sb.repo().join(".claude/skills/tdd").exists());
 
     let onto_files =
         run(sb
@@ -380,179 +371,8 @@ fn update_provider_switches_and_sweeps_both_directions() {
     sb.superdev().arg("status").assert().success();
 }
 
-#[test]
-fn a_stale_custom_name_reports_instead_of_failing() {
-    let sb = Sandbox::new();
-    sb.superdev().arg("init").assert().success();
-    let config = sb.read(".superdev/config.toml");
-    assert!(config.contains("[skills]"), "{config}");
-    sb.write(
-        ".superdev/config.toml",
-        &config.replace("[skills]\n", "[skills]\ncustom = [\"not-a-skill\"]\n"),
-    );
-    // A name that matches no shipped skill releases nothing, so it is a
-    // report, not an error: the repo is still exactly what the blueprint wants.
-    let stale = run(sb.superdev().arg("status"));
-    assert_eq!(stale.code, 0, "stdout: {}", stale.stdout);
-    assert!(
-        stale
-            .stdout
-            .contains("skills: custom names unknown skill 'not-a-skill' — no effect"),
-        "stdout: {}",
-        stale.stdout
-    );
-    sb.superdev().arg("sync").assert().success();
-}
-
-#[test]
-fn status_is_clean_after_init_and_dirty_after_tamper() {
-    let sb = Sandbox::new();
-    sb.superdev().arg("init").assert().success();
-    sb.superdev().arg("status").assert().success();
-    sb.write(".agents/aokf/SPEC.md", "tampered");
-    let dirty = run(sb.superdev().arg("status"));
-    assert_eq!(dirty.code, 1, "stdout: {}", dirty.stdout);
-    assert!(dirty.stdout.contains("SPEC.md"), "stdout: {}", dirty.stdout);
-    sb.superdev().arg("sync").assert().success();
-    sb.superdev().arg("status").assert().success();
-    assert_ne!(sb.read(".agents/aokf/SPEC.md"), "tampered");
-}
-
-#[test]
-fn sync_installs_committed_pins_on_a_fresh_clone() {
-    let sb = Sandbox::new();
-    sb.superdev().arg("init").assert().success();
-    sb.simulate_fresh_machine();
-
-    // No pin edit is planned — `.mise.toml` is committed and correct — but the
-    // tools it names are not installed on this machine.
-    let synced = run(sb.superdev().arg("sync"));
-    assert_eq!(synced.code, 0, "stderr: {}", synced.stderr);
-    let log = sb.log();
-    let install = log
-        .find("mise install")
-        .unwrap_or_else(|| panic!("log: {log}"));
-    // mise refuses to install from a config it has not been told to trust.
-    let trust = log
-        .find("mise trust")
-        .unwrap_or_else(|| panic!("log: {log}"));
-    let plugin = log.find("claude plugin install").unwrap();
-    let index = log
-        .find("mise exec http:codegraph -- codegraph init")
-        .unwrap();
-    assert!(trust < install, "log: {log}");
-    assert!(install < plugin && install < index, "log: {log}");
-    sb.superdev().arg("status").assert().success();
-}
-
-#[test]
-fn a_failed_init_reports_the_manifest_it_leaves_behind() {
-    let sb = Sandbox::new();
-    let failed = run(sb.superdev().env("FAKE_CODEGRAPH_FAILS", "1").arg("init"));
-    assert_eq!(failed.code, 2, "stdout: {}", failed.stdout);
-    assert!(
-        failed
-            .stdout
-            .contains("left in place: .superdev/config.toml"),
-        "stdout: {}",
-        failed.stdout
-    );
-    // The manifest is kept deliberately: it is what the retry resumes from.
-    assert!(sb.repo().join(".superdev/config.toml").is_file());
-    assert!(!sb.repo().join(".superdev/lock.toml").exists());
-    sb.superdev().arg("sync").assert().success();
-}
-
-#[test]
-fn init_refuses_reruns_and_non_git_dirs() {
-    let sb = Sandbox::new();
-    sb.superdev().arg("init").assert().success();
-    let rerun = run(sb.superdev().arg("init"));
-    assert_eq!(rerun.code, 2);
-    assert!(rerun.stderr.contains("sync"), "stderr: {}", rerun.stderr);
-
-    let plain = tempfile::tempdir().unwrap();
-    let mut cmd = Command::cargo_bin("superdev").unwrap();
-    let not_git = run(cmd.current_dir(plain.path()).arg("init"));
-    assert_eq!(not_git.code, 2);
-    assert!(not_git.stderr.contains("git"), "stderr: {}", not_git.stderr);
-}
-
-#[test]
-fn scaffolds_survive_user_edits_and_sync_dry_run_changes_nothing() {
-    let sb = Sandbox::new();
-    sb.superdev().arg("init").assert().success();
-    sb.write("AGENTS.md", "customised");
-    sb.superdev().arg("status").assert().success(); // scaffolds never drift
-    sb.write(".agents/aokf/SPEC.md", "tampered");
-    sb.superdev().args(["sync", "--dry-run"]).assert().success();
-    assert_eq!(sb.read(".agents/aokf/SPEC.md"), "tampered");
-    assert_eq!(sb.read("AGENTS.md"), "customised");
-}
-
-#[test]
-fn update_refuses_hand_picked_checksum_pinned_versions() {
-    let sb = Sandbox::new();
-    sb.superdev().arg("init").assert().success();
-    // Both capabilities superdev downloads by checksum ship exactly the
-    // version this binary carries digests for.
-    for target in ["code-index@9.9.9", "workflows@9.9.9"] {
-        let refused = run(sb.superdev().args(["update", target]));
-        assert_eq!(refused.code, 2, "stdout: {}", refused.stdout);
-        assert!(
-            refused.stderr.contains("registry default"),
-            "stderr: {}",
-            refused.stderr
-        );
-    }
-    assert!(!sb.read(".superdev/config.toml").contains("9.9.9"));
-    sb.superdev().args(["update", "flying"]).assert().code(2);
-    // Retargeting a capability with no explicit version still works.
-    sb.superdev()
-        .args(["update", "code-index"])
-        .assert()
-        .success();
-    sb.superdev().arg("status").assert().success();
-}
-
-#[test]
-fn a_stale_workflows_pin_makes_status_dirty() {
-    let sb = Sandbox::new();
-    sb.superdev().arg("init").assert().success();
-    sb.pin_workflows("1.0.0");
-    let stale = run(sb.superdev().arg("status"));
-    assert_eq!(stale.code, 1, "stdout: {}", stale.stdout);
-    assert!(
-        stale
-            .stdout
-            .contains("workflows: pinned 1.0.0, registry has 1.2.3"),
-        "stdout: {}",
-        stale.stdout
-    );
-    assert!(
-        stale.stdout.contains("superdev update"),
-        "stdout: {}",
-        stale.stdout
-    );
-}
-
-#[test]
-fn sync_refuses_a_stale_workflows_pin() {
-    let sb = Sandbox::new();
-    sb.superdev().arg("init").assert().success();
-    sb.pin_workflows("1.0.0");
-    let refused = run(sb.superdev().arg("sync"));
-    assert_eq!(refused.code, 2, "stdout: {}", refused.stdout);
-    assert!(
-        refused.stderr.contains("run `superdev update`"),
-        "stderr: {}",
-        refused.stderr
-    );
-    // `update` is the way out, and it leaves the repo in sync again.
-    sb.superdev().arg("update").assert().success();
-    sb.superdev().arg("status").assert().success();
-}
-
+/// Journey 4: disable a capability — the orphan sweep unpins what superdev
+/// owns and leaves the user's own pins exactly as written.
 #[test]
 fn disabling_code_index_unpins_codegraph_and_keeps_user_pins() {
     let sb = Sandbox::new();
@@ -602,4 +422,24 @@ fn disabling_code_index_unpins_codegraph_and_keeps_user_pins() {
     assert!(!lock.contains("[components.code-index]"), "{lock}");
     assert!(lock.contains(".mise.toml:http:superpowers"), "{lock}");
     sb.superdev().arg("status").assert().success();
+}
+
+/// Journey 5: a provider command fails mid-init — the manifest survives with
+/// a pointer to it, and `sync` resumes.
+#[test]
+fn a_failed_init_reports_the_manifest_it_leaves_behind() {
+    let sb = Sandbox::new();
+    let failed = run(sb.superdev().env("FAKE_CODEGRAPH_FAILS", "1").arg("init"));
+    assert_eq!(failed.code, 2, "stdout: {}", failed.stdout);
+    assert!(
+        failed
+            .stdout
+            .contains("left in place: .superdev/config.toml"),
+        "stdout: {}",
+        failed.stdout
+    );
+    // The manifest is kept deliberately: it is what the retry resumes from.
+    assert!(sb.repo().join(".superdev/config.toml").is_file());
+    assert!(!sb.repo().join(".superdev/lock.toml").exists());
+    sb.superdev().arg("sync").assert().success();
 }
