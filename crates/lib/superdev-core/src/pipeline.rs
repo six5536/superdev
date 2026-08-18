@@ -204,7 +204,13 @@ pub fn apply_repo(
     // disabled capability's applied record goes with its files.
     for key in orphans.released.iter().chain(orphans.gone.iter()) {
         lock_changed |= lock.files.remove(key).is_some();
-        lock.owners.remove(key);
+    }
+    // Nothing writes or reads `owners` any more: clear whatever attribution a
+    // pre-removal binary left behind, in one stroke, rather than waiting for
+    // each file's rewrite — an entry on an up-to-date file would never see one.
+    if !lock.owners.is_empty() {
+        lock.owners.clear();
+        lock_changed = true;
     }
     let disabled: Vec<String> = lock
         .components
@@ -453,7 +459,6 @@ fn prune_custom(manifest: &Manifest, lock: &mut Lock) -> bool {
                 .collect();
             for key in keys {
                 pruned |= lock.files.remove(&key).is_some();
-                lock.owners.remove(&key);
             }
         }
     }
@@ -853,13 +858,11 @@ mod tests {
             ".claude/skills/tdd/refs/A.md",
         ] {
             lock.files.insert(key.into(), "h".into());
-            lock.owners.insert(key.into(), "knowledge".into());
         }
         lock.files
             .insert(".claude/skills/wizard/SKILL.md".into(), "h".into());
         assert!(prune_custom(&manifest, &mut lock));
         assert!(!lock.files.keys().any(|k| k.contains("/tdd/")));
-        assert!(!lock.owners.keys().any(|k| k.contains("/tdd/")));
         assert!(lock.files.contains_key(".claude/skills/wizard/SKILL.md"));
         assert!(lock.files.contains_key(".claude/skills/humanise/SKILL.md"));
         // Nothing left to prune: reports no change.

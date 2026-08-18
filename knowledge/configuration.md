@@ -123,10 +123,10 @@ the lock; the hashes are what lets an apply tell that the file it just
 overwrote had been edited by hand, and say so (after backing it up).
 
 A legacy `owners` table may remain from binaries that materialised skills
-from provider checkouts. Nothing writes it any more: every shipped file's
-name comes from the binary, so claims need no attribution. Sync retires a
-stale entry when its file is rewritten or swept, and an empty table is not
-serialised.
+from provider checkouts. Nothing writes or reads it any more: every shipped
+file's name comes from the binary, so claims need no attribution. The first
+sync clears the whole table — a per-file retirement would strand entries on
+files that never need rewriting — and an empty table is not serialised.
 
 An entry no component claims any more is an orphan, and `sync` prunes it.
 Content that still hashes to the locked value is superdev's own residue: it is

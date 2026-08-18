@@ -350,12 +350,14 @@ fn a_workflows_manifest_errors_and_sync_migrates_after_the_table_goes() {
             edited.push_str(&format!("\".agents/MATT-POCOCK-SKILLS.md\" = \"{hash}\"\n"));
         }
     }
-    // The attribution a pre-removal binary recorded.
+    // The attribution a pre-removal binary recorded — including one on a
+    // file sync has no reason to touch, which only a wholesale clear retires.
     edited.push_str("\n[owners]\n");
     for key in [
         ".claude/skills/tdd/SKILL.md",
         ".claude/skills/ask-matt/SKILL.md",
         ".agents/MATT-POCOCK-SKILLS.md",
+        ".claude/skills/wizard/SKILL.md",
     ] {
         edited.push_str(&format!("\"{key}\" = \"workflows\"\n"));
     }

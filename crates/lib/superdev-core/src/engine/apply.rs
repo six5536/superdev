@@ -252,9 +252,6 @@ impl<'a> Session<'a> {
             .chain(written)
             .map(|(key, hash)| {
                 lock.files.insert(key.clone(), hash);
-                // Nothing writes `owners` any more; a rewrite retires the
-                // legacy attribution a pre-removal binary left behind.
-                lock.owners.remove(&key);
                 key
             })
             .collect();
@@ -266,7 +263,6 @@ impl<'a> Session<'a> {
                 continue;
             }
             lock.files.remove(&key);
-            lock.owners.remove(&key);
         }
         self.written_keys.extend(keys);
         if let Some(capability) = entry.capability {
