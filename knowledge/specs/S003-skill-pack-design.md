@@ -16,11 +16,11 @@ links:
 # Goal
 
 Fill the `skills` capability slot the
-[blueprint engine](2026-08-11-cli-core-blueprint-engine-design.md) left as a
+[blueprint engine](S001-cli-core-blueprint-engine-design.md) left as a
 placeholder: ship a curated skill set and the AOKF validation hook into every
 managed repo, versioned with the binary, with a clean path for per-project
 customisation. The hook and the aokf-maintain skill wrap the validator built
-for the [AOKF MCP server](2026-08-11-aokf-mcp-server-design.md).
+for the [AOKF MCP server](S002-aokf-mcp-server-design.md).
 
 # Contents
 

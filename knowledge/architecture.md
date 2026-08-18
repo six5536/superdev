@@ -18,7 +18,7 @@ links:
 
 superdev runs inside a target repo and keeps that repo's agent-development
 setup current. Three layers, detailed in the
-[CLI core & blueprint engine spec](specs/2026-08-11-cli-core-blueprint-engine-design.md):
+[CLI core & blueprint engine spec](specs/S001-cli-core-blueprint-engine-design.md):
 
 - **`superdev-core`** — the domain: the manifest, the components, planning,
   the engine that applies a plan, and the `aokf` subsystem that reads the
@@ -34,7 +34,7 @@ Installing the `knowledge` capability is half of it; the other half is reading
 it back. The `aokf` subsystem parses the bundle, validates it, indexes it, and
 serves it to agents over MCP (`superdev mcp aokf`), so an agent queries the
 knowledgebase instead of preloading every concept — the design is in the
-[AOKF MCP server spec](specs/2026-08-11-aokf-mcp-server-design.md), the tools
+[AOKF MCP server spec](specs/S002-aokf-mcp-server-design.md), the tools
 in [api-contracts](api-contracts.md). Freshness is lazy: every tool call
 re-hashes the bundle and syncs only what changed, so there is no watcher and
 no daemon state to go stale.
@@ -66,7 +66,7 @@ The component also carries embedded skill overrides — superdev's own version
 of an upstream skill, `grilling` first — materialised in place of the
 checkout's and installed only where this provider is; a skill's `custom`
 entry releases override and upstream alike
-([spec](specs/2026-08-18-workflows-skill-overrides-design.md)).
+([spec](specs/S006-workflows-skill-overrides-design.md)).
 
 `workflows` and `code-index` are fetched by URL and verified against a
 checksum this binary carries beside the version, so superdev installs the
@@ -83,7 +83,7 @@ knowledge capability ships its own lifecycle skills the same way —
 `aokf-bootstrap` and `aokf-maintain` — and merges the validation hook's
 PostToolUse entry into `.claude/settings.json`, so hook and skills exist
 exactly where a bundle exists
-([spec](specs/2026-08-18-knowledge-owned-skills-design.md)).
+([spec](specs/S008-knowledge-owned-skills-design.md)).
 
 # Files in a managed repo
 

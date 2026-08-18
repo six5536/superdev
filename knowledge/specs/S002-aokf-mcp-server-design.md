@@ -16,7 +16,7 @@ links:
 # Context
 
 Sub-project 2 of superdev (see the
-[CLI core spec](2026-08-11-cli-core-blueprint-engine-design.md) for the
+[CLI core spec](S001-cli-core-blueprint-engine-design.md) for the
 product frame). `superdev mcp aokf` serves the AOKF bundle to agents over
 MCP, so querying replaces the wholesale `@knowledge/…` preloading in
 AGENTS.md. The AOKF format is defined in `/.agents/aokf/SPEC.md`.

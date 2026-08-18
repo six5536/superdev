@@ -13,7 +13,7 @@ itself — workspace layout, launcher packaging, CI — is left to the user.
 The concrete want: a "Rust with npm deployment" template of this repo's
 own shape, so `superdev init` can seed a new repo that builds, tests and
 releases the way this one does. The skill-overrides spec
-([spec](2026-08-18-workflows-skill-overrides-design.md)) scoped itself to
+([spec](S006-workflows-skill-overrides-design.md)) scoped itself to
 skills but chose the kind-scoped assets layout so future artefact kinds
 get sibling directories; this is the first such kind.
 

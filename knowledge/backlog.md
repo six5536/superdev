@@ -12,7 +12,7 @@ status: draft
   AGENTS.md: teach agents when and how to record durable learnings in the
   bundle mid-task — concept placement, links, sources. Judged a good idea
   during the skill-pack design
-  ([spec](specs/2026-08-12-skill-pack-design.md)) and deferred to the
+  ([spec](specs/S003-skill-pack-design.md)) and deferred to the
   knowledge-upkeep sub-project.
 
 - **Template pre-filled knowledge skeletons.** A project template fixes
@@ -21,7 +21,7 @@ status: draft
   parts of the `technology-stack` and `architecture` skeletons instead of
   leaving them TBD, shrinking `aokf-bootstrap`'s interview to the genuinely
   human questions. Raised while designing the bootstrap interview phase
-  ([spec](specs/2026-08-18-knowledge-owned-skills-design.md)).
+  ([spec](specs/S008-knowledge-owned-skills-design.md)).
 
 - **Comment-preserving manifest stamping.** `sync` rewrites `config.toml`
   through the whole-file `Manifest::save` when it stamps the blueprint
@@ -29,7 +29,7 @@ status: draft
   did, now implicit in every post-upgrade sync. A targeted `toml_edit` edit
   of the one key would keep a hand-editable file's comments. Raised in the
   blueprint-migrations final review
-  ([spec](specs/2026-08-12-blueprint-migrations-design.md)).
+  ([spec](specs/S004-blueprint-migrations-design.md)).
 
 # Decided against
 

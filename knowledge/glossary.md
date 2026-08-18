@@ -37,7 +37,7 @@ status: stable
   binary that `init` seeds a repo from, token-substituted and disjoint from
   every capability's files. `config.toml` records the name and token values
   as provenance; `sync` never revisits the files. `rust-npm` is the first —
-  see the [spec](specs/2026-08-18-project-templates-design.md).
+  see the [spec](specs/S007-project-templates-design.md).
 - **Skill pack** — the three generic skills the `skills` capability ships as
   owned files under `.claude/skills/`, embedded in the binary and versioned
   with it. Claude Code loads them from there natively, so there is nothing to
@@ -59,7 +59,7 @@ status: stable
 - **Harvest** — the move `aokf-bootstrap` performs: relocate a durable fact from
   stranded prose (or an opted-in code comment) into the bundle, leaving a
   one-line summary and a link behind in the source. See the
-  [spec](specs/2026-08-18-knowledge-owned-skills-design.md).
+  [spec](specs/S008-knowledge-owned-skills-design.md).
 - **Claim** — a typed lock entry a component declares it owns: a file, a
   `.mise.toml` pin, or a managed JSON key. The orphan pass subtracts the live
   claims from the lock, which is how a migration is derived.

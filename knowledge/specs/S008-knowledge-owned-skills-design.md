@@ -22,7 +22,7 @@ Two pressures, one owner:
 
 Both resolve the same way the skill-overrides spec resolved provider
 content: the capability that owns the domain carries the machinery
-([spec](2026-08-18-workflows-skill-overrides-design.md)).
+([spec](S006-workflows-skill-overrides-design.md)).
 
 # Decision
 

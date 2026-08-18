@@ -27,7 +27,7 @@ Code plugin install on their machine.
 This also makes provider selection real. Today `components::enabled` maps
 each capability to one hardcoded component and ignores the manifest's
 `provider` field entirely — the [blueprint
-engine](2026-08-11-cli-core-blueprint-engine-design.md)'s
+engine](S001-cli-core-blueprint-engine-design.md)'s
 capability-to-provider map exists only in prose.
 
 # Registry-backed provider selection
@@ -95,7 +95,7 @@ files loses nothing.
   attributed files, without hardcoding the upstream skill list. Upgrades
   are then self-cleaning: a skill the next release drops becomes an
   unclaimed lock entry and the
-  [orphan pass](2026-08-12-blueprint-migrations-design.md) sweeps it, and a
+  [orphan pass](S004-blueprint-migrations-design.md) sweeps it, and a
   provider switch sweeps the whole set.
 - **User edits.** Same rules as the skill pack: owned files are overwritten
   with backup and a note. `[workflows]` gains the same `custom = [...]`
@@ -159,7 +159,7 @@ and two variants in one picker is noise. No removal code — the next sync
 finds the unclaimed lock entry and the orphan pass sweeps it, or releases
 it with a report where the user had edited it.
 
-The [skill pack](2026-08-12-skill-pack-design.md)'s custom-list validation
+The [skill pack](S003-skill-pack-design.md)'s custom-list validation
 softens with it: a `[skills] custom` name that is not in the pack becomes
 the report line
 `skills: custom names unknown skill '<name>' — no effect` instead of a

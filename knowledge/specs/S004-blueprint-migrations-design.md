@@ -28,9 +28,9 @@ is invisible unless `CLAUDE.md` imports it.
 # Sub-project decomposition
 
 The remaining work after the [blueprint
-engine](2026-08-11-cli-core-blueprint-engine-design.md), the [AOKF MCP
-server](2026-08-11-aokf-mcp-server-design.md) and the [skill
-pack](2026-08-12-skill-pack-design.md) splits three ways:
+engine](S001-cli-core-blueprint-engine-design.md), the [AOKF MCP
+server](S002-aokf-mcp-server-design.md) and the [skill
+pack](S003-skill-pack-design.md) splits three ways:
 
 4. **Blueprint migrations** — this spec: pruning what the blueprint dropped,
    and the entry-point fix.
@@ -87,7 +87,7 @@ For each lock entry no live claim covers:
   overwrite, journalled so a later failure restores it.
 - **Modified** — the user's work under superdev's old name. Left exactly as
   it is, dropped from the lock, and reported once. This is the
-  [skill pack](2026-08-12-skill-pack-design.md)'s custom rule again:
+  [skill pack](S003-skill-pack-design.md)'s custom rule again:
   superdev takes back only what it wrote.
 - **Already gone** — leaves the lock silently.
 - **Unreadable, or now a directory** — fails loudly, as everywhere else the
