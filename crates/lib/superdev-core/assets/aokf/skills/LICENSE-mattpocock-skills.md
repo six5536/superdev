@@ -10,6 +10,7 @@ Skills in this directory not on this list are superdev's own.
 - grilling
 - implement
 - to-plan (derived from upstream to-tickets)
+- tdd
 - to-spec
 
 MIT licence of the original work:
