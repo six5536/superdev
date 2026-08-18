@@ -149,14 +149,14 @@ pub fn plan_repo(
     let mut planned = Vec::new();
     planned.extend(repo_entry(root, manifest)?);
     planned.extend(engine::plan(&components, &ctx)?);
-    let claims_by_capability: Vec<(Capability, Vec<Claim>)> = components
+    let claims_by_component: Vec<(Capability, String, Vec<Claim>)> = components
         .iter()
-        .map(|c| (c.capability(), c.owned(&ctx)))
+        .map(|c| (c.capability(), c.provider().to_string(), c.owned(&ctx)))
         .collect();
-    claim_collision(&claims_by_capability)?;
-    let mut claims: Vec<Claim> = claims_by_capability
+    claim_collision(&claims_by_component)?;
+    let mut claims: Vec<Claim> = claims_by_component
         .into_iter()
-        .flat_map(|(_, claims)| claims)
+        .flat_map(|(_, _, claims)| claims)
         .collect();
     // The aggregator is repo-level: no component claims it, and without a
     // live claim its lock entry would read as an orphan every run.
@@ -222,6 +222,17 @@ pub fn apply_repo(
         lock.components.remove(&name);
         lock_changed = true;
     }
+    // A pack removed from a many slot goes the same way as a disabled
+    // capability: its record leaves with its files.
+    for (name, records) in lock.components.iter_mut() {
+        let Some(capability) = Capability::parse(name) else {
+            continue;
+        };
+        let before = records.len();
+        records.retain(|r| manifest.config_of(capability, &r.provider).is_some());
+        lock_changed |= records.len() != before;
+    }
+    lock.components.retain(|_, records| !records.is_empty());
     if planned.iter().all(|p| p.actions.is_empty()) {
         if lock_changed {
             lock.save(root)?;
@@ -253,46 +264,58 @@ pub fn adopt_existing(root: &Path, manifest: &mut Manifest) -> Vec<String> {
 
 /// The pin for the provider the manifest names, falling back to the default
 /// entry when the capability is not enabled or names a provider the registry
-/// lacks. None means the version floats.
+/// lacks. None means the version floats. Callers pass single slots only, so
+/// the first entry is the whole set; a many slot has no one selected pin.
 pub fn selected_pin(manifest: &Manifest, capability: Capability) -> Option<Pinned> {
     manifest
-        .capabilities
-        .get(capability.as_str())
+        .configs(capability)
+        .first()
         .and_then(|c| registry::entry_for(capability, &c.provider))
         .unwrap_or_else(|| registry::default_entry(capability))
         .version
 }
 
-/// The registry version for the provider the manifest names, when both exist.
-pub fn registry_version(manifest: &Manifest, capability: Capability) -> Option<String> {
-    let config = manifest.capabilities.get(capability.as_str())?;
-    registry::entry_for(capability, &config.provider)?
+/// The registry version for `provider` in `capability`, when the registry
+/// carries that pair.
+pub fn registry_version_of(capability: Capability, provider: &str) -> Option<String> {
+    registry::entry_for(capability, provider)?
         .version
         .map(|p| p.version.to_string())
 }
 
-/// Refuse when two capabilities claim the same lock key. Deliberate
-/// overrides are intra-component, so a cross-component collision is always
-/// an accident — silently picking a winner would oscillate across syncs.
-/// The message carries the way out.
-fn claim_collision(claims_by_capability: &[(Capability, Vec<Claim>)]) -> Result<()> {
-    let mut seen: std::collections::BTreeMap<String, Capability> =
+/// Refuse when two enabled components claim the same lock key — across
+/// capabilities or between two packs in one many slot. Deliberate overrides
+/// are intra-component, so a cross-component collision is always an
+/// accident — silently picking a winner would oscillate across syncs. The
+/// message carries the way out; providers are named only when the
+/// capability alone cannot tell the two sides apart.
+fn claim_collision(claims_by_component: &[(Capability, String, Vec<Claim>)]) -> Result<()> {
+    let mut seen: std::collections::BTreeMap<String, (Capability, String)> =
         std::collections::BTreeMap::new();
-    for (capability, claims) in claims_by_capability {
+    for (capability, provider, claims) in claims_by_component {
         for claim in claims {
             let key = claim.lock_key();
-            if let Some(first) = seen.get(&key)
-                && first != capability
+            if let Some((first_cap, first_provider)) = seen.get(&key)
+                && !(first_cap == capability && first_provider == provider)
             {
+                let (first, second) = if first_cap == capability {
+                    (
+                        format!("{} ({first_provider})", first_cap.as_str()),
+                        format!("{} ({provider})", capability.as_str()),
+                    )
+                } else {
+                    (
+                        first_cap.as_str().to_string(),
+                        capability.as_str().to_string(),
+                    )
+                };
                 return Err(Error::Manifest {
                     message: format!(
-                        "{} and {} both claim {key} — add its skill to one side's custom list, or upgrade superdev",
-                        first.as_str(),
-                        capability.as_str()
+                        "{first} and {second} both claim {key} — add its skill to one side's custom list, or upgrade superdev",
                     ),
                 });
             }
-            seen.insert(key, *capability);
+            seen.insert(key, (*capability, provider.clone()));
         }
     }
     Ok(())
@@ -338,16 +361,10 @@ fn aggregator_content(manifest: &Manifest) -> String {
          @coding.md\n\
          @prose.md\n",
     );
-    if manifest
-        .capabilities
-        .contains_key(Capability::Knowledge.as_str())
-    {
+    if manifest.enabled(Capability::Knowledge) {
         out.push_str("@aokf.md\n");
     }
-    if manifest
-        .capabilities
-        .contains_key(Capability::CodeIndex.as_str())
-    {
+    if manifest.enabled(Capability::CodeIndex) {
         out.push_str("@codegraph.md\n");
     }
     out.push_str("</superdev-system>\n");
@@ -368,10 +385,7 @@ fn read_or_empty(path: std::path::PathBuf) -> Result<String> {
 fn repo_entry(root: &Path, manifest: &Manifest) -> Result<Option<Planned>> {
     let gitignore = read_or_empty(root.join(".gitignore"))?;
     let mut wanted = vec![(".superdev/cache/".to_string(), "ignore machine state")];
-    if manifest
-        .capabilities
-        .contains_key(Capability::CodeIndex.as_str())
-    {
+    if manifest.enabled(Capability::CodeIndex) {
         wanted.push((format!("{CODEGRAPH_INDEX_DIR}/"), "ignore the code index"));
     }
     let mut actions: Vec<Action> = wanted
@@ -431,17 +445,18 @@ fn prune_custom(manifest: &Manifest, lock: &mut Lock) -> bool {
     // Name-guarded per capability: two capabilities ship into
     // `.claude/skills/`, so an unknown name in one's list must not release
     // the other's file.
-    for (capability, shipped) in [
+    for (capability, provider, shipped) in [
         (
             Capability::Skills,
+            "superdev-skills",
             skillpack::SKILLS
                 .iter()
                 .map(|(name, _)| *name)
                 .collect::<Vec<_>>(),
         ),
-        (Capability::Knowledge, aokf::skill_names().collect()),
+        (Capability::Knowledge, "aokf", aokf::skill_names().collect()),
     ] {
-        let Some(config) = manifest.capabilities.get(capability.as_str()) else {
+        let Some(config) = manifest.config_of(capability, provider) else {
             continue;
         };
         for name in &config.custom {
@@ -470,17 +485,18 @@ fn prune_custom(manifest: &Manifest, lock: &mut Lock) -> bool {
 /// that names no shipped skill, since marking it custom has no effect.
 fn custom_lines(manifest: &Manifest) -> Vec<String> {
     let mut lines = Vec::new();
-    for (capability, shipped) in [
+    for (capability, provider, shipped) in [
         (
             Capability::Skills,
+            "superdev-skills",
             skillpack::SKILLS
                 .iter()
                 .map(|(name, _)| *name)
                 .collect::<Vec<_>>(),
         ),
-        (Capability::Knowledge, aokf::skill_names().collect()),
+        (Capability::Knowledge, "aokf", aokf::skill_names().collect()),
     ] {
-        let Some(config) = manifest.capabilities.get(capability.as_str()) else {
+        let Some(config) = manifest.config_of(capability, provider) else {
             continue;
         };
         let cap = capability.as_str();
@@ -495,39 +511,57 @@ fn custom_lines(manifest: &Manifest) -> Vec<String> {
     lines
 }
 
-/// One line per enabled capability pinned away from this binary's registry.
+/// One line per enabled entry pinned away from this binary's registry. The
+/// provider is named only when the slot holds more than one entry — a
+/// single-entry line reads as before.
 fn behind_pins(manifest: &Manifest) -> Vec<String> {
     let mut lines = Vec::new();
     for capability in Capability::ALL {
-        // Every registry-pinned version is locked to the default, so stale
-        // means mismatched — there is no is-it-older question to ask.
-        let Some((pinned, default)) = pin_mismatch(manifest, capability) else {
-            continue;
-        };
-        lines.push(format!(
-            "{}: pinned {pinned}, registry has {default} — run `superdev update`",
-            capability.as_str()
-        ));
+        let many = manifest.configs(capability).len() > 1;
+        for (provider, pinned, default) in pin_mismatches(manifest, capability) {
+            let label = if many {
+                format!("{} ({provider})", capability.as_str())
+            } else {
+                capability.as_str().to_string()
+            };
+            lines.push(format!(
+                "{label}: pinned {pinned}, registry has {default} — run `superdev update`"
+            ));
+        }
     }
     lines
 }
 
-/// A registry-locked capability's pin and this binary's default, when the two
-/// differ. Only the default has provenance — a checksum baked in beside it,
-/// or the content itself — so any other pin, newer included, is one superdev
-/// cannot install.
-fn pin_mismatch(manifest: &Manifest, capability: Capability) -> Option<(String, String)> {
-    let config = manifest.capabilities.get(capability.as_str())?;
-    let default = registry_version(manifest, capability)?;
-    let pinned = config.version.clone();
-    (pinned.as_deref() != Some(default.as_str()))
-        .then(|| (pinned.unwrap_or_else(|| "(unset)".into()), default))
+/// Per entry: the provider, its pin and this binary's default, for every
+/// registry-locked entry pinned off that default. Every registry-pinned
+/// version is locked to the default, so stale means mismatched — there is no
+/// is-it-older question to ask; only the default has provenance, so any
+/// other pin, newer included, is one superdev cannot install.
+fn pin_mismatches(manifest: &Manifest, capability: Capability) -> Vec<(String, String, String)> {
+    manifest
+        .configs(capability)
+        .iter()
+        .filter_map(|config| {
+            let default = registry_version_of(capability, &config.provider)?;
+            let pinned = config.version.clone();
+            (pinned.as_deref() != Some(default.as_str())).then(|| {
+                (
+                    config.provider.clone(),
+                    pinned.unwrap_or_else(|| "(unset)".into()),
+                    default,
+                )
+            })
+        })
+        .collect()
 }
 
-/// The first registry-locked capability pinned off this binary's default.
+/// The first registry-locked entry pinned off this binary's default.
 fn locked_pin_mismatch(manifest: &Manifest) -> Option<(Capability, String, String)> {
     Capability::ALL.into_iter().find_map(|capability| {
-        pin_mismatch(manifest, capability).map(|(pinned, default)| (capability, pinned, default))
+        pin_mismatches(manifest, capability)
+            .into_iter()
+            .next()
+            .map(|(_, pinned, default)| (capability, pinned, default))
     })
 }
 
@@ -537,13 +571,12 @@ fn locked_pin_mismatch(manifest: &Manifest) -> Option<(Capability, String, Strin
 fn plannable(manifest: &Manifest) -> Manifest {
     let mut plannable = manifest.clone();
     for capability in Capability::ALL {
-        // No entry means an unknown provider; leave the pin and let the
-        // resolution error say so.
-        let Some(version) = registry_version(manifest, capability) else {
-            continue;
-        };
-        if let Some(config) = plannable.capabilities.get_mut(capability.as_str()) {
-            config.version = Some(version);
+        for config in plannable.configs_mut(capability) {
+            // No entry means an unknown provider; leave the pin and let the
+            // resolution error say so.
+            if let Some(version) = registry_version_of(capability, &config.provider) {
+                config.version = Some(version);
+            }
         }
     }
     plannable
@@ -590,11 +623,7 @@ mod tests {
     }
 
     fn pin(manifest: &mut Manifest, capability: Capability, version: Option<&str>) {
-        manifest
-            .capabilities
-            .get_mut(capability.as_str())
-            .unwrap()
-            .version = version.map(str::to_string);
+        manifest.configs_mut(capability)[0].version = version.map(str::to_string);
     }
 
     #[test]
@@ -607,13 +636,14 @@ mod tests {
                 .version
                 .to_string();
             let mut manifest = Manifest::default_for("0.1.0", &[]);
-            assert_eq!(pin_mismatch(&manifest, capability), None);
+            assert!(pin_mismatches(&manifest, capability).is_empty());
             assert!(behind_pins(&manifest).is_empty());
 
             pin(&mut manifest, capability, Some("1.0.0"));
+            let provider = manifest.configs(capability)[0].provider.clone();
             assert_eq!(
-                pin_mismatch(&manifest, capability),
-                Some(("1.0.0".to_string(), default.clone()))
+                pin_mismatches(&manifest, capability),
+                vec![(provider, "1.0.0".to_string(), default.clone())]
             );
             assert_eq!(
                 behind_pins(&manifest),
@@ -624,7 +654,7 @@ mod tests {
 
             // A newer pin is not "behind", but superdev still cannot install it.
             pin(&mut manifest, capability, Some("9.9.9"));
-            assert!(pin_mismatch(&manifest, capability).is_some());
+            assert!(!pin_mismatches(&manifest, capability).is_empty());
             assert_eq!(locked_pin_mismatch(&manifest).unwrap().0, capability);
             pin(&mut manifest, capability, None);
             assert!(behind_pins(&manifest)[0].contains("pinned (unset)"));
@@ -641,8 +671,8 @@ mod tests {
         assert!(locked_pin_mismatch(&plannable).is_none());
         // Pins with no provenance beside them are left exactly as written.
         assert_eq!(
-            plannable.capabilities["knowledge"].version,
-            manifest.capabilities["knowledge"].version
+            plannable.capabilities["knowledge"][0].version,
+            manifest.capabilities["knowledge"][0].version
         );
     }
 
@@ -685,6 +715,49 @@ mod tests {
             .iter()
             .flat_map(|p| p.actions.iter().map(|a| a.describe()))
             .collect()
+    }
+
+    #[test]
+    fn a_pack_dropped_from_the_manifest_loses_its_lock_record() {
+        use crate::lock::LockedComponent;
+
+        let dir = tempfile::tempdir().unwrap();
+        let fake = FakeRunner::new();
+        // The manifest keeps one pack; the lock still records two.
+        let manifest = Manifest::default_for(crate::version(), &[]);
+        let mut lock = Lock::default();
+        lock.components.insert(
+            "skills".into(),
+            vec![
+                LockedComponent {
+                    provider: "superdev-skills".into(),
+                    version: Some(crate::version().to_string()),
+                },
+                LockedComponent {
+                    provider: "another-pack".into(),
+                    version: Some("1.2.0".into()),
+                },
+            ],
+        );
+        let plan = RepoPlan {
+            planned: Vec::new(),
+            orphans: OrphanPlan::default(),
+            behind: Vec::new(),
+            custom: Vec::new(),
+            blueprint: None,
+            lock,
+            lock_changed: false,
+        };
+        assert!(apply_repo(dir.path(), &fake, &manifest, plan).unwrap().ok);
+        let saved = Lock::load(dir.path()).unwrap();
+        let providers: Vec<&str> = saved.components["skills"]
+            .iter()
+            .map(|r| r.provider.as_str())
+            .collect();
+        // The dropped pack's record went; the kept pack's stayed. Its files
+        // go the generic way: claims no longer cover them, so the orphan
+        // pass classifies them like any other orphan.
+        assert_eq!(providers, ["superdev-skills"]);
     }
 
     #[test]
@@ -790,10 +863,12 @@ mod tests {
     fn a_cross_capability_claim_collision_refuses_with_the_way_out() {
         let a = (
             Capability::Skills,
+            "superdev-skills".to_string(),
             vec![Claim::File(".claude/skills/grilling/SKILL.md".into())],
         );
         let b = (
             Capability::Knowledge,
+            "aokf".to_string(),
             vec![Claim::File(".claude/skills/grilling/SKILL.md".into())],
         );
         let err = claim_collision(&[a, b]).unwrap_err().to_string();
@@ -803,20 +878,48 @@ mod tests {
         );
         assert!(err.contains("custom list"), "{err}");
 
-        // The same capability claiming a key twice is not a collision, and
+        // The same component claiming a key twice is not a collision, and
         // distinct keys never are.
         let dup = (
             Capability::Skills,
+            "superdev-skills".to_string(),
             vec![Claim::File("a.txt".into()), Claim::File("a.txt".into())],
         );
-        let other = (Capability::Knowledge, vec![Claim::File("b.txt".into())]);
+        let other = (
+            Capability::Knowledge,
+            "aokf".to_string(),
+            vec![Claim::File("b.txt".into())],
+        );
         assert!(claim_collision(&[dup, other]).is_ok());
+    }
+
+    #[test]
+    fn two_packs_in_one_slot_colliding_name_both_providers() {
+        let a = (
+            Capability::Skills,
+            "superdev-skills".to_string(),
+            vec![Claim::File(".claude/skills/humanise/SKILL.md".into())],
+        );
+        let b = (
+            Capability::Skills,
+            "another-pack".to_string(),
+            vec![Claim::File(".claude/skills/humanise/SKILL.md".into())],
+        );
+        let err = claim_collision(&[a, b]).unwrap_err().to_string();
+        assert!(
+            err.contains(
+                "skills (superdev-skills) and skills (another-pack) both claim \
+                 .claude/skills/humanise/SKILL.md"
+            ),
+            "{err}"
+        );
+        assert!(err.contains("custom list"), "{err}");
     }
 
     #[test]
     fn custom_skills_are_pruned_from_the_lock_and_reported() {
         let mut manifest = Manifest::default_for("0.1.0", &[]);
-        manifest.capabilities.get_mut("skills").unwrap().custom =
+        manifest.capabilities.get_mut("skills").unwrap()[0].custom =
             vec!["humanise".into(), "grill-me".into()];
         let mut lock = Lock::default();
         lock.files
@@ -848,7 +951,7 @@ mod tests {
     #[test]
     fn knowledge_custom_entries_release_the_whole_directory() {
         let mut manifest = Manifest::default_for("0.1.0", &[]);
-        manifest.capabilities.get_mut("knowledge").unwrap().custom = vec!["tdd".into()];
+        manifest.capabilities.get_mut("knowledge").unwrap()[0].custom = vec!["tdd".into()];
         let mut lock = Lock::default();
         // A skill-pack file, untouched by the knowledge custom list.
         lock.files
@@ -872,7 +975,7 @@ mod tests {
     #[test]
     fn knowledge_custom_lines_cover_every_carried_skill() {
         let mut manifest = Manifest::default_for("0.1.0", &[]);
-        manifest.capabilities.get_mut("knowledge").unwrap().custom =
+        manifest.capabilities.get_mut("knowledge").unwrap()[0].custom =
             vec!["tdd".into(), "flying".into()];
         let lines = custom_lines(&manifest);
         assert!(lines.contains(&"knowledge: tdd custom, unmanaged".to_string()));
@@ -883,7 +986,7 @@ mod tests {
         );
         // Every carried skill is a known custom name.
         let mut manifest = Manifest::default_for("0.1.0", &[]);
-        manifest.capabilities.get_mut("knowledge").unwrap().custom =
+        manifest.capabilities.get_mut("knowledge").unwrap()[0].custom =
             aokf::skill_names().map(String::from).collect();
         for line in custom_lines(&manifest) {
             assert!(line.ends_with("custom, unmanaged"), "{line}");

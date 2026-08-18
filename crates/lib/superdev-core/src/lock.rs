@@ -22,12 +22,64 @@ pub struct LockedComponent {
     pub version: Option<String>,
 }
 
+/// A capability's lock shape as written: one record table for a single
+/// entry, an array of tables from two up — mirroring the manifest so the
+/// single case keeps its `[components.<name>]` shape.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(untagged)]
+enum WrittenRecords {
+    /// A single `[components.<name>]` table.
+    One(LockedComponent),
+    /// `[[components.<name>]]` entries, one per provider.
+    Many(Vec<LockedComponent>),
+}
+
+/// (De)serialise the components map through [`WrittenRecords`].
+mod records_serde {
+    use super::{BTreeMap, LockedComponent, WrittenRecords};
+    use serde::{Deserialize, Deserializer, Serialize, Serializer};
+
+    pub fn serialize<S: Serializer>(
+        map: &BTreeMap<String, Vec<LockedComponent>>,
+        serializer: S,
+    ) -> Result<S::Ok, S::Error> {
+        let written: BTreeMap<&String, WrittenRecords> = map
+            .iter()
+            .map(|(name, records)| {
+                let entry = match records.as_slice() {
+                    [only] => WrittenRecords::One(only.clone()),
+                    _ => WrittenRecords::Many(records.clone()),
+                };
+                (name, entry)
+            })
+            .collect();
+        written.serialize(serializer)
+    }
+
+    pub fn deserialize<'de, D: Deserializer<'de>>(
+        deserializer: D,
+    ) -> Result<BTreeMap<String, Vec<LockedComponent>>, D::Error> {
+        let written: BTreeMap<String, WrittenRecords> = Deserialize::deserialize(deserializer)?;
+        Ok(written
+            .into_iter()
+            .map(|(name, entry)| {
+                let records = match entry {
+                    WrittenRecords::One(record) => vec![record],
+                    WrittenRecords::Many(records) => records,
+                };
+                (name, records)
+            })
+            .collect())
+    }
+}
+
 /// Last-applied state: how `status` tells deliberate user change from drift.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Lock {
-    /// Per-capability applied provider/version.
-    #[serde(default)]
-    pub components: BTreeMap<String, LockedComponent>,
+    /// Applied provider/version records, keyed by capability — one per
+    /// enabled (capability, provider) entry.
+    #[serde(default, with = "records_serde")]
+    pub components: BTreeMap<String, Vec<LockedComponent>>,
     /// sha256 of superdev-owned content, keyed by repo-relative path
     /// (`.mise.toml:<tool>` for managed mise keys).
     #[serde(default)]
@@ -97,14 +149,44 @@ mod tests {
         let mut lock = Lock::default();
         lock.components.insert(
             "code-index".into(),
-            LockedComponent {
+            vec![LockedComponent {
                 provider: "codegraph".into(),
                 version: Some("1.5.0".into()),
-            },
+            }],
         );
         lock.files
             .insert(".agents/aokf/SPEC.md".into(), sha256_hex(b"spec"));
         lock.save(dir.path()).unwrap();
+        assert_eq!(Lock::load(dir.path()).unwrap(), lock);
+    }
+
+    #[test]
+    fn a_many_slot_locks_one_record_per_provider() {
+        let dir = tempfile::tempdir().unwrap();
+        let mut lock = Lock::default();
+        lock.components.insert(
+            "skills".into(),
+            vec![
+                LockedComponent {
+                    provider: "superdev-skills".into(),
+                    version: Some("0.1.0".into()),
+                },
+                LockedComponent {
+                    provider: "another-pack".into(),
+                    version: Some("1.2.0".into()),
+                },
+            ],
+        );
+        lock.save(dir.path()).unwrap();
+        let text = std::fs::read_to_string(dir.path().join(LOCK_PATH)).unwrap();
+        assert!(text.contains("[[components.skills]]"), "{text}");
+        assert_eq!(Lock::load(dir.path()).unwrap(), lock);
+        // One record keeps the single-table shape old locks already carry.
+        lock.components.get_mut("skills").unwrap().pop();
+        lock.save(dir.path()).unwrap();
+        let text = std::fs::read_to_string(dir.path().join(LOCK_PATH)).unwrap();
+        assert!(text.contains("[components.skills]"), "{text}");
+        assert!(!text.contains("[[components.skills]]"), "{text}");
         assert_eq!(Lock::load(dir.path()).unwrap(), lock);
     }
 
@@ -123,7 +205,7 @@ version = "0.1.0"
         std::fs::create_dir(dir.path().join(".superdev")).unwrap();
         std::fs::write(dir.path().join(LOCK_PATH), toml).unwrap();
         let lock = Lock::load(dir.path()).unwrap();
-        assert_eq!(lock.components["skills"].provider, "superdev-skills");
+        assert_eq!(lock.components["skills"][0].provider, "superdev-skills");
         assert_eq!(lock.files[".mise.toml:http:codegraph"], "bbbb");
         assert_eq!(lock.files.len(), 3);
         assert!(lock.owners.is_empty());

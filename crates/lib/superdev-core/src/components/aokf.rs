@@ -227,7 +227,13 @@ const HOOK_ELEMENT: &str = r#"{"matcher":"Edit|Write","hooks":[{"type":"command"
 /// Release, at adoption time, every aokf skill the repo already has under
 /// its own name and with its own content. Returns the lines to print.
 pub(crate) fn adopt_existing(root: &Path, manifest: &mut Manifest) -> Vec<String> {
-    super::skills::adopt_existing(root, Capability::Knowledge, &skill_identities(), manifest)
+    super::skills::adopt_existing(
+        root,
+        Capability::Knowledge,
+        "aokf",
+        &skill_identities(),
+        manifest,
+    )
 }
 
 /// The native AOKF provider.
@@ -275,7 +281,7 @@ fn items(ctx: &Ctx<'_>) -> Vec<ManagedItem> {
         value_json: MCP_VALUE.into(),
     });
     let custom = ctx
-        .config(Capability::Knowledge)
+        .config(Capability::Knowledge, "aokf")
         .map(|c| c.custom.as_slice())
         .unwrap_or_default();
     items.extend(super::skills::skill_dir_items(
@@ -372,7 +378,7 @@ mod tests {
         use crate::component::Claim;
         let dir = tempfile::tempdir().unwrap();
         let mut manifest = Manifest::default_for("0.1.0", &[]);
-        manifest.capabilities.get_mut("knowledge").unwrap().custom =
+        manifest.capabilities.get_mut("knowledge").unwrap()[0].custom =
             vec!["aokf-maintain".into(), "tdd".into()];
         let lock = Lock::default();
         let fake = FakeRunner::new();
@@ -423,7 +429,10 @@ mod tests {
         std::fs::write(path, "# Ours, thanks\n").unwrap();
         let mut manifest = Manifest::default_for("0.1.0", &[]);
         let lines = adopt_existing(dir.path(), &mut manifest);
-        assert_eq!(manifest.capabilities["knowledge"].custom, ["aokf-maintain"]);
+        assert_eq!(
+            manifest.capabilities["knowledge"][0].custom,
+            ["aokf-maintain"]
+        );
         assert_eq!(
             lines,
             vec![format!(

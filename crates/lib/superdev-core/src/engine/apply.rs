@@ -266,16 +266,20 @@ impl<'a> Session<'a> {
         }
         self.written_keys.extend(keys);
         if let Some(capability) = entry.capability {
-            lock.components.insert(
-                capability.as_str().to_string(),
-                LockedComponent {
-                    provider: entry.provider.clone(),
-                    version: manifest
-                        .capabilities
-                        .get(capability.as_str())
-                        .and_then(|c| c.version.clone()),
-                },
-            );
+            let record = LockedComponent {
+                provider: entry.provider.clone(),
+                version: manifest
+                    .config_of(capability, &entry.provider)
+                    .and_then(|c| c.version.clone()),
+            };
+            let records = lock
+                .components
+                .entry(capability.as_str().to_string())
+                .or_default();
+            match records.iter_mut().find(|r| r.provider == entry.provider) {
+                Some(existing) => *existing = record,
+                None => records.push(record),
+            }
         }
         true
     }
@@ -546,7 +550,34 @@ mod tests {
             "content"
         );
         assert!(lock.files.contains_key("a/b.txt"));
-        assert_eq!(lock.components["knowledge"].provider, "aokf");
+        assert_eq!(lock.components["knowledge"][0].provider, "aokf");
+    }
+
+    #[test]
+    fn each_pack_in_a_many_slot_gets_its_own_lock_record() {
+        let dir = tempfile::tempdir().unwrap();
+        let fake = FakeRunner::new();
+        let manifest = Manifest::default_for("0.1.0", &[]);
+        let mut lock = Lock::default();
+        let entry = |provider: &str, path: &str| Planned {
+            capability: Some(crate::capability::Capability::Skills),
+            provider: provider.into(),
+            actions: vec![write_owned(path)],
+        };
+        let planned = vec![
+            entry("superdev-skills", "a.txt"),
+            entry("another-pack", "b.txt"),
+        ];
+        assert!(apply(dir.path(), &fake, &manifest, &planned, &mut lock).ok);
+        let providers: Vec<&str> = lock.components["skills"]
+            .iter()
+            .map(|r| r.provider.as_str())
+            .collect();
+        assert_eq!(providers, ["superdev-skills", "another-pack"]);
+        // A re-apply updates the existing record instead of duplicating it.
+        let planned = vec![entry("superdev-skills", "a.txt")];
+        assert!(apply(dir.path(), &fake, &manifest, &planned, &mut lock).ok);
+        assert_eq!(lock.components["skills"].len(), 2);
     }
 
     #[test]
@@ -994,7 +1025,7 @@ mod tests {
 
         // A component that fails to plan aborts the whole plan.
         let mut broken = Manifest::default_for("0.1.0", &[]);
-        broken.capabilities.get_mut("code-index").unwrap().version = Some("9.9.9".into());
+        broken.capabilities.get_mut("code-index").unwrap()[0].version = Some("9.9.9".into());
         let ctx = crate::component::Ctx {
             root: dir.path(),
             runner: &fake,

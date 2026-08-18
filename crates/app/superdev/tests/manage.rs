@@ -282,6 +282,76 @@ fn sync_installs_committed_pins_on_a_fresh_clone() {
 /// swaps same-named skills to knowledge ownership and sweeps the dropped
 /// upstream files.
 #[test]
+fn skills_entries_are_a_set_with_guided_refusals() {
+    let sb = Sandbox::new();
+    sb.superdev().arg("init").assert().success();
+    let config = sb.read(".superdev/config.toml");
+    let without_skills = remove_table(&config, "[skills]");
+
+    // The single [skills] table and a one-entry [[skills]] array are the
+    // same manifest; status accepts both identically.
+    sb.write(
+        ".superdev/config.toml",
+        &format!(
+            "{without_skills}\n[[skills]]\nprovider = \"superdev-skills\"\nversion = \"{}\"\n",
+            env!("CARGO_PKG_VERSION")
+        ),
+    );
+    let accepted = run(sb.superdev().arg("status"));
+    assert_ne!(accepted.code, 2, "stderr: {}", accepted.stderr);
+
+    // A second entry naming an unregistered pack gets the provider listing.
+    sb.write(
+        ".superdev/config.toml",
+        &format!(
+            "{without_skills}\n[[skills]]\nprovider = \"superdev-skills\"\nversion = \"{}\"\n\n[[skills]]\nprovider = \"another-pack\"\n",
+            env!("CARGO_PKG_VERSION")
+        ),
+    );
+    let unknown = run(sb.superdev().arg("status"));
+    assert_eq!(unknown.code, 2, "stdout: {}", unknown.stdout);
+    assert!(
+        unknown
+            .stderr
+            .contains("skills provider must be one of: superdev-skills"),
+        "stderr: {}",
+        unknown.stderr
+    );
+
+    // The same pack twice is refused at load, naming the duplicate.
+    sb.write(
+        ".superdev/config.toml",
+        &format!(
+            "{without_skills}\n[[skills]]\nprovider = \"superdev-skills\"\n\n[[skills]]\nprovider = \"superdev-skills\"\n"
+        ),
+    );
+    let duplicate = run(sb.superdev().arg("status"));
+    assert_eq!(duplicate.code, 2, "stdout: {}", duplicate.stdout);
+    assert!(
+        duplicate
+            .stderr
+            .contains("skills lists provider `superdev-skills` more than once"),
+        "stderr: {}",
+        duplicate.stderr
+    );
+
+    // The array form on an exclusive slot is refused with the way out.
+    sb.write(
+        ".superdev/config.toml",
+        &format!("{config}\n").replace("[knowledge]", "[[knowledge]]"),
+    );
+    let exclusive = run(sb.superdev().arg("status"));
+    assert_eq!(exclusive.code, 2, "stdout: {}", exclusive.stdout);
+    assert!(
+        exclusive
+            .stderr
+            .contains("knowledge holds one provider — use a single [knowledge] table"),
+        "stderr: {}",
+        exclusive.stderr
+    );
+}
+
+#[test]
 fn a_workflows_manifest_errors_and_sync_migrates_after_the_table_goes() {
     let sb = Sandbox::new();
     sb.superdev().arg("init").assert().success();

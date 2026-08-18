@@ -18,26 +18,30 @@ pub const MANAGED_MISE_TOOLS: [&str; 1] = [codegraph::CODEGRAPH_MISE_TOOL];
 /// manifest's `provider` field was recorded but never read.
 pub fn enabled(manifest: &Manifest) -> Result<Vec<Box<dyn Component>>> {
     // Validate first, so `component_for` only ever sees a pair the registry has.
-    for (name, config) in &manifest.capabilities {
+    for (name, configs) in &manifest.capabilities {
         let capability = Capability::parse(name).expect("manifest rejects unknown capabilities");
-        if registry::entry_for(capability, &config.provider).is_none() {
-            return Err(Error::Manifest {
-                message: format!(
-                    "{name} provider must be one of: {}",
-                    registry::providers_for(capability).join(", ")
-                ),
-            });
+        for config in configs {
+            if registry::entry_for(capability, &config.provider).is_none() {
+                return Err(Error::Manifest {
+                    message: format!(
+                        "{name} provider must be one of: {}",
+                        registry::providers_for(capability).join(", ")
+                    ),
+                });
+            }
         }
     }
+    // One component per enabled (capability, provider) entry, in registry
+    // order — a many slot's packs plan independently, side by side.
     let mut components: Vec<Box<dyn Component>> = Vec::new();
     for entry in registry::entries() {
-        let Some(config) = manifest.capabilities.get(entry.capability.as_str()) else {
-            continue;
-        };
-        if config.provider != entry.provider {
-            continue;
+        if manifest
+            .configs(entry.capability)
+            .iter()
+            .any(|c| c.provider == entry.provider)
+        {
+            components.push(component_for(entry.capability, entry.provider));
         }
-        components.push(component_for(entry.capability, entry.provider));
     }
     Ok(components)
 }
@@ -110,7 +114,7 @@ mod tests {
     #[test]
     fn enabled_rejects_an_unknown_provider() {
         let mut manifest = Manifest::default_for("0.1.0", &[]);
-        manifest.capabilities.get_mut("knowledge").unwrap().provider = "flying".into();
+        manifest.capabilities.get_mut("knowledge").unwrap()[0].provider = "flying".into();
         // `err()`, not `unwrap_err()`: the Ok side holds trait objects that
         // cannot be Debug-printed.
         let err = enabled(&manifest).err().unwrap().to_string();
@@ -119,6 +123,28 @@ mod tests {
             "{err}"
         );
         assert!(enabled(&Manifest::default_for("0.1.0", &[])).is_ok());
+    }
+
+    #[test]
+    fn every_skills_entry_is_validated_and_resolved() {
+        // A second entry naming an unregistered pack is refused with the
+        // guided provider listing, even though the first entry is fine.
+        let mut manifest = Manifest::default_for("0.1.0", &[]);
+        manifest
+            .capabilities
+            .get_mut("skills")
+            .unwrap()
+            .push(crate::manifest::CapabilityConfig {
+                provider: "another-pack".into(),
+                version: None,
+                embeddings: None,
+                custom: Vec::new(),
+            });
+        let err = enabled(&manifest).err().unwrap().to_string();
+        assert!(
+            err.contains("skills provider must be one of: superdev-skills"),
+            "{err}"
+        );
     }
 
     #[test]

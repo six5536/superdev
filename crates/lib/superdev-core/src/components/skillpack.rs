@@ -29,7 +29,13 @@ pub(crate) const SKILLS: [(&str, &str); 3] = [
 /// Release, at adoption time, every pack skill the repo already has under
 /// its own name and with its own content. Returns the lines to print.
 pub(crate) fn adopt_existing(root: &Path, manifest: &mut Manifest) -> Vec<String> {
-    super::skills::adopt_existing(root, Capability::Skills, &SKILLS, manifest)
+    super::skills::adopt_existing(
+        root,
+        Capability::Skills,
+        "superdev-skills",
+        &SKILLS,
+        manifest,
+    )
 }
 
 /// The superdev skill pack provider.
@@ -39,7 +45,7 @@ pub struct SkillPack;
 /// file.
 fn items(ctx: &Ctx<'_>) -> Vec<ManagedItem> {
     let custom = ctx
-        .config(Capability::Skills)
+        .config(Capability::Skills, "superdev-skills")
         .map(|c| c.custom.as_slice())
         .unwrap_or_default();
     super::skills::skill_items(&SKILLS, custom)
@@ -159,7 +165,7 @@ mod tests {
         )
         .unwrap();
         let (mut manifest, lock) = ctx_parts();
-        manifest.capabilities.get_mut("skills").unwrap().custom = vec!["humanise".into()];
+        manifest.capabilities.get_mut("skills").unwrap()[0].custom = vec!["humanise".into()];
         let fake = FakeRunner::new();
         let ctx = Ctx {
             root: dir.path(),
@@ -175,7 +181,7 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         converge(dir.path());
         let (mut manifest, lock) = ctx_parts();
-        manifest.capabilities.get_mut("skills").unwrap().custom = vec!["grill-me".into()];
+        manifest.capabilities.get_mut("skills").unwrap()[0].custom = vec!["grill-me".into()];
         let fake = FakeRunner::new();
         let ctx = Ctx {
             root: dir.path(),
@@ -190,7 +196,7 @@ mod tests {
     fn a_foreign_version_pin_is_rejected() {
         let dir = tempfile::tempdir().unwrap();
         let (mut manifest, lock) = ctx_parts();
-        manifest.capabilities.get_mut("skills").unwrap().version = Some("9.9.9".into());
+        manifest.capabilities.get_mut("skills").unwrap()[0].version = Some("9.9.9".into());
         let fake = FakeRunner::new();
         let ctx = Ctx {
             root: dir.path(),
@@ -206,7 +212,7 @@ mod tests {
         use crate::component::Claim;
         let dir = tempfile::tempdir().unwrap();
         let (mut manifest, lock) = ctx_parts();
-        manifest.capabilities.get_mut("skills").unwrap().custom = vec!["humanise".into()];
+        manifest.capabilities.get_mut("skills").unwrap()[0].custom = vec!["humanise".into()];
         let fake = FakeRunner::new();
         let ctx = Ctx {
             root: dir.path(),
@@ -244,7 +250,7 @@ mod tests {
 
         let mut manifest = Manifest::default_for("0.1.0", &[]);
         let lines = adopt_existing(dir.path(), &mut manifest);
-        assert_eq!(manifest.capabilities["skills"].custom, ["humanise"]);
+        assert_eq!(manifest.capabilities["skills"][0].custom, ["humanise"]);
         assert_eq!(
             lines,
             vec![format!(
@@ -257,7 +263,7 @@ mod tests {
         let empty = tempfile::tempdir().unwrap();
         let mut manifest = Manifest::default_for("0.1.0", &[]);
         assert!(adopt_existing(empty.path(), &mut manifest).is_empty());
-        assert!(manifest.capabilities["skills"].custom.is_empty());
+        assert!(manifest.capabilities["skills"][0].custom.is_empty());
         let mut off = Manifest::default_for("0.1.0", &[crate::capability::Capability::Skills]);
         assert!(adopt_existing(dir.path(), &mut off).is_empty());
     }

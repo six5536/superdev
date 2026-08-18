@@ -39,9 +39,16 @@ when the value changes; `--dry-run` never stamps. `status` prints
 `blueprint <a>, binary <b> — sync will update it` and leaves the exit code
 alone, so a binary upgrade that changes nothing keeps CI green.
 
-`provider` names the implementation filling the slot. Every capability
-currently has one provider; an id the registry does not carry fails with
-`<capability> provider must be one of: …`. A manifest still naming the
+`provider` names the implementation filling the slot. An id the registry
+does not carry fails with `<capability> provider must be one of: …`. Every
+capability except skills holds exactly one provider; skills is a many
+slot — additional packs are written as `[[skills]]` array-of-tables
+entries, one per pack, each with its own `provider`, `version` and
+`custom`. The single `[skills]` table is the one-entry case and keeps its
+shape on rewrites; the array form appears only from two entries up. The
+same pack listed twice, the array form on an exclusive slot, and an empty
+entry list are all refused at load with guided errors
+([spec](specs/S011-skills-cardinality-design.md)). A manifest still naming the
 removed `workflows` capability fails at load with a guided error telling the
 user to delete the table (moving any custom names to `[knowledge]`) — the
 skill set now ships with the knowledge capability, and superpowers users can

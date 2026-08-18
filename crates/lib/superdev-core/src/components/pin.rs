@@ -28,7 +28,9 @@ pub fn require_registry_default(
     let pinned = registry::entry_for(capability, provider)
         .and_then(|e| e.version)
         .expect("caller is a pinned provider");
-    let config = ctx.config(capability).expect("planned only when enabled");
+    let config = ctx
+        .config(capability, provider)
+        .expect("planned only when enabled");
     if config.version.as_deref() != Some(pinned.version) {
         return Err(Error::Manifest {
             message: refusal_message(capability, pinned),
@@ -129,7 +131,7 @@ mod tests {
         .unwrap();
         assert_eq!(default, "1.5.0");
 
-        manifest.capabilities.get_mut("code-index").unwrap().version = Some("9.9.9".into());
+        manifest.capabilities.get_mut("code-index").unwrap()[0].version = Some("9.9.9".into());
         let err = require_registry_default(
             &ctx(dir.path(), &fake, &manifest, &lock),
             Capability::CodeIndex,
@@ -143,7 +145,7 @@ mod tests {
         );
         assert!(err.contains("run `superdev update code-index`"), "{err}");
 
-        manifest.capabilities.get_mut("code-index").unwrap().version = None;
+        manifest.capabilities.get_mut("code-index").unwrap()[0].version = None;
         assert!(
             require_registry_default(
                 &ctx(dir.path(), &fake, &manifest, &lock),

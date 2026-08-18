@@ -423,7 +423,7 @@ mod tests {
             "blueprint = \"0.1.0\"\n[knowledge]\nprovider = \"aokf\"\n[knowledge.embeddings]\nprovider = \"openai\"\nmodel = \"text-embedding-3-small\"\n",
         ).unwrap();
         assert_eq!(
-            m.capabilities["knowledge"]
+            m.capabilities["knowledge"][0]
                 .embeddings
                 .as_ref()
                 .unwrap()

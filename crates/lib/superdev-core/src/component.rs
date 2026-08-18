@@ -22,9 +22,10 @@ pub struct Ctx<'a> {
 }
 
 impl Ctx<'_> {
-    /// The manifest entry for `capability`, when enabled.
-    pub fn config(&self, capability: Capability) -> Option<&CapabilityConfig> {
-        self.manifest.capabilities.get(capability.as_str())
+    /// The manifest entry `provider` fills in `capability`, when enabled —
+    /// per provider, because a many slot holds one entry per pack.
+    pub fn config(&self, capability: Capability, provider: &str) -> Option<&CapabilityConfig> {
+        self.manifest.config_of(capability, provider)
     }
 }
 
@@ -248,8 +249,9 @@ mod tests {
             manifest: &manifest,
             lock: &lock,
         };
-        assert!(ctx.config(Capability::Skills).is_some());
-        assert!(ctx.config(Capability::CodeIndex).is_none());
+        assert!(ctx.config(Capability::Skills, "superdev-skills").is_some());
+        assert!(ctx.config(Capability::Skills, "other-pack").is_none());
+        assert!(ctx.config(Capability::CodeIndex, "codegraph").is_none());
         assert_eq!(Nop.capability(), Capability::Knowledge);
         assert_eq!(Nop.provider(), "nop");
         assert!(Nop.plan(&ctx).unwrap().is_empty());

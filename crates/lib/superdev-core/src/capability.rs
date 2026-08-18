@@ -1,5 +1,15 @@
 //! capability.rs — the functionality slots superdev manages.
 
+/// How many providers a capability holds at once. Declared here, in the
+/// blueprint, so a manifest cannot turn an exclusive slot plural.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Cardinality {
+    /// One provider, exclusively — alternatives compete for the slot.
+    Single,
+    /// A set of providers, additively — entries are packs, not rivals.
+    Many,
+}
+
 /// A functionality slot in a managed repo. Flags and manifest keys name
 /// capabilities, never the tools behind them.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -38,6 +48,15 @@ impl Capability {
     pub fn parse(s: &str) -> Option<Capability> {
         Capability::ALL.into_iter().find(|c| c.as_str() == s)
     }
+
+    /// How many providers this slot holds. Skill packs are additive, so
+    /// skills is the many slot; everything else is exclusive.
+    pub fn cardinality(self) -> Cardinality {
+        match self {
+            Capability::Skills => Cardinality::Many,
+            _ => Cardinality::Single,
+        }
+    }
 }
 
 #[cfg(test)]
@@ -51,5 +70,17 @@ mod tests {
         }
         assert_eq!(Capability::parse("code-index"), Some(Capability::CodeIndex));
         assert_eq!(Capability::parse("nope"), None);
+    }
+
+    #[test]
+    fn skills_is_the_only_many_slot() {
+        for c in Capability::ALL {
+            let expected = if c == Capability::Skills {
+                Cardinality::Many
+            } else {
+                Cardinality::Single
+            };
+            assert_eq!(c.cardinality(), expected, "{c:?}");
+        }
     }
 }

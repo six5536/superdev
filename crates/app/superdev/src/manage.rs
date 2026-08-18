@@ -112,10 +112,7 @@ pub fn init(root: &Path, args: &InitArgs) -> Result<u8> {
     match pipeline::apply_repo(root, &runner, &manifest, plan) {
         Ok(outcome) if outcome.ok => {
             print_block(&outcome.report)?;
-            if manifest
-                .capabilities
-                .contains_key(Capability::Knowledge.as_str())
-            {
+            if manifest.enabled(Capability::Knowledge) {
                 out(BOOTSTRAP_HINT)?;
             }
             Ok(0)
@@ -218,26 +215,38 @@ pub fn update(root: &Path, target: Option<&str>, provider: Option<&str>) -> Resu
                     ),
                 });
             }
-            let fallback = pipeline::registry_version(&manifest, capability);
-            let config = manifest
-                .capabilities
-                .get_mut(capability.as_str())
-                .ok_or_else(|| Error::Manifest {
+            if !manifest.enabled(capability) {
+                return Err(Error::Manifest {
                     message: format!("`{}` is not enabled", capability.as_str()),
-                })?;
+                });
+            }
             if let Some(id) = provider {
                 let entry = registry::entry_for(capability, id).expect("validated above");
-                config.provider = entry.provider.to_string();
-                config.version = entry.version.map(|p| p.version.to_string());
+                let configs = manifest.configs_mut(capability);
+                // A provider switch replaces the slot's one entry; a slot
+                // holding several packs has no single entry to switch.
+                if configs.len() > 1 {
+                    return Err(Error::Manifest {
+                        message: format!(
+                            "{} holds several packs — edit {CONFIG_PATH} to change them",
+                            capability.as_str()
+                        ),
+                    });
+                }
+                configs[0].provider = entry.provider.to_string();
+                configs[0].version = entry.version.map(|p| p.version.to_string());
             } else {
-                config.version = version.or(fallback);
+                for config in manifest.configs_mut(capability) {
+                    config.version = version
+                        .clone()
+                        .or_else(|| pipeline::registry_version_of(capability, &config.provider));
+                }
             }
         }
         (None, None) => {
             for capability in Capability::ALL {
-                let version = pipeline::registry_version(&manifest, capability);
-                if let Some(config) = manifest.capabilities.get_mut(capability.as_str()) {
-                    config.version = version;
+                for config in manifest.configs_mut(capability) {
+                    config.version = pipeline::registry_version_of(capability, &config.provider);
                 }
             }
         }

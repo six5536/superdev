@@ -223,8 +223,8 @@ fn embeddings(root: &Path) -> Result<Option<EmbeddingsConfig>> {
         return Ok(None);
     }
     Ok(Manifest::load(root)?
-        .capabilities
-        .get(Capability::Knowledge.as_str())
+        .configs(Capability::Knowledge)
+        .first()
         .and_then(|config| config.embeddings.clone()))
 }
 

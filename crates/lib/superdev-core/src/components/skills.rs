@@ -58,10 +58,11 @@ pub(crate) fn skill_items(skills: &[(&str, &str)], custom: &[String]) -> Vec<Man
 pub(crate) fn adopt_existing(
     root: &Path,
     capability: Capability,
+    provider: &str,
     skills: &[(&str, &str)],
     manifest: &mut Manifest,
 ) -> Vec<String> {
-    let Some(config) = manifest.capabilities.get_mut(capability.as_str()) else {
+    let Some(config) = manifest.config_of_mut(capability, provider) else {
         return Vec::new();
     };
     for (name, shipped) in skills {

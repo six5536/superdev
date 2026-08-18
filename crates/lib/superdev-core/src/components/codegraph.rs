@@ -186,7 +186,10 @@ mod tests {
     fn indexed_repo_with_pin_plans_nothing() {
         let dir = tempfile::tempdir().unwrap();
         let manifest = Manifest::default_for("0.1.0", &[]);
-        let version = manifest.capabilities["code-index"].version.clone().unwrap();
+        let version = manifest.capabilities["code-index"][0]
+            .version
+            .clone()
+            .unwrap();
         std::fs::write(
             dir.path().join(".mise.toml"),
             crate::components::mise::set_pin("", CODEGRAPH_MISE_TOOL, &pin_value(&version))
@@ -216,7 +219,7 @@ mod tests {
     fn a_version_off_the_registry_default_is_refused() {
         let dir = tempfile::tempdir().unwrap();
         let mut manifest = Manifest::default_for("0.1.0", &[]);
-        manifest.capabilities.get_mut("code-index").unwrap().version = Some("9.9.9".into());
+        manifest.capabilities.get_mut("code-index").unwrap()[0].version = Some("9.9.9".into());
         let lock = Lock::default();
         let fake = FakeRunner::new();
         let ctx = Ctx {

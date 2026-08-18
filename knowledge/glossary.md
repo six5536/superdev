@@ -12,11 +12,16 @@ status: stable
 - **Capability** — a functionality slot in a managed repo: `knowledge`,
   `code-index`, `frontend`, `skills`. Capability names are what
   users type; see [architectural-rules](architectural-rules.md).
+- **Cardinality** — how many providers a capability holds at once, declared
+  in the blueprint: *single* (one provider, exclusively — alternatives
+  compete for the slot) or *many* (a set of providers, additively). Skills
+  is the many slot; a manifest cannot turn an exclusive slot plural.
 - **Provider** — the tool that fills a capability, e.g. `codegraph` for
   `code-index`. The registry carries one entry per (capability, provider) pair
-  and flags one as the default; the manifest's `provider` field selects among
-  them, so a capability's implementation changes without its user-facing name
-  changing. Every slot currently has exactly one entry.
+  and flags one as the default; the manifest selects among them — one
+  `provider` field for a single slot, one entry per enabled pack for a many
+  slot — so a capability's implementation changes without its user-facing
+  name changing. Every slot currently has exactly one registry entry.
 - **Provenance** — why a pinned version is locked to the registry default:
   the binary carries either the checksum of the fetched artefact or the
   embedded content itself, so a version the binary cannot vouch for is
