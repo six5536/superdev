@@ -13,6 +13,16 @@ publish a version it cannot find a heading for.
 
 ### Added
 
+- Project templates: `init --template rust-npm` (or a prompt, on a TTY)
+  seeds a new repo with a Rust CLI workspace deployed as prebuilt binaries
+  through npm — crates, launcher and platform packages, CI and release
+  workflows, repo docs, and policy configs, all token-substituted with the
+  project's name. Template files are write-once scaffolds: existing files
+  win, and `sync` never touches them. `--template none` and `--name` script
+  the answers; `.superdev/config.toml` records the choice under `[template]`
+- A fuller knowledge seed: `init` now scaffolds a starter concept skeleton
+  (glossary, architecture, testing strategy and the rest) instead of a
+  three-file stub, ready for agents to fill in
 - Project scaffold: CI and release machinery, npm launcher + platform
   packages, cargo workspace, and the AOKF knowledgebase
 - `superdev init`, `status`, `sync` and `update`: set a repo up for

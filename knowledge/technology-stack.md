@@ -27,7 +27,8 @@ set:[^cargo-toml]
   man page generated from the same clap definition); `serde` (derive) for the
   manifest and lock types; `toml_edit` to read them and to edit `.mise.toml`
   in place, preserving the user's layout and comments; `sha2` for the sha256
-  hashes that detect drift in superdev-owned files.
+  hashes that detect drift in superdev-owned files; `dialoguer` for init's
+  template and project-name prompts.
 - **Rust (knowledge side)**: `rmcp` (the official Rust MCP SDK) for the stdio
   server; `tantivy` for the BM25 index; `model2vec-rs` for local static
   embeddings; `serde_yaml_ng` to parse concept frontmatter; `pulldown-cmark`

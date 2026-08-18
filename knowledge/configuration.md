@@ -92,6 +92,19 @@ own text and is left managed.
 `workflows: custom names unknown skill '<name>' — no effect` line for a name
 upstream does not ship.
 
+A `[template]` table records the project template `init` seeded the repo
+from, with the substituted token values:
+
+```toml
+[template]
+name = "rust-npm"
+project-name = "My Tool"
+project-slug = "my-tool"
+```
+
+Provenance, not management: template files are scaffolds, so nothing here is
+hashed and no verb re-plans them. Absent when init chose no template.
+
 One table per enabled capability, keyed by the capability name — an absent
 table means disabled, which is what `init --no-<capability>` produces. An
 unknown capability name is rejected. `version` is omitted where the source

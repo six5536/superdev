@@ -50,7 +50,13 @@ Every verb acts on the current directory.
   `[workflows] custom` — first, so adoption never overwrites work superdev did
   not write. `--workflows-provider <id>` is checked against the registry before
   anything is written and conflicts with `--no-workflows`; absent, the registry
-  default applies.
+  default applies. `--template <name>` seeds the repo from a shipped project
+  template (an unknown name fails naming the shipped set), `--template none`
+  declines, and `--name` sets the substitution values; on a TTY with neither
+  flag, init prompts — template list first, then the project name prefilled
+  with the directory name. Without a TTY there is no prompt and no template,
+  so scripted init is unchanged. Template files are write-once scaffolds:
+  existing files win and are reported as kept.
 - **`status`** never writes. It exits `1` on any drift, missing component,
   planned removal, or pin behind this binary's registry, so CI can gate on it.
   Each skill released by `[skills] custom` prints as

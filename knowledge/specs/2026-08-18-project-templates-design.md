@@ -3,7 +3,7 @@ type: Spec
 id: spec-project-templates
 title: Project Templates
 description: Design for project templates — embedded write-once repo scaffolds init seeds a new repo from, token-substituted and disjoint from capability files — with rust-npm as the first, and the fuller knowledge seed it surfaced.
-status: draft
+status: stable
 ---
 
 # Motivation
@@ -36,13 +36,23 @@ from:
 - **Disjoint by construction.** Template paths must not overlap any
   component's claims or scaffolds (`AGENTS.md`, `knowledge/`,
   `.claude/`, `.superdev/`, `.mise.toml`, `.mcp.json`); a build-time
-  consistency test enforces it, so collisions are impossible rather
-  than resolved.
+  consistency test enforces it in both directions — the static
+  components' writes and claims must all fall under the reserved
+  prefixes, and no template target may — so a component growing a file
+  outside them fails the test rather than colliding silently.
+  Shared-line files are the exception: a component's ensure-line merges
+  into whatever exists, so a template may ship the file the lines land
+  in (`.gitignore`). The template entry applies first, ahead of every
+  capability, so those lines see the template's file.
 - **Embedded.** Templates live at `assets/templates/<name>/`, a sibling
-  of `skills/` and `overrides/`, and mirror the target repo exactly —
-  the whole template installs as one unit under one init-time choice,
-  so identity mapping is right here where the condition-scoped kinds
-  need semantic paths. The binary is the provenance; new templates
+  of `skills/` and `overrides/`, and mirror the target repo — the whole
+  template installs as one unit under one init-time choice, so identity
+  mapping is right here where the condition-scoped kinds need semantic
+  paths. Two on-disk deviations, both mechanical: leading dots are
+  stripped (a real `.gitignore` in the assets would hide sibling assets
+  from git) and a tokenised path segment is written `_slug_`, because
+  `:` cannot appear in Windows file names; the embedded table restores
+  both in the target paths. The binary is the provenance; new templates
   arrive with releases. Fetchable sources are out of scope.
 
 # Selection
@@ -64,12 +74,15 @@ from:
 
 # Tokens
 
-Two tokens, exact-match only: `{{superdev:project-name}}` and
-`{{superdev:project-slug}}`. They substitute in file contents and in
-asset paths (`crates/app/{{superdev:project-slug}}/` lands renamed).
-Anything else passes through untouched — including GitHub Actions'
-`${{ … }}`, which template CI files legitimately contain. No
-user-defined variables.
+Three tokens, exact-match only: `{{superdev:project-name}}`,
+`{{superdev:project-slug}}`, and `{{superdev:project-ident}}` — the slug
+with `_` for `-`, added during implementation because Rust source refers
+to a hyphenated crate by its underscore identifier, which the slug cannot
+express. Tokens substitute in file contents and in target paths
+(`crates/app/{{superdev:project-slug}}/` lands renamed). Anything else
+passes through untouched — including GitHub Actions' `${{ … }}`, which
+template CI files legitimately contain. No user-defined variables. A name
+that yields an empty slug falls back to `project`.
 
 # The rust-npm template
 
@@ -79,9 +92,13 @@ The first shipped template, derived from this repo's shape:
   stubs, `rust-toolchain.toml`, `rustfmt.toml`, the `packages/` npm
   launcher and platform-package skeleton, `package.json` scripts,
   `.gitignore`, `.gitattributes`.
-- CI workflows: checks (fmt, clippy, test matrix), audit, and the
-  tag-driven release pipeline building per-target binaries and
-  publishing the npm packages.
+- CI workflows: a thin `ci.yml` calling a reusable `checks.yml` (fmt,
+  clippy, test matrix), audit, and the tag-driven release pipeline
+  building per-target binaries and publishing the npm packages — plus
+  `scripts/verify-version.mjs`, the one-version-everywhere gate the
+  release workflow runs against the tag. Crates are `publish = false`
+  and the pipeline publishes npm only, consistent with the proprietary
+  default.
 - Repo docs: README, CONTRIBUTING, CHANGELOG seed, SECURITY,
   CODE_OF_CONDUCT — skeletons with the project name substituted. The
   LICENSE ships proprietary — "Copyright (c) the owners of
@@ -98,8 +115,10 @@ this repo's concept structure. The fuller seed goes to the **aokf
 component's scaffold**, not the template — every knowledge-enabled
 repo gets the concept skeleton (glossary, architecture,
 testing-strategy and the rest, emptied to frontmatter, headings and
-TBD prompts), template or not. This keeps `knowledge/` single-owner
-and the disjointness rule intact. Placing it in the template was
+TBD prompts), template or not. The issue-tracker and domain-docs
+concepts stay out of the seed: they record one workflow provider's
+conventions and are created by its setup skill. This keeps
+`knowledge/` single-owner and the disjointness rule intact. Placing it in the template was
 rejected: it would need a carve-out in that rule and leave
 non-template repos on the thin seed.
 

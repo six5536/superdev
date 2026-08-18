@@ -36,15 +36,19 @@ All domain logic; no argument parsing. One module per concern:
 - `runner` — the process seam; `report` — plan and apply rendering; `error` —
   the crate's error type; `fsutil` and `json_edit` — the pure file and
   JSON-pointer helpers the engine and planners share.
+- `templates` — the project templates: token substitution, the init-only
+  scaffold plan, and `rust_npm`, the embedded table mapping
+  `assets/templates/rust-npm/` onto tokenised target paths.
 - `aokf` — the read side of the knowledge bundle, one module per stage:
   `concept` (frontmatter and section parsing), `bundle` (loading, reserved-file
   rules), `validate` (document check and conformance ladder), `graph` (link
   resolution and inverse synthesis), `embed` (the embedding providers),
   `index` (tantivy plus the vector store), `mcp` (the server).
-- The AOKF spec and agent files the `knowledge` capability writes, and the four
-  SKILL.md files the `skills` capability writes, ship as `assets/`, embedded at
-  compile time. The mattpocock-skills files are not embedded: they come from
-  the checksummed checkout at sync time.
+- The AOKF spec, agent files and starter concept skeleton the `knowledge`
+  capability writes, the four SKILL.md files the `skills` capability writes,
+  and the project templates ship as `assets/`, embedded at compile time. The
+  mattpocock-skills files are not embedded: they come from the checksummed
+  checkout at sync time.
 
 The MCP server exposes four read-only tools over stdio — `aokf_search`,
 `aokf_read`, `aokf_graph`, `aokf_overview` (see
@@ -60,7 +64,9 @@ when no model loads.
 Depends on `superdev-core`. Binary name `superdev`. `main.rs` is clap parsing
 and exit codes; `manage.rs` holds the `init`, `status`, `sync` and `update`
 verbs — each loads, calls the core pipeline, renders its lines and turns
-its facts into an exit code. `aokf_cli.rs` holds `aokf validate`, `aokf index` and
+its facts into an exit code. `template_select.rs` decides init's project
+template: flags and TTY-ness feed logic behind a `Prompter` trait, with the
+dialoguer adapter as untested glue. `aokf_cli.rs` holds `aokf validate`, `aokf index` and
 `mcp aokf`: path defaults, printed output, and the current-thread tokio
 runtime the server blocks on. Also present is the plumbing the release
 pipeline needs:

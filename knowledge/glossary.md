@@ -36,7 +36,7 @@ status: stable
 - **Project template** — a set of write-once scaffolds embedded in the
   binary that `init` seeds a repo from, token-substituted and disjoint from
   every capability's files. `config.toml` records the name and token values
-  as provenance; `sync` never revisits the files. Designed, not yet built —
+  as provenance; `sync` never revisits the files. `rust-npm` is the first —
   see the [spec](specs/2026-08-18-project-templates-design.md).
 - **Skill pack** — the four skills the `skills` capability ships as owned files
   under `.claude/skills/`, embedded in the binary and versioned with it. Claude
