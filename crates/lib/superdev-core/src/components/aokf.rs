@@ -232,7 +232,7 @@ const FILES: &[(&str, &str, Ownership, &str)] = &[
 /// The knowledge-lifecycle skills, carried by this component so they exist
 /// exactly where a bundle exists: (skill name, embedded SKILL.md).
 pub(crate) const SKILLS: [(&str, &str); 2] = [
-    ("aokf-adopt", asset!("aokf/skills/aokf-adopt/SKILL.md")),
+    ("aokf-bootstrap", asset!("aokf/skills/aokf-bootstrap/SKILL.md")),
     (
         "aokf-maintain",
         asset!("aokf/skills/aokf-maintain/SKILL.md"),
@@ -435,7 +435,7 @@ mod tests {
             !keys.iter().any(|k| k.contains("aokf-maintain")),
             "{keys:?}"
         );
-        assert!(keys.contains(&".claude/skills/aokf-adopt/SKILL.md".to_string()));
+        assert!(keys.contains(&".claude/skills/aokf-bootstrap/SKILL.md".to_string()));
         assert!(keys.contains(
             &".claude/settings.json:hooks.PostToolUse[superdev aokf hook validate]".to_string()
         ));

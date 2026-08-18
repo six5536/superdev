@@ -57,8 +57,9 @@ Every verb acts on the current directory.
   with the directory name. Without a TTY there is no prompt and no template,
   so scripted init is unchanged. Template files are write-once scaffolds:
   existing files win and are reported as kept. A knowledge-enabled init ends
-  with the hint to run `/aokf-adopt` in Claude Code — adoption is judgement
-  work the agent does after the mechanical scaffolding.
+  with the hint to run `/aokf-bootstrap` in Claude Code — filling the bundle
+  from existing docs and an owner interview is judgement work the agent does
+  after the mechanical scaffolding.
 - **`status`** never writes. It exits `1` on any drift, missing component,
   planned removal, or pin behind this binary's registry, so CI can gate on it.
   Each skill released by `[skills] custom` prints as

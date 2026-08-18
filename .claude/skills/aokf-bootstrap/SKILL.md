@@ -1,12 +1,13 @@
 ---
-name: aokf-adopt
-description: Bring a repo's existing knowledge into the AOKF bundle at `knowledge/` — after `superdev init`, when docs feel stale or scattered, or when agents keep missing rules that live outside the bundle.
+name: aokf-bootstrap
+description: Fill the AOKF bundle at `knowledge/` from what the repo already knows — harvest its stranded prose, then interview the owner to flesh out the seeded skeleton. Run after `superdev init`, when docs feel stale or scattered, or when agents keep missing rules that live outside the bundle.
 ---
 
-Bring this repo's stranded knowledge into the AOKF bundle at `knowledge/`.
-The format spec is `.agents/aokf/SPEC.md`; read it before writing concepts.
-Adoption is judgement work: `superdev init` scaffolded the structure, this
-skill fills it from what the repo already knows.
+Fill this repo's AOKF bundle at `knowledge/` from the two places its
+knowledge already lives: the repo's stranded prose, and the owner's
+head. The format spec is `.agents/aokf/SPEC.md`; read it before writing
+concepts. Bootstrap is judgement work: `superdev init` scaffolded the
+structure, this skill fills it.
 
 The unit of work is the **harvest**: relocate one durable fact from a
 source into the bundle, leaving a one-line summary and a link behind in
@@ -33,6 +34,10 @@ comments carrying repo-wide conventions, decisions, and gotchas — a
 module header explaining a policy, a "we do X because Y". API-describing
 doc comments are never harvested: they are the environment, reachable by
 reading the code, and stale the moment the code moves.
+
+The owner is always the inventory's last source; the interview
+(phase 3) works it. A fresh repo with no prose to list starts there —
+the interview is its whole bootstrap.
 
 The inventory is the work list. Re-running this skill is safe: whatever
 is already summarised-and-cited is done, and the inventory is what
@@ -62,7 +67,27 @@ For an incumbent entry point, ask the owner first: **merge and reduce**
 `AGENTS.md`, the incumbent down to its `@AGENTS.md` import) or **leave as
 found**. Never merge silently — that file is someone's curated context.
 
-# Phase 3 — verify and report
+# Phase 3 — interview
+
+Work the last source: the owner. List the skeleton concepts still
+carrying TBD prompts and split them in two:
+
+- **Answerable now** — facts that already exist, in the owner's head or
+  the repo's shape: what the project is and its status, constraints and
+  non-goals, the first glossary terms, the dependency policy, intended
+  conventions. Interview for these — a few questions per round, grouped
+  by concept — and land each answer in its skeleton.
+- **Accretes later** — knowledge only development produces: the real
+  architecture, the testing strategy as practised, error-handling
+  conventions. Leave the TBD prompt in place. Interviewing these early
+  produces speculative prose the next audit flags as wrong; they fill
+  through the project's own specs and decisions.
+
+The split is per repo, not a fixed list: a repo seeded from a project
+template already fixes much of its technology stack, and an owner who
+has written code before has conventions worth asking for.
+
+# Phase 4 — verify and report
 
 Run the validator and fix every error before finishing:
 
@@ -70,12 +95,12 @@ Run the validator and fix every error before finishing:
 superdev aokf validate knowledge
 ```
 
-Finish with a report — and an empty inventory is itself the report: say
-the repo had nothing to harvest. Otherwise: every inventoried source
-accounted for — harvested (with its concepts named), reduced to
-summary-and-citation, or explicitly left with a reason. The bundle must PASS at level 2. Leave
-changes uncommitted unless asked; if asked, commit as `docs:` per
-Conventional Commits.
+Finish with a report: every inventoried source accounted for —
+harvested (with its concepts named), reduced to summary-and-citation,
+or explicitly left with a reason — and every skeleton either filled or
+left TBD with the reason it must accrete. The bundle must PASS at
+level 2. Leave changes uncommitted unless asked; if asked, commit as
+`docs:` per Conventional Commits.
 
 ## Project adaptations
 

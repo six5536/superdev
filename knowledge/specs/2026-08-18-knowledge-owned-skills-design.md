@@ -2,7 +2,7 @@
 type: Spec
 id: spec-knowledge-owned-skills
 title: Knowledge-Owned Skills
-description: Design for aokf-carried lifecycle skills — aokf-maintain and the validation hook relocate to the knowledge capability, and a new aokf-adopt skill harvests a repo's stranded prose into the bundle.
+description: Design for aokf-carried lifecycle skills — aokf-maintain and the validation hook relocate to the knowledge capability, and a new aokf-bootstrap skill harvests a repo's stranded prose and interviews the owner to fill the seeded skeleton.
 status: stable
 ---
 
@@ -44,13 +44,15 @@ The aokf component carries the knowledge-lifecycle skills:
   beside them, so everything the component ships has one home.
   `assets/skills/` stays the pack's, per the kind-scoped assets layout.
   Relocated and new skills keep the PROJECT.md extension layer.
-- **`aokf-adopt`** is the first new aokf-carried skill (below).
+- **`aokf-bootstrap`** is the first new aokf-carried skill (below). It
+  began as `aokf-adopt` (harvest only) and was renamed when the interview
+  phase made it a fresh repo's bootstrap too, not just an adoption tool.
 
-# The aokf-adopt skill
+# The aokf-bootstrap skill
 
-Adoption-time judgement work an agent does after `superdev init`'s
-mechanical scaffolding: bring the repo's existing knowledge into the
-bundle.
+Judgement work an agent does after `superdev init`'s mechanical
+scaffolding: fill the bundle from the two places a repo's knowledge
+already lives — its stranded prose, and the owner's head.
 
 - **Inventory**: every prose document — README, CONTRIBUTING, `docs/`,
   in-repo wikis, incumbent CLAUDE.md/AGENTS.md files. Code is opt-in: the
@@ -73,17 +75,28 @@ bundle.
   code sweep, entry-point handling, an ambiguous placement — are asked
   with a question tool; clear-cut moves run autonomously and land as a
   reviewable diff.
+- **Interview**: the owner is always the inventory's last source. After
+  the prose harvest — or immediately, on a fresh repo with nothing to
+  harvest — the skill walks the skeletons still carrying TBD prompts and
+  splits them per repo: facts that already exist (purpose, status,
+  constraints, first glossary terms, the dependency policy, intended
+  conventions) are interviewed and landed; knowledge only development
+  produces (the real architecture, testing strategy as practised) is left
+  TBD, because interviewing it early yields speculative prose the next
+  audit flags as wrong — it accretes through specs.
 - **Completion criterion**: every inventoried source accounted for —
   harvested, reduced to summary-and-citation, or explicitly left with a
-  reason — and the bundle validating at level 2. Re-running is safe: the
+  reason — every skeleton filled or left TBD with the reason it must
+  accrete, and the bundle validating at level 2. Re-running is safe: the
   inventory is whatever remains unaccounted.
 
 # Init hint
 
 Whenever the knowledge capability is enabled, `init` ends with
-`knowledge: run /aokf-adopt in Claude Code to bring existing docs into the
-bundle` — unconditional, like the workflows setup hint. An empty repo
-loses nothing: adopt's inventory comes back empty and says so.
+`knowledge: run /aokf-bootstrap in Claude Code to fill the bundle from
+existing docs and an owner interview` — unconditional, like the workflows
+setup hint. An empty repo loses nothing: with no prose to harvest, the
+interview is its whole bootstrap.
 
 # Dogfood consequence
 

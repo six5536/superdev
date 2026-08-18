@@ -15,6 +15,14 @@ status: draft
   ([spec](specs/2026-08-12-skill-pack-design.md)) and deferred to the
   knowledge-upkeep sub-project.
 
+- **Template pre-filled knowledge skeletons.** A project template fixes
+  facts about the repo it creates — the rust-npm scaffold establishes the
+  Rust workspace, the npm launcher and the CI shape — so it could pre-fill
+  parts of the `technology-stack` and `architecture` skeletons instead of
+  leaving them TBD, shrinking `aokf-bootstrap`'s interview to the genuinely
+  human questions. Raised while designing the bootstrap interview phase
+  ([spec](specs/2026-08-18-knowledge-owned-skills-design.md)).
+
 - **Comment-preserving manifest stamping.** `sync` rewrites `config.toml`
   through the whole-file `Manifest::save` when it stamps the blueprint
   version, dropping any hand-written comments — the rewrite `update` always

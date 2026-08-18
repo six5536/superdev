@@ -21,12 +21,13 @@ publish a version it cannot find a heading for.
   win, and `sync` never touches them. `--template none` and `--name` script
   the answers; `.superdev/config.toml` records the choice under `[template]`
 - Knowledge-owned skills: the aokf component carries its lifecycle skills —
-  the new `aokf-adopt` (harvest a repo's existing docs into the bundle) and
-  the relocated `aokf-maintain` — plus the validation hook, so all three
+  the new `aokf-bootstrap` (harvest a repo's existing docs into the bundle,
+  then interview the owner to flesh out the seeded skeleton) and the
+  relocated `aokf-maintain` — plus the validation hook, so all three
   exist exactly where a bundle exists and a `--no-knowledge` repo gets no
   hook. `[knowledge]` takes a `custom` list like the other skill-writing
-  capabilities, and a knowledge-enabled `init` ends with the `/aokf-adopt`
-  hint
+  capabilities, and a knowledge-enabled `init` ends with the
+  `/aokf-bootstrap` hint
 - A fuller knowledge seed: `init` now scaffolds a starter concept skeleton
   (glossary, architecture, testing strategy and the rest) instead of a
   three-file stub, ready for agents to fill in

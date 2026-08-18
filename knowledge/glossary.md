@@ -56,7 +56,7 @@ status: stable
   superdev stops writing it, drops its hashes from the lock, and `status`
   reports it as unmanaged rather than drifted. A name the capability no
   longer ships reports as having no effect instead of failing.
-- **Harvest** — the move `aokf-adopt` performs: relocate a durable fact from
+- **Harvest** — the move `aokf-bootstrap` performs: relocate a durable fact from
   stranded prose (or an opted-in code comment) into the bundle, leaving a
   one-line summary and a link behind in the source. See the
   [spec](specs/2026-08-18-knowledge-owned-skills-design.md).

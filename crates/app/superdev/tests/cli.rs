@@ -927,7 +927,7 @@ fn an_unknown_template_fails_before_anything_is_written() {
 }
 
 #[test]
-fn init_hints_at_adopt_only_when_knowledge_is_enabled() {
+fn init_hints_at_bootstrap_only_when_knowledge_is_enabled() {
     let dir = tempfile::tempdir().unwrap();
     std::fs::create_dir_all(dir.path().join(".git")).unwrap();
     let out = superdev()
@@ -937,7 +937,7 @@ fn init_hints_at_adopt_only_when_knowledge_is_enabled() {
         .success();
     let stdout = String::from_utf8_lossy(&out.get_output().stdout).into_owned();
     assert!(
-        stdout.contains("knowledge: run /aokf-adopt in Claude Code"),
+        stdout.contains("knowledge: run /aokf-bootstrap in Claude Code"),
         "{stdout}"
     );
 
@@ -955,5 +955,5 @@ fn init_hints_at_adopt_only_when_knowledge_is_enabled() {
         .assert()
         .success();
     let stdout = String::from_utf8_lossy(&out.get_output().stdout).into_owned();
-    assert!(!stdout.contains("aokf-adopt"), "{stdout}");
+    assert!(!stdout.contains("aokf-bootstrap"), "{stdout}");
 }
