@@ -22,6 +22,7 @@ impl<'a> Session<'a> {
         tool: &str,
         source_dirs: &[String],
         custom: &[String],
+        overrides: &[(String, String)],
         effects: LockEffects<'_>,
     ) -> ActionOutcome {
         // Repo-level entries own nothing, so they have nothing to attribute —
@@ -48,6 +49,7 @@ impl<'a> Session<'a> {
         let mut kept = 0usize;
         let mut edited = 0usize;
         let mut fresh: Vec<String> = Vec::new();
+        let mut pending: Vec<(String, String)> = Vec::new();
         for source_dir in source_dirs {
             let dir = checkout.join(source_dir);
             let entries = match fs::read_dir(&dir) {
@@ -86,46 +88,62 @@ impl<'a> Session<'a> {
                         ".claude/skills/{name}/{}",
                         rel.display().to_string().replace('\\', "/")
                     );
-                    let content = match read_text(&file) {
-                        Ok(Some(content)) => content,
-                        Ok(None) => continue,
-                        Err(e) => return ActionOutcome::Failed(e.to_string()),
+                    // An embedded override wins over the checkout's file.
+                    let content = match overrides.iter().find(|(path, _)| *path == target) {
+                        Some((_, content)) => content.clone(),
+                        None => match read_text(&file) {
+                            Ok(Some(content)) => content,
+                            Ok(None) => continue,
+                            Err(e) => return ActionOutcome::Failed(e.to_string()),
+                        },
                     };
                     fresh.push(target.clone());
-                    let existing = match read_text(&self.root.join(&target)) {
-                        Ok(existing) => existing,
-                        Err(e) => return ActionOutcome::Failed(e.to_string()),
-                    };
-                    // An unchanged file is still claimed, so a converged run
-                    // keeps its lock entry and its attribution.
-                    if existing.as_deref() == Some(content.as_str()) {
-                        kept += 1;
-                        effects
-                            .written
-                            .push((target.clone(), sha256_hex(content.as_bytes())));
-                        effects.attributed.push(target);
-                        continue;
-                    }
-                    // The owned-write ritual, on Tx directly: back up what was
-                    // there, note a user edit, journal, write.
-                    if let Some(old) = &existing {
-                        if let Err(e) = self.tx.backup(&target, old) {
-                            return ActionOutcome::Failed(e.to_string());
-                        }
-                        if self.prior_hashes.get(&target) != Some(&sha256_hex(old.as_bytes())) {
-                            edited += 1;
-                        }
-                    }
-                    if let Err(e) = self.tx.write(&target, existing, &content) {
-                        return ActionOutcome::Failed(e.to_string());
-                    }
-                    wrote += 1;
-                    effects
-                        .written
-                        .push((target.clone(), sha256_hex(content.as_bytes())));
-                    effects.attributed.push(target);
+                    pending.push((target, content));
                 }
             }
+        }
+        // Overrides without a checkout counterpart are still superdev's to
+        // ship: they join the same write pass as everything else.
+        for (target, content) in overrides {
+            if fresh.contains(target) {
+                continue;
+            }
+            fresh.push(target.clone());
+            pending.push((target.clone(), content.clone()));
+        }
+        // One owned-write ritual for the lot, on Tx directly: an unchanged
+        // file is still claimed (a converged run keeps its lock entry and
+        // attribution); a changed one is backed up, noted when the user
+        // edited it, journalled and written.
+        for (target, content) in pending {
+            let existing = match read_text(&self.root.join(&target)) {
+                Ok(existing) => existing,
+                Err(e) => return ActionOutcome::Failed(e.to_string()),
+            };
+            if existing.as_deref() == Some(content.as_str()) {
+                kept += 1;
+                effects
+                    .written
+                    .push((target.clone(), sha256_hex(content.as_bytes())));
+                effects.attributed.push(target);
+                continue;
+            }
+            if let Some(old) = &existing {
+                if let Err(e) = self.tx.backup(&target, old) {
+                    return ActionOutcome::Failed(e.to_string());
+                }
+                if self.prior_hashes.get(&target) != Some(&sha256_hex(old.as_bytes())) {
+                    edited += 1;
+                }
+            }
+            if let Err(e) = self.tx.write(&target, existing, &content) {
+                return ActionOutcome::Failed(e.to_string());
+            }
+            wrote += 1;
+            effects
+                .written
+                .push((target.clone(), sha256_hex(content.as_bytes())));
+            effects.attributed.push(target);
         }
         // Reconcile: what this capability had materialised and the checkout
         // no longer ships leaves by the dropped-claim removal rules.
@@ -184,6 +202,7 @@ mod tests {
             tool: "http:mattpocock-skills".into(),
             source_dirs: vec!["skills/engineering".into(), "skills/productivity".into()],
             custom: custom.iter().map(|c| (*c).to_string()).collect(),
+            overrides: Vec::new(),
         }
     }
 
@@ -198,6 +217,54 @@ mod tests {
             },
         );
         fake
+    }
+
+    #[test]
+    fn overrides_win_over_the_checkout_and_extras_are_written() {
+        let checkout = fake_checkout();
+        let dir = tempfile::tempdir().unwrap();
+        let fake = where_scripted(checkout.path());
+        let manifest = Manifest::default_for("0.1.0", &[]);
+        let mut lock = Lock::default();
+        let action = Action::MaterialiseSkills {
+            tool: "http:mattpocock-skills".into(),
+            source_dirs: vec!["skills/engineering".into(), "skills/productivity".into()],
+            custom: Vec::new(),
+            overrides: vec![
+                // Present in the checkout: the embedded content wins.
+                (
+                    ".claude/skills/alpha/SKILL.md".into(),
+                    "superdev alpha".into(),
+                ),
+                // No checkout counterpart: written as an extra.
+                (
+                    ".claude/skills/extra/SKILL.md".into(),
+                    "superdev extra".into(),
+                ),
+            ],
+        };
+        let planned = vec![Planned {
+            capability: Some(crate::capability::Capability::Workflows),
+            provider: "mattpocock-skills".into(),
+            actions: vec![action],
+        }];
+        let result = apply(dir.path(), &fake, &manifest, &planned, &mut lock);
+        assert!(result.ok, "{result:?}");
+        assert_eq!(
+            std::fs::read_to_string(dir.path().join(".claude/skills/alpha/SKILL.md")).unwrap(),
+            "superdev alpha"
+        );
+        assert_eq!(
+            std::fs::read_to_string(dir.path().join(".claude/skills/extra/SKILL.md")).unwrap(),
+            "superdev extra"
+        );
+        for key in [
+            ".claude/skills/alpha/SKILL.md",
+            ".claude/skills/extra/SKILL.md",
+        ] {
+            assert!(lock.files.contains_key(key), "{key}");
+            assert_eq!(lock.owners.get(key).map(String::as_str), Some("workflows"));
+        }
     }
 
     #[test]

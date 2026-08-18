@@ -80,6 +80,45 @@ pub(crate) fn adopt_existing(
         .collect()
 }
 
+macro_rules! asset {
+    ($rel:literal) => {
+        include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/assets/", $rel))
+    };
+}
+
+/// Embedded skill overrides, as (target path, content): superdev's own
+/// version of an upstream skill, materialised in place of the checkout's.
+/// Carried by this component, so they install exactly where this provider
+/// is installed. The skill name (the path segment under `.claude/skills/`)
+/// is what a `custom` entry releases.
+pub(crate) const OVERRIDES: [(&str, &str); 2] = [
+    (
+        ".claude/skills/grilling/SKILL.md",
+        asset!("overrides/mattpocock-skills/skills/grilling/SKILL.md"),
+    ),
+    (
+        ".claude/skills/grilling/agents/openai.yaml",
+        asset!("overrides/mattpocock-skills/skills/grilling/agents/openai.yaml"),
+    ),
+];
+
+/// The skill name an override target belongs to, for `custom` matching.
+fn override_skill(path: &str) -> &str {
+    path.strip_prefix(".claude/skills/")
+        .and_then(|rest| rest.split('/').next())
+        .expect("override targets live under .claude/skills/")
+}
+
+/// The overrides a manifest still manages: `custom` releases the whole
+/// skill, upstream and override alike.
+fn live_overrides(custom: &[String]) -> Vec<(String, String)> {
+    OVERRIDES
+        .iter()
+        .filter(|(path, _)| !custom.iter().any(|c| c == override_skill(path)))
+        .map(|(path, content)| ((*path).to_string(), (*content).to_string()))
+        .collect()
+}
+
 /// The mattpocock-skills provider.
 pub struct MattSkills;
 
@@ -122,6 +161,7 @@ impl Component for MattSkills {
                 tool: MATTSKILLS_MISE_TOOL.into(),
                 source_dirs: SOURCE_DIRS.iter().map(|d| (*d).to_string()).collect(),
                 custom: config.custom.clone(),
+                overrides: live_overrides(&config.custom),
             });
         }
         Ok(actions)
@@ -140,8 +180,9 @@ impl Component for MattSkills {
     }
 }
 
-/// Whether the materialised set needs refreshing — all answered from the
-/// lock and the working tree, so `status` needs neither network nor checkout.
+/// Whether the materialised set needs refreshing — answered from the lock,
+/// the working tree and this binary's embedded overrides, so `status` needs
+/// neither network nor checkout.
 fn refresh_due(ctx: &Ctx<'_>, config: &crate::manifest::CapabilityConfig) -> bool {
     let applied = ctx.lock.components.get(Capability::Workflows.as_str());
     let recorded =
@@ -156,7 +197,7 @@ fn refresh_due(ctx: &Ctx<'_>, config: &crate::manifest::CapabilityConfig) -> boo
     if !recorded || attributed.is_empty() {
         return true;
     }
-    attributed.into_iter().any(|key| {
+    if attributed.into_iter().any(|key| {
         // A hand-edited lock can drop the hash; refresh rather than panic.
         let Some(locked) = ctx.lock.files.get(key) else {
             return true;
@@ -165,7 +206,20 @@ fn refresh_due(ctx: &Ctx<'_>, config: &crate::manifest::CapabilityConfig) -> boo
             Ok(content) => crate::lock::sha256_hex(content.as_bytes()) != *locked,
             Err(_) => true,
         }
-    })
+    }) {
+        return true;
+    }
+    // Overrides drift against the binary, not the lock: an upgrade that
+    // changes embedded content leaves file and lock agreeing with each
+    // other, so compare the file against what this binary ships.
+    live_overrides(&config.custom)
+        .iter()
+        .any(
+            |(path, content)| match std::fs::read_to_string(ctx.root.join(path)) {
+                Ok(existing) => existing != *content,
+                Err(_) => true,
+            },
+        )
 }
 
 #[cfg(test)]
@@ -229,12 +283,23 @@ mod tests {
         let skill = dir.path().join(".claude/skills/tdd/SKILL.md");
         std::fs::create_dir_all(skill.parent().unwrap()).unwrap();
         std::fs::write(&skill, "tdd content").unwrap();
+        // Converged includes the embedded overrides: file, lock and owners.
+        for (path, content) in OVERRIDES {
+            let p = dir.path().join(path);
+            std::fs::create_dir_all(p.parent().unwrap()).unwrap();
+            std::fs::write(&p, content).unwrap();
+        }
         lock.files.insert(
             ".claude/skills/tdd/SKILL.md".into(),
             crate::lock::sha256_hex(b"tdd content"),
         );
         lock.owners
             .insert(".claude/skills/tdd/SKILL.md".into(), "workflows".into());
+        for (path, content) in OVERRIDES {
+            lock.files
+                .insert((*path).into(), crate::lock::sha256_hex(content.as_bytes()));
+            lock.owners.insert((*path).into(), "workflows".into());
+        }
         lock.components.insert(
             "workflows".into(),
             crate::lock::LockedComponent {
@@ -259,6 +324,81 @@ mod tests {
         let actions = MattSkills.plan(&ctx).unwrap();
         assert_eq!(actions.len(), 1);
         assert!(actions[0].describe().contains("materialise"), "{actions:?}");
+    }
+
+    #[test]
+    fn override_drift_replans_and_custom_releases_the_override() {
+        let dir = tempfile::tempdir().unwrap();
+        let (manifest, mut lock) = ctx_parts();
+        std::fs::write(
+            dir.path().join(".mise.toml"),
+            crate::components::mise::set_pin("", MATTSKILLS_MISE_TOOL, &pin_value()).unwrap(),
+        )
+        .unwrap();
+        lock.components.insert(
+            "workflows".into(),
+            crate::lock::LockedComponent {
+                provider: "mattpocock-skills".into(),
+                version: Some("1.2.3".into()),
+            },
+        );
+        for (path, content) in OVERRIDES {
+            let p = dir.path().join(path);
+            std::fs::create_dir_all(p.parent().unwrap()).unwrap();
+            std::fs::write(&p, content).unwrap();
+            lock.files
+                .insert((*path).into(), crate::lock::sha256_hex(content.as_bytes()));
+            lock.owners.insert((*path).into(), "workflows".into());
+        }
+        let fake = FakeRunner::new();
+        let ctx = Ctx {
+            root: dir.path(),
+            runner: &fake,
+            manifest: &manifest,
+            lock: &lock,
+        };
+        assert!(MattSkills.plan(&ctx).unwrap().is_empty());
+
+        // A binary whose embedded override differs from the file replans,
+        // even though file and lock agree with each other.
+        let (path, _) = OVERRIDES[0];
+        std::fs::write(dir.path().join(path), "older override").unwrap();
+        lock.files
+            .insert(path.into(), crate::lock::sha256_hex(b"older override"));
+        let ctx = Ctx {
+            root: dir.path(),
+            runner: &fake,
+            manifest: &manifest,
+            lock: &lock,
+        };
+        let actions = MattSkills.plan(&ctx).unwrap();
+        assert_eq!(actions.len(), 1, "{actions:?}");
+        let overrides = match &actions[0] {
+            Action::MaterialiseSkills { overrides, .. } => overrides.clone(),
+            other => panic!("{other:?}"),
+        };
+        assert!(overrides.iter().any(|(p, _)| p == path));
+
+        // custom releases the whole skill: no override pairs ride the action,
+        // and the released file no longer counts as drift.
+        let (mut manifest, lock) = ctx_parts();
+        manifest.capabilities.get_mut("workflows").unwrap().custom = vec!["grilling".into()];
+        let ctx = Ctx {
+            root: dir.path(),
+            runner: &fake,
+            manifest: &manifest,
+            lock: &lock,
+        };
+        let overrides = MattSkills
+            .plan(&ctx)
+            .unwrap()
+            .into_iter()
+            .find_map(|a| match a {
+                Action::MaterialiseSkills { overrides, .. } => Some(overrides),
+                _ => None,
+            })
+            .expect("fresh lock replans the materialise");
+        assert!(overrides.is_empty(), "{overrides:?}");
     }
 
     #[test]

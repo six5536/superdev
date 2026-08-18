@@ -83,6 +83,9 @@ pub enum Action {
         source_dirs: Vec<String>,
         /// Skill names released to the user; never written, never attributed.
         custom: Vec<String>,
+        /// Embedded (target path, content) replacements that win over the
+        /// checkout's files, written even without a checkout counterpart.
+        overrides: Vec<(String, String)>,
     },
     /// Run an external command in the repo root.
     Run {

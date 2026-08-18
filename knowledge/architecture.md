@@ -62,6 +62,11 @@ The default is repo-owned deliberately. `mattpocock-skills` copies the pinned
 checkout's skills into `.claude/skills/` as committed files, so a collaborator
 who clones the repo has them from git alone; `superpowers` needs a per-user
 `claude plugin install` on every machine, which is what makes it the secondary.
+The component also carries embedded skill overrides — superdev's own version
+of an upstream skill, `grilling` first — materialised in place of the
+checkout's and installed only where this provider is; a skill's `custom`
+entry releases override and upstream alike
+([spec](specs/2026-08-18-workflows-skill-overrides-design.md)).
 
 `workflows` and `code-index` are fetched by URL and verified against a
 checksum this binary carries beside the version, so superdev installs the

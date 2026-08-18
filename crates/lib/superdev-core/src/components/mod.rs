@@ -144,7 +144,7 @@ mod tests {
             // whose claims are lock-derived, anchor them to the fixture instead,
             // so the test carries an expectation the code cannot move.
             if component.provider() == "mattpocock-skills" {
-                let expected: BTreeSet<String> = [
+                let mut expected: BTreeSet<String> = [
                     ".mise.toml:http:mattpocock-skills".to_string(),
                     ".claude/skills/alpha/SKILL.md".to_string(),
                     ".claude/skills/beta/SKILL.md".to_string(),
@@ -152,6 +152,11 @@ mod tests {
                 ]
                 .into_iter()
                 .collect();
+                // The embedded overrides materialise as extras beside the
+                // fixture checkout's skills. Literal paths, so the test
+                // carries an expectation the code cannot move.
+                expected.insert(".claude/skills/grilling/SKILL.md".to_string());
+                expected.insert(".claude/skills/grilling/agents/openai.yaml".to_string());
                 assert_eq!(claimed, expected);
             }
         }

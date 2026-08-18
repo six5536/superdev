@@ -159,7 +159,15 @@ pub fn plan_repo(
     let mut planned = Vec::new();
     planned.extend(repo_entry(root, manifest)?);
     planned.extend(engine::plan(&components, &ctx)?);
-    let claims: Vec<Claim> = components.iter().flat_map(|c| c.owned(&ctx)).collect();
+    let claims_by_capability: Vec<(Capability, Vec<Claim>)> = components
+        .iter()
+        .map(|c| (c.capability(), c.owned(&ctx)))
+        .collect();
+    claim_collision(&claims_by_capability)?;
+    let claims: Vec<Claim> = claims_by_capability
+        .into_iter()
+        .flat_map(|(_, claims)| claims)
+        .collect();
     let orphans = orphan::plan(root, &lock, &claims)?;
     if !orphans.actions.is_empty() {
         planned.push(Planned {
@@ -266,6 +274,33 @@ pub fn registry_version(manifest: &Manifest, capability: Capability) -> Option<S
     registry::entry_for(capability, &config.provider)?
         .version
         .map(|p| p.version.to_string())
+}
+
+/// Refuse when two capabilities claim the same lock key. Deliberate
+/// overrides are intra-component, so a cross-component collision is always
+/// an accident — silently picking a winner would oscillate across syncs.
+/// The message carries the way out.
+fn claim_collision(claims_by_capability: &[(Capability, Vec<Claim>)]) -> Result<()> {
+    let mut seen: std::collections::BTreeMap<String, Capability> =
+        std::collections::BTreeMap::new();
+    for (capability, claims) in claims_by_capability {
+        for claim in claims {
+            let key = claim.lock_key();
+            if let Some(first) = seen.get(&key)
+                && first != capability
+            {
+                return Err(Error::Manifest {
+                    message: format!(
+                        "{} and {} both claim {key} — add its skill to one side's custom list, or upgrade superdev",
+                        first.as_str(),
+                        capability.as_str()
+                    ),
+                });
+            }
+            seen.insert(key, *capability);
+        }
+    }
+    Ok(())
 }
 
 /// The ignore lines no capability owns: superdev's machine state, and the
@@ -654,6 +689,33 @@ mod tests {
             !descs.iter().any(|d| d.contains("materialise")),
             "{descs:?}"
         );
+    }
+
+    #[test]
+    fn a_cross_capability_claim_collision_refuses_with_the_way_out() {
+        let a = (
+            Capability::Skills,
+            vec![Claim::File(".claude/skills/grilling/SKILL.md".into())],
+        );
+        let b = (
+            Capability::Workflows,
+            vec![Claim::File(".claude/skills/grilling/SKILL.md".into())],
+        );
+        let err = claim_collision(&[a, b]).unwrap_err().to_string();
+        assert!(
+            err.contains("skills and workflows both claim .claude/skills/grilling/SKILL.md"),
+            "{err}"
+        );
+        assert!(err.contains("custom list"), "{err}");
+
+        // The same capability claiming a key twice is not a collision, and
+        // distinct keys never are.
+        let dup = (
+            Capability::Skills,
+            vec![Claim::File("a.txt".into()), Claim::File("a.txt".into())],
+        );
+        let other = (Capability::Workflows, vec![Claim::File("b.txt".into())]);
+        assert!(claim_collision(&[dup, other]).is_ok());
     }
 
     #[test]

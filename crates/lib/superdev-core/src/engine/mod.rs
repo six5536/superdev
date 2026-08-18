@@ -207,6 +207,7 @@ impl<'a> Session<'a> {
         let mut attributed: Vec<String> = Vec::new();
         let mut removed: Vec<String> = Vec::new();
         for action in &entry.actions {
+            let before = written.len();
             let outcome = match action {
                 // Pins were applied as one grouped edit before any entry ran.
                 Action::SetMisePin { .. } => continue,
@@ -234,11 +235,13 @@ impl<'a> Session<'a> {
                     tool,
                     source_dirs,
                     custom,
+                    overrides,
                 } => self.materialise_skills(
                     entry.capability,
                     tool,
                     source_dirs,
                     custom,
+                    overrides,
                     LockEffects {
                         written: &mut written,
                         attributed: &mut attributed,
@@ -253,6 +256,23 @@ impl<'a> Session<'a> {
                     ..
                 } => self.run_action(program, args, undo, *optional),
                 Action::Remove { claim, .. } => self.remove_claim(claim, &mut removed),
+            };
+            // The backstop for collisions the planner cannot enumerate (a
+            // checkout-derived path on a first sync): a key another entry
+            // already wrote this run means two capabilities ship one path.
+            // A real failure keeps its own message.
+            let outcome = if matches!(outcome, ActionOutcome::Failed(_)) {
+                outcome
+            } else {
+                match written[before..]
+                    .iter()
+                    .find(|(key, _)| self.written_keys.contains(key))
+                {
+                    Some((key, _)) => ActionOutcome::Failed(format!(
+                        "collision: {key} was already written by an earlier capability this run — add its skill to one side's custom list, or upgrade superdev"
+                    )),
+                    None => outcome,
+                }
             };
             let failed = matches!(outcome, ActionOutcome::Failed(_));
             self.record(index, action, outcome);
@@ -586,6 +606,41 @@ mod tests {
         );
         assert!(lock.files.contains_key("a/b.txt"));
         assert_eq!(lock.components["knowledge"].provider, "aokf");
+    }
+
+    #[test]
+    fn a_cross_entry_duplicate_write_fails_and_unwinds() {
+        let dir = tempfile::tempdir().unwrap();
+        let fake = FakeRunner::new();
+        let manifest = Manifest::default_for("0.1.0", &[]);
+        let mut lock = Lock::default();
+        let planned = vec![
+            Planned {
+                capability: Some(Capability::Workflows),
+                provider: "mattpocock-skills".into(),
+                actions: vec![write_owned("shared.txt")],
+            },
+            Planned {
+                capability: Some(Capability::Skills),
+                provider: "superdev-skills".into(),
+                actions: vec![write_owned("shared.txt")],
+            },
+        ];
+        let result = apply(dir.path(), &fake, &manifest, &planned, &mut lock);
+        assert!(!result.ok);
+        let failed = result
+            .reports
+            .iter()
+            .flat_map(|r| r.outcomes.iter())
+            .find_map(|(_, o)| match o {
+                ActionOutcome::Failed(e) => Some(e.clone()),
+                _ => None,
+            })
+            .expect("the duplicate write fails");
+        assert!(failed.contains("collision: shared.txt"), "{failed}");
+        // The unwind took the first write back with it. The in-memory lock
+        // keeps the first entry's keys — the caller discards it when not ok.
+        assert!(!dir.path().join("shared.txt").exists());
     }
 
     #[test]
