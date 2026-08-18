@@ -38,7 +38,10 @@ The aokf component carries the knowledge-lifecycle skills:
   releases a skill from management, `init` adoption seeds it, an unknown
   name reports `knowledge: custom names unknown skill '<name>' — no
   effect`.
-- **Assets are capability-scoped** at `assets/aokf/skills/<name>/` —
+- **Assets are capability-scoped** under `assets/aokf/` — the skills at
+  `assets/aokf/skills/<name>/`, and the rest of the aokf install (the
+  `AGENTS.md` scaffold, the `.agents` files, the knowledge seed) moved in
+  beside them, so everything the component ships has one home.
   `assets/skills/` stays the pack's, per the kind-scoped assets layout.
   Relocated and new skills keep the PROJECT.md extension layer.
 - **`aokf-adopt`** is the first new aokf-carried skill (below).
