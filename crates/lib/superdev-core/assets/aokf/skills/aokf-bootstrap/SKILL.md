@@ -3,14 +3,13 @@ name: aokf-bootstrap
 description: Fill the AOKF bundle at `knowledge/` from what the repo already knows — harvest its stranded prose, then interview the owner to flesh out the seeded skeleton. Run after `superdev init`, when docs feel stale or scattered, or when agents keep missing rules that live outside the bundle.
 ---
 
-Fill this repo's AOKF bundle at `knowledge/` from the two places its
-knowledge already lives: the repo's stranded prose, and the owner's
-head. The format spec is `.agents/aokf/SPEC.md`; read it before writing
-concepts.
+Fill this repo's AOKF bundle at `knowledge/` from its existing prose
+and from the owner. The format spec is `.agents/aokf/SPEC.md`; read it
+before writing concepts.
 
-The unit of work is the **harvest**: relocate one durable fact from a
-source into the bundle, leaving a one-line summary and a link behind in
-the source. Never import-only: a fact with two full homes drifts.
+A **harvest** relocates one durable fact from a source into the
+bundle, leaving a one-line summary and a link behind in the source.
+Never import-only: a fact with two full homes drifts.
 
 # Posture
 
@@ -30,16 +29,13 @@ Skip generated files and the bundle itself.
 Then ask: **should this run also sweep the code?** Only if yes, add
 the comments that carry repo-wide conventions, decisions, and gotchas:
 a module header explaining a policy, a "we do X because Y". API-describing
-doc comments are never harvested: they are the environment, reachable by
-reading the code, and stale the moment the code moves.
+doc comments are never harvested; they are the environment.
 
 The owner is always the inventory's last source; the interview
-(phase 3) works it. A fresh repo with no prose to list starts there:
-the interview is its whole bootstrap.
+(phase 3) works it. A fresh repo with no prose to list starts there.
 
-The inventory is the work list. Re-running this skill is safe: whatever
-is already summarised-and-cited is done, and the inventory is what
-remains.
+The inventory is the work list; on a re-run, a source already
+summarised-and-cited is done and drops off it.
 
 # Phase 2 — harvest
 
@@ -63,7 +59,7 @@ Work the inventory source by source:
 For an incumbent entry point, ask the owner first: **merge and reduce**
 (durable content into the bundle, genuinely always-loaded rules into
 `AGENTS.md`, the incumbent down to its `@AGENTS.md` import) or **leave as
-found**. Never merge silently; that file is someone's curated context.
+found**.
 
 # Phase 3 — interview
 
@@ -77,13 +73,11 @@ carrying TBD prompts and split them in two:
   by concept, and land each answer in its skeleton.
 - **Accretes later**: knowledge only development produces — the real
   architecture, the testing strategy as practised, error-handling
-  conventions. Leave the TBD prompt in place: guessed early, these
-  are speculative prose; they fill through the project's own specs and
-  decisions.
+  conventions. Leave the TBD prompt in place; these fill through
+  the project's own specs and decisions.
 
 The split is per repo, not a fixed list: a repo seeded from a project
-template already fixes much of its technology stack, and an owner who
-has written code before has conventions worth asking for.
+template, for example, already fixes much of its technology stack.
 
 # Phase 4 — verify and report
 
@@ -97,9 +91,8 @@ Finish with a report that accounts for every inventoried source:
 harvested (with its concepts named), reduced to summary-and-citation,
 or explicitly left with a reason. Account for every skeleton the same
 way: filled, or left TBD with the reason it must accrete. The bundle
-must PASS at level 2. Leave changes uncommitted unless asked; if
-asked, commit as
-`docs:` per Conventional Commits.
+must PASS at level 2. Leave changes uncommitted unless
+asked; if asked, commit as `docs:` per Conventional Commits.
 
 ## Project adaptations
 
