@@ -21,16 +21,19 @@ gate are in [CONTRIBUTING](/CONTRIBUTING.md).[^contributing]
 - **Fake runner.** Every process spawn goes through `CommandRunner`; the
   test-only `FakeRunner` records each command line and scripts outcomes,
   including a missing program and a mid-apply failure to exercise the
-  rollback. No test shells out to a real tool.
+  rollback. No test shells out to a real tool. Orchestration detail — call
+  ordering, targeted install lists, per-provider flows — is asserted here,
+  in core, not end-to-end.
 - **CLI end-to-end.** Invoke the real binary (`assert_cmd`) against every
   surface: `--version`, help, completions per shell, `man`, usage-error exit
-  codes, the manage verbs (`init` → clean `status` → tamper → `status`
-  exits 1 → `sync` repairs), `aokf validate`'s three exit codes and its JSON,
-  `aokf index`, and `mcp aokf`'s startup
-  failures. The manage tests put fake `mise`, `claude` and
-  `codegraph` on `PATH` as shell scripts — `mise where` answers with a
-  fixture skills checkout, so materialisation runs against real files — and
-  are therefore unix-only; Windows runs the rest.
+  codes, `aokf validate`'s three exit codes and its JSON, `aokf index`, and
+  `mcp aokf`'s startup failures. The manage verbs get five smoke journeys —
+  fresh `init`, `sync` on a fresh clone, a provider switch swept both ways,
+  disabling `code-index`, and a failed `init` reporting the manifest it
+  leaves behind — against fake `mise`, `claude` and `codegraph` on `PATH` as
+  shell scripts; `mise where` answers with a fixture skills checkout, so
+  materialisation runs against real files. The fakes make these unix-only;
+  Windows runs the rest.
 - **Validator parity.** One fixture bundle per failure class under
   `tests/fixtures/aokf/`, each with a `.golden.json` captured from the Python
   validator before that script was deleted. The Rust output is compared to it

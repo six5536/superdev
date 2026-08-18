@@ -60,7 +60,7 @@ Every verb acts on the current directory.
   blueprint-version line print as reports and never affect the exit code.
 - **`sync`** refuses to run while `workflows`, `code-index` or `skills` is
   pinned anywhere other than the registry default, and says to run
-  `superdev update`. The first two are downloaded by URL and verified against a
+  `superdev update <capability>`. The first two are downloaded by URL and verified against a
   checksum baked into this binary beside the version, so no other version has
   provenance — or a URL; the skill pack's content is embedded in the binary, so
   the binary is its provenance. On a fresh clone it runs `mise trust` then
