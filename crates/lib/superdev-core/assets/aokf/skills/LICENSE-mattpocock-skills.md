@@ -12,6 +12,7 @@ Skills in this directory not on this list are superdev's own.
 - grilling
 - implement
 - to-plan (derived from upstream to-tickets)
+- research
 - tdd
 - to-spec
 - triage
