@@ -6,7 +6,6 @@
 //! skill materialiser in `materialise`.
 
 mod apply;
-mod materialise;
 mod pins;
 mod tx;
 

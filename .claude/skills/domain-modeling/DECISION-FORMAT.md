@@ -1,32 +1,44 @@
-# ADR Format
+# Decision Format
 
-ADRs live in `docs/adr/` and use sequential numbering: `0001-slug.md`, `0002-slug.md`, etc.
-
-Create the `docs/adr/` directory lazily — only when the first ADR is needed.
+Decisions are AOKF concepts under `knowledge/decisions/`, one file per
+decision, named `Dnnn-<slug>.md` (e.g. `D001-event-sourced-orders.md`).
+Create the directory lazily — when the first decision is recorded — and
+add each new concept to the bundle's `index.md`.
 
 ## Template
 
 ```md
-# {Short title of the decision}
+---
+type: Decision
+id: decision-event-sourced-orders
+title: Event-sourced orders
+description: The order write model is event-sourced.
+---
 
 {1-3 sentences: what's the context, what did we decide, and why.}
 ```
 
-That's it. An ADR can be a single paragraph. The value is in recording *that* a decision was made and *why* — not in filling out sections.
+That's it. A decision can be a single paragraph. The value is in
+recording *that* a decision was made and *why* — not in filling out
+sections.
 
 ## Optional sections
 
-Only include these when they add genuine value. Most ADRs won't need them.
+Only include these when they add genuine value. Most decisions won't
+need them.
 
-- **Status** frontmatter (`proposed | accepted | deprecated | superseded by ADR-NNNN`) — useful when decisions are revisited
-- **Considered Options** — only when the rejected alternatives are worth remembering
+- **Considered options** — only when the rejected alternatives are worth remembering
 - **Consequences** — only when non-obvious downstream effects need to be called out
+- **Lifecycle** — a revisited decision uses AOKF natively: the new concept declares a `supersedes` link (with the mirroring body link), and the old one gets `status: deprecated`. No prose markers.
 
 ## Numbering
 
-Scan `docs/adr/` for the highest existing number and increment by one.
+The filename's `Dnnn` orders decisions at a glance: scan
+`knowledge/decisions/` for the highest number and increment by one. The
+`id` is the stable link target and never changes, even when the file is
+renamed.
 
-## When to offer an ADR
+## When to offer a decision record
 
 All three of these must be true:
 

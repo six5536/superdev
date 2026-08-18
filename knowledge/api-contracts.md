@@ -12,10 +12,8 @@ resource: /crates/app/superdev/src/main.rs
 ```
 superdev                     print help, exit 0
 superdev init                set this repo up; --no-knowledge, --no-code-index,
-                             --no-workflows, --no-frontend, --no-skills each
-                             disable a capability;
-                             --workflows-provider <ID> picks the workflows
-                             provider
+                             --no-frontend, --no-skills each disable a
+                             capability
 superdev status              report drift; exit 1 when there is work to do
 superdev sync                re-apply the blueprint; --dry-run prints the plan only
 superdev update [TARGET]     move pins to this binary's defaults, then sync;
@@ -45,12 +43,13 @@ Every verb acts on the current directory.
   also ensures `CLAUDE.md` contains the line `@AGENTS.md`, appended to an
   existing file or created as a one-line file: Claude Code reads only
   `CLAUDE.md`, and that line is what makes it load the canonical entry point.
-  Skills the repo already has under a pack name are released into
-  `[skills] custom` — or, for the workflows provider's own names, into
-  `[workflows] custom` — first, so adoption never overwrites work superdev did
-  not write. `--workflows-provider <id>` is checked against the registry before
-  anything is written and conflicts with `--no-workflows`; absent, the registry
-  default applies. `--template <name>` seeds the repo from a shipped project
+  AGENTS.md gets the same treatment with `@.agents/superdev.md` — the file
+  is the user's; appending to a pre-existing one reports the hint that
+  superdev's old sections can be trimmed.
+  Skills the repo already has under a pack or knowledge-carried name are
+  released into `[skills] custom` or `[knowledge] custom` first, so adoption
+  never overwrites work superdev did not write.
+  `--template <name>` seeds the repo from a shipped project
   template (an unknown name fails naming the shipped set), `--template none`
   declines, and `--name` sets the substitution values; on a TTY with neither
   flag, init prompts — template list first, then the project name prefilled
@@ -64,15 +63,15 @@ Every verb acts on the current directory.
   planned removal, or pin behind this binary's registry, so CI can gate on it.
   Each skill released by `[skills] custom` prints as
   `skills: <name> custom, unmanaged`, and each one released by
-  `[workflows] custom` or `[knowledge] custom` the same way under its own
-  capability name — a released
+  `[knowledge] custom` the same way under its own capability name — a released
   skill is the user's file, not drift, so it leaves the code alone. Released orphans and the
   blueprint-version line print as reports and never affect the exit code.
-- **`sync`** refuses to run while `workflows`, `code-index` or `skills` is
+- **`sync`** refuses to run while `code-index` or `skills` is
   pinned anywhere other than the registry default, and says to run
-  `superdev update <capability>`. The first two are downloaded by URL and verified against a
+  `superdev update <capability>`. `code-index` is downloaded by URL and verified against a
   checksum baked into this binary beside the version, so no other version has
-  provenance — or a URL; the skill pack's content is embedded in the binary, so
+  provenance — or a URL; the skill pack's and the knowledge capability's
+  content is embedded in the binary, so
   the binary is its provenance. On a fresh clone it runs `mise trust` then
   `mise install` before any provider command, because the committed pins need no
   edit yet name tools this machine has never installed — and mise will not
@@ -82,27 +81,16 @@ Every verb acts on the current directory.
   fails rolls back before anything is deleted; an orphan the user has edited is
   released instead of removed. A successful run stamps this binary's version as
   the manifest's `blueprint`.
-- **`update`** rejects an explicit `workflows@<version>`,
-  `code-index@<version>` or `skills@<version>` for the same reason. Every other
+- **`update`** rejects an explicit `code-index@<version>` or
+  `skills@<version>` for the same reason. Every other
   capability takes an explicit version. `--provider <id>` is the only CLI path
   that switches a provider: it needs a capability target, rewrites that
   capability's provider and sets its version to the new provider's registry
   default, then syncs. Bare `update` moves versions and leaves every provider
-  alone.
-- **`workflows`** has two providers, both pinned by this binary's checksums.
-  `mattpocock-skills` materialises the pinned checkout's `skills/engineering`
-  and `skills/productivity` directories into `.claude/skills/<name>/` as owned
-  files, attributed to `workflows` in the lock and committed, so a collaborator
-  needs nothing installed. `superpowers` keeps the plugin flow, installed per
-  machine. After a materialisation — at `init` as well as `sync` — the run
-  prints `workflows: run /setup-matt-pocock-skills in Claude Code to finish
-  configuring`; the upstream setup skill is interactive, so it is the one step
-  superdev cannot take. A provider switch adds two more report lines: update
-  the `.agents` import in AGENTS.md (only where `knowledge` is enabled), and,
-  leaving superpowers, that the user-level plugin is still installed and
-  `claude plugin uninstall superpowers` removes it. The materialisation and the
-  sweep of the old provider are planned actions, so `status` exits `1` while
-  either is pending; every line above is a report and moves no exit code.
+  alone. `update workflows` is an unknown-capability error: the capability was
+  removed, and a manifest still carrying its table fails at load with the
+  guided migration error
+  ([spec](specs/S009-knowledge-carried-skills-design.md)).
 
 `aokf validate` and `aokf index` default `PATH` to `knowledge/`; the hook
 always reads the bundle at `knowledge/`. The search index lives in

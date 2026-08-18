@@ -6,10 +6,10 @@ description: Prose rules, Rust and TypeScript conventions, and the code-is-canon
 status: stable
 sources:
   - id: prose
-    resource: /.agents/PROSE.md
+    resource: /.agents/prose.md
     title: Prose rules
   - id: coding
-    resource: /.agents/CODING.md
+    resource: /.agents/coding.md
     title: Coding behaviour rules
   - id: checks
     resource: /.github/workflows/checks.yml
@@ -18,7 +18,7 @@ sources:
 
 # Approach
 
-The behavioural rules are in [CODING.md](/.agents/CODING.md): think before
+The behavioural rules are in [coding.md](/.agents/coding.md): think before
 coding, simplicity first, surgical changes only, and verifiable success
 criteria defined before executing.[^coding]
 
@@ -26,7 +26,7 @@ criteria defined before executing.[^coding]
 
 Be concise without losing information; use plain language. British English
 spelling (`behaviour`, `normalise`). The full rules are in
-[PROSE.md](/.agents/PROSE.md); the core: one idea per sentence, no filler or
+[prose.md](/.agents/prose.md); the core: one idea per sentence, no filler or
 preamble, comments explain *why* never *what*, no hedging unless genuinely
 uncertain.[^prose]
 

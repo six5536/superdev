@@ -27,8 +27,8 @@ pub struct CapabilityConfig {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub embeddings: Option<EmbeddingsConfig>,
     /// Skills released from management: superdev stops writing them and
-    /// `status` reports them as custom. Honoured by `skills` and `workflows`,
-    /// which both materialise into `.claude/skills/`.
+    /// `status` reports them as custom. Honoured by `skills` and `knowledge`,
+    /// which both write into `.claude/skills/`.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub custom: Vec<String>,
 }
@@ -92,6 +92,15 @@ impl Manifest {
             message: e.to_string(),
         })?;
         for name in m.capabilities.keys() {
+            if name == "workflows" {
+                return Err(Error::Manifest {
+                    message: "the workflows capability was removed — delete the [workflows] \
+                              table (moving any custom names to [knowledge]); its skill set \
+                              now ships with the knowledge capability. superpowers users: \
+                              `claude plugin install superpowers`"
+                        .into(),
+                });
+            }
             if Capability::parse(name).is_none() {
                 return Err(Error::Manifest {
                     message: format!("unknown capability `{name}`"),
@@ -141,13 +150,26 @@ mod tests {
             m.capabilities["skills"].version.as_deref(),
             Some(env!("CARGO_PKG_VERSION"))
         );
-        assert_eq!(m.capabilities["workflows"].provider, "mattpocock-skills");
-        assert_eq!(
-            m.capabilities["workflows"].version.as_deref(),
-            Some("1.2.3")
-        );
         let parsed = Manifest::parse(&m.to_toml()).unwrap();
         assert_eq!(parsed, m);
+    }
+
+    #[test]
+    fn a_workflows_table_gets_the_guided_error() {
+        let err = Manifest::parse(
+            "blueprint = \"0.1.0\"\n\n[workflows]\nprovider = \"mattpocock-skills\"\n",
+        )
+        .unwrap_err()
+        .to_string();
+        assert!(
+            err.contains("the workflows capability was removed"),
+            "{err}"
+        );
+        assert!(
+            err.contains("moving any custom names to [knowledge]"),
+            "{err}"
+        );
+        assert!(err.contains("claude plugin install superpowers"), "{err}");
     }
 
     #[test]

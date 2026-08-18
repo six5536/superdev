@@ -10,6 +10,27 @@ use crate::manifest::{CONFIG_PATH, Manifest};
 
 use super::item::ManagedItem;
 
+/// One shipped skill directory: its name and every file, as (path relative
+/// to the directory, content).
+pub(crate) type SkillFiles = (&'static str, &'static [(&'static str, &'static str)]);
+
+/// Each non-custom skill directory as owned files, in shipped order.
+pub(crate) fn skill_dir_items(skills: &[SkillFiles], custom: &[String]) -> Vec<ManagedItem> {
+    skills
+        .iter()
+        .filter(|(name, _)| !custom.iter().any(|c| c == name))
+        .flat_map(|(name, files)| {
+            files
+                .iter()
+                .map(move |(rel, content)| ManagedItem::OwnedFile {
+                    path: format!(".claude/skills/{name}/{rel}"),
+                    content: (*content).to_string(),
+                    reason: format!("{name} skill"),
+                })
+        })
+        .collect()
+}
+
 /// Where a shipped skill lives in the managed repo.
 pub(crate) fn skill_path(name: &str) -> String {
     format!(".claude/skills/{name}/SKILL.md")

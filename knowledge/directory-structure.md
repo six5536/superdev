@@ -17,8 +17,8 @@ packages/                 # npm launcher + per-platform binary packages
 knowledge/                # this AOKF bundle — canonical project knowledge
 knowledge/specs/          # design specs (permanent decision records)
 knowledge/plans/          # implementation plans (tagged done on landing)
-.agents/                  # AOKF spec and agent-facing rules (PROSE.md, MATT-POCOCK-SKILLS.md)
-.claude/skills/           # committed skills: the four-skill pack + the materialised workflows set
+.agents/                  # superdev.md aggregator, capability instructions, AOKF spec, agent rules
+.claude/skills/           # committed skills: the skill pack + the knowledge-carried set
 .superdev/                # superdev's own manifest and lock (this repo is self-managed)
 .github/workflows/        # checks.yml (reusable), ci.yml, release.yml, audit.yml
 .devcontainer/            # dev container definition

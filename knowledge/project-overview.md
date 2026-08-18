@@ -20,7 +20,6 @@ See
 # Status
 
 Unreleased. The CLI core, the blueprint engine, the AOKF MCP server's read
-side, the skill pack, blueprint migrations and workflows provider selection
-(mattpocock-skills default, superpowers secondary) are built; structured
-updates through MCP and knowledge upkeep are not. Nothing is published to
-npm or crates.io yet.
+side, the skill pack, blueprint migrations and the knowledge-carried skill
+set are built; structured updates through MCP and knowledge upkeep are not.
+Nothing is published to npm or crates.io yet.

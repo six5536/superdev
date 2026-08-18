@@ -96,10 +96,10 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let mut lock = Lock::default();
         lock.components.insert(
-            "workflows".into(),
+            "code-index".into(),
             LockedComponent {
-                provider: "superpowers".into(),
-                version: Some("6.2.0".into()),
+                provider: "codegraph".into(),
+                version: Some("1.5.0".into()),
             },
         );
         lock.files
@@ -116,7 +116,7 @@ version = "0.1.0"
 
 [files]
 ".agents/aokf/SPEC.md" = "aaaa"
-".mise.toml:http:superpowers" = "bbbb"
+".mise.toml:http:codegraph" = "bbbb"
 ".claude/settings.json:hooks.PostToolUse[superdev aokf hook validate]" = "cccc"
 "#;
         let dir = tempfile::tempdir().unwrap();
@@ -124,7 +124,7 @@ version = "0.1.0"
         std::fs::write(dir.path().join(LOCK_PATH), toml).unwrap();
         let lock = Lock::load(dir.path()).unwrap();
         assert_eq!(lock.components["skills"].provider, "superdev-skills");
-        assert_eq!(lock.files[".mise.toml:http:superpowers"], "bbbb");
+        assert_eq!(lock.files[".mise.toml:http:codegraph"], "bbbb");
         assert_eq!(lock.files.len(), 3);
         assert!(lock.owners.is_empty());
     }

@@ -19,8 +19,6 @@ use crate::runner::CommandRunner;
 use super::pins::PinEffects;
 use super::tx::Tx;
 
-/// Argument form resolved to a mise tool's install path.
-pub(super) const MISE_WHERE: &str = "{mise-where:";
 /// Skip reason for a removal target that is already absent. Named, because
 /// reconciliation reads it back to tell a swept file from a released one.
 pub(super) const ALREADY_GONE: &str = "already gone";
@@ -128,17 +126,6 @@ pub fn apply(
     }
 }
 
-/// The lock changes one entry accumulates while its actions run, applied
-/// together when the entry completes.
-pub(super) struct LockEffects<'e> {
-    /// (key, hash) pairs to insert into `files`.
-    pub(super) written: &'e mut Vec<(String, String)>,
-    /// Keys to attribute to the entry's capability in `owners`.
-    pub(super) attributed: &'e mut Vec<String>,
-    /// Keys to drop from both.
-    pub(super) removed: &'e mut Vec<String>,
-}
-
 /// State carried through a single apply run.
 pub(super) struct Session<'a> {
     pub(super) root: &'a Path,
@@ -148,7 +135,6 @@ pub(super) struct Session<'a> {
     /// Locked hashes as of the start of the run, for user-edit detection.
     pub(super) prior_hashes: BTreeMap<String, String>,
     /// Lock attribution as of the start of the run, for reconciliation.
-    pub(super) prior_owners: BTreeMap<String, String>,
     /// Lock keys earlier entries wrote in this run. Removals were planned
     /// against the pre-run state, so a later one must not drop them.
     pub(super) written_keys: BTreeSet<String>,
@@ -167,7 +153,6 @@ impl<'a> Session<'a> {
             runner,
             tx: Tx::new(root),
             prior_hashes: lock.files.clone(),
-            prior_owners: lock.owners.clone(),
             written_keys: BTreeSet::new(),
             reports: planned
                 .iter()
@@ -198,7 +183,6 @@ impl<'a> Session<'a> {
         pin_effects: PinEffects,
     ) -> bool {
         let mut written = Vec::new();
-        let mut attributed: Vec<String> = Vec::new();
         let mut removed: Vec<String> = Vec::new();
         for action in &entry.actions {
             let before = written.len();
@@ -211,7 +195,12 @@ impl<'a> Session<'a> {
                     ownership,
                     ..
                 } => self.write_action(path, content, *ownership, &mut written),
-                Action::EnsureLine { path, line, .. } => self.ensure_line(path, line),
+                Action::EnsureLine {
+                    path,
+                    line,
+                    append_note,
+                    ..
+                } => self.ensure_line(path, line, append_note),
                 Action::SetJsonKey {
                     path,
                     pointer,
@@ -225,23 +214,6 @@ impl<'a> Session<'a> {
                 } => {
                     self.ensure_json_array_element(path, pointer, marker, value_json, &mut written)
                 }
-                Action::MaterialiseSkills {
-                    tool,
-                    source_dirs,
-                    custom,
-                    overrides,
-                } => self.materialise_skills(
-                    entry.capability,
-                    tool,
-                    source_dirs,
-                    custom,
-                    overrides,
-                    LockEffects {
-                        written: &mut written,
-                        attributed: &mut attributed,
-                        removed: &mut removed,
-                    },
-                ),
                 Action::Run {
                     program,
                     args,
@@ -280,16 +252,12 @@ impl<'a> Session<'a> {
             .chain(written)
             .map(|(key, hash)| {
                 lock.files.insert(key.clone(), hash);
+                // Nothing writes `owners` any more; a rewrite retires the
+                // legacy attribution a pre-removal binary left behind.
+                lock.owners.remove(&key);
                 key
             })
             .collect();
-        // Before the removals, so a reconciled removal wins over an
-        // attribution the same entry recorded.
-        for key in attributed {
-            if let Some(capability) = entry.capability {
-                lock.owners.insert(key, capability.as_str().to_string());
-            }
-        }
         for key in removed {
             // An earlier entry rewrote this file in this same run: the removal
             // was planned against the old state and would strand the fresh
@@ -350,7 +318,12 @@ impl<'a> Session<'a> {
         ActionOutcome::Applied { note }
     }
 
-    fn ensure_line(&mut self, path: &str, line: &str) -> ActionOutcome {
+    fn ensure_line(
+        &mut self,
+        path: &str,
+        line: &str,
+        append_note: &Option<String>,
+    ) -> ActionOutcome {
         let existing = match read_text(&self.root.join(path)) {
             Ok(existing) => existing,
             Err(e) => return ActionOutcome::Failed(e.to_string()),
@@ -364,8 +337,11 @@ impl<'a> Session<'a> {
         }
         next.push_str(line);
         next.push('\n');
+        // The note fires only for appends to a pre-existing file: a fresh
+        // create has nothing of the user's to talk about.
+        let note = existing.is_some().then(|| append_note.clone()).flatten();
         match self.tx.write(path, existing, &next) {
-            Ok(()) => ActionOutcome::Applied { note: None },
+            Ok(()) => ActionOutcome::Applied { note },
             Err(e) => ActionOutcome::Failed(e.to_string()),
         }
     }
@@ -495,16 +471,11 @@ impl<'a> Session<'a> {
         undo: &Option<(String, Vec<String>)>,
         optional: bool,
     ) -> ActionOutcome {
-        let args = match self.resolve_args(args) {
-            Ok(args) => args,
-            // The failure is mise's, not the action's program.
-            Err(e) => return missing_or_failed("mise", e, optional),
-        };
-        match self.runner.run(program, &args, self.root) {
+        match self.runner.run(program, args, self.root) {
             Err(e) => missing_or_failed(program, e, optional),
             Ok(out) if out.status != 0 => ActionOutcome::Failed(
                 Error::Command {
-                    command: command_line(program, &args),
+                    command: command_line(program, args),
                     status: Some(out.status),
                     stderr: out.stderr,
                 }
@@ -517,36 +488,12 @@ impl<'a> Session<'a> {
                     }
                     None => self.tx.mark_irreversible(format!(
                         "`{}` has no undo",
-                        command_line(program, &args)
+                        command_line(program, args)
                     )),
                 }
                 ActionOutcome::Applied { note: None }
             }
         }
-    }
-
-    /// Replace every `{mise-where:TOOL}` argument with the tool's install path.
-    fn resolve_args(&self, args: &[String]) -> Result<Vec<String>> {
-        args.iter()
-            .map(|arg| {
-                let Some(tool) = arg
-                    .strip_prefix(MISE_WHERE)
-                    .and_then(|a| a.strip_suffix('}'))
-                else {
-                    return Ok(arg.clone());
-                };
-                let args = vec!["where".to_string(), tool.to_string()];
-                let out = self.runner.run("mise", &args, self.root)?;
-                if out.status != 0 {
-                    return Err(Error::Command {
-                        command: command_line("mise", &args),
-                        status: Some(out.status),
-                        stderr: out.stderr,
-                    });
-                }
-                Ok(out.stdout.trim().to_string())
-            })
-            .collect()
     }
 }
 
@@ -614,8 +561,8 @@ mod tests {
         let mut lock = Lock::default();
         let planned = vec![
             Planned {
-                capability: Some(Capability::Workflows),
-                provider: "mattpocock-skills".into(),
+                capability: Some(Capability::Knowledge),
+                provider: "aokf".into(),
                 actions: vec![write_owned("shared.txt")],
             },
             Planned {
@@ -710,44 +657,6 @@ mod tests {
             result.reports[0].outcomes[0].1,
             ActionOutcome::Skipped(_)
         ));
-    }
-
-    #[test]
-    fn mise_where_placeholder_is_resolved() {
-        let dir = tempfile::tempdir().unwrap();
-        let fake = FakeRunner::new();
-        fake.script(
-            "mise where http:superpowers",
-            Output {
-                status: 0,
-                stdout: "/tmp/sp\n".into(),
-                stderr: String::new(),
-            },
-        );
-        let manifest = Manifest::default_for("0.1.0", &[]);
-        let mut lock = Lock::default();
-        let planned = vec![Planned {
-            capability: Some(crate::capability::Capability::Workflows),
-            provider: "superpowers".into(),
-            actions: vec![Action::Run {
-                program: "claude".into(),
-                args: vec![
-                    "plugin".into(),
-                    "marketplace".into(),
-                    "add".into(),
-                    "{mise-where:http:superpowers}".into(),
-                ],
-                purpose: "register".into(),
-                undo: None,
-                optional: true,
-            }],
-        }];
-        let result = apply(dir.path(), &fake, &manifest, &planned, &mut lock);
-        assert!(result.ok);
-        assert!(
-            fake.calls()
-                .contains(&"claude plugin marketplace add /tmp/sp".to_string())
-        );
     }
 
     #[test]
@@ -1083,13 +992,13 @@ mod tests {
         let components = crate::components::enabled(&manifest).unwrap();
         let planned = plan(&components, &ctx).unwrap();
         assert_eq!(planned.len(), components.len());
-        assert_eq!(planned[0].provider, "mattpocock-skills");
+        assert_eq!(planned[0].provider, "frontend-design");
         assert!(planned.iter().all(|p| p.capability.is_some()));
         assert!(planned.iter().any(|p| !p.actions.is_empty()));
 
         // A component that fails to plan aborts the whole plan.
         let mut broken = Manifest::default_for("0.1.0", &[]);
-        broken.capabilities.get_mut("workflows").unwrap().version = Some("9.9.9".into());
+        broken.capabilities.get_mut("code-index").unwrap().version = Some("9.9.9".into());
         let ctx = crate::component::Ctx {
             root: dir.path(),
             runner: &fake,
@@ -1121,6 +1030,7 @@ mod tests {
                     path: ".gitignore".into(),
                     line: ".superdev/cache/".into(),
                     reason: "ignore machine state".into(),
+                    append_note: None,
                 },
             ],
         }];
@@ -1153,6 +1063,7 @@ mod tests {
             path: path.into(),
             line: "added".into(),
             reason: "test".into(),
+            append_note: None,
         };
         let planned = vec![Planned {
             capability: None,
@@ -1168,6 +1079,46 @@ mod tests {
         assert_eq!(
             std::fs::read_to_string(dir.path().join("b.txt")).unwrap(),
             "added\n"
+        );
+    }
+
+    #[test]
+    fn ensure_line_notes_appends_to_existing_files_only() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::write(dir.path().join("a.txt"), "first\n").unwrap();
+        std::fs::write(dir.path().join("c.txt"), "added\n").unwrap();
+        let fake = FakeRunner::new();
+        let manifest = Manifest::default_for("0.1.0", &[]);
+        let mut lock = Lock::default();
+        let line = |path: &str| Action::EnsureLine {
+            path: path.into(),
+            line: "added".into(),
+            reason: "test".into(),
+            append_note: Some("the rest is yours".into()),
+        };
+        let planned = vec![Planned {
+            capability: None,
+            provider: "superdev".into(),
+            actions: vec![line("a.txt"), line("b.txt"), line("c.txt")],
+        }];
+        let result = apply(dir.path(), &fake, &manifest, &planned, &mut lock);
+        assert!(result.ok);
+        // Appended to an existing file: the note fires.
+        assert_eq!(
+            result.reports[0].outcomes[0].1,
+            ActionOutcome::Applied {
+                note: Some("the rest is yours".into())
+            }
+        );
+        // Created fresh: nothing of the user's to talk about.
+        assert_eq!(
+            result.reports[0].outcomes[1].1,
+            ActionOutcome::Applied { note: None }
+        );
+        // Already present: skipped, no note.
+        assert_eq!(
+            result.reports[0].outcomes[2].1,
+            ActionOutcome::Skipped("present".into())
         );
     }
 
@@ -1229,12 +1180,12 @@ mod tests {
         let mut lock = Lock::default();
         let planned = vec![
             Planned {
-                capability: Some(crate::capability::Capability::Workflows),
-                provider: "superpowers".into(),
+                capability: Some(crate::capability::Capability::Frontend),
+                provider: "frontend-design".into(),
                 actions: vec![
                     Action::SetMisePin {
-                        tool: "http:superpowers".into(),
-                        value_toml: "\"6.2.0\"".into(),
+                        tool: "http:example".into(),
+                        value_toml: "\"1.0.0\"".into(),
                     },
                     write_owned("owned.txt"),
                     Action::Run {
@@ -1246,11 +1197,15 @@ mod tests {
                     },
                     Action::Run {
                         program: "claude".into(),
-                        args: vec!["plugin".into(), "install".into(), "superpowers".into()],
+                        args: vec!["plugin".into(), "install".into(), "frontend-design".into()],
                         purpose: "install".into(),
                         undo: Some((
                             "claude".into(),
-                            vec!["plugin".into(), "uninstall".into(), "superpowers".into()],
+                            vec![
+                                "plugin".into(),
+                                "uninstall".into(),
+                                "frontend-design".into(),
+                            ],
                         )),
                         optional: true,
                     },
@@ -1277,7 +1232,7 @@ mod tests {
         assert!(!dir.path().join(".mise.toml").exists(), "pin file removed");
         assert!(
             fake.calls()
-                .contains(&"claude plugin uninstall superpowers".to_string())
+                .contains(&"claude plugin uninstall frontend-design".to_string())
         );
         assert!(result.reverted.iter().any(|r| r.contains("owned.txt")));
         assert!(result.reverted.iter().any(|r| r.contains("uninstall")));
@@ -1297,69 +1252,6 @@ mod tests {
         // The first entry completed, so its hashes are staged in the lock —
         // which the caller discards, because the run is not ok.
         assert!(lock.files.contains_key("owned.txt"));
-    }
-
-    #[test]
-    fn missing_mise_stops_placeholder_resolution() {
-        let dir = tempfile::tempdir().unwrap();
-        let fake = FakeRunner::new();
-        fake.missing("mise");
-        let manifest = Manifest::default_for("0.1.0", &[]);
-        let mut lock = Lock::default();
-        let run = |optional| Action::Run {
-            program: "claude".into(),
-            args: vec!["add".into(), "{mise-where:http:superpowers}".into()],
-            purpose: "register".into(),
-            undo: None,
-            optional,
-        };
-        let planned = vec![Planned {
-            capability: Some(crate::capability::Capability::Workflows),
-            provider: "superpowers".into(),
-            actions: vec![run(true)],
-        }];
-        let result = apply(dir.path(), &fake, &manifest, &planned, &mut lock);
-        assert!(result.ok);
-        let ActionOutcome::Skipped(reason) = &result.reports[0].outcomes[0].1 else {
-            panic!("expected a skip");
-        };
-        assert!(reason.starts_with("mise not installed"), "{reason}");
-
-        let planned = vec![Planned {
-            capability: Some(crate::capability::Capability::Workflows),
-            provider: "superpowers".into(),
-            actions: vec![run(false)],
-        }];
-        assert!(!apply(dir.path(), &fake, &manifest, &planned, &mut lock).ok);
-    }
-
-    #[test]
-    fn failing_mise_where_is_a_failure() {
-        let dir = tempfile::tempdir().unwrap();
-        let fake = FakeRunner::new();
-        fake.script(
-            "mise where",
-            Output {
-                status: 1,
-                stdout: String::new(),
-                stderr: "not installed".into(),
-            },
-        );
-        let manifest = Manifest::default_for("0.1.0", &[]);
-        let mut lock = Lock::default();
-        let planned = vec![Planned {
-            capability: Some(crate::capability::Capability::Workflows),
-            provider: "superpowers".into(),
-            actions: vec![Action::Run {
-                program: "claude".into(),
-                args: vec!["add".into(), "{mise-where:http:superpowers}".into()],
-                purpose: "register".into(),
-                undo: None,
-                optional: true,
-            }],
-        }];
-        let result = apply(dir.path(), &fake, &manifest, &planned, &mut lock);
-        assert!(!result.ok);
     }
 
     #[test]

@@ -30,3 +30,4 @@
 /target/llvm-cov
 /target/llvm-cov-target
 *.profraw
+.codegraph/

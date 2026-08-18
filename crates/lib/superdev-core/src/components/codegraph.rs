@@ -6,10 +6,44 @@ use crate::component::{Claim, Component, Ctx};
 use crate::error::Result;
 use crate::registry::CODEGRAPH_PLATFORMS;
 
+use super::item::{ManagedItem, claims, plan_items};
+
 /// mise `[tools]` key for codegraph.
 pub const CODEGRAPH_MISE_TOOL: &str = "http:codegraph";
 /// Directory `codegraph init` creates.
 pub const CODEGRAPH_INDEX_DIR: &str = ".codegraph";
+
+/// The instruction file telling agents the index exists and how to query it,
+/// imported by the `.agents/superdev.md` aggregator.
+const INSTRUCTIONS_PATH: &str = ".agents/codegraph.md";
+const INSTRUCTIONS: &str = include_str!(concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/assets/codegraph/codegraph.md"
+));
+
+/// codegraph's MCP server in the shared `.mcp.json`, launched through mise
+/// because the pinned binary is on no PATH the client can see.
+const MCP_POINTER: &str = "mcpServers.codegraph";
+const MCP_VALUE: &str =
+    r#"{"command":"mise","args":["exec","http:codegraph","--","codegraph","serve","--mcp"]}"#;
+
+/// The declarative half: the instruction file and the MCP registration.
+/// The pin and the init run stay hand-written below.
+fn items() -> Vec<ManagedItem> {
+    vec![
+        ManagedItem::OwnedFile {
+            path: INSTRUCTIONS_PATH.into(),
+            content: INSTRUCTIONS.into(),
+            reason: "code-index instructions".into(),
+        },
+        ManagedItem::JsonEntry {
+            path: ".mcp.json".into(),
+            pointer: MCP_POINTER.into(),
+            marker: None,
+            value_json: MCP_VALUE.into(),
+        },
+    ]
+}
 
 /// The codegraph provider.
 pub struct Codegraph;
@@ -56,6 +90,7 @@ impl Component for Codegraph {
         )? {
             actions.push(pin);
         }
+        actions.extend(plan_items(ctx.root, &items()));
         if !ctx.root.join(CODEGRAPH_INDEX_DIR).is_dir() {
             // Through mise: the tool is pinned in this repo's `.mise.toml`,
             // and mise install puts it on no PATH the running process can see.
@@ -80,14 +115,16 @@ impl Component for Codegraph {
     }
 
     fn owned(&self, _ctx: &Ctx<'_>) -> Vec<Claim> {
-        vec![Claim::MisePin(CODEGRAPH_MISE_TOOL.to_string())]
+        let mut owned = vec![Claim::MisePin(CODEGRAPH_MISE_TOOL.to_string())];
+        owned.extend(claims(&items()));
+        owned
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::component::{Component, Ctx};
+    use crate::component::{Claim, Component, Ctx};
     use crate::lock::Lock;
     use crate::manifest::Manifest;
     use crate::runner::FakeRunner;
@@ -127,6 +164,22 @@ mod tests {
                 .any(|d| d.contains("run `mise exec http:codegraph -- codegraph init`")),
             "descs: {descs:?}"
         );
+        // The agent wiring: the instruction file and the MCP registration.
+        assert!(
+            descs
+                .iter()
+                .any(|d| d.contains("write .agents/codegraph.md")),
+            "descs: {descs:?}"
+        );
+        assert!(
+            descs
+                .iter()
+                .any(|d| d.contains("set mcpServers.codegraph in .mcp.json")),
+            "descs: {descs:?}"
+        );
+        let claimed: Vec<String> = Codegraph.owned(&ctx).iter().map(Claim::lock_key).collect();
+        assert!(claimed.contains(&".agents/codegraph.md".to_string()));
+        assert!(claimed.contains(&".mcp.json:mcpServers.codegraph".to_string()));
     }
 
     #[test]
@@ -141,6 +194,13 @@ mod tests {
         )
         .unwrap();
         std::fs::create_dir_all(dir.path().join(CODEGRAPH_INDEX_DIR)).unwrap();
+        std::fs::create_dir_all(dir.path().join(".agents")).unwrap();
+        std::fs::write(dir.path().join(INSTRUCTIONS_PATH), INSTRUCTIONS).unwrap();
+        std::fs::write(
+            dir.path().join(".mcp.json"),
+            format!(r#"{{"mcpServers":{{"codegraph":{MCP_VALUE}}}}}"#),
+        )
+        .unwrap();
         let lock = Lock::default();
         let fake = FakeRunner::new();
         let ctx = Ctx {

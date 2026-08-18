@@ -19,26 +19,6 @@ pub(crate) fn read_text(path: &Path) -> Result<Option<String>> {
     }
 }
 
-/// Every file under `dir`, recursively, in sorted order.
-pub(crate) fn collect_files(dir: &Path, into: &mut Vec<std::path::PathBuf>) -> Result<()> {
-    let mut entries: Vec<_> = fs::read_dir(dir)
-        .map_err(|e| Error::Io {
-            path: dir.into(),
-            source: e,
-        })?
-        .filter_map(|e| e.ok().map(|e| e.path()))
-        .collect();
-    entries.sort();
-    for path in entries {
-        if path.is_dir() {
-            collect_files(&path, into)?;
-        } else {
-            into.push(path);
-        }
-    }
-    Ok(())
-}
-
 pub(crate) fn write_file(path: &Path, content: &str) -> Result<()> {
     if let Some(parent) = path.parent() {
         fs::create_dir_all(parent).map_err(|e| Error::Io {

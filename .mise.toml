@@ -11,16 +11,11 @@ cargo-binstall = "1.21.0"
 
 "npm:@anthropic-ai/claude-code" = { version = "latest", npm_args = "--ignore-scripts=false" }
 "github:rtk-ai/rtk" = "0.43.0"
-# Superpowers ships no release assets, so the github backend cannot install it;
-# the http backend pins the tag tarball and verifies the sha256, which is the
-# version lock and provenance. Bump: change the tag in the url + version, then
-# update the checksum (curl -sL <url> | sha256sum).
-"http:superpowers" = { version = "6.2.0", url = "https://github.com/obra/superpowers/archive/refs/tags/v6.2.0.tar.gz", checksum = "sha256:468246a7b4981d4c014c2b58d9ee538700ffded075279d5810059cdc1abeb5f3", strip_components = 1 }
 
 "cargo:cargo-zigbuild" = "0.22.3"
 "cargo:cargo-nextest" = "0.9.137"
 "cargo:cargo-llvm-cov" = "0.8.7"
-"http:mattpocock-skills" = { version = "1.2.3", url = "https://github.com/mattpocock/skills/archive/refs/tags/v1.2.3.tar.gz", checksum = "sha256:238fac54d0f53d3e2d0501c1b38c9c0e4e9bc26f6b057b53a7328ea15d43b66f", strip_components = 1 }
+"http:codegraph" = { version = "1.5.0", platforms = { "linux-arm64" = { url = "https://github.com/colbymchenry/codegraph/releases/download/v1.5.0/codegraph-linux-arm64.tar.gz", checksum = "sha256:9f17750aedf45d51f68caae39ed21d6e2a7290b2326e5c53f95a165918ebd1d8" }, "linux-x64" = { url = "https://github.com/colbymchenry/codegraph/releases/download/v1.5.0/codegraph-linux-x64.tar.gz", checksum = "sha256:2ba65e87a1210b706bb1e67d5e48b5fc4a1935e43dbb3fb5f31c5597840d2e58" }, "macos-arm64" = { url = "https://github.com/colbymchenry/codegraph/releases/download/v1.5.0/codegraph-darwin-arm64.tar.gz", checksum = "sha256:cf5ee435a6e44d097b2f98f2b7b8b9422bb1094844404efed82519c5da1af2cf" }, "macos-x64" = { url = "https://github.com/colbymchenry/codegraph/releases/download/v1.5.0/codegraph-darwin-x64.tar.gz", checksum = "sha256:0a0ccc29bf7da9d10be1458d89d7e15c55927ae24cd95e9fa3de4bdfea059dde" }, "windows-arm64" = { url = "https://github.com/colbymchenry/codegraph/releases/download/v1.5.0/codegraph-win32-arm64.zip", checksum = "sha256:de125e792b5eed7dee8def2ab9bd7e762f372012f75f595e59d3b0c8714b0d55" }, "windows-x64" = { url = "https://github.com/colbymchenry/codegraph/releases/download/v1.5.0/codegraph-win32-x64.zip", checksum = "sha256:d6798622b4f44ee6757c94335f437ee27a9ff7d3537b554cb6a2b3baf11bc4a1" } }, strip_components = 1 }
 
 [env]
 ENTIRE_TOKEN_STORE = "file"

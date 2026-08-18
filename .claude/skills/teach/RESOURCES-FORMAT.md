@@ -1,11 +1,16 @@
-# RESOURCES.md Format
+# Resources Format
 
-`RESOURCES.md` is the curated set of trusted sources for this topic. Knowledge for explainers should be drawn from here, not from parametric guesses. Wisdom comes from the communities listed here.
+The resources concept (`knowledge/resources.md`, `type: Reference`, `id: resources`) is the curated set of trusted sources for this topic. Knowledge for explainers should be drawn from here, not from parametric guesses. Wisdom comes from the communities listed here.
 
 ## Structure
 
 ```md
-# {Topic} Resources
+---
+type: Reference
+id: resources
+title: {Topic} Resources
+description: The curated knowledge sources and communities for this topic.
+---
 
 ## Knowledge
 

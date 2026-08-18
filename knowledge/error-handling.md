@@ -17,7 +17,7 @@ resource: /crates/app/superdev/src/main.rs
 - `2` — usage error (clap), a hard failure, or an I/O failure, rendered as
   `error: <message>` on stderr. A failed `sync` or `init` exits `2`, as does
   `mcp aokf` when it cannot start. A provider id the registry does not know —
-  in the manifest, or behind `--workflows-provider` or `--provider` — exits `2`
+  in the manifest, or behind `update --provider` — exits `2`
   with `<capability> provider must be one of: <ids>`. The validation hook uses
   `2` for its own purpose — see below. `status` reaches `2` in one case: an
   orphaned lock entry it cannot read, because the engine never guesses about

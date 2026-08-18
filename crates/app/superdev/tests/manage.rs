@@ -24,20 +24,7 @@ impl Sandbox {
         fs::create_dir_all(repo.join(".git")).unwrap(); // presence is all superdev checks
         let bin = dir.path().join("bin");
         fs::create_dir_all(&bin).unwrap();
-        // What `mise where http:mattpocock-skills` resolves to: a stand-in for
-        // the unpacked upstream tarball the workflows materialiser copies from.
-        for rel in [
-            "skills/engineering/tdd/SKILL.md",
-            "skills/engineering/code-review/SKILL.md",
-            "skills/productivity/handoff/SKILL.md",
-        ] {
-            let p = dir.path().join("checkout").join(rel);
-            fs::create_dir_all(p.parent().unwrap()).unwrap();
-            fs::write(p, "upstream skill\n").unwrap();
-        }
-        // `mise where` fails until `mise install` has run, as the real mise does
-        // on a machine that has never installed the repo's pinned tools. `mise
-        // exec` forwards to the fake tool, which is how a pinned tool is
+        // `mise exec` forwards to the fake tool, which is how a pinned tool is
         // reached: it is on no PATH the caller can see.
         write_fake(
             &bin,
@@ -52,12 +39,6 @@ case "$1" in
     while [ $# -gt 0 ] && [ "$1" != "--" ]; do shift; done
     [ "$1" = "--" ] && shift
     exec "$@" ;;
-  where)
-    [ -f "$FAKE_INSTALLED" ] || { echo "$2 is not installed" >&2; exit 1; }
-    case "$2" in
-      http:mattpocock-skills) echo "$FAKE_CHECKOUT" ;;
-      *) echo /tmp/fake-superpowers ;;
-    esac ;;
 esac
 exit 0
 "#,
@@ -102,8 +83,7 @@ exit 0
             .env("PATH", path)
             .env("FAKE_LOG", self.dir.path().join("calls.log"))
             .env("FAKE_PLUGINS", self.dir.path().join("plugins.txt"))
-            .env("FAKE_INSTALLED", self.dir.path().join("installed"))
-            .env("FAKE_CHECKOUT", self.dir.path().join("checkout"));
+            .env("FAKE_INSTALLED", self.dir.path().join("installed"));
         cmd
     }
 
@@ -165,16 +145,6 @@ fn remove_table(toml: &str, table: &str) -> String {
     out
 }
 
-/// One `[table]`'s keys, up to the next header. Panics when the table is
-/// missing, which is the same failure the caller's assertion would report.
-fn table<'a>(toml: &'a str, header: &str) -> &'a str {
-    let rest = toml
-        .split_once(header)
-        .unwrap_or_else(|| panic!("no {header} in: {toml}"))
-        .1;
-    rest.split_once("\n[").map_or(rest, |(keys, _)| keys)
-}
-
 /// The backed-up copy of `rel`, searched across the per-run stamp directories
 /// the engine names by clock time.
 fn backup_of(sb: &Sandbox, rel: &str) -> Option<String> {
@@ -201,41 +171,47 @@ fn init_sets_up_a_fresh_repo() {
     let repo = sb.repo();
     assert!(repo.join(".superdev/config.toml").is_file());
     assert!(repo.join(".superdev/lock.toml").is_file());
-    assert!(repo.join("AGENTS.md").is_file());
+    // A fresh AGENTS.md holds only superdev's import; the rest is the user's
+    // to write. The fenced aggregator points at the enabled capabilities'
+    // instruction files.
+    assert_eq!(sb.read("AGENTS.md"), "@.agents/superdev.md\n");
+    let aggregator = sb.read(".agents/superdev.md");
+    assert!(aggregator.starts_with("<superdev-system>"), "{aggregator}");
+    assert!(aggregator.contains("@aokf.md"), "{aggregator}");
+    assert!(aggregator.contains("@codegraph.md"), "{aggregator}");
+    assert!(aggregator.contains("@coding.md"), "{aggregator}");
+    assert!(repo.join(".agents/coding.md").is_file());
+    assert!(repo.join(".agents/prose.md").is_file());
+    assert!(repo.join(".agents/aokf.md").is_file());
+    assert!(repo.join(".agents/codegraph.md").is_file());
     assert!(repo.join(".agents/aokf/SPEC.md").is_file());
     let mcp = sb.read(".mcp.json");
     assert!(mcp.contains("\"superdev-aokf\""), "{mcp}");
+    assert!(mcp.contains("\"codegraph\""), "{mcp}");
     assert!(sb.read(".gitignore").contains(".superdev/cache/"));
     assert!(sb.read(".gitignore").contains(".codegraph/"));
-    // The default workflows provider materialises its skills into the repo, so
-    // a collaborator gets them from git alone; nothing installs at user level.
-    assert_eq!(sb.read(".claude/skills/tdd/SKILL.md"), "upstream skill\n");
+    // The knowledge capability carries the converted skill set into the repo,
+    // so a collaborator gets it from git alone; nothing installs at user level.
+    assert!(repo.join(".claude/skills/tdd/SKILL.md").is_file());
+    assert!(repo.join(".claude/skills/tdd/mocking.md").is_file());
     assert!(repo.join(".claude/skills/handoff/SKILL.md").is_file());
+    assert!(
+        repo.join(".claude/skills/LICENSE-mattpocock-skills.md")
+            .is_file()
+    );
     let lock = sb.read(".superdev/lock.toml");
-    let owners = lock
-        .split("[owners]")
-        .nth(1)
-        .unwrap_or_else(|| panic!("lock: {lock}"));
     assert!(
-        owners.contains("\".claude/skills/tdd/SKILL.md\" = \"workflows\""),
+        lock.contains("\".claude/skills/tdd/SKILL.md\""),
         "lock: {lock}"
     );
-    assert!(
-        table(&lock, "[components.workflows]").contains("provider = \"mattpocock-skills\""),
-        "lock: {lock}"
-    );
-    assert!(
-        init.stdout
-            .contains("workflows: run /setup-matt-pocock-skills in Claude Code"),
-        "stdout: {}",
-        init.stdout
-    );
+    assert!(!lock.contains("workflows"), "lock: {lock}");
+    assert!(!sb.read(".superdev/config.toml").contains("workflows"));
     // codegraph comes from its checksummed release bundles, not npm.
     let pinned = sb.read(".mise.toml");
-    assert!(pinned.contains("http:mattpocock-skills"), "{pinned}");
     assert!(pinned.contains("http:codegraph"), "{pinned}");
     assert!(pinned.contains("sha256:"), "{pinned}");
     assert!(!pinned.contains("npm:"), "{pinned}");
+    assert!(!pinned.contains("mattpocock"), "{pinned}");
     // The real binary drove each fake through PATH — wiring, not ordering:
     // core's FakeRunner tests own the ordering and the targeted lists.
     let log = sb.log();
@@ -258,10 +234,23 @@ fn init_sets_up_a_fresh_repo() {
     sb.superdev().arg("sync").assert().success();
     assert_ne!(sb.read(".agents/aokf/SPEC.md"), "tampered");
 
-    // Scaffolds are the user's from the moment they exist: no drift, ever.
-    sb.write("AGENTS.md", "customised");
+    // AGENTS.md is the user's: any content is fine as long as the import
+    // line stays, and superdev never rewrites the rest.
+    sb.write("AGENTS.md", "customised\n@.agents/superdev.md\n");
     sb.superdev().arg("status").assert().success();
-    assert_eq!(sb.read("AGENTS.md"), "customised");
+    assert_eq!(sb.read("AGENTS.md"), "customised\n@.agents/superdev.md\n");
+    // Deleting the line is planned work; sync appends it back and reports
+    // the trim hint, leaving the user's text alone.
+    sb.write("AGENTS.md", "customised\n");
+    sb.superdev().arg("status").assert().code(1);
+    let synced = run(sb.superdev().arg("sync"));
+    assert_eq!(synced.code, 0, "stderr: {}", synced.stderr);
+    assert!(
+        synced.stdout.contains("AGENTS.md is yours"),
+        "stdout: {}",
+        synced.stdout
+    );
+    assert_eq!(sb.read("AGENTS.md"), "customised\n@.agents/superdev.md\n");
 
     // A version-less retarget re-pins to the registry default and stays clean.
     sb.superdev()
@@ -288,86 +277,113 @@ fn sync_installs_committed_pins_on_a_fresh_clone() {
     sb.superdev().arg("status").assert().success();
 }
 
-/// Journey 3: switch the workflows provider both ways — each switch sweeps
-/// the other provider's footprint and reports the steps only the user can
-/// take.
+/// Journey 3: a repo still carrying the removed workflows capability. The
+/// manifest load fails with the guided error; once the table is deleted, sync
+/// swaps same-named skills to knowledge ownership and sweeps the dropped
+/// upstream files.
 #[test]
-fn update_provider_switches_and_sweeps_both_directions() {
+fn a_workflows_manifest_errors_and_sync_migrates_after_the_table_goes() {
     let sb = Sandbox::new();
-    sb.superdev()
-        .args(["init", "--workflows-provider", "superpowers"])
-        .assert()
-        .success();
-    // The plugin flow's manifest record, for contrast with journey 1's.
+    sb.superdev().arg("init").assert().success();
     let config = sb.read(".superdev/config.toml");
-    let workflows = table(&config, "[workflows]");
-    assert!(workflows.contains("provider = \"superpowers\""), "{config}");
-    // Init writes the registry version, not a placeholder.
-    assert!(workflows.contains("version = \"6.2.0\""), "{config}");
-    assert!(!sb.repo().join(".claude/skills/tdd").exists());
 
-    let onto_files =
-        run(sb
-            .superdev()
-            .args(["update", "workflows", "--provider", "mattpocock-skills"]));
-    assert_eq!(onto_files.code, 0, "stderr: {}", onto_files.stderr);
-    assert!(
-        onto_files
-            .stdout
-            .contains("unpin http:superpowers in .mise.toml"),
-        "stdout: {}",
-        onto_files.stdout
+    // The pre-removal manifest shape: every verb refuses with the way out.
+    sb.write(
+        ".superdev/config.toml",
+        &format!("{config}\n[workflows]\nprovider = \"mattpocock-skills\"\nversion = \"1.2.3\"\n"),
     );
-    // The plugin is a user-level install superdev cannot take back, and the
-    // knowledge scaffold's import names the old provider: both are the user's
-    // to finish.
+    let refused = run(sb.superdev().arg("status"));
+    assert_eq!(refused.code, 2, "stdout: {}", refused.stdout);
     assert!(
-        onto_files
-            .stdout
-            .contains("claude plugin uninstall superpowers"),
-        "stdout: {}",
-        onto_files.stdout
+        refused
+            .stderr
+            .contains("the workflows capability was removed"),
+        "stderr: {}",
+        refused.stderr
     );
     assert!(
-        onto_files
-            .stdout
-            .contains("update the .agents import in AGENTS.md"),
-        "stdout: {}",
-        onto_files.stdout
+        refused.stderr.contains("claude plugin install superpowers"),
+        "stderr: {}",
+        refused.stderr
     );
-    let mise = sb.read(".mise.toml");
-    assert!(!mise.contains("http:superpowers"), "{mise}");
-    assert!(mise.contains("http:mattpocock-skills"), "{mise}");
-    assert_eq!(sb.read(".claude/skills/tdd/SKILL.md"), "upstream skill\n");
-    let lock = sb.read(".superdev/lock.toml");
-    assert!(!lock.contains(".mise.toml:http:superpowers"), "{lock}");
-    sb.superdev().arg("status").assert().success();
+    // The error never rewrites the manifest: config.toml is the user's file.
+    assert!(sb.read(".superdev/config.toml").contains("[workflows]"));
 
-    // And back. The materialised set is superdev's own, so the switch sweeps
-    // it rather than leaving two providers' skills side by side.
-    let onto_plugin = run(sb
-        .superdev()
-        .args(["update", "workflows", "--provider", "superpowers"]));
-    assert_eq!(onto_plugin.code, 0, "stderr: {}", onto_plugin.stderr);
-    for skill in ["tdd", "code-review", "handoff"] {
-        assert!(
-            !sb.repo()
-                .join(format!(".claude/skills/{skill}/SKILL.md"))
-                .exists(),
-            "{skill} survived the switch"
-        );
+    // The user deletes the table by hand. `update workflows` is now just an
+    // unknown capability.
+    sb.write(".superdev/config.toml", &config);
+    let unknown = run(sb.superdev().args(["update", "workflows"]));
+    assert_eq!(unknown.code, 2, "stdout: {}", unknown.stdout);
+    assert!(
+        unknown.stderr.contains("unknown capability `workflows`"),
+        "stderr: {}",
+        unknown.stderr
+    );
+
+    // Rewind the repo's files to what the old provider left behind: a
+    // same-named skill it wrote, a dropped upstream skill, and the override
+    // file, all attributed to `workflows` in the lock.
+    let upstream = "upstream skill\n";
+    let hash = superdev_core::lock::sha256_hex(upstream.as_bytes());
+    for rel in [
+        ".claude/skills/tdd/SKILL.md",
+        ".claude/skills/ask-matt/SKILL.md",
+        ".agents/MATT-POCOCK-SKILLS.md",
+    ] {
+        let p = sb.repo().join(rel);
+        fs::create_dir_all(p.parent().unwrap()).unwrap();
+        fs::write(p, upstream).unwrap();
     }
-    // Swept, not shredded: the removal leaves the file under the cache, so a
-    // switch made by mistake costs nothing.
-    assert_eq!(
-        backup_of(&sb, ".claude/skills/tdd/SKILL.md"),
-        Some("upstream skill\n".to_string())
-    );
     let lock = sb.read(".superdev/lock.toml");
-    assert!(!lock.contains("[owners]"), "{lock}");
-    let mise = sb.read(".mise.toml");
-    assert!(!mise.contains("http:mattpocock-skills"), "{mise}");
-    assert!(mise.contains("http:superpowers"), "{mise}");
+    let mut edited = String::new();
+    for line in lock.lines() {
+        if line.starts_with("\".claude/skills/tdd/SKILL.md\"") {
+            edited.push_str(&format!("\".claude/skills/tdd/SKILL.md\" = \"{hash}\"\n"));
+            continue;
+        }
+        edited.push_str(line);
+        edited.push('\n');
+        if line == "[files]" {
+            edited.push_str(&format!(
+                "\".claude/skills/ask-matt/SKILL.md\" = \"{hash}\"\n"
+            ));
+            edited.push_str(&format!("\".agents/MATT-POCOCK-SKILLS.md\" = \"{hash}\"\n"));
+        }
+    }
+    // The attribution a pre-removal binary recorded.
+    edited.push_str("\n[owners]\n");
+    for key in [
+        ".claude/skills/tdd/SKILL.md",
+        ".claude/skills/ask-matt/SKILL.md",
+        ".agents/MATT-POCOCK-SKILLS.md",
+    ] {
+        edited.push_str(&format!("\"{key}\" = \"workflows\"\n"));
+    }
+    sb.write(".superdev/lock.toml", &edited);
+
+    // The pending swap is planned work: status exits 1 until sync runs.
+    let pending = run(sb.superdev().arg("status"));
+    assert_eq!(pending.code, 1, "stdout: {}", pending.stdout);
+
+    let synced = run(sb.superdev().arg("sync"));
+    assert_eq!(synced.code, 0, "stderr: {}", synced.stderr);
+    // The same-named skill is superdev's again — the shipped content, with
+    // the legacy attribution retired from the lock.
+    assert_ne!(sb.read(".claude/skills/tdd/SKILL.md"), upstream);
+    let lock = sb.read(".superdev/lock.toml");
+    assert!(
+        lock.contains("\".claude/skills/tdd/SKILL.md\""),
+        "lock: {lock}"
+    );
+    assert!(!lock.contains("workflows"), "lock: {lock}");
+    assert!(!lock.contains("[owners]"), "lock: {lock}");
+    // The dropped files are swept with a backup, not shredded.
+    assert!(!sb.repo().join(".claude/skills/ask-matt/SKILL.md").exists());
+    assert!(!sb.repo().join(".agents/MATT-POCOCK-SKILLS.md").exists());
+    assert_eq!(
+        backup_of(&sb, ".claude/skills/ask-matt/SKILL.md"),
+        Some(upstream.to_string())
+    );
     sb.superdev().arg("status").assert().success();
 }
 
@@ -376,18 +392,7 @@ fn update_provider_switches_and_sweeps_both_directions() {
 #[test]
 fn disabling_code_index_unpins_codegraph_and_keeps_user_pins() {
     let sb = Sandbox::new();
-    // On superpowers, so the plugin-installing workflows provider stays covered
-    // end to end alongside the default materialising one.
-    sb.superdev()
-        .args(["init", "--workflows-provider", "superpowers"])
-        .assert()
-        .success();
-    let log = sb.log();
-    assert!(
-        log.contains("claude plugin marketplace add /tmp/fake-superpowers"),
-        "log: {log}"
-    );
-    assert!(log.contains("claude plugin install superpowers@superpowers-dev"));
+    sb.superdev().arg("init").assert().success();
 
     // A pin of the user's own, in the file superdev shares with them.
     let mise = sb.read(".mise.toml");
@@ -412,15 +417,24 @@ fn disabling_code_index_unpins_codegraph_and_keeps_user_pins() {
 
     let synced = run(sb.superdev().arg("sync"));
     assert_eq!(synced.code, 0, "stderr: {}", synced.stderr);
-    // Only superdev's own pin goes: the user's and the other capability's stay.
+    // Only superdev's own pin goes: the user's stays.
     let mise = sb.read(".mise.toml");
     assert!(!mise.contains("http:codegraph"), "{mise}");
     assert!(mise.contains("node = \"24\""), "{mise}");
-    assert!(mise.contains("http:superpowers"), "{mise}");
     let lock = sb.read(".superdev/lock.toml");
     assert!(!lock.contains(".mise.toml:http:codegraph"), "{lock}");
     assert!(!lock.contains("[components.code-index]"), "{lock}");
-    assert!(lock.contains(".mise.toml:http:superpowers"), "{lock}");
+    // The capabilities still enabled keep their records: the sweep is targeted.
+    assert!(lock.contains("[components.knowledge]"), "{lock}");
+    // The agent wiring goes with the capability: instruction file, MCP key
+    // and aggregator import — while the knowledge wiring stays.
+    assert!(!sb.repo().join(".agents/codegraph.md").exists());
+    let mcp = sb.read(".mcp.json");
+    assert!(!mcp.contains("\"codegraph\""), "{mcp}");
+    assert!(mcp.contains("\"superdev-aokf\""), "{mcp}");
+    let aggregator = sb.read(".agents/superdev.md");
+    assert!(!aggregator.contains("@codegraph.md"), "{aggregator}");
+    assert!(aggregator.contains("@aokf.md"), "{aggregator}");
     sb.superdev().arg("status").assert().success();
 }
 

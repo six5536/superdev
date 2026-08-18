@@ -3,26 +3,6 @@
 
 use crate::capability::Capability;
 
-/// Source tarball for the pinned Superpowers release (mise `http` backend).
-pub const SUPERPOWERS_URL: &str =
-    "https://github.com/obra/superpowers/archive/refs/tags/v6.2.0.tar.gz";
-/// sha256 of that tarball.
-pub const SUPERPOWERS_CHECKSUM: &str =
-    "sha256:468246a7b4981d4c014c2b58d9ee538700ffded075279d5810059cdc1abeb5f3";
-
-/// Source tarball for the pinned mattpocock/skills release (mise `http` backend).
-pub const MATTSKILLS_URL: &str =
-    "https://github.com/mattpocock/skills/archive/refs/tags/v1.2.3.tar.gz";
-/// sha256 of that tarball.
-///
-/// Bump: refresh the version, url, checksum and `MATTSKILLS_SKILLS` together,
-/// then audit the new tarball's `skills/engineering` and `skills/productivity`
-/// trees — every file must be UTF-8 text and non-executable, because
-/// materialisation reads text and does not preserve modes. v1.2.3 was audited
-/// clean at 76 files.
-pub const MATTSKILLS_CHECKSUM: &str =
-    "sha256:238fac54d0f53d3e2d0501c1b38c9c0e4e9bc26f6b057b53a7328ea15d43b66f";
-
 /// Why a pinned version is locked to the registry default: what this binary
 /// carries as the version's provenance. A version the binary cannot vouch for
 /// is refused.
@@ -70,27 +50,7 @@ pub struct RegistryEntry {
     pub default: bool,
 }
 
-const ENTRIES: [RegistryEntry; 6] = [
-    RegistryEntry {
-        capability: Capability::Workflows,
-        provider: "superpowers",
-        version: Some(Pinned {
-            version: "6.2.0",
-            provenance: Provenance::Checksum,
-        }),
-        available: true,
-        default: false,
-    },
-    RegistryEntry {
-        capability: Capability::Workflows,
-        provider: "mattpocock-skills",
-        version: Some(Pinned {
-            version: "1.2.3",
-            provenance: Provenance::Checksum,
-        }),
-        available: true,
-        default: true,
-    },
+const ENTRIES: [RegistryEntry; 4] = [
     RegistryEntry {
         capability: Capability::Frontend,
         provider: "frontend-design",
@@ -221,17 +181,7 @@ mod tests {
                 "{c:?}"
             );
         }
-        assert_eq!(
-            default_entry(Capability::Workflows).provider,
-            "mattpocock-skills"
-        );
-        let superpowers = entry_for(Capability::Workflows, "superpowers")
-            .unwrap()
-            .version
-            .unwrap();
-        assert_eq!(superpowers.version, "6.2.0");
-        assert_eq!(superpowers.provenance, Provenance::Checksum);
-        assert!(entry_for(Capability::Workflows, "flying").is_none());
+        assert!(entry_for(Capability::Knowledge, "flying").is_none());
         assert_eq!(providers_for(Capability::Knowledge), vec!["aokf"]);
     }
 

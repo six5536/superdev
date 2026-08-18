@@ -3,7 +3,7 @@ type: Spec
 id: spec-knowledge-carried-skills
 title: Knowledge-Carried Skills
 description: The aokf component ships the full converted skill set and the workflows capability is dropped; a manifest naming it gets a guided error.
-status: draft
+status: stable
 links:
   - rel: supersedes
     to: spec-workflows-provider-default
@@ -29,15 +29,15 @@ collisions in `.claude/skills/` and two sources of truth for one flow.
 # Solution
 
 Drop the workflows capability entirely. The aokf component carries the
-converted skill set — 24 skills plus `aokf-bootstrap` and
-`aokf-maintain` — as owned files under `.claude/skills/`, exactly as it
+converted skill set — 25 skills, the derived set plus
+`aokf-bootstrap` and `aokf-maintain` — as owned files under `.claude/skills/`, exactly as it
 already carries its two lifecycle skills
 ([knowledge-owned skills](S008-knowledge-owned-skills-design.md)). A
 manifest still naming `[workflows]` fails with a guided error.
 
 # Behaviour
 
-1. A knowledge-enabled repo materialises all 26 skills — each skill's
+1. A knowledge-enabled repo materialises all 25 skills — each skill's
    whole directory: `SKILL.md`, companions, `agents/`, scripts — as
    knowledge-owned files. `[knowledge] custom` releases any of them by
    name, releasing the whole directory.
@@ -65,8 +65,8 @@ manifest still naming `[workflows]` fails with a guided error.
 
 # Design decisions
 
-- The set ships embedded in the binary like every aokf asset (~70 files
-  across 26 directories), each an owned file at
+- The set ships embedded in the binary like every aokf asset (69 files
+  across 25 directories, plus the MIT notice), each an owned file at
   `.claude/skills/<skill>/<path>`. A skill is its directory: companions
   and harness configs materialise with it.
 - The guided error happens at manifest load and never rewrites

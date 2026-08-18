@@ -34,12 +34,15 @@ pub enum Action {
         line: String,
         /// Short human reason.
         reason: String,
+        /// Report note when the line is appended to a file that already
+        /// existed — the migrating population, not fresh creates.
+        append_note: Option<String>,
     },
     /// Set one `[tools]` key in `.mise.toml`, preserving the rest.
     SetMisePin {
-        /// Tool key, e.g. `http:superpowers`.
+        /// Tool key, e.g. `http:codegraph`.
         tool: String,
-        /// Value as a TOML fragment, e.g. `"6.2.0"` or an inline table.
+        /// Value as a TOML fragment, e.g. `"1.0.0"` or an inline table.
         value_toml: String,
     },
     /// Set one top-level key path in a JSON file, preserving all other content.
@@ -72,20 +75,6 @@ pub enum Action {
         claim: Claim,
         /// Short human reason, shown in plans.
         reason: String,
-    },
-    /// Copy the workflows provider's pinned checkout into `.claude/skills/`,
-    /// one owned file at a time, attributed in the lock. The checkout is
-    /// resolved through mise at apply time, so planning needs no checkout.
-    MaterialiseSkills {
-        /// mise tool key holding the checkout, e.g. `http:mattpocock-skills`.
-        tool: String,
-        /// Checkout-relative directories each holding skill directories.
-        source_dirs: Vec<String>,
-        /// Skill names released to the user; never written, never attributed.
-        custom: Vec<String>,
-        /// Embedded (target path, content) replacements that win over the
-        /// checkout's files, written even without a checkout counterpart.
-        overrides: Vec<(String, String)>,
     },
     /// Run an external command in the repo root.
     Run {
@@ -123,9 +112,6 @@ impl Action {
                 Claim::MisePin(tool) => format!("unpin {tool} in .mise.toml"),
                 Claim::JsonKey { path, pointer } => format!("remove {pointer} from {path}"),
             },
-            Action::MaterialiseSkills { tool, .. } => {
-                format!("materialise {tool} skills into .claude/skills/")
-            }
             Action::Run {
                 program,
                 args,
@@ -153,10 +139,10 @@ mod tests {
         assert_eq!(a.describe(), "write .agents/aokf/SPEC.md (AOKF spec)");
 
         let a = Action::SetMisePin {
-            tool: "http:superpowers".into(),
-            value_toml: "\"6.2.0\"".into(),
+            tool: "http:codegraph".into(),
+            value_toml: "\"1.0.0\"".into(),
         };
-        assert_eq!(a.describe(), "pin http:superpowers in .mise.toml");
+        assert_eq!(a.describe(), "pin http:codegraph in .mise.toml");
 
         let a = Action::Run {
             program: "codegraph".into(),
@@ -171,6 +157,7 @@ mod tests {
             path: ".gitignore".into(),
             line: ".superdev/cache/".into(),
             reason: "ignore machine state".into(),
+            append_note: None,
         };
         assert_eq!(
             a.describe(),

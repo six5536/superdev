@@ -1,12 +1,12 @@
 blueprint = "0.1.0"
 
+[code-index]
+provider = "codegraph"
+version = "1.5.0"
+
 [knowledge]
 provider = "aokf"
 
 [skills]
 provider = "superdev-skills"
 version = "0.1.0"
-
-[workflows]
-provider = "mattpocock-skills"
-version = "1.2.3"

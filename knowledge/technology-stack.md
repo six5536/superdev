@@ -43,14 +43,11 @@ set:[^cargo-toml]
   (with `tokio`) to drive the server in-process.
 - **Tooling** (pinned in `.mise.toml`): `cargo-zigbuild` and `zig` (the cross
   C compiler for the musl targets), `cargo-nextest`, `cargo-llvm-cov`.
-- **Agent tooling**: this repo's workflow skills are the managed
-  `http:mattpocock-skills` checkout, materialised into `.claude/skills/` by
-  superdev itself. The [Superpowers](https://github.com/obra/superpowers)
-  Claude Code plugin stays pinned beside it via the `http` backend (tag
-  tarball + sha256 checksum — Superpowers publishes no release assets, so
-  the `github` backend cannot install it); the devcontainer post-create
-  script wires that checkout into Claude Code as a local
-  marketplace.[^mise-toml]
+- **Agent tooling**: this repo's engineering skills are the knowledge-carried
+  set superdev itself writes into `.claude/skills/` — embedded in the binary,
+  most derived from
+  [Matt Pocock's skills repository](https://github.com/mattpocock/skills)
+  under MIT.
 
 The embedding model is pinned like a dependency:
 `minishlab/potion-retrieval-32M`, at commit `6fc8051…`, fetched once per
@@ -64,10 +61,7 @@ licenses data rather than code ([deny.toml](/deny.toml)).
 superdev pins its providers into *managed* repos the same way: the `http`
 backend against a checksummed URL. codegraph gets one release bundle per
 platform; those bundles vendor their own Node, unlike the npm package, whose
-shim needs one on the host. Each workflows provider gets one tag tarball —
-`http:mattpocock-skills` at 1.2.3, the default, from
-[Matt Pocock's skills repository](https://github.com/mattpocock/skills) under
-MIT, or `http:superpowers` at 6.2.0.
+shim needs one on the host.
 
 [^cargo-toml]: Workspace manifest (dependency set)
 [^mise-toml]: Pinned tool versions

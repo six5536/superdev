@@ -4,7 +4,6 @@ use crate::action::Action;
 use crate::capability::Capability;
 use crate::component::{Claim, Component, Ctx};
 use crate::error::Result;
-use crate::registry::{self, SUPERPOWERS_CHECKSUM, SUPERPOWERS_URL};
 
 /// Where a plugin's marketplace comes from.
 pub enum Marketplace {
@@ -12,13 +11,6 @@ pub enum Marketplace {
     GitHub {
         /// `owner/repo` passed to `claude plugin marketplace add`.
         repo: &'static str,
-        /// Marketplace name used in `<plugin>@<name>`.
-        name: &'static str,
-    },
-    /// A mise-pinned checkout registered as a local marketplace.
-    MiseTool {
-        /// mise tool key, e.g. `http:superpowers`.
-        tool: &'static str,
         /// Marketplace name used in `<plugin>@<name>`.
         name: &'static str,
     },
@@ -34,22 +26,6 @@ pub struct ClaudePlugin {
     pub plugin: &'static str,
     /// Marketplace source.
     pub marketplace: Marketplace,
-}
-
-/// mise `[tools]` key for the Superpowers checkout.
-pub const SUPERPOWERS_MISE_TOOL: &str = "http:superpowers";
-
-/// The Superpowers workflows plugin (mise-pinned tarball checkout).
-pub fn superpowers() -> ClaudePlugin {
-    ClaudePlugin {
-        capability: Capability::Workflows,
-        provider_id: "superpowers",
-        plugin: "superpowers",
-        marketplace: Marketplace::MiseTool {
-            tool: SUPERPOWERS_MISE_TOOL,
-            name: "superpowers-dev",
-        },
-    }
 }
 
 /// Anthropic's frontend-design plugin from the official marketplace.
@@ -79,27 +55,9 @@ impl ClaudePlugin {
         }
     }
 
-    fn mise_pin_action(&self, ctx: &Ctx<'_>) -> Result<Option<Action>> {
-        let Marketplace::MiseTool { tool, .. } = &self.marketplace else {
-            return Ok(None);
-        };
-        // By provider, not by capability alone: workflows has more than one
-        // entry, and only this plugin's pin belongs in this fragment.
-        let default = registry::entry_for(self.capability, self.provider_id)
-            .and_then(|e| e.version)
-            .expect("registry pins superpowers")
-            .version;
-        let value = format!(
-            "{{ version = \"{default}\", url = \"{SUPERPOWERS_URL}\", checksum = \"{SUPERPOWERS_CHECKSUM}\", strip_components = 1 }}"
-        );
-        super::pin::planned_pin(ctx, self.capability, self.provider_id, tool, &value)
-    }
-
     fn install_actions(&self) -> Vec<Action> {
-        let (source, name) = match &self.marketplace {
-            Marketplace::GitHub { repo, name } => (repo.to_string(), *name),
-            Marketplace::MiseTool { tool, name } => (format!("{{mise-where:{tool}}}"), *name),
-        };
+        let Marketplace::GitHub { repo, name } = &self.marketplace;
+        let (source, name) = (repo.to_string(), *name);
         vec![
             Action::Run {
                 program: "claude".into(),
@@ -137,21 +95,14 @@ impl Component for ClaudePlugin {
     }
 
     fn plan(&self, ctx: &Ctx<'_>) -> Result<Vec<Action>> {
-        let mut actions = Vec::new();
-        if let Some(pin) = self.mise_pin_action(ctx)? {
-            actions.push(pin);
+        if self.installed(ctx)? {
+            return Ok(Vec::new());
         }
-        if !self.installed(ctx)? {
-            actions.extend(self.install_actions());
-        }
-        Ok(actions)
+        Ok(self.install_actions())
     }
 
     fn owned(&self, _ctx: &Ctx<'_>) -> Vec<Claim> {
-        match &self.marketplace {
-            Marketplace::MiseTool { tool, .. } => vec![Claim::MisePin((*tool).to_string())],
-            Marketplace::GitHub { .. } => Vec::new(),
-        }
+        Vec::new()
     }
 }
 
@@ -161,83 +112,32 @@ mod tests {
     use crate::component::{Component, Ctx};
     use crate::lock::Lock;
     use crate::manifest::Manifest;
-    use crate::registry::{SUPERPOWERS_CHECKSUM, SUPERPOWERS_URL};
     use crate::runner::FakeRunner;
     use crate::runner::Output;
 
-    /// The default workflows provider is mattpocock-skills, so these tests name
-    /// superpowers explicitly rather than inherit whatever the registry defaults to.
     fn ctx_parts() -> (Manifest, Lock) {
-        let mut manifest = Manifest::default_for("0.1.0", &[]);
-        let workflows = manifest.capabilities.get_mut("workflows").unwrap();
-        workflows.provider = "superpowers".into();
-        workflows.version = Some("6.2.0".into());
-        (manifest, Lock::default())
-    }
-
-    /// A `.mise.toml` pinning Superpowers, written in a deliberately different
-    /// layout so the test also covers pin normalisation.
-    fn pinned_mise_toml() -> String {
-        format!(
-            "[tools]\n\"http:superpowers\" = {{ version = \"6.2.0\", # pinned\n  url = \"{SUPERPOWERS_URL}\",\n  checksum = \"{SUPERPOWERS_CHECKSUM}\",\n  strip_components = 1 }}\n"
-        )
+        (Manifest::default_for("0.1.0", &[]), Lock::default())
     }
 
     #[test]
-    fn installed_and_pinned_plans_nothing() {
-        let dir = tempfile::tempdir().unwrap();
-        std::fs::write(dir.path().join(".mise.toml"), pinned_mise_toml()).unwrap();
+    fn installed_plugin_plans_nothing() {
         let (manifest, lock) = ctx_parts();
         let fake = FakeRunner::new();
         fake.script(
             "claude plugin list",
             Output {
                 status: 0,
-                stdout: "superpowers 6.2.0\n".into(),
+                stdout: "frontend-design 1.0.0\n".into(),
                 stderr: String::new(),
             },
         );
         let ctx = Ctx {
-            root: dir.path(),
+            root: std::path::Path::new("."),
             runner: &fake,
             manifest: &manifest,
             lock: &lock,
         };
-        assert!(superpowers().plan(&ctx).unwrap().is_empty());
-    }
-
-    #[test]
-    fn missing_plugin_plans_pin_and_install() {
-        let dir = tempfile::tempdir().unwrap();
-        let (manifest, lock) = ctx_parts();
-        let fake = FakeRunner::new();
-        fake.script(
-            "claude plugin list",
-            Output {
-                status: 0,
-                stdout: String::new(),
-                stderr: String::new(),
-            },
-        );
-        let ctx = Ctx {
-            root: dir.path(),
-            runner: &fake,
-            manifest: &manifest,
-            lock: &lock,
-        };
-        let actions = superpowers().plan(&ctx).unwrap();
-        let descs: Vec<String> = actions.iter().map(|a| a.describe()).collect();
-        assert!(descs.iter().any(|d| d.contains("pin http:superpowers")));
-        assert!(
-            descs
-                .iter()
-                .any(|d| d.contains("marketplace add {mise-where:http:superpowers}"))
-        );
-        assert!(
-            descs
-                .iter()
-                .any(|d| d.contains("plugin install superpowers@superpowers-dev"))
-        );
+        assert!(frontend_design().plan(&ctx).unwrap().is_empty());
     }
 
     #[test]
@@ -272,23 +172,7 @@ mod tests {
     }
 
     #[test]
-    fn non_registry_superpowers_version_is_rejected() {
-        let (mut manifest, lock) = ctx_parts();
-        manifest.capabilities.get_mut("workflows").unwrap().version = Some("9.9.9".into());
-        let fake = FakeRunner::new();
-        let ctx = Ctx {
-            root: std::path::Path::new("."),
-            runner: &fake,
-            manifest: &manifest,
-            lock: &lock,
-        };
-        assert!(superpowers().plan(&ctx).is_err());
-    }
-
-    #[test]
     fn components_report_their_slot_and_provider() {
-        assert_eq!(superpowers().capability(), Capability::Workflows);
-        assert_eq!(superpowers().provider(), "superpowers");
         assert_eq!(frontend_design().capability(), Capability::Frontend);
         assert_eq!(frontend_design().provider(), "frontend-design");
     }

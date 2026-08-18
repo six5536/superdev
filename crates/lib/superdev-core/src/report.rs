@@ -65,8 +65,8 @@ mod tests {
     fn plan_lists_changes_and_marks_ok() {
         let planned = vec![
             Planned {
-                capability: Some(Capability::Workflows),
-                provider: "superpowers".into(),
+                capability: Some(Capability::Frontend),
+                provider: "frontend-design".into(),
                 actions: vec![],
             },
             Planned {
@@ -76,11 +76,12 @@ mod tests {
                     path: ".gitignore".into(),
                     line: "x".into(),
                     reason: "r".into(),
+                    append_note: None,
                 }],
             },
         ];
         let s = render_plan(&planned);
-        assert!(s.contains("workflows (superpowers): ok"));
+        assert!(s.contains("frontend (frontend-design): ok"));
         assert!(s.contains("knowledge (aokf): 1 change(s)"));
         assert!(s.contains("  - ensure .gitignore contains `x`"));
     }
@@ -126,7 +127,7 @@ mod tests {
     fn apply_renders_notes_and_skips_without_a_revert_section() {
         let result = ApplyResult {
             reports: vec![ComponentReport {
-                label: "workflows (superpowers)".into(),
+                label: "frontend (frontend-design)".into(),
                 outcomes: vec![
                     (
                         "write AGENTS.md (entry point)".into(),
@@ -146,7 +147,7 @@ mod tests {
         };
         assert_eq!(
             render_apply(&result),
-            "workflows (superpowers)\n\
+            "frontend (frontend-design)\n\
              \x20 applied  write AGENTS.md (entry point): replaced a user edit\n\
              \x20 skipped  run `mise install` (tools): already installed\n"
         );

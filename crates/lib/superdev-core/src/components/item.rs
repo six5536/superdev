@@ -105,6 +105,7 @@ pub(crate) fn plan_items(root: &Path, items: &[ManagedItem]) -> Vec<Action> {
                         path: path.clone(),
                         line: line.clone(),
                         reason: reason.clone(),
+                        append_note: None,
                     });
                 }
             }

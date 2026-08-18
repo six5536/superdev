@@ -168,7 +168,7 @@ mod tests {
             "claude plugin list",
             Output {
                 status: 0,
-                stdout: "superpowers".into(),
+                stdout: "frontend-design".into(),
                 stderr: String::new(),
             },
         );
@@ -176,7 +176,7 @@ mod tests {
         let out = fake
             .run("claude", &["plugin".into(), "list".into()], Path::new("."))
             .unwrap();
-        assert_eq!(out.stdout, "superpowers");
+        assert_eq!(out.stdout, "frontend-design");
         assert!(
             fake.run("codegraph", &["init".into()], Path::new("."))
                 .is_err()

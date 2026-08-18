@@ -4,8 +4,6 @@
 /// capabilities, never the tools behind them.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Capability {
-    /// Superpowers prompting/workflow skills.
-    Workflows,
     /// Frontend design workflows (Anthropic plugin).
     Frontend,
     /// superdev's own skill pack, shipped as owned repo files.
@@ -19,8 +17,7 @@ pub enum Capability {
 impl Capability {
     /// Every capability, in canonical apply order: plugins first, then the
     /// code index, then the knowledge scaffold.
-    pub const ALL: [Capability; 5] = [
-        Capability::Workflows,
+    pub const ALL: [Capability; 4] = [
         Capability::Frontend,
         Capability::Skills,
         Capability::CodeIndex,
@@ -30,7 +27,6 @@ impl Capability {
     /// Kebab-case name used in the manifest, the lock, and CLI flags.
     pub fn as_str(self) -> &'static str {
         match self {
-            Capability::Workflows => "workflows",
             Capability::Frontend => "frontend",
             Capability::Skills => "skills",
             Capability::CodeIndex => "code-index",

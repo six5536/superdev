@@ -127,7 +127,7 @@ mod tests {
             current_pin(SAMPLE, "node").unwrap().as_deref(),
             Some("\"24\"")
         );
-        assert_eq!(current_pin(SAMPLE, "http:superpowers").unwrap(), None);
+        assert_eq!(current_pin(SAMPLE, "http:codegraph").unwrap(), None);
     }
 
     #[test]
@@ -147,13 +147,13 @@ mod tests {
 
     #[test]
     fn set_pin_preserves_everything_else() {
-        let out = set_pin(SAMPLE, "http:superpowers", "{ version = \"6.2.0\" }").unwrap();
+        let out = set_pin(SAMPLE, "http:codegraph", "{ version = \"1.5.0\" }").unwrap();
         assert!(out.contains("# my tools"));
         assert!(out.contains("node = \"24\" # keep"));
         assert!(out.contains("rust = ['1.96', 'nightly']"));
         assert_eq!(
-            current_pin(&out, "http:superpowers").unwrap().as_deref(),
-            Some("{ version = \"6.2.0\" }")
+            current_pin(&out, "http:codegraph").unwrap().as_deref(),
+            Some("{ version = \"1.5.0\" }")
         );
     }
 
@@ -207,9 +207,6 @@ mod tests {
 
     #[test]
     fn lock_key_names_the_file_and_tool() {
-        assert_eq!(
-            pin_lock_key("http:superpowers"),
-            ".mise.toml:http:superpowers"
-        );
+        assert_eq!(pin_lock_key("http:codegraph"), ".mise.toml:http:codegraph");
     }
 }

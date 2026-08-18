@@ -89,11 +89,7 @@ impl<'a> Session<'a> {
     /// match, so nothing is planned, yet no tool is installed on this machine.
     /// Skipped when nothing runs, or when no superdev-managed tool is pinned.
     fn install_committed_pins(&mut self, planned: &[Planned]) -> bool {
-        let runs = |p: &&Planned| {
-            p.actions
-                .iter()
-                .any(|a| matches!(a, Action::Run { .. } | Action::MaterialiseSkills { .. }))
-        };
+        let runs = |p: &&Planned| p.actions.iter().any(|a| matches!(a, Action::Run { .. }));
         let Some(entry) = planned.iter().position(|p| runs(&p)) else {
             return true;
         };
@@ -181,11 +177,11 @@ mod tests {
         let mut lock = Lock::default();
         let planned = vec![
             Planned {
-                capability: Some(crate::capability::Capability::Workflows),
-                provider: "superpowers".into(),
+                capability: Some(crate::capability::Capability::Frontend),
+                provider: "frontend-design".into(),
                 actions: vec![Action::SetMisePin {
-                    tool: "http:superpowers".into(),
-                    value_toml: "\"6.2.0\"".into(),
+                    tool: "http:example".into(),
+                    value_toml: "\"1.0.0\"".into(),
                 }],
             },
             Planned {
@@ -193,7 +189,7 @@ mod tests {
                 provider: "codegraph".into(),
                 actions: vec![
                     Action::SetMisePin {
-                        tool: "npm:codegraph".into(),
+                        tool: "http:codegraph".into(),
                         value_toml: "\"1.0.0\"".into(),
                     },
                     Action::Run {
@@ -209,8 +205,8 @@ mod tests {
         let result = apply(dir.path(), &fake, &manifest, &planned, &mut lock);
         assert!(result.ok);
         let mise = std::fs::read_to_string(dir.path().join(".mise.toml")).unwrap();
-        assert!(mise.contains("http:superpowers"));
-        assert!(mise.contains("npm:codegraph"));
+        assert!(mise.contains("http:example"));
+        assert!(mise.contains("http:codegraph"));
         let calls = fake.calls();
         // One install, naming every pin this run wrote — and nothing else.
         assert_eq!(
@@ -218,7 +214,7 @@ mod tests {
                 .iter()
                 .filter(|c| c.starts_with("mise install"))
                 .collect::<Vec<_>>(),
-            vec!["mise install http:superpowers npm:codegraph"]
+            vec!["mise install http:codegraph http:example"]
         );
         // Providers need their pinned tools installed before they run, and
         // mise will not install from a config it has not been told to trust.
@@ -236,7 +232,7 @@ mod tests {
         // Both pins are hashed into the lock under their mise keys.
         assert!(
             lock.files
-                .contains_key(&crate::components::mise::pin_lock_key("http:superpowers"))
+                .contains_key(&crate::components::mise::pin_lock_key("http:codegraph"))
         );
     }
 
@@ -246,19 +242,19 @@ mod tests {
         // A fresh clone: the pin is already committed, so nothing edits it.
         std::fs::write(
             dir.path().join(".mise.toml"),
-            mise::set_pin("", "http:superpowers", "{ version = \"6.2.0\" }").unwrap(),
+            mise::set_pin("", "http:codegraph", "{ version = \"1.0.0\" }").unwrap(),
         )
         .unwrap();
         let fake = FakeRunner::new();
         let manifest = Manifest::default_for("0.1.0", &[]);
         let mut lock = Lock::default();
         let planned = vec![Planned {
-            capability: Some(crate::capability::Capability::Workflows),
-            provider: "superpowers".into(),
+            capability: Some(crate::capability::Capability::CodeIndex),
+            provider: "codegraph".into(),
             actions: vec![Action::Run {
-                program: "claude".into(),
-                args: vec!["plugin".into(), "install".into(), "superpowers".into()],
-                purpose: "install".into(),
+                program: "codegraph".into(),
+                args: vec!["init".into()],
+                purpose: "build the code index".into(),
                 undo: None,
                 optional: true,
             }],
@@ -268,18 +264,15 @@ mod tests {
         let calls = fake.calls();
         let install = calls
             .iter()
-            .position(|c| c == "mise install http:superpowers")
+            .position(|c| c == "mise install http:codegraph")
             .unwrap_or_else(|| panic!("no targeted `mise install` in {calls:?}"));
         let trust = calls
             .iter()
             .position(|c| c == "mise trust")
             .unwrap_or_else(|| panic!("no `mise trust` in {calls:?}"));
-        let plugin = calls
-            .iter()
-            .position(|c| c == "claude plugin install superpowers")
-            .unwrap();
+        let init = calls.iter().position(|c| c == "codegraph init").unwrap();
         assert_eq!(trust + 1, install, "calls: {calls:?}");
-        assert!(install < plugin, "calls: {calls:?}");
+        assert!(install < init, "calls: {calls:?}");
         // The entry that runs the command carries both steps in its report.
         let described: Vec<&str> = result.reports[0]
             .outcomes
@@ -312,11 +305,11 @@ mod tests {
         let manifest = Manifest::default_for("0.1.0", &[]);
         let mut lock = Lock::default();
         let planned = vec![Planned {
-            capability: Some(crate::capability::Capability::Workflows),
-            provider: "superpowers".into(),
+            capability: Some(crate::capability::Capability::CodeIndex),
+            provider: "codegraph".into(),
             actions: vec![Action::SetMisePin {
-                tool: "http:superpowers".into(),
-                value_toml: "\"6.2.0\"".into(),
+                tool: "http:codegraph".into(),
+                value_toml: "\"1.0.0\"".into(),
             }],
         }];
         let result = apply(dir.path(), &fake, &manifest, &planned, &mut lock);
@@ -328,7 +321,7 @@ mod tests {
             .collect();
         assert_eq!(
             installs,
-            vec!["mise install http:superpowers"],
+            vec!["mise install http:codegraph"],
             "superdev installs its own pins, never the repo's"
         );
         // The user's tools stay in the file, untouched and uninstalled.
@@ -351,17 +344,17 @@ mod tests {
         let manifest = Manifest::default_for("0.1.0", &[]);
         let mut lock = Lock::default();
         let planned = vec![Planned {
-            capability: Some(crate::capability::Capability::Workflows),
-            provider: "superpowers".into(),
+            capability: Some(crate::capability::Capability::CodeIndex),
+            provider: "codegraph".into(),
             actions: vec![
                 Action::SetMisePin {
-                    tool: "http:superpowers".into(),
-                    value_toml: "\"6.2.0\"".into(),
+                    tool: "http:codegraph".into(),
+                    value_toml: "\"1.0.0\"".into(),
                 },
                 Action::Run {
-                    program: "claude".into(),
-                    args: vec!["plugin".into(), "install".into(), "superpowers".into()],
-                    purpose: "install".into(),
+                    program: "codegraph".into(),
+                    args: vec!["init".into()],
+                    purpose: "build the code index".into(),
                     undo: None,
                     optional: false,
                 },

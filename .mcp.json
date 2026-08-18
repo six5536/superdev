@@ -1,5 +1,16 @@
 {
   "mcpServers": {
+    "codegraph": {
+      "args": [
+        "exec",
+        "http:codegraph",
+        "--",
+        "codegraph",
+        "serve",
+        "--mcp"
+      ],
+      "command": "mise"
+    },
     "superdev-aokf": {
       "args": [
         "mcp",

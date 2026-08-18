@@ -13,7 +13,7 @@ use crate::action::Action;
 use crate::capability::Capability;
 use crate::component::{Claim, Ctx};
 use crate::components::codegraph::CODEGRAPH_INDEX_DIR;
-use crate::components::{aokf, mattskills, skillpack};
+use crate::components::{aokf, skillpack};
 use crate::engine::Planned;
 use crate::error::{Error, Result};
 use crate::lock::Lock;
@@ -44,7 +44,6 @@ pub struct RepoPlan {
     orphans: OrphanPlan,
     behind: Vec<String>,
     custom: Vec<String>,
-    switch: Vec<String>,
     blueprint: Option<String>,
     /// The loaded lock with custom-released entries pruned in memory.
     lock: Lock,
@@ -71,15 +70,6 @@ impl RepoPlan {
         self.planned.iter().any(|p| !p.actions.is_empty())
     }
 
-    /// Whether the plan copies an upstream skill set into the repo.
-    pub fn materialises(&self) -> bool {
-        self.planned.iter().any(|p| {
-            p.actions
-                .iter()
-                .any(|a| matches!(a, Action::MaterialiseSkills { .. }))
-        })
-    }
-
     /// One line per enabled capability pinned away from this binary's registry.
     pub fn behind_lines(&self) -> &[String] {
         &self.behind
@@ -88,11 +78,6 @@ impl RepoPlan {
     /// One line per skill or workflow skill released to the user.
     pub fn custom_lines(&self) -> &[String] {
         &self.custom
-    }
-
-    /// What a workflows provider switch left behind.
-    pub fn switch_lines(&self) -> &[String] {
-        &self.switch
     }
 
     /// One line per orphan released because the user edited it.
@@ -113,8 +98,6 @@ pub struct ApplyOutcome {
     pub report: String,
     /// False when the engine failed and unwound.
     pub ok: bool,
-    /// True when the plan materialised an upstream skill set.
-    pub materialised: bool,
 }
 
 /// Plan the whole repo: prune the custom-released lock entries in memory,
@@ -171,10 +154,13 @@ pub fn plan_repo(
         .map(|c| (c.capability(), c.owned(&ctx)))
         .collect();
     claim_collision(&claims_by_capability)?;
-    let claims: Vec<Claim> = claims_by_capability
+    let mut claims: Vec<Claim> = claims_by_capability
         .into_iter()
         .flat_map(|(_, claims)| claims)
         .collect();
+    // The aggregator is repo-level: no component claims it, and without a
+    // live claim its lock entry would read as an orphan every run.
+    claims.push(Claim::File(AGGREGATOR_PATH.into()));
     let orphans = orphan::plan(root, &lock, &claims)?;
     if !orphans.actions.is_empty() {
         planned.push(Planned {
@@ -186,7 +172,6 @@ pub fn plan_repo(
     Ok(RepoPlan {
         behind,
         custom,
-        switch: switch_lines(manifest, &lock),
         blueprint,
         planned,
         orphans,
@@ -208,7 +193,6 @@ pub fn apply_repo(
     manifest: &Manifest,
     plan: RepoPlan,
 ) -> Result<ApplyOutcome> {
-    let materialised = plan.materialises();
     let RepoPlan {
         planned,
         orphans,
@@ -240,7 +224,6 @@ pub fn apply_repo(
         return Ok(ApplyOutcome {
             report: String::new(),
             ok: true,
-            materialised: false,
         });
     }
     let result = engine::apply(root, runner, manifest, &planned, &mut lock);
@@ -251,7 +234,6 @@ pub fn apply_repo(
     Ok(ApplyOutcome {
         report: report::render_apply(&result),
         ok: result.ok,
-        materialised,
     })
 }
 
@@ -259,7 +241,6 @@ pub fn apply_repo(
 /// name superdev would manage. Returns the lines to print.
 pub fn adopt_existing(root: &Path, manifest: &mut Manifest) -> Vec<String> {
     let mut lines = skillpack::adopt_existing(root, manifest);
-    lines.extend(mattskills::adopt_existing(root, manifest));
     lines.extend(aokf::adopt_existing(root, manifest));
     lines
 }
@@ -311,15 +292,75 @@ fn claim_collision(claims_by_capability: &[(Capability, Vec<Claim>)]) -> Result<
     Ok(())
 }
 
-/// The ignore lines no capability owns: superdev's machine state, and the
-/// code index when that capability is on. Neither belongs in git.
+/// Where superdev's agent instructions live: the aggregator AGENTS.md
+/// imports, owned and rewritten as the enabled set changes.
+const AGGREGATOR_PATH: &str = ".agents/superdev.md";
+/// The one line superdev keeps in the user's AGENTS.md.
+const AGENTS_IMPORT_LINE: &str = "@.agents/superdev.md";
+/// Reported once, when the line is appended to an AGENTS.md that already
+/// existed — the repos migrating off the old superdev-written scaffold.
+const AGENTS_TRIM_HINT: &str = "AGENTS.md is yours — superdev's guidance moved behind @.agents/superdev.md; \
+     trim any old superdev-written sections";
+
+/// The general agent rules every managed repo gets, write-once scaffolds
+/// beside the aggregator: (path, content).
+const RULE_SCAFFOLDS: [(&str, &str); 2] = [
+    (
+        ".agents/coding.md",
+        include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/assets/agents/coding.md"
+        )),
+    ),
+    (
+        ".agents/prose.md",
+        include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/assets/agents/prose.md"
+        )),
+    ),
+];
+
+/// The fenced aggregator: the general rules, then one import per enabled
+/// capability that ships an instruction file. Imports are sibling-relative,
+/// so they resolve from the aggregator's own directory.
+fn aggregator_content(manifest: &Manifest) -> String {
+    let mut out = String::from(
+        "<superdev-system>\n\
+         This repository is managed by superdev.\n\
+         superdev is a collection of capabilities, described in the following files:\n\
+         @coding.md\n\
+         @prose.md\n",
+    );
+    if manifest
+        .capabilities
+        .contains_key(Capability::Knowledge.as_str())
+    {
+        out.push_str("@aokf.md\n");
+    }
+    if manifest
+        .capabilities
+        .contains_key(Capability::CodeIndex.as_str())
+    {
+        out.push_str("@codegraph.md\n");
+    }
+    out.push_str("</superdev-system>\n");
+    out
+}
+
+/// One file's content, absent as an empty string; other errors propagate.
+fn read_or_empty(path: std::path::PathBuf) -> Result<String> {
+    match std::fs::read_to_string(&path) {
+        Ok(existing) => Ok(existing),
+        Err(e) if e.kind() == io::ErrorKind::NotFound => Ok(String::new()),
+        Err(source) => Err(Error::Io { path, source }),
+    }
+}
+
+/// The repo-level entry no capability owns: the `.gitignore` lines, the
+/// ensured AGENTS.md import, and the instructions aggregator it points at.
 fn repo_entry(root: &Path, manifest: &Manifest) -> Result<Option<Planned>> {
-    let path = root.join(".gitignore");
-    let existing = match std::fs::read_to_string(&path) {
-        Ok(existing) => existing,
-        Err(e) if e.kind() == io::ErrorKind::NotFound => String::new(),
-        Err(source) => return Err(Error::Io { path, source }),
-    };
+    let gitignore = read_or_empty(root.join(".gitignore"))?;
     let mut wanted = vec![(".superdev/cache/".to_string(), "ignore machine state")];
     if manifest
         .capabilities
@@ -327,15 +368,45 @@ fn repo_entry(root: &Path, manifest: &Manifest) -> Result<Option<Planned>> {
     {
         wanted.push((format!("{CODEGRAPH_INDEX_DIR}/"), "ignore the code index"));
     }
-    let actions: Vec<Action> = wanted
+    let mut actions: Vec<Action> = wanted
         .into_iter()
-        .filter(|(line, _)| !crate::fsutil::has_line(&existing, line))
+        .filter(|(line, _)| !crate::fsutil::has_line(&gitignore, line))
         .map(|(line, reason)| Action::EnsureLine {
             path: ".gitignore".into(),
             line,
             reason: reason.to_string(),
+            append_note: None,
         })
         .collect();
+    if !crate::fsutil::has_line(&read_or_empty(root.join("AGENTS.md"))?, AGENTS_IMPORT_LINE) {
+        actions.push(Action::EnsureLine {
+            path: "AGENTS.md".into(),
+            line: AGENTS_IMPORT_LINE.into(),
+            reason: "make agents read superdev's instructions".into(),
+            append_note: Some(AGENTS_TRIM_HINT.into()),
+        });
+    }
+    let aggregator = aggregator_content(manifest);
+    if read_or_empty(root.join(AGGREGATOR_PATH))? != aggregator {
+        actions.push(Action::WriteFile {
+            path: AGGREGATOR_PATH.into(),
+            content: aggregator,
+            ownership: crate::action::Ownership::Owned,
+            reason: "superdev's agent instructions".into(),
+        });
+    }
+    for (path, content) in RULE_SCAFFOLDS {
+        // Write-once: the rules are the user's to adapt from the moment they
+        // exist, so only an absent file is planned.
+        if !root.join(path).is_file() {
+            actions.push(Action::WriteFile {
+                path: path.into(),
+                content: content.into(),
+                ownership: crate::action::Ownership::Scaffold,
+                reason: "general agent rules".into(),
+            });
+        }
+    }
     if actions.is_empty() {
         return Ok(None);
     }
@@ -355,35 +426,29 @@ fn prune_custom(manifest: &Manifest, lock: &mut Lock) -> bool {
     // `.claude/skills/`, so an unknown name in one's list must not release
     // the other's file.
     for (capability, shipped) in [
-        (Capability::Skills, skillpack::SKILLS.as_slice()),
-        (Capability::Knowledge, aokf::SKILLS.as_slice()),
+        (
+            Capability::Skills,
+            skillpack::SKILLS
+                .iter()
+                .map(|(name, _)| *name)
+                .collect::<Vec<_>>(),
+        ),
+        (Capability::Knowledge, aokf::skill_names().collect()),
     ] {
         let Some(config) = manifest.capabilities.get(capability.as_str()) else {
             continue;
         };
         for name in &config.custom {
-            if !shipped.iter().any(|(known, _)| known == name) {
+            if !shipped.contains(&name.as_str()) {
                 continue;
             }
-            let key = format!(".claude/skills/{name}/SKILL.md");
-            pruned |= lock.files.remove(&key).is_some();
-            lock.owners.remove(&key);
-        }
-    }
-    if let Some(config) = manifest.capabilities.get(Capability::Workflows.as_str()) {
-        for name in &config.custom {
+            // Release the whole skill directory: a knowledge skill is its
+            // directory, and the pack's directories hold only SKILL.md.
             let prefix = format!(".claude/skills/{name}/");
-            // Attribution decides, not the path: the skill pack writes under
-            // the same directory, and a pack name listed here must not
-            // release the pack's file.
             let keys: Vec<String> = lock
                 .files
                 .keys()
-                .filter(|key| {
-                    key.starts_with(&prefix)
-                        && lock.owners.get(*key).map(String::as_str)
-                            == Some(Capability::Workflows.as_str())
-                })
+                .filter(|key| key.starts_with(&prefix))
                 .cloned()
                 .collect();
             for key in keys {
@@ -401,62 +466,26 @@ fn prune_custom(manifest: &Manifest, lock: &mut Lock) -> bool {
 fn custom_lines(manifest: &Manifest) -> Vec<String> {
     let mut lines = Vec::new();
     for (capability, shipped) in [
-        (Capability::Skills, skillpack::SKILLS.as_slice()),
-        (Capability::Knowledge, aokf::SKILLS.as_slice()),
+        (
+            Capability::Skills,
+            skillpack::SKILLS
+                .iter()
+                .map(|(name, _)| *name)
+                .collect::<Vec<_>>(),
+        ),
+        (Capability::Knowledge, aokf::skill_names().collect()),
     ] {
         let Some(config) = manifest.capabilities.get(capability.as_str()) else {
             continue;
         };
         let cap = capability.as_str();
         for name in &config.custom {
-            lines.push(if shipped.iter().any(|(known, _)| known == name) {
+            lines.push(if shipped.contains(&name.as_str()) {
                 format!("{cap}: {name} custom, unmanaged")
             } else {
                 format!("{cap}: custom names unknown skill '{name}' — no effect")
             });
         }
-    }
-    if let Some(config) = manifest.capabilities.get(Capability::Workflows.as_str())
-        && config.provider == "mattpocock-skills"
-    {
-        for name in &config.custom {
-            lines.push(if mattskills::MATTSKILLS_SKILLS.contains(&name.as_str()) {
-                format!("workflows: {name} custom, unmanaged")
-            } else {
-                format!("workflows: custom names unknown skill '{name}' — no effect")
-            });
-        }
-    }
-    lines
-}
-
-/// When the lock's applied workflows provider differs from the manifest's:
-/// what the switch left behind. Empty when the lock has no workflows record,
-/// or when the recorded provider already matches.
-fn switch_lines(manifest: &Manifest, lock: &Lock) -> Vec<String> {
-    let Some(applied) = lock.components.get(Capability::Workflows.as_str()) else {
-        return Vec::new();
-    };
-    let Some(config) = manifest.capabilities.get(Capability::Workflows.as_str()) else {
-        return Vec::new();
-    };
-    if applied.provider == config.provider {
-        return Vec::new();
-    }
-    let mut lines = Vec::new();
-    if manifest
-        .capabilities
-        .contains_key(Capability::Knowledge.as_str())
-    {
-        lines.push(
-            "workflows: update the .agents import in AGENTS.md for the new provider".to_string(),
-        );
-    }
-    if applied.provider == "superpowers" {
-        lines.push(
-            "workflows: superpowers plugin left installed — `claude plugin uninstall superpowers` removes it"
-                .to_string(),
-        );
     }
     lines
 }
@@ -540,7 +569,7 @@ fn stamp_blueprint(root: &Path, manifest: &Manifest) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::lock::{LockedComponent, sha256_hex};
+    use crate::lock::sha256_hex;
     use crate::runner::FakeRunner;
 
     /// Every capability whose default entry is registry-locked, derived so
@@ -654,13 +683,84 @@ mod tests {
     }
 
     #[test]
-    fn workflows_provider_selects_materialise_or_plugin_flow() {
+    fn aggregator_imports_track_the_enabled_set() {
+        let all = aggregator_content(&Manifest::default_for("0.1.0", &[]));
+        assert!(all.starts_with("<superdev-system>\n"), "{all}");
+        assert!(all.ends_with("</superdev-system>\n"), "{all}");
+        assert!(all.contains("@aokf.md"), "{all}");
+        assert!(all.contains("@codegraph.md"), "{all}");
+        let partial = aggregator_content(&Manifest::default_for("0.1.0", &[Capability::Knowledge]));
+        assert!(!partial.contains("@aokf.md"), "{partial}");
+        assert!(partial.contains("@codegraph.md"), "{partial}");
+        // The general rules are not capability-gated: every managed repo
+        // imports them, even with every instruction-shipping capability off.
+        let none = aggregator_content(&Manifest::default_for(
+            "0.1.0",
+            &[Capability::Knowledge, Capability::CodeIndex],
+        ));
+        assert!(none.contains("@coding.md"), "{none}");
+        assert!(none.contains("@prose.md"), "{none}");
+        assert!(
+            !none.contains("@aokf.md") && !none.contains("@codegraph.md"),
+            "{none}"
+        );
+    }
+
+    #[test]
+    fn repo_entry_plans_the_import_line_and_the_aggregator_once() {
+        let dir = tempfile::tempdir().unwrap();
+        let manifest = Manifest::default_for("0.1.0", &[]);
+        let entry = repo_entry(dir.path(), &manifest).unwrap().unwrap();
+        let descs: Vec<String> = entry.actions.iter().map(Action::describe).collect();
+        assert!(
+            descs
+                .iter()
+                .any(|d| d.contains("ensure AGENTS.md contains `@.agents/superdev.md`")),
+            "{descs:?}"
+        );
+        assert!(
+            descs
+                .iter()
+                .any(|d| d.contains("write .agents/superdev.md")),
+            "{descs:?}"
+        );
+        for (path, _) in RULE_SCAFFOLDS {
+            assert!(
+                descs.iter().any(|d| d.contains(path)),
+                "{path} missing from {descs:?}"
+            );
+        }
+        // A settled repo replans nothing — and the rule scaffolds count as
+        // settled whatever their content, because they are the user's.
+        std::fs::write(
+            dir.path().join(".gitignore"),
+            ".superdev/cache/\n.codegraph/\n",
+        )
+        .unwrap();
+        std::fs::write(
+            dir.path().join("AGENTS.md"),
+            "# Mine\n@.agents/superdev.md\n",
+        )
+        .unwrap();
+        std::fs::create_dir_all(dir.path().join(".agents")).unwrap();
+        std::fs::write(
+            dir.path().join(AGGREGATOR_PATH),
+            aggregator_content(&manifest),
+        )
+        .unwrap();
+        for (path, _) in RULE_SCAFFOLDS {
+            std::fs::write(dir.path().join(path), "adapted by the user\n").unwrap();
+        }
+        assert!(repo_entry(dir.path(), &manifest).unwrap().is_none());
+    }
+
+    /// The knowledge capability plans every aokf-carried skill file, so a
+    /// `[knowledge] custom` name can release any of them.
+    #[test]
+    fn knowledge_plans_the_full_carried_skill_set() {
         let dir = tempfile::tempdir().unwrap();
         std::fs::create_dir_all(dir.path().join(".git")).unwrap();
         let fake = FakeRunner::new();
-
-        // The default provider copies files in; nothing is installed at user
-        // level, so no plugin action may appear.
         let manifest = Manifest::default_for(crate::version(), &[]);
         let plan = plan_repo(
             dir.path(),
@@ -671,49 +771,14 @@ mod tests {
         )
         .unwrap();
         let descs = plan_descs(&plan);
-        assert!(
-            descs
-                .iter()
-                .any(|d| d.contains("materialise http:mattpocock-skills")),
-            "{descs:?}"
-        );
-        assert!(
-            descs
-                .iter()
-                .any(|d| d.contains("pin http:mattpocock-skills"))
-        );
-        assert!(
-            !descs
-                .iter()
-                .any(|d| d.contains("plugin install superpowers")),
-            "{descs:?}"
-        );
-
-        // The secondary provider installs its plugin and materialises nothing.
-        let mut manifest = Manifest::default_for(crate::version(), &[]);
-        let workflows = manifest.capabilities.get_mut("workflows").unwrap();
-        workflows.provider = "superpowers".into();
-        workflows.version = Some("6.2.0".into());
-        let plan = plan_repo(
-            dir.path(),
-            &fake,
-            &manifest,
-            &Lock::default(),
-            PlanMode::Sync,
-        )
-        .unwrap();
-        let descs = plan_descs(&plan);
-        assert!(descs.iter().any(|d| d.contains("pin http:superpowers")));
-        assert!(
-            descs
-                .iter()
-                .any(|d| d.contains("plugin install superpowers@superpowers-dev")),
-            "{descs:?}"
-        );
-        assert!(
-            !descs.iter().any(|d| d.contains("materialise")),
-            "{descs:?}"
-        );
+        for name in aokf::skill_names() {
+            assert!(
+                descs
+                    .iter()
+                    .any(|d| d.contains(&format!(".claude/skills/{name}/SKILL.md"))),
+                "{name} missing from the plan"
+            );
+        }
     }
 
     #[test]
@@ -723,12 +788,12 @@ mod tests {
             vec![Claim::File(".claude/skills/grilling/SKILL.md".into())],
         );
         let b = (
-            Capability::Workflows,
+            Capability::Knowledge,
             vec![Claim::File(".claude/skills/grilling/SKILL.md".into())],
         );
         let err = claim_collision(&[a, b]).unwrap_err().to_string();
         assert!(
-            err.contains("skills and workflows both claim .claude/skills/grilling/SKILL.md"),
+            err.contains("skills and knowledge both claim .claude/skills/grilling/SKILL.md"),
             "{err}"
         );
         assert!(err.contains("custom list"), "{err}");
@@ -739,7 +804,7 @@ mod tests {
             Capability::Skills,
             vec![Claim::File("a.txt".into()), Claim::File("a.txt".into())],
         );
-        let other = (Capability::Workflows, vec![Claim::File("b.txt".into())]);
+        let other = (Capability::Knowledge, vec![Claim::File("b.txt".into())]);
         assert!(claim_collision(&[dup, other]).is_ok());
     }
 
@@ -776,13 +841,11 @@ mod tests {
     }
 
     #[test]
-    fn workflows_custom_entries_prune_files_and_owners() {
+    fn knowledge_custom_entries_release_the_whole_directory() {
         let mut manifest = Manifest::default_for("0.1.0", &[]);
-        let workflows = manifest.capabilities.get_mut("workflows").unwrap();
-        workflows.provider = "mattpocock-skills".into();
-        workflows.custom = vec!["tdd".into(), "humanise".into()];
+        manifest.capabilities.get_mut("knowledge").unwrap().custom = vec!["tdd".into()];
         let mut lock = Lock::default();
-        // A skill-pack file: same directory, no workflows attribution.
+        // A skill-pack file, untouched by the knowledge custom list.
         lock.files
             .insert(".claude/skills/humanise/SKILL.md".into(), "h".into());
         for key in [
@@ -790,73 +853,38 @@ mod tests {
             ".claude/skills/tdd/refs/A.md",
         ] {
             lock.files.insert(key.into(), "h".into());
-            lock.owners.insert(key.into(), "workflows".into());
+            lock.owners.insert(key.into(), "knowledge".into());
         }
         lock.files
             .insert(".claude/skills/wizard/SKILL.md".into(), "h".into());
-        lock.owners
-            .insert(".claude/skills/wizard/SKILL.md".into(), "workflows".into());
         assert!(prune_custom(&manifest, &mut lock));
         assert!(!lock.files.keys().any(|k| k.contains("/tdd/")));
         assert!(!lock.owners.keys().any(|k| k.contains("/tdd/")));
         assert!(lock.files.contains_key(".claude/skills/wizard/SKILL.md"));
-        // The pack owns humanise, so the workflows custom list cannot release it.
         assert!(lock.files.contains_key(".claude/skills/humanise/SKILL.md"));
+        // Nothing left to prune: reports no change.
+        assert!(!prune_custom(&manifest, &mut lock));
     }
 
     #[test]
-    fn custom_lines_and_switch_lines_report() {
+    fn knowledge_custom_lines_cover_every_carried_skill() {
         let mut manifest = Manifest::default_for("0.1.0", &[]);
-        let workflows = manifest.capabilities.get_mut("workflows").unwrap();
-        workflows.provider = "mattpocock-skills".into();
-        workflows.custom = vec!["tdd".into(), "flying".into()];
-        manifest.capabilities.get_mut("skills").unwrap().custom =
-            vec!["humanise".into(), "grill-me".into()];
+        manifest.capabilities.get_mut("knowledge").unwrap().custom =
+            vec!["tdd".into(), "flying".into()];
         let lines = custom_lines(&manifest);
-        assert!(lines.contains(&"workflows: tdd custom, unmanaged".to_string()));
+        assert!(lines.contains(&"knowledge: tdd custom, unmanaged".to_string()));
         assert!(
             lines.contains(
-                &"workflows: custom names unknown skill 'flying' — no effect".to_string()
+                &"knowledge: custom names unknown skill 'flying' — no effect".to_string()
             )
         );
-        assert!(lines.contains(&"skills: humanise custom, unmanaged".to_string()));
-        assert!(
-            lines
-                .contains(&"skills: custom names unknown skill 'grill-me' — no effect".to_string())
-        );
-
-        let mut lock = Lock::default();
-        lock.components.insert(
-            "workflows".into(),
-            LockedComponent {
-                provider: "superpowers".into(),
-                version: Some("6.2.0".into()),
-            },
-        );
-        let lines = switch_lines(&manifest, &lock);
-        assert!(
-            lines
-                .iter()
-                .any(|l| l.contains("claude plugin uninstall superpowers")),
-            "{lines:?}"
-        );
-        assert!(
-            lines
-                .iter()
-                .any(|l| l.contains("update the .agents import")),
-            "{lines:?}"
-        );
-        // No switch, no lines.
-        assert!(switch_lines(&manifest, &Lock::default()).is_empty());
-        let mut same = Lock::default();
-        same.components.insert(
-            "workflows".into(),
-            LockedComponent {
-                provider: "mattpocock-skills".into(),
-                version: Some("1.2.3".into()),
-            },
-        );
-        assert!(switch_lines(&manifest, &same).is_empty());
+        // Every carried skill is a known custom name.
+        let mut manifest = Manifest::default_for("0.1.0", &[]);
+        manifest.capabilities.get_mut("knowledge").unwrap().custom =
+            aokf::skill_names().map(String::from).collect();
+        for line in custom_lines(&manifest) {
+            assert!(line.ends_with("custom, unmanaged"), "{line}");
+        }
     }
 
     #[test]

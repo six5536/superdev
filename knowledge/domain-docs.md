@@ -7,9 +7,8 @@ status: stable
 ---
 
 This repo is single-context. Its domain docs are bundle concepts, not
-`CONTEXT.md` or `docs/adr/` ([Matt Pocock skills
-overrides](/.agents/MATT-POCOCK-SKILLS.md)). Before exploring the
-codebase, read:
+`CONTEXT.md` or `docs/adr/` — the knowledge-carried engineering skills
+write here natively. Before exploring the codebase, read:
 
 - [Domain Glossary](glossary.md) — the `CONTEXT.md` equivalent.
 - [Architecture](architecture.md) and

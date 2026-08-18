@@ -248,7 +248,7 @@ mod tests {
             manifest: &manifest,
             lock: &lock,
         };
-        assert!(ctx.config(Capability::Workflows).is_some());
+        assert!(ctx.config(Capability::Skills).is_some());
         assert!(ctx.config(Capability::CodeIndex).is_none());
         assert_eq!(Nop.capability(), Capability::Knowledge);
         assert_eq!(Nop.provider(), "nop");

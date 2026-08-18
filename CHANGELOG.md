@@ -92,14 +92,15 @@ publish a version it cannot find a heading for.
   Code actually loads the managed entry point
 - `blueprint` in `.superdev/config.toml` now records the version last
   applied: `sync` stamps it, `status` reports a difference without failing
-- Workflows provider selection: the manifest's `provider` field is now
-  honoured, `init --workflows-provider <id>` and
-  `update workflows --provider <id>` choose between `mattpocock-skills`
-  (the new default — materialised into `.claude/skills/` as repo files, so
-  collaborators need nothing installed) and `superpowers` (the plugin flow,
-  unchanged). Switching sweeps the old provider's pin and files
-- The knowledge scaffold's framework override now matches the workflows
-  provider: `.agents/SUPERPOWERS.md` or `.agents/MATT-POCOCK-SKILLS.md`
+- Knowledge-carried skills: the knowledge capability ships the full
+  aokf-converted skill set — 25 skills, each its whole directory, most
+  derived from mattpocock/skills (MIT) — as owned repo files under
+  `.claude/skills/`, released per skill by `[knowledge] custom`. The
+  workflows capability is gone: a manifest still naming `[workflows]` fails
+  with a guided migration error, and the next sync after the table is
+  deleted swaps same-named skills to knowledge ownership and sweeps the
+  dropped upstream files. The superpowers plugin remains installable by
+  hand: `claude plugin install superpowers`
 
 ### Fixed
 

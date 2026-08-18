@@ -45,12 +45,10 @@ All domain logic; no argument parsing. One module per concern:
   rules), `validate` (document check and conformance ladder), `graph` (link
   resolution and inverse synthesis), `embed` (the embedding providers),
   `index` (tantivy plus the vector store), `mcp` (the server).
-- The AOKF spec, agent files, starter concept skeleton and lifecycle skills
-  the `knowledge` capability writes, the three SKILL.md files the `skills`
-  capability writes, and the project templates ship as `assets/`, embedded
-  at compile time. The
-  mattpocock-skills files are not embedded: they come from the checksummed
-  checkout at sync time.
+- The AOKF spec, agent files, starter concept skeleton and the 25 carried
+  skill directories the `knowledge` capability writes, the three SKILL.md
+  files the `skills` capability writes, and the project templates ship as
+  `assets/`, embedded at compile time.
 
 The MCP server exposes four read-only tools over stdio — `aokf_search`,
 `aokf_read`, `aokf_graph`, `aokf_overview` (see

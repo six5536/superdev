@@ -2,7 +2,7 @@
 type: Procedure
 id: development-procedure
 title: Development Procedure
-description: Setup, the spec-and-plan change workflow, what to run before a PR, how this repo manages its own skills and workflows, and how it serves and searches its own knowledgebase.
+description: Setup, the spec-and-plan change workflow, what to run before a PR, how this repo manages its own skills, and how it serves and searches its own knowledgebase.
 status: stable
 sources:
   - id: contributing
@@ -16,13 +16,12 @@ no Node.
 
 # Workflow
 
-1. Significant changes follow the mattpocock/skills flow with this
-   project's overrides
-   ([MATT-POCOCK-SKILLS.md](/.agents/MATT-POCOCK-SKILLS.md)): grill the
+1. Significant changes follow the knowledge-carried engineering skills
+   (the aokf-converted flow in `.claude/skills/`): grill the
    requirements and write the spec into `knowledge/specs/` (permanent
    decision record) with `to-spec`, then break it into an implementation
    plan in `knowledge/plans/` (tagged `done` in the commit that
-   completes the work) with `to-tickets` or `wayfinder`.
+   completes the work) with `to-plan` or `wayfinder`.
 2. Implement with focused commits, using
    [Conventional Commits](https://www.conventionalcommits.org/) (`feat:`,
    `fix:`, `docs:`, `test:`, `refactor:`, `chore:`).
@@ -33,15 +32,15 @@ no Node.
    Windows, the blueprint-drift check on every platform, and the coverage gate
    on Linux.
 
-# This repo manages its own skills, workflows and knowledge machinery
+# This repo manages its own skills and knowledge machinery
 
-superdev fills the `skills`, `workflows` and `knowledge` capabilities here:
-committed `.superdev/config.toml` and `.superdev/lock.toml`, with
-`cargo run -- sync` writing the three pack skills, the aokf lifecycle skills
-and PostToolUse hook entry, the `.agents` files, and the materialised
-mattpocock-skills set. The knowledge scaffolds (AGENTS.md, the bundle) were
-this repo's before the capability was enabled, so they are untouched;
-`code-index` and `frontend` stay off.
+superdev fills the `skills`, `knowledge` and `code-index` capabilities
+here: committed `.superdev/config.toml` and `.superdev/lock.toml`, with
+`cargo run -- sync` writing the three pack skills, the knowledge-carried
+skill set with its PostToolUse hook entry, the `.agents` files, and the
+codegraph pin, index and agent wiring. The knowledge scaffolds (the
+bundle) were this repo's before the capability was enabled, so they are
+untouched; `frontend` stays off.
 `npm run check:blueprint` is what catches drift in the shipped skill assets —
 in the pre-PR list and in CI, through the product's own drift detection rather
 than a parity test.

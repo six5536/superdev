@@ -17,20 +17,13 @@ use crate::template_select;
 
 /// Printed after a materialisation: the upstream setup skill is interactive,
 /// so it is the one step superdev cannot run for the user.
-const SETUP_HINT: &str =
-    "workflows: run /setup-matt-pocock-skills in Claude Code to finish configuring";
-
 /// Printed at the end of every knowledge-enabled init: bootstrap is judgement
 /// work the agent does after the mechanical scaffolding.
-const BOOTSTRAP_HINT: &str =
-    "knowledge: run /aokf-bootstrap in Claude Code to fill the bundle from existing docs and an owner interview";
+const BOOTSTRAP_HINT: &str = "knowledge: run /aokf-bootstrap in Claude Code to fill the bundle from existing docs and an owner interview";
 
-/// The five capability-disable flags (kebab-case comes free from clap).
+/// The four capability-disable flags (kebab-case comes free from clap).
 #[derive(clap::Args)]
 pub struct InitArgs {
-    /// Skip the prompting/workflow skills
-    #[arg(long)]
-    pub no_workflows: bool,
     /// Skip the frontend design workflows
     #[arg(long)]
     pub no_frontend: bool,
@@ -43,9 +36,6 @@ pub struct InitArgs {
     /// Skip the knowledgebase scaffold
     #[arg(long)]
     pub no_knowledge: bool,
-    /// Workflows provider (default: the registry default)
-    #[arg(long, value_name = "ID", conflicts_with = "no_workflows")]
-    pub workflows_provider: Option<String>,
     #[arg(long, value_name = "NAME", help = crate::template_select::TEMPLATE_HELP)]
     pub template: Option<String>,
     /// Project name for template substitution (default: the directory name)
@@ -56,7 +46,6 @@ pub struct InitArgs {
 impl InitArgs {
     fn disabled(&self) -> Vec<Capability> {
         let flags = [
-            (self.no_workflows, Capability::Workflows),
             (self.no_frontend, Capability::Frontend),
             (self.no_skills, Capability::Skills),
             (self.no_code_index, Capability::CodeIndex),
@@ -84,16 +73,6 @@ pub fn init(root: &Path, args: &InitArgs) -> Result<u8> {
             message: "already initialised — run `superdev sync`".into(),
         });
     }
-    if let Some(id) = &args.workflows_provider
-        && registry::entry_for(Capability::Workflows, id).is_none()
-    {
-        return Err(Error::Manifest {
-            message: format!(
-                "workflows provider must be one of: {}",
-                registry::providers_for(Capability::Workflows).join(", ")
-            ),
-        });
-    }
     let dir_name = root
         .file_name()
         .and_then(|n| n.to_str())
@@ -112,16 +91,6 @@ pub fn init(root: &Path, args: &InitArgs) -> Result<u8> {
             project_name: selection.tokens.name.clone(),
             project_slug: selection.tokens.slug.clone(),
         });
-    }
-    if let (Some(id), Some(config)) = (
-        &args.workflows_provider,
-        manifest
-            .capabilities
-            .get_mut(Capability::Workflows.as_str()),
-    ) {
-        let entry = registry::entry_for(Capability::Workflows, id).expect("validated above");
-        config.provider = entry.provider.to_string();
-        config.version = entry.version.map(|p| p.version.to_string());
     }
     let adopted = pipeline::adopt_existing(root, &mut manifest);
     manifest.save(root)?;
@@ -143,9 +112,6 @@ pub fn init(root: &Path, args: &InitArgs) -> Result<u8> {
     match pipeline::apply_repo(root, &runner, &manifest, plan) {
         Ok(outcome) if outcome.ok => {
             print_block(&outcome.report)?;
-            if outcome.materialised {
-                out(SETUP_HINT)?;
-            }
             if manifest
                 .capabilities
                 .contains_key(Capability::Knowledge.as_str())
@@ -194,9 +160,6 @@ pub fn status(root: &Path) -> Result<u8> {
     for line in plan.custom_lines() {
         out(line)?;
     }
-    for line in plan.switch_lines() {
-        out(line)?;
-    }
     for line in &plan.released_lines() {
         out(line)?;
     }
@@ -221,9 +184,6 @@ pub fn sync(root: &Path, dry_run: bool) -> Result<u8> {
     for line in &plan.released_lines() {
         out(line)?;
     }
-    for line in plan.switch_lines() {
-        out(line)?;
-    }
     if dry_run {
         return Ok(0);
     }
@@ -231,9 +191,6 @@ pub fn sync(root: &Path, dry_run: bool) -> Result<u8> {
     print_block(&outcome.report)?;
     if !outcome.ok {
         return Err(apply_failed());
-    }
-    if outcome.materialised {
-        out(SETUP_HINT)?;
     }
     Ok(0)
 }
@@ -356,36 +313,12 @@ mod tests {
     use super::*;
 
     #[test]
-    fn init_args_carry_a_validated_workflows_provider() {
-        let dir = tempfile::tempdir().unwrap();
-        std::fs::create_dir_all(dir.path().join(".git")).unwrap();
-        let args = InitArgs {
-            no_workflows: false,
-            no_frontend: true,
-            no_skills: true,
-            no_code_index: true,
-            no_knowledge: true,
-            workflows_provider: Some("flying".into()),
-            template: None,
-            name: None,
-        };
-        let err = init(dir.path(), &args).unwrap_err().to_string();
-        assert!(err.contains("workflows provider must be one of"), "{err}");
-        assert!(
-            !dir.path().join(CONFIG_PATH).exists(),
-            "nothing written on error"
-        );
-    }
-
-    #[test]
     fn init_refuses_reruns_and_non_git_dirs() {
         let args = InitArgs {
-            no_workflows: false,
             no_frontend: false,
             no_skills: false,
             no_code_index: false,
             no_knowledge: false,
-            workflows_provider: None,
             template: None,
             name: None,
         };
@@ -407,17 +340,17 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let manifest = Manifest::default_for(superdev_core::version(), &[]);
         manifest.save(dir.path()).unwrap();
-        let err = update(dir.path(), None, Some("superpowers"))
+        let err = update(dir.path(), None, Some("aokf"))
             .unwrap_err()
             .to_string();
         assert!(
             err.contains("--provider needs a capability target"),
             "{err}"
         );
-        let err = update(dir.path(), Some("workflows"), Some("flying"))
+        let err = update(dir.path(), Some("knowledge"), Some("flying"))
             .unwrap_err()
             .to_string();
-        assert!(err.contains("workflows provider must be one of"), "{err}");
+        assert!(err.contains("knowledge provider must be one of"), "{err}");
     }
 
     #[test]
@@ -428,12 +361,12 @@ mod tests {
             (Capability::CodeIndex, None)
         );
         assert!(parse_target(&manifest, "flying").is_err());
+        assert!(parse_target(&manifest, "workflows").is_err());
         // Every registry-pinned capability refuses a hand-picked version.
-        let err = parse_target(&manifest, "workflows@9.9.9")
+        let err = parse_target(&manifest, "code-index@9.9.9")
             .unwrap_err()
             .to_string();
-        assert!(err.contains("run `superdev update workflows`"), "{err}");
-        assert!(parse_target(&manifest, "code-index@9.9.9").is_err());
+        assert!(err.contains("run `superdev update code-index`"), "{err}");
         assert!(parse_target(&manifest, "skills@9.9.9").is_err());
     }
 }

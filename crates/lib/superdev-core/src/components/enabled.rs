@@ -4,18 +4,14 @@
 
 use crate::capability::Capability;
 use crate::component::Component;
-use crate::components::{aokf, codegraph, mattskills, plugin, skillpack};
+use crate::components::{aokf, codegraph, plugin, skillpack};
 use crate::error::{Error, Result};
 use crate::manifest::Manifest;
 use crate::registry;
 
 /// Every mise `[tools]` key superdev pins. A repo carrying any of them needs
 /// `mise install` before a provider command can resolve its tool.
-pub const MANAGED_MISE_TOOLS: [&str; 3] = [
-    plugin::SUPERPOWERS_MISE_TOOL,
-    mattskills::MATTSKILLS_MISE_TOOL,
-    codegraph::CODEGRAPH_MISE_TOOL,
-];
+pub const MANAGED_MISE_TOOLS: [&str; 1] = [codegraph::CODEGRAPH_MISE_TOOL];
 
 /// Every enabled component, in canonical apply order, resolved from the
 /// manifest's provider choices. Until this resolution existed, the
@@ -49,13 +45,10 @@ pub fn enabled(manifest: &Manifest) -> Result<Vec<Box<dyn Component>>> {
 /// The component implementing a known (capability, provider) pair.
 fn component_for(capability: Capability, provider: &str) -> Box<dyn Component> {
     match (capability, provider) {
-        (Capability::Workflows, "superpowers") => Box::new(plugin::superpowers()),
-        (Capability::Workflows, "mattpocock-skills") => Box::new(mattskills::MattSkills),
         (Capability::Frontend, _) => Box::new(plugin::frontend_design()),
         (Capability::Skills, _) => Box::new(skillpack::SkillPack),
         (Capability::CodeIndex, _) => Box::new(codegraph::Codegraph),
         (Capability::Knowledge, _) => Box::new(aokf::Aokf),
-        _ => unreachable!("resolved from the registry"),
     }
 }
 
@@ -71,18 +64,6 @@ mod tests {
         use crate::runner::FakeRunner;
         use std::collections::BTreeSet;
 
-        // The workflows component materialises from a checkout; only it reads this.
-        let checkout = tempfile::tempdir().unwrap();
-        for rel in [
-            "skills/engineering/alpha/SKILL.md",
-            "skills/engineering/beta/SKILL.md",
-            "skills/productivity/gamma/SKILL.md",
-        ] {
-            let p = checkout.path().join(rel);
-            std::fs::create_dir_all(p.parent().unwrap()).unwrap();
-            std::fs::write(p, "skill body").unwrap();
-        }
-
         let manifest = Manifest::default_for(env!("CARGO_PKG_VERSION"), &[]);
         for component in enabled(&manifest).unwrap() {
             // The item-list components derive plan and owned from one list,
@@ -93,14 +74,6 @@ mod tests {
             }
             let dir = tempfile::tempdir().unwrap();
             let fake = FakeRunner::new();
-            fake.script(
-                "mise where http:mattpocock-skills",
-                crate::runner::Output {
-                    status: 0,
-                    stdout: format!("{}\n", checkout.path().display()),
-                    stderr: String::new(),
-                },
-            );
             let empty = Lock::default();
             let ctx = Ctx {
                 root: dir.path(),
@@ -131,63 +104,28 @@ mod tests {
                 .collect();
             let locked: BTreeSet<String> = lock.files.keys().cloned().collect();
             assert_eq!(claimed, locked, "{}", component.provider());
-
-            // Both sets above come out of the same apply. For the one component
-            // whose claims are lock-derived, anchor them to the fixture instead,
-            // so the test carries an expectation the code cannot move.
-            if component.provider() == "mattpocock-skills" {
-                let mut expected: BTreeSet<String> = [
-                    ".mise.toml:http:mattpocock-skills".to_string(),
-                    ".claude/skills/alpha/SKILL.md".to_string(),
-                    ".claude/skills/beta/SKILL.md".to_string(),
-                    ".claude/skills/gamma/SKILL.md".to_string(),
-                ]
-                .into_iter()
-                .collect();
-                // The embedded overrides materialise as extras beside the
-                // fixture checkout's skills. Literal paths, so the test
-                // carries an expectation the code cannot move.
-                expected.insert(".claude/skills/grilling/SKILL.md".to_string());
-                expected.insert(".claude/skills/grilling/agents/openai.yaml".to_string());
-                assert_eq!(claimed, expected);
-            }
         }
     }
 
     #[test]
     fn enabled_rejects_an_unknown_provider() {
         let mut manifest = Manifest::default_for("0.1.0", &[]);
-        manifest.capabilities.get_mut("workflows").unwrap().provider = "flying".into();
+        manifest.capabilities.get_mut("knowledge").unwrap().provider = "flying".into();
         // `err()`, not `unwrap_err()`: the Ok side holds trait objects that
         // cannot be Debug-printed.
         let err = enabled(&manifest).err().unwrap().to_string();
         assert!(
-            err.contains("workflows provider must be one of: superpowers"),
+            err.contains("knowledge provider must be one of: aokf"),
             "{err}"
         );
         assert!(enabled(&Manifest::default_for("0.1.0", &[])).is_ok());
     }
 
     #[test]
-    fn the_workflows_provider_resolves_from_the_manifest() {
-        let mut manifest = Manifest::default_for("0.1.0", &[]);
-        let workflows = manifest.capabilities.get_mut("workflows").unwrap();
-        workflows.provider = "mattpocock-skills".into();
-        workflows.version = Some("1.2.3".into());
-        let components = enabled(&manifest).unwrap();
-        assert!(
-            components
-                .iter()
-                .any(|c| c.provider() == "mattpocock-skills")
-        );
-        assert!(!components.iter().any(|c| c.provider() == "superpowers"));
-    }
-
-    #[test]
     fn enabled_skips_disabled_capabilities() {
         let manifest = Manifest::default_for("0.1.0", &[Capability::CodeIndex]);
         let components = enabled(&manifest).unwrap();
-        assert_eq!(components.len(), 4);
+        assert_eq!(components.len(), 3);
         assert!(
             components
                 .iter()

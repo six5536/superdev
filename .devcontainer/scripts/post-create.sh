@@ -24,13 +24,3 @@ ln -sf "${CONTAINER_WORKSPACE_FOLDER}/scripts/superdev" "$HOME/.local/bin/superd
 git submodule update --init
 git submodule foreach 'git remote set-url --push origin no_push'
 
-# Superpowers (Claude Code plugin). `mise install` above fetched the
-# checksum-verified checkout pinned in .mise.toml; register it as a local
-# marketplace and install the plugin from it. Remove-then-add so a version
-# bump in .mise.toml lands on the next container create; both install steps
-# are no-ops when already current.
-superpowers="$(mise where http:superpowers)"
-mise exec -- claude plugin marketplace remove superpowers-dev >/dev/null 2>&1 || true
-mise exec -- claude plugin marketplace add "$superpowers"
-mise exec -- claude plugin install superpowers@superpowers-dev
-

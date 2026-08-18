@@ -7,9 +7,8 @@ status: stable
 ---
 
 Issues live as markdown files in this bundle, not on GitHub. Specs and
-plans already live here ([Matt Pocock skills
-overrides](/.agents/MATT-POCOCK-SKILLS.md)); issues follow the same
-conventions. The engineering skills (`to-tickets`, `triage`, `to-spec`,
+plans already live here; issues follow the same conventions. The
+knowledge-carried engineering skills (`to-plan`, `triage`, `to-spec`,
 `wayfinder`) read this concept to learn where to publish and fetch.
 
 # Conventions

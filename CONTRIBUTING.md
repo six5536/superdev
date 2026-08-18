@@ -14,13 +14,8 @@ Toolchains are pinned and managed with [mise](https://mise.jdx.dev/):
   `clippy`).
 - `.mise.toml` pins everything else: Node, a `nightly` Rust used only by the
   coverage job, `zig` (the cross C compiler behind `cargo-zigbuild`, whose
-  version the release workflow reads straight out of this file), the cargo
-  tools (`cargo-nextest`, `cargo-llvm-cov`, `cargo-zigbuild`), and the
-  [Superpowers](https://github.com/obra/superpowers) Claude Code plugin
-  (tag-pinned source tarball, sha256-verified; the devcontainer post-create
-  script registers the checkout as a local marketplace and installs the
-  plugin — outside the devcontainer, run the two `claude plugin` commands
-  from `.devcontainer/scripts/post-create.sh` yourself).
+  version the release workflow reads straight out of this file), and the
+  cargo tools (`cargo-nextest`, `cargo-llvm-cov`, `cargo-zigbuild`).
 
 ```sh
 mise install     # install all pinned tools

@@ -22,28 +22,6 @@ const NAMED_ASSET: &str = "knowledge/manifest.aokf.yaml";
 
 /// The workflow-framework override each provider gets, as
 /// (provider id, target path, embedded asset).
-const WORKFLOW_OVERRIDES: [(&str, &str, &str); 2] = [
-    (
-        "superpowers",
-        ".agents/SUPERPOWERS.md",
-        asset!("aokf/agents/SUPERPOWERS.md"),
-    ),
-    (
-        "mattpocock-skills",
-        ".agents/MATT-POCOCK-SKILLS.md",
-        asset!("aokf/agents/MATT-POCOCK-SKILLS.md"),
-    ),
-];
-
-/// The enabled workflows provider's override, when there is one.
-fn workflow_override(ctx: &Ctx<'_>) -> Option<(&'static str, &'static str)> {
-    let config = ctx.config(Capability::Workflows)?;
-    WORKFLOW_OVERRIDES
-        .iter()
-        .find(|(provider, ..)| *provider == config.provider)
-        .map(|(_, path, content)| (*path, *content))
-}
-
 /// Where agent tools find MCP servers, and superdev's key inside it. The file
 /// is shared with the user's own servers, so only this key is managed.
 const MCP_PATH: &str = ".mcp.json";
@@ -66,28 +44,10 @@ const FILES: &[(&str, &str, Ownership, &str)] = &[
         "AOKF specification",
     ),
     (
-        ".agents/VALIDATION.md",
-        asset!("aokf/agents/VALIDATION.md"),
+        ".agents/aokf.md",
+        asset!("aokf/agents/aokf.md"),
         Ownership::Owned,
-        "validation rules",
-    ),
-    (
-        ".agents/CODING.md",
-        asset!("aokf/agents/CODING.md"),
-        Ownership::Scaffold,
-        "coding rules",
-    ),
-    (
-        ".agents/PROSE.md",
-        asset!("aokf/agents/PROSE.md"),
-        Ownership::Scaffold,
-        "prose rules",
-    ),
-    (
-        "AGENTS.md",
-        asset!("aokf/AGENTS.md"),
-        Ownership::Scaffold,
-        "agent entry point",
+        "knowledge instructions",
     ),
     (
         "knowledge/index.md",
@@ -229,15 +189,28 @@ const FILES: &[(&str, &str, Ownership, &str)] = &[
     ),
 ];
 
-/// The knowledge-lifecycle skills, carried by this component so they exist
-/// exactly where a bundle exists: (skill name, embedded SKILL.md).
-pub(crate) const SKILLS: [(&str, &str); 2] = [
-    ("aokf-bootstrap", asset!("aokf/skills/aokf-bootstrap/SKILL.md")),
-    (
-        "aokf-maintain",
-        asset!("aokf/skills/aokf-maintain/SKILL.md"),
-    ),
-];
+/// The aokf-carried skill set lives in the generated
+/// [`super::aokf_skills::SKILLS`] table: the converted engineering flow plus
+/// the knowledge-lifecycle skills, carried by this component so they exist
+/// exactly where a bundle exists.
+pub(crate) fn skill_names() -> impl Iterator<Item = &'static str> {
+    super::aokf_skills::SKILLS.iter().map(|(name, _)| *name)
+}
+
+/// Each skill's identity file, for init-time adoption: (name, SKILL.md).
+fn skill_identities() -> Vec<(&'static str, &'static str)> {
+    super::aokf_skills::SKILLS
+        .iter()
+        .map(|(name, files)| {
+            let skill_md = files
+                .iter()
+                .find(|(rel, _)| *rel == "SKILL.md")
+                .expect("every skill directory carries a SKILL.md")
+                .1;
+            (*name, skill_md)
+        })
+        .collect()
+}
 
 /// Where Claude Code reads hook registrations. Shared with the user's own
 /// hooks, so only superdev's array element is managed.
@@ -254,7 +227,7 @@ const HOOK_ELEMENT: &str = r#"{"matcher":"Edit|Write","hooks":[{"type":"command"
 /// Release, at adoption time, every aokf skill the repo already has under
 /// its own name and with its own content. Returns the lines to print.
 pub(crate) fn adopt_existing(root: &Path, manifest: &mut Manifest) -> Vec<String> {
-    super::skills::adopt_existing(root, Capability::Knowledge, &SKILLS, manifest)
+    super::skills::adopt_existing(root, Capability::Knowledge, &skill_identities(), manifest)
 }
 
 /// The native AOKF provider.
@@ -275,17 +248,6 @@ fn items(ctx: &Ctx<'_>) -> Vec<ManagedItem> {
         // is not a placeholder.
         let content = match *path {
             NAMED_ASSET => content.replace("{name}", &repo_name),
-            "AGENTS.md" => match workflow_override(ctx) {
-                Some((path, _)) => content.replace("{workflows_overrides}", &format!("@{path}")),
-                None => {
-                    content
-                        .lines()
-                        .filter(|l| *l != "{workflows_overrides}")
-                        .collect::<Vec<_>>()
-                        .join("\n")
-                        + "\n"
-                }
-            },
             _ => (*content).to_string(),
         };
         items.push(match ownership {
@@ -299,13 +261,6 @@ fn items(ctx: &Ctx<'_>) -> Vec<ManagedItem> {
                 content,
                 reason: (*reason).to_string(),
             },
-        });
-    }
-    if let Some((path, content)) = workflow_override(ctx) {
-        items.push(ManagedItem::OwnedFile {
-            path: path.to_string(),
-            content: content.to_string(),
-            reason: "workflows overrides".to_string(),
         });
     }
     items.push(ManagedItem::EnsureLine {
@@ -323,7 +278,16 @@ fn items(ctx: &Ctx<'_>) -> Vec<ManagedItem> {
         .config(Capability::Knowledge)
         .map(|c| c.custom.as_slice())
         .unwrap_or_default();
-    items.extend(super::skills::skill_items(&SKILLS, custom));
+    items.extend(super::skills::skill_dir_items(
+        super::aokf_skills::SKILLS,
+        custom,
+    ));
+    let (license_rel, license_content) = super::aokf_skills::LICENSE_FILE;
+    items.push(ManagedItem::OwnedFile {
+        path: format!(".claude/skills/{license_rel}"),
+        content: license_content.to_string(),
+        reason: "derived-skills licence".to_string(),
+    });
     items.push(ManagedItem::JsonEntry {
         path: SETTINGS_PATH.into(),
         pointer: HOOK_POINTER.into(),
@@ -373,41 +337,28 @@ mod tests {
         Aokf.plan(&ctx).unwrap()
     }
 
-    fn plan_with_provider(dir: &std::path::Path, provider: Option<&str>) -> Vec<Action> {
-        let mut manifest = Manifest::default_for("0.1.0", &[]);
-        match provider {
-            Some(provider) => {
-                let workflows = manifest.capabilities.get_mut("workflows").unwrap();
-                workflows.provider = provider.into();
-            }
-            None => {
-                manifest.capabilities.remove("workflows");
-            }
-        }
-        let lock = Lock::default();
-        let fake = FakeRunner::new();
-        let ctx = Ctx {
-            root: dir,
-            runner: &fake,
-            manifest: &manifest,
-            lock: &lock,
-        };
-        Aokf.plan(&ctx).unwrap()
-    }
-
     #[test]
-    fn ships_the_lifecycle_skills_and_the_hook() {
+    fn ships_the_carried_skill_set_and_the_hook() {
         let dir = tempfile::tempdir().unwrap();
         let actions = plan_in(dir.path());
         let descs: Vec<String> = actions.iter().map(Action::describe).collect();
-        for (name, _) in SKILLS {
-            assert!(
-                descs
-                    .iter()
-                    .any(|d| d.contains(&format!(".claude/skills/{name}/SKILL.md"))),
-                "{descs:?}"
-            );
+        // A skill is its directory: every file of every skill materialises.
+        for (name, files) in super::super::aokf_skills::SKILLS {
+            for (rel, _) in *files {
+                assert!(
+                    descs
+                        .iter()
+                        .any(|d| d.contains(&format!(".claude/skills/{name}/{rel}"))),
+                    ".claude/skills/{name}/{rel} missing from {descs:?}"
+                );
+            }
         }
+        assert!(
+            descs
+                .iter()
+                .any(|d| d.contains(".claude/skills/LICENSE-mattpocock-skills.md")),
+            "{descs:?}"
+        );
         assert!(
             descs
                 .iter()
@@ -417,11 +368,12 @@ mod tests {
     }
 
     #[test]
-    fn a_custom_skill_is_released_and_the_hook_stays() {
+    fn a_custom_skill_is_released_whole_and_the_hook_stays() {
         use crate::component::Claim;
         let dir = tempfile::tempdir().unwrap();
         let mut manifest = Manifest::default_for("0.1.0", &[]);
-        manifest.capabilities.get_mut("knowledge").unwrap().custom = vec!["aokf-maintain".into()];
+        manifest.capabilities.get_mut("knowledge").unwrap().custom =
+            vec!["aokf-maintain".into(), "tdd".into()];
         let lock = Lock::default();
         let fake = FakeRunner::new();
         let ctx = Ctx {
@@ -435,7 +387,10 @@ mod tests {
             !keys.iter().any(|k| k.contains("aokf-maintain")),
             "{keys:?}"
         );
+        // Releasing a skill releases its whole directory, companions included.
+        assert!(!keys.iter().any(|k| k.contains("/tdd/")), "{keys:?}");
         assert!(keys.contains(&".claude/skills/aokf-bootstrap/SKILL.md".to_string()));
+        assert!(keys.contains(&".claude/skills/wizard/template.sh".to_string()));
         assert!(keys.contains(
             &".claude/settings.json:hooks.PostToolUse[superdev aokf hook validate]".to_string()
         ));
@@ -500,69 +455,33 @@ mod tests {
     }
 
     #[test]
-    fn the_override_file_follows_the_workflows_provider() {
+    fn agents_md_is_never_planned_and_the_instructions_are() {
+        // AGENTS.md is the user's file: the repo-level entry ensures its one
+        // import line; this component must not touch it.
         let dir = tempfile::tempdir().unwrap();
-        let writes = |actions: &[Action]| -> Vec<String> {
-            actions
-                .iter()
-                .filter_map(|a| match a {
-                    Action::WriteFile { path, .. } => Some(path.clone()),
-                    _ => None,
-                })
-                .collect()
-        };
-        let superpowers = writes(&plan_with_provider(dir.path(), Some("superpowers")));
-        assert!(superpowers.contains(&".agents/SUPERPOWERS.md".to_string()));
-        assert!(!superpowers.contains(&".agents/MATT-POCOCK-SKILLS.md".to_string()));
-        let matt = writes(&plan_with_provider(dir.path(), Some("mattpocock-skills")));
-        assert!(matt.contains(&".agents/MATT-POCOCK-SKILLS.md".to_string()));
-        assert!(!matt.contains(&".agents/SUPERPOWERS.md".to_string()));
-        let none = writes(&plan_with_provider(dir.path(), None));
+        let actions = plan_in(dir.path());
         assert!(
-            !none
-                .iter()
-                .any(|p| p.starts_with(".agents/SUPERPOWERS")
-                    || p.starts_with(".agents/MATT-POCOCK"))
+            !actions.iter().any(|a| matches!(
+                a,
+                Action::WriteFile { path, .. } if path == "AGENTS.md"
+            )),
+            "AGENTS.md planned by the aokf component"
         );
-    }
-
-    #[test]
-    fn the_scaffold_imports_match_the_provider() {
-        let dir = tempfile::tempdir().unwrap();
-        let agents_content = |provider: Option<&str>| {
-            plan_with_provider(dir.path(), provider)
-                .into_iter()
-                .find_map(|a| match a {
-                    Action::WriteFile { path, content, .. } if path == "AGENTS.md" => Some(content),
-                    _ => None,
-                })
-                .unwrap()
-        };
-        assert!(agents_content(Some("superpowers")).contains("@.agents/SUPERPOWERS.md"));
-        let matt = agents_content(Some("mattpocock-skills"));
-        assert!(matt.contains("@.agents/MATT-POCOCK-SKILLS.md"));
-        assert!(!matt.contains("SUPERPOWERS"));
-        let none = agents_content(None);
-        assert!(!none.contains("{workflows_overrides}"));
-        assert!(!none.contains("SUPERPOWERS") && !none.contains("MATT-POCOCK"));
-    }
-
-    #[test]
-    fn owned_follows_the_provider_too() {
-        let dir = tempfile::tempdir().unwrap();
-        let mut manifest = Manifest::default_for("0.1.0", &[]);
-        manifest.capabilities.get_mut("workflows").unwrap().provider = "mattpocock-skills".into();
-        let lock = Lock::default();
-        let fake = FakeRunner::new();
-        let ctx = Ctx {
-            root: dir.path(),
-            runner: &fake,
-            manifest: &manifest,
-            lock: &lock,
-        };
-        let keys: Vec<String> = Aokf.owned(&ctx).iter().map(Claim::lock_key).collect();
-        assert!(keys.contains(&".agents/MATT-POCOCK-SKILLS.md".to_string()));
-        assert!(!keys.contains(&".agents/SUPERPOWERS.md".to_string()));
+        let instructions = actions
+            .into_iter()
+            .find_map(|a| match a {
+                Action::WriteFile { path, content, .. } if path == ".agents/aokf.md" => {
+                    Some(content)
+                }
+                _ => None,
+            })
+            .unwrap();
+        // Sibling-relative imports: they resolve from `.agents/`.
+        assert!(instructions.contains("@aokf/SPEC.md"), "{instructions}");
+        assert!(
+            instructions.contains("@../knowledge/index.md"),
+            "{instructions}"
+        );
     }
 
     #[test]
@@ -580,7 +499,7 @@ mod tests {
             })
             .collect();
         assert!(paths.contains(&".agents/aokf/SPEC.md"));
-        assert!(paths.contains(&"AGENTS.md"));
+        assert!(paths.contains(&".agents/aokf.md"));
         let manifest_action = actions.iter().find_map(|a| match a {
             Action::WriteFile { path, content, .. } if path == "knowledge/manifest.aokf.yaml" => {
                 Some(content)
@@ -593,14 +512,12 @@ mod tests {
                 .unwrap()
                 .contains(&format!("name: {repo_name}-knowledge"))
         );
-        // Every other asset ships byte-for-byte as embedded. AGENTS.md is
-        // templated (the workflow-override token), and the workflow override
-        // itself is planned outside the FILES table — both are exempt.
+        // Every other asset ships byte-for-byte as embedded.
         for action in &actions {
             let Action::WriteFile { path, content, .. } = action else {
                 continue;
             };
-            if path == NAMED_ASSET || path == "AGENTS.md" {
+            if path == NAMED_ASSET {
                 continue;
             }
             let Some((_, asset, ..)) = FILES.iter().find(|(p, ..)| p == path) else {
