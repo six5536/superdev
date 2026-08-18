@@ -14,6 +14,7 @@ Skills in this directory not on this list are superdev's own.
 - to-plan (derived from upstream to-tickets)
 - tdd
 - to-spec
+- triage
 - writing-for-agents
 
 MIT licence of the original work:
