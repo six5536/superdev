@@ -6,6 +6,8 @@ use crate::capability::Capability;
 use crate::component::{Claim, Component, Ctx};
 use crate::error::Result;
 
+use super::item::{self, ManagedItem};
+
 macro_rules! asset {
     ($rel:literal) => {
         include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/assets/", $rel))
@@ -107,6 +109,68 @@ const FILES: &[(&str, &str, Ownership, &str)] = &[
 /// The native AOKF provider.
 pub struct Aokf;
 
+/// Everything the knowledge capability keeps in the repo, as one list the
+/// driver derives both `plan` and `owned` from.
+fn items(ctx: &Ctx<'_>) -> Vec<ManagedItem> {
+    let repo_name = ctx
+        .root
+        .file_name()
+        .and_then(|n| n.to_str())
+        .unwrap_or("project")
+        .to_string();
+    let mut items = Vec::new();
+    for (path, content, ownership, reason) in FILES {
+        // Every other asset is shipped verbatim: a stray `{name}` in prose
+        // is not a placeholder.
+        let content = match *path {
+            NAMED_ASSET => content.replace("{name}", &repo_name),
+            "AGENTS.md" => match workflow_override(ctx) {
+                Some((path, _)) => content.replace("{workflows_overrides}", &format!("@{path}")),
+                None => {
+                    content
+                        .lines()
+                        .filter(|l| *l != "{workflows_overrides}")
+                        .collect::<Vec<_>>()
+                        .join("\n")
+                        + "\n"
+                }
+            },
+            _ => (*content).to_string(),
+        };
+        items.push(match ownership {
+            Ownership::Owned => ManagedItem::OwnedFile {
+                path: (*path).to_string(),
+                content,
+                reason: (*reason).to_string(),
+            },
+            Ownership::Scaffold => ManagedItem::Scaffold {
+                path: (*path).to_string(),
+                content,
+                reason: (*reason).to_string(),
+            },
+        });
+    }
+    if let Some((path, content)) = workflow_override(ctx) {
+        items.push(ManagedItem::OwnedFile {
+            path: path.to_string(),
+            content: content.to_string(),
+            reason: "workflows overrides".to_string(),
+        });
+    }
+    items.push(ManagedItem::EnsureLine {
+        path: CLAUDE_ENTRY_PATH.into(),
+        line: CLAUDE_ENTRY_LINE.into(),
+        reason: "make Claude Code read AGENTS.md".into(),
+    });
+    items.push(ManagedItem::JsonEntry {
+        path: MCP_PATH.into(),
+        pointer: MCP_POINTER.into(),
+        marker: None,
+        value_json: MCP_VALUE.into(),
+    });
+    items
+}
+
 impl Component for Aokf {
     fn capability(&self) -> Capability {
         Capability::Knowledge
@@ -117,110 +181,12 @@ impl Component for Aokf {
     }
 
     fn plan(&self, ctx: &Ctx<'_>) -> Result<Vec<Action>> {
-        let repo_name = ctx
-            .root
-            .file_name()
-            .and_then(|n| n.to_str())
-            .unwrap_or("project")
-            .to_string();
-        let mut actions = Vec::new();
-        for (path, content, ownership, reason) in FILES {
-            // Every other asset is shipped verbatim: a stray `{name}` in prose
-            // is not a placeholder.
-            let content = match *path {
-                NAMED_ASSET => content.replace("{name}", &repo_name),
-                "AGENTS.md" => match workflow_override(ctx) {
-                    Some((path, _)) => {
-                        content.replace("{workflows_overrides}", &format!("@{path}"))
-                    }
-                    None => {
-                        content
-                            .lines()
-                            .filter(|l| *l != "{workflows_overrides}")
-                            .collect::<Vec<_>>()
-                            .join("\n")
-                            + "\n"
-                    }
-                },
-                _ => (*content).to_string(),
-            };
-            let existing = std::fs::read_to_string(ctx.root.join(path)).ok();
-            let wanted = match ownership {
-                Ownership::Owned => existing.as_deref() != Some(content.as_str()),
-                Ownership::Scaffold => existing.is_none(),
-            };
-            if wanted {
-                actions.push(Action::WriteFile {
-                    path: (*path).to_string(),
-                    content,
-                    ownership: *ownership,
-                    reason: (*reason).to_string(),
-                });
-            }
-        }
-        if let Some((path, content)) = workflow_override(ctx) {
-            let existing = std::fs::read_to_string(ctx.root.join(path)).ok();
-            if existing.as_deref() != Some(content) {
-                actions.push(Action::WriteFile {
-                    path: path.to_string(),
-                    content: content.to_string(),
-                    ownership: Ownership::Owned,
-                    reason: "workflows overrides".to_string(),
-                });
-            }
-        }
-        let claude = std::fs::read_to_string(ctx.root.join(CLAUDE_ENTRY_PATH)).unwrap_or_default();
-        // Exact whole-line match, the same rule the engine applies.
-        if !claude.lines().any(|l| l == CLAUDE_ENTRY_LINE) {
-            actions.push(Action::EnsureLine {
-                path: CLAUDE_ENTRY_PATH.into(),
-                line: CLAUDE_ENTRY_LINE.into(),
-                reason: "make Claude Code read AGENTS.md".into(),
-            });
-        }
-        if mcp_registration_missing(ctx.root) {
-            actions.push(Action::SetJsonKey {
-                path: MCP_PATH.to_string(),
-                pointer: MCP_POINTER.to_string(),
-                value_json: MCP_VALUE.to_string(),
-            });
-        }
-        Ok(actions)
+        Ok(item::plan_items(ctx.root, &items(ctx)))
     }
 
     fn owned(&self, ctx: &Ctx<'_>) -> Vec<Claim> {
-        let mut claims: Vec<Claim> = FILES
-            .iter()
-            .filter(|(_, _, ownership, _)| *ownership == Ownership::Owned)
-            .map(|(path, ..)| Claim::File((*path).to_string()))
-            .collect();
-        if let Some((path, _)) = workflow_override(ctx) {
-            claims.push(Claim::File(path.to_string()));
-        }
-        claims.push(Claim::JsonKey {
-            path: MCP_PATH.into(),
-            pointer: MCP_POINTER.into(),
-        });
-        claims
+        item::claims(&items(ctx))
     }
-}
-
-/// True when `.mcp.json` does not already carry superdev's entry. Compares the
-/// parsed values, so reformatting or reordering the file is not drift. An
-/// unreadable or malformed file counts as missing: the engine reports why.
-fn mcp_registration_missing(root: &std::path::Path) -> bool {
-    let wanted: serde_json::Value =
-        serde_json::from_str(MCP_VALUE).expect("the registration literal is valid JSON");
-    let current = std::fs::read_to_string(root.join(MCP_PATH))
-        .ok()
-        .and_then(|text| serde_json::from_str::<serde_json::Value>(&text).ok())
-        .and_then(|root| {
-            MCP_POINTER
-                .split('.')
-                .try_fold(&root, |value, segment| value.get(segment))
-                .cloned()
-        });
-    current.as_ref() != Some(&wanted)
 }
 
 #[cfg(test)]

@@ -51,3 +51,9 @@ pub(crate) fn write_file(path: &Path, content: &str) -> Result<()> {
         source: e,
     })
 }
+
+/// Exact whole-line containment — the one rule for "the file already has
+/// this line", shared by the planners and the engine's line applier.
+pub(crate) fn has_line(content: &str, line: &str) -> bool {
+    content.lines().any(|l| l == line)
+}

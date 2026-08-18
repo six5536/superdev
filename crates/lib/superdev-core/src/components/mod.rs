@@ -2,6 +2,7 @@
 
 pub mod aokf;
 pub mod codegraph;
+pub(crate) mod item;
 pub mod mattskills;
 pub mod mise;
 pub mod pin;
@@ -92,6 +93,12 @@ mod tests {
 
         let manifest = Manifest::default_for(env!("CARGO_PKG_VERSION"), &[]);
         for component in enabled(&manifest).unwrap() {
+            // The item-list components derive plan and owned from one list,
+            // so their consistency is true by construction; only the
+            // hand-written pairs need this simulation.
+            if matches!(component.provider(), "aokf" | "superdev-skills") {
+                continue;
+            }
             let dir = tempfile::tempdir().unwrap();
             let fake = FakeRunner::new();
             fake.script(

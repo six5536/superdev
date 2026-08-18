@@ -24,8 +24,9 @@ All domain logic; no argument parsing. One module per concern:
 - `component` — the provider trait (`plan` observes and returns actions);
   `action` — the action enum and file ownership.
 - `components::{aokf, plugin, mattskills, codegraph, mise, pin, skillpack}` —
-  the providers, plus the targeted `.mise.toml` editing and the
-  registry-locked pin planning they share.
+  the providers, plus the shared helpers: targeted `.mise.toml` editing,
+  registry-locked pin planning, and `item` — the declarative managed-item
+  list the static components derive both `plan` and `owned` from.
 - `pipeline` — the verb pipeline between manifest and engine: `plan_repo`
   and `apply_repo`, owning the prune-before-plan and orphans-last ordering.
 - `engine` — applies a plan and unwinds on failure, one file per concern:

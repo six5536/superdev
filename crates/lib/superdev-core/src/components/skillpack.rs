@@ -2,10 +2,12 @@
 //! shipped as owned files in the managed repo. Claude Code loads project
 //! skills from `.claude/skills/` natively, so there is nothing to install.
 
-use crate::action::{Action, Ownership};
+use crate::action::Action;
 use crate::capability::Capability;
 use crate::component::{Claim, Component, Ctx};
 use crate::error::Result;
+
+use super::item::{self, ManagedItem};
 
 macro_rules! asset {
     ($rel:literal) => {
@@ -66,25 +68,29 @@ pub(crate) fn adopt_existing(
 /// The superdev skill pack provider.
 pub struct SkillPack;
 
-impl SkillPack {
-    /// The hook action, unless the settings file already carries the exact
-    /// desired element. Planning must stay empty when converged: `status`
-    /// exits 1 on any planned action.
-    fn hook_action(&self, ctx: &Ctx<'_>) -> Option<Action> {
-        let desired: serde_json::Value =
-            serde_json::from_str(HOOK_ELEMENT).expect("the hook element is valid JSON");
-        let present = std::fs::read_to_string(ctx.root.join(SETTINGS_PATH))
-            .ok()
-            .and_then(|s| serde_json::from_str::<serde_json::Value>(&s).ok())
-            .and_then(|v| v["hooks"]["PostToolUse"].as_array().cloned())
-            .is_some_and(|items| items.contains(&desired));
-        (!present).then(|| Action::EnsureJsonArrayElement {
-            path: SETTINGS_PATH.into(),
-            pointer: HOOK_POINTER.into(),
-            marker: HOOK_MARKER.into(),
-            value_json: HOOK_ELEMENT.into(),
+/// Everything the pack keeps in the repo: each non-custom skill as an owned
+/// file, and the validation hook as a managed settings entry.
+fn items(ctx: &Ctx<'_>) -> Vec<ManagedItem> {
+    let custom = ctx
+        .config(Capability::Skills)
+        .map(|c| c.custom.as_slice())
+        .unwrap_or_default();
+    let mut items: Vec<ManagedItem> = SKILLS
+        .iter()
+        .filter(|(name, _)| !custom.iter().any(|c| c == name))
+        .map(|(name, content)| ManagedItem::OwnedFile {
+            path: format!(".claude/skills/{name}/SKILL.md"),
+            content: (*content).to_string(),
+            reason: format!("{name} skill"),
         })
-    }
+        .collect();
+    items.push(ManagedItem::JsonEntry {
+        path: SETTINGS_PATH.into(),
+        pointer: HOOK_POINTER.into(),
+        marker: Some(HOOK_MARKER.into()),
+        value_json: HOOK_ELEMENT.into(),
+    });
+    items
 }
 
 impl Component for SkillPack {
@@ -97,45 +103,12 @@ impl Component for SkillPack {
     }
 
     fn plan(&self, ctx: &Ctx<'_>) -> Result<Vec<Action>> {
-        let config = ctx
-            .config(Capability::Skills)
-            .expect("planned only when enabled");
         super::pin::require_registry_default(ctx, Capability::Skills, "superdev-skills")?;
-        let mut actions = Vec::new();
-        for (name, content) in SKILLS {
-            if config.custom.iter().any(|c| c == name) {
-                continue;
-            }
-            let path = format!(".claude/skills/{name}/SKILL.md");
-            let existing = std::fs::read_to_string(ctx.root.join(&path)).ok();
-            if existing.as_deref() != Some(content) {
-                actions.push(Action::WriteFile {
-                    path,
-                    content: content.to_string(),
-                    ownership: Ownership::Owned,
-                    reason: format!("{name} skill"),
-                });
-            }
-        }
-        actions.extend(self.hook_action(ctx));
-        Ok(actions)
+        Ok(item::plan_items(ctx.root, &items(ctx)))
     }
 
     fn owned(&self, ctx: &Ctx<'_>) -> Vec<Claim> {
-        let custom = ctx
-            .config(Capability::Skills)
-            .map(|c| c.custom.as_slice())
-            .unwrap_or_default();
-        let mut claims: Vec<Claim> = SKILLS
-            .iter()
-            .filter(|(name, _)| !custom.iter().any(|c| c == name))
-            .map(|(name, _)| Claim::File(format!(".claude/skills/{name}/SKILL.md")))
-            .collect();
-        claims.push(Claim::JsonKey {
-            path: SETTINGS_PATH.into(),
-            pointer: format!("{HOOK_POINTER}[{HOOK_MARKER}]"),
-        });
-        claims
+        item::claims(&items(ctx))
     }
 }
 

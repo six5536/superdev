@@ -16,7 +16,7 @@ use crate::action::{Action, Ownership};
 use crate::capability::Capability;
 use crate::component::{Claim, Component, Ctx};
 use crate::error::{Error, Result};
-use crate::fsutil::read_text;
+use crate::fsutil::{has_line, read_text};
 use crate::json_edit::{edit_json_array_element, edit_json_key};
 use crate::lock::{Lock, LockedComponent, sha256_hex};
 use crate::manifest::Manifest;
@@ -342,7 +342,7 @@ impl<'a> Session<'a> {
             Err(e) => return ActionOutcome::Failed(e.to_string()),
         };
         let mut next = existing.clone().unwrap_or_default();
-        if next.lines().any(|l| l == line) {
+        if has_line(&next, line) {
             return ActionOutcome::Skipped("present".into());
         }
         if !next.is_empty() && !next.ends_with('\n') {

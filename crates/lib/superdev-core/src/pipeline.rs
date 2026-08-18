@@ -286,8 +286,7 @@ fn repo_entry(root: &Path, manifest: &Manifest) -> Result<Option<Planned>> {
     }
     let actions: Vec<Action> = wanted
         .into_iter()
-        // Same rule the engine applies: an exact whole-line match counts.
-        .filter(|(line, _)| !existing.lines().any(|l| l == line))
+        .filter(|(line, _)| !crate::fsutil::has_line(&existing, line))
         .map(|(line, reason)| Action::EnsureLine {
             path: ".gitignore".into(),
             line,
