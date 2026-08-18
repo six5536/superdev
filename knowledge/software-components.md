@@ -28,10 +28,13 @@ All domain logic; no argument parsing. One module per concern:
   registry-locked pin planning they share.
 - `pipeline` — the verb pipeline between manifest and engine: `plan_repo`
   and `apply_repo`, owning the prune-before-plan and orphans-last ordering.
-- `engine` — applies a plan, journals every side effect, unwinds on failure;
-  `orphan` — plans the sweep of lock entries no live claim covers.
+- `engine` — applies a plan and unwinds on failure, one file per concern:
+  `tx` (the journal every side effect goes through), `pins` (the grouped
+  mise pin phase), `materialise` (the skill copier), with the appliers in
+  `mod`. `orphan` — plans the sweep of lock entries no live claim covers.
 - `runner` — the process seam; `report` — plan and apply rendering; `error` —
-  the crate's error type.
+  the crate's error type; `fsutil` and `json_edit` — the pure file and
+  JSON-pointer helpers the engine and planners share.
 - `aokf` — the read side of the knowledge bundle, one module per stage:
   `concept` (frontmatter and section parsing), `bundle` (loading, reserved-file
   rules), `validate` (document check and conformance ladder), `graph` (link
