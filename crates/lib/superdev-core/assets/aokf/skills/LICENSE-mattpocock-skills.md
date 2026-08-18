@@ -7,6 +7,7 @@ Skills in this directory not on this list are superdev's own.
 - domain-modeling
 - grill-me (merges upstream grill-me and grill-with-docs)
 - grilling
+- to-plan (derived from upstream to-tickets)
 - to-spec
 
 MIT licence of the original work:
