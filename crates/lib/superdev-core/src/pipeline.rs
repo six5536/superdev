@@ -1,7 +1,7 @@
 //! pipeline.rs — the verb pipeline between manifest and engine: one plan
 //! entry and one apply entry, shared by init, status, sync and update.
 //!
-//! The ordering invariants live here, by construction: the custom prune runs
+//! The ordering rules live here, by construction: the custom prune runs
 //! before planning (an unpruned just-released skill would read as an orphan),
 //! and the orphan pass plans last (removals run after every component write).
 //! The binary loads, calls, renders and turns facts into exit codes.
