@@ -20,6 +20,11 @@ use crate::template_select;
 const SETUP_HINT: &str =
     "workflows: run /setup-matt-pocock-skills in Claude Code to finish configuring";
 
+/// Printed at the end of every knowledge-enabled init: adoption is judgement
+/// work the agent does after the mechanical scaffolding.
+const ADOPT_HINT: &str =
+    "knowledge: run /aokf-adopt in Claude Code to bring existing docs into the bundle";
+
 /// The five capability-disable flags (kebab-case comes free from clap).
 #[derive(clap::Args)]
 pub struct InitArgs {
@@ -140,6 +145,12 @@ pub fn init(root: &Path, args: &InitArgs) -> Result<u8> {
             print_block(&outcome.report)?;
             if outcome.materialised {
                 out(SETUP_HINT)?;
+            }
+            if manifest
+                .capabilities
+                .contains_key(Capability::Knowledge.as_str())
+            {
+                out(ADOPT_HINT)?;
             }
             Ok(0)
         }

@@ -2,10 +2,13 @@
 //! shipped as owned files in the managed repo. Claude Code loads project
 //! skills from `.claude/skills/` natively, so there is nothing to install.
 
+use std::path::Path;
+
 use crate::action::Action;
 use crate::capability::Capability;
 use crate::component::{Claim, Component, Ctx};
 use crate::error::Result;
+use crate::manifest::Manifest;
 
 use super::item::{self, ManagedItem};
 
@@ -15,82 +18,31 @@ macro_rules! asset {
     };
 }
 
-/// The pack: (skill name, embedded SKILL.md).
-pub const SKILLS: [(&str, &str); 4] = [
-    ("aokf-maintain", asset!("skills/aokf-maintain/SKILL.md")),
+/// The pack: (skill name, embedded SKILL.md). The knowledge-lifecycle
+/// skills live with the aokf component, not here.
+pub(crate) const SKILLS: [(&str, &str); 3] = [
     ("double-check", asset!("skills/double-check/SKILL.md")),
     ("humanise", asset!("skills/humanise/SKILL.md")),
     ("self-improve", asset!("skills/self-improve/SKILL.md")),
 ];
 
-/// Where Claude Code reads hook registrations. Shared with the user's own
-/// hooks, so only superdev's array element is managed.
-pub const SETTINGS_PATH: &str = ".claude/settings.json";
-/// The array the hook entry lives in.
-pub const HOOK_POINTER: &str = "hooks.PostToolUse";
-/// What identifies superdev's element among the user's.
-pub const HOOK_MARKER: &str = "superdev aokf hook validate";
-/// The registration itself: validate the bundle after an Edit/Write.
-pub const HOOK_ELEMENT: &str = r#"{"matcher":"Edit|Write","hooks":[{"type":"command","command":"superdev aokf hook validate"}]}"#;
-
-/// Release, at adoption time, every pack skill the repo already has under its
-/// own name and with its own content. Overwriting those would replace work
-/// superdev never wrote with a backup the user has to go looking for; marking
-/// them custom keeps the file and hands the choice back. Returns the lines to
-/// print. Only `init` calls this — later syncs honour the list as written.
-pub(crate) fn adopt_existing(
-    root: &std::path::Path,
-    manifest: &mut crate::manifest::Manifest,
-) -> Vec<String> {
-    let Some(config) = manifest.capabilities.get_mut(Capability::Skills.as_str()) else {
-        return Vec::new();
-    };
-    for (name, shipped) in SKILLS {
-        let existing =
-            std::fs::read_to_string(root.join(format!(".claude/skills/{name}/SKILL.md")));
-        // Identical content is superdev's own text already: nothing to keep.
-        if existing.is_ok_and(|existing| existing != shipped) {
-            config.custom.push(name.to_string());
-        }
-    }
-    config
-        .custom
-        .iter()
-        .map(|name| {
-            format!(
-                "skills: kept your {name} — marked custom in {}",
-                crate::manifest::CONFIG_PATH
-            )
-        })
-        .collect()
+/// Release, at adoption time, every pack skill the repo already has under
+/// its own name and with its own content. Returns the lines to print.
+pub(crate) fn adopt_existing(root: &Path, manifest: &mut Manifest) -> Vec<String> {
+    super::skills::adopt_existing(root, Capability::Skills, &SKILLS, manifest)
 }
 
 /// The superdev skill pack provider.
 pub struct SkillPack;
 
 /// Everything the pack keeps in the repo: each non-custom skill as an owned
-/// file, and the validation hook as a managed settings entry.
+/// file.
 fn items(ctx: &Ctx<'_>) -> Vec<ManagedItem> {
     let custom = ctx
         .config(Capability::Skills)
         .map(|c| c.custom.as_slice())
         .unwrap_or_default();
-    let mut items: Vec<ManagedItem> = SKILLS
-        .iter()
-        .filter(|(name, _)| !custom.iter().any(|c| c == name))
-        .map(|(name, content)| ManagedItem::OwnedFile {
-            path: format!(".claude/skills/{name}/SKILL.md"),
-            content: (*content).to_string(),
-            reason: format!("{name} skill"),
-        })
-        .collect();
-    items.push(ManagedItem::JsonEntry {
-        path: SETTINGS_PATH.into(),
-        pointer: HOOK_POINTER.into(),
-        marker: Some(HOOK_MARKER.into()),
-        value_json: HOOK_ELEMENT.into(),
-    });
-    items
+    super::skills::skill_items(&SKILLS, custom)
 }
 
 impl Component for SkillPack {
@@ -126,22 +78,17 @@ mod tests {
         )
     }
 
-    /// Write every skill and the exact hook entry, so nothing is planned.
+    /// Write every skill, so nothing is planned.
     fn converge(root: &std::path::Path) {
         for (name, content) in SKILLS {
             let path = root.join(format!(".claude/skills/{name}/SKILL.md"));
             std::fs::create_dir_all(path.parent().unwrap()).unwrap();
             std::fs::write(path, content).unwrap();
         }
-        std::fs::write(
-            root.join(SETTINGS_PATH),
-            format!(r#"{{"hooks":{{"PostToolUse":[{HOOK_ELEMENT}]}}}}"#),
-        )
-        .unwrap();
     }
 
     #[test]
-    fn a_fresh_repo_plans_every_skill_and_the_hook() {
+    fn a_fresh_repo_plans_every_skill() {
         let dir = tempfile::tempdir().unwrap();
         let (manifest, lock) = ctx_parts();
         let fake = FakeRunner::new();
@@ -152,7 +99,7 @@ mod tests {
             lock: &lock,
         };
         let actions = SkillPack.plan(&ctx).unwrap();
-        assert_eq!(actions.len(), 5);
+        assert_eq!(actions.len(), 3);
         let descs: Vec<String> = actions.iter().map(|a| a.describe()).collect();
         for (name, _) in SKILLS {
             assert!(
@@ -162,12 +109,6 @@ mod tests {
                 "{descs:?}"
             );
         }
-        assert!(
-            descs
-                .iter()
-                .any(|d| d.contains("superdev aokf hook validate")),
-            "{descs:?}"
-        );
         assert!(fake.calls().is_empty(), "planning must run nothing");
     }
 
@@ -261,30 +202,7 @@ mod tests {
     }
 
     #[test]
-    fn a_stale_hook_entry_replans_the_hook() {
-        let dir = tempfile::tempdir().unwrap();
-        converge(dir.path());
-        // Same marker, older shape: must be replaced, so it must be planned.
-        std::fs::write(
-            dir.path().join(SETTINGS_PATH),
-            r#"{"hooks":{"PostToolUse":[{"matcher":"Write","hooks":[{"type":"command","command":"superdev aokf hook validate"}]}]}}"#,
-        )
-        .unwrap();
-        let (manifest, lock) = ctx_parts();
-        let fake = FakeRunner::new();
-        let ctx = Ctx {
-            root: dir.path(),
-            runner: &fake,
-            manifest: &manifest,
-            lock: &lock,
-        };
-        let actions = SkillPack.plan(&ctx).unwrap();
-        assert_eq!(actions.len(), 1);
-        assert!(actions[0].describe().contains("hooks.PostToolUse"));
-    }
-
-    #[test]
-    fn owned_omits_custom_skills_but_keeps_the_hook() {
+    fn owned_omits_custom_skills() {
         use crate::component::Claim;
         let dir = tempfile::tempdir().unwrap();
         let (mut manifest, lock) = ctx_parts();
@@ -299,9 +217,6 @@ mod tests {
         let keys: Vec<String> = SkillPack.owned(&ctx).iter().map(Claim::lock_key).collect();
         assert!(!keys.iter().any(|k| k.contains("humanise")), "{keys:?}");
         assert!(keys.contains(&".claude/skills/double-check/SKILL.md".to_string()));
-        assert!(keys.contains(
-            &".claude/settings.json:hooks.PostToolUse[superdev aokf hook validate]".to_string()
-        ));
     }
 
     #[test]

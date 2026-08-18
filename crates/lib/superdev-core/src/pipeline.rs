@@ -13,7 +13,7 @@ use crate::action::Action;
 use crate::capability::Capability;
 use crate::component::{Claim, Ctx};
 use crate::components::codegraph::CODEGRAPH_INDEX_DIR;
-use crate::components::{mattskills, skillpack};
+use crate::components::{aokf, mattskills, skillpack};
 use crate::engine::Planned;
 use crate::error::{Error, Result};
 use crate::lock::Lock;
@@ -260,6 +260,7 @@ pub fn apply_repo(
 pub fn adopt_existing(root: &Path, manifest: &mut Manifest) -> Vec<String> {
     let mut lines = skillpack::adopt_existing(root, manifest);
     lines.extend(mattskills::adopt_existing(root, manifest));
+    lines.extend(aokf::adopt_existing(root, manifest));
     lines
 }
 
@@ -350,8 +351,20 @@ fn repo_entry(root: &Path, manifest: &Manifest) -> Result<Option<Planned>> {
 /// as drift against superdev content. True when anything was removed.
 fn prune_custom(manifest: &Manifest, lock: &mut Lock) -> bool {
     let mut pruned = false;
-    if let Some(config) = manifest.capabilities.get(Capability::Skills.as_str()) {
+    // Name-guarded per capability: two capabilities ship into
+    // `.claude/skills/`, so an unknown name in one's list must not release
+    // the other's file.
+    for (capability, shipped) in [
+        (Capability::Skills, skillpack::SKILLS.as_slice()),
+        (Capability::Knowledge, aokf::SKILLS.as_slice()),
+    ] {
+        let Some(config) = manifest.capabilities.get(capability.as_str()) else {
+            continue;
+        };
         for name in &config.custom {
+            if !shipped.iter().any(|(known, _)| known == name) {
+                continue;
+            }
             let key = format!(".claude/skills/{name}/SKILL.md");
             pruned |= lock.files.remove(&key).is_some();
             lock.owners.remove(&key);
@@ -387,15 +400,20 @@ fn prune_custom(manifest: &Manifest, lock: &mut Lock) -> bool {
 /// that names no shipped skill, since marking it custom has no effect.
 fn custom_lines(manifest: &Manifest) -> Vec<String> {
     let mut lines = Vec::new();
-    if let Some(config) = manifest.capabilities.get(Capability::Skills.as_str()) {
+    for (capability, shipped) in [
+        (Capability::Skills, skillpack::SKILLS.as_slice()),
+        (Capability::Knowledge, aokf::SKILLS.as_slice()),
+    ] {
+        let Some(config) = manifest.capabilities.get(capability.as_str()) else {
+            continue;
+        };
+        let cap = capability.as_str();
         for name in &config.custom {
-            lines.push(
-                if skillpack::SKILLS.iter().any(|(known, _)| known == name) {
-                    format!("skills: {name} custom, unmanaged")
-                } else {
-                    format!("skills: custom names unknown skill '{name}' — no effect")
-                },
-            );
+            lines.push(if shipped.iter().any(|(known, _)| known == name) {
+                format!("{cap}: {name} custom, unmanaged")
+            } else {
+                format!("{cap}: custom names unknown skill '{name}' — no effect")
+            });
         }
     }
     if let Some(config) = manifest.capabilities.get(Capability::Workflows.as_str())

@@ -390,9 +390,9 @@ fn skills_repo() -> tempfile::TempDir {
 }
 
 #[test]
-fn init_materialises_the_skill_pack_and_hook() {
+fn init_materialises_the_skill_pack() {
     let dir = skills_repo();
-    for name in ["aokf-maintain", "double-check", "humanise", "self-improve"] {
+    for name in ["double-check", "humanise", "self-improve"] {
         let path = dir.path().join(format!(".claude/skills/{name}/SKILL.md"));
         assert!(path.is_file(), "missing {}", path.display());
         assert!(
@@ -402,17 +402,9 @@ fn init_materialises_the_skill_pack_and_hook() {
             "{name} lacks the PROJECT.md trailer"
         );
     }
-    let settings: serde_json::Value = serde_json::from_str(
-        &std::fs::read_to_string(dir.path().join(".claude/settings.json")).unwrap(),
-    )
-    .unwrap();
-    let entries = settings["hooks"]["PostToolUse"].as_array().unwrap();
-    assert!(
-        entries
-            .iter()
-            .any(|e| e.to_string().contains("superdev aokf hook validate")),
-        "settings: {settings}"
-    );
+    // The hook and the lifecycle skills belong to knowledge, disabled here.
+    assert!(!dir.path().join(".claude/settings.json").exists());
+    assert!(!dir.path().join(".claude/skills/aokf-maintain").exists());
     let lock = std::fs::read_to_string(dir.path().join(".superdev/lock.toml")).unwrap();
     assert!(lock.contains(".claude/skills/humanise/SKILL.md"), "{lock}");
     assert!(lock.contains("superdev-skills"), "{lock}");
@@ -603,13 +595,7 @@ fn user_hook_entries_survive_a_sync() {
     .unwrap();
     superdev()
         .current_dir(dir.path())
-        .args([
-            "init",
-            "--no-workflows",
-            "--no-frontend",
-            "--no-code-index",
-            "--no-knowledge",
-        ])
+        .args(["init", "--no-workflows", "--no-frontend", "--no-code-index"])
         .assert()
         .success();
     let settings: serde_json::Value = serde_json::from_str(
@@ -731,12 +717,13 @@ fn disabling_skills_sweeps_them_and_releases_the_users_edit() {
     );
     assert_eq!(std::fs::read_to_string(&humanise).unwrap(), "mine now\n");
 
-    // The hook entry goes with the pack, and the file is still valid JSON.
+    // The hook belongs to the still-enabled knowledge capability, so it
+    // survives the pack's departure — as do the aokf-carried skills.
     let settings: serde_json::Value =
         serde_json::from_str(&std::fs::read_to_string(root.join(".claude/settings.json")).unwrap())
             .unwrap();
     assert!(
-        !settings["hooks"]["PostToolUse"]
+        settings["hooks"]["PostToolUse"]
             .as_array()
             .unwrap()
             .iter()
@@ -745,8 +732,10 @@ fn disabling_skills_sweeps_them_and_releases_the_users_edit() {
     );
 
     let lock = std::fs::read_to_string(root.join(".superdev/lock.toml")).unwrap();
-    assert!(!lock.contains(".claude/skills/"), "{lock}");
-    assert!(!lock.contains("hooks.PostToolUse"), "{lock}");
+    assert!(!lock.contains(".claude/skills/double-check/"), "{lock}");
+    assert!(!lock.contains(".claude/skills/self-improve/"), "{lock}");
+    assert!(lock.contains(".claude/skills/aokf-maintain/"), "{lock}");
+    assert!(lock.contains("hooks.PostToolUse"), "{lock}");
     assert!(!lock.contains("[components.skills]"), "{lock}");
     // The capability still enabled keeps its record: the sweep is targeted.
     assert!(lock.contains(".agents/aokf/SPEC.md"), "{lock}");
@@ -935,4 +924,36 @@ fn an_unknown_template_fails_before_anything_is_written() {
         "unexpected: {stderr}"
     );
     assert!(!dir.path().join(".superdev").exists(), "nothing written");
+}
+
+#[test]
+fn init_hints_at_adopt_only_when_knowledge_is_enabled() {
+    let dir = tempfile::tempdir().unwrap();
+    std::fs::create_dir_all(dir.path().join(".git")).unwrap();
+    let out = superdev()
+        .current_dir(dir.path())
+        .args(["init", "--no-workflows", "--no-frontend", "--no-code-index"])
+        .assert()
+        .success();
+    let stdout = String::from_utf8_lossy(&out.get_output().stdout).into_owned();
+    assert!(
+        stdout.contains("knowledge: run /aokf-adopt in Claude Code"),
+        "{stdout}"
+    );
+
+    let off = tempfile::tempdir().unwrap();
+    std::fs::create_dir_all(off.path().join(".git")).unwrap();
+    let out = superdev()
+        .current_dir(off.path())
+        .args([
+            "init",
+            "--no-workflows",
+            "--no-frontend",
+            "--no-code-index",
+            "--no-knowledge",
+        ])
+        .assert()
+        .success();
+    let stdout = String::from_utf8_lossy(&out.get_output().stdout).into_owned();
+    assert!(!stdout.contains("aokf-adopt"), "{stdout}");
 }

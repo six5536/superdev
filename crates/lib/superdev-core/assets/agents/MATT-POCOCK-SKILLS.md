@@ -22,9 +22,17 @@ history is the archive. Declare link edges from the plan side only
 (`implements` → the spec), so deleting the plan leaves no dangling
 references in the bundle.
 
+## Issues and triage (to-tickets, triage, wayfinder)
+
+Write issues as AOKF concepts under `knowledge/issues/`, one file per
+ticket, with the triage role as a frontmatter tag. The conventions, the
+label vocabulary and the wayfinder mechanics are in
+`knowledge/issue-tracker.md`.
+
 ## Decisions and context (domain-modeling)
 
 Record ADRs as AOKF concepts (`type: Decision`) in the bundle, not under
 `docs/adr/`. Context that domain-modeling would put in `CONTEXT.md` belongs
 in the bundle's architecture and glossary concepts. Never duplicate
-knowledge between the bundle and files outside it.
+knowledge between the bundle and files outside it. Which concepts serve as
+the domain docs is recorded in `knowledge/domain-docs.md`.

@@ -1,10 +1,13 @@
 //! components/aokf.rs — the knowledge capability: AOKF is native to superdev.
 //! The blueprint's files ship inside the binary.
 
+use std::path::Path;
+
 use crate::action::{Action, Ownership};
 use crate::capability::Capability;
 use crate::component::{Claim, Component, Ctx};
 use crate::error::Result;
+use crate::manifest::Manifest;
 
 use super::item::{self, ManagedItem};
 
@@ -226,6 +229,34 @@ const FILES: &[(&str, &str, Ownership, &str)] = &[
     ),
 ];
 
+/// The knowledge-lifecycle skills, carried by this component so they exist
+/// exactly where a bundle exists: (skill name, embedded SKILL.md).
+pub(crate) const SKILLS: [(&str, &str); 2] = [
+    ("aokf-adopt", asset!("aokf/skills/aokf-adopt/SKILL.md")),
+    (
+        "aokf-maintain",
+        asset!("aokf/skills/aokf-maintain/SKILL.md"),
+    ),
+];
+
+/// Where Claude Code reads hook registrations. Shared with the user's own
+/// hooks, so only superdev's array element is managed.
+const SETTINGS_PATH: &str = ".claude/settings.json";
+/// The array the hook entry lives in.
+const HOOK_POINTER: &str = "hooks.PostToolUse";
+/// What identifies superdev's element among the user's.
+const HOOK_MARKER: &str = "superdev aokf hook validate";
+/// The registration itself: validate the bundle after an Edit/Write. It
+/// ships with this capability, so a `--no-knowledge` repo never gets a hook
+/// blocking edits to a `knowledge/` directory superdev does not manage.
+const HOOK_ELEMENT: &str = r#"{"matcher":"Edit|Write","hooks":[{"type":"command","command":"superdev aokf hook validate"}]}"#;
+
+/// Release, at adoption time, every aokf skill the repo already has under
+/// its own name and with its own content. Returns the lines to print.
+pub(crate) fn adopt_existing(root: &Path, manifest: &mut Manifest) -> Vec<String> {
+    super::skills::adopt_existing(root, Capability::Knowledge, &SKILLS, manifest)
+}
+
 /// The native AOKF provider.
 pub struct Aokf;
 
@@ -287,6 +318,17 @@ fn items(ctx: &Ctx<'_>) -> Vec<ManagedItem> {
         pointer: MCP_POINTER.into(),
         marker: None,
         value_json: MCP_VALUE.into(),
+    });
+    let custom = ctx
+        .config(Capability::Knowledge)
+        .map(|c| c.custom.as_slice())
+        .unwrap_or_default();
+    items.extend(super::skills::skill_items(&SKILLS, custom));
+    items.push(ManagedItem::JsonEntry {
+        path: SETTINGS_PATH.into(),
+        pointer: HOOK_POINTER.into(),
+        marker: Some(HOOK_MARKER.into()),
+        value_json: HOOK_ELEMENT.into(),
     });
     items
 }
@@ -351,6 +393,89 @@ mod tests {
             lock: &lock,
         };
         Aokf.plan(&ctx).unwrap()
+    }
+
+    #[test]
+    fn ships_the_lifecycle_skills_and_the_hook() {
+        let dir = tempfile::tempdir().unwrap();
+        let actions = plan_in(dir.path());
+        let descs: Vec<String> = actions.iter().map(Action::describe).collect();
+        for (name, _) in SKILLS {
+            assert!(
+                descs
+                    .iter()
+                    .any(|d| d.contains(&format!(".claude/skills/{name}/SKILL.md"))),
+                "{descs:?}"
+            );
+        }
+        assert!(
+            descs
+                .iter()
+                .any(|d| d.contains("superdev aokf hook validate")),
+            "{descs:?}"
+        );
+    }
+
+    #[test]
+    fn a_custom_skill_is_released_and_the_hook_stays() {
+        use crate::component::Claim;
+        let dir = tempfile::tempdir().unwrap();
+        let mut manifest = Manifest::default_for("0.1.0", &[]);
+        manifest.capabilities.get_mut("knowledge").unwrap().custom = vec!["aokf-maintain".into()];
+        let lock = Lock::default();
+        let fake = FakeRunner::new();
+        let ctx = Ctx {
+            root: dir.path(),
+            runner: &fake,
+            manifest: &manifest,
+            lock: &lock,
+        };
+        let keys: Vec<String> = Aokf.owned(&ctx).iter().map(Claim::lock_key).collect();
+        assert!(
+            !keys.iter().any(|k| k.contains("aokf-maintain")),
+            "{keys:?}"
+        );
+        assert!(keys.contains(&".claude/skills/aokf-adopt/SKILL.md".to_string()));
+        assert!(keys.contains(
+            &".claude/settings.json:hooks.PostToolUse[superdev aokf hook validate]".to_string()
+        ));
+    }
+
+    #[test]
+    fn a_stale_hook_entry_replans_the_hook() {
+        let dir = tempfile::tempdir().unwrap();
+        // Same marker, older shape: must be replaced, so it must be planned.
+        std::fs::create_dir_all(dir.path().join(".claude")).unwrap();
+        std::fs::write(
+            dir.path().join(SETTINGS_PATH),
+            r#"{"hooks":{"PostToolUse":[{"matcher":"Write","hooks":[{"type":"command","command":"superdev aokf hook validate"}]}]}}"#,
+        )
+        .unwrap();
+        let actions = plan_in(dir.path());
+        assert!(
+            actions
+                .iter()
+                .any(|a| a.describe().contains("hooks.PostToolUse")),
+            "{actions:?}"
+        );
+    }
+
+    #[test]
+    fn adoption_keeps_the_repos_own_lifecycle_skills() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join(".claude/skills/aokf-maintain/SKILL.md");
+        std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+        std::fs::write(path, "# Ours, thanks\n").unwrap();
+        let mut manifest = Manifest::default_for("0.1.0", &[]);
+        let lines = adopt_existing(dir.path(), &mut manifest);
+        assert_eq!(manifest.capabilities["knowledge"].custom, ["aokf-maintain"]);
+        assert_eq!(
+            lines,
+            vec![format!(
+                "knowledge: kept your aokf-maintain — marked custom in {}",
+                crate::manifest::CONFIG_PATH
+            )]
+        );
     }
 
     /// The starter bundle must itself conform: write every knowledge file
@@ -448,7 +573,9 @@ mod tests {
             .iter()
             .filter_map(|a| match a {
                 Action::WriteFile { path, .. } => Some(path.as_str()),
-                Action::SetJsonKey { .. } | Action::EnsureLine { .. } => None,
+                Action::SetJsonKey { .. }
+                | Action::EnsureLine { .. }
+                | Action::EnsureJsonArrayElement { .. } => None,
                 other => panic!("unexpected action {other:?}"),
             })
             .collect();
@@ -507,6 +634,12 @@ mod tests {
                     content.push_str(&line);
                     content.push('\n');
                     std::fs::write(p, content).unwrap();
+                }
+                Action::EnsureJsonArrayElement {
+                    path, value_json, ..
+                } => {
+                    let json = format!("{{ \"hooks\": {{ \"PostToolUse\": [{value_json}] }} }}");
+                    std::fs::write(dir.path().join(path), json).unwrap();
                 }
                 other => panic!("unexpected action {other:?}"),
             }

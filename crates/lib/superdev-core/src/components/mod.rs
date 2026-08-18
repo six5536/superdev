@@ -8,6 +8,7 @@ pub mod mise;
 pub mod pin;
 pub mod plugin;
 pub mod skillpack;
+mod skills;
 
 mod enabled;
 
