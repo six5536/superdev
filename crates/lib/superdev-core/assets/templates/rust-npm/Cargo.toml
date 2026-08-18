@@ -4,7 +4,7 @@ members = [
   "crates/app/*",
   "crates/lib/*",
 ]
-# Without this a bare `cargo build` fails with "the workspace has no members".
+# A bare `cargo build` builds just these; CI builds --workspace.
 default-members = ["crates/app/{{superdev:project-slug}}", "crates/lib/{{superdev:project-slug}}-core"]
 
 [workspace.package]

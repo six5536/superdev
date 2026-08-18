@@ -4,7 +4,7 @@
 //! semantics: written only where absent, the user's from the moment it
 //! exists, never hashed, never revisited by `sync`.
 //!
-//! Two tokens substitute in file contents and in target paths, exact-match
+//! Three tokens substitute in file contents and in target paths, exact-match
 //! only; everything else — including GitHub Actions' `${{ … }}` — passes
 //! through untouched. On disk the assets mirror the seeded repo, except that
 //! leading dots are stripped (a real `.gitignore` would hide sibling assets
@@ -197,7 +197,14 @@ mod tests {
 
     /// The disjointness rule from the spec: no template target may overlap a
     /// path any capability claims or scaffolds. Collisions are impossible
-    /// rather than resolved, and this test is what enforces it.
+    /// rather than resolved, and this test is what enforces it — in both
+    /// directions: the static components' writes and claims must all fall
+    /// under the reserved prefixes, and no template target may. A component
+    /// that grows a file outside the prefixes fails here, forcing the list
+    /// (and the rule) to be updated together. `EnsureLine` targets are
+    /// exempt: shared-line files merge, so a template may ship the file the
+    /// lines land in. The dynamic providers (mattskills, codegraph) write
+    /// only under `.claude/` and `.mise.toml` by construction.
     #[test]
     fn shipped_template_paths_are_disjoint_from_capability_files() {
         const RESERVED: &[&str] = &[
@@ -210,12 +217,43 @@ mod tests {
             ".mcp.json",
             "knowledge/",
         ];
+        let covered = |path: &str| RESERVED.iter().any(|r| path == *r || path.starts_with(r));
+
+        let dir = tempfile::tempdir().unwrap();
+        let manifest = crate::manifest::Manifest::default_for("0.1.0", &[]);
+        let lock = crate::lock::Lock::default();
+        let fake = crate::runner::FakeRunner::new();
+        let ctx = crate::component::Ctx {
+            root: dir.path(),
+            runner: &fake,
+            manifest: &manifest,
+            lock: &lock,
+        };
+        use crate::component::{Claim, Component};
+        let statics: [Box<dyn Component>; 2] = [
+            Box::new(crate::components::aokf::Aokf),
+            Box::new(crate::components::skillpack::SkillPack),
+        ];
+        for component in &statics {
+            for action in component.plan(&ctx).unwrap() {
+                if let Action::WriteFile { path, .. } = action {
+                    assert!(covered(&path), "unreserved component write: {path}");
+                }
+            }
+            for claim in component.owned(&ctx) {
+                let path = match claim {
+                    Claim::File(path) => path,
+                    Claim::JsonKey { path, .. } => path,
+                    Claim::MisePin(_) => continue,
+                };
+                assert!(covered(&path), "unreserved component claim: {path}");
+            }
+        }
+
         for template in shipped() {
             for (target, _) in template.files {
                 assert!(
-                    !RESERVED
-                        .iter()
-                        .any(|r| target == r || target.starts_with(r)),
+                    !covered(target),
                     "{}: {target} overlaps a capability path",
                     template.name
                 );
@@ -225,7 +263,7 @@ mod tests {
 
     #[test]
     fn shipped_template_contents_substitute_cleanly() {
-        // Every token in every shipped file is one of the two real tokens: a
+        // Every token in every shipped file is one of the real tokens: a
         // typo'd token would survive substitution and leak into a seeded repo.
         let tokens = Tokens::for_name("demo");
         for template in shipped() {

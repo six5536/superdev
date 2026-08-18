@@ -8,3 +8,4 @@
 # Staged platform binaries (built by release CI); the bin/ dirs are kept by
 # .gitkeep.
 /packages/{{superdev:project-slug}}-*/bin/{{superdev:project-slug}}
+/packages/{{superdev:project-slug}}-*/bin/{{superdev:project-slug}}.exe

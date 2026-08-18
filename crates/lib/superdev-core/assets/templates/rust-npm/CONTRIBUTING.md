@@ -18,7 +18,7 @@ npm run test           # cargo nextest run --workspace (install cargo-nextest fi
 npm run lint           # cargo clippy --workspace
 npm run fmt            # cargo fmt --all
 npm run test:launcher  # the npm launcher's own tests
-npm run verify-version # one version everywhere: Cargo, packages, lockfiles
+npm run verify-version # one version everywhere: Cargo and every package.json
 ```
 
 Commit `Cargo.lock` after the first build, then add `--locked` to the cargo
