@@ -104,6 +104,126 @@ const FILES: &[(&str, &str, Ownership, &str)] = &[
         Ownership::Scaffold,
         "specs index",
     ),
+    (
+        "knowledge/api-contracts.md",
+        asset!("knowledge/api-contracts.md"),
+        Ownership::Scaffold,
+        "starter concept",
+    ),
+    (
+        "knowledge/architectural-rules.md",
+        asset!("knowledge/architectural-rules.md"),
+        Ownership::Scaffold,
+        "starter concept",
+    ),
+    (
+        "knowledge/architecture.md",
+        asset!("knowledge/architecture.md"),
+        Ownership::Scaffold,
+        "starter concept",
+    ),
+    (
+        "knowledge/backlog.md",
+        asset!("knowledge/backlog.md"),
+        Ownership::Scaffold,
+        "starter concept",
+    ),
+    (
+        "knowledge/coding-standards.md",
+        asset!("knowledge/coding-standards.md"),
+        Ownership::Scaffold,
+        "starter concept",
+    ),
+    (
+        "knowledge/configuration.md",
+        asset!("knowledge/configuration.md"),
+        Ownership::Scaffold,
+        "starter concept",
+    ),
+    (
+        "knowledge/constraints-non-goals.md",
+        asset!("knowledge/constraints-non-goals.md"),
+        Ownership::Scaffold,
+        "starter concept",
+    ),
+    (
+        "knowledge/definition-of-done.md",
+        asset!("knowledge/definition-of-done.md"),
+        Ownership::Scaffold,
+        "starter concept",
+    ),
+    (
+        "knowledge/dependency-policy.md",
+        asset!("knowledge/dependency-policy.md"),
+        Ownership::Scaffold,
+        "starter concept",
+    ),
+    (
+        "knowledge/development-commands.md",
+        asset!("knowledge/development-commands.md"),
+        Ownership::Scaffold,
+        "starter concept",
+    ),
+    (
+        "knowledge/development-procedure.md",
+        asset!("knowledge/development-procedure.md"),
+        Ownership::Scaffold,
+        "starter concept",
+    ),
+    (
+        "knowledge/directory-structure.md",
+        asset!("knowledge/directory-structure.md"),
+        Ownership::Scaffold,
+        "starter concept",
+    ),
+    (
+        "knowledge/error-handling.md",
+        asset!("knowledge/error-handling.md"),
+        Ownership::Scaffold,
+        "starter concept",
+    ),
+    (
+        "knowledge/glossary.md",
+        asset!("knowledge/glossary.md"),
+        Ownership::Scaffold,
+        "starter concept",
+    ),
+    (
+        "knowledge/project-overview.md",
+        asset!("knowledge/project-overview.md"),
+        Ownership::Scaffold,
+        "starter concept",
+    ),
+    (
+        "knowledge/release-procedure.md",
+        asset!("knowledge/release-procedure.md"),
+        Ownership::Scaffold,
+        "starter concept",
+    ),
+    (
+        "knowledge/security-requirements.md",
+        asset!("knowledge/security-requirements.md"),
+        Ownership::Scaffold,
+        "starter concept",
+    ),
+    (
+        "knowledge/software-components.md",
+        asset!("knowledge/software-components.md"),
+        Ownership::Scaffold,
+        "starter concept",
+    ),
+    (
+        "knowledge/technology-stack.md",
+        asset!("knowledge/technology-stack.md"),
+        Ownership::Scaffold,
+        "starter concept",
+    ),
+    (
+        "knowledge/testing-strategy.md",
+        asset!("knowledge/testing-strategy.md"),
+        Ownership::Scaffold,
+        "starter concept",
+    ),
 ];
 
 /// The native AOKF provider.
@@ -231,6 +351,27 @@ mod tests {
             lock: &lock,
         };
         Aokf.plan(&ctx).unwrap()
+    }
+
+    /// The starter bundle must itself conform: write every knowledge file
+    /// the component plans into an empty repo, then run the embedded
+    /// validator over it at level 2. A skeleton that ships broken would fail
+    /// the very hook superdev installs beside it.
+    #[test]
+    fn the_seeded_bundle_validates_clean_at_level_2() {
+        let dir = tempfile::tempdir().unwrap();
+        for action in plan_in(dir.path()) {
+            if let Action::WriteFile { path, content, .. } = action {
+                let target = dir.path().join(&path);
+                std::fs::create_dir_all(target.parent().unwrap()).unwrap();
+                std::fs::write(target, content).unwrap();
+            }
+        }
+        let bundle = crate::aokf::bundle::load_bundle(&dir.path().join("knowledge")).unwrap();
+        let report = crate::aokf::validate::validate(&bundle, dir.path(), 2);
+        assert!(report.findings.is_empty(), "{:#?}", report.findings);
+        assert_eq!(report.achieved_level, 2);
+        assert!(report.concept_count >= 20, "{}", report.concept_count);
     }
 
     #[test]
