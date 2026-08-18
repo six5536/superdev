@@ -75,7 +75,8 @@ unless the code is wrong, in which case say so and stop for direction.
   cross-reference.
 - **Placement.** Content sitting in the wrong concept moves; a concept
   covering two unrelated things splits; near-empty concepts merge into a
-  neighbour (keep the surviving file's `id`).
+  neighbour (keep the surviving file's `id`, and re-point inbound
+  `links` entries and index lines at it).
 - **Links.** Where prose in one concept leans on another's content,
   ensure a typed `links` entry with the right `rel` plus the mirroring
   body link. Prefer `id` targets. Declare each edge once, from the more
