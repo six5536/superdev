@@ -14,14 +14,8 @@ host platform (an optional dependency) and runs it.
 ## Develop
 
 Rust toolchain pinned by `rust-toolchain.toml`; Node 18+ for the launcher.
-
-```sh
-npm run build     # cargo build --workspace
-npm run test      # cargo nextest run --workspace
-npm run lint      # cargo clippy --workspace
-```
-
-See [CONTRIBUTING](CONTRIBUTING.md) for the layout and the release procedure.
+The layout, the command set, and the release procedure are in
+[CONTRIBUTING](CONTRIBUTING.md).
 
 ## License
 

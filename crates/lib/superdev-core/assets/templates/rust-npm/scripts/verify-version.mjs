@@ -71,6 +71,7 @@ for (const { where, version } of found) {
 if (problems.length > 0) {
   console.error("version check failed:");
   for (const p of problems) console.error(`  - ${p}`);
+  console.error("\nRun `npm run set-version <version>` to fix.");
   process.exit(1);
 }
 

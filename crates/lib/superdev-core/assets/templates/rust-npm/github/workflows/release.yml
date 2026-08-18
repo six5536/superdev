@@ -133,6 +133,26 @@ jobs:
           fi
           echo "$bin is static"
 
+      # Behavioural smoke of the built artifact, on every target the runner
+      # can execute. The aarch64 musl binary cannot run on the x64 ubuntu
+      # runner; darwin-x64 runs on the arm64 runner via Rosetta.
+      - name: Smoke-test the release binary
+        if: matrix.pkg != 'linux-arm64'
+        shell: bash
+        run: |
+          bin="packages/{{superdev:project-slug}}-${{ matrix.pkg }}/bin/{{superdev:project-slug}}"
+          case "${{ matrix.target }}" in *windows*) bin="$bin.exe" ;; esac
+          node scripts/release-smoke.mjs "$bin"
+
+      # npm-pack the launcher and this platform package, then run the real
+      # binary through the launcher. The launcher selects by the host's
+      # platform/arch, so this runs only where the built package matches the
+      # runner.
+      - name: Smoke-test the npm launcher with the packed binary
+        if: matrix.pkg == 'linux-x64' || matrix.pkg == 'darwin-arm64' || matrix.pkg == 'win32-x64'
+        shell: bash
+        run: node scripts/launcher-smoke.mjs
+
       - uses: actions/upload-artifact@v7
         with:
           name: {{superdev:project-slug}}-${{ matrix.pkg }}
@@ -176,13 +196,14 @@ jobs:
 
       - name: Smoke-test the built binary
         run: |
-          actual="$(./packages/{{superdev:project-slug}}-linux-x64/bin/{{superdev:project-slug}} --version)"
+          bin="packages/{{superdev:project-slug}}-linux-x64/bin/{{superdev:project-slug}}"
+          node scripts/release-smoke.mjs "$bin"
+          actual="$("./$bin" --version)"
           expected="{{superdev:project-slug}} $VERSION"
           if [ "$actual" != "$expected" ]; then
             echo "::error::binary reports '$actual', expected '$expected'"
             exit 1
           fi
-          echo "$actual"
 
       - name: Dry-run every publish before doing any of them
         run: |

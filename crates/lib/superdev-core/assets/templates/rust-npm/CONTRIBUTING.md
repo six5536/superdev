@@ -34,12 +34,20 @@
 ## Everyday commands
 
 ```sh
-npm run build          # cargo build --workspace
-npm run test           # cargo nextest run --workspace (install cargo-nextest first)
-npm run lint           # cargo clippy --workspace
-npm run fmt            # cargo fmt --all
-npm run test:launcher  # the npm launcher's own tests
-npm run verify-version # one version everywhere: Cargo and every package.json
+npm run build           # cargo build --workspace
+npm run test            # cargo nextest run --workspace (install cargo-nextest first)
+npm run lint            # cargo clippy --workspace
+npm run fmt             # cargo fmt --all
+npm run test:launcher   # the npm launcher's own tests
+
+npm run smoke           # behavioural smoke of a release binary (build --release first)
+npm run smoke:launcher  # npm-pack the launcher + host platform package, run the
+                        # real binary through it (stage the binary into
+                        # packages/<slug>-<host>/bin/ first)
+
+npm run verify-version  # one version everywhere: Cargo and every package.json
+npm run set-version <v> # set that version everywhere, lockfiles included
+npm run release <v>     # changelog gate + set-version + verify + commit + tag
 ```
 
 Commit `Cargo.lock` after the first build, then add `--locked` to the cargo
@@ -48,12 +56,15 @@ you committed.
 
 ## Releasing
 
-1. Set the version everywhere (`Cargo.toml`, every `packages/*/package.json`
-   and the launcher's `optionalDependencies`), and give `CHANGELOG.md` a
-   `## [X.Y.Z]` section — `npm run verify-version X.Y.Z` must pass.
-2. Tag `vX.Y.Z` and push the tag. Release CI verifies the tag against the
-   tree, runs the full check gate, builds each platform binary, publishes the
-   npm packages, and creates the GitHub release with archives and checksums.
+1. Give `CHANGELOG.md` a `## [X.Y.Z]` section (promote `[Unreleased]`); the
+   release script and the workflow both refuse a version without one, and the
+   section becomes the GitHub release notes.
+2. `npm run release X.Y.Z` — sets the version everywhere, verifies it, and
+   commits and tags. It deliberately does not push.
+3. Review (`git show vX.Y.Z`), then `git push --follow-tags`. The push
+   triggers `.github/workflows/release.yml`: tag checks, the full CI gate,
+   per-platform builds and smoke tests, npm publishes, and the GitHub
+   release — the workflow file is the authoritative sequence.
 
 npm publishing uses trusted publishing (OIDC) — configure it on npmjs.com for
 each package, or switch the publish steps to a token.
