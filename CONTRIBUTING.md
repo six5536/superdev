@@ -98,29 +98,16 @@ npm run coverage:check     # slow; needs the nightly toolchain
 `cargo-deny check licenses bans sources` also gates CI, but only fails when you
 change dependencies.
 
-## Documentation expectations
+## Standards and tests
 
-Documentation is gated in CI, so keep it green:
+The canonical rules live in the knowledgebase, not here:
 
-- Public items in `superdev-core` need doc comments (`#![warn(missing_docs)]`).
-- `cargo doc` must build clean under `RUSTDOCFLAGS=-D warnings` (no broken
-  intra-doc links, no stray HTML).
-- Rustdoc examples run as doctests (`cargo test --doc`).
-- **The code is the canonical reference.** README, CLI `--help`, and the
-  `knowledge/` bundle all describe actual behaviour; when a doc disagrees with
-  the code, fix the doc.
-
-## Tests
-
-Tests run under `cargo-nextest`, which gives per-test process isolation. The
-current layers (see [testing-strategy](knowledge/testing-strategy.md)):
-
-- **Unit tests** in each crate.
-- **CLI end-to-end** — invoke the real binary, assert output and exit codes.
-- **npm launcher** — a JS test that resolves and spawns a stub binary.
-- **Smoke** — `release-smoke.mjs` against a release build; `launcher-smoke.mjs`
-  through the packed npm launcher; `manage-smoke.sh` for a real `init` against
-  the real tools, run by hand in the devcontainer.
+- Code, prose, and documentation standards — including the module rules and
+  what the rustdoc CI gate enforces — are in
+  [knowledge/coding-standards.md](knowledge/coding-standards.md).
+- The test layers and the choices behind them are in
+  [knowledge/testing-strategy.md](knowledge/testing-strategy.md). Tests run
+  under `cargo-nextest` (per-test process isolation).
 
 ## Project layout
 
@@ -142,8 +129,8 @@ current layers (see [testing-strategy](knowledge/testing-strategy.md)):
 
 ## Dependencies
 
-Adding a dependency needs a clear reason. Reach for the standard library or a
-crate already in the tree first. When you do add one, take the latest version.
+The rules are in [knowledge/dependency-policy.md](knowledge/dependency-policy.md):
+ask first, take the latest version, hoist to the workspace `Cargo.toml`.
 
 ## Releasing
 

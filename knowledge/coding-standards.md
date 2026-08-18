@@ -11,9 +11,9 @@ sources:
   - id: coding
     resource: /.agents/CODING.md
     title: Coding behaviour rules
-  - id: contributing
-    resource: /CONTRIBUTING.md
-    title: Contributing guide
+  - id: checks
+    resource: /.github/workflows/checks.yml
+    title: The CI gate enforcing these
 ---
 
 # Approach
@@ -36,7 +36,7 @@ uncertain.[^prose]
 - Clippy clean at `-D warnings`, all targets.
 - Public items in `superdev-core` need doc comments (`#![warn(missing_docs)]`);
   rustdoc builds clean under `RUSTDOCFLAGS=-D warnings`; rustdoc examples run
-  as doctests.[^contributing]
+  as doctests.[^checks]
 
 Module rules:
 
@@ -75,4 +75,4 @@ which case fix the code and say so.
 
 [^coding]: Coding behaviour rules
 [^prose]: Prose rules
-[^contributing]: Contributing guide
+[^checks]: The CI gate enforcing these

@@ -14,32 +14,20 @@ Everything is wrapped as npm scripts (defined in
 [package.json](/package.json); the authoritative annotated list is in
 [CONTRIBUTING](/CONTRIBUTING.md)):[^contributing]
 
-- Dailies: `npm run build` / `test` / `lint` / `fmt` / `check` — thin wrappers
-  over cargo (`test` is `cargo nextest run --workspace` followed by
-  `check:aokf`).
-- Knowledgebase: `npm run check:aokf` is
-  `cargo run --quiet -- aokf validate knowledge` — the binary validating this
-  repo's own bundle. It exits 1 on errors; warnings alone still pass. The
-  Claude Code hook checks the same bundle by a different route,
-  `superdev aokf hook validate`. `cargo run -- aokf index` forces a full
-  rebuild of the search index, which nothing routine needs: the MCP server
-  syncs it lazily on every tool call.
-- Blueprint: `npm run check:blueprint` is `cargo run --quiet -- status` — the
+What the annotated list does not say:
+
+- `npm run check:aokf` is the binary validating this repo's own bundle; it
+  exits 1 on errors, and warnings alone still pass. The Claude Code hook
+  checks the same bundle by a different route (`superdev aokf hook
+  validate`), and `cargo run -- aokf index` forces a full index rebuild,
+  which nothing routine needs: the MCP server syncs lazily on every call.
+- `npm run check:blueprint` is `cargo run --quiet -- status` — the
   superdev-owned files here (the four pack skills, the hook entry, and the
   materialised mattpocock-skills set) still match the blueprint. It exits 1
   on drift, so CI gates on it.
-- Coverage: `npm run coverage` (HTML) / `coverage:summary` /
-  `coverage:check` (the ≥90%-per-crate gate; needs the nightly toolchain).
-- Packaging: `npm run test:launcher`, `npm run verify-version` (16 locations
-  must agree), `npm run release <version>` (bumps, verifies, commits, tags —
-  never pushes).
-- Smoke: `npm run smoke` runs a release binary through version, help,
-  completions, and the usage-error exit code; `npm run smoke:launcher`
-  npm-packs the launcher plus the host's platform package and runs the real
-  binary through the shim. Release CI runs both per buildable target.
-  `npm run smoke:manage` is manual only: a real `init` and `status` in a
-  scratch repo against the real mise, claude and codegraph, then `aokf
-  validate` and `aokf index` — the one run that downloads the embedding model.
+- Release CI runs `smoke` and `smoke:launcher` per buildable target;
+  `smoke:manage` is manual-only and the one run that downloads the real
+  embedding model.
 
 Two traps:
 

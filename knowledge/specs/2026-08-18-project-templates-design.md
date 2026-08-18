@@ -94,11 +94,14 @@ The first shipped template, derived from this repo's shape:
   `.gitignore`, `.gitattributes`.
 - CI workflows: a thin `ci.yml` calling a reusable `checks.yml` (fmt,
   clippy, test matrix), audit, and the tag-driven release pipeline
-  building per-target binaries and publishing the npm packages — plus
-  `scripts/verify-version.mjs`, the one-version-everywhere gate the
-  release workflow runs against the tag. Crates are `publish = false`
-  and the pipeline publishes npm only, consistent with the proprietary
-  default.
+  building, smoke-testing and publishing per-target binaries — plus the
+  release scripts the workflows and the runbook call:
+  `verify-version.mjs` (the one-version-everywhere gate),
+  `set-version.mjs`, `release.mjs` (changelog gate, bump, commit, tag),
+  `release-smoke.mjs` and `launcher-smoke.mjs`. Crates are
+  `publish = false` and the pipeline publishes npm only, consistent
+  with the proprietary default. The stub binary honours the exit-code
+  contract the smokes assert: usage errors exit 2.
 - Repo docs: README, CONTRIBUTING, CHANGELOG seed, SECURITY,
   CODE_OF_CONDUCT — skeletons with the project name substituted. The
   LICENSE ships proprietary — "Copyright (c) the owners of
