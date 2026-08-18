@@ -4,6 +4,7 @@ These skills are copied and modified from
 <https://github.com/mattpocock/skills>, used under the MIT licence below.
 Skills in this directory not on this list are superdev's own.
 
+- code-review
 - domain-modeling
 - grill-me (merges upstream grill-me and grill-with-docs)
 - grilling
