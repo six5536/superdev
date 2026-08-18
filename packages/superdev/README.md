@@ -1,7 +1,8 @@
 # superdev
 
-superdev is under construction; this package currently installs a scaffold
-binary with no verbs.
+superdev sets a repository up for agent-driven development — a
+knowledgebase, a code index, committed skills — and keeps that setup
+current. Under construction; nothing is published yet.
 
 ## Install
 

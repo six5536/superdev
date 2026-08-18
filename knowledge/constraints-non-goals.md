@@ -2,13 +2,24 @@
 type: Reference
 id: constraints-non-goals
 title: Known Constraints & Non-Goals
-description: Accepted limitations of the inherited machinery; product non-goals are TBD.
-status: draft
+description: What superdev deliberately does not do, and the accepted limitations of the inherited machinery.
+status: stable
 ---
 
 # Non-goals
 
-Not yet defined; record them as the [architecture](architecture.md) is decided.
+- **Generalisation, yet.** superdev is opinionated for one stack — Claude
+  Code, mise, AOKF. Other agent harnesses, tool managers and knowledge
+  formats stay out of scope until the one stack is proven; the
+  capability/provider split ([architecture](architecture.md)) is where
+  alternatives would slot in later.
+- **Managing toolchains.** superdev pins tools in `.mise.toml` and
+  delegates installation to mise; it never downloads or manages a
+  toolchain itself. (Rejecting a node pin for codegraph's sake is this
+  rule applied — see [backlog](backlog.md).)
+- **A service component.** superdev is a local CLI: no daemon, no hosted
+  service, no telemetry. The MCP servers are local stdio processes the
+  agent harness spawns per session.
 
 # Constraints (inherited machinery)
 

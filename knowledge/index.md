@@ -2,7 +2,7 @@
 
 * [Project Overview](project-overview.md) - what superdev is and its current status.
 * [Domain Glossary](glossary.md) - the terms the blueprint engine uses — blueprint, capability, provider, provenance, component, owned file, scaffold, project template, skill pack, knowledge-carried skill, PROJECT.md layer, custom skill, harvest, claim, orphan — plus the search terms section, locator, hybrid search and RRF.
-* [Known Constraints & Non-Goals](constraints-non-goals.md) - accepted limitations of the inherited machinery; product non-goals are TBD.
+* [Known Constraints & Non-Goals](constraints-non-goals.md) - what superdev deliberately does not do, and the accepted limitations of the inherited machinery.
 * [Backlog & Decided Ideas](backlog.md) - ideas under consideration and ideas decided against, with the reasoning.
 
 # Design
@@ -20,7 +20,7 @@
 # Process
 
 * [Coding Standards](coding-standards.md) - prose rules, Rust and TypeScript conventions, and the code-is-canonical principle.
-* [Security Requirements](security-requirements.md) - the vulnerability policy in brief; the security surface is TBD with the design.
+* [Security Requirements](security-requirements.md) - the vulnerability policy in brief, and the security-relevant guarantees the design makes.
 * [Dependency Policy](dependency-policy.md) - when a dependency may be added and how its version is chosen.
 * [Testing Strategy](testing-strategy.md) - the current test layers, the key choices behind them, and the CI platforms.
 * [Development Procedure](development-procedure.md) - setup, the spec-and-plan change workflow, what to run before a PR, how this repo manages its own skills, and how it serves and searches its own knowledgebase.
