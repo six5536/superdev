@@ -3,8 +3,8 @@
 Issues are AOKF concepts under `knowledge/issues/`, one file per issue,
 named `Innn-<slug>.md`. Scan the directory for the highest number and
 increment by one. The `id` is `issue-<slug>` and never changes. The
-triage role is a frontmatter tag; the bundle's issue-tracker concept
-carries the vocabulary.
+triage role is a frontmatter tag; the `/triage` skill carries the
+vocabulary.
 
 ## Template
 
@@ -25,13 +25,18 @@ links:
 # What to build
 
 {The end-to-end behaviour this issue makes work, from the user's
-perspective — not layer-by-layer implementation. Body links mirror the
-`implements` and `blocked-by` edges.}
+perspective — not layer-by-layer implementation.}
+
+Implements [the {topic} spec](/knowledge/specs/Snnn-{topic}-design.md).
 
 # Acceptance criteria
 
 - [ ] Criterion 1
 - [ ] Criterion 2
+
+# Out of scope
+
+- {What this issue must NOT change, or "Nothing noted".}
 
 # Blocked by
 
@@ -47,7 +52,8 @@ perspective — not layer-by-layer implementation. Body links mirror the
 - An issue produced by `/to-plan` is agent-grabbable by construction:
   tag it `ready-for-agent` unless instructed otherwise. Issues from
   other sources enter through triage and earn the tag there.
-- A completed issue is deleted in the commit that completes it — git
-  history is the archive, and the spec stays as the permanent record.
-  An issue rejected as wontfix is deleted too; when the rejection
-  reasoning is load-bearing, record it as a Decision concept first.
+- A completed issue stays in the bundle: swap its state tag to `done`
+  in the completing commit. A rejected issue keeps the `wontfix` tag
+  with the reasoning in its body; when the reasoning is load-bearing,
+  record it as a Decision concept too. Search down-ranks `done` and
+  `wontfix` concepts, so settled work doesn't crowd live knowledge.

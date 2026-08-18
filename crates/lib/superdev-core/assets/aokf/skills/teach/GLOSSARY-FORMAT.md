@@ -1,6 +1,6 @@
 # Glossary Format
 
-The glossary concept (`knowledge/glossary.md`, `id: glossary`) is the canonical language for this teaching workspace. All explainers, exercises, and learning records should adhere to its terminology. Building it is itself part of learning: compressing a concept into a tight definition is evidence the user understands it.
+The glossary concept (`knowledge/glossary.md`, `id: glossary`) is the canonical language for this teaching workspace. (A dev repo's domain glossary follows `/domain-modeling`'s format instead — the two never coexist, since a teaching workspace is its own repo.) All explainers, exercises, and learning records should adhere to its terminology. Building it is itself part of learning: compressing a concept into a tight definition is evidence the user understands it.
 
 ## Structure
 

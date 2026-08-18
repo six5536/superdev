@@ -4,7 +4,7 @@ description: Plan a huge chunk of work — more than one agent session can hold 
 disable-model-invocation: true
 ---
 
-A loose idea has arrived — too big for one agent session, and wrapped in fog: the way from here to the **destination** isn't visible yet. Wayfinding is about finding that way, not charging at the destination. This skill charts the way as a **shared map** in the knowledge bundle, then works its **decision tickets** — questions whose resolution is a decision, not slices of a build to execute — one at a time until the route is clear.
+A loose idea has arrived — too big for one agent session, and wrapped in fog: the way from here to the **destination** isn't visible yet. Wayfinding is about finding that way, not charging at the destination. This skill charts the way as a **shared map** in the knowledge bundle, then works its **decision tickets** — questions whose resolution is a decision, not slices of a build to execute — one at a time until the route is clear. Tickets here are decisions, not work items: work items are the issues `/to-plan` and `/triage` manage in `knowledge/issues/`.
 
 The destination varies per effort, and naming it is the first act of charting — it shapes every ticket. It might be a spec to hand off and iterate on, a decision to lock before planning starts, or a change made in place like a data-structure migration. The map is domain-agnostic — engineering work, course content, whatever fits the shape.
 
@@ -76,13 +76,14 @@ links:
 
 ## Question
 
-<the decision or investigation this ticket resolves, with body links
-mirroring the frontmatter edges>
+<the decision or investigation this ticket resolves>
+
+Part of [the map](map.md); blocked by [{other}](Qnnn-{other}.md).
 ```
 
 The `tags` entry carries the ticket type — one of `research`, `prototype`, `grilling`, `task` (see [Ticket Types](#ticket-types)).
 
-A session **claims** a ticket by writing a `claimed: <name>` frontmatter field, **first**, before any work — and committing it promptly, so concurrent sessions skip it. That field _is_ the claim: a ticket without one is unclaimed.
+A session **claims** a ticket by writing a `claimed: <name>` frontmatter field, **first**, before any work — and committing it promptly, so concurrent sessions skip it. That field _is_ the claim: a ticket without one is unclaimed. (`claimed` is a deliberate project extension field, open class per AOKF §4: the claim must be visible in the file itself, not derived from git.)
 
 Blocking is the `blocked-by` link (mirrored in the body, per the AOKF spec). A ticket is **unblocked** when every ticket blocking it is resolved; the **frontier** is the unresolved, unblocked, unclaimed tickets — the edge of the known.
 
@@ -141,13 +142,13 @@ User invokes with a map (URL or number). A ticket is **optional** — without on
 2. Choose the ticket. If the user named one, use it. Otherwise take the first frontier ticket in order. **Claim it**: write the `claimed` field and commit before any work.
 3. Resolve it — **zoom as needed**: fetch the full body of any related or closed ticket on demand; invoke the skills the `## Notes` block names. If in doubt, use `/grilling` and `/domain-modeling`.
 4. Record the resolution: write the answer into the ticket's **`## Answer`** section, tag it **`resolved`**, clear `claimed`, and **append a context pointer** to the map's Decisions-so-far.
-5. Add newly-surfaced tickets; graduate any fog the answer has made specifiable, clearing each graduated patch from **Not yet specified** so it lives only as its new ticket. If the answer reveals a ticket — this one or another — sits beyond the destination, **rule it out of scope** rather than resolving it on the route. If the decision invalidates other parts of the map, update or delete those tickets.
+5. Add newly-surfaced tickets; graduate any fog the answer has made specifiable, clearing each graduated patch from **Not yet specified** so it lives only as its new ticket. If the answer reveals a ticket — this one or another — sits beyond the destination, **rule it out of scope** rather than resolving it on the route. If the decision invalidates other parts of the map, update those tickets — or resolve them with a note that the decision overtook them.
 
 The user may run unblocked tickets in parallel, so expect other sessions to be editing the bundle concurrently — commit claims and resolutions promptly.
 
 ### When the way is clear
 
-The frontier is empty and no fog remains: hand off, don't build. Merge onto the main flow at `/to-spec`, promoting load-bearing decisions to Decision concepts where they must outlive the effort, and **delete the effort's directory in the handoff commit** — the spec and the Decisions carry what mattered; git history is the archive.
+The frontier is empty and no fog remains: hand off, don't build. Merge onto the main flow at `/to-spec`, promoting load-bearing decisions to Decision concepts where they must outlive the effort, and **tag the map `done` in the handoff commit** — the spec and the Decisions carry what mattered, and search down-ranks the finished map and its resolved tickets.
 
 ## Project adaptations
 

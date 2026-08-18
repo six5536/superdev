@@ -1,7 +1,9 @@
 # Glossary Format
 
 The glossary is the AOKF concept `knowledge/glossary.md`, seeded by
-`superdev init`. This file describes its body.
+`superdev init`. This file describes its body in a dev repo; a teaching
+workspace's glossary follows `/teach`'s own format instead — the two
+never coexist, since a teaching workspace is its own repo.
 
 ## Structure
 

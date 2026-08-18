@@ -1,6 +1,6 @@
 # Writing Agent Briefs
 
-An agent brief is what an issue concept's body becomes when the issue moves to `ready-for-agent`. It is the authoritative specification an AFK agent will work from: the original request and triage notes are context — the brief is the contract. It fills the ISSUE-FORMAT.md structure (`/to-plan` carries it); this file is the guidance on filling it well.
+An agent brief is what an issue concept's body becomes when the issue moves to `ready-for-agent`. It is the authoritative specification an AFK agent will work from: the original request and triage notes are context — the brief is the contract. It fills the ISSUE-FORMAT.md structure (`/to-plan` carries it) — leave the `# Blocked by` section intact; this file is the guidance on filling the rest well.
 
 ## Principles
 
@@ -105,14 +105,13 @@ before 1024 characters and appends "..." to indicate truncation.
 # What to build
 
 **Current behaviour:** When a feature request is rejected, the issue
-concept is deleted with the reasoning only in the commit message.
-Future similar requests require the maintainer to recall or dig through
-history for the prior decision.
+keeps its `wontfix` tag but no reasoning is recorded. Future similar
+requests require the maintainer to recall the prior decision.
 
-**Desired behaviour:** Rejected requests are recorded under the backlog
-concept's "Decided against" section — decision, reasoning, and what
-prompted it — and triage's prior-rejection check surfaces a match when
-a new issue resembles one.
+**Desired behaviour:** Rejected requests carry their reasoning in the
+issue body and under the backlog concept's "Decided against" section,
+and triage's prior-rejection check surfaces a match when a new issue
+resembles one.
 
 **Key interfaces:**
 - The backlog concept's "Decided against" entry shape: the idea, the
@@ -121,8 +120,8 @@ a new issue resembles one.
 
 # Acceptance criteria
 
-- [ ] Rejecting an enhancement adds a "Decided against" entry before
-      the issue concept is deleted
+- [ ] Rejecting an enhancement records the reasoning in the issue body
+      and adds a "Decided against" entry
 - [ ] A new issue resembling a recorded rejection is surfaced during
       triage with a pointer to the entry
 - [ ] An already-implemented request produces no entry (it was built,

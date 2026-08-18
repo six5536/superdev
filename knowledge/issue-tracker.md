@@ -29,9 +29,10 @@ conventions. The engineering skills (`to-tickets`, `triage`, `to-spec`,
   issue side (`references` → the spec's id), so deleting the issue leaves
   no dangling references in the bundle.
 - Comments and conversation history append under a `## Comments` heading.
-- Issues are ephemeral like plans: delete the file in
-  the commit that resolves it — git history is the archive. Durable
-  knowledge found while resolving moves into the core concepts.
+- A resolved issue stays: swap its state tag to `done` (or keep
+  `wontfix`, reasoning in the body) in the resolving commit — search
+  down-ranks settled work. Durable knowledge found while resolving
+  moves into the core concepts.
 - Keep `knowledge/issues/index.md` current (open issues, grouped by
   feature heading), and list it from the root `knowledge/index.md`.
   Create the directory with the first issue.

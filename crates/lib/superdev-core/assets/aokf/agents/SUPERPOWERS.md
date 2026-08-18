@@ -16,9 +16,9 @@ into the core concepts and keep the spec as the record of why.
 ## Plans (writing-plans skill)
 
 Write plans to `knowledge/plans/YYYY-MM-DD-<feature>.md` as AOKF concepts:
-`type: Plan`, a unique `id`, `status: draft`. Plans are ephemeral: delete the
-file in the commit that completes the work — git history is the archive.
-Declare link edges from the plan side only (`implements` → the spec), so
-deleting the plan leaves no dangling references in the bundle. `implements`
+`type: Plan`, a unique `id`, `status: draft`. A completed plan is
+tagged `done` in the commit that completes the work — search down-ranks
+it. Declare link edges from the plan side only (`implements` → the
+spec), so the spec stays free of work-item churn. `implements`
 is a custom rel; the validator's "read as relates-to" warning on it is
 expected.

@@ -16,10 +16,11 @@ test suite once at the end.
 
 Once done, use /code-review to review the work.
 
-Commit your work to the current branch. Completing a plan deletes the
-Plan concept and flips its spec to `status: stable` in the same commit;
-completing an issue deletes the issue concept. Update the bundle's
-`index.md` for anything removed.
+Commit your work to the current branch. Completing a plan tags it
+`done` and flips its spec to `status: stable` in the same commit;
+completing an issue swaps its state tag to `done` — and when it was the
+last open issue implementing its spec, flips that spec to `stable` too.
+Nothing is deleted: search down-ranks `done` concepts.
 
 ## Project adaptations
 

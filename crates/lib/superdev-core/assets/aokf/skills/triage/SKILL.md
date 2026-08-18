@@ -52,7 +52,7 @@ Show counts and a one-line summary per item. Let the maintainer pick.
 
 ## Triage a specific issue
 
-1. **Gather context.** Read the whole concept — body, tags, links, and any prior triage notes, so you don't re-ask resolved questions. Explore the codebase using the glossary concept's vocabulary, respecting Decision concepts and stable specs in the area. Run two checks: (a) **redundancy** — search for an existing implementation of the requested behaviour by domain concept (not just the request's wording), and report where you looked. If found, it's an already-implemented `wontfix` (step 5). (b) **prior rejection** — read the backlog concept's "Decided against" entries and any Decision concepts, and surface any that resembles this request.
+1. **Gather context.** Read the whole concept — body, tags, links, and any prior triage notes, so you don't re-ask resolved questions. Explore the codebase using the glossary concept's vocabulary, respecting Decision concepts and stable specs in the area. Run two checks: (a) **redundancy** — search for an existing implementation of the requested behaviour by domain concept (not just the request's wording), and report where you looked. If found, it's an already-implemented `wontfix` (step 5). (b) **prior rejection** — read the backlog concept's "Decided against" entries, any Decision concepts, and the `wontfix`-tagged issues, and surface any that resembles this request.
 
 2. **Recommend.** Tell the maintainer your category and state recommendation with reasoning, plus a brief codebase summary relevant to the request — including whether it's already implemented. Wait for direction.
 
@@ -64,15 +64,15 @@ Show counts and a one-line summary per item. Let the maintainer pick.
    - `ready-for-agent` — write the agent brief into the concept's body ([AGENT-BRIEF.md](AGENT-BRIEF.md)).
    - `ready-for-human` — same structure, but note why it can't be delegated (judgment calls, external access, design decisions, manual testing).
    - `needs-info` — add triage notes to the concept (template below).
-   - `wontfix` — the concept is deleted, with the record depending on *why*:
-     - **Already implemented** — point to where it lives in the deleting commit's message; no backlog entry (that record is for *rejected* requests, not built ones).
-     - **Rejected (bug)** — delete, reasoning in the commit message.
-     - **Rejected (enhancement)** — record it under the backlog concept's "Decided against" with the reasoning (or as a Decision concept when the reasoning is load-bearing), then delete the issue.
+   - `wontfix` — the issue keeps the tag and stays; search down-ranks it. Record the *why* in its body:
+     - **Already implemented** — point to where it lives; no backlog entry (that record is for *rejected* requests, not built ones).
+     - **Rejected (bug)** — the reasoning, briefly.
+     - **Rejected (enhancement)** — the reasoning, plus an entry under the backlog concept's "Decided against" (or a Decision concept when the reasoning is load-bearing).
    - `needs-triage` — apply the tag. Optional notes if there's partial progress.
 
 ## Quick state override
 
-If the maintainer says "move I003 to ready-for-agent", trust them and apply the tag directly. Confirm what you're about to do (tag changes, notes, deletion), then act. Skip grilling. If moving to `ready-for-agent` without a grilling session, ask whether they want an agent brief written.
+If the maintainer says "move I003 to ready-for-agent", trust them and apply the tag directly. Confirm what you're about to do (tag changes, notes), then act. Skip grilling. If moving to `ready-for-agent` without a grilling session, ask whether they want an agent brief written.
 
 ## Needs-info template
 

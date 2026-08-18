@@ -26,9 +26,6 @@ Run the validator first:
 superdev aokf validate knowledge
 ```
 
-(In the superdev source repo itself, which has no installed binary, use
-`cargo run --quiet -- aokf validate knowledge`.)
-
 It performs the SPEC §10 document check and grades the §11 conformance
 ladder: frontmatter and `type`, slug-valid unique `id`s, no stamped
 fields, well-formed `verified` entries, `links` entries with `rel` and a

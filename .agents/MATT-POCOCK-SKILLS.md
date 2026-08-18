@@ -16,11 +16,10 @@ knowledge into the core concepts and keep the spec as the record of why.
 ## Plans and tickets (wayfinder, to-tickets, implement)
 
 Write plans and ticket sets to `knowledge/plans/YYYY-MM-DD-<feature>.md` as
-AOKF concepts: `type: Plan`, a unique `id`, `status: draft`. Plans are
-ephemeral: delete the file in the commit that completes the work — git
-history is the archive. Declare link edges from the plan side only
-(`implements` → the spec), so deleting the plan leaves no dangling
-references in the bundle.
+AOKF concepts: `type: Plan`, a unique `id`, `status: draft`. A completed plan is
+tagged `done` in the commit that completes the work — search down-ranks
+it. Declare link edges from the plan side only (`implements` → the
+spec), so the spec stays free of work-item churn.
 
 ## Issues and triage (to-tickets, triage, wayfinder)
 

@@ -1,6 +1,6 @@
 # Plan Format
 
-Plans are ephemeral AOKF concepts under `knowledge/plans/`, one file
+Plans are AOKF concepts under `knowledge/plans/`, one file
 per plan, named `Pnnn-<feature>.md`. Scan the directory for the highest
 number and increment by one. The `id` is `plan-<feature>` and never
 changes.
@@ -39,8 +39,9 @@ links:
   its verification, never restated design.
 - Every task ends on a **Verify** line the executing agent can actually
   run or observe.
-- Declare link edges from the plan side only (`implements` → the spec),
-  so deleting the plan leaves no dangling references in the bundle.
-- Plans are ephemeral: delete the file in the commit that completes the
-  work — git history is the archive. Flip the spec to `status: stable`
-  in the same commit.
+- Declare link edges from the plan side only (`implements` → the spec)
+  — the spec is permanent and stays free of work-item churn.
+- A completed plan stays in the bundle: tag it `done` in the commit
+  that completes the work, and flip the spec to `status: stable` in the
+  same commit. Search down-ranks `done` concepts, so finished work
+  doesn't crowd live knowledge.

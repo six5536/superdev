@@ -14,8 +14,8 @@ A **flow** is a path through the skills. Most work travels one **main flow**, on
 1. **`/grill-me`** — sharpen the idea by interview. It runs the `/grilling` primitive and decides for itself whether `/domain-modeling` joins: it does when the subject is this repo's domain, so terms and decisions land in the bundle as they crystallise.
 2. **Branch — can you settle every question in conversation?** If a question needs a runnable answer (state, business logic, a UI you have to see), detour through **`/prototype`**, bridged by **`/handoff`** in both directions.
 3. **`/to-spec`** — freeze the shared understanding into a permanent Spec concept (`knowledge/specs/Snnn-…`), test seams confirmed with the user.
-4. **`/to-plan`** — break the spec into executable work: an ephemeral Plan concept by default, or issues with blocking edges when the work is parallel, independent, or long-horizon.
-5. **`/implement`** — execute a plan or issue, driving **`/tdd`** internally at the spec's seams and closing with **`/code-review`** (Standards + Spec axes). Completion enforces the lifecycle: plan deleted and spec flipped stable, or issue deleted.
+4. **`/to-plan`** — break the spec into executable work: a Plan concept by default, or issues with blocking edges when the work is parallel, independent, or long-horizon.
+5. **`/implement`** — execute a plan or issue, driving **`/tdd`** internally at the spec's seams and closing with **`/code-review`** (Standards + Spec axes). Completion enforces the lifecycle: the plan or issue is tagged `done`, the spec flips stable, and search down-ranks the finished work.
 
 ### Context hygiene
 

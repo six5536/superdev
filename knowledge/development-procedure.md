@@ -21,7 +21,7 @@ no Node.
    ([MATT-POCOCK-SKILLS.md](/.agents/MATT-POCOCK-SKILLS.md)): grill the
    requirements and write the spec into `knowledge/specs/` (permanent
    decision record) with `to-spec`, then break it into an implementation
-   plan in `knowledge/plans/` (ephemeral — deleted in the commit that
+   plan in `knowledge/plans/` (tagged `done` in the commit that
    completes the work) with `to-tickets` or `wayfinder`.
 2. Implement with focused commits, using
    [Conventional Commits](https://www.conventionalcommits.org/) (`feat:`,

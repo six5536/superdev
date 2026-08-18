@@ -1,12 +1,12 @@
 ---
 name: to-plan
-description: Break a spec or the current conversation into executable work — one ephemeral Plan concept by default, or a set of issues with blocking edges when the work is parallel, independent, or long-horizon.
+description: Break a spec or the current conversation into executable work — one Plan concept by default, or a set of issues with blocking edges when the work is parallel, independent, or long-horizon.
 disable-model-invocation: true
 ---
 
 # To Plan
 
-Break a spec, or the current conversation, into executable work: an ephemeral **plan** or a set of **issues**, in the knowledge bundle either way.
+Break a spec, or the current conversation, into executable work: a **plan** or a set of **issues**, in the knowledge bundle either way.
 
 ## Process
 
@@ -22,7 +22,7 @@ Look for opportunities to prefactor the code to make the implementation easier. 
 
 ### 3. Choose the form
 
-Default to a **plan**: one Plan concept holding the ordered tasks, executed serially in one or a few sessions, deleted in the commit that completes the work. Choose **issues** when the work is parallelisable (multiple agents taking units concurrently), genuinely independent (no shared in-flight interfaces), or long-horizon (weeks, cold starts). Say which form you chose and why; the user confirms it in step 5.
+Default to a **plan**: one Plan concept holding the ordered tasks, executed serially in one or a few sessions, tagged `done` in the commit that completes the work. Choose **issues** when the work is parallelisable (multiple agents taking units concurrently), genuinely independent (no shared in-flight interfaces), or long-horizon (weeks, cold starts). Say which form you chose and why; the user confirms it in step 5.
 
 ### 4. Draft the breakdown
 

@@ -16,7 +16,7 @@ crates/app/superdev/      # the binary: CLI parsing, wiring, output
 packages/                 # npm launcher + per-platform binary packages
 knowledge/                # this AOKF bundle — canonical project knowledge
 knowledge/specs/          # design specs (permanent decision records)
-knowledge/plans/          # implementation plans (ephemeral; deleted on landing)
+knowledge/plans/          # implementation plans (tagged done on landing)
 .agents/                  # AOKF spec and agent-facing rules (PROSE.md, MATT-POCOCK-SKILLS.md)
 .claude/skills/           # committed skills: the four-skill pack + the materialised workflows set
 .superdev/                # superdev's own manifest and lock (this repo is self-managed)
