@@ -1,7 +1,13 @@
 # Licence — skills derived from mattpocock/skills
 
-The skills in this directory marked as derived are copied and modified
-from <https://github.com/mattpocock/skills>, used under the MIT licence:
+These skills are copied and modified from
+<https://github.com/mattpocock/skills>, used under the MIT licence below.
+Skills in this directory not on this list are superdev's own.
+
+- domain-modeling
+- grilling
+
+MIT licence of the original work:
 
     MIT License
     
