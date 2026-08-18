@@ -9,15 +9,22 @@ Skills in this directory not on this list are superdev's own.
 - diagnosing-bugs
 - domain-modeling
 - grill-me (merges upstream grill-me and grill-with-docs)
+- handoff
+- improve-codebase-architecture
 - grilling
 - implement
 - to-plan (derived from upstream to-tickets)
+- prototype
 - research
+- resolving-merge-conflicts
 - tdd
+- to-questionnaire
 - to-spec
 - triage
+- wait-what
 - wayfinder
 - writing-for-agents
+- wizard
 
 MIT licence of the original work:
 
