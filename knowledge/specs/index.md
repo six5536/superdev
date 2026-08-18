@@ -5,3 +5,4 @@
 * [Skill Pack](2026-08-12-skill-pack-design.md) - design for the skills capability — five skills and the validation hook shipped as owned repo files, with a PROJECT.md extension layer and a per-skill custom opt-out.
 * [Blueprint Migrations](2026-08-12-blueprint-migrations-design.md) - design for evolving a managed repo — components declare what they own, the lock's leftovers are pruned or released, and CLAUDE.md imports AGENTS.md so Claude Code reads it at all.
 * [Workflows Provider Default](2026-08-17-workflows-provider-default-design.md) - design for defaulting the workflows capability to mattpocock-skills as materialised repo files, with superpowers kept as a supported plugin-based secondary.
+* [Workflows Skill Overrides](2026-08-18-workflows-skill-overrides-design.md) - design for provider-carried skill overrides — the mattpocock-skills component materialises embedded replacements, grilling first — installed only where that provider is.

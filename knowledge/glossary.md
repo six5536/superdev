@@ -2,7 +2,7 @@
 type: Glossary
 id: glossary
 title: Domain Glossary
-description: The terms the blueprint engine uses — blueprint, capability, provider, provenance, component, owned file, scaffold, skill pack, materialised skill, PROJECT.md layer, custom skill, claim, orphan — plus the search terms section, locator, hybrid search and RRF.
+description: The terms the blueprint engine uses — blueprint, capability, provider, provenance, component, skill override, owned file, scaffold, skill pack, materialised skill, PROJECT.md layer, custom skill, claim, orphan — plus the search terms section, locator, hybrid search and RRF.
 status: stable
 ---
 
@@ -23,6 +23,11 @@ status: stable
   refused.
 - **Component** — the code implementing one provider. It observes the repo,
   compares against the manifest, and returns actions; it never applies them.
+- **Skill override** — an embedded replacement for one of a workflows
+  provider's skills, carried by that provider's component and materialised
+  in place of the upstream version. It exists only where that provider is
+  installed, and the skill's `custom` entry releases override and upstream
+  alike.
 - **Owned file** — a file superdev writes and keeps current, hashed into
   `lock.toml`. `sync` rewrites it, backing up and reporting any user edit.
   The embedded AOKF spec and validator are owned.
