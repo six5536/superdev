@@ -82,8 +82,7 @@ already lives — its stranded prose, and the owner's head.
   constraints, first glossary terms, the dependency policy, intended
   conventions) are interviewed and landed; knowledge only development
   produces (the real architecture, testing strategy as practised) is left
-  TBD, because interviewing it early yields speculative prose the next
-  audit flags as wrong — it accretes through specs.
+  TBD — it accretes through the project's own specs and decisions.
 - **Completion criterion**: every inventoried source accounted for —
   harvested, reduced to summary-and-citation, or explicitly left with a
   reason — every skeleton filled or left TBD with the reason it must
