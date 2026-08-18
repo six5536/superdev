@@ -16,6 +16,7 @@ Skills in this directory not on this list are superdev's own.
 - tdd
 - to-spec
 - triage
+- wayfinder
 - writing-for-agents
 
 MIT licence of the original work:
