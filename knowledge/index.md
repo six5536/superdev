@@ -1,7 +1,7 @@
 # Overview
 
 * [Project Overview](project-overview.md) - what superdev is and its current status.
-* [Domain Glossary](glossary.md) - the terms the blueprint engine uses — blueprint, capability, provider, provenance, component, skill override, owned file, scaffold, skill pack, materialised skill, PROJECT.md layer, custom skill, claim, orphan — plus the search terms section, locator, hybrid search and RRF.
+* [Domain Glossary](glossary.md) - the terms the blueprint engine uses — blueprint, capability, provider, provenance, component, skill override, owned file, scaffold, project template, skill pack, materialised skill, PROJECT.md layer, custom skill, claim, orphan — plus the search terms section, locator, hybrid search and RRF.
 * [Known Constraints & Non-Goals](constraints-non-goals.md) - accepted limitations of the inherited machinery; product non-goals are TBD.
 * [Backlog & Decided Ideas](backlog.md) - ideas under consideration and ideas decided against, with the reasoning.
 

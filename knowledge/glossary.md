@@ -2,7 +2,7 @@
 type: Glossary
 id: glossary
 title: Domain Glossary
-description: The terms the blueprint engine uses — blueprint, capability, provider, provenance, component, skill override, owned file, scaffold, skill pack, materialised skill, PROJECT.md layer, custom skill, claim, orphan — plus the search terms section, locator, hybrid search and RRF.
+description: The terms the blueprint engine uses — blueprint, capability, provider, provenance, component, skill override, owned file, scaffold, project template, skill pack, materialised skill, PROJECT.md layer, custom skill, claim, orphan — plus the search terms section, locator, hybrid search and RRF.
 status: stable
 ---
 
@@ -33,6 +33,11 @@ status: stable
   The embedded AOKF spec and validator are owned.
 - **Scaffold** — a file superdev writes once and never touches again, such as
   `AGENTS.md`. It is the user's from the moment it exists, so it cannot drift.
+- **Project template** — a set of write-once scaffolds embedded in the
+  binary that `init` seeds a repo from, token-substituted and disjoint from
+  every capability's files. `config.toml` records the name and token values
+  as provenance; `sync` never revisits the files. Designed, not yet built —
+  see the [spec](specs/2026-08-18-project-templates-design.md).
 - **Skill pack** — the four skills the `skills` capability ships as owned files
   under `.claude/skills/`, embedded in the binary and versioned with it. Claude
   Code loads them from there natively, so there is nothing to install.
