@@ -1,0 +1,30 @@
+[workspace]
+resolver = "2"
+members = [
+  "crates/app/*",
+  "crates/lib/*",
+]
+# Without this a bare `cargo build` fails with "the workspace has no members".
+default-members = ["crates/app/{{superdev:project-slug}}", "crates/lib/{{superdev:project-slug}}-core"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.96.0"
+readme = "README.md"
+# Proprietary by default (see LICENSE); crates are not published. To open
+# source, set `license`, remove `publish = false` from the crates, and add a
+# crates.io publish step to release.yml.
+publish = false
+
+[workspace.dependencies]
+# Internal crates
+{{superdev:project-slug}}-core = { path = "crates/lib/{{superdev:project-slug}}-core", version = "0.1.0" }
+
+# Optimize release builds for size
+[profile.release]
+opt-level = "z"
+strip = true
+lto = true
+panic = "abort"
+codegen-units = 1

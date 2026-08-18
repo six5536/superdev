@@ -1,0 +1,18 @@
+{
+    "name": "{{superdev:project-slug}}-workspace",
+    "private": true,
+    "description": "{{superdev:project-name}} development workspace.",
+    "workspaces": [
+        "packages/{{superdev:project-slug}}"
+    ],
+    "scripts": {
+        "build": "cargo build --workspace",
+        "dev": "cargo run -p {{superdev:project-slug}} --",
+        "test": "cargo nextest run --workspace",
+        "check": "cargo check --workspace --tests",
+        "lint": "cargo clippy --workspace",
+        "fmt": "cargo fmt --all",
+        "test:launcher": "node --test packages/{{superdev:project-slug}}/test/*.test.js",
+        "verify-version": "node scripts/verify-version.mjs"
+    }
+}

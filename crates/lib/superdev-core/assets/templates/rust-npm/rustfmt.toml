@@ -1,0 +1,8 @@
+edition = "2024"
+
+tab_spaces = 4
+hex_literal_case = "Upper"
+imports_granularity = "Crate"
+group_imports = "StdExternalCrate"
+max_width = 100
+newline_style = "Unix"

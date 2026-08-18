@@ -1,0 +1,10 @@
+/target
+**/*.rs.bk
+.DS_Store
+
+/node_modules/
+/packages/*/node_modules/
+
+# Staged platform binaries (built by release CI); the bin/ dirs are kept by
+# .gitkeep.
+/packages/{{superdev:project-slug}}-*/bin/{{superdev:project-slug}}

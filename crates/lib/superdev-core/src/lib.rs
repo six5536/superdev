@@ -33,6 +33,7 @@ pub mod pipeline;
 pub mod registry;
 pub mod report;
 pub mod runner;
+pub mod templates;
 
 /// The crate version, as compiled in from the workspace `Cargo.toml`.
 ///

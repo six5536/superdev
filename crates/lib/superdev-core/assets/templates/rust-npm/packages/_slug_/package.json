@@ -1,0 +1,26 @@
+{
+  "name": "{{superdev:project-slug}}",
+  "version": "0.1.0",
+  "description": "{{superdev:project-name}} command-line tool.",
+  "license": "SEE LICENSE IN LICENSE",
+  "bin": {
+    "{{superdev:project-slug}}": "bin/{{superdev:project-slug}}.js"
+  },
+  "files": [
+    "bin/",
+    "lib/"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "optionalDependencies": {
+    "{{superdev:project-slug}}-linux-x64": "0.1.0",
+    "{{superdev:project-slug}}-linux-arm64": "0.1.0",
+    "{{superdev:project-slug}}-darwin-x64": "0.1.0",
+    "{{superdev:project-slug}}-darwin-arm64": "0.1.0",
+    "{{superdev:project-slug}}-win32-x64": "0.1.0"
+  },
+  "scripts": {
+    "test": "node --test test/*.test.js"
+  }
+}

@@ -33,11 +33,28 @@ pub struct CapabilityConfig {
     pub custom: Vec<String>,
 }
 
+/// The project template `init` seeded this repo from: provenance, not
+/// management — no verb ever re-plans a template. Recording the token values
+/// beside the name answers "what seeded this repo, with what".
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub struct TemplateRecord {
+    /// The shipped template's name.
+    pub name: String,
+    /// The value `{{superdev:project-name}}` substituted to.
+    pub project_name: String,
+    /// The value `{{superdev:project-slug}}` substituted to.
+    pub project_slug: String,
+}
+
 /// The manifest: blueprint version plus one table per enabled capability.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Manifest {
     /// Blueprint (= superdev) version that wrote this file.
     pub blueprint: String,
+    /// The template `init` seeded this repo from, when one was chosen.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub template: Option<TemplateRecord>,
     /// Enabled capabilities, keyed by kebab-case name. Absent = disabled.
     #[serde(flatten)]
     pub capabilities: BTreeMap<String, CapabilityConfig>,
@@ -63,6 +80,7 @@ impl Manifest {
             .collect();
         Manifest {
             blueprint: blueprint.to_string(),
+            template: None,
             capabilities,
         }
     }
@@ -161,6 +179,21 @@ mod tests {
         assert!(!m.to_toml().contains("custom"));
         m.capabilities.get_mut("skills").unwrap().custom = vec!["humanise".into()];
         assert_eq!(Manifest::parse(&m.to_toml()).unwrap(), m);
+    }
+
+    #[test]
+    fn template_record_survives_a_round_trip_and_stays_optional() {
+        let mut m = Manifest::default_for("0.1.0", &[]);
+        assert!(!m.to_toml().contains("template"));
+        m.template = Some(TemplateRecord {
+            name: "rust-npm".into(),
+            project_name: "My Tool".into(),
+            project_slug: "my-tool".into(),
+        });
+        let toml = m.to_toml();
+        assert!(toml.contains("[template]"), "{toml}");
+        assert!(toml.contains("project-name = \"My Tool\""), "{toml}");
+        assert_eq!(Manifest::parse(&toml).unwrap(), m);
     }
 
     #[test]

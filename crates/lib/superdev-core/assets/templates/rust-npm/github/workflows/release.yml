@@ -1,0 +1,272 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+env:
+  CARGO_TERM_COLOR: always
+
+permissions:
+  contents: read
+
+# Never run two releases at once, and never cancel one in flight — a half-done
+# publish is the worst outcome.
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # 1. Is the tag coherent? Cheap checks first, so a typo fails in seconds.
+  # ---------------------------------------------------------------------------
+  meta:
+    name: verify tag
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.v.outputs.version }}
+      prerelease: ${{ steps.v.outputs.prerelease }}
+      npm_tag: ${{ steps.v.outputs.npm_tag }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Derive version from tag
+        id: v
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          # A semver prerelease has a hyphen after the patch component.
+          if [[ "$version" == *-* ]]; then
+            echo "prerelease=true" >> "$GITHUB_OUTPUT"
+            echo "npm_tag=next" >> "$GITHUB_OUTPUT"
+          else
+            echo "prerelease=false" >> "$GITHUB_OUTPUT"
+            echo "npm_tag=latest" >> "$GITHUB_OUTPUT"
+          fi
+          echo "Releasing $version"
+
+      - name: Tag matches every version in the tree
+        run: node scripts/verify-version.mjs "${{ steps.v.outputs.version }}"
+
+      - name: CHANGELOG has a section for this version
+        run: |
+          version='${{ steps.v.outputs.version }}'
+          if ! grep -qF "## [$version]" CHANGELOG.md; then
+            echo "::error::CHANGELOG.md has no '## [$version]' section."
+            exit 1
+          fi
+
+  # ---------------------------------------------------------------------------
+  # 2. The same gate CI runs. Releases are rare; pay for the full signal.
+  # ---------------------------------------------------------------------------
+  checks:
+    needs: meta
+    uses: ./.github/workflows/checks.yml
+
+  # ---------------------------------------------------------------------------
+  # 3. Build each platform binary.
+  # ---------------------------------------------------------------------------
+  build:
+    name: build ${{ matrix.pkg }}
+    needs: meta
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Linux ships static musl: no glibc floor to track, and it runs on
+          # Alpine too. zigbuild supplies a C cross-compiler for any dependency
+          # that needs one, which plain rust-lld cannot.
+          - { os: ubuntu-latest, target: x86_64-unknown-linux-musl, pkg: linux-x64, builder: zigbuild }
+          - { os: ubuntu-latest, target: aarch64-unknown-linux-musl, pkg: linux-arm64, builder: zigbuild }
+          - { os: macos-latest, target: x86_64-apple-darwin, pkg: darwin-x64, builder: cargo }
+          - { os: macos-latest, target: aarch64-apple-darwin, pkg: darwin-arm64, builder: cargo }
+          # Windows builds natively on its own runner (msvc needs no cross
+          # setup there). x64 only: Windows-on-ARM runs it under emulation.
+          - { os: windows-latest, target: x86_64-pc-windows-msvc, pkg: win32-x64, builder: cargo }
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install the pinned toolchain and cross target
+        run: |
+          rustup toolchain install --profile minimal
+          rustup target add ${{ matrix.target }}
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Install cargo-zigbuild
+        if: matrix.builder == 'zigbuild'
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-zigbuild
+
+      - name: Install zig
+        if: matrix.builder == 'zigbuild'
+        uses: mlugg/setup-zig@v2
+        with:
+          version: "0.14.1"
+          cache-key: ${{ matrix.target }}
+
+      - name: Build (zigbuild)
+        if: matrix.builder == 'zigbuild'
+        run: cargo zigbuild --release --target ${{ matrix.target }} -p {{superdev:project-slug}}
+
+      - name: Build (cargo)
+        if: matrix.builder == 'cargo'
+        run: cargo build --release --target ${{ matrix.target }} -p {{superdev:project-slug}}
+
+      - name: Stage binary into platform package
+        shell: bash
+        run: |
+          bin="{{superdev:project-slug}}"
+          case "${{ matrix.target }}" in *windows*) bin="$bin.exe" ;; esac
+          install -m 0755 "target/${{ matrix.target }}/release/$bin" \
+            "packages/{{superdev:project-slug}}-${{ matrix.pkg }}/bin/$bin"
+
+      - name: Assert Linux binaries are statically linked
+        if: matrix.builder == 'zigbuild'
+        run: |
+          bin="packages/{{superdev:project-slug}}-${{ matrix.pkg }}/bin/{{superdev:project-slug}}"
+          if readelf -l "$bin" | grep -q "program interpreter"; then
+            echo "::error::$bin is dynamically linked; expected a static musl build"
+            exit 1
+          fi
+          echo "$bin is static"
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: {{superdev:project-slug}}-${{ matrix.pkg }}
+          path: packages/{{superdev:project-slug}}-${{ matrix.pkg }}/bin/{{superdev:project-slug}}*
+          if-no-files-found: error
+
+  # ---------------------------------------------------------------------------
+  # 4. Publish. Nothing here runs until the tag, the gate, and the builds agree.
+  # ---------------------------------------------------------------------------
+  publish:
+    name: publish
+    needs: [meta, checks, build]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # npm trusted publishing (OIDC) + automatic provenance
+    env:
+      VERSION: ${{ needs.meta.outputs.version }}
+      NPM_TAG: ${{ needs.meta.outputs.npm_tag }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+
+      - name: Download platform binaries
+        uses: actions/download-artifact@v8
+        with:
+          path: artifacts
+
+      - name: Place binaries into platform packages
+        run: |
+          slug="{{superdev:project-slug}}"
+          for pkg in linux-x64 linux-arm64 darwin-x64 darwin-arm64; do
+            install -m 0755 "artifacts/$slug-$pkg/$slug" "packages/$slug-$pkg/bin/$slug"
+          done
+          install -m 0755 "artifacts/$slug-win32-x64/$slug.exe" \
+            "packages/$slug-win32-x64/bin/$slug.exe"
+
+      - name: Smoke-test the built binary
+        run: |
+          actual="$(./packages/{{superdev:project-slug}}-linux-x64/bin/{{superdev:project-slug}} --version)"
+          expected="{{superdev:project-slug}} $VERSION"
+          if [ "$actual" != "$expected" ]; then
+            echo "::error::binary reports '$actual', expected '$expected'"
+            exit 1
+          fi
+          echo "$actual"
+
+      - name: Dry-run every publish before doing any of them
+        run: |
+          slug="{{superdev:project-slug}}"
+          for pkg in linux-x64 linux-arm64 darwin-x64 darwin-arm64 win32-x64; do
+            npm publish "./packages/$slug-$pkg" --dry-run --tag "$NPM_TAG"
+          done
+          npm publish "./packages/$slug" --dry-run --tag "$NPM_TAG"
+
+      # Authentication is npm trusted publishing (OIDC) via `id-token: write`;
+      # there is no NPM_TOKEN. Platform packages first: the launcher declares
+      # them as optionalDependencies, so publishing it first would briefly
+      # point users at versions that do not exist yet.
+      - name: Publish platform packages to npm
+        run: |
+          slug="{{superdev:project-slug}}"
+          for pkg in linux-x64 linux-arm64 darwin-x64 darwin-arm64 win32-x64; do
+            npm publish "./packages/$slug-$pkg" --tag "$NPM_TAG"
+          done
+
+      - name: Publish launcher to npm
+        run: npm publish "./packages/{{superdev:project-slug}}" --tag "$NPM_TAG"
+
+  # ---------------------------------------------------------------------------
+  # 5. GitHub Release: archives, checksums, notes.
+  # ---------------------------------------------------------------------------
+  github-release:
+    name: github release
+    needs: [meta, publish]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      VERSION: ${{ needs.meta.outputs.version }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Download platform binaries
+        uses: actions/download-artifact@v8
+        with:
+          path: artifacts
+
+      - name: Build archives and checksums
+        run: |
+          slug="{{superdev:project-slug}}"
+          mkdir -p dist/out
+          for pkg in linux-x64 linux-arm64 darwin-x64 darwin-arm64; do
+            stage="dist/stage/$slug-$VERSION-$pkg"
+            mkdir -p "$stage"
+            install -m 0755 "artifacts/$slug-$pkg/$slug" "$stage/$slug"
+            cp README.md LICENSE CHANGELOG.md "$stage/"
+            tar -czf "dist/out/$slug-$VERSION-$pkg.tar.gz" -C dist/stage "$slug-$VERSION-$pkg"
+          done
+          # Windows ships a .zip, the archive form its users expect.
+          stage="dist/stage/$slug-$VERSION-win32-x64"
+          mkdir -p "$stage"
+          install -m 0755 "artifacts/$slug-win32-x64/$slug.exe" "$stage/$slug.exe"
+          cp README.md LICENSE CHANGELOG.md "$stage/"
+          (cd dist/stage && zip -qr "../out/$slug-$VERSION-win32-x64.zip" "$slug-$VERSION-win32-x64")
+          cd dist/out && sha256sum ./*.tar.gz ./*.zip > SHA256SUMS && cat SHA256SUMS
+
+      - name: Extract release notes from CHANGELOG
+        run: |
+          # The section for this version, up to the next "## " heading — or the
+          # trailing link-reference definitions, which are markdown plumbing.
+          awk -v ver="## [$VERSION]" '
+            index($0, ver) == 1 { found = 1; next }
+            found && /^## / { exit }
+            found && /^\[[^]]+\]: / { exit }
+            found { print }
+          ' CHANGELOG.md > dist/notes.md
+          if [ ! -s dist/notes.md ]; then
+            echo "::error::no release notes found for $VERSION in CHANGELOG.md"
+            exit 1
+          fi
+          cat dist/notes.md
+
+      - name: Create the release
+        uses: softprops/action-gh-release@v3
+        with:
+          name: v${{ env.VERSION }}
+          body_path: dist/notes.md
+          prerelease: ${{ needs.meta.outputs.prerelease == 'true' }}
+          files: |
+            dist/out/*.tar.gz
+            dist/out/*.zip
+            dist/out/SHA256SUMS

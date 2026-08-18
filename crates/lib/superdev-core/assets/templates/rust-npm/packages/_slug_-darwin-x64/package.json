@@ -1,0 +1,15 @@
+{
+  "name": "{{superdev:project-slug}}-darwin-x64",
+  "version": "0.1.0",
+  "description": "Prebuilt {{superdev:project-name}} binary for darwin-x64.",
+  "license": "SEE LICENSE IN LICENSE",
+  "os": [
+    "darwin"
+  ],
+  "cpu": [
+    "x64"
+  ],
+  "files": [
+    "bin/"
+  ]
+}
