@@ -10,6 +10,27 @@
   are published by release CI.
 - `scripts/` — repo scripts wired as npm scripts (see `package.json`).
 
+## Rust rules
+
+- Hoist dependency versions, profiles, and shared package metadata to the
+  workspace `Cargo.toml`; member crates inherit with `workspace = true`.
+- Use the latest version when adding a dependency, and never add one without
+  maintainer confirmation.
+- `mod.rs` contains only `mod` declarations and `pub use` re-exports; all
+  code lives in named files.
+- Declare submodules privately (`mod foo;`) and expose their API via
+  `pub use foo::Item;`; flatten re-exports at `lib.rs` so callers write
+  `crate::Item`.
+- Default to private; widen visibility via `pub(crate)` -> `pub(super)` ->
+  `pub` only as needed.
+- Group imports `std` -> external -> `crate`/`super`/`self`, collapse with
+  nested paths, and prefer `use crate::...` over `super::super::...`.
+- Import types and traits directly; import the parent module for free
+  functions (`module::func()`); no glob imports except preludes, enum
+  variants in `match`, and tests.
+- Every `unsafe` block lives in a dedicated `*_unsafe.rs` module behind safe
+  public functions, is clearly documented, and needs maintainer confirmation.
+
 ## Everyday commands
 
 ```sh

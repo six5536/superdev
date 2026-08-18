@@ -15,6 +15,10 @@ sources:
   current set is in [technology-stack](technology-stack.md).[^contributing]
 - **Always check the latest version (as of 7 days ago)** and use that, unless
   instructed otherwise.
+- **Hoist to the workspace.** Dependency versions, profiles, and shared
+  package metadata live in the workspace `Cargo.toml`; member crates inherit
+  with `workspace = true`. The shipped project templates follow the same
+  rule.
 - `cargo-deny` gates licences, bans, and sources in CI; advisories run on a
   schedule and open an issue rather than failing unrelated builds.
 
