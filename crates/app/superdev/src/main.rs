@@ -11,6 +11,7 @@
 
 mod aokf_cli;
 mod manage;
+mod template_select;
 
 use std::io::{self, Write};
 use std::path::PathBuf;

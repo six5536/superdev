@@ -849,3 +849,90 @@ fn a_stale_blueprint_reports_on_status_and_sync_stamps_it() {
     let stdout = stdout_of(&out);
     assert!(!stdout.contains("sync will update it"), "{stdout}");
 }
+
+/// A template init end-to-end: cross-platform (no provider tools needed with
+/// every capability disabled), non-TTY (so nothing prompts).
+#[test]
+fn init_with_a_template_seeds_the_repo_and_records_it() {
+    let dir = tempfile::tempdir().unwrap();
+    std::fs::create_dir_all(dir.path().join(".git")).unwrap();
+    // A pre-existing file wins over its template counterpart.
+    std::fs::write(dir.path().join("README.md"), "mine\n").unwrap();
+    let assert = superdev()
+        .current_dir(dir.path())
+        .args([
+            "init",
+            "--template",
+            "rust-npm",
+            "--name",
+            "My Tool",
+            "--no-workflows",
+            "--no-frontend",
+            "--no-skills",
+            "--no-code-index",
+            "--no-knowledge",
+        ])
+        .assert()
+        .success();
+    let stdout = String::from_utf8_lossy(&assert.get_output().stdout).to_string();
+    assert!(
+        stdout.contains("template rust-npm: kept README.md — already exists"),
+        "{stdout}"
+    );
+    assert_eq!(
+        std::fs::read_to_string(dir.path().join("README.md")).unwrap(),
+        "mine\n",
+        "existing files win"
+    );
+    // Substituted content and tokenised paths landed.
+    let main_rs = dir.path().join("crates/app/my-tool/src/main.rs");
+    let main_rs = std::fs::read_to_string(main_rs).unwrap();
+    assert!(main_rs.contains("my_tool_core::"), "{main_rs}");
+    let license = std::fs::read_to_string(dir.path().join("LICENSE")).unwrap();
+    assert!(license.contains("the owners of My Tool"), "{license}");
+    // The manifest records the template as provenance.
+    let config = std::fs::read_to_string(dir.path().join(".superdev/config.toml")).unwrap();
+    assert!(config.contains("[template]"), "{config}");
+    assert!(config.contains("project-slug = \"my-tool\""), "{config}");
+    // Template files are scaffolds: not one of them is locked.
+    let lock = std::fs::read_to_string(dir.path().join(".superdev/lock.toml")).unwrap();
+    assert!(!lock.contains("LICENSE"), "{lock}");
+}
+
+#[test]
+fn init_without_a_tty_and_without_the_flag_seeds_nothing() {
+    let dir = tempfile::tempdir().unwrap();
+    std::fs::create_dir_all(dir.path().join(".git")).unwrap();
+    superdev()
+        .current_dir(dir.path())
+        .args([
+            "init",
+            "--no-workflows",
+            "--no-frontend",
+            "--no-skills",
+            "--no-code-index",
+            "--no-knowledge",
+        ])
+        .assert()
+        .success();
+    assert!(!dir.path().join("LICENSE").exists(), "no template files");
+    let config = std::fs::read_to_string(dir.path().join(".superdev/config.toml")).unwrap();
+    assert!(!config.contains("[template]"), "{config}");
+}
+
+#[test]
+fn an_unknown_template_fails_before_anything_is_written() {
+    let dir = tempfile::tempdir().unwrap();
+    std::fs::create_dir_all(dir.path().join(".git")).unwrap();
+    let out = superdev()
+        .current_dir(dir.path())
+        .args(["init", "--template", "flying"])
+        .assert()
+        .code(2);
+    let stderr = String::from_utf8_lossy(&out.get_output().stderr).into_owned();
+    assert!(
+        stderr.contains("template must be one of: rust-npm"),
+        "unexpected: {stderr}"
+    );
+    assert!(!dir.path().join(".superdev").exists(), "nothing written");
+}

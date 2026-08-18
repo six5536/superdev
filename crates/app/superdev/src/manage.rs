@@ -8,10 +8,12 @@ use superdev_core::capability::Capability;
 use superdev_core::components::pin;
 use superdev_core::error::{Error, Result};
 use superdev_core::lock::Lock;
-use superdev_core::manifest::{CONFIG_PATH, Manifest};
+use superdev_core::manifest::{CONFIG_PATH, Manifest, TemplateRecord};
 use superdev_core::pipeline::{self, PlanMode, RepoPlan};
 use superdev_core::runner::SystemRunner;
-use superdev_core::{registry, report};
+use superdev_core::{registry, report, templates};
+
+use crate::template_select;
 
 /// Printed after a materialisation: the upstream setup skill is interactive,
 /// so it is the one step superdev cannot run for the user.
@@ -39,6 +41,11 @@ pub struct InitArgs {
     /// Workflows provider (default: the registry default)
     #[arg(long, value_name = "ID", conflicts_with = "no_workflows")]
     pub workflows_provider: Option<String>,
+    #[arg(long, value_name = "NAME", help = crate::template_select::TEMPLATE_HELP)]
+    pub template: Option<String>,
+    /// Project name for template substitution (default: the directory name)
+    #[arg(long, value_name = "NAME")]
+    pub name: Option<String>,
 }
 
 impl InitArgs {
@@ -57,7 +64,8 @@ impl InitArgs {
     }
 }
 
-/// Set the repo up: write the manifest, then apply the whole blueprint.
+/// Set the repo up: write the manifest, then apply the whole blueprint —
+/// with the chosen project template's scaffolds, if any, ahead of it.
 pub fn init(root: &Path, args: &InitArgs) -> Result<u8> {
     if !root.join(".git").exists() {
         return Err(Error::Manifest {
@@ -81,7 +89,25 @@ pub fn init(root: &Path, args: &InitArgs) -> Result<u8> {
             ),
         });
     }
+    let dir_name = root
+        .file_name()
+        .and_then(|n| n.to_str())
+        .unwrap_or("project");
+    let selection = template_select::choose(
+        args.template.as_deref(),
+        args.name.as_deref(),
+        template_select::is_tty(),
+        dir_name,
+        &template_select::TerminalPrompter,
+    )?;
     let mut manifest = Manifest::default_for(superdev_core::version(), &args.disabled());
+    if let Some(selection) = &selection {
+        manifest.template = Some(TemplateRecord {
+            name: selection.template.name.to_string(),
+            project_name: selection.tokens.name.clone(),
+            project_slug: selection.tokens.slug.clone(),
+        });
+    }
     if let (Some(id), Some(config)) = (
         &args.workflows_provider,
         manifest
@@ -98,7 +124,16 @@ pub fn init(root: &Path, args: &InitArgs) -> Result<u8> {
         out(line)?;
     }
     let runner = SystemRunner;
-    let plan = pipeline::plan_repo(root, &runner, &manifest, &Lock::default(), PlanMode::Sync)?;
+    let mut plan = pipeline::plan_repo(root, &runner, &manifest, &Lock::default(), PlanMode::Sync)?;
+    if let Some(selection) = &selection {
+        let (entry, kept) = templates::plan(root, selection.template, &selection.tokens);
+        for line in &kept {
+            out(line)?;
+        }
+        if !entry.actions.is_empty() {
+            plan.prepend(entry);
+        }
+    }
     print_plan(&plan)?;
     match pipeline::apply_repo(root, &runner, &manifest, plan) {
         Ok(outcome) if outcome.ok => {
@@ -320,6 +355,8 @@ mod tests {
             no_code_index: true,
             no_knowledge: true,
             workflows_provider: Some("flying".into()),
+            template: None,
+            name: None,
         };
         let err = init(dir.path(), &args).unwrap_err().to_string();
         assert!(err.contains("workflows provider must be one of"), "{err}");
@@ -338,6 +375,8 @@ mod tests {
             no_code_index: false,
             no_knowledge: false,
             workflows_provider: None,
+            template: None,
+            name: None,
         };
         // Both guards fire before anything is planned or run.
         let plain = tempfile::tempdir().unwrap();

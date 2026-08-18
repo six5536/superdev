@@ -63,6 +63,7 @@ pub fn slug_of(name: &str) -> String {
 }
 
 /// One shipped project template.
+#[derive(Debug)]
 pub struct Template {
     /// The name `--template` and the prompt select by.
     pub name: &'static str,

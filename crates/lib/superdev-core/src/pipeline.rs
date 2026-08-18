@@ -59,6 +59,13 @@ impl RepoPlan {
         &self.planned
     }
 
+    /// Prepend an init-only entry — the project template — ahead of every
+    /// capability's, so its scaffolds exist before any component write. No
+    /// other verb plans templates, which is what keeps them write-once.
+    pub fn prepend(&mut self, entry: Planned) {
+        self.planned.insert(0, entry);
+    }
+
     /// Whether any entry carries an action.
     pub fn has_actions(&self) -> bool {
         self.planned.iter().any(|p| !p.actions.is_empty())
