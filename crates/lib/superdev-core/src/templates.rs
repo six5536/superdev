@@ -176,7 +176,10 @@ mod tests {
         assert!(planned.capability.is_none());
         let descs: Vec<String> = planned.actions.iter().map(Action::describe).collect();
         assert_eq!(descs.len(), 2, "{descs:?}");
-        assert!(descs[1].contains("crates/app/my-tool/Cargo.toml"), "{descs:?}");
+        assert!(
+            descs[1].contains("crates/app/my-tool/Cargo.toml"),
+            "{descs:?}"
+        );
 
         // An existing target drops out of the plan and is reported kept.
         std::fs::write(dir.path().join("README.md"), "mine").unwrap();

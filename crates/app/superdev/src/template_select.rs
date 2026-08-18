@@ -145,14 +145,22 @@ mod tests {
 
     #[test]
     fn flags_answer_in_advance_and_skip_the_prompt() {
-        let sel = choose(Some("rust-npm"), Some("My Tool"), true, "my-dir", &NO_PROMPT)
-            .unwrap()
-            .unwrap();
+        let sel = choose(
+            Some("rust-npm"),
+            Some("My Tool"),
+            true,
+            "my-dir",
+            &NO_PROMPT,
+        )
+        .unwrap()
+        .unwrap();
         assert_eq!(sel.template.name, "rust-npm");
         assert_eq!(sel.tokens.slug, "my-tool");
-        assert!(choose(Some("none"), None, true, "my-dir", &NO_PROMPT)
-            .unwrap()
-            .is_none());
+        assert!(
+            choose(Some("none"), None, true, "my-dir", &NO_PROMPT)
+                .unwrap()
+                .is_none()
+        );
     }
 
     #[test]
@@ -166,13 +174,17 @@ mod tests {
 
     #[test]
     fn no_tty_means_no_prompt_and_no_template() {
-        assert!(choose(None, None, false, "my-dir", &NO_PROMPT)
-            .unwrap()
-            .is_none());
+        assert!(
+            choose(None, None, false, "my-dir", &NO_PROMPT)
+                .unwrap()
+                .is_none()
+        );
         // The name flag alone changes nothing without a template.
-        assert!(choose(None, Some("My Tool"), false, "my-dir", &NO_PROMPT)
-            .unwrap()
-            .is_none());
+        assert!(
+            choose(None, Some("My Tool"), false, "my-dir", &NO_PROMPT)
+                .unwrap()
+                .is_none()
+        );
     }
 
     #[test]
