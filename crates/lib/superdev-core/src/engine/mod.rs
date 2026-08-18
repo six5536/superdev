@@ -1,24 +1,33 @@
-//! engine.rs — plan every component, apply the result, roll back on failure.
-//!
-//! Every side effect is journalled as it happens, so the first failure can
-//! unwind the run instead of leaving the repo half-changed.
+//! engine/mod.rs — plan every component, apply the result, roll back on
+//! failure. The appliers here compute content and make policy calls (skip,
+//! drift guard, backup); every actual side effect goes through [`tx::Tx`],
+//! which journals it so the first failure can unwind the run instead of
+//! leaving the repo half-changed. The mise pin phase lives in [`pins`], the
+//! skill materialiser in [`materialise`].
+
+mod materialise;
+mod pins;
+mod tx;
 
 use std::collections::{BTreeMap, BTreeSet};
-use std::fs;
 use std::path::Path;
-use std::time::{SystemTime, UNIX_EPOCH};
 
 use crate::action::{Action, Ownership};
 use crate::capability::Capability;
 use crate::component::{Component, Ctx};
 use crate::components::mise;
 use crate::error::{Error, Result};
+use crate::fsutil::read_text;
+use crate::json_edit::{
+    edit_json_array_element, edit_json_key, json_value_at, remove_json_pointer,
+};
 use crate::lock::{Lock, LockedComponent, sha256_hex};
 use crate::manifest::Manifest;
 use crate::runner::CommandRunner;
 
-/// Where backups of overwritten files go, under the repo root.
-const BACKUP_DIR: &str = ".superdev/cache/backup";
+use pins::PinEffects;
+use tx::Tx;
+
 /// Argument form resolved to a mise tool's install path.
 const MISE_WHERE: &str = "{mise-where:";
 /// Skip reason for a removal target that is already absent. Named, because
@@ -102,10 +111,14 @@ pub fn apply(
     lock: &mut Lock,
 ) -> ApplyResult {
     let mut session = Session::new(root, runner, planned, lock);
-    let mut ok = session.apply_pins(planned);
+    let (mut ok, mut pin_effects) = session.apply_pins(planned);
     if ok {
         for (index, entry) in planned.iter().enumerate() {
-            if !session.apply_entry(index, entry, manifest, lock) {
+            // Each entry takes ownership of the pin effects it earned in the
+            // pin phase; the lock learns about them only when the entry
+            // completes.
+            let effects = std::mem::take(&mut pin_effects[index]);
+            if !session.apply_entry(index, entry, manifest, lock, effects) {
                 ok = false;
                 break;
             }
@@ -114,7 +127,7 @@ pub fn apply(
     let (reverted, not_reverted) = if ok {
         (Vec::new(), Vec::new())
     } else {
-        session.unwind()
+        session.tx.unwind(session.runner)
     };
     ApplyResult {
         reports: session.reports,
@@ -122,12 +135,6 @@ pub fn apply(
         not_reverted,
         ok,
     }
-}
-
-/// One journalled side effect, and how to take it back.
-enum Undo {
-    RestoreFile { path: String, prior: Option<String> },
-    RunCommand { program: String, args: Vec<String> },
 }
 
 /// The lock changes one entry accumulates while its actions run, applied
@@ -145,11 +152,8 @@ struct LockEffects<'e> {
 struct Session<'a> {
     root: &'a Path,
     runner: &'a dyn CommandRunner,
-    /// One timestamp per run, so a run's backups sit together.
-    stamp: u64,
-    journal: Vec<Undo>,
-    /// Side effects with no undo, reported when a later failure unwinds.
-    irreversible: Vec<String>,
+    /// The journal every side effect goes through.
+    tx: Tx<'a>,
     /// Locked hashes as of the start of the run, for user-edit detection.
     prior_hashes: BTreeMap<String, String>,
     /// Lock attribution as of the start of the run, for reconciliation.
@@ -157,8 +161,6 @@ struct Session<'a> {
     /// Lock keys earlier entries wrote in this run. Removals were planned
     /// against the pre-run state, so a later one must not drop them.
     written_keys: BTreeSet<String>,
-    /// Pin hashes each entry earned, held until the entry completes.
-    pins: Vec<Vec<(String, String)>>,
     reports: Vec<ComponentReport>,
 }
 
@@ -172,15 +174,10 @@ impl<'a> Session<'a> {
         Session {
             root,
             runner,
-            stamp: SystemTime::now()
-                .duration_since(UNIX_EPOCH)
-                .map_or(0, |d| d.as_secs()),
-            journal: Vec::new(),
-            irreversible: Vec::new(),
+            tx: Tx::new(root),
             prior_hashes: lock.files.clone(),
             prior_owners: lock.owners.clone(),
             written_keys: BTreeSet::new(),
-            pins: vec![Vec::new(); planned.len()],
             reports: planned
                 .iter()
                 .map(|p| ComponentReport {
@@ -200,132 +197,6 @@ impl<'a> Session<'a> {
             .push((action.describe(), outcome));
     }
 
-    /// Apply every `SetMisePin` as one edit, then trust and install.
-    /// Providers run their own commands afterwards, so the tools must exist.
-    ///
-    /// With no pin edit planned, the tools may still be missing — a fresh
-    /// clone commits `.mise.toml` but installs nothing — so
-    /// [`Session::install_committed_pins`] covers that case.
-    fn apply_pins(&mut self, planned: &[Planned]) -> bool {
-        let pins: Vec<(usize, &Action, &str, &str)> = planned
-            .iter()
-            .enumerate()
-            .flat_map(|(index, p)| {
-                p.actions.iter().filter_map(move |a| match a {
-                    Action::SetMisePin { tool, value_toml } => {
-                        Some((index, a, tool.as_str(), value_toml.as_str()))
-                    }
-                    _ => None,
-                })
-            })
-            .collect();
-        let Some(&(first, first_action, _, _)) = pins.first() else {
-            return self.install_committed_pins(planned);
-        };
-        let path = self.root.join(".mise.toml");
-        let prior = match read_text(&path) {
-            Ok(prior) => prior,
-            Err(e) => {
-                self.record(first, first_action, ActionOutcome::Failed(e.to_string()));
-                return false;
-            }
-        };
-        // Edit in memory first: a bad pin then leaves the file untouched.
-        let mut content = prior.clone().unwrap_or_default();
-        for &(entry, action, tool, value) in &pins {
-            match mise::set_pin(&content, tool, value) {
-                Ok(next) => content = next,
-                Err(e) => {
-                    self.record(entry, action, ActionOutcome::Failed(e.to_string()));
-                    return false;
-                }
-            }
-        }
-        self.journal.push(Undo::RestoreFile {
-            path: ".mise.toml".into(),
-            prior,
-        });
-        if let Err(e) = write_file(&path, &content) {
-            self.record(first, first_action, ActionOutcome::Failed(e.to_string()));
-            return false;
-        }
-        for &(entry, action, tool, _) in &pins {
-            // Hash the normalised value, so layout changes never read as drift.
-            let value = mise::current_pin(&content, tool)
-                .expect("content came from set_pin, so it parses")
-                .expect("the pin was just set");
-            self.pins[entry].push((mise::pin_lock_key(tool), sha256_hex(value.as_bytes())));
-            self.record(entry, action, ActionOutcome::Applied { note: None });
-        }
-        // Install what this run pinned plus every managed pin the file already
-        // carried: an untouched pin may still be missing on this machine.
-        let mut tools: Vec<String> = pins.iter().map(|&(.., tool, _)| tool.to_string()).collect();
-        tools.extend(managed_pins_in(&content));
-        tools.sort_unstable();
-        tools.dedup();
-        self.install_pinned_tools(first, &tools)
-    }
-
-    /// Install the pins `.mise.toml` already carries, when a provider is about
-    /// to run a command. On a fresh clone of a managed repo the committed pins
-    /// match, so nothing is planned, yet no tool is installed on this machine.
-    /// Skipped when nothing runs, or when no superdev-managed tool is pinned.
-    fn install_committed_pins(&mut self, planned: &[Planned]) -> bool {
-        let runs = |p: &&Planned| {
-            p.actions
-                .iter()
-                .any(|a| matches!(a, Action::Run { .. } | Action::MaterialiseSkills { .. }))
-        };
-        let Some(entry) = planned.iter().position(|p| runs(&p)) else {
-            return true;
-        };
-        let Ok(Some(content)) = read_text(&self.root.join(".mise.toml")) else {
-            return true;
-        };
-        // An unparseable file pins nothing superdev can claim; leave it to the
-        // component that reads it to report the problem.
-        let pinned = managed_pins_in(&content);
-        if pinned.is_empty() {
-            return true;
-        }
-        self.install_pinned_tools(entry, &pinned)
-    }
-
-    /// Trust the config, then install — naming the tools. mise refuses to
-    /// install from a config it has not been told to trust, and superdev
-    /// writes managed pins into repos that have never trusted theirs.
-    /// Trusting is idempotent, so it runs every time; a failure is treated
-    /// exactly like a failed install.
-    ///
-    /// A bare `mise install` would install every tool the repo pins, tying
-    /// superdev's success to toolchains it does not manage: one unrelated pin
-    /// that cannot build on this machine would fail the whole apply.
-    fn install_pinned_tools(&mut self, entry: usize, tools: &[String]) -> bool {
-        if !self.run_mise(entry, &["trust".into()], "trust the repo's mise config") {
-            return false;
-        }
-        let mut args = vec!["install".to_string()];
-        args.extend(tools.iter().cloned());
-        self.run_mise(entry, &args, "install the pinned tools")
-    }
-
-    /// Run a `mise` command the plan never contained, recording it against
-    /// `entry` as if it had.
-    fn run_mise(&mut self, entry: usize, args: &[String], purpose: &str) -> bool {
-        let args = args.to_vec();
-        let action = Action::Run {
-            program: "mise".into(),
-            args: args.clone(),
-            purpose: purpose.into(),
-            undo: None,
-            optional: false,
-        };
-        let outcome = self.run_action("mise", &args, &None, false);
-        let ok = !matches!(outcome, ActionOutcome::Failed(_));
-        self.record(entry, &action, outcome);
-        ok
-    }
-
     /// Apply one entry's non-pin actions, then record what it applied.
     fn apply_entry(
         &mut self,
@@ -333,6 +204,7 @@ impl<'a> Session<'a> {
         entry: &Planned,
         manifest: &Manifest,
         lock: &mut Lock,
+        pin_effects: PinEffects,
     ) -> bool {
         let mut written = Vec::new();
         let mut attributed: Vec<String> = Vec::new();
@@ -395,7 +267,8 @@ impl<'a> Session<'a> {
                 return false;
             }
         }
-        let keys: Vec<String> = std::mem::take(&mut self.pins[index])
+        let keys: Vec<String> = pin_effects
+            .hashes
             .into_iter()
             .chain(written)
             .map(|(key, hash)| {
@@ -443,8 +316,7 @@ impl<'a> Session<'a> {
         ownership: Ownership,
         written: &mut Vec<(String, String)>,
     ) -> ActionOutcome {
-        let full = self.root.join(path);
-        let existing = match read_text(&full) {
+        let existing = match read_text(&self.root.join(path)) {
             Ok(existing) => existing,
             Err(e) => return ActionOutcome::Failed(e.to_string()),
         };
@@ -453,12 +325,7 @@ impl<'a> Session<'a> {
         }
         let mut note = None;
         if let Some(old) = &existing {
-            let backup = self
-                .root
-                .join(BACKUP_DIR)
-                .join(self.stamp.to_string())
-                .join(path);
-            if let Err(e) = write_file(&backup, old) {
+            if let Err(e) = self.tx.backup(path, old) {
                 return ActionOutcome::Failed(e.to_string());
             }
             if ownership == Ownership::Owned
@@ -467,11 +334,7 @@ impl<'a> Session<'a> {
                 note = Some("overwrote a user-edited file (backed up)".to_string());
             }
         }
-        self.journal.push(Undo::RestoreFile {
-            path: path.to_string(),
-            prior: existing,
-        });
-        if let Err(e) = write_file(&full, content) {
+        if let Err(e) = self.tx.write(path, existing, content) {
             return ActionOutcome::Failed(e.to_string());
         }
         if ownership == Ownership::Owned {
@@ -481,8 +344,7 @@ impl<'a> Session<'a> {
     }
 
     fn ensure_line(&mut self, path: &str, line: &str) -> ActionOutcome {
-        let full = self.root.join(path);
-        let existing = match read_text(&full) {
+        let existing = match read_text(&self.root.join(path)) {
             Ok(existing) => existing,
             Err(e) => return ActionOutcome::Failed(e.to_string()),
         };
@@ -490,16 +352,12 @@ impl<'a> Session<'a> {
         if next.lines().any(|l| l == line) {
             return ActionOutcome::Skipped("present".into());
         }
-        self.journal.push(Undo::RestoreFile {
-            path: path.to_string(),
-            prior: existing,
-        });
         if !next.is_empty() && !next.ends_with('\n') {
             next.push('\n');
         }
         next.push_str(line);
         next.push('\n');
-        match write_file(&full, &next) {
+        match self.tx.write(path, existing, &next) {
             Ok(()) => ActionOutcome::Applied { note: None },
             Err(e) => ActionOutcome::Failed(e.to_string()),
         }
@@ -510,8 +368,7 @@ impl<'a> Session<'a> {
     /// longer superdev's.
     fn remove_file(&mut self, path: &str, removed: &mut Vec<String>) -> ActionOutcome {
         removed.push(path.to_string());
-        let full = self.root.join(path);
-        let existing = match read_text(&full) {
+        let existing = match read_text(&self.root.join(path)) {
             Ok(existing) => existing,
             Err(e) => return ActionOutcome::Failed(e.to_string()),
         };
@@ -525,154 +382,13 @@ impl<'a> Session<'a> {
                 "changed since superdev wrote it — left in place".into(),
             );
         }
-        let backup = self
-            .root
-            .join(BACKUP_DIR)
-            .join(self.stamp.to_string())
-            .join(path);
-        if let Err(e) = write_file(&backup, &content) {
+        if let Err(e) = self.tx.backup(path, &content) {
             return ActionOutcome::Failed(e.to_string());
         }
-        self.journal.push(Undo::RestoreFile {
-            path: path.to_string(),
-            prior: Some(content),
-        });
-        match fs::remove_file(&full) {
+        match self.tx.remove(path, content) {
             Ok(()) => ActionOutcome::Applied { note: None },
             Err(e) => ActionOutcome::Failed(e.to_string()),
         }
-    }
-
-    /// Copy a pinned checkout's skill directories into the repo, then
-    /// reconcile: attributed entries the checkout no longer ships leave by
-    /// the same rules as RemoveFile. One aggregate outcome carries the counts.
-    fn materialise_skills(
-        &mut self,
-        capability: Option<Capability>,
-        tool: &str,
-        source_dirs: &[String],
-        custom: &[String],
-        effects: LockEffects<'_>,
-    ) -> ActionOutcome {
-        // Repo-level entries own nothing, so they have nothing to attribute —
-        // and never materialise.
-        let Some(capability) = capability else {
-            return ActionOutcome::Failed("materialise needs an owning capability".into());
-        };
-        let args = vec!["where".to_string(), tool.to_string()];
-        let checkout = match self.runner.run("mise", &args, self.root) {
-            Ok(out) if out.status == 0 => std::path::PathBuf::from(out.stdout.trim()),
-            Ok(out) => {
-                return ActionOutcome::Failed(
-                    Error::Command {
-                        command: command_line("mise", &args),
-                        status: Some(out.status),
-                        stderr: out.stderr,
-                    }
-                    .to_string(),
-                );
-            }
-            Err(e) => return ActionOutcome::Failed(e.to_string()),
-        };
-        let mut wrote = 0usize;
-        let mut kept = 0usize;
-        let mut edited = 0usize;
-        let mut fresh: Vec<String> = Vec::new();
-        for source_dir in source_dirs {
-            let dir = checkout.join(source_dir);
-            let entries = match fs::read_dir(&dir) {
-                Ok(entries) => entries,
-                Err(e) => {
-                    return ActionOutcome::Failed(
-                        Error::Io {
-                            path: dir,
-                            source: e,
-                        }
-                        .to_string(),
-                    );
-                }
-            };
-            for entry in entries {
-                let Ok(entry) = entry else { continue };
-                let path = entry.path();
-                // A skill is a directory; loose files beside them are the
-                // checkout's own, e.g. its README.
-                if !path.is_dir() {
-                    continue;
-                }
-                let name = entry.file_name().to_string_lossy().to_string();
-                if custom.contains(&name) {
-                    continue;
-                }
-                let mut files = Vec::new();
-                if let Err(e) = collect_files(&path, &mut files) {
-                    return ActionOutcome::Failed(e.to_string());
-                }
-                for file in files {
-                    let rel = file
-                        .strip_prefix(&path)
-                        .expect("collected under this skill directory");
-                    let target = format!(
-                        ".claude/skills/{name}/{}",
-                        rel.display().to_string().replace('\\', "/")
-                    );
-                    let content = match read_text(&file) {
-                        Ok(Some(content)) => content,
-                        Ok(None) => continue,
-                        Err(e) => return ActionOutcome::Failed(e.to_string()),
-                    };
-                    fresh.push(target.clone());
-                    let existing = match read_text(&self.root.join(&target)) {
-                        Ok(existing) => existing,
-                        Err(e) => return ActionOutcome::Failed(e.to_string()),
-                    };
-                    // An unchanged file is still claimed, so a converged run
-                    // keeps its lock entry and its attribution.
-                    if existing.as_deref() == Some(content.as_str()) {
-                        kept += 1;
-                        effects
-                            .written
-                            .push((target.clone(), sha256_hex(content.as_bytes())));
-                        effects.attributed.push(target);
-                        continue;
-                    }
-                    let mut probe = Vec::new();
-                    match self.write_action(&target, &content, Ownership::Owned, &mut probe) {
-                        ActionOutcome::Applied { note } => {
-                            wrote += 1;
-                            edited += usize::from(note.is_some());
-                        }
-                        ActionOutcome::Failed(e) => return ActionOutcome::Failed(e),
-                        ActionOutcome::Skipped(_) => unreachable!("owned writes never skip"),
-                    }
-                    effects.written.append(&mut probe);
-                    effects.attributed.push(target);
-                }
-            }
-        }
-        // Reconcile: what this capability had materialised and the checkout
-        // no longer ships leaves by the RemoveFile rules.
-        let mut released = 0usize;
-        let mut swept = 0usize;
-        let stale: Vec<String> = self
-            .prior_owners
-            .iter()
-            .filter(|(key, owner)| owner.as_str() == capability.as_str() && !fresh.contains(key))
-            .map(|(key, _)| key.clone())
-            .collect();
-        for key in stale {
-            match self.remove_file(&key, effects.removed) {
-                ActionOutcome::Applied { .. } => swept += 1,
-                ActionOutcome::Skipped(reason) if reason == ALREADY_GONE => {}
-                ActionOutcome::Skipped(_) => released += 1,
-                ActionOutcome::Failed(e) => return ActionOutcome::Failed(e),
-            }
-        }
-        let mut note = format!("wrote {wrote}, kept {kept}, removed {swept}, released {released}");
-        if edited > 0 {
-            note.push_str(&format!("; overwrote {edited} user-edited (backed up)"));
-        }
-        ActionOutcome::Applied { note: Some(note) }
     }
 
     /// Remove a managed pin. Journals the whole file: removing a pin is a
@@ -680,8 +396,7 @@ impl<'a> Session<'a> {
     fn remove_mise_pin(&mut self, tool: &str, removed: &mut Vec<String>) -> ActionOutcome {
         let key = mise::pin_lock_key(tool);
         removed.push(key.clone());
-        let path = self.root.join(".mise.toml");
-        let existing = match read_text(&path) {
+        let existing = match read_text(&self.root.join(".mise.toml")) {
             Ok(existing) => existing,
             Err(e) => return ActionOutcome::Failed(e.to_string()),
         };
@@ -702,11 +417,7 @@ impl<'a> Session<'a> {
             Ok(next) => next.expect("the pin is present"),
             Err(e) => return ActionOutcome::Failed(e.to_string()),
         };
-        self.journal.push(Undo::RestoreFile {
-            path: ".mise.toml".into(),
-            prior: Some(content),
-        });
-        match write_file(&path, &next) {
+        match self.tx.write(".mise.toml", Some(content), &next) {
             Ok(()) => ActionOutcome::Applied { note: None },
             Err(e) => ActionOutcome::Failed(e.to_string()),
         }
@@ -721,8 +432,7 @@ impl<'a> Session<'a> {
     ) -> ActionOutcome {
         let key = format!("{path}:{pointer}");
         removed.push(key.clone());
-        let full = self.root.join(path);
-        let existing = match read_text(&full) {
+        let existing = match read_text(&self.root.join(path)) {
             Ok(existing) => existing,
             Err(e) => return ActionOutcome::Failed(e.to_string()),
         };
@@ -743,11 +453,7 @@ impl<'a> Session<'a> {
             Ok(edited) => edited.expect("the entry is present"),
             Err(e) => return ActionOutcome::Failed(e.to_string()),
         };
-        self.journal.push(Undo::RestoreFile {
-            path: path.to_string(),
-            prior: Some(content),
-        });
-        match write_file(&full, &next) {
+        match self.tx.write(path, Some(content), &next) {
             Ok(()) => ActionOutcome::Applied { note: None },
             Err(e) => ActionOutcome::Failed(e.to_string()),
         }
@@ -762,8 +468,7 @@ impl<'a> Session<'a> {
         value_json: &str,
         written: &mut Vec<(String, String)>,
     ) -> ActionOutcome {
-        let full = self.root.join(path);
-        let existing = match read_text(&full) {
+        let existing = match read_text(&self.root.join(path)) {
             Ok(existing) => existing,
             Err(e) => return ActionOutcome::Failed(e.to_string()),
         };
@@ -778,11 +483,7 @@ impl<'a> Session<'a> {
             Ok(edited) => edited,
             Err(e) => return ActionOutcome::Failed(e.to_string()),
         };
-        self.journal.push(Undo::RestoreFile {
-            path: path.to_string(),
-            prior: existing,
-        });
-        if let Err(e) = write_file(&full, &content) {
+        if let Err(e) = self.tx.write(path, existing, &content) {
             return ActionOutcome::Failed(e.to_string());
         }
         // Hash the canonical value, so layout changes never read as drift.
@@ -801,8 +502,7 @@ impl<'a> Session<'a> {
         value_json: &str,
         written: &mut Vec<(String, String)>,
     ) -> ActionOutcome {
-        let full = self.root.join(path);
-        let existing = match read_text(&full) {
+        let existing = match read_text(&self.root.join(path)) {
             Ok(existing) => existing,
             Err(e) => return ActionOutcome::Failed(e.to_string()),
         };
@@ -818,11 +518,7 @@ impl<'a> Session<'a> {
             Ok(edited) => edited,
             Err(e) => return ActionOutcome::Failed(e.to_string()),
         };
-        self.journal.push(Undo::RestoreFile {
-            path: path.to_string(),
-            prior: existing,
-        });
-        if let Err(e) = write_file(&full, &content) {
+        if let Err(e) = self.tx.write(path, existing, &content) {
             return ActionOutcome::Failed(e.to_string());
         }
         written.push((
@@ -856,13 +552,13 @@ impl<'a> Session<'a> {
             ),
             Ok(_) => {
                 match undo {
-                    Some((program, args)) => self.journal.push(Undo::RunCommand {
-                        program: program.clone(),
-                        args: args.clone(),
-                    }),
-                    None => self
-                        .irreversible
-                        .push(format!("`{}` has no undo", command_line(program, &args))),
+                    Some((program, args)) => {
+                        self.tx.record_command_undo(program.clone(), args.clone());
+                    }
+                    None => self.tx.mark_irreversible(format!(
+                        "`{}` has no undo",
+                        command_line(program, &args)
+                    )),
                 }
                 ActionOutcome::Applied { note: None }
             }
@@ -892,50 +588,6 @@ impl<'a> Session<'a> {
             })
             .collect()
     }
-
-    /// Take back this run's side effects, newest first.
-    fn unwind(&mut self) -> (Vec<String>, Vec<String>) {
-        let mut reverted = Vec::new();
-        let mut not_reverted = Vec::new();
-        while let Some(undo) = self.journal.pop() {
-            match undo {
-                Undo::RestoreFile {
-                    path,
-                    prior: Some(old),
-                } => match write_file(&self.root.join(&path), &old) {
-                    Ok(()) => reverted.push(format!("restored {path}")),
-                    Err(e) => not_reverted.push(format!("{path} left changed: {e}")),
-                },
-                Undo::RestoreFile { path, prior: None } => {
-                    match fs::remove_file(self.root.join(&path)) {
-                        Ok(()) => reverted.push(format!("removed {path}")),
-                        // Never created: the write is what failed.
-                        Err(e) if e.kind() == std::io::ErrorKind::NotFound => {}
-                        Err(e) => not_reverted.push(format!("{path} left in place: {e}")),
-                    }
-                }
-                Undo::RunCommand { program, args } => {
-                    let line = command_line(&program, &args);
-                    match self.runner.run(&program, &args, self.root) {
-                        Ok(out) if out.status == 0 => reverted.push(format!("ran `{line}`")),
-                        _ => not_reverted.push(format!("`{line}` did not undo cleanly")),
-                    }
-                }
-            }
-        }
-        not_reverted.append(&mut self.irreversible);
-        (reverted, not_reverted)
-    }
-}
-
-/// The superdev-managed tools `.mise.toml` pins, in registry order. Naming
-/// them is what keeps `mise install` off the repo's own toolchain.
-fn managed_pins_in(content: &str) -> Vec<String> {
-    crate::components::MANAGED_MISE_TOOLS
-        .iter()
-        .filter(|tool| matches!(mise::current_pin(content, tool), Ok(Some(_))))
-        .map(|tool| (*tool).to_string())
-        .collect()
 }
 
 /// A missing program is a skip for optional actions, a failure otherwise.
@@ -953,230 +605,6 @@ fn command_line(program: &str, args: &[String]) -> String {
     format!("{program} {}", args.join(" "))
         .trim_end()
         .to_string()
-}
-
-/// File content, or None when the file is absent. Anything unreadable — a
-/// binary file at a target path included — is an error, never an overwrite.
-pub(crate) fn read_text(path: &Path) -> Result<Option<String>> {
-    match fs::read_to_string(path) {
-        Ok(s) => Ok(Some(s)),
-        Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(None),
-        Err(e) => Err(Error::Io {
-            path: path.into(),
-            source: e,
-        }),
-    }
-}
-
-/// Every file under `dir`, recursively, in sorted order.
-fn collect_files(dir: &Path, into: &mut Vec<std::path::PathBuf>) -> Result<()> {
-    let mut entries: Vec<_> = fs::read_dir(dir)
-        .map_err(|e| Error::Io {
-            path: dir.into(),
-            source: e,
-        })?
-        .filter_map(|e| e.ok().map(|e| e.path()))
-        .collect();
-    entries.sort();
-    for path in entries {
-        if path.is_dir() {
-            collect_files(&path, into)?;
-        } else {
-            into.push(path);
-        }
-    }
-    Ok(())
-}
-
-/// Set one dotted key path in a JSON document, creating missing objects on the
-/// way. Returns the file content to write and the canonical value text, which
-/// is what the lock hashes.
-///
-/// Every other key survives; their order does not, because serde_json sorts
-/// object keys on the way out.
-fn edit_json_key(
-    path: &str,
-    json: &str,
-    pointer: &str,
-    value_json: &str,
-) -> Result<(String, String)> {
-    let bad = |message: String| Error::Toml {
-        path: path.into(),
-        message,
-    };
-    let mut root: serde_json::Value = serde_json::from_str(json).map_err(|e| bad(e.to_string()))?;
-    let value: serde_json::Value = serde_json::from_str(value_json)
-        .map_err(|e| bad(format!("invalid value `{value_json}`: {e}")))?;
-
-    let mut segments: Vec<&str> = pointer.split('.').collect();
-    let key = segments.pop().expect("split yields at least one segment");
-    // Names the container the walk is standing in, for the error message.
-    let mut container = "the root".to_string();
-    let mut cursor = &mut root;
-    for segment in segments {
-        cursor = match cursor.as_object_mut() {
-            Some(map) => map
-                .entry(segment)
-                .or_insert_with(|| serde_json::Value::Object(serde_json::Map::new())),
-            None => return Err(bad(format!("{container} is not a JSON object"))),
-        };
-        container = format!("`{segment}`");
-    }
-    match cursor.as_object_mut() {
-        Some(map) => map.insert(key.to_string(), value.clone()),
-        None => return Err(bad(format!("{container} is not a JSON object"))),
-    };
-
-    let mut content = serde_json::to_string_pretty(&root).expect("a parsed value re-serialises");
-    content.push('\n');
-    Ok((content, value.to_string()))
-}
-
-/// Ensure the array at a dotted key path contains `value_json`: the first
-/// element whose serialised form contains `marker` is replaced, else the
-/// element is appended. Missing objects on the way — and the array itself —
-/// are created. Returns the file content to write and the canonical element
-/// text, which is what the lock hashes.
-fn edit_json_array_element(
-    path: &str,
-    json: &str,
-    pointer: &str,
-    marker: &str,
-    value_json: &str,
-) -> Result<(String, String)> {
-    let bad = |message: String| Error::Toml {
-        path: path.into(),
-        message,
-    };
-    let mut root: serde_json::Value = serde_json::from_str(json).map_err(|e| bad(e.to_string()))?;
-    let value: serde_json::Value = serde_json::from_str(value_json)
-        .map_err(|e| bad(format!("invalid value `{value_json}`: {e}")))?;
-
-    let mut container = "the root".to_string();
-    let mut segment_name = "the root";
-    let mut cursor = &mut root;
-    for segment in pointer.split('.') {
-        cursor = match cursor.as_object_mut() {
-            Some(map) => map
-                .entry(segment)
-                .or_insert_with(|| serde_json::Value::Object(serde_json::Map::new())),
-            None => return Err(bad(format!("{container} is not a JSON object"))),
-        };
-        container = format!("`{segment}`");
-        segment_name = segment;
-    }
-    // The walk mints an empty object for a missing final segment; the pointer
-    // names an array, so turn that placeholder into one.
-    if cursor.as_object().is_some_and(serde_json::Map::is_empty) {
-        *cursor = serde_json::Value::Array(Vec::new());
-    }
-    let Some(items) = cursor.as_array_mut() else {
-        return Err(bad(format!("`{segment_name}` is not a JSON array")));
-    };
-    match items
-        .iter_mut()
-        .find(|item| item.to_string().contains(marker))
-    {
-        Some(item) => *item = value.clone(),
-        None => items.push(value.clone()),
-    }
-
-    let mut content = serde_json::to_string_pretty(&root).expect("a parsed value re-serialises");
-    content.push('\n');
-    Ok((content, value.to_string()))
-}
-
-/// Split a lock-style pointer into dotted segments and the optional trailing
-/// `[marker]` naming an array element.
-pub(crate) fn parse_pointer(pointer: &str) -> (Vec<&str>, Option<&str>) {
-    match pointer.split_once('[') {
-        Some((dotted, rest)) => (
-            dotted.split('.').collect(),
-            Some(rest.strip_suffix(']').unwrap_or(rest)),
-        ),
-        None => (pointer.split('.').collect(), None),
-    }
-}
-
-/// The canonical value text at `pointer`: the object key's value, or the
-/// array element whose serialised form contains the marker — the same rule
-/// `edit_json_array_element` matches by. `Ok(None)` when absent.
-pub(crate) fn json_value_at(path: &str, json: &str, pointer: &str) -> Result<Option<String>> {
-    let root: serde_json::Value = serde_json::from_str(json).map_err(|e| Error::Toml {
-        path: path.into(),
-        message: e.to_string(),
-    })?;
-    let (segments, marker) = parse_pointer(pointer);
-    let mut cursor = &root;
-    for segment in segments {
-        match cursor.get(segment) {
-            Some(next) => cursor = next,
-            None => return Ok(None),
-        }
-    }
-    let value = match marker {
-        None => Some(cursor),
-        Some(marker) => cursor
-            .as_array()
-            .and_then(|items| items.iter().find(|item| item.to_string().contains(marker))),
-    };
-    Ok(value.map(ToString::to_string))
-}
-
-/// Remove the entry `pointer` names. Returns the new file content and the
-/// removed canonical value; `Ok(None)` when absent. Empty parents stay.
-pub(crate) fn remove_json_pointer(
-    path: &str,
-    json: &str,
-    pointer: &str,
-) -> Result<Option<(String, String)>> {
-    let bad = |message: String| Error::Toml {
-        path: path.into(),
-        message,
-    };
-    let mut root: serde_json::Value = serde_json::from_str(json).map_err(|e| bad(e.to_string()))?;
-    let (mut segments, marker) = parse_pointer(pointer);
-    let last = if marker.is_none() {
-        segments.pop()
-    } else {
-        None
-    };
-    let mut cursor = &mut root;
-    for segment in segments {
-        match cursor.get_mut(segment) {
-            Some(next) => cursor = next,
-            None => return Ok(None),
-        }
-    }
-    let removed = match (last, marker) {
-        (Some(key), None) => cursor.as_object_mut().and_then(|map| map.remove(key)),
-        (_, Some(marker)) => cursor.as_array_mut().and_then(|items| {
-            let index = items
-                .iter()
-                .position(|item| item.to_string().contains(marker))?;
-            Some(items.remove(index))
-        }),
-        (None, None) => None,
-    };
-    Ok(removed.map(|value| {
-        let mut content =
-            serde_json::to_string_pretty(&root).expect("a parsed value re-serialises");
-        content.push('\n');
-        (content, value.to_string())
-    }))
-}
-
-fn write_file(path: &Path, content: &str) -> Result<()> {
-    if let Some(parent) = path.parent() {
-        fs::create_dir_all(parent).map_err(|e| Error::Io {
-            path: parent.into(),
-            source: e,
-        })?;
-    }
-    fs::write(path, content).map_err(|e| Error::Io {
-        path: path.into(),
-        source: e,
-    })
 }
 
 #[cfg(test)]
@@ -1215,279 +643,6 @@ mod tests {
         );
         assert!(lock.files.contains_key("a/b.txt"));
         assert_eq!(lock.components["knowledge"].provider, "aokf");
-    }
-
-    #[test]
-    fn groups_mise_pins_and_installs_once() {
-        let dir = tempfile::tempdir().unwrap();
-        let fake = FakeRunner::new();
-        let manifest = Manifest::default_for("0.1.0", &[]);
-        let mut lock = Lock::default();
-        let planned = vec![
-            Planned {
-                capability: Some(crate::capability::Capability::Workflows),
-                provider: "superpowers".into(),
-                actions: vec![Action::SetMisePin {
-                    tool: "http:superpowers".into(),
-                    value_toml: "\"6.2.0\"".into(),
-                }],
-            },
-            Planned {
-                capability: Some(crate::capability::Capability::CodeIndex),
-                provider: "codegraph".into(),
-                actions: vec![
-                    Action::SetMisePin {
-                        tool: "npm:codegraph".into(),
-                        value_toml: "\"1.0.0\"".into(),
-                    },
-                    Action::Run {
-                        program: "codegraph".into(),
-                        args: vec!["init".into()],
-                        purpose: "build the code index".into(),
-                        undo: None,
-                        optional: false,
-                    },
-                ],
-            },
-        ];
-        let result = apply(dir.path(), &fake, &manifest, &planned, &mut lock);
-        assert!(result.ok);
-        let mise = std::fs::read_to_string(dir.path().join(".mise.toml")).unwrap();
-        assert!(mise.contains("http:superpowers"));
-        assert!(mise.contains("npm:codegraph"));
-        let calls = fake.calls();
-        // One install, naming every pin this run wrote — and nothing else.
-        assert_eq!(
-            calls
-                .iter()
-                .filter(|c| c.starts_with("mise install"))
-                .collect::<Vec<_>>(),
-            vec!["mise install http:superpowers npm:codegraph"]
-        );
-        // Providers need their pinned tools installed before they run, and
-        // mise will not install from a config it has not been told to trust.
-        let trust = calls.iter().position(|c| c == "mise trust").unwrap();
-        let install = calls
-            .iter()
-            .position(|c| c.starts_with("mise install"))
-            .unwrap();
-        let init = calls.iter().position(|c| c == "codegraph init").unwrap();
-        assert_eq!(trust + 1, install, "calls: {calls:?}");
-        assert!(
-            install < init,
-            "mise install must precede provider commands"
-        );
-        // Both pins are hashed into the lock under their mise keys.
-        assert!(
-            lock.files
-                .contains_key(&crate::components::mise::pin_lock_key("http:superpowers"))
-        );
-    }
-
-    #[test]
-    fn committed_pins_are_installed_before_a_run() {
-        let dir = tempfile::tempdir().unwrap();
-        // A fresh clone: the pin is already committed, so nothing edits it.
-        std::fs::write(
-            dir.path().join(".mise.toml"),
-            mise::set_pin("", "http:superpowers", "{ version = \"6.2.0\" }").unwrap(),
-        )
-        .unwrap();
-        let fake = FakeRunner::new();
-        let manifest = Manifest::default_for("0.1.0", &[]);
-        let mut lock = Lock::default();
-        let planned = vec![Planned {
-            capability: Some(crate::capability::Capability::Workflows),
-            provider: "superpowers".into(),
-            actions: vec![Action::Run {
-                program: "claude".into(),
-                args: vec!["plugin".into(), "install".into(), "superpowers".into()],
-                purpose: "install".into(),
-                undo: None,
-                optional: true,
-            }],
-        }];
-        let result = apply(dir.path(), &fake, &manifest, &planned, &mut lock);
-        assert!(result.ok);
-        let calls = fake.calls();
-        let install = calls
-            .iter()
-            .position(|c| c == "mise install http:superpowers")
-            .unwrap_or_else(|| panic!("no targeted `mise install` in {calls:?}"));
-        let trust = calls
-            .iter()
-            .position(|c| c == "mise trust")
-            .unwrap_or_else(|| panic!("no `mise trust` in {calls:?}"));
-        let plugin = calls
-            .iter()
-            .position(|c| c == "claude plugin install superpowers")
-            .unwrap();
-        assert_eq!(trust + 1, install, "calls: {calls:?}");
-        assert!(install < plugin, "calls: {calls:?}");
-        // The entry that runs the command carries both steps in its report.
-        let described: Vec<&str> = result.reports[0]
-            .outcomes
-            .iter()
-            .map(|(d, _)| d.as_str())
-            .collect();
-        assert!(
-            described
-                .iter()
-                .any(|d| d.contains("mise trust") && d.contains("trust the repo's mise config")),
-            "outcomes: {described:?}"
-        );
-        assert!(
-            described.iter().any(|d| d.contains("mise install")),
-            "outcomes: {described:?}"
-        );
-    }
-
-    #[test]
-    fn install_never_names_the_repos_own_tools() {
-        let dir = tempfile::tempdir().unwrap();
-        // A repo with a rich toolchain of its own, one entry of which cannot
-        // build on this machine. Installing it is not superdev's business.
-        std::fs::write(
-            dir.path().join(".mise.toml"),
-            "[tools]\nnode = \"24.15\"\n\"cargo:cargo-ndk\" = '4.1.2'\n",
-        )
-        .unwrap();
-        let fake = FakeRunner::new();
-        let manifest = Manifest::default_for("0.1.0", &[]);
-        let mut lock = Lock::default();
-        let planned = vec![Planned {
-            capability: Some(crate::capability::Capability::Workflows),
-            provider: "superpowers".into(),
-            actions: vec![Action::SetMisePin {
-                tool: "http:superpowers".into(),
-                value_toml: "\"6.2.0\"".into(),
-            }],
-        }];
-        let result = apply(dir.path(), &fake, &manifest, &planned, &mut lock);
-        assert!(result.ok);
-        let installs: Vec<String> = fake
-            .calls()
-            .into_iter()
-            .filter(|c| c.starts_with("mise install"))
-            .collect();
-        assert_eq!(
-            installs,
-            vec!["mise install http:superpowers"],
-            "superdev installs its own pins, never the repo's"
-        );
-        // The user's tools stay in the file, untouched and uninstalled.
-        let mise = std::fs::read_to_string(dir.path().join(".mise.toml")).unwrap();
-        assert!(mise.contains("cargo:cargo-ndk"));
-    }
-
-    #[test]
-    fn a_failed_trust_stops_the_run_and_unwinds_the_pin_edit() {
-        let dir = tempfile::tempdir().unwrap();
-        let fake = FakeRunner::new();
-        fake.script(
-            "mise trust",
-            Output {
-                status: 1,
-                stdout: String::new(),
-                stderr: "not trusted".into(),
-            },
-        );
-        let manifest = Manifest::default_for("0.1.0", &[]);
-        let mut lock = Lock::default();
-        let planned = vec![Planned {
-            capability: Some(crate::capability::Capability::Workflows),
-            provider: "superpowers".into(),
-            actions: vec![
-                Action::SetMisePin {
-                    tool: "http:superpowers".into(),
-                    value_toml: "\"6.2.0\"".into(),
-                },
-                Action::Run {
-                    program: "claude".into(),
-                    args: vec!["plugin".into(), "install".into(), "superpowers".into()],
-                    purpose: "install".into(),
-                    undo: None,
-                    optional: false,
-                },
-            ],
-        }];
-        let result = apply(dir.path(), &fake, &manifest, &planned, &mut lock);
-        assert!(!result.ok);
-        let calls = fake.calls();
-        assert_eq!(calls, vec!["mise trust"], "install must not follow");
-        // The pin edit is taken back, exactly as a failed install would.
-        assert!(!dir.path().join(".mise.toml").exists());
-        assert!(result.reverted.iter().any(|r| r.contains(".mise.toml")));
-        assert!(matches!(
-            result.reports[0].outcomes.last().unwrap(),
-            (d, ActionOutcome::Failed(e)) if d.contains("mise trust") && e.contains("not trusted")
-        ));
-        assert!(lock.files.is_empty());
-    }
-
-    #[test]
-    fn nothing_to_install_without_runs_or_managed_pins() {
-        let dir = tempfile::tempdir().unwrap();
-        let fake = FakeRunner::new();
-        let manifest = Manifest::default_for("0.1.0", &[]);
-        let mut lock = Lock::default();
-        // A run, but no `.mise.toml` at all.
-        let run = Planned {
-            capability: None,
-            provider: "superdev".into(),
-            actions: vec![Action::Run {
-                program: "claude".into(),
-                args: vec!["plugin".into(), "list".into()],
-                purpose: "list".into(),
-                undo: None,
-                optional: true,
-            }],
-        };
-        assert!(
-            apply(
-                dir.path(),
-                &fake,
-                &manifest,
-                std::slice::from_ref(&run),
-                &mut lock
-            )
-            .ok
-        );
-        assert!(
-            !fake
-                .calls()
-                .iter()
-                .any(|c| c == "mise install" || c == "mise trust")
-        );
-
-        // A `.mise.toml` pinning only the user's own tools.
-        std::fs::write(dir.path().join(".mise.toml"), "[tools]\nnode = \"24\"\n").unwrap();
-        assert!(apply(dir.path(), &fake, &manifest, &[run], &mut lock).ok);
-        assert!(
-            !fake
-                .calls()
-                .iter()
-                .any(|c| c == "mise install" || c == "mise trust")
-        );
-
-        // A managed pin, but nothing to run.
-        std::fs::write(
-            dir.path().join(".mise.toml"),
-            mise::set_pin("", "npm:@colbymchenry/codegraph", "\"1.5.0\"").unwrap(),
-        )
-        .unwrap();
-        let write_only = Planned {
-            capability: None,
-            provider: "superdev".into(),
-            actions: vec![write_owned("a.txt")],
-        };
-        assert!(apply(dir.path(), &fake, &manifest, &[write_only], &mut lock).ok);
-        assert!(
-            !fake
-                .calls()
-                .iter()
-                .any(|c| c == "mise install" || c == "mise trust")
-        );
     }
 
     #[test]
@@ -1918,53 +1073,6 @@ mod tests {
     }
 
     #[test]
-    fn pointers_parse_navigate_and_remove() {
-        assert_eq!(parse_pointer("a.b"), (vec!["a", "b"], None));
-        assert_eq!(
-            parse_pointer("hooks.PostToolUse[superdev aokf hook validate]"),
-            (
-                vec!["hooks", "PostToolUse"],
-                Some("superdev aokf hook validate")
-            )
-        );
-
-        let json = r#"{"mcpServers":{"superdev-aokf":{"command":"superdev"},"mine":{}}}"#;
-        let value = json_value_at("f", json, "mcpServers.superdev-aokf")
-            .unwrap()
-            .unwrap();
-        assert!(value.contains("superdev"));
-        assert_eq!(json_value_at("f", json, "mcpServers.gone").unwrap(), None);
-        assert!(json_value_at("f", "not json", "a").is_err());
-
-        let (content, removed) = remove_json_pointer("f", json, "mcpServers.superdev-aokf")
-            .unwrap()
-            .unwrap();
-        assert!(removed.contains("superdev"));
-        let root: serde_json::Value = serde_json::from_str(&content).unwrap();
-        assert!(root["mcpServers"].get("superdev-aokf").is_none());
-        // The user's key and the (possibly emptied) parent survive.
-        assert!(root["mcpServers"].get("mine").is_some());
-        assert_eq!(
-            remove_json_pointer("f", json, "mcpServers.gone").unwrap(),
-            None
-        );
-
-        let hooks = r#"{"hooks":{"PostToolUse":[{"matcher":"Agent","hooks":[]},{"matcher":"Edit|Write","hooks":[{"type":"command","command":"superdev aokf hook validate"}]}]}}"#;
-        let pointer = "hooks.PostToolUse[superdev aokf hook validate]";
-        assert!(
-            json_value_at("f", hooks, pointer)
-                .unwrap()
-                .unwrap()
-                .contains("Edit|Write")
-        );
-        let (content, _) = remove_json_pointer("f", hooks, pointer).unwrap().unwrap();
-        let root: serde_json::Value = serde_json::from_str(&content).unwrap();
-        let items = root["hooks"]["PostToolUse"].as_array().unwrap();
-        assert_eq!(items.len(), 1, "only superdev's element goes");
-        assert_eq!(items[0]["matcher"], "Agent");
-    }
-
-    #[test]
     fn plan_runs_every_component() {
         let dir = tempfile::tempdir().unwrap();
         let manifest = Manifest::default_for("0.1.0", &[]);
@@ -2087,7 +1195,7 @@ mod tests {
                 note: Some("overwrote a user-edited file (backed up)".into())
             }
         );
-        let backups = std::fs::read_dir(dir.path().join(".superdev/cache/backup"))
+        let backups = std::fs::read_dir(dir.path().join(tx::BACKUP_DIR))
             .unwrap()
             .map(|e| e.unwrap().path().join("owned.txt"))
             .collect::<Vec<_>>();
@@ -2193,37 +1301,6 @@ mod tests {
         // The first entry completed, so its hashes are staged in the lock —
         // which the caller discards, because the run is not ok.
         assert!(lock.files.contains_key("owned.txt"));
-    }
-
-    #[test]
-    fn mise_install_failure_fails_the_run() {
-        let dir = tempfile::tempdir().unwrap();
-        let fake = FakeRunner::new();
-        fake.script(
-            "mise install",
-            Output {
-                status: 1,
-                stdout: String::new(),
-                stderr: "no network".into(),
-            },
-        );
-        let manifest = Manifest::default_for("0.1.0", &[]);
-        let mut lock = Lock::default();
-        let planned = vec![Planned {
-            capability: Some(crate::capability::Capability::CodeIndex),
-            provider: "codegraph".into(),
-            actions: vec![Action::SetMisePin {
-                tool: "npm:codegraph".into(),
-                value_toml: "\"1.0.0\"".into(),
-            }],
-        }];
-        let result = apply(dir.path(), &fake, &manifest, &planned, &mut lock);
-        assert!(!result.ok);
-        assert!(!dir.path().join(".mise.toml").exists());
-        assert!(matches!(
-            result.reports[0].outcomes.last().unwrap(),
-            (d, ActionOutcome::Failed(_)) if d.contains("mise install")
-        ));
     }
 
     #[test]
@@ -2353,7 +1430,7 @@ mod tests {
         assert!(result.ok);
         assert!(!dir.path().join("old.txt").exists());
         assert!(!lock.files.contains_key("old.txt"));
-        let backups: Vec<_> = std::fs::read_dir(dir.path().join(BACKUP_DIR))
+        let backups: Vec<_> = std::fs::read_dir(dir.path().join(tx::BACKUP_DIR))
             .unwrap()
             .map(|e| e.unwrap().path().join("old.txt"))
             .collect();
@@ -2517,299 +1594,5 @@ mod tests {
             "superdev content"
         );
         assert!(result.reverted.iter().any(|r| r.contains("old.txt")));
-    }
-
-    /// A fake checkout: skills/engineering/{alpha,beta}, skills/productivity/gamma.
-    /// alpha has a nested reference file; a stray README sits beside the dirs.
-    fn fake_checkout() -> tempfile::TempDir {
-        let dir = tempfile::tempdir().unwrap();
-        let write = |rel: &str, content: &str| {
-            let p = dir.path().join(rel);
-            std::fs::create_dir_all(p.parent().unwrap()).unwrap();
-            std::fs::write(p, content).unwrap();
-        };
-        write("skills/engineering/alpha/SKILL.md", "alpha v1");
-        write("skills/engineering/alpha/refs/DEEP.md", "alpha deep");
-        write("skills/engineering/beta/SKILL.md", "beta v1");
-        write("skills/engineering/README.md", "not a skill");
-        write("skills/productivity/gamma/SKILL.md", "gamma v1");
-        dir
-    }
-
-    fn materialise_action(custom: &[&str]) -> Action {
-        Action::MaterialiseSkills {
-            tool: "http:mattpocock-skills".into(),
-            source_dirs: vec!["skills/engineering".into(), "skills/productivity".into()],
-            custom: custom.iter().map(|c| (*c).to_string()).collect(),
-        }
-    }
-
-    fn where_scripted(checkout: &std::path::Path) -> FakeRunner {
-        let fake = FakeRunner::new();
-        fake.script(
-            "mise where http:mattpocock-skills",
-            Output {
-                status: 0,
-                stdout: format!("{}\n", checkout.display()),
-                stderr: String::new(),
-            },
-        );
-        fake
-    }
-
-    #[test]
-    fn materialise_writes_locks_and_attributes() {
-        let checkout = fake_checkout();
-        let dir = tempfile::tempdir().unwrap();
-        let fake = where_scripted(checkout.path());
-        let manifest = Manifest::default_for("0.1.0", &[]);
-        let mut lock = Lock::default();
-        let planned = vec![Planned {
-            capability: Some(crate::capability::Capability::Workflows),
-            provider: "mattpocock-skills".into(),
-            actions: vec![materialise_action(&[])],
-        }];
-        let result = apply(dir.path(), &fake, &manifest, &planned, &mut lock);
-        assert!(result.ok, "{:?}", result.reports);
-        assert_eq!(
-            std::fs::read_to_string(dir.path().join(".claude/skills/alpha/refs/DEEP.md")).unwrap(),
-            "alpha deep"
-        );
-        assert!(dir.path().join(".claude/skills/gamma/SKILL.md").exists());
-        // The stray README is not a skill directory and is not copied.
-        assert!(!dir.path().join(".claude/skills/README.md").exists());
-        let key = ".claude/skills/alpha/SKILL.md";
-        assert_eq!(lock.files[key], sha256_hex(b"alpha v1"));
-        assert_eq!(lock.owners[key], "workflows");
-        assert_eq!(lock.owners.len(), 4);
-    }
-
-    #[test]
-    fn materialise_reconciles_dropped_skills_and_skips_custom() {
-        let checkout = fake_checkout();
-        let dir = tempfile::tempdir().unwrap();
-        // A managed pin already committed, so the run has tools to install.
-        std::fs::write(
-            dir.path().join(".mise.toml"),
-            mise::set_pin("", "http:superpowers", "\"6.2.0\"").unwrap(),
-        )
-        .unwrap();
-        let fake = where_scripted(checkout.path());
-        let manifest = Manifest::default_for("0.1.0", &[]);
-        // A previously materialised skill the checkout no longer ships…
-        std::fs::create_dir_all(dir.path().join(".claude/skills/old")).unwrap();
-        std::fs::write(dir.path().join(".claude/skills/old/SKILL.md"), "old v1").unwrap();
-        // …and one the user edited since.
-        std::fs::create_dir_all(dir.path().join(".claude/skills/mine")).unwrap();
-        std::fs::write(dir.path().join(".claude/skills/mine/SKILL.md"), "edited").unwrap();
-        let mut lock = Lock::default();
-        for (key, content) in [
-            (".claude/skills/old/SKILL.md", "old v1"),
-            (".claude/skills/mine/SKILL.md", "mine v1"),
-        ] {
-            lock.files
-                .insert(key.into(), sha256_hex(content.as_bytes()));
-            lock.owners.insert(key.into(), "workflows".into());
-        }
-        let planned = vec![Planned {
-            capability: Some(crate::capability::Capability::Workflows),
-            provider: "mattpocock-skills".into(),
-            actions: vec![materialise_action(&["beta"])],
-        }];
-        let result = apply(dir.path(), &fake, &manifest, &planned, &mut lock);
-        assert!(result.ok, "{:?}", result.reports);
-        // alpha's two files and gamma's one; old swept, mine released.
-        let materialised = result.reports[0]
-            .outcomes
-            .iter()
-            .find(|(d, _)| d.starts_with("materialise"))
-            .map(|(_, o)| o.clone())
-            .unwrap_or_else(|| panic!("outcomes: {:?}", result.reports[0].outcomes));
-        assert_eq!(
-            materialised,
-            ActionOutcome::Applied {
-                note: Some("wrote 3, kept 0, removed 1, released 1".into())
-            }
-        );
-        // Dropped and unmodified: deleted, with a backup.
-        assert!(!dir.path().join(".claude/skills/old/SKILL.md").exists());
-        // User-edited: left in place, released from the lock.
-        assert_eq!(
-            std::fs::read_to_string(dir.path().join(".claude/skills/mine/SKILL.md")).unwrap(),
-            "edited"
-        );
-        assert!(!lock.files.contains_key(".claude/skills/old/SKILL.md"));
-        assert!(!lock.files.contains_key(".claude/skills/mine/SKILL.md"));
-        assert!(
-            lock.owners
-                .keys()
-                .all(|k| !k.contains("/old/") && !k.contains("/mine/"))
-        );
-        // Custom skill: never written, never attributed.
-        assert!(!dir.path().join(".claude/skills/beta").exists());
-        assert!(!lock.files.keys().any(|k| k.contains("/beta/")));
-        // The pinned tool is installed before the checkout is read.
-        let calls = fake.calls();
-        let install = calls
-            .iter()
-            .position(|c| c.starts_with("mise install"))
-            .unwrap();
-        let where_ = calls
-            .iter()
-            .position(|c| c.starts_with("mise where"))
-            .unwrap();
-        assert!(install < where_, "calls: {calls:?}");
-    }
-
-    #[test]
-    fn materialise_failures_unwind() {
-        // No checkout: `mise where` fails.
-        let dir = tempfile::tempdir().unwrap();
-        let fake = FakeRunner::new();
-        fake.script(
-            "mise where http:mattpocock-skills",
-            Output {
-                status: 1,
-                stdout: String::new(),
-                stderr: "not installed".into(),
-            },
-        );
-        let manifest = Manifest::default_for("0.1.0", &[]);
-        let mut lock = Lock::default();
-        let planned = vec![Planned {
-            capability: Some(crate::capability::Capability::Workflows),
-            provider: "mattpocock-skills".into(),
-            actions: vec![materialise_action(&[])],
-        }];
-        let result = apply(dir.path(), &fake, &manifest, &planned, &mut lock);
-        assert!(!result.ok);
-        assert!(lock.files.is_empty());
-
-        // Non-UTF-8 checkout content: fails and unwinds the files written first.
-        let checkout = fake_checkout();
-        std::fs::write(
-            checkout.path().join("skills/productivity/gamma/SKILL.md"),
-            [0xff, 0xfe],
-        )
-        .unwrap();
-        let dir = tempfile::tempdir().unwrap();
-        let fake = where_scripted(checkout.path());
-        let mut lock = Lock::default();
-        let result = apply(dir.path(), &fake, &manifest, &planned, &mut lock);
-        assert!(!result.ok);
-        assert!(
-            !dir.path().join(".claude/skills/alpha/SKILL.md").exists(),
-            "earlier writes must unwind"
-        );
-    }
-
-    #[test]
-    fn a_converged_materialise_rewrites_nothing() {
-        let checkout = fake_checkout();
-        let dir = tempfile::tempdir().unwrap();
-        let manifest = Manifest::default_for("0.1.0", &[]);
-        let planned = vec![Planned {
-            capability: Some(crate::capability::Capability::Workflows),
-            provider: "mattpocock-skills".into(),
-            actions: vec![materialise_action(&[])],
-        }];
-        let mut lock = Lock::default();
-        let fake = where_scripted(checkout.path());
-        assert!(apply(dir.path(), &fake, &manifest, &planned, &mut lock).ok);
-        let fake = where_scripted(checkout.path());
-        let result = apply(dir.path(), &fake, &manifest, &planned, &mut lock);
-        assert!(result.ok);
-        // Every file was new on the first run and unchanged on the second, so
-        // nothing was ever overwritten and no backup exists.
-        let backups = std::fs::read_dir(dir.path().join(BACKUP_DIR))
-            .map(|d| d.count())
-            .unwrap_or(0);
-        assert_eq!(backups, 0, "an unchanged file is never backed up");
-        assert_eq!(lock.owners.len(), 4);
-        assert_eq!(
-            result.reports[0].outcomes[0].1,
-            ActionOutcome::Applied {
-                note: Some("wrote 0, kept 4, removed 0, released 0".into())
-            }
-        );
-    }
-
-    #[test]
-    fn materialise_notes_the_user_edits_it_overwrote() {
-        let checkout = fake_checkout();
-        let dir = tempfile::tempdir().unwrap();
-        // A skill file the user rewrote: the lock never saw this content.
-        std::fs::create_dir_all(dir.path().join(".claude/skills/beta")).unwrap();
-        std::fs::write(dir.path().join(".claude/skills/beta/SKILL.md"), "mine").unwrap();
-        let fake = where_scripted(checkout.path());
-        let manifest = Manifest::default_for("0.1.0", &[]);
-        let mut lock = Lock::default();
-        let planned = vec![Planned {
-            capability: Some(crate::capability::Capability::Workflows),
-            provider: "mattpocock-skills".into(),
-            actions: vec![materialise_action(&[])],
-        }];
-        let result = apply(dir.path(), &fake, &manifest, &planned, &mut lock);
-        assert!(result.ok, "{:?}", result.reports);
-        assert_eq!(
-            result.reports[0].outcomes[0].1,
-            ActionOutcome::Applied {
-                note: Some(
-                    "wrote 4, kept 0, removed 0, released 0; overwrote 1 user-edited (backed up)"
-                        .into()
-                )
-            }
-        );
-        assert_eq!(
-            std::fs::read_to_string(dir.path().join(".claude/skills/beta/SKILL.md")).unwrap(),
-            "beta v1"
-        );
-    }
-
-    /// A provider switch in one run: the old skill pack's file is orphaned
-    /// (the orphan entry is planned last, from pre-run claims) while the new
-    /// provider materialises the very same path. The materialise must win.
-    #[test]
-    fn a_materialised_key_survives_the_same_runs_orphan_removal() {
-        let checkout = fake_checkout();
-        let dir = tempfile::tempdir().unwrap();
-        let key = ".claude/skills/alpha/SKILL.md";
-        // The old pack's file, on disk and in the lock, unowned.
-        std::fs::create_dir_all(dir.path().join(".claude/skills/alpha")).unwrap();
-        std::fs::write(dir.path().join(key), "pack alpha").unwrap();
-        let mut lock = Lock::default();
-        lock.files.insert(key.into(), sha256_hex(b"pack alpha"));
-        let fake = where_scripted(checkout.path());
-        let manifest = Manifest::default_for("0.1.0", &[]);
-        let planned = vec![
-            Planned {
-                capability: Some(crate::capability::Capability::Workflows),
-                provider: "mattpocock-skills".into(),
-                actions: vec![materialise_action(&[])],
-            },
-            Planned {
-                capability: None,
-                provider: "orphan".into(),
-                actions: vec![Action::RemoveFile {
-                    path: key.into(),
-                    reason: "no longer claimed".into(),
-                }],
-            },
-        ];
-        let result = apply(dir.path(), &fake, &manifest, &planned, &mut lock);
-        assert!(result.ok, "{:?}", result.reports);
-        // The orphan still reports the skip: the file it saw is not the one
-        // it planned against.
-        assert_eq!(
-            result.reports[1].outcomes[0].1,
-            ActionOutcome::Skipped("changed since superdev wrote it — left in place".into())
-        );
-        // …but the fresh file stays managed.
-        assert_eq!(
-            std::fs::read_to_string(dir.path().join(key)).unwrap(),
-            "alpha v1"
-        );
-        assert_eq!(lock.files[key], sha256_hex(b"alpha v1"));
-        assert_eq!(lock.owners[key], "workflows");
     }
 }

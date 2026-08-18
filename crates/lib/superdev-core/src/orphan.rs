@@ -10,8 +10,9 @@ use std::path::Path;
 use crate::action::Action;
 use crate::component::Claim;
 use crate::components::mise;
-use crate::engine::{json_value_at, read_text};
 use crate::error::Result;
+use crate::fsutil::read_text;
+use crate::json_edit::json_value_at;
 use crate::lock::{Lock, sha256_hex};
 
 /// The orphan pass, computed against the lock. Planning only; the engine

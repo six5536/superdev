@@ -7,8 +7,8 @@ status: draft
 ---
 
 From the 2026-08-17 architecture review, candidate 2 (Strong). Second
-plan of the engine track, on top of the
-[transaction primitive](2026-08-17-engine-transaction-primitive.md).
+plan of the engine track, on top of the transaction primitive (landed
+2026-08-18).
 
 # Friction
 
@@ -69,7 +69,6 @@ strings unchanged.
 
 # Sequencing
 
-After the
-[transaction primitive](2026-08-17-engine-transaction-primitive.md).
-Independent of the verb track. Delete this file in the commit that
+After the transaction primitive (landed 2026-08-18). Independent of
+the verb track. Delete this file in the commit that
 completes the work.
