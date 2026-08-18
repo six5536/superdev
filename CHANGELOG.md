@@ -28,6 +28,10 @@ publish a version it cannot find a heading for.
   hook. `[knowledge]` takes a `custom` list like the other skill-writing
   capabilities, and a knowledge-enabled `init` ends with the
   `/aokf-bootstrap` hint
+- Search down-ranks settled work: sections of a `deprecated` concept, or
+  one tagged `done`, `resolved` or `wontfix`, score lower after fusion, so
+  finished plans and issues stop crowding live knowledge. The index schema
+  changed; the cache rebuilds itself on the next call
 - A fuller knowledge seed: `init` now scaffolds a starter concept skeleton
   (glossary, architecture, testing strategy and the rest) instead of a
   three-file stub, ready for agents to fill in

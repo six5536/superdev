@@ -133,7 +133,10 @@ snippet, score — so the next call can read exactly what matched.
 
 - **`aokf_search`** — `query`, optional `limit` (8 by default, clamped to
   1..50), `types` and `tags`. Filters apply before fusion, so a filtered
-  concept cannot re-enter through the other ranking. Results group by concept,
+  concept cannot re-enter through the other ranking. Settled work — a
+  `deprecated` concept, or one tagged `done`, `resolved` or `wontfix` — is
+  down-ranked after fusion, so finished plans and issues sort below live
+  knowledge without leaving the results. Results group by concept,
   strongest concept first.
 - **`aokf_read`** — `id` (or bundle-relative path), optional `heading`: the
   whole concept, or one section named by heading or `a > b` heading path.

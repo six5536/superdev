@@ -23,14 +23,14 @@ use tantivy::{
 };
 
 use super::bundle::Bundle;
-use super::concept::Concept;
+use super::concept::{Concept, Status};
 use super::embed::Embedder;
 use crate::error::{Error, Result};
 use crate::lock::sha256_hex;
 
 /// Layout version of the index. Bump it when the tantivy schema or the vector
 /// file changes shape; a stored index at another version is rebuilt.
-pub const SCHEMA_VERSION: u32 = 1;
+pub const SCHEMA_VERSION: u32 = 2;
 
 /// Tantivy's indexing heap, shared across its writer threads.
 const WRITER_HEAP_BYTES: usize = 50_000_000;
@@ -52,6 +52,14 @@ const CANDIDATE_FACTOR: usize = 4;
 /// between rank 0 and rank 1 is small, so agreement between the two lists
 /// outweighs either one's ordering.
 const RRF_K: f32 = 60.0;
+
+/// Tags that mark settled work — a finished plan or map (`done`), a resolved
+/// wayfinder ticket, a rejected issue. Sections carrying one are down-ranked.
+const DOWNRANK_TAGS: [&str; 3] = ["done", "resolved", "wontfix"];
+
+/// Multiplier applied to a settled section's fused score, chosen so settled
+/// work sorts below live knowledge but never disappears from results.
+const DOWNRANK_FACTOR: f32 = 0.25;
 
 /// Longest snippet, in characters.
 const SNIPPET_CHARS: usize = 200;
@@ -136,6 +144,19 @@ struct SectionDoc {
     start_line: usize,
     end_line: usize,
     snippet: String,
+    tags: Vec<String>,
+    status: String,
+}
+
+impl SectionDoc {
+    /// Settled work: deprecated, or tagged as done/resolved/wontfix.
+    fn settled(&self) -> bool {
+        self.status == "deprecated"
+            || self
+                .tags
+                .iter()
+                .any(|tag| DOWNRANK_TAGS.contains(&tag.as_str()))
+    }
 }
 
 impl SectionDoc {
@@ -226,6 +247,11 @@ impl Index {
     /// they are fused by reciprocal rank fusion, so a filtered concept cannot
     /// re-enter through the other list.
     ///
+    /// Sections of settled work — a `deprecated` concept, or one tagged
+    /// `done`, `resolved` or `wontfix` — are down-ranked after fusion, so
+    /// finished plans, issues and maps sort below live knowledge without
+    /// leaving the results.
+    ///
     /// The result is a flat list, best first; grouping by concept belongs to
     /// the caller.
     ///
@@ -251,9 +277,9 @@ impl Index {
         let lexical = lexical_keys(&searcher, &fields, query, opts, &mut docs)?;
         let semantic = self.semantic_keys(&searcher, &fields, query, embedder, opts, &mut docs)?;
         let mut fused = rrf(&[lexical, semantic]);
-        fused.truncate(opts.limit);
-
         self.read_missing(&searcher, &fields, &fused, &mut docs)?;
+        downrank(&mut fused, &docs);
+        fused.truncate(opts.limit);
         Ok(fused
             .into_iter()
             .filter_map(|(key, score)| docs.get(&key).map(|doc| doc.hit(score)))
@@ -317,7 +343,8 @@ impl Index {
     }
 
     /// Read the documents behind `fused` that no earlier pass read — the
-    /// sections only semantic retrieval found. A vector record knows its
+    /// sections only semantic retrieval found — the lexical pass reads its
+    /// own. A vector record knows its
     /// path's hash and its ordinal, which together name exactly one document.
     fn read_missing(
         &self,
@@ -397,6 +424,7 @@ struct Fields {
     ordinal: Field,
     kind: Field,
     tags: Field,
+    status: Field,
     text: Field,
 }
 
@@ -413,7 +441,8 @@ fn schema() -> (Schema, Fields) {
         end_line: builder.add_u64_field("end_line", STORED),
         ordinal: builder.add_u64_field("ordinal", STORED | INDEXED),
         kind: builder.add_text_field("kind", STRING | STORED),
-        tags: builder.add_text_field("tags", STRING),
+        tags: builder.add_text_field("tags", STRING | STORED),
+        status: builder.add_text_field("status", STRING | STORED),
         text: builder.add_text_field("text", TEXT | STORED),
     };
     (builder.build(), fields)
@@ -603,6 +632,15 @@ fn update(
     Ok(Some((index, stats)))
 }
 
+/// The indexed form of a concept's status.
+fn status_str(status: &Status) -> &'static str {
+    match status {
+        Status::Draft => "draft",
+        Status::Stable => "stable",
+        Status::Deprecated => "deprecated",
+    }
+}
+
 /// Add one document per section of `concept`.
 fn add_concept(writer: &IndexWriter, fields: &Fields, concept: &Concept) -> Result<()> {
     for (ordinal, section) in concept.sections.iter().enumerate() {
@@ -619,6 +657,7 @@ fn add_concept(writer: &IndexWriter, fields: &Fields, concept: &Concept) -> Resu
         for tag in &concept.tags {
             doc.add_text(fields.tags, tag);
         }
+        doc.add_text(fields.status, status_str(&concept.status));
         doc.add_text(fields.text, &section.text);
         writer.add_document(doc).map_err(index_error)?;
     }
@@ -820,6 +859,21 @@ fn lexical_keys(
 ///
 /// Rank is what fuses, never score: BM25 and cosine are on unrelated scales,
 /// so the only comparable thing the two lists produce is their ordering.
+/// Scale down the fused score of settled sections and re-sort. Stable, so
+/// sections on equal scores keep their fused order.
+fn downrank(fused: &mut [(DocKey, f32)], docs: &HashMap<DocKey, SectionDoc>) {
+    let mut touched = false;
+    for (key, score) in fused.iter_mut() {
+        if docs.get(key).is_some_and(SectionDoc::settled) {
+            *score *= DOWNRANK_FACTOR;
+            touched = true;
+        }
+    }
+    if touched {
+        fused.sort_by(|a, b| b.1.total_cmp(&a.1));
+    }
+}
+
 pub(crate) fn rrf(lists: &[Vec<DocKey>]) -> Vec<(DocKey, f32)> {
     let mut scores: HashMap<DocKey, f32> = HashMap::new();
     let mut order: Vec<DocKey> = Vec::new();
@@ -906,6 +960,12 @@ fn read_doc(
         start_line: number(fields.start_line).unwrap_or_default() as usize,
         end_line: number(fields.end_line).unwrap_or_default() as usize,
         snippet: snippet(text(fields.text).unwrap_or_default()),
+        tags: doc
+            .get_all(fields.tags)
+            .filter_map(|value| value.as_str())
+            .map(str::to_string)
+            .collect(),
+        status: text(fields.status).unwrap_or("stable").to_string(),
         path,
     };
     Ok((key, section))
@@ -1079,6 +1139,42 @@ mod tests {
             .search(query, Some(&RaggedEmbedder), &SearchOpts::default())
             .unwrap();
         assert_eq!(mismatched, lexical);
+    }
+
+    /// Three concepts sharing one vocabulary; only their settledness differs.
+    const LIVE: &str = "---\ntype: Note\nid: live\n---\nquartz lantern meadow guide\n";
+    const FINISHED: &str =
+        "---\ntype: Plan\nid: finished\ntags: [done]\n---\nquartz lantern meadow guide\n";
+    const RETIRED: &str =
+        "---\ntype: Spec\nid: retired\nstatus: deprecated\n---\nquartz lantern meadow guide\n";
+
+    #[test]
+    fn settled_work_is_downranked_not_dropped() {
+        let dir = tempfile::tempdir().unwrap();
+        let bundle_dir = dir.path().join("bundle");
+        fs::create_dir(&bundle_dir).unwrap();
+        fs::write(bundle_dir.join("finished.md"), FINISHED).unwrap();
+        fs::write(bundle_dir.join("retired.md"), RETIRED).unwrap();
+        fs::write(bundle_dir.join("live.md"), LIVE).unwrap();
+        let bundle = load_bundle(&bundle_dir).unwrap();
+        let (idx, _) =
+            Index::open_and_sync(&IndexDir(dir.path().join("idx")), &bundle, None).unwrap();
+
+        let hits = idx.search("quartz", None, &SearchOpts::default()).unwrap();
+        // Identical text, so ranking is decided by settledness alone: the
+        // live concept first, the done-tagged plan and the deprecated spec
+        // down-ranked behind it — but still present.
+        assert_eq!(hits.len(), 3);
+        assert_eq!(hits[0].concept_id.as_deref(), Some("live"));
+        assert!(hits[1].score < hits[0].score);
+        let trailing: HashSet<_> = hits[1..]
+            .iter()
+            .map(|hit| hit.concept_id.clone().unwrap())
+            .collect();
+        assert_eq!(
+            trailing,
+            HashSet::from(["finished".to_string(), "retired".to_string()])
+        );
     }
 
     #[test]
