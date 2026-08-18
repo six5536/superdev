@@ -5,6 +5,8 @@ These skills are copied and modified from
 Skills in this directory not on this list are superdev's own.
 
 - code-review
+- codebase-design
+- diagnosing-bugs
 - domain-modeling
 - grill-me (merges upstream grill-me and grill-with-docs)
 - grilling
@@ -12,6 +14,7 @@ Skills in this directory not on this list are superdev's own.
 - to-plan (derived from upstream to-tickets)
 - tdd
 - to-spec
+- writing-for-agents
 
 MIT licence of the original work:
 
