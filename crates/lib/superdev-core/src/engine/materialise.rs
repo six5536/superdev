@@ -10,7 +10,7 @@ use crate::error::Error;
 use crate::fsutil::{collect_files, read_text};
 use crate::lock::sha256_hex;
 
-use super::{ALREADY_GONE, ActionOutcome, LockEffects, Session, command_line};
+use super::apply::{ALREADY_GONE, ActionOutcome, LockEffects, Session, command_line};
 
 impl<'a> Session<'a> {
     /// Copy a pinned checkout's skill directories into the repo, then
@@ -175,8 +175,10 @@ impl<'a> Session<'a> {
 mod tests {
     use super::super::*;
     use crate::action::Action;
+    use crate::component::Claim;
     use crate::components::mise;
     use crate::lock::Lock;
+    use crate::lock::sha256_hex;
     use crate::manifest::Manifest;
     use crate::runner::{FakeRunner, Output};
 

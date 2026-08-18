@@ -12,7 +12,7 @@ use crate::error::Result;
 use crate::fsutil::write_file;
 use crate::runner::CommandRunner;
 
-use super::command_line;
+use super::apply::command_line;
 
 /// Where backups of overwritten files go, under the repo root.
 pub(super) const BACKUP_DIR: &str = ".superdev/cache/backup";
@@ -127,7 +127,7 @@ impl<'a> Tx<'a> {
 
 #[cfg(test)]
 mod tests {
-    use super::super::command_line;
+    use super::super::apply::command_line;
     use super::*;
     use crate::runner::{FakeRunner, Output};
 

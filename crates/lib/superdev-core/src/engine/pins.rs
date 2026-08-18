@@ -9,7 +9,7 @@ use crate::components::mise;
 use crate::fsutil::read_text;
 use crate::lock::sha256_hex;
 
-use super::{ActionOutcome, Planned, Session};
+use super::apply::{ActionOutcome, Planned, Session};
 
 /// The lock hashes one entry's pins earned in the pin phase, applied to the
 /// lock only when the entry completes.
