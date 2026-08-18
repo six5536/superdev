@@ -1,3 +1,6 @@
+[components.knowledge]
+provider = "aokf"
+
 [components.skills]
 provider = "superdev-skills"
 version = "0.1.0"
@@ -7,7 +10,9 @@ provider = "mattpocock-skills"
 version = "1.2.3"
 
 [files]
+".agents/VALIDATION.md" = "d7c1d159ae895c127da03a100813e1730af441161f6e9e5dc61e2560d79b6ced"
 ".claude/settings.json:hooks.PostToolUse[superdev aokf hook validate]" = "fc402a3befe55700af20e66b8ca79e5819eb0037cee9c6c85a23c41fb816314d"
+".claude/skills/aokf-adopt/SKILL.md" = "e709a378590d2b0bafce9fef95594f51a54b40888ac70b3c35c39d2693773d80"
 ".claude/skills/aokf-maintain/SKILL.md" = "521d4a162eb0e6457960d128302c278641181418ad2584bbc1d2e7bc18e5676e"
 ".claude/skills/ask-matt/PHASE-BOUNDARIES.md" = "bd0fe4291d25064080a5b880a17d2ebe320e65a63747a2d69a64b04d72a0d03e"
 ".claude/skills/ask-matt/SKILL.md" = "3d38910535f5f01e15bc5fd7f6ca8880d628cd248741f08e6780dd7c1828e832"
@@ -86,6 +91,7 @@ version = "1.2.3"
 ".claude/skills/writing-for-agents/SKILL-MECHANICS.md" = "b4c54a0aaad3f6eddefde6d06770a0e401fbb8fc6a8f49ce18af816bd144d14d"
 ".claude/skills/writing-for-agents/SKILL.md" = "a842323e664e5af104eac5c97ad22fda929ebeb62d81c501161ac1f6f482db58"
 ".claude/skills/writing-for-agents/agents/openai.yaml" = "eacb24b2a618cfb81dacb0416f4fdd75ddf3a8060f8ddb99aae1b1e301907e4b"
+".mcp.json:mcpServers.superdev-aokf" = "941cb52a797645cb1458c19ac0f08927703ed1e64f41cec289472387b3b4ab8d"
 ".mise.toml:http:mattpocock-skills" = "94f21c203f3fe8232163087234d5332b385829bcafcd593db85934b21f62129e"
 
 [owners]
