@@ -25,14 +25,15 @@ All domain logic; no argument parsing. One module per concern:
   `action` — the action enum and file ownership.
 - `components::{aokf, plugin, mattskills, codegraph, mise, pin, skillpack}` —
   the providers, plus the shared helpers: targeted `.mise.toml` editing,
-  registry-locked pin planning, and `item` — the declarative managed-item
-  list the static components derive both `plan` and `owned` from.
+  registry-locked pin planning, `item` — the declarative managed-item
+  list the static components derive both `plan` and `owned` from — and
+  `enabled`, the manifest-to-component resolution.
 - `pipeline` — the verb pipeline between manifest and engine: `plan_repo`
   and `apply_repo`, owning the prune-before-plan and orphans-last ordering.
 - `engine` — applies a plan and unwinds on failure, one file per concern:
   `tx` (the journal every side effect goes through), `pins` (the grouped
   mise pin phase), `materialise` (the skill copier), with the appliers in
-  `mod`. `orphan` — plans the sweep of lock entries no live claim covers.
+  `apply`. `orphan` — plans the sweep of lock entries no live claim covers.
 - `runner` — the process seam; `report` — plan and apply rendering; `error` —
   the crate's error type; `fsutil` and `json_edit` — the pure file and
   JSON-pointer helpers the engine and planners share.
