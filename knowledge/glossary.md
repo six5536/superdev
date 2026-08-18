@@ -2,7 +2,7 @@
 type: Glossary
 id: glossary
 title: Domain Glossary
-description: The terms the blueprint engine uses — blueprint, capability, provider, provenance, component, skill override, owned file, scaffold, project template, skill pack, materialised skill, PROJECT.md layer, custom skill, claim, orphan — plus the search terms section, locator, hybrid search and RRF.
+description: The terms the blueprint engine uses — blueprint, capability, provider, provenance, component, skill override, owned file, scaffold, project template, skill pack, materialised skill, PROJECT.md layer, custom skill, harvest, claim, orphan — plus the search terms section, locator, hybrid search and RRF.
 status: stable
 ---
 
@@ -54,6 +54,10 @@ status: stable
   superdev stops writing it, drops its hashes from the lock, and `status`
   reports it as unmanaged rather than drifted. A name the capability no
   longer ships reports as having no effect instead of failing.
+- **Harvest** — the move `aokf-adopt` performs: relocate a durable fact from
+  stranded prose (or an opted-in code comment) into the bundle, leaving a
+  one-line summary and a link behind in the source. Designed, not yet
+  built — see the [spec](specs/2026-08-18-knowledge-owned-skills-design.md).
 - **Claim** — a typed lock entry a component declares it owns: a file, a
   `.mise.toml` pin, or a managed JSON key. The orphan pass subtracts the live
   claims from the lock, which is how a migration is derived.
