@@ -29,7 +29,7 @@ reappear in every future component.
 
 `ManagedItem` covers the four declarative kinds — OwnedFile, Scaffold,
 EnsureLine, JsonEntry — and the claim-shaped kinds embed the `Claim`
-from the [managed-entry plan](2026-08-17-managed-entry-interface.md):
+from the managed-entry refactor (landed 2026-08-18):
 `owned()` is the items' claims collected, `plan()` is
 read-compare-emit. EnsureLine items carry no claim (never locked).
 Pins stay with the

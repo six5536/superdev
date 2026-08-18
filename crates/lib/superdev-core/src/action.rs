@@ -1,6 +1,8 @@
 //! action.rs — the planned changes a component wants applied. Pure data;
 //! the engine is the only thing that executes them.
 
+use crate::component::Claim;
+
 /// Who may rewrite a file superdev writes.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Ownership {
@@ -63,25 +65,13 @@ pub enum Action {
         /// The desired element, as a JSON string.
         value_json: String,
     },
-    /// Delete a file superdev previously wrote.
-    RemoveFile {
-        /// Target path.
-        path: String,
+    /// Take back a claimed entry superdev previously wrote: delete the
+    /// whole-file shape, rewrite the shared-file shapes without their entry.
+    Remove {
+        /// The claim being taken back.
+        claim: Claim,
         /// Short human reason, shown in plans.
         reason: String,
-    },
-    /// Drop one `[tools]` key from `.mise.toml`, preserving the rest.
-    RemoveMisePin {
-        /// Tool key, e.g. `http:superpowers`.
-        tool: String,
-    },
-    /// Drop one key path from a JSON file, preserving all other content. The
-    /// pointer may end in `[marker]` to name a superdev-owned array element.
-    RemoveJsonKey {
-        /// Target path (repo-relative).
-        path: String,
-        /// Dotted key path, e.g. `mcpServers.superdev-aokf`.
-        pointer: String,
     },
     /// Copy the workflows provider's pinned checkout into `.claude/skills/`,
     /// one owned file at a time, attributed in the lock. The checkout is
@@ -125,9 +115,11 @@ impl Action {
                 marker,
                 ..
             } => format!("ensure {path} {pointer} has the `{marker}` entry"),
-            Action::RemoveFile { path, reason } => format!("remove {path} ({reason})"),
-            Action::RemoveMisePin { tool } => format!("unpin {tool} in .mise.toml"),
-            Action::RemoveJsonKey { path, pointer } => format!("remove {pointer} from {path}"),
+            Action::Remove { claim, reason } => match claim {
+                Claim::File(path) => format!("remove {path} ({reason})"),
+                Claim::MisePin(tool) => format!("unpin {tool} in .mise.toml"),
+                Claim::JsonKey { path, pointer } => format!("remove {pointer} from {path}"),
+            },
             Action::MaterialiseSkills { tool, .. } => {
                 format!("materialise {tool} skills into .claude/skills/")
             }
@@ -200,21 +192,25 @@ mod tests {
             "ensure .claude/settings.json hooks.PostToolUse has the `superdev aokf hook validate` entry"
         );
 
-        let a = Action::RemoveFile {
-            path: ".claude/skills/humanise/SKILL.md".into(),
+        let a = Action::Remove {
+            claim: Claim::File(".claude/skills/humanise/SKILL.md".into()),
             reason: "no longer in the blueprint".into(),
         };
         assert_eq!(
             a.describe(),
             "remove .claude/skills/humanise/SKILL.md (no longer in the blueprint)"
         );
-        let a = Action::RemoveMisePin {
-            tool: "http:codegraph".into(),
+        let a = Action::Remove {
+            claim: Claim::MisePin("http:codegraph".into()),
+            reason: "no longer in the blueprint".into(),
         };
         assert_eq!(a.describe(), "unpin http:codegraph in .mise.toml");
-        let a = Action::RemoveJsonKey {
-            path: ".mcp.json".into(),
-            pointer: "mcpServers.superdev-aokf".into(),
+        let a = Action::Remove {
+            claim: Claim::JsonKey {
+                path: ".mcp.json".into(),
+                pointer: "mcpServers.superdev-aokf".into(),
+            },
+            reason: "no longer in the blueprint".into(),
         };
         assert_eq!(
             a.describe(),

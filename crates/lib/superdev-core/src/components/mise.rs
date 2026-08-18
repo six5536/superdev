@@ -106,9 +106,13 @@ pub fn remove_pin(mise_toml: &str, tool: &str) -> Result<Option<String>> {
     Ok(removed.map(|_| doc.to_string()))
 }
 
+/// Prefix of every managed pin's lock key. `Claim::parse_key` decodes by it,
+/// so encode and decode share one definition.
+pub(crate) const PIN_LOCK_PREFIX: &str = ".mise.toml:";
+
 /// Lock `files` key under which a managed pin's value hash is recorded.
 pub fn pin_lock_key(tool: &str) -> String {
-    format!(".mise.toml:{tool}")
+    format!("{PIN_LOCK_PREFIX}{tool}")
 }
 
 #[cfg(test)]

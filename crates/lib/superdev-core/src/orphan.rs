@@ -9,10 +9,7 @@ use std::path::Path;
 
 use crate::action::Action;
 use crate::component::Claim;
-use crate::components::mise;
 use crate::error::Result;
-use crate::fsutil::read_text;
-use crate::json_edit::json_value_at;
 use crate::lock::{Lock, sha256_hex};
 
 /// The orphan pass, computed against the lock. Planning only; the engine
@@ -51,58 +48,19 @@ pub fn plan(root: &Path, lock: &Lock, claims: &[Claim]) -> Result<OrphanPlan> {
         if claimed.contains(key) {
             continue;
         }
-        match current_value(root, key)? {
+        let claim = Claim::parse_key(key);
+        match claim.read_current(root)? {
             None => plan.gone.push(key.clone()),
             Some(value) if sha256_hex(value.as_bytes()) == *locked_hash => {
-                plan.actions.push(removal(key));
+                plan.actions.push(Action::Remove {
+                    claim,
+                    reason: "no longer in the blueprint".into(),
+                });
             }
             Some(_) => plan.released.push(key.clone()),
         }
     }
     Ok(plan)
-}
-
-/// A lock key, parsed back into the claim shape its format encodes.
-/// superdev never writes a file path containing `:`, so a colon means a
-/// managed entry in a shared file.
-fn classify(key: &str) -> Claim {
-    if let Some(tool) = key.strip_prefix(".mise.toml:") {
-        return Claim::MisePin(tool.to_string());
-    }
-    match key.split_once(':') {
-        Some((path, pointer)) => Claim::JsonKey {
-            path: path.to_string(),
-            pointer: pointer.to_string(),
-        },
-        None => Claim::File(key.to_string()),
-    }
-}
-
-/// What the repo currently holds for a lock key — the text the key's hash
-/// was taken over. `None` when the target is gone.
-fn current_value(root: &Path, key: &str) -> Result<Option<String>> {
-    match classify(key) {
-        Claim::File(path) => read_text(&root.join(path)),
-        Claim::MisePin(tool) => match read_text(&root.join(".mise.toml"))? {
-            None => Ok(None),
-            Some(content) => mise::current_pin(&content, &tool),
-        },
-        Claim::JsonKey { path, pointer } => match read_text(&root.join(&path))? {
-            None => Ok(None),
-            Some(content) => json_value_at(&path, &content, &pointer),
-        },
-    }
-}
-
-fn removal(key: &str) -> Action {
-    match classify(key) {
-        Claim::File(path) => Action::RemoveFile {
-            path,
-            reason: "no longer in the blueprint".into(),
-        },
-        Claim::MisePin(tool) => Action::RemoveMisePin { tool },
-        Claim::JsonKey { path, pointer } => Action::RemoveJsonKey { path, pointer },
-    }
 }
 
 #[cfg(test)]

@@ -15,7 +15,7 @@ use super::{ALREADY_GONE, ActionOutcome, LockEffects, Session, command_line};
 impl<'a> Session<'a> {
     /// Copy a pinned checkout's skill directories into the repo, then
     /// reconcile: attributed entries the checkout no longer ships leave by
-    /// the same rules as RemoveFile. One aggregate outcome carries the counts.
+    /// the same removal rules as any dropped claim. One aggregate outcome carries the counts.
     pub(super) fn materialise_skills(
         &mut self,
         capability: Option<Capability>,
@@ -128,7 +128,7 @@ impl<'a> Session<'a> {
             }
         }
         // Reconcile: what this capability had materialised and the checkout
-        // no longer ships leaves by the RemoveFile rules.
+        // no longer ships leaves by the dropped-claim removal rules.
         let mut released = 0usize;
         let mut swept = 0usize;
         let stale: Vec<String> = self
@@ -138,7 +138,7 @@ impl<'a> Session<'a> {
             .map(|(key, _)| key.clone())
             .collect();
         for key in stale {
-            match self.remove_file(&key, effects.removed) {
+            match self.remove_claim(&crate::component::Claim::File(key), effects.removed) {
                 ActionOutcome::Applied { .. } => swept += 1,
                 ActionOutcome::Skipped(reason) if reason == ALREADY_GONE => {}
                 ActionOutcome::Skipped(_) => released += 1,
@@ -157,6 +157,7 @@ impl<'a> Session<'a> {
 mod tests {
     use super::super::*;
     use crate::action::Action;
+    use crate::components::mise;
     use crate::lock::Lock;
     use crate::manifest::Manifest;
     use crate::runner::{FakeRunner, Output};
@@ -432,8 +433,8 @@ mod tests {
             Planned {
                 capability: None,
                 provider: "orphan".into(),
-                actions: vec![Action::RemoveFile {
-                    path: key.into(),
+                actions: vec![Action::Remove {
+                    claim: Claim::File(key.into()),
                     reason: "no longer claimed".into(),
                 }],
             },

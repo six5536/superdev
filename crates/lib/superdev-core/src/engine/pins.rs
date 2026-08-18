@@ -159,6 +159,7 @@ fn managed_pins_in(content: &str) -> Vec<String> {
 mod tests {
     use super::super::*;
     use crate::action::{Action, Ownership};
+    use crate::components::mise;
     use crate::lock::Lock;
     use crate::manifest::Manifest;
     use crate::runner::{FakeRunner, Output};
