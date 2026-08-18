@@ -12,7 +12,7 @@ version = "1.2.3"
 [files]
 ".agents/VALIDATION.md" = "d7c1d159ae895c127da03a100813e1730af441161f6e9e5dc61e2560d79b6ced"
 ".claude/settings.json:hooks.PostToolUse[superdev aokf hook validate]" = "fc402a3befe55700af20e66b8ca79e5819eb0037cee9c6c85a23c41fb816314d"
-".claude/skills/aokf-bootstrap/SKILL.md" = "1affdb57164204c848550c7a5d61ab3f8f0a1f7d739bcee24e13ffcbef613bcc"
+".claude/skills/aokf-bootstrap/SKILL.md" = "ff88967eadf3552e9fa7abee8af9613a915fd411f019e2554146b1916b32f376"
 ".claude/skills/aokf-maintain/SKILL.md" = "521d4a162eb0e6457960d128302c278641181418ad2584bbc1d2e7bc18e5676e"
 ".claude/skills/ask-matt/PHASE-BOUNDARIES.md" = "bd0fe4291d25064080a5b880a17d2ebe320e65a63747a2d69a64b04d72a0d03e"
 ".claude/skills/ask-matt/SKILL.md" = "3d38910535f5f01e15bc5fd7f6ca8880d628cd248741f08e6780dd7c1828e832"
