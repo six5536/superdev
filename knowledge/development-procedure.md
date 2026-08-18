@@ -33,13 +33,15 @@ no Node.
    Windows, the blueprint-drift check on every platform, and the coverage gate
    on Linux.
 
-# This repo manages its own skills and workflows
+# This repo manages its own skills, workflows and knowledge machinery
 
-superdev fills the `skills` and `workflows` capabilities here: committed
-`.superdev/config.toml` and `.superdev/lock.toml`, with `cargo run -- sync`
-writing the four pack skills, the PostToolUse hook entry, and the
-materialised mattpocock-skills set. The other capabilities are off, because
-their repo-side files intentionally differ here.
+superdev fills the `skills`, `workflows` and `knowledge` capabilities here:
+committed `.superdev/config.toml` and `.superdev/lock.toml`, with
+`cargo run -- sync` writing the three pack skills, the aokf lifecycle skills
+and PostToolUse hook entry, the `.agents` files, and the materialised
+mattpocock-skills set. The knowledge scaffolds (AGENTS.md, the bundle) were
+this repo's before the capability was enabled, so they are untouched;
+`code-index` and `frontend` stay off.
 `npm run check:blueprint` is what catches drift in the shipped skill assets —
 in the pre-PR list and in CI, through the product's own drift detection rather
 than a parity test.
@@ -50,14 +52,13 @@ your PATH once, as [CONTRIBUTING](/CONTRIBUTING.md) says.
 
 # Working with this repo's knowledgebase
 
-The bundle is served to agents over MCP, and this repo has no installed
-`superdev` to serve it, so everything points at the working tree instead:
-`.mcp.json` runs `cargo run --quiet -- mcp aokf`, and `npm run check:aokf`
-runs `cargo run --quiet -- aokf validate knowledge`. Compilation is cached, so
-the cost after the first build is negligible — and every check tests the code
-you are editing rather than a binary from last month. A managed repo names its
-installed `superdev` in both places, and gets the same validation hook this one
-does.
+The bundle is served to agents over MCP. `.mcp.json` and the hook name a
+bare `superdev`, which the dev shim (`scripts/superdev`, symlinked onto PATH
+per [CONTRIBUTING](/CONTRIBUTING.md)) execs as `cargo run` against this
+tree; `npm run check:aokf` runs `cargo run --quiet -- aokf validate
+knowledge` directly. Compilation is cached, so the cost after the first
+build is negligible — and every check tests the code you are editing rather
+than a binary from last month.
 
 One search trap: specs and plans quote the question you are asking, at length,
 in prose. A search for behaviour will happily return the spec that proposed it

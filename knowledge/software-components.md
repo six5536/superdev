@@ -45,9 +45,10 @@ All domain logic; no argument parsing. One module per concern:
   rules), `validate` (document check and conformance ladder), `graph` (link
   resolution and inverse synthesis), `embed` (the embedding providers),
   `index` (tantivy plus the vector store), `mcp` (the server).
-- The AOKF spec, agent files and starter concept skeleton the `knowledge`
-  capability writes, the four SKILL.md files the `skills` capability writes,
-  and the project templates ship as `assets/`, embedded at compile time. The
+- The AOKF spec, agent files, starter concept skeleton and lifecycle skills
+  the `knowledge` capability writes, the three SKILL.md files the `skills`
+  capability writes, and the project templates ship as `assets/`, embedded
+  at compile time. The
   mattpocock-skills files are not embedded: they come from the checksummed
   checkout at sync time.
 

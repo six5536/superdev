@@ -74,12 +74,16 @@ registry version of those two and refuses any other — see
 [api-contracts](api-contracts.md). codegraph's bundles vendor their own Node,
 so a managed repo needs no node of its own.
 
-`skills` refuses any other version for a different reason: the four skill
-files are embedded in the binary, which makes this binary the provenance.
-Nothing is installed. `sync` writes them to `.claude/skills/<name>/SKILL.md`
-and merges one PostToolUse entry into `.claude/settings.json`; Claude Code
-reads both natively, so a teammate who clones the repo gets the pack and the
-validation hook without installing superdev.
+`skills` refuses any other version for a different reason: the pack's three
+skill files are embedded in the binary, which makes this binary the
+provenance. Nothing is installed. `sync` writes them to
+`.claude/skills/<name>/SKILL.md`; Claude Code reads them natively, so a
+teammate who clones the repo gets the pack without installing superdev. The
+knowledge capability ships its own lifecycle skills the same way —
+`aokf-adopt` and `aokf-maintain` — and merges the validation hook's
+PostToolUse entry into `.claude/settings.json`, so hook and skills exist
+exactly where a bundle exists
+([spec](specs/2026-08-18-knowledge-owned-skills-design.md)).
 
 # Files in a managed repo
 

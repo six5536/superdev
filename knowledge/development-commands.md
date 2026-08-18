@@ -22,9 +22,9 @@ What the annotated list does not say:
   validate`), and `cargo run -- aokf index` forces a full index rebuild,
   which nothing routine needs: the MCP server syncs lazily on every call.
 - `npm run check:blueprint` is `cargo run --quiet -- status` — the
-  superdev-owned files here (the four pack skills, the hook entry, and the
-  materialised mattpocock-skills set) still match the blueprint. It exits 1
-  on drift, so CI gates on it.
+  superdev-owned files here (the pack skills, the aokf lifecycle skills and
+  hook entry, the `.agents` files, and the materialised mattpocock-skills
+  set) still match the blueprint. It exits 1 on drift, so CI gates on it.
 - Release CI runs `smoke` and `smoke:launcher` per buildable target;
   `smoke:manage` is manual-only and the one run that downloads the real
   embedding model.

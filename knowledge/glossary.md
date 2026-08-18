@@ -38,9 +38,11 @@ status: stable
   every capability's files. `config.toml` records the name and token values
   as provenance; `sync` never revisits the files. `rust-npm` is the first —
   see the [spec](specs/2026-08-18-project-templates-design.md).
-- **Skill pack** — the four skills the `skills` capability ships as owned files
-  under `.claude/skills/`, embedded in the binary and versioned with it. Claude
-  Code loads them from there natively, so there is nothing to install.
+- **Skill pack** — the three generic skills the `skills` capability ships as
+  owned files under `.claude/skills/`, embedded in the binary and versioned
+  with it. Claude Code loads them from there natively, so there is nothing to
+  install. The knowledge-lifecycle skills are not pack skills: the aokf
+  component carries them.
 - **Materialised skill** — a skill copied out of a pinned provider checkout
   into `.claude/skills/<name>/` as owned files, with the lock recording which
   capability put it there. The names come from upstream rather than the binary,
@@ -56,8 +58,8 @@ status: stable
   longer ships reports as having no effect instead of failing.
 - **Harvest** — the move `aokf-adopt` performs: relocate a durable fact from
   stranded prose (or an opted-in code comment) into the bundle, leaving a
-  one-line summary and a link behind in the source. Designed, not yet
-  built — see the [spec](specs/2026-08-18-knowledge-owned-skills-design.md).
+  one-line summary and a link behind in the source. See the
+  [spec](specs/2026-08-18-knowledge-owned-skills-design.md).
 - **Claim** — a typed lock entry a component declares it owns: a file, a
   `.mise.toml` pin, or a managed JSON key. The orphan pass subtracts the live
   claims from the lock, which is how a migration is derived.

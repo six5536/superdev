@@ -56,12 +56,15 @@ Every verb acts on the current directory.
   flag, init prompts — template list first, then the project name prefilled
   with the directory name. Without a TTY there is no prompt and no template,
   so scripted init is unchanged. Template files are write-once scaffolds:
-  existing files win and are reported as kept.
+  existing files win and are reported as kept. A knowledge-enabled init ends
+  with the hint to run `/aokf-adopt` in Claude Code — adoption is judgement
+  work the agent does after the mechanical scaffolding.
 - **`status`** never writes. It exits `1` on any drift, missing component,
   planned removal, or pin behind this binary's registry, so CI can gate on it.
   Each skill released by `[skills] custom` prints as
   `skills: <name> custom, unmanaged`, and each one released by
-  `[workflows] custom` the same way under its own capability name — a released
+  `[workflows] custom` or `[knowledge] custom` the same way under its own
+  capability name — a released
   skill is the user's file, not drift, so it leaves the code alone. Released orphans and the
   blueprint-version line print as reports and never affect the exit code.
 - **`sync`** refuses to run while `workflows`, `code-index` or `skills` is

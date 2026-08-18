@@ -3,7 +3,7 @@ type: Spec
 id: spec-knowledge-owned-skills
 title: Knowledge-Owned Skills
 description: Design for aokf-carried lifecycle skills — aokf-maintain and the validation hook relocate to the knowledge capability, and a new aokf-adopt skill harvests a repo's stranded prose into the bundle.
-status: draft
+status: stable
 ---
 
 # Motivation
@@ -81,6 +81,17 @@ Whenever the knowledge capability is enabled, `init` ends with
 `knowledge: run /aokf-adopt in Claude Code to bring existing docs into the
 bundle` — unconditional, like the workflows setup hint. An empty repo
 loses nothing: adopt's inventory comes back empty and says so.
+
+# Dogfood consequence
+
+Landing this made superdev's own repo enable `[knowledge]`: with the hook
+and `aokf-maintain` owned by the knowledge capability, a skills-only
+manifest would have swept both. The repo's hand-written scaffolds
+(AGENTS.md, the bundle) predate the capability and are untouched; the
+owned `.agents` files and the embedded assets were trued up against each
+other (the stale asset took the repo's improved MATT-POCOCK-SKILLS.md,
+the repo took the asset's VALIDATION.md), and `.mcp.json` now names the
+bare `superdev` the dev shim resolves.
 
 # Out of scope
 

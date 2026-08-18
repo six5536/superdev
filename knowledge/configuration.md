@@ -78,7 +78,7 @@ custom = ["humanise"]
 A released skill keeps whatever content it has as a starting point, drops out
 of the plan and out of the lock, and `status` prints it as unmanaged rather
 than drifted. Delete the name to get stock content back on the next sync. A
-name that is not one of the four shipped skills reports `skills: custom names
+name the pack does not ship reports `skills: custom names
 unknown skill '<name>' — no effect` and changes nothing, so a pack that drops
 a skill does not break a repo that had marked it custom.
 
@@ -88,9 +88,12 @@ adoption reports it. Content byte-identical to the shipped skill is superdev's
 own text and is left managed.
 
 `[workflows] custom` releases a materialised skill the same way, under the
-`mattpocock-skills` provider, with the same `init` adoption and the same
-`workflows: custom names unknown skill '<name>' — no effect` line for a name
-upstream does not ship.
+`mattpocock-skills` provider, and `[knowledge] custom` releases an
+aokf-carried lifecycle skill — both with the same `init` adoption and the
+same `<capability>: custom names unknown skill '<name>' — no effect` line
+for a name the capability does not ship. The lists are name-guarded: a name
+in one capability's list never releases another capability's file, even
+though all three write into `.claude/skills/`.
 
 A `[template]` table records the project template `init` seeded the repo
 from, with the substituted token values:
@@ -153,16 +156,18 @@ id). Deleting it is safe — the next tool call rebuilds it.
   `mcpServers.superdev-aokf`. The file is shared with the user's own servers,
   so superdev manages and hashes that one key and leaves the rest alone, the
   same rule it applies to `.mise.toml`. A managed repo gets
-  `superdev mcp aokf`; this repo, which has no installed binary, gets
-  `cargo run --quiet -- mcp aokf`.
-- `.claude/settings.json` carries one managed `hooks.PostToolUse` element, the
-  array-element analogue of the `.mcp.json` key merge: superdev finds its own
-  element by the command string `superdev aokf hook validate`, adds or updates
-  it, and leaves the user's hooks alone. Both files are re-serialised whole on
+  `superdev mcp aokf`; in this repo the dev shim makes that resolve to
+  `cargo run` against the working tree.
+- `.claude/settings.json` carries one managed `hooks.PostToolUse` element,
+  owned by the knowledge capability (the hook validates the bundle, so it
+  exists exactly where a bundle does): superdev finds its own element by the
+  command string `superdev aokf hook validate`, adds or updates it, and
+  leaves the user's hooks alone. Both files are re-serialised whole on
   write, so key order is not preserved; the lock hashes the merged value, not
   the file, so a reformat is not drift.
-- `.claude/skills/<name>/SKILL.md` holds the four shipped skills as owned
-  files, alongside whatever the workflows provider materialises there. A
+- `.claude/skills/<name>/SKILL.md` holds the pack's three skills and the
+  knowledge capability's two lifecycle skills as owned files, alongside
+  whatever the workflows provider materialises there. A
   `PROJECT.md` beside one extends it — superdev never writes, hashes or reads
   that file, so a project layer survives every sync.
 - The local embedding model lives in the *user* cache, not the repo:
