@@ -1,3 +1,7 @@
+[components.bash-output-filter]
+provider = "rtk"
+version = "0.45.0"
+
 [components.code-index]
 provider = "codegraph"
 version = "1.5.0"
@@ -12,8 +16,10 @@ version = "0.1.0"
 [files]
 ".agents/aokf.md" = "d8b9fab198137af93b2675cc689fed26b43afbd5c63a67881ef121032dd307a2"
 ".agents/codegraph.md" = "ded8fff121b0e0f6566698a567cebe9170478231eba449c6f96bb778e2f31823"
-".agents/superdev.md" = "01eb2610b8385945e34eef6c9f9b0677c1f04e31b46981d16148354f7e4b7ecd"
+".agents/rtk.md" = "9b6097cd301c0c7c910f23a8f918e6138b8f0ced0d6f46135d83a32c6c339e2f"
+".agents/superdev.md" = "6ba64d542178aaa679b41ff0baab09c5ce0e9d8207e0145048718050c8db297e"
 ".claude/settings.json:hooks.PostToolUse[superdev aokf hook validate]" = "fc402a3befe55700af20e66b8ca79e5819eb0037cee9c6c85a23c41fb816314d"
+".claude/settings.json:hooks.PreToolUse[mise exec http:rtk -- rtk hook claude]" = "6bb35e2df2e56802503dd19f3a159a6b7446bd8fc8c7854994f239df08921d77"
 ".claude/skills/LICENSE-mattpocock-skills.md" = "08730b7539d64cbb696d2e07b07f9ea5ec7bb58802e0e31e46f712c812d566b7"
 ".claude/skills/aokf-bootstrap/SKILL.md" = "ff88967eadf3552e9fa7abee8af9613a915fd411f019e2554146b1916b32f376"
 ".claude/skills/aokf-maintain/SKILL.md" = "1c993d664317447ff2c01418321e53f06fe8f7293aad340ec60515d72df1bc49"
@@ -90,3 +96,6 @@ version = "0.1.0"
 ".mcp.json:mcpServers.codegraph" = "e0b059437b618fb326f87d47078490f74cd2459e45fc2b8414fe211dc023f45d"
 ".mcp.json:mcpServers.superdev-aokf" = "941cb52a797645cb1458c19ac0f08927703ed1e64f41cec289472387b3b4ab8d"
 ".mise.toml:http:codegraph" = "e4be6ff16fe91dc165523e8762aa56b0ec9f99e244e396006499017dcf0a3377"
+".miserc.toml" = "87942eccb857b746393f1ff23d8443bffb97c218c87f3ab35af5649cbafc0d3f"
+"mise.unix.toml" = "598ac6cc207154e59757ea93fa6d84409772ee5e680befbda21258851ad59895"
+"mise.windows-x64.toml" = "df7dc0441796369826ba5695381a1a476a45addd23ac00a5ffbb056a17094cf4"

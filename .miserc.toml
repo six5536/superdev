@@ -1,0 +1,2 @@
+# superdev-owned: activates mise's platform config files (mise.<env>.toml).
+auto_env = true

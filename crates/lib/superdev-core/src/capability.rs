@@ -20,6 +20,8 @@ pub enum Capability {
     Skills,
     /// Pre-indexed code knowledge graph.
     CodeIndex,
+    /// Command-output filtering before it reaches agent context.
+    BashOutputFilter,
     /// The AOKF knowledgebase (native).
     Knowledge,
 }
@@ -27,10 +29,11 @@ pub enum Capability {
 impl Capability {
     /// Every capability, in canonical apply order: plugins first, then the
     /// code index, then the knowledge scaffold.
-    pub const ALL: [Capability; 4] = [
+    pub const ALL: [Capability; 5] = [
         Capability::Frontend,
         Capability::Skills,
         Capability::CodeIndex,
+        Capability::BashOutputFilter,
         Capability::Knowledge,
     ];
 
@@ -40,6 +43,7 @@ impl Capability {
             Capability::Frontend => "frontend",
             Capability::Skills => "skills",
             Capability::CodeIndex => "code-index",
+            Capability::BashOutputFilter => "bash-output-filter",
             Capability::Knowledge => "knowledge",
         }
     }

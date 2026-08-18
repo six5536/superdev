@@ -10,3 +10,7 @@ provider = "aokf"
 [skills]
 provider = "superdev-skills"
 version = "0.1.0"
+
+[bash-output-filter]
+provider = "rtk"
+version = "0.45.0"

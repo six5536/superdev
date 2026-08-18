@@ -367,6 +367,9 @@ fn aggregator_content(manifest: &Manifest) -> String {
     if manifest.enabled(Capability::CodeIndex) {
         out.push_str("@codegraph.md\n");
     }
+    if manifest.enabled(Capability::BashOutputFilter) {
+        out.push_str("@rtk.md\n");
+    }
     out.push_str("</superdev-system>\n");
     out
 }
@@ -767,8 +770,13 @@ mod tests {
         assert!(all.ends_with("</superdev-system>\n"), "{all}");
         assert!(all.contains("@aokf.md"), "{all}");
         assert!(all.contains("@codegraph.md"), "{all}");
-        let partial = aggregator_content(&Manifest::default_for("0.1.0", &[Capability::Knowledge]));
+        assert!(all.contains("@rtk.md"), "{all}");
+        let partial = aggregator_content(&Manifest::default_for(
+            "0.1.0",
+            &[Capability::Knowledge, Capability::BashOutputFilter],
+        ));
         assert!(!partial.contains("@aokf.md"), "{partial}");
+        assert!(!partial.contains("@rtk.md"), "{partial}");
         assert!(partial.contains("@codegraph.md"), "{partial}");
         // The general rules are not capability-gated: every managed repo
         // imports them, even with every instruction-shipping capability off.

@@ -5,4 +5,5 @@ superdev is a collection of capabilities, described in the following files:
 @prose.md
 @aokf.md
 @codegraph.md
+@rtk.md
 </superdev-system>

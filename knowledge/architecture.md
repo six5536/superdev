@@ -49,6 +49,7 @@ A capability is a slot; the tool filling it is a swappable provider.
 | `code-index` | `codegraph`       | checksummed release bundle (mise `http`) + `mise exec http:codegraph -- codegraph init` |
 | `frontend`   | `frontend-design` | Claude Code plugin              |
 | `skills`     | `superdev-skills` | owned files in the repo         |
+| `bash-output-filter` | `rtk`     | checksummed release binaries in owned, platform-scoped mise config files, plus a PreToolUse rewrite hook |
 
 The registry holds one entry per (capability, provider) pair — its version, its
 checksum where it has one, and whether it is the default — and the manifest's

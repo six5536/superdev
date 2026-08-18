@@ -18,6 +18,10 @@ defaults.
 ```toml
 blueprint = "0.1.0"      # the superdev version last applied
 
+[bash-output-filter]
+provider = "rtk"
+version = "0.45.0"
+
 [code-index]
 provider = "codegraph"
 version = "1.5.0"
@@ -173,7 +177,26 @@ id). Deleting it is safe — the next tool call rebuilds it.
   command string `superdev aokf hook validate`, adds or updates it, and
   leaves the user's hooks alone. Both files are re-serialised whole on
   write, so key order is not preserved; the lock hashes the merged value, not
-  the file, so a reformat is not drift.
+  the file, so a reformat is not drift. The bash-output-filter capability
+  manages one `hooks.PreToolUse` element the same way, found by its
+  `mise exec http:rtk -- rtk hook claude` command string; the hook rewrites
+  Bash commands through rtk and is fail-open — only exit code 2 blocks a
+  command in Claude Code, and rtk's hook exits 0 on every failure path.
+  One caveat rides the capability: permission allow/deny rules match the
+  rewritten, rtk-prefixed command string (`rtk git status`, not
+  `git status`), so string-matched rules should account for both forms;
+  rtk's own per-command exclusion config is the opt-out.
+- The bash-output-filter capability owns three whole files: `.miserc.toml`
+  (turns on mise's `auto_env`, which needs mise ≥ 2026.8 — an older
+  observed mise gets a guided error at plan time) and the platform-scoped
+  pin files `mise.unix.toml` and `mise.windows-x64.toml`, holding the
+  checksummed rtk pin for exactly the platforms rtk publishes. A platform
+  without an artefact (windows-arm64) loads neither file and skips the tool
+  silently — which is why the pin is not in the shared `.mise.toml`. Its
+  agent guidance, `.agents/rtk.md`, tells agents output is auto-filtered
+  and how to get raw output (`RTK_DISABLED=1` in the command text, or
+  rtk's proxy passthrough)
+  ([spec](specs/S012-bash-output-filter-design.md)).
 - `.claude/skills/` holds the pack's three skills and the knowledge
   capability's 25 carried skill directories as owned files, plus the MIT
   notice for the derived set. A `PROJECT.md` beside a skill extends it —

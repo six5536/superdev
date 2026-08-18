@@ -11,10 +11,12 @@ superdev update    # move version pins to this binary's defaults, then sync
 ```
 
 `init` writes an AOKF knowledgebase with a full engineering skill set,
-builds a code index, and installs the Claude Code plugin superdev expects,
-then records the result in `.superdev/`. Pass `--no-knowledge`,
-`--no-code-index`, `--no-skills` or `--no-frontend` to leave a capability
-out. Everything it owns can be repaired by re-running `sync`.
+builds a code index, wires up a bash output filter that compacts command
+output before it reaches agent context, and installs the Claude Code
+plugin superdev expects, then records the result in `.superdev/`. Pass
+`--no-knowledge`, `--no-code-index`, `--no-skills`,
+`--no-bash-output-filter` or `--no-frontend` to leave a capability out.
+Everything it owns can be repaired by re-running `sync`.
 
 It also registers an MCP server for the knowledgebase, so agents search it
 instead of preloading every page of it:

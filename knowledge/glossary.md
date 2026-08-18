@@ -10,8 +10,9 @@ status: stable
   binary: the component set plus the registry of default versions tested
   together. The binary's version is the blueprint version.
 - **Capability** — a functionality slot in a managed repo: `knowledge`,
-  `code-index`, `frontend`, `skills`. Capability names are what
-  users type; see [architectural-rules](architectural-rules.md).
+  `code-index`, `frontend`, `skills`, `bash-output-filter`. Capability
+  names are what users type; see
+  [architectural-rules](architectural-rules.md).
 - **Cardinality** — how many providers a capability holds at once, declared
   in the blueprint: *single* (one provider, exclusively — alternatives
   compete for the slot) or *many* (a set of providers, additively). Skills

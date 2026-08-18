@@ -26,9 +26,9 @@ USER root
 # Install mise from a pinned GitHub release, verified against committed SHA256s.
 # To bump: change MISE_VERSION, then update both SHA256 values from
 #   https://github.com/jdx/mise/releases/download/${MISE_VERSION}/SHASUMS256.txt
-ARG MISE_VERSION=v2026.5.11
-ARG MISE_SHA256_X64=9f677e94d7eab919fa33e84d54314774e061fbdcfbe9e115bc1f500fe01b66ab
-ARG MISE_SHA256_ARM64=a3bc60547a060ebb31ebbe8d8274c721407cf3471043e473b8cb578cee8722fe
+ARG MISE_VERSION=v2026.8.8
+ARG MISE_SHA256_X64=58edfbdba6d4255b6536a61daeaf3b21f7a059430c789e948c8494ba32d59e1f
+ARG MISE_SHA256_ARM64=6e6e96d319fe274996db5aed691f5398552865e641dc4b6fb6b01d73f4853a17
 RUN set -eux; \
     arch="$(dpkg --print-architecture)"; \
     case "$arch" in \

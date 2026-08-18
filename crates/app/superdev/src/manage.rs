@@ -33,6 +33,9 @@ pub struct InitArgs {
     /// Skip the code index
     #[arg(long)]
     pub no_code_index: bool,
+    /// Skip the bash output filter
+    #[arg(long)]
+    pub no_bash_output_filter: bool,
     /// Skip the knowledgebase scaffold
     #[arg(long)]
     pub no_knowledge: bool,
@@ -49,6 +52,7 @@ impl InitArgs {
             (self.no_frontend, Capability::Frontend),
             (self.no_skills, Capability::Skills),
             (self.no_code_index, Capability::CodeIndex),
+            (self.no_bash_output_filter, Capability::BashOutputFilter),
             (self.no_knowledge, Capability::Knowledge),
         ];
         flags
@@ -327,6 +331,7 @@ mod tests {
             no_frontend: false,
             no_skills: false,
             no_code_index: false,
+            no_bash_output_filter: false,
             no_knowledge: false,
             template: None,
             name: None,

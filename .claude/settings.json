@@ -10,6 +10,17 @@
         ],
         "matcher": "Edit|Write"
       }
+    ],
+    "PreToolUse": [
+      {
+        "hooks": [
+          {
+            "command": "mise exec http:rtk -- rtk hook claude",
+            "type": "command"
+          }
+        ],
+        "matcher": "Bash"
+      }
     ]
   },
   "permissions": {}

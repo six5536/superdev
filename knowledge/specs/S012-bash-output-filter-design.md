@@ -3,7 +3,7 @@ type: Spec
 id: spec-bash-output-filter
 title: Bash Output Filter Capability
 description: A new bash-output-filter capability, default provider rtk — a checksummed mise pin, an owned instruction file, and a managed PreToolUse rewrite hook that compacts command output before it reaches agent context.
-status: draft
+status: stable
 links:
   - rel: relates-to
     to: spec-agent-instructions-layer
@@ -71,8 +71,8 @@ when an agent forgets the instructions.
    manifest version off the registry default is refused with the
    standard refusal, and `superdev update bash-output-filter` moves
    it.
-7. Disabling the capability sweeps the pin, the platform config
-   files' managed keys, `.miserc.toml`, the instruction file and the
+7. Disabling the capability sweeps the pin — the platform config
+   files and `.miserc.toml` whole — plus the instruction file and the
    hook key, and the next sync rewrites the aggregator without the
    import.
 8. `status` exits 1 while any of this is pending in an existing repo
@@ -138,6 +138,14 @@ when an agent forgets the instructions.
 - `.miserc.toml` is owned by this capability until a second consumer
   of `auto_env` appears; it sweeps with the capability rather than
   lingering as unowned repo state.
+- The platform pin files are whole owned files, not targeted keys in
+  shared files (revised at implementation from an earlier managed-key
+  position): they exist solely for this pin, so whole-file ownership
+  is the same behaviour with none of the shared-file merge machinery,
+  which stays scoped to `.mise.toml`. A user who adds their own tools
+  to them gets the owned-file overwrite-with-backup warning; their
+  own platform-conditional pins belong in their own `mise.<env>.toml`
+  names or `.mise.toml`.
 
 # Testing
 
