@@ -3,7 +3,7 @@ type: Spec
 id: spec-workflows-skill-overrides
 title: Workflows Skill Overrides
 description: Design for provider-carried skill overrides — the mattpocock-skills component materialises embedded replacements, grilling first — installed only where that provider is.
-status: stable
+status: deprecated
 ---
 
 # Motivation
