@@ -104,6 +104,17 @@ publish a version it cannot find a heading for.
   dropped upstream files. The superpowers plugin remains installable by
   hand: `claude plugin install superpowers`
 
+- `superdev template list` and `superdev template render`: read-only views
+  of the shipped project templates — render writes the token-substituted
+  tree into an empty directory and prints the derived token values.
+  `[template]` in `.superdev/config.toml` now records the seeding binary's
+  `version`; older manifests parse unchanged
+- The skill pack's `template-update`: update a repo from its project
+  template, or adopt one into a repo that never used a template — the
+  template confirmed with the user, a summary and per-area questions
+  before anything is written, and `[template]` restamped afterwards. The
+  engine still never touches template files; every update is a user edit
+
 ### Fixed
 
 - `sync` no longer installs the repo's whole toolchain. `mise install` and

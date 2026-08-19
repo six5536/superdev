@@ -20,10 +20,11 @@ macro_rules! asset {
 
 /// The pack: (skill name, embedded SKILL.md). The knowledge-lifecycle
 /// skills live with the aokf component, not here.
-pub(crate) const SKILLS: [(&str, &str); 3] = [
+pub(crate) const SKILLS: [(&str, &str); 4] = [
     ("double-check", asset!("skills/double-check/SKILL.md")),
     ("humanise", asset!("skills/humanise/SKILL.md")),
     ("self-improve", asset!("skills/self-improve/SKILL.md")),
+    ("template-update", asset!("skills/template-update/SKILL.md")),
 ];
 
 /// Release, at adoption time, every pack skill the repo already has under
@@ -105,7 +106,7 @@ mod tests {
             lock: &lock,
         };
         let actions = SkillPack.plan(&ctx).unwrap();
-        assert_eq!(actions.len(), 3);
+        assert_eq!(actions.len(), 4);
         let descs: Vec<String> = actions.iter().map(|a| a.describe()).collect();
         for (name, _) in SKILLS {
             assert!(

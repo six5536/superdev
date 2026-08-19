@@ -70,7 +70,7 @@ pub fn choose(
     }))
 }
 
-fn shipped_names() -> String {
+pub(crate) fn shipped_names() -> String {
     templates::shipped()
         .iter()
         .map(|t| t.name)

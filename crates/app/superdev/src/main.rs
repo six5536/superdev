@@ -53,6 +53,9 @@ enum Command {
         #[arg(long, value_name = "ID")]
         provider: Option<String>,
     },
+    /// Inspect and render the shipped project templates
+    #[command(subcommand)]
+    Template(manage::TemplateCommand),
     /// Serve project subsystems over MCP
     #[command(subcommand)]
     Mcp(aokf_cli::McpCommand),
@@ -93,6 +96,7 @@ fn run(cli: &Cli) -> Result<u8> {
         Some(Command::Update { target, provider }) => {
             manage::update(&root()?, target.as_deref(), provider.as_deref())
         }
+        Some(Command::Template(cmd)) => manage::template(cmd),
         Some(Command::Mcp(cmd)) => aokf_cli::run_mcp(cmd, &root()?),
         Some(Command::Aokf(cmd)) => aokf_cli::run_aokf(cmd, &root()?),
         Some(Command::Completions { shell }) => {

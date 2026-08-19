@@ -83,6 +83,17 @@ pub fn find(name: &str) -> Option<&'static Template> {
     shipped().iter().find(|t| t.name == name)
 }
 
+/// The template rendered for these tokens: (target path, content) pairs,
+/// substituted in both. The pure half of `template render` — callers decide
+/// where (or whether) the tree lands on disk.
+pub fn render(template: &Template, tokens: &Tokens) -> Vec<(String, String)> {
+    template
+        .files
+        .iter()
+        .map(|(target, content)| (substitute(target, tokens), substitute(content, tokens)))
+        .collect()
+}
+
 /// Substitute the tokens, exact-match only.
 pub fn substitute(text: &str, tokens: &Tokens) -> String {
     text.replace(TOKEN_NAME, &tokens.name)
@@ -166,6 +177,21 @@ mod tests {
             ),
         ],
     };
+
+    #[test]
+    fn render_substitutes_paths_and_contents_without_touching_disk() {
+        let rendered = render(&TEST_TEMPLATE, &tokens());
+        assert_eq!(
+            rendered,
+            vec![
+                ("README.md".to_string(), "# My Tool\n".to_string()),
+                (
+                    "crates/app/my-tool/Cargo.toml".to_string(),
+                    "name = \"my-tool\"\n".to_string()
+                ),
+            ]
+        );
+    }
 
     #[test]
     fn plans_absent_files_with_tokenised_paths_and_keeps_existing_ones() {

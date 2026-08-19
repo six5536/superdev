@@ -413,7 +413,12 @@ fn skills_repo() -> tempfile::TempDir {
 #[test]
 fn init_materialises_the_skill_pack() {
     let dir = skills_repo();
-    for name in ["double-check", "humanise", "self-improve"] {
+    for name in [
+        "double-check",
+        "humanise",
+        "self-improve",
+        "template-update",
+    ] {
         let path = dir.path().join(format!(".claude/skills/{name}/SKILL.md"));
         assert!(path.is_file(), "missing {}", path.display());
         assert!(
@@ -969,6 +974,10 @@ fn init_with_a_template_seeds_the_repo_and_records_it() {
     let config = std::fs::read_to_string(dir.path().join(".superdev/config.toml")).unwrap();
     assert!(config.contains("[template]"), "{config}");
     assert!(config.contains("project-slug = \"my-tool\""), "{config}");
+    assert!(
+        config.contains(&format!("version = \"{}\"", env!("CARGO_PKG_VERSION"))),
+        "{config}"
+    );
     // Template files are scaffolds: not one of them is locked.
     let lock = std::fs::read_to_string(dir.path().join(".superdev/lock.toml")).unwrap();
     assert!(!lock.contains("LICENSE"), "{lock}");
@@ -1010,6 +1019,69 @@ fn an_unknown_template_fails_before_anything_is_written() {
         "unexpected: {stderr}"
     );
     assert!(!dir.path().join(".superdev").exists(), "nothing written");
+}
+
+#[test]
+fn template_list_names_every_shipped_template() {
+    let out = superdev().args(["template", "list"]).assert().success();
+    let stdout = stdout_of(&out);
+    assert!(stdout.contains("rust-npm — "), "{stdout}");
+}
+
+/// `template render` is the template-update skill's window into the binary:
+/// the substituted tree lands in the directory, and the token lines are the
+/// `[template]` values verbatim, so the skill never re-derives a slug.
+#[test]
+fn template_render_writes_the_tree_and_prints_the_tokens() {
+    let dir = tempfile::tempdir().unwrap();
+    let target = dir.path().join("rendered");
+    let out = superdev()
+        .args(["template", "render", "rust-npm", "--name", "My Tool"])
+        .arg("--dir")
+        .arg(&target)
+        .assert()
+        .success();
+    let stdout = stdout_of(&out);
+    assert!(stdout.contains("rendered template rust-npm"), "{stdout}");
+    assert!(stdout.contains("project-name = \"My Tool\""), "{stdout}");
+    assert!(stdout.contains("project-slug = \"my-tool\""), "{stdout}");
+    assert!(stdout.contains("project-ident = \"my_tool\""), "{stdout}");
+    // Paths and contents both substituted; no repo state involved.
+    let main_rs = target.join("crates/app/my-tool/src/main.rs");
+    let main_rs = std::fs::read_to_string(main_rs).unwrap();
+    assert!(main_rs.contains("my_tool_core::"), "{main_rs}");
+    assert!(
+        !dir.path().join(".superdev").exists(),
+        "render is read-only"
+    );
+
+    // A second render into the same directory refuses: leftovers would read
+    // as part of the render to whoever diffs against it.
+    let out = superdev()
+        .args(["template", "render", "rust-npm", "--name", "My Tool"])
+        .arg("--dir")
+        .arg(&target)
+        .assert()
+        .code(2);
+    let stderr = String::from_utf8_lossy(&out.get_output().stderr).into_owned();
+    assert!(stderr.contains("not empty"), "{stderr}");
+}
+
+#[test]
+fn template_render_refuses_an_unknown_template() {
+    let dir = tempfile::tempdir().unwrap();
+    let out = superdev()
+        .args(["template", "render", "flying", "--name", "x"])
+        .arg("--dir")
+        .arg(dir.path().join("out"))
+        .assert()
+        .code(2);
+    let stderr = String::from_utf8_lossy(&out.get_output().stderr).into_owned();
+    assert!(
+        stderr.contains("template must be one of: rust-npm"),
+        "{stderr}"
+    );
+    assert!(!dir.path().join("out").join("LICENSE").exists());
 }
 
 #[test]

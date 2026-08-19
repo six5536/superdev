@@ -45,6 +45,12 @@ pub struct TemplateRecord {
     pub project_name: String,
     /// The value `{{superdev:project-slug}}` substituted to.
     pub project_slug: String,
+    /// The binary version whose template content the repo last matched:
+    /// stamped by `init`, restamped by the `template-update` skill after an
+    /// update or adoption. Absent in manifests from before the field existed
+    /// — they just lack the skill's "already up to date" short-circuit.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub version: Option<String>,
 }
 
 /// A capability's manifest shape as written: one table, or — for a many
@@ -421,11 +427,20 @@ mod tests {
             name: "rust-npm".into(),
             project_name: "My Tool".into(),
             project_slug: "my-tool".into(),
+            version: Some("0.2.0".into()),
         });
         let toml = m.to_toml();
         assert!(toml.contains("[template]"), "{toml}");
         assert!(toml.contains("project-name = \"My Tool\""), "{toml}");
+        assert!(toml.contains("version = \"0.2.0\""), "{toml}");
         assert_eq!(Manifest::parse(&toml).unwrap(), m);
+
+        // A table written before the version field existed still parses,
+        // and a version-less record writes no version line.
+        let old = toml.replace("version = \"0.2.0\"\n", "");
+        let parsed = Manifest::parse(&old).unwrap();
+        assert_eq!(parsed.template.as_ref().unwrap().version, None);
+        assert!(!parsed.to_toml().contains("0.2.0"));
     }
 
     #[test]

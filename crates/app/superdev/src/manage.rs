@@ -2,7 +2,7 @@
 //! pipeline, render its lines, and turn its facts into exit codes.
 
 use std::io::{self, Write};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use superdev_core::capability::Capability;
 use superdev_core::components::pin;
@@ -94,6 +94,7 @@ pub fn init(root: &Path, args: &InitArgs) -> Result<u8> {
             name: selection.template.name.to_string(),
             project_name: selection.tokens.name.clone(),
             project_slug: selection.tokens.slug.clone(),
+            version: Some(superdev_core::version().to_string()),
         });
     }
     let adopted = pipeline::adopt_existing(root, &mut manifest);
@@ -131,6 +132,94 @@ pub fn init(root: &Path, args: &InitArgs) -> Result<u8> {
             Err(e)
         }
     }
+}
+
+/// The `template` subcommands: read-only views of the shipped templates.
+/// Grown for the template-update skill — `render` gives it the current
+/// content to compare a repo against, and the printed token lines save it
+/// re-deriving slug rules it does not own.
+#[derive(clap::Subcommand)]
+pub enum TemplateCommand {
+    /// List the shipped project templates
+    List,
+    /// Write a template's token-substituted tree into an empty directory
+    Render {
+        /// Template to render (see `template list`)
+        template: String,
+        /// Project name the tokens substitute to
+        #[arg(long, value_name = "NAME")]
+        name: String,
+        /// Directory to write into — created if absent, must be empty
+        #[arg(long, value_name = "DIR")]
+        dir: PathBuf,
+    },
+}
+
+pub fn template(cmd: &TemplateCommand) -> Result<u8> {
+    match cmd {
+        TemplateCommand::List => {
+            for t in templates::shipped() {
+                out(&format!("{} — {}", t.name, t.description))?;
+            }
+            Ok(0)
+        }
+        TemplateCommand::Render {
+            template,
+            name,
+            dir,
+        } => template_render(template, name, dir),
+    }
+}
+
+fn template_render(template: &str, name: &str, dir: &Path) -> Result<u8> {
+    let template = templates::find(template).ok_or_else(|| Error::Manifest {
+        message: format!(
+            "template must be one of: {}",
+            template_select::shipped_names()
+        ),
+    })?;
+    fs_err(dir, std::fs::create_dir_all(dir))?;
+    // Refuse leftovers: a stale file in the target would read as part of
+    // this render to whoever diffs against it.
+    let mut entries = fs_err(dir, std::fs::read_dir(dir))?;
+    if entries.next().is_some() {
+        return Err(Error::Io {
+            path: dir.into(),
+            source: io::Error::other("directory is not empty — render into a fresh one"),
+        });
+    }
+    let tokens = templates::Tokens::for_name(name);
+    let files = templates::render(template, &tokens);
+    for (path, content) in &files {
+        let target = dir.join(path);
+        if let Some(parent) = target.parent() {
+            fs_err(parent, std::fs::create_dir_all(parent))?;
+        }
+        fs_err(&target, std::fs::write(&target, content))?;
+    }
+    out(&format!(
+        "rendered template {} into {} ({} files)",
+        template.name,
+        dir.display(),
+        files.len()
+    ))?;
+    // The [template] keys, verbatim — whoever records provenance copies
+    // these lines rather than re-deriving the slug.
+    out(&format!("project-name = {:?}", tokens.name))?;
+    out(&format!("project-slug = {:?}", tokens.slug))?;
+    out(&format!(
+        "project-ident = {:?}",
+        tokens.slug.replace('-', "_")
+    ))?;
+    Ok(0)
+}
+
+/// Wrap an fs result with the path it concerned.
+fn fs_err<T>(path: &Path, result: io::Result<T>) -> Result<T> {
+    result.map_err(|source| Error::Io {
+        path: path.into(),
+        source,
+    })
 }
 
 /// The manifest is written before the apply and deliberately kept: it is

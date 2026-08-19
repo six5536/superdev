@@ -2,7 +2,7 @@
 type: Glossary
 id: glossary
 title: Domain Glossary
-description: The terms the blueprint engine uses — blueprint, capability, provider, provenance, component, owned file, scaffold, project template, skill pack, knowledge-carried skill, PROJECT.md layer, custom skill, harvest, claim, orphan — plus the search terms section, locator, hybrid search and RRF.
+description: The terms the blueprint engine uses — blueprint, capability, provider, provenance, component, owned file, scaffold, project template, template adoption, skill pack, knowledge-carried skill, PROJECT.md layer, custom skill, harvest, claim, orphan — plus the search terms section, locator, hybrid search and RRF.
 status: stable
 ---
 
@@ -37,10 +37,17 @@ status: stable
   exists, so it cannot drift.
 - **Project template** — a set of write-once scaffolds embedded in the
   binary that `init` seeds a repo from, token-substituted and disjoint from
-  every capability's files. `config.toml` records the name and token values
-  as provenance; `sync` never revisits the files. `rust-npm` is the first —
-  see the [spec](specs/S007-project-templates-design.md).
-- **Skill pack** — the three generic skills the `skills` capability ships as
+  every capability's files. `config.toml` records the name, token values and
+  template version as provenance; the engine never revisits the files —
+  updates happen only through the `template-update` skill, as user edits.
+  `rust-npm` is the first — see the
+  [spec](specs/S007-project-templates-design.md).
+- **Template adoption** — taking a project template into a repo that was
+  never seeded from one: the `template-update` skill's first run there,
+  merging the rendered template into the existing shape with the user
+  deciding each collision, then recording `[template]` after the fact. From
+  then on the repo updates like a seeded one.
+- **Skill pack** — the four skills the `skills` capability ships as
   owned files under `.claude/skills/`, embedded in the binary and versioned
   with it. Claude Code loads them from there natively, so there is nothing to
   install. The knowledge-carried skills are not pack skills: the aokf

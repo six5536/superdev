@@ -149,11 +149,43 @@ conventions and are created by its setup skill. This keeps
 rejected: it would need a carve-out in that rule and leave
 non-template repos on the thin seed.
 
+# Updating a seeded repo
+
+Template evolution reaches existing repos through a skill, never the
+engine. The engine's stance is unchanged — template files are not
+hashed, not synced, and never drift; what the out-of-scope item below
+rejects is *engine-managed* template files. The `template-update` pack
+skill is the one update path: it discovers the template (`[template]`
+in the manifest, or — in a repo never seeded — shape analysis against
+the shipped list, confirmed either way), renders the binary's current
+content, three-way-compares using the file as seeded (recovered from
+git history) as the base, and applies what the user approves — a
+summary first, then per-area questions, per-file only at real
+conflicts. Every write is an ordinary user edit.
+
+Two engine surfaces exist for it: `superdev template list`, and
+`superdev template render <name> --name <project-name> --dir <dir>` —
+read-only views of the shipped templates. Render also prints the
+derived token values, so nothing outside the engine re-derives slug
+rules. `[template]` gains an optional `version`, stamped by `init` and
+restamped by the skill, so an update can short-circuit when the repo
+already matches the binary; manifests from before the field parse
+unchanged. Adoption — running the skill where no `[template]` exists —
+writes the table after the fact: the manifest is the user's
+declaration, and the skill edits it as the user.
+
+The reverse direction is this repo's own `template-backport` skill
+(unmanaged, beside `backport-assets`): harvest an exemplar project into
+a template's assets — reverse token substitution, the asset-layout
+deviations, the FILES table — to refresh a shipped template or create a
+new one.
+
 # Out of scope
 
 - Fetchable or third-party template sources — nothing vouches for
   fetched content; revisit with a trust story.
 - Templates presetting capability configuration.
 - Managed (synced) template files — a third ownership regime; scaffold
-  semantics are the point.
+  semantics are the point. Skill-mediated updates are deliberately not
+  this — see "Updating a seeded repo".
 - Further templates beyond rust-npm.
