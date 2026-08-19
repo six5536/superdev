@@ -193,7 +193,7 @@ fn hook_validate(root: &Path) -> Result<u8> {
     };
     let bundle = root.join(BUNDLE_DIR);
     let edited = Path::new(file_path);
-    if !edited.starts_with(&bundle) && !edited.starts_with(BUNDLE_DIR) {
+    if !under_bundle(&bundle, edited) {
         return Ok(0);
     }
     let report = validate(&load_bundle(&bundle)?, &root, DEFAULT_LEVEL);
@@ -203,6 +203,22 @@ fn hook_validate(root: &Path) -> Result<u8> {
     eprintln!("AOKF validation failed after editing {file_path} — fix before continuing:");
     eprintln!("{}", report.render_human().trim_end_matches('\n'));
     Ok(2)
+}
+
+/// Does the edited path name a file under the bundle? Falling back to the
+/// working directory gets a root with symlinks already resolved — macOS
+/// spells a temp dir `/private/var/…` where the payload still says `/var/…`
+/// — so a path that misses lexically gets a second look through the
+/// resolved spelling of both sides. Resolving only as a fallback keeps a
+/// symlink *into* the bundle matching on its bundle-side name.
+fn under_bundle(bundle: &Path, edited: &Path) -> bool {
+    if edited.starts_with(bundle) || edited.starts_with(BUNDLE_DIR) {
+        return true;
+    }
+    match (bundle.canonicalize(), edited.canonicalize()) {
+        (Ok(bundle), Ok(edited)) => edited.starts_with(bundle),
+        _ => false,
+    }
 }
 
 /// The bundle to work on: what the caller named, else `<root>/knowledge`.
