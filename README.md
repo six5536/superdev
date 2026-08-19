@@ -34,16 +34,17 @@ downloaded once per machine, and falls back to keyword-only if that model is
 unavailable.
 
 superdev is opinionated for one stack — Claude Code, mise and AOKF — and is
-still under construction. Nothing is published yet.
+still young: expect the surface to move before 1.0.
 
 ## Install
 
-Not published yet. Once released:
-
 ```sh
 npm install -g @six5536/superdev   # prebuilt binaries for Linux, macOS, Windows
-cargo install superdev    # build from source
+cargo install superdev             # build from source
 ```
+
+Either way the command is `superdev`. The npm package pulls a prebuilt
+binary for your platform; the crate builds one.
 
 ## Development
 
