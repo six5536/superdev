@@ -1,6 +1,6 @@
 {
   "name": "@six5536/superdev",
-  "version": "0.1.0",
+  "version": "0.1.0-rc.1",
   "description": "superdev command-line tool.",
   "homepage": "https://github.com/six5536/superdev#readme",
   "repository": {
@@ -30,11 +30,11 @@
     "node": ">=18"
   },
   "optionalDependencies": {
-    "@six5536/superdev-linux-x64": "0.1.0",
-    "@six5536/superdev-linux-arm64": "0.1.0",
-    "@six5536/superdev-darwin-x64": "0.1.0",
-    "@six5536/superdev-darwin-arm64": "0.1.0",
-    "@six5536/superdev-win32-x64": "0.1.0"
+    "@six5536/superdev-linux-x64": "0.1.0-rc.1",
+    "@six5536/superdev-linux-arm64": "0.1.0-rc.1",
+    "@six5536/superdev-darwin-x64": "0.1.0-rc.1",
+    "@six5536/superdev-darwin-arm64": "0.1.0-rc.1",
+    "@six5536/superdev-win32-x64": "0.1.0-rc.1"
   },
   "scripts": {
     "test": "node --test test/*.test.js"
