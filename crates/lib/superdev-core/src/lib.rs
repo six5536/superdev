@@ -52,7 +52,21 @@ mod tests {
     use super::version;
 
     #[test]
-    fn version_has_three_dotted_components() {
-        assert_eq!(version().split('.').count(), 3);
+    fn version_is_semver_with_an_optional_prerelease() {
+        let version = version();
+        // A release tag may carry a prerelease (`0.1.0-rc.1`) or build
+        // metadata; what precedes either must still be MAJOR.MINOR.PATCH.
+        let core = version
+            .split(['-', '+'])
+            .next()
+            .expect("version is non-empty");
+        let parts: Vec<&str> = core.split('.').collect();
+        assert_eq!(parts.len(), 3, "expected MAJOR.MINOR.PATCH in {version}");
+        assert!(
+            parts
+                .iter()
+                .all(|part| !part.is_empty() && part.bytes().all(|b| b.is_ascii_digit())),
+            "expected numeric version components in {version}"
+        );
     }
 }
