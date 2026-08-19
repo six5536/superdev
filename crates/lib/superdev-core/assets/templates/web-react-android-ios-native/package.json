@@ -1,0 +1,31 @@
+{
+  "name": "{{superdev:project-slug}}",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "apps/*",
+    "libs/debug-mcp-server"
+  ],
+  "scripts": {
+    "dev": "npm run dev -w apps/web",
+    "build": "npm run build -w apps/web",
+    "preview": "npm run preview -w apps/web",
+    "lint": "npm run lint -w apps/web",
+    "format": "npm run format -w apps/web",
+    "test": "npm run test -w apps/web",
+    "test:watch": "npm run test:watch -w apps/web",
+    "ios": "node scripts/ios.ts",
+    "android": "node scripts/android.ts",
+    "dev:ios": "node scripts/dev.ts ios",
+    "dev:android": "node scripts/dev.ts android",
+    "dev:web": "node scripts/dev.ts web",
+    "dev:all": "node scripts/dev.ts all",
+    "mcp:debug": "tsx libs/debug-mcp-server/src/index.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^25.3.2",
+    "commander": "^14.0.3",
+    "tsx": "^4.19.0"
+  }
+}

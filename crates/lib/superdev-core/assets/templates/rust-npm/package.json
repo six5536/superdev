@@ -1,0 +1,22 @@
+{
+    "name": "{{superdev:project-slug}}-workspace",
+    "private": true,
+    "description": "{{superdev:project-name}} development workspace.",
+    "workspaces": [
+        "packages/{{superdev:project-slug}}"
+    ],
+    "scripts": {
+        "build": "cargo build --workspace",
+        "dev": "cargo run -p {{superdev:project-slug}} --",
+        "test": "cargo nextest run --workspace",
+        "check": "cargo check --workspace --tests",
+        "lint": "cargo clippy --workspace",
+        "fmt": "cargo fmt --all",
+        "test:launcher": "node --test packages/{{superdev:project-slug}}/test/*.test.js",
+        "smoke": "node scripts/release-smoke.mjs",
+        "smoke:launcher": "node scripts/launcher-smoke.mjs",
+        "set-version": "node scripts/set-version.mjs",
+        "verify-version": "node scripts/verify-version.mjs",
+        "release": "node scripts/release.mjs"
+    }
+}

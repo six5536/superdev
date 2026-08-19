@@ -1,0 +1,88 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+build/
+*.tsbuildinfo
+.build/
+
+# IDE
+.idea/
+.vscode/mise-tools
+!.vscode/extensions.json
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+*.swp
+*.swo
+*.sublime-workspace
+*.sublime-project
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Environment files
+.env
+.env.local
+.env.*.local
+.env.development
+.env.production
+
+# Testing
+coverage/
+*.lcov
+.nyc_output/
+
+# Vite
+*.local
+
+# TypeScript
+*.tsbuildinfo
+
+# Android
+apps/android-native/.gradle/
+apps/android-native/build/
+apps/android-native/app/build/
+apps/android-native/local.properties
+*.apk
+*.aab
+*.dex
+*.class
+*.keystore
+!debug.keystore
+
+# iOS
+apps/ios-native/.build/
+apps/ios-native/.swiftpm/
+apps/ios-native/DerivedData/
+apps/ios-native/{{superdev:project-pascal}}.xcodeproj/xcuserdata/
+apps/ios-native/{{superdev:project-pascal}}.xcodeproj/project.xcworkspace/xcuserdata/
+apps/ios-native/{{superdev:project-pascal}}.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/
+*.ipa
+*.dSYM.zip
+*.dSYM
+
+# Mise
+.mise.local.toml
+
+# Screenshots (CLI automation)
+tmp/screenshots/
+
+

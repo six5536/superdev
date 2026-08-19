@@ -1,0 +1,15 @@
+{
+  "name": "{{superdev:project-slug}}-win32-x64",
+  "version": "0.1.0",
+  "description": "Prebuilt {{superdev:project-name}} binary for win32-x64.",
+  "license": "SEE LICENSE IN LICENSE",
+  "os": [
+    "win32"
+  ],
+  "cpu": [
+    "x64"
+  ],
+  "files": [
+    "bin/"
+  ]
+}

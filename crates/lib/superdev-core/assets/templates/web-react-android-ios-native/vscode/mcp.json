@@ -1,0 +1,22 @@
+{
+  "servers": {
+    "native-mobile-debug": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["tsx", "libs/debug-mcp-server/src/index.ts"],
+      "env": {
+        "DEBUG_DEVICES": "ios:8080,android:8081"
+      }
+    },
+    "appium-mcp": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "appium-mcp@latest"],
+      "env": {
+        "ANDROID_HOME": "${env:ANDROID_HOME}",
+        "CAPABILITIES_CONFIG": "${workspaceFolder}/appium-capabilities.json",
+        "NO_UI": "true"
+      }
+    }
+  }
+}

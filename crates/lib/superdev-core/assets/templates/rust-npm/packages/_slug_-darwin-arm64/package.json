@@ -1,0 +1,15 @@
+{
+  "name": "{{superdev:project-slug}}-darwin-arm64",
+  "version": "0.1.0",
+  "description": "Prebuilt {{superdev:project-name}} binary for darwin-arm64.",
+  "license": "SEE LICENSE IN LICENSE",
+  "os": [
+    "darwin"
+  ],
+  "cpu": [
+    "arm64"
+  ],
+  "files": [
+    "bin/"
+  ]
+}

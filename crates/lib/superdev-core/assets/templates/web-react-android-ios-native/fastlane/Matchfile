@@ -1,0 +1,6 @@
+# Fastlane Matchfile — iOS code signing via match
+# Configure git_url to your certificates repo
+
+# git_url("https://github.com/your-org/certificates.git")
+type("appstore")
+app_identifier("com.{{superdev:project-compact}}.app")

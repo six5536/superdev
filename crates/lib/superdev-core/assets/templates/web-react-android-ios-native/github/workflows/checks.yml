@@ -1,0 +1,63 @@
+name: Checks
+
+# Every platform gate in one reusable workflow, so ci.yml and release.yml run
+# exactly the same checks and the release gate cannot drift from CI.
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  web:
+    name: Web — Lint, Test, Build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          # Match the Node pin in mise.toml.
+          node-version: 24
+          cache: npm
+      - run: npm ci --workspace apps/web
+        working-directory: .
+      - run: npm run lint
+      - run: npm run test
+      - run: npm run build
+
+  android:
+    name: Android — Build & Test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/android-native
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          # Match the Java pin in mise.toml.
+          distribution: temurin
+          java-version: 21
+          cache: gradle
+      # The wrapper jar is a binary the template cannot seed; setup-gradle
+      # provides the version pinned in gradle-wrapper.properties. Once
+      # `gradle wrapper` has been run and the jar committed (docs/BUILD.md),
+      # these steps can switch to ./gradlew.
+      - uses: gradle/actions/setup-gradle@v4
+      - run: gradle assembleDebug --no-daemon
+      - run: gradle test --no-daemon
+
+  ios:
+    name: iOS — Build & Test
+    runs-on: macos-latest
+    defaults:
+      run:
+        working-directory: apps/ios-native
+    steps:
+      - uses: actions/checkout@v4
+      - run: swift build
+      - run: swift test

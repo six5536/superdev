@@ -1,0 +1,73 @@
+name: {{superdev:project-pascal}}
+options:
+  bundleIdPrefix: com.{{superdev:project-compact}}
+  deploymentTarget:
+    iOS: "17.0"
+  xcodeVersion: "16.2"
+  generateEmptyDirectories: false
+  createIntermediateGroups: true
+
+packages:
+  NativeDebugServer:
+    path: ../../libs/native-debug-server-ios
+
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    GENERATE_INFOPLIST_FILE: true
+
+targets:
+  {{superdev:project-pascal}}:
+    type: application
+    platform: iOS
+    sources:
+      - path: {{superdev:project-pascal}}/App
+      - path: {{superdev:project-pascal}}/Sources
+    resources:
+      - path: {{superdev:project-pascal}}/Sources/Resources
+    dependencies:
+      - package: NativeDebugServer
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.{{superdev:project-compact}}.app
+        MARKETING_VERSION: "0.1.0"
+        CURRENT_PROJECT_VERSION: 1
+        INFOPLIST_KEY_UIApplicationSceneManifest_Generation: true
+        INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents: true
+        INFOPLIST_KEY_UILaunchScreen_Generation: true
+        INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone: "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"
+        INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad: "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"
+        CODE_SIGN_STYLE: Automatic
+
+  {{superdev:project-pascal}}Tests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: {{superdev:project-pascal}}Tests
+    dependencies:
+      - target: {{superdev:project-pascal}}
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.{{superdev:project-compact}}.app.tests
+        MARKETING_VERSION: "0.1.0"
+        CURRENT_PROJECT_VERSION: 1
+        BUNDLE_LOADER: "$(TEST_HOST)"
+        TEST_HOST: "$(BUILT_PRODUCTS_DIR)/{{superdev:project-pascal}}.app/{{superdev:project-pascal}}"
+
+schemes:
+  {{superdev:project-pascal}}:
+    build:
+      targets:
+        {{superdev:project-pascal}}: all
+    run:
+      config: Debug
+    test:
+      config: Debug
+      targets:
+        - {{superdev:project-pascal}}Tests
+    profile:
+      config: Release
+    analyze:
+      config: Debug
+    archive:
+      config: Release

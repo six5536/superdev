@@ -1,0 +1,15 @@
+# The project's tools, installed by `mise install` and put on PATH by mise's
+# shims. This file is yours; superdev writes its own pins into the sibling
+# `.mise.toml`, and mise merges both, so neither ever rewrites the other.
+
+[tools]
+# rustup reads rust-toolchain.toml, but mise exports RUSTUP_TOOLCHAIN, so this
+# value is what a shell in the repo actually gets. Bump both together.
+rust = "1.96.0"
+# Match the Node version .github/workflows/checks.yml runs the launcher tests
+# on.
+node = "24"
+# cargo-binstall first: with it present the cargo backend fetches a prebuilt
+# nextest instead of compiling one. `npm test` runs cargo nextest.
+cargo-binstall = "1.21.0"
+"cargo:cargo-nextest" = "0.9.137"

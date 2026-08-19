@@ -1,0 +1,26 @@
+# Release Manifest — Single source of truth for all platform builds
+#
+# Fields:
+#   app_id          - Reverse-domain app identifier (used in build.gradle, Info.plist)
+#   app_name        - Display name shown to users
+#   version         - Semantic version (major.minor.patch)
+#   build_number    - Monotonically increasing integer (versionCode / CFBundleVersion)
+#   default_locale  - Primary language for store listings
+#   supported_locales - All supported locale codes
+#
+# Workflow:
+#   1. Edit version/build_number here
+#   2. Run `fastlane prepare_release` to stamp into all platform build files
+#   3. Commit the stamped files
+#   4. Tag the release: git tag v{version}
+#
+# No other file should be manually edited for version or build number.
+
+app_id: com.{{superdev:project-compact}}.app
+app_name: {{superdev:project-name}}
+version: 0.1.0
+build_number: 1
+default_locale: en-US
+supported_locales:
+  - en-US
+  - de-DE

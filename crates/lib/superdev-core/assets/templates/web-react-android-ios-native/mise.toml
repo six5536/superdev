@@ -1,0 +1,62 @@
+# The project's tools, installed by `mise install` and put on PATH by mise's
+# shims. This file is yours; superdev writes its own pins into the sibling
+# `.mise.toml`, and mise merges both, so neither ever rewrites the other.
+
+[tools]
+node = "24.15"
+java = "temurin-21" # Required by the Android Gradle Plugin
+# Generates apps/android-native's wrapper jar (binary, so not seeded — see
+# docs/BUILD.md). Keep in sync with gradle-wrapper.properties.
+gradle = "8.14.3"
+xcodegen = "latest" # Regenerates apps/ios-native/*.xcodeproj from project.yml (macOS)
+
+"npm:@playwright/test" = "1.60.0"
+"npm:@playwright/cli" = "0.1.13"
+
+[env]
+ANDROID_HOME = "/opt/android-sdk"
+ANDROID_SDK_ROOT = "/opt/android-sdk" # legacy var some tools still read
+
+# Where the container's `adb` finds its server: the host bridge on macOS/Windows (Docker is in a VM
+# there, so it can't see USB), or a local server when /dev/bus/usb is passed in. Must be a runtime
+# probe — `{{ os() }}` is `linux` in here regardless of host — and must be able to OMIT the vars
+# rather than blank them, which containerEnv can't do. See scripts/adb-env.sh.
+_.source = "{{ config_root }}/scripts/adb-env.sh"
+
+_.path = [
+  "/opt/android-sdk/cmdline-tools/latest/bin",
+  "/opt/android-sdk/platform-tools",
+]
+
+[tasks.playwright-browsers]
+description = "Download Chromium for Playwright + the MCP CLI (baked into the image)"
+# Browser binaries + their apt deps ONLY. These land in ~/.cache/ms-playwright (persists
+# in the image — not a volume) and, via `sudo apt`, in the OS. Workspace-independent, so
+# the Dockerfile bakes this at build time. `playwright-cli install-browser` pins the exact
+# (alpha) revision the MCP CLI's nested deps expect — keep it matched to @playwright/cli
+# (single source of truth: mise.toml [tools]). Each call downloads two artifacts (chromium
+# + headless-shell); the second shows no progress bar in non-interactive shells but isn't hung.
+run = """
+playwright install --with-deps chromium
+playwright-cli install-browser --with-deps chromium
+"""
+
+[tasks.playwright-workspace]
+description = "Initialize the Playwright MCP workspace (skills + config) in the repo"
+# Writes .claude/skills/playwright-cli + .playwright/cli.config.json into the CURRENT repo,
+# so it must run against the mounted workspace (post-create) — it CANNOT be baked into the
+# image, which has no workspace at build time. The browsers it needs are already baked
+# (see playwright-browsers). Cheap + idempotent.
+run = """
+playwright-cli install
+playwright-cli install --skills
+"""
+
+[tasks.android-packages]
+description = "Install/refresh Android SDK packages"
+shell = "bash -c" # mise's default sh is dash
+run = '''
+set -eu   # NOT pipefail: `yes | sdkmanager` makes `yes` exit 141 (SIGPIPE), which pipefail misreads as failure
+yes | sdkmanager --licenses > /dev/null
+sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0"
+'''

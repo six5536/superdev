@@ -1,0 +1,5 @@
+{{superdev:project-name}} — replace this with the full store listing.
+
+Describe what the app does, who it is for, and its headline features. Google
+Play allows up to 4000 characters; App Store Connect uses this via fastlane
+deliver.
