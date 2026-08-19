@@ -41,7 +41,7 @@ still under construction. Nothing is published yet.
 Not published yet. Once released:
 
 ```sh
-npm install -g superdev   # prebuilt binaries for Linux, macOS, Windows
+npm install -g @six5536/superdev   # prebuilt binaries for Linux, macOS, Windows
 cargo install superdev    # build from source
 ```
 

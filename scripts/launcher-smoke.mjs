@@ -39,6 +39,8 @@ const pkgName = selectPackage(process.platform, process.arch);
 if (!pkgName) {
   fail(`unsupported host ${process.platform}-${process.arch}`);
 }
+// The launcher publishes scoped, so it unpacks under node_modules/@six5536/.
+const launcherName = "@six5536/superdev";
 const pkgDir = join("packages", pkgName.replace("@six5536/", ""));
 const binName = binaryName(process.platform);
 if (!existsSync(join(pkgDir, "bin", binName))) {
@@ -61,7 +63,7 @@ try {
 
   // Extract each tarball (root dir `package/`) into a node_modules layout.
   const nm = join(base, "node_modules");
-  const dests = [join(nm, "superdev"), join(nm, pkgName)];
+  const dests = [join(nm, launcherName), join(nm, pkgName)];
   for (const [i, tgz] of tarballs.entries()) {
     const scratch = join(base, `x${i}`);
     mkdirSync(scratch, { recursive: true });
@@ -80,7 +82,7 @@ try {
     fail(`${pkgName}'s tarball does not contain bin/${binName} — check its "files" manifest`);
   }
 
-  const launcher = join(nm, "superdev", "bin", "superdev.js");
+  const launcher = join(nm, launcherName, "bin", "superdev.js");
   const version = run(process.execPath, [launcher, "--version"]);
   if (version.status !== 0 || !/^superdev \d+\.\d+\.\d+/.test(version.stdout.trim())) {
     console.error(version.stdout);
