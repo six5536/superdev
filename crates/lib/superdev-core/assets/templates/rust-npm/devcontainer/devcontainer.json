@@ -1,0 +1,57 @@
+{
+  "name": "{{superdev:project-name}}",
+  "build": {
+    "context": "..",
+    "dockerfile": "Dockerfile"
+  },
+  // Only git. Rust, Node and the cargo tooling are pinned in mise.toml and
+  // installed by post-create.sh, so one file decides the versions and a
+  // contributor outside the container gets them from the same place.
+  "features": {
+    "ghcr.io/devcontainers/features/git:1": {}
+  },
+  "containerEnv": {
+    "CONTAINER_WORKSPACE_FOLDER": "${containerWorkspaceFolder}",
+    "CLAUDE_CONFIG_DIR": "/home/vscode/.claude",
+    // mise's shims, on the PATH of every process rather than only interactive
+    // shells: the knowledge validation hook superdev installs runs `superdev`
+    // as a bare command from a non-interactive subshell, and shell activation
+    // alone would leave it unresolved and the hook silently unenforced.
+    "PATH": "/home/vscode/.local/share/mise/shims:${containerEnv:PATH}"
+  },
+  "mounts": [
+    // Keep high-churn build artefacts on local named volumes instead of the
+    // workspace share, which intermittently returns EACCES on a burst of
+    // parallel renames. The names carry the project slug so two projects on
+    // one machine never end up sharing a target/ or a node_modules/.
+    "source={{superdev:project-slug}}-node_modules,target=${containerWorkspaceFolder}/node_modules,type=volume",
+    "source={{superdev:project-slug}}-cargo-target,target=${containerWorkspaceFolder}/target,type=volume",
+    "source={{superdev:project-slug}}-mise-data,target=/home/vscode/.local/share/mise,type=volume",
+    // Claude Code's own state, kept across rebuilds.
+    "source={{superdev:project-slug}}-claude,target=/home/vscode/.claude,type=volume"
+    // To bring your host Claude Code config in, uncomment what you want. Each
+    // source must already exist on the host — Docker silently creates an empty
+    // directory in its place when it does not.
+    // "source=${localEnv:HOME}/.claude/CLAUDE.md,target=/home/vscode/.claude/CLAUDE.md,type=bind,readonly",
+    // "source=${localEnv:HOME}/.claude/commands,target=/home/vscode/.claude/commands,type=bind,readonly",
+    // "source=${localEnv:HOME}/.claude/agents,target=/home/vscode/.claude/agents,type=bind,readonly",
+    // "source=${localEnv:HOME}/.claude/skills,target=/home/vscode/.claude/skills,type=bind,readonly"
+  ],
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "editor.formatOnSave": true,
+        "files.watcherExclude": {
+          "**/target/**": true
+        }
+      },
+      "extensions": [
+        "EditorConfig.EditorConfig",
+        "hverlin.mise-vscode",
+        "niceandfair.vscode-tombi"
+      ]
+    }
+  },
+  "postCreateCommand": "bash .devcontainer/scripts/post-create.sh",
+  "remoteUser": "vscode"
+}

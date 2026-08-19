@@ -1,1 +1,7 @@
 * text=auto
+
+# Read inside the dev container by tools that reject CRLF: bash chokes on a
+# `\r` at the end of a shebang or a `set -euo pipefail`, and Docker on one
+# after a line continuation. These stay LF through a Windows checkout.
+*.sh text eol=lf
+.devcontainer/** text eol=lf

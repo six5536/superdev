@@ -16,8 +16,10 @@ publish a version it cannot find a heading for.
 - Project templates: `init --template rust-npm` (or a prompt, on a TTY)
   seeds a new repo with a Rust CLI workspace deployed as prebuilt binaries
   through npm — crates, launcher and platform packages, CI and release
-  workflows, repo docs, and policy configs, all token-substituted with the
-  project's name. Template files are write-once scaffolds: existing files
+  workflows, repo docs, policy configs, and a dev container that brings up
+  the pinned toolchain alongside superdev's own tooling, all
+  token-substituted with the project's name. Template files are
+  write-once scaffolds: existing files
   win, and `sync` never touches them. `--template none` and `--name` script
   the answers; `.superdev/config.toml` records the choice under `[template]`
 - Knowledge-owned skills: the aokf component carries its lifecycle skills —

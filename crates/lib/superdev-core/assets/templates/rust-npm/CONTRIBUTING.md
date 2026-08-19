@@ -10,6 +10,39 @@
   are published by release CI.
 - `scripts/` — repo scripts wired as npm scripts (see `package.json`).
 
+## Dev container
+
+`.devcontainer/` is the supported setup, but the tool versions are not its to
+decide: Rust, Node and the cargo tooling are pinned in `mise.toml` at the repo
+root, so `mise install` gets you the same versions outside the container too.
+Bump a version there. Rust is the one pin with a twin — `rust-toolchain.toml`
+is what CI and a plain `rustup` read, and mise exports `RUSTUP_TOOLCHAIN`, so
+move the two together.
+
+superdev writes its own pins into `.mise.toml`, next door. mise merges every
+config it finds in a directory, so the two files coexist and neither rewrites
+the other; `mise.toml` is yours.
+
+Only git comes from a devcontainer feature, pinned by digest in
+`devcontainer-lock.json`; refresh it with
+`devcontainer upgrade --workspace-folder .`. The Dockerfile installs mise from
+a pinned release checked against a committed SHA256 — bump both together, the
+file says where the hashes come from.
+
+`post-create.sh` installs everything the repo pins (`mise install`) and then
+the two tools that belong to the container rather than the project — `superdev`
+and Claude Code — into the container's global mise config. mise's shim
+directory is on `PATH` for every process, not only interactive shells, because
+the knowledge validation hook runs `superdev` from a non-interactive subshell.
+
+`target/`, `node_modules/` and mise's data live on named volumes prefixed with
+the project slug, so parallel projects on one machine never share them. To
+start a build from scratch, `docker volume rm {{superdev:project-slug}}-cargo-target`.
+
+Shell scripts and `.devcontainer/**` are forced to LF in `.gitattributes`.
+bash and Docker both fail on CRLF, and a Windows checkout would otherwise
+introduce it.
+
 ## Rust rules
 
 - Hoist dependency versions, profiles, and shared package metadata to the
@@ -35,7 +68,7 @@
 
 ```sh
 npm run build           # cargo build --workspace
-npm run test            # cargo nextest run --workspace (install cargo-nextest first)
+npm run test            # cargo nextest run --workspace (pinned in mise.toml)
 npm run lint            # cargo clippy --workspace
 npm run fmt             # cargo fmt --all
 npm run test:launcher   # the npm launcher's own tests

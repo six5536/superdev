@@ -17,7 +17,7 @@ macro_rules! tpl {
 }
 
 /// (tokenised target path, embedded content), in write order.
-const FILES: [(&str, &str); 41] = [
+const FILES: [(&str, &str); 46] = [
     ("CHANGELOG.md", tpl!("CHANGELOG.md")),
     ("CODE_OF_CONDUCT.md", tpl!("CODE_OF_CONDUCT.md")),
     ("CONTRIBUTING.md", tpl!("CONTRIBUTING.md")),
@@ -42,6 +42,19 @@ const FILES: [(&str, &str); 41] = [
         tpl!("crates/lib/_slug_-core/src/lib.rs"),
     ),
     ("deny.toml", tpl!("deny.toml")),
+    (".devcontainer/Dockerfile", tpl!("devcontainer/Dockerfile")),
+    (
+        ".devcontainer/devcontainer-lock.json",
+        tpl!("devcontainer/devcontainer-lock.json"),
+    ),
+    (
+        ".devcontainer/devcontainer.json",
+        tpl!("devcontainer/devcontainer.json"),
+    ),
+    (
+        ".devcontainer/scripts/post-create.sh",
+        tpl!("devcontainer/scripts/post-create.sh"),
+    ),
     (".gitattributes", tpl!("gitattributes")),
     (
         ".github/workflows/audit.yml",
@@ -57,6 +70,7 @@ const FILES: [(&str, &str); 41] = [
         tpl!("github/workflows/release.yml"),
     ),
     (".gitignore", tpl!("gitignore")),
+    ("mise.toml", tpl!("mise.toml")),
     ("package.json", tpl!("package.json")),
     (
         "packages/{{superdev:project-slug}}-darwin-arm64/bin/.gitkeep",

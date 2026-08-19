@@ -109,6 +109,30 @@ The first shipped template, derived from this repo's shape:
   nothing goes stale; the user replaces it at will.
 - Policy configs: `deny.toml` and `.prettierignore`, so the CI slice
   passes as shipped.
+- A dev container: `.devcontainer/` with the definition, its feature
+  lock, a Dockerfile and `post-create.sh`. It targets a
+  superdev-managed repo, not just a Rust one — the aokf hook calls a
+  bare `superdev`, so the container has to supply it or validation goes
+  silently unenforced. mise owns the tool versions: Rust, Node and the
+  cargo tooling are pinned in a seeded `mise.toml` and installed by
+  `post-create.sh`, so the same versions are one `mise install` away
+  outside the container; only git stays a devcontainer feature, and the
+  image bootstraps mise itself. The project's file is `mise.toml`, not
+  `.mise.toml`, for two reasons: `.mise.toml` is superdev's to write,
+  and the pin phase creates it before any scaffold applies, which would
+  make a seeded `.mise.toml` skip as already-existing. mise merges
+  every config in a directory, so the pair coexists. Rust is pinned
+  twice by necessity — `rust-toolchain.toml` is what CI and a plain
+  rustup read, mise exports `RUSTUP_TOOLCHAIN` — and both files say so.
+  Tools that belong to the container rather than the project —
+  `superdev`, Claude Code — stay in the container's global mise config.
+  `Action::WriteFile` sets no mode, so nothing seeded is executable and
+  every script is invoked through an interpreter.
+  Named volumes carry the slug token: they are global to the Docker
+  host, and hardcoded names would make two seeded projects share one
+  `target/`. The shipped `.gitattributes` forces `*.sh` and
+  `.devcontainer/**` to LF, because bash and Docker both fail on the
+  CRLF a Windows checkout would otherwise introduce.
 
 # The knowledge seed
 

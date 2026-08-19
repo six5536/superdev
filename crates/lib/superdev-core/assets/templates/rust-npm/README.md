@@ -13,7 +13,15 @@ host platform (an optional dependency) and runs it.
 
 ## Develop
 
-Rust toolchain pinned by `rust-toolchain.toml`; Node 18+ for the launcher.
+Open the repo in the dev container (`.devcontainer/`) and everything is
+already there — the pinned Rust toolchain, Node, and the superdev agent
+tooling. Without it, [mise](https://mise.jdx.dev) installs the same versions
+from `mise.toml`:
+
+```sh
+mise install
+```
+
 The layout, the command set, and the release procedure are in
 [CONTRIBUTING](CONTRIBUTING.md).
 
