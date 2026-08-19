@@ -15,7 +15,7 @@ knowledge-carried engineering skills (`to-plan`, `triage`, `to-spec`,
 
 - One feature per directory: `knowledge/issues/<feature-slug>/`.
 - The spec, when one exists, is
-  `knowledge/specs/YYYY-MM-DD-<feature>-design.md`.
+  `knowledge/specs/Snnn-<feature>-design.md`.
 - Implementation issues are one file per ticket at
   `knowledge/issues/<feature-slug>/NN-<slug>.md`, numbered from `01` —
   never a single combined tickets file.
@@ -24,9 +24,10 @@ knowledge-carried engineering skills (`to-plan`, `triage`, `to-spec`,
   while open.
 - The triage role is a string in the frontmatter `tags` list (see
   [Triage labels](#triage-labels)).
-- An issue that implements or affects a spec declares the link from the
-  issue side (`references` → the spec's id), so deleting the issue leaves
-  no dangling references in the bundle.
+- An issue or plan that implements a spec declares the link from its own
+  side (`implements` → the spec's id), so deleting it leaves no dangling
+  edges in the bundle; one that merely cites or affects a spec uses
+  `references` the same way.
 - Comments and conversation history append under a `## Comments` heading.
 - A resolved issue stays: swap its state tag to `done` (or keep
   `wontfix`, reasoning in the body) in the resolving commit — search
@@ -64,7 +65,7 @@ use the matching tag from this table.
 Used by `/wayfinder`. The **map** is the effort's plan concept; the
 **children** are issue files.
 
-- **Map**: `knowledge/plans/YYYY-MM-DD-<effort>.md` (`type: Plan`,
+- **Map**: `knowledge/plans/Pnnn-<effort>.md` (`type: Plan`,
   `status: draft`) — the Notes / Decisions-so-far / Fog body.
 - **Child ticket**: `knowledge/issues/<effort>/NN-<slug>.md`, numbered
   from `01`, with the question in the body. A `Type:` line records the

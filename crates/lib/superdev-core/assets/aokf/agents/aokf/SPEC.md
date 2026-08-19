@@ -1,8 +1,8 @@
 # AOKF — Agent Open Knowledge Format
 
-**Version:** 0.1
+**Version:** 0.2
 **Status:** Draft
-**Date:** 2026-08-04
+**Date:** 2026-08-18
 
 AOKF is a format for a project knowledgebase: a directory of markdown
 files with YAML frontmatter, kept inside the project's repository and
@@ -77,7 +77,7 @@ history.
 The manifest declares the bundle:
 
 ```yaml
-aokf: "0.1"                 # spec version the bundle targets
+aokf: "0.2"                 # spec version the bundle targets
 name: symify-knowledge
 description: Knowledgebase for the symify project.
 ```
@@ -284,6 +284,7 @@ Consumers resolve `to` as an `id` first, then as a path.
 | `depends-on`  | `depended-on-by`  | Requires the target to function.                           |
 | `references`  | `referenced-by`   | Cites or points at the target.                             |
 | `supersedes`  | `superseded-by`   | Replaces the target; the target is deprecated.             |
+| `implements`  | `implemented-by`  | Delivers or realises the target — a plan or issue implementing a spec. |
 | `contradicts` | `contradicts`     | Known conflict (symmetric); resolution belongs in prose.   |
 
 Producers SHOULD use a core value where one fits and MAY introduce
@@ -383,6 +384,6 @@ manifest.
 
 ## 12. Versioning
 
-This document specifies AOKF **0.1**. Minor version bumps are
+This document specifies AOKF **0.2**. Minor version bumps are
 backward-compatible additions; major bumps may break. A bundle declares
 the version it targets with the manifest's `aokf` key (§2).

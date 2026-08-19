@@ -120,7 +120,9 @@ fn aokf_validate_json_is_machine_readable() {
         .assert()
         .success();
     let report: serde_json::Value = serde_json::from_slice(&out.get_output().stdout).unwrap();
-    assert!(report["findings"].is_array(), "no findings array: {report}");
+    // Zero findings, warnings included: the bundle's own links use only core
+    // rels, which S013 made true by promoting `implements`.
+    assert_eq!(report["findings"], serde_json::json!([]), "{report}");
     assert_eq!(report["passed"], serde_json::json!(true));
     // The bundle path is the CLI's to add: core omits it.
     let bundle = report["bundle"].as_str().unwrap();

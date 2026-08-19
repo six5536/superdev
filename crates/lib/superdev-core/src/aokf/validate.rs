@@ -16,7 +16,7 @@ use super::bundle::Bundle;
 use super::concept::Concept;
 
 /// Relationship types the spec defines; anything else reads as `relates-to`.
-const CORE_RELS: [&str; 10] = [
+const CORE_RELS: [&str; 12] = [
     "relates-to",
     "part-of",
     "has-part",
@@ -27,6 +27,8 @@ const CORE_RELS: [&str; 10] = [
     "supersedes",
     "superseded-by",
     "contradicts",
+    "implements",
+    "implemented-by",
 ];
 
 const MANIFEST: &str = "manifest.aokf.yaml";
@@ -828,6 +830,24 @@ mod tests {
         assert_eq!(r.concept_count, 2);
         assert!(r.render_human().contains("no findings"));
         assert_eq!(r.to_json()["passed"], serde_json::json!(true));
+    }
+
+    #[test]
+    fn implements_is_core_and_warns_nothing() {
+        let (b, _dir) = bundle_with(&[
+            ("manifest.aokf.yaml", MANIFEST_YAML),
+            (
+                "plan.md",
+                "---\ntype: Plan\nid: alpha\nlinks:\n  - rel: implements\n    to: beta\n---\nSee [beta](spec.md).\n",
+            ),
+            (
+                "spec.md",
+                "---\ntype: Spec\nid: beta\nlinks:\n  - rel: implemented-by\n    to: alpha\n---\nSee [alpha](plan.md).\n",
+            ),
+        ]);
+        let r = validate(&b, &b.root, 2);
+        assert!(r.passed(), "{:?}", r.findings);
+        assert!(r.findings.is_empty(), "{:?}", r.findings);
     }
 
     #[test]

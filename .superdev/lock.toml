@@ -15,6 +15,7 @@ version = "0.1.0"
 
 [files]
 ".agents/aokf.md" = "d8b9fab198137af93b2675cc689fed26b43afbd5c63a67881ef121032dd307a2"
+".agents/aokf/SPEC.md" = "3088ede30804c0392aec67a3630e3d1ce9667891337dddfb3c3d5f4b93b37fbb"
 ".agents/codegraph.md" = "ded8fff121b0e0f6566698a567cebe9170478231eba449c6f96bb778e2f31823"
 ".agents/rtk.md" = "9b6097cd301c0c7c910f23a8f918e6138b8f0ced0d6f46135d83a32c6c339e2f"
 ".agents/superdev.md" = "6ba64d542178aaa679b41ff0baab09c5ce0e9d8207e0145048718050c8db297e"

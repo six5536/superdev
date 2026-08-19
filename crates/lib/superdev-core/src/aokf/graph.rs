@@ -201,6 +201,8 @@ pub fn inverse_rel(rel: &str) -> &str {
         "supersedes" => "superseded-by",
         "superseded-by" => "supersedes",
         "contradicts" => "contradicts",
+        "implements" => "implemented-by",
+        "implemented-by" => "implements",
         _ => "relates-to",
     }
 }
@@ -340,6 +342,19 @@ mod tests {
     fn inverse_vocabulary_matches_the_spec() {
         assert_eq!(inverse_rel("part-of"), "has-part");
         assert_eq!(inverse_rel("contradicts"), "contradicts");
+        assert_eq!(inverse_rel("implements"), "implemented-by");
+        assert_eq!(inverse_rel("implemented-by"), "implements");
         assert_eq!(inverse_rel("custom-thing"), "relates-to");
+    }
+
+    #[test]
+    fn an_implements_edge_shows_as_implemented_by_from_the_spec_side() {
+        let plan =
+            "---\ntype: Plan\nid: plan-x\nlinks:\n  - rel: implements\n    to: spec-x\n---\nbody\n";
+        let spec = "---\ntype: Spec\nid: spec-x\n---\nbody\n";
+        let g = Graph::build(&bundle_with(&[("plan.md", plan), ("spec.md", spec)]));
+        let n = g.neighbours("spec-x").unwrap();
+        assert_eq!(n.len(), 1);
+        assert_eq!(n[0].rel, "implemented-by");
     }
 }
