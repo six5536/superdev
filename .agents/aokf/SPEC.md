@@ -78,8 +78,8 @@ The manifest declares the bundle:
 
 ```yaml
 aokf: "0.2"                 # spec version the bundle targets
-name: symify-knowledge
-description: Knowledgebase for the symify project.
+name: example-knowledge
+description: Knowledgebase for the example project.
 ```
 
 `producer`, `generated`, and `counts` keys are stamped (§4): written by
@@ -100,11 +100,11 @@ type: Module
 id: planner
 title: Planner
 description: Pure planning stage; computes actions without touching the filesystem.
-resource: /crates/lib/symify-core/src/planner.rs
+resource: /crates/lib/example-core/src/planner.rs
 tags: [core, planning]
 sources:
   - id: config-src
-    resource: /crates/lib/symify-core/src/config.rs
+    resource: /crates/lib/example-core/src/config.rs
     title: Config source
 links:
   - rel: depends-on
@@ -193,7 +193,7 @@ that asserts a fact nobody can check is `restricted` or `stamped`.
 ```yaml
 sources:
   - id: planner-src
-    resource: /crates/lib/symify-core/src/planner.rs
+    resource: /crates/lib/example-core/src/planner.rs
     title: Planner source
   - id: clap-docs
     resource: https://docs.rs/clap/latest/clap/
