@@ -70,6 +70,18 @@ impl RepoPlan {
         self.planned.iter().any(|p| !p.actions.is_empty())
     }
 
+    /// Whether any entry carries drift: a managed file, pin or entry that no
+    /// longer matches the blueprint. `Run` actions are excluded because they
+    /// provision external state — a code index, an installed tool — that no
+    /// checkout carries and the lock never hashes. A run a real change
+    /// triggers is planned beside the write that triggered it, so dropping
+    /// runs here hides no drift.
+    pub fn has_drift(&self) -> bool {
+        self.planned
+            .iter()
+            .any(|p| p.actions.iter().any(|a| !matches!(a, Action::Run { .. })))
+    }
+
     /// One line per enabled capability pinned away from this binary's registry.
     pub fn behind_lines(&self) -> &[String] {
         &self.behind
@@ -710,6 +722,66 @@ mod tests {
         assert!(plan.has_actions());
         assert_eq!(plan.behind_lines().len(), 1);
         assert!(plan.behind_lines()[0].starts_with("skills: pinned 0.0.1"));
+    }
+
+    /// The `--drift` gate's contract: a run provisions external state no
+    /// checkout carries, so it is work to do without being drift. Every run
+    /// a real change triggers is planned beside that change, which is what
+    /// makes dropping runs from the exit code safe.
+    #[test]
+    fn a_provisioning_run_is_work_to_do_but_not_drift() {
+        // Every capability disabled, and the repo entry's own files already
+        // in place: a settled tree, so the plan starts empty and the asserts
+        // below speak only about what the test prepends.
+        let dir = tempfile::tempdir().unwrap();
+        let manifest = Manifest::default_for(crate::version(), &Capability::ALL);
+        std::fs::create_dir_all(dir.path().join(".agents")).unwrap();
+        std::fs::write(
+            dir.path().join(".agents/superdev.md"),
+            aggregator_content(&manifest),
+        )
+        .unwrap();
+        for scaffold in [".agents/coding.md", ".agents/prose.md"] {
+            std::fs::write(dir.path().join(scaffold), "the user's now\n").unwrap();
+        }
+        std::fs::write(dir.path().join(".gitignore"), ".superdev/cache/\n").unwrap();
+        std::fs::write(dir.path().join("AGENTS.md"), "@.agents/superdev.md\n").unwrap();
+        let fake = FakeRunner::new();
+        let mut plan = plan_repo(
+            dir.path(),
+            &fake,
+            &manifest,
+            &Lock::default(),
+            PlanMode::Status,
+        )
+        .unwrap();
+        assert!(!plan.has_actions(), "descs: {:?}", plan_descs(&plan));
+
+        plan.prepend(Planned {
+            capability: Some(Capability::CodeIndex),
+            provider: "codegraph".into(),
+            actions: vec![Action::Run {
+                program: "mise".into(),
+                args: vec!["exec".into()],
+                purpose: "build the code index".into(),
+                undo: None,
+                optional: false,
+            }],
+        });
+        assert!(plan.has_actions(), "a run is still work to do");
+        assert!(!plan.has_drift(), "a run alone is not drift");
+
+        plan.prepend(Planned {
+            capability: Some(Capability::CodeIndex),
+            provider: "codegraph".into(),
+            actions: vec![Action::WriteFile {
+                path: ".agents/codegraph.md".into(),
+                content: "x".into(),
+                ownership: crate::action::Ownership::Owned,
+                reason: "code-index instructions".into(),
+            }],
+        });
+        assert!(plan.has_drift(), "a managed file is drift");
     }
 
     /// Every planned action description, flattened for substring asserts.

@@ -802,6 +802,35 @@ fn disabling_skills_sweeps_them_and_releases_the_users_edit() {
     superdev().current_dir(root).arg("status").assert().code(0);
 }
 
+/// `--drift` narrows the exit code, never the report: on managed files it
+/// answers exactly as bare `status`. The runs it drops are covered in core,
+/// where a plan can hold one with nothing beside it.
+#[test]
+fn status_drift_answers_as_status_does_on_managed_files() {
+    let dir = local_repo();
+    let root = dir.path();
+    superdev()
+        .current_dir(root)
+        .args(["status", "--drift"])
+        .assert()
+        .code(0);
+
+    // An owned file the user rewrote is drift under either gate.
+    let humanise = root.join(".claude/skills/humanise/SKILL.md");
+    std::fs::write(&humanise, "mine now\n").unwrap();
+    superdev().current_dir(root).arg("status").assert().code(1);
+    let out = superdev()
+        .current_dir(root)
+        .args(["status", "--drift"])
+        .assert()
+        .code(1);
+    assert!(
+        stdout_of(&out).contains("write .claude/skills/humanise/SKILL.md"),
+        "{}",
+        stdout_of(&out)
+    );
+}
+
 #[test]
 fn claude_md_import_is_created_appended_and_restored() {
     // A: no CLAUDE.md at all — superdev writes one holding just the import.

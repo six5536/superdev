@@ -16,7 +16,7 @@
         "test": "cargo nextest run --workspace && npm run check:aokf",
         "check": "cargo check --workspace --tests",
         "check:aokf": "cargo run --quiet -- aokf validate knowledge",
-        "check:blueprint": "cargo run --quiet -- status",
+        "check:blueprint": "cargo run --quiet -- status --drift",
         "lint": "cargo clippy --workspace",
         "fmt": "cargo fmt --all",
         "coverage": "cargo +nightly llvm-cov nextest --workspace --html",

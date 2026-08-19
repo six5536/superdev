@@ -33,7 +33,12 @@ enum Command {
     /// Set this repo up for agent-driven development
     Init(manage::InitArgs),
     /// Report drift between the repo and its blueprint
-    Status,
+    Status {
+        /// Exit on drift alone, ignoring external state a checkout never
+        /// carries (an unbuilt code index, an uninstalled tool)
+        #[arg(long)]
+        drift: bool,
+    },
     /// Re-apply the blueprint so the repo matches the manifest
     Sync {
         /// Print the plan without applying it
@@ -83,7 +88,7 @@ fn main() -> ExitCode {
 fn run(cli: &Cli) -> Result<u8> {
     match &cli.command {
         Some(Command::Init(args)) => manage::init(&root()?, args),
-        Some(Command::Status) => manage::status(&root()?),
+        Some(Command::Status { drift }) => manage::status(&root()?, *drift),
         Some(Command::Sync { dry_run }) => manage::sync(&root()?, *dry_run),
         Some(Command::Update { target, provider }) => {
             manage::update(&root()?, target.as_deref(), provider.as_deref())

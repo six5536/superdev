@@ -149,7 +149,9 @@ fn apply_failed() -> Error {
 }
 
 /// Report drift without changing anything. 0 in sync, 1 with work to do.
-pub fn status(root: &Path) -> Result<u8> {
+/// `drift_only` keeps the report whole but narrows the exit code to drift,
+/// leaving provisioning runs out of it.
+pub fn status(root: &Path, drift_only: bool) -> Result<u8> {
     let manifest = load_manifest(root)?;
     let lock = Lock::load(root)?;
     let runner = SystemRunner;
@@ -167,9 +169,15 @@ pub fn status(root: &Path) -> Result<u8> {
     if let Some(line) = plan.blueprint_line() {
         out(line)?;
     }
-    Ok(u8::from(
-        plan.has_actions() || !plan.behind_lines().is_empty(),
-    ))
+    // A stale pin is version drift either way; `--drift` narrows only the
+    // action half, so a gate can ask "does this tree match the blueprint?"
+    // without a checkout's unprovisioned external state answering for it.
+    let outstanding = if drift_only {
+        plan.has_drift()
+    } else {
+        plan.has_actions()
+    };
+    Ok(u8::from(outstanding || !plan.behind_lines().is_empty()))
 }
 
 /// Re-apply the blueprint so the repo matches the manifest.

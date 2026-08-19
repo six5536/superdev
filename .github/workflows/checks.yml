@@ -81,8 +81,10 @@ jobs:
         if: runner.os != 'Windows'
         run: npm run check:aokf
 
+      # `--drift`, not bare `status`: a checkout carries no code index and no
+      # installed tools, and provisioning those is not drift from the blueprint.
       - name: Blueprint drift
-        run: cargo run --quiet -- status
+        run: cargo run --quiet -- status --drift
 
   coverage:
     # Runs the full test suite on ubuntu under instrumentation and enforces the
