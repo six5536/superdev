@@ -2,9 +2,8 @@
 
 How to get set up, what to run before you push, and how a release is cut.
 
-> Status: scaffold, unreleased. The repository carries the full project
-> machinery around a placeholder CLI; expect everything below the tooling layer
-> to change.
+> Status: released, pre-1.0. The tooling layer is settled; the CLI surface
+> above it is still moving, and minor versions may break it.
 
 ## Prerequisites
 

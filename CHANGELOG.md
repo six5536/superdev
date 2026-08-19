@@ -11,7 +11,7 @@ publish a version it cannot find a heading for.
 
 ## [Unreleased]
 
-## [0.1.0-rc.1] - 2026-08-19
+## [0.1.0] - 2026-08-19
 
 ### Added
 
