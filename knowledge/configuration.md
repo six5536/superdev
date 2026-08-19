@@ -2,7 +2,7 @@
 type: Reference
 id: configuration
 title: Configuration & Environments
-description: The .superdev directory — the config.toml manifest, the lock file, and the gitignored cache — plus the embeddings opt-in, the custom lists, the removed-workflows guided error, the .mcp.json and .claude/settings.json merges, and the user-level model cache.
+description: The .superdev directory — the config.toml manifest, the lock file, and the gitignored cache — plus the embeddings opt-in, the custom lists, the many-provider skills shape, the guided errors, the .mcp.json and .claude/settings.json merges, the bash-output-filter files, and the user-level model cache.
 status: stable
 resource: /crates/lib/superdev-core/src/manifest.rs
 ---

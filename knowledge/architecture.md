@@ -52,10 +52,12 @@ A capability is a slot; the tool filling it is a swappable provider.
 | `bash-output-filter` | `rtk`     | checksummed release binaries in owned, platform-scoped mise config files, plus a PreToolUse rewrite hook |
 
 The registry holds one entry per (capability, provider) pair — its version, its
-checksum where it has one, and whether it is the default — and the manifest's
-`provider` field picks among them. Every capability currently has exactly one
-provider; an id no entry matches fails with `<capability> provider must be one
-of: …`. A manifest still naming the removed `workflows` capability fails at
+checksum where it has one, and whether it is the default — and the manifest
+picks among them: one `provider` field per slot, except `skills`, whose
+many-provider shape is in
+[configuration](configuration.md). Every capability currently has exactly one
+registry entry; an id no entry matches fails with `<capability> provider must
+be one of: …`. A manifest still naming the removed `workflows` capability fails at
 load with a guided error
 ([spec](specs/S009-knowledge-carried-skills-design.md)).
 

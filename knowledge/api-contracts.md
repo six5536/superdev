@@ -12,8 +12,8 @@ resource: /crates/app/superdev/src/main.rs
 ```
 superdev                     print help, exit 0
 superdev init                set this repo up; --no-knowledge, --no-code-index,
-                             --no-frontend, --no-skills each disable a
-                             capability
+                             --no-bash-output-filter, --no-frontend,
+                             --no-skills each disable a capability
 superdev status              report drift; exit 1 when there is work to do
 superdev sync                re-apply the blueprint; --dry-run prints the plan only
 superdev update [TARGET]     move pins to this binary's defaults, then sync;
@@ -66,9 +66,11 @@ Every verb acts on the current directory.
   `[knowledge] custom` the same way under its own capability name — a released
   skill is the user's file, not drift, so it leaves the code alone. Released orphans and the
   blueprint-version line print as reports and never affect the exit code.
-- **`sync`** refuses to run while `code-index` or `skills` is
-  pinned anywhere other than the registry default, and says to run
-  `superdev update <capability>`. `code-index` is downloaded by URL and verified against a
+- **`sync`** refuses to run while a registry-locked capability
+  (`code-index`, `skills`, `bash-output-filter`) is pinned anywhere other
+  than the registry default, and says to run
+  `superdev update <capability>`. `code-index` and `bash-output-filter`
+  are downloaded by URL and verified against a
   checksum baked into this binary beside the version, so no other version has
   provenance — or a URL; the skill pack's and the knowledge capability's
   content is embedded in the binary, so
