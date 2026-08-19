@@ -1,8 +1,9 @@
 //! templates/rust_npm.rs — the rust-npm template: a Rust CLI workspace
 //! deployed as prebuilt binaries through npm, derived from superdev's own
 //! repo shape. On disk the assets follow the seeded layout with leading dots
-//! stripped and tokenised segments written `_slug_` (see the module docs in
-//! [`super`]); this table restores both in the target paths.
+//! stripped, tokenised segments written `_slug_`, and each `Cargo.toml` held
+//! as `Cargo.toml.tpl` (see the module docs in [`super`]); this table
+//! restores all three in the target paths.
 
 use super::Template;
 
@@ -21,13 +22,13 @@ const FILES: [(&str, &str); 46] = [
     ("CHANGELOG.md", tpl!("CHANGELOG.md")),
     ("CODE_OF_CONDUCT.md", tpl!("CODE_OF_CONDUCT.md")),
     ("CONTRIBUTING.md", tpl!("CONTRIBUTING.md")),
-    ("Cargo.toml", tpl!("Cargo.toml")),
+    ("Cargo.toml", tpl!("Cargo.toml.tpl")),
     ("LICENSE", tpl!("LICENSE")),
     ("README.md", tpl!("README.md")),
     ("SECURITY.md", tpl!("SECURITY.md")),
     (
         "crates/app/{{superdev:project-slug}}/Cargo.toml",
-        tpl!("crates/app/_slug_/Cargo.toml"),
+        tpl!("crates/app/_slug_/Cargo.toml.tpl"),
     ),
     (
         "crates/app/{{superdev:project-slug}}/src/main.rs",
@@ -35,7 +36,7 @@ const FILES: [(&str, &str); 46] = [
     ),
     (
         "crates/lib/{{superdev:project-slug}}-core/Cargo.toml",
-        tpl!("crates/lib/_slug_-core/Cargo.toml"),
+        tpl!("crates/lib/_slug_-core/Cargo.toml.tpl"),
     ),
     (
         "crates/lib/{{superdev:project-slug}}-core/src/lib.rs",

@@ -6,10 +6,13 @@
 //!
 //! Five tokens substitute in file contents and in target paths, exact-match
 //! only; everything else — including GitHub Actions' `${{ … }}` — passes
-//! through untouched. On disk the assets mirror the seeded repo, except that
-//! leading dots are stripped (a real `.gitignore` would hide sibling assets
-//! from git) and a tokenised path segment is written `_slug_` or `_pascal_`,
-//! because `:` cannot appear in Windows file names.
+//! through untouched. On disk the assets mirror the seeded repo, except for
+//! three manglings the target paths restore: leading dots are stripped (a
+//! real `.gitignore` would hide sibling assets from git), a tokenised path
+//! segment is written `_slug_` or `_pascal_` because `:` cannot appear in
+//! Windows file names, and a `Cargo.toml` is stored as `Cargo.toml.tpl`
+//! because cargo omits any directory holding a real manifest from the
+//! published crate, which would ship a Rust template with no files in it.
 
 use std::path::Path;
 
@@ -202,6 +205,35 @@ mod tests {
         // GitHub Actions syntax and near-miss tokens pass through untouched.
         let untouched = "${{ secrets.TOKEN }} {{superdev:project}} {{name}}";
         assert_eq!(substitute(untouched, &tokens), untouched);
+    }
+
+    /// Cargo omits any directory holding a `Cargo.toml` from the packaged
+    /// crate, treating it as a nested package. A template manifest stored
+    /// under its real name therefore drops that whole template from the
+    /// tarball, and the published crate fails to compile on `include_str!` —
+    /// invisibly, since building from the repo still works. Assets keep
+    /// manifests as `Cargo.toml.tpl`; this pins the rule.
+    #[test]
+    fn no_template_asset_is_named_cargo_toml() {
+        fn walk(dir: &Path, found: &mut Vec<std::path::PathBuf>) {
+            for entry in std::fs::read_dir(dir).expect("assets dir is readable") {
+                let path = entry.expect("readable dir entry").path();
+                if path.is_dir() {
+                    walk(&path, found);
+                } else if path.file_name().is_some_and(|name| name == "Cargo.toml") {
+                    found.push(path);
+                }
+            }
+        }
+
+        let assets = Path::new(env!("CARGO_MANIFEST_DIR")).join("assets/templates");
+        let mut found = Vec::new();
+        walk(&assets, &mut found);
+        assert!(
+            found.is_empty(),
+            "template assets must store manifests as `Cargo.toml.tpl`, \
+             or cargo strips them from the published crate; found: {found:?}"
+        );
     }
 
     const TEST_TEMPLATE: Template = Template {
