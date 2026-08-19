@@ -11,6 +11,8 @@ publish a version it cannot find a heading for.
 
 ## [Unreleased]
 
+## [0.1.0-rc.1] - 2026-08-19
+
 ### Added
 
 - A second project template, `web-react-android-ios-native`: one product as
@@ -97,9 +99,6 @@ publish a version it cannot find a heading for.
   `update skills@<version>` is refused like the other pinned capabilities
 - `superdev aokf hook validate`: the hook as a subcommand — payload on
   stdin, validates in-process, works on every platform superdev ships for
-
-### Added
-
 - `init` adopts a repo's existing skills: one already sitting under a pack
   name, with content of its own, is released into `[skills] custom` and
   reported, instead of being overwritten and backed up
@@ -120,7 +119,6 @@ publish a version it cannot find a heading for.
   deleted swaps same-named skills to knowledge ownership and sweeps the
   dropped upstream files. The superpowers plugin remains installable by
   hand: `claude plugin install superpowers`
-
 - `superdev template list` and `superdev template render`: read-only views
   of the shipped project templates — render writes the token-substituted
   tree into an empty directory and prints the derived token values.
