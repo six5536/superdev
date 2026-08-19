@@ -74,15 +74,28 @@ from:
 
 # Tokens
 
-Three tokens, exact-match only: `{{superdev:project-name}}`,
-`{{superdev:project-slug}}`, and `{{superdev:project-ident}}` — the slug
-with `_` for `-`, added during implementation because Rust source refers
-to a hyphenated crate by its underscore identifier, which the slug cannot
-express. Tokens substitute in file contents and in target paths
-(`crates/app/{{superdev:project-slug}}/` lands renamed). Anything else
-passes through untouched — including GitHub Actions' `${{ … }}`, which
-template CI files legitimately contain. No user-defined variables. A name
-that yields an empty slug falls back to `project`.
+Five tokens, exact-match only: `{{superdev:project-name}}`,
+`{{superdev:project-slug}}`, and three spellings of the slug that a
+target language forbids the slug itself in:
+
+- `{{superdev:project-ident}}` — the slug with `_` for `-`, because Rust
+  source refers to a hyphenated crate by its underscore identifier.
+- `{{superdev:project-compact}}` — the slug with the hyphens dropped, for
+  reverse-domain app ids: Android forbids `-` in an `applicationId` and
+  iOS forbids `_` in a bundle id, so only alphanumeric segments satisfy
+  both.
+- `{{superdev:project-pascal}}` — the slug's segments capitalised and
+  joined, for Swift and Kotlin type names, Xcode project and scheme
+  names, and Gradle root projects, none of which admit a separator.
+
+Each was added when a template needed a spelling no existing token could
+express; the derivations live on `Tokens` so `substitute` and
+`template render`'s printout share one source of truth. Tokens substitute
+in file contents and in target paths (`crates/app/{{superdev:project-slug}}/`
+lands renamed). Anything else passes through untouched — including GitHub
+Actions' `${{ … }}`, which template CI files legitimately contain. No
+user-defined variables. A name that yields an empty slug falls back to
+`project`.
 
 # The rust-npm template
 
@@ -133,6 +146,53 @@ The first shipped template, derived from this repo's shape:
   `target/`. The shipped `.gitattributes` forces `*.sh` and
   `.devcontainer/**` to LF, because bash and Docker both fail on the
   CRLF a Windows checkout would otherwise introduce.
+
+# The web-react-android-ios-native template
+
+The second shipped template: one product as three native codebases — a
+React web app, a Kotlin/Jetpack Compose Android app and a SwiftUI iOS app
+— backported from a real three-platform project. Naming anticipates
+siblings: `<platforms>-<stack>`, so a Capacitor or shared-Rust-core
+variant gets its own name rather than a flag.
+
+- Three app stubs: `apps/web` (Vite, React Router, Tailwind, Vitest),
+  `apps/android-native` (Compose, with Robolectric so `gradlew test`
+  needs no emulator) and `apps/ios-native` (SwiftUI, SPM). Each is
+  hello-world and passes CI as shipped; the exemplar's domain code stays
+  out.
+- Agent debug tooling, the reason this stack is worth templating: an HTTP
+  debug server compiled into debug builds only
+  (`libs/native-debug-server-{android,ios}`), an MCP server wrapping its
+  API (`libs/debug-mcp-server`), and `scripts/` — a dev CLI for the
+  build/install/launch/logs/screenshot loop plus a host-side adb bridge.
+  Together they let an agent drive a real debug build on a device.
+- A fastlane release pipeline keyed off `release/release.yaml`, the one
+  place a version or app id is written, plus a store-metadata skeleton.
+- The same CI shape as rust-npm: a thin `ci.yml` calling a reusable
+  `checks.yml`, which `release.yml` also calls, so the release gate
+  cannot drift from CI. Tool versions in the workflows track the
+  `mise.toml` pins.
+- An Android-capable dev container: the Android SDK and cmdline-tools in
+  the image, amd64 multiarch so the SDK's x86_64 tools run under Rosetta
+  on Apple Silicon, and the adb server location resolved by a runtime
+  probe (`scripts/adb-env.sh`) rather than a static value — mise's
+  `{{ os() }}` is `linux` inside the container regardless of host, and
+  `containerEnv` cannot omit a variable, which is what a Linux host with
+  USB passed through needs.
+
+Two artefacts cannot be seeded and are bootstrapped instead, documented
+in the template's `docs/BUILD.md`: the Gradle wrapper jar (binary, and
+templates are UTF-8 `include_str!`) and the Xcode project, which
+`xcodegen` generates from the committed `project.yml`. `checks.yml` uses
+`gradle` via `setup-gradle` rather than `./gradlew`, so CI is green
+before either bootstrap runs — and `Action::WriteFile` sets no mode, so
+`gradlew` needs its executable bit set by hand.
+
+The exemplar carried copy-paste from unrelated projects — Rust and
+PostgreSQL tool pins, an NDK, another project's launch configs — none of
+which the template inherits. The knowledge bundle stays out too: it is a
+reserved path that belongs to the aokf component, so the template ships
+`docs/` for `aokf-bootstrap` to harvest and points at it from the README.
 
 # The knowledge seed
 

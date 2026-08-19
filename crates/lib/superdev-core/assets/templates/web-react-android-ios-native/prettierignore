@@ -1,0 +1,8 @@
+node_modules/
+dist/
+coverage/
+apps/android-native/.gradle/
+apps/android-native/app/build/
+apps/android-native/build/
+apps/ios-native/.build/
+CHANGELOG.md

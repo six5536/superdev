@@ -1,0 +1,153 @@
+require 'yaml'
+
+# --------------------------------------------------------------------------
+# Helper: read release manifest
+# --------------------------------------------------------------------------
+def release_config
+  @release_config ||= YAML.load_file(File.join(__dir__, '..', 'release', 'release.yaml'))
+end
+
+# --------------------------------------------------------------------------
+# prepare_release — stamp version from release.yaml into all platform files
+# --------------------------------------------------------------------------
+lane :prepare_release do
+  version      = release_config['version']
+  build_number = release_config['build_number']
+
+  UI.message("Stamping version #{version} (#{build_number}) into all platforms")
+
+  # Android — build.gradle.kts
+  android_gradle = File.join(__dir__, '..', 'apps', 'android-native', 'app', 'build.gradle.kts')
+  if File.exist?(android_gradle)
+    content = File.read(android_gradle)
+    content = content.gsub(/versionCode\s*=\s*\d+/, "versionCode = #{build_number}")
+    content = content.gsub(/versionName\s*=\s*"[^"]*"/, "versionName = \"#{version}\"")
+    File.write(android_gradle, content)
+    UI.success("Stamped Android: #{version} (#{build_number})")
+  end
+
+  # iOS — Info.plist (if exists)
+  info_plist = File.join(__dir__, '..', 'apps', 'ios-native', '{{superdev:project-pascal}}', 'Info.plist')
+  if File.exist?(info_plist)
+    set_info_plist_value(path: info_plist, key: "CFBundleShortVersionString", value: version)
+    set_info_plist_value(path: info_plist, key: "CFBundleVersion", value: build_number.to_s)
+    UI.success("Stamped iOS: #{version} (#{build_number})")
+  else
+    UI.important("iOS Info.plist not found at #{info_plist} — skipping")
+  end
+
+  # Web — package.json
+  web_pkg = File.join(__dir__, '..', 'apps', 'web', 'package.json')
+  if File.exist?(web_pkg)
+    pkg = JSON.parse(File.read(web_pkg))
+    pkg['version'] = version
+    File.write(web_pkg, JSON.pretty_generate(pkg) + "\n")
+    UI.success("Stamped Web: #{version}")
+  end
+end
+
+# --------------------------------------------------------------------------
+# bump_version — increment version or build number in release.yaml
+# --------------------------------------------------------------------------
+lane :bump_version do |options|
+  type = options[:type] || 'patch'  # major, minor, patch, build
+  config = release_config
+
+  if type == 'build'
+    config['build_number'] = config['build_number'].to_i + 1
+  else
+    parts = config['version'].split('.').map(&:to_i)
+    case type
+    when 'major'
+      parts[0] += 1; parts[1] = 0; parts[2] = 0
+    when 'minor'
+      parts[1] += 1; parts[2] = 0
+    when 'patch'
+      parts[2] += 1
+    end
+    config['version'] = parts.join('.')
+    config['build_number'] = config['build_number'].to_i + 1
+  end
+
+  yaml_path = File.join(__dir__, '..', 'release', 'release.yaml')
+  File.write(yaml_path, YAML.dump(config))
+  UI.success("Bumped to #{config['version']} (#{config['build_number']})")
+
+  prepare_release
+end
+
+# --------------------------------------------------------------------------
+# android_beta — build and upload to Play Store internal track
+# --------------------------------------------------------------------------
+lane :android_beta do
+  prepare_release
+
+  gradle(
+    project_dir: File.join(__dir__, '..', 'apps', 'android-native'),
+    task: 'bundle',
+    build_type: 'Release'
+  )
+
+  supply(
+    track: 'internal',
+    aab: File.join(__dir__, '..', 'apps', 'android-native', 'app', 'build', 'outputs', 'bundle', 'release', 'app-release.aab'),
+    json_key_data: ENV['GOOGLE_PLAY_SERVICE_ACCOUNT_JSON'],
+    metadata_path: File.join(__dir__, '..', 'release', 'metadata')
+  )
+end
+
+# --------------------------------------------------------------------------
+# android_production — promote from internal to production
+# --------------------------------------------------------------------------
+lane :android_production do
+  supply(
+    track: 'internal',
+    track_promote_to: 'production',
+    json_key_data: ENV['GOOGLE_PLAY_SERVICE_ACCOUNT_JSON']
+  )
+end
+
+# --------------------------------------------------------------------------
+# ios_beta — build and upload to TestFlight
+# --------------------------------------------------------------------------
+lane :ios_beta do
+  prepare_release
+
+  match(type: "appstore")
+
+  build_app(
+    project: File.join(__dir__, '..', 'apps', 'ios-native', '{{superdev:project-pascal}}.xcodeproj'),
+    scheme: '{{superdev:project-pascal}}',
+    export_method: 'app-store'
+  )
+
+  upload_to_testflight(
+    api_key_path: ENV['APP_STORE_CONNECT_API_KEY_PATH']
+  )
+end
+
+# --------------------------------------------------------------------------
+# ios_production — submit for App Store review
+# --------------------------------------------------------------------------
+lane :ios_production do
+  deliver(
+    submit_for_review: true,
+    automatic_release: false,
+    metadata_path: File.join(__dir__, '..', 'release', 'metadata'),
+    api_key_path: ENV['APP_STORE_CONNECT_API_KEY_PATH']
+  )
+end
+
+# --------------------------------------------------------------------------
+# web_deploy — build web app and deploy
+# --------------------------------------------------------------------------
+lane :web_deploy do
+  prepare_release
+
+  Dir.chdir(File.join(__dir__, '..')) do
+    sh('npm run build -w apps/web')
+  end
+
+  # Deploy step depends on hosting choice (Netlify, Vercel, S3, etc.)
+  UI.important("Web build complete at apps/web/dist/ — deploy to your hosting provider")
+end

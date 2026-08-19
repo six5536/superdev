@@ -11,8 +11,8 @@ use superdev_core::error::{Error, Result};
 use superdev_core::templates::{self, Template, Tokens};
 
 /// The `--template` help line. A test keeps it naming every shipped template.
-pub const TEMPLATE_HELP: &str =
-    "Project template to seed the repo from: rust-npm, or `none` (a TTY prompts when omitted)";
+pub const TEMPLATE_HELP: &str = "Project template to seed the repo from: rust-npm, \
+     web-react-android-ios-native, or `none` (a TTY prompts when omitted)";
 
 /// The questions the interactive path can ask.
 pub trait Prompter {

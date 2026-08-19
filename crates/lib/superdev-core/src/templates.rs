@@ -4,12 +4,12 @@
 //! semantics: written only where absent, the user's from the moment it
 //! exists, never hashed, never revisited by `sync`.
 //!
-//! Three tokens substitute in file contents and in target paths, exact-match
+//! Five tokens substitute in file contents and in target paths, exact-match
 //! only; everything else — including GitHub Actions' `${{ … }}` — passes
 //! through untouched. On disk the assets mirror the seeded repo, except that
 //! leading dots are stripped (a real `.gitignore` would hide sibling assets
-//! from git) and a tokenised path segment is written `_slug_`, because `:`
-//! cannot appear in Windows file names.
+//! from git) and a tokenised path segment is written `_slug_` or `_pascal_`,
+//! because `:` cannot appear in Windows file names.
 
 use std::path::Path;
 
@@ -23,6 +23,14 @@ pub const TOKEN_SLUG: &str = "{{superdev:project-slug}}";
 /// The slug as a Rust identifier (e.g. "my_tool") — a hyphenated crate name
 /// is referenced with underscores in source, which the slug cannot express.
 pub const TOKEN_IDENT: &str = "{{superdev:project-ident}}";
+/// The slug with the hyphens dropped (e.g. "mytool") — reverse-domain app
+/// ids, where Android forbids `-` and iOS forbids `_`, so only alphanumeric
+/// segments work on both.
+pub const TOKEN_COMPACT: &str = "{{superdev:project-compact}}";
+/// The slug in PascalCase (e.g. "MyTool") — Swift and Kotlin type names,
+/// Xcode project/scheme names and Gradle root projects, none of which admit
+/// a separator.
+pub const TOKEN_PASCAL: &str = "{{superdev:project-pascal}}";
 
 /// The values the tokens substitute to, recorded in the manifest afterwards.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -40,6 +48,30 @@ impl Tokens {
             name: name.to_string(),
             slug: slug_of(name),
         }
+    }
+
+    /// The slug as a Rust identifier: "my-tool" → "my_tool".
+    pub fn ident(&self) -> String {
+        self.slug.replace('-', "_")
+    }
+
+    /// The slug with the hyphens dropped: "my-tool" → "mytool".
+    pub fn compact(&self) -> String {
+        self.slug.replace('-', "")
+    }
+
+    /// The slug's segments capitalised and joined: "my-tool" → "MyTool".
+    pub fn pascal(&self) -> String {
+        self.slug
+            .split('-')
+            .map(|seg| {
+                let mut chars = seg.chars();
+                match chars.next() {
+                    Some(first) => first.to_ascii_uppercase().to_string() + chars.as_str(),
+                    None => String::new(),
+                }
+            })
+            .collect()
     }
 }
 
@@ -73,9 +105,12 @@ pub struct Template {
     files: &'static [(&'static str, &'static str)],
 }
 
+/// Every template this binary ships, in prompt order.
+static SHIPPED: [Template; 2] = [rust_npm::TEMPLATE, web_react_android_ios_native::TEMPLATE];
+
 /// Every template this binary ships.
 pub fn shipped() -> &'static [Template] {
-    &rust_npm::TEMPLATES
+    &SHIPPED
 }
 
 /// The shipped template with this name, if any.
@@ -98,7 +133,9 @@ pub fn render(template: &Template, tokens: &Tokens) -> Vec<(String, String)> {
 pub fn substitute(text: &str, tokens: &Tokens) -> String {
     text.replace(TOKEN_NAME, &tokens.name)
         .replace(TOKEN_SLUG, &tokens.slug)
-        .replace(TOKEN_IDENT, &tokens.slug.replace('-', "_"))
+        .replace(TOKEN_IDENT, &tokens.ident())
+        .replace(TOKEN_COMPACT, &tokens.compact())
+        .replace(TOKEN_PASCAL, &tokens.pascal())
 }
 
 /// The template's diff against the repo: one scaffold write per absent
@@ -134,6 +171,7 @@ pub fn plan(root: &Path, template: &Template, tokens: &Tokens) -> (Planned, Vec<
 }
 
 mod rust_npm;
+mod web_react_android_ios_native;
 
 #[cfg(test)]
 mod tests {
@@ -156,10 +194,10 @@ mod tests {
         let tokens = tokens();
         assert_eq!(
             substitute(
-                "# {{superdev:project-name}}\nbin: {{superdev:project-slug}}\nuse {{superdev:project-ident}}_core;",
+                "# {{superdev:project-name}}\nbin: {{superdev:project-slug}}\nuse {{superdev:project-ident}}_core;\nid: com.{{superdev:project-compact}}.app\nscheme: {{superdev:project-pascal}}",
                 &tokens
             ),
-            "# My Tool\nbin: my-tool\nuse my_tool_core;"
+            "# My Tool\nbin: my-tool\nuse my_tool_core;\nid: com.mytool.app\nscheme: MyTool"
         );
         // GitHub Actions syntax and near-miss tokens pass through untouched.
         let untouched = "${{ secrets.TOKEN }} {{superdev:project}} {{name}}";

@@ -1,0 +1,1 @@
+A short store description of {{superdev:project-name}} (80 characters max).

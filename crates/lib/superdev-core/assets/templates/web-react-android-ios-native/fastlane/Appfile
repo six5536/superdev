@@ -1,0 +1,4 @@
+# Fastlane Appfile
+# App identifiers read from release/release.yaml via Fastfile helper
+
+app_identifier "com.{{superdev:project-compact}}.app"

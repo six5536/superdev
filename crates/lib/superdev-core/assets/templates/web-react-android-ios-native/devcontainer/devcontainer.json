@@ -1,0 +1,81 @@
+{
+  "name": "{{superdev:project-slug}}",
+  "build": {
+    "context": "..",
+    "dockerfile": "Dockerfile"
+  },
+  // (The Android debug server :8081 is reached from a device via adb reverse — see
+  //  scripts/host/android-debug.sh / docs/ANDROID_DEBUGGING.md — so it needs no host publish here.)
+  "appPort": [],
+  // Never auto-forward the adb control port. The container talks to the *host* adb
+  // server on host.docker.internal:5037 (see containerEnv below), so the host must
+  // own that port. If VS Code auto-forwards 5037, its helper binds host 127.0.0.1:5037
+  // instead and every adb command hangs: the client writes `host:kill`/`host:version`
+  // into the tunnel and blocks forever on the 4-byte reply that no adb server sends.
+  "portsAttributes": {
+    "5037": {
+      "label": "adb (host-owned — do not forward)",
+      "onAutoForward": "ignore"
+    }
+  },
+  "features": {
+    "ghcr.io/devcontainers/features/git:1": {}
+  },
+  "containerEnv": {
+    "MISE_YES": "1",
+    "CONTAINER_WORKSPACE_FOLDER": "${containerWorkspaceFolder}",
+    "CLAUDE_CONFIG_DIR": "/home/vscode/.claude",
+    "PLAYWRIGHT_BROWSERS_PATH": "/home/vscode/.cache/ms-playwright"
+    // ANDROID_ADB_SERVER_ADDRESS/PORT deliberately live in mise.toml (via
+    // scripts/adb-env.sh), NOT here: the right value depends on the host OS, and
+    // containerEnv can only set a var unconditionally — it can't omit one, which is
+    // what a Linux host with /dev/bus/usb passed in needs (adb rejects a blank value
+    // with "no host in ':5037'"). mise can add but never unset, so keeping them here
+    // would override the probe. See docs/ANDROID_DEBUGGING.md.
+  },
+  "mounts": [
+    // Keep high-churn build artifacts on a local named volume instead virtiofs workspace share
+    // It intermittently returns EACCES on the burst of parallel rename
+    "source={{superdev:project-slug}}-node_modules,target=${containerWorkspaceFolder}/apps/web/node_modules,type=volume",
+    "source={{superdev:project-slug}}-gradle-cache,target=/home/vscode/.gradle,type=volume",
+    "source={{superdev:project-slug}}-android-gradle,target=${containerWorkspaceFolder}/apps/android-native/.gradle,type=volume",
+    "source={{superdev:project-slug}}-ios-build,target=${containerWorkspaceFolder}/apps/ios-native/.build,type=volume",
+    // Claude Code
+    "source={{superdev:project-slug}}-claude,target=/home/vscode/.claude,type=volume",
+    "source=${localEnv:HOME}/.claude/CLAUDE.md,target=/home/vscode/.claude/CLAUDE.md,type=bind,readonly",
+    "source=${localEnv:HOME}/.claude/commands,target=/home/vscode/.claude/commands,type=bind,readonly",
+    "source=${localEnv:HOME}/.claude/agents,target=/home/vscode/.claude/agents,type=bind,readonly",
+    "source=${localEnv:HOME}/.claude/skills,target=/home/vscode/.claude/skills,type=bind,readonly"
+  ],
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "editor.tabSize": 2,
+        "editor.formatOnSave": true,
+        "editor.defaultFormatter": "esbenp.prettier-vscode",
+        "eslint.validate": [
+          "javascript",
+          "javascriptreact",
+          "typescript",
+          "typescriptreact"
+        ],
+        "eslint.format.enable": true,
+        "editor.codeActionsOnSave": {
+          "source.fixAll.eslint": "explicit"
+        },
+        "npm.packageManager": "npm"
+      },
+      "extensions": [
+        "EditorConfig.EditorConfig",
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode",
+        "ms-vscode.vscode-typescript-next",
+        "hverlin.mise-vscode",
+        "niceandfair.vscode-tombi"
+      ]
+    }
+  },
+  "postCreateCommand": "bash .devcontainer/scripts/post-create.sh",
+  "postStartCommand": "bash .devcontainer/scripts/post-start.sh",
+  "remoteUser": "vscode"
+}

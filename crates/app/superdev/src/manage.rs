@@ -207,10 +207,9 @@ fn template_render(template: &str, name: &str, dir: &Path) -> Result<u8> {
     // these lines rather than re-deriving the slug.
     out(&format!("project-name = {:?}", tokens.name))?;
     out(&format!("project-slug = {:?}", tokens.slug))?;
-    out(&format!(
-        "project-ident = {:?}",
-        tokens.slug.replace('-', "_")
-    ))?;
+    out(&format!("project-ident = {:?}", tokens.ident()))?;
+    out(&format!("project-compact = {:?}", tokens.compact()))?;
+    out(&format!("project-pascal = {:?}", tokens.pascal()))?;
     Ok(0)
 }
 

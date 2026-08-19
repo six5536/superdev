@@ -147,8 +147,8 @@ const FILES: [(&str, &str); 46] = [
     ),
 ];
 
-pub(super) const TEMPLATES: [Template; 1] = [Template {
+pub(super) const TEMPLATE: Template = Template {
     name: "rust-npm",
     description: "Rust CLI workspace deployed as prebuilt binaries through npm",
     files: &FILES,
-}];
+};

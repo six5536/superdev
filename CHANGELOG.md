@@ -13,6 +13,23 @@ publish a version it cannot find a heading for.
 
 ### Added
 
+- A second project template, `web-react-android-ios-native`: one product as
+  three native codebases — a React web app, a Kotlin/Jetpack Compose Android
+  app and a SwiftUI iOS app, each a hello-world stub that builds and passes
+  CI. It ships the tooling that makes that stack workable for agents: an HTTP
+  debug server compiled into debug builds only, an MCP server wrapping it so
+  an agent can drive a running app, a dev CLI for the
+  build/install/launch/logs/screenshot loop, an Android-capable dev
+  container, and a fastlane release pipeline keyed off a single
+  `release/release.yaml`. Two artefacts can't be seeded and are bootstrapped
+  instead — the Gradle wrapper jar and the Xcode project — both documented
+  in the template's own `docs/BUILD.md`
+- Two template tokens for spellings the slug can't express:
+  `{{superdev:project-compact}}` (hyphens dropped) for reverse-domain app
+  ids, which Android and iOS constrain in opposite directions, and
+  `{{superdev:project-pascal}}` for Swift and Kotlin type names, Xcode
+  schemes and Gradle root projects. `template render` prints both alongside
+  the existing values
 - Project templates: `init --template rust-npm` (or a prompt, on a TTY)
   seeds a new repo with a Rust CLI workspace deployed as prebuilt binaries
   through npm — crates, launcher and platform packages, CI and release

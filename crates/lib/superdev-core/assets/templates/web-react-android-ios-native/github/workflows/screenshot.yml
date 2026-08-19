@@ -1,0 +1,36 @@
+name: Screenshots
+
+on:
+  workflow_dispatch:
+    inputs:
+      platform:
+        description: Platform for screenshots
+        required: true
+        type: choice
+        options:
+          - android
+          - ios
+          - both
+
+jobs:
+  screenshots:
+    name: Generate Store Screenshots
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: macos-latest
+            platform: ios
+          - os: ubuntu-latest
+            platform: android
+    if: >
+      github.event.inputs.platform == 'both' ||
+      github.event.inputs.platform == matrix.platform
+    steps:
+      - uses: actions/checkout@v4
+      - name: Generate screenshots
+        run: echo "TODO — implement screenshot generation for ${{ matrix.platform }}"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: screenshots-${{ matrix.platform }}
+          path: release/metadata/en-US/screenshots/

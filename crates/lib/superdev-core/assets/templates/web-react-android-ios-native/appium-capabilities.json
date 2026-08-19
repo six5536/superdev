@@ -1,0 +1,11 @@
+{
+  "android": {
+    "appium:app": "apps/android-native/app/build/outputs/apk/debug/app-debug.apk",
+    "appium:automationName": "UiAutomator2"
+  },
+  "ios": {
+    "appium:app": "apps/ios-native/.build/debug/{{superdev:project-pascal}}.app",
+    "appium:automationName": "XCUITest",
+    "appium:deviceName": "iPhone 16 Pro"
+  }
+}
