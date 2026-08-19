@@ -1,6 +1,7 @@
 ---
 name: backport-assets
 description: Backport edits made to this repo's live skills and agent files into the embedded assets they ship from. Use after editing anything under .claude/skills/ or .agents/ in this repo — those are superdev-owned copies and the next sync reverts unshipped edits — or when the user asks to backport, mirror, or ship such changes to the templates.
+disable-model-invocation: true
 ---
 
 # Backport assets
