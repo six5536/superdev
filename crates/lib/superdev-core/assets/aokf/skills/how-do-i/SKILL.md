@@ -1,13 +1,13 @@
 ---
-name: ask-way
-description: You don't remember every skill, so ask — the map of how this repo's skills compose, which to reach for, and where each flow hands off to the next.
+name: how-do-i
+description: Explain how to use agent skills and how they fit together into a workflow for this repo. Use when unsure which skill or flow fits, when asked how a skill works here, or to survey what skills exist.
 ---
 
-# Ask Way
+# How Do I
 
 You don't remember every skill, so ask.
 
-A **flow** is a path through the skills. Most work travels one **main flow**, on-ramps merge onto it, and the knowledge bundle at `knowledge/` is the substrate under all of it: specs, plans, issues, decisions and the glossary live there, searchable over MCP.
+A **flow** is a path through the skills. Most work travels one **main flow**, on-ramps merge onto it, and the knowledge bundle at `knowledge/` is the substrate under all of it: specs, plans, issues, decisions and the glossary live there.
 
 ## The main flow: idea → ship
 
@@ -59,6 +59,17 @@ At the boundary between chunks of work you have five options — continue, clear
 - **`/resolving-merge-conflicts`** — work an in-progress merge or rebase by intent, hunk by hunk; never `--abort`.
 - **`/teach`** — learn a topic over multiple sessions; the workspace's mission, learning records and resources live in the bundle.
 - **`/writing-for-agents`** — reference for writing documents agents consume, PROJECT.md layers included.
+
+## Skills beyond the map
+
+The map above is the skills superdev ships, but the session usually carries more — plugin skills, harness built-ins, repo-local additions. When the question names a skill the map doesn't, or asks what else exists:
+
+1. **Enumerate.** The session's available-skills listing is the full roster; `.claude/skills/` holds the copies that live in this repo. Cross-check both — a skill can appear in either alone.
+2. **Read before describing.** Open the skill's `SKILL.md`: the frontmatter says when it fires, the body says how it runs. Describe from what you read — the name alone misleads.
+3. **Apply the repo's adaptations.** A `PROJECT.md` in the skill's directory overrides stock behaviour; what it says is how the skill actually behaves here.
+4. **Answer in this repo's terms.** How to invoke it (`/name`, or the phrases that fire it), where it joins the flows above if it does, and what it reads or writes in `knowledge/`.
+
+Done when the answer covers invocation, behaviour as adapted here, and the skill's place — or non-place — on the map.
 
 ## Project adaptations
 

@@ -33,14 +33,6 @@ pub(crate) const SKILLS: &[SkillFiles] = &[
         &[("SKILL.md", asset!("aokf-maintain/SKILL.md"))],
     ),
     (
-        "ask-way",
-        &[
-            ("PHASE-BOUNDARIES.md", asset!("ask-way/PHASE-BOUNDARIES.md")),
-            ("SKILL.md", asset!("ask-way/SKILL.md")),
-            ("agents/openai.yaml", asset!("ask-way/agents/openai.yaml")),
-        ],
-    ),
-    (
         "code-review",
         &[
             ("SKILL.md", asset!("code-review/SKILL.md")),
@@ -116,6 +108,17 @@ pub(crate) const SKILLS: &[SkillFiles] = &[
         &[
             ("SKILL.md", asset!("handoff/SKILL.md")),
             ("agents/openai.yaml", asset!("handoff/agents/openai.yaml")),
+        ],
+    ),
+    (
+        "how-do-i",
+        &[
+            (
+                "PHASE-BOUNDARIES.md",
+                asset!("how-do-i/PHASE-BOUNDARIES.md"),
+            ),
+            ("SKILL.md", asset!("how-do-i/SKILL.md")),
+            ("agents/openai.yaml", asset!("how-do-i/agents/openai.yaml")),
         ],
     ),
     (

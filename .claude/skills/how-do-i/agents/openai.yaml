@@ -1,0 +1,5 @@
+interface:
+  display_name: "How Do I"
+  short_description: "Find the right skill or workflow, or learn how any skill works here"
+policy:
+  allow_implicit_invocation: false
