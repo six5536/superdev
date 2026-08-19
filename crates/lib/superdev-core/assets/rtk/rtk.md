@@ -11,7 +11,5 @@ When you genuinely need the complete raw output — reviewing a full diff,
 debugging the filter itself — bypass it for that one command:
 
 - prefix the command text with `RTK_DISABLED=1`, e.g.
-  `RTK_DISABLED=1 git diff` (the prefix must be inside the command
-  string), or
-- run it through `mise exec http:rtk -- rtk proxy <cmd>` (unfiltered,
-  usage still tracked).
+  `RTK_DISABLED=1 git diff`, or
+- run it through `mise exec http:rtk -- rtk proxy <cmd>`
