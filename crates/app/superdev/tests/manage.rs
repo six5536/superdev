@@ -274,6 +274,63 @@ fn init_sets_up_a_fresh_repo() {
     sb.superdev().arg("status").assert().success();
 }
 
+/// The `update` verb's whole surface: retarget every pin at once, switch a
+/// provider, and the two refusals — a disabled slot, and a provider switch
+/// on a slot holding several packs, where there is no single entry to move.
+#[test]
+fn update_retargets_switches_and_refuses() {
+    let sb = Sandbox::new();
+    sb.superdev().arg("init").assert().success();
+
+    // No target: every enabled capability's pin moves to this binary's
+    // registry default, and the repo stays converged.
+    sb.superdev().arg("update").assert().success();
+    sb.superdev().arg("status").assert().success();
+
+    // An explicit provider switch rewrites the slot's one entry.
+    sb.superdev()
+        .args(["update", "frontend", "--provider", "frontend-design"])
+        .assert()
+        .success();
+    assert!(
+        sb.read(".superdev/config.toml")
+            .contains("provider = \"frontend-design\""),
+    );
+
+    // A capability the manifest does not enable cannot be updated.
+    let config = sb.read(".superdev/config.toml");
+    sb.write(
+        ".superdev/config.toml",
+        &remove_table(&config, "[frontend]"),
+    );
+    let disabled = run(sb.superdev().args(["update", "frontend"]));
+    assert_eq!(disabled.code, 2, "stdout: {}", disabled.stdout);
+    assert!(
+        disabled.stderr.contains("`frontend` is not enabled"),
+        "stderr: {}",
+        disabled.stderr
+    );
+
+    // A many slot holding two packs has no single entry to switch, so the
+    // provider switch refuses and says where to make the change by hand.
+    let config = sb.read(".superdev/config.toml");
+    let two_packs = format!(
+        "{}\n[[skills]]\nprovider = \"superdev-skills\"\nversion = \"{}\"\n\n[[skills]]\nprovider = \"another-pack\"\n",
+        remove_table(&config, "[skills]"),
+        env!("CARGO_PKG_VERSION")
+    );
+    sb.write(".superdev/config.toml", &two_packs);
+    let several = run(sb
+        .superdev()
+        .args(["update", "skills", "--provider", "superdev-skills"]));
+    assert_eq!(several.code, 2, "stdout: {}", several.stdout);
+    assert!(
+        several.stderr.contains("skills holds several packs"),
+        "stderr: {}",
+        several.stderr
+    );
+}
+
 /// Journey 2: clone the repo on a machine that has never run superdev — the
 /// committed pins install without a single planned edit.
 #[test]

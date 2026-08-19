@@ -348,6 +348,25 @@ fn hook_validate_falls_back_to_the_working_directory() {
         .code(2);
 }
 
+/// The working-directory fallback lands on a root the OS reports with
+/// symlinks resolved, while the payload keeps the name the caller typed.
+/// macOS hits this with every temp dir (`/private/var` vs `/var`); a
+/// symlinked repo reproduces it anywhere.
+#[cfg(unix)]
+#[test]
+fn hook_validate_follows_a_symlinked_working_directory() {
+    let repo = hook_repo(false);
+    let link = repo.path().join("link");
+    std::os::unix::fs::symlink(repo.path(), &link).unwrap();
+    superdev()
+        .current_dir(&link)
+        .args(["aokf", "hook", "validate"])
+        .env_remove("CLAUDE_PROJECT_DIR")
+        .write_stdin(hook_payload(&link, "knowledge/alpha.md"))
+        .assert()
+        .code(2);
+}
+
 #[test]
 fn hook_validate_is_loud_on_a_malformed_payload() {
     let repo = hook_repo(true);
@@ -629,6 +648,32 @@ fn update_skills_to_an_explicit_version_is_refused() {
         .code(2);
     let stderr = String::from_utf8_lossy(&out.get_output().stderr).into_owned();
     assert!(stderr.contains("skills"), "{stderr}");
+}
+
+#[test]
+fn a_bare_at_sign_names_no_version() {
+    let dir = skills_repo();
+    let out = superdev()
+        .current_dir(dir.path())
+        .args(["update", "skills@"])
+        .assert()
+        .code(2);
+    let stderr = String::from_utf8_lossy(&out.get_output().stderr).into_owned();
+    assert!(stderr.contains("names no version"), "{stderr}");
+}
+
+#[test]
+fn an_uninitialised_repo_says_to_run_init() {
+    let dir = tempfile::tempdir().unwrap();
+    std::fs::create_dir_all(dir.path().join(".git")).unwrap();
+    let out = superdev()
+        .current_dir(dir.path())
+        .arg("status")
+        .assert()
+        .code(2);
+    let stderr = String::from_utf8_lossy(&out.get_output().stderr).into_owned();
+    assert!(stderr.contains("not initialised"), "{stderr}");
+    assert!(stderr.contains("superdev init"), "{stderr}");
 }
 
 /// `init` an existing repo with the two capabilities that need no external
