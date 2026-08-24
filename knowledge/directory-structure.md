@@ -17,6 +17,7 @@ packages/                 # npm launcher + per-platform binary packages
 knowledge/                # this AOKF bundle — canonical project knowledge
 knowledge/specs/          # design specs (permanent decision records)
 knowledge/plans/          # implementation plans (tagged done on landing)
+knowledge/templates/      # document templates (copy-verbatim skeletons)
 .agents/                  # superdev.md aggregator, capability instructions, AOKF spec, agent rules
 .claude/skills/           # committed skills: the skill pack + the knowledge-carried set
 .superdev/                # superdev's own manifest and lock (this repo is self-managed)

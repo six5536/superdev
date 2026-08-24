@@ -30,3 +30,4 @@
 * [Domain Docs](domain-docs.md) - which bundle concepts serve as the domain docs and how engineering skills use them.
 * [Definition of Done](definition-of-done.md) - what a change must satisfy before it merges.
 * [Release Procedure](release-procedure.md) - the changelog gate, the release command, the irreversible push, and the tag-driven pipeline.
+* [Templates](templates/index.md) - copy-verbatim skeletons for the documents the process produces — plans, ADRs, reviews, PR descriptions, release docs, and reports.
