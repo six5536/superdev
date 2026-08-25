@@ -48,28 +48,44 @@ pub struct ContentSet {
 impl ContentSet {
     /// The set one layer provides on its own.
     pub(crate) fn from_layer(items: Vec<Item>, origin: Origin) -> ContentSet {
-        ContentSet::from_layers(vec![(items, origin)])
+        ContentSet::from_layers(vec![(items, origin)], None)
     }
 
     /// The set the layers resolve to, in order: a later layer's item wins.
     ///
-    /// Base replacement and the shadow report arrive with the layering
-    /// rules; until then a later item simply supersedes an earlier one of
-    /// the same identity, and nothing is reported.
-    pub(crate) fn from_layers(layers: Vec<(Vec<Item>, Origin)>) -> ContentSet {
-        let mut items = BTreeMap::new();
+    /// The first layer is layer 0 — the embedded pack, or the entry that
+    /// replaced it, named by `base`. Superseding layer 0 is the ordinary
+    /// case and passes unreported; one pack hiding another's item is
+    /// reported, because that is a collision the user did not ask for and
+    /// cannot otherwise see.
+    pub(crate) fn from_layers(
+        layers: Vec<(Vec<Item>, Origin)>,
+        base: Option<Origin>,
+    ) -> ContentSet {
+        let layer_zero = layers.first().map(|(_, origin)| origin.clone());
+        let mut items: BTreeMap<(Owner, ItemKind, String), (Item, Origin)> = BTreeMap::new();
+        let mut shadowed = Vec::new();
         for (layer, origin) in layers {
             for item in layer {
-                items.insert(
-                    (item.owner, item.kind, item.name.clone()),
-                    (item, origin.clone()),
-                );
+                let key = (item.owner, item.kind, item.name.clone());
+                if let Some((loser, loser_origin)) = items.insert(key, (item, origin.clone()))
+                    && matches!(loser_origin, Origin::Pack { .. })
+                    && Some(&loser_origin) != layer_zero.as_ref()
+                {
+                    shadowed.push(Shadowed {
+                        owner: loser.owner,
+                        kind: loser.kind,
+                        name: loser.name,
+                        winner: origin.clone(),
+                        loser: loser_origin,
+                    });
+                }
             }
         }
         ContentSet {
             items,
-            shadowed: Vec::new(),
-            base: None,
+            shadowed,
+            base,
         }
     }
 
@@ -178,6 +194,101 @@ mod tests {
                 .count(),
             0
         );
+    }
+
+    fn pack(index: usize, name: &str) -> Origin {
+        Origin::Pack {
+            index,
+            name: name.to_string(),
+        }
+    }
+
+    /// ADR-004: the base *replaces* layer 0 rather than layering over it, so
+    /// what its rev no longer carries is simply not in the set — and the
+    /// orphan rule takes the file out of the repo rather than the embedded
+    /// copy resurrecting it.
+    #[test]
+    fn a_replaced_layer_zero_does_not_keep_what_it_dropped() {
+        let embedded = vec![
+            item(knowledge(), ItemKind::Skill, "frame"),
+            item(knowledge(), ItemKind::Skill, "retired"),
+        ];
+        // The base at a newer rev: `retired` is gone, `frame` rewritten.
+        let base = vec![Item {
+            files: vec![(String::new(), "newer frame".into())],
+            ..item(knowledge(), ItemKind::Skill, "frame")
+        }];
+        let replaced = ContentSet::from_layers(
+            vec![(base, pack(0, "github:six5536/superdev"))],
+            Some(pack(0, "github:six5536/superdev")),
+        );
+        assert!(
+            replaced
+                .item(knowledge(), ItemKind::Skill, "retired")
+                .is_none(),
+            "a dropped item must not persist from the embedded copy"
+        );
+        assert_eq!(
+            replaced
+                .item(knowledge(), ItemKind::Skill, "frame")
+                .expect("frame")
+                .files[0]
+                .1,
+            "newer frame"
+        );
+        assert!(replaced.shadowed().is_empty(), "layer 0 shadows nothing");
+        // Layering instead would have kept it, which is the difference.
+        let layered = ContentSet::from_layers(
+            vec![
+                (embedded, Origin::Snapshot),
+                (
+                    vec![item(knowledge(), ItemKind::Skill, "frame")],
+                    pack(0, "./packs/acme"),
+                ),
+            ],
+            None,
+        );
+        assert!(
+            layered
+                .item(knowledge(), ItemKind::Skill, "retired")
+                .is_some()
+        );
+    }
+
+    /// A pack hiding another pack's item is reported; hiding layer 0's is
+    /// not, whether layer 0 is the embedded pack or the base that replaced it.
+    #[test]
+    fn only_pack_over_pack_shadowing_is_reported() {
+        let one = || vec![item(knowledge(), ItemKind::Skill, "shared")];
+        let over_embedded = ContentSet::from_layers(
+            vec![(one(), Origin::Snapshot), (one(), pack(0, "./a"))],
+            None,
+        );
+        assert!(over_embedded.shadowed().is_empty());
+
+        let over_base = ContentSet::from_layers(
+            vec![
+                (one(), pack(0, "github:six5536/superdev")),
+                (one(), pack(1, "./a")),
+            ],
+            Some(pack(0, "github:six5536/superdev")),
+        );
+        assert!(
+            over_base.shadowed().is_empty(),
+            "layer 0 is layer 0 even when a pack replaced it: {:?}",
+            over_base.shadowed()
+        );
+
+        let over_pack = ContentSet::from_layers(
+            vec![
+                (one(), Origin::Snapshot),
+                (one(), pack(0, "./a")),
+                (one(), pack(1, "./b")),
+            ],
+            None,
+        );
+        assert_eq!(over_pack.shadowed().len(), 1);
+        assert_eq!(over_pack.shadowed()[0].loser, pack(0, "./a"));
     }
 
     #[test]

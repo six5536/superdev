@@ -3,6 +3,7 @@
 //! Runs before anything plans, so `Component::plan` stays side-effect free
 //! and `status` provably never fetches (ADR-002).
 
+use std::collections::BTreeMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -63,26 +64,61 @@ pub fn resolve(
     let _ = lock;
 
     let mut layers = vec![(snapshot_items(), Origin::Snapshot)];
+    let mut base = None;
     let mut pending = Vec::new();
+    let mut seen: BTreeMap<String, &str> = BTreeMap::new();
     for (index, entry) in manifest.packs.iter().enumerate() {
         let source = PackSource::parse(entry)?;
+        // Two entries naming one source cannot both be layered, and one of
+        // them naming the base would layer over it and silently win. The
+        // manifest refuses a provider listed twice for the same reason.
+        if let Some(first) = seen.insert(source.identity(), &entry.source) {
+            return Err(Error::Pack {
+                pack: entry.source.clone(),
+                message: format!(
+                    "names the same source as `{first}` — each pack appears once; \
+                     delete one entry"
+                ),
+            });
+        }
+        let origin = Origin::Pack {
+            index,
+            name: entry.source.clone(),
+        };
         match resolve_one(root, entry, &source, mode)? {
-            Resolved::Layer(items) => layers.push((
-                items,
-                Origin::Pack {
-                    index,
-                    name: entry.source.clone(),
-                },
-            )),
-            // Already layer 0; naming it again would shadow it with itself.
-            Resolved::Embedded => {}
+            Resolved::Layer(items) if is_base(&source) => {
+                // The embedded pack is a convenience copy of this same pack
+                // at an older rev, not a rival content set: the pinned rev
+                // becomes the whole of layer 0, including what it no longer
+                // carries. ADR-004.
+                layers[0] = (items, origin.clone());
+                base = Some(origin);
+            }
+            Resolved::Layer(items) => layers.push((items, origin)),
+            // The pin names exactly what is compiled in, so layer 0 already
+            // is this entry; naming it again would shadow it with itself.
+            Resolved::Embedded => base = Some(origin),
             Resolved::Pending => pending.push(entry.clone()),
         }
     }
     Ok(Resolution {
-        content: ContentSet::from_layers(layers),
+        content: ContentSet::from_layers(layers, base),
         pending,
     })
+}
+
+/// Whether an entry names the source the embedded pack is a copy of.
+///
+/// Compared on the normalised identity, so every spelling of that repository
+/// is the base: comparing the strings would treat three of the four common
+/// forms as a stranger's pack, and removals would stop propagating with
+/// nothing on screen to say why. ADR-004.
+fn is_base(source: &PackSource) -> bool {
+    let default = PackSource::Git {
+        url: DEFAULT_PACK.source.to_string(),
+        rev: DEFAULT_PACK.rev.to_string(),
+    };
+    source.identity() == default.identity()
 }
 
 /// Resolve one entry.
@@ -100,11 +136,7 @@ fn resolve_one(
         PackSource::Git { rev, .. } => {
             // A pin naming exactly what this binary carries is the default
             // path written out, and must cost no request.
-            let default = PackSource::Git {
-                url: DEFAULT_PACK.source.to_string(),
-                rev: DEFAULT_PACK.rev.to_string(),
-            };
-            if source.identity() == default.identity() && rev == DEFAULT_PACK.rev {
+            if is_base(source) && rev == DEFAULT_PACK.rev {
                 return Ok(Resolved::Embedded);
             }
             match mode {
@@ -346,6 +378,146 @@ mod tests {
         }
     }
 
+    /// Two packs, each providing the same skill name.
+    fn two_packs(repo: &Path) {
+        for (name, body) in [("a", "# from a\n"), ("b", "# from b\n")] {
+            let dir = repo.join(format!("packs/{name}"));
+            write_pack(&dir, "shared", body);
+        }
+    }
+
+    fn manifest_with_packs(sources: &[&str]) -> Manifest {
+        let mut manifest = Manifest::default_for("0.2.0", &[]);
+        manifest.packs = sources
+            .iter()
+            .map(|source| PackEntry {
+                source: (*source).into(),
+                rev: None,
+            })
+            .collect();
+        manifest
+    }
+
+    fn resolved(repo: &Path, sources: &[&str]) -> Resolution {
+        resolve(
+            repo,
+            &manifest_with_packs(sources),
+            &Lock::default(),
+            ResolveMode::Fetching,
+        )
+        .expect("resolves")
+    }
+
+    /// Case 5: superseding layer 0 is what a pack is for, so it passes
+    /// unreported — a report on every stock item a pack replaces would be
+    /// noise the user asked for.
+    #[test]
+    fn a_pack_superseding_the_embedded_pack_is_not_reported() {
+        let repo = tempfile::tempdir().unwrap();
+        write_pack(&repo.path().join("packs/acme"), "frame", "# Ours\n");
+        let resolved = resolved(repo.path(), &["./packs/acme"]);
+        assert_eq!(
+            resolved
+                .content
+                .item(knowledge(), ItemKind::Skill, "frame")
+                .expect("frame")
+                .files[0]
+                .1,
+            "# Ours\n"
+        );
+        assert!(
+            resolved.content.shadowed().is_empty(),
+            "{:?}",
+            resolved.content.shadowed()
+        );
+    }
+
+    /// Case 6: one pack hiding another's item is a collision the user did
+    /// not ask for and cannot otherwise see.
+    #[test]
+    fn one_pack_superseding_another_is_reported_with_both_names() {
+        let repo = tempfile::tempdir().unwrap();
+        two_packs(repo.path());
+        let resolved = resolved(repo.path(), &["./packs/a", "./packs/b"]);
+        let shadowed = resolved.content.shadowed();
+        assert_eq!(shadowed.len(), 1, "{shadowed:?}");
+        assert_eq!(shadowed[0].name, "shared");
+        assert_eq!(shadowed[0].kind, ItemKind::Skill);
+        assert_eq!(
+            shadowed[0].winner,
+            Origin::Pack {
+                index: 1,
+                name: "./packs/b".into()
+            }
+        );
+        assert_eq!(
+            shadowed[0].loser,
+            Origin::Pack {
+                index: 0,
+                name: "./packs/a".into()
+            }
+        );
+    }
+
+    /// Case 7: manifest order is the only tiebreak, and reversing it changes
+    /// the winner and nothing else.
+    #[test]
+    fn reversing_manifest_order_flips_the_winner_and_nothing_else() {
+        let repo = tempfile::tempdir().unwrap();
+        two_packs(repo.path());
+        let forward = resolved(repo.path(), &["./packs/a", "./packs/b"]);
+        let reverse = resolved(repo.path(), &["./packs/b", "./packs/a"]);
+
+        let body = |r: &Resolution| {
+            r.content
+                .item(knowledge(), ItemKind::Skill, "shared")
+                .expect("shared")
+                .files[0]
+                .1
+                .clone()
+        };
+        assert_eq!(body(&forward), "# from b\n");
+        assert_eq!(body(&reverse), "# from a\n");
+        assert_eq!(forward.content.shadowed().len(), 1);
+        assert_eq!(reverse.content.shadowed().len(), 1);
+
+        // Everything neither pack carries is unchanged by the ordering.
+        let names = |r: &Resolution| {
+            r.content
+                .items_of(knowledge(), ItemKind::Skill)
+                .map(|i| i.name.clone())
+                .collect::<Vec<_>>()
+        };
+        assert_eq!(names(&forward), names(&reverse));
+    }
+
+    /// ADR-004: the embedded pack is a copy of the default source at an
+    /// older rev, so an entry naming that source is layer 0 rather than a
+    /// layer over it — and what its rev drops is simply gone.
+    #[test]
+    fn the_base_replaces_layer_zero_rather_than_layering_over_it() {
+        let repo = tempfile::tempdir().unwrap();
+        let at_default = resolve(
+            repo.path(),
+            &manifest_with(DEFAULT_PACK.source, Some(DEFAULT_PACK.rev)),
+            &Lock::default(),
+            ResolveMode::Fetching,
+        )
+        .unwrap();
+        assert_eq!(
+            at_default.content.base(),
+            Some(&Origin::Pack {
+                index: 0,
+                name: DEFAULT_PACK.source.into()
+            }),
+            "status must be able to name which entry it treated as the base"
+        );
+        // A pack from any other source is a layer, not the base.
+        write_pack(&repo.path().join("packs/acme"), "brand-new", "# New\n");
+        let layered = resolved(repo.path(), &["./packs/acme"]);
+        assert_eq!(layered.content.base(), None);
+    }
+
     #[test]
     fn an_unresolvable_git_pin_is_pending_offline_and_an_error_when_fetching() {
         let repo = tempfile::tempdir().unwrap();
@@ -393,6 +565,39 @@ mod tests {
                 .is_some(),
             "the real files still resolve"
         );
+    }
+
+    /// Two entries naming one repository cannot both be layered, and one of
+    /// them naming the base would layer over it and silently win — the base
+    /// beaten by a duplicate of itself.
+    #[test]
+    fn two_entries_naming_one_source_are_refused() {
+        let repo = tempfile::tempdir().unwrap();
+        let mut manifest = Manifest::default_for("0.2.0", &[]);
+        manifest.packs = vec![
+            PackEntry {
+                source: "github:six5536/superdev".into(),
+                rev: Some(DEFAULT_PACK.rev.into()),
+            },
+            PackEntry {
+                source: "git@github.com:six5536/superdev.git".into(),
+                rev: Some(DEFAULT_PACK.rev.into()),
+            },
+        ];
+        let err = resolve(
+            repo.path(),
+            &manifest,
+            &Lock::default(),
+            ResolveMode::Fetching,
+        )
+        .unwrap_err();
+        let message = err.to_string();
+        assert!(
+            message.contains("git@github.com:six5536/superdev.git"),
+            "{message}"
+        );
+        assert!(message.contains("github:six5536/superdev"), "{message}");
+        assert!(message.contains("appears once"), "{message}");
     }
 
     #[test]

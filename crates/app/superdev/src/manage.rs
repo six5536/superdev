@@ -251,6 +251,9 @@ pub fn status(root: &Path, drift_only: bool) -> Result<u8> {
     for line in plan.custom_lines() {
         out(line)?;
     }
+    for line in plan.content_lines() {
+        out(line)?;
+    }
     for line in &plan.released_lines() {
         out(line)?;
     }

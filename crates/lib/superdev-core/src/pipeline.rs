@@ -14,11 +14,11 @@ use crate::capability::Capability;
 use crate::component::{Claim, Ctx};
 use crate::components::codegraph::CODEGRAPH_INDEX_DIR;
 use crate::components::{aokf, skillpack};
-use crate::content::{self, ContentSet, ItemKind, Owner};
+use crate::content::{self, ContentSet, ItemKind, Origin, Owner};
 use crate::engine::Planned;
 use crate::error::{Error, Result};
 use crate::lock::Lock;
-use crate::manifest::Manifest;
+use crate::manifest::{Manifest, PackEntry};
 use crate::orphan::OrphanPlan;
 use crate::pack;
 use crate::registry::{self, Pinned};
@@ -46,6 +46,7 @@ pub struct RepoPlan {
     orphans: OrphanPlan,
     behind: Vec<String>,
     custom: Vec<String>,
+    content: Vec<String>,
     blueprint: Option<String>,
     /// The loaded lock with custom-released entries pruned in memory.
     lock: Lock,
@@ -92,6 +93,13 @@ impl RepoPlan {
     /// One line per skill or workflow skill released to the user.
     pub fn custom_lines(&self) -> &[String] {
         &self.custom
+    }
+
+    /// Where the content came from: the layer that is layer 0, each layer
+    /// above it, and any item one pack hid from another. Informational —
+    /// layering is what the manifest asked for, never drift.
+    pub fn content_lines(&self) -> &[String] {
+        &self.content
     }
 
     /// One line per orphan released because the user edited it.
@@ -158,10 +166,12 @@ pub fn plan_repo(
         PlanMode::Status => pack::ResolveMode::Offline,
         PlanMode::Sync => pack::ResolveMode::Fetching,
     };
-    let content = pack::resolve(root, manifest, &lock, resolve_mode)?.content;
+    let resolution = pack::resolve(root, manifest, &lock, resolve_mode)?;
+    let content = resolution.content;
     // Named against the resolved set, not the embedded one: a custom name
     // guards whatever is shipped now, which a pack may have added to.
     let custom = custom_lines(manifest, &content);
+    let content_report = content_lines(manifest, &content, &resolution.pending);
     let lock_changed = prune_custom(manifest, &content, &mut lock);
     let components = components::enabled(manifest)?;
     let ctx = Ctx {
@@ -197,6 +207,7 @@ pub fn plan_repo(
     Ok(RepoPlan {
         behind,
         custom,
+        content: content_report,
         blueprint,
         planned,
         orphans,
@@ -499,6 +510,69 @@ fn prune_custom(manifest: &Manifest, content: &ContentSet, lock: &mut Lock) -> b
 /// One line per skill or workflow skill released to the user, so custom
 /// state stays visible without reading the manifest. Flags a custom name
 /// that names no shipped skill, since marking it custom has no effect.
+/// Where the content came from, and what one pack hid from another.
+///
+/// Which entry superdev treated as the base is inferred from the source, so
+/// a wrong match would otherwise be invisible — printing it turns a silent
+/// mismatch into one the next command shows. ADR-004.
+fn content_lines(manifest: &Manifest, content: &ContentSet, pending: &[PackEntry]) -> Vec<String> {
+    let mut lines = Vec::new();
+    let base = content.base();
+    match base {
+        None => lines.push(format!("content: embedded pack {}", embedded_version())),
+        Some(Origin::Pack { index, name }) => {
+            let rev = manifest
+                .packs
+                .get(*index)
+                .and_then(|entry| entry.rev.as_deref())
+                .unwrap_or("no rev");
+            lines.push(format!("content: base {name} at {rev}"));
+        }
+        // The base is always an entry when there is one; the embedded pack
+        // is reported by the `None` arm above.
+        Some(Origin::Snapshot) => {}
+    }
+    for (index, entry) in manifest.packs.iter().enumerate() {
+        let is_base = matches!(base, Some(Origin::Pack { index: base, .. }) if *base == index);
+        if is_base {
+            continue;
+        }
+        // A pin `status` could not satisfy is not layered over anything, and
+        // saying it is would tell a drift gate the repo carries content it
+        // does not.
+        if pending.contains(entry) {
+            lines.push(format!(
+                "content: {} not resolved — `superdev sync` fetches it",
+                entry.source
+            ));
+        } else {
+            lines.push(format!("content: layer {}", entry.source));
+        }
+    }
+    for hidden in content.shadowed() {
+        let (Origin::Pack { name: winner, .. }, Origin::Pack { name: loser, .. }) =
+            (&hidden.winner, &hidden.loser)
+        else {
+            continue;
+        };
+        lines.push(format!(
+            "content: {winner} supersedes {loser}'s {}",
+            hidden.name
+        ));
+    }
+    lines
+}
+
+/// The embedded pack's own version, for the line that names it.
+fn embedded_version() -> String {
+    content::pack_manifest_source()
+        .lines()
+        .find_map(|line| line.strip_prefix("version"))
+        .and_then(|rest| rest.split('"').nth(1))
+        .unwrap_or("unknown")
+        .to_string()
+}
+
 fn custom_lines(manifest: &Manifest, content: &ContentSet) -> Vec<String> {
     let mut lines = Vec::new();
     for (capability, provider, shipped) in [
@@ -830,6 +904,7 @@ mod tests {
             orphans: OrphanPlan::default(),
             behind: Vec::new(),
             custom: Vec::new(),
+            content: Vec::new(),
             blueprint: None,
             lock,
             lock_changed: false,
@@ -844,6 +919,38 @@ mod tests {
         // go the generic way: claims no longer cover them, so the orphan
         // pass classifies them like any other orphan.
         assert_eq!(providers, ["superdev-skills"]);
+    }
+
+    /// A pin `status` could not satisfy is not layered over anything. Saying
+    /// it is would tell a drift gate the repo carries content it does not.
+    #[test]
+    fn a_pending_pack_is_not_reported_as_a_layer() {
+        let mut manifest = Manifest::default_for("0.2.0", &[]);
+        manifest.packs = vec![PackEntry {
+            source: "github:someone/other".into(),
+            rev: Some("v9".into()),
+        }];
+        let content = content::snapshot();
+        let pending = manifest.packs.clone();
+
+        let unresolved = content_lines(&manifest, &content, &pending);
+        assert!(
+            unresolved.iter().any(|l| l.contains("not resolved")),
+            "{unresolved:?}"
+        );
+        assert!(
+            !unresolved.iter().any(|l| l.contains("layer")),
+            "{unresolved:?}"
+        );
+
+        // The same entry, resolved, is a layer.
+        let resolved = content_lines(&manifest, &content, &[]);
+        assert!(
+            resolved
+                .iter()
+                .any(|l| l == "content: layer github:someone/other"),
+            "{resolved:?}"
+        );
     }
 
     #[test]
