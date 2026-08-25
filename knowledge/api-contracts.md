@@ -66,6 +66,17 @@ Every verb acts on the current directory.
   `[knowledge] custom` the same way under its own capability name — a released
   skill is the user's file, not drift, so it leaves the code alone. Released orphans and the
   blueprint-version line print as reports and never affect the exit code.
+  A `content:` line names where the content came from, because which entry
+  superdev treated as layer 0 is inferred from the source and would otherwise
+  be invisible ([ADR-004](decisions/D004-base-pack-identity.md)):
+  `content: embedded pack <version>` when no entry replaced it,
+  `content: base <source> at <rev>` when one did, `content: layer <source>`
+  per pack above it, and `content: <source> not resolved` for a pin `status`
+  could not satisfy — which it never fetches to satisfy. One pack hiding
+  another's item prints
+  `content: <winner> supersedes <loser>'s <item>`; hiding layer 0's is what a
+  pack is for and prints nothing. All of these are reports and none affects
+  the exit code — layering is what the manifest asked for, not drift.
 - **`sync`** refuses to run while a registry-locked capability
   (`code-index`, `skills`, `bash-output-filter`) is pinned anywhere other
   than the registry default, and says to run

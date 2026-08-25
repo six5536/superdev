@@ -125,7 +125,7 @@ only variable when the Windows job runs.
 
 ### Slice 8: Layering, base replacement and the shadow report
 
-- [ ] Done — ticked by integrate at merge.
+- [x] Done — ticked by integrate at merge.
 - Change: add base-versus-layer selection on normalised source identity,
   item superseding in manifest order, shadow collection, and the removal of
   items the base no longer carries. Add the `status` content line naming the

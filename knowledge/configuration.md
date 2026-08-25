@@ -57,6 +57,11 @@ that names no pack changes, and `sync` never adds an entry to a manifest that
 lacks one.
 
 Entries layer in the order written, and a later item of the same name wins.
+An entry naming the source the embedded pack is a copy of *replaces* it
+rather than layering over it, so what that rev drops leaves the repo
+([ADR-004](decisions/D004-base-pack-identity.md)); every other entry sits
+above. Two entries naming one source are refused — each pack appears once,
+as each capability provider does.
 A source is compared normalised, so any spelling of one repository is one
 source; a pin naming exactly what this binary embeds resolves from it and
 makes no request. A path is resolved against the repo root, not the working
