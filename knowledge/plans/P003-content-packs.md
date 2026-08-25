@@ -83,7 +83,7 @@ only variable when the Windows job runs.
 
 ### Slice 5: Manifest and lock schemas
 
-- [ ] Done — ticked by integrate at merge.
+- [x] Done — ticked by integrate at merge.
 - Change: add `Manifest.packs: Vec<PackEntry>` and the lock's `[[packs]]`
   `PackLock` table, both defaulting to empty and skipped when empty. Parsing
   and saving only — nothing resolves yet, and an absent array means the

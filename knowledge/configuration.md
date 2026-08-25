@@ -37,6 +37,25 @@ provider = "superdev-skills"
 version = "0.1.0"
 ```
 
+A `[[packs]]` array names the content packs to layer, in layer order, and is
+absent from the manifest above because absence is the default:
+
+```toml
+[[packs]]
+source = "github:six5536/superdev"   # git: a rev is required
+rev    = "assets-v1.4.0"
+
+[[packs]]
+source = "./packs/acme"              # a path on this machine: no rev
+```
+
+It is a top-level array rather than a capability table because the two
+absences differ: an absent capability means disabled, while an absent pack
+list means the pack compiled into the binary
+([ADR-001](decisions/D001-packs-manifest-section.md)). Nothing about a repo
+that names no pack changes, and `sync` never adds an entry to a manifest that
+lacks one.
+
 `blueprint` is the version last applied, not the version that wrote the file.
 A successful `sync` stamps this binary's version, rewriting `config.toml` only
 when the value changes; `--dry-run` never stamps. `status` prints
@@ -132,6 +151,13 @@ superdev owns. Entries superdev merges into a shared file are hashed under
 found by comparing a file against the content the blueprint wants, not against
 the lock; the hashes are what lets an apply tell that the file it just
 overwrote had been edited by hand, and say so (after backing it up).
+
+A `[[packs]]` entry records each pack the last apply resolved — the source as
+the manifest wrote it, the normalised identity every spelling of that source
+shares, the rev, a digest over the resolved tree and the `format` the pack
+declared — so a later run can prove it got the same bytes. The per-file hashes
+stay in `files` with everything else, which is what makes a dropped pack's
+files orphans by the ordinary rule. Absent when no pack was named.
 
 A legacy `owners` table may remain from binaries that materialised skills
 from provider checkouts. Nothing writes or reads it any more: every shipped
