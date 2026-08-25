@@ -413,12 +413,7 @@ fn skills_repo() -> tempfile::TempDir {
 #[test]
 fn init_materialises_the_skill_pack() {
     let dir = skills_repo();
-    for name in [
-        "double-check",
-        "humanise",
-        "self-improve",
-        "template-update",
-    ] {
+    for name in ["double-check", "template-update"] {
         let path = dir.path().join(format!(".claude/skills/{name}/SKILL.md"));
         assert!(path.is_file(), "missing {}", path.display());
         assert!(
@@ -430,9 +425,12 @@ fn init_materialises_the_skill_pack() {
     }
     // The hook and the lifecycle skills belong to knowledge, disabled here.
     assert!(!dir.path().join(".claude/settings.json").exists());
-    assert!(!dir.path().join(".claude/skills/aokf-maintain").exists());
+    assert!(!dir.path().join(".claude/skills/maintain").exists());
     let lock = std::fs::read_to_string(dir.path().join(".superdev/lock.toml")).unwrap();
-    assert!(lock.contains(".claude/skills/humanise/SKILL.md"), "{lock}");
+    assert!(
+        lock.contains(".claude/skills/template-update/SKILL.md"),
+        "{lock}"
+    );
     assert!(lock.contains("superdev-skills"), "{lock}");
     // Straight after init there is nothing to do.
     superdev()
@@ -448,7 +446,7 @@ fn adopting_a_repo_with_its_own_skills_keeps_them() {
     // pack existed. Adoption must not replace work superdev never wrote.
     let dir = tempfile::tempdir().unwrap();
     std::fs::create_dir_all(dir.path().join(".git")).unwrap();
-    let theirs = dir.path().join(".claude/skills/humanise/SKILL.md");
+    let theirs = dir.path().join(".claude/skills/template-update/SKILL.md");
     std::fs::create_dir_all(theirs.parent().unwrap()).unwrap();
     std::fs::write(&theirs, "# Ours, thanks\n").unwrap();
 
@@ -464,7 +462,7 @@ fn adopting_a_repo_with_its_own_skills_keeps_them() {
         .assert()
         .success();
     let stdout = String::from_utf8_lossy(&out.get_output().stdout).into_owned();
-    assert!(stdout.contains("kept your humanise"), "{stdout}");
+    assert!(stdout.contains("kept your template-update"), "{stdout}");
 
     // Their file survives; the rest of the pack lands; the manifest records it.
     assert_eq!(
@@ -477,7 +475,10 @@ fn adopting_a_repo_with_its_own_skills_keeps_them() {
             .is_file()
     );
     let config = std::fs::read_to_string(dir.path().join(".superdev/config.toml")).unwrap();
-    assert!(config.contains("custom = [\"humanise\"]"), "{config}");
+    assert!(
+        config.contains("custom = [\"template-update\"]"),
+        "{config}"
+    );
     // No drift, and no lock hash claiming their file as superdev's.
     superdev()
         .current_dir(dir.path())
@@ -485,7 +486,10 @@ fn adopting_a_repo_with_its_own_skills_keeps_them() {
         .assert()
         .code(0);
     let lock = std::fs::read_to_string(dir.path().join(".superdev/lock.toml")).unwrap();
-    assert!(!lock.contains(".claude/skills/humanise/SKILL.md"), "{lock}");
+    assert!(
+        !lock.contains(".claude/skills/template-update/SKILL.md"),
+        "{lock}"
+    );
 }
 
 #[test]
@@ -550,7 +554,7 @@ fn init_refuses_when_the_manifest_exists() {
 #[test]
 fn a_drifted_skill_is_drift_until_marked_custom() {
     let dir = skills_repo();
-    let skill = dir.path().join(".claude/skills/humanise/SKILL.md");
+    let skill = dir.path().join(".claude/skills/template-update/SKILL.md");
     std::fs::write(&skill, "# Mine now\n").unwrap();
     // Drift: status exits 1 and names the file.
     let out = superdev()
@@ -559,14 +563,14 @@ fn a_drifted_skill_is_drift_until_marked_custom() {
         .assert()
         .code(1);
     let stdout = String::from_utf8_lossy(&out.get_output().stdout).into_owned();
-    assert!(stdout.contains("humanise"), "{stdout}");
+    assert!(stdout.contains("template-update"), "{stdout}");
 
     // Take it over: drift becomes a chosen state.
     let config_path = dir.path().join(".superdev/config.toml");
     let config = std::fs::read_to_string(&config_path).unwrap();
     std::fs::write(
         &config_path,
-        config.replace("[skills]", "[skills]\ncustom = [\"humanise\"]"),
+        config.replace("[skills]", "[skills]\ncustom = [\"template-update\"]"),
     )
     .unwrap();
     let out = superdev()
@@ -576,7 +580,7 @@ fn a_drifted_skill_is_drift_until_marked_custom() {
         .code(0);
     let stdout = String::from_utf8_lossy(&out.get_output().stdout).into_owned();
     assert!(
-        stdout.contains("skills: humanise custom, unmanaged"),
+        stdout.contains("skills: template-update custom, unmanaged"),
         "{stdout}"
     );
 
@@ -588,13 +592,16 @@ fn a_drifted_skill_is_drift_until_marked_custom() {
         .code(0);
     assert_eq!(std::fs::read_to_string(&skill).unwrap(), "# Mine now\n");
     let lock = std::fs::read_to_string(dir.path().join(".superdev/lock.toml")).unwrap();
-    assert!(!lock.contains(".claude/skills/humanise/SKILL.md"), "{lock}");
+    assert!(
+        !lock.contains(".claude/skills/template-update/SKILL.md"),
+        "{lock}"
+    );
 
     // Back under management: the next sync restores stock.
     let config = std::fs::read_to_string(&config_path).unwrap();
     std::fs::write(
         &config_path,
-        config.replace("\ncustom = [\"humanise\"]", ""),
+        config.replace("\ncustom = [\"template-update\"]", ""),
     )
     .unwrap();
     superdev()
@@ -742,8 +749,8 @@ fn disabling_skills_sweeps_them_and_releases_the_users_edit() {
     // The bytes superdev shipped, trailer and all: what the backup must hold.
     let shipped =
         std::fs::read_to_string(root.join(".claude/skills/double-check/SKILL.md")).unwrap();
-    let humanise = root.join(".claude/skills/humanise/SKILL.md");
-    std::fs::write(&humanise, "mine now\n").unwrap();
+    let users_skill = root.join(".claude/skills/template-update/SKILL.md");
+    std::fs::write(&users_skill, "mine now\n").unwrap();
 
     // Turn the capability off by hand, the way a user would: the rest of the
     // manifest stays byte-for-byte.
@@ -763,7 +770,7 @@ fn disabling_skills_sweeps_them_and_releases_the_users_edit() {
     );
     assert!(
         stdout.contains(
-            "orphan: .claude/skills/humanise/SKILL.md changed since superdev wrote it — left in place, released from the lock"
+            "orphan: .claude/skills/template-update/SKILL.md changed since superdev wrote it — left in place, released from the lock"
         ),
         "{stdout}"
     );
@@ -777,7 +784,7 @@ fn disabling_skills_sweeps_them_and_releases_the_users_edit() {
             .unwrap(),
         shipped
     );
-    assert_eq!(std::fs::read_to_string(&humanise).unwrap(), "mine now\n");
+    assert_eq!(std::fs::read_to_string(&users_skill).unwrap(), "mine now\n");
 
     // The hook belongs to the still-enabled knowledge capability, so it
     // survives the pack's departure — as do the aokf-carried skills.
@@ -795,8 +802,8 @@ fn disabling_skills_sweeps_them_and_releases_the_users_edit() {
 
     let lock = std::fs::read_to_string(root.join(".superdev/lock.toml")).unwrap();
     assert!(!lock.contains(".claude/skills/double-check/"), "{lock}");
-    assert!(!lock.contains(".claude/skills/self-improve/"), "{lock}");
-    assert!(lock.contains(".claude/skills/aokf-maintain/"), "{lock}");
+    assert!(!lock.contains(".claude/skills/template-update/"), "{lock}");
+    assert!(lock.contains(".claude/skills/maintain/"), "{lock}");
     assert!(lock.contains("hooks.PostToolUse"), "{lock}");
     assert!(!lock.contains("[components.skills]"), "{lock}");
     // The capability still enabled keeps its record: the sweep is targeted.
@@ -821,8 +828,8 @@ fn status_drift_answers_as_status_does_on_managed_files() {
         .code(0);
 
     // An owned file the user rewrote is drift under either gate.
-    let humanise = root.join(".claude/skills/humanise/SKILL.md");
-    std::fs::write(&humanise, "mine now\n").unwrap();
+    let users_skill = root.join(".claude/skills/template-update/SKILL.md");
+    std::fs::write(&users_skill, "mine now\n").unwrap();
     superdev().current_dir(root).arg("status").assert().code(1);
     let out = superdev()
         .current_dir(root)
@@ -830,7 +837,7 @@ fn status_drift_answers_as_status_does_on_managed_files() {
         .assert()
         .code(1);
     assert!(
-        stdout_of(&out).contains("write .claude/skills/humanise/SKILL.md"),
+        stdout_of(&out).contains("write .claude/skills/template-update/SKILL.md"),
         "{}",
         stdout_of(&out)
     );
@@ -1100,7 +1107,7 @@ fn init_hints_at_bootstrap_only_when_knowledge_is_enabled() {
         .success();
     let stdout = String::from_utf8_lossy(&out.get_output().stdout).into_owned();
     assert!(
-        stdout.contains("knowledge: run /aokf-bootstrap in Claude Code"),
+        stdout.contains("knowledge: run /bootstrap in Claude Code"),
         "{stdout}"
     );
 
@@ -1118,5 +1125,5 @@ fn init_hints_at_bootstrap_only_when_knowledge_is_enabled() {
         .assert()
         .success();
     let stdout = String::from_utf8_lossy(&out.get_output().stdout).into_owned();
-    assert!(!stdout.contains("aokf-bootstrap"), "{stdout}");
+    assert!(!stdout.contains("/bootstrap"), "{stdout}");
 }

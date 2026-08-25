@@ -288,12 +288,6 @@ fn items(ctx: &Ctx<'_>) -> Vec<ManagedItem> {
         super::aokf_skills::SKILLS,
         custom,
     ));
-    let (license_rel, license_content) = super::aokf_skills::LICENSE_FILE;
-    items.push(ManagedItem::OwnedFile {
-        path: format!(".claude/skills/{license_rel}"),
-        content: license_content.to_string(),
-        reason: "derived-skills licence".to_string(),
-    });
     items.push(ManagedItem::JsonEntry {
         path: SETTINGS_PATH.into(),
         pointer: HOOK_POINTER.into(),
@@ -362,12 +356,6 @@ mod tests {
         assert!(
             descs
                 .iter()
-                .any(|d| d.contains(".claude/skills/LICENSE-mattpocock-skills.md")),
-            "{descs:?}"
-        );
-        assert!(
-            descs
-                .iter()
                 .any(|d| d.contains("superdev aokf hook validate")),
             "{descs:?}"
         );
@@ -379,7 +367,7 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let mut manifest = Manifest::default_for("0.1.0", &[]);
         manifest.capabilities.get_mut("knowledge").unwrap()[0].custom =
-            vec!["aokf-maintain".into(), "tdd".into()];
+            vec!["maintain".into(), "prototype".into()];
         let lock = Lock::default();
         let fake = FakeRunner::new();
         let ctx = Ctx {
@@ -389,14 +377,11 @@ mod tests {
             lock: &lock,
         };
         let keys: Vec<String> = Aokf.owned(&ctx).iter().map(Claim::lock_key).collect();
-        assert!(
-            !keys.iter().any(|k| k.contains("aokf-maintain")),
-            "{keys:?}"
-        );
+        assert!(!keys.iter().any(|k| k.contains("/maintain/")), "{keys:?}");
         // Releasing a skill releases its whole directory, companions included.
-        assert!(!keys.iter().any(|k| k.contains("/tdd/")), "{keys:?}");
-        assert!(keys.contains(&".claude/skills/aokf-bootstrap/SKILL.md".to_string()));
-        assert!(keys.contains(&".claude/skills/wizard/template.sh".to_string()));
+        assert!(!keys.iter().any(|k| k.contains("/prototype/")), "{keys:?}");
+        assert!(keys.contains(&".claude/skills/bootstrap/SKILL.md".to_string()));
+        assert!(keys.contains(&".claude/skills/how-do-i/SESSION-BOUNDARIES.md".to_string()));
         assert!(keys.contains(
             &".claude/settings.json:hooks.PostToolUse[superdev aokf hook validate]".to_string()
         ));
@@ -424,19 +409,16 @@ mod tests {
     #[test]
     fn adoption_keeps_the_repos_own_lifecycle_skills() {
         let dir = tempfile::tempdir().unwrap();
-        let path = dir.path().join(".claude/skills/aokf-maintain/SKILL.md");
+        let path = dir.path().join(".claude/skills/maintain/SKILL.md");
         std::fs::create_dir_all(path.parent().unwrap()).unwrap();
         std::fs::write(path, "# Ours, thanks\n").unwrap();
         let mut manifest = Manifest::default_for("0.1.0", &[]);
         let lines = adopt_existing(dir.path(), &mut manifest);
-        assert_eq!(
-            manifest.capabilities["knowledge"][0].custom,
-            ["aokf-maintain"]
-        );
+        assert_eq!(manifest.capabilities["knowledge"][0].custom, ["maintain"]);
         assert_eq!(
             lines,
             vec![format!(
-                "knowledge: kept your aokf-maintain — marked custom in {}",
+                "knowledge: kept your maintain — marked custom in {}",
                 crate::manifest::CONFIG_PATH
             )]
         );

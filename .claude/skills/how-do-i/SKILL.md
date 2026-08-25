@@ -45,7 +45,7 @@ skills and process files actually say, not from memory.
       exists.
 - [ ] Question is about a boundary between chunks of work
       (continue, clear, handoff, subagent, compact)? Read
-      [PHASE-BOUNDARIES.md](PHASE-BOUNDARIES.md) for the ordered
+      [SESSION-BOUNDARIES.md](SESSION-BOUNDARIES.md) for the ordered
       decision tree.
 - [ ] Answer in this repo's terms: how to invoke the skill, what it
       does here, and where it sits in the flow — or that it sits

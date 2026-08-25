@@ -169,8 +169,8 @@ id). Deleting it is safe — the next tool call rebuilds it.
 - AGENTS.md carries one ensured line, `@.agents/superdev.md`, and is
   otherwise the user's. The aggregator it imports and the per-capability
   instruction files beside it (`.agents/aokf.md`, `.agents/codegraph.md`)
-  are owned files; the general rules (`.agents/coding.md`,
-  `.agents/prose.md`) are write-once scaffolds, the user's to adapt.
+  are owned files; the general rules (`.agents/professionalism.md`, `.agents/process.md`,
+  `.agents/coding.md`) are write-once scaffolds, the user's to adapt.
 - `.claude/settings.json` carries one managed `hooks.PostToolUse` element,
   owned by the knowledge capability (the hook validates the bundle, so it
   exists exactly where a bundle does): superdev finds its own element by the

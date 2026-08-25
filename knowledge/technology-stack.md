@@ -44,10 +44,7 @@ set:[^cargo-toml]
 - **Tooling** (pinned in `.mise.toml`): `cargo-zigbuild` and `zig` (the cross
   C compiler for the musl targets), `cargo-nextest`, `cargo-llvm-cov`.
 - **Agent tooling**: this repo's engineering skills are the knowledge-carried
-  set superdev itself writes into `.claude/skills/` — embedded in the binary,
-  most derived from
-  [Matt Pocock's skills repository](https://github.com/mattpocock/skills)
-  under MIT.
+  set superdev itself writes into `.claude/skills/` — embedded in the binary.
 
 The embedding model is pinned like a dependency:
 `minishlab/potion-retrieval-32M`, at commit `6fc8051…`, fetched once per

@@ -11,6 +11,28 @@ publish a version it cannot find a heading for.
 
 ## [Unreleased]
 
+### Changed
+
+- **Breaking:** the knowledge-carried skill set is replaced by the process
+  layer. The derived engineering skills (code-review, codebase-design,
+  diagnosing-bugs, domain-modeling, tdd, to-spec, to-plan, wayfinder and the
+  rest, with their MIT licence file) are swept on the next `sync` — backed up,
+  as any removal is — and in their place land the eight workflow phases
+  (`frame`, `spec`, `interface-design`, `feature-plan`, `build`, `verify`,
+  `integrate`, `accept`) and their support skills (`adhoc-plan`, `bootstrap`,
+  `brainstorm`, `grill-me`, `handoff`, `how-do-i`, `maintain`, `prototype`,
+  `research`). `aokf-bootstrap` and `aokf-maintain` continue as `bootstrap`
+  and `maintain`.
+- The agent-rules scaffolds grow up: `.agents/prose.md` becomes
+  `.agents/professionalism.md`, a new `.agents/process.md` describes the
+  eight-phase workflow, and the `.agents/superdev.md` aggregator imports
+  professionalism, process, then coding. Existing repos keep their own copies
+  (scaffolds are write-once); fresh repos get the new set.
+- The skill pack slims to `double-check` and `template-update`; `humanise`
+  and `self-improve` leave the pack and are swept on sync unless marked
+  custom.
+- The init hint now says `run /bootstrap in Claude Code`.
+
 ## [0.1.0] - 2026-08-19
 
 ### Added

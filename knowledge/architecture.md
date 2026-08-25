@@ -71,10 +71,9 @@ skill files are embedded in the binary, which makes this binary the
 provenance. Nothing is installed. `sync` writes them to
 `.claude/skills/<name>/SKILL.md`; Claude Code reads them natively, so a
 teammate who clones the repo gets the pack without installing superdev. The
-knowledge capability carries a much larger set the same way: the 25
-aokf-converted skills — the engineering flow derived from mattpocock/skills
-plus `aokf-bootstrap` and `aokf-maintain` — each materialised as its whole
-directory of owned files, with the MIT notice beside them
+knowledge capability carries a much larger set the same way: the 17
+aokf-carried skills — the workflow phases and their support skills — each
+materialised as its whole directory of owned files
 ([spec](specs/S009-knowledge-carried-skills-design.md)). It also merges the
 validation hook's PostToolUse entry into `.claude/settings.json`, so hook and
 skills exist exactly where a bundle exists
@@ -97,8 +96,9 @@ one and the next `sync` puts it back.
 
 AGENTS.md is the user's file: superdev's guidance sits behind that one
 import, in the owned `.agents/superdev.md` — a `<superdev-system>` fence
-wrapping a short prompt, the general-rules imports (`.agents/coding.md`
-and `.agents/prose.md`, write-once scaffolds every managed repo gets),
+wrapping a short prompt, the general-rules imports (`.agents/professionalism.md`,
+`.agents/process.md` and `.agents/coding.md`, write-once scaffolds every
+managed repo gets),
 and one import per enabled capability's instruction file
 (`.agents/aokf.md`, `.agents/codegraph.md`), rewritten as
 the enabled set changes

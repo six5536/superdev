@@ -16,12 +16,13 @@ no Node.
 
 # Workflow
 
-1. Significant changes follow the knowledge-carried engineering skills
-   (the aokf-converted flow in `.claude/skills/`): grill the
-   requirements and write the spec into `knowledge/specs/` (permanent
-   decision record) with `to-spec`, then break it into an implementation
-   plan in `knowledge/plans/` (tagged `done` in the commit that
-   completes the work) with `to-plan` or `wayfinder`.
+1. Significant changes travel the knowledge-carried workflow skills in
+   `.claude/skills/` (`/frame` → `/spec` → `/interface-design` →
+   `/feature-plan` → `/build` → `/verify` → `/integrate`; see
+   `.agents/process.md`): the spec lands in `knowledge/specs/`
+   (permanent decision record), the plan in `knowledge/plans/` (tagged
+   `done` in the commit that completes the work). One-off work takes
+   `/adhoc-plan`.
 2. Implement with focused commits, using
    [Conventional Commits](https://www.conventionalcommits.org/) (`feat:`,
    `fix:`, `docs:`, `test:`, `refactor:`, `chore:`).

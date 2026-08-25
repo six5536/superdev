@@ -52,11 +52,10 @@ status: stable
   with it. Claude Code loads them from there natively, so there is nothing to
   install. The knowledge-carried skills are not pack skills: the aokf
   component carries them.
-- **Knowledge-carried skill** — one of the 25 aokf-converted skills the
+- **Knowledge-carried skill** — one of the 17 aokf-carried skills the
   `knowledge` capability materialises into `.claude/skills/<name>/` as owned
   files, each skill its whole directory: SKILL.md, companions, harness
-  configs. Most derive from mattpocock/skills (MIT); the set exists exactly
-  where a bundle exists. See the
+  configs. The set exists exactly where a bundle exists. See the
   [spec](specs/S009-knowledge-carried-skills-design.md).
 - **PROJECT.md layer** — a `PROJECT.md` beside a shipped skill. Every SKILL.md
   ends with a trailer telling the agent to read it and let it win on conflict,

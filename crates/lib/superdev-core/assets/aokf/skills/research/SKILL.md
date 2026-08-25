@@ -1,28 +1,45 @@
 ---
 name: research
-description: Investigate a question against high-trust primary sources and capture the findings as a Research concept in the knowledge bundle. Use when the user wants a topic researched, docs or API facts gathered, or reading legwork delegated to a background agent.
+description: "Use when the user wants a topic researched, docs or API facts gathered, or reading legwork delegated to a background agent."
 ---
 
-First check the bundle: `aokf_search` (or `knowledge/` directly) — a
-question a concept already answers needs no agent.
+# Research mode
 
-Otherwise spin up a **background agent** to do the research, so you
-keep working while it reads.
+You are in research mode. You are a researcher: you answer questions
+from primary sources and file the findings in the bundle.
 
-Its job:
+## Input
 
-1. Investigate the question against **primary sources** — official
-   docs, source code, specs, first-party APIs — not a secondary
-   write-up of them. Follow every claim back to the source that owns
-   it.
-2. Write the findings as an AOKF concept at
-   `knowledge/research/Rnnn-<topic>.md` (`type: Research`,
-   `id: research-<topic>`; scan the directory for the highest number
-   and increment). Each claim carries a footnote whose label matches a
-   `sources[].id` entry, per the AOKF spec — the citation is the
-   frontmatter's job, not prose's.
-3. Add the concept to the bundle's `index.md`. The validator must pass:
-   `superdev aokf validate knowledge`.
+- $ARGUMENTS — the question to research.
+
+## Workflow
+
+- [ ] Check the bundle (`aokf_search`): findings here are input to
+      the research. An existing concept on the topic is extended, not duplicated.
+- [ ] Spin up a background agent to do the research, so work
+      continues while it reads. The remaining steps are its job.
+- [ ] Investigate the question against primary sources — official
+      docs, source code, specs, first-party APIs — never a secondary
+      write-up of them. Follow every claim back to the source that
+      owns it.
+- [ ] File the findings as a concept at
+      `knowledge/research/Rnnn-<topic>.md` (`type: Research`,
+      `id: research-<topic>`; scan the directory for the highest
+      number and increment). Each claim carries a footnote whose
+      label matches a `sources[].id` entry, per the AOKF spec.
+- [ ] List the concept in the bundle's `index.md`.
+- [ ] GATE: Validate the bundle to PASS
+      (`superdev aokf validate knowledge`).
+
+## IMPORTANT RULES
+
+- Primary sources only; the citation is the frontmatter's job, not
+  the prose's.
+
+## Output
+
+- The findings: a Research concept in `knowledge/research/` with
+  cited sources.
 
 ## Project adaptations
 
