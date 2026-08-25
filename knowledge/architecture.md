@@ -39,6 +39,21 @@ in [api-contracts](api-contracts.md). Freshness is lazy: every tool call
 re-hashes the bundle and syncs only what changed, so there is no watcher and
 no daemon state to go stale.
 
+# Content resolves before planning
+
+Every skill, scaffold and document template a component writes comes from one
+resolved content set, built before any component plans and handed to them
+through `Ctx`. Nothing is fetched or read during planning, which is what keeps
+`plan` side-effect free and `status` free
+([ADR-002](decisions/D002-resolve-before-plan.md)). A component asks the set
+for the items it owns rather than carrying a list of them, so what superdev
+ships is decided by the pack tree — see
+[directory-structure](directory-structure.md) for its shape and
+[ADR-003](decisions/D003-items-by-layout.md) for the rules that name an item.
+
+Today the set has one layer, the pack compiled into the binary. What a
+manifest pins layers over it.
+
 # Capabilities and providers
 
 A capability is a slot; the tool filling it is a swappable provider.

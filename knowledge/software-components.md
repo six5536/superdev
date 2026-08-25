@@ -32,6 +32,12 @@ All domain logic; no argument parsing. One module per concern:
   identity a later layer supersedes on, the layout rules that read that
   identity out of a pack tree, and the `ContentSet` a run resolves to. Depends
   on nothing but `std` and `capability`, and never on how a pack is fetched.
+  The `aokf` and `skillpack` components and the general-rules scaffolds read
+  their items from the set through `Ctx`, so adding a file to `/pack` ships it
+  with no Rust edit. What the binary owns rather than the pack stays a
+  constant: the knowledge instructions and the AOKF spec describe a version it
+  pins and a format its compiled validator enforces, as codegraph's and rtk's
+  instruction files do.
 - `pipeline` — the verb pipeline between manifest and engine: `plan_repo`
   and `apply_repo`, owning the prune-before-plan and orphans-last ordering.
 - `engine` — applies a plan and unwinds on failure, one file per concern:

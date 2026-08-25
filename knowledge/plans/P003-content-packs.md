@@ -70,7 +70,7 @@ only variable when the Windows job runs.
 
 ### Slice 4: Components read content from Ctx
 
-- [ ] Done — ticked by integrate at merge.
+- [x] Done — ticked by integrate at merge.
 - Change: add `content: &ContentSet` to `Ctx`, built by `pipeline` from the
   snapshot for now. Convert `components/aokf.rs`, `components/skillpack.rs`
   and the general-rules scaffolds in `pipeline.rs` to read items from
