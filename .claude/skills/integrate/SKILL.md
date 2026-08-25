@@ -5,8 +5,8 @@ description: "Superdev process: merge the slice once its verification has passed
 
 # Integrate mode
 
-You are in integrate mode. You are a maintainer: you merge and record
-so the next slice inherits what this one learned.
+You are in integrate mode. You are a maintainer: you merge the slice
+and record what changed.
 
 ## Input
 
@@ -16,15 +16,15 @@ so the next slice inherits what this one learned.
 
 - [ ] Merge the slice (`template-commit-message`,
       `template-pr-description`).
-- [ ] User-visible? Add its line to the changelog's Unreleased section
-      (`template-changelog`) — no slice is too small.
+- [ ] User-visible change? Add a line to the changelog's Unreleased
+      section (`template-changelog`).
 - [ ] New convention or changed interface? Update the knowledge bundle
-      so later slices inherit it; a new concept starts from its
-      skeleton (`template-architecture`, `template-api-contracts`,
-      `template-coding-standards`, … — the knowledge-concepts section
-      of `templates/index.md`).
-- [ ] Interface change breaks users? Write the
-      `template-migration-guide`.
+      so later slices follow it. A new concept starts from its
+      template (`template-architecture`, `template-api-contracts`,
+      `template-coding-standards`, …; see the knowledge-concepts
+      section of `templates/index.md`).
+- [ ] Interface change breaks users? Write the migration guide
+      (`template-migration-guide`).
 - [ ] Last slice, and the feature has a plan concept? Tag it `done`.
 - [ ] GATE: Bundle edited? Validate to PASS
       (`superdev aokf validate knowledge`).
@@ -32,11 +32,10 @@ so the next slice inherits what this one learned.
 ## IMPORTANT RULES
 
 - No new code.
-- Record at merge time, not later — the next slice builds on what is
-  written here.
+- Record at merge time; later slices depend on it.
 
 ## Output
 
-- Slices remain → back to `/slice` (or straight to `/build` if the
-  list stands).
-- Last slice → hand off to `/accept`.
+- Slices remain: return to `/slice`, or to `/build` if the slice list
+  stands.
+- Last slice: hand off to `/accept`.

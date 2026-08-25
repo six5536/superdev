@@ -15,13 +15,13 @@ don't build.
 
 ## Workflow
 
-- [ ] Check dependency order and blast radius (`codegraph_explore`)
-      before fixing the sequence.
+- [ ] Check the dependency order and the affected code
+      (`codegraph_explore`) before setting the sequence.
 - [ ] Cut the spec into slices small enough to build and verify in one
       pass.
-- [ ] Order by dependency first, then risk — riskiest early.
+- [ ] Order by dependency first, then risk: riskiest early.
 - [ ] Give each slice its own done-check.
-- [ ] Slice list deserving a written plan? File it from
+- [ ] If the slice list needs a written plan, file it from
       `template-plan`: a draft concept at
       `knowledge/plans/Pnnn-<slug>.md`, listed in the plans index and
       validated to PASS.
@@ -30,9 +30,9 @@ don't build.
 
 ## IMPORTANT RULES
 
-- Decompose only — no code, no design.
+- Decompose only: no code, no design.
 
 ## Output
 
-- An ordered slice list, each with its own done-check.
+- An ordered slice list, each slice with its own done-check.
 - Hand the first slice to `/build`.

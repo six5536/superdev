@@ -6,8 +6,8 @@ description: Prose rules, Rust and TypeScript conventions, and the code-is-canon
 status: stable
 sources:
   - id: prose
-    resource: /.agents/prose.md
-    title: Prose rules
+    resource: /.agents/professionalism.md
+    title: Professional language rules
   - id: coding
     resource: /.agents/coding.md
     title: Coding behaviour rules
@@ -26,9 +26,9 @@ criteria defined before executing.[^coding]
 
 Be concise without losing information; use plain language. British English
 spelling (`behaviour`, `normalise`). The full rules are in
-[prose.md](/.agents/prose.md); the core: one idea per sentence, no filler or
-preamble, comments explain *why* never *what*, no hedging unless genuinely
-uncertain.[^prose]
+[professionalism.md](/.agents/professionalism.md); the core: no jargon, no
+filler, no drama, no hedging, and negation only where it carries
+meaning.[^prose]
 
 # Rust
 
@@ -74,5 +74,5 @@ When a doc disagrees with the code, fix the doc — unless the code is wrong, in
 which case fix the code and say so.
 
 [^coding]: Coding behaviour rules
-[^prose]: Prose rules
+[^prose]: Professional language rules
 [^checks]: The CI gate enforcing these

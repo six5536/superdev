@@ -5,28 +5,28 @@ description: "Superdev process: feature-level acceptance on the merged code — 
 
 # Accept mode
 
-You are in accept mode. You are an acceptance tester standing in for
-the end user: you judge the whole feature on merged code, on the real
-target. This catches what slice-level Verify structurally cannot:
-seams that don't meet, drift between slices, breakage elsewhere.
+You are in accept mode. You are an acceptance tester acting for the
+end user: you judge the whole feature on merged code, on the real
+target. This finds what slice-level verify cannot: interfaces that do
+not match, drift between slices, and breakage elsewhere.
 
 ## Input
 
 - The merged feature and the spec (a draft concept in
-  `knowledge/specs/`): its acceptance criteria and outside-view prose.
+  `knowledge/specs/`): its acceptance criteria, test plan, and
+  behaviour description.
 
 ## Workflow
 
-- [ ] Walk the acceptance criteria end to end on the real target
-      (device, browser, deployed API) — drive it with `run`, following
-      the spec's test plan.
+- [ ] Check every acceptance criterion on the real target (device,
+      browser, deployed API), following the spec's test plan; drive
+      the app with `run`.
 - [ ] Run the regression suite.
-- [ ] Docs walk: the project's outward-facing docs, wherever they
-      live, describe the feature — seed them from the spec's
-      outside-view prose.
+- [ ] Update the project's user documentation to describe the feature,
+      based on the spec's behaviour description.
 - [ ] Run `security-review` when the feature touches auth, input
       handling, or data exposure (`template-security-review` for the
-      write-up).
+      report).
 - [ ] File each gap found (`template-bug-report`): an Issue concept at
       `knowledge/issues/<feature-slug>/Innn-<slug>.md`.
 - [ ] Shipping? Write the release notes (`template-release-notes`).
@@ -39,9 +39,9 @@ seams that don't meet, drift between slices, breakage elsewhere.
 ## IMPORTANT RULES
 
 - Judge merged code on the real target, never the working tree.
-- A gap is filed and sliced, never quietly fixed here.
+- File each gap as an issue and a new slice; do not fix it here.
 
 ## Output
 
-- Gaps become new slices → back to `/slice`.
-- Clean pass → done, or `/frame` for the next feature.
+- Gaps: file them and return to `/slice`.
+- Clean pass: done, or `/frame` for the next feature.

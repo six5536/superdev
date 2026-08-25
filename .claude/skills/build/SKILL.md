@@ -14,18 +14,18 @@ exactly one slice and nothing beyond it.
 
 ## Workflow
 
-- [ ] Read the code you're about to touch and its callers
-      (`codegraph_explore`) before editing.
+- [ ] Read the code you are about to change, and its callers
+      (`codegraph_explore`), before editing.
 - [ ] Read the `coding-standards` and `testing-strategy` concepts
       (`aokf_read`) before writing code and tests.
 - [ ] Implement the slice: the code and its tests together.
-- [ ] Shape the commit per `template-commit-message`.
+- [ ] Write the commit message per `template-commit-message`.
 - [ ] GATE: Does the diff contain anything outside the slice? Remove
       it.
 
 ## IMPORTANT RULES
 
-- Exactly one slice — small and surgical.
+- Exactly one slice; keep the change small.
 - Code and tests are one deliverable, never code alone.
 
 ## Output

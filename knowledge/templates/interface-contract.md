@@ -2,13 +2,13 @@
 type: Template
 id: template-interface-contract
 title: Interface Contract Template
-description: The seams build codes against — data model and API, module boundaries, key flows, and cross-cutting concerns — each expressed in its native language, or TypeSpec.
+description: The interfaces build codes against — data model and API, module boundaries, key flows, and cross-cutting concerns — each expressed in its native language, or TypeSpec.
 status: stable
 ---
 
 # Interface contract: <feature name>
 
-<One paragraph: the seams this feature adds or changes, and the decisions behind them — link the ADRs. A working document: build codes against it, and it dies once the code is canonical. Its decisions live on in the ADRs, its shapes in the code and the api-contracts concept.>
+<One paragraph: the interfaces this feature adds or changes, and the decisions behind them — link the ADRs. A working document: build codes against it, and it is discarded once the code is canonical. Its decisions remain in the ADRs, its definitions in the code and the api-contracts concept.>
 
 ## Data model & API
 
@@ -26,7 +26,7 @@ status: stable
 
 ## Key flows
 
-<Walk the 1–3 most important scenarios across the seams, end to end.>
+<Describe the 1–3 most important scenarios across the interfaces, end to end.>
 
 ## Cross-cutting concerns
 
