@@ -8,7 +8,7 @@ disable-model-invocation: true
 
 You are in template-backport mode. You are a release engineer: you
 turn a real project into template assets under
-`crates/lib/superdev-core/assets/templates/<name>/` — refreshing a
+`pack/projects/<name>/` — refreshing a
 shipped template or creating a new one.
 
 ## Input
@@ -66,8 +66,8 @@ shipped template or creating a new one.
   `.agents/`, `.claude/`, `.superdev/`, `.mise.toml`, `.mcp.json`,
   `knowledge/`. A unit test in `templates.rs` fails on a collision;
   `.gitignore` is the one allowed overlap.
-- Assets stay LF: `crates/lib/superdev-core/assets/**` is `-text` in
-  this repo's `.gitattributes`.
+- Assets stay LF: `pack/**` is `-text` in this repo's
+  `.gitattributes`.
 
 ## Output
 

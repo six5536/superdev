@@ -226,7 +226,7 @@ mod tests {
             }
         }
 
-        let assets = Path::new(env!("CARGO_MANIFEST_DIR")).join("assets/templates");
+        let assets = Path::new(env!("CARGO_MANIFEST_DIR")).join("assets/projects");
         let mut found = Vec::new();
         walk(&assets, &mut found);
         assert!(

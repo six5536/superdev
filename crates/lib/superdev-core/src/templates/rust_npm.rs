@@ -11,7 +11,7 @@ macro_rules! tpl {
     ($rel:literal) => {
         include_str!(concat!(
             env!("CARGO_MANIFEST_DIR"),
-            "/assets/templates/rust-npm/",
+            "/assets/projects/rust-npm/",
             $rel
         ))
     };

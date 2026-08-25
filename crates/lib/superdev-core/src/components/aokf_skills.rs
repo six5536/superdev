@@ -1,5 +1,5 @@
 //! components/aokf_skills.rs — the aokf-carried skill set, generated from
-//! `assets/aokf/skills/`: every file of every skill directory.
+//! `assets/knowledge/skills/`: every file of every skill directory.
 
 use super::skills::SkillFiles;
 
@@ -7,7 +7,7 @@ macro_rules! asset {
     ($path:literal) => {
         include_str!(concat!(
             env!("CARGO_MANIFEST_DIR"),
-            "/assets/aokf/skills/",
+            "/assets/knowledge/skills/",
             $path
         ))
     };

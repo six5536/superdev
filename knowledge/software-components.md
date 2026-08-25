@@ -39,7 +39,7 @@ All domain logic; no argument parsing. One module per concern:
   JSON-pointer helpers the engine and planners share.
 - `templates` — the project templates: token substitution, the init-only
   scaffold plan, and `rust_npm`, the embedded table mapping
-  `assets/templates/rust-npm/` onto tokenised target paths.
+  `assets/projects/rust-npm/` onto tokenised target paths.
 - `aokf` — the read side of the knowledge bundle, one module per stage:
   `concept` (frontmatter and section parsing), `bundle` (loading, reserved-file
   rules), `validate` (document check and conformance ladder), `graph` (link

@@ -1,0 +1,8 @@
+# superdev's stock content pack. The layout is the declaration: a directory
+# under an owner names the kind, and the directory below it the item
+# (ADR-003). This file carries the format version and metadata, never an
+# item list.
+format      = 1
+name        = "superdev-assets"
+version     = "0.1.0"
+description = "superdev's stock skills, templates and scaffolds"

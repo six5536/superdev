@@ -20,7 +20,7 @@ macro_rules! tpl {
     ($rel:literal) => {
         include_str!(concat!(
             env!("CARGO_MANIFEST_DIR"),
-            "/assets/templates/web-react-android-ios-native/",
+            "/assets/projects/web-react-android-ios-native/",
             $rel
         ))
     };
