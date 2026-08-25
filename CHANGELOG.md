@@ -35,6 +35,13 @@ publish a version it cannot find a heading for.
   custom.
 - The init hint now says `run /bootstrap in Claude Code`.
 
+### Added
+
+- The seeded knowledge bundle now carries what the workflow skills reference:
+  the document template library at `knowledge/templates/` (owned, so it
+  versions with the skills), the issue-tracker convention, and a plans index
+  beside the specs index — all listed from the bundle index.
+
 ## [0.1.0] - 2026-08-19
 
 ### Added

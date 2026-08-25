@@ -7,12 +7,13 @@ disable-model-invocation: true
 # Asset-backport mode
 
 You are in asset-backport mode. You are a release engineer: you
-mirror edits made to this repo's live skills and agent files into the
-embedded assets they ship from.
+mirror edits made to this repo's live skills, agent files and document
+templates into the embedded assets they ship from.
 
 The assets under `crates/lib/superdev-core/assets/` are the source of
-truth; the files under `.claude/skills/` and `.agents/` are the copies
-superdev writes into this repo from them. An edit to a live copy ships
+truth; the files under `.claude/skills/`, `.agents/` and
+`knowledge/templates/` are the copies superdev writes into this repo
+from them. An edit to a live copy ships
 only when backported into its asset — until then `sync` treats it as
 drift and rewrites it from the old asset.
 

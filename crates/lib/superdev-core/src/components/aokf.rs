@@ -68,6 +68,18 @@ const FILES: &[(&str, &str, Ownership, &str)] = &[
         "specs index",
     ),
     (
+        "knowledge/plans/index.md",
+        asset!("aokf/knowledge/plans/index.md"),
+        Ownership::Scaffold,
+        "plans index",
+    ),
+    (
+        "knowledge/issue-tracker.md",
+        asset!("aokf/knowledge/issue-tracker.md"),
+        Ownership::Scaffold,
+        "issue-tracker convention",
+    ),
+    (
         "knowledge/api-contracts.md",
         asset!("aokf/knowledge/api-contracts.md"),
         Ownership::Scaffold,
@@ -189,10 +201,165 @@ const FILES: &[(&str, &str, Ownership, &str)] = &[
     ),
 ];
 
+/// The document templates the workflow skills fill in, owned so they
+/// version with the skills that reference them: (file name under
+/// `knowledge/templates/`, content).
+const TEMPLATE_FILES: &[(&str, &str)] = &[
+    (
+        "adhoc-plan.md",
+        asset!("aokf/knowledge/templates/adhoc-plan.md"),
+    ),
+    ("adr.md", asset!("aokf/knowledge/templates/adr.md")),
+    (
+        "api-contracts.md",
+        asset!("aokf/knowledge/templates/api-contracts.md"),
+    ),
+    (
+        "architectural-rules.md",
+        asset!("aokf/knowledge/templates/architectural-rules.md"),
+    ),
+    (
+        "architecture.md",
+        asset!("aokf/knowledge/templates/architecture.md"),
+    ),
+    ("backlog.md", asset!("aokf/knowledge/templates/backlog.md")),
+    (
+        "bug-report.md",
+        asset!("aokf/knowledge/templates/bug-report.md"),
+    ),
+    (
+        "changelog.md",
+        asset!("aokf/knowledge/templates/changelog.md"),
+    ),
+    (
+        "code-review.md",
+        asset!("aokf/knowledge/templates/code-review.md"),
+    ),
+    (
+        "coding-standards.md",
+        asset!("aokf/knowledge/templates/coding-standards.md"),
+    ),
+    (
+        "commit-message.md",
+        asset!("aokf/knowledge/templates/commit-message.md"),
+    ),
+    (
+        "configuration.md",
+        asset!("aokf/knowledge/templates/configuration.md"),
+    ),
+    (
+        "constraints-non-goals.md",
+        asset!("aokf/knowledge/templates/constraints-non-goals.md"),
+    ),
+    (
+        "definition-of-done.md",
+        asset!("aokf/knowledge/templates/definition-of-done.md"),
+    ),
+    (
+        "dependency-policy.md",
+        asset!("aokf/knowledge/templates/dependency-policy.md"),
+    ),
+    (
+        "development-commands.md",
+        asset!("aokf/knowledge/templates/development-commands.md"),
+    ),
+    (
+        "development-procedure.md",
+        asset!("aokf/knowledge/templates/development-procedure.md"),
+    ),
+    (
+        "directory-structure.md",
+        asset!("aokf/knowledge/templates/directory-structure.md"),
+    ),
+    (
+        "error-handling.md",
+        asset!("aokf/knowledge/templates/error-handling.md"),
+    ),
+    (
+        "feature-plan.md",
+        asset!("aokf/knowledge/templates/feature-plan.md"),
+    ),
+    (
+        "glossary.md",
+        asset!("aokf/knowledge/templates/glossary.md"),
+    ),
+    ("index.md", asset!("aokf/knowledge/templates/index.md")),
+    (
+        "interface-contract.md",
+        asset!("aokf/knowledge/templates/interface-contract.md"),
+    ),
+    (
+        "investigation.md",
+        asset!("aokf/knowledge/templates/investigation.md"),
+    ),
+    (
+        "issue-tracker.md",
+        asset!("aokf/knowledge/templates/issue-tracker.md"),
+    ),
+    (
+        "migration-guide.md",
+        asset!("aokf/knowledge/templates/migration-guide.md"),
+    ),
+    (
+        "postmortem.md",
+        asset!("aokf/knowledge/templates/postmortem.md"),
+    ),
+    (
+        "pr-description.md",
+        asset!("aokf/knowledge/templates/pr-description.md"),
+    ),
+    (
+        "project-overview.md",
+        asset!("aokf/knowledge/templates/project-overview.md"),
+    ),
+    ("readme.md", asset!("aokf/knowledge/templates/readme.md")),
+    (
+        "release-notes.md",
+        asset!("aokf/knowledge/templates/release-notes.md"),
+    ),
+    (
+        "release-procedure.md",
+        asset!("aokf/knowledge/templates/release-procedure.md"),
+    ),
+    (
+        "security-requirements.md",
+        asset!("aokf/knowledge/templates/security-requirements.md"),
+    ),
+    (
+        "security-review.md",
+        asset!("aokf/knowledge/templates/security-review.md"),
+    ),
+    (
+        "software-components.md",
+        asset!("aokf/knowledge/templates/software-components.md"),
+    ),
+    ("spec.md", asset!("aokf/knowledge/templates/spec.md")),
+    (
+        "status-update.md",
+        asset!("aokf/knowledge/templates/status-update.md"),
+    ),
+    (
+        "technology-stack.md",
+        asset!("aokf/knowledge/templates/technology-stack.md"),
+    ),
+    (
+        "test-plan.md",
+        asset!("aokf/knowledge/templates/test-plan.md"),
+    ),
+    (
+        "testing-strategy.md",
+        asset!("aokf/knowledge/templates/testing-strategy.md"),
+    ),
+    (
+        "visual-system.md",
+        asset!("aokf/knowledge/templates/visual-system.md"),
+    ),
+];
+
 /// The aokf-carried skill set lives in the generated
-/// [`super::aokf_skills::SKILLS`] table: the converted engineering flow plus
-/// the knowledge-lifecycle skills, carried by this component so they exist
-/// exactly where a bundle exists.
+/// [`super::aokf_skills::SKILLS`] table: the workflow phases and their
+/// support skills, carried by this component so they exist exactly where a
+/// bundle exists.
 pub(crate) fn skill_names() -> impl Iterator<Item = &'static str> {
     super::aokf_skills::SKILLS.iter().map(|(name, _)| *name)
 }
@@ -267,6 +434,13 @@ fn items(ctx: &Ctx<'_>) -> Vec<ManagedItem> {
                 content,
                 reason: (*reason).to_string(),
             },
+        });
+    }
+    for (name, content) in TEMPLATE_FILES {
+        items.push(ManagedItem::OwnedFile {
+            path: format!("knowledge/templates/{name}"),
+            content: (*content).to_string(),
+            reason: "document template".to_string(),
         });
     }
     items.push(ManagedItem::EnsureLine {
@@ -359,6 +533,15 @@ mod tests {
                 .any(|d| d.contains("superdev aokf hook validate")),
             "{descs:?}"
         );
+        // The template library ships with the skills that reference it.
+        for (name, _) in TEMPLATE_FILES {
+            assert!(
+                descs
+                    .iter()
+                    .any(|d| d.contains(&format!("knowledge/templates/{name}"))),
+                "knowledge/templates/{name} missing from {descs:?}"
+            );
+        }
     }
 
     #[test]

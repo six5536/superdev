@@ -73,7 +73,8 @@ provenance. Nothing is installed. `sync` writes them to
 teammate who clones the repo gets the pack without installing superdev. The
 knowledge capability carries a much larger set the same way: the 17
 aokf-carried skills — the workflow phases and their support skills — each
-materialised as its whole directory of owned files
+materialised as its whole directory of owned files, and the document
+templates the skills fill in as owned files under `knowledge/templates/`
 ([spec](specs/S009-knowledge-carried-skills-design.md)). It also merges the
 validation hook's PostToolUse entry into `.claude/settings.json`, so hook and
 skills exist exactly where a bundle exists
