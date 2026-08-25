@@ -66,6 +66,20 @@ enum WrittenEntries {
     Many(Vec<CapabilityConfig>),
 }
 
+/// One content pack the repo wants. Order in the manifest is layer order.
+///
+/// A `[[packs]]` array rather than a capability table: an absent capability
+/// means disabled, but an absent pack list means the pack compiled into the
+/// binary — a different thing, and one no capability table can say. ADR-001.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct PackEntry {
+    /// Where the pack comes from, as the user wrote it.
+    pub source: String,
+    /// Git revision — tag, branch or commit sha. Absent for a path source.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub rev: Option<String>,
+}
+
 /// The manifest as TOML sees it — the on-disk shape `parse` validates and
 /// `to_toml` renders. Field order is the serialised order.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -73,6 +87,8 @@ struct WrittenManifest {
     blueprint: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     template: Option<TemplateRecord>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    packs: Vec<PackEntry>,
     #[serde(flatten)]
     capabilities: BTreeMap<String, WrittenEntries>,
 }
@@ -85,6 +101,10 @@ pub struct Manifest {
     pub blueprint: String,
     /// The template `init` seeded this repo from, when one was chosen.
     pub template: Option<TemplateRecord>,
+    /// The content packs to layer, in layer order. Empty when the manifest
+    /// carries no `[[packs]]`, which resolves from the pack compiled into
+    /// the binary — never "disabled". ADR-001.
+    pub packs: Vec<PackEntry>,
     /// Enabled capabilities, keyed by kebab-case name. Absent = disabled.
     /// Every list is non-empty; single slots hold exactly one entry.
     pub capabilities: BTreeMap<String, Vec<CapabilityConfig>>,
@@ -111,6 +131,10 @@ impl Manifest {
         Manifest {
             blueprint: blueprint.to_string(),
             template: None,
+            // `init` writes the default entry explicitly once it knows how to
+            // name one; until then the absence means the embedded pack, which
+            // is what a fresh repo wants either way.
+            packs: Vec::new(),
             capabilities,
         }
     }
@@ -208,6 +232,7 @@ impl Manifest {
         Ok(Manifest {
             blueprint: written.blueprint,
             template: written.template,
+            packs: written.packs,
             capabilities,
         })
     }
@@ -231,6 +256,7 @@ impl Manifest {
         let written = WrittenManifest {
             blueprint: self.blueprint.clone(),
             template: self.template.clone(),
+            packs: self.packs.clone(),
             capabilities,
         };
         toml_edit::ser::to_string_pretty(&written).expect("manifest serialises")
@@ -468,6 +494,61 @@ mod tests {
             .save(dir.path())
             .unwrap_err();
         assert!(blocked.to_string().contains(".superdev"));
+    }
+
+    /// A manifest an earlier binary wrote carries no `[[packs]]`, and must
+    /// come back out exactly as it went in — the absence is the default, not
+    /// something to fill in.
+    #[test]
+    fn a_manifest_without_packs_round_trips_byte_identically() {
+        let written = "blueprint = \"0.2.0\"\n\n[knowledge]\nprovider = \"aokf\"\n";
+        let manifest = Manifest::parse(written).unwrap();
+        assert!(
+            manifest.packs.is_empty(),
+            "absent means empty, never disabled"
+        );
+        assert_eq!(manifest.to_toml(), written);
+    }
+
+    #[test]
+    fn a_manifest_with_packs_round_trips_and_keeps_layer_order() {
+        let written = concat!(
+            "blueprint = \"0.2.0\"\n\n",
+            "[[packs]]\n",
+            "source = \"github:six5536/superdev\"\n",
+            "rev = \"assets-v1.4.0\"\n\n",
+            "[[packs]]\n",
+            "source = \"./packs/acme\"\n\n",
+            "[knowledge]\nprovider = \"aokf\"\n",
+        );
+        let manifest = Manifest::parse(written).unwrap();
+        assert_eq!(
+            manifest.packs,
+            [
+                PackEntry {
+                    source: "github:six5536/superdev".into(),
+                    rev: Some("assets-v1.4.0".into()),
+                },
+                PackEntry {
+                    source: "./packs/acme".into(),
+                    rev: None,
+                },
+            ],
+            "manifest order is layer order"
+        );
+        assert_eq!(manifest.to_toml(), written);
+    }
+
+    /// `packs` is a top-level array, not a capability table: it must not be
+    /// mistaken for one on the way in (ADR-001).
+    #[test]
+    fn packs_is_not_read_as_a_capability() {
+        let manifest = Manifest::parse(
+            "blueprint = \"0.2.0\"\n\n[[packs]]\nsource = \"./p\"\n\n[skills]\nprovider = \"superdev-skills\"\n",
+        )
+        .unwrap();
+        assert_eq!(manifest.capabilities.keys().collect::<Vec<_>>(), ["skills"]);
+        assert_eq!(manifest.packs.len(), 1);
     }
 
     #[test]

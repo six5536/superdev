@@ -492,6 +492,36 @@ fn adopting_a_repo_with_its_own_skills_keeps_them() {
     );
 }
 
+/// Test plan case 21: a repo initialised by a binary that knew nothing about
+/// packs must keep syncing from the embedded pack, and `sync` must not write
+/// a pack entry into the manifest on its way past. An absent `[[packs]]` is
+/// the default, not something to migrate — `update` is what fills it in.
+#[test]
+fn sync_leaves_a_pre_pack_manifest_without_a_pack_entry() {
+    let dir = local_repo();
+    let config = dir.path().join(".superdev/config.toml");
+
+    // What an earlier binary wrote: no `[[packs]]` anywhere.
+    let before = std::fs::read_to_string(&config).unwrap();
+    assert!(!before.contains("packs"), "{before}");
+
+    superdev()
+        .current_dir(dir.path())
+        .arg("sync")
+        .assert()
+        .success();
+
+    let after = std::fs::read_to_string(&config).unwrap();
+    assert_eq!(after, before, "sync rewrote the manifest");
+    assert!(
+        !dir.path().join(".claude/skills/frame/SKILL.md").exists()
+            || dir.path().join(".claude/skills/frame/SKILL.md").is_file(),
+        "the embedded pack still supplies the files"
+    );
+    let lock = std::fs::read_to_string(dir.path().join(".superdev/lock.toml")).unwrap();
+    assert!(!lock.contains("[[packs]]"), "{lock}");
+}
+
 /// Test plan case 1: the default path — no pack entry in the manifest —
 /// resolves entirely from the pack compiled into the binary. Run with `PATH`
 /// emptied, so a spawn of any kind would fail and a network client would have

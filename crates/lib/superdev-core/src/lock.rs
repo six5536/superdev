@@ -73,9 +73,31 @@ mod records_serde {
     }
 }
 
+/// One resolved pack, recorded so a later run can prove it got the same bytes,
+/// and so a dropped entry's files become orphans by the existing rule.
+/// Per-file hashes stay in the lock's existing `files` map.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct PackLock {
+    /// The source as the manifest wrote it.
+    pub source: String,
+    /// The normalised comparison key every spelling of one source shares.
+    pub identity: String,
+    /// The revision resolved, for a git source.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub rev: Option<String>,
+    /// Digest over the resolved tree, verified on every later run.
+    pub digest: String,
+    /// The `format` the pack's own manifest declared.
+    pub format: u32,
+}
+
 /// Last-applied state: how `status` tells deliberate user change from drift.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Lock {
+    /// The packs the last apply resolved, in manifest order. Empty when no
+    /// pack was named, which is the default path.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub packs: Vec<PackLock>,
     /// Applied provider/version records, keyed by capability — one per
     /// enabled (capability, provider) entry.
     #[serde(default, with = "records_serde")]
@@ -126,6 +148,60 @@ impl Lock {
 
 #[cfg(test)]
 mod tests {
+    /// A lock an earlier binary wrote carries no `[[packs]]`; the new field
+    /// must not appear in it on the next save.
+    #[test]
+    fn a_lock_without_packs_round_trips_byte_identically() {
+        let written = "[components.knowledge]\nprovider = \"aokf\"\n\n[files]\n\"knowledge/index.md\" = \"abc\"\n";
+        let lock: Lock = toml_edit::de::from_str(written).unwrap();
+        assert!(lock.packs.is_empty());
+        assert_eq!(toml_edit::ser::to_string_pretty(&lock).unwrap(), written);
+    }
+
+    #[test]
+    fn a_lock_with_packs_round_trips() {
+        let written = concat!(
+            "[[packs]]\n",
+            "source = \"github:six5536/superdev\"\n",
+            "identity = \"github.com/six5536/superdev\"\n",
+            "rev = \"assets-v1.4.0\"\n",
+            "digest = \"sha256:9f2a\"\n",
+            "format = 1\n\n",
+            "[components.knowledge]\nprovider = \"aokf\"\n\n",
+            "[files]\n\"knowledge/index.md\" = \"abc\"\n",
+        );
+        let lock: Lock = toml_edit::de::from_str(written).unwrap();
+        assert_eq!(
+            lock.packs,
+            [PackLock {
+                source: "github:six5536/superdev".into(),
+                identity: "github.com/six5536/superdev".into(),
+                rev: Some("assets-v1.4.0".into()),
+                digest: "sha256:9f2a".into(),
+                format: 1,
+            }]
+        );
+        assert_eq!(toml_edit::ser::to_string_pretty(&lock).unwrap(), written);
+    }
+
+    /// A path source has no rev, and the key must stay out of the file
+    /// rather than appear empty.
+    #[test]
+    fn a_pack_lock_without_a_rev_omits_the_key() {
+        let lock = Lock {
+            packs: vec![PackLock {
+                source: "./packs/acme".into(),
+                identity: "/repo/packs/acme".into(),
+                rev: None,
+                digest: "sha256:0000".into(),
+                format: 1,
+            }],
+            ..Lock::default()
+        };
+        let written = toml_edit::ser::to_string_pretty(&lock).unwrap();
+        assert!(!written.contains("rev"), "{written}");
+    }
+
     use super::*;
 
     #[test]
