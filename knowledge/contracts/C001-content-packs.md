@@ -259,9 +259,16 @@ pub struct Resolution {
     /// Pins `Offline` could not satisfy. Always empty under `Fetching`,
     /// which errors instead.
     pub pending: Vec<PackEntry>,
+    /// One record per pack that resolved, in manifest order, for the lock.
+    /// Apply writes these; nothing else knows the digest it verified.
+    pub packs: Vec<PackLock>,
 }
 
 /// Resolve the manifest's packs over the embedded snapshot.
+///
+/// Takes the runner because a git source is fetched by spawning the user's
+/// own `git` (ADR-007), and every spawn in the codebase goes through that
+/// one seam so no test reaches a real network.
 ///
 /// Reads the cache, the network (under `Fetching`) and the local paths; the
 /// only phase in a run that does. Verifies each pack against the digest the
@@ -269,6 +276,7 @@ pub struct Resolution {
 /// bytes nobody pinned. S014, Never substituting content.
 pub fn resolve(
     root: &Path,
+    runner: &dyn CommandRunner,
     manifest: &Manifest,
     lock: &Lock,
     mode: ResolveMode,

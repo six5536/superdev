@@ -11,9 +11,17 @@ The invariants behind the [architecture](architecture.md):
 - **Components observe and plan; they never change anything.** `plan` reads
   the repo and the manifest and returns actions. Running it twice changes
   nothing, which is what makes `status` and `--dry-run` free.
-- **The engine is the only side-effect site.** File writes, mise edits and
-  external commands happen in one place, so every one of them is journalled
-  and can be rolled back.
+- **The engine is the only side-effect site for the repo.** Every write to a
+  managed file, every mise edit and every provisioning command happens in one
+  place, so each is journalled and can be rolled back.
+  Resolving content is the one exception, and sits outside the repo: it reads
+  local paths, may spawn `git` for a pinned pack, and populates the machine's
+  own cache under `.superdev/cache/packs/`
+  ([ADR-002](decisions/D002-resolve-before-plan.md),
+  [ADR-005](decisions/D005-pack-cache-and-fetch.md)). It runs to completion
+  before any plan exists, so there is nothing yet to roll back — and putting
+  it after planning would mean planning read the network, which is what keeps
+  `status` free of it.
 - **A mise-pinned tool is invoked through `mise exec`.** `mise install` puts
   the tool on no PATH the running process can see, so a bare spawn fails
   wherever mise is activated rather than shimmed. Tools superdev does not pin

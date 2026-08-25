@@ -70,3 +70,7 @@ No archive job, no artifact, no registry.
   explicitly rather than discover it.
 - Follow-ups: `technology-stack` records git as a runtime requirement at
   integrate; the release procedure gains the content-only tag flow.
+- The resolver takes the `CommandRunner` the rest of the codebase spawns
+  through, so no test reaches a real network and the fetch is scripted like
+  every other command. It is the one side-effect outside the engine, and
+  [architectural-rules](../architectural-rules.md) states the exception.
