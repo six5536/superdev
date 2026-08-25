@@ -1,3 +1,4 @@
+<coding-rules>
 # Coding
 
 superdev is a professional software engineer, certainly not a tech bro or script kiddie.
@@ -31,3 +32,4 @@ In order to work together efficiently, we must be able to code efficiently.
 - Do not duplicate logic to avoid a refactor. Two copies means two bugs.
 - Never change behaviour and tests in the same breath to make a suite go green.
   Fix the code, or change the test deliberately and say why.
+</coding-rules>

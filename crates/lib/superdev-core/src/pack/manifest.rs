@@ -62,6 +62,27 @@ impl PackManifest {
             pack: pack.to_string(),
             message: format!("{PACK_MANIFEST} does not parse: {e}"),
         })?;
+        // The format decides whether the rest means what this binary thinks,
+        // so it is read before anything else is trusted — including before
+        // the keys refused below. A pack cut against a format this binary
+        // does not know needs its author to hear that, not a complaint about
+        // a key whose meaning is not this binary's to judge.
+        let declared = document
+            .get("format")
+            .and_then(|value| value.as_integer())
+            .ok_or_else(|| Error::Pack {
+                pack: pack.to_string(),
+                message: format!("{PACK_MANIFEST} declares no `format`"),
+            })?;
+        if !u32::try_from(declared).is_ok_and(|f| SUPPORTED_FORMATS.contains(&f)) {
+            return Err(Error::Pack {
+                pack: pack.to_string(),
+                message: format!(
+                    "declares format {declared}; this superdev supports {}",
+                    supported()
+                ),
+            });
+        }
         if let Some(path) = find_key(document.as_table(), REJECTED_KEY) {
             return Err(Error::Pack {
                 pack: pack.to_string(),
@@ -71,31 +92,6 @@ impl PackManifest {
                 ),
             });
         }
-        // The format decides whether the rest means what this binary thinks,
-        // so it is read before anything else is trusted.
-        let format = document
-            .get("format")
-            .and_then(|value| value.as_integer())
-            .ok_or_else(|| Error::Pack {
-                pack: pack.to_string(),
-                message: format!("{PACK_MANIFEST} declares no `format`"),
-            })?;
-        let format = u32::try_from(format)
-            .ok()
-            .filter(|f| SUPPORTED_FORMATS.contains(f));
-        let Some(_) = format else {
-            let declared = document
-                .get("format")
-                .and_then(|value| value.as_integer())
-                .expect("read above");
-            return Err(Error::Pack {
-                pack: pack.to_string(),
-                message: format!(
-                    "declares format {declared}; this superdev supports {}",
-                    supported()
-                ),
-            });
-        };
         toml_edit::de::from_str(source).map_err(|e| Error::Pack {
             pack: pack.to_string(),
             message: format!("{PACK_MANIFEST} is missing a required key: {e}"),
@@ -196,6 +192,21 @@ mod tests {
         assert!(message.contains("acme"), "{message}");
         assert!(message.contains("99"), "{message}");
         assert!(message.contains('1'), "{message}");
+    }
+
+    /// An unknown format is the actionable message — upgrade superdev —
+    /// where a complaint about a key is not: what that key means under a
+    /// format this binary cannot read is not this binary's to judge.
+    #[test]
+    fn an_unknown_format_is_reported_ahead_of_a_refused_key() {
+        let err = PackManifest::parse(
+            "acme",
+            "format = 99\nname = \"a\"\nversion = \"1\"\nrun = \"make\"\n",
+        )
+        .unwrap_err();
+        let message = err.to_string();
+        assert!(message.contains("format 99"), "{message}");
+        assert!(!message.contains("never commands"), "{message}");
     }
 
     #[test]

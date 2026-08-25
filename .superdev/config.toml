@@ -1,4 +1,8 @@
-blueprint = "0.1.0"
+blueprint = "0.2.0"
+
+[bash-output-filter]
+provider = "rtk"
+version = "0.45.0"
 
 [code-index]
 provider = "codegraph"
@@ -10,7 +14,3 @@ provider = "aokf"
 [skills]
 provider = "superdev-skills"
 version = "0.2.0"
-
-[bash-output-filter]
-provider = "rtk"
-version = "0.45.0"

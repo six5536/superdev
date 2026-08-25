@@ -16,7 +16,7 @@ version = "0.2.0"
 [files]
 ".agents/aokf.md" = "d8b9fab198137af93b2675cc689fed26b43afbd5c63a67881ef121032dd307a2"
 ".agents/aokf/SPEC.md" = "84d5390c2af278c58f9aae5fd92bcc116c8929e42c3d19199c954b0cb4042cff"
-".agents/codegraph.md" = "ded8fff121b0e0f6566698a567cebe9170478231eba449c6f96bb778e2f31823"
+".agents/codegraph.md" = "e17d5ae6efffd72a5bed4f85ab360dccea8d3d81aaec79b2e8e98261380cc2d6"
 ".agents/rtk.md" = "9b6097cd301c0c7c910f23a8f918e6138b8f0ced0d6f46135d83a32c6c339e2f"
 ".agents/superdev.md" = "6ba64d542178aaa679b41ff0baab09c5ce0e9d8207e0145048718050c8db297e"
 ".claude/settings.json:hooks.PostToolUse[superdev aokf hook validate]" = "fc402a3befe55700af20e66b8ca79e5819eb0037cee9c6c85a23c41fb816314d"

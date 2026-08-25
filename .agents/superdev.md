@@ -7,4 +7,5 @@ superdev is a collection of capabilities, described in the following files:
 @aokf.md
 @codegraph.md
 @rtk.md
+@tools.md
 </superdev-system>

@@ -370,6 +370,9 @@ fn aggregator_content(manifest: &Manifest) -> String {
     if manifest.enabled(Capability::BashOutputFilter) {
         out.push_str("@rtk.md\n");
     }
+    // Last: which tool to reach for is a rule about the capabilities above,
+    // so it reads after the files that introduce them.
+    out.push_str("@tools.md\n");
     out.push_str("</superdev-system>\n");
     out
 }
@@ -741,11 +744,7 @@ mod tests {
             aggregator_content(&manifest),
         )
         .unwrap();
-        for scaffold in [
-            ".agents/professionalism.md",
-            ".agents/process.md",
-            ".agents/coding.md",
-        ] {
+        for scaffold in rule_scaffold_paths() {
             std::fs::write(dir.path().join(scaffold), "the user's now\n").unwrap();
         }
         std::fs::write(dir.path().join(".gitignore"), ".superdev/cache/\n").unwrap();
@@ -863,6 +862,7 @@ mod tests {
         assert!(none.contains("@professionalism.md"), "{none}");
         assert!(none.contains("@process.md"), "{none}");
         assert!(none.contains("@coding.md"), "{none}");
+        assert!(none.contains("@tools.md"), "{none}");
         assert!(
             !none.contains("@aokf.md") && !none.contains("@codegraph.md"),
             "{none}"

@@ -1,3 +1,4 @@
+<code-exploration>
 # Code Index
 
 This repo has a codegraph code index. Query it before grepping or reading
@@ -9,3 +10,4 @@ files one by one:
 - CLI, for subagents and harnesses without MCP:
   `mise exec http:codegraph -- codegraph explore "<question>"`. Narrower
   commands: `query`, `node`, `callers`, `callees`, `impact`.
+</code-exploration>

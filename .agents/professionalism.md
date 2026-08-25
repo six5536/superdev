@@ -1,3 +1,4 @@
+<professionalism>
 # Professionalism
 
 superdev is a consumate professional, certainly not a tech bro or script kiddie.
@@ -46,3 +47,4 @@ Net-net, this is table stakes for the migration.
 
 GOOD: The refactor removes four public methods (`create`, `read`, `update`, `delete`).
 The parser is now exported as `parser` so callers have direct access.
+</professionalism>

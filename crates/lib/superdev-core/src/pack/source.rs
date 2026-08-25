@@ -130,12 +130,23 @@ fn git_identity(url: &str) -> String {
             None => url.to_string(),
         },
     };
-    // Strip any userinfo an explicit scheme carried.
-    let rest = rest.split_once('@').map_or(rest.as_str(), |(_, h)| h);
-    rest.trim_end_matches('/')
-        .trim_end_matches(".git")
+    // Userinfo and a port belong to the authority, which ends at the first
+    // `/`. Stripping either across the whole string would let an `@` or a
+    // `:` in the path decide the identity — and a source whose *path*
+    // contained `@github.com/six5536/superdev` would normalise to the
+    // default pack's key and be treated as the base.
+    let (authority, path) = rest.split_once('/').unwrap_or((rest.as_str(), ""));
+    let host = authority.rsplit_once('@').map_or(authority, |(_, h)| h);
+    let host = host.split_once(':').map_or(host, |(h, _)| h);
+    let path = path
         .trim_end_matches('/')
-        .to_ascii_lowercase()
+        .trim_end_matches(".git")
+        .trim_end_matches('/');
+    if path.is_empty() {
+        host.to_ascii_lowercase()
+    } else {
+        format!("{host}/{path}").to_ascii_lowercase()
+    }
 }
 
 #[cfg(test)]
@@ -185,6 +196,42 @@ mod tests {
         ] {
             assert_ne!(identity_of(other), mine, "{other}");
         }
+    }
+
+    /// Userinfo and a port belong to the authority. An `@` or a `:` further
+    /// along is part of the path and must not decide the identity — a source
+    /// whose path ended `@github.com/six5536/superdev` would otherwise
+    /// normalise to the default pack's key and be treated as the base,
+    /// replacing the embedded content wholesale.
+    #[test]
+    fn only_the_authority_is_stripped_so_a_foreign_source_cannot_impersonate() {
+        let default = identity_of("github:six5536/superdev");
+        for impostor in [
+            "https://evil.example/x@github.com/six5536/superdev",
+            "https://evil.example/six5536/superdev@github.com",
+        ] {
+            assert_ne!(identity_of(impostor), default, "{impostor}");
+        }
+        // An `@` in the path stays in the path.
+        assert_eq!(
+            identity_of("https://github.com/six5536/super@dev"),
+            "github.com/six5536/super@dev"
+        );
+        // Two repositories differing only after an `@` stay distinct.
+        assert_ne!(
+            identity_of("https://github.com/a/b@c"),
+            identity_of("https://example.com/x/y@c")
+        );
+    }
+
+    /// A port is not part of which repository a URL names, so the same repo
+    /// with one written out is the same source.
+    #[test]
+    fn an_explicit_port_does_not_split_the_equivalence_class() {
+        assert_eq!(
+            identity_of("ssh://git@github.com:22/six5536/superdev.git"),
+            identity_of("github:six5536/superdev")
+        );
     }
 
     #[test]
