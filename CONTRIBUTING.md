@@ -29,6 +29,28 @@ fatal.
 A plain `cargo build` needs no Node; Node is only needed for the npm packages
 and the repo scripts.
 
+### Windows checkouts need symlinks
+
+The shipped content lives at `/pack`, and `crates/lib/superdev-core/assets` is
+a symlink to it — that is what keeps the files inside the published crate while
+leaving them browsable at the repo root. Git for Windows only materialises a
+symlink when `core.symlinks` is on, and creating one needs Developer Mode or an
+elevated shell. Set it before you clone:
+
+```sh
+git config --global core.symlinks true
+```
+
+Without it the link checks out as a one-line text file and the build fails on
+`include_str!`. A clone made without symlink support records `core.symlinks =
+false` in its own `.git/config`, and that overrides the global setting — so
+repair an existing clone from inside it:
+
+```sh
+git config core.symlinks true    # this clone; --global alone will not do it
+git checkout -- crates/lib/superdev-core/assets
+```
+
 This repo manages its own skills with superdev, and the Claude Code validation
 hook it installs calls a bare `superdev`. Link the dev shim so that resolves to
 your working tree:
@@ -105,6 +127,9 @@ The canonical rules live in the knowledgebase, not here:
 
 ## Project layout
 
+- `pack/` — the content superdev ships: skills, agent instructions, the
+  knowledge bundle and the project templates. Symlinked into
+  `superdev-core` as `assets/`, which is where the binary embeds it from.
 - `crates/lib/superdev-core` — all domain logic (no arg parsing).
 - `crates/app/superdev` — the binary: CLI parsing, wiring, output rendering.
 - `packages/` — the npm launcher and per-platform prebuilt-binary packages.

@@ -28,6 +28,14 @@ jobs:
         os: [macos-latest, windows-latest]
     runs-on: ${{ matrix.os }}
     steps:
+      # /pack is reached from superdev-core by a tracked symlink (ADR-006), and
+      # Git for Windows only materialises one when core.symlinks is on. Without
+      # it the link checks out as a text file and `include_str!` fails at
+      # compile time. Must run before the checkout that creates the link.
+      - name: Allow symlinks in the checkout (Windows)
+        if: runner.os == 'Windows'
+        run: git config --global core.symlinks true
+
       - uses: actions/checkout@v7
 
       # No toolchain action: rust-toolchain.toml is the single source of truth

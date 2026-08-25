@@ -11,4 +11,4 @@ crates/lib/superdev-core/tests/fixtures/** -text
 knowledge/templates/** -text
 .miserc.toml -text
 mise.*.toml -text
-crates/lib/superdev-core/assets/** -text
+pack/** -text
