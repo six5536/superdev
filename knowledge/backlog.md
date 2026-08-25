@@ -23,6 +23,26 @@ status: draft
   human questions. Raised while designing the bootstrap interview phase
   ([spec](specs/S008-knowledge-owned-skills-design.md)).
 
+- **Assets in their own repo.** Every file superdev writes into a managed repo
+  is compiled into the binary, so content and code share one release cadence:
+  correcting a skill or adding a template needs a five-platform release. The
+  idea is to move the assets into a public repo superdev points at by default
+  — with further repos addable through the manifest — so packs update
+  independently of the binary. Explored and abandoned with nothing decided;
+  the shape needs settling before it is worth attempting. What made it hard:
+  independent updates rule out pinning content in the binary, which is what
+  the checksummed-pin machinery relies on, so integrity has to come from
+  somewhere else; every alternative examined either put key custody on
+  third-party pack authors or moved trust to a registry. Fetching at plan time
+  also contradicts two stable concepts — the "no network input at runtime"
+  guarantee in [security-requirements](security-requirements.md) and the
+  non-PIE musl acceptance that cites it in
+  [constraints-non-goals](constraints-non-goals.md) — and would put the
+  network in the path of the `status --drift` CI gate. Letting a repo add its
+  own assets also means the binary can no longer be the thing that enumerates
+  what exists, which reaches into templates, skills and the glossary's
+  definition of the blueprint.
+
 - **Comment-preserving manifest stamping.** `sync` rewrites `config.toml`
   through the whole-file `Manifest::save` when it stamps the blueprint
   version, dropping any hand-written comments — the rewrite `update` always
