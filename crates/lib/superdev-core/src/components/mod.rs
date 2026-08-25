@@ -1,7 +1,6 @@
 //! Component implementations and the helpers they share.
 
 pub mod aokf;
-pub(crate) mod aokf_skills;
 pub mod codegraph;
 pub(crate) mod item;
 pub mod mise;
@@ -14,3 +13,4 @@ mod skills;
 mod enabled;
 
 pub use enabled::{MANAGED_MISE_TOOLS, enabled};
+pub(crate) use skills::skill_names;

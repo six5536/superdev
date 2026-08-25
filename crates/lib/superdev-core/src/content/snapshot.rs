@@ -23,176 +23,94 @@ pub fn snapshot() -> ContentSet {
     ContentSet::from_layer(items(), Origin::Snapshot)
 }
 
+/// The snapshot, built once per test process.
+///
+/// Every test wants the same set, and a `Ctx` needs to borrow one that
+/// outlives it; a `OnceLock` gives both without a binding at each site.
+#[cfg(test)]
+pub(crate) fn test_snapshot() -> &'static ContentSet {
+    static SET: std::sync::OnceLock<ContentSet> = std::sync::OnceLock::new();
+    SET.get_or_init(snapshot)
+}
+
 #[cfg(test)]
 mod tests {
-    //! Parity with the components.
+    //! What the embedded pack must carry.
     //!
-    //! Nothing reads the snapshot yet, so these tests are what keeps it
-    //! honest: every asset a component ships today must reach the snapshot as
-    //! an item, byte for byte. When the components start reading `ContentSet`
-    //! they inherit a set already proven equal to what they write now.
-
-    use std::collections::BTreeMap;
+    //! The components now read this set rather than hand-written tables, so
+    //! a parity assertion against those tables would compare the set with
+    //! itself. What is worth pinning instead is the shape: every kind is
+    //! populated, the exceptions stay out, and the project templates — which
+    //! still keep their own tables — match file for file.
 
     use super::*;
-    use crate::action::Ownership;
     use crate::capability::Capability;
-    use crate::components::{aokf, aokf_skills, skillpack};
+    use crate::components::aokf;
     use crate::content::item::{ItemKind, Owner};
 
     fn knowledge() -> Owner {
         Owner::Capability(Capability::Knowledge)
     }
 
-    fn set() -> ContentSet {
-        snapshot()
-    }
-
-    /// The one file of a single-file item.
-    fn only_file<'a>(set: &'a ContentSet, owner: Owner, kind: ItemKind, name: &str) -> &'a str {
-        let item = set
-            .item(owner, kind, name)
-            .unwrap_or_else(|| panic!("snapshot carries {name:?} as {kind:?}"));
-        assert_eq!(item.files.len(), 1, "{name} is a single-file item");
-        assert_eq!(item.files[0].0, "", "a single-file item's path is empty");
-        &item.files[0].1
-    }
-
+    /// A rule that stops matching would empty a kind silently, and every
+    /// component reading it would plan nothing at all.
     #[test]
-    fn every_knowledge_carried_skill_reaches_the_snapshot() {
-        let set = set();
-        let shipped: BTreeMap<&str, &[(&str, &str)]> =
-            aokf_skills::SKILLS.iter().map(|(n, f)| (*n, *f)).collect();
-        let in_set: Vec<&str> = set
-            .items_of(knowledge(), ItemKind::Skill)
-            .map(|i| i.name.as_str())
-            .collect();
-        assert_eq!(
-            in_set,
-            shipped.keys().copied().collect::<Vec<_>>(),
-            "the same skills, by name"
+    fn every_kind_is_populated() {
+        let set = snapshot();
+        for (owner, kind, least) in [
+            (knowledge(), ItemKind::Skill, 15),
+            (knowledge(), ItemKind::KnowledgeSkeleton, 20),
+            (knowledge(), ItemKind::DocTemplate, 40),
+            (Owner::Capability(Capability::Skills), ItemKind::Skill, 2),
+            (Owner::Repo, ItemKind::AgentScaffold, 3),
+            (Owner::Repo, ItemKind::ProjectTemplate, 2),
+        ] {
+            let found = set.items_of(owner, kind).count();
+            assert!(
+                found >= least,
+                "{owner:?}/{kind:?}: {found} items, expected at least {least}"
+            );
+        }
+    }
+
+    /// The names the rules produce, spot-checked against each pattern: a
+    /// `<name>.md` kind drops the extension, `concepts/<name>` keeps it.
+    #[test]
+    fn items_are_named_as_their_pattern_spells_it() {
+        let set = snapshot();
+        assert!(set.item(knowledge(), ItemKind::Skill, "frame").is_some());
+        assert!(
+            set.item(knowledge(), ItemKind::DocTemplate, "adr")
+                .is_some()
         );
-        for (name, files) in &shipped {
-            let item = set
-                .item(knowledge(), ItemKind::Skill, name)
-                .expect("present");
-            let mut expected: Vec<(String, String)> = files
-                .iter()
-                .map(|(rel, content)| ((*rel).to_string(), (*content).to_string()))
-                .collect();
-            expected.sort();
-            assert_eq!(item.files, expected, "{name}: every file, byte for byte");
-        }
-    }
-
-    #[test]
-    fn every_skill_pack_skill_reaches_the_snapshot() {
-        let set = set();
-        let owner = Owner::Capability(Capability::Skills);
-        let in_set: Vec<&str> = set
-            .items_of(owner, ItemKind::Skill)
-            .map(|i| i.name.as_str())
-            .collect();
-        let shipped: Vec<&str> = skillpack::SKILLS.iter().map(|(n, _)| *n).collect();
-        assert_eq!(in_set, shipped);
-        for (name, content) in skillpack::SKILLS {
-            let item = set.item(owner, ItemKind::Skill, name).expect("present");
-            assert_eq!(
-                item.files,
-                [("SKILL.md".to_string(), content.to_string())],
-                "{name}: byte for byte"
-            );
-        }
-    }
-
-    #[test]
-    fn every_bundle_scaffold_reaches_the_snapshot() {
-        let set = set();
-        // A scaffold's target is `knowledge/` plus its path under
-        // `concepts/`, so the item is named by the first segment after it.
-        let shipped: Vec<(&str, &str)> = aokf::FILES
-            .iter()
-            .filter(|(_, _, ownership, _)| matches!(ownership, Ownership::Scaffold))
-            .map(|(target, content, _, _)| {
-                let rest = target.strip_prefix("knowledge/").expect("bundle scaffold");
-                (rest, *content)
-            })
-            .collect();
-        assert_eq!(shipped.len(), 25, "the scaffold set this pins");
-
-        for (rest, content) in &shipped {
-            let (name, rel) = match rest.split_once('/') {
-                Some((dir, under)) => (dir, under),
-                None => (*rest, ""),
-            };
-            let item = set
-                .item(knowledge(), ItemKind::KnowledgeSkeleton, name)
-                .unwrap_or_else(|| panic!("snapshot carries the {name} scaffold"));
-            let found = item
-                .files
-                .iter()
-                .find(|(path, _)| path == rel)
-                .unwrap_or_else(|| panic!("{name} carries {rel:?}"));
-            assert_eq!(&found.1, content, "knowledge/{rest}: byte for byte");
-        }
-
-        // No item the components do not ship, and none of them twice.
-        let file_count: usize = set
-            .items_of(knowledge(), ItemKind::KnowledgeSkeleton)
-            .map(|i| i.files.len())
-            .sum();
-        assert_eq!(file_count, shipped.len(), "no scaffold the components lack");
-    }
-
-    #[test]
-    fn every_document_template_reaches_the_snapshot() {
-        let set = set();
-        let in_set: Vec<&str> = set
-            .items_of(knowledge(), ItemKind::DocTemplate)
-            .map(|i| i.name.as_str())
-            .collect();
-        // The shipped table keys on the file name; the item is named by the
-        // `<name>.md` pattern, so without the extension.
-        let mut shipped: Vec<&str> = aokf::TEMPLATE_FILES
-            .iter()
-            .map(|(file, _)| file.strip_suffix(".md").expect("templates are Markdown"))
-            .collect();
-        shipped.sort();
-        assert_eq!(in_set, shipped);
-        for (file, content) in aokf::TEMPLATE_FILES {
-            let name = file.strip_suffix(".md").expect("templates are Markdown");
-            assert_eq!(
-                only_file(&set, knowledge(), ItemKind::DocTemplate, name),
-                *content,
-                "{file}: byte for byte"
-            );
-        }
-    }
-
-    #[test]
-    fn every_general_rules_scaffold_reaches_the_snapshot() {
-        let set = set();
-        for (target, content) in crate::pipeline::RULE_SCAFFOLDS {
-            let name = target
-                .strip_prefix(".agents/")
-                .and_then(|file| file.strip_suffix(".md"))
-                .expect("agent scaffold");
-            assert_eq!(
-                only_file(&set, Owner::Repo, ItemKind::AgentScaffold, name),
-                content,
-                "{target}: byte for byte"
-            );
-        }
-        assert_eq!(
-            set.items_of(Owner::Repo, ItemKind::AgentScaffold).count(),
-            crate::pipeline::RULE_SCAFFOLDS.len(),
-            "the capability instruction files are not scaffolds and must not appear"
+        assert!(
+            set.item(knowledge(), ItemKind::DocTemplate, "adr.md")
+                .is_none()
         );
+        assert!(
+            set.item(Owner::Repo, ItemKind::AgentScaffold, "coding")
+                .is_some()
+        );
+        assert!(
+            set.item(
+                knowledge(),
+                ItemKind::KnowledgeSkeleton,
+                "manifest.aokf.yaml"
+            )
+            .is_some(),
+            "a concept entry keeps its extension"
+        );
+        let plans = set
+            .item(knowledge(), ItemKind::KnowledgeSkeleton, "plans")
+            .expect("a concept directory is one item");
+        assert_eq!(plans.files.len(), 1, "and holds its whole subtree");
     }
 
+    /// The project templates are the one kind still driven by a table, so
+    /// this is a real cross-check rather than the set against itself.
     #[test]
     fn every_project_template_reaches_the_snapshot() {
-        let set = set();
+        let set = snapshot();
         let in_set: Vec<&str> = set
             .items_of(Owner::Repo, ItemKind::ProjectTemplate)
             .map(|i| i.name.as_str())
@@ -220,20 +138,13 @@ mod tests {
         }
     }
 
-    /// The instruction files and the AOKF spec ship from the pack tree but are
-    /// not content: they describe a version the binary pins or a format the
-    /// compiled validator enforces. `pack.toml` is metadata.
+    /// The instruction files and the AOKF spec ship from the pack tree but
+    /// are not content: they describe a version the binary pins or a format
+    /// the compiled validator enforces. `pack.toml` is metadata.
     #[test]
     fn what_is_not_content_stays_out_of_the_snapshot() {
         let files: usize = items().iter().map(|i| i.files.len()).sum();
-        let owned_by_the_binary = aokf::FILES
-            .iter()
-            .filter(|(_, _, ownership, _)| matches!(ownership, Ownership::Owned))
-            .count();
-        assert_eq!(owned_by_the_binary, 2, "the instructions and the AOKF spec");
-        // Every pack file is either an item's or one of the four the binary
-        // owns, plus pack.toml itself.
-        let not_content = owned_by_the_binary + 2 /* codegraph, rtk */ + 1 /* pack.toml */;
+        let not_content = aokf::binary_owned_count() + 2 /* codegraph, rtk */ + 1 /* pack.toml */;
         assert_eq!(
             files + not_content,
             FILES.len(),

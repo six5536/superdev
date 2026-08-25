@@ -7,32 +7,28 @@ use std::path::Path;
 use crate::action::Action;
 use crate::capability::Capability;
 use crate::component::{Claim, Component, Ctx};
+use crate::content::{ContentSet, Owner};
 use crate::error::Result;
 use crate::manifest::Manifest;
 
 use super::item::{self, ManagedItem};
 
-macro_rules! asset {
-    ($rel:literal) => {
-        include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/assets/", $rel))
-    };
-}
-
-/// The pack: (skill name, embedded SKILL.md). The knowledge-lifecycle
-/// skills live with the aokf component, not here.
-pub(crate) const SKILLS: [(&str, &str); 2] = [
-    ("double-check", asset!("skills/double-check/SKILL.md")),
-    ("template-update", asset!("skills/template-update/SKILL.md")),
-];
+/// The skills capability owns superdev's own pack: whatever the resolved
+/// content carries under this owner.
+pub(crate) const OWNER: Owner = Owner::Capability(Capability::Skills);
 
 /// Release, at adoption time, every pack skill the repo already has under
 /// its own name and with its own content. Returns the lines to print.
-pub(crate) fn adopt_existing(root: &Path, manifest: &mut Manifest) -> Vec<String> {
+pub(crate) fn adopt_existing(
+    root: &Path,
+    content: &ContentSet,
+    manifest: &mut Manifest,
+) -> Vec<String> {
     super::skills::adopt_existing(
         root,
         Capability::Skills,
         "superdev-skills",
-        &SKILLS,
+        &super::skills::skill_identities(content, OWNER),
         manifest,
     )
 }
@@ -47,7 +43,7 @@ fn items(ctx: &Ctx<'_>) -> Vec<ManagedItem> {
         .config(Capability::Skills, "superdev-skills")
         .map(|c| c.custom.as_slice())
         .unwrap_or_default();
-    super::skills::skill_items(&SKILLS, custom)
+    super::skills::skill_dir_items(ctx.content, OWNER, custom)
 }
 
 impl Component for SkillPack {
@@ -83,9 +79,14 @@ mod tests {
         )
     }
 
+    /// The pack's skills as the resolved content carries them.
+    fn shipped() -> Vec<(&'static str, &'static str)> {
+        crate::components::skills::skill_identities(crate::content::test_snapshot(), OWNER)
+    }
+
     /// Write every skill, so nothing is planned.
     fn converge(root: &std::path::Path) {
-        for (name, content) in SKILLS {
+        for (name, content) in shipped() {
             let path = root.join(format!(".claude/skills/{name}/SKILL.md"));
             std::fs::create_dir_all(path.parent().unwrap()).unwrap();
             std::fs::write(path, content).unwrap();
@@ -102,11 +103,12 @@ mod tests {
             runner: &fake,
             manifest: &manifest,
             lock: &lock,
+            content: crate::content::test_snapshot(),
         };
         let actions = SkillPack.plan(&ctx).unwrap();
         assert_eq!(actions.len(), 2);
         let descs: Vec<String> = actions.iter().map(|a| a.describe()).collect();
-        for (name, _) in SKILLS {
+        for (name, _) in shipped() {
             assert!(
                 descs
                     .iter()
@@ -128,6 +130,7 @@ mod tests {
             runner: &fake,
             manifest: &manifest,
             lock: &lock,
+            content: crate::content::test_snapshot(),
         };
         assert!(SkillPack.plan(&ctx).unwrap().is_empty());
     }
@@ -148,6 +151,7 @@ mod tests {
             runner: &fake,
             manifest: &manifest,
             lock: &lock,
+            content: crate::content::test_snapshot(),
         };
         let actions = SkillPack.plan(&ctx).unwrap();
         assert_eq!(actions.len(), 1);
@@ -171,6 +175,7 @@ mod tests {
             runner: &fake,
             manifest: &manifest,
             lock: &lock,
+            content: crate::content::test_snapshot(),
         };
         assert!(SkillPack.plan(&ctx).unwrap().is_empty());
     }
@@ -187,6 +192,7 @@ mod tests {
             runner: &fake,
             manifest: &manifest,
             lock: &lock,
+            content: crate::content::test_snapshot(),
         };
         assert!(SkillPack.plan(&ctx).unwrap().is_empty());
     }
@@ -202,6 +208,7 @@ mod tests {
             runner: &fake,
             manifest: &manifest,
             lock: &lock,
+            content: crate::content::test_snapshot(),
         };
         assert!(SkillPack.plan(&ctx).is_err());
     }
@@ -218,6 +225,7 @@ mod tests {
             runner: &fake,
             manifest: &manifest,
             lock: &lock,
+            content: crate::content::test_snapshot(),
         };
         let keys: Vec<String> = SkillPack.owned(&ctx).iter().map(Claim::lock_key).collect();
         assert!(
@@ -244,14 +252,15 @@ mod tests {
         // Theirs, under one of our names.
         write("template-update", "# Ours, thanks\n");
         // Already superdev's own text: nothing of the user's to keep.
-        let (_, shipped) = SKILLS
+        let identities = shipped();
+        let (_, shipped) = identities
             .iter()
             .find(|(name, _)| *name == "double-check")
             .unwrap();
         write("double-check", shipped);
 
         let mut manifest = Manifest::default_for("0.1.0", &[]);
-        let lines = adopt_existing(dir.path(), &mut manifest);
+        let lines = adopt_existing(dir.path(), crate::content::test_snapshot(), &mut manifest);
         assert_eq!(
             manifest.capabilities["skills"][0].custom,
             ["template-update"]
@@ -267,9 +276,11 @@ mod tests {
         // Nothing to adopt in an empty repo, or with skills disabled.
         let empty = tempfile::tempdir().unwrap();
         let mut manifest = Manifest::default_for("0.1.0", &[]);
-        assert!(adopt_existing(empty.path(), &mut manifest).is_empty());
+        assert!(
+            adopt_existing(empty.path(), crate::content::test_snapshot(), &mut manifest).is_empty()
+        );
         assert!(manifest.capabilities["skills"][0].custom.is_empty());
         let mut off = Manifest::default_for("0.1.0", &[crate::capability::Capability::Skills]);
-        assert!(adopt_existing(dir.path(), &mut off).is_empty());
+        assert!(adopt_existing(dir.path(), crate::content::test_snapshot(), &mut off).is_empty());
     }
 }

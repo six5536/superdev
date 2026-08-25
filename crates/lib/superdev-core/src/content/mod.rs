@@ -17,3 +17,5 @@ pub use item::{Item, ItemKind, Owner};
 pub use layout::items_from;
 pub use set::{ContentSet, Origin, Shadowed};
 pub use snapshot::snapshot;
+#[cfg(test)]
+pub(crate) use snapshot::test_snapshot;

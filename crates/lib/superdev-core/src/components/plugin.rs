@@ -136,6 +136,7 @@ mod tests {
             runner: &fake,
             manifest: &manifest,
             lock: &lock,
+            content: crate::content::test_snapshot(),
         };
         assert!(frontend_design().plan(&ctx).unwrap().is_empty());
     }
@@ -150,6 +151,7 @@ mod tests {
             runner: &fake,
             manifest: &manifest,
             lock: &lock,
+            content: crate::content::test_snapshot(),
         };
         let actions = frontend_design().plan(&ctx).unwrap();
         assert!(!actions.is_empty());

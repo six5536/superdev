@@ -1015,6 +1015,7 @@ mod tests {
             runner: &fake,
             manifest: &manifest,
             lock: &lock,
+            content: crate::content::test_snapshot(),
         };
         let components = crate::components::enabled(&manifest).unwrap();
         let planned = plan(&components, &ctx).unwrap();
@@ -1031,6 +1032,7 @@ mod tests {
             runner: &fake,
             manifest: &broken,
             lock: &lock,
+            content: crate::content::test_snapshot(),
         };
         assert!(plan(&crate::components::enabled(&broken).unwrap(), &ctx).is_err());
     }

@@ -3,9 +3,10 @@
 
 use std::path::Path;
 
-use crate::action::{Action, Ownership};
+use crate::action::Action;
 use crate::capability::Capability;
 use crate::component::{Claim, Component, Ctx};
+use crate::content::{ContentSet, ItemKind, Owner};
 use crate::error::Result;
 use crate::manifest::Manifest;
 
@@ -35,331 +36,45 @@ const MCP_VALUE: &str = r#"{"command":"superdev","args":["mcp","aokf"]}"#;
 const CLAUDE_ENTRY_PATH: &str = "CLAUDE.md";
 const CLAUDE_ENTRY_LINE: &str = "@AGENTS.md";
 
-/// (target path, asset content, ownership, reason)
-pub(crate) const FILES: &[(&str, &str, Ownership, &str)] = &[
+/// The files the binary owns rather than the pack: (target path, content,
+/// reason). The instructions describe a version this binary pins and the
+/// spec a format its compiled validator enforces, so both move with the
+/// binary and no pack may supply them.
+const BINARY_OWNED: &[(&str, &str, &str)] = &[
     (
         ".agents/aokf/SPEC.md",
         asset!("aokf/agents/aokf/SPEC.md"),
-        Ownership::Owned,
         "AOKF specification",
     ),
     (
         ".agents/aokf.md",
         asset!("aokf/agents/aokf.md"),
-        Ownership::Owned,
         "knowledge instructions",
     ),
-    (
-        "knowledge/index.md",
-        asset!("knowledge/concepts/index.md"),
-        Ownership::Scaffold,
-        "bundle index",
-    ),
-    (
-        "knowledge/manifest.aokf.yaml",
-        asset!("knowledge/concepts/manifest.aokf.yaml"),
-        Ownership::Scaffold,
-        "bundle manifest",
-    ),
-    (
-        "knowledge/specs/index.md",
-        asset!("knowledge/concepts/specs/index.md"),
-        Ownership::Scaffold,
-        "specs index",
-    ),
-    (
-        "knowledge/plans/index.md",
-        asset!("knowledge/concepts/plans/index.md"),
-        Ownership::Scaffold,
-        "plans index",
-    ),
-    (
-        "knowledge/issue-tracker.md",
-        asset!("knowledge/concepts/issue-tracker.md"),
-        Ownership::Scaffold,
-        "issue-tracker convention",
-    ),
-    (
-        "knowledge/api-contracts.md",
-        asset!("knowledge/concepts/api-contracts.md"),
-        Ownership::Scaffold,
-        "starter concept",
-    ),
-    (
-        "knowledge/architectural-rules.md",
-        asset!("knowledge/concepts/architectural-rules.md"),
-        Ownership::Scaffold,
-        "starter concept",
-    ),
-    (
-        "knowledge/architecture.md",
-        asset!("knowledge/concepts/architecture.md"),
-        Ownership::Scaffold,
-        "starter concept",
-    ),
-    (
-        "knowledge/backlog.md",
-        asset!("knowledge/concepts/backlog.md"),
-        Ownership::Scaffold,
-        "starter concept",
-    ),
-    (
-        "knowledge/coding-standards.md",
-        asset!("knowledge/concepts/coding-standards.md"),
-        Ownership::Scaffold,
-        "starter concept",
-    ),
-    (
-        "knowledge/configuration.md",
-        asset!("knowledge/concepts/configuration.md"),
-        Ownership::Scaffold,
-        "starter concept",
-    ),
-    (
-        "knowledge/constraints-non-goals.md",
-        asset!("knowledge/concepts/constraints-non-goals.md"),
-        Ownership::Scaffold,
-        "starter concept",
-    ),
-    (
-        "knowledge/definition-of-done.md",
-        asset!("knowledge/concepts/definition-of-done.md"),
-        Ownership::Scaffold,
-        "starter concept",
-    ),
-    (
-        "knowledge/dependency-policy.md",
-        asset!("knowledge/concepts/dependency-policy.md"),
-        Ownership::Scaffold,
-        "starter concept",
-    ),
-    (
-        "knowledge/development-commands.md",
-        asset!("knowledge/concepts/development-commands.md"),
-        Ownership::Scaffold,
-        "starter concept",
-    ),
-    (
-        "knowledge/development-procedure.md",
-        asset!("knowledge/concepts/development-procedure.md"),
-        Ownership::Scaffold,
-        "starter concept",
-    ),
-    (
-        "knowledge/directory-structure.md",
-        asset!("knowledge/concepts/directory-structure.md"),
-        Ownership::Scaffold,
-        "starter concept",
-    ),
-    (
-        "knowledge/error-handling.md",
-        asset!("knowledge/concepts/error-handling.md"),
-        Ownership::Scaffold,
-        "starter concept",
-    ),
-    (
-        "knowledge/glossary.md",
-        asset!("knowledge/concepts/glossary.md"),
-        Ownership::Scaffold,
-        "starter concept",
-    ),
-    (
-        "knowledge/project-overview.md",
-        asset!("knowledge/concepts/project-overview.md"),
-        Ownership::Scaffold,
-        "starter concept",
-    ),
-    (
-        "knowledge/release-procedure.md",
-        asset!("knowledge/concepts/release-procedure.md"),
-        Ownership::Scaffold,
-        "starter concept",
-    ),
-    (
-        "knowledge/security-requirements.md",
-        asset!("knowledge/concepts/security-requirements.md"),
-        Ownership::Scaffold,
-        "starter concept",
-    ),
-    (
-        "knowledge/software-components.md",
-        asset!("knowledge/concepts/software-components.md"),
-        Ownership::Scaffold,
-        "starter concept",
-    ),
-    (
-        "knowledge/technology-stack.md",
-        asset!("knowledge/concepts/technology-stack.md"),
-        Ownership::Scaffold,
-        "starter concept",
-    ),
-    (
-        "knowledge/testing-strategy.md",
-        asset!("knowledge/concepts/testing-strategy.md"),
-        Ownership::Scaffold,
-        "starter concept",
-    ),
 ];
 
-/// The document templates the workflow skills fill in, owned so they
-/// version with the skills that reference them: (file name under
-/// `knowledge/templates/`, content).
-pub(crate) const TEMPLATE_FILES: &[(&str, &str)] = &[
-    ("adhoc-plan.md", asset!("knowledge/templates/adhoc-plan.md")),
-    ("adr.md", asset!("knowledge/templates/adr.md")),
-    (
-        "api-contracts.md",
-        asset!("knowledge/templates/api-contracts.md"),
-    ),
-    (
-        "architectural-rules.md",
-        asset!("knowledge/templates/architectural-rules.md"),
-    ),
-    (
-        "architecture.md",
-        asset!("knowledge/templates/architecture.md"),
-    ),
-    ("backlog.md", asset!("knowledge/templates/backlog.md")),
-    ("bug-report.md", asset!("knowledge/templates/bug-report.md")),
-    ("changelog.md", asset!("knowledge/templates/changelog.md")),
-    (
-        "code-review.md",
-        asset!("knowledge/templates/code-review.md"),
-    ),
-    (
-        "coding-standards.md",
-        asset!("knowledge/templates/coding-standards.md"),
-    ),
-    (
-        "commit-message.md",
-        asset!("knowledge/templates/commit-message.md"),
-    ),
-    (
-        "configuration.md",
-        asset!("knowledge/templates/configuration.md"),
-    ),
-    (
-        "constraints-non-goals.md",
-        asset!("knowledge/templates/constraints-non-goals.md"),
-    ),
-    (
-        "definition-of-done.md",
-        asset!("knowledge/templates/definition-of-done.md"),
-    ),
-    (
-        "dependency-policy.md",
-        asset!("knowledge/templates/dependency-policy.md"),
-    ),
-    (
-        "development-commands.md",
-        asset!("knowledge/templates/development-commands.md"),
-    ),
-    (
-        "development-procedure.md",
-        asset!("knowledge/templates/development-procedure.md"),
-    ),
-    (
-        "directory-structure.md",
-        asset!("knowledge/templates/directory-structure.md"),
-    ),
-    (
-        "error-handling.md",
-        asset!("knowledge/templates/error-handling.md"),
-    ),
-    (
-        "feature-plan.md",
-        asset!("knowledge/templates/feature-plan.md"),
-    ),
-    ("glossary.md", asset!("knowledge/templates/glossary.md")),
-    ("index.md", asset!("knowledge/templates/index.md")),
-    (
-        "interface-contract.md",
-        asset!("knowledge/templates/interface-contract.md"),
-    ),
-    (
-        "investigation.md",
-        asset!("knowledge/templates/investigation.md"),
-    ),
-    (
-        "issue-tracker.md",
-        asset!("knowledge/templates/issue-tracker.md"),
-    ),
-    (
-        "migration-guide.md",
-        asset!("knowledge/templates/migration-guide.md"),
-    ),
-    ("postmortem.md", asset!("knowledge/templates/postmortem.md")),
-    (
-        "pr-description.md",
-        asset!("knowledge/templates/pr-description.md"),
-    ),
-    (
-        "project-overview.md",
-        asset!("knowledge/templates/project-overview.md"),
-    ),
-    ("readme.md", asset!("knowledge/templates/readme.md")),
-    (
-        "release-notes.md",
-        asset!("knowledge/templates/release-notes.md"),
-    ),
-    (
-        "release-procedure.md",
-        asset!("knowledge/templates/release-procedure.md"),
-    ),
-    (
-        "security-requirements.md",
-        asset!("knowledge/templates/security-requirements.md"),
-    ),
-    (
-        "security-review.md",
-        asset!("knowledge/templates/security-review.md"),
-    ),
-    (
-        "software-components.md",
-        asset!("knowledge/templates/software-components.md"),
-    ),
-    ("spec.md", asset!("knowledge/templates/spec.md")),
-    (
-        "status-update.md",
-        asset!("knowledge/templates/status-update.md"),
-    ),
-    (
-        "technology-stack.md",
-        asset!("knowledge/templates/technology-stack.md"),
-    ),
-    ("test-plan.md", asset!("knowledge/templates/test-plan.md")),
-    (
-        "testing-strategy.md",
-        asset!("knowledge/templates/testing-strategy.md"),
-    ),
-    (
-        "visual-system.md",
-        asset!("knowledge/templates/visual-system.md"),
-    ),
+/// How many files this binary owns rather than the pack.
+#[cfg(test)]
+pub(crate) fn binary_owned_count() -> usize {
+    BINARY_OWNED.len()
+}
+
+/// The bundle scaffolds that are not starter concepts, in the order they are
+/// written, each with the reason printed for it. Presentation only: a
+/// scaffold a pack adds needs no entry here — it takes the generic reason and
+/// sorts with the concepts, after the structural files that frame them.
+const SKELETON_REASONS: &[(&str, &str)] = &[
+    ("index.md", "bundle index"),
+    ("manifest.aokf.yaml", "bundle manifest"),
+    ("specs", "specs index"),
+    ("plans", "plans index"),
+    ("issue-tracker.md", "issue-tracker convention"),
 ];
 
-/// The aokf-carried skill set lives in the generated
-/// [`super::aokf_skills::SKILLS`] table: the workflow phases and their
-/// support skills, carried by this component so they exist exactly where a
-/// bundle exists.
-pub(crate) fn skill_names() -> impl Iterator<Item = &'static str> {
-    super::aokf_skills::SKILLS.iter().map(|(name, _)| *name)
-}
-
-/// Each skill's identity file, for init-time adoption: (name, SKILL.md).
-fn skill_identities() -> Vec<(&'static str, &'static str)> {
-    super::aokf_skills::SKILLS
-        .iter()
-        .map(|(name, files)| {
-            let skill_md = files
-                .iter()
-                .find(|(rel, _)| *rel == "SKILL.md")
-                .expect("every skill directory carries a SKILL.md")
-                .1;
-            (*name, skill_md)
-        })
-        .collect()
-}
+/// The knowledge capability owns the workflow phases and their support
+/// skills: whatever the resolved content carries under this owner, so they
+/// exist exactly where a bundle exists.
+pub(crate) const OWNER: Owner = Owner::Capability(Capability::Knowledge);
 
 /// Where Claude Code reads hook registrations. Shared with the user's own
 /// hooks, so only superdev's array element is managed.
@@ -375,12 +90,16 @@ const HOOK_ELEMENT: &str = r#"{"matcher":"Edit|Write","hooks":[{"type":"command"
 
 /// Release, at adoption time, every aokf skill the repo already has under
 /// its own name and with its own content. Returns the lines to print.
-pub(crate) fn adopt_existing(root: &Path, manifest: &mut Manifest) -> Vec<String> {
+pub(crate) fn adopt_existing(
+    root: &Path,
+    content: &ContentSet,
+    manifest: &mut Manifest,
+) -> Vec<String> {
     super::skills::adopt_existing(
         root,
         Capability::Knowledge,
         "aokf",
-        &skill_identities(),
+        &super::skills::skill_identities(content, OWNER),
         manifest,
     )
 }
@@ -398,30 +117,49 @@ fn items(ctx: &Ctx<'_>) -> Vec<ManagedItem> {
         .unwrap_or("project")
         .to_string();
     let mut items = Vec::new();
-    for (path, content, ownership, reason) in FILES {
-        // Every other asset is shipped verbatim: a stray `{name}` in prose
-        // is not a placeholder.
-        let content = match *path {
-            NAMED_ASSET => content.replace("{name}", &repo_name),
-            _ => (*content).to_string(),
-        };
-        items.push(match ownership {
-            Ownership::Owned => ManagedItem::OwnedFile {
-                path: (*path).to_string(),
-                content,
-                reason: (*reason).to_string(),
-            },
-            Ownership::Scaffold => ManagedItem::Scaffold {
-                path: (*path).to_string(),
-                content,
-                reason: (*reason).to_string(),
-            },
+    for (path, content, reason) in BINARY_OWNED {
+        items.push(ManagedItem::OwnedFile {
+            path: (*path).to_string(),
+            content: (*content).to_string(),
+            reason: (*reason).to_string(),
         });
     }
-    for (name, content) in TEMPLATE_FILES {
+    let mut skeletons: Vec<_> = ctx
+        .content
+        .items_of(OWNER, ItemKind::KnowledgeSkeleton)
+        .map(|item| {
+            let rank = SKELETON_REASONS
+                .iter()
+                .position(|(name, _)| *name == item.name);
+            // Listed first, in the table's order; everything else after, by
+            // name — so the bundle's frame reads before the concepts in it.
+            (rank.unwrap_or(SKELETON_REASONS.len()), item)
+        })
+        .collect();
+    skeletons.sort_by_key(|(rank, item)| (*rank, item.name.clone()));
+    for (rank, item) in skeletons {
+        let reason = SKELETON_REASONS
+            .get(rank)
+            .map_or("starter concept", |(_, reason)| *reason);
+        for (rel, content) in &item.files {
+            let path = join(&format!("knowledge/{}", item.name), rel);
+            // Only the bundle manifest carries a `{name}` token: a stray
+            // `{name}` in prose is not a placeholder.
+            let content = match path.as_str() {
+                NAMED_ASSET => content.replace("{name}", &repo_name),
+                _ => content.clone(),
+            };
+            items.push(ManagedItem::Scaffold {
+                path,
+                content,
+                reason: reason.to_string(),
+            });
+        }
+    }
+    for item in ctx.content.items_of(OWNER, ItemKind::DocTemplate) {
         items.push(ManagedItem::OwnedFile {
-            path: format!("knowledge/templates/{name}"),
-            content: (*content).to_string(),
+            path: format!("knowledge/templates/{}.md", item.name),
+            content: item.files[0].1.clone(),
             reason: "document template".to_string(),
         });
     }
@@ -440,10 +178,7 @@ fn items(ctx: &Ctx<'_>) -> Vec<ManagedItem> {
         .config(Capability::Knowledge, "aokf")
         .map(|c| c.custom.as_slice())
         .unwrap_or_default();
-    items.extend(super::skills::skill_dir_items(
-        super::aokf_skills::SKILLS,
-        custom,
-    ));
+    items.extend(super::skills::skill_dir_items(ctx.content, OWNER, custom));
     items.push(ManagedItem::JsonEntry {
         path: SETTINGS_PATH.into(),
         pointer: HOOK_POINTER.into(),
@@ -451,6 +186,16 @@ fn items(ctx: &Ctx<'_>) -> Vec<ManagedItem> {
         value_json: HOOK_ELEMENT.into(),
     });
     items
+}
+
+/// An item's base path joined with one file's path under it. A single-file
+/// item's path is empty, and the base is the file.
+fn join(base: &str, rel: &str) -> String {
+    if rel.is_empty() {
+        base.to_string()
+    } else {
+        format!("{base}/{rel}")
+    }
 }
 
 impl Component for Aokf {
@@ -489,6 +234,7 @@ mod tests {
             runner: &fake,
             manifest: &manifest,
             lock: &lock,
+            content: crate::content::test_snapshot(),
         };
         Aokf.plan(&ctx).unwrap()
     }
@@ -499,8 +245,10 @@ mod tests {
         let actions = plan_in(dir.path());
         let descs: Vec<String> = actions.iter().map(Action::describe).collect();
         // A skill is its directory: every file of every skill materialises.
-        for (name, files) in super::super::aokf_skills::SKILLS {
-            for (rel, _) in *files {
+        let content = crate::content::snapshot();
+        for item in content.items_of(OWNER, ItemKind::Skill) {
+            for (rel, _) in &item.files {
+                let name = &item.name;
                 assert!(
                     descs
                         .iter()
@@ -516,12 +264,13 @@ mod tests {
             "{descs:?}"
         );
         // The template library ships with the skills that reference it.
-        for (name, _) in TEMPLATE_FILES {
+        for item in content.items_of(OWNER, ItemKind::DocTemplate) {
+            let name = &item.name;
             assert!(
                 descs
                     .iter()
-                    .any(|d| d.contains(&format!("knowledge/templates/{name}"))),
-                "knowledge/templates/{name} missing from {descs:?}"
+                    .any(|d| d.contains(&format!("knowledge/templates/{name}.md"))),
+                "knowledge/templates/{name}.md missing from {descs:?}"
             );
         }
     }
@@ -540,6 +289,7 @@ mod tests {
             runner: &fake,
             manifest: &manifest,
             lock: &lock,
+            content: crate::content::test_snapshot(),
         };
         let keys: Vec<String> = Aokf.owned(&ctx).iter().map(Claim::lock_key).collect();
         assert!(!keys.iter().any(|k| k.contains("/maintain/")), "{keys:?}");
@@ -578,7 +328,7 @@ mod tests {
         std::fs::create_dir_all(path.parent().unwrap()).unwrap();
         std::fs::write(path, "# Ours, thanks\n").unwrap();
         let mut manifest = Manifest::default_for("0.1.0", &[]);
-        let lines = adopt_existing(dir.path(), &mut manifest);
+        let lines = adopt_existing(dir.path(), crate::content::test_snapshot(), &mut manifest);
         assert_eq!(manifest.capabilities["knowledge"][0].custom, ["maintain"]);
         assert_eq!(
             lines,
@@ -669,6 +419,7 @@ mod tests {
                 .contains(&format!("name: {repo_name}-knowledge"))
         );
         // Every other asset ships byte-for-byte as embedded.
+        let snapshot = crate::content::snapshot();
         for action in &actions {
             let Action::WriteFile { path, content, .. } = action else {
                 continue;
@@ -676,10 +427,17 @@ mod tests {
             if path == NAMED_ASSET {
                 continue;
             }
-            let Some((_, asset, ..)) = FILES.iter().find(|(p, ..)| p == path) else {
+            let Some(rest) = path.strip_prefix("knowledge/") else {
                 continue;
             };
-            assert_eq!(asset, &content.as_str(), "{path} was rewritten");
+            let (name, rel) = rest.split_once('/').unwrap_or((rest, ""));
+            let Some(item) = snapshot.item(OWNER, ItemKind::KnowledgeSkeleton, name) else {
+                continue;
+            };
+            let Some((_, asset)) = item.files.iter().find(|(p, _)| p == rel) else {
+                continue;
+            };
+            assert_eq!(asset, content, "{path} was rewritten");
         }
     }
 

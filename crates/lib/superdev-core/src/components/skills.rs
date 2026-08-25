@@ -8,25 +8,56 @@ use std::path::Path;
 use crate::capability::Capability;
 use crate::manifest::{CONFIG_PATH, Manifest};
 
+use crate::content::{ContentSet, ItemKind, Owner};
+
 use super::item::ManagedItem;
 
-/// One shipped skill directory: its name and every file, as (path relative
-/// to the directory, content).
-pub(crate) type SkillFiles = (&'static str, &'static [(&'static str, &'static str)]);
-
-/// Each non-custom skill directory as owned files, in shipped order.
-pub(crate) fn skill_dir_items(skills: &[SkillFiles], custom: &[String]) -> Vec<ManagedItem> {
-    skills
-        .iter()
-        .filter(|(name, _)| !custom.iter().any(|c| c == name))
-        .flat_map(|(name, files)| {
-            files
-                .iter()
-                .map(move |(rel, content)| ManagedItem::OwnedFile {
+/// Every skill one owner provides, as owned files, skipping the custom ones.
+///
+/// A skill is its whole directory — SKILL.md, companions, harness configs —
+/// so the `custom` list releases the directory, not a file.
+pub(crate) fn skill_dir_items(
+    content: &ContentSet,
+    owner: Owner,
+    custom: &[String],
+) -> Vec<ManagedItem> {
+    content
+        .items_of(owner, ItemKind::Skill)
+        .filter(|item| !custom.contains(&item.name))
+        .flat_map(|item| {
+            item.files.iter().map(move |(rel, file)| {
+                let name = &item.name;
+                ManagedItem::OwnedFile {
                     path: format!(".claude/skills/{name}/{rel}"),
-                    content: (*content).to_string(),
+                    content: file.clone(),
                     reason: format!("{name} skill"),
-                })
+                }
+            })
+        })
+        .collect()
+}
+
+/// Every skill name one owner provides, in name order.
+pub(crate) fn skill_names(content: &ContentSet, owner: Owner) -> Vec<&str> {
+    content
+        .items_of(owner, ItemKind::Skill)
+        .map(|item| item.name.as_str())
+        .collect()
+}
+
+/// Each skill's identity file, for init-time adoption: (name, SKILL.md).
+pub(crate) fn skill_identities(content: &ContentSet, owner: Owner) -> Vec<(&str, &str)> {
+    content
+        .items_of(owner, ItemKind::Skill)
+        .map(|item| {
+            let skill_md = item
+                .files
+                .iter()
+                .find(|(rel, _)| rel == "SKILL.md")
+                .expect("every skill directory carries a SKILL.md")
+                .1
+                .as_str();
+            (item.name.as_str(), skill_md)
         })
         .collect()
 }
@@ -34,19 +65,6 @@ pub(crate) fn skill_dir_items(skills: &[SkillFiles], custom: &[String]) -> Vec<M
 /// Where a shipped skill lives in the managed repo.
 pub(crate) fn skill_path(name: &str) -> String {
     format!(".claude/skills/{name}/SKILL.md")
-}
-
-/// Each non-custom skill as an owned file, in shipped order.
-pub(crate) fn skill_items(skills: &[(&str, &str)], custom: &[String]) -> Vec<ManagedItem> {
-    skills
-        .iter()
-        .filter(|(name, _)| !custom.iter().any(|c| c == name))
-        .map(|(name, content)| ManagedItem::OwnedFile {
-            path: skill_path(name),
-            content: (*content).to_string(),
-            reason: format!("{name} skill"),
-        })
-        .collect()
 }
 
 /// Release, at adoption time, every shipped skill the repo already has under

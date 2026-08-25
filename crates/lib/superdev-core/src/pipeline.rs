@@ -14,6 +14,7 @@ use crate::capability::Capability;
 use crate::component::{Claim, Ctx};
 use crate::components::codegraph::CODEGRAPH_INDEX_DIR;
 use crate::components::{aokf, skillpack};
+use crate::content::{self, ContentSet, ItemKind, Owner};
 use crate::engine::Planned;
 use crate::error::{Error, Result};
 use crate::lock::Lock;
@@ -126,7 +127,7 @@ pub fn plan_repo(
     // The report lines describe the manifest as written; Status planning
     // alone runs against the plannable copy below.
     let behind = behind_pins(manifest);
-    let custom = custom_lines(manifest);
+    let custom = custom_lines(manifest, &content::snapshot());
     let blueprint = blueprint_line(manifest);
     let plannable_manifest;
     let manifest = match mode {
@@ -150,16 +151,20 @@ pub fn plan_repo(
     // Before planning: a skill or workflow just marked custom still has its
     // lock entry, and unpruned an unmodified one would read as an orphan and
     // be deleted — the opposite of what marking it custom asked for.
-    let lock_changed = prune_custom(manifest, &mut lock);
+    // Resolved before planning, so `Component::plan` stays side-effect free
+    // and every component reads one content set (ADR-002).
+    let content = content::snapshot();
+    let lock_changed = prune_custom(manifest, &content, &mut lock);
     let components = components::enabled(manifest)?;
     let ctx = Ctx {
         root,
         runner,
         manifest,
         lock: &lock,
+        content: &content,
     };
     let mut planned = Vec::new();
-    planned.extend(repo_entry(root, manifest)?);
+    planned.extend(repo_entry(root, manifest, &content)?);
     planned.extend(engine::plan(&components, &ctx)?);
     let claims_by_component: Vec<(Capability, String, Vec<Claim>)> = components
         .iter()
@@ -269,8 +274,9 @@ pub fn apply_repo(
 /// Mark as custom, at init time, everything the repo already carries under a
 /// name superdev would manage. Returns the lines to print.
 pub fn adopt_existing(root: &Path, manifest: &mut Manifest) -> Vec<String> {
-    let mut lines = skillpack::adopt_existing(root, manifest);
-    lines.extend(aokf::adopt_existing(root, manifest));
+    let content = content::snapshot();
+    let mut lines = skillpack::adopt_existing(root, &content, manifest);
+    lines.extend(aokf::adopt_existing(root, &content, manifest));
     lines
 }
 
@@ -343,32 +349,6 @@ const AGENTS_IMPORT_LINE: &str = "@.agents/superdev.md";
 const AGENTS_TRIM_HINT: &str = "AGENTS.md is yours — superdev's guidance moved behind @.agents/superdev.md; \
      trim any old superdev-written sections";
 
-/// The general agent rules every managed repo gets, write-once scaffolds
-/// beside the aggregator: (path, content).
-pub(crate) const RULE_SCAFFOLDS: [(&str, &str); 3] = [
-    (
-        ".agents/professionalism.md",
-        include_str!(concat!(
-            env!("CARGO_MANIFEST_DIR"),
-            "/assets/agents/professionalism.md"
-        )),
-    ),
-    (
-        ".agents/process.md",
-        include_str!(concat!(
-            env!("CARGO_MANIFEST_DIR"),
-            "/assets/agents/process.md"
-        )),
-    ),
-    (
-        ".agents/coding.md",
-        include_str!(concat!(
-            env!("CARGO_MANIFEST_DIR"),
-            "/assets/agents/coding.md"
-        )),
-    ),
-];
-
 /// The fenced aggregator: the general rules, then one import per enabled
 /// capability that ships an instruction file. Imports are sibling-relative,
 /// so they resolve from the aggregator's own directory.
@@ -405,7 +385,7 @@ fn read_or_empty(path: std::path::PathBuf) -> Result<String> {
 
 /// The repo-level entry no capability owns: the `.gitignore` lines, the
 /// ensured AGENTS.md import, and the instructions aggregator it points at.
-fn repo_entry(root: &Path, manifest: &Manifest) -> Result<Option<Planned>> {
+fn repo_entry(root: &Path, manifest: &Manifest, content: &ContentSet) -> Result<Option<Planned>> {
     let gitignore = read_or_empty(root.join(".gitignore"))?;
     let mut wanted = vec![(".superdev/cache/".to_string(), "ignore machine state")];
     if manifest.enabled(Capability::CodeIndex) {
@@ -438,13 +418,14 @@ fn repo_entry(root: &Path, manifest: &Manifest) -> Result<Option<Planned>> {
             reason: "superdev's agent instructions".into(),
         });
     }
-    for (path, content) in RULE_SCAFFOLDS {
+    for item in content.items_of(Owner::Repo, ItemKind::AgentScaffold) {
+        let path = format!(".agents/{}.md", item.name);
         // Write-once: the rules are the user's to adapt from the moment they
         // exist, so only an absent file is planned.
-        if !root.join(path).is_file() {
+        if !root.join(&path).is_file() {
             actions.push(Action::WriteFile {
-                path: path.into(),
-                content: content.into(),
+                path,
+                content: item.files[0].1.clone(),
                 ownership: crate::action::Ownership::Scaffold,
                 reason: "general agent rules".into(),
             });
@@ -463,7 +444,7 @@ fn repo_entry(root: &Path, manifest: &Manifest) -> Result<Option<Planned>> {
 /// Remove released skills' and workflows' hashes from the lock: a custom
 /// name is the user's file, and a stale hash would misread their next edit
 /// as drift against superdev content. True when anything was removed.
-fn prune_custom(manifest: &Manifest, lock: &mut Lock) -> bool {
+fn prune_custom(manifest: &Manifest, content: &ContentSet, lock: &mut Lock) -> bool {
     let mut pruned = false;
     // Name-guarded per capability: two capabilities ship into
     // `.claude/skills/`, so an unknown name in one's list must not release
@@ -472,12 +453,13 @@ fn prune_custom(manifest: &Manifest, lock: &mut Lock) -> bool {
         (
             Capability::Skills,
             "superdev-skills",
-            skillpack::SKILLS
-                .iter()
-                .map(|(name, _)| *name)
-                .collect::<Vec<_>>(),
+            components::skill_names(content, skillpack::OWNER),
         ),
-        (Capability::Knowledge, "aokf", aokf::skill_names().collect()),
+        (
+            Capability::Knowledge,
+            "aokf",
+            components::skill_names(content, aokf::OWNER),
+        ),
     ] {
         let Some(config) = manifest.config_of(capability, provider) else {
             continue;
@@ -506,18 +488,19 @@ fn prune_custom(manifest: &Manifest, lock: &mut Lock) -> bool {
 /// One line per skill or workflow skill released to the user, so custom
 /// state stays visible without reading the manifest. Flags a custom name
 /// that names no shipped skill, since marking it custom has no effect.
-fn custom_lines(manifest: &Manifest) -> Vec<String> {
+fn custom_lines(manifest: &Manifest, content: &ContentSet) -> Vec<String> {
     let mut lines = Vec::new();
     for (capability, provider, shipped) in [
         (
             Capability::Skills,
             "superdev-skills",
-            skillpack::SKILLS
-                .iter()
-                .map(|(name, _)| *name)
-                .collect::<Vec<_>>(),
+            components::skill_names(content, skillpack::OWNER),
         ),
-        (Capability::Knowledge, "aokf", aokf::skill_names().collect()),
+        (
+            Capability::Knowledge,
+            "aokf",
+            components::skill_names(content, aokf::OWNER),
+        ),
     ] {
         let Some(config) = manifest.config_of(capability, provider) else {
             continue;
@@ -625,6 +608,15 @@ fn stamp_blueprint(root: &Path, manifest: &Manifest) -> Result<()> {
         manifest.save(root)?;
     }
     Ok(())
+}
+
+#[cfg(test)]
+/// Where the general-rules scaffolds land, for the tests that converge a repo.
+fn rule_scaffold_paths() -> Vec<String> {
+    content::test_snapshot()
+        .items_of(Owner::Repo, ItemKind::AgentScaffold)
+        .map(|item| format!(".agents/{}.md", item.name))
+        .collect()
 }
 
 #[cfg(test)]
@@ -881,7 +873,9 @@ mod tests {
     fn repo_entry_plans_the_import_line_and_the_aggregator_once() {
         let dir = tempfile::tempdir().unwrap();
         let manifest = Manifest::default_for("0.1.0", &[]);
-        let entry = repo_entry(dir.path(), &manifest).unwrap().unwrap();
+        let entry = repo_entry(dir.path(), &manifest, content::test_snapshot())
+            .unwrap()
+            .unwrap();
         let descs: Vec<String> = entry.actions.iter().map(Action::describe).collect();
         assert!(
             descs
@@ -895,9 +889,9 @@ mod tests {
                 .any(|d| d.contains("write .agents/superdev.md")),
             "{descs:?}"
         );
-        for (path, _) in RULE_SCAFFOLDS {
+        for path in rule_scaffold_paths() {
             assert!(
-                descs.iter().any(|d| d.contains(path)),
+                descs.iter().any(|d| d.contains(&path)),
                 "{path} missing from {descs:?}"
             );
         }
@@ -919,10 +913,14 @@ mod tests {
             aggregator_content(&manifest),
         )
         .unwrap();
-        for (path, _) in RULE_SCAFFOLDS {
+        for path in rule_scaffold_paths() {
             std::fs::write(dir.path().join(path), "adapted by the user\n").unwrap();
         }
-        assert!(repo_entry(dir.path(), &manifest).unwrap().is_none());
+        assert!(
+            repo_entry(dir.path(), &manifest, content::test_snapshot())
+                .unwrap()
+                .is_none()
+        );
     }
 
     /// The knowledge capability plans every aokf-carried skill file, so a
@@ -942,7 +940,7 @@ mod tests {
         )
         .unwrap();
         let descs = plan_descs(&plan);
-        for name in aokf::skill_names() {
+        for name in components::skill_names(content::test_snapshot(), aokf::OWNER) {
             assert!(
                 descs
                     .iter()
@@ -1023,7 +1021,7 @@ mod tests {
             ".claude/skills/double-check/SKILL.md".into(),
             "hash-b".into(),
         );
-        assert!(prune_custom(&manifest, &mut lock));
+        assert!(prune_custom(&manifest, content::test_snapshot(), &mut lock));
         assert!(
             !lock
                 .files
@@ -1034,17 +1032,21 @@ mod tests {
                 .contains_key(".claude/skills/double-check/SKILL.md")
         );
         // Nothing left to prune: reports no change.
-        assert!(!prune_custom(&manifest, &mut lock));
+        assert!(!prune_custom(
+            &manifest,
+            content::test_snapshot(),
+            &mut lock
+        ));
 
         assert_eq!(
-            custom_lines(&manifest),
+            custom_lines(&manifest, content::test_snapshot()),
             vec![
                 "skills: template-update custom, unmanaged".to_string(),
                 "skills: custom names unknown skill 'grill-me' — no effect".to_string(),
             ]
         );
         let no_skills = Manifest::default_for("0.1.0", &[Capability::Skills]);
-        assert!(custom_lines(&no_skills).is_empty());
+        assert!(custom_lines(&no_skills, content::test_snapshot()).is_empty());
     }
 
     #[test]
@@ -1063,7 +1065,7 @@ mod tests {
         }
         lock.files
             .insert(".claude/skills/frame/SKILL.md".into(), "h".into());
-        assert!(prune_custom(&manifest, &mut lock));
+        assert!(prune_custom(&manifest, content::test_snapshot(), &mut lock));
         assert!(!lock.files.keys().any(|k| k.contains("/prototype/")));
         assert!(lock.files.contains_key(".claude/skills/frame/SKILL.md"));
         assert!(
@@ -1071,7 +1073,11 @@ mod tests {
                 .contains_key(".claude/skills/double-check/SKILL.md")
         );
         // Nothing left to prune: reports no change.
-        assert!(!prune_custom(&manifest, &mut lock));
+        assert!(!prune_custom(
+            &manifest,
+            content::test_snapshot(),
+            &mut lock
+        ));
     }
 
     #[test]
@@ -1079,7 +1085,7 @@ mod tests {
         let mut manifest = Manifest::default_for("0.1.0", &[]);
         manifest.capabilities.get_mut("knowledge").unwrap()[0].custom =
             vec!["prototype".into(), "flying".into()];
-        let lines = custom_lines(&manifest);
+        let lines = custom_lines(&manifest, content::test_snapshot());
         assert!(lines.contains(&"knowledge: prototype custom, unmanaged".to_string()));
         assert!(
             lines.contains(
@@ -1089,8 +1095,11 @@ mod tests {
         // Every carried skill is a known custom name.
         let mut manifest = Manifest::default_for("0.1.0", &[]);
         manifest.capabilities.get_mut("knowledge").unwrap()[0].custom =
-            aokf::skill_names().map(String::from).collect();
-        for line in custom_lines(&manifest) {
+            components::skill_names(content::test_snapshot(), aokf::OWNER)
+                .into_iter()
+                .map(String::from)
+                .collect();
+        for line in custom_lines(&manifest, content::test_snapshot()) {
             assert!(line.ends_with("custom, unmanaged"), "{line}");
         }
     }

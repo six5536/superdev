@@ -324,6 +324,7 @@ mod tests {
             runner: &fake,
             manifest: &manifest,
             lock: &lock,
+            content: crate::content::test_snapshot(),
         };
         use crate::component::{Claim, Component};
         let statics: [Box<dyn Component>; 2] = [

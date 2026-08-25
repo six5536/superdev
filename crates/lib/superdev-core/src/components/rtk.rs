@@ -198,6 +198,7 @@ mod tests {
             runner,
             manifest,
             lock,
+            content: crate::content::test_snapshot(),
         }
     }
 

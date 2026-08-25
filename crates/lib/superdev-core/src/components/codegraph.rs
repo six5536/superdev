@@ -140,6 +140,7 @@ mod tests {
             runner: &fake,
             manifest: &manifest,
             lock: &lock,
+            content: crate::content::test_snapshot(),
         };
         let descs: Vec<String> = Codegraph
             .plan(&ctx)
@@ -211,6 +212,7 @@ mod tests {
             runner: &fake,
             manifest: &manifest,
             lock: &lock,
+            content: crate::content::test_snapshot(),
         };
         assert!(Codegraph.plan(&ctx).unwrap().is_empty());
     }
@@ -227,6 +229,7 @@ mod tests {
             runner: &fake,
             manifest: &manifest,
             lock: &lock,
+            content: crate::content::test_snapshot(),
         };
         // superdev ships checksums for one release only, so it can install
         // that one only.

@@ -4,6 +4,7 @@ use std::path::Path;
 
 use crate::action::Action;
 use crate::capability::Capability;
+use crate::content::ContentSet;
 use crate::error::Result;
 use crate::lock::Lock;
 use crate::manifest::{CapabilityConfig, Manifest};
@@ -19,6 +20,10 @@ pub struct Ctx<'a> {
     pub manifest: &'a Manifest,
     /// Last-applied state.
     pub lock: &'a Lock,
+    /// The content the layers resolved to: every skill, scaffold and template
+    /// a component materialises. Resolved before planning, so `plan` stays
+    /// side-effect free (ADR-002).
+    pub content: &'a ContentSet,
 }
 
 impl Ctx<'_> {
@@ -248,6 +253,7 @@ mod tests {
             runner: &fake,
             manifest: &manifest,
             lock: &lock,
+            content: crate::content::test_snapshot(),
         };
         assert!(ctx.config(Capability::Skills, "superdev-skills").is_some());
         assert!(ctx.config(Capability::Skills, "other-pack").is_none());

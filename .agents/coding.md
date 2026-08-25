@@ -19,6 +19,7 @@ In order to work together efficiently, we must be able to code efficiently.
 - You SHALL actively research existing code to apply the DRY principle.
 - You SHALL use any tools you need to help write and test code (e.g. MCP tools for result visualization).
 - You SHALL document all important code interfaces professionally.
+- You SHALL read and conform to coding standards.
 
 ## Professional Coding Don'ts
 

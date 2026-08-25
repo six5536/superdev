@@ -85,6 +85,7 @@ mod tests {
                 runner: &fake,
                 manifest: &manifest,
                 lock: &empty,
+                content: crate::content::test_snapshot(),
             };
             let planned = vec![Planned {
                 capability: Some(component.capability()),
@@ -101,6 +102,7 @@ mod tests {
                 runner: &fake,
                 manifest: &manifest,
                 lock: &lock,
+                content: crate::content::test_snapshot(),
             };
             let claimed: BTreeSet<String> = component
                 .owned(&after)

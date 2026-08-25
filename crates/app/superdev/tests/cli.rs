@@ -492,6 +492,48 @@ fn adopting_a_repo_with_its_own_skills_keeps_them() {
     );
 }
 
+/// Test plan case 1: the default path — no pack entry in the manifest —
+/// resolves entirely from the pack compiled into the binary. Run with `PATH`
+/// emptied, so a spawn of any kind would fail and a network client would have
+/// nothing to reach for: whatever this writes came from the binary itself.
+///
+/// The assertion outlives this slice. Once a manifest can name a pack, the
+/// absence of one must still mean the embedded snapshot and still touch
+/// nothing outside the repo.
+#[test]
+fn the_default_path_needs_nothing_outside_the_binary() {
+    let dir = tempfile::tempdir().unwrap();
+    std::fs::create_dir_all(dir.path().join(".git")).unwrap();
+    superdev()
+        .current_dir(dir.path())
+        .env_clear()
+        .env("HOME", dir.path())
+        .env("PATH", "")
+        .args([
+            "init",
+            "--no-frontend",
+            "--no-code-index",
+            "--no-bash-output-filter",
+            "--template",
+            "none",
+        ])
+        .assert()
+        .success();
+
+    // The manifest names no pack, and the files still arrive.
+    let manifest = std::fs::read_to_string(dir.path().join(".superdev/config.toml")).unwrap();
+    assert!(!manifest.contains("[[packs]]"), "{manifest}");
+    for path in [
+        ".claude/skills/frame/SKILL.md",
+        ".claude/skills/double-check/SKILL.md",
+        "knowledge/index.md",
+        "knowledge/templates/adr.md",
+        ".agents/coding.md",
+    ] {
+        assert!(dir.path().join(path).is_file(), "missing {path}");
+    }
+}
+
 #[test]
 fn init_no_skills_skips_the_pack() {
     let dir = tempfile::tempdir().unwrap();
