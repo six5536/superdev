@@ -11,6 +11,8 @@ publish a version it cannot find a heading for.
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-08-25
+
 ### Changed
 
 - **Breaking:** the knowledge-carried skill set is replaced by the process
