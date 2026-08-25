@@ -18,6 +18,15 @@ pub(crate) fn items() -> Vec<Item> {
     layout::items_from(FILES.iter().copied())
 }
 
+/// The embedded pack's own `pack.toml`, verbatim.
+pub fn pack_manifest_source() -> &'static str {
+    FILES
+        .iter()
+        .find(|(path, _)| *path == "pack.toml")
+        .expect("the embedded pack carries a pack.toml")
+        .1
+}
+
 /// The content a run has before any pack is resolved: layer 0.
 pub fn snapshot() -> ContentSet {
     ContentSet::from_layer(items(), Origin::Snapshot)

@@ -1,0 +1,272 @@
+//! pack/manifest.rs — `pack.toml`, and the paths a pack may not carry.
+
+use serde::Deserialize;
+
+use crate::error::{Error, Result};
+
+/// The file a pack root must carry.
+pub const PACK_MANIFEST: &str = "pack.toml";
+
+/// Formats this binary can read.
+///
+/// An entry outside the set is refused before any file is read: a pack cut
+/// against a later format may mean something this binary would get wrong.
+pub const SUPPORTED_FORMATS: &[u32] = &[1];
+
+/// Paths a pack may not carry, refused at resolve with the reason.
+///
+/// The instruction files and the AOKF spec move with the binary that pins or
+/// validates them, so a pack supplying one would describe a version or format
+/// this binary does not implement.
+pub const REJECTED: &[&str] = &[
+    "agents/aokf.md",
+    "agents/codegraph.md",
+    "agents/rtk.md",
+    "knowledge/agents/SPEC.md",
+];
+
+/// Refused wherever it appears: the project's own extension layer, which
+/// superdev never writes or tracks, so shipping one would take it under
+/// management and break that guarantee.
+pub const REJECTED_BASENAME: &str = "PROJECT.md";
+
+/// The key a pack may not declare, at any depth.
+///
+/// A pack describes files, never work: there is no variant it could reach
+/// `Action::Run` through. Refused by name rather than ignored, so an author
+/// who expected it to run is told instead of watching it do nothing.
+const REJECTED_KEY: &str = "run";
+
+/// A pack's own manifest. Unknown keys within a known format are ignored; an
+/// unknown `format` is refused before any file is read.
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+pub struct PackManifest {
+    /// The layout version this pack was cut against.
+    pub format: u32,
+    /// The pack's name, for reports.
+    pub name: String,
+    /// The pack's own version.
+    pub version: String,
+    /// One line about what it carries.
+    #[serde(default)]
+    pub description: Option<String>,
+}
+
+impl PackManifest {
+    /// Parse a pack's `pack.toml`.
+    ///
+    /// `pack` names the pack as the user wrote it, so every failure points at
+    /// the entry they would edit.
+    pub fn parse(pack: &str, source: &str) -> Result<PackManifest> {
+        let document: toml_edit::DocumentMut = source.parse().map_err(|e| Error::Pack {
+            pack: pack.to_string(),
+            message: format!("{PACK_MANIFEST} does not parse: {e}"),
+        })?;
+        if let Some(path) = find_key(document.as_table(), REJECTED_KEY) {
+            return Err(Error::Pack {
+                pack: pack.to_string(),
+                message: format!(
+                    "{PACK_MANIFEST} declares `{path}` — a pack describes files, never commands; \
+                     ship a skill that does the work instead"
+                ),
+            });
+        }
+        // The format decides whether the rest means what this binary thinks,
+        // so it is read before anything else is trusted.
+        let format = document
+            .get("format")
+            .and_then(|value| value.as_integer())
+            .ok_or_else(|| Error::Pack {
+                pack: pack.to_string(),
+                message: format!("{PACK_MANIFEST} declares no `format`"),
+            })?;
+        let format = u32::try_from(format)
+            .ok()
+            .filter(|f| SUPPORTED_FORMATS.contains(f));
+        let Some(_) = format else {
+            let declared = document
+                .get("format")
+                .and_then(|value| value.as_integer())
+                .expect("read above");
+            return Err(Error::Pack {
+                pack: pack.to_string(),
+                message: format!(
+                    "declares format {declared}; this superdev supports {}",
+                    supported()
+                ),
+            });
+        };
+        toml_edit::de::from_str(source).map_err(|e| Error::Pack {
+            pack: pack.to_string(),
+            message: format!("{PACK_MANIFEST} is missing a required key: {e}"),
+        })
+    }
+}
+
+/// The supported set, for an error a reader can act on.
+fn supported() -> String {
+    SUPPORTED_FORMATS
+        .iter()
+        .map(u32::to_string)
+        .collect::<Vec<_>>()
+        .join(", ")
+}
+
+/// The dotted path to the first key named `key`, at any depth.
+fn find_key(table: &toml_edit::Table, key: &str) -> Option<String> {
+    for (name, value) in table.iter() {
+        if name == key {
+            return Some(name.to_string());
+        }
+        let nested = match value {
+            toml_edit::Item::Table(inner) => find_key(inner, key),
+            toml_edit::Item::Value(toml_edit::Value::InlineTable(inner)) => {
+                inner.contains_key(key).then(|| key.to_string())
+            }
+            toml_edit::Item::ArrayOfTables(array) => {
+                array.iter().find_map(|inner| find_key(inner, key))
+            }
+            _ => None,
+        };
+        if let Some(found) = nested {
+            return Some(format!("{name}.{found}"));
+        }
+    }
+    None
+}
+
+/// Check one pack-relative path against the families a pack may not provide.
+///
+/// Refused by path, before the file is read: the reason is the path itself,
+/// not anything in it.
+pub fn check_path(pack: &str, path: &str) -> Result<()> {
+    if REJECTED.contains(&path) {
+        return Err(Error::Pack {
+            pack: pack.to_string(),
+            message: format!(
+                "carries `{path}` — instruction files and the AOKF spec describe a version this \
+                 binary pins or a format its validator enforces, so they ship with the binary"
+            ),
+        });
+    }
+    if path
+        .rsplit('/')
+        .next()
+        .is_some_and(|base| base == REJECTED_BASENAME)
+    {
+        return Err(Error::Pack {
+            pack: pack.to_string(),
+            message: format!(
+                "carries `{path}` — {REJECTED_BASENAME} is the project's own extension layer, \
+                 which superdev never writes or tracks"
+            ),
+        });
+    }
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const GOOD: &str = "format = 1\nname = \"acme\"\nversion = \"1.0.0\"\n";
+
+    #[test]
+    fn a_supported_format_parses() {
+        let manifest = PackManifest::parse("acme", GOOD).unwrap();
+        assert_eq!(manifest.format, 1);
+        assert_eq!(manifest.name, "acme");
+        assert_eq!(manifest.version, "1.0.0");
+        assert_eq!(manifest.description, None);
+    }
+
+    #[test]
+    fn an_unknown_key_within_a_known_format_is_ignored() {
+        let manifest = PackManifest::parse("acme", &format!("{GOOD}homepage = \"x\"\n")).unwrap();
+        assert_eq!(manifest.name, "acme");
+    }
+
+    /// Case 10: the error names the pack and what this binary can read, so a
+    /// reader knows whether to upgrade superdev or re-pin the pack.
+    #[test]
+    fn an_unknown_format_is_refused_naming_the_pack_and_the_supported_set() {
+        let err = PackManifest::parse("acme", "format = 99\nname = \"a\"\nversion = \"1\"\n")
+            .unwrap_err();
+        let message = err.to_string();
+        assert!(message.contains("acme"), "{message}");
+        assert!(message.contains("99"), "{message}");
+        assert!(message.contains('1'), "{message}");
+    }
+
+    #[test]
+    fn a_manifest_without_a_format_is_refused() {
+        let err = PackManifest::parse("acme", "name = \"a\"\nversion = \"1\"\n").unwrap_err();
+        assert!(err.to_string().contains("no `format`"), "{err}");
+    }
+
+    #[test]
+    fn an_unparseable_manifest_is_refused_naming_the_pack() {
+        let err = PackManifest::parse("acme", "format = ").unwrap_err();
+        let message = err.to_string();
+        assert!(message.contains("acme"), "{message}");
+        assert!(message.contains("does not parse"), "{message}");
+    }
+
+    #[test]
+    fn a_manifest_missing_a_required_key_is_refused() {
+        let err = PackManifest::parse("acme", "format = 1\nname = \"a\"\n").unwrap_err();
+        assert!(err.to_string().contains("acme"), "{err}");
+    }
+
+    /// Case 18, second half: a pack declaring work is refused naming the key,
+    /// wherever it sits.
+    #[test]
+    fn a_run_key_is_refused_at_any_depth() {
+        for source in [
+            &format!("{GOOD}run = \"make\"\n"),
+            &format!("{GOOD}[hooks]\nrun = \"make\"\n"),
+            &format!("{GOOD}[[steps]]\nrun = \"make\"\n"),
+        ] {
+            let err = PackManifest::parse("acme", source).unwrap_err();
+            let message = err.to_string();
+            assert!(message.contains("run"), "{message}");
+            assert!(message.contains("acme"), "{message}");
+        }
+    }
+
+    /// Case 18, first half: the instruction files and the AOKF spec.
+    #[test]
+    fn a_rejected_path_is_refused_naming_the_file_and_the_reason() {
+        for path in REJECTED {
+            let err = check_path("acme", path).unwrap_err();
+            let message = err.to_string();
+            assert!(message.contains(path), "{message}");
+            assert!(message.contains("ship with the binary"), "{message}");
+        }
+    }
+
+    #[test]
+    fn a_project_md_is_refused_wherever_it_sits() {
+        for path in [
+            "PROJECT.md",
+            "knowledge/skills/frame/PROJECT.md",
+            "skills/double-check/PROJECT.md",
+        ] {
+            let err = check_path("acme", path).unwrap_err();
+            assert!(err.to_string().contains("extension layer"), "{err}");
+        }
+    }
+
+    #[test]
+    fn an_ordinary_path_passes() {
+        for path in [
+            "knowledge/skills/frame/SKILL.md",
+            "agents/coding.md",
+            "projects/rust-npm/README.md",
+            // Named like the spec but not at its reserved path.
+            "knowledge/concepts/SPEC.md",
+        ] {
+            check_path("acme", path).unwrap_or_else(|e| panic!("{path}: {e}"));
+        }
+    }
+}

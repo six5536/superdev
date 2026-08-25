@@ -30,6 +30,7 @@ pub(crate) mod json_edit;
 pub mod lock;
 pub mod manifest;
 pub mod orphan;
+pub mod pack;
 pub mod pipeline;
 pub mod registry;
 pub mod report;

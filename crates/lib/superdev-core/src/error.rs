@@ -51,6 +51,15 @@ pub enum Error {
         /// What failed.
         message: String,
     },
+    /// A pack could not be resolved, or resolved to bytes that do not match
+    /// what the lock recorded.
+    Pack {
+        /// The pack as the user named it, so the message points at the
+        /// manifest entry they would edit.
+        pack: String,
+        /// What is wrong.
+        message: String,
+    },
 }
 
 /// Alias used across the crate.
@@ -79,6 +88,7 @@ impl fmt::Display for Error {
             Error::Embedding { message } => write!(f, "embedding: {message}"),
             Error::Index { message } => write!(f, "index: {message}"),
             Error::Mcp { message } => write!(f, "mcp: {message}"),
+            Error::Pack { pack, message } => write!(f, "pack `{pack}`: {message}"),
         }
     }
 }
