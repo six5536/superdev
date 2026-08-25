@@ -20,6 +20,7 @@ use crate::error::{Error, Result};
 use crate::lock::Lock;
 use crate::manifest::Manifest;
 use crate::orphan::OrphanPlan;
+use crate::pack;
 use crate::registry::{self, Pinned};
 use crate::runner::CommandRunner;
 use crate::{components, engine, orphan, report};
@@ -127,7 +128,6 @@ pub fn plan_repo(
     // The report lines describe the manifest as written; Status planning
     // alone runs against the plannable copy below.
     let behind = behind_pins(manifest);
-    let custom = custom_lines(manifest, &content::snapshot());
     let blueprint = blueprint_line(manifest);
     let plannable_manifest;
     let manifest = match mode {
@@ -152,8 +152,16 @@ pub fn plan_repo(
     // lock entry, and unpruned an unmodified one would read as an orphan and
     // be deleted — the opposite of what marking it custom asked for.
     // Resolved before planning, so `Component::plan` stays side-effect free
-    // and every component reads one content set (ADR-002).
-    let content = content::snapshot();
+    // and every component reads one content set (ADR-002). `status` resolves
+    // offline, which is what makes it provably free of fetching.
+    let resolve_mode = match mode {
+        PlanMode::Status => pack::ResolveMode::Offline,
+        PlanMode::Sync => pack::ResolveMode::Fetching,
+    };
+    let content = pack::resolve(root, manifest, &lock, resolve_mode)?.content;
+    // Named against the resolved set, not the embedded one: a custom name
+    // guards whatever is shipped now, which a pack may have added to.
+    let custom = custom_lines(manifest, &content);
     let lock_changed = prune_custom(manifest, &content, &mut lock);
     let components = components::enabled(manifest)?;
     let ctx = Ctx {

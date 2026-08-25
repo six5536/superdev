@@ -492,6 +492,110 @@ fn adopting_a_repo_with_its_own_skills_keeps_them() {
     );
 }
 
+/// Add `[[packs]]` entries to a repo's manifest, keeping the rest as written.
+fn pin_packs(root: &Path, entries: &str) {
+    let config = root.join(".superdev/config.toml");
+    let existing = std::fs::read_to_string(&config).unwrap();
+    let (first, rest) = existing.split_once('\n').expect("blueprint line");
+    std::fs::write(&config, format!("{first}\n\n{entries}\n{rest}")).unwrap();
+}
+
+/// Test plan case 2: a pin naming exactly what this binary embeds is the
+/// default path written out, and must cost no request. Run with `PATH`
+/// emptied, so a spawn of any kind would fail: whatever this writes came from
+/// the binary itself, not from the network.
+#[test]
+fn a_pin_at_the_embedded_rev_costs_no_request() {
+    let dir = local_repo();
+    pin_packs(
+        dir.path(),
+        "[[packs]]\nsource = \"github:six5536/superdev\"\nrev = \"assets-v0.1.0\"\n",
+    );
+    superdev()
+        .current_dir(dir.path())
+        .env_clear()
+        .env("HOME", dir.path())
+        .env("PATH", "")
+        .arg("sync")
+        .assert()
+        .success();
+    // The embedded pack still supplies the items, and the entry survives.
+    assert!(dir.path().join(".claude/skills/frame/SKILL.md").is_file());
+    let config = std::fs::read_to_string(dir.path().join(".superdev/config.toml")).unwrap();
+    assert!(config.contains("assets-v0.1.0"), "{config}");
+}
+
+/// Test plan case 19: a local-path pack is read from disk every run, so
+/// editing it and syncing again updates the repo copy — no rebuild, which is
+/// what lets this repo pin its own `/pack` and see an edit land.
+#[test]
+fn a_local_pack_updates_the_repo_copy_without_a_rebuild() {
+    let dir = local_repo();
+    let pack = dir.path().join("packs/acme");
+    let skill = pack.join("knowledge/skills/acme-review");
+    std::fs::create_dir_all(&skill).unwrap();
+    std::fs::write(
+        pack.join("pack.toml"),
+        "format = 1\nname = \"acme\"\nversion = \"1.0.0\"\n",
+    )
+    .unwrap();
+    std::fs::write(skill.join("SKILL.md"), "# Acme review\n\nv1\n").unwrap();
+    pin_packs(dir.path(), "[[packs]]\nsource = \"./packs/acme\"\n");
+
+    let written = dir.path().join(".claude/skills/acme-review/SKILL.md");
+    superdev()
+        .current_dir(dir.path())
+        .arg("sync")
+        .assert()
+        .success();
+    assert_eq!(
+        std::fs::read_to_string(&written).unwrap(),
+        "# Acme review\n\nv1\n"
+    );
+
+    // The same binary, a changed pack: the new bytes reach the repo.
+    std::fs::write(skill.join("SKILL.md"), "# Acme review\n\nv2\n").unwrap();
+    superdev()
+        .current_dir(dir.path())
+        .arg("sync")
+        .assert()
+        .success();
+    assert_eq!(
+        std::fs::read_to_string(&written).unwrap(),
+        "# Acme review\n\nv2\n"
+    );
+}
+
+/// A pack item of the same name supersedes the embedded one, and everything
+/// the pack does not carry still comes from the embedded copy.
+#[test]
+fn a_pack_supersedes_the_embedded_item_of_the_same_name() {
+    let dir = local_repo();
+    let skill = dir.path().join("packs/acme/knowledge/skills/frame");
+    std::fs::create_dir_all(&skill).unwrap();
+    std::fs::write(
+        dir.path().join("packs/acme/pack.toml"),
+        "format = 1\nname = \"acme\"\nversion = \"1.0.0\"\n",
+    )
+    .unwrap();
+    std::fs::write(skill.join("SKILL.md"), "# Frame, the acme way\n").unwrap();
+    pin_packs(dir.path(), "[[packs]]\nsource = \"./packs/acme\"\n");
+
+    superdev()
+        .current_dir(dir.path())
+        .arg("sync")
+        .assert()
+        .success();
+    assert_eq!(
+        std::fs::read_to_string(dir.path().join(".claude/skills/frame/SKILL.md")).unwrap(),
+        "# Frame, the acme way\n"
+    );
+    assert!(
+        dir.path().join(".claude/skills/verify/SKILL.md").is_file(),
+        "what the pack does not carry still comes from the embedded copy"
+    );
+}
+
 /// Test plan case 21: a repo initialised by a binary that knew nothing about
 /// packs must keep syncing from the embedded pack, and `sync` must not write
 /// a pack entry into the manifest on its way past. An absent `[[packs]]` is

@@ -37,6 +37,7 @@ pub struct Shadowed {
 }
 
 /// Every item the layers resolved to. Built once per run, borrowed by `Ctx`.
+#[derive(Debug)]
 pub struct ContentSet {
     /// Keyed by identity so lookup and `items_of` are both ordered.
     items: BTreeMap<(Owner, ItemKind, String), (Item, Origin)>,
@@ -46,20 +47,27 @@ pub struct ContentSet {
 
 impl ContentSet {
     /// The set one layer provides on its own.
-    ///
-    /// Layering, shadow collection and base replacement arrive with the
-    /// resolver; until then a run has exactly one layer — the snapshot.
     pub(crate) fn from_layer(items: Vec<Item>, origin: Origin) -> ContentSet {
+        ContentSet::from_layers(vec![(items, origin)])
+    }
+
+    /// The set the layers resolve to, in order: a later layer's item wins.
+    ///
+    /// Base replacement and the shadow report arrive with the layering
+    /// rules; until then a later item simply supersedes an earlier one of
+    /// the same identity, and nothing is reported.
+    pub(crate) fn from_layers(layers: Vec<(Vec<Item>, Origin)>) -> ContentSet {
+        let mut items = BTreeMap::new();
+        for (layer, origin) in layers {
+            for item in layer {
+                items.insert(
+                    (item.owner, item.kind, item.name.clone()),
+                    (item, origin.clone()),
+                );
+            }
+        }
         ContentSet {
-            items: items
-                .into_iter()
-                .map(|item| {
-                    (
-                        (item.owner, item.kind, item.name.clone()),
-                        (item, origin.clone()),
-                    )
-                })
-                .collect(),
+            items,
             shadowed: Vec::new(),
             base: None,
         }

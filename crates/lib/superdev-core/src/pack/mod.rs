@@ -8,9 +8,11 @@
 //! depends on this. Nothing here knows about components or capabilities.
 
 mod manifest;
+mod resolve;
 mod source;
 
 pub use manifest::{
     PACK_MANIFEST, PackManifest, REJECTED, REJECTED_BASENAME, SUPPORTED_FORMATS, check_path,
 };
+pub use resolve::{Resolution, ResolveMode, resolve};
 pub use source::{DEFAULT_PACK, DefaultPack, PackSource};

@@ -16,6 +16,7 @@ mod snapshot;
 pub use item::{Item, ItemKind, Owner};
 pub use layout::items_from;
 pub use set::{ContentSet, Origin, Shadowed};
+pub(crate) use snapshot::items as snapshot_items;
 #[cfg(test)]
 pub(crate) use snapshot::test_snapshot;
 pub use snapshot::{pack_manifest_source, snapshot};
