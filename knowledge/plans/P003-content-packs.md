@@ -95,7 +95,7 @@ only variable when the Windows job runs.
 
 ### Slice 6: Pack source, identity and the pack manifest
 
-- [ ] Done — ticked by integrate at merge.
+- [x] Done — ticked by integrate at merge.
 - Change: add `PackSource::parse` and `PackSource::identity` with the
   normalisation rules, `PackManifest` with `SUPPORTED_FORMATS`, the
   `REJECTED` path list and the `PROJECT.md` basename rule, and

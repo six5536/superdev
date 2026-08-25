@@ -32,6 +32,16 @@ only (pre-1.0, no backports).
 - **The MCP surface is read-only.** `superdev mcp aokf` exposes four
   read-only tools over stdio; nothing writes through it
   ([api-contracts](api-contracts.md)).
+- **A pack source names one repository, whichever way it is spelled.** The
+  key that decides whether a pack replaces the embedded content or merely
+  layers over it is the source with its scheme, userinfo, port, `.git`
+  suffix and trailing slash removed
+  ([ADR-004](decisions/D004-base-pack-identity.md)). Userinfo and the port
+  are stripped from the authority alone, never from the path: a source whose
+  *path* ended `@github.com/six5536/superdev` must not normalise to the
+  default pack's key and be treated as the base. A pack declares no
+  executable action, and the instruction files, the AOKF spec and
+  `PROJECT.md` are refused by path before any file is read.
 - **Local by default.** The CLI takes no network input at runtime; the
   network is touched only for pinned tool installs and the one-time
   embedding model download (or the explicit embeddings-API opt-in). The

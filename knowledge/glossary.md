@@ -64,7 +64,10 @@ status: stable
   declares no executable action, so post-install work it needs is a skill
   it ships rather than a command it runs.
 - **Pack source** — where a pack is resolved from: a git URL with a rev, or
-  a local filesystem path. Naming one in `config.toml` is the trust
+  a local filesystem path. Sources are compared by a normalised identity —
+  scheme, userinfo, port, `.git` suffix and trailing slash removed, host and
+  path lowercased — so every spelling of one repository is one source
+  ([ADR-004](decisions/D004-base-pack-identity.md)). Naming one in `config.toml` is the trust
   decision, exactly as adding a crate to `Cargo.toml` is. superdev
   guarantees only that the pinned bytes are the bytes applied; it makes no
   claim about the content.

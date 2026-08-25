@@ -11,6 +11,20 @@ publish a version it cannot find a heading for.
 
 ## [Unreleased]
 
+### Added
+
+- A `.agents/tools.md` scaffold: reach for internal and MCP tools before Bash.
+  Written once, like the other agent rules, and imported by
+  `.agents/superdev.md` after the capability files.
+
+### Changed
+
+- The agent-rules files are each wrapped in a tag naming what they are —
+  `<coding-rules>`, `<professionalism>`, `<code-exploration>` — as
+  `.agents/process.md` and the aggregator already were. `.agents/codegraph.md`
+  is owned, so it is rewritten on the next `sync` (backed up first); the rest
+  are scaffolds and existing repos keep their own copies.
+
 ## [0.2.0] - 2026-08-25
 
 ### Changed
