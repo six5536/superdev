@@ -2,7 +2,7 @@
 type: Glossary
 id: glossary
 title: Domain Glossary
-description: The terms the blueprint engine uses — blueprint, capability, provider, provenance, component, owned file, scaffold, project template, template adoption, skill pack, knowledge-carried skill, PROJECT.md layer, custom skill, harvest, claim, orphan — plus the search terms section, locator, hybrid search and RRF.
+description: The terms the blueprint engine uses — blueprint, capability, provider, provenance, component, owned file, scaffold, project template, template adoption, skill pack, knowledge-carried skill, content pack, pack source, embedded snapshot, pack layer, pack format, PROJECT.md layer, custom skill, harvest, claim, orphan — plus the search terms section, locator, hybrid search and RRF.
 status: stable
 ---
 
@@ -47,7 +47,7 @@ status: stable
   merging the rendered template into the existing shape with the user
   deciding each collision, then recording `[template]` after the fact. From
   then on the repo updates like a seeded one.
-- **Skill pack** — the four skills the `skills` capability ships as
+- **Skill pack** — the two skills the `skills` capability ships as
   owned files under `.claude/skills/`, embedded in the binary and versioned
   with it. Claude Code loads them from there natively, so there is nothing to
   install. The knowledge-carried skills are not pack skills: the aokf
@@ -57,6 +57,30 @@ status: stable
   files, each skill its whole directory: SKILL.md, companions, harness
   configs. The set exists exactly where a bundle exists. See the
   [spec](specs/S009-knowledge-carried-skills-design.md).
+- **Content pack** — a versioned set of superdev's prose content: skills,
+  document templates, project templates, knowledge skeletons and the
+  general-rules scaffolds. A pack is resolved from a pinned source and
+  materialised into the repo as ordinary owned files and scaffolds; it
+  declares no executable action, so post-install work it needs is a skill
+  it ships rather than a command it runs.
+- **Pack source** — where a pack is resolved from: a git URL with a rev, or
+  a local filesystem path. Naming one in `config.toml` is the trust
+  decision, exactly as adding a crate to `Cargo.toml` is. superdev
+  guarantees only that the pinned bytes are the bytes applied; it makes no
+  claim about the content.
+- **Embedded snapshot** — the first-party pack compiled into the binary at
+  the blueprint's default pin. It is a convenience copy so the default path
+  needs no network, not an independent content set: pinning the default rev
+  and fetching it yield the same bytes.
+- **Pack layer** — the precedence order among content sources. Layer 0 is the
+  embedded snapshot; a pack from the snapshot's own source replaces it
+  outright, so what that pack drops leaves the repo, while a pack from any
+  other source sits above it in manifest order and supersedes items by name.
+  Superseding layer 0 is the normal case and passes unreported; only
+  pack-over-pack shadowing is reported.
+- **Pack format** — the version a pack manifest declares. A binary refuses a
+  format it does not know, with a guided error. The format is not stable
+  before 1.0.
 - **PROJECT.md layer** — a `PROJECT.md` beside a shipped skill. Every SKILL.md
   ends with a trailer telling the agent to read it and let it win on conflict,
   so a project extends a stock skill without forking it. superdev never writes
