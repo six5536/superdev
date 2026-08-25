@@ -191,9 +191,16 @@ goes with its files.
 # `cache/`
 
 Machine state, gitignored by `init`: backups of overwritten files under
-`backup/<timestamp>/`, and the search index under `aokf-index/` (tantivy, the
+`backup/<timestamp>/`, the search index under `aokf-index/` (tantivy, the
 section vectors, and a manifest of per-file hashes, schema version and model
-id). Deleting it is safe — the next tool call rebuilds it.
+id), and each resolved pack under `packs/<digest>/`. Deleting it is safe — the
+next tool call rebuilds the index, and the next `sync` re-fetches a pack.
+
+A pack is cached by its digest so a later run reaches the network only for
+bytes this machine does not have ([ADR-005](decisions/D005-pack-cache-and-fetch.md)):
+a steady-state `sync`, a CI `status --drift` and a `--dry-run` after any
+previous resolve all stay offline. Only what verified against the lock's
+digest is kept; a pack that failed verification leaves nothing behind.
 
 # Outside the repo
 

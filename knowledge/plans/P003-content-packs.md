@@ -138,7 +138,7 @@ only variable when the Windows job runs.
 
 ### Slice 9: Git sources, digests and the cache
 
-- [ ] Done — ticked by integrate at merge.
+- [x] Done — ticked by integrate at merge.
 - Change: add `PackSource::Git` resolution by spawning the user's `git`
   through the injected `CommandRunner` — `clone --depth 1
   --filter=blob:none --sparse --branch <rev>` then `sparse-checkout set pack`

@@ -13,6 +13,23 @@ publish a version it cannot find a heading for.
 
 ### Added
 
+- **Content packs.** A `[[packs]]` array in `.superdev/config.toml` names
+  where superdev's skills, templates and scaffolds come from — a git URL with
+  a `rev`, or a path on this machine. Entries layer in the order written and a
+  later item of the same name wins; an entry naming the source the binary's
+  own content is a copy of replaces it rather than layering, so what that rev
+  drops leaves the repo. A manifest naming no pack behaves exactly as before,
+  and `sync` never adds an entry to one that lacks it.
+
+  A git source is fetched with the user's own `git` — shallow, blobless and
+  sparse — so credentials and forge access stay theirs and superdev holds no
+  token. Each resolved pack is verified against the digest the lock records
+  for its rev and kept under `.superdev/cache/packs/`, so a later `sync` or
+  `status` needs the network only for bytes the machine does not have. A rev
+  that resolves to different bytes than the lock recorded fails the run and
+  writes nothing: re-pinning is the only way forward, and is itself the new
+  trust decision. `status` gains `content:` lines naming what it resolved
+  from and any item one pack hid from another.
 - A `.agents/tools.md` scaffold: reach for internal and MCP tools before Bash.
   Written once, like the other agent rules, and imported by
   `.agents/superdev.md` after the capability files.

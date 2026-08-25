@@ -32,6 +32,15 @@ only (pre-1.0, no backports).
 - **The MCP surface is read-only.** `superdev mcp aokf` exposes four
   read-only tools over stdio; nothing writes through it
   ([api-contracts](api-contracts.md)).
+- **A pinned pack applies the bytes it was pinned to, or none.** Every
+  resolved pack is verified against the digest the lock recorded for that
+  rev — over paths as well as contents, so a rename is a different pack — and
+  a mismatch fails the run writing nothing, with no flag to accept it. A tag
+  that moved is the case this exists for: the user re-pins, which is itself
+  the new trust decision. A git source is fetched by spawning the user's own
+  `git` ([ADR-007](decisions/D007-git-fetch-by-spawn.md)), so credentials,
+  ssh agents and forge access are theirs; superdev stores no token and adds
+  no auth surface.
 - **A pack source names one repository, whichever way it is spelled.** The
   key that decides whether a pack replaces the embedded content or merely
   layers over it is the source with its scheme, userinfo, port, `.git`
