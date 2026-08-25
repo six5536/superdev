@@ -2,7 +2,7 @@
 type: Glossary
 id: glossary
 title: Domain Glossary
-description: The terms the blueprint engine uses — blueprint, capability, provider, provenance, component, owned file, scaffold, project template, template adoption, skill pack, knowledge-carried skill, content pack, pack source, embedded snapshot, pack layer, pack format, PROJECT.md layer, custom skill, harvest, claim, orphan — plus the search terms section, locator, hybrid search and RRF.
+description: The terms the blueprint engine uses — blueprint, capability, provider, provenance, component, owned file, scaffold, project template, template adoption, skill pack, knowledge-carried skill, content pack, pack source, embedded snapshot, pack item, pack layer, pack format, PROJECT.md layer, custom skill, harvest, claim, orphan — plus the search terms section, locator, hybrid search and RRF.
 status: stable
 ---
 
@@ -72,6 +72,15 @@ status: stable
   the blueprint's default pin. It is a convenience copy so the default path
   needs no network, not an independent content set: pinning the default rev
   and fetching it yield the same bytes.
+- **Pack item** — the unit a later layer supersedes: a whole skill directory,
+  one project template, one document template, one knowledge skeleton or one
+  general-rules scaffold. Its identity is (owning capability, kind, name), all
+  three read from where it sits in the pack tree rather than from a list in
+  `pack.toml` — `knowledge/skills/<name>/`, `knowledge/concepts/<name>`,
+  `knowledge/templates/<name>.md`, `skills/<name>/`, `agents/<name>.md`,
+  `projects/<name>/`. Superseding replaces a whole item, never part of one,
+  and only ever within the same owner. See
+  [ADR-003](decisions/D003-items-by-layout.md).
 - **Pack layer** — the precedence order among content sources. Layer 0 is the
   embedded snapshot; a pack from the snapshot's own source replaces it
   outright, so what that pack drops leaves the repo, while a pack from any

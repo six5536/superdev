@@ -43,7 +43,7 @@ only variable when the Windows job runs.
 
 ### Slice 2: Reorganise /pack into pack layout
 
-- [ ] Done — ticked by integrate at merge.
+- [x] Done — ticked by integrate at merge.
 - Change: `aokf/skills/` → `knowledge/skills/`, `aokf/knowledge/*.md` →
   `knowledge/concepts/`, `aokf/knowledge/templates/` →
   `knowledge/templates/`, `templates/` → `projects/`; `skills/` and `agents/`
