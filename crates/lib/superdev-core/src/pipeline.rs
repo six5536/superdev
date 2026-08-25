@@ -345,19 +345,26 @@ const AGENTS_TRIM_HINT: &str = "AGENTS.md is yours — superdev's guidance moved
 
 /// The general agent rules every managed repo gets, write-once scaffolds
 /// beside the aggregator: (path, content).
-const RULE_SCAFFOLDS: [(&str, &str); 2] = [
+const RULE_SCAFFOLDS: [(&str, &str); 3] = [
+    (
+        ".agents/professionalism.md",
+        include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/assets/agents/professionalism.md"
+        )),
+    ),
+    (
+        ".agents/process.md",
+        include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/assets/agents/process.md"
+        )),
+    ),
     (
         ".agents/coding.md",
         include_str!(concat!(
             env!("CARGO_MANIFEST_DIR"),
             "/assets/agents/coding.md"
-        )),
-    ),
-    (
-        ".agents/prose.md",
-        include_str!(concat!(
-            env!("CARGO_MANIFEST_DIR"),
-            "/assets/agents/prose.md"
         )),
     ),
 ];
@@ -370,8 +377,9 @@ fn aggregator_content(manifest: &Manifest) -> String {
         "<superdev-system>\n\
          This repository is managed by superdev.\n\
          superdev is a collection of capabilities, described in the following files:\n\
-         @coding.md\n\
-         @prose.md\n",
+         @professionalism.md\n\
+         @process.md\n\
+         @coding.md\n",
     );
     if manifest.enabled(Capability::Knowledge) {
         out.push_str("@aokf.md\n");
@@ -741,7 +749,11 @@ mod tests {
             aggregator_content(&manifest),
         )
         .unwrap();
-        for scaffold in [".agents/coding.md", ".agents/prose.md"] {
+        for scaffold in [
+            ".agents/professionalism.md",
+            ".agents/process.md",
+            ".agents/coding.md",
+        ] {
             std::fs::write(dir.path().join(scaffold), "the user's now\n").unwrap();
         }
         std::fs::write(dir.path().join(".gitignore"), ".superdev/cache/\n").unwrap();
@@ -856,8 +868,9 @@ mod tests {
             "0.1.0",
             &[Capability::Knowledge, Capability::CodeIndex],
         ));
+        assert!(none.contains("@professionalism.md"), "{none}");
+        assert!(none.contains("@process.md"), "{none}");
         assert!(none.contains("@coding.md"), "{none}");
-        assert!(none.contains("@prose.md"), "{none}");
         assert!(
             !none.contains("@aokf.md") && !none.contains("@codegraph.md"),
             "{none}"
@@ -1000,16 +1013,22 @@ mod tests {
     fn custom_skills_are_pruned_from_the_lock_and_reported() {
         let mut manifest = Manifest::default_for("0.1.0", &[]);
         manifest.capabilities.get_mut("skills").unwrap()[0].custom =
-            vec!["humanise".into(), "grill-me".into()];
+            vec!["template-update".into(), "grill-me".into()];
         let mut lock = Lock::default();
-        lock.files
-            .insert(".claude/skills/humanise/SKILL.md".into(), "hash-a".into());
+        lock.files.insert(
+            ".claude/skills/template-update/SKILL.md".into(),
+            "hash-a".into(),
+        );
         lock.files.insert(
             ".claude/skills/double-check/SKILL.md".into(),
             "hash-b".into(),
         );
         assert!(prune_custom(&manifest, &mut lock));
-        assert!(!lock.files.contains_key(".claude/skills/humanise/SKILL.md"));
+        assert!(
+            !lock
+                .files
+                .contains_key(".claude/skills/template-update/SKILL.md")
+        );
         assert!(
             lock.files
                 .contains_key(".claude/skills/double-check/SKILL.md")
@@ -1020,7 +1039,7 @@ mod tests {
         assert_eq!(
             custom_lines(&manifest),
             vec![
-                "skills: humanise custom, unmanaged".to_string(),
+                "skills: template-update custom, unmanaged".to_string(),
                 "skills: custom names unknown skill 'grill-me' — no effect".to_string(),
             ]
         );
@@ -1031,23 +1050,26 @@ mod tests {
     #[test]
     fn knowledge_custom_entries_release_the_whole_directory() {
         let mut manifest = Manifest::default_for("0.1.0", &[]);
-        manifest.capabilities.get_mut("knowledge").unwrap()[0].custom = vec!["tdd".into()];
+        manifest.capabilities.get_mut("knowledge").unwrap()[0].custom = vec!["prototype".into()];
         let mut lock = Lock::default();
         // A skill-pack file, untouched by the knowledge custom list.
         lock.files
-            .insert(".claude/skills/humanise/SKILL.md".into(), "h".into());
+            .insert(".claude/skills/double-check/SKILL.md".into(), "h".into());
         for key in [
-            ".claude/skills/tdd/SKILL.md",
-            ".claude/skills/tdd/refs/A.md",
+            ".claude/skills/prototype/SKILL.md",
+            ".claude/skills/prototype/refs/A.md",
         ] {
             lock.files.insert(key.into(), "h".into());
         }
         lock.files
-            .insert(".claude/skills/wizard/SKILL.md".into(), "h".into());
+            .insert(".claude/skills/frame/SKILL.md".into(), "h".into());
         assert!(prune_custom(&manifest, &mut lock));
-        assert!(!lock.files.keys().any(|k| k.contains("/tdd/")));
-        assert!(lock.files.contains_key(".claude/skills/wizard/SKILL.md"));
-        assert!(lock.files.contains_key(".claude/skills/humanise/SKILL.md"));
+        assert!(!lock.files.keys().any(|k| k.contains("/prototype/")));
+        assert!(lock.files.contains_key(".claude/skills/frame/SKILL.md"));
+        assert!(
+            lock.files
+                .contains_key(".claude/skills/double-check/SKILL.md")
+        );
         // Nothing left to prune: reports no change.
         assert!(!prune_custom(&manifest, &mut lock));
     }
@@ -1056,9 +1078,9 @@ mod tests {
     fn knowledge_custom_lines_cover_every_carried_skill() {
         let mut manifest = Manifest::default_for("0.1.0", &[]);
         manifest.capabilities.get_mut("knowledge").unwrap()[0].custom =
-            vec!["tdd".into(), "flying".into()];
+            vec!["prototype".into(), "flying".into()];
         let lines = custom_lines(&manifest);
-        assert!(lines.contains(&"knowledge: tdd custom, unmanaged".to_string()));
+        assert!(lines.contains(&"knowledge: prototype custom, unmanaged".to_string()));
         assert!(
             lines.contains(
                 &"knowledge: custom names unknown skill 'flying' — no effect".to_string()

@@ -19,7 +19,7 @@ use crate::template_select;
 /// so it is the one step superdev cannot run for the user.
 /// Printed at the end of every knowledge-enabled init: bootstrap is judgement
 /// work the agent does after the mechanical scaffolding.
-const BOOTSTRAP_HINT: &str = "knowledge: run /aokf-bootstrap in Claude Code to fill the bundle from existing docs and an owner interview";
+const BOOTSTRAP_HINT: &str = "knowledge: run /bootstrap in Claude Code to fill the bundle from existing docs and an owner interview";
 
 /// The four capability-disable flags (kebab-case comes free from clap).
 #[derive(clap::Args)]

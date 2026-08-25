@@ -8,6 +8,7 @@ crates/lib/superdev-core/tests/fixtures/** -text
 # component that starts writing a new file gets the protection with it.
 .claude/skills/** -text
 .agents/** -text
+knowledge/templates/** -text
 .miserc.toml -text
 mise.*.toml -text
 crates/lib/superdev-core/assets/** -text

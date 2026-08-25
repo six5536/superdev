@@ -20,10 +20,8 @@ macro_rules! asset {
 
 /// The pack: (skill name, embedded SKILL.md). The knowledge-lifecycle
 /// skills live with the aokf component, not here.
-pub(crate) const SKILLS: [(&str, &str); 4] = [
+pub(crate) const SKILLS: [(&str, &str); 2] = [
     ("double-check", asset!("skills/double-check/SKILL.md")),
-    ("humanise", asset!("skills/humanise/SKILL.md")),
-    ("self-improve", asset!("skills/self-improve/SKILL.md")),
     ("template-update", asset!("skills/template-update/SKILL.md")),
 ];
 
@@ -106,7 +104,7 @@ mod tests {
             lock: &lock,
         };
         let actions = SkillPack.plan(&ctx).unwrap();
-        assert_eq!(actions.len(), 4);
+        assert_eq!(actions.len(), 2);
         let descs: Vec<String> = actions.iter().map(|a| a.describe()).collect();
         for (name, _) in SKILLS {
             assert!(
@@ -139,7 +137,7 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         converge(dir.path());
         std::fs::write(
-            dir.path().join(".claude/skills/humanise/SKILL.md"),
+            dir.path().join(".claude/skills/template-update/SKILL.md"),
             "edited",
         )
         .unwrap();
@@ -153,7 +151,7 @@ mod tests {
         };
         let actions = SkillPack.plan(&ctx).unwrap();
         assert_eq!(actions.len(), 1);
-        assert!(actions[0].describe().contains("humanise"));
+        assert!(actions[0].describe().contains("template-update"));
     }
 
     #[test]
@@ -161,12 +159,12 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         converge(dir.path());
         std::fs::write(
-            dir.path().join(".claude/skills/humanise/SKILL.md"),
+            dir.path().join(".claude/skills/template-update/SKILL.md"),
             "mine now",
         )
         .unwrap();
         let (mut manifest, lock) = ctx_parts();
-        manifest.capabilities.get_mut("skills").unwrap()[0].custom = vec!["humanise".into()];
+        manifest.capabilities.get_mut("skills").unwrap()[0].custom = vec!["template-update".into()];
         let fake = FakeRunner::new();
         let ctx = Ctx {
             root: dir.path(),
@@ -213,7 +211,7 @@ mod tests {
         use crate::component::Claim;
         let dir = tempfile::tempdir().unwrap();
         let (mut manifest, lock) = ctx_parts();
-        manifest.capabilities.get_mut("skills").unwrap()[0].custom = vec!["humanise".into()];
+        manifest.capabilities.get_mut("skills").unwrap()[0].custom = vec!["template-update".into()];
         let fake = FakeRunner::new();
         let ctx = Ctx {
             root: dir.path(),
@@ -222,7 +220,10 @@ mod tests {
             lock: &lock,
         };
         let keys: Vec<String> = SkillPack.owned(&ctx).iter().map(Claim::lock_key).collect();
-        assert!(!keys.iter().any(|k| k.contains("humanise")), "{keys:?}");
+        assert!(
+            !keys.iter().any(|k| k.contains("template-update")),
+            "{keys:?}"
+        );
         assert!(keys.contains(&".claude/skills/double-check/SKILL.md".to_string()));
     }
 
@@ -241,7 +242,7 @@ mod tests {
             std::fs::write(path, body).unwrap();
         };
         // Theirs, under one of our names.
-        write("humanise", "# Ours, thanks\n");
+        write("template-update", "# Ours, thanks\n");
         // Already superdev's own text: nothing of the user's to keep.
         let (_, shipped) = SKILLS
             .iter()
@@ -251,11 +252,14 @@ mod tests {
 
         let mut manifest = Manifest::default_for("0.1.0", &[]);
         let lines = adopt_existing(dir.path(), &mut manifest);
-        assert_eq!(manifest.capabilities["skills"][0].custom, ["humanise"]);
+        assert_eq!(
+            manifest.capabilities["skills"][0].custom,
+            ["template-update"]
+        );
         assert_eq!(
             lines,
             vec![format!(
-                "skills: kept your humanise — marked custom in {}",
+                "skills: kept your template-update — marked custom in {}",
                 crate::manifest::CONFIG_PATH
             )]
         );

@@ -1,13 +1,13 @@
 ---
 name: grill-me
-description: A relentless interview to sharpen a plan, design, or idea — recording glossary terms and decisions in the knowledge bundle when the subject is this repo's domain.
-disable-model-invocation: true
+description: Interview the user relentlessly about a plan or design until reaching shared understanding, resolving each branch of the decision tree. Use when user wants to stress-test a plan, get grilled on their design, or mentions "grill me".
 ---
 
-Run a `/grilling` session. When the subject is this repo's domain — its
-design, its code, its language — use the `/domain-modeling` skill
-alongside, so terms and decisions land in the bundle as they
-crystallise. For a subject with no repo under it, grill without it.
+Interview me relentlessly about every aspect of this plan until we reach a shared understanding. Walk down each branch of the design tree, resolving dependencies between decisions one-by-one. For each question, provide your recommended answer.
+
+Ask the questions one at a time.
+
+If a question can be answered by exploring the codebase, explore the codebase instead.
 
 ## Project adaptations
 
