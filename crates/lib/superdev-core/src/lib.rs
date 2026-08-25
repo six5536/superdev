@@ -22,6 +22,7 @@ pub mod aokf;
 pub mod capability;
 pub mod component;
 pub mod components;
+pub mod content;
 pub mod engine;
 pub mod error;
 pub(crate) mod fsutil;

@@ -36,7 +36,7 @@ const CLAUDE_ENTRY_PATH: &str = "CLAUDE.md";
 const CLAUDE_ENTRY_LINE: &str = "@AGENTS.md";
 
 /// (target path, asset content, ownership, reason)
-const FILES: &[(&str, &str, Ownership, &str)] = &[
+pub(crate) const FILES: &[(&str, &str, Ownership, &str)] = &[
     (
         ".agents/aokf/SPEC.md",
         asset!("aokf/agents/aokf/SPEC.md"),
@@ -204,7 +204,7 @@ const FILES: &[(&str, &str, Ownership, &str)] = &[
 /// The document templates the workflow skills fill in, owned so they
 /// version with the skills that reference them: (file name under
 /// `knowledge/templates/`, content).
-const TEMPLATE_FILES: &[(&str, &str)] = &[
+pub(crate) const TEMPLATE_FILES: &[(&str, &str)] = &[
     ("adhoc-plan.md", asset!("knowledge/templates/adhoc-plan.md")),
     ("adr.md", asset!("knowledge/templates/adr.md")),
     (

@@ -345,7 +345,7 @@ const AGENTS_TRIM_HINT: &str = "AGENTS.md is yours — superdev's guidance moved
 
 /// The general agent rules every managed repo gets, write-once scaffolds
 /// beside the aggregator: (path, content).
-const RULE_SCAFFOLDS: [(&str, &str); 3] = [
+pub(crate) const RULE_SCAFFOLDS: [(&str, &str); 3] = [
     (
         ".agents/professionalism.md",
         include_str!(concat!(

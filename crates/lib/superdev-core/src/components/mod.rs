@@ -1,7 +1,7 @@
 //! Component implementations and the helpers they share.
 
 pub mod aokf;
-mod aokf_skills;
+pub(crate) mod aokf_skills;
 pub mod codegraph;
 pub(crate) mod item;
 pub mod mise;

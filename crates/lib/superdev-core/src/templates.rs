@@ -105,7 +105,7 @@ pub struct Template {
     /// One line for the selection prompt.
     pub description: &'static str,
     /// (tokenised target path, embedded content) pairs.
-    files: &'static [(&'static str, &'static str)],
+    pub(crate) files: &'static [(&'static str, &'static str)],
 }
 
 /// Every template this binary ships, in prompt order.
