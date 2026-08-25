@@ -28,16 +28,20 @@ code depends on them.
       and the rules new ones must follow.
 - [ ] Decide what is expensive to change: data schema, API contracts,
       module boundaries, auth surface, and the UI.
+- [ ] Does a contract rest on a third-party API or another external
+      fact? Establish it with `/research`; the findings land in the
+      bundle for later phases.
 - [ ] Backend interfaces: a written contract
       (`template-interface-contract`), each interface in its native
       language — SQL DDL for the schema, the host language's types or
       traits for module APIs, the framework's route definitions for
       endpoints — or TypeSpec where no native form exists.
 - [ ] UI: a mockup (`/design`; `/frontend-design` for the visual
-      direction) or throwaway prototype. Discard it and build against
-      it.
+      direction) or a throwaway prototype (`/prototype`). Discard it
+      and build against it.
 - [ ] Interview the user (`/grill-me`) on each decision and its
-      alternatives before filing the ADR.
+      alternatives before filing the ADR. A question conversation
+      cannot settle gets a runnable answer (`/prototype`).
 - [ ] Record each decision as an ADR (`template-adr`): a Decision
       concept at `knowledge/decisions/Dnnn-<slug>.md`, listed in the
       decisions index, with alternatives and reasoning.

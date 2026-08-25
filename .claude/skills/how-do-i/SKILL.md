@@ -25,15 +25,18 @@ skills and process files actually say, not from memory.
       - One-off work outside the workflow — a refactor, a migration,
         a chore: `/adhoc-plan`.
       - Support skills the phases call: `/grill-me` (interview the
-        user until one reading remains), `/double-check` (check the
-        last work).
-      - Exploration before the workflow: `/brainstorm` (widen an
-        idea), `/prototype` (throwaway code answering one design
-        question), `/research` (findings from primary sources into
-        the bundle).
+        user until one reading remains) and `/double-check` (check
+        the last work) in every document phase; `/brainstorm` from
+        `/frame`, to widen an idea too unshaped to state a goal;
+        `/prototype` from `/interface-design`, for throwaway code
+        answering a question conversation cannot settle;
+        `/research` from `/frame` and `/interface-design`, for
+        external facts from primary sources, filed in the bundle.
+        All four also run standalone.
       - Knowledge upkeep: `/bootstrap` (fill the bundle from the
-        repo and the owner), `/maintain` (audit and repair the
-        bundle).
+        repo and the owner; `/frame` calls it when an existing
+        project's bundle is empty), `/maintain` (audit and repair
+        the bundle and the workflow's records; run regularly).
 - [ ] Question names a skill outside this map, or asks what else
       exists? Enumerate: the session's available-skills listing is
       the full roster; `.claude/skills/` holds the copies in this

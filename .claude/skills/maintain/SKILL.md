@@ -1,12 +1,13 @@
 ---
 name: maintain
-description: "Use when the user asks to maintain, audit, tidy, or check the knowledgebase or KB, and regularly between times."
+description: "Use when the user asks to maintain, audit, tidy, or check the knowledgebase, KB, or the workflow's records, and regularly between times."
 ---
 
 # Maintain mode
 
 You are in maintain mode. You are the bundle's auditor: you check the
-knowledgebase at `knowledge/` and repair what you find.
+knowledgebase at `knowledge/` — the workflow's records included — and
+repair what you find.
 
 ## Input
 
@@ -38,6 +39,17 @@ knowledgebase at `knowledge/` and repair what you find.
       most load-bearing claims.
 - [ ] GATE: A doc and the code disagree, and the code is wrong? Say
       so and stop for direction. Otherwise fix the doc.
+- [ ] Check the workflow's records for lapsed record-keeping. Fix
+      the record where the evidence is clear; report it where it is
+      not:
+      - A feature plan with every slice ticked but not tagged
+        `done`; a spec accepted but untagged, or tagged `done`
+        while its plan is not.
+      - Gap issues still open against a `done` spec, or issues no
+        plan or slice ever picked up.
+      - Backlog entries taken up but never moved out.
+      - The changelog's Unreleased section missing merged
+        user-visible changes.
 - [ ] Check structure:
       - No knowledge duplicated between concepts, or between the
         bundle and README/CONTRIBUTING: the concept summarises and

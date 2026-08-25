@@ -17,16 +17,21 @@ problem, not the solution.
 
 - [ ] Read existing project knowledge first (`aokf_overview` +
       `aokf_search`).
+- [ ] GATE: Existing project whose bundle is empty or still TBD? Fill
+      it with `/bootstrap` first.
 - [ ] Feature: read `project-overview`, `constraints-non-goals` and
       `backlog` (`aokf_read`) for prior scope and rejections.
 - [ ] GATE: If the feature is out of scope or already decided against,
       stop and tell the user why.
+- [ ] GATE: Is the idea too unshaped to state a goal? Widen it with
+      `/brainstorm`; frame its shortlist.
 - [ ] State the goal, the user, and the constraints, using the
       `glossary`'s terms.
 - [ ] Interview the user (`/grill-me`): resolve the open decisions,
       the gaps, and every competing reading of the intent.
-- [ ] New project: choose the tech stack; set the visual system with
-      the `/frontend-design` skill.
+- [ ] New project: choose the tech stack — `/research` settles an
+      open technology question — and set the visual system with the
+      `/frontend-design` skill.
 - [ ] New project: create the README (`template-readme`) and the
       knowledgebase (`template-project-overview`,
       `template-technology-stack`, `template-constraints-non-goals`,
