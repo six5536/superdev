@@ -28,6 +28,10 @@ All domain logic; no argument parsing. One module per concern:
   registry-locked pin planning, `item` — the declarative managed-item
   list the static components derive both `plan` and `owned` from — and
   `enabled`, the manifest-to-component resolution.
+- `content` — what a pack provides: `Item` and the `(owner, kind, name)`
+  identity a later layer supersedes on, the layout rules that read that
+  identity out of a pack tree, and the `ContentSet` a run resolves to. Depends
+  on nothing but `std` and `capability`, and never on how a pack is fetched.
 - `pipeline` — the verb pipeline between manifest and engine: `plan_repo`
   and `apply_repo`, owning the prune-before-plan and orphans-last ordering.
 - `engine` — applies a plan and unwinds on failure, one file per concern:
@@ -49,7 +53,10 @@ All domain logic; no argument parsing. One module per concern:
   skill directories the `knowledge` capability writes, the three SKILL.md
   files the `skills` capability writes, and the project templates all live in
   `/pack` at the repository root, reached from the crate as `assets/` through a
-  symlink and embedded at compile time.
+  symlink and embedded at compile time. `superdev-core/build.rs` enumerates
+  that tree into the file list `content` reads, so a file added to the pack
+  reaches the binary without a Rust edit; the contents are still `include_str!`
+  literals, and only the list of them is generated.
 
 The MCP server exposes four read-only tools over stdio — `aokf_search`,
 `aokf_read`, `aokf_graph`, `aokf_overview` (see

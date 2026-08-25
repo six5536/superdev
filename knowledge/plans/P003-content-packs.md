@@ -58,7 +58,7 @@ only variable when the Windows job runs.
 
 ### Slice 3: The content module — items, layout rules, ContentSet
 
-- [ ] Done — ticked by integrate at merge.
+- [x] Done — ticked by integrate at merge.
 - Change: add `superdev-core::content` — `Owner`, `ItemKind`, `Item`,
   `Origin`, `Shadowed`, `ContentSet` — and the rules that turn a pack tree
   into items. Build the embedded snapshot's `ContentSet` from `/pack/`.
