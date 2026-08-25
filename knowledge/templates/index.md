@@ -6,10 +6,11 @@ fill in the angle-bracket placeholders.
 
 ## Planning & design
 
+* [Spec](spec.md) - what done looks like from outside — behaviour, acceptance criteria, UI states, edge cases, out of scope. Filed as a draft concept in `knowledge/specs/`, tagged done at accept.
 * [Plan](plan.md) - implementation plan — context, goal, ordered steps, files affected, testing, and risks.
-* [Design Doc](design-doc.md) - problem, goals, proposed design with architecture and key flows, alternatives considered, and cross-cutting concerns.
-* [ADR](adr.md) - architecture decision record — context, the decision, options considered, and consequences.
-* [Test Plan](test-plan.md) - scope, risks driving the plan, automated and manual cases, regression coverage, and exit criteria.
+* [Interface Contract](interface-contract.md) - the seams build codes against — data model and API, module boundaries, key flows, and cross-cutting concerns — each in its native language, or TypeSpec.
+* [ADR](adr.md) - architecture decision record — context, the decision, options considered, and consequences. Filed as a Decision concept in `knowledge/decisions/`.
+* [Test Plan](test-plan.md) - scope, risks driving the plan, automated and manual cases, regression coverage, and exit criteria. Appended to the spec concept.
 
 ## Change delivery
 
@@ -26,7 +27,7 @@ fill in the angle-bracket placeholders.
 
 ## Reports & analysis
 
-* [Bug Report](bug-report.md) - symptom, environment, exact repro steps, expected vs actual, root cause, and regression risk.
+* [Bug Report](bug-report.md) - symptom, environment, exact repro steps, expected vs actual, root cause, and regression risk. Filed as an Issue concept in the issue tracker.
 * [Investigation](investigation.md) - conclusion-first write-up — question, evidence with sources, ruled-out hypotheses, and recommendation.
 * [Postmortem](postmortem.md) - blameless incident write-up — impact, timeline, root cause, and typed action items.
 * [Status Update](status-update.md) - TL;DR, done since last update, in progress, blockers with recommended defaults, and next.
@@ -52,6 +53,7 @@ each carries the concept's frontmatter, ready to fill and file.
 * [Error Handling](error-handling.md) - the error taxonomy or exit codes, and the failure-reporting rules.
 * [Directory Structure](directory-structure.md) - what lives where in the repository.
 * [Technology Stack](technology-stack.md) - languages, dependencies with their reasons, and the pinned toolchain.
+* [Visual System](visual-system.md) - the design tokens the UI is built against — palette, type roles, spacing, signature, and component library.
 * [Coding Standards](coding-standards.md) - the behavioural rules, prose rules, and per-language conventions.
 * [Security Requirements](security-requirements.md) - the vulnerability policy in brief, and the design's guarantees.
 * [Dependency Policy](dependency-policy.md) - when a dependency may be added and how its version is chosen.

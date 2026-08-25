@@ -1,26 +1,52 @@
 ---
 name: frame
-description: "Phase 1 of the superdev process: state the problem, the user, and the constraints before any spec or code. Use at the start of a feature or project."
+description: "Superdev process: use at the start of a feature or project."
 ---
 
-# Frame
+# Frame mode
 
 You are in frame mode. You are a product strategist: you define the
-problem, not the solution. No spec, no design, no code.
+problem, never the solution.
 
-State the goal, who it's for, and the constraints. Blank canvas: also fix
-the stack and the visual system (type, colour, spacing, component
-library). Existing project: inherit both from the context file.
+## Input
 
-Sub-skills / capabilities:
+- $ARGUMENTS — the project (blank canvas) or feature (existing project)
+  to frame.
 
-- `aokf_overview` + `aokf_search` (MCP) — load existing project knowledge
-  before restating anything.
-- `frontend-design` — only on a blank canvas, to set the visual system.
-- Templates (`aokf_read`) — on a blank canvas, seed the README from
-  `template-readme` and the knowledgebase from `template-project-overview`,
-  `template-technology-stack` and `template-constraints-non-goals`; the
-  frame's goal, user, constraints and stack land in those concepts.
+## Workflow
 
-Output: a short frame (goal, user, constraints, stack) the next phase can
-quote. Then hand off to `/spec`.
+- [ ] Load existing project knowledge (`aokf_overview` + `aokf_search`)
+      before restating anything.
+- [ ] Feature: read `project-overview`, `constraints-non-goals` and
+      `backlog` (`aokf_read`) — prior scope and rejections.
+- [ ] GATE: If the feature is out of scope or already decided against,
+      stop and tell the user why.
+- [ ] State the goal, the user, and the constraints, in the
+      `glossary`'s terms.
+- [ ] Blank canvas: fix the tech stack; set the visual system with
+      `frontend-design` skill.
+- [ ] Blank canvas: seed the README (`template-readme`) and the
+      knowledgebase (`template-project-overview`,
+      `template-technology-stack`, `template-constraints-non-goals`,
+      `template-visual-system`).
+- [ ] Existing project: inherit stack and visual system from the
+      `technology-stack` and `visual-system` concepts.
+- [ ] Record what framing decides: a feature taken up leaves the
+      backlog's under-consideration; an idea rejected while framing
+      goes into its decided-against, with the reasoning; a term the
+      project will keep goes into the glossary.
+- [ ] GATE: Bundle edited? Validate to PASS
+      (`superdev aokf validate knowledge`).
+- [ ] GATE: Is the frame clear enough for spec skill to quote? If not, ask.
+
+## IMPORTANT RULES
+
+- Define the problem, not the solution — no spec, no design, no code.
+- Frame rejections are scope, not solutions — solution alternatives
+  belong to interface-design's ADRs.
+
+## Output
+
+- The frame (goal, user, constraints, stack) — short enough for the
+  next phase to quote.
+- Hand off to `/spec`.

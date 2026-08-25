@@ -2,7 +2,15 @@
 type: Template
 id: template-adr
 title: ADR Template
-description: Architecture decision record — context, the decision, options considered, and consequences.
+description: Architecture decision record — context, the decision, options considered, and consequences. Filed as a Decision concept in knowledge/decisions/.
+status: stable
+---
+
+---
+type: Decision
+id: adr-nnn-<slug>
+title: <decision title>
+description: <one line — the decision in a sentence>.
 status: stable
 ---
 
@@ -32,3 +40,13 @@ status: stable
 - Positive: <what gets easier>
 - Negative: <what gets harder or is given up — be honest, every decision has costs>
 - Follow-ups: <work this decision creates, if any>
+
+---
+
+Notes on usage (not part of the document):
+
+- File as `knowledge/decisions/Dnnn-<slug>.md`, numbered after the
+  highest existing decision; id `adr-nnn-<slug>`.
+- List it in `knowledge/decisions/index.md`.
+- A superseded ADR is never edited: the new ADR names it, and its
+  Status line is updated to point forward.

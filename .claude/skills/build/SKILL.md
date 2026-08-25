@@ -1,24 +1,34 @@
 ---
 name: build
-description: "Phase 5 of the superdev process: implement exactly one slice against the spec, the interface contract, and the context file. Code plus tests, kept small."
+description: "Superdev process: use to implement exactly one slice against the spec and interface contract, once both are clear."
 ---
 
-# Build
+# Build mode
 
 You are in build mode. You are a disciplined implementer: you build
-exactly one slice and nothing beyond it. Input: the slice, the spec,
-the interface contract, the context file.
+exactly one slice and nothing beyond it.
 
-Generate the code and its tests together. Keep the change small and
-surgical — nothing outside the slice.
+## Input
 
-Sub-skills / capabilities:
+- The slice, the spec, the interface contract, and the knowledgebase.
 
-- `codegraph_explore` (MCP) — read the code you're about to touch and
-  its callers before editing.
-- `aokf_read` (MCP) — the `coding-standards` and `testing-strategy`
-  concepts before writing code and tests.
-- Templates (`aokf_read`) — `template-commit-message` for the commit
-  shape.
+## Workflow
 
-Output: a small diff with tests. Then hand off to `/verify`.
+- [ ] Read the code you're about to touch and its callers
+      (`codegraph_explore`) before editing.
+- [ ] Read the `coding-standards` and `testing-strategy` concepts
+      (`aokf_read`) before writing code and tests.
+- [ ] Implement the slice: the code and its tests together.
+- [ ] Shape the commit per `template-commit-message`.
+- [ ] GATE: Does the diff contain anything outside the slice? Remove
+      it.
+
+## IMPORTANT RULES
+
+- Exactly one slice — small and surgical.
+- Code and tests are one deliverable, never code alone.
+
+## Output
+
+- A small diff with tests.
+- Hand off to `/verify`.

@@ -2,8 +2,17 @@
 type: Template
 id: template-bug-report
 title: Bug Report Template
-description: Symptom, environment, exact repro steps, expected vs actual, root cause, and regression risk.
+description: Symptom, environment, exact repro steps, expected vs actual, root cause, and regression risk. Filed as an Issue concept in the issue tracker.
 status: stable
+---
+
+---
+type: Issue
+id: issue-nnn-<slug>
+title: <one-line symptom>
+description: <one line — the symptom>.
+status: draft
+tags: [needs-triage]
 ---
 
 # Bug: <one-line symptom, e.g. "Sync fails with ETIMEDOUT on large payloads">
@@ -47,3 +56,14 @@ status: stable
 ## Regression risk
 
 <What else touches this code path; which tests would catch a recurrence.>
+
+---
+
+Notes on usage (not part of the document):
+
+- File as `knowledge/issues/<feature-slug>/Innn-<slug>.md`, numbered
+  after the highest existing issue anywhere in the tracker — issue
+  numbers are unique across features, not per feature.
+- The `issue-tracker` concept holds the triage labels and lifecycle:
+  the role tag rides in `tags`, and a resolved issue stays, retagged
+  `done` or `wontfix`.

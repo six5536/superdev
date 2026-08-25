@@ -17,11 +17,13 @@ knowledge-carried engineering skills (`to-plan`, `triage`, `to-spec`,
 - The spec, when one exists, is
   `knowledge/specs/Snnn-<feature>-design.md`.
 - Implementation issues are one file per ticket at
-  `knowledge/issues/<feature-slug>/NN-<slug>.md`, numbered from `01` —
-  never a single combined tickets file.
+  `knowledge/issues/<feature-slug>/Innn-<slug>.md`, numbered after the
+  highest existing issue anywhere in the tracker — issue numbers are
+  unique across features, not per feature — and never a single
+  combined tickets file.
 - Each issue is an AOKF concept: `type: Issue`, a unique id
-  `<feature-slug>-NN-<slug>`, a `title`, a `description`, `status: draft`
-  while open.
+  `issue-nnn-<slug>`, a `title`, a `description`, `status: draft`
+  while open. The `template-bug-report` template carries this shape.
 - The triage role is a string in the frontmatter `tags` list (see
   [Triage labels](#triage-labels)).
 - An issue or plan that implements a spec declares the link from its own
@@ -67,12 +69,13 @@ Used by `/wayfinder`. The **map** is the effort's plan concept; the
 
 - **Map**: `knowledge/plans/Pnnn-<effort>.md` (`type: Plan`,
   `status: draft`) — the Notes / Decisions-so-far / Fog body.
-- **Child ticket**: `knowledge/issues/<effort>/NN-<slug>.md`, numbered
-  from `01`, with the question in the body. A `Type:` line records the
-  ticket type (`research`/`prototype`/`grilling`/`task`); a `Status:`
-  line records `claimed`/`resolved`.
-- **Blocking**: a `Blocked by: NN, NN` line near the top. A ticket is
-  unblocked when every file it lists is `resolved`.
+- **Child ticket**: `knowledge/issues/<effort>/Innn-<slug>.md`,
+  numbered like any issue, with the question in the body. A `Type:`
+  line records the ticket type
+  (`research`/`prototype`/`grilling`/`task`); a `Status:` line records
+  `claimed`/`resolved`.
+- **Blocking**: a `Blocked by: Innn, Innn` line near the top. A ticket
+  is unblocked when every file it lists is `resolved`.
 - **Frontier**: scan `knowledge/issues/<effort>/` for files that are
   open, unblocked, and unclaimed; first by number wins.
 - **Claim**: set `Status: claimed` and save before any work.

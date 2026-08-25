@@ -2,8 +2,16 @@
 type: Template
 id: template-plan
 title: Plan Template
-description: Implementation plan — context, goal, ordered steps, files affected, testing, and risks.
+description: Implementation plan — context, goal, ordered steps, files affected, testing, and risks. Filed as a draft concept in knowledge/plans/, tagged done when the work lands.
 status: stable
+---
+
+---
+type: Plan
+id: plan-<slug>
+title: <short title of the task>
+description: <one line — what this plan delivers>.
+status: draft
 ---
 
 # Plan: <short title of the task>
@@ -54,3 +62,11 @@ Non-goals:
 ## Out-of-band notes
 
 <Migrations, follow-up work, docs to update, anything that lands after the code does. Delete this section if empty.>
+
+---
+
+Notes on usage (not part of the document):
+
+- File as `knowledge/plans/Pnnn-<slug>.md`, numbered after the highest
+  existing plan; id `plan-<slug>`.
+- List it in `knowledge/plans/index.md`.
