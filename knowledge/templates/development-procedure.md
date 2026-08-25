@@ -21,4 +21,5 @@ status: stable
 1. <How a change starts: where it is framed, specified, and decided before code.>
 2. <How it is implemented: branching, commit conventions, the slice size.>
 3. <How the knowledgebase is kept current when behaviour or design changes.>
-4. <What must pass before a PR, and what CI adds on top.>
+4. <What must pass before a PR, what CI adds on top, and the smoke
+   test run at each merge: the command and what it proves.>

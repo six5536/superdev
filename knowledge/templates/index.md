@@ -7,7 +7,8 @@ fill in the angle-bracket placeholders.
 ## Planning & design
 
 * [Spec](spec.md) - what done looks like from outside — behaviour, acceptance criteria, UI states, edge cases, out of scope. Filed as a draft concept in `knowledge/specs/`, tagged done at accept.
-* [Plan](plan.md) - implementation plan — context, goal, ordered steps, files affected, testing, and risks.
+* [Feature Plan](feature-plan.md) - the feature's slice list — per slice a done-check, the assigned test-plan cases, and a done marker. Produced by the feature-plan phase.
+* [Ad-hoc Plan](adhoc-plan.md) - ad-hoc implementation plan for one-off work outside the feature workflow — context, goal, ordered steps, files affected, testing, and risks.
 * [Interface Contract](interface-contract.md) - the interfaces build codes against — data model and API, module boundaries, key flows, and cross-cutting concerns — each in its native language, or TypeSpec.
 * [ADR](adr.md) - architecture decision record — context, the decision, options considered, and consequences. Filed as a Decision concept in `knowledge/decisions/`.
 * [Test Plan](test-plan.md) - scope, risks driving the plan, automated and manual cases, regression coverage, and exit criteria. Appended to the spec concept.

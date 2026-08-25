@@ -5,7 +5,7 @@ description: "Superdev process: use to implement exactly one slice against the s
 
 # Build mode
 
-You are in build mode. You are a disciplined implementer: you build
+You are in build mode. You are a lead software engineer: you build
 exactly one slice and nothing beyond it.
 
 ## Input
@@ -18,20 +18,20 @@ exactly one slice and nothing beyond it.
 
 ## Workflow
 
-- [ ] Read the slice's plan entry and the spec's criteria and
-      test-plan cases it covers (`aokf_read`).
+- [ ] Read the slice's plan entry, the spec's criteria, and the
+      test-plan cases assigned to the slice (`aokf_read`).
 - [ ] Read the code you are about to change, and its callers
       (`codegraph_explore`), before editing.
 - [ ] Read the `coding-standards` and `testing-strategy` concepts
       (`aokf_read`) before writing code and tests; for a UI slice,
       also `visual-system`.
-- [ ] Implement the slice using TDD, against the test-plan cases this
-      slice covers. Write tests with the code only where TDD is
-      impractical, e.g. exploratory UI work.
+- [ ] Implement the slice using TDD, against its assigned test-plan
+      cases. Write tests with the code only where TDD is impractical,
+      e.g. exploratory UI work.
 - [ ] GATE: Does the implementation need a contract change? Return to
       `/interface-design`; do not diverge from the contract.
 - [ ] GATE: Is the slice too big to build in one pass? Return to
-      `/plan`.
+      `/feature-plan`.
 - [ ] Run the tests you wrote and the affected existing tests; fix
       failures before handing off.
 - [ ] GATE: Does the diff contain anything outside the slice? Remove
@@ -51,4 +51,10 @@ exactly one slice and nothing beyond it.
 - A small, committed diff with passing tests.
 - Hand off to `/verify`.
 - Contract change needed: return to `/interface-design`. Slice too
-  big: return to `/plan`.
+  big: return to `/feature-plan`.
+
+## Project adaptations
+
+If a `PROJECT.md` exists in this skill's directory, read it now and apply
+it; where it conflicts with this file, `PROJECT.md` wins. If absent,
+continue.

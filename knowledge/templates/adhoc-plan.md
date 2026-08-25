@@ -1,14 +1,14 @@
 ---
 type: Template
-id: template-plan
-title: Plan Template
-description: Implementation plan — context, goal, ordered steps, files affected, testing, and risks. Filed as a draft concept in knowledge/plans/, tagged done when the work lands.
+id: template-adhoc-plan
+title: Ad-hoc Plan Template
+description: Ad-hoc implementation plan for one-off work outside the feature workflow — context, goal, ordered steps, files affected, testing, and risks. Filed as a draft concept in knowledge/plans/, tagged done when the work lands.
 status: stable
 ---
 
 ---
 type: Plan
-id: plan-<slug>
+id: adhoc-plan-<slug>
 title: <short title of the task>
 description: <one line — what this plan delivers>.
 status: draft
@@ -68,5 +68,8 @@ Non-goals:
 Notes on usage (not part of the document):
 
 - File as `knowledge/plans/Pnnn-<slug>.md`, numbered after the highest
-  existing plan; id `plan-<slug>`.
+  existing plan; id `adhoc-plan-<slug>`.
 - List it in `knowledge/plans/index.md`.
+- For a feature going through the workflow, use
+  `template-feature-plan` instead: the feature-plan phase produces it
+  and build, verify, and integrate read it.

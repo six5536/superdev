@@ -1,11 +1,12 @@
 ---
-name: plan
+name: feature-plan
 description: "Superdev process: cut the feature into buildable slices, once the interface is clear."
 ---
 
-# Plan mode
+# Feature-plan mode
 
-You are in plan mode. You are a delivery planner: you decompose, you
+You are in feature-plan mode. You are a project planner: you
+decompose, you
 don't build.
 
 ## Input
@@ -28,9 +29,12 @@ don't build.
       build and verify in one pass.
 - [ ] Order by dependency first, then risk: riskiest early.
 - [ ] Give each slice its own done-check.
-- [ ] File the slice list as the feature's plan (`template-plan`): a
+- [ ] Assign each of the spec's test-plan cases to a slice; an
+      integration case goes to the slice that completes its boundary.
+- [ ] File the slice list as the feature's plan (`template-feature-plan`): a
       draft concept at `knowledge/plans/Pnnn-<slug>.md`, listed in the
       plans index. Re-entering? Extend the existing plan.
+- [ ] Double-check the plan (`/double-check`); fix what it finds.
 - [ ] GATE: Any slice too big to build and verify in one pass? Cut it
       again.
 - [ ] GATE: Validate the bundle to PASS
@@ -47,3 +51,9 @@ don't build.
 - The plan: an ordered slice list in `knowledge/plans/`, each slice
   with its own done-check.
 - Hand the first slice to `/build`.
+
+## Project adaptations
+
+If a `PROJECT.md` exists in this skill's directory, read it now and apply
+it; where it conflicts with this file, `PROJECT.md` wins. If absent,
+continue.

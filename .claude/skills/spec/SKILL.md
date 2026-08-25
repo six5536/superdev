@@ -5,12 +5,14 @@ description: "Superdev process: use to describe the feature from the outside, as
 
 # Spec mode
 
-You are in spec mode. You are a behavioural analyst: you describe the
+You are in spec mode. You are a requirements analyst: you describe the
 feature from outside, as a user or caller sees it.
 
 ## Input
 
 - The frame skill's output (goal, user, constraints).
+- Re-entry: verify's finding that a criterion or test-plan case is
+  ambiguous or wrong.
 - $ARGUMENTS — the feature to specify, when not handed off.
 
 ## Workflow
@@ -32,6 +34,10 @@ feature from outside, as a user or caller sees it.
 - [ ] Append the test plan (`template-test-plan`) to the spec:
       automated cases, and manual checks for what automation cannot
       reach. UI is still tested.
+- [ ] Interview the user (`/grill-me`): resolve every criterion or
+      behaviour readable two ways until one reading remains.
+- [ ] Double-check the spec and test plan (`/double-check`); fix what
+      it finds.
 - [ ] GATE: Can verify and accept check every criterion pass/fail
       without interpretation? If not, rework it.
 - [ ] GATE: Does the spec contradict a prior spec or convention?
@@ -53,3 +59,9 @@ feature from outside, as a user or caller sees it.
 - The spec: a draft concept in `knowledge/specs/` with acceptance
   criteria, test plan, and the behaviour description.
 - Hand off to `/interface-design`.
+
+## Project adaptations
+
+If a `PROJECT.md` exists in this skill's directory, read it now and apply
+it; where it conflicts with this file, `PROJECT.md` wins. If absent,
+continue.

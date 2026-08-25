@@ -13,6 +13,8 @@ code depends on them.
 
 - The spec: the feature's draft `Spec` concept at
   `knowledge/specs/Snnn-<feature-slug>.md`.
+- Re-entry: a contract change requested by build, or a divergence
+  verify says the contract should adopt.
 - $ARGUMENTS — the feature or spec id, when not handed off.
 
 ## Workflow
@@ -31,12 +33,16 @@ code depends on them.
       language — SQL DDL for the schema, the host language's types or
       traits for module APIs, the framework's route definitions for
       endpoints — or TypeSpec where no native form exists.
-- [ ] UI: a mockup (`design`; `frontend-design` for the visual
+- [ ] UI: a mockup (`/design`; `/frontend-design` for the visual
       direction) or throwaway prototype. Discard it and build against
       it.
+- [ ] Interview the user (`/grill-me`) on each decision and its
+      alternatives before filing the ADR.
 - [ ] Record each decision as an ADR (`template-adr`): a Decision
       concept at `knowledge/decisions/Dnnn-<slug>.md`, listed in the
       decisions index, with alternatives and reasoning.
+- [ ] Double-check the contract and ADRs (`/double-check`); fix what
+      it finds.
 - [ ] GATE: Does a new interface contradict the architecture or its
       rules? Reject it, or report the conflict for a deliberate
       change.
@@ -55,4 +61,10 @@ code depends on them.
 ## Output
 
 - The interface contract and, for UI, the mockup.
-- Hand off to `/plan`.
+- Hand off to `/feature-plan`.
+
+## Project adaptations
+
+If a `PROJECT.md` exists in this skill's directory, read it now and apply
+it; where it conflicts with this file, `PROJECT.md` wins. If absent,
+continue.

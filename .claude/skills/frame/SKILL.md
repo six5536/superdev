@@ -5,7 +5,7 @@ description: "Superdev process: use at the start of a feature or project."
 
 # Frame mode
 
-You are in frame mode. You are a product strategist: you define the
+You are in frame mode. You are a product manager: you define the
 problem, not the solution.
 
 ## Input
@@ -23,8 +23,10 @@ problem, not the solution.
       stop and tell the user why.
 - [ ] State the goal, the user, and the constraints, using the
       `glossary`'s terms.
+- [ ] Interview the user (`/grill-me`): resolve the open decisions,
+      the gaps, and every competing reading of the intent.
 - [ ] New project: choose the tech stack; set the visual system with
-      the `frontend-design` skill.
+      the `/frontend-design` skill.
 - [ ] New project: create the README (`template-readme`) and the
       knowledgebase (`template-project-overview`,
       `template-technology-stack`, `template-constraints-non-goals`,
@@ -34,10 +36,11 @@ problem, not the solution.
 - [ ] Record the decisions: move a feature taken up out of the
       backlog; record a rejected idea under decided-against with the
       reasoning; add a term the project will keep to the glossary.
+- [ ] Double-check the frame (`/double-check`); fix what it finds.
 - [ ] GATE: Bundle edited? Validate to PASS
       (`superdev aokf validate knowledge`).
-- [ ] GATE: Is the frame clear enough for the spec skill? If not, ask
-      the user.
+- [ ] GATE: Is the frame clear enough for the spec skill? If not,
+      interview the user (`/grill-me`).
 
 ## IMPORTANT RULES
 
@@ -49,3 +52,9 @@ problem, not the solution.
 
 - The frame: goal, user, constraints, stack.
 - Hand off to `/spec`.
+
+## Project adaptations
+
+If a `PROJECT.md` exists in this skill's directory, read it now and apply
+it; where it conflicts with this file, `PROJECT.md` wins. If absent,
+continue.
