@@ -5,7 +5,7 @@ description: "Use after superdev init, when docs are stale or scattered, or when
 
 # Bootstrap mode
 
-You are in bootstrap mode. You are a knowledge curator: you move the
+You are in bootstrap mode. You are a technical writer: you move the
 repo's stranded facts into the bundle at `knowledge/` and interview
 the owner for the rest.
 

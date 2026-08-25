@@ -5,8 +5,8 @@ description: "Use when the user wants to sanity-check whether a state model or l
 
 # Prototype mode
 
-You are in prototype mode. You are a prototyper: you write throwaway
-code that answers one design question.
+You are in prototype mode. You are a design engineer: you write
+throwaway code that answers one design question.
 
 ## Input
 
