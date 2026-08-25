@@ -51,8 +51,12 @@ ships is decided by the pack tree — see
 [directory-structure](directory-structure.md) for its shape and
 [ADR-003](decisions/D003-items-by-layout.md) for the rules that name an item.
 
-Today the set has one layer, the pack compiled into the binary. What a
-manifest pins layers over it.
+Layer 0 is the pack compiled into the binary; each `[[packs]]` entry layers
+over it in manifest order, and a later item of the same identity wins. A pin
+naming exactly what the binary embeds resolves from it and makes no request,
+whichever way the source is spelled. A local-path source is read from disk
+every run, so editing it and syncing again lands the new bytes with no
+rebuild.
 
 # Capabilities and providers
 

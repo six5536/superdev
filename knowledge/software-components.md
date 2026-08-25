@@ -28,6 +28,12 @@ All domain logic; no argument parsing. One module per concern:
   registry-locked pin planning, `item` — the declarative managed-item
   list the static components derive both `plan` and `owned` from — and
   `enabled`, the manifest-to-component resolution.
+- `pack` — where content comes from: the source a pack is resolved from, the
+  normalised identity that decides replace-versus-layer, `pack.toml` with the
+  paths and keys a pack may not carry, and `resolve` — the phase that turns
+  the manifest's entries into a content set before anything plans. Depends on
+  `content`; `content` never depends on it, and neither knows about
+  components.
 - `content` — what a pack provides: `Item` and the `(owner, kind, name)`
   identity a later layer supersedes on, the layout rules that read that
   identity out of a pack tree, and the `ContentSet` a run resolves to. Depends

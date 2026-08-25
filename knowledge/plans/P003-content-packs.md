@@ -111,7 +111,7 @@ only variable when the Windows job runs.
 
 ### Slice 7: Resolve a local pack and materialise its items
 
-- [ ] Done — ticked by integrate at merge.
+- [x] Done — ticked by integrate at merge.
 - Change: add `pack::resolve` for `PackSource::Path` only, with
   `ResolveMode` and `Resolution`, returning a `ContentSet` built from one
   pack over the snapshot. Call it from `pipeline` ahead of `plan_repo`,

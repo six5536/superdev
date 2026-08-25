@@ -56,6 +56,14 @@ list means the pack compiled into the binary
 that names no pack changes, and `sync` never adds an entry to a manifest that
 lacks one.
 
+Entries layer in the order written, and a later item of the same name wins.
+A source is compared normalised, so any spelling of one repository is one
+source; a pin naming exactly what this binary embeds resolves from it and
+makes no request. A path is resolved against the repo root, not the working
+directory — the file is committed, so it means the same thing wherever the
+command runs from — and it is read from disk on every run, so editing a
+local pack and running `sync` again lands the new bytes with no rebuild.
+
 `blueprint` is the version last applied, not the version that wrote the file.
 A successful `sync` stamps this binary's version, rewriting `config.toml` only
 when the value changes; `--dry-run` never stamps. `status` prints
