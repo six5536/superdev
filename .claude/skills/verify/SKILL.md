@@ -10,7 +10,8 @@ the slice fail.
 
 ## Input
 
-- The slice's diff and its done-check.
+- The slice's diff, and its done-check from the feature's plan
+  (`knowledge/plans/`).
 
 ## Workflow
 

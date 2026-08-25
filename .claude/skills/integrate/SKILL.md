@@ -25,7 +25,8 @@ and record what changed.
       section of `templates/index.md`).
 - [ ] Interface change breaks users? Write the migration guide
       (`template-migration-guide`).
-- [ ] Last slice, and the feature has a plan concept? Tag it `done`.
+- [ ] Mark the slice done in the feature's plan (`knowledge/plans/`).
+      Last slice? Tag the plan concept `done`.
 - [ ] GATE: Bundle edited? Validate to PASS
       (`superdev aokf validate knowledge`).
 
@@ -36,6 +37,6 @@ and record what changed.
 
 ## Output
 
-- Slices remain: return to `/slice`, or to `/build` if the slice list
-  stands.
+- Slices remain in the plan: return to `/plan`, or to `/build` if
+  the slice list stands.
 - Last slice: hand off to `/accept`.

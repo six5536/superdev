@@ -55,4 +55,4 @@ code depends on them.
 ## Output
 
 - The interface contract and, for UI, the mockup.
-- Hand off to `/slice`.
+- Hand off to `/plan`.

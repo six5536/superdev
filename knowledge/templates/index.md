@@ -61,6 +61,5 @@ each carries the concept's frontmatter, ready to fill and file.
 * [Development Procedure](development-procedure.md) - setup, the change workflow, and what must pass before a PR.
 * [Development Commands](development-commands.md) - the everyday command set and the traps in it.
 * [Issue Tracker](issue-tracker.md) - where issues live, the filing conventions, and the triage labels.
-* [Domain Docs](domain-docs.md) - which documents serve as the domain docs, and the vocabulary rules.
 * [Definition of Done](definition-of-done.md) - what a change must satisfy before it merges.
 * [Release Procedure](release-procedure.md) - how a release is cut, the gates, and the irreversible steps.

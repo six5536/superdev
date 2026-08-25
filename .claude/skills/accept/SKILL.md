@@ -28,7 +28,7 @@ not match, drift between slices, and breakage elsewhere.
       handling, or data exposure (`template-security-review` for the
       report).
 - [ ] File each gap found (`template-bug-report`): an Issue concept at
-      `knowledge/issues/<feature-slug>/Innn-<slug>.md`.
+      `knowledge/issues/Innn-<slug>.md`, linked to the spec.
 - [ ] Shipping? Write the release notes (`template-release-notes`).
 - [ ] GATE: Feature undocumented? That is a gap.
 - [ ] GATE: Any gap found? It becomes a new slice.
@@ -43,5 +43,5 @@ not match, drift between slices, and breakage elsewhere.
 
 ## Output
 
-- Gaps: file them and return to `/slice`.
+- Gaps: file them and return to `/plan`.
 - Clean pass: done, or `/frame` for the next feature.

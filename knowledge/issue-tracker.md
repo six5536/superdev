@@ -13,14 +13,14 @@ knowledge-carried engineering skills (`to-plan`, `triage`, `to-spec`,
 
 # Conventions
 
-- One feature per directory: `knowledge/issues/<feature-slug>/`.
+- One flat directory: one file per ticket at
+  `knowledge/issues/Innn-<slug>.md`, numbered after the highest
+  existing issue, and never a single combined tickets file.
 - The spec, when one exists, is
-  `knowledge/specs/Snnn-<feature>-design.md`.
-- Implementation issues are one file per ticket at
-  `knowledge/issues/<feature-slug>/Innn-<slug>.md`, numbered after the
-  highest existing issue anywhere in the tracker — issue numbers are
-  unique across features, not per feature — and never a single
-  combined tickets file.
+  `knowledge/specs/Snnn-<feature-slug>.md`.
+- An issue's feature is declared by its `implements` or `references`
+  link to the spec, not by the path; an issue without a feature has
+  neither.
 - Each issue is an AOKF concept: `type: Issue`, a unique id
   `issue-nnn-<slug>`, a `title`, a `description`, `status: draft`
   while open. The `template-bug-report` template carries this shape.
@@ -39,9 +39,9 @@ knowledge-carried engineering skills (`to-plan`, `triage`, `to-spec`,
   feature heading), and list it from the root `knowledge/index.md`.
   Create the directory with the first issue.
 
-When a skill says "publish to the issue tracker": create a new file under
-`knowledge/issues/<feature-slug>/`, creating the directory and index
-entries if needed. When a skill says "fetch the relevant ticket": read the
+When a skill says "publish to the issue tracker": create a new file in
+`knowledge/issues/`, creating the directory and index entries if
+needed. When a skill says "fetch the relevant ticket": read the
 file at the referenced path — the user normally passes the path or issue
 number directly.
 
@@ -69,15 +69,17 @@ Used by `/wayfinder`. The **map** is the effort's plan concept; the
 
 - **Map**: `knowledge/plans/Pnnn-<effort>.md` (`type: Plan`,
   `status: draft`) — the Notes / Decisions-so-far / Fog body.
-- **Child ticket**: `knowledge/issues/<effort>/Innn-<slug>.md`,
-  numbered like any issue, with the question in the body. A `Type:`
+- **Child ticket**: `knowledge/issues/Innn-<slug>.md`, numbered like
+  any issue and linked to the effort's plan (`references`), with the
+  question in the body. A `Type:`
   line records the ticket type
   (`research`/`prototype`/`grilling`/`task`); a `Status:` line records
   `claimed`/`resolved`.
 - **Blocking**: a `Blocked by: Innn, Innn` line near the top. A ticket
   is unblocked when every file it lists is `resolved`.
-- **Frontier**: scan `knowledge/issues/<effort>/` for files that are
-  open, unblocked, and unclaimed; first by number wins.
+- **Frontier**: scan the effort's tickets (those linking its plan)
+  for files that are open, unblocked, and unclaimed; first by number
+  wins.
 - **Claim**: set `Status: claimed` and save before any work.
 - **Resolve**: append the answer under an `## Answer` heading, set
   `Status: resolved`, then append a context pointer (gist + link) to the
