@@ -7,6 +7,7 @@
 //! Depends on [`crate::content`] for what a pack provides; `content` never
 //! depends on this. Nothing here knows about components or capabilities.
 
+mod fetch;
 mod manifest;
 mod resolve;
 mod source;

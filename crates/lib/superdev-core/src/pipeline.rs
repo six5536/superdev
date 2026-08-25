@@ -17,7 +17,7 @@ use crate::components::{aokf, skillpack};
 use crate::content::{self, ContentSet, ItemKind, Origin, Owner};
 use crate::engine::Planned;
 use crate::error::{Error, Result};
-use crate::lock::Lock;
+use crate::lock::{Lock, PackLock};
 use crate::manifest::{Manifest, PackEntry};
 use crate::orphan::OrphanPlan;
 use crate::pack;
@@ -47,6 +47,10 @@ pub struct RepoPlan {
     behind: Vec<String>,
     custom: Vec<String>,
     content: Vec<String>,
+    /// One record per pack that resolved, for the lock. A dropped entry's
+    /// record leaves with it, so a pack's files become orphans by the
+    /// ordinary rule.
+    packs: Vec<PackLock>,
     blueprint: Option<String>,
     /// The loaded lock with custom-released entries pruned in memory.
     lock: Lock,
@@ -166,7 +170,7 @@ pub fn plan_repo(
         PlanMode::Status => pack::ResolveMode::Offline,
         PlanMode::Sync => pack::ResolveMode::Fetching,
     };
-    let resolution = pack::resolve(root, manifest, &lock, resolve_mode)?;
+    let resolution = pack::resolve(root, runner, manifest, &lock, resolve_mode)?;
     let content = resolution.content;
     // Named against the resolved set, not the embedded one: a custom name
     // guards whatever is shipped now, which a pack may have added to.
@@ -208,6 +212,7 @@ pub fn plan_repo(
         behind,
         custom,
         content: content_report,
+        packs: resolution.packs,
         blueprint,
         planned,
         orphans,
@@ -232,10 +237,18 @@ pub fn apply_repo(
     let RepoPlan {
         planned,
         orphans,
+        packs,
         mut lock,
         mut lock_changed,
         ..
     } = plan;
+    // What resolved is what the next run must get again: the digest is the
+    // whole of that proof, and a dropped entry's record goes with it so its
+    // files orphan by the ordinary rule.
+    if lock.packs != packs {
+        lock.packs = packs;
+        lock_changed = true;
+    }
     // Released and gone orphans leave the lock without an action, and a
     // disabled capability's applied record goes with its files.
     for key in orphans.released.iter().chain(orphans.gone.iter()) {
@@ -905,6 +918,7 @@ mod tests {
             behind: Vec::new(),
             custom: Vec::new(),
             content: Vec::new(),
+            packs: Vec::new(),
             blueprint: None,
             lock,
             lock_changed: false,
