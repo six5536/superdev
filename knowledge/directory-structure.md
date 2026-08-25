@@ -11,6 +11,7 @@ sources:
 ---
 
 ```
+pack/                     # the content superdev ships: skills, agent rules, knowledge, templates
 crates/lib/superdev-core/ # all domain logic (no arg parsing)
 crates/app/superdev/      # the binary: CLI parsing, wiring, output
 packages/                 # npm launcher + per-platform binary packages
@@ -27,8 +28,11 @@ scripts/                  # version, release, and smoke-test scripts
 submodules/               # read-only reference checkouts (git submodules)
 ```
 
-Crate and package contents are detailed in
-[software-components](software-components.md). Top-level docs (README,
+`crates/lib/superdev-core/assets` is a relative symlink to `pack/`: that is
+what keeps the content inside the published crate while leaving it browsable at
+the root, and it is why a Windows checkout needs `core.symlinks=true`
+(see [CONTRIBUTING](/CONTRIBUTING.md)). Crate and package contents are detailed
+in [software-components](software-components.md). Top-level docs (README,
 CONTRIBUTING, CHANGELOG, SECURITY, CODE_OF_CONDUCT) are the public,
 GitHub-surfaced files; AGENTS.md is the agent entry point that loads this
 bundle.[^contributing]

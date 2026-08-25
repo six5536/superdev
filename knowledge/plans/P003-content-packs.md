@@ -27,7 +27,7 @@ only variable when the Windows job runs.
 
 ### Slice 1: Move the content to /pack, unchanged
 
-- [ ] Done — ticked by integrate at merge.
+- [x] Done — ticked by integrate at merge.
 - Change: move `crates/lib/superdev-core/assets/` to `/pack/` with its
   internal layout untouched, and leave `crates/lib/superdev-core/assets` as a
   relative symlink to it. Every `asset!()` path is therefore unchanged. Move

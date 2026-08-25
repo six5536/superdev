@@ -47,8 +47,9 @@ All domain logic; no argument parsing. One module per concern:
   `index` (tantivy plus the vector store), `mcp` (the server).
 - The AOKF spec, agent files, starter concept skeleton and the 25 carried
   skill directories the `knowledge` capability writes, the three SKILL.md
-  files the `skills` capability writes, and the project templates ship as
-  `assets/`, embedded at compile time.
+  files the `skills` capability writes, and the project templates all live in
+  `/pack` at the repository root, reached from the crate as `assets/` through a
+  symlink and embedded at compile time.
 
 The MCP server exposes four read-only tools over stdio — `aokf_search`,
 `aokf_read`, `aokf_graph`, `aokf_overview` (see
