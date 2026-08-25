@@ -128,12 +128,14 @@ pub const SUPPORTED_FORMATS: &[u32] = &[1];
 ### Items — what a pack provides
 
 A pack's tree names all three parts of an item's identity — the owning
-capability, the kind, and the name:
+capability, the kind, and the name. `<name>` is the entry directly under the
+kind directory; where the table shows `/**` that entry is a directory and the
+item is its whole subtree:
 
 ```
 pack.toml
 knowledge/skills/<name>/**       → .claude/skills/<name>/**        owned
-knowledge/concepts/<name>.md     → knowledge/<name>.md             scaffold
+knowledge/concepts/<name>        → knowledge/<name>                scaffold
 knowledge/templates/<name>.md    → knowledge/templates/<name>.md   owned
 skills/<name>/**                 → .claude/skills/<name>/**        owned
 agents/<name>.md                 → .agents/<name>.md               scaffold
@@ -156,7 +158,11 @@ pub enum Owner {
 pub enum ItemKind {
     /// `<owner>/skills/<name>/**` — owned files under `.claude/skills/`.
     Skill,
-    /// `knowledge/concepts/<name>.md` — a write-once bundle scaffold.
+    /// `knowledge/concepts/<name>` — a write-once bundle scaffold. `<name>`
+    /// is any entry directly under `concepts/`, file or directory, and the
+    /// subtree mirrors the repo's `knowledge/`: the bundle ships skeletons
+    /// that are not one `.md` each — `manifest.aokf.yaml`, and the
+    /// `plans/` and `specs/` index directories. ADR-010.
     KnowledgeSkeleton,
     /// `knowledge/templates/<name>.md` — an owned document template.
     DocTemplate,

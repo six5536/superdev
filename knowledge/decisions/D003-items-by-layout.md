@@ -70,6 +70,10 @@ with it.
   the resolver reports what it found, so this is visible rather than silent.
 - Negative: the tree is one level deeper than a flat kind layout, and the
   asset tree must be reorganised before the first pack can be cut.
+- The knowledge-skeleton line above reads `knowledge/concepts/<name>.md`;
+  [ADR-010](D010-concepts-entry-is-the-item.md) widens it to any entry under
+  `concepts/`, file or directory, because three shipped scaffolds are not one
+  `.md` each.
 - Follow-ups: a pack may not carry `PROJECT.md`. The
   [glossary](../glossary.md) reserves it as the project's own extension layer
   — "superdev never writes or tracks the file" — so shipping one would take it
