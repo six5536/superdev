@@ -11,7 +11,7 @@ provider = "aokf"
 
 [components.skills]
 provider = "superdev-skills"
-version = "0.1.0"
+version = "0.2.0"
 
 [files]
 ".agents/aokf.md" = "d8b9fab198137af93b2675cc689fed26b43afbd5c63a67881ef121032dd307a2"
