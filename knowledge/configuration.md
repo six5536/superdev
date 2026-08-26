@@ -99,7 +99,13 @@ never moves backwards and never below what the binary carries; a pin naming
 any other source, or resting on a branch, a sha or a pre-release, is reported
 and left alone. When the source cannot be reached, carries no release, or
 carries only releases older than the pin, the run says so and the pin stays
-where the binary would put it. A manifest an earlier binary wrote gains the
+where the binary would put it. Being the one request nobody asked for, it is
+also the one on a clock: a few seconds, after which a network that neither
+answers nor refuses is reported as unreachable like any other, rather than
+holding the command for the OS connect timeout
+([ADR-015](decisions/D015-the-spawn-seam-carries-a-deadline.md)). No git call
+superdev makes prompts for credentials, so a source that needs them fails
+instead of waiting for someone to type. A manifest an earlier binary wrote gains the
 default entry on the first `update`, which is the only command that adds one.
 
 A pin resting on a **candidate** content tag — `assets-vA.B.C-rc.N`, what a

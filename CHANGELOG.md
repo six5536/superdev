@@ -41,7 +41,13 @@ publish a version it cannot find a heading for.
   is your trust decision to make again. With no network the pin moves no
   further than the binary's own default and the run says it could not check,
   and a manifest written by an earlier binary gains the entry on the first
-  `update`. `source` accepts `github:owner/repo` and `gitlab:owner/repo` as
+  `update`. That query is the one request superdev makes that you did not ask
+  for, so it is the one on a clock: a few seconds, after which a network that
+  neither answers nor refuses is reported as unreachable rather than holding
+  the command for however long your OS takes to give up. A clone is not
+  bounded — you pinned that pack and asked for it, and a slow link is not
+  superdev's to give up on. No git call prompts for credentials, so a source
+  you cannot read anonymously fails rather than waiting for you to type. `source` accepts `github:owner/repo` and `gitlab:owner/repo` as
   shorthand, and otherwise a git URL over `https://`, `ssh://` or `file://` —
   the scp form and a bare ssh alias included, so your ssh config and your
   mirrors keep working.

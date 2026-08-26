@@ -84,7 +84,13 @@ only (pre-1.0, no backports).
   ([ADR-009](decisions/D009-update-queries-default-source.md)). That query is
   the narrowest of these: it runs on the untargeted `update` alone, asks only
   the source superdev itself ships, and a failure to reach it degrades to the
-  pin the binary carries rather than failing the run. The
+  pin the binary carries rather than failing the run. It is also the only
+  spawn superdev bounds — a few seconds, because it is the only one made on
+  superdev's own initiative
+  ([ADR-015](decisions/D015-the-spawn-seam-carries-a-deadline.md)); a clone,
+  a toolchain install and the model download are all things the user asked
+  for and are left to take as long as they take. Every git call carries
+  `GIT_TERMINAL_PROMPT=0`, so none can stop for a credential prompt. The
   accepted non-PIE musl binaries rest on exactly this — see
   [constraints-non-goals](constraints-non-goals.md).
 

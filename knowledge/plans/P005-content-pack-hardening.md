@@ -130,7 +130,7 @@ case below is new and drawn from the issue it closes.
 
 ### Slice 5: The one unprompted request is bounded, and never prompts
 
-- [ ] Not started.
+- [x] Done — ticked by integrate at merge.
 - Gap: [I002](../issues/I002-no-time-bound-on-the-update-query.md).
 - Change: `fetch::git` takes the options through. The `ls-remote` query sets a
   deadline of a few seconds; the clone sets none, because the user pinned the
