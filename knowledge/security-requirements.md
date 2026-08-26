@@ -34,7 +34,9 @@ only (pre-1.0, no backports).
   ([api-contracts](api-contracts.md)).
 - **A pinned pack applies the bytes it was pinned to, or none.** Every
   resolved pack is verified against the digest the lock recorded for that
-  rev — over paths as well as contents, so a rename is a different pack — and
+  rev — over paths as well as contents, so a rename is a different pack, and
+  fetched with `core.autocrlf` overridden so the same rev digests the same on
+  every platform — and
   a mismatch fails the run writing nothing, with no flag to accept it. A tag
   that moved is the case this exists for: the user re-pins, which is itself
   the new trust decision. A git source is fetched by spawning the user's own
