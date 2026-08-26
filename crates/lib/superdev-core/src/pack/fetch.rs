@@ -57,6 +57,23 @@ pub fn cache_path(root: &Path, digest: &str) -> PathBuf {
     root.join(CACHE_DIR).join(digest.replace(':', "-"))
 }
 
+/// The `-c` overrides every git command here carries.
+///
+/// A pack's digest is over the bytes as the pack published them, and the lock
+/// recording it is committed and shared. Left to the user's `core.autocrlf`,
+/// a checkout on Windows would translate every line ending, so the same rev
+/// would digest differently there and a lock written on one platform would
+/// fail verification on the other. superdev's clone takes the bytes verbatim
+/// whatever the machine is configured to prefer.
+fn verbatim() -> Vec<String> {
+    vec![
+        "-c".into(),
+        "core.autocrlf=false".into(),
+        "-c".into(),
+        "core.eol=lf".into(),
+    ]
+}
+
 /// Fetch a git source into a directory of its own, returning the pack root.
 ///
 /// Shallow, blobless and sparse: the pack directory and not the history.
@@ -84,13 +101,14 @@ pub fn fetch(
     }
 
     let target = checkout.to_string_lossy().into_owned();
-    let mut clone: Vec<String> = vec![
+    let mut clone: Vec<String> = verbatim();
+    clone.extend([
         "clone".into(),
         "--depth".into(),
         "1".into(),
         "--filter=blob:none".into(),
         "--sparse".into(),
-    ];
+    ]);
     if !looks_like_sha(rev) {
         clone.push("--branch".into());
         clone.push(rev.into());
@@ -102,46 +120,38 @@ pub fn fetch(
     if looks_like_sha(rev) {
         // A sha is not reachable by `--branch`, and a blobless shallow clone
         // does not carry it: ask for that one commit, then move onto it.
-        run_git(
-            runner,
-            pack,
-            &[
-                "-C".into(),
-                target.clone(),
-                "fetch".into(),
-                "--depth".into(),
-                "1".into(),
-                "origin".into(),
-                rev.into(),
-            ],
-            into,
-        )?;
-        run_git(
-            runner,
-            pack,
-            &[
-                "-C".into(),
-                target.clone(),
-                "checkout".into(),
-                "--detach".into(),
-                "FETCH_HEAD".into(),
-            ],
-            into,
-        )?;
+        let mut args = verbatim();
+        args.extend([
+            "-C".into(),
+            target.clone(),
+            "fetch".into(),
+            "--depth".into(),
+            "1".into(),
+            "origin".into(),
+            rev.into(),
+        ]);
+        run_git(runner, pack, &args, into)?;
+
+        let mut args = verbatim();
+        args.extend([
+            "-C".into(),
+            target.clone(),
+            "checkout".into(),
+            "--detach".into(),
+            "FETCH_HEAD".into(),
+        ]);
+        run_git(runner, pack, &args, into)?;
     }
 
-    run_git(
-        runner,
-        pack,
-        &[
-            "-C".into(),
-            target,
-            "sparse-checkout".into(),
-            "set".into(),
-            PACK_SUBDIR.into(),
-        ],
-        into,
-    )?;
+    let mut args = verbatim();
+    args.extend([
+        "-C".into(),
+        target,
+        "sparse-checkout".into(),
+        "set".into(),
+        PACK_SUBDIR.into(),
+    ]);
+    run_git(runner, pack, &args, into)?;
 
     let pack_root = checkout.join(PACK_SUBDIR);
     if !pack_root.is_dir() {
@@ -244,6 +254,42 @@ mod tests {
         let path = cache_path(Path::new("/repo"), "sha256:abc");
         assert!(!path.to_string_lossy().contains(':'), "{}", path.display());
         assert!(path.starts_with("/repo/.superdev/cache/packs"));
+    }
+
+    /// The lock's digest is committed and shared. Left to the machine's
+    /// `core.autocrlf`, a Windows checkout would translate every line ending,
+    /// the same rev would digest differently there, and a lock written on one
+    /// platform would fail verification on the other.
+    #[test]
+    fn every_git_call_takes_the_bytes_verbatim() {
+        use crate::runner::{FakeRunner, Output};
+        let fake = FakeRunner::new();
+        // Every git invocation succeeds, so the whole sequence runs.
+        fake.script(
+            "git",
+            Output {
+                status: 0,
+                stdout: String::new(),
+                stderr: String::new(),
+            },
+        );
+        let dir = tempfile::tempdir().unwrap();
+        // A sha rev takes the longest path: clone, fetch, checkout, sparse.
+        let _ = fetch(
+            &fake,
+            "acme",
+            "https://example.com/p.git",
+            "9f2a1b3c",
+            dir.path(),
+        );
+        let calls = fake.calls();
+        assert!(!calls.is_empty(), "the fetch ran no git at all");
+        for call in &calls {
+            assert!(
+                call.contains("core.autocrlf=false") && call.contains("core.eol=lf"),
+                "a git call touching the work tree without the overrides: {call}"
+            );
+        }
     }
 
     #[test]

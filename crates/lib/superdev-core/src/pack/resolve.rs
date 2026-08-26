@@ -931,7 +931,9 @@ mod tests {
             ResolveMode::Fetching,
         )
         .unwrap_err();
-        assert!(err.to_string().contains("git clone"), "{err}");
+        let message = err.to_string();
+        assert!(message.contains("clone"), "{message}");
+        assert!(message.contains(&absent), "names the source: {message}");
     }
 
     /// Every superdev repo is a git repo, so a user without `git` is in an
