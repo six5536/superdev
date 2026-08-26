@@ -18,4 +18,4 @@ pub use manifest::{
 };
 pub use pin::update_pins;
 pub use resolve::{Resolution, ResolveMode, resolve};
-pub use source::{DEFAULT_PACK, DefaultPack, PACK_TAG_PREFIX, PackSource};
+pub use source::{DEFAULT_PACK, DefaultPack, PACK_TAG_PREFIX, PackSource, SUPPORTED_SCHEMES};

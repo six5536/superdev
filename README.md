@@ -54,12 +54,16 @@ entry naming the source superdev's own content comes from *replaces* it rather
 than layering, so what that revision drops leaves your repo too. A repo that
 names no pack behaves exactly as it always did.
 
-`source` takes `github:owner/repo` and `gitlab:owner/repo` as shorthand; every
-other git URL — `https://`, `ssh://`, `git@host:path` — is handed to `git` as
-written, so your ssh config and mirrors keep working. Anything with no scheme
-and no `host:` is a directory, read from disk every run and taking no `rev`;
-a bare repository on disk is a git URL, so spell it `file:///srv/mirror.git`. Fetching uses
-your own `git`, so credentials stay yours and superdev stores no token. What
+`source` takes `github:owner/repo` and `gitlab:owner/repo` as shorthand for
+those two forges, and otherwise a git URL over `https://`, `ssh://` or
+`file://` — the scp form `git@host:path` included, so your ssh config and your
+mirrors keep working. Those are the whole set: `git://` and `http://` are
+refused because neither authenticates, so anyone on the path could answer for
+the pack, and an `ext::`-style remote helper is refused because it names a
+program rather than a transport. Anything with no scheme and no `host:` is a
+directory, read from disk every run and taking no `rev`; a bare repository on
+disk is a git URL, so spell it `file:///srv/mirror.git`. Fetching uses your
+own `git`, so credentials stay yours and superdev stores no token. What
 it fetches is verified against a digest in `.superdev/lock.toml`, and a
 revision that resolves to different bytes than the lock recorded stops the run
 rather than quietly applying them.

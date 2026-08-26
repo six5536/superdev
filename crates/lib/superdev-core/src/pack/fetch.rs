@@ -15,6 +15,8 @@ use sha2::{Digest, Sha256};
 use crate::error::{Error, Result};
 use crate::runner::{CommandRunner, Output};
 
+use super::source::SUPPORTED_SCHEMES;
+
 /// Where a resolved pack is kept, under the gitignored machine-state
 /// directory that already holds the search index and the backup tree.
 const CACHE_DIR: &str = ".superdev/cache/packs";
@@ -66,25 +68,48 @@ pub fn cache_path(root: &Path, digest: &str) -> PathBuf {
 /// fail verification on the other. superdev's clone takes the bytes verbatim
 /// whatever the machine is configured to prefer.
 ///
+/// The transports refused by name.
+///
+/// Named and not left to the blanket, because git resolves
+/// `protocol.<name>.allow` ahead of `protocol.allow` whatever their sources:
+/// a machine whose own config says `protocol.ext.allow = always` outranks a
+/// blanket on superdev's command line, and only a named refusal on that same
+/// command line outranks the machine. `ext` runs a program as its connection;
+/// `git` and `http` authenticate nothing, so anyone on the path can answer.
+/// ADR-012.
+const REFUSED_TRANSPORTS: &[&str] = &["ext", "git", "http"];
+
 /// Every git call superdev makes is built from this, `pin.rs`'s query
 /// included — the one call that did not was how a manifest still got a
 /// command run.
 fn overrides() -> Vec<String> {
-    vec![
-        "-c".into(),
+    let mut args = vec![
+        "-c".to_string(),
         "core.autocrlf=false".into(),
         "-c".into(),
         "core.eol=lf".into(),
-        // An `ext::` URL names a command and git runs it as the connection.
-        // Whether it may is `protocol.ext.allow`, which defaults to refusing
-        // but is the user's to change — and a manifest is a file that arrives
-        // with a repository, so a source is not superdev's to trust. Set for
-        // superdev's own calls rather than inherited, so a machine configured
-        // to permit the transport does not permit it to a cloned manifest.
-        // I007.
+        // Everything superdev did not admit, refused. A manifest is a file
+        // that arrives with a repository, so a source is not superdev's to
+        // trust; set on superdev's own calls rather than inherited, so a
+        // machine configured to permit a transport does not permit it to a
+        // cloned manifest. I007.
         "-c".into(),
-        "protocol.ext.allow=never".into(),
-    ]
+        "protocol.allow=never".into(),
+    ];
+    // Read off the same constant `PackSource::parse` refuses against, so the
+    // two halves of the allowlist cannot drift apart.
+    for scheme in SUPPORTED_SCHEMES {
+        args.push("-c".into());
+        args.push(format!("protocol.{scheme}.allow=always"));
+    }
+    // The blanket alone does not hold against a machine that has named one of
+    // these, and `insteadOf` can rewrite a source `parse` approved into one of
+    // them after superdev has handed it over. This is the half that sees that.
+    for refused in REFUSED_TRANSPORTS {
+        args.push("-c".into());
+        args.push(format!("protocol.{refused}.allow=never"));
+    }
+    args
 }
 
 /// Fetch a git source into a directory of its own, returning the pack root.
@@ -243,6 +268,10 @@ mod tests {
     /// than inheriting an answer. Without this, a manifest cloned from
     /// anywhere runs whatever it likes on a machine that permits the
     /// transport. I007.
+    ///
+    /// Every setting is asserted, not just the one that started this: the
+    /// blanket alone does not hold against a machine that has named a
+    /// transport, so each named refusal is load-bearing on its own. ADR-012.
     #[test]
     fn every_git_call_refuses_the_transports_that_run_commands() {
         let runner = FakeRunner::new();
@@ -259,11 +288,92 @@ mod tests {
         let calls = runner.calls();
         assert!(!calls.is_empty(), "the fetch spawned nothing");
         for call in &calls {
+            for setting in [
+                "protocol.allow=never",
+                "protocol.https.allow=always",
+                "protocol.ssh.allow=always",
+                "protocol.file.allow=always",
+                "protocol.ext.allow=never",
+                "protocol.git.allow=never",
+                "protocol.http.allow=never",
+            ] {
+                assert!(
+                    call.contains(setting),
+                    "a git call without `{setting}`: {call}"
+                );
+            }
+        }
+    }
+
+    /// The overrides admit exactly what `parse` admits, because they are read
+    /// off the same constant. A scheme added to one and not the other would be
+    /// refused by half of the pair and accepted by the other.
+    #[test]
+    fn the_overrides_admit_exactly_the_supported_schemes() {
+        let args = overrides().join(" ");
+        for scheme in SUPPORTED_SCHEMES {
             assert!(
-                call.contains("protocol.ext.allow=never"),
-                "a git call without the override: {call}"
+                args.contains(&format!("protocol.{scheme}.allow=always")),
+                "`{scheme}` is supported but not admitted: {args}"
             );
         }
+        for refused in REFUSED_TRANSPORTS {
+            assert!(
+                !SUPPORTED_SCHEMES.contains(refused),
+                "`{refused}` is both refused and supported"
+            );
+        }
+    }
+
+    /// The case that proves the overrides are not decoration.
+    ///
+    /// `url.<base>.insteadOf` rewrites a URL *after* superdev has handed it
+    /// over, so a plain `https://` source that `parse` approved becomes an
+    /// `ext::` command under a config that asks for it — which `parse` cannot
+    /// see. Only a *named* refusal stops it: git resolves
+    /// `protocol.<name>.allow` ahead of `protocol.allow` whatever their
+    /// sources, so the machine's `protocol.ext.allow = always` outranks
+    /// superdev's blanket and is outranked in turn by superdev's named line.
+    ///
+    /// Spawned directly rather than through `CommandRunner`, because the
+    /// hostile config reaches git as an environment variable and `run` passes
+    /// no environment. The argument vector is the product's own. Unix only:
+    /// the rewritten URL runs its command through `sh`.
+    #[cfg(unix)]
+    #[test]
+    fn a_rewritten_url_still_runs_no_command() {
+        let dir = tempfile::tempdir().unwrap();
+        let marker = dir.path().join("marker");
+        let config = dir.path().join("hostile.gitconfig");
+        std::fs::write(
+            &config,
+            format!(
+                "[protocol \"ext\"]\n\tallow = always\n\
+                 [url \"ext::touch {} \"]\n\tinsteadOf = https://superdev.invalid/\n",
+                marker.display()
+            ),
+        )
+        .unwrap();
+
+        let mut args = overrides();
+        args.extend([
+            "ls-remote".to_string(),
+            "--".into(),
+            "https://superdev.invalid/pack".into(),
+        ]);
+        let out = std::process::Command::new("git")
+            .args(&args)
+            .env("GIT_CONFIG_GLOBAL", &config)
+            .env("GIT_CONFIG_NOSYSTEM", "1")
+            .current_dir(dir.path())
+            .output()
+            .expect("git runs");
+
+        assert!(
+            !marker.exists(),
+            "the rewritten URL ran its command: {}",
+            String::from_utf8_lossy(&out.stderr)
+        );
     }
 
     /// An operand that begins with `-` is an option to git. `parse` refuses

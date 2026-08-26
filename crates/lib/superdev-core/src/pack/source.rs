@@ -26,6 +26,22 @@ pub const DEFAULT_PACK: DefaultPack = DefaultPack {
     rev: "assets-v0.1.0",
 };
 
+/// The transports a pack may be fetched over.
+///
+/// [`PackSource::parse`] refuses anything else, naming the source, and no
+/// config on the machine can lift that. `git://` and `http://` are left out
+/// deliberately: neither authenticates, so anyone on the path can answer for
+/// a pack — and a source keys the same however it is spelled, so the pack
+/// they answer with can be the one that replaces superdev's own content.
+///
+/// The git overrides admit the same set explicitly over a
+/// `protocol.allow=never` default. Both halves are needed and neither is
+/// sufficient: `parse` cannot see a `url.<base>.insteadOf` rewrite, which
+/// turns an approved `https://` source into whatever the machine's config
+/// says, and among the overrides only the named refusals outrank a user
+/// config. ADR-012.
+pub const SUPPORTED_SCHEMES: &[&str] = &["https", "ssh", "file"];
+
 /// What a pack release tag is called: this prefix and a three-part version.
 ///
 /// One repository cuts two kinds of release — the binary at `vX.Y.Z` and its
@@ -81,6 +97,14 @@ impl PackSource {
             });
         }
         if is_git(source) {
+            // Before the `rev`, because a transport superdev will not fetch
+            // over is wrong whatever revision it names.
+            if let Some(refusal) = unsupported_transport(source) {
+                return Err(Error::Pack {
+                    pack: entry.source.clone(),
+                    message: refusal,
+                });
+            }
             let Some(rev) = entry
                 .rev
                 .as_deref()
@@ -267,6 +291,61 @@ fn relative_to(path: &Path, root: &Path) -> Option<String> {
     } else {
         parts.join("/")
     })
+}
+
+/// Why superdev will not fetch over this source's transport, or `None` when
+/// it will.
+///
+/// A source with no scheme is one of the two spellings that carry their
+/// transport implicitly, and both are in the set: superdev's
+/// `forge:owner/repo` shorthand is https, and the scp form — `host:path`,
+/// with or without a user, an ssh alias included — is ssh.
+fn unsupported_transport(source: &str) -> Option<String> {
+    if let Some(helper) = remote_helper(source) {
+        return Some(format!(
+            "`{helper}::` names a git remote helper, which runs a program of \
+             that name rather than naming a transport. superdev fetches a pack \
+             over {}",
+            supported()
+        ));
+    }
+    let (scheme, _) = source.split_once("://")?;
+    let known = SUPPORTED_SCHEMES
+        .iter()
+        .any(|supported| scheme.eq_ignore_ascii_case(supported));
+    (!known).then(|| {
+        format!(
+            "superdev does not fetch a pack over `{scheme}` — only {}. \
+             An unauthenticated transport lets anyone on the path answer for \
+             the pack",
+            supported()
+        )
+    })
+}
+
+/// The supported set, for an error a reader can act on.
+fn supported() -> String {
+    SUPPORTED_SCHEMES
+        .iter()
+        .map(|scheme| format!("`{scheme}`"))
+        .collect::<Vec<_>>()
+        .join(", ")
+}
+
+/// The helper a `<name>::<address>` source names, if it names one.
+///
+/// Recognised before any scheme, and what follows `::` is never examined:
+/// `ext::https://example.com` runs the `ext` helper and is not an https
+/// source. The name is matched against the characters a helper name may
+/// hold, which is also what keeps an IPv6 literal — `https://[::1]/pack` —
+/// from reading as one.
+fn remote_helper(source: &str) -> Option<&str> {
+    let (name, _) = source.split_once("::")?;
+    let plausible = !name.is_empty()
+        && name
+            .chars()
+            .all(|c| c.is_ascii_alphanumeric() || matches!(c, '+' | '.' | '-'));
+    plausible.then_some(name)
 }
 
 /// Whether a source names a git repository rather than a directory.
@@ -663,6 +742,67 @@ mod tests {
         let message = err.to_string();
         assert!(message.contains("./packs/acme"), "{message}");
         assert!(message.contains("no `rev`"), "{message}");
+    }
+
+    /// A source keys the same however it is spelled, so a pack fetched over a
+    /// transport anyone on the path can answer is a pack that can *replace*
+    /// superdev's own content. Refused before anything is spawned. ADR-012.
+    #[test]
+    fn a_transport_superdev_does_not_fetch_over_is_refused() {
+        for (source, transport) in [
+            ("git://github.com/six5536/superdev", "git"),
+            ("http://github.com/six5536/superdev", "http"),
+            ("ftp://packs.example/acme", "ftp"),
+            ("GIT://github.com/six5536/superdev", "GIT"),
+        ] {
+            let err = PackSource::parse(&entry(source, Some("v1"))).unwrap_err();
+            let message = err.to_string();
+            assert!(message.contains(source), "{message}");
+            assert!(message.contains(transport), "{message}");
+        }
+    }
+
+    /// A `<name>::<address>` source names a `git-remote-<name>` program, and
+    /// what follows the `::` is that program's argument rather than a
+    /// transport — so `ext::https://…` is the `ext` helper and not an https
+    /// source. Refused on the name alone, before the address is looked at.
+    #[test]
+    fn a_remote_helper_is_refused_whatever_it_wraps() {
+        for source in [
+            "ext::https://github.com/six5536/superdev",
+            "ext::touch /tmp/pwned",
+            "transport::anything",
+        ] {
+            let err = PackSource::parse(&entry(source, Some("v1"))).unwrap_err();
+            let message = err.to_string();
+            assert!(message.contains("remote helper"), "{source}: {message}");
+        }
+    }
+
+    /// The refusal must not reach a spelling somebody legitimately uses. Two
+    /// of these carry their transport implicitly — the shorthand is https and
+    /// the scp form is ssh — and the last is what every git-source fixture in
+    /// this suite is spelled as.
+    #[test]
+    fn every_supported_spelling_is_still_accepted() {
+        for source in [
+            "github:six5536/superdev",
+            "gitlab:six5536/superdev",
+            "https://github.com/six5536/superdev.git",
+            "HTTPS://github.com/six5536/superdev.git",
+            "ssh://git@github.com/six5536/superdev.git",
+            "git@github.com:six5536/superdev.git",
+            "github.com:six5536/superdev",
+            "work:acme/packs",
+            "file:///srv/mirror/superdev.git",
+            // An IPv6 literal holds a `::` and is not a remote helper.
+            "https://[::1]:8443/acme/packs.git",
+        ] {
+            assert!(
+                PackSource::parse(&entry(source, Some("v1"))).is_ok(),
+                "{source} was refused"
+            );
+        }
     }
 
     #[test]

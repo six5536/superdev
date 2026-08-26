@@ -600,11 +600,16 @@ fn a_manifest_cannot_talk_git_into_running_its_command() {
 
 /// I007 by the path `sync` alone does not cover: the query `update` makes.
 ///
-/// `update` asks the default source for its newest release, and identity is
-/// what decides which source that is — normalised on the substring after the
-/// first `://`, so a URL can be built that runs a command *and* keys as
-/// superdev's own. That query is what the earlier `sync` test could not
-/// reach, and what ran the command before the override was shared.
+/// A source `parse` approved can still reach git as something else.
+/// `url.<base>.insteadOf` rewrites it *after* superdev has handed it over, so
+/// a plain `https://` pin — which the transport allowlist accepts, and which
+/// keys as superdev's own source, so `update` queries it — becomes an `ext::`
+/// command on a machine whose config asks for that. The allowlist cannot see
+/// the rewrite; only the named refusal in superdev's own overrides stops it.
+///
+/// This is the end-to-end half of `pack::fetch`'s `a_rewritten_url_still_runs_no_command`,
+/// and it is what keeps the query path covered now that a manifest can no
+/// longer name a helper outright — the case below.
 ///
 /// The pin is a release the source does not carry, so both halves of the run
 /// go out: the query, then the fetch the following `sync` attempts. Neither
@@ -617,10 +622,21 @@ fn an_update_cannot_be_talked_into_running_a_manifests_command() {
     let dir = local_repo();
     let marker = dir.path().join("PROOF");
     let gitconfig = dir.path().join("permissive.gitconfig");
-    std::fs::write(&gitconfig, "[protocol \"ext\"]\n\tallow = always\n").unwrap();
-    // The crafted source keys as the default, so it must replace the entry
-    // `init` wrote rather than sit beside it — two entries naming one source
-    // are refused, and that refusal would pass this test for the wrong reason.
+    // A machine that has enabled the transport — which people do for custom
+    // helpers — and rewrites superdev's own source into one. Both halves are
+    // the user's own config, and neither is anything superdev can see.
+    std::fs::write(
+        &gitconfig,
+        format!(
+            "[protocol \"ext\"]\n\tallow = always\n\
+             [url \"ext::touch {} \"]\n\tinsteadOf = https://github.com/\n",
+            marker.display(),
+        ),
+    )
+    .unwrap();
+    // The pin keys as the default, so it must replace the entry `init` wrote
+    // rather than sit beside it — two entries naming one source are refused,
+    // and that refusal would pass this test for the wrong reason.
     as_a_pre_pack_manifest(dir.path());
     // A release tag the source does not carry, rather than whatever this
     // binary embeds: the pin has to be one `update` will query and one whose
@@ -629,10 +645,7 @@ fn an_update_cannot_be_talked_into_running_a_manifests_command() {
     // says nothing about whether the query went out.
     pin_packs(
         dir.path(),
-        &format!(
-            "[[packs]]\nsource = \"ext::touch {} ://@github.com/six5536/superdev\"\nrev = \"assets-v9.9.9\"\n",
-            marker.display(),
-        ),
+        "[[packs]]\nsource = \"https://github.com/six5536/superdev\"\nrev = \"assets-v9.9.9\"\n",
     );
 
     let out = superdev()
@@ -647,8 +660,8 @@ fn an_update_cannot_be_talked_into_running_a_manifests_command() {
 
     assert!(
         !marker.exists(),
-        "a git call under `update` ran a command a manifest named — the query \
-         or the fetch that follows it"
+        "a git call under `update` ran a command the machine's config named — \
+         the query or the fetch that follows it"
     );
     // The query has to have gone out, or this proves nothing: were the pin
     // ever short-circuited when it equals the embedded rev — which `sync`
@@ -658,6 +671,49 @@ fn an_update_cannot_be_talked_into_running_a_manifests_command() {
     assert!(
         stdout.contains("could not reach it"),
         "the source was never asked: {stdout}"
+    );
+}
+
+/// A manifest may not name a remote helper at all, so the crafted source that
+/// used to reach git no longer gets that far.
+///
+/// The transport allowlist refuses it in `PackSource::parse`, before anything
+/// is spawned, and no config on the machine can lift that — where the
+/// overrides above are what hold once a URL has reached git. Two different
+/// failures, which is why both cases are kept. ADR-012.
+#[cfg(unix)]
+#[test]
+fn a_manifest_naming_a_remote_helper_is_refused_before_anything_runs() {
+    let dir = local_repo();
+    let marker = dir.path().join("PROOF");
+    let gitconfig = dir.path().join("permissive.gitconfig");
+    std::fs::write(&gitconfig, "[protocol \"ext\"]\n\tallow = always\n").unwrap();
+    as_a_pre_pack_manifest(dir.path());
+    pin_packs(
+        dir.path(),
+        &format!(
+            "[[packs]]\nsource = \"ext::touch {} ://@github.com/six5536/superdev\"\nrev = \"assets-v9.9.9\"\n",
+            marker.display(),
+        ),
+    );
+
+    let out = superdev()
+        .current_dir(dir.path())
+        .env("GIT_CONFIG_GLOBAL", &gitconfig)
+        .env("GIT_CONFIG_NOSYSTEM", "1")
+        .arg("sync")
+        .assert()
+        .failure();
+
+    assert!(!marker.exists(), "superdev ran a command a manifest named");
+    let reported = format!(
+        "{}{}",
+        stdout_of(&out),
+        String::from_utf8_lossy(&out.get_output().stderr)
+    );
+    assert!(
+        reported.contains("remote helper"),
+        "the refusal does not say what is wrong with the source: {reported}"
     );
 }
 
