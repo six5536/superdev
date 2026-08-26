@@ -2,7 +2,7 @@
 type: Plan
 id: feature-plan-content-packs
 title: Externally Sourced Content Packs — feature plan
-description: Deliver S014 in thirteen slices — move the content to /pack, reorganise it into pack layout, derive it from that layout, add the manifest and lock schemas, resolve local then git sources, wire ownership, teach init and update, make each release one command, and dogfood it.
+description: Deliver S014 in fourteen slices — move the content to /pack, reorganise it into pack layout, derive it from that layout, add the manifest and lock schemas, resolve local then git sources, wire ownership, teach init and update, make each release one command, make a committed path pin portable, and dogfood it.
 status: draft
 links:
   - rel: implements
@@ -14,7 +14,8 @@ links:
 Spec: [S014](../specs/S014-content-packs-design.md). Contract:
 [C001](../contracts/C001-content-packs.md). Decisions:
 [ADR-001](../decisions/D001-packs-manifest-section.md) …
-[ADR-006](../decisions/D006-pack-at-repo-root.md).
+[ADR-006](../decisions/D006-pack-at-repo-root.md),
+[ADR-011](../decisions/D011-path-pack-identity-is-root-relative.md).
 
 Ordered by dependency, then risk. Slice 1 carries the Windows symlink risk
 and slice 8 the layering semantics; both sit as early as their dependencies
@@ -201,7 +202,29 @@ only variable when the Windows job runs.
   than from the snapshot.
 - Cases: none automated. Manual: M2.
 
-### Slice 13: Dogfood — superdev pins its own pack
+### Slice 13: A committed path pin reads the same everywhere
+
+- [ ] Done — ticked by integrate at merge.
+- Change: `PackSource::identity` takes the repo root, and a path source's key
+  becomes its canonicalised path relative to that root with forward slashes.
+  A pack outside the root keeps its `..` prefix; where no relative form exists
+  — a different Windows drive — the canonical absolute path stands. Keys are
+  compared only within a source kind, so a directory can never key as the base
+  pack ([ADR-011](../decisions/D011-path-pack-identity-is-root-relative.md)).
+  Four call sites in `resolve.rs` and `is_default` in `source.rs` follow.
+- Raised by slice 14's build: the lock is committed, so until this lands
+  dogfooding writes one contributor's absolute paths into a tracked file and
+  every other checkout's first `sync` rewrites them. `status --drift` passes
+  either way, so CI does not catch it.
+- Done-check: a repo carrying a path pack locks the same `identity` whatever
+  directory it is checked out into, and on every platform; two spellings of
+  one directory are still one pack and a second entry naming it is still
+  refused; a directory whose relative path reads like a repository key layers
+  rather than replacing the embedded pack.
+- Cases: none — the test plan does not reach the lock's persisted form.
+  Covered by its own tests and the existing pack suite.
+
+### Slice 14: Dogfood — superdev pins its own pack
 
 - [ ] Done — ticked by integrate at merge.
 - Change: point this repo's own manifest at `/pack/` as a local-path pack, so

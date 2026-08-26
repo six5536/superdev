@@ -313,10 +313,10 @@ not reach the default branch on its own.
 
 ## Out-of-band notes
 
-- Sequenced behind P003: start once slice 13 is merged and P003 is tagged
-  `done`. The pack layout this plan edits is on `main` already, but slices 12
-  and 13 cut the pack release and dogfood the pin, and the new skills should
-  ship in a release after that.
+- Sequenced behind P003: start once its last slice is merged and P003 is
+  tagged `done`. The pack layout this plan edits is on `main` already, but its
+  closing slices cut the pack release and dogfood the pin, and the new skills
+  should ship in a release after that.
 - `.claude/skills/asset-backport/SKILL.md` still names
   `crates/lib/superdev-core/assets/` as the source of truth. P003 moved it to
   `/pack`. Out of scope here; worth a line in the backlog.
