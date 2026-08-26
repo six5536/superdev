@@ -298,7 +298,15 @@ fn move_into_cache(pack: &str, from: &Path, to: &Path) -> Result<()> {
 /// contributing most of itself.
 #[allow(clippy::type_complexity)]
 fn read_pack(pack: &str, dir: &Path) -> Result<(Vec<Item>, Vec<(String, String)>)> {
+    // The root and the manifest are pack paths like any other, and neither
+    // `is_dir` nor `read_to_string` can tell a link from the thing it points
+    // at. Left unchecked they are the same hole the walk closes, one level
+    // up: a linked root walks a directory outside the pack, and a linked
+    // manifest decides the format gate on bytes the digest never covers —
+    // two packs declaring different formats would digest alike. I008.
+    refuse_a_link(pack, dir)?;
     let manifest_path = dir.join(PACK_MANIFEST);
+    refuse_a_link(pack, &manifest_path)?;
     let declared = fs::read_to_string(&manifest_path).map_err(|e| Error::Pack {
         pack: pack.to_string(),
         message: format!("{}: {e}", manifest_path.display()),
@@ -318,14 +326,38 @@ fn read_pack(pack: &str, dir: &Path) -> Result<(Vec<Item>, Vec<(String, String)>
     Ok((items, files))
 }
 
+/// Refuse a path that is a symlink, naming it.
+///
+/// For the two paths the walk never sees — the pack root and its manifest.
+/// Inside the tree a link is skipped, because a pack may reasonably carry one
+/// it does not mean as content; these two are the pack itself, and a link
+/// standing in for either means the pack is not where it says it is.
+fn refuse_a_link(pack: &str, path: &Path) -> Result<()> {
+    let linked = fs::symlink_metadata(path)
+        .map(|meta| meta.file_type().is_symlink())
+        .unwrap_or(false);
+    if linked {
+        return Err(Error::Pack {
+            pack: pack.to_string(),
+            message: format!(
+                "{} is a symlink — a pack is the files it contains, not links \
+                 to files elsewhere",
+                path.display()
+            ),
+        });
+    }
+    Ok(())
+}
+
 /// Collect every file under `dir` as (path relative to `root`, content).
 ///
 /// Paths are forward-slashed so a pack means the same thing on every
 /// platform. `.git` is skipped: a path source is often a working checkout,
-/// and its history is not content. A symlinked directory is skipped for the
-/// same reason and one more — a link back to an ancestor would otherwise be
-/// walked until the OS refused, and report a path forty `loop/` deep instead
-/// of what was wrong.
+/// and its history is not content. Every symlink is skipped: a linked file
+/// would otherwise be read through, putting bytes from outside the pack into
+/// the repo as pack content, and a linked directory pointing back at an
+/// ancestor would be walked until the OS refused and report a path forty
+/// `loop/` deep instead of what was wrong.
 fn read_dir(pack: &str, root: &Path, dir: &Path, files: &mut Vec<(String, String)>) -> Result<()> {
     let entries = fs::read_dir(dir).map_err(|e| Error::Pack {
         pack: pack.to_string(),
@@ -348,13 +380,13 @@ fn read_dir(pack: &str, root: &Path, dir: &Path, files: &mut Vec<(String, String
         // too, so the bytes came from wherever it pointed and were written
         // into the repo as pack content. A pack names its own paths; a link
         // is how it names one it does not contain. I008.
-        let linked = fs::symlink_metadata(&path)
-            .map(|meta| meta.file_type().is_symlink())
-            .unwrap_or(false);
-        if linked {
+        let Ok(meta) = fs::symlink_metadata(&path) else {
+            continue;
+        };
+        if meta.file_type().is_symlink() {
             continue;
         }
-        if path.is_dir() {
+        if meta.is_dir() {
             read_dir(pack, root, &path, files)?;
             continue;
         }
@@ -486,6 +518,58 @@ mod tests {
                 .is_some(),
             "the rest of the pack still resolved"
         );
+    }
+
+    /// The manifest decides the format gate, and the walk never sees it — so
+    /// a link there would pick the gate with bytes no digest covers, and two
+    /// packs declaring different formats would digest alike. Refused, not
+    /// skipped: without a manifest there is no pack. I008.
+    #[cfg(unix)]
+    #[test]
+    fn a_linked_pack_manifest_is_refused() {
+        let repo = tempfile::tempdir().unwrap();
+        let elsewhere = repo.path().join("elsewhere.toml");
+        fs::write(
+            &elsewhere,
+            "format = 1\nname = \"x\"\nversion = \"1.0.0\"\n",
+        )
+        .unwrap();
+        let pack = repo.path().join("packs/acme");
+        write_pack(&pack, "honest", "# honest\n");
+        fs::remove_file(pack.join(PACK_MANIFEST)).unwrap();
+        std::os::unix::fs::symlink(&elsewhere, pack.join(PACK_MANIFEST)).unwrap();
+
+        let err = resolve(
+            repo.path(),
+            &FakeRunner::new(),
+            &manifest_with("./packs/acme", None),
+            &Lock::default(),
+            ResolveMode::Fetching,
+        )
+        .expect_err("a linked manifest");
+
+        assert!(format!("{err}").contains("is a symlink"), "{err}");
+    }
+
+    /// The pack root is the pack. A link there walks a directory somewhere
+    /// else entirely and calls all of it content.
+    ///
+    /// Asserted against `read_pack` rather than through `resolve`, because a
+    /// *path* source cannot reach it: `rooted` canonicalises, so a link the
+    /// user named is resolved before the pack is read, which is the point of
+    /// canonicalising. The root that arrives unresolved is a fetched pack's —
+    /// `<checkout>/pack`, whatever the cloned repository put there.
+    #[cfg(unix)]
+    #[test]
+    fn a_linked_pack_root_is_refused() {
+        let repo = tempfile::tempdir().unwrap();
+        write_pack(&repo.path().join("real"), "honest", "# honest\n");
+        let linked = repo.path().join("checkout-pack");
+        std::os::unix::fs::symlink(repo.path().join("real"), &linked).unwrap();
+
+        let err = read_pack("acme", &linked).expect_err("a linked root");
+
+        assert!(format!("{err}").contains("is a symlink"), "{err}");
     }
 
     #[test]
