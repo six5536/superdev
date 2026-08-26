@@ -39,7 +39,7 @@ case below is new and drawn from the issue it closes.
 
 ### Slice 1: Refuse a transport superdev does not fetch over
 
-- [ ] Not started.
+- [x] Done — ticked by integrate at merge.
 - Gap: [I007](../issues/I007-a-pack-source-reaches-git-with-no-scheme-check.md),
   the half left after slice 15 of P003.
 - Change: add `SUPPORTED_SCHEMES` to `pack/source.rs`. `PackSource::parse`

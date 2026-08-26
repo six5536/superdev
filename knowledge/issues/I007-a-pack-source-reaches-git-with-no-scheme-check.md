@@ -2,9 +2,9 @@
 type: Issue
 id: issue-007-a-pack-source-reaches-git-with-no-scheme-check
 title: A pack source's scheme is unchecked, so the base pack can be fetched over a transport anyone on-path can answer
-description: "The command-running half is closed; what remains is that superdev allowlists no scheme, so git:// and http:// normalise onto the default identity and a cloned manifest can have the base pack fetched over an unauthenticated transport."
-status: draft
-tags: [ready-for-agent]
+description: "superdev allowlisted no scheme, so git:// and http:// normalised onto the default identity and a cloned manifest could have the base pack fetched over an unauthenticated transport; the command-running half was closed first, the transport half by ADR-012."
+status: stable
+tags: [done]
 links:
   - rel: references
     to: spec-content-packs

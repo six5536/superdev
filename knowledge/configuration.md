@@ -66,8 +66,14 @@ A source is compared normalised, so any spelling of one repository is one
 source; a pin naming exactly what this binary embeds resolves from it and
 makes no request. `github:owner/repo` and `gitlab:owner/repo` are the only
 shorthands, expanded to `https://<forge>.com/owner/repo` before `git` sees
-them; every other spelling reaches `git` as written, so an ssh alias, an
-`insteadOf` prefix and a mirror all keep working. A path is resolved against
+them. Every other spelling reaches `git` as written provided its transport is
+one superdev fetches over — `https`, `ssh` or `file`, spelled in lower case as
+git itself matches them — so an ssh alias, an `insteadOf` prefix and a mirror
+all keep working, while `git://`, `http://` and an `ext::`-style remote helper
+are refused when the manifest is parsed, naming the source
+([ADR-012](decisions/D012-pack-source-schemes-are-allowlisted.md)). The scp
+form and a bare alias carry their transport implicitly and are ssh; the
+shorthand is https. A path is resolved against
 the repo root, not the working directory — the file is committed, so it means
 the same thing wherever the command runs from — and canonicalised before it is
 compared, so two spellings of one directory are one pack. Its identity is that

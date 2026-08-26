@@ -42,8 +42,9 @@ publish a version it cannot find a heading for.
   further than the binary's own default and the run says it could not check,
   and a manifest written by an earlier binary gains the entry on the first
   `update`. `source` accepts `github:owner/repo` and `gitlab:owner/repo` as
-  shorthand; every other spelling, an ssh alias included, is handed to `git`
-  as written.
+  shorthand, and otherwise a git URL over `https://`, `ssh://` or `file://` —
+  the scp form and a bare ssh alias included, so your ssh config and your
+  mirrors keep working.
 
   Releasing is one command per release. `npm run release X.Y.Z` cuts the
   binary and, from the same commit, the content release its pin names, so
@@ -61,15 +62,22 @@ publish a version it cannot find a heading for.
 
 ### Security
 
-- A pack source can no longer choose what superdev runs. A `[[packs]]` entry
-  arrives with a repository, and git's `ext::` transport takes a command as
-  its connection — so on a machine configured to permit that transport,
-  running `sync` or `update` in a repo you cloned ran whatever its manifest
-  named. Every git call superdev makes now refuses those transports outright,
-  a source or rev beginning with `-` is refused when the manifest is read, and
-  operands are passed after `--`. A stock git already refused the transport;
-  what changes is that superdev no longer depends on your configuration to say
-  so.
+- A pack source can no longer choose what superdev runs, or what it arrives
+  over. A `[[packs]]` entry arrives with a repository, and git's `ext::`
+  transport takes a command as its connection — so on a machine configured to
+  permit that transport, running `sync` or `update` in a repo you cloned ran
+  whatever its manifest named. A source may now name only `https`, `ssh` or
+  `file`, and a `<name>::<address>` remote helper is refused as one whatever
+  its address; anything else is refused when the manifest is read, naming the
+  source and the transport, before superdev spawns anything. Every git call
+  superdev makes then refuses every transport it did not admit, `git://` and
+  `http://` by name — neither authenticates, so anyone on the path could
+  answer for a pack, and because a source keys the same however it is spelled,
+  the pack they answered with would be the one that replaces superdev's own
+  content. A source or rev beginning with `-` is refused when the manifest is
+  read, and operands are passed after `--`. A stock git already refused
+  `ext::`; what changes is that superdev no longer depends on your
+  configuration to say so.
 - A pack cannot ship a file it does not contain. A symlink in a pack tree was
   followed when it pointed at a file, so a pack could name a link to anything
   the user running superdev could read and have those bytes written into the
