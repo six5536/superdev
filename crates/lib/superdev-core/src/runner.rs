@@ -218,4 +218,33 @@ mod tests {
             vec!["claude plugin list", "codegraph init", "mise install"]
         );
     }
+
+    /// The needle wins over a prefix that also matches. Asserted because the
+    /// doc promises it and nothing else would notice the two being swapped
+    /// back: a broad prefix answering first leaves every needle dead, and
+    /// every test using one passes while exercising nothing.
+    #[test]
+    fn a_needle_is_answered_before_a_prefix_that_also_matches() {
+        let fake = FakeRunner::new();
+        let out = |stdout: &str| Output {
+            status: 0,
+            stdout: stdout.into(),
+            stderr: String::new(),
+        };
+        fake.script("git", out("the broad prefix"));
+        fake.script_containing("ls-remote", out("the needle"));
+
+        let answered = fake
+            .run(
+                "git",
+                &["-c".into(), "x=y".into(), "ls-remote".into()],
+                Path::new("."),
+            )
+            .unwrap();
+
+        assert_eq!(answered.stdout, "the needle");
+        // And a call the needle does not match still gets the prefix.
+        let other = fake.run("git", &["clone".into()], Path::new(".")).unwrap();
+        assert_eq!(other.stdout, "the broad prefix");
+    }
 }

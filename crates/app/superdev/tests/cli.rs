@@ -598,14 +598,19 @@ fn a_manifest_cannot_talk_git_into_running_its_command() {
     assert!(!marker.exists(), "superdev ran a command a manifest named");
 }
 
-/// I007 again, by the verb `sync` cannot reach.
+/// I007 by the path `sync` alone does not cover: the query `update` makes.
 ///
 /// `update` asks the default source for its newest release, and identity is
 /// what decides which source that is — normalised on the substring after the
 /// first `://`, so a URL can be built that runs a command *and* keys as
-/// superdev's own. `sync` never sees it: the rev equals what the binary
-/// embeds, so resolution short-circuits to the snapshot and no fetch happens.
-/// The query is the only thing that goes out, and it is the thing that ran.
+/// superdev's own. That query is what the earlier `sync` test could not
+/// reach, and what ran the command before the override was shared.
+///
+/// The pin is a release the source does not carry, so both halves of the run
+/// go out: the query, then the fetch the following `sync` attempts. Neither
+/// may run the command, and the assertion does not distinguish them — read a
+/// failure here as "some git call lost the override", not as a verdict on
+/// which one.
 #[cfg(unix)]
 #[test]
 fn an_update_cannot_be_talked_into_running_a_manifests_command() {
@@ -640,7 +645,11 @@ fn an_update_cannot_be_talked_into_running_a_manifests_command() {
         // for the same reason. What matters is which of the two ran a command.
         .failure();
 
-    assert!(!marker.exists(), "`update` ran a command a manifest named");
+    assert!(
+        !marker.exists(),
+        "a git call under `update` ran a command a manifest named — the query \
+         or the fetch that follows it"
+    );
     // The query has to have gone out, or this proves nothing: were the pin
     // ever short-circuited when it equals the embedded rev — which `sync`
     // already does — the `ext::` path would never be reached and the marker
