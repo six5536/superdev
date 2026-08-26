@@ -328,36 +328,46 @@ fn read_pack(pack: &str, dir: &Path) -> Result<(Vec<Item>, Vec<(String, String)>
 
 /// Refuse a path that is a symlink, naming it.
 ///
-/// For the two paths the walk never sees — the pack root and its manifest.
-/// Inside the tree a link is skipped, because a pack may reasonably carry one
-/// it does not mean as content; these two are the pack itself, and a link
-/// standing in for either means the pack is not where it says it is.
+/// One rule for the whole tree: the pack root, its manifest, and every path
+/// the walk meets. A pack resolves whole or not at all, so a link cannot be
+/// stepped over — that leaves the pack shipping everything but the item its
+/// author meant the link to stand for, with nothing said. ADR-014, I009.
 fn refuse_a_link(pack: &str, path: &Path) -> Result<()> {
     let linked = fs::symlink_metadata(path)
         .map(|meta| meta.file_type().is_symlink())
         .unwrap_or(false);
     if linked {
-        return Err(Error::Pack {
-            pack: pack.to_string(),
-            message: format!(
-                "{} is a symlink — a pack is the files it contains, not links \
-                 to files elsewhere",
-                path.display()
-            ),
-        });
+        return Err(link_refusal(pack, path));
     }
     Ok(())
+}
+
+/// The refusal a symlink earns, naming it.
+///
+/// Apart from [`refuse_a_link`] because the walk already holds the metadata
+/// that answers the question, and asking the filesystem twice for every entry
+/// in a pack is a syscall per file for nothing.
+fn link_refusal(pack: &str, path: &Path) -> Error {
+    Error::Pack {
+        pack: pack.to_string(),
+        message: format!(
+            "{} is a symlink — a pack is the files it contains, not links \
+             to files elsewhere",
+            path.display()
+        ),
+    }
 }
 
 /// Collect every file under `dir` as (path relative to `root`, content).
 ///
 /// Paths are forward-slashed so a pack means the same thing on every
 /// platform. `.git` is skipped: a path source is often a working checkout,
-/// and its history is not content. Every symlink is skipped: a linked file
-/// would otherwise be read through, putting bytes from outside the pack into
-/// the repo as pack content, and a linked directory pointing back at an
+/// and its history is not content. Every symlink fails the walk, naming
+/// itself: a linked file read through would put bytes from outside the pack
+/// into the repo as pack content, and a linked directory pointing back at an
 /// ancestor would be walked until the OS refused and report a path forty
-/// `loop/` deep instead of what was wrong.
+/// `loop/` deep instead of what was wrong. Refused where it is met, so
+/// neither happens and the pack does not resolve short of what it declares.
 fn read_dir(pack: &str, root: &Path, dir: &Path, files: &mut Vec<(String, String)>) -> Result<()> {
     let entries = fs::read_dir(dir).map_err(|e| Error::Pack {
         pack: pack.to_string(),
@@ -374,17 +384,17 @@ fn read_dir(pack: &str, root: &Path, dir: &Path, files: &mut Vec<(String, String
             continue;
         }
         // `symlink_metadata` does not follow the link, which is what tells a
-        // link from the thing it points at. Every link is skipped, not only a
-        // linked directory: `is_dir` follows, so a linked *file* answered
-        // false and fell through to be read — and `read_to_string` follows
-        // too, so the bytes came from wherever it pointed and were written
-        // into the repo as pack content. A pack names its own paths; a link
-        // is how it names one it does not contain. I008.
+        // link from the thing it points at. Every link is refused, not only a
+        // linked directory: `is_dir` follows, so a linked *file* answers
+        // false and would fall through to be read — and `read_to_string`
+        // follows too, so the bytes would come from wherever it pointed and
+        // be written into the repo as pack content. A pack names its own
+        // paths; a link is how it names one it does not contain. I008, I009.
         let Ok(meta) = fs::symlink_metadata(&path) else {
             continue;
         };
         if meta.file_type().is_symlink() {
-            continue;
+            return Err(link_refusal(pack, &path));
         }
         if meta.is_dir() {
             read_dir(pack, root, &path, files)?;
@@ -483,9 +493,14 @@ mod tests {
     /// escapes on the way out — what escapes is the content, read from
     /// wherever the link points and written into the repo as pack content.
     /// I008.
+    ///
+    /// The link is refused rather than skipped, so nothing is written at all:
+    /// `resolve` fails before there is a content set for the pipeline to plan
+    /// from. Skipping closed the leak but left the pack resolving without an
+    /// item it meant to ship, which is the half I009 reopened. ADR-014.
     #[cfg(unix)]
     #[test]
-    fn a_symlinked_file_in_a_pack_is_not_followed() {
+    fn a_symlinked_file_in_a_pack_is_refused_and_leaks_nothing() {
         let repo = tempfile::tempdir().unwrap();
         let outside = repo.path().join("secret.txt");
         fs::write(&outside, "SUPER-SECRET\n").unwrap();
@@ -495,28 +510,24 @@ mod tests {
         fs::create_dir_all(&leak).unwrap();
         std::os::unix::fs::symlink(&outside, leak.join("SKILL.md")).unwrap();
 
-        let resolved = resolve(
+        let err = resolve(
             repo.path(),
             &FakeRunner::new(),
             &manifest_with("./packs/acme", None),
             &Lock::default(),
             ResolveMode::Fetching,
         )
-        .expect("the pack resolves; the link is simply not in it");
+        .expect_err("a link in the tree stops the pack");
 
+        let message = err.to_string();
+        assert!(message.contains("is a symlink"), "{message}");
         assert!(
-            resolved
-                .content
-                .item(knowledge(), ItemKind::Skill, "leak")
-                .is_none(),
-            "a linked file became an item"
+            message.contains("knowledge/skills/leak/SKILL.md"),
+            "the refusal does not name the path: {message}"
         );
         assert!(
-            resolved
-                .content
-                .item(knowledge(), ItemKind::Skill, "honest")
-                .is_some(),
-            "the rest of the pack still resolved"
+            !message.contains("SUPER-SECRET"),
+            "the target's bytes were read: {message}"
         );
     }
 
@@ -850,28 +861,29 @@ mod tests {
     /// A path source is often a working checkout. A directory symlink back
     /// to an ancestor would be walked until the OS refused, and the pack
     /// would fail naming a path forty `loop/` deep rather than anything a
-    /// reader could act on.
+    /// reader could act on. It is refused where it is met, so the path the
+    /// error names is the link itself. ADR-014.
     #[cfg(unix)]
     #[test]
-    fn a_symlinked_directory_inside_a_pack_is_skipped() {
+    fn a_symlinked_directory_inside_a_pack_is_refused() {
         let repo = tempfile::tempdir().unwrap();
         let dir = repo.path().join("packs/acme");
         write_pack(&dir, "brand-new", "# Brand new\n");
         std::os::unix::fs::symlink(&dir, dir.join("loop")).unwrap();
-        let resolved = resolve(
+        let err = resolve(
             repo.path(),
             &FakeRunner::new(),
             &manifest_with("./packs/acme", None),
             &Lock::default(),
             ResolveMode::Fetching,
         )
-        .expect("the cycle is skipped, not walked");
+        .expect_err("the cycle is refused, not walked");
+        let message = err.to_string();
+        assert!(message.contains("is a symlink"), "{message}");
+        assert!(message.ends_with("elsewhere"), "walked into it: {message}");
         assert!(
-            resolved
-                .content
-                .item(knowledge(), ItemKind::Skill, "brand-new")
-                .is_some(),
-            "the real files still resolve"
+            message.contains("/loop") && !message.contains("loop/loop"),
+            "the refusal does not name the link itself: {message}"
         );
     }
 
@@ -1034,6 +1046,95 @@ mod tests {
                 .files[0]
                 .1,
             "# v1\n"
+        );
+    }
+
+    /// A fetched pack is read back from the cache on every later run, and the
+    /// cache is a directory on this machine with no index of its own. So the
+    /// filesystem check has to hold there too, not only for a path pack —
+    /// otherwise a link that appeared in the cache after the fetch that
+    /// checked it would be read straight through. ADR-014.
+    ///
+    /// Planted rather than fetched: what git's index says at fetch time is
+    /// slice 3's check, and this is the one that runs afterwards.
+    #[cfg(unix)]
+    #[test]
+    fn a_symlink_in_a_cached_pack_is_refused_when_it_is_read_back() {
+        let repo = tempfile::tempdir().unwrap();
+        let fixture = tempfile::tempdir().unwrap();
+        git_fixture(fixture.path(), "v1", "fixture-skill", "# v1\n");
+        let url = format!("file://{}", fixture.path().display());
+        let manifest = git_manifest(&url, "v1");
+
+        let first = resolve(
+            repo.path(),
+            &crate::runner::SystemRunner,
+            &manifest,
+            &Lock::default(),
+            ResolveMode::Fetching,
+        )
+        .expect("the pack fetches clean");
+        let lock = Lock {
+            packs: first.packs.clone(),
+            ..Lock::default()
+        };
+        let cached = fetch::cache_path(repo.path(), &first.packs[0].digest);
+
+        let outside = repo.path().join("secret.txt");
+        fs::write(&outside, "SUPER-SECRET\n").unwrap();
+        let planted = cached.join("knowledge/skills/fixture-skill/EXTRA.md");
+        std::os::unix::fs::symlink(&outside, &planted).unwrap();
+
+        // Offline: the cache is what is read, and no fetch stands between the
+        // plant and the check.
+        let err = resolve(
+            repo.path(),
+            &FakeRunner::new(),
+            &manifest,
+            &lock,
+            ResolveMode::Offline,
+        )
+        .expect_err("the cached link stops the run");
+
+        let message = err.to_string();
+        assert!(message.contains("is a symlink"), "{message}");
+        assert!(message.contains("EXTRA.md"), "{message}");
+    }
+
+    /// superdev's own pack must keep resolving, and it is the pack every
+    /// third-party author copies — so the day a link appears under `/pack/`
+    /// is the day this fails, rather than the day a release does. ADR-014.
+    #[test]
+    fn superdevs_own_pack_carries_no_symlink() {
+        // The crate's `assets` is itself a relative link to `/pack/`, which is
+        // what keeps the files inside the published crate — and is exactly
+        // what `read_pack` refuses in a pack root, so follow it to the
+        // directory the manifest actually pins. Its *contents* are what the
+        // pack ships, and none of those may be a link.
+        let root = Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("assets")
+            .canonicalize()
+            .expect("the crate's assets link resolves to /pack");
+        let mut links = Vec::new();
+        let mut stack = vec![root.clone()];
+        while let Some(dir) = stack.pop() {
+            for entry in fs::read_dir(&dir).expect("the pack is readable") {
+                let path = entry.expect("an entry").path();
+                let meta = fs::symlink_metadata(&path).expect("its type");
+                if meta.file_type().is_symlink() {
+                    links.push(path.display().to_string());
+                } else if meta.is_dir() {
+                    stack.push(path);
+                }
+            }
+        }
+        assert!(
+            links.is_empty(),
+            "superdev's own pack ships a symlink: {links:?}"
+        );
+        assert!(
+            read_pack("superdev", &root).is_ok(),
+            "superdev's own pack no longer resolves"
         );
     }
 
