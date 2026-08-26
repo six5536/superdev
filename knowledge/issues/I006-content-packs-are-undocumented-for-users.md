@@ -3,14 +3,33 @@ type: Issue
 id: issue-006-content-packs-are-undocumented-for-users
 title: Content packs are absent from the user documentation, and the update command now describes itself wrongly
 description: Neither the README nor the CLI help nor the man page mentions packs, so a user cannot discover the feature; and update's one-line description still says it moves pins to this binary's defaults, which stopped being true when it began querying the default source.
-status: draft
-tags: [needs-triage]
+status: stable
+tags: [done]
 links:
   - rel: references
     to: spec-content-packs
 ---
 
 # Bug: content packs are undocumented, and `update` describes itself wrongly
+
+## Resolved
+
+P003 slice 18. `update`'s description says what it does on every surface it
+reaches — `--help`, the man page, the zsh completions and the README all come
+from two lines, and the same sentence had also survived in `api-contracts.md`,
+which agents read in preference to the README. The README gained a section on
+where content comes from, and the man page's top-level description says packs
+exist, since it carries no long description for any subcommand.
+
+Both are held by tests: prose goes stale in silence, and this one had gone
+stale in five places from one edit nobody made.
+
+Two things learned in the fixing, recorded because the next person will meet
+them. clap takes a doc-comment paragraph whole and `wrap_help` is not enabled,
+so a description long enough to be useful runs off the terminal and breaks the
+help table's alignment — the long ones are hand-wrapped. And the man page is a
+one-line index per subcommand, so detail belongs in the top-level description
+rather than in a subcommand's summary.
 
 ## Summary
 

@@ -29,6 +29,14 @@ What the annotated list does not say:
   `smoke:manage` is manual-only and the one run that downloads the real
   embedding model.
 
+A third, for anyone editing the CLI's descriptions: clap takes a doc comment's
+whole paragraph as the description and `wrap_help` is not enabled, so anything
+longer than a terminal's width renders as one line and breaks the help table's
+alignment. A description that needs detail carries a hand-wrapped
+`long_about`. The man page is a one-line index per subcommand and shows no
+long description at all, so detail a reader needs from `man` belongs in the
+top-level one.
+
 Two traps:
 
 - `npm run lint` is only `cargo clippy --workspace`; CI runs clippy with

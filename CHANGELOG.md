@@ -87,6 +87,14 @@ publish a version it cannot find a heading for.
   by that hash, so a stale one left its registration behind for good when the
   capability was disabled.
 
+- `superdev update` said it moved pins to this binary's defaults. It stopped
+  meaning that when it began asking the pack source for a newer release — the
+  one verb that reaches the network, describing itself as one that does not.
+  Corrected in `--help`, the man page and the completions, which all come from
+  the same line. The README now says where superdev's content comes from at
+  all: what a pack is, how entries layer, and that content releases under its
+  own tags.
+
 ### Changed
 
 - The agent-rules files are each wrapped in a tag naming what they are —

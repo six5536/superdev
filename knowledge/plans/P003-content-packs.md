@@ -3,7 +3,8 @@ type: Plan
 id: feature-plan-content-packs
 title: Externally Sourced Content Packs — feature plan
 description: Deliver S014 in eighteen slices — move the content to /pack, reorganise it into pack layout, derive it from that layout, add the manifest and lock schemas, resolve local then git sources, wire ownership, teach init and update, make each release one command, make a committed path pin portable, dogfood it, then close the gaps acceptance found and the one deferred issue small enough to fix.
-status: draft
+status: stable
+tags: [done]
 links:
   - rel: implements
     to: spec-content-packs
@@ -301,7 +302,7 @@ unplanned, so nothing scheduled can stall behind one.
 
 ### Slice 18: Document packs, and what `update` actually does
 
-- [ ] Done — ticked by integrate at merge.
+- [x] Done — ticked by integrate at merge.
 - Gap: [I006](../issues/I006-content-packs-are-undocumented-for-users.md).
 - Change: correct `update`'s description at
   `crates/app/superdev/src/main.rs` — clap renders it into `--help`, the man
