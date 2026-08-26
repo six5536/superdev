@@ -74,7 +74,7 @@ case below is new and drawn from the issue it closes.
 
 ### Slice 2: A symlink in a pack is refused, not skipped
 
-- [ ] Not started.
+- [x] Done — ticked by integrate at merge.
 - Gap: [I009](../issues/I009-a-skipped-symlink-says-nothing.md), the half a
   filesystem check can reach.
 - Change: `read_dir` and `read_pack` in `pack/resolve.rs` refuse a symlink

@@ -81,8 +81,12 @@ publish a version it cannot find a heading for.
 - A pack cannot ship a file it does not contain. A symlink in a pack tree was
   followed when it pointed at a file, so a pack could name a link to anything
   the user running superdev could read and have those bytes written into the
-  repository as pack content. Links are skipped now, and a link standing in
-  for the pack's own root or its `pack.toml` is refused outright.
+  repository as pack content. A symlink anywhere in a pack — the tree, the
+  pack's own root, its `pack.toml` — now stops the run naming the path.
+  Refused rather than stepped over, because a pack that resolves without the
+  item its author meant a link to stand for is a pack shipping less than it
+  declares, and neither `sync` nor `status --drift` would have said so. If you
+  were deduplicating a file with a link, copy it instead.
 
 ### Fixed
 

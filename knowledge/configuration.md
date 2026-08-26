@@ -110,12 +110,14 @@ answered with. Its own version does not count, because a candidate tag says
 nothing about whether the release it is a candidate for was ever cut. A branch
 or a sha stays where it is.
 
-A pack is the files it contains. A symlink inside one is skipped rather than
-read through — following it would put bytes from anywhere on the machine into
-the repo as pack content — and a link standing in for the pack's own root or
-its `pack.toml` is refused, because then the pack is not where it says it is.
-Nothing says which links were skipped
-([I009](issues/I009-a-skipped-symlink-says-nothing.md)).
+A pack is the files it contains, so a symlink anywhere in one fails the run
+naming the path — the tree, the pack's own root and its `pack.toml` alike.
+Following a link would put bytes from anywhere on the machine into the repo as
+pack content; stepping over one leaves the pack shipping everything except the
+item its author meant the link to stand for, with `sync` silent and
+`status --drift` green, which is the outcome `read_pack` promises never
+happens ([ADR-014](decisions/D014-a-symlink-in-a-pack-is-refused.md)). A pack
+author who wanted to deduplicate an item copies the file instead.
 
 A pack-provided file is superdev's on exactly the terms an embedded one is:
 hashed into the lock, rewritten by `sync`, reported as drift when edited, and
