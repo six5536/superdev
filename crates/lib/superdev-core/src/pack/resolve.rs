@@ -5,7 +5,7 @@
 
 use std::collections::BTreeMap;
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 use crate::content::{ContentSet, Item, Origin, items_from, snapshot_items};
 use crate::error::{Error, Result};
@@ -77,7 +77,9 @@ pub fn resolve(
     let mut pending = Vec::new();
     let mut seen: BTreeMap<String, &str> = BTreeMap::new();
     for (index, entry) in manifest.packs.iter().enumerate() {
-        let source = PackSource::parse(entry)?;
+        // Settled before the identity below compares it: a relative path
+        // is a location, and two spellings of one directory are one pack.
+        let source = PackSource::parse(entry)?.rooted(root);
         // Two entries naming one source cannot both be layered, and one of
         // them naming the base would layer over it and silently win. The
         // manifest refuses a provider listed twice for the same reason.
@@ -149,8 +151,7 @@ fn resolve_one(
             // A directory has no rev to pin, so it is read every run and its
             // digest simply records what was read — the point of a path
             // source being that editing it lands without a re-pin.
-            let dir = pack_dir(root, path);
-            let (items, files) = read_pack(&entry.source, &dir)?;
+            let (items, files) = read_pack(&entry.source, path)?;
             Ok(Resolved::Layer(
                 items,
                 record(entry, source, &fetch::digest(&files)),
@@ -357,19 +358,6 @@ fn relative(root: &Path, path: &Path) -> String {
         .map(|c| c.as_os_str().to_string_lossy())
         .collect::<Vec<_>>()
         .join("/")
-}
-
-/// Where a path source's directory sits.
-///
-/// A relative path is the repo's, not the working directory's: the manifest
-/// is committed, so it has to mean the same thing wherever the command runs
-/// from.
-fn pack_dir(root: &Path, path: &Path) -> PathBuf {
-    if path.is_absolute() {
-        path.to_path_buf()
-    } else {
-        root.join(path)
-    }
 }
 
 #[cfg(test)]
@@ -1065,10 +1053,6 @@ mod tests {
             &repo.path().join("packs/acme"),
             "brand-new",
             "# Brand new\n",
-        );
-        assert_eq!(
-            pack_dir(repo.path(), Path::new("./packs/acme")),
-            repo.path().join("./packs/acme")
         );
         let elsewhere = tempfile::tempdir().unwrap();
         // Resolving with a different root finds nothing, which is what makes

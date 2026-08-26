@@ -101,3 +101,48 @@ pub(crate) fn adopt_existing(
         })
         .collect()
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::capability::Capability;
+    use crate::content::{ContentSet, Item, ItemKind, Origin};
+
+    /// Test plan case 14: a `custom` name releases an item whatever layer
+    /// provided it. Ownership is the item's, not its provenance's — a pack
+    /// skill the user has taken over is theirs on the same terms as a
+    /// shipped one.
+    #[test]
+    fn a_custom_name_releases_a_pack_provided_item() {
+        let owner = Owner::Capability(Capability::Knowledge);
+        let item = |name: &str| Item {
+            owner,
+            kind: ItemKind::Skill,
+            name: name.to_string(),
+            files: vec![("SKILL.md".to_string(), format!("# {name}\n"))],
+        };
+        let from_pack = ContentSet::from_layers(
+            vec![(
+                vec![item("acme-review"), item("acme-plan")],
+                Origin::Pack {
+                    index: 0,
+                    name: "./packs/acme".into(),
+                },
+            )],
+            None,
+        );
+
+        let all = skill_dir_items(&from_pack, owner, &[]);
+        assert_eq!(all.len(), 2, "both pack skills are written by default");
+
+        let released = skill_dir_items(&from_pack, owner, &["acme-review".to_string()]);
+        let paths: Vec<&str> = released
+            .iter()
+            .map(|item| match item {
+                ManagedItem::OwnedFile { path, .. } => path.as_str(),
+                _ => unreachable!("skills are owned files"),
+            })
+            .collect();
+        assert_eq!(paths, [".claude/skills/acme-plan/SKILL.md"]);
+    }
+}

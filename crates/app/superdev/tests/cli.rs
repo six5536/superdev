@@ -566,6 +566,122 @@ fn a_local_pack_updates_the_repo_copy_without_a_rebuild() {
     );
 }
 
+/// A local pack holding two skills, pinned into the repo and synced.
+fn repo_with_a_pack() -> tempfile::TempDir {
+    let dir = local_repo();
+    let pack = dir.path().join("packs/acme");
+    std::fs::write(
+        {
+            std::fs::create_dir_all(&pack).unwrap();
+            pack.join("pack.toml")
+        },
+        "format = 1\nname = \"acme\"\nversion = \"1.0.0\"\n",
+    )
+    .unwrap();
+    for (name, body) in [
+        ("acme-review", "# Acme review\n"),
+        ("acme-plan", "# Acme plan\n"),
+    ] {
+        let skill = pack.join(format!("knowledge/skills/{name}"));
+        std::fs::create_dir_all(&skill).unwrap();
+        std::fs::write(skill.join("SKILL.md"), body).unwrap();
+    }
+    pin_packs(dir.path(), "[[packs]]\nsource = \"./packs/acme\"\n");
+    superdev()
+        .current_dir(dir.path())
+        .arg("sync")
+        .assert()
+        .success();
+    dir
+}
+
+/// Test plan case 13: ownership is unchanged by provenance. A hand-edited
+/// pack-provided file is drift on exactly the terms an embedded one is —
+/// reported, exit 1, and repaired by `sync` with the edit backed up.
+#[test]
+fn a_hand_edited_pack_file_is_drift_like_any_other() {
+    let dir = repo_with_a_pack();
+    let written = dir.path().join(".claude/skills/acme-review/SKILL.md");
+    std::fs::write(&written, "# Mine now\n").unwrap();
+
+    let out = superdev()
+        .current_dir(dir.path())
+        .arg("status")
+        .assert()
+        .code(1);
+    let stdout = String::from_utf8_lossy(&out.get_output().stdout).into_owned();
+    assert!(
+        stdout.contains(".claude/skills/acme-review/SKILL.md"),
+        "{stdout}"
+    );
+
+    superdev()
+        .current_dir(dir.path())
+        .arg("sync")
+        .assert()
+        .success();
+    assert_eq!(
+        std::fs::read_to_string(&written).unwrap(),
+        "# Acme review\n",
+        "sync repairs a pack-provided file"
+    );
+}
+
+/// Test plan case 15: dropping a pack entry removes its files by the
+/// existing orphan rule — pruned when they still hash to the locked value,
+/// left and released when the user has changed them. A pack's files are
+/// superdev's on the same terms as any other, right up to the point the user
+/// makes one theirs.
+#[test]
+fn dropping_a_pack_entry_prunes_the_untouched_and_releases_the_edited() {
+    let dir = repo_with_a_pack();
+    let untouched = dir.path().join(".claude/skills/acme-review/SKILL.md");
+    let edited = dir.path().join(".claude/skills/acme-plan/SKILL.md");
+    std::fs::write(&edited, "# I edited this one\n").unwrap();
+
+    // The record has to be there before its absence means anything: without
+    // this, a build that never wrote one would pass the assertion below.
+    let lock_path = dir.path().join(".superdev/lock.toml");
+    assert!(
+        std::fs::read_to_string(&lock_path)
+            .unwrap()
+            .contains("[[packs]]"),
+        "the resolved pack is recorded while the entry stands"
+    );
+
+    // Drop the entry, leaving the pack directory on disk.
+    let config = dir.path().join(".superdev/config.toml");
+    let without = std::fs::read_to_string(&config)
+        .unwrap()
+        .replace("[[packs]]\nsource = \"./packs/acme\"\n\n", "");
+    std::fs::write(&config, without).unwrap();
+
+    let out = superdev()
+        .current_dir(dir.path())
+        .arg("sync")
+        .assert()
+        .success();
+    let stdout = String::from_utf8_lossy(&out.get_output().stdout).into_owned();
+
+    assert!(!untouched.exists(), "an untouched pack file is pruned");
+    assert_eq!(
+        std::fs::read_to_string(&edited).unwrap(),
+        "# I edited this one\n",
+        "an edited one is left exactly where it is"
+    );
+    assert_eq!(
+        stdout
+            .lines()
+            .filter(|l| l.contains("acme-plan") && l.contains("released from the lock"))
+            .count(),
+        1,
+        "reported once, not per pass: {stdout}"
+    );
+    let lock = std::fs::read_to_string(&lock_path).unwrap();
+    assert!(!lock.contains("acme"), "both leave the lock: {lock}");
+    assert!(!lock.contains("[[packs]]"), "and so does the pack record");
+}
+
 /// A pack item of the same name supersedes the embedded one, and everything
 /// the pack does not carry still comes from the embedded copy.
 #[test]

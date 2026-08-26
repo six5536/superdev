@@ -1,7 +1,7 @@
 //! pack/source.rs — where a pack comes from, and the key that decides whether
 //! it replaces the embedded pack or layers over it.
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use crate::error::{Error, Result};
 use crate::manifest::PackEntry;
@@ -82,13 +82,37 @@ impl PackSource {
         })
     }
 
+    /// The same source with a relative path settled against the repo root.
+    ///
+    /// A path source's identity is a location on this machine, so where it
+    /// points has to be settled before anything compares it: `./packs/acme`
+    /// and `packs/acme` are one directory and must be one pack. Relative to
+    /// the repo, not the process: the manifest is committed, so it means the
+    /// same thing wherever the command runs from.
+    pub fn rooted(&self, root: &Path) -> PackSource {
+        let PackSource::Path { path } = self else {
+            return self.clone();
+        };
+        let joined = if path.is_absolute() {
+            path.clone()
+        } else {
+            root.join(path)
+        };
+        // `canonicalize` settles `.`, `..` and symlinks, and needs the
+        // directory to exist. A missing one keeps the joined path, so the
+        // error that follows names where superdev actually looked.
+        PackSource::Path {
+            path: joined.canonicalize().unwrap_or(joined),
+        }
+    }
+
     /// The comparison key every spelling of one source shares.
     ///
-    /// Scheme, userinfo, a `.git` suffix and any trailing slash are removed
-    /// and host and path lowercased, so `github:six5536/superdev`,
+    /// Scheme, userinfo, port, a `.git` suffix and any trailing slash are
+    /// removed and host and path lowercased, so `github:six5536/superdev`,
     /// `https://github.com/six5536/superdev.git` and the ssh form are one
-    /// source. A path source's key is the path it holds, which the resolver
-    /// has made absolute. ADR-004.
+    /// source. A path source's key is its canonicalised absolute path, which
+    /// [`PackSource::rooted`] settles. ADR-004.
     pub fn identity(&self) -> String {
         match self {
             PackSource::Git { url, .. } => git_identity(url),
@@ -232,6 +256,49 @@ mod tests {
             identity_of("ssh://git@github.com:22/six5536/superdev.git"),
             identity_of("github:six5536/superdev")
         );
+    }
+
+    /// A path source's identity is a location, so two spellings of one
+    /// directory must be one pack — otherwise the same pack layers twice and
+    /// is reported as shadowing itself.
+    #[test]
+    fn two_spellings_of_one_directory_share_an_identity() {
+        let repo = tempfile::tempdir().unwrap();
+        std::fs::create_dir_all(repo.path().join("packs/acme")).unwrap();
+        // `..` resolves through a directory that exists, not a lexical one.
+        std::fs::create_dir_all(repo.path().join("packs/other")).unwrap();
+        let of = |source: &str| {
+            PackSource::parse(&entry(source, None))
+                .expect("a path source")
+                .rooted(repo.path())
+                .identity()
+        };
+        let expected = of("./packs/acme");
+        for spelling in [
+            "packs/acme",
+            "./packs/acme",
+            "packs/./acme",
+            "packs/other/../acme",
+        ] {
+            assert_eq!(of(spelling), expected, "{spelling}");
+        }
+        assert_ne!(of("packs/elsewhere"), expected);
+        // Settled against the repo, not the process: absolute either way.
+        assert!(std::path::Path::new(&expected).is_absolute(), "{expected}");
+    }
+
+    /// A directory that does not exist cannot be canonicalised; the joined
+    /// path keeps the error naming where superdev actually looked.
+    #[test]
+    fn a_missing_directory_still_roots_against_the_repo() {
+        let repo = tempfile::tempdir().unwrap();
+        let rooted = PackSource::parse(&entry("./packs/absent", None))
+            .unwrap()
+            .rooted(repo.path());
+        let PackSource::Path { path } = rooted else {
+            panic!("a path source");
+        };
+        assert!(path.starts_with(repo.path()), "{}", path.display());
     }
 
     #[test]
