@@ -146,7 +146,12 @@ case below is new and drawn from the issue it closes.
 
 ### Slice 6: `update` proves a pin before it writes it
 
-- [ ] Not started.
+- [x] Done — ticked by integrate at merge. Cases 16 and 22 did not pass
+  *unchanged* as this entry expected: the probe is a real resolution, so a
+  fake runner answering only `ls-remote` can no longer satisfy the move they
+  assert. They now start from a repo whose cache already holds the release
+  they move to, which is the state a second `update` on a synced repo starts
+  from. What they assert is unchanged. Cases 17 and 20 did pass untouched.
 - Gap: [I001](../issues/I001-update-can-pin-an-unreadable-pack-format.md).
 - Change: `update_pins` takes `&Lock` and resolves the entry it is about to
   move before writing it. On a refusal the pin stays where it is and the reason

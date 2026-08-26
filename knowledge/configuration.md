@@ -97,7 +97,19 @@ path by which a content fix reaches an unchanged binary, and the one place
 superdev reaches the network without being asked to fetch something. A pin
 never moves backwards and never below what the binary carries; a pin naming
 any other source, or resting on a branch, a sha or a pre-release, is reported
-and left alone. When the source cannot be reached, carries no release, or
+and left alone. The newest release *this binary can read*: the pack is
+resolved before the pin naming it is written, and a release this binary would
+refuse — an unknown `format`, a `REJECTED` path, an unparseable `pack.toml`, a
+symlink — leaves the pin where it was with the reason reported in the line
+that would have announced the move
+([ADR-013](decisions/D013-update-proves-a-pin-before-it-writes-it.md)).
+Written first, such a pin would be a state no superdev command could leave:
+`update` saves the manifest before the `sync` that validates it, and never
+moves a pin backwards. One entry is proven, not the manifest, so a second pack
+that cannot resolve does not hold back a move that is fine — at the cost of
+one extra clone on a run that actually advances a pin, because the cache is
+found by the digest the lock records and apply writes that after the sync.
+When the source cannot be reached, carries no release, or
 carries only releases older than the pin, the run says so and the pin stays
 where the binary would put it. Being the one request nobody asked for, it is
 also the one on a clock: a few seconds, after which a network that neither

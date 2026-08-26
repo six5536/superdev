@@ -41,7 +41,14 @@ publish a version it cannot find a heading for.
   is your trust decision to make again. With no network the pin moves no
   further than the binary's own default and the run says it could not check,
   and a manifest written by an earlier binary gains the entry on the first
-  `update`. That query is the one request superdev makes that you did not ask
+  `update`. The newest release *your binary can read*: the pack is fetched
+  before the pin naming it is written, and a release built for a later
+  superdev leaves your pin where it is and says why. Written first, that pin
+  would have been unreachable by any superdev command — `update` saves the
+  manifest before the sync that validates it, and never moves a pin backwards,
+  so hand-editing `.superdev/config.toml` was the only way out. That costs one
+  extra fetch on a run that actually moves a pin, and nothing on the runs that
+  do not. That query is the one request superdev makes that you did not ask
   for, so it is the one on a clock: a few seconds, after which a network that
   neither answers nor refuses is reported as unreachable rather than holding
   the command for however long your OS takes to give up. A clone is not
