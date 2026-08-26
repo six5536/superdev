@@ -93,9 +93,20 @@ pub fn update_pins(
         };
         let newest = asked.get_or_insert_with(|| newest_release(runner, root, &source));
         let (target, unchecked) = match newest {
+            // A pin ahead of every release the source carries is a hand-edit
+            // or a typo, and the `sync` that follows is about to fail on it.
+            // It is reported as what it is rather than as the newest release,
+            // which would say the query had confirmed something it did not.
+            Newest::Answered(Some(remote)) if *remote < current => (
+                current.max(floor),
+                Some(format!("the source's newest release is {}", tag(*remote))),
+            ),
             Newest::Answered(Some(remote)) => (current.max(floor).max(*remote), None),
-            Newest::Answered(None) => (current.max(floor), Some("it carries no release tag")),
-            Newest::Unreachable => (current.max(floor), Some("could not reach it")),
+            Newest::Answered(None) => (
+                current.max(floor),
+                Some("it carries no release tag".to_string()),
+            ),
+            Newest::Unreachable => (current.max(floor), Some("could not reach it".to_string())),
         };
         if target > current {
             let moved = tag(target);
@@ -319,7 +330,29 @@ mod tests {
         let lines = update_pins(&runner, Path::new("."), &mut manifest);
 
         assert_eq!(revs(&manifest), [Some("assets-v9.9.9")]);
-        assert!(lines.join("\n").contains("newest release"), "{lines:?}");
+        // Not "is at the newest release": the source does not carry this rev
+        // at all, and the `sync` that follows is about to fail on it. Saying
+        // it is current would send the reader looking anywhere but here.
+        assert_eq!(
+            lines,
+            ["packs: github:six5536/superdev stays at assets-v9.9.9 \
+              — the source's newest release is assets-v0.1.0"]
+        );
+    }
+
+    /// A pin the source does carry, and carries as its newest, is the one
+    /// case that may say so.
+    #[test]
+    fn a_pin_at_the_sources_newest_is_reported_as_current() {
+        let runner = source_carrying(&["assets-v0.1.0"]);
+        let mut manifest = manifest(&[(DEFAULT_PACK.source, Some(DEFAULT_PACK.rev))]);
+
+        let lines = update_pins(&runner, Path::new("."), &mut manifest);
+
+        assert_eq!(
+            lines,
+            ["packs: github:six5536/superdev is at the newest release assets-v0.1.0"]
+        );
     }
 
     /// A pin on a branch or a sha is a deliberate choice — someone testing

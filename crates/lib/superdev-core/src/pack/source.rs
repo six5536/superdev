@@ -144,8 +144,9 @@ impl PackSource {
     /// it — git reads a colon with no dot before it as the scp form and goes
     /// looking for a host called `github`. Until now the default pin always
     /// resolved from the binary, so nothing ever handed it to git; `update`
-    /// moving that pin ahead is what makes the expansion load-bearing. Every
-    /// other spelling is git's own and passes through untouched.
+    /// moving that pin ahead is what makes the expansion load-bearing. Only
+    /// the named forges are expanded; every other spelling, an ssh alias
+    /// included, is git's own and passes through untouched.
     pub fn clone_url(&self) -> String {
         match self {
             PackSource::Git { url, .. } => match shorthand(url) {
@@ -157,22 +158,29 @@ impl PackSource {
     }
 }
 
-/// Split superdev's `host:owner/repo` shorthand into its host and path.
+/// The forges `<name>:owner/repo` is shorthand for, each at `<name>.com`.
 ///
-/// A dot or an `@` before the colon means the scp form — `github.com:o/r`,
-/// `git@github.com:o/r` — which is a URL git already understands and must
-/// not be expanded again into `github.com.com`.
+/// An allowlist and not "any bare word before a colon": a bare word is an ssh
+/// alias or an `insteadOf` prefix at least as often as it is a forge, and
+/// those belong to the user's git config, which superdev cannot see. Naming
+/// the forges is also what keeps the shorthand a documented spelling rather
+/// than a guess a reader has to run to confirm.
+const SHORTHAND_FORGES: &[&str] = &["github", "gitlab"];
+
+/// Split superdev's `forge:owner/repo` shorthand into its host and path.
+///
+/// The forge name is matched whole, so the scp form the same forge is also
+/// written as — `github.com:o/r`, `git@github.com:o/r` — is not matched and
+/// not expanded a second time into `github.com.com`.
 fn shorthand(url: &str) -> Option<(&str, &str)> {
     if url.contains("://") {
         return None;
     }
     let (before, after) = url.split_once(':')?;
-    let plain = before.len() > 1
-        && !before.contains('.')
-        && !before.contains('@')
-        && !before.contains('/')
-        && !before.starts_with('.');
-    plain.then_some((before, after))
+    let forge = SHORTHAND_FORGES
+        .iter()
+        .any(|f| before.eq_ignore_ascii_case(f));
+    forge.then_some((before, after))
 }
 
 /// Whether a source names a git repository rather than a directory.
@@ -300,9 +308,27 @@ mod tests {
             "git@github.com:six5536/superdev.git",
             "ssh://git@github.com/six5536/superdev.git",
             "github.com:six5536/superdev",
+            // A bare word before the colon is an ssh alias or an `insteadOf`
+            // prefix as often as it is a forge name, and rewriting one into
+            // `https://gh.com/...` breaks a clone that worked. Only the
+            // forges superdev names are expanded; the rest are git's.
+            "gh:acme/packs",
+            "work:acme/packs",
         ] {
             assert_eq!(url_of(untouched), untouched, "{untouched}");
         }
+    }
+
+    /// An alias is not a forge, so it is not keyed as one either: `gh:` and
+    /// `github:` are different sources until the user's git says otherwise,
+    /// and guessing they are the same would let an alias match the base pack.
+    #[test]
+    fn an_alias_is_not_keyed_as_a_forge() {
+        assert_eq!(identity_of("gh:six5536/superdev"), "gh/six5536/superdev");
+        assert_ne!(
+            identity_of("gh:six5536/superdev"),
+            identity_of("github:six5536/superdev")
+        );
     }
 
     /// The default source is recognised however it is spelled, and nothing
