@@ -296,8 +296,13 @@ pub fn sync(root: &Path, dry_run: bool) -> Result<u8> {
     Ok(0)
 }
 
-/// Move version pins to this binary's defaults (or to an explicit version),
-/// then sync.
+/// Bring pins current, then sync.
+///
+/// A capability's pin moves to this binary's default, or to an explicit
+/// version. The pack's moves further: the untargeted form asks the default
+/// source for its newest release and takes that, which is how content reaches
+/// a repo whose binary has not changed (ADR-009). It is the one place
+/// superdev reaches the network without being asked to fetch something.
 pub fn update(root: &Path, target: Option<&str>, provider: Option<&str>) -> Result<u8> {
     let mut manifest = load_manifest(root)?;
     match (target, provider) {

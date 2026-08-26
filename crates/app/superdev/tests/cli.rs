@@ -774,6 +774,48 @@ fn a_converged_run_reconciles_a_json_key_too() {
     );
 }
 
+/// `update` is the one verb that reaches the network, and its own help said
+/// it moved pins to this binary's defaults — which stopped being true when it
+/// began asking the default pack source for a newer release. The description
+/// is a doc comment clap renders into `--help`, the man page and the
+/// completions, so it went stale in three places at once and nothing noticed.
+/// I006.
+#[test]
+fn update_help_says_it_may_reach_the_source() {
+    let out = superdev().args(["update", "--help"]).assert().success();
+    let help = stdout_of(&out);
+
+    // Not "does not say `this binary's defaults`" — that is still true of a
+    // capability's pin, and the old text was wrong for saying it of every
+    // pin. What has to be there is the part that was missing.
+    let help = help.to_lowercase();
+    assert!(
+        help.contains("pack"),
+        "the help does not mention the pack pin it may move: {help}"
+    );
+    assert!(
+        help.contains("newest release"),
+        "the help does not say the pack pin may go past this binary: {help}"
+    );
+}
+
+/// A user who never reads the knowledgebase should still be able to find out
+/// that content comes from somewhere and can be pointed elsewhere.
+#[test]
+fn the_readme_describes_packs() {
+    let readme = std::fs::read_to_string(
+        std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../README.md"),
+    )
+    .expect("the README");
+
+    for expected in ["[[packs]]", "assets-v", "superdev update"] {
+        assert!(
+            readme.contains(expected),
+            "the README never mentions `{expected}`"
+        );
+    }
+}
+
 /// Test plan case 19: a local-path pack is read from disk every run, so
 /// editing it and syncing again updates the repo copy — no rebuild, which is
 /// what lets this repo pin its own `/pack` and see an edit land.

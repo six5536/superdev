@@ -45,7 +45,8 @@ enum Command {
         #[arg(long)]
         dry_run: bool,
     },
-    /// Move version pins to this binary's defaults, then sync
+    /// Bring pins current — capabilities to this binary's defaults, the pack
+    /// to its source's newest release — then sync
     Update {
         /// Capability to update, optionally `<capability>@<version>`
         target: Option<String>,
