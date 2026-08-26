@@ -6,6 +6,7 @@
 //! that goes and looks (ADR-009).
 
 use std::path::Path;
+use std::time::Duration;
 
 use crate::manifest::{Manifest, PackEntry};
 use crate::runner::CommandRunner;
@@ -161,6 +162,17 @@ fn choose(current: Release, floor: Option<Release>, newest: &Newest) -> (Release
     }
 }
 
+/// How long the query gets to answer.
+///
+/// This is the one request superdev makes that nobody asked for, so it is the
+/// one with a deadline. Long enough for a forge over a slow link, short
+/// enough that a network dropping packets rather than refusing them costs a
+/// pause instead of the OS connect timeout — around two minutes on Linux, on
+/// a command whose failure mode is simply to keep the pin it already has.
+/// A constant and not a setting: a knob here would outlive the problem.
+/// ADR-015, I002.
+const QUERY_DEADLINE: Duration = Duration::from_secs(5);
+
 /// Ask a source for the newest pack release it carries.
 ///
 /// `ls-remote` and not a clone: the answer is one line of refs, and the pin
@@ -177,7 +189,7 @@ fn newest_release(runner: &dyn CommandRunner, root: &Path, source: &PackSource) 
     ];
     // Through the one seam, so the overrides come along without this call
     // having to remember them — it is the call that forgot.
-    match super::fetch::git(runner, &args, root) {
+    match super::fetch::git_within(runner, &args, root, Some(QUERY_DEADLINE)) {
         Ok(out) if out.status == 0 => Newest::Answered(
             out.stdout
                 .lines()
@@ -287,6 +299,91 @@ mod tests {
             "{:?}",
             runner.calls()
         );
+    }
+
+    /// The one request superdev makes that nobody asked for is the one with a
+    /// deadline, and it never stops for a prompt. I002, ADR-015.
+    #[test]
+    fn the_query_asks_for_a_deadline_and_never_prompts() {
+        let runner = source_carrying(&["assets-v0.9.0"]);
+        let mut manifest = manifest(&[(DEFAULT_PACK.source, Some(DEFAULT_PACK.rev))]);
+
+        update_pins(&runner, Path::new("."), &mut manifest);
+
+        let query = runner
+            .calls()
+            .iter()
+            .position(|call| call.contains("ls-remote"))
+            .expect("the query went out");
+        let opts = &runner.options()[query];
+        assert_eq!(opts.timeout, Some(QUERY_DEADLINE));
+        assert!(
+            opts.env
+                .contains(&("GIT_TERMINAL_PROMPT".to_string(), "0".to_string())),
+            "the query could stop for a credential prompt: {:?}",
+            opts.env
+        );
+    }
+
+    /// A network that drops packets rather than refusing them used to hold
+    /// `update` for the OS connect timeout — around two minutes — on a
+    /// command whose worst case is simply to keep the pin it has. It now
+    /// comes back on superdev's own deadline and carries on. I002.
+    ///
+    /// The runner blocks exactly as long as it is allowed to and then fails
+    /// the way `SystemRunner` does, so the wall clock here is the deadline
+    /// that was passed. That it is honoured once passed is
+    /// `runner::tests::a_child_that_outlives_its_deadline_is_stopped_and_reported`,
+    /// against a real child.
+    #[test]
+    fn a_source_that_never_answers_costs_the_deadline_and_not_the_os_timeout() {
+        /// Blocks for `NEVER` unless given less, and then reports what a
+        /// timed-out spawn reports.
+        struct Blocking;
+        /// Long enough to stand in for a black-holed connect, and far longer
+        /// than any deadline this test would accept.
+        const NEVER: Duration = Duration::from_secs(120);
+        impl CommandRunner for Blocking {
+            fn run_with(
+                &self,
+                program: &str,
+                args: &[String],
+                _cwd: &Path,
+                opts: &crate::runner::RunOptions,
+            ) -> crate::error::Result<crate::runner::Output> {
+                let waited = opts.timeout.unwrap_or(NEVER).min(NEVER);
+                std::thread::sleep(waited);
+                Err(crate::error::Error::Command {
+                    command: format!("{program} {}", args.join(" ")),
+                    status: None,
+                    stderr: format!(
+                        "no answer within {}s, so it was stopped",
+                        waited.as_secs_f32()
+                    ),
+                })
+            }
+        }
+
+        let mut manifest = manifest(&[(DEFAULT_PACK.source, Some("assets-v0.0.1"))]);
+        let began = std::time::Instant::now();
+        let lines = update_pins(&Blocking, Path::new("."), &mut manifest);
+        let waited = began.elapsed();
+
+        // Both ends: it really did wait the deadline rather than failing for
+        // some unrelated reason, and it did not wait past it. This test costs
+        // that deadline in wall clock, deliberately — the promise being kept
+        // is about elapsed time, and nothing cheaper measures it.
+        assert!(
+            waited >= QUERY_DEADLINE && waited < QUERY_DEADLINE * 2,
+            "the wait was not the deadline: {waited:?}"
+        );
+        assert!(
+            lines.join("\n").contains("could not reach it"),
+            "a deadline is not reported as any other unreachable source: {lines:?}"
+        );
+        // And it carried on: the pin still comes forward to what the binary
+        // itself carries, which is what makes `update` usable offline.
+        assert_eq!(revs(&manifest), [Some(DEFAULT_PACK.rev)]);
     }
 
     /// Test plan case 17: a pin naming another source is reported and left

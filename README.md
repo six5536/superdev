@@ -83,8 +83,12 @@ looks: it asks the default source for its newest release and moves the pin
 there, even past what your binary embeds. A pin naming any other source is
 reported and left alone — pointing superdev at someone's pack is your
 decision, and it stays yours to revisit. Unreachable, the pin moves no further
-than your binary already carries and the run says so; on a network that
-neither answers nor refuses, expect it to wait for your OS to give up first.
+than your binary already carries and the run says so — including on a network
+that neither answers nor refuses, which superdev gives a few seconds before
+reporting the same thing and carrying on. It is the one request superdev makes
+that you did not ask for, so it is the one on a clock. Nothing prompts for
+credentials either: a pack you cannot read anonymously fails rather than
+waiting for you to type.
 
 superdev is opinionated for one stack — Claude Code, mise and AOKF — and is
 still young: expect the surface to move before 1.0.

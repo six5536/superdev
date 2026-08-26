@@ -9,11 +9,12 @@
 
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::time::Duration;
 
 use sha2::{Digest, Sha256};
 
 use crate::error::{Error, Result};
-use crate::runner::{CommandRunner, Output};
+use crate::runner::{CommandRunner, Output, RunOptions};
 
 use super::manifest::link_refusal;
 use super::source::SUPPORTED_SCHEMES;
@@ -288,9 +289,42 @@ fn refuse_linked_entries(runner: &dyn CommandRunner, pack: &str, checkout: &Path
 /// through `update`, and a rule the type system keeps is worth more than one
 /// a test has to remember to look for.
 pub(super) fn git(runner: &dyn CommandRunner, args: &[String], cwd: &Path) -> Result<Output> {
+    git_within(runner, args, cwd, None)
+}
+
+/// The same, giving git `timeout` to answer in.
+///
+/// `None` waits. A clone happens because the user pinned a pack and asked for
+/// it, and a repository on a slow link is a legitimately long wait superdev
+/// has no business ending; only what superdev does on its own initiative is
+/// bounded. ADR-015.
+pub(super) fn git_within(
+    runner: &dyn CommandRunner,
+    args: &[String],
+    cwd: &Path,
+    timeout: Option<Duration>,
+) -> Result<Output> {
     let mut full = overrides();
     full.extend_from_slice(args);
-    runner.run("git", &full, cwd)
+    runner.run_with(
+        "git",
+        &full,
+        cwd,
+        &RunOptions {
+            timeout,
+            env: environment(),
+        },
+    )
+}
+
+/// The environment every git call carries.
+///
+/// `GIT_TERMINAL_PROMPT=0` on all of them, not only the ones that reach the
+/// network: a prompt superdev cannot answer is a stall whatever produced it.
+/// Stdin is already null, which makes most prompts fail on EOF — but git asks
+/// the terminal directly where it can, and this is what closes that.
+fn environment() -> Vec<(String, String)> {
+    vec![("GIT_TERMINAL_PROMPT".to_string(), "0".to_string())]
 }
 
 /// Run one git command, turning a failure into a pack error naming the pack.
@@ -368,6 +402,37 @@ mod tests {
         git(&["config", "user.name", "fixture"]);
         git(&["config", "commit.gpgsign", "false"]);
         git
+    }
+
+    /// The clone is the user's own request — they pinned the pack and asked
+    /// for it — so nothing here ends it early. Only what superdev does on its
+    /// own initiative is bounded. ADR-015.
+    #[test]
+    fn a_fetch_carries_no_deadline_and_never_prompts() {
+        let runner = FakeRunner::new();
+        let dir = tempfile::tempdir().unwrap();
+
+        let _ = fetch(
+            &runner,
+            "acme",
+            "https://example.invalid/acme.git",
+            "v1",
+            dir.path(),
+        );
+
+        let options = runner.options();
+        assert!(!options.is_empty(), "the fetch spawned nothing");
+        for (call, opts) in runner.calls().iter().zip(&options) {
+            assert!(
+                opts.timeout.is_none(),
+                "a fetch call carries a deadline: {call}"
+            );
+            assert!(
+                opts.env
+                    .contains(&("GIT_TERMINAL_PROMPT".to_string(), "0".to_string())),
+                "a git call that could stop for a prompt: {call}"
+            );
+        }
     }
 
     /// A pack with neither a link nor a submodule passes, so the check costs
