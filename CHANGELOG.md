@@ -76,6 +76,17 @@ publish a version it cannot find a heading for.
   repository as pack content. Links are skipped now, and a link standing in
   for the pack's own root or its `pack.toml` is refused outright.
 
+### Fixed
+
+- The lock describes what is on disk, not only what the last run wrote. A file
+  edited into agreement with what superdev ships — the way a contributor tries
+  a change before shipping it — kept the hash of what it replaced, so the next
+  run that touched it announced an edit nobody had made and backed the file
+  up. The same staleness on a managed `.mcp.json` or `.claude/settings.json`
+  key was worse: superdev decides whether such an entry is its own to remove
+  by that hash, so a stale one left its registration behind for good when the
+  capability was disabled.
+
 ### Changed
 
 - The agent-rules files are each wrapped in a tag naming what they are —

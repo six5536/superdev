@@ -3,14 +3,37 @@ type: Issue
 id: issue-005-a-backport-leaves-the-lock-stale
 title: Sync re-records a hash only for a file it writes, so backporting an edit leaves the lock stale
 description: After a live edit is mirrored into the pack, sync has nothing to write and never refreshes that file's recorded hash, so the next legitimate write reports it as a user-edited file and backs it up.
-status: draft
-tags: [needs-triage]
+status: stable
+tags: [done]
 links:
   - rel: references
     to: spec-content-packs
 ---
 
 # Bug: a backport leaves the lock stale
+
+## Resolved
+
+P003 slice 17. A run reconciles every claim against what is actually there
+before it saves the lock, so a file that changed on disk to what superdev
+would write no longer leaves the lock describing what it replaced.
+
+Two things the fix turned on, both held by tests. It runs *after* the engine:
+reconciling first records a hand-edited file's own bytes as the hash the
+engine then compares against, so the overwrite is reported as an ordinary
+write and the user is never told the edit went into a backup. And it refreshes
+only keys the lock already holds — adoption leaves a repo's own copy of a
+shipped file unclaimed on purpose, and inserting would take ownership of every
+one on the next run.
+
+It covers mise pins and JSON keys too, where a stale hash cost more than on a
+file: the orphan pass compares against it to decide whether an entry is
+superdev's to remove, so a stale one left superdev's own registration in a
+shared file for good.
+
+One limit: it can only reconcile a claim that is still live. Stale a hash and
+drop the claim in the same run — disable the capability at the same time — and
+there is nothing left to reconcile against, so that entry still releases.
 
 ## Summary
 

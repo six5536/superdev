@@ -117,6 +117,14 @@ released by naming it in a `custom` list. Dropping a pack entry removes its
 files by the ordinary orphan rule — pruned while they still hash to the locked
 value, left in place and released once the user has changed them.
 
+A run brings the lock up to what is actually there before saving it, so an
+entry describes the file, pin or key on disk rather than only what the last
+run happened to write — a converged run writes nothing, and without this a
+file edited into agreement would keep the hash of what it replaced, and be
+reported as a user edit the next time anything wrote it. Only entries the lock
+already holds are refreshed: a file superdev left to the repo at adoption
+stays the repo's ([I005](issues/I005-a-backport-leaves-the-lock-stale.md)).
+
 `blueprint` is the version last applied, not the version that wrote the file.
 A successful `sync` stamps this binary's version, rewriting `config.toml` only
 when the value changes; `--dry-run` never stamps. `status` prints

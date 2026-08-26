@@ -284,7 +284,7 @@ unplanned, so nothing scheduled can stall behind one.
 
 ### Slice 17: The lock describes what is on disk, not only what was written
 
-- [ ] Done — ticked by integrate at merge.
+- [x] Done — ticked by integrate at merge.
 - Gap: [I005](../issues/I005-a-backport-leaves-the-lock-stale.md), filed
   during delivery rather than by accept, scheduled because it is contained and
   fires on every backport, which is how this repo's owner edits skills.
