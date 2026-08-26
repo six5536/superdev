@@ -733,6 +733,47 @@ fn a_hand_edited_file_is_still_reported_as_one() {
     );
 }
 
+/// I005 is not only about whole files. A mise pin and a JSON key are claims
+/// too, and their hashes are recorded on the same terms — only when an action
+/// applies. A stale one is worse here than on a file: the orphan pass reads
+/// the current value, finds it does not match what the lock recorded, and
+/// classifies superdev's own entry as *released* instead of removing it. The
+/// registration then stays in the user's shared file for good, with a line
+/// saying they changed it.
+#[test]
+fn a_converged_run_reconciles_a_json_key_too() {
+    let dir = local_repo();
+    let lock = dir.path().join(".superdev/lock.toml");
+    let key = ".mcp.json:mcpServers.superdev-aokf";
+    let real = std::fs::read_to_string(&lock).unwrap();
+    assert!(real.contains(key), "the fixture claims no json key: {real}");
+    let stale = real
+        .lines()
+        .map(|line| {
+            if line.starts_with(&format!("\"{key}\"")) {
+                format!("\"{key}\" = \"{}\"", "0".repeat(64))
+            } else {
+                line.to_string()
+            }
+        })
+        .collect::<Vec<_>>()
+        .join("\n");
+    assert_ne!(stale, real, "the fixture never staled anything");
+    std::fs::write(&lock, format!("{stale}\n")).unwrap();
+
+    superdev()
+        .current_dir(dir.path())
+        .arg("sync")
+        .assert()
+        .success();
+
+    let after = std::fs::read_to_string(&lock).unwrap();
+    assert!(
+        !after.contains(&"0".repeat(64)),
+        "the json key still carries a hash of nothing on disk: {after}"
+    );
+}
+
 /// Test plan case 19: a local-path pack is read from disk every run, so
 /// editing it and syncing again updates the repo copy — no rebuild, which is
 /// what lets this repo pin its own `/pack` and see an edit land.

@@ -43,10 +43,10 @@ pub enum PlanMode {
 /// report lines, and the pruned lock the apply consumes.
 pub struct RepoPlan {
     planned: Vec<Planned>,
-    /// Every whole file a component claims, for reconciling the lock against
-    /// disk. Only paths: a mise pin or a JSON key is a fragment of a file and
-    /// hashes as one, so neither can be read back off disk this way.
-    owned_files: Vec<String>,
+    /// Everything the components claim, for reconciling the lock against what
+    /// is actually there. Every kind, not only whole files: a mise pin and a
+    /// JSON key are recorded on the same terms and go stale the same way.
+    claims: Vec<Claim>,
     orphans: OrphanPlan,
     behind: Vec<String>,
     custom: Vec<String>,
@@ -204,13 +204,6 @@ pub fn plan_repo(
     // The aggregator is repo-level: no component claims it, and without a
     // live claim its lock entry would read as an orphan every run.
     claims.push(Claim::File(AGGREGATOR_PATH.into()));
-    let owned_files: Vec<String> = claims
-        .iter()
-        .filter_map(|claim| match claim {
-            Claim::File(path) => Some(path.clone()),
-            _ => None,
-        })
-        .collect();
     let orphans = orphan::plan(root, &lock, &claims)?;
     if !orphans.actions.is_empty() {
         planned.push(Planned {
@@ -227,7 +220,7 @@ pub fn plan_repo(
         blueprint,
         planned,
         orphans,
-        owned_files,
+        claims,
         lock,
         lock_changed,
     })
@@ -250,7 +243,7 @@ pub fn apply_repo(
         planned,
         orphans,
         packs,
-        owned_files,
+        claims,
         mut lock,
         mut lock_changed,
         ..
@@ -296,7 +289,7 @@ pub fn apply_repo(
     }
     lock.components.retain(|_, records| !records.is_empty());
     if planned.iter().all(|p| p.actions.is_empty()) {
-        if reconcile_lock(root, &owned_files, &mut lock) {
+        if reconcile_lock(root, &claims, &mut lock) {
             lock_changed = true;
         }
         if lock_changed {
@@ -317,7 +310,7 @@ pub fn apply_repo(
         // nothing about the edit it just overwrote. Everything the engine
         // wrote is already recorded, so what is left here is what it had no
         // reason to touch.
-        reconcile_lock(root, &owned_files, &mut lock);
+        reconcile_lock(root, &claims, &mut lock);
         lock.save(root)?;
         stamp_blueprint(root, manifest)?;
     }
@@ -327,29 +320,44 @@ pub fn apply_repo(
     })
 }
 
-/// Bring the lock's hashes up to the files on disk, for owned files only.
+/// Bring the lock's hashes up to what is actually there.
 ///
-/// Refreshes what the lock already holds and never adds a key: a claim can
-/// cover a file superdev deliberately does not own — a write-once scaffold is
-/// claimed so it does not read as an orphan, and locking it would start
-/// rewriting the user's copy.
+/// Every claim kind, read the way the orphan pass reads one: a mise pin and a
+/// JSON key are values inside a shared file, and their hashes go stale on the
+/// same terms as a whole file's. A stale one costs more, in fact — the orphan
+/// pass compares against it to decide whether an entry is superdev's to
+/// remove or the user's to keep, so a stale hash leaves superdev's own
+/// registration in a shared file for good, over a line saying the user
+/// changed it.
+///
+/// Refreshes what the lock already holds and never adds a key. Adoption
+/// leaves a repo's own copy of a shipped file unclaimed when it already
+/// matches, deliberately, and it is claimed all the same so it does not read
+/// as an orphan — inserting here would quietly take ownership of every one of
+/// them on the next run.
 ///
 /// Runs after the engine, never before. A file the user edited differs from
 /// the lock and from what superdev writes; reconciling first would record the
 /// edit as the hash the engine then compares against, and an overwrite nobody
 /// was told about is the failure the hash exists to prevent.
-fn reconcile_lock(root: &Path, owned_files: &[String], lock: &mut Lock) -> bool {
+fn reconcile_lock(root: &Path, claims: &[Claim], lock: &mut Lock) -> bool {
     let mut changed = false;
-    for path in owned_files {
-        let Some(recorded) = lock.files.get_mut(path) else {
+    for claim in claims {
+        let key = claim.lock_key();
+        let Some(recorded) = lock.files.get(&key) else {
             continue;
         };
-        let Ok(Some(body)) = crate::fsutil::read_text(&root.join(path)) else {
+        // Absent is not stale: a claim whose file or key is gone is the
+        // orphan pass's business, not this one. An unreadable one leaves the
+        // recorded hash alone — guessing at content is what the engine
+        // refuses to do everywhere else, and this pass runs after a
+        // successful apply, too late to turn a repair into a failure.
+        let Ok(Some(value)) = claim.read_current(root) else {
             continue;
         };
-        let actual = crate::lock::sha256_hex(body.as_bytes());
+        let actual = crate::lock::sha256_hex(value.as_bytes());
         if *recorded != actual {
-            *recorded = actual;
+            lock.files.insert(key, actual);
             changed = true;
         }
     }
@@ -973,7 +981,7 @@ mod tests {
             content: Vec::new(),
             packs: Vec::new(),
             blueprint: None,
-            owned_files: Vec::new(),
+            claims: Vec::new(),
             lock,
             lock_changed: false,
         };
