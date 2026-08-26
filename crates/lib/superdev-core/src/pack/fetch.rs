@@ -181,11 +181,6 @@ pub fn fetch(
     Ok(pack_root)
 }
 
-/// Run one git command, turning a failure into a pack error naming the pack.
-///
-/// A missing `git` is worth its own message: every superdev repo is a git
-/// repo, so a user without it is in an unusual state and the generic
-/// "not found" would not say what to install.
 /// Spawn git with the overrides in front, whatever the caller asked for.
 ///
 /// The only way this crate reaches git. Callers pass the verb and its
@@ -199,6 +194,11 @@ pub(super) fn git(runner: &dyn CommandRunner, args: &[String], cwd: &Path) -> Re
     runner.run("git", &full, cwd)
 }
 
+/// Run one git command, turning a failure into a pack error naming the pack.
+///
+/// A missing `git` is worth its own message: every superdev repo is a git
+/// repo, so a user without it is in an unusual state and the generic
+/// "not found" would not say what to install.
 fn run_git(runner: &dyn CommandRunner, pack: &str, args: &[String], cwd: &Path) -> Result<()> {
     match git(runner, args, cwd) {
         Ok(out) if out.status == 0 => Ok(()),

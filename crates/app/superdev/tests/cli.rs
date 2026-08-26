@@ -617,12 +617,16 @@ fn an_update_cannot_be_talked_into_running_a_manifests_command() {
     // `init` wrote rather than sit beside it — two entries naming one source
     // are refused, and that refusal would pass this test for the wrong reason.
     as_a_pre_pack_manifest(dir.path());
+    // A release tag the source does not carry, rather than whatever this
+    // binary embeds: the pin has to be one `update` will query and one whose
+    // outcome does not depend on the release phase. Embed a candidate and the
+    // run reports "a candidate, and no release covers it yet" instead, which
+    // says nothing about whether the query went out.
     pin_packs(
         dir.path(),
         &format!(
-            "[[packs]]\nsource = \"ext::touch {} ://@github.com/six5536/superdev\"\nrev = \"{}\"\n",
+            "[[packs]]\nsource = \"ext::touch {} ://@github.com/six5536/superdev\"\nrev = \"assets-v9.9.9\"\n",
             marker.display(),
-            superdev_core::pack::DEFAULT_PACK.rev,
         ),
     );
 
@@ -632,7 +636,9 @@ fn an_update_cannot_be_talked_into_running_a_manifests_command() {
         .env("GIT_CONFIG_NOSYSTEM", "1")
         .arg("update")
         .assert()
-        .success();
+        // The sync that follows cannot resolve the pin either, and is refused
+        // for the same reason. What matters is which of the two ran a command.
+        .failure();
 
     assert!(!marker.exists(), "`update` ran a command a manifest named");
     // The query has to have gone out, or this proves nothing: were the pin

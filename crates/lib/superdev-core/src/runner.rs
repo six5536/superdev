@@ -68,7 +68,13 @@ mod fake {
     use crate::error::{Error, Result};
 
     /// Scripted runner for tests: records every call, returns the output of
-    /// the first script whose prefix matches, succeeds silently otherwise.
+    /// the first matching script, succeeds silently otherwise.
+    ///
+    /// A needle registered with `script_containing` is tried before any
+    /// prefix, because it is the more particular of the two: a broad prefix
+    /// registered elsewhere in the same test would otherwise answer first and
+    /// leave the needle dead, which is a test that has stopped
+    /// discriminating without stopping passing.
     pub(crate) struct FakeRunner {
         scripts: RefCell<Vec<(String, Output)>>,
         contains: RefCell<Vec<(String, Output)>>,
@@ -129,18 +135,18 @@ mod fake {
                 });
             }
             if let Some((_, out)) = self
-                .scripts
-                .borrow()
-                .iter()
-                .find(|(p, _)| line.starts_with(p))
-            {
-                return Ok(out.clone());
-            }
-            if let Some((_, out)) = self
                 .contains
                 .borrow()
                 .iter()
                 .find(|(n, _)| line.contains(n.as_str()))
+            {
+                return Ok(out.clone());
+            }
+            if let Some((_, out)) = self
+                .scripts
+                .borrow()
+                .iter()
+                .find(|(p, _)| line.starts_with(p))
             {
                 return Ok(out.clone());
             }
