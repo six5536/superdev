@@ -3,7 +3,8 @@ type: Plan
 id: feature-plan-content-packs
 title: Externally Sourced Content Packs — feature plan
 description: Deliver S014 in fourteen slices — move the content to /pack, reorganise it into pack layout, derive it from that layout, add the manifest and lock schemas, resolve local then git sources, wire ownership, teach init and update, make each release one command, make a committed path pin portable, and dogfood it.
-status: draft
+status: stable
+tags: [done]
 links:
   - rel: implements
     to: spec-content-packs
@@ -226,7 +227,7 @@ only variable when the Windows job runs.
 
 ### Slice 14: Dogfood — superdev pins its own pack
 
-- [ ] Done — ticked by integrate at merge.
+- [x] Done — ticked by integrate at merge.
 - Change: point this repo's own manifest at `/pack/` as a local-path pack, so
   an asset edit reaches `.claude/skills/` on the next `sync` without a
   rebuild. Retire the `asset-backport` skill and the workflow note that

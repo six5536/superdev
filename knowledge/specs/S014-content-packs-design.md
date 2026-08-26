@@ -270,10 +270,18 @@ Still open:
 - Whether the first-party pack's tag series lives on this repo or moves to
   its own repository later — the frame chose this repo; nothing here depends
   on that choice.
-- Whether `superdev` should dogfood by pinning its own `assets/` directory
-  as a local-path pack, retiring the `asset-backport` step — recommended,
-  and testable by criterion 20. The feature plan decides whether that lands
-  in this feature.
+
+Settled during delivery:
+
+- Whether `superdev` should dogfood by pinning its own content directory as a
+  local-path pack, retiring the `asset-backport` step — **yes**, and it landed
+  in this feature's last slice. The manifest pins `./pack`, an edit there
+  reaches `.claude/skills/` with no rebuild, and `asset-backport` is gone. Two
+  limits came with it, filed rather than fixed:
+  [I003](../issues/I003-a-local-pack-cannot-remove-what-it-dropped.md), a
+  layer cannot remove what it dropped, and
+  [I004](../issues/I004-a-path-packs-digest-churns-and-is-never-checked.md),
+  the recorded digest churns and is checked by nothing.
 
 # Test plan: externally sourced content packs
 
@@ -338,11 +346,10 @@ Still open:
 
 ### Manual verification
 
-1. Point this repo's manifest at its own `crates/lib/superdev-core/assets/`
-   as a local-path pack. Edit `assets/aokf/skills/frame/SKILL.md`, run
-   `superdev sync` without rebuilding, and confirm
-   `.claude/skills/frame/SKILL.md` carries the edit — the dogfood the
-   `asset-backport` skill exists to work around.
+1. Point this repo's manifest at its own `/pack/` as a local-path pack. Edit
+   `pack/knowledge/skills/frame/SKILL.md`, run `superdev sync` without
+   rebuilding, and confirm `.claude/skills/frame/SKILL.md` carries the edit —
+   the dogfood the `asset-backport` skill existed to work around.
 2. Tag an `assets-vN` release, pin a scratch repo at it, run `init`, and
    confirm the skills materialise from the tag rather than the snapshot.
 3. Disconnect the network and run `superdev status --drift` in that scratch

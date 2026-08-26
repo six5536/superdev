@@ -47,6 +47,23 @@ enabled, so they are untouched; `frontend` stays off.
 in the pre-PR list and in CI, through the product's own drift detection rather
 than a parity test.
 
+The manifest also pins `/pack/` as a local-path pack, so this repo's content
+comes from the tree rather than from the copy compiled into the binary: edit a
+skill, template or scaffold under `pack/` and `cargo run -- sync` writes it to
+`.claude/skills/` with no rebuild in between. That retired the `asset-backport`
+skill, which existed to mirror an edit made to a live file back into the asset
+it shipped from.
+
+Two things the pin does not do. It **layers** rather than replacing, because
+only the blueprint's default git source is the base
+([ADR-004](decisions/D004-base-pack-identity.md)), so **deleting or renaming**
+an item under `pack/` does not remove its live copy — that still needs a
+rebuild, and `status --drift` stays green until then
+([I003](issues/I003-a-local-pack-cannot-remove-what-it-dropped.md)). And the
+lock records a digest over the whole tree, so any commit touching `pack/`
+should be made with `sync` run
+([I004](issues/I004-a-path-packs-digest-churns-and-is-never-checked.md)).
+
 The managed hook entry names a bare `superdev`, and this repo has no installed
 copy. `scripts/superdev` execs `cargo run` against this tree; symlink it onto
 your PATH once, as [CONTRIBUTING](/CONTRIBUTING.md) says.
