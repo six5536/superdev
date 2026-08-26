@@ -15,6 +15,7 @@ use sha2::{Digest, Sha256};
 use crate::error::{Error, Result};
 use crate::runner::{CommandRunner, Output};
 
+use super::manifest::link_refusal;
 use super::source::SUPPORTED_SCHEMES;
 
 /// Where a resolved pack is kept, under the gitignored machine-state
@@ -59,15 +60,6 @@ pub fn cache_path(root: &Path, digest: &str) -> PathBuf {
     root.join(CACHE_DIR).join(digest.replace(':', "-"))
 }
 
-/// The `-c` overrides every git command here carries.
-///
-/// A pack's digest is over the bytes as the pack published them, and the lock
-/// recording it is committed and shared. Left to the user's `core.autocrlf`,
-/// a checkout on Windows would translate every line ending, so the same rev
-/// would digest differently there and a lock written on one platform would
-/// fail verification on the other. superdev's clone takes the bytes verbatim
-/// whatever the machine is configured to prefer.
-///
 /// The transports refused by name.
 ///
 /// Named and not left to the blanket, because git resolves
@@ -79,6 +71,15 @@ pub fn cache_path(root: &Path, digest: &str) -> PathBuf {
 /// ADR-012.
 const REFUSED_TRANSPORTS: &[&str] = &["ext", "git", "http"];
 
+/// The `-c` overrides every git command here carries.
+///
+/// A pack's digest is over the bytes as the pack published them, and the lock
+/// recording it is committed and shared. Left to the user's `core.autocrlf`,
+/// a checkout on Windows would translate every line ending, so the same rev
+/// would digest differently there and a lock written on one platform would
+/// fail verification on the other. superdev's clone takes the bytes verbatim
+/// whatever the machine is configured to prefer.
+///
 /// Every git call superdev makes is built from this, `pin.rs`'s query
 /// included — the one call that did not was how a manifest still got a
 /// command run.
@@ -196,6 +197,11 @@ pub fn fetch(
     ]);
     run_git(runner, pack, &args, into)?;
 
+    // Before anything under the pack is read or digested, and before the
+    // directory check below, so what stops the run is the entry rather than
+    // whatever shape it left on disk.
+    refuse_linked_entries(runner, pack, &checkout)?;
+
     let pack_root = checkout.join(PACK_SUBDIR);
     if !pack_root.is_dir() {
         return Err(Error::Pack {
@@ -204,6 +210,74 @@ pub fn fetch(
         });
     }
     Ok(pack_root)
+}
+
+/// A checked-out entry git records as a symlink.
+const INDEX_SYMLINK: &str = "120000";
+
+/// A checked-out entry git records as a gitlink — a submodule.
+const INDEX_GITLINK: &str = "160000";
+
+/// Refuse a fetched pack whose index says it carries a link or a submodule.
+///
+/// Git is asked rather than the filesystem because only git knows. On Windows
+/// without `core.symlinks` a link is checked out as a plain file holding the
+/// target's path, which `symlink_metadata` cannot tell from content — so the
+/// bytes would enter the digest there and not here, and one rev would verify
+/// on Linux and fail on Windows naming nothing a reader could act on. The
+/// index says `120000` on both. ADR-014.
+///
+/// A submodule is refused with it: a shallow sparse clone leaves its
+/// directory empty, so the pack would ship an empty item and say nothing —
+/// the same failure in a different costume.
+///
+/// The filesystem check in `resolve` stays, and is not redundant: this answer
+/// is taken once against the checkout, and the cache read on every later run
+/// has no index of its own.
+fn refuse_linked_entries(runner: &dyn CommandRunner, pack: &str, checkout: &Path) -> Result<()> {
+    let args: Vec<String> = vec![
+        "-C".into(),
+        checkout.to_string_lossy().into_owned(),
+        "ls-files".into(),
+        "--stage".into(),
+        // NUL-separated, so a path git would otherwise quote — a newline or a
+        // non-ASCII byte in a filename — arrives whole and unescaped.
+        "-z".into(),
+        "--".into(),
+        PACK_SUBDIR.into(),
+    ];
+    let out = git(runner, &args, checkout)?;
+    if out.status != 0 {
+        return Err(Error::Pack {
+            pack: pack.to_string(),
+            message: format!(
+                "could not read `{PACK_SUBDIR}/`'s entries from the checkout: {}",
+                out.stderr.trim()
+            ),
+        });
+    }
+    for entry in out.stdout.split('\0').filter(|entry| !entry.is_empty()) {
+        // `<mode> <object> <stage>\t<path>`. The path holds no tab: git
+        // records one as `\t` in a quoted path, and `-z` paths are never
+        // quoted, so a real tab cannot reach here to be split on.
+        let Some((meta, path)) = entry.split_once('\t') else {
+            continue;
+        };
+        match meta.split_whitespace().next() {
+            Some(INDEX_SYMLINK) => return Err(link_refusal(pack, path)),
+            Some(INDEX_GITLINK) => {
+                return Err(Error::Pack {
+                    pack: pack.to_string(),
+                    message: format!(
+                        "{path} is a submodule — a shallow sparse clone leaves one \
+                         empty, so the pack would ship an item with nothing in it"
+                    ),
+                });
+            }
+            _ => {}
+        }
+    }
+    Ok(())
 }
 
 /// Spawn git with the overrides in front, whatever the caller asked for.
@@ -262,6 +336,145 @@ fn looks_like_sha(rev: &str) -> bool {
 mod tests {
     use super::*;
     use crate::runner::FakeRunner;
+
+    /// A git repository carrying a pack, for the questions only a real index
+    /// can answer. Returns its directory; `git` runs inside it.
+    #[cfg(unix)]
+    fn fixture_repo(dir: &Path) -> impl Fn(&[&str]) -> String + use<'_> {
+        let git = move |args: &[&str]| {
+            let out = std::process::Command::new("git")
+                .args(args)
+                .current_dir(dir)
+                .env("GIT_CONFIG_GLOBAL", "/dev/null")
+                .env("GIT_CONFIG_NOSYSTEM", "1")
+                .output()
+                .expect("git runs");
+            assert!(out.status.success(), "git {args:?}: {out:?}");
+            String::from_utf8_lossy(&out.stdout).trim().to_string()
+        };
+        fs::create_dir_all(dir.join("pack/knowledge/skills/honest")).unwrap();
+        fs::write(
+            dir.join("pack/pack.toml"),
+            "format = 1\nname = \"fixture\"\nversion = \"1.0.0\"\n",
+        )
+        .unwrap();
+        fs::write(
+            dir.join("pack/knowledge/skills/honest/SKILL.md"),
+            "# honest\n",
+        )
+        .unwrap();
+        git(&["init", "-q", "-b", "main"]);
+        git(&["config", "user.email", "fixture@example.com"]);
+        git(&["config", "user.name", "fixture"]);
+        git(&["config", "commit.gpgsign", "false"]);
+        git
+    }
+
+    /// A pack with neither a link nor a submodule passes, so the check costs
+    /// a clean pack one git call and nothing else.
+    #[cfg(unix)]
+    #[test]
+    fn a_pack_the_index_calls_ordinary_is_accepted() {
+        let dir = tempfile::tempdir().unwrap();
+        let git = fixture_repo(dir.path());
+        git(&["add", "-A"]);
+        git(&["commit", "-q", "-m", "clean"]);
+
+        refuse_linked_entries(&crate::runner::SystemRunner, "acme", dir.path())
+            .expect("a pack with no link resolves");
+    }
+
+    /// Git's index decides, not the filesystem — and here they agree.
+    #[cfg(unix)]
+    #[test]
+    fn a_symlink_the_index_records_is_refused() {
+        let dir = tempfile::tempdir().unwrap();
+        let git = fixture_repo(dir.path());
+        std::os::unix::fs::symlink(
+            "../honest/SKILL.md",
+            dir.path().join("pack/knowledge/skills/honest/LINK.md"),
+        )
+        .unwrap();
+        git(&["add", "-A"]);
+        git(&["commit", "-q", "-m", "linked"]);
+
+        let err = refuse_linked_entries(&crate::runner::SystemRunner, "acme", dir.path())
+            .expect_err("the index says 120000");
+        let message = err.to_string();
+        assert!(message.contains("is a symlink"), "{message}");
+        assert!(
+            message.contains("pack/knowledge/skills/honest/LINK.md"),
+            "the refusal does not name the path: {message}"
+        );
+    }
+
+    /// The case the filesystem cannot see, and the reason this asks git at
+    /// all. Without `core.symlinks` git writes the entry as a plain file
+    /// holding the target's path — which is what a Windows checkout does —
+    /// so `symlink_metadata` sees ordinary content and the bytes enter the
+    /// digest. A lock written on Linux would then fail on Windows naming
+    /// nothing a reader could act on. ADR-014.
+    ///
+    /// Reproduced on Linux by setting `core.symlinks=false` in the
+    /// repository's *own* config and forcing a re-checkout: passing
+    /// `-c core.symlinks=false` to `clone` does not work, because clone
+    /// probes the filesystem and writes its own value.
+    #[cfg(unix)]
+    #[test]
+    fn a_link_checked_out_as_a_plain_file_is_still_refused() {
+        let dir = tempfile::tempdir().unwrap();
+        let git = fixture_repo(dir.path());
+        let link = dir.path().join("pack/knowledge/skills/honest/LINK.md");
+        std::os::unix::fs::symlink("../honest/SKILL.md", &link).unwrap();
+        git(&["add", "-A"]);
+        git(&["commit", "-q", "-m", "linked"]);
+
+        git(&["config", "core.symlinks", "false"]);
+        fs::remove_file(&link).unwrap();
+        git(&["checkout", "--", "pack"]);
+
+        // The premise: the working tree now holds content, not a link.
+        let meta = fs::symlink_metadata(&link).expect("the entry exists");
+        assert!(
+            !meta.file_type().is_symlink(),
+            "the checkout still made a real link — the premise did not hold"
+        );
+        assert_eq!(
+            fs::read_to_string(&link).unwrap(),
+            "../honest/SKILL.md",
+            "the plain file holds the target's path"
+        );
+
+        let err = refuse_linked_entries(&crate::runner::SystemRunner, "acme", dir.path())
+            .expect_err("the index still says 120000");
+        assert!(err.to_string().contains("is a symlink"), "{err}");
+    }
+
+    /// A submodule is the same failure in a different costume: a shallow
+    /// sparse clone leaves the directory empty, so the pack would ship an
+    /// empty item and say nothing. ADR-014.
+    #[cfg(unix)]
+    #[test]
+    fn a_submodule_under_the_pack_is_refused() {
+        let dir = tempfile::tempdir().unwrap();
+        let git = fixture_repo(dir.path());
+        git(&["add", "-A"]);
+        git(&["commit", "-q", "-m", "clean"]);
+        let sha = git(&["rev-parse", "HEAD"]);
+        // The index entry a submodule is, without the machinery around it.
+        git(&[
+            "update-index",
+            "--add",
+            "--cacheinfo",
+            &format!("160000,{sha},pack/vendor"),
+        ]);
+
+        let err = refuse_linked_entries(&crate::runner::SystemRunner, "acme", dir.path())
+            .expect_err("a gitlink under the pack");
+        let message = err.to_string();
+        assert!(message.contains("submodule"), "{message}");
+        assert!(message.contains("pack/vendor"), "{message}");
+    }
 
     /// git runs a command for an `ext::` URL, and whether it may is the
     /// user's config to set — so superdev sets it for its own calls rather

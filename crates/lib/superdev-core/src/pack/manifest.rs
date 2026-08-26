@@ -161,6 +161,22 @@ pub fn check_path(pack: &str, path: &str) -> Result<()> {
     Ok(())
 }
 
+/// The refusal a symlink earns, naming it.
+///
+/// Here rather than beside either caller, because two of them refuse a link
+/// and the reader meeting one should not have to work out whether the other
+/// means something different: the filesystem walk that reads a pack, and the
+/// question git's index answers about a fetched one. ADR-014.
+pub(super) fn link_refusal(pack: &str, path: &str) -> Error {
+    Error::Pack {
+        pack: pack.to_string(),
+        message: format!(
+            "{path} is a symlink — a pack is the files it contains, not links \
+             to files elsewhere"
+        ),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

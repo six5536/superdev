@@ -14,7 +14,7 @@ use crate::manifest::{Manifest, PackEntry};
 use crate::runner::CommandRunner;
 
 use super::fetch;
-use super::manifest::{PACK_MANIFEST, PackManifest, SUPPORTED_FORMATS, check_path};
+use super::manifest::{PACK_MANIFEST, PackManifest, SUPPORTED_FORMATS, check_path, link_refusal};
 use super::source::{DEFAULT_PACK, PackSource};
 
 /// How far the resolver may go. ADR-002.
@@ -337,25 +337,9 @@ fn refuse_a_link(pack: &str, path: &Path) -> Result<()> {
         .map(|meta| meta.file_type().is_symlink())
         .unwrap_or(false);
     if linked {
-        return Err(link_refusal(pack, path));
+        return Err(link_refusal(pack, &path.display().to_string()));
     }
     Ok(())
-}
-
-/// The refusal a symlink earns, naming it.
-///
-/// Apart from [`refuse_a_link`] because the walk already holds the metadata
-/// that answers the question, and asking the filesystem twice for every entry
-/// in a pack is a syscall per file for nothing.
-fn link_refusal(pack: &str, path: &Path) -> Error {
-    Error::Pack {
-        pack: pack.to_string(),
-        message: format!(
-            "{} is a symlink — a pack is the files it contains, not links \
-             to files elsewhere",
-            path.display()
-        ),
-    }
 }
 
 /// Collect every file under `dir` as (path relative to `root`, content).
@@ -400,7 +384,7 @@ fn read_dir(pack: &str, root: &Path, dir: &Path, files: &mut Vec<(String, String
             message: format!("{}: {e}", path.display()),
         })?;
         if meta.file_type().is_symlink() {
-            return Err(link_refusal(pack, &path));
+            return Err(link_refusal(pack, &path.display().to_string()));
         }
         if meta.is_dir() {
             read_dir(pack, root, &path, files)?;
@@ -1142,6 +1126,57 @@ mod tests {
             read_pack("superdev", &root).is_ok(),
             "superdev's own pack no longer resolves"
         );
+    }
+
+    /// End to end: a real clone of a real repository whose pack holds a link.
+    /// Refused at fetch, on git's answer rather than the filesystem's, and
+    /// before a digest exists to record. ADR-014.
+    #[cfg(unix)]
+    #[test]
+    fn a_fetched_pack_with_a_symlink_is_refused_before_it_is_digested() {
+        let repo = tempfile::tempdir().unwrap();
+        let fixture = tempfile::tempdir().unwrap();
+        git_fixture(fixture.path(), "v1", "fixture-skill", "# v1\n");
+        std::os::unix::fs::symlink(
+            "../fixture-skill/SKILL.md",
+            fixture.path().join("pack/knowledge/skills/LINK.md"),
+        )
+        .unwrap();
+        git_fixture(fixture.path(), "v2", "fixture-skill", "# v2\n");
+        let url = format!("file://{}", fixture.path().display());
+
+        let err = resolve(
+            repo.path(),
+            &crate::runner::SystemRunner,
+            &git_manifest(&url, "v2"),
+            &Lock::default(),
+            ResolveMode::Fetching,
+        )
+        .expect_err("the link stops the fetch");
+
+        let message = err.to_string();
+        // The path git reports, repo-relative and with no leading slash —
+        // which is what says the *index* refused it. The filesystem check
+        // from slice 2 would catch this same link on Linux and name the
+        // checkout's absolute path, so asserting only "is a symlink" would
+        // pass with this slice removed entirely.
+        assert!(
+            message.contains(": pack/knowledge/skills/LINK.md is a symlink"),
+            "refused by the filesystem rather than the index: {message}"
+        );
+        // Nothing digested means nothing cached: the refusal lands before
+        // there is a digest to name a cache directory with.
+        let cache = repo.path().join(".superdev/cache/packs");
+        let cached: Vec<_> = fs::read_dir(&cache)
+            .map(|entries| {
+                entries
+                    .flatten()
+                    .map(|e| e.file_name().to_string_lossy().into_owned())
+                    .filter(|name| name != ".fetch")
+                    .collect()
+            })
+            .unwrap_or_default();
+        assert!(cached.is_empty(), "a refused pack was cached: {cached:?}");
     }
 
     /// Case 12: a tag that moved resolves to bytes the lock did not record.
