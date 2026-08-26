@@ -65,7 +65,11 @@ pub fn cache_path(root: &Path, digest: &str) -> PathBuf {
 /// would digest differently there and a lock written on one platform would
 /// fail verification on the other. superdev's clone takes the bytes verbatim
 /// whatever the machine is configured to prefer.
-fn verbatim() -> Vec<String> {
+///
+/// Every git call superdev makes is built from this, `pin.rs`'s query
+/// included — the one call that did not was how a manifest still got a
+/// command run.
+pub(super) fn overrides() -> Vec<String> {
     vec![
         "-c".into(),
         "core.autocrlf=false".into(),
@@ -110,7 +114,7 @@ pub fn fetch(
     }
 
     let target = checkout.to_string_lossy().into_owned();
-    let mut clone: Vec<String> = verbatim();
+    let mut clone: Vec<String> = overrides();
     clone.extend([
         "clone".into(),
         "--depth".into(),
@@ -133,7 +137,7 @@ pub fn fetch(
     if looks_like_sha(rev) {
         // A sha is not reachable by `--branch`, and a blobless shallow clone
         // does not carry it: ask for that one commit, then move onto it.
-        let mut args = verbatim();
+        let mut args = overrides();
         args.extend([
             "-C".into(),
             target.clone(),
@@ -146,7 +150,7 @@ pub fn fetch(
         ]);
         run_git(runner, pack, &args, into)?;
 
-        let mut args = verbatim();
+        let mut args = overrides();
         args.extend([
             "-C".into(),
             target.clone(),
@@ -157,7 +161,7 @@ pub fn fetch(
         run_git(runner, pack, &args, into)?;
     }
 
-    let mut args = verbatim();
+    let mut args = overrides();
     args.extend([
         "-C".into(),
         target,

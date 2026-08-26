@@ -166,7 +166,11 @@ fn choose(current: Release, floor: Option<Release>, newest: &Newest) -> (Release
 /// `ls-remote` and not a clone: the answer is one line of refs, and the pin
 /// it produces is what the resolver then fetches and verifies as usual.
 fn newest_release(runner: &dyn CommandRunner, root: &Path, source: &PackSource) -> Newest {
-    let args = vec![
+    // Built from the same overrides every other git call carries. This one
+    // goes out unprompted, on a source a cloned manifest named, so it is the
+    // last place that should have been trusted to build its own.
+    let mut args = super::fetch::overrides();
+    args.extend([
         "ls-remote".to_string(),
         "--tags".to_string(),
         "--refs".to_string(),
@@ -174,7 +178,7 @@ fn newest_release(runner: &dyn CommandRunner, root: &Path, source: &PackSource) 
         "--".to_string(),
         source.clone_url(),
         format!("refs/tags/{PACK_TAG_PREFIX}*"),
-    ];
+    ]);
     match runner.run("git", &args, root) {
         Ok(out) if out.status == 0 => Newest::Answered(
             out.stdout
@@ -245,8 +249,10 @@ mod tests {
             .iter()
             .map(|tag| format!("0123456789abcdef\trefs/tags/{tag}\n"))
             .collect();
+        // Scripted on the program alone: the overrides every call carries sit
+        // between it and the subcommand, so `git ls-remote` prefixes nothing.
         runner.script(
-            "git ls-remote",
+            "git",
             Output {
                 status: 0,
                 stdout: refs,
@@ -332,7 +338,7 @@ mod tests {
     fn a_failed_query_is_treated_as_unreachable() {
         let runner = FakeRunner::new();
         runner.script(
-            "git ls-remote",
+            "git",
             Output {
                 status: 128,
                 stdout: String::new(),
@@ -468,6 +474,27 @@ mod tests {
         );
     }
 
+    /// This call builds its own argument vector, so it has to carry the
+    /// overrides too — and it is the one `update` makes unprompted, on a
+    /// source a cloned manifest names. `fetch`'s equivalent test cannot see
+    /// this call; that is exactly how it was missed.
+    #[test]
+    fn the_query_refuses_the_transports_that_run_commands() {
+        let runner = source_carrying(&["assets-v0.2.0"]);
+        let mut manifest = manifest(&[(DEFAULT_PACK.source, Some(DEFAULT_PACK.rev))]);
+
+        update_pins(&runner, Path::new("."), &mut manifest);
+
+        let calls = runner.calls();
+        assert!(!calls.is_empty(), "no query was made");
+        for call in &calls {
+            assert!(
+                call.contains("protocol.ext.allow=never"),
+                "a git call without the override: {call}"
+            );
+        }
+    }
+
     /// The query is built from the source, not from a hardcoded URL, and
     /// carries the tag pattern so a repository of a thousand tags answers
     /// with the handful that are pack releases.
@@ -480,9 +507,13 @@ mod tests {
 
         let calls = runner.calls();
         assert_eq!(calls.len(), 1, "asked once: {calls:?}");
-        assert_eq!(
-            calls[0],
-            "git ls-remote --tags --refs -- https://github.com/six5536/superdev refs/tags/assets-v*"
+        assert!(
+            calls[0].ends_with(
+                "ls-remote --tags --refs -- \
+                 https://github.com/six5536/superdev refs/tags/assets-v*"
+            ),
+            "{}",
+            calls[0]
         );
     }
 

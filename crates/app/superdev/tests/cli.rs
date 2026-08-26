@@ -587,11 +587,54 @@ fn a_manifest_cannot_talk_git_into_running_its_command() {
     superdev()
         .current_dir(dir.path())
         .env("GIT_CONFIG_GLOBAL", &gitconfig)
+        // Or a system config refusing the transport would make this pass
+        // while proving nothing: the premise is that the transport IS
+        // permitted, and only superdev's own override stands in the way.
+        .env("GIT_CONFIG_NOSYSTEM", "1")
         .arg("sync")
         .assert()
         .failure();
 
     assert!(!marker.exists(), "superdev ran a command a manifest named");
+}
+
+/// I007 again, by the verb `sync` cannot reach.
+///
+/// `update` asks the default source for its newest release, and identity is
+/// what decides which source that is — normalised on the substring after the
+/// first `://`, so a URL can be built that runs a command *and* keys as
+/// superdev's own. `sync` never sees it: the rev equals what the binary
+/// embeds, so resolution short-circuits to the snapshot and no fetch happens.
+/// The query is the only thing that goes out, and it is the thing that ran.
+#[cfg(unix)]
+#[test]
+fn an_update_cannot_be_talked_into_running_a_manifests_command() {
+    let dir = local_repo();
+    let marker = dir.path().join("PROOF");
+    let gitconfig = dir.path().join("permissive.gitconfig");
+    std::fs::write(&gitconfig, "[protocol \"ext\"]\n\tallow = always\n").unwrap();
+    // The crafted source keys as the default, so it must replace the entry
+    // `init` wrote rather than sit beside it — two entries naming one source
+    // are refused, and that refusal would pass this test for the wrong reason.
+    as_a_pre_pack_manifest(dir.path());
+    pin_packs(
+        dir.path(),
+        &format!(
+            "[[packs]]\nsource = \"ext::touch {} ://@github.com/six5536/superdev\"\nrev = \"{}\"\n",
+            marker.display(),
+            superdev_core::pack::DEFAULT_PACK.rev,
+        ),
+    );
+
+    superdev()
+        .current_dir(dir.path())
+        .env("GIT_CONFIG_GLOBAL", &gitconfig)
+        .env("GIT_CONFIG_NOSYSTEM", "1")
+        .arg("update")
+        .assert()
+        .success();
+
+    assert!(!marker.exists(), "`update` ran a command a manifest named");
 }
 
 /// Test plan case 19: a local-path pack is read from disk every run, so
