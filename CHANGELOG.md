@@ -30,6 +30,19 @@ publish a version it cannot find a heading for.
   writes nothing: re-pinning is the only way forward, and is itself the new
   trust decision. `status` gains `content:` lines naming what it resolved
   from and any item one pack hid from another.
+
+  `init` writes the default entry into the manifest rather than leaving the
+  array absent — both resolve identically, but the written one is the pin a
+  reader can see and edit. `superdev update` asks that default source for its
+  newest content release and moves the pin there, even ahead of what the
+  binary embeds: it is how a skill fix reaches you without a new binary. A pin
+  naming any other source is reported and left alone, because naming a source
+  is your trust decision to make again. With no network the pin moves no
+  further than the binary's own default and the run says it could not check,
+  and a manifest written by an earlier binary gains the entry on the first
+  `update`. `source` accepts `github:owner/repo` and `gitlab:owner/repo` as
+  shorthand; every other spelling, an ssh alias included, is handed to `git`
+  as written.
 - A `.agents/tools.md` scaffold: reach for internal and MCP tools before Bash.
   Written once, like the other agent rules, and imported by
   `.agents/superdev.md` after the capability files.

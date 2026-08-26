@@ -64,11 +64,31 @@ above. Two entries naming one source are refused — each pack appears once,
 as each capability provider does.
 A source is compared normalised, so any spelling of one repository is one
 source; a pin naming exactly what this binary embeds resolves from it and
-makes no request. A path is resolved against the repo root, not the working
-directory — the file is committed, so it means the same thing wherever the
-command runs from — and canonicalised before it is compared, so two spellings
-of one directory are one pack. It is read from disk on every run, so editing a
-local pack and running `sync` again lands the new bytes with no rebuild.
+makes no request. `github:owner/repo` and `gitlab:owner/repo` are the only
+shorthands, expanded to `https://<forge>.com/owner/repo` before `git` sees
+them; every other spelling reaches `git` as written, so an ssh alias, an
+`insteadOf` prefix and a mirror all keep working. A path is resolved against
+the repo root, not the working directory — the file is committed, so it means
+the same thing wherever the command runs from — and canonicalised before it is
+compared, so two spellings of one directory are one pack. It is read from disk
+on every run, so editing a local pack and running `sync` again lands the new
+bytes with no rebuild.
+
+`init` writes the default entry rather than leaving the array absent: both
+resolve the same way, but the written pin is the one a reader can see and
+edit without first knowing that absence means the embedded pack. `update` —
+only its untargeted form, never `update <capability>` — asks the default
+source for the newest `assets-v<major>.<minor>.<patch>` tag it carries and
+moves that pin there, ahead of what the binary embeds if need be
+([ADR-009](decisions/D009-update-queries-default-source.md)). That is the one
+path by which a content fix reaches an unchanged binary, and the one place
+superdev reaches the network without being asked to fetch something. A pin
+never moves backwards and never below what the binary carries; a pin naming
+any other source, or resting on a branch, a sha or a pre-release, is reported
+and left alone. When the source cannot be reached, carries no release, or
+carries only releases older than the pin, the run says so and the pin stays
+where the binary would put it. A manifest an earlier binary wrote gains the
+default entry on the first `update`, which is the only command that adds one.
 
 A pack-provided file is superdev's on exactly the terms an embedded one is:
 hashed into the lock, rewritten by `sync`, reported as drift when edited, and

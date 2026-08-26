@@ -54,8 +54,14 @@ only (pre-1.0, no backports).
   executable action, and the instruction files, the AOKF spec and
   `PROJECT.md` are refused by path before any file is read.
 - **Local by default.** The CLI takes no network input at runtime; the
-  network is touched only for pinned tool installs and the one-time
-  embedding model download (or the explicit embeddings-API opt-in). The
+  network is touched only for pinned tool installs, the one-time
+  embedding model download (or the explicit embeddings-API opt-in), fetching
+  a pack the lock does not already have cached, and the one query `update`
+  makes of the default pack source
+  ([ADR-009](decisions/D009-update-queries-default-source.md)). That query is
+  the narrowest of these: it runs on the untargeted `update` alone, asks only
+  the source superdev itself ships, and a failure to reach it degrades to the
+  pin the binary carries rather than failing the run. The
   accepted non-PIE musl binaries rest on exactly this — see
   [constraints-non-goals](constraints-non-goals.md).
 

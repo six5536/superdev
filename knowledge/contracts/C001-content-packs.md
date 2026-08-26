@@ -371,10 +371,11 @@ pub enum Error {
 
 ## Key flows
 
-**Default `init`, offline.** `manifest.packs` is empty → `resolve` returns the
-snapshot's `ContentSet` with no cache read and no network → `plan_repo` →
-apply. `init` then writes the default `[[packs]]` entry naming
-`DEFAULT_PACK`.
+**Default `init`, offline.** The manifest `init` builds carries the default
+`[[packs]]` entry naming `DEFAULT_PACK`, so `resolve` sees a pin at exactly
+the rev this binary embeds → returns the snapshot's `ContentSet` with no cache
+read and no network → `plan_repo` → apply. An empty `manifest.packs` takes the
+same path, and is what every manifest written before packs existed carries.
 
 **Pinning a newer rev.** `sync` → `resolve(Fetching)` finds the pin absent
 from the lock → fetches into `.superdev/cache/packs/<digest>/` → parses

@@ -11,6 +11,7 @@
 * [Plans](plans/index.md) - implementation plans delivering specs, tagged done when they land.
 * [Decisions](decisions/index.md) - architecture decision records: the interfaces that were expensive to change, with their alternatives.
 * [Contracts](contracts/index.md) - interface contracts build codes against, discarded once the code is canonical.
+* [Issues](issues/index.md) - open tickets, grouped by feature.
 * [Architecture](architecture.md) - the core/binary/blueprint layering, the capability-to-provider map, the knowledge-serving side, and the files superdev keeps in a managed repo.
 * [Architectural Rules](architectural-rules.md) - planning is side-effect free, the engine is the only place that applies, and capabilities are the user-facing names.
 * [Software Components](software-components.md) - the Rust crates, the npm launcher and platform packages, the platform matrix, and the CI/CD workflows.

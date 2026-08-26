@@ -170,7 +170,7 @@ only variable when the Windows job runs.
 
 ### Slice 11: init and update
 
-- [ ] Done — ticked by integrate at merge.
+- [x] Done — ticked by integrate at merge.
 - Change: `init` writes the blueprint's default pack entry explicitly.
   `update` asks the default source for its newest release tag and moves that
   pin there, even ahead of the blueprint's default
