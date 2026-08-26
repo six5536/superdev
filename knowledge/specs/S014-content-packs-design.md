@@ -3,7 +3,8 @@ type: Spec
 id: spec-content-packs
 title: Externally Sourced Content Packs
 description: superdev's prose content becomes a versioned pack resolved from a pinned source, replacing or layering over an embedded snapshot the binary still carries, so a skill or template ships without a five-platform binary release.
-status: draft
+status: stable
+tags: [done]
 links:
   - rel: relates-to
     to: spec-cli-core-blueprint-engine
@@ -270,6 +271,26 @@ Still open:
 - Whether the first-party pack's tag series lives on this repo or moves to
   its own repository later — the frame chose this repo; nothing here depends
   on that choice.
+
+## Accepted
+
+Two passes. The first checked all twenty-three criteria against the real
+binary and found three gaps, none of them reachable by a criterion: the
+feature was undocumented for users, a manifest could get `git` to run a
+command, and a pack could read a file it did not contain. All three were cut
+as slices and closed. The second pass re-checked the criteria, confirmed each
+gap closed as a user meets it, and a security review found both fixes airtight
+with nothing new.
+
+Five issues stay open, each needing an interface decision before it can be
+cut: [I001](../issues/I001-update-can-pin-an-unreadable-pack-format.md),
+[I002](../issues/I002-no-time-bound-on-the-update-query.md),
+[I003](../issues/I003-a-local-pack-cannot-remove-what-it-dropped.md),
+[I004](../issues/I004-a-path-packs-digest-churns-and-is-never-checked.md) and
+the remaining half of
+[I007](../issues/I007-a-pack-source-reaches-git-with-no-scheme-check.md).
+[I009](../issues/I009-a-skipped-symlink-says-nothing.md) is open too, a
+consequence of the symlink fix rather than of the feature.
 
 Settled during delivery:
 
