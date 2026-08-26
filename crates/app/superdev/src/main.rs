@@ -22,7 +22,22 @@ use clap_complete::Shell;
 use superdev_core::error::{Error, Result};
 
 #[derive(Parser)]
-#[command(name = "superdev", version = superdev_core::version(), about = "superdev — project scaffold")]
+#[command(
+    name = "superdev",
+    version = superdev_core::version(),
+    about = "superdev — project scaffold",
+    // Hand-wrapped: clap's `wrap_help` is not enabled, so a paragraph here
+    // renders as one long line and runs off the terminal. roff reflows it
+    // again for the man page, so the breaks cost nothing there.
+    long_about = "superdev — project scaffold.\n\n\
+        Sets a repository up for agent-driven development and keeps that\n\
+        setup current. The skills, templates and scaffolds it writes come\n\
+        from a content pack: one ships inside this binary, and `[[packs]]`\n\
+        in .superdev/config.toml points at another — a git source or a\n\
+        directory — to add your own or supersede superdev's. Content\n\
+        releases under its own assets-vX.Y.Z tags, and `superdev update`\n\
+        is the verb that goes looking for a newer one."
+)]
 struct Cli {
     #[command(subcommand)]
     command: Option<Command>,
@@ -45,8 +60,14 @@ enum Command {
         #[arg(long)]
         dry_run: bool,
     },
-    /// Bring pins current — capabilities to this binary's defaults, the pack
-    /// to its source's newest release — then sync
+    /// Bring pins current, then sync
+    // Explicit, and hand-wrapped: clap joins a doc comment's lines into one
+    // paragraph, and without `wrap_help` that paragraph never breaks.
+    #[command(long_about = "Bring pins current, then sync.\n\n\
+            A capability's pin moves to this binary's default. The pack's\n\
+            moves to its source's newest release, which may be past what\n\
+            this binary embeds — the one place superdev reaches the\n\
+            network unasked.")]
     Update {
         /// Capability to update, optionally `<capability>@<version>`
         target: Option<String>,

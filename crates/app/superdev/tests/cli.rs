@@ -785,6 +785,16 @@ fn update_help_says_it_may_reach_the_source() {
     let out = superdev().args(["update", "--help"]).assert().success();
     let help = stdout_of(&out);
 
+    // The man page is a one-line index per subcommand, so the detail cannot
+    // live in `update`'s summary — a summary long enough to hold it runs off
+    // the help table. It goes in the top-level description instead, which is
+    // the man page's prose, and that is asserted here too.
+    let manual = stdout_of(&superdev().arg("man").assert().success());
+    assert!(
+        manual.to_lowercase().contains("pack"),
+        "the man page never mentions packs: {manual}"
+    );
+
     // Not "does not say `this binary's defaults`" — that is still true of a
     // capability's pin, and the old text was wrong for saying it of every
     // pin. What has to be there is the part that was missing.

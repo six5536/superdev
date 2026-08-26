@@ -16,7 +16,7 @@ superdev init                set this repo up; --no-knowledge, --no-code-index,
                              --no-skills each disable a capability
 superdev status              report drift; exit 1 when there is work to do
 superdev sync                re-apply the blueprint; --dry-run prints the plan only
-superdev update [TARGET]     move pins to this binary's defaults, then sync;
+superdev update [TARGET]     bring pins current, then sync;
                              TARGET is `<capability>[@<version>]`;
                              --provider <ID> switches TARGET's provider
 superdev aokf validate [PATH]
@@ -100,7 +100,11 @@ Every verb acts on the current directory.
   that switches a provider: it needs a capability target, rewrites that
   capability's provider and sets its version to the new provider's registry
   default, then syncs. Bare `update` moves versions and leaves every provider
-  alone. `update workflows` is an unknown-capability error: the capability was
+  alone — and it alone moves the pack pin, asking the default source for its
+  newest release and taking that even when it is past what this binary embeds
+  ([ADR-009](decisions/D009-update-queries-default-source.md)); a targeted
+  `update <capability>` makes no such request. `update workflows` is an
+  unknown-capability error: the capability was
   removed, and a manifest still carrying its table fails at load with the
   guided migration error
   ([spec](specs/S009-knowledge-carried-skills-design.md)).

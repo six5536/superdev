@@ -42,7 +42,7 @@ uses:
 ```toml
 [[packs]]
 source = "github:six5536/superdev"   # a git repo — a rev is required
-rev    = "assets-v1.4.0"
+rev    = "assets-v0.1.0"
 
 [[packs]]
 source = "./packs/acme"              # or a directory on this machine
@@ -55,8 +55,10 @@ than layering, so what that revision drops leaves your repo too. A repo that
 names no pack behaves exactly as it always did.
 
 `source` takes `github:owner/repo` and `gitlab:owner/repo` as shorthand; every
-other spelling — `https://`, `ssh://`, `git@host:path`, a path — is handed to
-`git` as written, so your ssh config and mirrors keep working. Fetching uses
+other git URL — `https://`, `ssh://`, `git@host:path` — is handed to `git` as
+written, so your ssh config and mirrors keep working. Anything with no scheme
+and no `host:` is a directory, read from disk every run and taking no `rev`;
+a bare repository on disk is a git URL, so spell it `file:///srv/mirror.git`. Fetching uses
 your own `git`, so credentials stay yours and superdev stores no token. What
 it fetches is verified against a digest in `.superdev/lock.toml`, and a
 revision that resolves to different bytes than the lock recorded stops the run
@@ -67,8 +69,9 @@ tags, so a skill fix does not wait for one. `superdev update` is what goes and
 looks: it asks the default source for its newest release and moves the pin
 there, even past what your binary embeds. A pin naming any other source is
 reported and left alone — pointing superdev at someone's pack is your
-decision, and it stays yours to revisit. With no network the pin moves no
-further than your binary already carries, and the run says it could not check.
+decision, and it stays yours to revisit. Unreachable, the pin moves no further
+than your binary already carries and the run says so; on a network that
+neither answers nor refuses, expect it to wait for your OS to give up first.
 
 superdev is opinionated for one stack — Claude Code, mise and AOKF — and is
 still young: expect the surface to move before 1.0.
