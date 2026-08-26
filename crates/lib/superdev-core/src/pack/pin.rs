@@ -363,7 +363,7 @@ mod tests {
                 source: DEFAULT_PACK.source.to_string(),
                 identity: PackSource::parse(&entry).unwrap().identity(root.path()),
                 rev: Some(rev.to_string()),
-                digest,
+                digest: Some(digest),
                 format: 1,
             }],
             ..Lock::default()

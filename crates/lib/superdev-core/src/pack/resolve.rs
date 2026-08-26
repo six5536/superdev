@@ -155,14 +155,13 @@ fn resolve_one(
 ) -> Result<Resolved> {
     match source {
         PackSource::Path { path } => {
-            // A directory has no rev to pin, so it is read every run and its
-            // digest simply records what was read — the point of a path
-            // source being that editing it lands without a re-pin.
-            let (items, files) = read_pack(&entry.source, path)?;
-            Ok(Resolved::Layer(
-                items,
-                record(root, entry, source, &fetch::digest(&files)),
-            ))
+            // A directory has no rev to pin, so it is read every run and
+            // there is nothing for a digest to be checked against — the point
+            // of a path source being that editing it lands without a re-pin.
+            // Recorded, the value would be rewritten by every commit touching
+            // the pack and read by nothing. ADR-016.
+            let (items, _) = read_pack(&entry.source, path)?;
+            Ok(Resolved::Layer(items, record(root, entry, source, None)))
         }
         PackSource::Git { rev, .. } => {
             // A pin naming exactly what this binary carries is the default
@@ -177,10 +176,14 @@ fn resolve_one(
             // Cached from an earlier resolve of this same rev: the bytes are
             // already here and already proven, so neither mode reaches out.
             if let Some(locked) = locked {
-                let cached = fetch::cache_path(root, &locked.digest);
-                if cached.is_dir() {
-                    let (items, files) = read_pack(&entry.source, &cached)?;
-                    return verified(root, entry, source, items, &files, Some(&locked.digest));
+                // A git source always recorded one; `as_deref` is because
+                // the field is now optional for the path arm's sake.
+                if let Some(digest) = locked.digest.as_deref() {
+                    let cached = fetch::cache_path(root, digest);
+                    if cached.is_dir() {
+                        let (items, files) = read_pack(&entry.source, &cached)?;
+                        return verified(root, entry, source, items, &files, Some(digest));
+                    }
                 }
             }
             if mode == ResolveMode::Offline {
@@ -221,7 +224,7 @@ fn fetch_verified(
         source,
         items,
         &files,
-        locked.map(|l| l.digest.as_str()),
+        locked.and_then(|l| l.digest.as_deref()),
     )?;
     let digest = fetch::digest(&files);
     move_into_cache(&entry.source, &pack_root, &fetch::cache_path(root, &digest))?;
@@ -255,19 +258,22 @@ fn verified(
             ),
         });
     }
-    Ok(Resolved::Layer(items, record(root, entry, source, &digest)))
+    Ok(Resolved::Layer(
+        items,
+        record(root, entry, source, Some(&digest)),
+    ))
 }
 
 /// The lock record for one resolved pack.
 ///
 /// `root` because a path source's key is relative to it — the lock is
 /// committed, and an absolute one would be this checkout's alone. ADR-011.
-fn record(root: &Path, entry: &PackEntry, source: &PackSource, digest: &str) -> PackLock {
+fn record(root: &Path, entry: &PackEntry, source: &PackSource, digest: Option<&str>) -> PackLock {
     PackLock {
         source: entry.source.clone(),
         identity: source.identity(root),
         rev: entry.rev.clone(),
-        digest: digest.to_string(),
+        digest: digest.map(str::to_string),
         format: SUPPORTED_FORMATS[0],
     }
 }
@@ -957,11 +963,17 @@ mod tests {
         );
         assert_eq!(resolution.packs.len(), 1);
         let record = &resolution.packs[0];
-        assert!(record.digest.starts_with("sha256:"), "{record:?}");
+        assert!(
+            record
+                .digest
+                .as_deref()
+                .is_some_and(|d| d.starts_with("sha256:")),
+            "{record:?}"
+        );
         assert_eq!(record.rev.as_deref(), Some("v1"));
         assert_eq!(record.format, 1);
         // Cached, so the next run needs nothing from outside.
-        assert!(fetch::cache_path(repo.path(), &record.digest).is_dir());
+        assert!(fetch::cache_path(repo.path(), record.digest.as_deref().unwrap()).is_dir());
     }
 
     /// Case 4: with the pack cached and the lock recording it, a later
@@ -1068,7 +1080,7 @@ mod tests {
             packs: first.packs.clone(),
             ..Lock::default()
         };
-        let cached = fetch::cache_path(repo.path(), &first.packs[0].digest);
+        let cached = fetch::cache_path(repo.path(), first.packs[0].digest.as_deref().unwrap());
 
         let outside = repo.path().join("secret.txt");
         fs::write(&outside, "SUPER-SECRET\n").unwrap();
@@ -1126,6 +1138,85 @@ mod tests {
             read_pack("superdev", &root).is_ok(),
             "superdev's own pack no longer resolves"
         );
+    }
+
+    /// I004: a path source records no digest.
+    ///
+    /// There is nothing for one to be checked against — a directory is read
+    /// afresh every run — so a recorded value was written by every commit
+    /// touching the pack and read by nothing. ADR-016.
+    #[test]
+    fn a_path_pack_records_no_digest() {
+        let repo = tempfile::tempdir().unwrap();
+        write_pack(&repo.path().join("packs/acme"), "brand-new", "# new\n");
+
+        let resolved = resolve(
+            repo.path(),
+            &FakeRunner::new(),
+            &manifest_with("./packs/acme", None),
+            &Lock::default(),
+            ResolveMode::Fetching,
+        )
+        .expect("a path pack resolves");
+
+        assert_eq!(resolved.packs.len(), 1);
+        assert_eq!(resolved.packs[0].digest, None);
+        // Absent exactly when `rev` is: the two describe pinned bytes, and a
+        // directory has neither.
+        assert_eq!(resolved.packs[0].rev, None);
+    }
+
+    /// The churn this closes. Editing a file under a path pack and resolving
+    /// again leaves its lock record byte-identical, so a commit touching the
+    /// pack no longer rewrites a line nothing reads. I004.
+    #[test]
+    fn editing_a_path_pack_leaves_its_lock_record_unchanged() {
+        let repo = tempfile::tempdir().unwrap();
+        let pack = repo.path().join("packs/acme");
+        write_pack(&pack, "brand-new", "# before\n");
+        let resolve_once = || {
+            resolve(
+                repo.path(),
+                &FakeRunner::new(),
+                &manifest_with("./packs/acme", None),
+                &Lock::default(),
+                ResolveMode::Fetching,
+            )
+            .expect("a path pack resolves")
+            .packs
+        };
+
+        let before = resolve_once();
+        fs::write(
+            pack.join("knowledge/skills/brand-new/SKILL.md"),
+            "# after, and quite different\n",
+        )
+        .unwrap();
+        let after = resolve_once();
+
+        let written = |packs| {
+            toml_edit::ser::to_string_pretty(&Lock {
+                packs,
+                ..Lock::default()
+            })
+            .expect("the lock serialises")
+        };
+        assert_eq!(
+            written(before),
+            written(after),
+            "editing the pack rewrote its lock record"
+        );
+    }
+
+    /// A lock written before this still parses, and loses only that field —
+    /// so a repo does not need a `sync` before its next `status` works.
+    #[test]
+    fn a_lock_written_before_this_still_parses() {
+        let written = "[[packs]]\nsource = \"./pack\"\nidentity = \"pack\"\n\
+             digest = \"sha256:9f2a\"\nformat = 1\n";
+        let lock: Lock = toml_edit::de::from_str(written).expect("an older lock still parses");
+        assert_eq!(lock.packs[0].digest.as_deref(), Some("sha256:9f2a"));
+        assert_eq!(lock.packs[0].identity, "pack");
     }
 
     /// End to end: a real clone of a real repository whose pack holds a link.
@@ -1202,7 +1293,7 @@ mod tests {
             packs: first.packs.clone(),
             ..Lock::default()
         };
-        let cached = fetch::cache_path(repo.path(), &first.packs[0].digest);
+        let cached = fetch::cache_path(repo.path(), first.packs[0].digest.as_deref().unwrap());
         fs::remove_dir_all(&cached).expect("force a re-fetch");
 
         // The same tag, different content.
@@ -1218,7 +1309,10 @@ mod tests {
         .unwrap_err();
         let message = err.to_string();
         assert!(message.contains("different bytes"), "{message}");
-        assert!(message.contains(&first.packs[0].digest), "{message}");
+        assert!(
+            message.contains(first.packs[0].digest.as_deref().unwrap()),
+            "{message}"
+        );
         assert!(!cached.is_dir(), "nothing unverified may be left cached");
         // Nothing written means nothing: the rejected bytes must not survive
         // the run that rejected them, even where nothing would read them.

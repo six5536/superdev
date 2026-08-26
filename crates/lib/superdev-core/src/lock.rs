@@ -85,8 +85,14 @@ pub struct PackLock {
     /// The revision resolved, for a git source.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub rev: Option<String>,
-    /// Digest over the resolved tree, verified on every later run.
-    pub digest: String,
+    /// What a fetched pack was verified against, checked on every later run.
+    ///
+    /// Absent for a path source: a directory is read afresh every run, so
+    /// there are no pinned bytes to verify against, and a value recorded here
+    /// would be rewritten by every commit touching the pack and read by
+    /// nothing. Absent exactly when `rev` is. ADR-016.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub digest: Option<String>,
     /// The `format` the pack's own manifest declared.
     pub format: u32,
 }
@@ -177,7 +183,7 @@ mod tests {
                 source: "github:six5536/superdev".into(),
                 identity: "github.com/six5536/superdev".into(),
                 rev: Some("assets-v1.4.0".into()),
-                digest: "sha256:9f2a".into(),
+                digest: Some("sha256:9f2a".into()),
                 format: 1,
             }]
         );
@@ -193,7 +199,7 @@ mod tests {
                 source: "./packs/acme".into(),
                 identity: "/repo/packs/acme".into(),
                 rev: None,
-                digest: "sha256:0000".into(),
+                digest: Some("sha256:0000".into()),
                 format: 1,
             }],
             ..Lock::default()
