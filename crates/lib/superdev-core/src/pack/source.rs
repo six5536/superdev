@@ -61,6 +61,25 @@ impl PackSource {
     /// has no revision to pin.
     pub fn parse(entry: &PackEntry) -> Result<PackSource> {
         let source = entry.source.trim();
+        // A value beginning with `-` is an option wherever git meets it, and
+        // no source or rev worth having starts that way. Refused here so
+        // nothing downstream has to reason about where in an argument vector
+        // it lands. I007.
+        for (what, value) in [
+            ("source", Some(source)),
+            ("rev", entry.rev.as_deref().map(str::trim)),
+        ] {
+            let Some(value) = value.filter(|v| v.starts_with('-')) else {
+                continue;
+            };
+            return Err(Error::Pack {
+                pack: entry.source.clone(),
+                message: format!(
+                    "its {what} `{value}` begins with `-`, which git reads as an \
+                     option rather than as a {what}"
+                ),
+            });
+        }
         if is_git(source) {
             let Some(rev) = entry
                 .rev
@@ -431,6 +450,24 @@ mod tests {
             !source.is_default(),
             "keys match, but a directory is not a repository"
         );
+    }
+
+    /// A value beginning with `-` is read by git as an option, not as the
+    /// thing it stands where. Refused at the door, so nothing downstream has
+    /// to reason about where in an argument vector it lands.
+    #[test]
+    fn a_source_or_rev_that_would_read_as_an_option_is_refused() {
+        for source in ["--upload-pack=id:x", "-oProxyCommand=id:x"] {
+            let err = PackSource::parse(&entry(source, Some("v1")))
+                .expect_err("a source that reads as an option");
+            assert!(format!("{err}").contains(source), "{err}");
+        }
+        let err = PackSource::parse(&entry("github:six5536/superdev", Some("--upload-pack=id")))
+            .expect_err("a rev that reads as an option");
+        assert!(format!("{err}").contains("--upload-pack=id"), "{err}");
+        // A path is not spared: it reaches no git argv today, but the rule is
+        // about the shape of the value, not about where it happens to go.
+        assert!(PackSource::parse(&entry("-weird-dir", None)).is_err());
     }
 
     /// The scp form without a user is a host, not superdev's shorthand.

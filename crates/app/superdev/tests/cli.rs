@@ -560,6 +560,40 @@ fn a_pin_at_the_embedded_rev_costs_no_request() {
     assert_eq!(after, config, "sync leaves the pin exactly as it found it");
 }
 
+/// I007, inverted: the reproduction that worked, asserted not to.
+///
+/// `ext::<command>` makes git run that command as the connection. Whether it
+/// may is `protocol.ext.allow`, which a stock git sets to refuse — so this
+/// enables it, which is the configuration where superdev's own defence is the
+/// only one left. A manifest arrives with a repository; cloning someone's
+/// branch and running `sync` must not run their command.
+#[cfg(unix)]
+#[test]
+fn a_manifest_cannot_talk_git_into_running_its_command() {
+    let dir = local_repo();
+    let marker = dir.path().join("PROOF");
+    let gitconfig = dir.path().join("permissive.gitconfig");
+    std::fs::write(&gitconfig, "[protocol \"ext\"]\n\tallow = always\n").unwrap();
+    pin_packs(
+        dir.path(),
+        &format!(
+            "[[packs]]\nsource = \"ext::touch {}\"\nrev = \"main\"\n",
+            marker.display()
+        ),
+    );
+
+    // Not `.success()`: the pack cannot resolve either way, and what is under
+    // test is what did not happen while it failed.
+    superdev()
+        .current_dir(dir.path())
+        .env("GIT_CONFIG_GLOBAL", &gitconfig)
+        .arg("sync")
+        .assert()
+        .failure();
+
+    assert!(!marker.exists(), "superdev ran a command a manifest named");
+}
+
 /// Test plan case 19: a local-path pack is read from disk every run, so
 /// editing it and syncing again updates the repo copy — no rebuild, which is
 /// what lets this repo pin its own `/pack` and see an edit land.

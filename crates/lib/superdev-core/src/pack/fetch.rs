@@ -71,6 +71,15 @@ fn verbatim() -> Vec<String> {
         "core.autocrlf=false".into(),
         "-c".into(),
         "core.eol=lf".into(),
+        // An `ext::` URL names a command and git runs it as the connection.
+        // Whether it may is `protocol.ext.allow`, which defaults to refusing
+        // but is the user's to change — and a manifest is a file that arrives
+        // with a repository, so a source is not superdev's to trust. Set for
+        // superdev's own calls rather than inherited, so a machine configured
+        // to permit the transport does not permit it to a cloned manifest.
+        // I007.
+        "-c".into(),
+        "protocol.ext.allow=never".into(),
     ]
 }
 
@@ -113,6 +122,10 @@ pub fn fetch(
         clone.push("--branch".into());
         clone.push(rev.into());
     }
+    // Everything after this is an operand. `parse` already refuses a source
+    // or rev beginning with `-`; this is the second lock on that door, so the
+    // shape of what a manifest may say stops being load-bearing here.
+    clone.push("--".into());
     clone.push(url.into());
     clone.push(target.clone());
     run_git(runner, pack, &clone, into)?;
@@ -127,6 +140,7 @@ pub fn fetch(
             "fetch".into(),
             "--depth".into(),
             "1".into(),
+            "--".into(),
             "origin".into(),
             rev.into(),
         ]);
@@ -205,6 +219,61 @@ fn looks_like_sha(rev: &str) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::runner::FakeRunner;
+
+    /// git runs a command for an `ext::` URL, and whether it may is the
+    /// user's config to set — so superdev sets it for its own calls rather
+    /// than inheriting an answer. Without this, a manifest cloned from
+    /// anywhere runs whatever it likes on a machine that permits the
+    /// transport. I007.
+    #[test]
+    fn every_git_call_refuses_the_transports_that_run_commands() {
+        let runner = FakeRunner::new();
+        let dir = tempfile::tempdir().unwrap();
+
+        let _ = fetch(
+            &runner,
+            "acme",
+            "https://example.invalid/acme.git",
+            "v1",
+            dir.path(),
+        );
+
+        let calls = runner.calls();
+        assert!(!calls.is_empty(), "the fetch spawned nothing");
+        for call in &calls {
+            assert!(
+                call.contains("protocol.ext.allow=never"),
+                "a git call without the override: {call}"
+            );
+        }
+    }
+
+    /// An operand that begins with `-` is an option to git. `parse` refuses
+    /// those, and `--` is the second lock on the same door: the two together
+    /// are what make an argument vector's shape not worth reasoning about.
+    #[test]
+    fn a_url_is_passed_as_an_operand_not_an_option() {
+        let runner = FakeRunner::new();
+        let dir = tempfile::tempdir().unwrap();
+
+        let _ = fetch(
+            &runner,
+            "acme",
+            "https://example.invalid/acme.git",
+            "v1",
+            dir.path(),
+        );
+
+        let clone = runner
+            .calls()
+            .into_iter()
+            .find(|c| c.contains(" clone "))
+            .expect("a clone");
+        let (before, after) = clone.split_once(" -- ").expect("an end-of-options marker");
+        assert!(!before.contains("example.invalid"), "{clone}");
+        assert!(after.contains("example.invalid"), "{clone}");
+    }
 
     fn files(pairs: &[(&str, &str)]) -> Vec<(String, String)> {
         pairs

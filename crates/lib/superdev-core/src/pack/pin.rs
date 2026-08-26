@@ -170,6 +170,8 @@ fn newest_release(runner: &dyn CommandRunner, root: &Path, source: &PackSource) 
         "ls-remote".to_string(),
         "--tags".to_string(),
         "--refs".to_string(),
+        // The source is an operand, not an option, whatever it spells.
+        "--".to_string(),
         source.clone_url(),
         format!("refs/tags/{PACK_TAG_PREFIX}*"),
     ];
@@ -480,7 +482,7 @@ mod tests {
         assert_eq!(calls.len(), 1, "asked once: {calls:?}");
         assert_eq!(
             calls[0],
-            "git ls-remote --tags --refs https://github.com/six5536/superdev refs/tags/assets-v*"
+            "git ls-remote --tags --refs -- https://github.com/six5536/superdev refs/tags/assets-v*"
         );
     }
 
