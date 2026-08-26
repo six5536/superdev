@@ -36,7 +36,8 @@ use superdev_core::error::{Error, Result};
         in .superdev/config.toml points at another — a git source or a\n\
         directory — to add your own or supersede superdev's. Content\n\
         releases under its own assets-vX.Y.Z tags, and `superdev update`\n\
-        is the verb that goes looking for a newer one."
+        is the verb that goes looking for the newest one this binary can\n\
+        read."
 )]
 struct Cli {
     #[command(subcommand)]
@@ -65,9 +66,10 @@ enum Command {
     // paragraph, and without `wrap_help` that paragraph never breaks.
     #[command(long_about = "Bring pins current, then sync.\n\n\
             A capability's pin moves to this binary's default. The pack's\n\
-            moves to its source's newest release, which may be past what\n\
-            this binary embeds — the one place superdev reaches the\n\
-            network unasked.")]
+            moves to the newest release its source carries that this binary\n\
+            can read, which may be past what it embeds — the one place\n\
+            superdev reaches the network unasked. A release it cannot read\n\
+            is reported and the pin stays where it was.")]
     Update {
         /// Capability to update, optionally `<capability>@<version>`
         target: Option<String>,

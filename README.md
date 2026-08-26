@@ -80,7 +80,11 @@ file, or vendor the directory, instead.
 Content releases separately from the binary, under its own `assets-vX.Y.Z`
 tags, so a skill fix does not wait for one. `superdev update` is what goes and
 looks: it asks the default source for its newest release and moves the pin
-there, even past what your binary embeds. A pin naming any other source is
+there, even past what your binary embeds — as far as the newest release your
+binary can actually read. It fetches the pack before writing the pin naming
+it, so a release built for a later superdev leaves your pin where it is and
+says why, rather than parking your repo on content nothing you have can open.
+A pin naming any other source is
 reported and left alone — pointing superdev at someone's pack is your
 decision, and it stays yours to revisit. Unreachable, the pin moves no further
 than your binary already carries and the run says so — including on a network

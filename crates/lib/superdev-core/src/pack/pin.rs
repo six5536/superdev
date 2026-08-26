@@ -8,9 +8,12 @@
 use std::path::Path;
 use std::time::Duration;
 
+use crate::error::Error;
+use crate::lock::Lock;
 use crate::manifest::{Manifest, PackEntry};
 use crate::runner::CommandRunner;
 
+use super::resolve::ResolveMode;
 use super::source::{DEFAULT_PACK, PACK_TAG_PREFIX, PackSource};
 
 /// A pack release, as `assets-vX.Y.Z` spells it. Ordered by the tuple, which
@@ -48,6 +51,7 @@ pub fn update_pins(
     runner: &dyn CommandRunner,
     root: &Path,
     manifest: &mut Manifest,
+    lock: &Lock,
 ) -> Vec<String> {
     let mut lines = Vec::new();
     if manifest.packs.is_empty() {
@@ -117,6 +121,15 @@ pub fn update_pins(
             || matches!(newest, Newest::Answered(Some(remote)) if *remote >= current);
         let moved = tag(target);
         if covered && moved != rev {
+            // Proven before it is written. `update` saves the manifest before
+            // the `sync` that follows validates anything, and the
+            // never-backwards rule means it cannot undo what it just did — so
+            // a pin that lands on a pack this binary cannot read is a state no
+            // superdev command can leave. ADR-013, I001.
+            if let Err(refused) = probe(runner, root, entry, &moved, lock) {
+                lines.push(format!("packs: {named} stays at {rev} — {refused}"));
+                continue;
+            }
             entry.rev = Some(moved.clone());
             lines.push(match unchecked {
                 None => format!("packs: {named} moved to {moved}"),
@@ -135,6 +148,44 @@ pub fn update_pins(
         }
     }
     lines
+}
+
+/// Read the pack a pin is about to move to, and say why not if it will not.
+///
+/// The same resolution the `sync` a moment later performs — fetching, since
+/// that is what `sync` would do — but for this entry alone. One entry, so a
+/// second pack being broken cannot hold back a move that is fine, and the
+/// reason reported belongs to the entry it is reported against.
+///
+/// This costs a second fetch of the same tree, and it is worth being exact
+/// about why rather than assuming the cache absorbs it: a cached pack is
+/// found by the digest the *lock* recorded for that rev, and the lock gains
+/// that record when apply writes it — after the sync. So the bytes this
+/// fetched sit in the cache under a digest nothing yet points at, and the
+/// sync clones them again. One extra clone of an order-1MB tree, on the rare
+/// run that actually advances a pin; an `update` that finds nothing new
+/// probes nothing. ADR-013.
+fn probe(
+    runner: &dyn CommandRunner,
+    root: &Path,
+    entry: &PackEntry,
+    moved: &str,
+    lock: &Lock,
+) -> std::result::Result<(), String> {
+    let candidate = Manifest {
+        packs: vec![PackEntry {
+            source: entry.source.clone(),
+            rev: Some(moved.to_string()),
+        }],
+        ..Manifest::default_for("0.0.0", &[])
+    };
+    match super::resolve::resolve(root, runner, &candidate, lock, ResolveMode::Fetching) {
+        Ok(_) => Ok(()),
+        // The message alone: the pack it names is this entry, which the line
+        // it lands in has already named.
+        Err(Error::Pack { message, .. }) => Err(message),
+        Err(other) => Err(other.to_string()),
+    }
 }
 
 /// Where a pin should end up, and what to say about how it got there.
@@ -236,7 +287,9 @@ fn tag((major, minor, patch): Release) -> String {
 
 #[cfg(test)]
 mod tests {
+    use super::super::manifest::PACK_MANIFEST;
     use super::*;
+    use crate::lock::PackLock;
     use crate::runner::{FakeRunner, Output};
 
     /// A manifest with the given entries and nothing else that matters here.
@@ -277,6 +330,47 @@ mod tests {
         manifest.packs.iter().map(|p| p.rev.as_deref()).collect()
     }
 
+    /// A repo whose cache already holds the pack `rev` names, and the lock
+    /// entry that finds it.
+    ///
+    /// The probe resolves from there and spawns nothing, which is what a
+    /// pin-arithmetic test wants: it is about which release is chosen, not
+    /// about fetching. It is also a state a real repo reaches — the cache
+    /// survives, and a `rev` synced once is found by the digest the lock
+    /// recorded for it. ADR-013.
+    fn already_cached(rev: &str) -> (tempfile::TempDir, Lock) {
+        already_cached_declaring(rev, 1)
+    }
+
+    /// The same, with the pack declaring `format` — so a probe of `rev` can
+    /// meet a pack this binary cannot read without a network.
+    fn already_cached_declaring(rev: &str, format: u32) -> (tempfile::TempDir, Lock) {
+        let root = tempfile::tempdir().unwrap();
+        let manifest = format!("format = {format}\nname = \"fixture\"\nversion = \"1.0.0\"\n");
+        let manifest = manifest.as_str();
+        let files = vec![(PACK_MANIFEST.to_string(), manifest.to_string())];
+        let digest = super::super::fetch::digest(&files);
+        let dir = super::super::fetch::cache_path(root.path(), &digest);
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(dir.join(PACK_MANIFEST), manifest).unwrap();
+
+        let entry = PackEntry {
+            source: DEFAULT_PACK.source.to_string(),
+            rev: Some(rev.to_string()),
+        };
+        let lock = Lock {
+            packs: vec![PackLock {
+                source: DEFAULT_PACK.source.to_string(),
+                identity: PackSource::parse(&entry).unwrap().identity(root.path()),
+                rev: Some(rev.to_string()),
+                digest,
+                format: 1,
+            }],
+            ..Lock::default()
+        };
+        (root, lock)
+    }
+
     /// Test plan case 16: the pin moves to the source's newest release, ahead
     /// of what this binary embeds. Without this the whole feature is limited
     /// to repos whose owner edits the manifest by hand.
@@ -284,8 +378,9 @@ mod tests {
     fn a_default_source_pin_moves_to_the_newest_release() {
         let runner = source_carrying(&["assets-v0.1.0", "assets-v0.9.0", "assets-v0.10.0"]);
         let mut manifest = manifest(&[(DEFAULT_PACK.source, Some(DEFAULT_PACK.rev))]);
+        let (root, lock) = already_cached("assets-v0.10.0");
 
-        let lines = update_pins(&runner, Path::new("."), &mut manifest);
+        let lines = update_pins(&runner, root.path(), &mut manifest, &lock);
 
         assert_eq!(revs(&manifest), [Some("assets-v0.10.0")]);
         assert!(
@@ -308,7 +403,7 @@ mod tests {
         let runner = source_carrying(&["assets-v0.9.0"]);
         let mut manifest = manifest(&[(DEFAULT_PACK.source, Some(DEFAULT_PACK.rev))]);
 
-        update_pins(&runner, Path::new("."), &mut manifest);
+        update_pins(&runner, Path::new("."), &mut manifest, &Lock::default());
 
         let query = runner
             .calls()
@@ -366,7 +461,7 @@ mod tests {
 
         let mut manifest = manifest(&[(DEFAULT_PACK.source, Some("assets-v0.0.1"))]);
         let began = std::time::Instant::now();
-        let lines = update_pins(&Blocking, Path::new("."), &mut manifest);
+        let lines = update_pins(&Blocking, Path::new("."), &mut manifest, &Lock::default());
         let waited = began.elapsed();
 
         // Both ends: it really did wait the deadline rather than failing for
@@ -394,7 +489,7 @@ mod tests {
         let runner = source_carrying(&["assets-v9.9.9"]);
         let mut manifest = manifest(&[("github:acme/packs", Some("assets-v0.1.0"))]);
 
-        let lines = update_pins(&runner, Path::new("."), &mut manifest);
+        let lines = update_pins(&runner, Path::new("."), &mut manifest, &Lock::default());
 
         assert_eq!(revs(&manifest), [Some("assets-v0.1.0")]);
         assert!(
@@ -419,7 +514,7 @@ mod tests {
         runner.missing("git");
         let mut manifest = manifest(&[(DEFAULT_PACK.source, Some("assets-v0.0.1"))]);
 
-        let lines = update_pins(&runner, Path::new("."), &mut manifest);
+        let lines = update_pins(&runner, Path::new("."), &mut manifest, &Lock::default());
 
         assert_eq!(revs(&manifest), [Some(DEFAULT_PACK.rev)]);
         let line = lines.join("\n");
@@ -443,7 +538,7 @@ mod tests {
         );
         let mut manifest = manifest(&[(DEFAULT_PACK.source, Some(DEFAULT_PACK.rev))]);
 
-        let lines = update_pins(&runner, Path::new("."), &mut manifest);
+        let lines = update_pins(&runner, Path::new("."), &mut manifest, &Lock::default());
 
         assert_eq!(revs(&manifest), [Some(DEFAULT_PACK.rev)]);
         assert!(lines.join("\n").contains("could not reach it"), "{lines:?}");
@@ -456,8 +551,9 @@ mod tests {
     fn a_manifest_without_an_entry_gains_the_default_one() {
         let runner = source_carrying(&["assets-v0.4.0"]);
         let mut manifest = manifest(&[]);
+        let (root, lock) = already_cached("assets-v0.4.0");
 
-        let lines = update_pins(&runner, Path::new("."), &mut manifest);
+        let lines = update_pins(&runner, root.path(), &mut manifest, &lock);
 
         assert_eq!(manifest.packs.len(), 1);
         assert_eq!(manifest.packs[0].source, DEFAULT_PACK.source);
@@ -478,7 +574,7 @@ mod tests {
         let runner = source_carrying(&["assets-v0.1.0"]);
         let mut manifest = manifest(&[(DEFAULT_PACK.source, Some("assets-v9.9.9"))]);
 
-        let lines = update_pins(&runner, Path::new("."), &mut manifest);
+        let lines = update_pins(&runner, Path::new("."), &mut manifest, &Lock::default());
 
         assert_eq!(revs(&manifest), [Some("assets-v9.9.9")]);
         // Not "is at the newest release": the source does not carry this rev
@@ -498,7 +594,7 @@ mod tests {
         let runner = source_carrying(&["assets-v0.1.0"]);
         let mut manifest = manifest(&[(DEFAULT_PACK.source, Some(DEFAULT_PACK.rev))]);
 
-        let lines = update_pins(&runner, Path::new("."), &mut manifest);
+        let lines = update_pins(&runner, Path::new("."), &mut manifest, &Lock::default());
 
         assert_eq!(
             lines,
@@ -521,7 +617,7 @@ mod tests {
             ),
         ]);
 
-        let lines = update_pins(&runner, Path::new("."), &mut manifest);
+        let lines = update_pins(&runner, Path::new("."), &mut manifest, &Lock::default());
 
         assert_eq!(
             revs(&manifest),
@@ -547,7 +643,7 @@ mod tests {
         let runner = FakeRunner::new();
         let mut manifest = manifest(&[("./packs/acme", None)]);
 
-        let lines = update_pins(&runner, Path::new("."), &mut manifest);
+        let lines = update_pins(&runner, Path::new("."), &mut manifest, &Lock::default());
 
         assert_eq!(revs(&manifest), [None]);
         assert!(lines.is_empty(), "{lines:?}");
@@ -561,7 +657,7 @@ mod tests {
         let runner = source_carrying(&[]);
         let mut manifest = manifest(&[(DEFAULT_PACK.source, Some(DEFAULT_PACK.rev))]);
 
-        let lines = update_pins(&runner, Path::new("."), &mut manifest);
+        let lines = update_pins(&runner, Path::new("."), &mut manifest, &Lock::default());
 
         assert_eq!(revs(&manifest), [Some(DEFAULT_PACK.rev)]);
         assert!(
@@ -579,7 +675,7 @@ mod tests {
         let runner = source_carrying(&["assets-v0.2.0"]);
         let mut manifest = manifest(&[(DEFAULT_PACK.source, Some(DEFAULT_PACK.rev))]);
 
-        update_pins(&runner, Path::new("."), &mut manifest);
+        update_pins(&runner, Path::new("."), &mut manifest, &Lock::default());
 
         let calls = runner.calls();
         assert!(!calls.is_empty(), "no query was made");
@@ -598,18 +694,20 @@ mod tests {
     fn the_query_asks_the_source_for_its_release_tags() {
         let runner = source_carrying(&["assets-v0.2.0"]);
         let mut manifest = manifest(&[(DEFAULT_PACK.source, Some(DEFAULT_PACK.rev))]);
+        let (root, lock) = already_cached("assets-v0.2.0");
 
-        update_pins(&runner, Path::new("."), &mut manifest);
+        update_pins(&runner, root.path(), &mut manifest, &lock);
 
         let calls = runner.calls();
-        assert_eq!(calls.len(), 1, "asked once: {calls:?}");
+        let queries: Vec<&String> = calls.iter().filter(|c| c.contains("ls-remote")).collect();
+        assert_eq!(queries.len(), 1, "asked once: {calls:?}");
         assert!(
-            calls[0].ends_with(
+            queries[0].ends_with(
                 "ls-remote --tags --refs -- \
                  https://github.com/six5536/superdev refs/tags/assets-v*"
             ),
             "{}",
-            calls[0]
+            queries[0]
         );
     }
 
@@ -622,7 +720,7 @@ mod tests {
         let runner = source_carrying(&["assets-v0.1.0"]);
         let mut manifest = manifest(&[(DEFAULT_PACK.source, Some("assets-v0.1.0-rc.1"))]);
 
-        let lines = update_pins(&runner, Path::new("."), &mut manifest);
+        let lines = update_pins(&runner, Path::new("."), &mut manifest, &Lock::default());
 
         assert_eq!(revs(&manifest), [Some("assets-v0.1.0")]);
         assert!(
@@ -639,7 +737,7 @@ mod tests {
         let runner = source_carrying(&[]);
         let mut manifest = manifest(&[(DEFAULT_PACK.source, Some("assets-v9.9.9-rc.1"))]);
 
-        let lines = update_pins(&runner, Path::new("."), &mut manifest);
+        let lines = update_pins(&runner, Path::new("."), &mut manifest, &Lock::default());
 
         assert_eq!(revs(&manifest), [Some("assets-v9.9.9-rc.1")]);
         assert!(
@@ -655,7 +753,7 @@ mod tests {
         let runner = source_carrying(&["assets-v9.9.9"]);
         let mut manifest = manifest(&[(DEFAULT_PACK.source, Some("main"))]);
 
-        let lines = update_pins(&runner, Path::new("."), &mut manifest);
+        let lines = update_pins(&runner, Path::new("."), &mut manifest, &Lock::default());
 
         assert_eq!(revs(&manifest), [Some("main")]);
         assert!(lines.join("\n").contains("not a release tag"), "{lines:?}");
@@ -669,7 +767,7 @@ mod tests {
         let runner = source_carrying(&["assets-v0.1.0", "assets-v0.2.0-rc.1"]);
         let mut manifest = manifest(&[(DEFAULT_PACK.source, Some("assets-v0.1.0"))]);
 
-        let lines = update_pins(&runner, Path::new("."), &mut manifest);
+        let lines = update_pins(&runner, Path::new("."), &mut manifest, &Lock::default());
 
         assert_eq!(revs(&manifest), [Some("assets-v0.1.0")]);
         assert!(
@@ -696,6 +794,148 @@ mod tests {
         );
     }
 
+    /// A fixture repository whose pack declares `format`, at `tag`.
+    #[cfg(unix)]
+    fn source_declaring(dir: &Path, tag: &str, format: u32) -> String {
+        let git = |args: &[&str]| {
+            let out = std::process::Command::new("git")
+                .args(args)
+                .current_dir(dir)
+                .env("GIT_CONFIG_GLOBAL", "/dev/null")
+                .env("GIT_CONFIG_NOSYSTEM", "1")
+                .output()
+                .expect("git runs");
+            assert!(out.status.success(), "git {args:?}: {out:?}");
+        };
+        std::fs::create_dir_all(dir.join("pack/knowledge/skills/only")).unwrap();
+        std::fs::write(
+            dir.join("pack/pack.toml"),
+            format!("format = {format}\nname = \"fixture\"\nversion = \"1.0.0\"\n"),
+        )
+        .unwrap();
+        std::fs::write(
+            dir.join("pack/knowledge/skills/only/SKILL.md"),
+            "---\nname: only\ndescription: x\n---\n",
+        )
+        .unwrap();
+        if !dir.join(".git").exists() {
+            git(&["init", "-q", "-b", "main"]);
+            git(&["config", "user.email", "fixture@example.com"]);
+            git(&["config", "user.name", "fixture"]);
+            git(&["config", "commit.gpgsign", "false"]);
+            git(&["config", "tag.gpgSign", "false"]);
+        }
+        git(&["add", "-A"]);
+        git(&["commit", "-q", "-m", tag]);
+        git(&["tag", "-f", tag]);
+        format!("file://{}", dir.display())
+    }
+
+    /// The gate itself, against a real clone of a real repository: a release
+    /// declaring a format this binary cannot read is refused, and the reason
+    /// is the one `sync` would have given a moment later. I001, ADR-013.
+    ///
+    /// Directly, because a fixture on this machine cannot key as superdev's
+    /// own source — that is what [`PackSource::identity`] exists to prevent —
+    /// and only the default source's pin moves. What `update_pins` does with
+    /// the answer is the pair of tests below.
+    #[cfg(unix)]
+    #[test]
+    fn the_probe_refuses_a_release_this_binary_cannot_read() {
+        let root = tempfile::tempdir().unwrap();
+        let fixture = tempfile::tempdir().unwrap();
+        let url = source_declaring(fixture.path(), "assets-v9.9.9", 99);
+        let entry = PackEntry {
+            source: url,
+            rev: Some("assets-v0.0.1".into()),
+        };
+
+        let refused = probe(
+            &crate::runner::SystemRunner,
+            root.path(),
+            &entry,
+            "assets-v9.9.9",
+            &Lock::default(),
+        )
+        .expect_err("format 99 is not readable");
+
+        assert!(refused.contains("format 99"), "{refused}");
+    }
+
+    /// And passes one it can, so the probe is a gate rather than a wall. Same
+    /// fixture, same path, one field different.
+    #[cfg(unix)]
+    #[test]
+    fn the_probe_admits_a_release_this_binary_can_read() {
+        let root = tempfile::tempdir().unwrap();
+        let fixture = tempfile::tempdir().unwrap();
+        let url = source_declaring(fixture.path(), "assets-v9.9.9", 1);
+        let entry = PackEntry {
+            source: url,
+            rev: Some("assets-v0.0.1".into()),
+        };
+
+        probe(
+            &crate::runner::SystemRunner,
+            root.path(),
+            &entry,
+            "assets-v9.9.9",
+            &Lock::default(),
+        )
+        .expect("format 1 resolves");
+    }
+
+    /// I001 end to end: the pin the run was about to write names a pack this
+    /// binary cannot read, so it is not written. Written, it would be a state
+    /// no superdev command could leave — `update` saves before `sync`
+    /// validates, and the never-backwards rule stops `update` undoing it.
+    ///
+    /// The refusal takes the place of the line that would have announced the
+    /// move, and the run carries on: this is the degradation `update` already
+    /// performs for a source it cannot reach, extended to one that answered
+    /// with something unusable. ADR-013.
+    #[test]
+    fn a_release_this_binary_cannot_read_leaves_the_pin_where_it_was() {
+        let runner = source_carrying(&["assets-v0.7.0"]);
+        let mut manifest = manifest(&[(DEFAULT_PACK.source, Some("assets-v0.0.1"))]);
+        let (root, lock) = already_cached_declaring("assets-v0.7.0", 99);
+
+        let lines = update_pins(&runner, root.path(), &mut manifest, &lock);
+
+        let reported = lines.join("\n");
+        assert_eq!(
+            revs(&manifest),
+            [Some("assets-v0.0.1")],
+            "the pin moved to a pack this binary cannot read: {reported}"
+        );
+        assert!(
+            reported.contains("stays at assets-v0.0.1") && reported.contains("format 99"),
+            "the refusal does not say what was wrong: {reported}"
+        );
+    }
+
+    /// One entry is proven, not the manifest. A second pack nobody can
+    /// resolve must not hold back a move that is fine — which is what the
+    /// probe resolving a manifest of one entry buys, and what passing the
+    /// whole manifest would have cost. ADR-013.
+    #[test]
+    fn an_unresolvable_second_entry_does_not_hold_back_a_move_that_is_fine() {
+        let runner = source_carrying(&["assets-v0.7.0"]);
+        let mut manifest = manifest(&[
+            (DEFAULT_PACK.source, Some("assets-v0.0.1")),
+            ("github:acme/nothing-here", Some("assets-v0.0.1")),
+        ]);
+        let (root, lock) = already_cached("assets-v0.7.0");
+
+        let lines = update_pins(&runner, root.path(), &mut manifest, &lock);
+
+        assert_eq!(
+            revs(&manifest),
+            [Some("assets-v0.7.0"), Some("assets-v0.0.1")],
+            "{lines:?}"
+        );
+    }
+
     /// Two spellings of the default source are one source: the query goes out
     /// once, and both entries land on the same release.
     #[test]
@@ -705,13 +945,19 @@ mod tests {
             (DEFAULT_PACK.source, Some(DEFAULT_PACK.rev)),
             ("git@github.com:six5536/superdev.git", Some("assets-v0.0.1")),
         ]);
+        let (root, lock) = already_cached("assets-v0.3.0");
 
-        update_pins(&runner, Path::new("."), &mut manifest);
+        update_pins(&runner, root.path(), &mut manifest, &lock);
 
         assert_eq!(
             revs(&manifest),
             [Some("assets-v0.3.0"), Some("assets-v0.3.0")]
         );
-        assert_eq!(runner.calls().len(), 1, "{:?}", runner.calls());
+        let queries = runner
+            .calls()
+            .iter()
+            .filter(|call| call.contains("ls-remote"))
+            .count();
+        assert_eq!(queries, 1, "{:?}", runner.calls());
     }
 }

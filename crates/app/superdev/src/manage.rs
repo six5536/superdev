@@ -303,6 +303,13 @@ pub fn sync(root: &Path, dry_run: bool) -> Result<u8> {
 /// source for its newest release and takes that, which is how content reaches
 /// a repo whose binary has not changed (ADR-009). It is the one place
 /// superdev reaches the network without being asked to fetch something.
+///
+/// The newest release *this binary can read*: the pack is resolved before the
+/// pin naming it is written, and a release this binary would refuse leaves the
+/// pin where it was with the reason reported. Written first, such a pin would
+/// be unreachable by any superdev command — this saves the manifest before the
+/// `sync` below validates anything, and `update` never moves a pin backwards
+/// (ADR-013).
 pub fn update(root: &Path, target: Option<&str>, provider: Option<&str>) -> Result<u8> {
     let mut manifest = load_manifest(root)?;
     match (target, provider) {
@@ -361,7 +368,10 @@ pub fn update(root: &Path, target: Option<&str>, provider: Option<&str>) -> Resu
             // Only the untargeted form moves the pack pin: `update knowledge`
             // is a narrow request, and this is the one place superdev reaches
             // the network without being asked to fetch something. ADR-009.
-            for line in pack::update_pins(&SystemRunner, root, &mut manifest) {
+            // The lock resolution reads, so a pin can be proved against the
+            // cache before it is written. ADR-013.
+            let lock = Lock::load(root)?;
+            for line in pack::update_pins(&SystemRunner, root, &mut manifest, &lock) {
                 out(&line)?;
             }
         }
