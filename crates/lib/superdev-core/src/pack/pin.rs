@@ -87,16 +87,35 @@ pub fn update_pins(
             ));
             continue;
         }
-        let Some(current) = release(&rev) else {
-            lines.push(format!(
-                "packs: {named} stays at {rev} — not a release tag, so nothing says what is newer"
-            ));
-            continue;
+        // A candidate content tag is superdev's own, cut beside a binary
+        // release candidate, and the repo an rc binary set up is pinned to
+        // one. Nothing else ever rewrites a manifest, so leaving it alone the
+        // way a branch is left alone would strand that repo on candidate
+        // content for good. Its release is what it is a candidate for.
+        let (current, candidate) = match release(&rev) {
+            Some(current) => (current, false),
+            None => match candidate_release(&rev) {
+                Some(core) => (core, true),
+                None => {
+                    lines.push(format!(
+                        "packs: {named} stays at {rev} — not a release tag, \
+                         so nothing says what is newer"
+                    ));
+                    continue;
+                }
+            },
         };
         let newest = asked.get_or_insert_with(|| newest_release(runner, root, &source));
         let (target, unchecked) = choose(current, floor, newest);
-        if target > current {
-            let moved = tag(target);
+        // A candidate only comes forward onto a release something vouches
+        // for — this binary's own, or one the source answered with. Its own
+        // core is not that: `assets-v0.2.0-rc.1` says nothing about whether
+        // `assets-v0.2.0` was ever cut.
+        let covered = !candidate
+            || floor.is_some_and(|floor| floor >= current)
+            || matches!(newest, Newest::Answered(Some(remote)) if *remote >= current);
+        let moved = tag(target);
+        if covered && moved != rev {
             entry.rev = Some(moved.clone());
             lines.push(match unchecked {
                 None => format!("packs: {named} moved to {moved}"),
@@ -105,9 +124,12 @@ pub fn update_pins(
                 ),
             });
         } else {
-            lines.push(match unchecked {
-                None => format!("packs: {named} is at the newest release {rev}"),
-                Some(why) => format!("packs: {named} stays at {rev} — {why}"),
+            lines.push(match (candidate, unchecked) {
+                (true, _) => format!(
+                    "packs: {named} stays at {rev} — a candidate, and no release covers it yet"
+                ),
+                (false, None) => format!("packs: {named} is at the newest release {rev}"),
+                (false, Some(why)) => format!("packs: {named} stays at {rev} — {why}"),
             });
         }
     }
@@ -163,6 +185,19 @@ fn newest_release(runner: &dyn CommandRunner, root: &Path, source: &PackSource) 
         // out, so the pin goes no further than what it already has.
         _ => Newest::Unreachable,
     }
+}
+
+/// The release a candidate content tag is a candidate for, or `None` for
+/// anything that is not one.
+///
+/// `assets-v1.2.0-rc.1` is cut beside a binary release candidate: superdev's
+/// own tag, with its own shape, and so a pin `update` knows what to do with —
+/// unlike a branch or a sha, which are somebody's deliberate choice.
+fn candidate_release(tag: &str) -> Option<Release> {
+    let version = tag.trim().strip_prefix(PACK_TAG_PREFIX)?;
+    let (core, suffix) = version.split_once('-')?;
+    (!suffix.is_empty()).then_some(())?;
+    release(&format!("{PACK_TAG_PREFIX}{core}"))
 }
 
 /// The release a tag names, or `None` for anything that is not one.
@@ -369,7 +404,8 @@ mod tests {
 
     /// A pin on a branch or a sha is a deliberate choice — someone testing
     /// against unreleased content — and nothing here knows what is newer
-    /// than it. Report it and leave it.
+    /// than it. Report it and leave it. A candidate content tag is not in
+    /// this company: superdev cut it, and knows what it is a candidate for.
     #[test]
     fn a_pin_that_is_not_a_release_tag_is_left_alone() {
         let runner = source_carrying(&["assets-v9.9.9"]);
@@ -377,13 +413,19 @@ mod tests {
             (DEFAULT_PACK.source, Some("main")),
             (
                 "https://github.com/six5536/superdev.git",
-                Some("assets-v1.0.0-rc1"),
+                Some("6f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f90"),
             ),
         ]);
 
         let lines = update_pins(&runner, Path::new("."), &mut manifest);
 
-        assert_eq!(revs(&manifest), [Some("main"), Some("assets-v1.0.0-rc1")]);
+        assert_eq!(
+            revs(&manifest),
+            [
+                Some("main"),
+                Some("6f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f90")
+            ]
+        );
         assert_eq!(
             lines
                 .iter()
@@ -440,6 +482,54 @@ mod tests {
             calls[0],
             "git ls-remote --tags --refs https://github.com/six5536/superdev refs/tags/assets-v*"
         );
+    }
+
+    /// A candidate binary's `init` writes its own candidate pin into the
+    /// manifest. Once the release it was a candidate for is out, the pin has
+    /// to come forward on its own: nothing else rewrites a manifest, so a pin
+    /// left here strands that repo on candidate content for good.
+    #[test]
+    fn a_candidate_pin_comes_forward_once_a_release_covers_it() {
+        let runner = source_carrying(&["assets-v0.1.0"]);
+        let mut manifest = manifest(&[(DEFAULT_PACK.source, Some("assets-v0.1.0-rc.1"))]);
+
+        let lines = update_pins(&runner, Path::new("."), &mut manifest);
+
+        assert_eq!(revs(&manifest), [Some("assets-v0.1.0")]);
+        assert!(
+            lines.join("\n").contains("moved to assets-v0.1.0"),
+            "{lines:?}"
+        );
+    }
+
+    /// The release it comes forward to is one something vouches for. On a
+    /// candidate binary, with a source carrying nothing, no release covers the
+    /// pin — and rewriting it to `assets-v0.2.0` would name a tag nobody cut.
+    #[test]
+    fn a_candidate_pin_no_release_covers_is_left_where_it_is() {
+        let runner = source_carrying(&[]);
+        let mut manifest = manifest(&[(DEFAULT_PACK.source, Some("assets-v9.9.9-rc.1"))]);
+
+        let lines = update_pins(&runner, Path::new("."), &mut manifest);
+
+        assert_eq!(revs(&manifest), [Some("assets-v9.9.9-rc.1")]);
+        assert!(
+            lines.join("\n").contains("stays at assets-v9.9.9-rc.1"),
+            "{lines:?}"
+        );
+    }
+
+    /// A branch or a sha is a deliberate choice and stays one: only superdev's
+    /// own candidate tags are pins it knows how to bring forward.
+    #[test]
+    fn a_branch_pin_is_still_left_alone() {
+        let runner = source_carrying(&["assets-v9.9.9"]);
+        let mut manifest = manifest(&[(DEFAULT_PACK.source, Some("main"))]);
+
+        let lines = update_pins(&runner, Path::new("."), &mut manifest);
+
+        assert_eq!(revs(&manifest), [Some("main")]);
+        assert!(lines.join("\n").contains("not a release tag"), "{lines:?}");
     }
 
     /// A candidate's content tag is on the source like any other, and must

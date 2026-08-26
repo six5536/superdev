@@ -18,6 +18,7 @@ import {
   plannedPackVersion,
   prereleaseOf,
   isBehind,
+  refusalFor,
 } from "../pack-version.mjs";
 
 const PACK_TOML = `# a comment the rewrite must not disturb
@@ -216,4 +217,33 @@ test("the tag helper refuses what the release cannot cut", () => {
   assert.throws(() => packTag("1.2"), /1\.2/);
   assert.throws(() => packTag(""), /MAJOR/);
   assert.throws(() => packTag("v1.2.3"), /v1\.2\.3/);
+});
+
+// --- What a release refuses -------------------------------------------------
+
+test("a version behind what the tree declares is refused", () => {
+  assert.match(
+    refusalFor({ candidate: "0.0.5", declared: "0.1.0", coreReleased: false }),
+    /behind pack\.toml's 0\.1\.0/,
+  );
+});
+
+test("a candidate whose release is already out is refused", () => {
+  // `isBehind` compares the numbers alone, so this one gets past it: 0.2.0-rc.1
+  // and 0.2.0 share a version. What makes it backwards is 0.2.0 being cut.
+  assert.match(
+    refusalFor({ candidate: "0.2.0-rc.1", declared: "0.2.0", coreReleased: true }),
+    /already released/,
+  );
+});
+
+test("a candidate for a version not yet out is the normal path", () => {
+  assert.equal(
+    refusalFor({ candidate: "0.1.0-rc.1", declared: "0.1.0", coreReleased: false }),
+    "",
+  );
+  assert.equal(
+    refusalFor({ candidate: "0.2.0", declared: "0.1.0", coreReleased: true }),
+    "",
+  );
 });

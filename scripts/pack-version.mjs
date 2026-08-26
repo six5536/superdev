@@ -61,6 +61,25 @@ export function isBehind(candidate, declared) {
 }
 
 /**
+ * Why this version may not be cut, or `""` when it may.
+ *
+ * Both release paths ask, so both refuse the same things. `isBehind` compares
+ * the three numbers alone, which is what the bootstrap needs — cutting
+ * `0.1.0-rc.1` while `pack.toml` declares an unreleased `0.1.0` is the normal
+ * candidate path, not a step backwards. What makes a candidate backwards is
+ * its release already being out, which is a question about the tags.
+ */
+export function refusalFor({ candidate, declared, coreReleased }) {
+  if (isBehind(candidate, declared)) {
+    return `pack version ${candidate} is behind pack.toml's ${declared}`;
+  }
+  if (prereleaseOf(candidate) && coreReleased) {
+    return `${TAG_PREFIX}${coreOf(candidate)} is already released, so ${TAG_PREFIX}${candidate} would go backwards`;
+  }
+  return "";
+}
+
+/**
  * The pack version a release should cut. Knows nothing about git; the caller
  * says whether the declared version's release has been tagged.
  *

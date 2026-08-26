@@ -30,7 +30,7 @@ import {
   packTag,
   setPackVersion,
   plannedPackVersion,
-  isBehind,
+  refusalFor,
   coreOf,
   TAG_PREFIX,
 } from "./pack-version.mjs";
@@ -50,28 +50,40 @@ if (run("git", ["status", "--porcelain"]).trim() !== "") {
 }
 
 // --- 2. Work out the version, refusing a bad one before anything is written -
+fetchTags();
 const declared = readPackVersion(root);
+// The version the tree declares, while that is still unreleased; the next
+// patch once it is out.
+const coreReleased = run("git", ["tag", "--list", `${TAG_PREFIX}${coreOf(declared)}`]).trim() !== "";
 const version = chooseVersion();
 const tag = packTag(version);
 
 function chooseVersion() {
   const given = process.argv[2]?.replace(/^(assets-)?v/, "");
   if (given === undefined || given === "") {
-    // The version the tree declares, while that is still unreleased; the next
-    // patch once it is out.
-    const core = coreOf(declared);
-    const released = run("git", ["tag", "--list", `${TAG_PREFIX}${core}`]).trim() !== "";
-    return plannedPackVersion({ declared, coreReleased: released });
+    return plannedPackVersion({ declared, coreReleased });
   }
   try {
     packTag(given);
   } catch (e) {
     fail(e.message);
   }
-  if (isBehind(given, declared)) {
-    fail(`pack version ${given} is behind pack.toml's ${declared}`);
+  const refusal = refusalFor({ candidate: given, declared, coreReleased });
+  if (refusal) {
+    fail(refusal);
   }
   return given;
+}
+
+// Tags decide which versions are already out, and a clone can be missing
+// them. Best effort: a release without a reachable remote is still worth
+// preparing, but it should say it is deciding blind.
+function fetchTags() {
+  try {
+    run("git", ["fetch", "--tags", "--quiet"]);
+  } catch {
+    console.warn("warning: could not fetch tags; deciding from this clone's own");
+  }
 }
 
 // --- 3. Tag must not already exist -----------------------------------------

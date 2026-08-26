@@ -35,7 +35,7 @@ import {
   setPackVersion,
   plannedPackVersion,
   prereleaseOf,
-  isBehind,
+  refusalFor,
   coreOf,
   TAG_PREFIX,
 } from "./pack-version.mjs";
@@ -65,9 +65,13 @@ if (run("git", ["status", "--porcelain"]).trim() !== "") {
 
 // --- 2. Work out the pack version, and refuse a bad one before writing ------
 // The pack has a version series of its own, so it comes from the tree rather
-// than from the binary version. Everything here is decided before step 4
-// touches a file: an argument this rejects must not leave a half-set tree.
+// than from the binary version. Everything here is settled before step 5
+// writes anything: an argument this rejects must not leave a half-set tree.
+fetchTags();
 const declared = readPackVersion(root);
+// Has the version the tree declares been released? If not, that is the one to
+// cut, so the first release cuts the `pack.toml` the repo already carries.
+const coreReleased = run("git", ["tag", "--list", `${TAG_PREFIX}${coreOf(declared)}`]).trim() !== "";
 const packVersion = choosePackVersion();
 const packTagName = packTag(packVersion);
 
@@ -75,24 +79,21 @@ function choosePackVersion() {
   const given = process.argv[3]?.replace(/^(assets-)?v/, "");
   const prerelease = prereleaseOf(version);
   if (given === undefined || given === "") {
-    // Has the version the tree declares been released? If not, that is the one
-    // to cut; the first release cuts the `pack.toml` the repo already carries.
-    const core = coreOf(declared);
-    const released = run("git", ["tag", "--list", `${TAG_PREFIX}${core}`]).trim() !== "";
-    return plannedPackVersion({ declared, coreReleased: released, prerelease });
+    return plannedPackVersion({ declared, coreReleased, prerelease });
   }
   try {
     packTag(given);
   } catch (e) {
     fail(e.message);
   }
-  if (isBehind(given, declared)) {
-    fail(`pack version ${given} is behind pack.toml's ${declared}`);
+  const refusal = refusalFor({ candidate: given, declared, coreReleased });
+  if (refusal) {
+    fail(refusal);
   }
   // A candidate binary must not cut a release-numbered content tag: `update`
-  // moves stable pins onto anything spelled as a three-number release. The
-  // converse strands them — a release whose pin names a candidate tag is no
-  // release to `update`, so every pin on it sits still until the next binary.
+  // moves stable pins onto anything spelled as a three-number release. Nor the
+  // converse — a release whose pin names a candidate tag gives every repo it
+  // sets up a pin that only comes forward once some later release covers it.
   if (prerelease && !prereleaseOf(given)) {
     fail(`${tag} is a prerelease, so its content tag must be one too — try ${given}-${prerelease}`);
   }
@@ -100,6 +101,19 @@ function choosePackVersion() {
     fail(`${tag} is a release, so its content tag must be one too — not ${packTag(given)}`);
   }
   return given;
+}
+
+// Which versions are already out is a question about tags, and a clone can be
+// missing them — `--no-tags`, or simply not fetched since a colleague cut one.
+// Deciding from a stale view re-cuts a version that exists, which only shows
+// up as a rejected push once the commit and both tags are made. Best effort:
+// a release without a reachable remote is still a release worth preparing.
+function fetchTags() {
+  try {
+    run("git", ["fetch", "--tags", "--quiet"]);
+  } catch {
+    console.warn("warning: could not fetch tags; deciding from this clone's own");
+  }
 }
 
 // --- 3. Neither tag may already exist ---------------------------------------

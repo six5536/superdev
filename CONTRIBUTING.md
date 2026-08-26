@@ -191,9 +191,9 @@ it picks is the one `pack.toml` already declares while that is still
 unreleased, and the next patch once it is out — so a hand-edited `pack.toml`
 gets the version its author chose, and the first release cuts the version the
 repo already claims. Pass a second argument (`npm run release X.Y.Z A.B.C`) to
-name it instead; a version behind what `pack.toml` declares is refused, as is
-one that is not `MAJOR.MINOR.PATCH`, and both are refused before anything is
-written.
+name it instead; a version behind what `pack.toml` declares is refused, so is
+a candidate for a version already released, so is one that is not
+`MAJOR.MINOR.PATCH`, and all of them are refused before anything is written.
 
 A prerelease binary cuts a prerelease content tag: `npm run release
 0.3.0-rc.1` produces `assets-vA.B.C-rc.1`. `superdev update` moves a pin only
