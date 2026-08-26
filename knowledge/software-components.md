@@ -50,7 +50,12 @@ All domain logic; no argument parsing. One module per concern:
   `tx` (the journal every side effect goes through), `pins` (the grouped
   mise pin phase), `materialise` (the skill copier), with the appliers in
   `apply`. `orphan` — plans the sweep of lock entries no live claim covers.
-- `runner` — the process seam; `report` — plan and apply rendering; `error` —
+- `runner` — the process seam. `run_with` is its one required method, taking
+  a `RunOptions` that carries a deadline and extra environment; `run` defaults
+  onto it with neither, so a caller wanting only a command writes what it
+  always did ([ADR-015](decisions/D015-the-spawn-seam-carries-a-deadline.md)).
+  An expired deadline is an `Error::Command` like any other failed spawn.
+  `report` — plan and apply rendering; `error` —
   the crate's error type; `fsutil` and `json_edit` — the pure file and
   JSON-pointer helpers the engine and planners share.
 - `templates` — the project templates: token substitution, the init-only

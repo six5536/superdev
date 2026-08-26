@@ -113,7 +113,7 @@ case below is new and drawn from the issue it closes.
 
 ### Slice 4: The spawn seam carries a deadline and an environment
 
-- [ ] Not started.
+- [x] Done — ticked by integrate at merge.
 - Gap: [I002](../issues/I002-no-time-bound-on-the-update-query.md), the seam
   half.
 - Change: add `RunOptions { timeout, env }` to `runner.rs`. `run_with` becomes

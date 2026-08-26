@@ -19,11 +19,15 @@ gate are in [CONTRIBUTING](/CONTRIBUTING.md).[^contributing]
   doctests. Planning is pure, so most of these feed a temp-dir repo and a
   manifest in and assert on the action list that comes out.
 - **Fake runner.** Every process spawn goes through `CommandRunner`; the
-  test-only `FakeRunner` records each command line and scripts outcomes,
+  test-only `FakeRunner` records each command line, and the `RunOptions` that
+  came with it, and scripts outcomes,
   including a missing program and a mid-apply failure to exercise the
   rollback. No test shells out to a real tool. Orchestration detail — call
   ordering, targeted install lists, per-provider flows — is asserted here,
-  in core, not end-to-end.
+  in core, not end-to-end. A caller that sets a deadline is checked on what it
+  asked for rather than on a real process; the seam's own behaviour under one
+  — the kill, the environment, both pipes draining — is what `runner`'s unit
+  tests spawn `sh` for.
 - **CLI end-to-end.** Invoke the real binary (`assert_cmd`) against every
   surface: `--version`, help, completions per shell, `man`, usage-error exit
   codes, `aokf validate`'s three exit codes and its JSON, `aokf index`, and
