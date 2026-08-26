@@ -104,6 +104,13 @@ answered with. Its own version does not count, because a candidate tag says
 nothing about whether the release it is a candidate for was ever cut. A branch
 or a sha stays where it is.
 
+A pack is the files it contains. A symlink inside one is skipped rather than
+read through — following it would put bytes from anywhere on the machine into
+the repo as pack content — and a link standing in for the pack's own root or
+its `pack.toml` is refused, because then the pack is not where it says it is.
+Nothing says which links were skipped
+([I009](issues/I009-a-skipped-symlink-says-nothing.md)).
+
 A pack-provided file is superdev's on exactly the terms an embedded one is:
 hashed into the lock, rewritten by `sync`, reported as drift when edited, and
 released by naming it in a `custom` list. Dropping a pack entry removes its

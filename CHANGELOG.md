@@ -70,6 +70,11 @@ publish a version it cannot find a heading for.
   operands are passed after `--`. A stock git already refused the transport;
   what changes is that superdev no longer depends on your configuration to say
   so.
+- A pack cannot ship a file it does not contain. A symlink in a pack tree was
+  followed when it pointed at a file, so a pack could name a link to anything
+  the user running superdev could read and have those bytes written into the
+  repository as pack content. Links are skipped now, and a link standing in
+  for the pack's own root or its `pack.toml` is refused outright.
 
 ### Changed
 

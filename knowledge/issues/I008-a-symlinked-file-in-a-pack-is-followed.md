@@ -3,8 +3,8 @@ type: Issue
 id: issue-008-a-symlinked-file-in-a-pack-is-followed
 title: A symlinked file in a pack is followed, copying the target's contents into the repo
 description: read_dir skips a symlinked directory but not a symlinked file, so a pack can name a link to any readable file on the machine and superdev writes that file's contents into the working tree as pack content.
-status: draft
-tags: [needs-triage]
+status: stable
+tags: [done]
 links:
   - rel: references
     to: spec-content-packs
@@ -13,6 +13,19 @@ links:
 ---
 
 # Bug: a symlinked file in a pack is followed
+
+## Resolved
+
+P003 slice 16. Every symlink in a pack tree is skipped, not only a linked
+directory, so no file outside the pack is read through one. The two paths the
+walk never visits — the pack root and `pack.toml` — are refused outright,
+because a link standing in for either means the pack is not where it says it
+is; a linked manifest would otherwise have picked the format gate with bytes
+no digest covers.
+
+What the skip leaves behind is
+[I009](I009-a-skipped-symlink-says-nothing.md): it is silent, so a pack that
+dedupes an item with a link loses that item without saying so.
 
 ## Summary
 

@@ -271,7 +271,7 @@ unplanned, so nothing scheduled can stall behind one.
 
 ### Slice 16: A pack's symlinks are not followed
 
-- [ ] Done — ticked by integrate at merge.
+- [x] Done — ticked by integrate at merge.
 - Gap: [I008](../issues/I008-a-symlinked-file-in-a-pack-is-followed.md).
 - Change: skip every symlink in a pack tree, not only a linked directory —
   `read_dir` already computes `linked` and acts on it for one case out of two.
