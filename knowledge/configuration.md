@@ -70,7 +70,13 @@ them; every other spelling reaches `git` as written, so an ssh alias, an
 `insteadOf` prefix and a mirror all keep working. A path is resolved against
 the repo root, not the working directory — the file is committed, so it means
 the same thing wherever the command runs from — and canonicalised before it is
-compared, so two spellings of one directory are one pack. It is read from disk
+compared, so two spellings of one directory are one pack. Its identity is that
+canonical location written relative to the repo root, with forward slashes, so
+the lock it lands in reads the same in every checkout and on every platform; a
+pack beside the repo keeps its `..`
+([ADR-011](decisions/D011-path-pack-identity-is-root-relative.md)). A directory
+and a repository are never the same source, however alike their identities
+read. It is read from disk
 on every run, so editing a local pack and running `sync` again lands the new
 bytes with no rebuild.
 

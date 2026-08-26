@@ -204,7 +204,7 @@ only variable when the Windows job runs.
 
 ### Slice 13: A committed path pin reads the same everywhere
 
-- [ ] Done — ticked by integrate at merge.
+- [x] Done — ticked by integrate at merge.
 - Change: `PackSource::identity` takes the repo root, and a path source's key
   becomes its canonicalised path relative to that root with forward slashes.
   A pack outside the root keeps its `..` prefix; where no relative form exists

@@ -15,11 +15,12 @@ publish a version it cannot find a heading for.
 
 - **Content packs.** A `[[packs]]` array in `.superdev/config.toml` names
   where superdev's skills, templates and scaffolds come from — a git URL with
-  a `rev`, or a path on this machine. Entries layer in the order written and a
-  later item of the same name wins; an entry naming the source the binary's
-  own content is a copy of replaces it rather than layering, so what that rev
-  drops leaves the repo. A manifest naming no pack behaves exactly as before,
-  and `sync` never adds an entry to one that lacks it.
+  a `rev`, or a path on this machine — recorded relative to the repository, so
+  a committed pin reads the same in every clone. Entries layer in the order
+  written and a later item of the same name wins; an entry naming the source
+  the binary's own content is a copy of replaces it rather than layering, so
+  what that rev drops leaves the repo. A manifest naming no pack behaves
+  exactly as before, and `sync` never adds an entry to one that lacks it.
 
   A git source is fetched with the user's own `git` — shallow, blobless and
   sparse — so credentials and forge access stay theirs and superdev holds no
