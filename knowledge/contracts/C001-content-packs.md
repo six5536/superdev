@@ -17,7 +17,8 @@ a resolver that runs before planning and hands components their content
 through `Ctx` ([ADR-002](../decisions/D002-resolve-before-plan.md)), a content
 set keyed by items the pack layout names
 ([ADR-003](../decisions/D003-items-by-layout.md)), source identity that
-decides replace-versus-layer ([ADR-004](../decisions/D004-base-pack-identity.md)),
+decides replace-versus-layer ([ADR-004](../decisions/D004-base-pack-identity.md),
+[ADR-011](../decisions/D011-path-pack-identity-is-root-relative.md)),
 and a machine-local cache with on-demand fetching
 ([ADR-005](../decisions/D005-pack-cache-and-fetch.md)). A working document:
 build codes against it and it is discarded once the code is canonical.
@@ -85,9 +86,23 @@ impl PackSource {
     /// slash removed, host and path lowercased. Every spelling of one
     /// repository shares a key, so `github:six5536/superdev`,
     /// `https://github.com/six5536/superdev.git` and the ssh form are one
-    /// source. A path source's key is its canonicalised absolute path.
-    /// ADR-004.
-    pub fn identity(&self) -> String;
+    /// source.
+    ///
+    /// A path source's key is its canonicalised path taken relative to
+    /// `root`, with forward slashes — `./pack` and `pack/` are both `pack` —
+    /// so the lock that records it reads the same in every checkout and on
+    /// every platform. A pack outside the root keeps its `..` prefix, and
+    /// where no relative form exists (a different Windows drive) the
+    /// canonical absolute path stands. `root` is what makes that possible and
+    /// is why it is a parameter: a path identity means nothing without the
+    /// repository it was taken from. A git source ignores it.
+    ///
+    /// Keys never compare across source kinds: a directory and a repository
+    /// are different sources however alike their keys read, so every
+    /// comparison is within a kind. Without that a directory named
+    /// `github.com/six5536/superdev` would key as the base pack and silently
+    /// replace the embedded content. ADR-004, ADR-011.
+    pub fn identity(&self, root: &Path) -> String;
 }
 
 /// The pack this binary embeds and defaults to; a manifest entry whose
@@ -310,6 +325,15 @@ identity = "github.com/six5536/superdev"
 rev      = "assets-v1.4.0"
 digest   = "sha256:9f2a…"
 format   = 1
+
+# A directory on this machine. No `rev` — it is read afresh every run — and an
+# identity relative to the repo root, so this file reads the same in every
+# checkout of the repository that commits it. ADR-011.
+[[packs]]
+source   = "./pack"
+identity = "pack"
+digest   = "sha256:58675e…"
+format   = 1
 ```
 
 ```rust
@@ -319,6 +343,9 @@ format   = 1
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct PackLock {
     pub source: String,
+    /// `PackSource::identity`. This file is committed, so a path source's key
+    /// is relative to the repo root and reads the same in every checkout.
+    /// ADR-011.
     pub identity: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub rev: Option<String>,
