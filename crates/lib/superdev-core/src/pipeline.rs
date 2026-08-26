@@ -43,6 +43,10 @@ pub enum PlanMode {
 /// report lines, and the pruned lock the apply consumes.
 pub struct RepoPlan {
     planned: Vec<Planned>,
+    /// Every whole file a component claims, for reconciling the lock against
+    /// disk. Only paths: a mise pin or a JSON key is a fragment of a file and
+    /// hashes as one, so neither can be read back off disk this way.
+    owned_files: Vec<String>,
     orphans: OrphanPlan,
     behind: Vec<String>,
     custom: Vec<String>,
@@ -200,6 +204,13 @@ pub fn plan_repo(
     // The aggregator is repo-level: no component claims it, and without a
     // live claim its lock entry would read as an orphan every run.
     claims.push(Claim::File(AGGREGATOR_PATH.into()));
+    let owned_files: Vec<String> = claims
+        .iter()
+        .filter_map(|claim| match claim {
+            Claim::File(path) => Some(path.clone()),
+            _ => None,
+        })
+        .collect();
     let orphans = orphan::plan(root, &lock, &claims)?;
     if !orphans.actions.is_empty() {
         planned.push(Planned {
@@ -216,6 +227,7 @@ pub fn plan_repo(
         blueprint,
         planned,
         orphans,
+        owned_files,
         lock,
         lock_changed,
     })
@@ -238,6 +250,7 @@ pub fn apply_repo(
         planned,
         orphans,
         packs,
+        owned_files,
         mut lock,
         mut lock_changed,
         ..
@@ -283,6 +296,9 @@ pub fn apply_repo(
     }
     lock.components.retain(|_, records| !records.is_empty());
     if planned.iter().all(|p| p.actions.is_empty()) {
+        if reconcile_lock(root, &owned_files, &mut lock) {
+            lock_changed = true;
+        }
         if lock_changed {
             lock.save(root)?;
         }
@@ -294,6 +310,14 @@ pub fn apply_repo(
     }
     let result = engine::apply(root, runner, manifest, &planned, &mut lock);
     if result.ok {
+        // After the engine, never before it: a file the user edited differs
+        // from the lock *and* from what superdev writes, and reconciling
+        // first would bless the edit as the recorded hash — so the write that
+        // follows would find them equal and report a plain write, saying
+        // nothing about the edit it just overwrote. Everything the engine
+        // wrote is already recorded, so what is left here is what it had no
+        // reason to touch.
+        reconcile_lock(root, &owned_files, &mut lock);
         lock.save(root)?;
         stamp_blueprint(root, manifest)?;
     }
@@ -301,6 +325,35 @@ pub fn apply_repo(
         report: report::render_apply(&result),
         ok: result.ok,
     })
+}
+
+/// Bring the lock's hashes up to the files on disk, for owned files only.
+///
+/// Refreshes what the lock already holds and never adds a key: a claim can
+/// cover a file superdev deliberately does not own — a write-once scaffold is
+/// claimed so it does not read as an orphan, and locking it would start
+/// rewriting the user's copy.
+///
+/// Runs after the engine, never before. A file the user edited differs from
+/// the lock and from what superdev writes; reconciling first would record the
+/// edit as the hash the engine then compares against, and an overwrite nobody
+/// was told about is the failure the hash exists to prevent.
+fn reconcile_lock(root: &Path, owned_files: &[String], lock: &mut Lock) -> bool {
+    let mut changed = false;
+    for path in owned_files {
+        let Some(recorded) = lock.files.get_mut(path) else {
+            continue;
+        };
+        let Ok(Some(body)) = crate::fsutil::read_text(&root.join(path)) else {
+            continue;
+        };
+        let actual = crate::lock::sha256_hex(body.as_bytes());
+        if *recorded != actual {
+            *recorded = actual;
+            changed = true;
+        }
+    }
+    changed
 }
 
 /// Mark as custom, at init time, everything the repo already carries under a
@@ -920,6 +973,7 @@ mod tests {
             content: Vec::new(),
             packs: Vec::new(),
             blueprint: None,
+            owned_files: Vec::new(),
             lock,
             lock_changed: false,
         };

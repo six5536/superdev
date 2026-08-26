@@ -661,6 +661,78 @@ fn an_update_cannot_be_talked_into_running_a_manifests_command() {
     );
 }
 
+/// I005: the lock describes what is on disk, not only what this run wrote.
+///
+/// A backport ends with the live copy already matching the pack, so `sync`
+/// plans nothing and writes nothing — and a hash is recorded only for a file
+/// that gets written, so the lock keeps whatever it held before the edit.
+/// The next run that does write that file then reports a user edit nobody
+/// made. Simulated here by staling one entry directly, which is the state a
+/// backport leaves behind.
+#[test]
+fn a_converged_run_brings_the_lock_up_to_what_is_on_disk() {
+    let dir = local_repo();
+    let lock = dir.path().join(".superdev/lock.toml");
+    let key = ".claude/skills/double-check/SKILL.md";
+    let real = std::fs::read_to_string(&lock).unwrap();
+    let stale = real
+        .lines()
+        .map(|line| {
+            if line.starts_with(&format!("\"{key}\"")) {
+                format!("\"{key}\" = \"{}\"", "0".repeat(64))
+            } else {
+                line.to_string()
+            }
+        })
+        .collect::<Vec<_>>()
+        .join("\n");
+    assert_ne!(stale, real, "the fixture never staled anything");
+    std::fs::write(&lock, format!("{stale}\n")).unwrap();
+
+    // Nothing to do: the file on disk is already what superdev would write.
+    superdev()
+        .current_dir(dir.path())
+        .arg("sync")
+        .assert()
+        .success();
+
+    let after = std::fs::read_to_string(&lock).unwrap();
+    assert!(
+        !after.contains(&"0".repeat(64)),
+        "the lock still describes a file that is not there: {after}"
+    );
+}
+
+/// The other half of I005: reconciling must not swallow a real edit.
+///
+/// A hand-edited owned file differs from the lock *and* from what superdev
+/// writes. Refresh the lock before the engine runs and the two agree by the
+/// time it compares them, so the overwrite is reported as an ordinary write
+/// and the user is never told their edit went into a backup. The order is the
+/// whole of the fix, and nothing else would notice it being wrong.
+#[test]
+fn a_hand_edited_file_is_still_reported_as_one() {
+    let dir = local_repo();
+    let live = dir.path().join(".claude/skills/double-check/SKILL.md");
+    let mine = format!(
+        "{}\nmy own words\n",
+        std::fs::read_to_string(&live).unwrap()
+    );
+    std::fs::write(&live, &mine).unwrap();
+
+    let out = superdev()
+        .current_dir(dir.path())
+        .arg("sync")
+        .assert()
+        .success();
+
+    let stdout = stdout_of(&out);
+    assert!(
+        stdout.contains("overwrote a user-edited file (backed up)"),
+        "the edit was overwritten with nothing said: {stdout}"
+    );
+}
+
 /// Test plan case 19: a local-path pack is read from disk every run, so
 /// editing it and syncing again updates the repo copy — no rebuild, which is
 /// what lets this repo pin its own `/pack` and see an edit land.
