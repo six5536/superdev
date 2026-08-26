@@ -321,10 +321,16 @@ unplanned, so nothing scheduled can stall behind one.
 - Cases: none from the test plan. A test asserting the help text names the
   network behaviour would stop it going stale again.
 
-## Not scheduled — each needs an interface decision first
+## Not scheduled — each needed an interface decision first
 
-Cutting any of these as a slice now would only bounce it to
-`/interface-design`, so they go there, or into a later feature, on their own.
+Cutting any of these as a slice would only have bounced it to
+`/interface-design`, so they went there on their own. All five are now
+decided — [ADR-012](../decisions/D012-pack-source-schemes-are-allowlisted.md)
+to [ADR-016](../decisions/D016-a-path-pack-records-no-digest.md) — and
+scheduled as [P005](P005-content-pack-hardening.md), except
+[I003](../issues/I003-a-local-pack-cannot-remove-what-it-dropped.md), closed
+`wontfix`: a path pack keeps layering, and the rebuild a pack developer needs
+anyway is the answer.
 
 - **The scheme allowlist**, the other half of
   [I007](../issues/I007-a-pack-source-reaches-git-with-no-scheme-check.md):
