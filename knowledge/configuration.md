@@ -66,8 +66,15 @@ A source is compared normalised, so any spelling of one repository is one
 source; a pin naming exactly what this binary embeds resolves from it and
 makes no request. A path is resolved against the repo root, not the working
 directory — the file is committed, so it means the same thing wherever the
-command runs from — and it is read from disk on every run, so editing a
+command runs from — and canonicalised before it is compared, so two spellings
+of one directory are one pack. It is read from disk on every run, so editing a
 local pack and running `sync` again lands the new bytes with no rebuild.
+
+A pack-provided file is superdev's on exactly the terms an embedded one is:
+hashed into the lock, rewritten by `sync`, reported as drift when edited, and
+released by naming it in a `custom` list. Dropping a pack entry removes its
+files by the ordinary orphan rule — pruned while they still hash to the locked
+value, left in place and released once the user has changed them.
 
 `blueprint` is the version last applied, not the version that wrote the file.
 A successful `sync` stamps this binary's version, rewriting `config.toml` only

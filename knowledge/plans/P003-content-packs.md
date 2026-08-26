@@ -157,7 +157,7 @@ only variable when the Windows job runs.
 
 ### Slice 10: Ownership — drift, custom and removal
 
-- [ ] Done — ticked by integrate at merge.
+- [x] Done — ticked by integrate at merge.
 - Change: wire pack-provided items through the existing ownership machinery
   so provenance changes nothing: lock hashing and drift reporting, the
   `custom` lists' name-guarded release, and orphan pruning when a pack entry
