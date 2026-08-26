@@ -342,11 +342,16 @@ fn read_dir(pack: &str, root: &Path, dir: &Path, files: &mut Vec<(String, String
             continue;
         }
         // `symlink_metadata` does not follow the link, which is what tells a
-        // linked directory from a real one.
+        // link from the thing it points at. Every link is skipped, not only a
+        // linked directory: `is_dir` follows, so a linked *file* answered
+        // false and fell through to be read — and `read_to_string` follows
+        // too, so the bytes came from wherever it pointed and were written
+        // into the repo as pack content. A pack names its own paths; a link
+        // is how it names one it does not contain. I008.
         let linked = fs::symlink_metadata(&path)
             .map(|meta| meta.file_type().is_symlink())
             .unwrap_or(false);
-        if linked && path.is_dir() {
+        if linked {
             continue;
         }
         if path.is_dir() {
@@ -438,6 +443,48 @@ mod tests {
                 .item(knowledge(), ItemKind::Skill, "acme-vendored")
                 .is_some(),
             "the vendored pack layered"
+        );
+    }
+
+    /// A pack names its own file paths, and a symlink lets it name one it
+    /// does not contain. The written path stays inside the pack, so nothing
+    /// escapes on the way out — what escapes is the content, read from
+    /// wherever the link points and written into the repo as pack content.
+    /// I008.
+    #[cfg(unix)]
+    #[test]
+    fn a_symlinked_file_in_a_pack_is_not_followed() {
+        let repo = tempfile::tempdir().unwrap();
+        let outside = repo.path().join("secret.txt");
+        fs::write(&outside, "SUPER-SECRET\n").unwrap();
+        let pack = repo.path().join("packs/acme");
+        write_pack(&pack, "honest", "# honest\n");
+        let leak = pack.join("knowledge/skills/leak");
+        fs::create_dir_all(&leak).unwrap();
+        std::os::unix::fs::symlink(&outside, leak.join("SKILL.md")).unwrap();
+
+        let resolved = resolve(
+            repo.path(),
+            &FakeRunner::new(),
+            &manifest_with("./packs/acme", None),
+            &Lock::default(),
+            ResolveMode::Fetching,
+        )
+        .expect("the pack resolves; the link is simply not in it");
+
+        assert!(
+            resolved
+                .content
+                .item(knowledge(), ItemKind::Skill, "leak")
+                .is_none(),
+            "a linked file became an item"
+        );
+        assert!(
+            resolved
+                .content
+                .item(knowledge(), ItemKind::Skill, "honest")
+                .is_some(),
+            "the rest of the pack still resolved"
         );
     }
 
