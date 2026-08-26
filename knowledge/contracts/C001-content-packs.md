@@ -20,7 +20,19 @@ set keyed by items the pack layout names
 decides replace-versus-layer ([ADR-004](../decisions/D004-base-pack-identity.md),
 [ADR-011](../decisions/D011-path-pack-identity-is-root-relative.md)),
 and a machine-local cache with on-demand fetching
-([ADR-005](../decisions/D005-pack-cache-and-fetch.md)). A working document:
+([ADR-005](../decisions/D005-pack-cache-and-fetch.md)). The decisions taken
+against the issues acceptance left open are folded in where they land: the
+transport allowlist
+([ADR-012](../decisions/D012-pack-source-schemes-are-allowlisted.md)), the
+pin `update` proves before it writes
+([ADR-013](../decisions/D013-update-proves-a-pin-before-it-writes-it.md)),
+the symlink refusal
+([ADR-014](../decisions/D014-a-symlink-in-a-pack-is-refused.md)), the
+deadline on the process seam
+([ADR-015](../decisions/D015-the-spawn-seam-carries-a-deadline.md)) and the
+digest a path pack no longer records
+([ADR-016](../decisions/D016-a-path-pack-records-no-digest.md)).
+A working document:
 build codes against it and it is discarded once the code is canonical.
 
 ## Data model & API
@@ -81,6 +93,13 @@ impl PackSource {
     /// Parse one manifest entry. Rejects a git source carrying no `rev`, a
     /// path source that names one, and a source or rev beginning with `-`,
     /// which git reads as an option wherever it meets it. ADR-004, I007.
+    ///
+    /// Rejects a transport outside [`SUPPORTED_SCHEMES`], naming the source
+    /// and the transport, before anything is spawned — and a
+    /// `<name>::<address>` remote helper as one, whatever its address, since
+    /// a helper names a program rather than a protocol. The `github:` and
+    /// `gitlab:` shorthands are https and the scp form is ssh, so neither
+    /// spelling changes. ADR-012.
     pub fn parse(entry: &PackEntry) -> Result<PackSource>;
 
     /// The comparison key: scheme, userinfo, a `.git` suffix and any trailing
@@ -113,6 +132,19 @@ pub struct DefaultPack {
     pub rev: &'static str,
 }
 pub const DEFAULT_PACK: DefaultPack = DefaultPack { /* … */ };
+
+/// The transports a pack may be fetched over. `parse` refuses anything else,
+/// naming the source, and no config on the machine can lift that.
+///
+/// The git overrides carry the same set as `protocol.<name>.allow=always`
+/// over a `protocol.allow=never` default, plus `never` naming `git`, `http`
+/// and `ext`. Both halves are needed and neither is sufficient: `parse`
+/// cannot see a `url.<base>.insteadOf` rewrite, which turns an approved
+/// `https://` source into whatever the machine's config says; and among the
+/// overrides only the named `never` lines outrank a user config, since git
+/// resolves `protocol.<name>.allow` ahead of `protocol.allow` whatever their
+/// sources. ADR-012.
+pub const SUPPORTED_SCHEMES: &[&str] = &["https", "ssh", "file"];
 ```
 
 ### Pack format — `pack.toml` at the pack root
@@ -214,6 +246,18 @@ pub const REJECTED: &[&str] = &[
 pub const REJECTED_BASENAME: &str = "PROJECT.md";
 ```
 
+A symlink anywhere in a pack is refused the same way, naming the path: a pack
+resolves whole or not at all, and an item silently missing is the failure
+`read_pack` says it does not have. What counts as one is decided by whoever
+knows. For a fetched pack it is git's index — mode `120000`, asked for after
+the checkout and before anything is read, because on Windows without
+`core.symlinks` git materialises a link as a plain file the filesystem cannot
+tell from content, and the same rev would otherwise digest differently there.
+Mode `160000`, a submodule, is refused with it: a shallow sparse clone leaves
+it empty. For a path pack there is no index and no second platform, so
+`symlink_metadata` decides. The filesystem check also stays at read time,
+which is where the cache is read and has no index of its own. ADR-014.
+
 ### The resolved content set — what components read
 
 ```rust
@@ -299,6 +343,74 @@ pub fn resolve(
 ) -> Result<Resolution>;
 ```
 
+### Where the pin moves
+
+```rust
+/// Bring the manifest's pack pins current, and say what happened. ADR-009.
+///
+/// A moved pin is resolved before it is written, and stays where it is when
+/// resolution refuses — the reason is reported in the line that would have
+/// announced the move. The manifest is what every later run reads and a pin
+/// never moves backwards, so a pin written to content this binary cannot
+/// read would leave no superdev command able to repair it. A moving pin
+/// therefore fetches twice — the cache is found by the digest the lock
+/// records, and apply does not write that until after the sync — so the
+/// price is one extra clone on the rare run that advances a pin. The lock is
+/// here because resolution reads it. ADR-013, I001.
+///
+/// Nothing here fails the run.
+pub fn update_pins(
+    runner: &dyn CommandRunner,
+    root: &Path,
+    manifest: &mut Manifest,
+    lock: &Lock,
+) -> Vec<String>;
+```
+
+### The process seam
+
+Not `pack`'s own, but changed for it: the query `update` makes unprompted is
+the first spawn in the codebase that needs a deadline, and the first that
+needs an environment.
+
+```rust
+/// How a command is run: everything beyond the program and its arguments.
+#[derive(Debug, Clone, Default)]
+pub struct RunOptions {
+    /// Kill the child and fail after this long. `None` waits as long as it
+    /// takes, which is what a toolchain install needs.
+    pub timeout: Option<Duration>,
+    /// Extra environment for the child, over the inherited one.
+    pub env: Vec<(String, String)>,
+}
+
+pub trait CommandRunner {
+    /// Run `program args…` in `cwd`, capturing output.
+    fn run(&self, program: &str, args: &[String], cwd: &Path) -> Result<Output> {
+        self.run_with(program, args, cwd, &RunOptions::default())
+    }
+
+    /// The same, with a deadline and an environment. The one required
+    /// method: `run` defaults onto it, so every existing call site is
+    /// unchanged and there is a single implementation to get right.
+    fn run_with(
+        &self,
+        program: &str,
+        args: &[String],
+        cwd: &Path,
+        opts: &RunOptions,
+    ) -> Result<Output>;
+}
+```
+
+An expired deadline is an `Error::Command` like any other failed spawn, which
+is what lets the pin query report it as "could not reach it" without knowing
+why. Only what superdev does on its own initiative is bounded: the
+`ls-remote` query takes a deadline of a few seconds and
+`GIT_TERMINAL_PROMPT=0`; the clone takes the environment and no deadline,
+because the user asked for it and a slow link is not superdev's to give up
+on. ADR-015.
+
 ### Planning context — the one component-facing change
 
 ```rust
@@ -327,13 +439,14 @@ rev      = "assets-v1.4.0"
 digest   = "sha256:9f2a…"
 format   = 1
 
-# A directory on this machine. No `rev` — it is read afresh every run — and an
-# identity relative to the repo root, so this file reads the same in every
-# checkout of the repository that commits it. ADR-011.
+# Its identity is relative to the repo root, so this file reads the same in
+# every checkout of the repository that commits it. ADR-011.
+# A directory on this machine. No `rev` — it is read afresh every run — and no
+# digest: there are no pinned bytes to verify, and recording one would rewrite
+# this line on every content commit. ADR-016.
 [[packs]]
 source   = "./pack"
 identity = "pack"
-digest   = "sha256:58675e…"
 format   = 1
 ```
 
@@ -350,7 +463,12 @@ pub struct PackLock {
     pub identity: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub rev: Option<String>,
-    pub digest: String,
+    /// What a fetched pack was verified against. Absent for a path source:
+    /// a directory is read afresh every run, so no pinned bytes exist to
+    /// verify, and a recorded value would be rewritten by every content
+    /// commit and read by nothing. Absent exactly when `rev` is. ADR-016.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub digest: Option<String>,
     pub format: u32,
 }
 ```
@@ -423,13 +541,17 @@ the locked values → no fetch → `plan_repo` finds nothing → exit 0.
 
 ## Cross-cutting concerns
 
-- **Security.** A git source is fetched by the user's own `git`, so
+- **Security.** A source may only name https, ssh or `file`, refused at
+  parse and refused again by `protocol.allow=never` with the same set
+  admitted explicitly, so a transport anyone on-path can answer cannot be
+  the one the base pack arrives over (ADR-012). A git source is fetched by
+  the user's own `git`, so
   credentials, ssh agents and forge access are the user's and superdev holds
   no token. Every resolved pack is verified against the digest the lock
   recorded for that rev; a mismatch fails the run and writes nothing, with no
   flag to override. A pack declares no executable action — there is no
-  variant it could reach `Action::Run` through. `REJECTED` paths are refused
-  by path before any file is read. Git credentials are the user's own; superdev
+  variant it could reach `Action::Run` through. `REJECTED` paths, and every symlink,
+  are refused before any file is read. Git credentials are the user's own; superdev
   stores no token and adds no auth surface. Trust in a pack's *content* is the
   user's, made by naming the source, and stated as such in the docs.
 - **Performance.** One resolve per run; the cache makes a second run over an

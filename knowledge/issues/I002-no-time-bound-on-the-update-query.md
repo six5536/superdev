@@ -4,13 +4,29 @@ id: issue-002-no-time-bound-on-the-update-query
 title: The default-source query has no time bound, so a black-holed network stalls update
 description: update now runs git ls-remote on every untargeted invocation, and CommandRunner has no timeout, so a network that neither answers nor refuses stalls the command for as long as the OS takes to give up.
 status: draft
-tags: [needs-triage]
+tags: [ready-for-agent]
 links:
   - rel: references
     to: spec-content-packs
 ---
 
 # Bug: the default-source query has no time bound
+
+## Decided
+
+[ADR-015](../decisions/D015-the-spawn-seam-carries-a-deadline.md).
+`CommandRunner` gains an options form of `run` carrying a timeout and extra
+environment, defaulted so every existing call site is unchanged and
+`run_with` is the one required method. No dependency: a deadline over
+`std::process` is a spawn, a reader thread per pipe and a poll that kills on
+expiry.
+
+Only what superdev does on its own initiative is bounded. The `ls-remote`
+query takes a deadline of a few seconds; the clone does not, because the user
+pinned the pack and asked for it, and a repository on a slow link is a
+legitimately long wait. `GIT_TERMINAL_PROMPT=0` rides on the same change,
+which is what made it need the seam.
+
 
 ## Summary
 

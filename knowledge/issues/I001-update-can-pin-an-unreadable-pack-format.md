@@ -4,13 +4,33 @@ id: issue-001-update-can-pin-an-unreadable-pack-format
 title: update can move a pin to a pack format this binary cannot read, and cannot move it back
 description: update persists the moved pin before sync validates it, and a pin never moves backwards, so a content release in a newer format leaves every later sync and update failing until the manifest is hand-edited.
 status: draft
-tags: [needs-triage]
+tags: [ready-for-agent]
 links:
   - rel: references
     to: spec-content-packs
 ---
 
 # Bug: `update` can pin a pack format this binary cannot read
+
+## Decided
+
+[ADR-013](../decisions/D013-update-proves-a-pin-before-it-writes-it.md).
+`update` will resolve a moved pin before saving the manifest, and keep the old
+pin when resolution refuses, reporting the reason in the line that would have
+announced the move. It proves the one entry rather than the whole manifest, so
+a second broken pack cannot hold back a pin that is fine. It costs one extra
+clone on a run that actually moves a pin: the cache is found by the digest the
+lock records, and apply does not write that until after the sync. An `update`
+that finds nothing new probes nothing.
+
+That closes the class rather than the case: an unknown format, a tag that does
+not exist, a `REJECTED` path, an unparseable `pack.toml` and a refused symlink
+all stop being things a saved pin can name. The never-backwards rule needs no
+relaxing once a pin can no longer arrive somewhere unreadable.
+
+`update_pins` gains the lock, which resolution reads. Recorded in
+[C001](../contracts/C001-content-packs.md).
+
 
 ## Summary
 

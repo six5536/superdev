@@ -3,8 +3,8 @@ type: Issue
 id: issue-003-a-local-pack-cannot-remove-what-it-dropped
 title: Deleting an item from a local pack leaves its live copy in place, and the drift check stays green
 description: A path pack layers rather than replacing, so an item deleted or renamed under pack/ is still written from the embedded snapshot; sync reports nothing and status --drift exits 0 until the binary is rebuilt.
-status: draft
-tags: [needs-triage]
+status: stable
+tags: [wontfix]
 links:
   - rel: references
     to: spec-content-packs
@@ -12,6 +12,31 @@ links:
 
 # Bug: a local pack cannot remove what it dropped
 
+## Won't fix
+
+Decided 2026-08-26. The layering rule stands and nothing is built for this.
+
+A path pack layers because [ADR-004](../decisions/D004-base-pack-identity.md)
+and [ADR-011](../decisions/D011-path-pack-identity-is-root-relative.md)
+deliberately keep a directory from being the base, and the only people who
+meet this are the ones developing a pack — for whom the binary has to be
+rebuilt anyway before the removal is real. Letting an entry declare itself the
+base was considered and turned down as machinery for a case the rebuild
+already covers.
+
+**The answer is `cargo run -- sync`**, which rebuilds and syncs in one step.
+
+Deleting the live copy by hand is not a second answer, and the workaround
+below is corrected accordingly: `.claude/skills/<name>/` is an owned file, so
+the next `sync` finds it missing and writes it straight back from the copy
+compiled into the binary. It stays gone only once that binary is rebuilt —
+which is the same one step that makes the deletion take effect in the first
+place.
+
+What stays true, and is the cost of not fixing it: between deleting from
+`pack/` and rebuilding, `sync` writes nothing and `status --drift` exits 0.
+A contributor who retires a skill and pushes without rebuilding gets a green
+CI on a repo that still ships it.
 ## Summary
 
 Against [S014](../specs/S014-content-packs-design.md).
@@ -57,12 +82,16 @@ be the same content, which is where the rule stops fitting.
 
 ## Proposed fix / workaround
 
-- Fix: needs an interface decision, not a local change. Either a way to say
-  "this path pack is the base" — which the identity rules deliberately do not
-  allow — or a check that notices the embedded snapshot carrying an item the
-  local pack no longer has, and reports it rather than silently writing it.
+- Fix: none. See [Won't fix](#wont-fix) above. The two candidates were an
+  entry that declares itself the base — which the identity rules deliberately
+  do not allow — and a report when the embedded snapshot carries an item the
+  local pack no longer has, which is true of every third-party pack too and
+  so is noise unless the entry has already said it means to be the whole
+  content.
 - Workaround: rebuild the binary after deleting or renaming under `pack/`;
-  `cargo run -- sync` does both in one step.
+  `cargo run -- sync` does both in one step. Deleting the live copy by hand
+  instead does not work — the next `sync` writes it back from the embedded
+  snapshot.
 
 ## Regression risk
 

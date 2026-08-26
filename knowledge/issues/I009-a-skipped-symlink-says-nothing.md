@@ -4,13 +4,31 @@ id: issue-009-a-skipped-symlink-says-nothing
 title: A symlink inside a pack is skipped in silence, so an item a pack meant to ship quietly disappears
 description: The walk drops every symlink without reporting it, so a pack that dedupes an item with a link resolves clean while that item is simply absent; sync writes nothing and status --drift stays green.
 status: draft
-tags: [needs-triage]
+tags: [ready-for-agent]
 links:
   - rel: references
     to: spec-content-packs
 ---
 
 # Bug: a skipped symlink says nothing
+
+## Decided
+
+[ADR-014](../decisions/D014-a-symlink-in-a-pack-is-refused.md). A symlink
+anywhere in a pack fails the run naming the path, as the pack root and
+`pack.toml` already do — one rule for the whole tree, and `read_pack` means
+what it says.
+
+The cross-platform half this issue raised is settled with it, and is why the
+decision is not simply "refuse". For a fetched pack the *index* decides, not
+the filesystem: mode `120000` is a symlink whatever Windows was able to
+materialise, so a link is refused on both platforms before any byte of it is
+hashed and the same rev digests the same either way. Mode `160000` — a
+submodule, which a shallow sparse clone leaves empty — is refused with it. A
+path pack has no index and no second platform, so `symlink_metadata` still
+decides there, and the filesystem check stays at read time, where the cache
+is read and has no index of its own.
+
 
 ## Summary
 

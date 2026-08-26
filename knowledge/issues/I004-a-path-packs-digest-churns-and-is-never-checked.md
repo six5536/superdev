@@ -4,13 +4,26 @@ id: issue-004-a-path-packs-digest-churns-and-is-never-checked
 title: A path pack's lock digest is rewritten by every content commit and verified by nothing
 description: The lock records a digest over a path pack's whole tree that resolution never checks, so every commit touching pack/ rewrites the same line — conflicting between concurrent content PRs — and a commit made without sync leaves a wrong digest nothing detects.
 status: draft
-tags: [needs-triage]
+tags: [ready-for-agent]
 links:
   - rel: references
     to: spec-content-packs
 ---
 
 # Bug: a path pack's digest churns and is never checked
+
+## Decided
+
+[ADR-016](../decisions/D016-a-path-pack-records-no-digest.md).
+`PackLock.digest` becomes optional and is omitted for a path source. The
+churn goes, nothing false is recorded, and nothing is lost: the value was
+written and never read, and whether the live files match the pack is checked
+by the per-file hashes in the lock's `files` map, which are untouched.
+
+Verifying it instead was the other way to make it honest, and it is the wrong
+way — it would fail every run after every edit until the pack was re-synced,
+which is the workflow a path source exists to remove.
+
 
 ## Summary
 
