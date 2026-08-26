@@ -2,7 +2,7 @@
 type: Plan
 id: adhoc-plan-workflow-autonomy
 title: Workflow autonomy — branch, slice dependencies, unattended delivery
-description: Give the workflow a branch at frame, model slice dependencies in the plan, run stages 4-7 unattended behind a Stop hook and a new execute-feature-plan skill, and commit at every successful integrate.
+description: Give the workflow a branch at frame, model slice dependencies in the plan, run stages 4-7 unattended on a general superdev run facility with a Stop hook and a new execute-feature-plan skill, and commit at every successful integrate.
 status: draft
 links:
   - rel: relates-to
@@ -42,8 +42,8 @@ Non-goals:
   the cutting rules stay in that skill.
 - No autonomy for stages 1-3 or for accept. Framing, specifying and
   interface decisions stay interactive.
-- No unattended merge to the default branch. `/execute-feature-plan` merges
-  into the branch `/frame` created, never into `main`.
+- No unattended merge to the default branch. `/execute-feature-plan` works
+  on the branch `/frame` created, never on `main`; the user fast-forwards.
 - No validator rule for `Depends-on`. The feature-plan GATE and
   `/double-check` cover it; `superdev aokf validate` stays a bundle
   validator.
@@ -79,18 +79,38 @@ while a run is active and a slice is ready, the hook refuses to let the turn
 end. A repo without the hook still gets the behaviour from the skill; a repo
 with it gets the behaviour whether or not the model stays disciplined.
 
-The hook is armed by a run-state file that `/execute-feature-plan` writes
-under `.superdev/cache/` and clears when it stops. Absent that file — every
-ordinary session — the hook exits 0 and is invisible. This is what keeps a
-shipped Stop hook from holding users' sessions open.
+The hook is armed by a run-state file under `.superdev/cache/`. Absent that
+file — every ordinary session — the hook exits 0 and is invisible. This is
+what keeps a shipped Stop hook from holding users' sessions open.
+
+The hook stays dumb. It reads the run state's owner, its `next` action and
+its continue counter, and decides only whether to let the turn end; it never
+parses the plan. The skill, which has read the plan anyway, writes the
+verdict. So the slice format stays pure content, free to change in a pack
+release without a binary release — the same argument S014 and ADR-006 make.
+
+The counter is a watchdog, and the hook owns it: every continue costs a
+tick, and the skill resets it to zero whenever it writes a new `next`. A run
+whose model has stopped making progress therefore dies at the cap, which a
+counter the skill incremented could never guarantee.
+
+The run state is not the workflow's. `superdev run begin|advance|end` own
+it, `superdev run hook` is the Stop hook that reads it, and any skill may
+drive a no-stop run through those verbs — `/execute-feature-plan` is the
+first consumer, not the only possible one. The verbs also give the exclusive
+creation the lock rests on, which a model hand-writing TOML cannot do.
 
 The run state names the session that owns it. `.claude/settings.json` is
 repo-scoped, so the hook fires in every session in the repo, and a run
 started in one must not hold the others open: the hook exits 0 unless the
-payload's `session_id` matches the owner. The file is created exclusively,
-so a second run in the same repo is refused rather than racing the first on
-one working tree. Two git worktrees each have their own
+payload's `session_id` matches the owner. `superdev run begin` creates the
+file exclusively, so a second run in the same repo is refused rather than
+racing the first on one working tree. Two git worktrees each have their own
 `.superdev/cache/`, so genuinely parallel runs are already separate.
+
+`Stop` fires for the main agent only — `SubagentStop` is a separate event —
+so subagent-per-slice and the hook compose: the hook sees the driver's turn
+boundaries and never a slice's.
 
 Alternatives: self-chaining the four skills was rejected — nowhere to hold
 the decision queue, and every phase would carry the autonomy rules. The
@@ -105,19 +125,39 @@ Each slice runs in its own subagent. The driver's context holds plan state
 and the decision queue and nothing else, which is what makes thirteen slices
 fit.
 
+A blocked run ends rather than pauses: the questions are written into the
+plan's Deferred decisions section, the run state is deleted and the lock
+released, and the user is asked. The plan is the durable record, so resuming
+is `/execute-feature-plan` again — it re-reads the plan and the answers. No
+idle run holds the repo, and a stale run-state file stays exceptional.
+
+The run never touches the default branch. It commits and merges on the
+branch `/frame` created; the user fast-forwards `main` when they choose.
+This changes today's practice, where each slice reaches `main` almost
+immediately, and it is the trade the design rests on: unattended work must
+not reach the default branch on its own.
+
 ## Steps
 
 1. **Record the branching convention** — add a branching line to
    `pack/knowledge/templates/development-procedure.md`, and record this
    repo's own in `knowledge/development-procedure.md`: one branch per
-   feature, `feature/<slug>`, merged to `main`. Nothing references it yet, so
-   this step stands alone.
+   feature, `feature/<slug>` off the default branch, fast-forwarded to
+   `main` by a human. Where a repo's concept names no convention, `/frame`
+   uses `feature/<slug>` and writes the line into the concept, so the next
+   feature reads one that exists. `/adhoc-plan` branches `chore/<slug>` when
+   the work touches code, and not for a documentation-only plan. Nothing
+   references any of this yet, so the step stands alone.
 
 2. **Model dependencies in the plan** — add `Depends-on:` beside `Cases:` in
-   `pack/knowledge/templates/feature-plan.md` (earlier slice numbers, or
-   `none`), and a `## Deferred decisions` section. Teach
+   `pack/knowledge/templates/feature-plan.md` (slice numbers in any
+   direction, or `none`), and a `## Deferred decisions` section. Teach
    `pack/knowledge/skills/feature-plan/SKILL.md` to state each slice's
-   dependencies, order topologically, and GATE on a forward reference.
+   dependencies, order the list topologically where it can, and GATE on a
+   cycle. A forward reference is legal and load-bearing: integrate's replan
+   edge adds a slice that must precede an undone one, and saying so must not
+   renumber every slice after it and strand the references in commits and
+   issues. List order is the reading and default order; dependencies bind.
    Existing plans keep their order-only form: P003 is complete before this
    work starts, and backfilling a finished plan buys nothing. The field
    applies to plans cut from here on.
@@ -142,26 +182,39 @@ fit.
    driver that could not follow it would stop at every replan. A slice
    failing verify returns to build at most twice, then becomes a deferred
    decision. Stop when no slice is ready, then put the queue to the user in
-   sequence. On entry it creates the run-state file exclusively, recording
-   the owning `session_id`, a start timestamp and the pid, and refuses when
-   one already exists — naming the owner and how to clear it; on exit it
-   removes the file. It rewrites the owning session id when it re-enters, so
-   a resumed session does not orphan its own run. No Rust change: the layout
-   rules pick the directory up.
+   sequence. It drives the run through step 6's verbs: `superdev run begin`
+   on entry, `superdev run advance --next` at every real step forward — which
+   is also what resets the watchdog — and `superdev run end` when it stops.
+   A blocked run **ends**: the questions go into the plan's Deferred
+   decisions section, the run state is released, and resuming is a fresh
+   `/execute-feature-plan` that re-reads the plan and the answers. The skill
+   itself needs no Rust change; the layout rules pick the directory up.
 
-6. **Add the Stop hook** — `HookCommand::Continue` in
-   `crates/app/superdev/src/aokf_cli.rs` reading the Stop payload from stdin,
-   and a second `ManagedItem::JsonEntry` in `components/aokf.rs` at
-   `hooks.Stop`, marker `superdev aokf hook continue`. Exit 0 when the
-   run-state file is absent, when the run state's consecutive-continue count
-   is at its cap, or when no slice is ready; otherwise exit 2 naming the
-   ready slice, which is documented to prevent Claude from stopping and
-   continue the conversation. The loop guard is superdev's own counter in the
-   run state, not the harness's: confirm whether the Stop payload carries a
+6. **Add the run facility and its Stop hook** — a new top-level `run` verb
+   in `crates/app/superdev/src/main.rs` with `begin`, `advance`, `end` and
+   `hook`, and a module beside `aokf_cli.rs` holding the run state. `begin`
+   creates `.superdev/cache/run.toml` exclusively — recording the owning
+   `session_id`, `next`, the continue counter, a start timestamp and the pid
+   — and refuses when one exists, naming the owner and how to clear it.
+   `advance --next` rewrites `next`, resets the counter to zero, and
+   refreshes the owning session id so a resumed session does not orphan its
+   own run. `end` removes the file.
+
+   `run hook` is the Stop hook body, modelled on `hook_validate` including
+   its `CLAUDE_PROJECT_DIR` preference and its loud exit 2 on an unreadable
+   payload. It exits 0 when the run state is absent, when the payload's
+   `session_id` is not the owner, when `next` is empty, or when the counter
+   has reached its cap; otherwise it increments the counter and exits 2
+   naming `next`, which is documented to prevent Claude from stopping and
+   continue the conversation. Confirm whether the Stop payload carries a
    `stop_hook_active` flag and honour it as well if it does, but do not rest
-   the guard on it. Exit 0 too when the payload's `session_id` is not the
-   run's owner — a documented common input field. Ships with the knowledge
-   capability, like the validation hook.
+   the guard on it — the counter is the guarantee.
+
+   Register it as a second `ManagedItem::JsonEntry` in `components/aokf.rs`
+   at `hooks.Stop`, marker `superdev run hook`. It ships with the knowledge
+   capability, like the validation hook, so `--no-knowledge` never gets it.
+   Document the four new verbs in `knowledge/api-contracts.md`: they join a
+   surface that carries a stability promise.
 
 7. **Update the process documents** — `pack/agents/process.md`: the branch at
    frame, the go-ahead gate after stage 3, the loop over stages 4-7, and the
@@ -185,23 +238,29 @@ fit.
 | `pack/knowledge/skills/interface-design/SKILL.md` | modified — go-ahead GATE, commit the contract and ADRs, hand off |
 | `pack/knowledge/skills/integrate/SKILL.md` | modified — commit the records after a successful merge |
 | `pack/knowledge/skills/execute-feature-plan/SKILL.md` | new — the unattended loop over stages 4-7 |
+| `pack/knowledge/skills/adhoc-plan/SKILL.md` | modified — branch `chore/<slug>` when the work touches code |
 | `pack/knowledge/skills/how-do-i/SKILL.md` | modified — the new skill in the map |
 | `pack/agents/process.md` | modified — diagram, phase list, commit points |
-| `crates/app/superdev/src/aokf_cli.rs` | modified — `HookCommand::Continue` and its body |
+| `crates/app/superdev/src/run.rs` | new — the run state and the `begin`/`advance`/`end`/`hook` bodies |
+| `crates/app/superdev/src/main.rs` | modified — the top-level `run` verb and its subcommands |
 | `crates/lib/superdev-core/src/components/aokf.rs` | modified — the `hooks.Stop` JsonEntry and its constants |
+| `knowledge/api-contracts.md` | modified — the four `superdev run` verbs on the promised CLI surface |
 | `CHANGELOG.md` | modified — the new skill and the new hook |
 | `.superdev/lock.toml` | modified — the new Stop-hook claim, written by sync |
 
 ## Testing & verification
 
-- `crates/app/superdev/src/aokf_cli.rs` unit tests: exit 0 with no run-state
-  file; exit 0 when the payload's `session_id` is not the run's owner; exit 0
-  at the continue cap; exit 0 when the run state names a plan with no ready
-  slice; exit 2 naming the slice when one is ready; exit 2 on an unreadable
-  payload, matching `hook_validate`.
+- `run.rs` hook tests: exit 0 with no run-state file; exit 0 when the
+  payload's `session_id` is not the owner; exit 0 when `next` is empty; exit
+  0 at the continue cap; exit 2 naming `next` otherwise, and the counter is
+  one higher afterwards; exit 2 on an unreadable payload, matching
+  `hook_validate`.
+- `run.rs` state tests: `begin` refuses when a run exists and names its
+  owner; `advance` resets the counter and refreshes the owning session;
+  `end` removes the file and is harmless when none exists.
 - `components/aokf.rs` test: the Stop entry is planned into an empty repo and
   claimed as
-  `.claude/settings.json:hooks.Stop[superdev aokf hook continue]`; a
+  `.claude/settings.json:hooks.Stop[superdev run hook]`; a
   settings file that already carries it plans nothing.
 - `cargo nextest run --workspace`.
 - `npm run check:blueprint` — the live copies byte-match what the rebuilt
@@ -218,19 +277,22 @@ fit.
   the Stop hook must be invisible.
 - Manual: with a run active in one session, confirm a second session in the
   same repo ends its turns normally and is never told to continue a slice.
+- Manual: a wedged run — set `next` and never advance — stops at the cap
+  rather than looping.
 
 ## Risks & open questions
 
 - Risk: a shipped Stop hook that holds users' sessions open. This is the
   worst failure this plan can cause, and it lands in every managed repo.
-  Mitigation: the hook exits 0 unless the run-state file exists, and caps
-  consecutive continues on a counter superdev owns; the tests above cover
-  each path. It ships with the knowledge capability, so `--no-knowledge`
+  Mitigation: the hook exits 0 unless the run-state file exists, and the
+  hook itself increments the cap counter, so a model that has stopped
+  behaving cannot keep the loop alive; the tests above cover each path. It ships with the knowledge capability, so `--no-knowledge`
   never gets it.
 - Risk: a run in one session holding every other session in the repo open,
   or two runs racing on one working tree. Mitigation: the run state names its
-  owning session and the hook compares `session_id`; the file is created
-  exclusively so the second run is refused. Both paths are tested above.
+  owning session and the hook compares `session_id`; `superdev run begin`
+  creates the file exclusively so the second run is refused. Both paths are
+  tested above.
 - Risk: unattended merging. Mitigation: step 3 gives the feature a branch
   before any slice runs, so `/execute-feature-plan` merges only into that
   branch. Ordering matters — step 3 must land before step 5.
@@ -240,10 +302,14 @@ fit.
 - Risk: the run stalls on a bad autonomy call — the agent answers a question
   that was the user's. Mitigation: the rule is drawn on the existing gates,
   which already name their return phase, rather than on judgement.
-- Open question: does `/adhoc-plan` get the branch step too? Recommended
-  default: yes, when the work touches code — this plan included.
-- Open question: `hook continue` as the verb name. Alternatives:
-  `hook next-slice`, `hook resume`. Cheap to change before it ships.
+- Risk: the run state is written by the model, so the hook trusts it. This
+  is the accepted cost of keeping the plan's format out of the binary. The
+  watchdog bounds the damage: a wrong `next` continues at most to the cap.
+- Risk: `superdev run` adds four verbs to a CLI surface carrying a stability
+  promise. Accepted deliberately — the alternative, skills hand-writing the
+  state file, forfeits the exclusive creation the lock rests on.
+- Open question: whether `session_id` survives a `--resume`. Not established
+  from the documentation; `run advance` refreshes the owner to cover it.
 
 ## Out-of-band notes
 
