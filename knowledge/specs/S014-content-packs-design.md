@@ -282,15 +282,26 @@ as slices and closed. The second pass re-checked the criteria, confirmed each
 gap closed as a user meets it, and a security review found both fixes airtight
 with nothing new.
 
-Five issues stay open, each needing an interface decision before it can be
-cut: [I001](../issues/I001-update-can-pin-an-unreadable-pack-format.md),
+A third pass followed [P005](../plans/P005-content-pack-hardening.md), which
+took the interface decisions those two passes had parked and delivered them in
+seven slices. Every issue this spec left open is now closed:
+[I001](../issues/I001-update-can-pin-an-unreadable-pack-format.md),
 [I002](../issues/I002-no-time-bound-on-the-update-query.md),
-[I003](../issues/I003-a-local-pack-cannot-remove-what-it-dropped.md),
-[I004](../issues/I004-a-path-packs-digest-churns-and-is-never-checked.md) and
-the remaining half of
-[I007](../issues/I007-a-pack-source-reaches-git-with-no-scheme-check.md).
-[I009](../issues/I009-a-skipped-symlink-says-nothing.md) is open too, a
-consequence of the symlink fix rather than of the feature.
+[I004](../issues/I004-a-path-packs-digest-churns-and-is-never-checked.md),
+[I007](../issues/I007-a-pack-source-reaches-git-with-no-scheme-check.md) and
+[I009](../issues/I009-a-skipped-symlink-says-nothing.md).
+[I003](../issues/I003-a-local-pack-cannot-remove-what-it-dropped.md) is closed
+`wontfix`: a path pack keeps layering, and the rebuild a pack developer needs
+anyway is the answer.
+
+That pass checked each closure against the real binary rather than the suite.
+`git://`, `http://` and `ext::` sources are refused before anything spawns,
+naming the transport; a symlink in a path pack stops `sync` naming the path
+and writes nothing; the repo's own lock carries no digest for `./pack`. The
+one worth recording is I002, because only a real hanging connection measures
+it: against an address that black-holes rather than refuses, `git ls-remote`
+took 75 seconds and `superdev update` took 6, reporting `could not reach it`
+and carrying on. A security review of the seven slices found nothing.
 
 Settled during delivery:
 
