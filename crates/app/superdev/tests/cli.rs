@@ -567,6 +567,13 @@ fn a_pin_at_the_embedded_rev_costs_no_request() {
 /// enables it, which is the configuration where superdev's own defence is the
 /// only one left. A manifest arrives with a repository; cloning someone's
 /// branch and running `sync` must not run their command.
+///
+/// Two of superdev's defences now stop this, and the assertion does not care
+/// which: `parse` refuses the helper before the spawn, and the overrides
+/// refuse the transport if it ever reaches git. Removing either alone leaves
+/// this passing, which is the point of keeping it beside the two tests that
+/// each pin one half — `a_manifest_naming_a_remote_helper_is_refused_before_anything_runs`
+/// and `an_update_cannot_be_talked_into_running_a_manifests_command`.
 #[cfg(unix)]
 #[test]
 fn a_manifest_cannot_talk_git_into_running_its_command() {

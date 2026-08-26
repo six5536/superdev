@@ -300,6 +300,12 @@ fn relative_to(path: &Path, root: &Path) -> Option<String> {
 /// transport implicitly, and both are in the set: superdev's
 /// `forge:owner/repo` shorthand is https, and the scp form — `host:path`,
 /// with or without a user, an ssh alias included — is ssh.
+///
+/// The scheme is matched case-sensitively, because git matches
+/// `protocol.<name>.allow` that way and hands a spelling it does not
+/// recognise to a `git-remote-<name>` program instead. Accepting `HTTPS://`
+/// here would admit a source superdev's own overrides then refuse at the
+/// clone, leaving the reader a git error to trace back rather than this one.
 fn unsupported_transport(source: &str) -> Option<String> {
     if let Some(helper) = remote_helper(source) {
         return Some(format!(
@@ -310,9 +316,7 @@ fn unsupported_transport(source: &str) -> Option<String> {
         ));
     }
     let (scheme, _) = source.split_once("://")?;
-    let known = SUPPORTED_SCHEMES
-        .iter()
-        .any(|supported| scheme.eq_ignore_ascii_case(supported));
+    let known = SUPPORTED_SCHEMES.contains(&scheme);
     (!known).then(|| {
         format!(
             "superdev does not fetch a pack over `{scheme}` — only {}. \
@@ -754,6 +758,12 @@ mod tests {
             ("http://github.com/six5536/superdev", "http"),
             ("ftp://packs.example/acme", "ftp"),
             ("GIT://github.com/six5536/superdev", "GIT"),
+            // Case is git's own rule, not a courtesy superdev extends: git
+            // matches `protocol.<name>.allow` case-sensitively and hands an
+            // unrecognised spelling to a `git-remote-<name>` program, so
+            // `HTTPS://` is refused here rather than by superdev's own
+            // override at the clone, where the error would be git's.
+            ("HTTPS://github.com/six5536/superdev.git", "HTTPS"),
         ] {
             let err = PackSource::parse(&entry(source, Some("v1"))).unwrap_err();
             let message = err.to_string();
@@ -789,7 +799,6 @@ mod tests {
             "github:six5536/superdev",
             "gitlab:six5536/superdev",
             "https://github.com/six5536/superdev.git",
-            "HTTPS://github.com/six5536/superdev.git",
             "ssh://git@github.com/six5536/superdev.git",
             "git@github.com:six5536/superdev.git",
             "github.com:six5536/superdev",
