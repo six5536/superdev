@@ -9,6 +9,7 @@ use superdev_core::components::pin;
 use superdev_core::error::{Error, Result};
 use superdev_core::lock::Lock;
 use superdev_core::manifest::{CONFIG_PATH, Manifest, TemplateRecord};
+use superdev_core::pack;
 use superdev_core::pipeline::{self, PlanMode, RepoPlan};
 use superdev_core::runner::SystemRunner;
 use superdev_core::{registry, report, templates};
@@ -351,6 +352,12 @@ pub fn update(root: &Path, target: Option<&str>, provider: Option<&str>) -> Resu
                 for config in manifest.configs_mut(capability) {
                     config.version = pipeline::registry_version_of(capability, &config.provider);
                 }
+            }
+            // Only the untargeted form moves the pack pin: `update knowledge`
+            // is a narrow request, and this is the one place superdev reaches
+            // the network without being asked to fetch something. ADR-009.
+            for line in pack::update_pins(&SystemRunner, root, &mut manifest) {
+                out(&line)?;
             }
         }
     }

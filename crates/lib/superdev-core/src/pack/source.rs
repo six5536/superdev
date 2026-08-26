@@ -26,6 +26,14 @@ pub const DEFAULT_PACK: DefaultPack = DefaultPack {
     rev: "assets-v0.1.0",
 };
 
+/// What a pack release tag is called: this prefix and a three-part version.
+///
+/// One repository cuts two kinds of release — the binary at `vX.Y.Z` and its
+/// content here — so the content tag carries a prefix that keeps the two
+/// apart. `update` moves a default-source pin between these and nothing
+/// else. ADR-008.
+pub const PACK_TAG_PREFIX: &str = "assets-v";
+
 /// Where a pack is resolved from.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum PackSource {
@@ -119,6 +127,52 @@ impl PackSource {
             PackSource::Path { path } => path.to_string_lossy().trim_end_matches('/').to_string(),
         }
     }
+
+    /// Whether this names the repository the embedded pack is a copy of.
+    ///
+    /// Compared on the normalised identity, so every spelling of that
+    /// repository is the default: comparing the strings would treat three of
+    /// the four common forms as a stranger's pack. ADR-004.
+    pub fn is_default(&self) -> bool {
+        matches!(self, PackSource::Git { .. })
+            && self.identity() == git_identity(DEFAULT_PACK.source)
+    }
+
+    /// The URL to hand `git`.
+    ///
+    /// `github:owner/repo` is superdev's own shorthand and git does not know
+    /// it — git reads a colon with no dot before it as the scp form and goes
+    /// looking for a host called `github`. Until now the default pin always
+    /// resolved from the binary, so nothing ever handed it to git; `update`
+    /// moving that pin ahead is what makes the expansion load-bearing. Every
+    /// other spelling is git's own and passes through untouched.
+    pub fn clone_url(&self) -> String {
+        match self {
+            PackSource::Git { url, .. } => match shorthand(url) {
+                Some((host, path)) => format!("https://{host}.com/{path}"),
+                None => url.clone(),
+            },
+            PackSource::Path { path } => path.to_string_lossy().into_owned(),
+        }
+    }
+}
+
+/// Split superdev's `host:owner/repo` shorthand into its host and path.
+///
+/// A dot or an `@` before the colon means the scp form — `github.com:o/r`,
+/// `git@github.com:o/r` — which is a URL git already understands and must
+/// not be expanded again into `github.com.com`.
+fn shorthand(url: &str) -> Option<(&str, &str)> {
+    if url.contains("://") {
+        return None;
+    }
+    let (before, after) = url.split_once(':')?;
+    let plain = before.len() > 1
+        && !before.contains('.')
+        && !before.contains('@')
+        && !before.contains('/')
+        && !before.starts_with('.');
+    plain.then_some((before, after))
 }
 
 /// Whether a source names a git repository rather than a directory.
@@ -141,17 +195,16 @@ fn is_git(source: &str) -> bool {
 
 /// Normalise a git URL to `host/path`.
 fn git_identity(url: &str) -> String {
-    // Shorthand: `github:owner/repo` means github.com.
     let rest = match url.split_once("://") {
         Some((_, rest)) => rest.to_string(),
-        None => match url.split_once(':') {
-            // scp form carries userinfo, shorthand does not.
-            Some((before, after)) if before.contains('@') => {
-                let host = before.split_once('@').map_or(before, |(_, h)| h);
-                format!("{host}/{after}")
-            }
-            Some((shorthand, after)) => format!("{}.com/{after}", shorthand.to_ascii_lowercase()),
-            None => url.to_string(),
+        // Shorthand: `github:owner/repo` means github.com. Anything else
+        // with a colon is the scp form, whose authority is what precedes it.
+        None => match shorthand(url) {
+            Some((host, path)) => format!("{host}.com/{path}"),
+            None => match url.split_once(':') {
+                Some((authority, path)) => format!("{authority}/{path}"),
+                None => url.to_string(),
+            },
         },
     };
     // Userinfo and a port belong to the authority, which ends at the first
@@ -162,7 +215,10 @@ fn git_identity(url: &str) -> String {
     let (authority, path) = rest.split_once('/').unwrap_or((rest.as_str(), ""));
     let host = authority.rsplit_once('@').map_or(authority, |(_, h)| h);
     let host = host.split_once(':').map_or(host, |(h, _)| h);
+    // A leading slash is the scp form's absolute path (`host:/srv/x`) and
+    // the doubled slash of `ssh://host//srv/x`: one repository either way.
     let path = path
+        .trim_start_matches('/')
         .trim_end_matches('/')
         .trim_end_matches(".git")
         .trim_end_matches('/');
@@ -207,6 +263,74 @@ mod tests {
         ] {
             assert_eq!(identity_of(source), expected, "{source}");
         }
+    }
+
+    /// The scp form without a user is a host, not superdev's shorthand.
+    /// Expanding it again would key it as `github.com.com/...`, so the same
+    /// repository written that way would not be recognised as the base.
+    #[test]
+    fn the_scp_form_is_not_expanded_as_shorthand() {
+        assert_eq!(
+            identity_of("github.com:six5536/superdev"),
+            "github.com/six5536/superdev"
+        );
+    }
+
+    /// git does not know `github:owner/repo` — it reads the colon as the scp
+    /// form and looks for a host called `github`. Every other spelling is
+    /// git's own and must reach it unchanged, or a user's ssh config, their
+    /// mirror and their `insteadOf` rules all stop applying.
+    #[test]
+    fn only_the_shorthand_is_expanded_for_git() {
+        let url_of = |source: &str| {
+            PackSource::parse(&entry(source, Some("v1")))
+                .expect("a git source")
+                .clone_url()
+        };
+        assert_eq!(
+            url_of("github:six5536/superdev"),
+            "https://github.com/six5536/superdev"
+        );
+        assert_eq!(
+            url_of("gitlab:six5536/superdev"),
+            "https://gitlab.com/six5536/superdev"
+        );
+        for untouched in [
+            "https://github.com/six5536/superdev.git",
+            "git@github.com:six5536/superdev.git",
+            "ssh://git@github.com/six5536/superdev.git",
+            "github.com:six5536/superdev",
+        ] {
+            assert_eq!(url_of(untouched), untouched, "{untouched}");
+        }
+    }
+
+    /// The default source is recognised however it is spelled, and nothing
+    /// else is: `update` moves this pin and no other, so a false positive
+    /// here would move a stranger's pin and a false negative would strand
+    /// superdev's own.
+    #[test]
+    fn the_default_source_is_recognised_by_identity_and_nothing_else_is() {
+        for spelling in [
+            "github:six5536/superdev",
+            "https://github.com/six5536/superdev.git",
+            "git@github.com:six5536/superdev.git",
+        ] {
+            let source = PackSource::parse(&entry(spelling, Some("v1"))).unwrap();
+            assert!(source.is_default(), "{spelling}");
+        }
+        for other in [
+            "github:six5536/superdev-forks",
+            "https://evil.example/x@github.com/six5536/superdev",
+        ] {
+            let source = PackSource::parse(&entry(other, Some("v1"))).unwrap();
+            assert!(!source.is_default(), "{other}");
+        }
+        let path = PackSource::parse(&entry("./packs/acme", None)).unwrap();
+        assert!(
+            !path.is_default(),
+            "a directory is never the default source"
+        );
     }
 
     #[test]
@@ -351,7 +475,7 @@ mod tests {
             .expect("pack.toml carries a version");
         assert_eq!(
             DEFAULT_PACK.rev,
-            format!("assets-v{version}"),
+            format!("{PACK_TAG_PREFIX}{version}"),
             "DEFAULT_PACK.rev must name the tag /pack/pack.toml's version cuts"
         );
     }

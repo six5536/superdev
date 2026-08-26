@@ -157,7 +157,7 @@ fn resolve_one(
                 record(entry, source, &fetch::digest(&files)),
             ))
         }
-        PackSource::Git { url, rev } => {
+        PackSource::Git { rev, .. } => {
             // A pin naming exactly what this binary carries is the default
             // path written out, and must cost no request.
             if is_base(source) && rev == DEFAULT_PACK.rev {
@@ -184,7 +184,9 @@ fn resolve_one(
             // Only what verified is kept, and a failure leaves nothing at
             // all: bytes that did not match the pin have no business
             // surviving the run that rejected them.
-            let outcome = fetch_verified(runner, root, entry, source, url, rev, &staging, locked);
+            // `clone_url`, not `url`: git does not know superdev's
+            // `github:owner/repo` shorthand and reads it as an ssh host.
+            let outcome = fetch_verified(runner, root, entry, source, rev, &staging, locked);
             let _ = fs::remove_dir_all(&staging);
             outcome
         }
@@ -195,18 +197,16 @@ fn resolve_one(
 ///
 /// Split out so the caller can clear the staging directory on every path:
 /// what fails verification must not outlive the run that rejected it.
-#[allow(clippy::too_many_arguments)]
 fn fetch_verified(
     runner: &dyn CommandRunner,
     root: &Path,
     entry: &PackEntry,
     source: &PackSource,
-    url: &str,
     rev: &str,
     staging: &Path,
     locked: Option<&PackLock>,
 ) -> Result<Resolved> {
-    let pack_root = fetch::fetch(runner, &entry.source, url, rev, staging)?;
+    let pack_root = fetch::fetch(runner, &entry.source, &source.clone_url(), rev, staging)?;
     let (items, files) = read_pack(&entry.source, &pack_root)?;
     let resolved = verified(
         entry,

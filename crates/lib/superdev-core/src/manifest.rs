@@ -131,10 +131,14 @@ impl Manifest {
         Manifest {
             blueprint: blueprint.to_string(),
             template: None,
-            // `init` writes the default entry explicitly once it knows how to
-            // name one; until then the absence means the embedded pack, which
-            // is what a fresh repo wants either way.
-            packs: Vec::new(),
+            // Written out rather than left absent: an absent `[[packs]]`
+            // resolves the same way, but a fresh repo should be able to see
+            // what its content is pinned to, and edit it, without first
+            // learning that the empty case means something.
+            packs: vec![PackEntry {
+                source: crate::pack::DEFAULT_PACK.source.to_string(),
+                rev: Some(crate::pack::DEFAULT_PACK.rev.to_string()),
+            }],
             capabilities,
         }
     }

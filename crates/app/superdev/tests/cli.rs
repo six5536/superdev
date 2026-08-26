@@ -492,6 +492,36 @@ fn adopting_a_repo_with_its_own_skills_keeps_them() {
     );
 }
 
+/// Strip the `[[packs]]` entry `init` writes, leaving the manifest in the
+/// shape a binary that knew nothing about packs produced. An absent array is
+/// the migration case, and after this slice it is the only way to spell it.
+fn as_a_pre_pack_manifest(root: &Path) -> String {
+    let config = root.join(".superdev/config.toml");
+    let existing = std::fs::read_to_string(&config).unwrap();
+    let mut kept = String::new();
+    let mut inside = false;
+    for line in existing.lines() {
+        if line.trim() == "[[packs]]" {
+            inside = true;
+            continue;
+        }
+        if inside {
+            // The block runs to the next table header, and the blank line
+            // before it belongs to the block.
+            if line.starts_with('[') {
+                inside = false;
+            } else {
+                continue;
+            }
+        }
+        kept.push_str(line);
+        kept.push('\n');
+    }
+    assert!(!kept.contains("packs"), "{kept}");
+    std::fs::write(&config, &kept).unwrap();
+    kept
+}
+
 /// Add `[[packs]]` entries to a repo's manifest, keeping the rest as written.
 fn pin_packs(root: &Path, entries: &str) {
     let config = root.join(".superdev/config.toml");
@@ -501,16 +531,21 @@ fn pin_packs(root: &Path, entries: &str) {
 }
 
 /// Test plan case 2: a pin naming exactly what this binary embeds is the
-/// default path written out, and must cost no request. Run with `PATH`
-/// emptied, so a spawn of any kind would fail: whatever this writes came from
-/// the binary itself, not from the network.
+/// default path written out, and must cost no request. `init` writes that
+/// entry, so this is every fresh repo. Run with `PATH` emptied, so a spawn of
+/// any kind would fail: whatever this writes came from the binary itself, not
+/// from the network.
 #[test]
 fn a_pin_at_the_embedded_rev_costs_no_request() {
     let dir = local_repo();
-    pin_packs(
-        dir.path(),
-        "[[packs]]\nsource = \"github:six5536/superdev\"\nrev = \"assets-v0.1.0\"\n",
+    let config = std::fs::read_to_string(dir.path().join(".superdev/config.toml")).unwrap();
+    assert!(
+        config.contains("[[packs]]")
+            && config.contains("github:six5536/superdev")
+            && config.contains("assets-v0.1.0"),
+        "init writes the default entry explicitly: {config}"
     );
+
     superdev()
         .current_dir(dir.path())
         .env_clear()
@@ -521,8 +556,8 @@ fn a_pin_at_the_embedded_rev_costs_no_request() {
         .success();
     // The embedded pack still supplies the items, and the entry survives.
     assert!(dir.path().join(".claude/skills/frame/SKILL.md").is_file());
-    let config = std::fs::read_to_string(dir.path().join(".superdev/config.toml")).unwrap();
-    assert!(config.contains("assets-v0.1.0"), "{config}");
+    let after = std::fs::read_to_string(dir.path().join(".superdev/config.toml")).unwrap();
+    assert_eq!(after, config, "sync leaves the pin exactly as it found it");
 }
 
 /// Test plan case 19: a local-path pack is read from disk every run, so
@@ -593,6 +628,207 @@ fn repo_with_a_pack() -> tempfile::TempDir {
         .assert()
         .success();
     dir
+}
+
+/// Test plan case 20: with the default source unreachable, `update` moves the
+/// pin no further than what this binary carries and says it could not check.
+/// `PATH` emptied, so no `git` exists to ask — the same state as no network,
+/// and `update` has to stay usable in it.
+#[test]
+fn an_offline_update_stops_at_the_blueprint_default() {
+    let dir = local_repo();
+    let config = dir.path().join(".superdev/config.toml");
+    let before = std::fs::read_to_string(&config).unwrap();
+
+    let out = superdev()
+        .current_dir(dir.path())
+        .env_clear()
+        .env("HOME", dir.path())
+        .env("PATH", "")
+        .arg("update")
+        .assert()
+        .success();
+
+    assert_eq!(
+        std::fs::read_to_string(&config).unwrap(),
+        before,
+        "the pin moved with nothing to move it to"
+    );
+    let stdout = stdout_of(&out);
+    assert!(stdout.contains("could not reach"), "{stdout}");
+    assert!(stdout.contains("assets-v0.1.0"), "{stdout}");
+}
+
+/// Test plan case 22: a manifest an earlier binary wrote gains the default
+/// entry on `update`. Offline, so what lands is the blueprint default — the
+/// migration is the entry appearing, not where it points.
+#[test]
+fn an_update_writes_the_default_entry_into_a_pre_pack_manifest() {
+    let dir = local_repo();
+    let config = dir.path().join(".superdev/config.toml");
+    as_a_pre_pack_manifest(dir.path());
+
+    let out = superdev()
+        .current_dir(dir.path())
+        .env_clear()
+        .env("HOME", dir.path())
+        .env("PATH", "")
+        .arg("update")
+        .assert()
+        .success();
+
+    let after = std::fs::read_to_string(&config).unwrap();
+    assert!(after.contains("[[packs]]"), "{after}");
+    assert!(
+        after.contains("source = \"github:six5536/superdev\""),
+        "{after}"
+    );
+    assert!(after.contains("rev = \"assets-v0.1.0\""), "{after}");
+    assert!(
+        stdout_of(&out).contains("wrote the default entry"),
+        "{after}"
+    );
+    // Still the same content: the entry names what was already compiled in.
+    assert!(dir.path().join(".claude/skills/frame/SKILL.md").is_file());
+}
+
+/// A real git repository holding a pack, tagged, so the query and the fetch
+/// run against git rather than a script of what git might say.
+fn tagged_pack_repo(dir: &Path, tags: &[&str], skill: &str, body: &str) {
+    let git = |args: &[&str]| {
+        let out = std::process::Command::new("git")
+            .args(args)
+            .current_dir(dir)
+            .output()
+            .expect("git runs");
+        assert!(out.status.success(), "git {args:?}: {out:?}");
+    };
+    std::fs::create_dir_all(dir.join(format!("pack/knowledge/skills/{skill}"))).unwrap();
+    std::fs::write(
+        dir.join("pack/pack.toml"),
+        "format = 1\nname = \"fixture\"\nversion = \"9.9.9\"\n",
+    )
+    .unwrap();
+    std::fs::write(
+        dir.join(format!("pack/knowledge/skills/{skill}/SKILL.md")),
+        body,
+    )
+    .unwrap();
+    git(&["init", "-q", "-b", "main"]);
+    git(&["config", "user.email", "fixture@example.com"]);
+    git(&["config", "user.name", "fixture"]);
+    // The developer's global config may sign commits and tags; a fixture must
+    // not depend on a key being available.
+    git(&["config", "commit.gpgsign", "false"]);
+    git(&["config", "tag.gpgSign", "false"]);
+    git(&["add", "-A"]);
+    git(&["commit", "-q", "-m", "pack"]);
+    for tag in tags {
+        git(&["tag", "-f", tag]);
+    }
+}
+
+/// A directory holding a `git` that answers for the default source out of a
+/// local repository, and delegates everything else to the real one.
+///
+/// The default source is a URL on the internet; the only honest way to test
+/// that `update` asks it and fetches what it names is to put a repository
+/// where it looks. One substitution does it — both `ls-remote` and `clone`
+/// carry the URL as an argument.
+#[cfg(unix)]
+fn git_answering_for_the_default_source(origin: &Path) -> tempfile::TempDir {
+    use std::os::unix::fs::PermissionsExt;
+
+    let real = std::process::Command::new("sh")
+        .args(["-c", "command -v git"])
+        .output()
+        .expect("sh runs");
+    let real = String::from_utf8_lossy(&real.stdout).trim().to_string();
+    assert!(!real.is_empty(), "no git on PATH to delegate to");
+
+    let dir = tempfile::tempdir().unwrap();
+    let shim = dir.path().join("git");
+    std::fs::write(
+        &shim,
+        format!(
+            "#!/bin/sh\n\
+             n=$#\n\
+             i=0\n\
+             while [ $i -lt $n ]; do\n\
+             \x20 a=$1; shift\n\
+             \x20 if [ \"$a\" = \"https://github.com/six5536/superdev\" ]; then\n\
+             \x20   a=\"file://{origin}\"\n\
+             \x20 fi\n\
+             \x20 set -- \"$@\" \"$a\"\n\
+             \x20 i=$((i+1))\n\
+             done\n\
+             exec {real} \"$@\"\n",
+            origin = origin.display(),
+        ),
+    )
+    .unwrap();
+    std::fs::set_permissions(&shim, std::fs::Permissions::from_mode(0o755)).unwrap();
+    dir
+}
+
+/// Test plan case 16: `update` asks the default source for its newest release
+/// and moves the pin there, ahead of what this binary embeds. Without this the
+/// feature reaches only repos whose owner edits the manifest by hand, which is
+/// most of the point of shipping content separately from the binary.
+///
+/// The release then *replaces* layer 0 rather than layering over it, because
+/// its identity is the default source's: what the rev no longer carries is
+/// gone from the repo. That is the base-replacement rule end to end.
+#[cfg(unix)]
+#[test]
+fn an_update_moves_the_default_pin_to_the_sources_newest_release() {
+    let dir = local_repo();
+    let origin = tempfile::tempdir().unwrap();
+    // `assets-v0.9.0` sorts after `assets-v0.10.0` as a string, so a run that
+    // picked the newest tag alphabetically would move the pin backwards.
+    tagged_pack_repo(
+        origin.path(),
+        &["assets-v0.1.0", "assets-v0.9.0", "assets-v0.10.0", "v2.0.0"],
+        "acme-review",
+        "# From the release\n",
+    );
+    let shim = git_answering_for_the_default_source(origin.path());
+    let path = format!(
+        "{}:{}",
+        shim.path().display(),
+        std::env::var("PATH").unwrap_or_default()
+    );
+
+    let out = superdev()
+        .current_dir(dir.path())
+        .env("PATH", &path)
+        .arg("update")
+        .assert()
+        .success();
+
+    let config = std::fs::read_to_string(dir.path().join(".superdev/config.toml")).unwrap();
+    assert!(config.contains("rev = \"assets-v0.10.0\""), "{config}");
+    assert!(
+        stdout_of(&out).contains("moved to assets-v0.10.0"),
+        "{}",
+        stdout_of(&out)
+    );
+
+    // The release's content reached the repo, and replaced the embedded pack
+    // rather than layering over it: what it does not carry is gone.
+    assert_eq!(
+        std::fs::read_to_string(dir.path().join(".claude/skills/acme-review/SKILL.md")).unwrap(),
+        "# From the release\n"
+    );
+    assert!(
+        !dir.path().join(".claude/skills/frame/SKILL.md").exists(),
+        "the pinned rev is the whole of layer 0"
+    );
+
+    // The lock records what was fetched, so a later run can prove it again.
+    let lock = std::fs::read_to_string(dir.path().join(".superdev/lock.toml")).unwrap();
+    assert!(lock.contains("assets-v0.10.0"), "{lock}");
+    assert!(lock.contains("sha256:"), "{lock}");
 }
 
 /// Test plan case 13: ownership is unchanged by provenance. A hand-edited
@@ -722,7 +958,7 @@ fn sync_leaves_a_pre_pack_manifest_without_a_pack_entry() {
     let config = dir.path().join(".superdev/config.toml");
 
     // What an earlier binary wrote: no `[[packs]]` anywhere.
-    let before = std::fs::read_to_string(&config).unwrap();
+    let before = as_a_pre_pack_manifest(dir.path());
     assert!(!before.contains("packs"), "{before}");
 
     superdev()
@@ -770,18 +1006,40 @@ fn the_default_path_needs_nothing_outside_the_binary() {
         .assert()
         .success();
 
-    // The manifest names no pack, and the files still arrive.
-    let manifest = std::fs::read_to_string(dir.path().join(".superdev/config.toml")).unwrap();
-    assert!(!manifest.contains("[[packs]]"), "{manifest}");
-    for path in [
+    let carried = [
         ".claude/skills/frame/SKILL.md",
         ".claude/skills/double-check/SKILL.md",
         "knowledge/index.md",
         "knowledge/templates/adr.md",
         ".agents/coding.md",
-    ] {
+    ];
+    for path in carried {
         assert!(dir.path().join(path).is_file(), "missing {path}");
     }
+
+    // A manifest naming no pack at all — what an earlier binary wrote, and
+    // still the shape this case is about — resolves the same way and reaches
+    // for nothing either.
+    as_a_pre_pack_manifest(dir.path());
+    for path in carried {
+        std::fs::remove_file(dir.path().join(path)).unwrap();
+    }
+    superdev()
+        .current_dir(dir.path())
+        .env_clear()
+        .env("HOME", dir.path())
+        .env("PATH", "")
+        .arg("sync")
+        .assert()
+        .success();
+    for path in carried {
+        assert!(dir.path().join(path).is_file(), "missing {path} after sync");
+    }
+    let manifest = std::fs::read_to_string(dir.path().join(".superdev/config.toml")).unwrap();
+    assert!(
+        !manifest.contains("[[packs]]"),
+        "sync added one: {manifest}"
+    );
 }
 
 #[test]
