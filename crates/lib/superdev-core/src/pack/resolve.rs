@@ -390,9 +390,15 @@ fn read_dir(pack: &str, root: &Path, dir: &Path, files: &mut Vec<(String, String
         // follows too, so the bytes would come from wherever it pointed and
         // be written into the repo as pack content. A pack names its own
         // paths; a link is how it names one it does not contain. I008, I009.
-        let Ok(meta) = fs::symlink_metadata(&path) else {
-            continue;
-        };
+        // Failing to answer is not the same as answering no. `read_dir` just
+        // named this path, so a failure here is a race or a permission the
+        // pack author needs to know about — and stepping over it would leave
+        // the pack short of a file it declares with nothing said, which is
+        // the shape this slice closes.
+        let meta = fs::symlink_metadata(&path).map_err(|e| Error::Pack {
+            pack: pack.to_string(),
+            message: format!("{}: {e}", path.display()),
+        })?;
         if meta.file_type().is_symlink() {
             return Err(link_refusal(pack, &path));
         }
