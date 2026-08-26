@@ -2,9 +2,8 @@
 type: Plan
 id: feature-plan-content-packs
 title: Externally Sourced Content Packs — feature plan
-description: Deliver S014 in fourteen slices — move the content to /pack, reorganise it into pack layout, derive it from that layout, add the manifest and lock schemas, resolve local then git sources, wire ownership, teach init and update, make each release one command, make a committed path pin portable, and dogfood it.
-status: stable
-tags: [done]
+description: Deliver S014 in eighteen slices — move the content to /pack, reorganise it into pack layout, derive it from that layout, add the manifest and lock schemas, resolve local then git sources, wire ownership, teach init and update, make each release one command, make a committed path pin portable, dogfood it, then close the gaps acceptance found and the one deferred issue small enough to fix.
+status: draft
 links:
   - rel: implements
     to: spec-content-packs
@@ -239,3 +238,104 @@ only variable when the Windows job runs.
   `superdev sync` updates `.claude/skills/frame/SKILL.md` with no rebuild;
   `asset-backport` is gone and nothing references it.
 - Cases: none automated. Manual: M1.
+
+## Slices after the first pass
+
+Reopened after `/accept`. All twenty-three acceptance criteria passed; these
+close the gaps the criteria do not reach. Every slice here is buildable without
+a contract change — what needs a decision is listed at the end and stays
+unplanned, so nothing scheduled can stall behind one.
+
+### Slice 15: Nothing superdev spawns can be talked into running a command
+
+- [ ] Done — ticked by integrate at merge.
+- Gap: [I007](../issues/I007-a-pack-source-reaches-git-with-no-scheme-check.md),
+  the half of it that needs no decision — and the half that closes the hole.
+- Change: add `-c protocol.ext.allow=never` (and the same for the other
+  command-running helpers) to the `verbatim()` overrides every git invocation
+  already carries, so the guarantee holds whatever the user's git config says.
+  Put `--` before the operands in `fetch.rs`'s clone and fetch and in
+  `pin.rs`'s `ls-remote`, and refuse a source or rev beginning with `-`, so a
+  value that satisfies `is_git` cannot present to git as an option.
+- First because it is the confirmed exploit. On a stock git the transport is
+  already refused; the override is what stops a user who has enabled it from
+  being exploited by a manifest they cloned. It changes no accepted spelling,
+  so it needs no contract change and can land immediately.
+- Done-check: with `protocol.ext.allow = always` in the git config, a manifest
+  naming `ext::touch /tmp/x` runs no command and the file is not created — the
+  reproduction in I007, inverted; a source beginning with `-` is refused
+  naming it; every spelling of the default source still resolves, and a
+  `file://` pack and the scp form still resolve.
+- Cases: none from the test plan, which does not reach the transport. New
+  tests per the issue, the reproduction among them.
+
+### Slice 16: A pack's symlinks are not followed
+
+- [ ] Done — ticked by integrate at merge.
+- Gap: [I008](../issues/I008-a-symlinked-file-in-a-pack-is-followed.md).
+- Change: skip every symlink in a pack tree, not only a linked directory —
+  `read_dir` already computes `linked` and acts on it for one case out of two.
+- Done-check: a pack whose item file is a symlink to a file outside the pack
+  resolves without that item and writes nothing from it; the existing
+  linked-directory behaviour is unchanged; superdev's own `/pack/` still
+  resolves whole, since it ships no symlink.
+- Cases: none from the test plan. A new test putting a symlinked file in a
+  fixture pack and asserting it is not among the resolved files.
+
+### Slice 17: The lock describes what is on disk, not only what was written
+
+- [ ] Done — ticked by integrate at merge.
+- Gap: [I005](../issues/I005-a-backport-leaves-the-lock-stale.md), filed
+  during delivery rather than by accept, scheduled because it is contained and
+  fires on every backport, which is how this repo's owner edits skills.
+- Change: record an owned file's hash whenever the run resolves it as
+  matching, not only when it writes it. `apply` pushes to `written` inside the
+  write path alone, so a file that needed no write keeps whatever hash the
+  lock last recorded.
+- Done-check: edit a live owned file, mirror it into `pack/`, `sync`, and the
+  lock's hash for that file describes the file on disk; a later `sync` that
+  rewrites it reports a plain write with no backup and no `user-edited` note;
+  a genuinely hand-edited file is still reported and still backed up.
+- Cases: none from the test plan. A new test resolving a file that already
+  matches and asserting its hash lands in the lock.
+
+### Slice 18: Document packs, and what `update` actually does
+
+- [ ] Done — ticked by integrate at merge.
+- Gap: [I006](../issues/I006-content-packs-are-undocumented-for-users.md).
+- Change: correct `update`'s description at
+  `crates/app/superdev/src/main.rs` — clap renders it into `--help`, the man
+  page and the completions — and the matching rustdoc in `manage.rs`, so both
+  say the pack pin may move to the source's newest release. Add a packs
+  section to `README.md`: the `[[packs]]` entry and the source spellings,
+  layering and base replacement, the two release series, and that `update` is
+  the verb that reaches the network.
+- Last, and deliberately not made to wait on the scheme allowlist below: it
+  documents the spellings superdev accepts today, and if the allowlist later
+  narrows them that slice updates this text as part of its own work.
+- Done-check: `superdev --help`, the man page and `README.md` each describe
+  packs and none of them says `update` moves pins only to this binary's
+  defaults; a reader who has never seen the knowledgebase can pin a pack from
+  the README alone.
+- Cases: none from the test plan. A test asserting the help text names the
+  network behaviour would stop it going stale again.
+
+## Not scheduled — each needs an interface decision first
+
+Cutting any of these as a slice now would only bounce it to
+`/interface-design`, so they go there, or into a later feature, on their own.
+
+- **The scheme allowlist**, the other half of
+  [I007](../issues/I007-a-pack-source-reaches-git-with-no-scheme-check.md):
+  refusing a source whose scheme superdev does not support, rather than
+  handing it to git. Defence in depth once slice 15 lands, and a clearer
+  error. Which schemes are in the set changes what a manifest may say, which
+  [C001](../contracts/C001-content-packs.md) documents as `parse`'s rejections.
+- [I001](../issues/I001-update-can-pin-an-unreadable-pack-format.md) — a
+  format range the tag does not carry.
+- [I002](../issues/I002-no-time-bound-on-the-update-query.md) — a deadline on
+  the process boundary every component shares.
+- [I003](../issues/I003-a-local-pack-cannot-remove-what-it-dropped.md) — a
+  path source that may be the base, which ADR-004 and ADR-011 forbid.
+- [I004](../issues/I004-a-path-packs-digest-churns-and-is-never-checked.md) —
+  a lock schema whose digest is optional.
