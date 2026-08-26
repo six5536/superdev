@@ -185,13 +185,25 @@ verifies it landed consistently, then commits and tags. It deliberately stops
 there.
 
 It also cuts the content release riding on that commit: `pack/pack.toml`'s
-version moves to the next patch, `DEFAULT_PACK.rev` is set to the tag that
-version releases as, and the commit is tagged `assets-vA.B.C` as well as
-`vX.Y.Z`. Pass a second argument (`npm run release X.Y.Z A.B.C`) to choose the
-pack version instead of taking the patch bump. Setting both together is what
-makes it impossible to ship a binary whose pin names content it did not embed;
-a Rust test holds the pair, and the release fails rather than writing one
-without the other.
+version moves, `DEFAULT_PACK.rev` is set to the tag that version releases as,
+and the commit is tagged `assets-vA.B.C` as well as `vX.Y.Z`. The pack version
+it picks is the one `pack.toml` already declares while that is still
+unreleased, and the next patch once it is out — so a hand-edited `pack.toml`
+gets the version its author chose, and the first release cuts the version the
+repo already claims. Pass a second argument (`npm run release X.Y.Z A.B.C`) to
+name it instead; a version behind what `pack.toml` declares is refused, as is
+one that is not `MAJOR.MINOR.PATCH`, and both are refused before anything is
+written.
+
+A prerelease binary cuts a prerelease content tag: `npm run release
+0.3.0-rc.1` produces `assets-vA.B.C-rc.1`. `superdev update` moves a pin only
+between three-number releases, so candidate content never reaches a stable
+user's next update — while the candidate binary's own pin still names exactly
+what it embedded.
+
+Setting both together is what makes it impossible to ship a binary whose pin
+names content it did not embed; a Rust test holds the pair, and the release
+fails rather than writing one without the other.
 
 **3. Review, then push.**
 
@@ -231,7 +243,7 @@ release:pack` refuses a tag it cannot find one for.
 **2. Cut it.**
 
 ```sh
-npm run release:pack           # bumps pack/pack.toml's patch
+npm run release:pack           # the version pack.toml declares, or the next patch
 npm run release:pack A.B.C     # or name the version
 ```
 

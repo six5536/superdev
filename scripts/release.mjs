@@ -5,20 +5,23 @@
 // Usage: node scripts/release.mjs <version> [pack-version]
 //
 //   1. refuse a dirty working tree
-//   2. refuse either tag if it exists
-//   3. refuse a version with no CHANGELOG section
-//   4. set the version everywhere (including lockfiles)
-//   5. set the pack version and the pin that must name it
-//   6. verify it landed consistently
-//   7. commit, then tag the commit twice
+//   2. work out the pack version, refusing one that is malformed or backwards
+//   3. refuse either tag if it exists
+//   4. refuse a version with no CHANGELOG section
+//   5. set the version everywhere (including lockfiles)
+//   6. set the pack version and the pin that must name it
+//   7. verify it landed consistently
+//   8. commit, then tag the commit twice
 //
 // The binary and its content are cut from one commit so `DEFAULT_PACK.rev`
 // always names a rev whose `/pack/` is what this binary embedded — there is no
 // second step for a human to forget (ADR-008). The pack keeps a version series
-// of its own; with none given it takes the next patch. A content release with
-// no binary is `scripts/release-pack.mjs`.
+// of its own; with none given it takes the version `pack.toml` declares while
+// that is unreleased, and the next patch once it is out. A candidate binary
+// cuts a candidate content tag, which `update` does not move stable pins to. A
+// content release with no binary is `scripts/release-pack.mjs`.
 //
-// Checks 1 to 3 run before anything is written, so a failure leaves the tree
+// Checks 1 to 4 run before anything is written, so a failure leaves the tree
 // untouched.
 
 import { readFileSync } from "node:fs";
@@ -26,7 +29,16 @@ import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 
-import { readPackVersion, nextPatch, packTag, setPackVersion } from "./pack-version.mjs";
+import {
+  readPackVersion,
+  packTag,
+  setPackVersion,
+  plannedPackVersion,
+  prereleaseOf,
+  isBehind,
+  coreOf,
+  TAG_PREFIX,
+} from "./pack-version.mjs";
 
 const version = process.argv[2]?.replace(/^v/, "");
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -51,18 +63,53 @@ if (run("git", ["status", "--porcelain"]).trim() !== "") {
   fail("working tree is dirty; commit or stash first");
 }
 
-// --- 2. Neither tag may already exist ---------------------------------------
-// The pack version is its own series, so it is read from the tree rather than
-// derived from the binary version; with none given the patch moves on.
-const packVersion = process.argv[3]?.replace(/^(assets-)?v/, "") ?? nextPatch(readPackVersion(root));
+// --- 2. Work out the pack version, and refuse a bad one before writing ------
+// The pack has a version series of its own, so it comes from the tree rather
+// than from the binary version. Everything here is decided before step 4
+// touches a file: an argument this rejects must not leave a half-set tree.
+const declared = readPackVersion(root);
+const packVersion = choosePackVersion();
 const packTagName = packTag(packVersion);
+
+function choosePackVersion() {
+  const given = process.argv[3]?.replace(/^(assets-)?v/, "");
+  const prerelease = prereleaseOf(version);
+  if (given === undefined || given === "") {
+    // Has the version the tree declares been released? If not, that is the one
+    // to cut; the first release cuts the `pack.toml` the repo already carries.
+    const core = coreOf(declared);
+    const released = run("git", ["tag", "--list", `${TAG_PREFIX}${core}`]).trim() !== "";
+    return plannedPackVersion({ declared, coreReleased: released, prerelease });
+  }
+  try {
+    packTag(given);
+  } catch (e) {
+    fail(e.message);
+  }
+  if (isBehind(given, declared)) {
+    fail(`pack version ${given} is behind pack.toml's ${declared}`);
+  }
+  // A candidate binary must not cut a release-numbered content tag: `update`
+  // moves stable pins onto anything spelled as a three-number release. The
+  // converse strands them — a release whose pin names a candidate tag is no
+  // release to `update`, so every pin on it sits still until the next binary.
+  if (prerelease && !prereleaseOf(given)) {
+    fail(`${tag} is a prerelease, so its content tag must be one too — try ${given}-${prerelease}`);
+  }
+  if (!prerelease && prereleaseOf(given)) {
+    fail(`${tag} is a release, so its content tag must be one too — not ${packTag(given)}`);
+  }
+  return given;
+}
+
+// --- 3. Neither tag may already exist ---------------------------------------
 for (const existing of [tag, packTagName]) {
   if (run("git", ["tag", "--list", existing]).trim() !== "") {
     fail(`tag ${existing} already exists`);
   }
 }
 
-// --- 3. CHANGELOG must have a section for this version ----------------------
+// --- 4. CHANGELOG must have a section for this version ----------------------
 // This is the gate that makes "update the changelog" non-optional; the release
 // workflow extracts the same section for the GitHub release notes.
 const changelog = readFileSync(join(root, "CHANGELOG.md"), "utf8");
@@ -73,20 +120,20 @@ if (!new RegExp(`^## \\[${version.replace(/[.\\+]/g, "\\$&")}\\]`, "m").test(cha
   );
 }
 
-// --- 4. Set the version everywhere ------------------------------------------
+// --- 5. Set the version everywhere ------------------------------------------
 step(`setting version to ${version}`);
 run("node", [join(root, "scripts/set-version.mjs"), version], { stdio: "inherit" });
 
-// --- 5. Set the pack version and the pin that must name it ------------------
+// --- 6. Set the pack version and the pin that must name it ------------------
 step(`setting the pack version to ${packVersion}`);
 setPackVersion(root, packVersion);
 console.log(`  pack/pack.toml and DEFAULT_PACK.rev now name ${packTagName}`);
 
-// --- 6. Verify it landed consistently ---------------------------------------
+// --- 7. Verify it landed consistently ---------------------------------------
 step("verifying version consistency");
 run("node", [join(root, "scripts/verify-version.mjs"), version], { stdio: "inherit" });
 
-// --- 7. Commit, then tag that one commit twice ------------------------------
+// --- 8. Commit, then tag that one commit twice ------------------------------
 step("committing and tagging");
 run("git", ["add", "-A"], { stdio: "inherit" });
 run("git", ["commit", "-m", `chore(release): ${tag}`], { stdio: "inherit" });

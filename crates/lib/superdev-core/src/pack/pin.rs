@@ -60,8 +60,10 @@ pub fn update_pins(
         ));
     }
     // What this binary carries is the floor: an older pin comes up to it
-    // with no request at all, because the content is already on disk.
-    let floor = release(DEFAULT_PACK.rev).expect("the default pin is a release tag");
+    // with no request at all, because the content is already on disk. A
+    // candidate binary pins a candidate tag, which is no release and so no
+    // floor — its content is exactly what a stable pin must not be raised to.
+    let floor = release(DEFAULT_PACK.rev);
     // Asked once however many entries spell it, and not at all when none
     // names the default source — an update that touches nothing of
     // superdev's makes no request.
@@ -92,22 +94,7 @@ pub fn update_pins(
             continue;
         };
         let newest = asked.get_or_insert_with(|| newest_release(runner, root, &source));
-        let (target, unchecked) = match newest {
-            // A pin ahead of every release the source carries is a hand-edit
-            // or a typo, and the `sync` that follows is about to fail on it.
-            // It is reported as what it is rather than as the newest release,
-            // which would say the query had confirmed something it did not.
-            Newest::Answered(Some(remote)) if *remote < current => (
-                current.max(floor),
-                Some(format!("the source's newest release is {}", tag(*remote))),
-            ),
-            Newest::Answered(Some(remote)) => (current.max(floor).max(*remote), None),
-            Newest::Answered(None) => (
-                current.max(floor),
-                Some("it carries no release tag".to_string()),
-            ),
-            Newest::Unreachable => (current.max(floor), Some("could not reach it".to_string())),
-        };
+        let (target, unchecked) = choose(current, floor, newest);
         if target > current {
             let moved = tag(target);
             entry.rev = Some(moved.clone());
@@ -125,6 +112,31 @@ pub fn update_pins(
         }
     }
     lines
+}
+
+/// Where a pin should end up, and what to say about how it got there.
+///
+/// Split out from the loop because the floor is whatever this binary happens
+/// to carry, and the one case that cannot be reached from a released binary —
+/// no floor at all, which is what a candidate build has — is the one most
+/// worth holding.
+fn choose(current: Release, floor: Option<Release>, newest: &Newest) -> (Release, Option<String>) {
+    // Never below what the binary carries, and never below where the pin
+    // already is: going to look is meant to bring content forward.
+    let base = floor.map_or(current, |floor| current.max(floor));
+    match newest {
+        // A pin ahead of every release the source carries is a hand-edit or a
+        // typo, and the `sync` that follows is about to fail on it. It is
+        // reported as what it is rather than as the newest release, which
+        // would say the query had confirmed something it did not.
+        Newest::Answered(Some(remote)) if *remote < current => (
+            base,
+            Some(format!("the source's newest release is {}", tag(*remote))),
+        ),
+        Newest::Answered(Some(remote)) => (base.max(*remote), None),
+        Newest::Answered(None) => (base, Some("it carries no release tag".to_string())),
+        Newest::Unreachable => (base, Some("could not reach it".to_string())),
+    }
 }
 
 /// Ask a source for the newest pack release it carries.
@@ -427,6 +439,41 @@ mod tests {
         assert_eq!(
             calls[0],
             "git ls-remote --tags --refs https://github.com/six5536/superdev refs/tags/assets-v*"
+        );
+    }
+
+    /// A candidate's content tag is on the source like any other, and must
+    /// not be what a stable pin moves to: the release script cuts one at every
+    /// binary rc, so this is the ordinary state of the repository, not an edge.
+    #[test]
+    fn a_candidate_tag_on_the_source_is_not_a_release_to_move_to() {
+        let runner = source_carrying(&["assets-v0.1.0", "assets-v0.2.0-rc.1"]);
+        let mut manifest = manifest(&[(DEFAULT_PACK.source, Some("assets-v0.1.0"))]);
+
+        let lines = update_pins(&runner, Path::new("."), &mut manifest);
+
+        assert_eq!(revs(&manifest), [Some("assets-v0.1.0")]);
+        assert!(
+            lines.join("\n").contains("is at the newest release"),
+            "{lines:?}"
+        );
+    }
+
+    /// A candidate binary pins `assets-vX.Y.Z-rc.N`, which is no release, so
+    /// this binary contributes no floor. Nothing may panic on that, and a pin
+    /// must not be dragged up to a version the binary cannot vouch for.
+    #[test]
+    fn a_binary_carrying_no_release_is_no_floor() {
+        let current = (0, 1, 0);
+
+        assert_eq!(
+            choose(current, None, &Newest::Unreachable),
+            (current, Some("could not reach it".to_string()))
+        );
+        assert_eq!(
+            choose(current, None, &Newest::Answered(Some((0, 4, 0)))),
+            ((0, 4, 0), None),
+            "the source still moves it; only the binary's own floor is absent"
         );
     }
 

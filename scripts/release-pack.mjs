@@ -3,16 +3,18 @@
 //
 // Usage: node scripts/release-pack.mjs [pack-version]
 //
-// With no version it bumps the patch. Like the binary release it stops before
-// pushing, because the push is what publishes.
+// With no version it cuts the one `pack.toml` declares while that is still
+// unreleased, and the next patch once it is out. Like the binary release it
+// stops before pushing, because the push is what publishes.
 //
 //   1. refuse a dirty working tree
-//   2. refuse a tag that exists
-//   3. refuse a version with no CHANGELOG section
-//   4. set pack.toml's version and DEFAULT_PACK.rev together
-//   5. commit and tag
+//   2. work out the version, refusing one that is malformed or backwards
+//   3. refuse a tag that exists
+//   4. refuse a version with no CHANGELOG section
+//   5. set pack.toml's version and DEFAULT_PACK.rev together
+//   6. commit and tag
 //
-// Checks 1 to 3 run before anything is written, so a failure leaves the tree
+// Checks 1 to 4 run before anything is written, so a failure leaves the tree
 // untouched.
 //
 // The tag is `assets-vA.B.C`, which the release workflow's `v*` filter does not
@@ -25,9 +27,11 @@ import { dirname, join } from "node:path";
 
 import {
   readPackVersion,
-  nextPatch,
   packTag,
   setPackVersion,
+  plannedPackVersion,
+  isBehind,
+  coreOf,
   TAG_PREFIX,
 } from "./pack-version.mjs";
 
@@ -40,20 +44,42 @@ const fail = (msg) => {
   process.exit(1);
 };
 
-const version = process.argv[2]?.replace(/^(assets-)?v/, "") ?? nextPatch(readPackVersion(root));
-const tag = packTag(version);
-
 // --- 1. Clean working tree --------------------------------------------------
 if (run("git", ["status", "--porcelain"]).trim() !== "") {
   fail("working tree is dirty; commit or stash first");
 }
 
-// --- 2. Tag must not already exist -----------------------------------------
+// --- 2. Work out the version, refusing a bad one before anything is written -
+const declared = readPackVersion(root);
+const version = chooseVersion();
+const tag = packTag(version);
+
+function chooseVersion() {
+  const given = process.argv[2]?.replace(/^(assets-)?v/, "");
+  if (given === undefined || given === "") {
+    // The version the tree declares, while that is still unreleased; the next
+    // patch once it is out.
+    const core = coreOf(declared);
+    const released = run("git", ["tag", "--list", `${TAG_PREFIX}${core}`]).trim() !== "";
+    return plannedPackVersion({ declared, coreReleased: released });
+  }
+  try {
+    packTag(given);
+  } catch (e) {
+    fail(e.message);
+  }
+  if (isBehind(given, declared)) {
+    fail(`pack version ${given} is behind pack.toml's ${declared}`);
+  }
+  return given;
+}
+
+// --- 3. Tag must not already exist -----------------------------------------
 if (run("git", ["tag", "--list", tag]).trim() !== "") {
   fail(`tag ${tag} already exists`);
 }
 
-// --- 3. CHANGELOG must have a section for this content release --------------
+// --- 4. CHANGELOG must have a section for this content release --------------
 // A content release has no binary release to be described by, so it carries
 // its own section. The binary release writes no second section: the pack tag
 // it cuts comes off the same commit its own section already describes.
@@ -65,12 +91,12 @@ if (!new RegExp(`^## \\[${tag.replace(/[.\\+]/g, "\\$&")}\\]`, "m").test(changel
   );
 }
 
-// --- 4. Set the pack version and the pin it must agree with -----------------
+// --- 5. Set the pack version and the pin it must agree with -----------------
 step(`setting the pack version to ${version}`);
 setPackVersion(root, version);
 console.log(`  pack/pack.toml and DEFAULT_PACK.rev now name ${tag}`);
 
-// --- 5. Commit and tag ------------------------------------------------------
+// --- 6. Commit and tag ------------------------------------------------------
 step("committing and tagging");
 run("git", ["add", "-A"], { stdio: "inherit" });
 run("git", ["commit", "-m", `chore(release): ${tag}`], { stdio: "inherit" });

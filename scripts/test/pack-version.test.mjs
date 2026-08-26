@@ -10,7 +10,15 @@ import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync } from "nod
 import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 
-import { readPackVersion, nextPatch, packTag, setPackVersion } from "../pack-version.mjs";
+import {
+  readPackVersion,
+  nextPatch,
+  packTag,
+  setPackVersion,
+  plannedPackVersion,
+  prereleaseOf,
+  isBehind,
+} from "../pack-version.mjs";
 
 const PACK_TOML = `# a comment the rewrite must not disturb
 format      = 1
@@ -120,4 +128,92 @@ test("a version that is not three numbers is refused", () => {
   assert.throws(() => setPackVersion(root, "1.0"), /1\.0/);
   assert.throws(() => setPackVersion(root, "v1.0.0"), /v1\.0\.0/);
   cleanup(root);
+});
+
+// --- Choosing the version a release cuts ------------------------------------
+
+test("a version the tree declares but has never released is what gets cut", () => {
+  // pack.toml says 0.1.0 and no such tag exists: the first release cuts the
+  // version the tree already claims rather than skipping past it, which is
+  // also how a hand-edited pack.toml gets the version its author chose.
+  assert.equal(
+    plannedPackVersion({ declared: "0.1.0", coreReleased: false }),
+    "0.1.0",
+  );
+});
+
+test("once that version is released the patch moves on", () => {
+  assert.equal(
+    plannedPackVersion({ declared: "0.1.0", coreReleased: true }),
+    "0.1.1",
+  );
+});
+
+test("a prerelease binary cuts a prerelease content tag", () => {
+  // `update` takes only three-number releases, so a candidate's content must
+  // not be spelled as one: an rc that cut `assets-v0.1.1` would move every
+  // stable user's pin onto release-candidate content.
+  assert.equal(
+    plannedPackVersion({ declared: "0.1.0", coreReleased: false, prerelease: "rc.1" }),
+    "0.1.0-rc.1",
+  );
+  assert.equal(
+    plannedPackVersion({ declared: "0.1.0", coreReleased: true, prerelease: "rc.1" }),
+    "0.1.1-rc.1",
+  );
+});
+
+test("a second candidate moves the suffix, not the version", () => {
+  assert.equal(
+    plannedPackVersion({ declared: "0.1.0-rc.1", coreReleased: false, prerelease: "rc.2" }),
+    "0.1.0-rc.2",
+  );
+});
+
+test("the release after a candidate drops the suffix and keeps the version", () => {
+  // 0.1.0-rc.1 is tagged but 0.1.0 is not, so the stable release is 0.1.0.
+  assert.equal(
+    plannedPackVersion({ declared: "0.1.0-rc.1", coreReleased: false }),
+    "0.1.0",
+  );
+});
+
+test("the prerelease a binary version carries, if any", () => {
+  assert.equal(prereleaseOf("0.3.0"), "");
+  assert.equal(prereleaseOf("0.3.0-rc.1"), "rc.1");
+  assert.equal(prereleaseOf("1.0.0-alpha.2"), "alpha.2");
+});
+
+// --- Refusing to go backwards -----------------------------------------------
+
+test("a version below the one the tree declares is behind it", () => {
+  assert.ok(isBehind("0.0.5", "0.1.0"));
+  assert.ok(isBehind("0.1.0", "0.10.0"));
+  assert.ok(!isBehind("0.1.0", "0.1.0"));
+  assert.ok(!isBehind("0.2.0", "0.1.0"));
+  // A candidate and its release share a version, so neither is behind the
+  // other: cutting 0.1.0 with 0.1.0-rc.1 declared is the normal path.
+  assert.ok(!isBehind("0.1.0", "0.1.0-rc.1"));
+});
+
+// --- Prereleases through the writing path -----------------------------------
+
+test("a prerelease version is written to both files", () => {
+  const root = fixture();
+
+  const tag = setPackVersion(root, "1.0.0-rc.1");
+
+  assert.equal(tag, "assets-v1.0.0-rc.1");
+  assert.equal(readPackVersion(root), "1.0.0-rc.1");
+  assert.match(
+    readFileSync(join(root, "crates/lib/superdev-core/src/pack/source.rs"), "utf8"),
+    /rev: "assets-v1\.0\.0-rc\.1"/,
+  );
+  cleanup(root);
+});
+
+test("the tag helper refuses what the release cannot cut", () => {
+  assert.throws(() => packTag("1.2"), /1\.2/);
+  assert.throws(() => packTag(""), /MAJOR/);
+  assert.throws(() => packTag("v1.2.3"), /v1\.2\.3/);
 });
