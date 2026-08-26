@@ -166,11 +166,7 @@ fn choose(current: Release, floor: Option<Release>, newest: &Newest) -> (Release
 /// `ls-remote` and not a clone: the answer is one line of refs, and the pin
 /// it produces is what the resolver then fetches and verifies as usual.
 fn newest_release(runner: &dyn CommandRunner, root: &Path, source: &PackSource) -> Newest {
-    // Built from the same overrides every other git call carries. This one
-    // goes out unprompted, on a source a cloned manifest named, so it is the
-    // last place that should have been trusted to build its own.
-    let mut args = super::fetch::overrides();
-    args.extend([
+    let args = vec![
         "ls-remote".to_string(),
         "--tags".to_string(),
         "--refs".to_string(),
@@ -178,8 +174,10 @@ fn newest_release(runner: &dyn CommandRunner, root: &Path, source: &PackSource) 
         "--".to_string(),
         source.clone_url(),
         format!("refs/tags/{PACK_TAG_PREFIX}*"),
-    ]);
-    match runner.run("git", &args, root) {
+    ];
+    // Through the one seam, so the overrides come along without this call
+    // having to remember them — it is the call that forgot.
+    match super::fetch::git(runner, &args, root) {
         Ok(out) if out.status == 0 => Newest::Answered(
             out.stdout
                 .lines()
@@ -249,10 +247,11 @@ mod tests {
             .iter()
             .map(|tag| format!("0123456789abcdef\trefs/tags/{tag}\n"))
             .collect();
-        // Scripted on the program alone: the overrides every call carries sit
-        // between it and the subcommand, so `git ls-remote` prefixes nothing.
-        runner.script(
-            "git",
+        // On the subcommand, not the program: every git call carries `-c`
+        // overrides ahead of the verb, and answering every `git` alike would
+        // feed the next call added here this same tag listing.
+        runner.script_containing(
+            "ls-remote",
             Output {
                 status: 0,
                 stdout: refs,
@@ -337,8 +336,8 @@ mod tests {
     #[test]
     fn a_failed_query_is_treated_as_unreachable() {
         let runner = FakeRunner::new();
-        runner.script(
-            "git",
+        runner.script_containing(
+            "ls-remote",
             Output {
                 status: 128,
                 stdout: String::new(),

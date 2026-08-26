@@ -13,7 +13,7 @@ use std::path::{Path, PathBuf};
 use sha2::{Digest, Sha256};
 
 use crate::error::{Error, Result};
-use crate::runner::CommandRunner;
+use crate::runner::{CommandRunner, Output};
 
 /// Where a resolved pack is kept, under the gitignored machine-state
 /// directory that already holds the search index and the backup tree.
@@ -69,7 +69,7 @@ pub fn cache_path(root: &Path, digest: &str) -> PathBuf {
 /// Every git call superdev makes is built from this, `pin.rs`'s query
 /// included — the one call that did not was how a manifest still got a
 /// command run.
-pub(super) fn overrides() -> Vec<String> {
+fn overrides() -> Vec<String> {
     vec![
         "-c".into(),
         "core.autocrlf=false".into(),
@@ -114,7 +114,7 @@ pub fn fetch(
     }
 
     let target = checkout.to_string_lossy().into_owned();
-    let mut clone: Vec<String> = overrides();
+    let mut clone: Vec<String> = Vec::new();
     clone.extend([
         "clone".into(),
         "--depth".into(),
@@ -137,7 +137,7 @@ pub fn fetch(
     if looks_like_sha(rev) {
         // A sha is not reachable by `--branch`, and a blobless shallow clone
         // does not carry it: ask for that one commit, then move onto it.
-        let mut args = overrides();
+        let mut args: Vec<String> = Vec::new();
         args.extend([
             "-C".into(),
             target.clone(),
@@ -150,7 +150,7 @@ pub fn fetch(
         ]);
         run_git(runner, pack, &args, into)?;
 
-        let mut args = overrides();
+        let mut args: Vec<String> = Vec::new();
         args.extend([
             "-C".into(),
             target.clone(),
@@ -161,7 +161,7 @@ pub fn fetch(
         run_git(runner, pack, &args, into)?;
     }
 
-    let mut args = overrides();
+    let mut args: Vec<String> = Vec::new();
     args.extend([
         "-C".into(),
         target,
@@ -186,8 +186,21 @@ pub fn fetch(
 /// A missing `git` is worth its own message: every superdev repo is a git
 /// repo, so a user without it is in an unusual state and the generic
 /// "not found" would not say what to install.
+/// Spawn git with the overrides in front, whatever the caller asked for.
+///
+/// The only way this crate reaches git. Callers pass the verb and its
+/// operands and cannot omit the overrides, because they never assemble the
+/// vector: a call that forgot one is what let a manifest run a command
+/// through `update`, and a rule the type system keeps is worth more than one
+/// a test has to remember to look for.
+pub(super) fn git(runner: &dyn CommandRunner, args: &[String], cwd: &Path) -> Result<Output> {
+    let mut full = overrides();
+    full.extend_from_slice(args);
+    runner.run("git", &full, cwd)
+}
+
 fn run_git(runner: &dyn CommandRunner, pack: &str, args: &[String], cwd: &Path) -> Result<()> {
-    match runner.run("git", args, cwd) {
+    match git(runner, args, cwd) {
         Ok(out) if out.status == 0 => Ok(()),
         Ok(out) => Err(Error::Pack {
             pack: pack.to_string(),

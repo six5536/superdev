@@ -71,6 +71,7 @@ mod fake {
     /// the first script whose prefix matches, succeeds silently otherwise.
     pub(crate) struct FakeRunner {
         scripts: RefCell<Vec<(String, Output)>>,
+        contains: RefCell<Vec<(String, Output)>>,
         missing: RefCell<Vec<String>>,
         calls: RefCell<Vec<String>>,
     }
@@ -80,6 +81,7 @@ mod fake {
         pub(crate) fn new() -> FakeRunner {
             FakeRunner {
                 scripts: RefCell::new(Vec::new()),
+                contains: RefCell::new(Vec::new()),
                 missing: RefCell::new(Vec::new()),
                 calls: RefCell::new(Vec::new()),
             }
@@ -88,6 +90,18 @@ mod fake {
         /// Return `output` for the first command line starting with `prefix`.
         pub(crate) fn script(&self, prefix: &str, output: Output) {
             self.scripts.borrow_mut().push((prefix.to_string(), output));
+        }
+
+        /// Return `output` for the first command line containing `needle`.
+        ///
+        /// A prefix cannot pick out a subcommand when the program takes
+        /// options before it — every git call carries `-c` overrides — and
+        /// widening the prefix to `git` answers every call alike, which is
+        /// how a test stops discriminating without stopping passing.
+        pub(crate) fn script_containing(&self, needle: &str, output: Output) {
+            self.contains
+                .borrow_mut()
+                .push((needle.to_string(), output));
         }
 
         /// Simulate `program` not being installed.
@@ -119,6 +133,14 @@ mod fake {
                 .borrow()
                 .iter()
                 .find(|(p, _)| line.starts_with(p))
+            {
+                return Ok(out.clone());
+            }
+            if let Some((_, out)) = self
+                .contains
+                .borrow()
+                .iter()
+                .find(|(n, _)| line.contains(n.as_str()))
             {
                 return Ok(out.clone());
             }

@@ -626,7 +626,7 @@ fn an_update_cannot_be_talked_into_running_a_manifests_command() {
         ),
     );
 
-    superdev()
+    let out = superdev()
         .current_dir(dir.path())
         .env("GIT_CONFIG_GLOBAL", &gitconfig)
         .env("GIT_CONFIG_NOSYSTEM", "1")
@@ -635,6 +635,15 @@ fn an_update_cannot_be_talked_into_running_a_manifests_command() {
         .success();
 
     assert!(!marker.exists(), "`update` ran a command a manifest named");
+    // The query has to have gone out, or this proves nothing: were the pin
+    // ever short-circuited when it equals the embedded rev — which `sync`
+    // already does — the `ext::` path would never be reached and the marker
+    // would be absent for the wrong reason.
+    let stdout = stdout_of(&out);
+    assert!(
+        stdout.contains("could not reach it"),
+        "the source was never asked: {stdout}"
+    );
 }
 
 /// Test plan case 19: a local-path pack is read from disk every run, so
