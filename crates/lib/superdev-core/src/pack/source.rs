@@ -119,12 +119,23 @@ impl PackSource {
     /// Scheme, userinfo, port, a `.git` suffix and any trailing slash are
     /// removed and host and path lowercased, so `github:six5536/superdev`,
     /// `https://github.com/six5536/superdev.git` and the ssh form are one
-    /// source. A path source's key is its canonicalised absolute path, which
-    /// [`PackSource::rooted`] settles. ADR-004.
-    pub fn identity(&self) -> String {
+    /// source.
+    ///
+    /// A path source's key is its canonicalised location — which
+    /// [`PackSource::rooted`] settles — expressed relative to `root`, with
+    /// forward slashes. The lock this is written to is committed, so an
+    /// absolute path would put the author's own directory layout in a tracked
+    /// file and every other checkout's first `sync` would rewrite it. That is
+    /// why `root` is a parameter: a path key means nothing apart from the
+    /// repository it was taken from. A git source ignores it. ADR-004,
+    /// ADR-011.
+    ///
+    /// Two keys are only ever compared within a source kind — see
+    /// [`PackSource::is_default`].
+    pub fn identity(&self, root: &Path) -> String {
         match self {
             PackSource::Git { url, .. } => git_identity(url),
-            PackSource::Path { path } => path.to_string_lossy().trim_end_matches('/').to_string(),
+            PackSource::Path { path } => path_identity(path, root),
         }
     }
 
@@ -133,9 +144,17 @@ impl PackSource {
     /// Compared on the normalised identity, so every spelling of that
     /// repository is the default: comparing the strings would treat three of
     /// the four common forms as a stranger's pack. ADR-004.
+    ///
+    /// A directory is never the default, whatever its key reads as. Since a
+    /// path key became relative it can read exactly like a repository's, and
+    /// a directory named `github.com/six5536/superdev` matching here would
+    /// replace the embedded content instead of layering over it — a silent
+    /// wrong answer, which is the failure ADR-004 exists to avoid. ADR-011.
     pub fn is_default(&self) -> bool {
-        matches!(self, PackSource::Git { .. })
-            && self.identity() == git_identity(DEFAULT_PACK.source)
+        match self {
+            PackSource::Git { url, .. } => git_identity(url) == git_identity(DEFAULT_PACK.source),
+            PackSource::Path { .. } => false,
+        }
     }
 
     /// The URL to hand `git`.
@@ -181,6 +200,54 @@ fn shorthand(url: &str) -> Option<(&str, &str)> {
         .iter()
         .any(|f| before.eq_ignore_ascii_case(f));
     forge.then_some((before, after))
+}
+
+/// A directory's key: where it sits relative to the repository, with forward
+/// slashes.
+///
+/// The root is canonicalised too, or a repository reached through a symlink
+/// would share no prefix with the pack inside it and every key would come out
+/// as a pile of `..`.
+fn path_identity(path: &Path, root: &Path) -> String {
+    let canonical = root.canonicalize();
+    let root = canonical.as_deref().unwrap_or(root);
+    relative_to(path, root)
+        .unwrap_or_else(|| path.to_string_lossy().trim_end_matches('/').to_string())
+}
+
+/// Express `path` relative to `root`, or `None` when no relative form exists.
+///
+/// Two paths anchored differently — a different Windows drive, or one
+/// absolute and one not — have none, and the caller keeps the path as it
+/// stands. Everywhere else this walks off the shared prefix and climbs out of
+/// whatever is left of the root.
+fn relative_to(path: &Path, root: &Path) -> Option<String> {
+    use std::path::Component;
+
+    let anchor = |c: &&Component| matches!(c, Component::Prefix(_) | Component::RootDir);
+    let (from, to): (Vec<_>, Vec<_>) = (path.components().collect(), root.components().collect());
+    if from
+        .iter()
+        .take_while(anchor)
+        .ne(to.iter().take_while(anchor))
+    {
+        return None;
+    }
+
+    let shared = from.iter().zip(&to).take_while(|(a, b)| a == b).count();
+    let mut parts = vec!["..".to_string(); to.len() - shared];
+    parts.extend(
+        from[shared..]
+            .iter()
+            .map(|c| c.as_os_str().to_string_lossy().into_owned()),
+    );
+    // The pack is the repository root itself. `.` and not the empty string:
+    // a key is read by a person, and nothing is not a location.
+    Some(if parts.is_empty() {
+        ".".to_string()
+    } else {
+        parts.join("/")
+    })
 }
 
 /// Whether a source names a git repository rather than a directory.
@@ -251,7 +318,7 @@ mod tests {
     fn identity_of(source: &str) -> String {
         PackSource::parse(&entry(source, Some("v1")))
             .expect("a git source")
-            .identity()
+            .identity(Path::new("/repo"))
     }
 
     /// ADR-004's equivalence class: every spelling of one repository is one
@@ -271,6 +338,99 @@ mod tests {
         ] {
             assert_eq!(identity_of(source), expected, "{source}");
         }
+    }
+
+    /// The lock this identity is written to is committed, so it must not
+    /// carry the directory the author happened to check out into. The same
+    /// pack in two clones is one key.
+    #[test]
+    fn a_path_identity_does_not_depend_on_where_the_repo_lives() {
+        let of_root = |root: &Path| {
+            std::fs::create_dir_all(root.join("pack")).unwrap();
+            PackSource::parse(&entry("./pack", None))
+                .expect("a path source")
+                .rooted(root)
+                .identity(root)
+        };
+        let one = tempfile::tempdir().unwrap();
+        let other = tempfile::tempdir().unwrap();
+
+        assert_eq!(of_root(one.path()), "pack");
+        assert_eq!(of_root(one.path()), of_root(other.path()));
+    }
+
+    /// A pack beside the repo rather than inside it still has a key, and it
+    /// still travels: what it says is where the pack sits relative to the
+    /// repo, which is the part another checkout can reproduce.
+    #[test]
+    fn a_pack_outside_the_root_keeps_its_dot_dots() {
+        let parent = tempfile::tempdir().unwrap();
+        let root = parent.path().join("repo");
+        std::fs::create_dir_all(&root).unwrap();
+        std::fs::create_dir_all(parent.path().join("shared/packs")).unwrap();
+
+        let identity = PackSource::parse(&entry("../shared/packs", None))
+            .expect("a path source")
+            .rooted(&root)
+            .identity(&root);
+
+        assert_eq!(identity, "../shared/packs");
+    }
+
+    /// Written with forward slashes whatever the platform separates with, or
+    /// a Windows contributor and a Linux one would commit different locks for
+    /// one pack.
+    #[test]
+    fn a_path_identity_is_written_with_forward_slashes() {
+        let repo = tempfile::tempdir().unwrap();
+        std::fs::create_dir_all(repo.path().join("vendor/packs/acme")).unwrap();
+
+        let identity = PackSource::parse(&entry("vendor/packs/acme", None))
+            .expect("a path source")
+            .rooted(repo.path())
+            .identity(repo.path());
+
+        assert_eq!(identity, "vendor/packs/acme");
+        assert!(!identity.contains('\\'), "{identity}");
+    }
+
+    /// A pack that is the repository itself has nowhere to go. `.` and not
+    /// the empty string: a key is read by a person, and nothing is not a
+    /// location.
+    #[test]
+    fn a_pack_at_the_repo_root_keys_as_here() {
+        let repo = tempfile::tempdir().unwrap();
+
+        let identity = PackSource::parse(&entry(".", None))
+            .expect("a path source")
+            .rooted(repo.path())
+            .identity(repo.path());
+
+        assert_eq!(identity, ".");
+    }
+
+    /// A relative key can read like a repository key, where an absolute one
+    /// never could. Comparing across kinds would let this directory key as
+    /// the base pack and silently replace the embedded content.
+    #[test]
+    fn a_directory_named_like_a_repository_is_not_that_repository() {
+        let repo = tempfile::tempdir().unwrap();
+        let masquerade = "github.com/six5536/superdev";
+        std::fs::create_dir_all(repo.path().join(masquerade)).unwrap();
+
+        let source = PackSource::parse(&entry(masquerade, None))
+            .expect("a path source")
+            .rooted(repo.path());
+
+        assert_eq!(source.identity(repo.path()), masquerade);
+        assert_eq!(
+            source.identity(repo.path()),
+            git_identity(DEFAULT_PACK.source)
+        );
+        assert!(
+            !source.is_default(),
+            "keys match, but a directory is not a repository"
+        );
     }
 
     /// The scp form without a user is a host, not superdev's shorthand.
@@ -421,7 +581,7 @@ mod tests {
             PackSource::parse(&entry(source, None))
                 .expect("a path source")
                 .rooted(repo.path())
-                .identity()
+                .identity(repo.path())
         };
         let expected = of("./packs/acme");
         for spelling in [
@@ -433,8 +593,9 @@ mod tests {
             assert_eq!(of(spelling), expected, "{spelling}");
         }
         assert_ne!(of("packs/elsewhere"), expected);
-        // Settled against the repo, not the process: absolute either way.
-        assert!(std::path::Path::new(&expected).is_absolute(), "{expected}");
+        // Settled against the repo, not the process, and written as where it
+        // sits in that repo rather than on this machine. ADR-011.
+        assert_eq!(expected, "packs/acme");
     }
 
     /// A directory that does not exist cannot be canonicalised; the joined

@@ -75,7 +75,11 @@ pub fn resolve(
     let mut layers = vec![(snapshot_items(), Origin::Snapshot)];
     let mut base = None;
     let mut pending = Vec::new();
-    let mut seen: BTreeMap<String, &str> = BTreeMap::new();
+    // Keyed on the kind as well as the identity: a path key is relative now,
+    // so it can spell a repository exactly, and a vendored tree at
+    // `github.com/owner/repo` beside a pin on that repository is two sources,
+    // not one named twice. ADR-011.
+    let mut seen: BTreeMap<(&str, String), &str> = BTreeMap::new();
     for (index, entry) in manifest.packs.iter().enumerate() {
         // Settled before the identity below compares it: a relative path
         // is a location, and two spellings of one directory are one pack.
@@ -83,7 +87,11 @@ pub fn resolve(
         // Two entries naming one source cannot both be layered, and one of
         // them naming the base would layer over it and silently win. The
         // manifest refuses a provider listed twice for the same reason.
-        if let Some(first) = seen.insert(source.identity(), &entry.source) {
+        let kind = match source {
+            PackSource::Git { .. } => "git",
+            PackSource::Path { .. } => "path",
+        };
+        if let Some(first) = seen.insert((kind, source.identity(root)), &entry.source) {
             return Err(Error::Pack {
                 pack: entry.source.clone(),
                 message: format!(
@@ -130,11 +138,10 @@ pub fn resolve(
 /// forms as a stranger's pack, and removals would stop propagating with
 /// nothing on screen to say why. ADR-004.
 fn is_base(source: &PackSource) -> bool {
-    let default = PackSource::Git {
-        url: DEFAULT_PACK.source.to_string(),
-        rev: DEFAULT_PACK.rev.to_string(),
-    };
-    source.identity() == default.identity()
+    // Not an identity comparison of its own: a path key is relative now, so it
+    // can read exactly like a repository's, and only the source kind tells the
+    // two apart. `is_default` is where that guard lives. ADR-011.
+    source.is_default()
 }
 
 /// Resolve one entry.
@@ -154,7 +161,7 @@ fn resolve_one(
             let (items, files) = read_pack(&entry.source, path)?;
             Ok(Resolved::Layer(
                 items,
-                record(entry, source, &fetch::digest(&files)),
+                record(root, entry, source, &fetch::digest(&files)),
             ))
         }
         PackSource::Git { rev, .. } => {
@@ -164,7 +171,7 @@ fn resolve_one(
                 return Ok(Resolved::Embedded);
             }
             let locked = lock.packs.iter().find(|p| {
-                p.identity == source.identity() && p.rev.as_deref() == Some(rev.as_str())
+                p.identity == source.identity(root) && p.rev.as_deref() == Some(rev.as_str())
             });
 
             // Cached from an earlier resolve of this same rev: the bytes are
@@ -173,7 +180,7 @@ fn resolve_one(
                 let cached = fetch::cache_path(root, &locked.digest);
                 if cached.is_dir() {
                     let (items, files) = read_pack(&entry.source, &cached)?;
-                    return verified(entry, source, items, &files, Some(&locked.digest));
+                    return verified(root, entry, source, items, &files, Some(&locked.digest));
                 }
             }
             if mode == ResolveMode::Offline {
@@ -209,6 +216,7 @@ fn fetch_verified(
     let pack_root = fetch::fetch(runner, &entry.source, &source.clone_url(), rev, staging)?;
     let (items, files) = read_pack(&entry.source, &pack_root)?;
     let resolved = verified(
+        root,
         entry,
         source,
         items,
@@ -227,6 +235,7 @@ fn fetch_verified(
 /// silently would apply bytes nobody pinned. There is no flag to accept it —
 /// the user re-pins, which is itself the new trust decision.
 fn verified(
+    root: &Path,
     entry: &PackEntry,
     source: &PackSource,
     items: Vec<Item>,
@@ -246,14 +255,17 @@ fn verified(
             ),
         });
     }
-    Ok(Resolved::Layer(items, record(entry, source, &digest)))
+    Ok(Resolved::Layer(items, record(root, entry, source, &digest)))
 }
 
 /// The lock record for one resolved pack.
-fn record(entry: &PackEntry, source: &PackSource, digest: &str) -> PackLock {
+///
+/// `root` because a path source's key is relative to it — the lock is
+/// committed, and an absolute one would be this checkout's alone. ADR-011.
+fn record(root: &Path, entry: &PackEntry, source: &PackSource, digest: &str) -> PackLock {
     PackLock {
         source: entry.source.clone(),
-        identity: source.identity(),
+        identity: source.identity(root),
         rev: entry.rev.clone(),
         digest: digest.to_string(),
         format: SUPPORTED_FORMATS[0],
@@ -389,6 +401,44 @@ mod tests {
 
     fn knowledge() -> Owner {
         Owner::Capability(Capability::Knowledge)
+    }
+
+    /// A directory and a repository are different sources however alike their
+    /// keys read. Since a path key became relative it can spell a repository
+    /// exactly, and refusing the pair as duplicates would fail a manifest that
+    /// is perfectly valid — a vendored tree beside the repo it mirrors.
+    /// ADR-011.
+    #[test]
+    fn a_directory_spelling_a_repository_is_not_a_duplicate_of_it() {
+        let repo = tempfile::tempdir().unwrap();
+        let masquerade = "github.com/six5536/superdev";
+        write_pack(
+            &repo.path().join(masquerade),
+            "acme-vendored",
+            "# vendored\n",
+        );
+
+        let mut manifest = manifest_with(DEFAULT_PACK.source, Some(DEFAULT_PACK.rev));
+        manifest.packs.push(PackEntry {
+            source: masquerade.into(),
+            rev: None,
+        });
+
+        let resolved = resolve(
+            repo.path(),
+            &FakeRunner::new(),
+            &manifest,
+            &Lock::default(),
+            ResolveMode::Offline,
+        )
+        .expect("a directory and a repository are two sources, not one named twice");
+        assert!(
+            resolved
+                .content
+                .item(knowledge(), ItemKind::Skill, "acme-vendored")
+                .is_some(),
+            "the vendored pack layered"
+        );
     }
 
     #[test]
