@@ -69,11 +69,13 @@ revision that resolves to different bytes than the lock recorded stops the run
 rather than quietly applying them.
 
 A pack is the files it contains, so it may not contain a symlink — anywhere,
-including its own root and its `pack.toml`. One stops the run naming the path.
-Deduplicating an item with a link would have the pack ship a file it does not
-carry, and a link does not survive a checkout the same way on every platform,
-so the same revision would otherwise verify on one machine and fail on
-another. Copy the file instead.
+including its own root and its `pack.toml` — nor a submodule. One stops the
+run naming the path. Deduplicating an item with a link would have the pack
+ship a file it does not carry, and a link does not survive a checkout the same
+way on every platform, so the same revision would otherwise verify on one
+machine and fail on another; a submodule is left empty by the shallow clone
+superdev makes, so the pack would ship an item with nothing in it. Copy the
+file, or vendor the directory, instead.
 
 Content releases separately from the binary, under its own `assets-vX.Y.Z`
 tags, so a skill fix does not wait for one. `superdev update` is what goes and

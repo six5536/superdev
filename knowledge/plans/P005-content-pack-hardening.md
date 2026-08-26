@@ -93,7 +93,7 @@ case below is new and drawn from the issue it closes.
 
 ### Slice 3: Git decides what a symlink is
 
-- [ ] Not started.
+- [x] Done — ticked by integrate at merge.
 - Gap: [I009](../issues/I009-a-skipped-symlink-says-nothing.md), the
   cross-platform half.
 - Change: after the checkout and before anything is read or digested, `fetch`

@@ -88,6 +88,15 @@ publish a version it cannot find a heading for.
   declares, and neither `sync` nor `status --drift` would have said so. If you
   were deduplicating a file with a link, copy it instead.
 
+  For a fetched pack, git's index decides what a link is rather than the
+  filesystem. Windows without `core.symlinks` checks a link out as a plain
+  file holding the target's path, which no filesystem check can tell from
+  content — so the same revision used to digest differently there, and a lock
+  committed from Linux failed on Windows saying only that the bytes did not
+  match. It now fails on both, naming the file. A submodule under the pack is
+  refused on the same answer: the shallow clone leaves it empty, so the pack
+  would have shipped an item with nothing in it.
+
 ### Fixed
 
 - The lock describes what is on disk, not only what the last run wrote. A file

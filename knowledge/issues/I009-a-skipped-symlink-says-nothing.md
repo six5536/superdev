@@ -3,8 +3,8 @@ type: Issue
 id: issue-009-a-skipped-symlink-says-nothing
 title: A symlink inside a pack is skipped in silence, so an item a pack meant to ship quietly disappears
 description: The walk drops every symlink without reporting it, so a pack that dedupes an item with a link resolves clean while that item is simply absent; sync writes nothing and status --drift stays green.
-status: draft
-tags: [ready-for-agent]
+status: stable
+tags: [done]
 links:
   - rel: references
     to: spec-content-packs

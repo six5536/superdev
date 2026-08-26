@@ -119,6 +119,17 @@ item its author meant the link to stand for, with `sync` silent and
 happens ([ADR-014](decisions/D014-a-symlink-in-a-pack-is-refused.md)). A pack
 author who wanted to deduplicate an item copies the file instead.
 
+What counts as a symlink is decided by whoever knows. For a fetched pack it is
+git's index, asked once after the checkout and before anything is read: on
+Windows without `core.symlinks` git writes a link as a plain file holding the
+target's path, which the filesystem cannot tell from content, so the same
+revision would digest differently there and a committed lock would stop being
+portable. A submodule is refused on the same answer, because the shallow
+sparse clone leaves its directory empty and the pack would ship an item with
+nothing in it. For a path pack there is no index and no second platform, so
+the filesystem decides — and that check runs for a fetched pack too, when it
+is read back from the cache, which has no index of its own.
+
 A pack-provided file is superdev's on exactly the terms an embedded one is:
 hashed into the lock, rewritten by `sync`, reported as drift when edited, and
 released by naming it in a `custom` list. Dropping a pack entry removes its
