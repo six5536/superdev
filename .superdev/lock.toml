@@ -1,3 +1,9 @@
+[[packs]]
+source = "./pack"
+identity = "pack"
+digest = "sha256:58675e89df9c62d69c8bd26f3c41671a5f571c62f39da02dd64c27f4d57fa39f"
+format = 1
+
 [components.bash-output-filter]
 provider = "rtk"
 version = "0.45.0"

@@ -235,7 +235,7 @@ writes the table after the fact: the manifest is the user's
 declaration, and the skill edits it as the user.
 
 The reverse direction is this repo's own `template-backport` skill
-(unmanaged, beside `asset-backport`): harvest an exemplar project into
+(unmanaged): harvest an exemplar project into
 a template's assets — reverse token substitution, the asset-layout
 deviations, the FILES table — to refresh a shipped template or create a
 new one.

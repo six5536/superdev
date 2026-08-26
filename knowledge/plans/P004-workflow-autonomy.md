@@ -317,6 +317,3 @@ not reach the default branch on its own.
   tagged `done`. The pack layout this plan edits is on `main` already, but its
   closing slices cut the pack release and dogfood the pin, and the new skills
   should ship in a release after that.
-- `.claude/skills/asset-backport/SKILL.md` still names
-  `crates/lib/superdev-core/assets/` as the source of truth. P003 moved it to
-  `/pack`. Out of scope here; worth a line in the backlog.

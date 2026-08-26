@@ -1,5 +1,12 @@
 blueprint = "0.2.0"
 
+# superdev's own content, read from the tree rather than from the copy
+# compiled into the binary: an edit under /pack/ reaches .claude/skills/ on the
+# next `sync`, with no rebuild in between. Layers over the embedded pack, which
+# is built from these same files, so it changes nothing until they differ.
+[[packs]]
+source = "./pack"
+
 [bash-output-filter]
 provider = "rtk"
 version = "0.45.0"
