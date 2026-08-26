@@ -90,6 +90,14 @@ carries only releases older than the pin, the run says so and the pin stays
 where the binary would put it. A manifest an earlier binary wrote gains the
 default entry on the first `update`, which is the only command that adds one.
 
+A pin resting on a **candidate** content tag — `assets-vA.B.C-rc.N`, what a
+binary release candidate cuts and what a repo that candidate set up is pinned
+to — is the one non-release pin `update` moves. It comes forward onto a
+release something vouches for: the one this binary carries, or one the source
+answered with. Its own version does not count, because a candidate tag says
+nothing about whether the release it is a candidate for was ever cut. A branch
+or a sha stays where it is.
+
 A pack-provided file is superdev's on exactly the terms an embedded one is:
 hashed into the lock, rewritten by `sync`, reported as drift when edited, and
 released by naming it in a `custom` list. Dropping a pack entry removes its

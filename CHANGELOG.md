@@ -43,6 +43,17 @@ publish a version it cannot find a heading for.
   `update`. `source` accepts `github:owner/repo` and `gitlab:owner/repo` as
   shorthand; every other spelling, an ssh alias included, is handed to `git`
   as written.
+
+  Releasing is one command per release. `npm run release X.Y.Z` cuts the
+  binary and, from the same commit, the content release its pin names, so
+  there is no second step to forget and no way to ship a binary pinned at
+  content it did not embed. `npm run release:pack` cuts a content release
+  alone: superdev's skills, templates and scaffolds change without a new
+  binary, no workflow runs and nothing reaches a registry. The pack carries a
+  version series of its own — `assets-vA.B.C`, apart from the binary's
+  `vX.Y.Z` — so binary semver stays contiguous. A release candidate cuts a
+  candidate content tag, which `update` never moves a released pin to; a pin
+  left on one comes forward as soon as a release covers it.
 - A `.agents/tools.md` scaffold: reach for internal and MCP tools before Bash.
   Written once, like the other agent rules, and imported by
   `.agents/superdev.md` after the capability files.

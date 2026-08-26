@@ -186,7 +186,7 @@ only variable when the Windows job runs.
 
 ### Slice 12: One command per release
 
-- [ ] Done — ticked by integrate at merge.
+- [x] Done — ticked by integrate at merge.
 - Change: teach `npm run release X.Y.Z` to set `/pack/pack.toml`'s version,
   set `DEFAULT_PACK.rev` to the pack tag it is about to cut, and create both
   `vX.Y.Z` and `assets-vA.B.C` from one commit. Add `npm run release:pack`,

@@ -33,7 +33,8 @@ Two traps:
 
 - `npm run lint` is only `cargo clippy --workspace`; CI runs clippy with
   `--all-targets -- -D warnings` plus fmt-check, doctests, rustdoc `-D
-  warnings`, launcher tests, version consistency, and the coverage gate.
+  warnings`, launcher tests, release-script tests (`npm run test:scripts`),
+  version consistency, and the coverage gate.
   Before a PR, run the full list in CONTRIBUTING, not the dailies.
 - Only the launcher package is an npm workspace. The five platform-binary
   packages deliberately are not (npm enforces their `os`/`cpu` fields on
