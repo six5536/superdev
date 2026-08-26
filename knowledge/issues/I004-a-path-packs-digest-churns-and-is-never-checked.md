@@ -3,8 +3,8 @@ type: Issue
 id: issue-004-a-path-packs-digest-churns-and-is-never-checked
 title: A path pack's lock digest is rewritten by every content commit and verified by nothing
 description: The lock records a digest over a path pack's whole tree that resolution never checks, so every commit touching pack/ rewrites the same line — conflicting between concurrent content PRs — and a commit made without sync leaves a wrong digest nothing detects.
-status: draft
-tags: [ready-for-agent]
+status: stable
+tags: [done]
 links:
   - rel: references
     to: spec-content-packs

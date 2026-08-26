@@ -261,7 +261,12 @@ overwrote had been edited by hand, and say so (after backing it up).
 A `[[packs]]` entry records each pack the last apply resolved — the source as
 the manifest wrote it, the normalised identity every spelling of that source
 shares, the rev, a digest over the resolved tree and the `format` the pack
-declared — so a later run can prove it got the same bytes. The per-file hashes
+declared — so a later run can prove it got the same bytes. `rev` and `digest`
+are both absent for a path source, and absent together: a directory is read
+afresh every run, so there are no pinned bytes to name or to check against,
+and a digest recorded there would be rewritten by every commit touching the
+pack and read by nothing
+([ADR-016](decisions/D016-a-path-pack-records-no-digest.md)). The per-file hashes
 stay in `files` with everything else, which is what makes a dropped pack's
 files orphans by the ordinary rule. Absent when no pack was named.
 

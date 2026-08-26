@@ -26,7 +26,10 @@ publish a version it cannot find a heading for.
   sparse — so credentials and forge access stay theirs and superdev holds no
   token. Each resolved pack is verified against the digest the lock records
   for its rev and kept under `.superdev/cache/packs/`, so a later `sync` or
-  `status` needs the network only for bytes the machine does not have. A rev
+  `status` needs the network only for bytes the machine does not have. A
+  directory pack records no digest in the lock — it is read afresh every run,
+  so there are no pinned bytes to check against, and a value there would be
+  rewritten by every commit touching the pack and read by nothing. A rev
   that resolves to different bytes than the lock recorded fails the run and
   writes nothing: re-pinning is the only way forward, and is itself the new
   trust decision. `status` gains `content:` lines naming what it resolved

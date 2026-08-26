@@ -3,7 +3,8 @@ type: Plan
 id: feature-plan-content-pack-hardening
 title: Content pack hardening — feature plan
 description: Deliver ADR-012 to ADR-016 in seven slices — refuse an unsupported transport, refuse a symlink in a pack and let git decide what one is, give the spawn seam a deadline and an environment, bound the one unprompted request, prove a pin before writing it, and stop recording a digest nothing reads.
-status: draft
+status: stable
+tags: [done]
 links:
   - rel: references
     to: spec-content-packs
@@ -173,7 +174,7 @@ case below is new and drawn from the issue it closes.
 
 ### Slice 7: A path pack records no digest
 
-- [ ] Not started.
+- [x] Done — ticked by integrate at merge.
 - Gap: [I004](../issues/I004-a-path-packs-digest-churns-and-is-never-checked.md).
 - Change: `PackLock.digest` becomes `Option<String>`, omitted for a path
   source; `resolve_one`'s path arm records none and the git arm's three

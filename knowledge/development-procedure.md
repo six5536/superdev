@@ -61,10 +61,13 @@ only the blueprint's default git source is the base
 ([ADR-004](decisions/D004-base-pack-identity.md)), so **deleting or renaming**
 an item under `pack/` does not remove its live copy — that still needs a
 rebuild, and `status --drift` stays green until then
-([I003](issues/I003-a-local-pack-cannot-remove-what-it-dropped.md)). And the
-lock records a digest over the whole tree, so any commit touching `pack/`
-should be made with `sync` run
-([I004](issues/I004-a-path-packs-digest-churns-and-is-never-checked.md)).
+([I003](issues/I003-a-local-pack-cannot-remove-what-it-dropped.md)). What it
+no longer does is record a digest for the pin: a path pack has none, so a
+commit touching `pack/` no longer rewrites a lock line
+([ADR-016](decisions/D016-a-path-pack-records-no-digest.md)). Run `sync` with
+such a commit anyway — the per-file hashes still move when a live copy does,
+and a lock that has stopped describing what is on disk is the failure
+[I005](issues/I005-a-backport-leaves-the-lock-stale.md) closed.
 
 The managed hook entry names a bare `superdev`, and this repo has no installed
 copy. `scripts/superdev` execs `cargo run` against this tree; symlink it onto
