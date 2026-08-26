@@ -59,6 +59,18 @@ publish a version it cannot find a heading for.
   Written once, like the other agent rules, and imported by
   `.agents/superdev.md` after the capability files.
 
+### Security
+
+- A pack source can no longer choose what superdev runs. A `[[packs]]` entry
+  arrives with a repository, and git's `ext::` transport takes a command as
+  its connection — so on a machine configured to permit that transport,
+  running `sync` or `update` in a repo you cloned ran whatever its manifest
+  named. Every git call superdev makes now refuses those transports outright,
+  a source or rev beginning with `-` is refused when the manifest is read, and
+  operands are passed after `--`. A stock git already refused the transport;
+  what changes is that superdev no longer depends on your configuration to say
+  so.
+
 ### Changed
 
 - The agent-rules files are each wrapped in a tag naming what they are —

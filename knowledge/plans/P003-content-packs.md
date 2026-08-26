@@ -248,7 +248,7 @@ unplanned, so nothing scheduled can stall behind one.
 
 ### Slice 15: Nothing superdev spawns can be talked into running a command
 
-- [ ] Done — ticked by integrate at merge.
+- [x] Done — ticked by integrate at merge.
 - Gap: [I007](../issues/I007-a-pack-source-reaches-git-with-no-scheme-check.md),
   the half of it that needs no decision — and the half that closes the hole.
 - Change: add `-c protocol.ext.allow=never` (and the same for the other

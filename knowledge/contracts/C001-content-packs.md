@@ -78,8 +78,9 @@ pub enum PackSource {
 }
 
 impl PackSource {
-    /// Parse one manifest entry. Rejects a git source carrying no `rev` and
-    /// a path source that names one.
+    /// Parse one manifest entry. Rejects a git source carrying no `rev`, a
+    /// path source that names one, and a source or rev beginning with `-`,
+    /// which git reads as an option wherever it meets it. ADR-004, I007.
     pub fn parse(entry: &PackEntry) -> Result<PackSource>;
 
     /// The comparison key: scheme, userinfo, a `.git` suffix and any trailing

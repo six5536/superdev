@@ -53,6 +53,18 @@ only (pre-1.0, no backports).
   default pack's key and be treated as the base. A pack declares no
   executable action, and the instruction files, the AOKF spec and
   `PROJECT.md` are refused by path before any file is read.
+- **A pack source cannot choose what runs.** A manifest arrives with a
+  repository, so `source` is not superdev's to trust. Every git call is built
+  by one function that puts `-c protocol.ext.allow=never` in front — an
+  `ext::` URL names a command and git runs it as the connection, and whether
+  it may is otherwise the user's config to set. Callers pass the verb and its
+  operands and cannot omit the override, because they never assemble the
+  vector. A source or rev beginning with `-` is refused when the manifest is
+  parsed, and `--` precedes every operand, so a value's shape decides nothing.
+  What is *not* closed is the transport: `git://` and `http://` normalise onto
+  the default identity like any other spelling, so a cloned manifest can still
+  have the base pack fetched over a transport anyone on-path can answer
+  ([I007](issues/I007-a-pack-source-reaches-git-with-no-scheme-check.md)).
 - **Local by default.** The CLI takes no network input at runtime; the
   network is touched only for pinned tool installs, the one-time
   embedding model download (or the explicit embeddings-API opt-in), fetching

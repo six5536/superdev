@@ -1,8 +1,8 @@
 ---
 type: Issue
 id: issue-007-a-pack-source-reaches-git-with-no-scheme-check
-title: A pack source reaches git unvalidated, so a repo's manifest can run a command through a transport helper
-description: "The source string is handed to git clone as the URL with no scheme allowlist and no end-of-options separator, so a manifest naming a command-running transport helper executes it — confirmed on a git that permits the transport, and superdev contributes no defence of its own."
+title: A pack source's scheme is unchecked, so the base pack can be fetched over a transport anyone on-path can answer
+description: "The command-running half is closed; what remains is that superdev allowlists no scheme, so git:// and http:// normalise onto the default identity and a cloned manifest can have the base pack fetched over an unauthenticated transport."
 status: draft
 tags: [needs-triage]
 links:
@@ -12,7 +12,19 @@ links:
     to: security-requirements
 ---
 
-# Bug: a pack source reaches git with no scheme check
+# Bug: a pack source's scheme is unchecked
+
+## Resolved in part
+
+P003 slice 15 closed the command-execution half. Every git call is built by
+one function that puts `-c protocol.ext.allow=never` in front, so an `ext::`
+URL runs nothing whatever the user's git config says; a source or rev
+beginning with `-` is refused at parse; and `--` precedes every operand. Two
+regression tests hold it, one per verb — `update`'s query was a second way in
+that `sync` could not reach.
+
+What remains is below, and it needs the interface decision this issue was
+always going to need.
 
 ## Summary
 
@@ -44,15 +56,18 @@ makes merely *resolving* someone else's source execute their code.
 
 ## Steps to reproduce
 
-1. `printf '[protocol "ext"]\n\tallow = always\n' > /tmp/gitcfg` — the
-   non-default configuration this needs.
-2. In a scratch repo, `superdev init`, then append:
+1. In a scratch repo, `superdev init`, then point the pack entry at the
+   default repository over an unauthenticated transport:
    ```toml
    [[packs]]
-   source = "ext::touch /tmp/PROOF"
-   rev = "main"
+   source = "git://github.com/six5536/superdev"
+   rev = "assets-v0.2.0"
    ```
-3. `GIT_CONFIG_GLOBAL=/tmp/gitcfg superdev sync`
+2. `superdev sync`
+
+`git_identity` discards the scheme, so this keys as the default pack — which
+means it *replaces* the embedded content rather than layering over it, and it
+is fetched over a transport with no authentication and no integrity.
 
 ## Expected behaviour
 
@@ -61,32 +76,32 @@ spawned, naming the source.
 
 ## Actual behaviour
 
-`/tmp/PROOF` is created — the command ran. `sync` then reports the clone
-failure, having already executed it. On a stock git the run instead fails with
-`fatal: transport 'ext' not allowed`, so the defence is entirely git's.
+The clone goes out over `git://`. Nothing refuses it, and because identity
+ignores the scheme the content replaces superdev's own. The same holds for
+`http://`, and for any `<name>::url` whose `git-remote-<name>` helper exists
+on PATH — the override closes `ext` by name and cannot close a set that is
+whatever the machine happens to carry.
 
 ## Root cause (if known)
 
-`is_git` at `crates/lib/superdev-core/src/pack/source.rs:258` accepts any
-`word:...` form as a git source, with no scheme allowlist. `clone_url`
-(`source.rs:149`) returns anything that is not the `github`/`gitlab` shorthand
-verbatim. `fetch` (`crates/lib/superdev-core/src/pack/fetch.rs:116`) pushes it
-as the clone operand with no `--` before it.
+`is_git` accepts any `word:...` form as a git source with no scheme
+allowlist, and `git_identity` normalises on the substring after the first
+`://`, so the scheme plays no part in deciding which source an entry names.
+That is deliberate for the case it was designed for — one repository written
+four ways is one source (ADR-004) — and it is what lets a scheme nobody
+vetted inherit the base pack's standing.
 
 ## Proposed fix / workaround
 
-- Fix, in order of value:
-  1. Allowlist the schemes superdev supports — `https://`, `ssh://`, `git://`,
-     `file://`, the `github:`/`gitlab:` shorthands and the `user@host:path` scp
-     form — and refuse the rest, naming the source.
-  2. Refuse a source or rev that begins with `-`, and put `--` before the
-     operands in every git invocation (`fetch.rs`, and `pin.rs`'s `ls-remote`
-     for consistency). Without it a value like `--upload-pack=id:x`, which
-     `is_git` accepts, is read by git as an option.
-  3. Add `-c protocol.ext.allow=never` to the `verbatim()` overrides, so the
-     defence holds whatever the user's config says.
-- Workaround: do not run `superdev sync` in a repository whose manifest you
-  have not read.
+- Fix: allowlist rather than denylist, in both places it can be done.
+  `-c protocol.allow=never` with explicit `always` for `https`, `ssh` and
+  `file` closes every unknown helper at once, where naming `ext` closes one.
+  Refusing an unsupported scheme in `PackSource::parse` gives the better
+  error and refuses before anything spawns. Either narrows what a manifest
+  may say, which [C001](../contracts/C001-content-packs.md) documents as
+  `parse`'s rejections, so it is an interface decision — and the reason this
+  half stayed unscheduled while the other landed.
+- Workaround: read the manifest of a repository before running `sync` in it.
 
 ## Regression risk
 
