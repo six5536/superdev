@@ -77,6 +77,7 @@ npm run coverage:summary # coverage summary in the terminal
 npm run coverage:check   # enforce the gate: line coverage >= 90% per crate
 
 npm run test:launcher   # node test for the npm launcher shim
+npm run test:scripts    # node tests for the release scripts
 
 npm run smoke           # behavioural smoke of a release binary (build --release first)
 npm run smoke:launcher  # npm-pack the launcher + host platform package, run the
@@ -86,7 +87,8 @@ npm run smoke:manage    # real init + status in a scratch repo against the real
                         # mise/claude/codegraph; devcontainer only, never in CI
 
 npm run verify-version  # every version in the tree agrees (16 locations)
-npm run release <ver>   # bump + verify + commit + tag (does not push)
+npm run release <ver>   # bump + verify + commit + tag both series (no push)
+npm run release:pack    # cut a content release alone (does not push)
 ```
 
 Only the launcher (`packages/superdev`) is an npm workspace. The five
@@ -105,6 +107,7 @@ cargo nextest run --workspace
 cargo test --doc --workspace
 RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps
 npm run test:launcher
+npm run test:scripts
 npm run verify-version
 npm run check:aokf
 npm run check:blueprint
@@ -153,8 +156,17 @@ ask first, take the latest version, hoist to the workspace `Cargo.toml`.
 
 ## Releasing
 
-Releases are tag-driven (`.github/workflows/release.yml`, triggered by a `v*`
-tag).
+There are two release paths, and each is one command.
+
+- **A binary release** cuts `vX.Y.Z` and, from the same commit, the content
+  release `assets-vA.B.C` its `DEFAULT_PACK.rev` names. Tag-driven
+  (`.github/workflows/release.yml`, triggered by a `v*` tag).
+- **A content release** cuts `assets-vA.B.C` alone: superdev's skills,
+  templates and scaffolds change without a new binary. No workflow runs for it
+  and nothing reaches a registry — `superdev update` finds it by asking this
+  repository for its newest `assets-v` tag.
+
+### The binary release
 
 **1. Write the changelog.** Add a `## [X.Y.Z]` section to `CHANGELOG.md`
 (promote `[Unreleased]` if that is where the notes already are). This is not
@@ -171,6 +183,15 @@ That sets the version everywhere in lockstep (Cargo workspace, the internal
 `superdev-core` pin, all six `package.json` files, and **both lockfiles**),
 verifies it landed consistently, then commits and tags. It deliberately stops
 there.
+
+It also cuts the content release riding on that commit: `pack/pack.toml`'s
+version moves to the next patch, `DEFAULT_PACK.rev` is set to the tag that
+version releases as, and the commit is tagged `assets-vA.B.C` as well as
+`vX.Y.Z`. Pass a second argument (`npm run release X.Y.Z A.B.C`) to choose the
+pack version instead of taking the patch bump. Setting both together is what
+makes it impossible to ship a binary whose pin names content it did not embed;
+a Rust test holds the pair, and the release fails rather than writing one
+without the other.
 
 **3. Review, then push.**
 
@@ -197,6 +218,38 @@ Pushing the tag is what triggers the publish, and publishes cannot be undone
 
 A prerelease tag (`vX.Y.Z-rc.1`) publishes to npm under the `next` dist-tag and
 is marked as a prerelease on GitHub, so it never becomes `latest`.
+
+### The content release
+
+To ship a skill, template or scaffold fix without a binary:
+
+**1. Write the changelog.** Add a `## [assets-vA.B.C]` section to
+`CHANGELOG.md` saying what the content change is. A content release has no
+binary section to be described by, so it carries its own; `npm run
+release:pack` refuses a tag it cannot find one for.
+
+**2. Cut it.**
+
+```sh
+npm run release:pack           # bumps pack/pack.toml's patch
+npm run release:pack A.B.C     # or name the version
+```
+
+That moves `pack/pack.toml` and `DEFAULT_PACK.rev` together, commits, and tags
+`assets-vA.B.C`. Like the binary release it stops before pushing.
+
+**3. Review, then push.**
+
+```sh
+git show assets-vA.B.C
+git push --follow-tags
+```
+
+The `v*` filter on `release.yml` does not match an `assets-v` tag, so no
+workflow runs and nothing is published. What the push does is make the release
+visible to `superdev update`, which asks this repository for its newest
+`assets-v` tag and moves a default pin there — that is how the fix reaches
+repos whose binary has not changed.
 
 ### Publishing credentials
 

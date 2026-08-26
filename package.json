@@ -23,12 +23,14 @@
         "coverage:summary": "cargo +nightly llvm-cov nextest --workspace --summary-only",
         "coverage:check": "cargo +nightly llvm-cov clean --workspace && cargo +nightly llvm-cov nextest --workspace --no-report && cargo +nightly llvm-cov report --summary-only --ignore-filename-regex 'crates/app' --fail-under-lines 90 && cargo +nightly llvm-cov report --summary-only --ignore-filename-regex 'crates/lib' --fail-under-lines 90",
         "test:launcher": "node --test packages/superdev/test/*.test.js",
+        "test:scripts": "node --test scripts/test/*.test.mjs",
         "smoke": "node scripts/release-smoke.mjs",
         "smoke:launcher": "node scripts/launcher-smoke.mjs",
         "smoke:manage": "bash scripts/manage-smoke.sh",
         "set-version": "node scripts/set-version.mjs",
         "verify-version": "node scripts/verify-version.mjs",
-        "release": "node scripts/release.mjs"
+        "release": "node scripts/release.mjs",
+        "release:pack": "node scripts/release-pack.mjs"
     },
     "devDependencies": {
         "@types/node": "^26.1.2"

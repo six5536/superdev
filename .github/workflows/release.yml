@@ -2,6 +2,10 @@ name: Release
 
 on:
   push:
+    # `v*` and not `*`: a content release is tagged `assets-vA.B.C`, which this
+    # filter does not match, so cutting one runs no five-platform build and
+    # publishes nothing. That is the point of releasing content apart from the
+    # binary (ADR-008), and widening this filter would take it away.
     tags: ["v*"]
 
 # Bypass sccache in CI.

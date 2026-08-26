@@ -81,6 +81,10 @@ jobs:
         if: runner.os != 'Windows'
         run: node --test packages/superdev/test/*.test.js
 
+      - name: Release script tests
+        if: runner.os != 'Windows'
+        run: npm run test:scripts
+
       - name: Version consistency
         if: runner.os != 'Windows'
         run: node scripts/verify-version.mjs
