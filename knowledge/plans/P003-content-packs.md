@@ -232,7 +232,9 @@ only variable when the Windows job runs.
   an asset edit reaches `.claude/skills/` on the next `sync` without a
   rebuild. Retire the `asset-backport` skill and the workflow note that
   documents it. Answers the spec's remaining open question in the
-  affirmative.
+  affirmative. (Superseded after the fact: the pack-to-live direction is
+  what the pin removed, and `pack-backport` replaced the skill for the
+  live-to-pack one, which iterating on a live copy still needs.)
 - Done-check: editing `pack/knowledge/skills/frame/SKILL.md` and running
   `superdev sync` updates `.claude/skills/frame/SKILL.md` with no rebuild;
   `asset-backport` is gone and nothing references it.

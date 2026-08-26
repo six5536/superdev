@@ -275,13 +275,23 @@ Settled during delivery:
 
 - Whether `superdev` should dogfood by pinning its own content directory as a
   local-path pack, retiring the `asset-backport` step — **yes**, and it landed
-  in this feature's last slice. The manifest pins `./pack`, an edit there
-  reaches `.claude/skills/` with no rebuild, and `asset-backport` is gone. Two
-  limits came with it, filed rather than fixed:
+  in this feature's last slice. The manifest pins `./pack` and an edit there
+  reaches `.claude/skills/` with no rebuild.
+
+  What the pin removed is the *pack-to-live* round trip: no rebuild stands
+  between the two any more. It does not remove the *live-to-pack* one, which
+  is what backporting is, and which anyone iterating on a live copy still
+  does. `asset-backport` was retired and `pack-backport` took its place —
+  smaller, because the pack's layout is its own declaration and a build script
+  enumerates it, so a new file needs no table.
+
+  Three limits came with the pin, filed rather than fixed:
   [I003](../issues/I003-a-local-pack-cannot-remove-what-it-dropped.md), a
   layer cannot remove what it dropped, and
   [I004](../issues/I004-a-path-packs-digest-churns-and-is-never-checked.md),
-  the recorded digest churns and is checked by nothing.
+  the recorded digest churns and is checked by nothing, and
+  [I005](../issues/I005-a-backport-leaves-the-lock-stale.md), a backport
+  leaves the lock describing the file it replaced.
 
 # Test plan: externally sourced content packs
 

@@ -51,8 +51,10 @@ The manifest also pins `/pack/` as a local-path pack, so this repo's content
 comes from the tree rather than from the copy compiled into the binary: edit a
 skill, template or scaffold under `pack/` and `cargo run -- sync` writes it to
 `.claude/skills/` with no rebuild in between. That retired the `asset-backport`
-skill, which existed to mirror an edit made to a live file back into the asset
-it shipped from.
+skill; `pack-backport` replaced it. The pin removed the pack-to-live round
+trip — no rebuild stands between them — not the live-to-pack one, so an edit
+made to a live copy to try it still has to be mirrored into `pack/` before the
+next `sync` overwrites it.
 
 Two things the pin does not do. It **layers** rather than replacing, because
 only the blueprint's default git source is the base
