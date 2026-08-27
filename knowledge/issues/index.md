@@ -16,6 +16,15 @@
 * [Five findings the repository alone can decide are only warnings, and go unread](I012-five-decidable-findings-only-warn.md) - broken links, missing resources, missing sources, missing index targets and unjoined footnotes are all decidable from the tree, but SPEC §11 makes them warnings; the bundle carried 39 of them unactioned until someone happened to look.
 * [Sync would revert the schema migration and the conformance decision, and the pre-PR check says so 65 times](I016-sync-would-revert-the-schema-migration.md) - the live tree carries the schema migration and ADR-017; /pack/ still carries what they replaced, so status --drift reports 65 changes and sync would restore 41 deleted templates, put the level ladder back into the AOKF spec, and overwrite 21 rewritten skills.
 
+## Issue tracker
+
+* [The Issue type has one shape, bug-report, so everything filed has to pretend to be a defect](I015-every-issue-must-be-a-bug-report.md) - one schema and one template constrain type Issue, so a feature request, a rename or a decision has to invent repro steps and an environment to be filed at all — six of the fourteen issues on file already do, and a feature request has no home but an untracked bullet in the backlog.
+
+## Naming
+
+* [The canonical knowledge is called "the bundle" on every surface, and the word describes nothing](I013-the-knowledge-is-called-the-bundle.md) - AOKF SPEC §1 names the knowledge tree a "bundle" and the word has spread to 880 places — the --bundle flag, the JSON report key, the Rust API, the skills and the concepts — where it tells a reader nothing about a directory of markdown the repository owns.
+* [The schema validator is called "format", which already means three other things here](I014-the-schema-validator-is-called-format.md) - the grammar-driven validator lives at src/format/, ships its grammar at .agents/format/ and calls its files "superdev-format", while format! is 457 lines away in the same crate, "pack format" is a glossary term and AOKF is itself a format. It should be called schema-validator.
+
 ## The superdev format
 
 * [The format the agent must write in has no document, and the renderer that would produce one has no consumer](I017-the-format-has-no-agent-facing-document.md) - every skill and schema is written in superdev-format, and the only statement of it is a 700-line grammar file the agent is never pointed at; the doc renderer ported for exactly this now exists in the binary with nothing calling it but a flag nobody runs.
