@@ -739,3 +739,34 @@ mod tests {
         );
     }
 }
+
+#[cfg(test)]
+mod yaml_dialect {
+    /// `yes` / `no` / `on` / `off` are strings in YAML 1.2 and booleans in 1.1.
+    /// The Node reference reads the grammar with a 1.2 parser, so the port has
+    /// to agree or `booleanValues` would differ and every boolean frontmatter
+    /// key would be checked against the wrong set.
+    #[test]
+    fn unquoted_yes_and_no_are_strings_as_they_are_for_the_reference() {
+        let v: serde_yaml_ng::Value =
+            serde_yaml_ng::from_str("- \"true\"\n- yes\n- no\n- on\n- off\n- 1\n").unwrap();
+        let kinds: Vec<&str> = v
+            .as_sequence()
+            .unwrap()
+            .iter()
+            .map(|x| {
+                if x.is_string() {
+                    "string"
+                } else if x.is_bool() {
+                    "bool"
+                } else {
+                    "other"
+                }
+            })
+            .collect();
+        assert_eq!(
+            kinds,
+            ["string", "string", "string", "string", "string", "other"]
+        );
+    }
+}
