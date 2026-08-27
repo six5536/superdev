@@ -20,9 +20,6 @@ const BUNDLE_DIR: &str = "knowledge";
 /// state: `.superdev/cache/` is gitignored by `init`.
 const INDEX_DIR: &str = ".superdev/cache/aokf-index";
 
-/// Conformance level `validate` grades at when the caller names none.
-const DEFAULT_LEVEL: u8 = 2;
-
 /// Serve a project subsystem over MCP.
 #[derive(clap::Subcommand)]
 pub enum McpCommand {
@@ -37,9 +34,6 @@ pub enum AokfCommand {
     Validate {
         /// Bundle directory (default: `knowledge`)
         path: Option<PathBuf>,
-        /// Conformance level to grade at (default: 2)
-        #[arg(long, value_parser = clap::value_parser!(u8).range(0..=2))]
-        level: Option<u8>,
         /// Emit JSON instead of text
         #[arg(long)]
         json: bool,
@@ -108,7 +102,6 @@ pub fn run_aokf(cmd: &AokfCommand, root: &Path) -> Result<u8> {
     match cmd {
         AokfCommand::Validate {
             path,
-            level,
             json,
             repo_root,
         } => {
@@ -117,7 +110,7 @@ pub fn run_aokf(cmd: &AokfCommand, root: &Path) -> Result<u8> {
             let repo_root = repo_root
                 .as_deref()
                 .map_or_else(|| root.to_path_buf(), |p| root.join(p));
-            let report = validate(&bundle, &repo_root, level.unwrap_or(DEFAULT_LEVEL));
+            let report = validate(&bundle, &repo_root);
             if *json {
                 let mut value = report.to_json();
                 // The bundle path is the caller's string, so core leaves the
@@ -196,7 +189,7 @@ fn hook_validate(root: &Path) -> Result<u8> {
     if !under_bundle(&bundle, edited) {
         return Ok(0);
     }
-    let report = validate(&load_bundle(&bundle)?, &root, DEFAULT_LEVEL);
+    let report = validate(&load_bundle(&bundle)?, &root);
     if report.passed() {
         return Ok(0);
     }

@@ -341,7 +341,7 @@ mod tests {
 
     /// The starter bundle must itself conform: write every knowledge file
     /// the component plans into an empty repo, then run the embedded
-    /// validator over it at level 2. A skeleton that ships broken would fail
+    /// validator over it. A skeleton that ships broken would fail
     /// the very hook superdev installs beside it.
     #[test]
     fn the_seeded_bundle_validates_clean_at_level_2() {
@@ -354,9 +354,9 @@ mod tests {
             }
         }
         let bundle = crate::aokf::bundle::load_bundle(&dir.path().join("knowledge")).unwrap();
-        let report = crate::aokf::validate::validate(&bundle, dir.path(), 2);
+        let report = crate::aokf::validate::validate(&bundle, dir.path());
         assert!(report.findings.is_empty(), "{:#?}", report.findings);
-        assert_eq!(report.achieved_level, 2);
+        assert!(report.passed());
         assert!(report.concept_count >= 20, "{}", report.concept_count);
     }
 

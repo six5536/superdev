@@ -1,12 +1,9 @@
 {
   "concepts": 1,
-  "checked_level": 2,
-  "achieved_level": 2,
   "passed": true,
   "findings": [
     {
       "severity": "warning",
-      "error_at_level": null,
       "file": "alpha.md",
       "message": "footnote [^orphan] has no matching sources[].id"
     }

@@ -1,8 +1,8 @@
-//! validate.rs — the document check of SPEC §10 and the conformance ladder
-//! of SPEC §11.
+//! validate.rs — the document check of SPEC §10 and the conformance
+//! decision of SPEC §11.
 //!
 //! A behavioural port of the Python reference validator that this replaced:
-//! the same findings, at the same levels, in the same order. Where the two
+//! the same findings, with the same severities, in the same order. Where the two
 //! differ, the divergence is noted at the check. `tests/validator_parity.rs`
 //! holds the reference behaviour as goldens.
 
@@ -40,32 +40,22 @@ pub struct Finding {
     pub path: String,
     /// What is wrong.
     pub message: String,
-    /// Lowest conformance level at which this is an error; `None` for the
-    /// spec's always-warn items (SPEC §10 item 5).
-    pub error_at: Option<u8>,
+    /// Whether this fails the bundle. `false` for the spec's always-warn
+    /// items (SPEC §10 item 5), which report without failing.
+    pub fatal: bool,
 }
 
 impl Finding {
-    /// `"error"` when the finding is fatal at `checked_level`, otherwise
-    /// `"warning"`.
+    /// `"error"` when the finding fails the bundle, otherwise `"warning"`.
     #[must_use]
-    pub fn severity(&self, checked_level: u8) -> &'static str {
-        if self.error_at.is_some_and(|at| at <= checked_level) {
-            "error"
-        } else {
-            "warning"
-        }
+    pub fn severity(&self) -> &'static str {
+        if self.fatal { "error" } else { "warning" }
     }
 }
 
 /// The outcome of one validation run.
 #[derive(Debug, Clone)]
 pub struct Report {
-    /// Highest level the bundle satisfies; `-1` when level 0 itself fails,
-    /// which the human rendering prints as `none`.
-    pub achieved_level: i8,
-    /// The level this run graded against.
-    pub checked_level: u8,
     /// Everything found, in file order.
     pub findings: Vec<Finding>,
     /// Concepts that parsed.
@@ -73,13 +63,11 @@ pub struct Report {
 }
 
 impl Report {
-    /// Whether the bundle passes at the checked level.
+    /// Whether the bundle conforms (SPEC §11). There is no partial
+    /// conformance: one fatal finding is the whole verdict.
     #[must_use]
     pub fn passed(&self) -> bool {
-        !self
-            .findings
-            .iter()
-            .any(|f| f.error_at.is_some_and(|at| at <= self.checked_level))
+        !self.findings.iter().any(|f| f.fatal)
     }
 
     /// The report as JSON.
@@ -93,8 +81,7 @@ impl Report {
             .iter()
             .map(|f| {
                 serde_json::json!({
-                    "severity": f.severity(self.checked_level),
-                    "error_at_level": f.error_at,
+                    "severity": f.severity(),
                     "file": f.path,
                     "message": f.message,
                 })
@@ -102,8 +89,6 @@ impl Report {
             .collect();
         serde_json::json!({
             "concepts": self.concept_count,
-            "checked_level": self.checked_level,
-            "achieved_level": self.achieved_level,
             "passed": self.passed(),
             "findings": findings,
         })
@@ -113,22 +98,13 @@ impl Report {
     /// bundle path above it.
     #[must_use]
     pub fn render_human(&self) -> String {
-        let achieved = if self.achieved_level < 0 {
-            "none".to_string()
-        } else {
-            self.achieved_level.to_string()
-        };
-        let mut lines = vec![
-            format!("  concepts: {}", self.concept_count),
-            format!("  achieved level: {achieved}"),
-            format!("  checked at level: {}", self.checked_level),
-        ];
+        let mut lines = vec![format!("  concepts: {}", self.concept_count)];
         if self.findings.is_empty() {
             lines.push("  ✓ no findings".to_string());
         }
         let mut errors = 0;
         for finding in &self.findings {
-            let severity = finding.severity(self.checked_level);
+            let severity = finding.severity();
             let mark = if severity == "error" {
                 errors += 1;
                 "✗"
@@ -144,8 +120,7 @@ impl Report {
         let warnings = self.findings.len() - errors;
         lines.push(String::new());
         lines.push(format!(
-            "{verdict} at level {} ({errors} error(s), {warnings} warning(s))",
-            self.checked_level
+            "{verdict} ({errors} error(s), {warnings} warning(s))"
         ));
         lines.join("\n") + "\n"
     }
@@ -160,12 +135,11 @@ struct Context<'a> {
     ids: &'a HashMap<String, String>,
 }
 
-/// Run the document check (SPEC §10) and grade the ladder (SPEC §11).
+/// Run the document check (SPEC §10) and decide conformance (SPEC §11).
 ///
-/// `repo_root` resolves `/`-rooted targets; `checked_level` decides which
-/// findings count as errors, and nothing else.
+/// `repo_root` resolves `/`-rooted targets.
 #[must_use]
-pub fn validate(bundle: &Bundle, repo_root: &Path, checked_level: u8) -> Report {
+pub fn validate(bundle: &Bundle, repo_root: &Path) -> Report {
     let mut findings = Vec::new();
     let ids = check_identities(bundle, &mut findings);
     check_manifest(bundle, &mut findings);
@@ -181,8 +155,6 @@ pub fn validate(bundle: &Bundle, repo_root: &Path, checked_level: u8) -> Report 
     check_indexes(bundle, repo_root, &mut findings);
 
     Report {
-        achieved_level: achieved_level(&findings),
-        checked_level,
         findings,
         concept_count: bundle.concepts.len(),
     }
@@ -209,7 +181,7 @@ fn check_identities(bundle: &Bundle, findings: &mut Vec<Finding>) -> HashMap<Str
         let concept = match entry {
             Ok(concept) => concept,
             Err(message) => {
-                findings.push(error(path, message.to_string(), 0));
+                findings.push(error(path, message.to_string()));
                 continue;
             }
         };
@@ -222,13 +194,11 @@ fn check_identities(bundle: &Bundle, findings: &mut Vec<Finding>) -> HashMap<Str
             findings.push(error(
                 path,
                 format!("`id` is not a valid slug: {}", repr_str(&id)),
-                0,
             ));
         } else if let Some(first) = ids.get(&id) {
             findings.push(error(
                 path,
                 format!("duplicate `id` {} (also in {first})", repr_str(&id)),
-                0,
             ));
         } else {
             ids.insert(id, path.to_string());
@@ -238,22 +208,14 @@ fn check_identities(bundle: &Bundle, findings: &mut Vec<Finding>) -> HashMap<Str
 }
 
 /// The manifest parses and carries no stamped keys (document check); it
-/// exists and declares `aokf` and `name` (level 1).
+/// exists and declares `aokf` and `name`.
 fn check_manifest(bundle: &Bundle, findings: &mut Vec<Finding>) {
     if let Some(message) = &bundle.manifest_error {
-        findings.push(error(
-            MANIFEST,
-            format!("manifest parse error: {message}"),
-            0,
-        ));
+        findings.push(error(MANIFEST, format!("manifest parse error: {message}")));
         return;
     }
     let Some(manifest) = &bundle.manifest else {
-        findings.push(error(
-            MANIFEST,
-            "no manifest (required at Level 1)".to_string(),
-            1,
-        ));
+        findings.push(error(MANIFEST, "no manifest (required)".to_string()));
         return;
     };
     // A manifest that parses to something other than a mapping has no keys
@@ -266,13 +228,12 @@ fn check_manifest(bundle: &Bundle, findings: &mut Vec<Finding>) {
             findings.push(error(
                 MANIFEST,
                 format!("stamped key `{key}` present in the working tree"),
-                0,
             ));
         }
     }
     for key in ["aokf", "name"] {
         if !truthy(&manifest.raw[key]) {
-            findings.push(error(MANIFEST, format!("manifest missing `{key}`"), 1));
+            findings.push(error(MANIFEST, format!("manifest missing `{key}`")));
         }
     }
 }
@@ -286,17 +247,15 @@ fn check_concept(concept: &Concept, context: &Context, findings: &mut Vec<Findin
         findings.push(error(
             path,
             "missing or empty required field `type`".to_string(),
-            0,
         ));
     }
     if fm["id"].is_null() {
-        findings.push(error(path, "no `id` (required at Level 1)".to_string(), 1));
+        findings.push(error(path, "no `id` (required)".to_string()));
     }
     if has_key(fm, "generated") {
         findings.push(error(
             path,
             "stamped field `generated` present in the working tree".to_string(),
-            0,
         ));
     }
     check_verified(path, &fm["verified"], findings);
@@ -368,17 +327,12 @@ fn check_verified(path: &str, value: &Value, findings: &mut Vec<Finding>) {
         findings.push(error(
             path,
             "`verified` must be a mapping or a list of mappings".to_string(),
-            0,
         ));
         return;
     };
     for (index, entry) in entries.iter().enumerate() {
         if !entry.is_mapping() {
-            findings.push(error(
-                path,
-                format!("verified[{index}] is not a mapping"),
-                0,
-            ));
+            findings.push(error(path, format!("verified[{index}] is not a mapping")));
             continue;
         }
         let by = &entry["by"];
@@ -389,7 +343,6 @@ fn check_verified(path: &str, value: &Value, findings: &mut Vec<Finding>) {
                     "verified[{index}].by must be `human:<id>` or `process:<id>`, got {}",
                     py_repr(by)
                 ),
-                0,
             ));
         }
         if !is_iso8601(&entry["at"]) {
@@ -399,7 +352,6 @@ fn check_verified(path: &str, value: &Value, findings: &mut Vec<Finding>) {
                     "verified[{index}].at is not ISO 8601: {}",
                     py_repr(&entry["at"])
                 ),
-                0,
             ));
         }
     }
@@ -419,22 +371,18 @@ fn check_sources(
     } else if let Some(sequence) = value.as_sequence() {
         sequence
     } else {
-        findings.push(error(path, "`sources` must be a list".to_string(), 0));
+        findings.push(error(path, "`sources` must be a list".to_string()));
         &empty
     };
 
     let mut ids = HashSet::new();
     for (index, source) in sources.iter().enumerate() {
         if !source.is_mapping() {
-            findings.push(error(path, format!("sources[{index}] is not a mapping"), 0));
+            findings.push(error(path, format!("sources[{index}] is not a mapping")));
             continue;
         }
         if !truthy(&source["resource"]) {
-            findings.push(error(
-                path,
-                format!("sources[{index}] missing `resource`"),
-                0,
-            ));
+            findings.push(error(path, format!("sources[{index}] missing `resource`")));
         }
         if !source["id"].is_null() {
             ids.insert(py_str(&source["id"]));
@@ -466,24 +414,23 @@ fn check_links(
         return;
     }
     let Some(entries) = value.as_sequence() else {
-        findings.push(error(path, "`links` must be a list".to_string(), 0));
+        findings.push(error(path, "`links` must be a list".to_string()));
         return;
     };
 
     for (index, link) in entries.iter().enumerate() {
         let at = format!("links[{index}]");
         if !link.is_mapping() {
-            findings.push(error(path, format!("{at} is not a mapping"), 0));
+            findings.push(error(path, format!("{at} is not a mapping")));
             continue;
         }
         let rel = &link["rel"];
         if !truthy(rel) {
-            findings.push(error(path, format!("{at} missing `rel`"), 0));
+            findings.push(error(path, format!("{at} missing `rel`")));
         } else if !rel.as_str().is_some_and(is_slug) {
             findings.push(error(
                 path,
                 format!("{at} `rel` is not lowercase kebab-case: {}", py_repr(rel)),
-                2,
             ));
         } else if !CORE_RELS.contains(&rel.as_str().unwrap_or_default()) {
             findings.push(warning(
@@ -494,7 +441,7 @@ fn check_links(
 
         let to = &link["to"];
         if !truthy(to) {
-            findings.push(error(path, format!("{at} missing `to`"), 0));
+            findings.push(error(path, format!("{at} missing `to`")));
             continue;
         }
         // An `id` first, then a path (SPEC §8).
@@ -507,7 +454,6 @@ fn check_links(
             findings.push(error(
                 path,
                 format!("{at} `to: {to}` resolves to no concept id or path"),
-                2,
             ));
             continue;
         };
@@ -515,7 +461,6 @@ fn check_links(
             findings.push(error(
                 path,
                 format!("{at} `to: {to}` has no mirroring body link"),
-                2,
             ));
         }
     }
@@ -543,26 +488,11 @@ fn check_indexes(bundle: &Bundle, repo_root: &Path, findings: &mut Vec<Finding>)
     }
 }
 
-/// The highest level with no error at or below it; `-1` when level 0 fails.
-fn achieved_level(findings: &[Finding]) -> i8 {
-    let mut achieved = -1;
-    for level in 0..=2u8 {
-        if findings
-            .iter()
-            .any(|f| f.error_at.is_some_and(|at| at <= level))
-        {
-            break;
-        }
-        achieved = i8::try_from(level).unwrap_or(-1);
-    }
-    achieved
-}
-
-fn error(path: &str, message: String, level: u8) -> Finding {
+fn error(path: &str, message: String) -> Finding {
     Finding {
         path: path.to_string(),
         message,
-        error_at: Some(level),
+        fatal: true,
     }
 }
 
@@ -570,7 +500,7 @@ fn warning(path: &str, message: String) -> Finding {
     Finding {
         path: path.to_string(),
         message,
-        error_at: None,
+        fatal: false,
     }
 }
 
@@ -818,15 +748,15 @@ mod tests {
     const B: &str = "---\ntype: T\nid: beta\n---\nx\n";
 
     #[test]
-    fn clean_bundle_passes_level_2() {
+    fn clean_bundle_passes() {
         let (b, _dir) = bundle_with(&[
             ("manifest.aokf.yaml", MANIFEST_YAML),
             ("a.md", A_MIRRORED),
             ("beta.md", B),
         ]);
-        let r = validate(&b, &b.root, 2);
+        let r = validate(&b, &b.root);
         assert!(r.passed(), "{:?}", r.findings);
-        assert_eq!(r.achieved_level, 2);
+        assert!(r.passed());
         assert_eq!(r.concept_count, 2);
         assert!(r.render_human().contains("no findings"));
         assert_eq!(r.to_json()["passed"], serde_json::json!(true));
@@ -845,25 +775,24 @@ mod tests {
                 "---\ntype: Spec\nid: beta\nlinks:\n  - rel: implemented-by\n    to: alpha\n---\nSee [alpha](plan.md).\n",
             ),
         ]);
-        let r = validate(&b, &b.root, 2);
+        let r = validate(&b, &b.root);
         assert!(r.passed(), "{:?}", r.findings);
         assert!(r.findings.is_empty(), "{:?}", r.findings);
     }
 
     #[test]
-    fn duplicate_ids_fail_level_0() {
+    fn duplicate_ids_fail() {
         let (b, _dir) = bundle_with(&[
             ("a.md", "---\ntype: T\nid: dup\n---\nx\n"),
             ("b.md", "---\ntype: T\nid: dup\n---\nx\n"),
         ]);
-        let r = validate(&b, &b.root, 2);
+        let r = validate(&b, &b.root);
         assert!(!r.passed());
-        assert_eq!(r.achieved_level, -1);
         assert!(r.findings.iter().any(|f| f.message.contains("dup")));
     }
 
     #[test]
-    fn unmirrored_link_fails_only_at_level_2() {
+    fn unmirrored_link_fails() {
         let files = [
             ("manifest.aokf.yaml", MANIFEST_YAML),
             (
@@ -873,10 +802,8 @@ mod tests {
             ("beta.md", B),
         ];
         let (b, _dir) = bundle_with(&files);
-        assert!(validate(&b, &b.root, 1).passed());
-        let r = validate(&b, &b.root, 2);
+        let r = validate(&b, &b.root);
         assert!(!r.passed());
-        assert_eq!(r.achieved_level, 1);
         assert!(r.findings[0].message.contains("no mirroring body link"));
     }
 
@@ -907,58 +834,50 @@ mod tests {
             ),
             ("nofm.md", "no frontmatter\n"),
         ]);
-        let r = validate(&b, &b.root, 2);
+        let r = validate(&b, &b.root);
         let found: Vec<String> = r
             .findings
             .iter()
-            .map(|f| {
-                format!(
-                    "{}|{:?}|{}|{}",
-                    f.severity(2),
-                    f.error_at,
-                    f.path,
-                    f.message
-                )
-            })
+            .map(|f| format!("{}|{}|{}", f.severity(), f.path, f.message))
             .collect();
         assert_eq!(
             found,
             [
-                "error|Some(0)|a.md|`id` is not a valid slug: 'Bad_Slug'",
-                "error|Some(0)|dup.md|duplicate `id` 'beta' (also in beta.md)",
-                "error|Some(0)|nofm.md|no frontmatter: expected a `---` line, then a closing `---`",
-                "error|Some(0)|manifest.aokf.yaml|stamped key `generated` present in the working tree",
-                "error|Some(0)|manifest.aokf.yaml|stamped key `counts` present in the working tree",
-                "error|Some(1)|manifest.aokf.yaml|manifest missing `name`",
-                "error|Some(0)|a.md|missing or empty required field `type`",
-                "error|Some(0)|a.md|stamped field `generated` present in the working tree",
-                "error|Some(0)|a.md|verified[0].by must be `human:<id>` or `process:<id>`, got 'nobody'",
-                "error|Some(0)|a.md|verified[0].at is not ISO 8601: 'yesterday'",
-                "warning|None|a.md|broken body link: nope.md",
-                "warning|None|a.md|`resource` path does not exist: /nowhere.rs",
-                "error|Some(0)|a.md|sources[1] missing `resource`",
-                "error|Some(0)|a.md|sources[2] is not a mapping",
-                "warning|None|a.md|sources[3].resource does not exist: /missing.rs",
-                "warning|None|a.md|footnote [^unknown] has no matching sources[].id",
-                "error|Some(0)|a.md|links[0] missing `rel`",
-                "error|Some(2)|a.md|links[1] `rel` is not lowercase kebab-case: 'Bad Rel'",
-                "warning|None|a.md|links[2] non-core rel `made-up` (read as relates-to)",
-                "error|Some(0)|a.md|links[3] missing `to`",
-                "error|Some(2)|a.md|links[4] `to: nowhere-at-all` resolves to no concept id or path",
-                "error|Some(0)|a.md|links[6] is not a mapping",
-                "error|Some(0)|dup.md|verified[1].at is not ISO 8601: '2026-13-45'",
-                "error|Some(0)|dup.md|verified[2] is not a mapping",
-                "error|Some(0)|dup.md|`links` must be a list",
-                "error|Some(1)|other.md|no `id` (required at Level 1)",
-                "error|Some(0)|other.md|`verified` must be a mapping or a list of mappings",
-                "error|Some(0)|other.md|`sources` must be a list",
-                "warning|None|index.md|index entry points at missing file: missing.md",
+                "error|a.md|`id` is not a valid slug: 'Bad_Slug'",
+                "error|dup.md|duplicate `id` 'beta' (also in beta.md)",
+                "error|nofm.md|no frontmatter: expected a `---` line, then a closing `---`",
+                "error|manifest.aokf.yaml|stamped key `generated` present in the working tree",
+                "error|manifest.aokf.yaml|stamped key `counts` present in the working tree",
+                "error|manifest.aokf.yaml|manifest missing `name`",
+                "error|a.md|missing or empty required field `type`",
+                "error|a.md|stamped field `generated` present in the working tree",
+                "error|a.md|verified[0].by must be `human:<id>` or `process:<id>`, got 'nobody'",
+                "error|a.md|verified[0].at is not ISO 8601: 'yesterday'",
+                "warning|a.md|broken body link: nope.md",
+                "warning|a.md|`resource` path does not exist: /nowhere.rs",
+                "error|a.md|sources[1] missing `resource`",
+                "error|a.md|sources[2] is not a mapping",
+                "warning|a.md|sources[3].resource does not exist: /missing.rs",
+                "warning|a.md|footnote [^unknown] has no matching sources[].id",
+                "error|a.md|links[0] missing `rel`",
+                "error|a.md|links[1] `rel` is not lowercase kebab-case: 'Bad Rel'",
+                "warning|a.md|links[2] non-core rel `made-up` (read as relates-to)",
+                "error|a.md|links[3] missing `to`",
+                "error|a.md|links[4] `to: nowhere-at-all` resolves to no concept id or path",
+                "error|a.md|links[6] is not a mapping",
+                "error|dup.md|verified[1].at is not ISO 8601: '2026-13-45'",
+                "error|dup.md|verified[2] is not a mapping",
+                "error|dup.md|`links` must be a list",
+                "error|other.md|no `id` (required)",
+                "error|other.md|`verified` must be a mapping or a list of mappings",
+                "error|other.md|`sources` must be a list",
+                "warning|index.md|index entry points at missing file: missing.md",
             ]
         );
-        assert_eq!(r.achieved_level, -1);
+        assert!(!r.passed());
         assert!(
             r.render_human()
-                .ends_with("FAIL at level 2 (23 error(s), 6 warning(s))\n")
+                .ends_with("FAIL (23 error(s), 6 warning(s))\n")
         );
         assert_eq!(
             r.to_json()["findings"][0]["file"],
@@ -969,13 +888,13 @@ mod tests {
     #[test]
     fn a_manifest_that_is_not_a_mapping_or_will_not_parse() {
         let (b, _dir) = bundle_with(&[("manifest.aokf.yaml", "- one\n")]);
-        assert!(validate(&b, &b.root, 2).findings.is_empty());
+        assert!(validate(&b, &b.root).findings.is_empty());
 
         let (b, _dir) = bundle_with(&[("manifest.aokf.yaml", "aokf: [unclosed\n")]);
-        let r = validate(&b, &b.root, 2);
+        let r = validate(&b, &b.root);
         assert_eq!(r.findings.len(), 1);
         assert!(r.findings[0].message.starts_with("manifest parse error:"));
-        assert_eq!(r.achieved_level, -1);
+        assert!(!r.passed());
     }
 
     #[test]

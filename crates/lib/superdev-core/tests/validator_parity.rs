@@ -16,13 +16,22 @@
 //! exist to hold, so it needs the same argument a deliberate behaviour change
 //! would.
 //!
+//! The goldens were projected once, when the conformance ladder was removed
+//! (ADR-017): `checked_level` and `achieved_level` were deleted from each
+//! report, `error_at_level` from each finding, and the one message reading
+//! "(required at Level 1)" became "(required)". Nothing else was touched —
+//! every `severity`, `file` and other `message` is as the reference emitted
+//! it, which the commit that did it shows as a diff of deletions. The goldens
+//! were captured at the top level, where a finding was an error exactly when
+//! it carried any level at all, so no verdict moved.
+//!
 //! Two normalisations, and nothing else:
 //!
 //! - `jq 'del(.bundle)'` drops the reference validator's `bundle` key. It
 //!   echoes the path from its own command line; [`Report::to_json`] leaves
 //!   that to the caller, which holds the string.
-//! - Findings for a file that failed to parse compare on `(file, severity,
-//!   error_at_level)` only: both sides quote their YAML parser, and the two
+//! - Findings for a file that failed to parse compare on `(file, severity)`
+//!   only: both sides quote their YAML parser, and the two
 //!   parsers word the same complaint differently. [`PARSE_ERRORS`] lists the
 //!   fixture files this applies to; their `message` is replaced on both sides
 //!   before comparing. Every other message compares verbatim.
@@ -50,14 +59,14 @@ fn fixtures() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/aokf")
 }
 
-/// Validate `case` at level 2 and compare the JSON to its golden.
+/// Validate `case` and compare the JSON to its golden.
 fn parity(case: &str) {
     let dir = fixtures().join(case);
     let golden = std::fs::read_to_string(dir.with_extension("golden.json")).unwrap();
     let golden: serde_json::Value = serde_json::from_str(&golden).unwrap();
 
     let bundle = load_bundle(&dir).unwrap();
-    let ours = validate(&bundle, &dir, 2).to_json();
+    let ours = validate(&bundle, &dir).to_json();
 
     assert_eq!(
         blank_parse_errors(case, ours),
@@ -138,15 +147,14 @@ fn footnote_mismatch() {
 
 /// The repository's own bundle, validated where it lives. It changes with
 /// every knowledge edit, so the assertion is the one thing that must hold:
-/// the level CI already gates on.
+/// the check CI already gates on.
 #[test]
-fn the_live_knowledge_bundle_conforms_at_level_2() {
+fn the_live_knowledge_bundle_conforms() {
     let repo_root = Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("../../..")
         .canonicalize()
         .unwrap();
     let bundle = load_bundle(&repo_root.join("knowledge")).unwrap();
-    let report = validate(&bundle, &repo_root, 2);
+    let report = validate(&bundle, &repo_root);
     assert!(report.passed(), "{:#?}", report.findings);
-    assert_eq!(report.achieved_level, 2);
 }

@@ -21,7 +21,7 @@ superdev update [TARGET]     bring pins current, then sync;
                              --provider <ID> switches TARGET's provider
 superdev aokf validate [PATH]
                              check the bundle against the AOKF spec; exit 1
-                             on errors. --level 0..2 (default 2), --json,
+                             on errors. --json,
                              --repo-root <DIR> for `/`-rooted paths
 superdev aokf index [PATH]   rebuild the search index from scratch
 superdev aokf hook validate  the Claude Code PostToolUse hook: payload on

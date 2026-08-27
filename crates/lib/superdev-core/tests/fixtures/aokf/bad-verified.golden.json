@@ -1,42 +1,34 @@
 {
   "concepts": 3,
-  "checked_level": 2,
-  "achieved_level": -1,
   "passed": false,
   "findings": [
     {
       "severity": "error",
-      "error_at_level": 0,
       "file": "alpha.md",
       "message": "verified[0].by must be `human:<id>` or `process:<id>`, got 'nobody'"
     },
     {
       "severity": "error",
-      "error_at_level": 0,
       "file": "alpha.md",
       "message": "verified[0].at is not ISO 8601: 'yesterday'"
     },
     {
       "severity": "error",
-      "error_at_level": 0,
       "file": "beta.md",
       "message": "verified[0].at is not ISO 8601: '2026-13-45'"
     },
     {
       "severity": "error",
-      "error_at_level": 0,
       "file": "beta.md",
       "message": "verified[1] is not a mapping"
     },
     {
       "severity": "error",
-      "error_at_level": 0,
       "file": "beta.md",
       "message": "verified[2].by must be `human:<id>` or `process:<id>`, got 3"
     },
     {
       "severity": "error",
-      "error_at_level": 0,
       "file": "gamma.md",
       "message": "`verified` must be a mapping or a list of mappings"
     }

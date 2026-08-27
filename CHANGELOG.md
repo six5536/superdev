@@ -11,6 +11,17 @@ publish a version it cannot find a heading for.
 
 ## [Unreleased]
 
+### Removed
+
+- **The AOKF conformance ladder.** A bundle now passes or fails; there is no
+  level to grade against. `superdev aokf validate --level` is gone, and the
+  report drops `checked_level`, `achieved_level` and each finding's
+  `error_at_level`. No verdict changes: every implementation graded at the top
+  level already, where a finding was an error exactly when it carried any level
+  at all. What does change is that `--level 0` can no longer wave a bundle with
+  broken links and no manifest past the hook and the pre-PR check. AOKF is
+  0.3; see ADR-017.
+
 ### Added
 
 - **Content packs.** A `[[packs]]` array in `.superdev/config.toml` names

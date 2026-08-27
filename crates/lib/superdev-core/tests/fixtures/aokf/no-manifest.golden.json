@@ -1,14 +1,11 @@
 {
   "concepts": 1,
-  "checked_level": 2,
-  "achieved_level": 0,
   "passed": false,
   "findings": [
     {
       "severity": "error",
-      "error_at_level": 1,
       "file": "manifest.aokf.yaml",
-      "message": "no manifest (required at Level 1)"
+      "message": "no manifest (required)"
     }
   ]
 }

@@ -25,7 +25,7 @@ error before moving on:
 superdev aokf validate knowledge
 ```
 
-It checks the bundle against `.agents/aokf/SPEC.md` and must PASS at level 2.
+It checks the bundle against `.agents/aokf/SPEC.md` and must PASS.
 Warnings don't fail the run but usually mean a rename the bundle missed; fix
 the reference, not the target.
 </aokf-system>

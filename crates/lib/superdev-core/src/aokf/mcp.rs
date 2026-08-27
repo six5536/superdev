@@ -29,9 +29,6 @@ const GROUP_CAP: usize = 30;
 /// Most warnings listed by `aokf_overview`.
 const WARNING_CAP: usize = 10;
 
-/// Conformance level the overview grades the bundle at.
-const CHECKED_LEVEL: u8 = 2;
-
 /// Most hits one search may ask for. Retrieval widens the caller's limit
 /// before tantivy pre-allocates against it, so an unbounded `limit` is an
 /// allocation failure — and an abort under the release profile.
@@ -627,20 +624,18 @@ fn render_overview(bundle: &Bundle, stats: &SyncStats, repo_root: &std::path::Pa
         }
     }
 
-    let report = validate(bundle, repo_root, CHECKED_LEVEL);
+    let report = validate(bundle, repo_root);
     let mut warnings: Vec<String> = bundle
         .broken
         .iter()
         .map(|e| format!("  {}: does not parse: {}", e.path, e.message))
         .collect();
-    warnings.extend(report.findings.iter().map(|f| {
-        format!(
-            "  {}: [{}] {}",
-            f.path,
-            f.severity(CHECKED_LEVEL),
-            f.message
-        )
-    }));
+    warnings.extend(
+        report
+            .findings
+            .iter()
+            .map(|f| format!("  {}: [{}] {}", f.path, f.severity(), f.message)),
+    );
     if !warnings.is_empty() {
         lines.push(String::new());
         lines.push("warnings:".to_string());

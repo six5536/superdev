@@ -1,6 +1,6 @@
 # AOKF — Agent Open Knowledge Format
 
-**Version:** 0.2
+**Version:** 0.3
 **Status:** Draft
 **Date:** 2026-08-18
 
@@ -77,7 +77,7 @@ history.
 The manifest declares the bundle:
 
 ```yaml
-aokf: "0.2"                 # spec version the bundle targets
+aokf: "0.3" # spec version the bundle targets
 name: example-knowledge
 description: Knowledgebase for the example project.
 ```
@@ -138,27 +138,27 @@ Knowledge with no such external home lives in the bundle only.
 
 Every frontmatter field and manifest key belongs to one class:
 
-| Class        | Who may write                                            | Enforced by            |
-|--------------|----------------------------------------------------------|------------------------|
-| `open`       | Anyone: humans, agents, tooling.                         | Nothing to enforce.    |
-| `restricted` | Humans and deterministic processes. **Agents MUST NOT add, edit, reorder, or delete.** | Diff check (§10). |
+| Class        | Who may write                                                                          | Enforced by           |
+| ------------ | -------------------------------------------------------------------------------------- | --------------------- |
+| `open`       | Anyone: humans, agents, tooling.                                                       | Nothing to enforce.   |
+| `restricted` | Humans and deterministic processes. **Agents MUST NOT add, edit, reorder, or delete.** | Diff check (§10).     |
 | `stamped`    | Deterministic export tooling, at export time. **MUST NOT appear in the working tree.** | Document check (§10). |
 
 Field reference:
 
-| Field                          | Class      | Notes                                   |
-|--------------------------------|------------|-----------------------------------------|
-| `type`                         | open       | Required. Kind of concept.              |
-| `id`                           | open       | Stable identity slug; immutable once assigned (§5). |
-| `title`                        | open       | Display name; consumers may fall back to the filename. |
-| `description`                  | open       | One-line summary, used by indexes and previews. |
-| `tags`                         | open       | Short labels for grouping concepts across directories. |
-| `resource`                     | open       | Repo path or URL of the thing the concept describes. Absent for abstract concepts. |
-| `status`                       | open       | `draft` \| `stable` \| `deprecated`; absent ⇒ `stable`. |
-| `sources`                      | open       | Entries carry `resource`, `id`, `title` only (§6). |
-| `links`                        | open       | Typed relationships to other concepts (§8). |
-| `verified`                     | restricted | §7.                                     |
-| `generated`                    | stamped    | `{ by, at }`, derived from git history at export. Never hand-written. |
+| Field         | Class      | Notes                                                                              |
+| ------------- | ---------- | ---------------------------------------------------------------------------------- |
+| `type`        | open       | Required. Kind of concept.                                                         |
+| `id`          | open       | Stable identity slug; immutable once assigned (§5).                                |
+| `title`       | open       | Display name; consumers may fall back to the filename.                             |
+| `description` | open       | One-line summary, used by indexes and previews.                                    |
+| `tags`        | open       | Short labels for grouping concepts across directories.                             |
+| `resource`    | open       | Repo path or URL of the thing the concept describes. Absent for abstract concepts. |
+| `status`      | open       | `draft` \| `stable` \| `deprecated`; absent ⇒ `stable`.                            |
+| `sources`     | open       | Entries carry `resource`, `id`, `title` only (§6).                                 |
+| `links`       | open       | Typed relationships to other concepts (§8).                                        |
+| `verified`    | restricted | §7.                                                                                |
+| `generated`   | stamped    | `{ by, at }`, derived from git history at export. Never hand-written.              |
 
 Producer-defined extension keys are permitted and default to `open`.
 Consumers must not reject documents over unknown keys. A project that
@@ -266,26 +266,26 @@ Tiers are advisory signals, not access control. A concept with no
 Typed relationships are declared in a `links` frontmatter array. Each
 entry is a map:
 
-| Key    | Rule | Meaning                                                          |
-|--------|------|------------------------------------------------------------------|
-| `rel`  | MUST | The relationship type (below).                                   |
-| `to`   | MUST | Target concept: an `id` (preferred) or a `/` repo-root path.     |
-| `note` | MAY  | One-line explanation of this specific edge.                      |
+| Key    | Rule | Meaning                                                      |
+| ------ | ---- | ------------------------------------------------------------ |
+| `rel`  | MUST | The relationship type (below).                               |
+| `to`   | MUST | Target concept: an `id` (preferred) or a `/` repo-root path. |
+| `note` | MAY  | One-line explanation of this specific edge.                  |
 
 A link asserts a directed edge from the containing concept to `to`.
 Consumers resolve `to` as an `id` first, then as a path.
 
 **Relationship vocabulary**, with defined inverses:
 
-| `rel`         | Inverse           | Meaning                                                    |
-|---------------|-------------------|------------------------------------------------------------|
-| `relates-to`  | `relates-to`      | Generic association (symmetric).                           |
-| `part-of`     | `has-part`        | Composition or containment.                                |
-| `depends-on`  | `depended-on-by`  | Requires the target to function.                           |
-| `references`  | `referenced-by`   | Cites or points at the target.                             |
-| `supersedes`  | `superseded-by`   | Replaces the target; the target is deprecated.             |
-| `implements`  | `implemented-by`  | Delivers or realises the target — a plan or issue implementing a spec. |
-| `contradicts` | `contradicts`     | Known conflict (symmetric); resolution belongs in prose.   |
+| `rel`         | Inverse          | Meaning                                                                |
+| ------------- | ---------------- | ---------------------------------------------------------------------- |
+| `relates-to`  | `relates-to`     | Generic association (symmetric).                                       |
+| `part-of`     | `has-part`       | Composition or containment.                                            |
+| `depends-on`  | `depended-on-by` | Requires the target to function.                                       |
+| `references`  | `referenced-by`  | Cites or points at the target.                                         |
+| `supersedes`  | `superseded-by`  | Replaces the target; the target is deprecated.                         |
+| `implements`  | `implemented-by` | Delivers or realises the target — a plan or issue implementing a spec. |
+| `contradicts` | `contradicts`    | Known conflict (symmetric); resolution belongs in prose.               |
 
 Producers SHOULD use a core value where one fits and MAY introduce
 custom values (lowercase kebab-case) where none does. Consumers MUST
@@ -323,8 +323,8 @@ frontmatter. The body is one or more heading-grouped link lists:
 ```markdown
 # Core
 
-* [Planner](planner.md) - pure planning stage; no filesystem writes.
-* [Executor](executor.md) - applies planned actions.
+- [Planner](planner.md) - pure planning stage; no filesystem writes.
+- [Executor](executor.md) - applies planned actions.
 ```
 
 Entries should carry the linked concept's `description`. Indexes may be
@@ -365,17 +365,16 @@ enforces the write classes; without it they are only a convention.
 
 ## 11. Conformance
 
-Bundle conformance is a ladder; a bundle's level is the highest it
-fully satisfies.
+A bundle conforms when all of the following hold.
 
-| Level | Requirements |
-|-------|--------------|
-| **0** | Every non-reserved `.md` file passes the document check (§10). |
-| **1** | Level 0, plus every concept has a unique `id`, plus a manifest declaring `aokf` and `name`. |
-| **2** | Level 1, plus every `links` entry has a valid `rel` and a `to` that resolves, and is mirrored by a body link (§8). |
+- Every non-reserved `.md` file passes the document check (§10).
+- Every concept has a unique `id`, and a manifest declares `aokf` and
+  `name`.
+- Every `links` entry has a valid `rel` and a `to` that resolves, and is
+  mirrored by a body link (§8).
 
 A repository conforms if, additionally, its agent commits pass the diff
-check (§10). This is independent of the bundle's level.
+check (§10). This is independent of whether the bundle conforms.
 
 Consumers must be permissive. In particular, never reject a bundle for
 missing optional fields, unknown `type` values, unknown frontmatter
@@ -384,6 +383,6 @@ manifest.
 
 ## 12. Versioning
 
-This document specifies AOKF **0.2**. Minor version bumps are
-backward-compatible additions; major bumps may break. A bundle declares
-the version it targets with the manifest's `aokf` key (§2).
+This document specifies AOKF **0.3**. Before 1.0 a minor bump may break.
+From 1.0 minor bumps are backward-compatible additions and major bumps may
+break. A bundle declares the version it targets with the manifest's `aokf` key (§2).

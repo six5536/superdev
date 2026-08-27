@@ -1,18 +1,14 @@
 {
   "concepts": 3,
-  "checked_level": 2,
-  "achieved_level": -1,
   "passed": false,
   "findings": [
     {
       "severity": "error",
-      "error_at_level": 0,
       "file": "beta.md",
       "message": "duplicate `id` 'dup' (also in alpha.md)"
     },
     {
       "severity": "error",
-      "error_at_level": 0,
       "file": "gamma.md",
       "message": "`id` is not a valid slug: 'Bad_Slug'"
     }
