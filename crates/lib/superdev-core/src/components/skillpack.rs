@@ -24,12 +24,15 @@ pub(crate) fn adopt_existing(
     content: &ContentSet,
     manifest: &mut Manifest,
 ) -> Vec<String> {
+    let identities = super::skills::skill_identities(content, OWNER);
+    let Some(config) = manifest.config_of_mut(Capability::Skills, "superdev-skills") else {
+        return Vec::new();
+    };
     super::skills::adopt_existing(
         root,
-        Capability::Skills,
-        "superdev-skills",
-        &super::skills::skill_identities(content, OWNER),
-        manifest,
+        Capability::Skills.as_str(),
+        &mut config.custom,
+        &identities,
     )
 }
 
@@ -47,8 +50,8 @@ fn items(ctx: &Ctx<'_>) -> Vec<ManagedItem> {
 }
 
 impl Component for SkillPack {
-    fn capability(&self) -> Capability {
-        Capability::Skills
+    fn capability(&self) -> Option<Capability> {
+        Some(Capability::Skills)
     }
 
     fn provider(&self) -> &'static str {
@@ -237,7 +240,7 @@ mod tests {
 
     #[test]
     fn reports_its_slot_and_provider() {
-        assert_eq!(SkillPack.capability(), Capability::Skills);
+        assert_eq!(SkillPack.capability(), Some(Capability::Skills));
         assert_eq!(SkillPack.provider(), "superdev-skills");
     }
 

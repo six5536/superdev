@@ -54,11 +54,11 @@ mod tests {
 
     use super::*;
     use crate::capability::Capability;
-    use crate::components::aokf;
+    use crate::components::sokf;
     use crate::content::item::{ItemKind, Owner};
 
     fn knowledge() -> Owner {
-        Owner::Capability(Capability::Knowledge)
+        Owner::Knowledge
     }
 
     /// A rule that stops matching would empty a kind silently, and every
@@ -153,7 +153,7 @@ mod tests {
     #[test]
     fn what_is_not_content_stays_out_of_the_snapshot() {
         let files: usize = items().iter().map(|i| i.files.len()).sum();
-        let not_content = aokf::binary_owned_count() + 2 /* codegraph, rtk */ + 1 /* pack.toml */;
+        let not_content = sokf::binary_owned_count() + 2 /* codegraph, rtk */ + 1 /* pack.toml */;
         assert_eq!(
             files + not_content,
             FILES.len(),

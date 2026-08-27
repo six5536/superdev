@@ -86,8 +86,8 @@ impl ClaudePlugin {
 }
 
 impl Component for ClaudePlugin {
-    fn capability(&self) -> Capability {
-        self.capability
+    fn capability(&self) -> Option<Capability> {
+        Some(self.capability)
     }
 
     fn provider(&self) -> &'static str {
@@ -175,7 +175,7 @@ mod tests {
 
     #[test]
     fn components_report_their_slot_and_provider() {
-        assert_eq!(frontend_design().capability(), Capability::Frontend);
+        assert_eq!(frontend_design().capability(), Some(Capability::Frontend));
         assert_eq!(frontend_design().provider(), "frontend-design");
     }
 }

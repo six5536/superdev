@@ -26,12 +26,33 @@ pub(super) const ALREADY_GONE: &str = "already gone";
 /// One component's planned changes.
 #[derive(Debug, Clone)]
 pub struct Planned {
-    /// None for repo-level actions not owned by a capability (e.g. .gitignore).
+    /// None for actions no capability owns: the repo-level entry, and the
+    /// core components — SOKF today.
     pub capability: Option<Capability>,
-    /// Provider that produced these actions.
+    /// Provider that produced these actions, or the core component's name.
     pub provider: String,
     /// Actions, in apply order.
     pub actions: Vec<Action>,
+}
+
+/// What the repo-level entry calls itself. Named here so the label can tell
+/// it from a core component, which has no slot either.
+pub const REPO_PROVIDER: &str = "superdev";
+
+impl Planned {
+    /// How this entry heads its section of a plan or an apply report.
+    ///
+    /// A capability names its slot and its provider, because a slot can be
+    /// filled more than one way. The repo entry keeps its `repo (…)` form.
+    /// A core component names itself alone: nothing competes for it, so
+    /// there is no second name to disambiguate against.
+    pub fn label(&self) -> String {
+        match self.capability {
+            Some(c) => format!("{} ({})", c.as_str(), self.provider),
+            None if self.provider == REPO_PROVIDER => format!("repo ({})", self.provider),
+            None => self.provider.clone(),
+        }
+    }
 }
 
 /// What became of one action.
@@ -80,7 +101,7 @@ pub fn plan(components: &[Box<dyn Component>], ctx: &Ctx<'_>) -> Result<Vec<Plan
         .iter()
         .map(|c| {
             Ok(Planned {
-                capability: Some(c.capability()),
+                capability: c.capability(),
                 provider: c.provider().to_string(),
                 actions: c.plan(ctx)?,
             })
@@ -157,10 +178,7 @@ impl<'a> Session<'a> {
             reports: planned
                 .iter()
                 .map(|p| ComponentReport {
-                    label: match p.capability {
-                        Some(c) => format!("{} ({})", c.as_str(), p.provider),
-                        None => format!("repo ({})", p.provider),
-                    },
+                    label: p.label(),
                     outcomes: Vec::new(),
                 })
                 .collect(),
@@ -539,8 +557,8 @@ mod tests {
         let manifest = Manifest::default_for("0.1.0", &[]);
         let mut lock = Lock::default();
         let planned = vec![Planned {
-            capability: Some(crate::capability::Capability::Knowledge),
-            provider: "aokf".into(),
+            capability: Some(crate::capability::Capability::Skills),
+            provider: "superdev-skills".into(),
             actions: vec![write_owned("a/b.txt")],
         }];
         let result = apply(dir.path(), &fake, &manifest, &planned, &mut lock);
@@ -550,7 +568,25 @@ mod tests {
             "content"
         );
         assert!(lock.files.contains_key("a/b.txt"));
-        assert_eq!(lock.components["knowledge"][0].provider, "aokf");
+        assert_eq!(lock.components["skills"][0].provider, "superdev-skills");
+    }
+
+    /// A core component fills no slot, so there is no provider choice for the
+    /// lock to record — but its files are locked like any other's.
+    #[test]
+    fn a_core_component_locks_its_files_and_records_no_provider() {
+        let dir = tempfile::tempdir().unwrap();
+        let fake = FakeRunner::new();
+        let manifest = Manifest::default_for("0.1.0", &[]);
+        let mut lock = Lock::default();
+        let planned = vec![Planned {
+            capability: None,
+            provider: "knowledge".into(),
+            actions: vec![write_owned("a/b.txt")],
+        }];
+        assert!(apply(dir.path(), &fake, &manifest, &planned, &mut lock).ok);
+        assert!(lock.files.contains_key("a/b.txt"));
+        assert!(lock.components.is_empty(), "{:?}", lock.components);
     }
 
     #[test]
@@ -588,7 +624,7 @@ mod tests {
         let mut lock = Lock::default();
         let planned = vec![
             Planned {
-                capability: Some(Capability::Knowledge),
+                capability: None,
                 provider: "aokf".into(),
                 actions: vec![write_owned("shared.txt")],
             },
@@ -631,7 +667,7 @@ mod tests {
         let mut lock = Lock::default();
         let planned = vec![
             Planned {
-                capability: Some(crate::capability::Capability::Knowledge),
+                capability: None,
                 provider: "aokf".into(),
                 actions: vec![write_owned("created.txt")],
             },
@@ -738,7 +774,7 @@ mod tests {
         let manifest = Manifest::default_for("0.1.0", &[]);
         let mut lock = Lock::default();
         let planned = vec![Planned {
-            capability: Some(crate::capability::Capability::Knowledge),
+            capability: None,
             provider: "aokf".into(),
             actions: vec![set_mcp_key()],
         }];
@@ -769,7 +805,7 @@ mod tests {
         let manifest = Manifest::default_for("0.1.0", &[]);
         let mut lock = Lock::default();
         let planned = vec![Planned {
-            capability: Some(crate::capability::Capability::Knowledge),
+            capability: None,
             provider: "aokf".into(),
             actions: vec![set_mcp_key()],
         }];
@@ -792,7 +828,7 @@ mod tests {
         let manifest = Manifest::default_for("0.1.0", &[]);
         let mut lock = Lock::default();
         let planned = vec![Planned {
-            capability: Some(crate::capability::Capability::Knowledge),
+            capability: None,
             provider: "aokf".into(),
             actions: vec![write_owned("created.txt"), set_mcp_key()],
         }];
@@ -823,7 +859,7 @@ mod tests {
         let manifest = Manifest::default_for("0.1.0", &[]);
         let mut lock = Lock::default();
         let planned = vec![Planned {
-            capability: Some(crate::capability::Capability::Knowledge),
+            capability: None,
             provider: "aokf".into(),
             actions: vec![set_mcp_key()],
         }];
@@ -1021,7 +1057,13 @@ mod tests {
         let planned = plan(&components, &ctx).unwrap();
         assert_eq!(planned.len(), components.len());
         assert_eq!(planned[0].provider, "frontend-design");
-        assert!(planned.iter().all(|p| p.capability.is_some()));
+        // Every capability provider names its slot; SOKF, planned last,
+        // names none — that is what makes it core.
+        let (core, slotted): (Vec<_>, Vec<_>) =
+            planned.iter().partition(|p| p.capability.is_none());
+        assert_eq!(core.len(), 1);
+        assert_eq!(core[0].provider, crate::components::sokf::NAME);
+        assert!(slotted.iter().all(|p| p.capability.is_some()));
         assert!(planned.iter().any(|p| !p.actions.is_empty()));
 
         // A component that fails to plan aborts the whole plan.
@@ -1159,7 +1201,7 @@ mod tests {
         let manifest = Manifest::default_for("0.1.0", &[]);
         let mut lock = Lock::default();
         let planned = vec![Planned {
-            capability: Some(crate::capability::Capability::Knowledge),
+            capability: None,
             provider: "aokf".into(),
             actions: vec![write_owned("owned.txt")],
         }];

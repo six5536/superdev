@@ -194,7 +194,7 @@ fn aokf_index_rebuilds_and_reports_lexical_only() {
     std::fs::create_dir(dir.path().join(".superdev")).unwrap();
     std::fs::write(
         dir.path().join(".superdev/config.toml"),
-        "blueprint = \"0.1.0\"\n\n[knowledge]\nprovider = \"aokf\"\n",
+        "blueprint = \"0.1.0\"\n",
     )
     .unwrap();
     // A file that cannot be parsed leaves the bundle silently, so `index` says so.
@@ -468,6 +468,8 @@ fn hook_validate_ignores_payloads_without_a_file_path() {
 
 /// `init` a temp repo with only the skills capability (the others need
 /// external binaries; skills needs none, so these tests run everywhere).
+/// The SOKF knowledge comes too: it is part of superdev, and no flag skips
+/// it.
 fn skills_repo() -> tempfile::TempDir {
     let dir = tempfile::tempdir().unwrap();
     std::fs::create_dir_all(dir.path().join(".git")).unwrap();
@@ -478,7 +480,6 @@ fn skills_repo() -> tempfile::TempDir {
             "--no-frontend",
             "--no-code-index",
             "--no-bash-output-filter",
-            "--no-knowledge",
         ])
         .assert()
         .success();
@@ -498,9 +499,10 @@ fn init_materialises_the_skill_pack() {
             "{name} lacks the PROJECT.md trailer"
         );
     }
-    // The hook and the lifecycle skills belong to knowledge, disabled here.
-    assert!(!dir.path().join(".claude/settings.json").exists());
-    assert!(!dir.path().join(".claude/skills/maintain").exists());
+    // The hook and the lifecycle skills belong to SOKF, which no flag
+    // disables, so they are here beside the pack's.
+    assert!(dir.path().join(".claude/settings.json").exists());
+    assert!(dir.path().join(".claude/skills/maintain").exists());
     let lock = std::fs::read_to_string(dir.path().join(".superdev/lock.toml")).unwrap();
     assert!(
         lock.contains(".claude/skills/template-update/SKILL.md"),
@@ -532,7 +534,6 @@ fn adopting_a_repo_with_its_own_skills_keeps_them() {
             "--no-frontend",
             "--no-code-index",
             "--no-bash-output-filter",
-            "--no-knowledge",
         ])
         .assert()
         .success();
@@ -1457,18 +1458,21 @@ fn init_no_skills_skips_the_pack() {
             "--no-frontend",
             "--no-code-index",
             "--no-bash-output-filter",
-            "--no-knowledge",
             "--no-skills",
         ])
         .assert()
         .success();
-    assert!(!dir.path().join(".claude/skills").exists());
-    assert!(!dir.path().join(".claude/settings.json").exists());
+    // The pack's skills are gone; SOKF's are not, because SOKF is not the
+    // pack and no flag turns it off.
+    assert!(!dir.path().join(".claude/skills/double-check").exists());
+    assert!(!dir.path().join(".claude/skills/template-update").exists());
+    assert!(dir.path().join(".claude/skills/maintain").exists());
+    assert!(dir.path().join(".claude/settings.json").exists());
 }
 
 #[test]
 fn init_ignores_a_cache_left_by_the_knowledge_tools() {
-    // `superdev mcp aokf` writes .superdev/cache/ in repos it never initialised.
+    // `superdev mcp sokf` writes .superdev/cache/ in repos it never initialised.
     // Only the manifest means initialised.
     let dir = tempfile::tempdir().unwrap();
     std::fs::create_dir_all(dir.path().join(".git")).unwrap();
@@ -1480,7 +1484,6 @@ fn init_ignores_a_cache_left_by_the_knowledge_tools() {
             "--no-frontend",
             "--no-code-index",
             "--no-bash-output-filter",
-            "--no-knowledge",
         ])
         .assert()
         .success();
@@ -1497,7 +1500,6 @@ fn init_refuses_when_the_manifest_exists() {
             "--no-frontend",
             "--no-code-index",
             "--no-bash-output-filter",
-            "--no-knowledge",
         ])
         .assert()
         .code(2);
@@ -1740,8 +1742,8 @@ fn disabling_skills_sweeps_them_and_releases_the_users_edit() {
     );
     assert_eq!(std::fs::read_to_string(&users_skill).unwrap(), "mine now\n");
 
-    // The hook belongs to the still-enabled knowledge capability, so it
-    // survives the pack's departure — as do the aokf-carried skills.
+    // The hook belongs to SOKF, which is part of superdev, so it survives
+    // the pack's departure — as do the SOKF-carried skills.
     let settings: serde_json::Value =
         serde_json::from_str(&std::fs::read_to_string(root.join(".claude/settings.json")).unwrap())
             .unwrap();
@@ -1760,9 +1762,11 @@ fn disabling_skills_sweeps_them_and_releases_the_users_edit() {
     assert!(lock.contains(".claude/skills/maintain/"), "{lock}");
     assert!(lock.contains("hooks.PostToolUse"), "{lock}");
     assert!(!lock.contains("[components.skills]"), "{lock}");
-    // The capability still enabled keeps its record: the sweep is targeted.
+    // SOKF's files stay locked: the sweep is targeted at the pack alone.
     assert!(lock.contains(".agents/aokf/SPEC.md"), "{lock}");
-    assert!(lock.contains("[components.knowledge]"), "{lock}");
+    // No provider record, though — SOKF fills no slot, so there is no
+    // provider choice for the lock to remember.
+    assert!(!lock.contains("[components.knowledge]"), "{lock}");
 
     // A settled state is not drift.
     superdev().current_dir(root).arg("status").assert().code(0);
@@ -1911,7 +1915,6 @@ fn init_with_a_template_seeds_the_repo_and_records_it() {
             "--no-skills",
             "--no-code-index",
             "--no-bash-output-filter",
-            "--no-knowledge",
         ])
         .assert()
         .success();
@@ -1956,7 +1959,6 @@ fn init_without_a_tty_and_without_the_flag_seeds_nothing() {
             "--no-skills",
             "--no-code-index",
             "--no-bash-output-filter",
-            "--no-knowledge",
         ])
         .assert()
         .success();
@@ -2045,8 +2047,10 @@ fn template_render_refuses_an_unknown_template() {
     assert!(!dir.path().join("out").join("LICENSE").exists());
 }
 
+/// SOKF is part of superdev, so every `init` seeds it and every `init`
+/// prints the hint — there is no flag combination that suppresses either.
 #[test]
-fn init_hints_at_bootstrap_only_when_knowledge_is_enabled() {
+fn init_always_hints_at_bootstrap() {
     let dir = tempfile::tempdir().unwrap();
     std::fs::create_dir_all(dir.path().join(".git")).unwrap();
     let out = superdev()
@@ -2065,19 +2069,24 @@ fn init_hints_at_bootstrap_only_when_knowledge_is_enabled() {
         "{stdout}"
     );
 
-    let off = tempfile::tempdir().unwrap();
-    std::fs::create_dir_all(off.path().join(".git")).unwrap();
+    // Every other capability off changes nothing: the hint rides with SOKF.
+    let bare = tempfile::tempdir().unwrap();
+    std::fs::create_dir_all(bare.path().join(".git")).unwrap();
     let out = superdev()
-        .current_dir(off.path())
+        .current_dir(bare.path())
         .args([
             "init",
             "--no-frontend",
+            "--no-skills",
             "--no-code-index",
             "--no-bash-output-filter",
-            "--no-knowledge",
         ])
         .assert()
         .success();
     let stdout = String::from_utf8_lossy(&out.get_output().stdout).into_owned();
-    assert!(!stdout.contains("/bootstrap"), "{stdout}");
+    assert!(
+        stdout.contains("knowledge: run /bootstrap in Claude Code"),
+        "{stdout}"
+    );
+    assert!(bare.path().join("knowledge/index.md").is_file());
 }

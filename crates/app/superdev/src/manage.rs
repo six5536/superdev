@@ -37,9 +37,6 @@ pub struct InitArgs {
     /// Skip the bash output filter
     #[arg(long)]
     pub no_bash_output_filter: bool,
-    /// Skip the knowledge scaffold
-    #[arg(long)]
-    pub no_knowledge: bool,
     #[arg(long, value_name = "NAME", help = crate::template_select::TEMPLATE_HELP)]
     pub template: Option<String>,
     /// Project name for template substitution (default: the directory name)
@@ -54,7 +51,6 @@ impl InitArgs {
             (self.no_skills, Capability::Skills),
             (self.no_code_index, Capability::CodeIndex),
             (self.no_bash_output_filter, Capability::BashOutputFilter),
-            (self.no_knowledge, Capability::Knowledge),
         ];
         flags
             .into_iter()
@@ -118,9 +114,8 @@ pub fn init(root: &Path, args: &InitArgs) -> Result<u8> {
     match pipeline::apply_repo(root, &runner, &manifest, plan) {
         Ok(outcome) if outcome.ok => {
             print_block(&outcome.report)?;
-            if manifest.enabled(Capability::Knowledge) {
-                out(BOOTSTRAP_HINT)?;
-            }
+            // SOKF is always set up, so the hint always applies.
+            out(BOOTSTRAP_HINT)?;
             Ok(0)
         }
         Ok(outcome) => {
@@ -453,7 +448,6 @@ mod tests {
             no_skills: false,
             no_code_index: false,
             no_bash_output_filter: false,
-            no_knowledge: false,
             template: None,
             name: None,
         };
@@ -482,10 +476,15 @@ mod tests {
             err.contains("--provider needs a capability target"),
             "{err}"
         );
-        let err = update(dir.path(), Some("knowledge"), Some("flying"))
+        let err = update(dir.path(), Some("code-index"), Some("flying"))
             .unwrap_err()
             .to_string();
-        assert!(err.contains("knowledge provider must be one of"), "{err}");
+        assert!(err.contains("code-index provider must be one of"), "{err}");
+        // `knowledge` is not a capability any more, so it is not a target.
+        let err = update(dir.path(), Some("knowledge"), None)
+            .unwrap_err()
+            .to_string();
+        assert!(err.contains("knowledge"), "{err}");
     }
 
     #[test]

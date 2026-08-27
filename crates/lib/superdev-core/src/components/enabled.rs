@@ -1,10 +1,10 @@
 //! components/enabled.rs — the manifest-to-component resolution: which
 //! provider implementation fills each enabled capability, in canonical apply
-//! order.
+//! order, plus the core components no manifest entry governs.
 
 use crate::capability::Capability;
 use crate::component::Component;
-use crate::components::{aokf, codegraph, plugin, rtk, skillpack};
+use crate::components::{codegraph, plugin, rtk, skillpack, sokf};
 use crate::error::{Error, Result};
 use crate::manifest::Manifest;
 use crate::registry;
@@ -13,9 +13,9 @@ use crate::registry;
 /// `mise install` before a provider command can resolve its tool.
 pub const MANAGED_MISE_TOOLS: [&str; 1] = [codegraph::CODEGRAPH_MISE_TOOL];
 
-/// Every enabled component, in canonical apply order, resolved from the
-/// manifest's provider choices. Until this resolution existed, the
-/// manifest's `provider` field was recorded but never read.
+/// Every component to plan, in canonical apply order: the enabled
+/// capabilities resolved from the manifest's provider choices, then SOKF,
+/// which is part of superdev and so appears unconditionally.
 pub fn enabled(manifest: &Manifest) -> Result<Vec<Box<dyn Component>>> {
     // Validate first, so `component_for` only ever sees a pair the registry has.
     for (name, configs) in &manifest.capabilities {
@@ -43,6 +43,9 @@ pub fn enabled(manifest: &Manifest) -> Result<Vec<Box<dyn Component>>> {
             components.push(component_for(entry.capability, entry.provider));
         }
     }
+    // Last, as the knowledge scaffold always was: it writes over the tree the
+    // capabilities have finished setting up. No manifest entry gates it.
+    components.push(Box::new(sokf::Sokf));
     Ok(components)
 }
 
@@ -53,7 +56,6 @@ fn component_for(capability: Capability, provider: &str) -> Box<dyn Component> {
         (Capability::Skills, _) => Box::new(skillpack::SkillPack),
         (Capability::CodeIndex, _) => Box::new(codegraph::Codegraph),
         (Capability::BashOutputFilter, _) => Box::new(rtk::Rtk),
-        (Capability::Knowledge, _) => Box::new(aokf::Aokf),
     }
 }
 
@@ -88,7 +90,7 @@ mod tests {
                 content: crate::content::test_snapshot(),
             };
             let planned = vec![Planned {
-                capability: Some(component.capability()),
+                capability: component.capability(),
                 provider: component.provider().to_string(),
                 actions: component.plan(&ctx).unwrap(),
             }];
@@ -117,12 +119,12 @@ mod tests {
     #[test]
     fn enabled_rejects_an_unknown_provider() {
         let mut manifest = Manifest::default_for("0.1.0", &[]);
-        manifest.capabilities.get_mut("knowledge").unwrap()[0].provider = "flying".into();
+        manifest.capabilities.get_mut("code-index").unwrap()[0].provider = "flying".into();
         // `err()`, not `unwrap_err()`: the Ok side holds trait objects that
         // cannot be Debug-printed.
         let err = enabled(&manifest).err().unwrap().to_string();
         assert!(
-            err.contains("knowledge provider must be one of: aokf"),
+            err.contains("code-index provider must be one of: codegraph"),
             "{err}"
         );
         assert!(enabled(&Manifest::default_for("0.1.0", &[])).is_ok());
@@ -140,7 +142,6 @@ mod tests {
             .push(crate::manifest::CapabilityConfig {
                 provider: "another-pack".into(),
                 version: None,
-                embeddings: None,
                 custom: Vec::new(),
             });
         let err = enabled(&manifest).err().unwrap().to_string();
@@ -158,7 +159,7 @@ mod tests {
         assert!(
             components
                 .iter()
-                .all(|c| c.capability() != Capability::CodeIndex)
+                .all(|c| c.capability() != Some(Capability::CodeIndex))
         );
     }
 }

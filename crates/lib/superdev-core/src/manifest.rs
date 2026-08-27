@@ -22,13 +22,30 @@ pub struct CapabilityConfig {
     /// Version pin; None when the source manages versions.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub version: Option<String>,
-    /// Embedding provider for capabilities that index text. Absent = the
-    /// bundled local model.
+    /// Skills released from management: superdev stops writing them and
+    /// `status` reports them as custom. Honoured by `skills`, which writes
+    /// into `.claude/skills/` alongside the SOKF knowledge.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub custom: Vec<String>,
+}
+
+/// `[knowledge]` — the SOKF knowledge's settings. A plain table, not a
+/// capability: SOKF is part of superdev, so there is no provider to name and
+/// no slot to leave empty.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct KnowledgeConfig {
+    /// Set only in a manifest written before SOKF became core. Its presence
+    /// is the whole reason the field exists: `parse` refuses such a manifest
+    /// and names the edit, rather than silently reading a provider choice
+    /// that no longer means anything.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub provider: Option<String>,
+    /// Embedding provider for the search index. Absent = the local model.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub embeddings: Option<EmbeddingsConfig>,
-    /// Skills released from management: superdev stops writing them and
-    /// `status` reports them as custom. Honoured by `skills` and `knowledge`,
-    /// which both write into `.claude/skills/`.
+    /// SOKF skills released from management: superdev stops writing them and
+    /// `status` reports them as custom.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub custom: Vec<String>,
 }
@@ -89,6 +106,11 @@ struct WrittenManifest {
     template: Option<TemplateRecord>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     packs: Vec<PackEntry>,
+    /// Named ahead of the flatten so `[knowledge]` lands here rather than in
+    /// the capability map. Always written: a fresh repo should be able to see
+    /// the table it may put `custom` and `embeddings` in.
+    #[serde(default)]
+    knowledge: KnowledgeConfig,
     #[serde(flatten)]
     capabilities: BTreeMap<String, WrittenEntries>,
 }
@@ -105,6 +127,9 @@ pub struct Manifest {
     /// carries no `[[packs]]`, which resolves from the pack compiled into
     /// the binary — never "disabled". ADR-001.
     pub packs: Vec<PackEntry>,
+    /// The SOKF knowledge's settings. Always present: SOKF is core, so there
+    /// is no state in which the table means "off".
+    pub knowledge: KnowledgeConfig,
     /// Enabled capabilities, keyed by kebab-case name. Absent = disabled.
     /// Every list is non-empty; single slots hold exactly one entry.
     pub capabilities: BTreeMap<String, Vec<CapabilityConfig>>,
@@ -122,7 +147,6 @@ impl Manifest {
                     vec![CapabilityConfig {
                         provider: e.provider.to_string(),
                         version: e.version.map(|p| p.version.to_string()),
-                        embeddings: None,
                         custom: Vec::new(),
                     }],
                 )
@@ -139,6 +163,7 @@ impl Manifest {
                 source: crate::pack::DEFAULT_PACK.source.to_string(),
                 rev: Some(crate::pack::DEFAULT_PACK.rev.to_string()),
             }],
+            knowledge: KnowledgeConfig::default(),
             capabilities,
         }
     }
@@ -188,13 +213,25 @@ impl Manifest {
             path: CONFIG_PATH.into(),
             message: e.to_string(),
         })?;
+        // A manifest from before SOKF became core: `[knowledge]` named a
+        // provider for a slot that no longer exists. Refused by name, so the
+        // reader is told the edit rather than left with a provider choice
+        // that is silently ignored.
+        if written.knowledge.provider.is_some() {
+            return Err(Error::Manifest {
+                message: "[knowledge] is no longer a capability — SOKF is part of superdev. \
+                          Delete the `provider` line; keep the table for `custom` and \
+                          `embeddings`"
+                    .into(),
+            });
+        }
         let mut capabilities = BTreeMap::new();
         for (name, entries) in written.capabilities {
             if name == "workflows" {
                 return Err(Error::Manifest {
                     message: "the workflows capability was removed — delete the [workflows] \
                               table (moving any custom names to [knowledge]); its skill set \
-                              now ships with the knowledge capability. superpowers users: \
+                              now ships with the SOKF knowledge. superpowers users: \
                               `claude plugin install superpowers`"
                         .into(),
                 });
@@ -237,6 +274,7 @@ impl Manifest {
             blueprint: written.blueprint,
             template: written.template,
             packs: written.packs,
+            knowledge: written.knowledge,
             capabilities,
         })
     }
@@ -261,6 +299,7 @@ impl Manifest {
             blueprint: self.blueprint.clone(),
             template: self.template.clone(),
             packs: self.packs.clone(),
+            knowledge: self.knowledge.clone(),
             capabilities,
         };
         toml_edit::ser::to_string_pretty(&written).expect("manifest serialises")
@@ -361,13 +400,33 @@ mod tests {
 
     #[test]
     fn the_array_form_on_a_single_slot_is_refused() {
-        let err = Manifest::parse("blueprint = \"0.1.0\"\n[[knowledge]]\nprovider = \"aokf\"\n")
+        let err =
+            Manifest::parse("blueprint = \"0.1.0\"\n[[code-index]]\nprovider = \"codegraph\"\n")
+                .unwrap_err()
+                .to_string();
+        assert!(
+            err.contains("code-index holds one provider — use a single [code-index] table"),
+            "{err}"
+        );
+    }
+
+    /// A manifest from before SOKF became core names a provider for a slot
+    /// that no longer exists. Refused by name, so the reader is told what to
+    /// edit rather than having the line silently ignored.
+    #[test]
+    fn a_pre_sokf_knowledge_capability_is_refused_by_name() {
+        let err = Manifest::parse("blueprint = \"0.1.0\"\n\n[knowledge]\nprovider = \"aokf\"\n")
             .unwrap_err()
             .to_string();
         assert!(
-            err.contains("knowledge holds one provider — use a single [knowledge] table"),
+            err.contains("[knowledge] is no longer a capability"),
             "{err}"
         );
+        assert!(err.contains("Delete the `provider` line"), "{err}");
+        // The table itself is fine — it is the provider line that is not.
+        let ok = Manifest::parse("blueprint = \"0.1.0\"\n\n[knowledge]\ncustom = [\"maintain\"]\n")
+            .unwrap();
+        assert_eq!(ok.knowledge.custom, ["maintain"]);
     }
 
     #[test]
@@ -421,7 +480,7 @@ mod tests {
     #[test]
     fn spec_shape_parses() {
         let m = Manifest::parse(
-            "blueprint = \"0.1.0\"\n\n[knowledge]\nprovider = \"aokf\"\n\n[code-index]\nprovider = \"codegraph\"\nversion = \"1.2.3\"\n",
+            "blueprint = \"0.1.0\"\n\n[code-index]\nprovider = \"codegraph\"\nversion = \"1.2.3\"\n",
         )
         .unwrap();
         assert_eq!(
@@ -434,7 +493,7 @@ mod tests {
     fn embeddings_survive_a_round_trip_and_stay_optional() {
         let mut m = Manifest::default_for("0.1.0", &[]);
         assert!(!m.to_toml().contains("embeddings"));
-        m.capabilities.get_mut("knowledge").unwrap()[0].embeddings = Some(EmbeddingsConfig {
+        m.knowledge.embeddings = Some(EmbeddingsConfig {
             provider: "openai".into(),
             model: "text-embedding-3-small".into(),
         });
@@ -505,7 +564,7 @@ mod tests {
     /// something to fill in.
     #[test]
     fn a_manifest_without_packs_round_trips_byte_identically() {
-        let written = "blueprint = \"0.2.0\"\n\n[knowledge]\nprovider = \"aokf\"\n";
+        let written = "blueprint = \"0.2.0\"\n\n[knowledge]\ncustom = [\"maintain\"]\n";
         let manifest = Manifest::parse(written).unwrap();
         assert!(
             manifest.packs.is_empty(),
@@ -523,7 +582,7 @@ mod tests {
             "rev = \"assets-v1.4.0\"\n\n",
             "[[packs]]\n",
             "source = \"./packs/acme\"\n\n",
-            "[knowledge]\nprovider = \"aokf\"\n",
+            "[knowledge]\ncustom = [\"maintain\"]\n",
         );
         let manifest = Manifest::parse(written).unwrap();
         assert_eq!(

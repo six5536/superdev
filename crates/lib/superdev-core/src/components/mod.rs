@@ -1,6 +1,5 @@
 //! Component implementations and the helpers they share.
 
-pub mod aokf;
 pub mod codegraph;
 pub(crate) mod item;
 pub mod mise;
@@ -9,6 +8,7 @@ pub mod plugin;
 pub mod rtk;
 pub mod skillpack;
 mod skills;
+pub mod sokf;
 
 mod enabled;
 

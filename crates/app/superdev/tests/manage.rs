@@ -177,7 +177,7 @@ fn init_sets_up_a_fresh_repo() {
     assert_eq!(sb.read("AGENTS.md"), "@.agents/superdev.md\n");
     let aggregator = sb.read(".agents/superdev.md");
     assert!(aggregator.starts_with("<superdev-system>"), "{aggregator}");
-    assert!(aggregator.contains("@aokf.md"), "{aggregator}");
+    assert!(aggregator.contains("@sokf.md"), "{aggregator}");
     assert!(aggregator.contains("@codegraph.md"), "{aggregator}");
     assert!(aggregator.contains("@rtk.md"), "{aggregator}");
     assert!(aggregator.contains("@coding.md"), "{aggregator}");
@@ -409,14 +409,14 @@ fn skills_entries_are_a_set_with_guided_refusals() {
     // The array form on an exclusive slot is refused with the way out.
     sb.write(
         ".superdev/config.toml",
-        &format!("{config}\n").replace("[knowledge]", "[[knowledge]]"),
+        &format!("{config}\n").replace("[code-index]", "[[code-index]]"),
     );
     let exclusive = run(sb.superdev().arg("status"));
     assert_eq!(exclusive.code, 2, "stdout: {}", exclusive.stdout);
     assert!(
         exclusive
             .stderr
-            .contains("knowledge holds one provider — use a single [knowledge] table"),
+            .contains("code-index holds one provider — use a single [code-index] table"),
         "stderr: {}",
         exclusive.stderr
     );
@@ -604,7 +604,7 @@ fn disabling_code_index_unpins_codegraph_and_keeps_user_pins() {
     assert!(!lock.contains(".mise.toml:http:codegraph"), "{lock}");
     assert!(!lock.contains("[components.code-index]"), "{lock}");
     // The capabilities still enabled keep their records: the sweep is targeted.
-    assert!(lock.contains("[components.knowledge]"), "{lock}");
+    assert!(lock.contains("[components.skills]"), "{lock}");
     // The agent wiring goes with the capability: instruction file, MCP key
     // and aggregator import — while the knowledge wiring stays.
     assert!(!sb.repo().join(".agents/codegraph.md").exists());
@@ -613,7 +613,7 @@ fn disabling_code_index_unpins_codegraph_and_keeps_user_pins() {
     assert!(mcp.contains("\"superdev-aokf\""), "{mcp}");
     let aggregator = sb.read(".agents/superdev.md");
     assert!(!aggregator.contains("@codegraph.md"), "{aggregator}");
-    assert!(aggregator.contains("@aokf.md"), "{aggregator}");
+    assert!(aggregator.contains("@sokf.md"), "{aggregator}");
     sb.superdev().arg("status").assert().success();
 }
 

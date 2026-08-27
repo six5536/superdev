@@ -9,4 +9,4 @@ mod apply;
 mod pins;
 mod tx;
 
-pub use apply::{ActionOutcome, ApplyResult, ComponentReport, Planned, apply, plan};
+pub use apply::{ActionOutcome, ApplyResult, ComponentReport, Planned, REPO_PROVIDER, apply, plan};

@@ -50,7 +50,7 @@ pub struct RegistryEntry {
     pub default: bool,
 }
 
-const ENTRIES: [RegistryEntry; 5] = [
+const ENTRIES: [RegistryEntry; 4] = [
     RegistryEntry {
         capability: Capability::Frontend,
         provider: "frontend-design",
@@ -85,13 +85,6 @@ const ENTRIES: [RegistryEntry; 5] = [
             version: RTK_VERSION,
             provenance: Provenance::Checksum,
         }),
-        available: true,
-        default: true,
-    },
-    RegistryEntry {
-        capability: Capability::Knowledge,
-        provider: "aokf",
-        version: None,
         available: true,
         default: true,
     },
@@ -234,8 +227,8 @@ mod tests {
                 "{c:?}"
             );
         }
-        assert!(entry_for(Capability::Knowledge, "flying").is_none());
-        assert_eq!(providers_for(Capability::Knowledge), vec!["aokf"]);
+        assert!(entry_for(Capability::CodeIndex, "flying").is_none());
+        assert_eq!(providers_for(Capability::CodeIndex), vec!["codegraph"]);
     }
 
     /// A half-done bump — new version, stale urls — would install the old

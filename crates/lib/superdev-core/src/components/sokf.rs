@@ -1,5 +1,7 @@
-//! components/aokf.rs — the knowledge capability: AOKF is native to superdev.
-//! The blueprint's files ship inside the binary.
+//! components/sokf.rs — the SOKF knowledge. Not a capability: SOKF is part
+//! of superdev, so this component is always planned and no manifest entry
+//! turns it off. The specification and the instructions ship inside the
+//! binary; everything else it writes comes from the content pack.
 
 use std::path::Path;
 
@@ -71,10 +73,10 @@ const SKELETON_REASONS: &[(&str, &str)] = &[
     ("issue-tracker.md", "issue-tracker convention"),
 ];
 
-/// The knowledge capability owns the workflow phases and their support
-/// skills: whatever the resolved content carries under this owner, so they
-/// exist exactly where a bundle exists.
-pub(crate) const OWNER: Owner = Owner::Capability(Capability::Knowledge);
+/// SOKF owns the workflow phases and their support skills: whatever the
+/// resolved content carries under this owner, so they exist wherever the
+/// SOKF knowledge does.
+pub(crate) const OWNER: Owner = Owner::Knowledge;
 
 /// Where Claude Code reads hook registrations. Shared with the user's own
 /// hooks, so only superdev's array element is managed.
@@ -88,24 +90,23 @@ const HOOK_MARKER: &str = "superdev aokf hook validate";
 /// blocking edits to a `knowledge/` directory superdev does not manage.
 const HOOK_ELEMENT: &str = r#"{"matcher":"Edit|Write","hooks":[{"type":"command","command":"superdev aokf hook validate"}]}"#;
 
-/// Release, at adoption time, every aokf skill the repo already has under
+/// Release, at adoption time, every SOKF skill the repo already has under
 /// its own name and with its own content. Returns the lines to print.
 pub(crate) fn adopt_existing(
     root: &Path,
     content: &ContentSet,
     manifest: &mut Manifest,
 ) -> Vec<String> {
-    super::skills::adopt_existing(
-        root,
-        Capability::Knowledge,
-        "aokf",
-        &super::skills::skill_identities(content, OWNER),
-        manifest,
-    )
+    let identities = super::skills::skill_identities(content, OWNER);
+    super::skills::adopt_existing(root, NAME, &mut manifest.knowledge.custom, &identities)
 }
 
-/// The native AOKF provider.
-pub struct Aokf;
+/// What this component is called in reports, lock groups and adoption lines.
+/// Not a provider id: nothing competes for the slot, because there is none.
+pub(crate) const NAME: &str = "knowledge";
+
+/// The SOKF component.
+pub struct Sokf;
 
 /// Everything the knowledge capability keeps in the repo, as one list the
 /// driver derives both `plan` and `owned` from.
@@ -174,10 +175,7 @@ fn items(ctx: &Ctx<'_>) -> Vec<ManagedItem> {
         marker: None,
         value_json: MCP_VALUE.into(),
     });
-    let custom = ctx
-        .config(Capability::Knowledge, "aokf")
-        .map(|c| c.custom.as_slice())
-        .unwrap_or_default();
+    let custom = ctx.manifest.knowledge.custom.as_slice();
     items.extend(super::skills::skill_dir_items(ctx.content, OWNER, custom));
     items.push(ManagedItem::JsonEntry {
         path: SETTINGS_PATH.into(),
@@ -198,13 +196,13 @@ fn join(base: &str, rel: &str) -> String {
     }
 }
 
-impl Component for Aokf {
-    fn capability(&self) -> Capability {
-        Capability::Knowledge
+impl Component for Sokf {
+    fn capability(&self) -> Option<Capability> {
+        None
     }
 
     fn provider(&self) -> &'static str {
-        "aokf"
+        NAME
     }
 
     fn plan(&self, ctx: &Ctx<'_>) -> Result<Vec<Action>> {
@@ -236,7 +234,7 @@ mod tests {
             lock: &lock,
             content: crate::content::test_snapshot(),
         };
-        Aokf.plan(&ctx).unwrap()
+        Sokf.plan(&ctx).unwrap()
     }
 
     #[test]
@@ -280,8 +278,7 @@ mod tests {
         use crate::component::Claim;
         let dir = tempfile::tempdir().unwrap();
         let mut manifest = Manifest::default_for("0.1.0", &[]);
-        manifest.capabilities.get_mut("knowledge").unwrap()[0].custom =
-            vec!["maintain".into(), "prototype".into()];
+        manifest.knowledge.custom = vec!["maintain".into(), "prototype".into()];
         let lock = Lock::default();
         let fake = FakeRunner::new();
         let ctx = Ctx {
@@ -291,7 +288,7 @@ mod tests {
             lock: &lock,
             content: crate::content::test_snapshot(),
         };
-        let keys: Vec<String> = Aokf.owned(&ctx).iter().map(Claim::lock_key).collect();
+        let keys: Vec<String> = Sokf.owned(&ctx).iter().map(Claim::lock_key).collect();
         assert!(!keys.iter().any(|k| k.contains("/maintain/")), "{keys:?}");
         // Releasing a skill releases its whole directory, companions included.
         assert!(!keys.iter().any(|k| k.contains("/prototype/")), "{keys:?}");
@@ -329,7 +326,7 @@ mod tests {
         std::fs::write(path, "# Ours, thanks\n").unwrap();
         let mut manifest = Manifest::default_for("0.1.0", &[]);
         let lines = adopt_existing(dir.path(), crate::content::test_snapshot(), &mut manifest);
-        assert_eq!(manifest.capabilities["knowledge"][0].custom, ["maintain"]);
+        assert_eq!(manifest.knowledge.custom, ["maintain"]);
         assert_eq!(
             lines,
             vec![format!(
@@ -582,9 +579,11 @@ mod tests {
         );
     }
 
+    /// SOKF fills no slot: that is what makes it core rather than a
+    /// provider something else could replace.
     #[test]
-    fn reports_its_slot_and_provider() {
-        assert_eq!(Aokf.capability(), crate::capability::Capability::Knowledge);
-        assert_eq!(Aokf.provider(), "aokf");
+    fn fills_no_capability_slot() {
+        assert_eq!(Sokf.capability(), None);
+        assert_eq!(Sokf.provider(), NAME);
     }
 }

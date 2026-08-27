@@ -6,10 +6,7 @@ use crate::engine::{ActionOutcome, ApplyResult, Planned};
 pub fn render_plan(planned: &[Planned]) -> String {
     let mut out = String::new();
     for entry in planned {
-        let label = match entry.capability {
-            Some(c) => format!("{} ({})", c.as_str(), entry.provider),
-            None => format!("repo ({})", entry.provider),
-        };
+        let label = entry.label();
         if entry.actions.is_empty() {
             out.push_str(&format!("{label}: ok\n"));
             continue;
@@ -70,8 +67,8 @@ mod tests {
                 actions: vec![],
             },
             Planned {
-                capability: Some(Capability::Knowledge),
-                provider: "aokf".into(),
+                capability: None,
+                provider: "knowledge".into(),
                 actions: vec![Action::EnsureLine {
                     path: ".gitignore".into(),
                     line: "x".into(),
@@ -82,7 +79,7 @@ mod tests {
         ];
         let s = render_plan(&planned);
         assert!(s.contains("frontend (frontend-design): ok"));
-        assert!(s.contains("knowledge (aokf): 1 change(s)"));
+        assert!(s.contains("knowledge: 1 change(s)"));
         assert!(s.contains("  - ensure .gitignore contains `x`"));
     }
 
@@ -90,7 +87,7 @@ mod tests {
     fn apply_report_shows_outcomes_and_reverts() {
         let result = ApplyResult {
             reports: vec![ComponentReport {
-                label: "knowledge (aokf)".into(),
+                label: "knowledge".into(),
                 outcomes: vec![
                     (
                         "write AGENTS.md (agent entry point)".into(),
@@ -120,7 +117,7 @@ mod tests {
             provider: "gitignore".into(),
             actions: vec![],
         }];
-        assert_eq!(render_plan(&planned), "repo (gitignore): ok\n");
+        assert_eq!(render_plan(&planned), "gitignore: ok\n");
     }
 
     #[test]

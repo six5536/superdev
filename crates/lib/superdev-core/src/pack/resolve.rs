@@ -418,7 +418,6 @@ fn relative(root: &Path, path: &Path) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::capability::Capability;
     use crate::content::{ItemKind, Owner};
     use crate::runner::FakeRunner;
 
@@ -443,7 +442,7 @@ mod tests {
     }
 
     fn knowledge() -> Owner {
-        Owner::Capability(Capability::Knowledge)
+        Owner::Knowledge
     }
 
     /// A directory and a repository are different sources however alike their

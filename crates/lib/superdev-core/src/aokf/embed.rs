@@ -420,15 +420,8 @@ mod tests {
     #[test]
     fn manifest_accepts_embeddings_subtable() {
         let m = crate::manifest::Manifest::parse(
-            "blueprint = \"0.1.0\"\n[knowledge]\nprovider = \"aokf\"\n[knowledge.embeddings]\nprovider = \"openai\"\nmodel = \"text-embedding-3-small\"\n",
+            "blueprint = \"0.1.0\"\n[knowledge.embeddings]\nprovider = \"openai\"\nmodel = \"text-embedding-3-small\"\n",
         ).unwrap();
-        assert_eq!(
-            m.capabilities["knowledge"][0]
-                .embeddings
-                .as_ref()
-                .unwrap()
-                .provider,
-            "openai"
-        );
+        assert_eq!(m.knowledge.embeddings.as_ref().unwrap().provider, "openai");
     }
 }

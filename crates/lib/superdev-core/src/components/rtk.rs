@@ -120,8 +120,8 @@ fn mise_version(ctx: &Ctx<'_>) -> Option<(u64, u64)> {
 pub struct Rtk;
 
 impl Component for Rtk {
-    fn capability(&self) -> Capability {
-        Capability::BashOutputFilter
+    fn capability(&self) -> Option<Capability> {
+        Some(Capability::BashOutputFilter)
     }
 
     fn provider(&self) -> &'static str {

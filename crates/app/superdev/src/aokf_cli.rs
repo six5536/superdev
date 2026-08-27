@@ -9,7 +9,6 @@ use std::path::{Path, PathBuf};
 use superdev_core::aokf::{
     AokfServer, EmbeddingsConfig, Index, IndexDir, embedder_from, load_bundle,
 };
-use superdev_core::capability::Capability;
 use superdev_core::error::{Error, Result};
 use superdev_core::format;
 use superdev_core::manifest::{CONFIG_PATH, Manifest};
@@ -281,15 +280,12 @@ fn embedder(root: &Path) -> Result<Option<Box<dyn superdev_core::aokf::Embedder>
     embedder_from(embeddings(root)?.as_ref())
 }
 
-/// The knowledge capability's `[knowledge.embeddings]` table, when there is one.
+/// The `[knowledge.embeddings]` table, when there is one.
 fn embeddings(root: &Path) -> Result<Option<EmbeddingsConfig>> {
     if !root.join(CONFIG_PATH).is_file() {
         return Ok(None);
     }
-    Ok(Manifest::load(root)?
-        .configs(Capability::Knowledge)
-        .first()
-        .and_then(|config| config.embeddings.clone()))
+    Ok(Manifest::load(root)?.knowledge.embeddings)
 }
 
 /// The one stdout path, so `main` can keep BrokenPipe a success.

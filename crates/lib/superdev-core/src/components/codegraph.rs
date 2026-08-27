@@ -65,8 +65,8 @@ fn pin_value(version: &str) -> String {
 }
 
 impl Component for Codegraph {
-    fn capability(&self) -> Capability {
-        Capability::CodeIndex
+    fn capability(&self) -> Option<Capability> {
+        Some(Capability::CodeIndex)
     }
 
     fn provider(&self) -> &'static str {
@@ -239,7 +239,7 @@ mod tests {
 
     #[test]
     fn reports_its_slot_and_provider() {
-        assert_eq!(Codegraph.capability(), Capability::CodeIndex);
+        assert_eq!(Codegraph.capability(), Some(Capability::CodeIndex));
         assert_eq!(Codegraph.provider(), "codegraph");
     }
 }

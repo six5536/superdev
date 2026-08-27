@@ -328,7 +328,7 @@ mod tests {
         };
         use crate::component::{Claim, Component};
         let statics: [Box<dyn Component>; 2] = [
-            Box::new(crate::components::aokf::Aokf),
+            Box::new(crate::components::sokf::Sokf),
             Box::new(crate::components::skillpack::SkillPack),
         ];
         for component in &statics {

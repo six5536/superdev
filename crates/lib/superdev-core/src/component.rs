@@ -128,10 +128,13 @@ impl Claim {
     }
 }
 
-/// One capability provider.
+/// One thing the engine plans and applies: a capability's provider, or a
+/// core component that fills no slot.
 pub trait Component {
-    /// Slot this provider fills.
-    fn capability(&self) -> Capability;
+    /// Slot this provider fills, or `None` for a core component. SOKF is the
+    /// only `None` today: it is part of superdev, so no manifest entry
+    /// enables it and no provider competes for it.
+    fn capability(&self) -> Option<Capability>;
     /// Provider id, e.g. `"codegraph"`.
     fn provider(&self) -> &'static str;
     /// Observe current state, compare with the manifest, return the diff as
@@ -153,8 +156,8 @@ mod tests {
 
     struct Nop;
     impl Component for Nop {
-        fn capability(&self) -> Capability {
-            Capability::Knowledge
+        fn capability(&self) -> Option<Capability> {
+            Some(Capability::CodeIndex)
         }
         fn provider(&self) -> &'static str {
             "nop"
@@ -258,7 +261,7 @@ mod tests {
         assert!(ctx.config(Capability::Skills, "superdev-skills").is_some());
         assert!(ctx.config(Capability::Skills, "other-pack").is_none());
         assert!(ctx.config(Capability::CodeIndex, "codegraph").is_none());
-        assert_eq!(Nop.capability(), Capability::Knowledge);
+        assert_eq!(Nop.capability(), Some(Capability::CodeIndex));
         assert_eq!(Nop.provider(), "nop");
         assert!(Nop.plan(&ctx).unwrap().is_empty());
     }

@@ -2,16 +2,20 @@
 
 use crate::capability::Capability;
 
-/// Which capability materialises an item, or none for the repo-level kinds.
+/// What materialises an item: a capability's component, superdev's own SOKF
+/// component, or nothing in particular for the repo-level kinds.
 ///
-/// Part of an item's identity because two capabilities both write into
-/// `.claude/skills/` and their `custom` lists are name-guarded: a name in one
-/// capability's list must never release another capability's file. ADR-003.
+/// Part of an item's identity because the SOKF component and the skills
+/// capability both write into `.claude/skills/` and their `custom` lists are
+/// name-guarded: a name in one list must never release the other's file.
+/// ADR-003.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Owner {
     /// Materialised by one capability's component.
     Capability(Capability),
-    /// Repo-level: written outside any capability's slot.
+    /// Materialised by the SOKF component, which fills no slot.
+    Knowledge,
+    /// Repo-level: written outside any component's claim.
     Repo,
 }
 

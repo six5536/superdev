@@ -130,7 +130,6 @@ impl ContentSet {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::capability::Capability;
 
     fn item(owner: Owner, kind: ItemKind, name: &str) -> Item {
         Item {
@@ -142,7 +141,7 @@ mod tests {
     }
 
     fn knowledge() -> Owner {
-        Owner::Capability(Capability::Knowledge)
+        Owner::Knowledge
     }
 
     fn set() -> ContentSet {

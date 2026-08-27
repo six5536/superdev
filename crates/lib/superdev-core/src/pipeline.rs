@@ -13,7 +13,7 @@ use crate::action::Action;
 use crate::capability::Capability;
 use crate::component::{Claim, Ctx};
 use crate::components::codegraph::CODEGRAPH_INDEX_DIR;
-use crate::components::{aokf, skillpack};
+use crate::components::{skillpack, sokf};
 use crate::content::{self, ContentSet, ItemKind, Origin, Owner};
 use crate::engine::Planned;
 use crate::error::{Error, Result};
@@ -26,7 +26,7 @@ use crate::runner::CommandRunner;
 use crate::{components, engine, orphan, report};
 
 /// Provider name for repo-level actions no capability owns.
-const REPO_PROVIDER: &str = "superdev";
+use crate::engine::REPO_PROVIDER;
 
 /// How the pipeline treats a manifest pinned off the registry default.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -192,7 +192,7 @@ pub fn plan_repo(
     let mut planned = Vec::new();
     planned.extend(repo_entry(root, manifest, &content)?);
     planned.extend(engine::plan(&components, &ctx)?);
-    let claims_by_component: Vec<(Capability, String, Vec<Claim>)> = components
+    let claims_by_component: Vec<(Option<Capability>, String, Vec<Claim>)> = components
         .iter()
         .map(|c| (c.capability(), c.provider().to_string(), c.owned(&ctx)))
         .collect();
@@ -369,7 +369,7 @@ fn reconcile_lock(root: &Path, claims: &[Claim], lock: &mut Lock) -> bool {
 pub fn adopt_existing(root: &Path, manifest: &mut Manifest) -> Vec<String> {
     let content = content::snapshot();
     let mut lines = skillpack::adopt_existing(root, &content, manifest);
-    lines.extend(aokf::adopt_existing(root, &content, manifest));
+    lines.extend(sokf::adopt_existing(root, &content, manifest));
     lines
 }
 
@@ -400,8 +400,14 @@ pub fn registry_version_of(capability: Capability, provider: &str) -> Option<Str
 /// accident — silently picking a winner would oscillate across syncs. The
 /// message carries the way out; providers are named only when the
 /// capability alone cannot tell the two sides apart.
-fn claim_collision(claims_by_component: &[(Capability, String, Vec<Claim>)]) -> Result<()> {
-    let mut seen: std::collections::BTreeMap<String, (Capability, String)> =
+/// What to call a claimant in a collision message: its slot, or the SOKF
+/// knowledge for the core component that fills none.
+fn slot_name(capability: Option<Capability>) -> &'static str {
+    capability.map_or("knowledge", Capability::as_str)
+}
+
+fn claim_collision(claims_by_component: &[(Option<Capability>, String, Vec<Claim>)]) -> Result<()> {
+    let mut seen: std::collections::BTreeMap<String, (Option<Capability>, String)> =
         std::collections::BTreeMap::new();
     for (capability, provider, claims) in claims_by_component {
         for claim in claims {
@@ -411,13 +417,13 @@ fn claim_collision(claims_by_component: &[(Capability, String, Vec<Claim>)]) -> 
             {
                 let (first, second) = if first_cap == capability {
                     (
-                        format!("{} ({first_provider})", first_cap.as_str()),
-                        format!("{} ({provider})", capability.as_str()),
+                        format!("{} ({first_provider})", slot_name(*first_cap)),
+                        format!("{} ({provider})", slot_name(*capability)),
                     )
                 } else {
                     (
-                        first_cap.as_str().to_string(),
-                        capability.as_str().to_string(),
+                        slot_name(*first_cap).to_string(),
+                        slot_name(*capability).to_string(),
                     )
                 };
                 return Err(Error::Manifest {
@@ -454,9 +460,9 @@ fn aggregator_content(manifest: &Manifest) -> String {
          @process.md\n\
          @coding.md\n",
     );
-    if manifest.enabled(Capability::Knowledge) {
-        out.push_str("@aokf.md\n");
-    }
+    // Unconditional: SOKF is part of superdev, so its instructions are
+    // never absent from the aggregator.
+    out.push_str("@sokf.md\n");
     if manifest.enabled(Capability::CodeIndex) {
         out.push_str("@codegraph.md\n");
     }
@@ -540,27 +546,34 @@ fn repo_entry(root: &Path, manifest: &Manifest, content: &ContentSet) -> Result<
 /// Remove released skills' and workflows' hashes from the lock: a custom
 /// name is the user's file, and a stale hash would misread their next edit
 /// as drift against superdev content. True when anything was removed.
+/// The two `custom` lists and the skills each governs: the skills
+/// capability's entry, and the SOKF table. Name-guarded, because both write
+/// into `.claude/skills/` and a name in one list must never release the
+/// other's file.
+fn custom_lists<'a>(
+    manifest: &'a Manifest,
+    content: &'a ContentSet,
+) -> Vec<(&'static str, &'a [String], Vec<&'a str>)> {
+    let mut lists: Vec<(&'static str, &[String], Vec<&str>)> = Vec::new();
+    if let Some(config) = manifest.config_of(Capability::Skills, "superdev-skills") {
+        lists.push((
+            Capability::Skills.as_str(),
+            config.custom.as_slice(),
+            components::skill_names(content, skillpack::OWNER),
+        ));
+    }
+    lists.push((
+        sokf::NAME,
+        manifest.knowledge.custom.as_slice(),
+        components::skill_names(content, sokf::OWNER),
+    ));
+    lists
+}
+
 fn prune_custom(manifest: &Manifest, content: &ContentSet, lock: &mut Lock) -> bool {
     let mut pruned = false;
-    // Name-guarded per capability: two capabilities ship into
-    // `.claude/skills/`, so an unknown name in one's list must not release
-    // the other's file.
-    for (capability, provider, shipped) in [
-        (
-            Capability::Skills,
-            "superdev-skills",
-            components::skill_names(content, skillpack::OWNER),
-        ),
-        (
-            Capability::Knowledge,
-            "aokf",
-            components::skill_names(content, aokf::OWNER),
-        ),
-    ] {
-        let Some(config) = manifest.config_of(capability, provider) else {
-            continue;
-        };
-        for name in &config.custom {
+    for (_, custom, shipped) in custom_lists(manifest, content) {
+        for name in custom {
             if !shipped.contains(&name.as_str()) {
                 continue;
             }
@@ -649,23 +662,8 @@ fn embedded_version() -> String {
 
 fn custom_lines(manifest: &Manifest, content: &ContentSet) -> Vec<String> {
     let mut lines = Vec::new();
-    for (capability, provider, shipped) in [
-        (
-            Capability::Skills,
-            "superdev-skills",
-            components::skill_names(content, skillpack::OWNER),
-        ),
-        (
-            Capability::Knowledge,
-            "aokf",
-            components::skill_names(content, aokf::OWNER),
-        ),
-    ] {
-        let Some(config) = manifest.config_of(capability, provider) else {
-            continue;
-        };
-        let cap = capability.as_str();
-        for name in &config.custom {
+    for (cap, custom, shipped) in custom_lists(manifest, content) {
+        for name in custom {
             lines.push(if shipped.contains(&name.as_str()) {
                 format!("{cap}: {name} custom, unmanaged")
             } else {
@@ -844,9 +842,10 @@ mod tests {
         let plannable = plannable(&manifest);
         assert!(locked_pin_mismatch(&plannable).is_none());
         // Pins with no provenance beside them are left exactly as written.
+        // frontend is such a slot: the registry pins no version for it.
         assert_eq!(
-            plannable.capabilities["knowledge"][0].version,
-            manifest.capabilities["knowledge"][0].version
+            plannable.capabilities["frontend"][0].version,
+            manifest.capabilities["frontend"][0].version
         );
     }
 
@@ -889,9 +888,10 @@ mod tests {
     /// makes dropping runs from the exit code safe.
     #[test]
     fn a_provisioning_run_is_work_to_do_but_not_drift() {
-        // Every capability disabled, and the repo entry's own files already
-        // in place: a settled tree, so the plan starts empty and the asserts
-        // below speak only about what the test prepends.
+        // Every capability disabled, and everything still planned already in
+        // place — the repo entry's files and SOKF's, which no flag disables:
+        // a settled tree, so the plan starts empty and the asserts below
+        // speak only about what the test prepends.
         let dir = tempfile::tempdir().unwrap();
         let manifest = Manifest::default_for(crate::version(), &Capability::ALL);
         std::fs::create_dir_all(dir.path().join(".agents")).unwrap();
@@ -906,6 +906,7 @@ mod tests {
         std::fs::write(dir.path().join(".gitignore"), ".superdev/cache/\n").unwrap();
         std::fs::write(dir.path().join("AGENTS.md"), "@.agents/superdev.md\n").unwrap();
         let fake = FakeRunner::new();
+        settle_sokf(dir.path(), &manifest, &fake);
         let mut plan = plan_repo(
             dir.path(),
             &fake,
@@ -941,6 +942,28 @@ mod tests {
             }],
         });
         assert!(plan.has_drift(), "a managed file is drift");
+    }
+
+    /// Apply what the SOKF component plans, so a test that wants a settled
+    /// tree gets one. SOKF is core, so it plans in every repo — a test that
+    /// left its files unwritten would be measuring the scaffold rather than
+    /// whatever it meant to measure.
+    fn settle_sokf(root: &std::path::Path, manifest: &Manifest, fake: &FakeRunner) {
+        use crate::component::Component;
+        let ctx = crate::component::Ctx {
+            root,
+            runner: fake,
+            manifest,
+            lock: &Lock::default(),
+            content: crate::content::test_snapshot(),
+        };
+        let mut lock = Lock::default();
+        let planned = vec![Planned {
+            capability: None,
+            provider: crate::components::sokf::NAME.into(),
+            actions: crate::components::sokf::Sokf.plan(&ctx).unwrap(),
+        }];
+        assert!(engine::apply(root, fake, manifest, &planned, &mut lock).ok);
     }
 
     /// Every planned action description, flattened for substring asserts.
@@ -1034,21 +1057,22 @@ mod tests {
         let all = aggregator_content(&Manifest::default_for("0.1.0", &[]));
         assert!(all.starts_with("<superdev-system>\n"), "{all}");
         assert!(all.ends_with("</superdev-system>\n"), "{all}");
-        assert!(all.contains("@aokf.md"), "{all}");
+        assert!(all.contains("@sokf.md"), "{all}");
         assert!(all.contains("@codegraph.md"), "{all}");
         assert!(all.contains("@rtk.md"), "{all}");
         let partial = aggregator_content(&Manifest::default_for(
             "0.1.0",
-            &[Capability::Knowledge, Capability::BashOutputFilter],
+            &[Capability::BashOutputFilter],
         ));
-        assert!(!partial.contains("@aokf.md"), "{partial}");
         assert!(!partial.contains("@rtk.md"), "{partial}");
         assert!(partial.contains("@codegraph.md"), "{partial}");
+        // SOKF is not a capability, so no disabled set removes its import.
+        assert!(partial.contains("@sokf.md"), "{partial}");
         // The general rules are not capability-gated: every managed repo
         // imports them, even with every instruction-shipping capability off.
         let none = aggregator_content(&Manifest::default_for(
             "0.1.0",
-            &[Capability::Knowledge, Capability::CodeIndex],
+            &[Capability::CodeIndex, Capability::BashOutputFilter],
         ));
         assert!(none.contains("@professionalism.md"), "{none}");
         assert!(none.contains("@process.md"), "{none}");
@@ -1131,7 +1155,7 @@ mod tests {
         )
         .unwrap();
         let descs = plan_descs(&plan);
-        for name in components::skill_names(content::test_snapshot(), aokf::OWNER) {
+        for name in components::skill_names(content::test_snapshot(), sokf::OWNER) {
             assert!(
                 descs
                     .iter()
@@ -1144,13 +1168,13 @@ mod tests {
     #[test]
     fn a_cross_capability_claim_collision_refuses_with_the_way_out() {
         let a = (
-            Capability::Skills,
+            Some(Capability::Skills),
             "superdev-skills".to_string(),
             vec![Claim::File(".claude/skills/grilling/SKILL.md".into())],
         );
         let b = (
-            Capability::Knowledge,
-            "aokf".to_string(),
+            None,
+            crate::components::sokf::NAME.to_string(),
             vec![Claim::File(".claude/skills/grilling/SKILL.md".into())],
         );
         let err = claim_collision(&[a, b]).unwrap_err().to_string();
@@ -1163,13 +1187,13 @@ mod tests {
         // The same component claiming a key twice is not a collision, and
         // distinct keys never are.
         let dup = (
-            Capability::Skills,
+            Some(Capability::Skills),
             "superdev-skills".to_string(),
             vec![Claim::File("a.txt".into()), Claim::File("a.txt".into())],
         );
         let other = (
-            Capability::Knowledge,
-            "aokf".to_string(),
+            None,
+            crate::components::sokf::NAME.to_string(),
             vec![Claim::File("b.txt".into())],
         );
         assert!(claim_collision(&[dup, other]).is_ok());
@@ -1178,12 +1202,12 @@ mod tests {
     #[test]
     fn two_packs_in_one_slot_colliding_name_both_providers() {
         let a = (
-            Capability::Skills,
+            Some(Capability::Skills),
             "superdev-skills".to_string(),
             vec![Claim::File(".claude/skills/humanise/SKILL.md".into())],
         );
         let b = (
-            Capability::Skills,
+            Some(Capability::Skills),
             "another-pack".to_string(),
             vec![Claim::File(".claude/skills/humanise/SKILL.md".into())],
         );
@@ -1243,7 +1267,7 @@ mod tests {
     #[test]
     fn knowledge_custom_entries_release_the_whole_directory() {
         let mut manifest = Manifest::default_for("0.1.0", &[]);
-        manifest.capabilities.get_mut("knowledge").unwrap()[0].custom = vec!["prototype".into()];
+        manifest.knowledge.custom = vec!["prototype".into()];
         let mut lock = Lock::default();
         // A skill-pack file, untouched by the knowledge custom list.
         lock.files
@@ -1274,8 +1298,7 @@ mod tests {
     #[test]
     fn knowledge_custom_lines_cover_every_carried_skill() {
         let mut manifest = Manifest::default_for("0.1.0", &[]);
-        manifest.capabilities.get_mut("knowledge").unwrap()[0].custom =
-            vec!["prototype".into(), "flying".into()];
+        manifest.knowledge.custom = vec!["prototype".into(), "flying".into()];
         let lines = custom_lines(&manifest, content::test_snapshot());
         assert!(lines.contains(&"knowledge: prototype custom, unmanaged".to_string()));
         assert!(
@@ -1285,11 +1308,10 @@ mod tests {
         );
         // Every carried skill is a known custom name.
         let mut manifest = Manifest::default_for("0.1.0", &[]);
-        manifest.capabilities.get_mut("knowledge").unwrap()[0].custom =
-            components::skill_names(content::test_snapshot(), aokf::OWNER)
-                .into_iter()
-                .map(String::from)
-                .collect();
+        manifest.knowledge.custom = components::skill_names(content::test_snapshot(), sokf::OWNER)
+            .into_iter()
+            .map(String::from)
+            .collect();
         for line in custom_lines(&manifest, content::test_snapshot()) {
             assert!(line.ends_with("custom, unmanaged"), "{line}");
         }

@@ -5,8 +5,7 @@
 
 use std::path::Path;
 
-use crate::capability::Capability;
-use crate::manifest::{CONFIG_PATH, Manifest};
+use crate::manifest::CONFIG_PATH;
 
 use crate::content::{ContentSet, ItemKind, Owner};
 
@@ -73,39 +72,32 @@ pub(crate) fn skill_path(name: &str) -> String {
 /// marking them custom keeps the file and hands the choice back. Returns the
 /// lines to print. Only `init` calls this — later syncs honour the list as
 /// written.
+/// `custom` is the list to extend — a capability entry's, or the SOKF
+/// table's — and `label` names the owner in the printed line. Taking the
+/// list rather than the manifest is what lets a core component with no
+/// capability entry use the same code.
 pub(crate) fn adopt_existing(
     root: &Path,
-    capability: Capability,
-    provider: &str,
+    label: &str,
+    custom: &mut Vec<String>,
     skills: &[(&str, &str)],
-    manifest: &mut Manifest,
 ) -> Vec<String> {
-    let Some(config) = manifest.config_of_mut(capability, provider) else {
-        return Vec::new();
-    };
     for (name, shipped) in skills {
         let existing = std::fs::read_to_string(root.join(skill_path(name)));
         // Identical content is superdev's own text already: nothing to keep.
         if existing.is_ok_and(|existing| existing != *shipped) {
-            config.custom.push((*name).to_string());
+            custom.push((*name).to_string());
         }
     }
-    config
-        .custom
+    custom
         .iter()
-        .map(|name| {
-            format!(
-                "{}: kept your {name} — marked custom in {CONFIG_PATH}",
-                capability.as_str()
-            )
-        })
+        .map(|name| format!("{label}: kept your {name} — marked custom in {CONFIG_PATH}"))
         .collect()
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::capability::Capability;
     use crate::content::{ContentSet, Item, ItemKind, Origin};
 
     /// Test plan case 14: a `custom` name releases an item whatever layer
@@ -114,7 +106,7 @@ mod tests {
     /// shipped one.
     #[test]
     fn a_custom_name_releases_a_pack_provided_item() {
-        let owner = Owner::Capability(Capability::Knowledge);
+        let owner = Owner::Knowledge;
         let item = |name: &str| Item {
             owner,
             kind: ItemKind::Skill,

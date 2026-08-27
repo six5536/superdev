@@ -67,7 +67,7 @@ fn classify(path: &str) -> Option<Position> {
         name: name.to_string(),
         rel: rel.join("/"),
     };
-    let knowledge = Owner::Capability(Capability::Knowledge);
+    let knowledge = Owner::Knowledge;
     match segments.as_slice() {
         ["knowledge", "skills", name, rest @ ..] if !rest.is_empty() => {
             Some(position(knowledge, ItemKind::Skill, name, rest))
@@ -122,7 +122,7 @@ mod tests {
             ("agents/coding.md", "rules"),
             ("projects/rust-npm/README.md", "project"),
         ]);
-        let knowledge = Owner::Capability(Capability::Knowledge);
+        let knowledge = Owner::Knowledge;
         assert_eq!(names(&items, knowledge, ItemKind::Skill), ["frame"]);
         assert_eq!(
             names(&items, knowledge, ItemKind::KnowledgeSkeleton),
@@ -177,7 +177,7 @@ mod tests {
             ("knowledge/concepts/specs/index.md", "specs"),
             ("knowledge/concepts/manifest.aokf.yaml", "manifest"),
         ]);
-        let knowledge = Owner::Capability(Capability::Knowledge);
+        let knowledge = Owner::Knowledge;
         assert_eq!(
             names(&items, knowledge, ItemKind::KnowledgeSkeleton),
             ["manifest.aokf.yaml", "plans", "specs"]
