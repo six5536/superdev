@@ -31,3 +31,4 @@
 /target/llvm-cov-target
 *.profraw
 .codegraph/
+__old/

@@ -1,4 +1,4 @@
-# The AOKF parity fixtures are parsed byte-for-byte and compared against
+# The SOKF parity fixtures are parsed byte-for-byte and compared against
 # golden output, so their line endings must survive a Windows checkout.
 crates/lib/superdev-core/tests/fixtures/** -text
 
