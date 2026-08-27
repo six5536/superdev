@@ -1,0 +1,191 @@
+# superdev grammar 2.0
+
+The closed vocabulary of superdev-format files. This file is the single home of the grammar: validate-awa.mjs drives every structural check from it, and `validate-awa.mjs --doc` prints it as a reference. Change the language here, not in the validator.
+
+## Conditions
+
+One attribute carries every condition in the language, on every element that can bear one. Absent means unconditional, except on <tool_call>, where the condition is always stated.
+
+One attribute, `when`, on every element that can bear a condition:
+
+- `always` — unconditional; the explicit form, required on <tool_call>
+- `if {condition}` — runs when the condition holds
+- `unless {condition}` — runs except when the condition holds
+- `before {event}` — runs ahead of the named event
+
+`trigger` is not part of the grammar: renamed to when (one condition attribute across the grammar).
+`if` is not part of the grammar: renamed to when.
+`required` is not part of the grammar: renamed to when; an output is produced, not required.
+
+## Unit frontmatter
+
+A unit file is a Claude Code skill, so its frontmatter is the host's. Fields and types are from https://code.claude.com/docs/en/skills — every one of them is optional to the host and only description is recommended, so the `required` lists below are superdev being stricter than Claude Code, deliberately.
+
+- **claude-code-skill** — A skill directory: .claude/skills/{dir}/SKILL.md. Matches `SKILL.md`. Requires `name`, `description`.
+- **prompt** — A prompt file, whose host takes a smaller set and names the unit in the filename. Matches `.prompt.md`. Requires `description`.
+- **loose** — A unit file outside either layout — the procedure documents themselves. Requires `description`.
+
+- `name` — string; matching `^[a-z0-9]+(-[a-z0-9]+)*$`. Display name in skill listings. For a personal or project skill the command still comes from the directory name, so the two must agree.
+- `description` — string; at most 1536 chars. What the skill does and when to use it. The listing truncates the combined description at 1536 characters, so a longer one loses its tail.
+- `argument-hint` — string; Agent Skills: no. Autocomplete hint for the arguments the unit takes.
+- `arguments` — stringOrList; Agent Skills: no. Named positional arguments for $name substitution.
+- `disable-model-invocation` — boolean; Agent Skills: no. true keeps the unit user-invocable only.
+- `user-invocable` — boolean; Agent Skills: no. false hides the unit from the / menu; only Claude invokes it.
+- `allowed-tools` — stringOrList. Tools pre-approved for the invoking turn.
+- `disallowed-tools` — stringOrList; Agent Skills: no. Tools removed from the pool while the unit is active.
+- `model` — string; Agent Skills: no. Model override for the turn.
+- `effort` — string; one of low, medium, high, xhigh, max; Agent Skills: no
+- `context` — string; one of fork; Agent Skills: no. fork runs the unit in its own subagent context.
+- `agent` — string; Agent Skills: no. Subagent type, with context: fork.
+- `background` — boolean; Agent Skills: no. false waits for the forked subagent, with context: fork.
+- `hooks` — map; Agent Skills: no. Hooks registered when the unit is invoked.
+- `paths` — stringOrList; Agent Skills: no. Globs that limit when the unit activates.
+- `shell` — string; one of bash, powershell; Agent Skills: no
+- `metadata` — map. Free-form map for your own tooling.
+- `license` — string
+- `compatibility` — string; at most 500 chars
+
+Keys marked "Agent Skills: no" are outside the Agent Skills spec — Claude Code accepts it, but claude.ai uploads, the Skills API, and package_skill.py reject the file with a hard error (https://agentskills.io).
+
+
+## Unit elements
+
+### `skill`
+
+```xml
+<skill name="…" purpose="…" input="…"? user-input="…" output="…">…</skill>
+```
+
+Wraps the whole unit.
+Occurs 1–1 times.
+- `name` (required) — the unit name, matching the frontmatter name
+- `purpose` (required) — imperative title
+- `input` — what the user types; omitted when the unit takes none
+- `user-input` (required) — the host's own user-input variable Always `$ARGUMENTS`.
+- `output` (required) — what the unit delivers, in one line — the artifacts by what they are, not by path, and what is reported in conversation
+
+### `goal`
+
+```xml
+<goal persona="…"?>…</goal>
+```
+
+The unit's mission, in the source's words.
+Sits inside `<skill>`.
+Occurs 1–1 times.
+- `persona` — the role the source assigns; omitted when it assigns none
+
+### `constraints`
+
+```xml
+<constraints>…</constraints>
+```
+
+Load-bearing background that is neither a step nor a norm. Optional.
+Sits inside `<skill>`.
+Occurs 0–1 times.
+
+### `bootstrap_actions`
+
+```xml
+<bootstrap_actions>…</bootstrap_actions>
+```
+
+The unit's context manifest — everything that may enter context, each with the condition under which it does.
+Sits inside `<skill>`.
+Occurs 1–1 times.
+
+### `tool_call`
+
+```xml
+<tool_call name="…" path="…"? id="…"? query="…"? when="…" />
+```
+
+One load. name is the exact tool to invoke.
+Sits inside `<bootstrap_actions>`.
+- `name` (required) — read_file, or any MCP/CLI tool the ecosystem loads context with
+- `path` — for file reads
+- `id` — for knowledge-base reads
+- `query` — for search-shaped tools whose target is a question or a code location
+
+### `process_actions`
+
+```xml
+<process_actions>…</process_actions>
+```
+
+The ordered work. Optional — a unit may be all norms.
+Sits inside `<skill>`.
+Occurs 0–1 times.
+
+### `loop`
+
+```xml
+<loop until="…"? for-each="…"? max="…"? when="…"?>…</loop>
+```
+
+Work that repeats. until repeats a body until a condition holds — a retry or a convergence; for-each repeats it over a collection discovered at run time, which is the one load that cannot be hoisted into bootstrap because its targets are not known yet.
+Sits inside `<process_actions>`.
+- `until` — the condition that ends the loop; the body repeats while it does not hold
+- `for-each` — what is iterated, one pass of the body per item
+- `max` — an upper bound on passes, for a loop that could otherwise spin; omitted when the condition is the only sane bound
+- `when` — marks a loop that runs only on a branch
+
+### `step`
+
+```xml
+<step name="…" when="…"? task="…"? />  |  <step …>…</step>
+```
+
+One unit of work that leaves something behind. Carries its wording in task, or in the element body when the wording contains a double quote or an angle bracket.
+Sits inside `<process_actions>` or `<loop>`.
+- `name` (required) — short uppercase label
+- `when` — marks a step that runs only on a branch
+- `task` — the source wording
+
+### `gate`
+
+```xml
+<gate check="…" on-fail="…" />
+```
+
+A blocking check: the criterion that must hold, and the remedy when it does not — often a skill to return to, which should match an edge in the core workflow graph. Gates are not restated as rules.
+Sits inside `<process_actions>` or `<loop>`.
+- `check` (required) — the criterion that must hold
+- `on-fail` (required) — the remedy
+
+### `skill_call`
+
+```xml
+<skill_call name="…" input="…"? when="…" />
+```
+
+The transfer of the work to another unit, at the point in the process where it happens. The last one is the handoff. A unit invoked mid-process that hands the work back is a step instead — a step leaves something behind, a skill_call does not.
+Sits inside `<process_actions>`.
+- `name` (required) — the skill or prompt to call, as the user would invoke it
+- `input` — what travels with the work; omitted when the context carries it
+
+### `rules`
+
+```xml
+<rules>…</rules>
+```
+
+The unit's freestanding norms.
+Sits inside `<skill>`.
+Occurs 1–1 times.
+
+### `rule`
+
+```xml
+<rule level="…">…</rule>
+```
+
+One norm. The statement stays imperative and carries no modal of its own — the level attribute does that.
+Sits inside `<rules>`.
+- `level` (required) —  One of MUST, MUST NOT, SHALL, SHALL NOT, SHOULD, SHOULD NOT, MAY.
+
+## Element order
+
+`skill` → `goal` → `constraints` → `bootstrap_actions` → `process_actions` → `rules`
+

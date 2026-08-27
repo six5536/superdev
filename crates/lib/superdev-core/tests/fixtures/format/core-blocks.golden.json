@@ -1,0 +1,16 @@
+{
+  "files": 1,
+  "passed": false,
+  "findings": [
+    {
+      "severity": "error",
+      "file": "core.md",
+      "message": "core: missing H1"
+    },
+    {
+      "severity": "error",
+      "file": "core.md",
+      "message": "core: unbalanced </superdev>"
+    }
+  ]
+}

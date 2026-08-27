@@ -1,0 +1,11 @@
+{
+  "files": 2,
+  "passed": false,
+  "findings": [
+    {
+      "severity": "error",
+      "file": "sd-refs/SKILL.md",
+      "message": "references a core block the core does not define: <file_naming>"
+    }
+  ]
+}

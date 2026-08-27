@@ -2,7 +2,7 @@
 type: Issue
 id: issue-005-a-backport-leaves-the-lock-stale
 title: Sync re-records a hash only for a file it writes, so backporting an edit leaves the lock stale
-description: After a live edit is mirrored into the pack, sync has nothing to write and never refreshes that file's recorded hash, so the next legitimate write reports it as a user-edited file and backs it up.
+description: After a live edit was mirrored into the pack, sync had nothing to write and never refreshed that file's recorded hash, so the next legitimate write reported it as user-edited and backed it up; fixed in slice 17, which reconciles every claim against disk before saving the lock.
 status: stable
 tags: [done]
 links:

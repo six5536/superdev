@@ -1,0 +1,31 @@
+{
+  "files": 1,
+  "passed": false,
+  "findings": [
+    {
+      "severity": "error",
+      "file": "SKILL.md",
+      "message": "frontmatter: unknown key \"invented-key\" — not a Claude Code skill field"
+    },
+    {
+      "severity": "error",
+      "file": "SKILL.md",
+      "message": "frontmatter: name missing (required in a claude-code-skill file)"
+    },
+    {
+      "severity": "error",
+      "file": "SKILL.md",
+      "message": "<skill> user-input must be $ARGUMENTS, got \"\""
+    },
+    {
+      "severity": "error",
+      "file": "SKILL.md",
+      "message": "missing <bootstrap_actions> block"
+    },
+    {
+      "severity": "warning",
+      "file": "SKILL.md",
+      "message": "frontmatter: \"argument-hint\" is outside the Agent Skills spec — Claude Code accepts it, but claude.ai uploads, the Skills API, and package_skill.py reject the file with a hard error"
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "files": 1,
+  "passed": false,
+  "findings": [
+    {
+      "severity": "error",
+      "file": "schemas/thing.md",
+      "message": "schema yaml: sections[0]: needs exactly one of heading/heading-pattern, found heading and heading-pattern"
+    },
+    {
+      "severity": "error",
+      "file": "schemas/thing.md",
+      "message": "schema yaml: sections[1]: needs exactly one of heading/heading-pattern, found neither"
+    }
+  ]
+}

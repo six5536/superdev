@@ -2,7 +2,7 @@
 type: Issue
 id: issue-003-a-local-pack-cannot-remove-what-it-dropped
 title: Deleting an item from a local pack leaves its live copy in place, and the drift check stays green
-description: A path pack layers rather than replacing, so an item deleted or renamed under pack/ is still written from the embedded snapshot; sync reports nothing and status --drift exits 0 until the binary is rebuilt.
+description: A path pack layers rather than replacing, so an item deleted or renamed under pack/ is still written from the embedded snapshot and status --drift exits 0 until the binary is rebuilt; wontfix — the layering rule stands, and the rebuild a pack developer needs anyway is the answer.
 status: stable
 tags: [wontfix]
 links:

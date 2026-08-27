@@ -2,7 +2,7 @@
 type: Issue
 id: issue-001-update-can-pin-an-unreadable-pack-format
 title: update can move a pin to a pack format this binary cannot read, and cannot move it back
-description: update persists the moved pin before sync validates it, and a pin never moves backwards, so a content release in a newer format leaves every later sync and update failing until the manifest is hand-edited.
+description: update persisted a moved pin before sync validated it, and a pin never moves backwards, so a content release in a newer format left every later sync and update failing until the manifest was hand-edited; fixed in P005 slice 6, which proves a pin before writing it.
 status: stable
 tags: [done]
 links:

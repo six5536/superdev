@@ -2,7 +2,7 @@
 type: Issue
 id: issue-008-a-symlinked-file-in-a-pack-is-followed
 title: A symlinked file in a pack is followed, copying the target's contents into the repo
-description: read_dir skips a symlinked directory but not a symlinked file, so a pack can name a link to any readable file on the machine and superdev writes that file's contents into the working tree as pack content.
+description: read_dir skipped a symlinked directory but not a symlinked file, so a pack could name a link to any readable file on the machine and superdev wrote its contents into the working tree as pack content; fixed in slice 16 and hardened by P005 slices 2 and 3 into a refusal.
 status: stable
 tags: [done]
 links:

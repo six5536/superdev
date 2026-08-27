@@ -1,0 +1,51 @@
+{
+  "files": 1,
+  "passed": false,
+  "findings": [
+    {
+      "severity": "error",
+      "file": "SKILL.md",
+      "message": "frontmatter: name \"sd-elements\" does not match the skill directory \"unit-elements\", which is what the command is named after"
+    },
+    {
+      "severity": "error",
+      "file": "SKILL.md",
+      "message": "</rules> closes across an unclosed <rule>"
+    },
+    {
+      "severity": "error",
+      "file": "SKILL.md",
+      "message": "<skill> user-input must be $ARGUMENTS, got \"\""
+    },
+    {
+      "severity": "error",
+      "file": "SKILL.md",
+      "message": "unknown tag <made_up> (unit files use only skill/goal/constraints/bootstrap_actions/tool_call/process_actions/loop/step/gate/skill_call/rules/rule)"
+    },
+    {
+      "severity": "error",
+      "file": "SKILL.md",
+      "message": "<process_actions> has no <step>, <gate>, <skill_call>, <loop> entries"
+    },
+    {
+      "severity": "error",
+      "file": "SKILL.md",
+      "message": "<rule> must sit directly inside <rules>, found inside <process_actions>"
+    },
+    {
+      "severity": "error",
+      "file": "SKILL.md",
+      "message": "<rule> is empty"
+    },
+    {
+      "severity": "error",
+      "file": "SKILL.md",
+      "message": "missing <bootstrap_actions> block"
+    },
+    {
+      "severity": "error",
+      "file": "SKILL.md",
+      "message": "frontmatter name \"sd-elements\" does not match <skill name=\"Elements\">"
+    }
+  ]
+}

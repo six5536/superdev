@@ -1,0 +1,11 @@
+{
+  "files": 2,
+  "passed": false,
+  "findings": [
+    {
+      "severity": "error",
+      "file": "sd-dup-a/SKILL.md",
+      "message": "100% overlap — one occurrence must become a reference: sd-dup-a/SKILL.md (rule [MUST] \"never write a lockfile entry that a fetc…\"): \"never write a lockfile entry that a fetch has not verified against its source\" | sd-dup-b/SKILL.md (rule [MUST] \"never write a lockfile entry that a fetc…\"): \"never write a lockfile entry that a fetch has not verified against its source\""
+    }
+  ]
+}

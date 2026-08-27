@@ -25,6 +25,7 @@ pub mod components;
 pub mod content;
 pub mod engine;
 pub mod error;
+pub mod format;
 pub(crate) mod fsutil;
 pub(crate) mod json_edit;
 pub mod lock;
