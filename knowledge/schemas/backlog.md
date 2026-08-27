@@ -12,7 +12,6 @@ Both halves are required: an idea that was rejected without its reasoning is
 an idea that gets proposed again.
 
 ````yaml
-target-files: "knowledge/backlog.md"
 description: >
   Ideas under consideration and ideas decided against, each with the reasoning
   that put it where it is.

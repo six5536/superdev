@@ -99,7 +99,9 @@ validation hook's PostToolUse entry into `.claude/settings.json`, so hook and
 skills exist exactly where knowledge exists
 ([spec](specs/S008-knowledge-owned-skills-design.md)).
 
-# Files in a managed repo
+# Files and artefacts
+
+The files superdev writes into a managed repo, and what each is for.
 
 `.superdev/config.toml` records what the repo wants and `.superdev/lock.toml`
 what superdev last applied; both are committed. `.superdev/cache/` holds

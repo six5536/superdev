@@ -84,6 +84,13 @@ answer for the author.
   ships none.
 - Workaround: do not use symlinks inside a pack; copy the file.
 
+## Regression risk
+
+The walk is reached only from pack resolution, and the change adds a report
+where there was silence rather than altering what is written. A recurrence
+would be a symlink resolving clean again with an item missing, which the
+pack-resolution tests added in P005 slices 2 and 3 cover directly.
+
 ## Comments
 
 Related, and worth settling together: a symlink does not digest the same on

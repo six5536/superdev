@@ -51,7 +51,7 @@ code depends on them.
       rules? Reject it, or report the conflict for a deliberate
       change.
 - [ ] GATE: Knowledge edited? Validate to PASS
-      (`superdev aokf validate knowledge`).
+      (`superdev validate`).
 - [ ] GATE: Deciding anything internal? Leave it to build.
 
 ## IMPORTANT RULES

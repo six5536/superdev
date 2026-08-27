@@ -12,6 +12,7 @@
 
 pub mod check;
 pub mod doc;
+pub mod document;
 pub mod grammar;
 pub mod re;
 pub mod read;

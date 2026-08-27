@@ -41,7 +41,7 @@ current.
 - [ ] Mark the slice done in the feature's plan (`knowledge/plans/`).
       Last slice? Tag the plan concept `done`.
 - [ ] GATE: Knowledge edited? Validate to PASS
-      (`superdev aokf validate knowledge`).
+      (`superdev validate`).
 
 ## IMPORTANT RULES
 

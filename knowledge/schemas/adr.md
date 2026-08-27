@@ -13,7 +13,6 @@ Structural rules for architecture decision records filed at
 ADR names it, and its Status line is updated to point forward.
 
 ````yaml
-target-files: "knowledge/decisions/adr-*.md"
 description: >
   Architecture decision record — context, the decision, options
   considered, and consequences.

@@ -40,7 +40,7 @@ You define the problem, not the solution. Frame the project or feature given in 
 <loop until="the check finds nothing left to fix" max="3">
 <step name="DOUBLE-CHECK" task="/double-check the frame; fix what it finds" />
 </loop>
-<gate check="knowledge validates to PASS per the core knowledge block" on-fail="fix every error" />
+<gate check="`superdev validate` passes: the SOKF knowledge, and every document against its schema" on-fail="fix every error" />
 <gate check="The frame is clear enough for the spec skill" on-fail="/grill-me" />
 <skill_call name="/spec" when="always" />
 </process_actions>

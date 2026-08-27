@@ -10,7 +10,7 @@ links:
     to: spec-content-packs
 ---
 
-# Bug: content packs are undocumented, and `update` describes itself wrongly
+# Feature: content packs are undocumented, and `update` describes itself wrongly
 
 ## Resolved
 
@@ -57,30 +57,10 @@ this binary's default, which is the whole point of
 sentence is in `README.md` and in the man page, and it tells a user the one
 verb that reaches the network does not.
 
-## Environment
-
-- Version/commit: 0.2.0 / P003 complete (`e1ac431`)
-- Platform: all
-
-## Steps to reproduce
-
-1. `superdev --help` — grep for `pack`: no matches.
-2. `superdev man` — grep for `pack`: no matches.
-3. `grep -i pack README.md` — no matches.
-4. Read `update`'s description in any of the three.
-
-## Expected behaviour
-
-A user can discover packs from the product's own documentation, and every
-description of `update` says that it may reach the network and move the pack
-pin past what the binary carries.
-
-## Actual behaviour
+## Motivation
 
 No user-facing mention of the feature exists, and three places state the
 opposite of what `update` does.
-
-## Root cause (if known)
 
 The inaccurate sentence is the doc comment at
 `crates/app/superdev/src/main.rs:48`, which clap renders into `--help` and the
@@ -88,7 +68,22 @@ man page; `crates/app/superdev/src/manage.rs:299` carries the same wording, and
 `README.md` repeats it. No slice in P003 owned the README, and the help text
 was not revisited when slice 11 changed what `update` does.
 
-## Proposed fix / workaround
+## Proposed behaviour
+
+A user can discover packs from the product's own documentation, and every
+description of `update` says that it may reach the network and move the pack
+pin past what the binary carries.
+
+## Alternatives considered
+
+- Document packs in CONTRIBUTING alone — where everything written during
+  delivery had already gone, and where a user who installed the binary
+  never looks.
+- Leave `update`'s description and correct it at the next release — the
+  sentence tells a user that the one verb reaching the network does not,
+  which is the kind of wrong that costs trust rather than time.
+
+## Scope
 
 - Fix: correct the `update` description in `main.rs` (and the rustdoc in
   `manage.rs`) so it says the pack pin may move to the source's newest release;
@@ -98,9 +93,3 @@ was not revisited when slice 11 changed what `update` does.
   the canonical knowledge for the rest.
 - Workaround: none; the information exists only in `knowledge/` and
   CONTRIBUTING.
-
-## Regression risk
-
-`main.rs`'s clap derive feeds `--help`, the man page and the completions, so
-one edit moves all three. A test asserting the help text names the network
-behaviour would keep it honest.

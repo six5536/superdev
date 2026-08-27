@@ -1,0 +1,10 @@
+{
+  "findings": [
+    {
+      "file": "a.md",
+      "message": "section \"First\" comes after \"Second\", and thing.md orders them the other way",
+      "severity": "error"
+    }
+  ],
+  "passed": false
+}

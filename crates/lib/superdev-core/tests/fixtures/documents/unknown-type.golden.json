@@ -1,0 +1,10 @@
+{
+  "findings": [
+    {
+      "file": "a.md",
+      "message": "type `Invented` names no schema",
+      "severity": "error"
+    }
+  ],
+  "passed": false
+}

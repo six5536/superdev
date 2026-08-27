@@ -41,6 +41,17 @@ sections:
     description: >
       Title heading naming what is missing, e.g. "The tracker has no
       shape for a feature request".
+  - heading-pattern: "^(Decided|Resolved|Resolved in part|Won't fix)$"
+    level: 2
+    repeatable: true
+    content: prose
+    description: >
+      How it ended, added when it does: what was decided and by whom, what
+      shipped and where, or why it will not be done. Sits directly under the
+      title, before the report itself, because a reader who opens a settled
+      issue wants the verdict before the evidence — every settled issue on
+      file puts it there. Absent while the issue is outstanding, which is
+      what distinguishes an open one from a settled one at a glance.
   - heading: "Summary"
     level: 2
     required: true
@@ -78,15 +89,13 @@ sections:
     description: >
       What is in, and — separately — what is deliberately out, so a
       reader sees the boundary was drawn rather than forgotten.
-  - heading-pattern: "^(Decided|Resolved|Resolved in part|Won't fix|Comments)$"
+
+  - heading: "Comments"
     level: 2
-    repeatable: true
     content: prose
     description: >
-      How the request ended, added when it does: what was decided and by
-      whom, what shipped and where, or why it will not be built. Absent
-      while the request is outstanding, which is what distinguishes an
-      open request from a settled one at a glance.
+      Conversation history, appended as it happens — the tracker's
+      convention says append, so this sits last, where the verdict does not.
 
 example: |
   ---

@@ -38,7 +38,7 @@ don't build.
 - [ ] GATE: Any slice too big to build and verify in one pass? Cut it
       again.
 - [ ] GATE: Validate the canonical knowledge to PASS
-      (`superdev aokf validate knowledge`).
+      (`superdev validate`).
 
 ## IMPORTANT RULES
 

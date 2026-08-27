@@ -43,7 +43,7 @@ problem, not the solution.
       reasoning; add a term the project will keep to the glossary.
 - [ ] Double-check the frame (`/double-check`); fix what it finds.
 - [ ] GATE: Knowledge edited? Validate to PASS
-      (`superdev aokf validate knowledge`).
+      (`superdev validate`).
 - [ ] GATE: Is the frame clear enough for the spec skill? If not,
       interview the user (`/grill-me`).
 

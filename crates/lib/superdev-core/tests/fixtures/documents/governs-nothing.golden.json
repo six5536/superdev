@@ -1,0 +1,10 @@
+{
+  "findings": [
+    {
+      "file": "thing.md",
+      "message": "schema: governs nothing — declare a frontmatter `type` const, or a `target-files` glob for documents that carry no frontmatter",
+      "severity": "error"
+    }
+  ],
+  "passed": false
+}

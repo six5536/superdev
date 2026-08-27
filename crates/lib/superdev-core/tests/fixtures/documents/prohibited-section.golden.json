@@ -1,0 +1,10 @@
+{
+  "findings": [
+    {
+      "file": "a.md",
+      "message": "prohibited section \"Overview\" (thing.md forbids it)",
+      "severity": "error"
+    }
+  ],
+  "passed": false
+}

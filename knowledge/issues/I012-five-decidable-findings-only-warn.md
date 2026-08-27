@@ -10,7 +10,7 @@ links:
     to: adr-017-aokf-conformance-is-pass-or-fail
 ---
 
-# Bug: five findings the repository alone can decide are only warnings, and go unread
+# Feature: five findings the repository alone can decide are only warnings, and go unread
 
 ## Summary
 
@@ -23,24 +23,7 @@ degrades. The other five are decidable from the repository alone. A file
 exists or it does not; a footnote label joins a source or it does not. They
 warn anyway, so nothing fails, so nobody reads them.
 
-## Environment
-
-- Version/commit: superdev 0.2.0, AOKF 0.3
-- Platform: any; every one of these checks is pure and reads only the tree
-
-## Steps to reproduce
-
-1. Add `[nowhere](does-not-exist.md)` to any concept under `knowledge/`.
-2. Run `cargo run --quiet -- aokf validate knowledge`.
-3. Note the exit code.
-
-## Expected behaviour
-
-A link to a file that is not there fails the run, the way every other
-repository-decidable rule does. The tree is the whole input; there is nothing
-else the answer could depend on.
-
-## Actual behaviour
+## Motivation
 
 `PASS`, exit 0, with the finding printed as a warning among any others. The
 edit-time hook exits 0 too, so the agent that wrote the link is never told.
@@ -51,8 +34,6 @@ knowledge carried **39** warnings, every one of them
 accumulated because the schemas cite the templates they replaced. They were
 real, they were trivial to fix once seen, and they were invisible for as long
 as they existed because nothing ever failed on them.
-
-## Root cause (if known)
 
 SPEC §11 closes with:
 
@@ -77,7 +58,23 @@ The five, all at `crates/lib/superdev-core/src/aokf/validate.rs`:
 - `index entry points at missing file: {target}`
 - `footnote [^label] has no matching sources[].id`
 
-## Proposed fix / workaround
+## Proposed behaviour
+
+A link to a file that is not there fails the run, the way every other
+repository-decidable rule does. The tree is the whole input; there is nothing
+else the answer could depend on.
+
+## Alternatives considered
+
+- Leave them as warnings and rely on a reader noticing — what happens today,
+  and the thirty-nine unactioned findings are the measure of it.
+- Promote them in the tool but keep SPEC §11 as it stands — the validator
+  would then be stricter than the format it implements, which is the sort of
+  divergence the spec exists to prevent.
+- Add a third severity between warning and error — more vocabulary for the
+  same decision, and nothing would agree on which findings deserved it.
+
+## Scope
 
 Split the tier by decidability rather than by tradition. A finding the
 repository alone can settle is an error; a finding whose answer lies outside
@@ -102,16 +99,3 @@ which took the same kind of question about the same section.
 Workaround until then: read the warnings. The canonical knowledge currently sits at zero,
 so a new one is visible; that is a property of having just cleared them, not
 of the design.
-
-## Regression risk
-
-Every repository superdev manages gets stricter at once, and any that has been
-carrying dangling links starts failing its pre-PR check. That is the point,
-but it is a breaking change to what `validate` accepts and belongs in the same
-release note as any other.
-
-The five checks have no covering tests of their own beyond the parity goldens,
-which pin them as warnings — `broken-links.golden.json` records
-`"severity": "warning"` for exactly this case. Moving them changes those
-goldens, and the goldens cannot be regenerated, so the change has to be made
-as a recorded projection the way ADR-017's was.

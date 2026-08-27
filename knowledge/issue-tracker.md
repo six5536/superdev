@@ -64,7 +64,7 @@ The skills speak in five canonical triage roles. This repo keeps the
 default strings; a "label" here is a string in the issue's frontmatter
 `tags` list.
 
-| Role              | Tag in this repo  | Meaning                                  |
+| Role              | Label             | Meaning                                  |
 | ----------------- | ----------------- | ---------------------------------------- |
 | `needs-triage`    | `needs-triage`    | Maintainer needs to evaluate this issue  |
 | `needs-info`      | `needs-info`      | Waiting on reporter for more information |

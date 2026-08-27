@@ -26,7 +26,7 @@ You judge the whole feature on merged code, as the user will experience it. This
 <gate check="The feature is documented" on-fail="file the gap" />
 <gate check="No gap is left without a slice" on-fail="make each gap a new slice" />
 <step name="TAG DONE" task="Clean pass? Tag the spec concept `done`" />
-<gate check="knowledge validates to PASS per the core knowledge block" on-fail="fix every error" />
+<gate check="`superdev validate` passes: the SOKF knowledge, and every document against its schema" on-fail="fix every error" />
 <skill_call name="/feature-plan" when="if gaps found" input="the gap issues" />
 </process_actions>
 

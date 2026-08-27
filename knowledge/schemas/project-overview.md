@@ -11,7 +11,6 @@ Structural rules for `knowledge/project-overview.md`, the canonical knowledge's 
 concept and the first thing a newcomer reads.
 
 ````yaml
-target-files: "knowledge/project-overview.md"
 description: >
   What the project does, for whom, the one thing that distinguishes it, and
   where it currently stands.

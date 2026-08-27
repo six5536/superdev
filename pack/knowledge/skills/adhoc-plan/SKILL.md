@@ -32,7 +32,7 @@ a chore.
       `knowledge/plans/Pnnn-<slug>.md`, listed in the plans index.
 - [ ] Double-check the plan (`/double-check`); fix what it finds.
 - [ ] GATE: Validate the canonical knowledge to PASS
-      (`superdev aokf validate knowledge`).
+      (`superdev validate`).
 
 ## IMPORTANT RULES
 

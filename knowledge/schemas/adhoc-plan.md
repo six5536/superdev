@@ -21,7 +21,6 @@ workstream `W1` — so a later section can point at an earlier one instead of
 restating it.
 
 ````yaml
-target-files: "knowledge/adhoc-plans/*.md"
 description: >
   Ad-hoc implementation plan for one-off work outside the feature
   workflow — what is true, what is being built, in what order, and what

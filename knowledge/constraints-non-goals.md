@@ -21,7 +21,9 @@ status: stable
   service, no telemetry. The MCP servers are local stdio processes the
   agent harness spawns per session.
 
-# Constraints (inherited machinery)
+# Constraints
+
+Inherited machinery, and what it fixes.
 
 - **Pre-1.0**: minor versions may carry breaking changes; `superdev-core`'s
   API is not stable.

@@ -20,7 +20,7 @@ You answer questions from primary sources and file the findings in the canonical
 <step name="INVESTIGATE" task="Investigate the question against primary sources — official docs, source code, specs, first-party APIs — never a secondary write-up of them. Follow every claim back to the source that owns it" />
 <step name="FILE THE FINDINGS" task="File the findings as a concept at `knowledge/research/research-{nnn}-{topic}.md` per `schema-research`" />
 <step name="LIST IN THE INDEX" task="List the concept in the canonical knowledge's `index.md`" />
-<gate check="knowledge validates to PASS per the core knowledge block" on-fail="fix every error" />
+<gate check="`superdev validate` passes: the SOKF knowledge, and every document against its schema" on-fail="fix every error" />
 </process_actions>
 
 

@@ -1,0 +1,10 @@
+{
+  "findings": [
+    {
+      "file": "a.md",
+      "message": "missing required section \"Second\" (thing.md)",
+      "severity": "error"
+    }
+  ],
+  "passed": false
+}

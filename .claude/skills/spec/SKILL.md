@@ -29,7 +29,7 @@ You describe the feature from outside, as a user or caller sees it. Create or up
 <step name="DOUBLE-CHECK" task="`/double-check` the spec and test plan; fix what it finds" />
 <gate check="Verify and accept can check every criterion pass/fail without interpretation" on-fail="rework the criterion" />
 <gate check="The spec contradicts no prior spec or convention" on-fail="report the conflict; never override it" />
-<gate check="knowledge validates to PASS per the core knowledge block" on-fail="fix every error" />
+<gate check="`superdev validate` passes: the SOKF knowledge, and every document against its schema" on-fail="fix every error" />
 <skill_call name="/interface-design" when="always" />
 </process_actions>
 

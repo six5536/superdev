@@ -67,21 +67,40 @@ pub fn validate_repo(
 
     let mut findings = Vec::new();
     let mut concept_count = 0;
+    let mut documents: Vec<(String, String, Option<String>)> = Vec::new();
 
-    // Named explicitly, so an unreadable bundle is an error rather than a
-    // silent skip; unnamed, so a repository without one is simply a repository
-    // whose format files are still worth checking.
+    // Named explicitly, so unreadable knowledge is an error rather than a
+    // silent skip; unnamed, so a repository without any is simply a repository
+    // whose governed files are still worth checking.
     let named = paths.iter().any(|p| bundle.starts_with(p));
     if named || (paths.is_empty() && bundle.is_dir()) {
-        let report = sokf::validate(&load_bundle(&bundle)?, &repo_root);
-        concept_count = report.concept_count;
+        let knowledge = load_bundle(&bundle)?;
         let prefix = relative(&repo_root, &bundle);
-        findings.extend(report.findings.into_iter().map(|f| Finding {
-            path: if prefix.is_empty() {
-                f.path
+        let spell = |path: &str| {
+            if prefix.is_empty() {
+                path.to_string()
             } else {
-                format!("{prefix}/{}", f.path)
-            },
+                format!("{prefix}/{path}")
+            }
+        };
+        // The candidates for schema checking: every concept the knowledge
+        // holds. Schemas are excluded — they answer to the grammar, not to
+        // each other — and so are indexes, which SPEC §9 governs.
+        for concept in &knowledge.concepts {
+            let path = spell(&concept.path);
+            if path.contains("/schemas/") || path.ends_with("/index.md") || path == "index.md" {
+                continue;
+            }
+            documents.push((
+                path,
+                read(&bundle.join(&concept.path))?,
+                Some(concept.kind.clone()),
+            ));
+        }
+        let report = sokf::validate(&knowledge, &repo_root);
+        concept_count = report.concept_count;
+        findings.extend(report.findings.into_iter().map(|f| Finding {
+            path: spell(&f.path),
             message: f.message,
             fatal: f.fatal,
         }));
@@ -113,6 +132,40 @@ pub fn validate_repo(
         message: f.message,
         fatal: f.fatal,
     }));
+
+    // Documents against the schemas that govern them. The schemas come from
+    // the files just walked — `knowledge/schemas` is one of the grammar's
+    // roots — so a repository whose schemas were not read simply checks no
+    // documents, rather than reporting every one of them as ungoverned.
+    let schema_files: Vec<(String, String)> = files
+        .iter()
+        .filter(|(name, _)| name.contains("/schemas/") && !name.ends_with("/index.md"))
+        .cloned()
+        .collect();
+    if !schema_files.is_empty() {
+        // Two documents carry no frontmatter and are named by glob instead.
+        for name in ["README.md", "CHANGELOG.md"] {
+            let path = repo_root.join(name);
+            if path.is_file() {
+                documents.push((name.to_string(), read(&path)?, None));
+            }
+        }
+        let (set, mut schema_findings) = schema::document::SchemaSet::load(&schema_files);
+        let candidates: Vec<schema::document::Document<'_>> = documents
+            .iter()
+            .map(|(path, text, doc_type)| schema::document::Document {
+                path,
+                text,
+                doc_type: doc_type.as_deref(),
+            })
+            .collect();
+        schema_findings.extend(schema::document::check_documents(&candidates, &set));
+        findings.extend(schema_findings.into_iter().map(|f| Finding {
+            path: f.file,
+            message: f.message,
+            fatal: f.fatal,
+        }));
+    }
     // Stable, so each half keeps the order it emitted while the two interleave
     // by file.
     findings.sort_by(|a, b| a.path.cmp(&b.path));

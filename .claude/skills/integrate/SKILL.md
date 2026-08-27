@@ -31,7 +31,7 @@ You merge verified work into the shared branch and keep the project's records cu
 <step name="UPDATE THE KNOWLEDGE" task="New convention, changed interface, or new term? Update the canonical knowledge so later slices follow it: the glossary for terms; a new concept starts from its schema (see the knowledge-concepts section of `knowledge/schemas/index.md`)" />
 <step name="WRITE MIGRATION GUIDE" task="Interface change breaks users? Write the migration guide" />
 <step name="MARK THE SLICE DONE" task="Mark the slice done in the feature's plan (`knowledge/feature-plans/`). Last slice? Tag the plan concept `done`" />
-<gate check="knowledge validates to PASS per the core knowledge block" on-fail="fix every error" />
+<gate check="`superdev validate` passes: the SOKF knowledge, and every document against its schema" on-fail="fix every error" />
 <skill_call name="/build" when="if a next slice remains" input="the next slice" />
 <skill_call name="/feature-plan" when="if the slice list needs re-cutting" />
 </process_actions>

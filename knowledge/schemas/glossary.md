@@ -12,7 +12,6 @@ The document is a list of terms with no headings, so it declares a preamble
 and no sections.
 
 ````yaml
-target-files: "knowledge/glossary.md"
 description: >
   The domain terms this project's code, issues and specs rely on, one
   definition each, in plain language or in terms already defined above.

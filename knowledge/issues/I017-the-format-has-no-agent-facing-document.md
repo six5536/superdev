@@ -10,7 +10,7 @@ links:
     to: adhoc-plan-006-rust-format-validator
 ---
 
-# Bug: the format the agent must write in has no document
+# Feature: the format the agent must write in has no document
 
 ## Summary
 
@@ -21,34 +21,11 @@ agent is never told about. The consequence is a validator finding rather than a
 rule followed: the first fixture written for the port broke four rules its
 author had no way to know.
 
-## Environment
-
-- Version/commit: superdev 0.2.0, AOKF 0.3
-- Platform: any
-
-## Steps to reproduce
-
-1. `grep -rn 'superdev-format\|grammar.yaml' .agents/` — nothing outside
-   `.agents/format/grammar.yaml` itself mentions the format.
-2. Ask an agent to add a skill. Nothing in its instructions names the element
-   vocabulary, the condition forms, or the one-home-per-statement rule.
-3. `cargo run --quiet -- validate --doc` prints the whole language, in prose,
-   in 191 lines. Nothing reads it.
-
-## Expected behaviour
-
-The format has an agent-facing document beside its spec, the way AOKF has
-`.agents/aokf.md` beside `.agents/aokf/SPEC.md`, and the agent is pointed at
-it before it writes a unit. The renderer exists precisely so that document
-cannot drift from the grammar it describes.
-
-## Actual behaviour
+## Motivation
 
 `superdev validate --doc` is the only consumer, and it is a flag a person
 types by hand. `format/doc.rs` is 190 lines of ported code held by one golden,
 carrying a language nobody is shown.
-
-## Root cause (if known)
 
 The [format validator plan](../adhoc-plans/P006-rust-format-validator.md)
 ports the renderer under D-13 — deleting the reference was one-way, so the
@@ -58,7 +35,24 @@ it. That is a pack question: `.agents/aokf.md` is binary-owned, and a format
 document would have to be too, since the binary is what enforces the grammar.
 The question was deferred and never asked.
 
-## Proposed fix / workaround
+## Proposed behaviour
+
+The format has an agent-facing document beside its spec, the way AOKF has
+`.agents/aokf.md` beside `.agents/aokf/SPEC.md`, and the agent is pointed at
+it before it writes a unit. The renderer exists precisely so that document
+cannot drift from the grammar it describes.
+
+## Alternatives considered
+
+- Point the agent at `grammar.yaml` directly — 700 lines of machine-readable
+  rules, written for a parser rather than a reader.
+- Write the document by hand beside the grammar — it would go stale the
+  first time the grammar changed, which is the failure this project already
+  knows well.
+- Leave the renderer unused and let the schemas carry the guidance — they
+  describe documents, not the language skills are written in.
+
+## Scope
 
 - Decide what the document is: the rendered grammar as it stands, a written
   guide with the render as an appendix, or a short instruction file pointing at
@@ -74,11 +68,3 @@ The question was deferred and never asked.
   test the way the doc golden is held.
 - Meanwhile `cargo run --quiet -- validate --doc` answers any question about
   the language, and is worth naming wherever the format is discussed.
-
-## Regression risk
-
-Low as code: the renderer is already tested against a golden captured from the
-reference. The risk is in the blueprint — adding a binary-owned file writes it
-into every managed repository on the next `sync`, and doing that while
-[I016](I016-sync-would-revert-the-schema-migration.md) stands adds a line to a
-drift report already carrying 65.

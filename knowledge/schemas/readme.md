@@ -39,14 +39,12 @@ sections:
       runtime version, system dependencies.
   - heading: "Quick start"
     level: 2
-    required: true
     content: code
     description: >
       The shortest path from install to seeing it work — a copy-pasteable
       example with its expected output, each in its own fenced block.
   - heading: "Usage"
     level: 2
-    required: true
     content: prose
     description: >
       The main commands or APIs. Link to fuller docs rather than duplicating
@@ -59,7 +57,6 @@ sections:
       One heading per common task, each with a minimal fenced example.
   - heading: "Configuration"
     level: 2
-    required: true
     content: table
     columns: [Option, Default, Description]
     description: >

@@ -10,7 +10,7 @@ links:
     to: adhoc-plan-006-rust-format-validator
 ---
 
-# Bug: the shape SPEC §9 gives an index is described but never enforced
+# Feature: the shape SPEC §9 gives an index is described but never enforced
 
 ## Summary
 
@@ -28,26 +28,7 @@ they govern, which
 [the format-validator plan](../adhoc-plans/P006-rust-format-validator.md)
 lists as a non-goal.
 
-## Environment
-
-- Version/commit: superdev 0.2.0 / dff3ac2
-- Platform: any
-
-## Steps to reproduce
-
-1. Add a YAML frontmatter block to `knowledge/decisions/index.md`.
-2. Change its `* ` entry bullets to `- `.
-3. Delete its `# Decisions` heading.
-4. Run `cargo run --quiet -- aokf validate knowledge`, and
-   `node scripts/superdev-format/validate-superdev.mjs knowledge/decisions/index.md`.
-
-## Expected behaviour
-
-Something reports the frontmatter, since §9 says an index has none. The bullet
-style and the missing heading are worth a finding too, given every other index
-in the canonical knowledge agrees on both.
-
-## Actual behaviour
+## Motivation
 
 `aokf validate` passes with no findings — `index.md` is a reserved
 file, so the per-concept checks never see it, and `check_indexes` only
@@ -59,8 +40,6 @@ so a directory listing is not mistaken for a schema.
 So the file falls between the two validators: one treats it as reserved, the
 other as excepted.
 
-## Root cause (if known)
-
 Nothing owns the rule. SPEC §10's warn list names one index rule — missing
 targets — and §9's shape statements appear only as prose. The schema
 vocabulary can express the shape, but `target-files` is not yet applied to
@@ -70,7 +49,24 @@ The eight indexes were standardised by hand against §9 and now agree: no
 frontmatter, an H1, `* ` bullets, ` - ` separators, 113 entries. That
 consistency is currently held by nothing but care.
 
-## Proposed fix / workaround
+## Proposed behaviour
+
+Something reports the frontmatter, since §9 says an index has none. The bullet
+style and the missing heading are worth a finding too, given every other index
+in the canonical knowledge agrees on both.
+
+## Alternatives considered
+
+- Leave §9's shape as guidance and check nothing — the state this issue
+  reports. It has already let five indexes drift without a word.
+- Generate every index from the concepts rather than checking what an author
+  wrote — removes the divergence outright, and gives up the heading grouping
+  an author chooses. Worth its own request.
+- Check the shape in the schema layer rather than the SOKF half — an index
+  carries no frontmatter, so it would have to be reached by glob, and §9 is
+  the specification's rule rather than a schema's.
+
+## Scope
 
 Repurpose `schema-templates-index`, which today governs
 `knowledge/templates/index.md` — a file that goes away when the schemas
@@ -81,11 +77,3 @@ about to describe nothing into one covering eight live files.
 
 It cannot be enforced until schema-to-document validation exists, so this
 issue is blocked behind that work rather than behind the port itself.
-
-## Regression risk
-
-None to existing behaviour: this adds a check where there is none. The risk is
-in the schema being written too tightly — `knowledge/index.md` carries no
-group headings while `knowledge/schemas/index.md` carries seven, and
-`knowledge/issues/index.md` carries one, so the group heading must be optional
-and repeatable or six of the eight fail on day one.

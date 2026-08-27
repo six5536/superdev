@@ -7,7 +7,7 @@ status: draft
 tags: [needs-triage]
 ---
 
-# Bug: the Issue type has one shape, bug-report, so everything filed has to pretend to be a defect
+# Feature: the Issue type has one shape, bug-report, so everything filed has to pretend to be a defect
 
 ## Summary
 
@@ -22,33 +22,7 @@ all, so it lands in `knowledge/backlog.md` as a bullet with no id, no triage
 tag and nothing a spec can link to. bug-report is one kind of issue. It is
 being used as the definition of one.
 
-## Environment
-
-- Version/commit: superdev 0.2.0, AOKF 0.3, grammar 2.0
-- Platform: any; a gap in the schema and template sets, not in code
-
-## Steps to reproduce
-
-1. Run `grep -l 'const: Issue' knowledge/schemas/*.md` — one file,
-   `bug-report.md`.
-2. Run `ls pack/knowledge/templates/*.md | grep -cv index.md` — 40
-   templates, of which one produces an Issue.
-3. Read `.claude/skills/accept/SKILL.md:25`: every gap found at acceptance
-   is filed "per `schema-bug-report`", whatever the gap turns out to be.
-4. Read the Environment and Steps to reproduce sections of I006, I010, I011,
-   I012, I013 and I014.
-
-## Expected behaviour
-
-One shape per kind of thing that can be filed, all sharing `type: Issue`,
-the `issue-nnn-<slug>` id, the triage tags and the lifecycle, and differing
-only in their body sections. A feature request states motivation, the
-proposed behaviour, the alternatives considered and the scope, and is never
-asked for an error log. A scoped piece of mechanical work states the
-surfaces it touches and what "done" means, and is never asked for a
-regression risk it does not have.
-
-## Actual behaviour
+## Motivation
 
 One shape, worn by everything.
 
@@ -82,8 +56,6 @@ reproduce" heading.
 This issue is itself a request for new document kinds, filed on the
 bug-report shape, for want of anywhere else to put it.
 
-## Root cause (if known)
-
 The tracker was specified from the acceptance path and no further. `/accept`
 files the gaps it finds, gaps found at acceptance are usually defects, and
 one shape covered that. `knowledge/issue-tracker.md` then wrote the
@@ -109,7 +81,29 @@ contract an agent reads rather than a check the tool runs. That defect
 stands on its own and could be filed separately; it is named here because
 kind-by-filename cannot work until it is fixed.
 
-## Proposed fix / workaround
+## Proposed behaviour
+
+One shape per kind of thing that can be filed, all sharing `type: Issue`,
+the `issue-nnn-<slug>` id, the triage tags and the lifecycle, and differing
+only in their body sections. A feature request states motivation, the
+proposed behaviour, the alternatives considered and the scope, and is never
+asked for an error log. A scoped piece of mechanical work states the
+surfaces it touches and what "done" means, and is never asked for a
+regression risk it does not have.
+
+## Alternatives considered
+
+- Keep one shape and relax it until everything fits — a schema loose enough
+  to admit a bug report and a rename requires almost nothing, so it checks
+  almost nothing.
+- Keep `type: Issue` and add a second field naming the kind — every concept
+  would then say the same thing twice, and the tracker would have two
+  dispatch mechanisms where one would do.
+- File non-defects outside the tracker, in the backlog — which is what
+  happens now, and it is why a feature request has no id, no triage tag and
+  nothing a spec can link to.
+
+## Scope
 
 - Settle the kind set. `bug-report` exists. `feature-request` is the clear
   second — motivation, proposed behaviour, alternatives, scope. `task`
@@ -136,25 +130,3 @@ kind-by-filename cannot work until it is fixed.
   `schema-bug-report`, and `/feature-plan` reads issues back.
 - Workaround until then: file the non-bug on the bug shape and write "any"
   in the Environment section, which is what the six existing ones do.
-
-## Regression risk
-
-The skills are the risk. `/accept` and `/feature-plan` both name the tracker,
-and an agent that is not told a kind set exists will keep reaching for
-bug-report, which is the current behaviour by another name. The skills,
-`issue-tracker.md`, the templates index and the schemas index have to land
-together, or the old default silently survives the change.
-
-Renaming the existing fourteen files breaks the links in
-`knowledge/issues/index.md` and the cross-references between issues. A
-broken body link is only a warning today (see
-[I012](I012-five-decidable-findings-only-warn.md)), so a missed link will
-not fail the run — read the report with the warnings open, or land this
-after I012.
-
-Each new schema is itself checked by the format validator for its own shape,
-including the rule that its `example` instantiates every required section,
-which is what keeps a schema self-testing. The duplication check does not
-compare `schema|schema`, so sibling issue schemas may share a lifecycle
-paragraph without tripping it; it does compare `unit|schema`, so wording
-lifted from a skill into a schema will trip.

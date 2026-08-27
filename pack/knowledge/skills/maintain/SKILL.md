@@ -17,7 +17,7 @@ repair what you find.
 
 ## Workflow
 
-- [ ] Run the validator (`superdev aokf validate knowledge`). Fix
+- [ ] Run the validator (`superdev validate`). Fix
       every error; treat warnings as work items. Broken links
       usually mean a rename the canonical knowledge missed — fix the reference,
       not the target. Re-run until PASS at level 2.
@@ -69,7 +69,7 @@ repair what you find.
       rest; tighten without losing warnings, caveats, or stated
       assumptions. Surgical changes only.
 - [ ] GATE: Validate the canonical knowledge to PASS
-      (`superdev aokf validate knowledge`).
+      (`superdev validate`).
 
 ## IMPORTANT RULES
 

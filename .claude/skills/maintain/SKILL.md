@@ -41,7 +41,7 @@ The MUST NOT rules below are from SPEC §4, §5, §7 — never break these.
 - Where prose in one concept leans on another's content, ensure a typed `links` entry with the right `rel` plus the mirroring body link. Prefer `id` targets; declare each edge once, from the more natural side.
 - Each `description` is an accurate one-liner; update drifted ones and re-sync the `index.md` entry.</step>
   <step name="APPLY THE WORDING RULES" task="Apply the wording rules to every body you touched and skim the rest; tighten without losing warnings, caveats, or stated assumptions. Surgical changes only" />
-  <gate check="knowledge validates to PASS per the core knowledge block" on-fail="fix every error" />
+  <gate check="`superdev validate` passes: the SOKF knowledge, and every document against its schema" on-fail="fix every error" />
   </process_actions>
 
 

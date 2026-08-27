@@ -29,7 +29,7 @@ from primary sources and file the findings in the canonical knowledge.
       label matches a `sources[].id` entry, per the AOKF spec.
 - [ ] List the concept in the canonical knowledge's `index.md`.
 - [ ] GATE: Validate the canonical knowledge to PASS
-      (`superdev aokf validate knowledge`).
+      (`superdev validate`).
 
 ## IMPORTANT RULES
 

@@ -43,7 +43,7 @@ feature from outside, as a user or caller sees it.
 - [ ] GATE: Does the spec contradict a prior spec or convention?
       Report the conflict; do not override it.
 - [ ] GATE: Validate the canonical knowledge to PASS
-      (`superdev aokf validate knowledge`).
+      (`superdev validate`).
 
 ## IMPORTANT RULES
 

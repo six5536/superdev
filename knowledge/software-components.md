@@ -136,7 +136,9 @@ Windows `x86_64` (msvc, built natively on the `windows-latest` runner).
 `cargo-zigbuild` provides the cross C compiler for the musl targets; its musl
 output is non-PIE, accepted for a local CLI with no network input.
 
-# CI/CD (`.github/workflows`)
+# CI/CD
+
+The workflows under `.github/workflows`.
 
 All checks live in a reusable `workflow_call` workflow (`checks.yml`), called
 by both `ci.yml` and `release.yml`, so the release gate cannot drift from CI.

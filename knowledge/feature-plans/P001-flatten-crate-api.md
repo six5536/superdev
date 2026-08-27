@@ -10,7 +10,9 @@ links:
     note: Implements the module rules recorded there.
 ---
 
-# Goal
+# Feature plan: flatten the superdev-core API
+
+## Goal
 
 Bring `superdev-core` to the module rules in
 [coding-standards](/knowledge/coding-standards.md): submodules declared
@@ -18,7 +20,7 @@ privately, their API re-exported with `pub use`, flattened at `lib.rs` so
 callers write `superdev_core::Item` instead of
 `superdev_core::manifest::Manifest`.
 
-# Scope
+## Scope
 
 - `lib.rs`: change `pub mod` to `mod` per module and add the flattened
   re-export block. Keep `aokf` and `components` as public namespaces if
@@ -30,18 +32,26 @@ callers write `superdev_core::Item` instead of
 - The crate is pre-1.0 and the two crates release in lockstep, so the
   public-API break costs nothing externally.
 
-# Steps
+## Slices
 
-1. Inventory the current cross-crate surface (`grep superdev_core::` in
+### Slice 1: inventory the surface
+
+Inventory the current cross-crate surface (`grep superdev_core::` in
    the binary and tests) to get the exact re-export list.
-2. Flatten one module at a time, keeping the suite green per step:
+
+### Slice 2: flatten module by module
+
+Flatten one module at a time, keeping the suite green per step:
    `manifest`, `lock`, `capability`, `registry`, `component`, `action`,
    `pipeline`, `engine`, `orphan`, `report`, `runner`, `error`,
    `templates`, then decide `aokf` and `components`.
-3. Doc pass: `#![warn(missing_docs)]` stays satisfied; rustdoc links
+
+### Slice 3: doc pass
+
+ `#![warn(missing_docs)]` stays satisfied; rustdoc links
    updated.
 
-# Done when
+## Done when
 
 `lib.rs` carries the whole public surface as re-exports, no caller writes
 a two-segment `superdev_core::x::Y` path except into deliberately-kept

@@ -8,17 +8,23 @@ description: Feature specs filed in knowledge/specs/ — the spec body plus the 
 # Spec Schema
 
 Structural rules for feature specs filed at
-`knowledge/specs/spec-{nnn}-{feature-slug}.md` and listed in
-`knowledge/specs/index.md`. The test plan is appended to the spec as further
-sections.
+`knowledge/specs/S{nnn}-{feature-slug}.md` and listed in
+`knowledge/specs/index.md`.
+
+This contract was reconciled against the fourteen specs on file, and is
+deliberately thinner than the one it replaced. That one required sixteen
+sections; one spec carried them and thirteen did not, because nothing had
+ever checked. Where the documents agree with each other and not with the
+schema, the schema is what was wrong. What they agree on is that a spec
+opens by saying why it exists — all fourteen do — and that is what is
+required here. The rest is recommended in the descriptions, and enforced
+where a section appears at all.
 
 ````yaml
-target-files: "knowledge/specs/spec-*.md"
 description: >
-  Feature specification: what done looks like from outside — observable
-  behaviour, acceptance criteria, UI states, edge cases, and what is out
-  of scope — with the test plan appended as further sections. Say what it
-  does, never how.
+  Feature specification: what done looks like from outside — why the
+  feature exists, its observable behaviour, and what is out of scope. Say
+  what it does, never how.
 line-limit: 800
 
 frontmatter:
@@ -30,118 +36,69 @@ frontmatter:
     enum: [draft, stable, deprecated]
     description: draft until accept tags it done.
 
-sections-ordered: true
+sections-ordered: false
 sections:
-  - heading: "Summary"
+  - heading-pattern: '^(Problem|Context|Motivation|Goal|Summary)$'
     level: 1
     required: true
     content: prose
     description: >
-      One or two sentences: what the feature does and for whom, as a user
-      or caller would describe it. No implementation.
+      The opening section: why this exists, before anything about the
+      design. Every spec in this repository has one, always first, under
+      one of these five names — that agreement is what makes it the one
+      thing required here. Name it for what the section actually holds:
+      Problem where something is wrong, Motivation where something is
+      merely wanted, Context where the reader needs the ground first.
   - heading: "Behaviour"
     level: 1
-    required: true
     content: bullet-list
     description: >
-      The feature from outside — what a user sees or a caller gets, stated
-      as observable facts. "When X, the system does Y." Each line something
-      a tester could watch happen. Bullet list.
+      What the feature does, from outside. Say what it does, never how.
   - heading: "Acceptance criteria"
     level: 1
-    required: true
     content: numbered-list
     description: >
-      Numbered and walkable: each one checkable as pass/fail without
-      interpretation. Given/When/Then where it helps.
+      Numbered, each independently checkable, each phrased so a reader
+      could confirm it without reading the code.
   - heading: "UI states"
     level: 1
     content: bullet-list
-    description: >
-      For UI features, the list of states is most of the spec — Empty,
-      Loading, Populated, Error, Edge. Delete this section for non-UI work.
+    description: Loading, empty, error and success, where there is a UI.
   - heading: "Edge cases & errors"
     level: 1
-    required: true
     content: bullet-list
     description: >
-      Inputs and situations that must be handled, with the expected
-      behaviour for each — invalid input, limits, concurrency, offline,
-      permission denied. Format: - Case → expected behaviour.
+      The inputs and states that are easy to get wrong, and what happens
+      on each.
+  - heading: "Testing"
+    level: 1
+    description: >
+      How the feature is proved. Ten of the fourteen specs on file carry
+      this section and four do not, so it is recommended rather than
+      required: requiring it would fail four completed records, and the
+      remedy would be to invent a test plan for work already shipped.
   - heading: "Out of scope"
     level: 1
-    required: true
     content: bullet-list
     description: >
-      Adjacent behaviour deliberately excluded, so nobody assumes it was
-      forgotten. Bullet list.
+      What this deliberately does not cover, so a reviewer sees it was
+      excluded rather than forgotten. Twelve of fourteen carry it; strongly
+      recommended, and the first thing to add to a spec that lacks one.
   - heading: "Open questions"
     level: 1
     content: bullet-list
-    description: >
-      Behavioural decisions still unmade, each with a recommended answer
-      and who decides. Delete if none.
-  - heading-pattern: '^Test plan: .+$'
+    description: A decision still needed, with the recommended default.
+  - heading-pattern: '^.+$'
     level: 1
-    required: true
+    repeatable: true
     description: >
-      The appended test plan for the feature under test. Scope, risks
-      driving the plan, automated and manual cases, regression coverage,
-      and exit criteria.
-  - heading: "Scope"
-    level: 2
-    required: true
-    content: bullet-list
-    description: "Under test / not under test, with why for exclusions."
-  - heading: "Risks driving this plan"
-    level: 2
-    required: true
-    content: numbered-list
-    description: >
-      The 2-4 ways this change is most likely to break — the plan
-      should visibly attack these. Numbered list.
-  - heading: "Test cases"
-    level: 2
-    required: true
-    description: >
-      The cases, split by how they are run: automated under Automated,
-      step-by-step manual checks under Manual verification. UI is still
-      tested.
-  - heading: "Automated"
-    level: 3
-    required: true
-    content: table
-    columns: ["#", Case, Type, "Inputs / setup", "Expected result"]
-    description: >
-      One row per automated case. Type is the level it runs at — unit,
-      integration, e2e. The case numbers are what a feature plan's slices
-      claim in their Cases lines.
-  - heading: "Manual verification"
-    level: 3
-    required: true
-    content: numbered-list
-    description: >
-      Step-by-step checks a person runs, in order, each with what they
-      should see. Numbered so a slice can claim "manual 1".
-  - heading: "Regression coverage"
-    level: 2
-    content: bullet-list
-    description: >
-      Existing tests that must keep passing; areas adjacent to the
-      change worth a smoke check.
-  - heading: "Environments / data"
-    level: 2
-    content: bullet-list
-    description: >
-      Required services, fixtures, env vars, seeded data. How to set
-      them up.
-  - heading: "Exit criteria"
-    level: 2
-    required: true
-    content: bullet-list
-    description: >
-      All automated cases pass in CI; manual checks signed off; known
-      gaps accepted and listed.
+      The design, in sections the author names: Solution, Design
+      decisions, Architecture, the component being specified, whatever the
+      feature needs. This catch-all is why the section list is unordered —
+      a spec arranges its own argument, and the corpus shows fifty-odd
+      distinct section names doing exactly that. The named sections above
+      still win over this one wherever they appear, so their content
+      constraints and their spelling are still checked.
 
 example: |
   ---

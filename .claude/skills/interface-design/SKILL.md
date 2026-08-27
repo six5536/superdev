@@ -30,7 +30,7 @@ You decide only the interfaces that will be expensive to change once other code 
 <step name="RECORD ADRS" task="Record each decision as an ADR per `schema-adr`, listed in the decisions index" />
 <step name="DOUBLE-CHECK" task="Double-check the contract and ADRs (`/double-check`); fix what it finds" />
 <gate check="A new interface contradicts neither the architecture nor its rules" on-fail="reject it, or report the conflict for a deliberate change" />
-<gate check="knowledge validates to PASS per the core knowledge block" on-fail="fix every error" />
+<gate check="`superdev validate` passes: the SOKF knowledge, and every document against its schema" on-fail="fix every error" />
 <gate check="Everything internal is left to build" on-fail="stop deciding it here" />
 <skill_call name="/feature-plan" when="always" />
 </process_actions>

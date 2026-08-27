@@ -27,7 +27,7 @@ A harvest relocates one durable fact from a source into the canonical knowledge,
 <step name="RESOLVE INCUMBENT ENTRY POINTS" task="Incumbent entry point? Ask the owner: merge and reduce (durable content into the canonical knowledge, always-loaded rules into `AGENTS.md`, the incumbent down to its `@AGENTS.md` import), or leave as found" />
 <step name="INTERVIEW THE OWNER" task="Interview the owner (`/grill-me`) on the skeletons still carrying TBD prompts that are answerable now: what the project is and its status, constraints and non-goals, first glossary terms, dependency policy, intended conventions. Land each answer in its skeleton" />
 <step name="LEAVE ACCRETING TBDS" task="Leave the TBDs only development can fill (architecture as practised, testing strategy, error-handling conventions); they accrete through the project's own specs and decisions" />
-<gate check="knowledge validates to PASS per the core knowledge block" on-fail="fix every error" />
+<gate check="`superdev validate` passes: the SOKF knowledge, and every document against its schema" on-fail="fix every error" />
 </process_actions>
 
 

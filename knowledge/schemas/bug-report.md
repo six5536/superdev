@@ -45,6 +45,17 @@ sections:
     description: >
       Title heading carrying the one-line symptom, e.g. "Sync fails
       with ETIMEDOUT on large payloads".
+  - heading-pattern: "^(Decided|Resolved|Resolved in part|Won't fix)$"
+    level: 2
+    repeatable: true
+    content: prose
+    description: >
+      How it ended, added when it does: what was decided and by whom, what
+      shipped and where, or why it will not be done. Sits directly under the
+      title, before the report itself, because a reader who opens a settled
+      issue wants the verdict before the evidence — every settled issue on
+      file puts it there. Absent while the issue is outstanding, which is
+      what distinguishes an open one from a settled one at a glance.
   - heading: "Summary"
     level: 2
     required: true
@@ -94,15 +105,6 @@ sections:
     description: >
       Fix: the change that removes the defect. Workaround: how
       users can avoid it meanwhile, if any. Bullet list.
-  - heading-pattern: "^(Decided|Resolved|Resolved in part|Won't fix|Comments)$"
-    level: 2
-    repeatable: true
-    content: prose
-    description: >
-      How the issue ended, added when it does: what was decided and by whom,
-      what shipped and where, or why it will not be fixed. Absent while the
-      issue is outstanding, which is what distinguishes an open issue from a
-      settled one at a glance.
 
   - heading: "Regression risk"
     level: 2
@@ -111,6 +113,13 @@ sections:
     description: >
       What else touches this code path; which tests would catch a
       recurrence.
+
+  - heading: "Comments"
+    level: 2
+    content: prose
+    description: >
+      Conversation history, appended as it happens — the tracker's
+      convention says append, so this sits last, where the verdict does not.
 
 example: |
   ---

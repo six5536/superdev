@@ -40,7 +40,7 @@ do not work together, and regressions elsewhere in the app.
 - [ ] GATE: Any gap found? It becomes a new slice.
 - [ ] Clean pass? Tag the spec concept `done`.
 - [ ] GATE: Knowledge edited? Validate to PASS
-      (`superdev aokf validate knowledge`).
+      (`superdev validate`).
 
 ## IMPORTANT RULES
 

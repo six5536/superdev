@@ -23,7 +23,6 @@ sections and declares no order: AOKF mandates neither, and the shape of an
 answer follows the question.
 
 ````yaml
-target-files: "knowledge/research/research-*.md"
 description: >
   The findings of one researched question, with each claim attributed to
   a listed source by footnote.

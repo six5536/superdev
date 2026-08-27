@@ -1,0 +1,10 @@
+{
+  "findings": [
+    {
+      "file": "thing.md",
+      "message": "schema: type `Thing` is already governed by other.md — a type names one schema",
+      "severity": "error"
+    }
+  ],
+  "passed": false
+}

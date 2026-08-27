@@ -1,0 +1,10 @@
+{
+  "findings": [
+    {
+      "file": "a.md",
+      "message": "section \"Rows\" has columns [\"ID\", \"Other\"], and thing.md declares [\"ID\", \"Name\"]",
+      "severity": "error"
+    }
+  ],
+  "passed": false
+}

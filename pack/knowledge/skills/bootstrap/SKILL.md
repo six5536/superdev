@@ -55,7 +55,7 @@ import-only: a fact with two full homes drifts.
       practised, testing strategy, error-handling conventions); they
       accrete through the project's own specs and decisions.
 - [ ] GATE: Validate the canonical knowledge to PASS at level 2
-      (`superdev aokf validate knowledge`); fix every error.
+      (`superdev validate`); fix every error.
 
 ## IMPORTANT RULES
 

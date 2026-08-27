@@ -67,7 +67,9 @@ files are brought into line when touched, not in bulk.
 
 - Only use `index.ts` when necessary; otherwise name files descriptively.
 
-# The code is the canonical reference
+# Canonical reference
+
+The code is the canonical reference.
 
 README, CLI `--help`, and this knowledge all describe actual behaviour.
 When a doc disagrees with the code, fix the doc — unless the code is wrong, in

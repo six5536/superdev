@@ -15,7 +15,6 @@ directory is what selects this schema, so the glob does not repeat the kind;
 the id still asserts it per document.
 
 ````yaml
-target-files: "knowledge/feature-plans/*.md"
 description: >
   The feature's slice list — per slice a done-check, the assigned
   test-plan cases, and a done marker. Produced by the feature-plan phase;

@@ -28,7 +28,7 @@ You decompose, you don't build. Produce the feature's plan as specified in the i
 <step name="FILE THE PLAN" task="File the slice list as the feature's plan: a draft concept in `knowledge/feature-plans/` per `schema-feature-plan`, listed in that directory's index. Re-entering? Extend the existing plan" />
 <step name="DOUBLE-CHECK" task="`/double-check` the plan; fix what it finds" />
 <gate check="No slice is too big to build and verify in one pass" on-fail="cut it again" />
-<gate check="knowledge validates to PASS per the core knowledge block" on-fail="fix every error" />
+<gate check="`superdev validate` passes: the SOKF knowledge, and every document against its schema" on-fail="fix every error" />
 <skill_call name="/build" when="always" input="the first slice" />
 </process_actions>
 
