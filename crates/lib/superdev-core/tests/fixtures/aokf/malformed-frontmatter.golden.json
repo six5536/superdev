@@ -1,21 +1,21 @@
 {
   "concepts": 0,
-  "passed": false,
   "findings": [
     {
-      "severity": "error",
       "file": "bad-yaml.md",
-      "message": "frontmatter YAML parse error: while parsing a flow sequence\n  in \"<unicode string>\", line 1, column 7:\n    type: [unclosed\n          ^\nexpected ',' or ']', but got '<stream end>'\n  in \"<unicode string>\", line 1, column 16:\n    type: [unclosed\n                   ^"
+      "message": "did not find expected ',' or ']' at line 2 column 1, while parsing a flow sequence at line 1 column 7",
+      "severity": "error"
     },
     {
-      "severity": "error",
       "file": "no-frontmatter.md",
-      "message": "no frontmatter block"
+      "message": "no frontmatter: expected a `---` line, then a closing `---`",
+      "severity": "error"
     },
     {
-      "severity": "error",
       "file": "not-a-mapping.md",
-      "message": "frontmatter is not a mapping"
+      "message": "frontmatter is not a mapping",
+      "severity": "error"
     }
-  ]
+  ],
+  "passed": false
 }

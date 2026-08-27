@@ -1,26 +1,26 @@
 {
   "concepts": 1,
-  "passed": false,
   "findings": [
     {
-      "severity": "error",
       "file": "manifest.aokf.yaml",
-      "message": "stamped key `producer` present in the working tree"
+      "message": "stamped key `producer` present in the working tree",
+      "severity": "error"
     },
     {
-      "severity": "error",
       "file": "manifest.aokf.yaml",
-      "message": "stamped key `generated` present in the working tree"
+      "message": "stamped key `generated` present in the working tree",
+      "severity": "error"
     },
     {
-      "severity": "error",
       "file": "manifest.aokf.yaml",
-      "message": "stamped key `counts` present in the working tree"
+      "message": "stamped key `counts` present in the working tree",
+      "severity": "error"
     },
     {
-      "severity": "error",
       "file": "alpha.md",
-      "message": "stamped field `generated` present in the working tree"
+      "message": "stamped field `generated` present in the working tree",
+      "severity": "error"
     }
-  ]
+  ],
+  "passed": false
 }

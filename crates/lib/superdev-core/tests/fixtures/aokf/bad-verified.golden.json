@@ -1,36 +1,36 @@
 {
   "concepts": 3,
-  "passed": false,
   "findings": [
     {
-      "severity": "error",
       "file": "alpha.md",
-      "message": "verified[0].by must be `human:<id>` or `process:<id>`, got 'nobody'"
+      "message": "verified[0].by must be `human:<id>` or `process:<id>`, got 'nobody'",
+      "severity": "error"
     },
     {
-      "severity": "error",
       "file": "alpha.md",
-      "message": "verified[0].at is not ISO 8601: 'yesterday'"
+      "message": "verified[0].at is not ISO 8601: 'yesterday'",
+      "severity": "error"
     },
     {
-      "severity": "error",
       "file": "beta.md",
-      "message": "verified[0].at is not ISO 8601: '2026-13-45'"
+      "message": "verified[0].at is not ISO 8601: '2026-13-45'",
+      "severity": "error"
     },
     {
-      "severity": "error",
       "file": "beta.md",
-      "message": "verified[1] is not a mapping"
+      "message": "verified[1] is not a mapping",
+      "severity": "error"
     },
     {
-      "severity": "error",
       "file": "beta.md",
-      "message": "verified[2].by must be `human:<id>` or `process:<id>`, got 3"
+      "message": "verified[2].by must be `human:<id>` or `process:<id>`, got 3",
+      "severity": "error"
     },
     {
-      "severity": "error",
       "file": "gamma.md",
-      "message": "`verified` must be a mapping or a list of mappings"
+      "message": "`verified` must be a mapping or a list of mappings",
+      "severity": "error"
     }
-  ]
+  ],
+  "passed": false
 }

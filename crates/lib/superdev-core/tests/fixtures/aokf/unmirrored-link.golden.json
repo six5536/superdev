@@ -1,11 +1,11 @@
 {
   "concepts": 2,
-  "passed": false,
   "findings": [
     {
-      "severity": "error",
       "file": "alpha.md",
-      "message": "links[0] `to: beta` has no mirroring body link"
+      "message": "links[0] `to: beta` has no mirroring body link",
+      "severity": "error"
     }
-  ]
+  ],
+  "passed": false
 }

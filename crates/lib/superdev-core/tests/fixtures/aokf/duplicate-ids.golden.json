@@ -1,16 +1,16 @@
 {
   "concepts": 3,
-  "passed": false,
   "findings": [
     {
-      "severity": "error",
       "file": "beta.md",
-      "message": "duplicate `id` 'dup' (also in alpha.md)"
+      "message": "duplicate `id` 'dup' (also in alpha.md)",
+      "severity": "error"
     },
     {
-      "severity": "error",
       "file": "gamma.md",
-      "message": "`id` is not a valid slug: 'Bad_Slug'"
+      "message": "`id` is not a valid slug: 'Bad_Slug'",
+      "severity": "error"
     }
-  ]
+  ],
+  "passed": false
 }

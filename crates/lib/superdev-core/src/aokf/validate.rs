@@ -1,10 +1,11 @@
 //! validate.rs — the document check of SPEC §10 and the conformance
 //! decision of SPEC §11.
 //!
-//! A behavioural port of the Python reference validator that this replaced:
-//! the same findings, with the same severities, in the same order. Where the two
-//! differ, the divergence is noted at the check. `tests/validator_parity.rs`
-//! holds the reference behaviour as goldens.
+//! Began as a behavioural port of the Python reference validator this
+//! replaced — the same findings, with the same severities, in the same order —
+//! and the divergences that were taken deliberately are noted at the check.
+//! Every finding's text is the contract: `tests/validate_snapshots.rs` records
+//! the report for one bundle per failure class and compares it verbatim.
 
 use std::collections::{BTreeSet, HashMap, HashSet};
 use std::path::{Path, PathBuf};

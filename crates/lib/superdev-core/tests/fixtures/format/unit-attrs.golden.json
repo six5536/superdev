@@ -1,51 +1,51 @@
 {
   "files": 1,
-  "passed": false,
   "findings": [
     {
-      "severity": "error",
       "file": "SKILL.md",
-      "message": "frontmatter: name \"sd-attrs\" does not match the skill directory \"unit-attrs\", which is what the command is named after"
+      "message": "frontmatter: name \"sd-attrs\" does not match the skill directory \"unit-attrs\", which is what the command is named after",
+      "severity": "error"
     },
     {
-      "severity": "error",
       "file": "SKILL.md",
-      "message": "<skill> user-input must be $ARGUMENTS, got \"\""
+      "message": "<skill> user-input must be $ARGUMENTS, got \"\"",
+      "severity": "error"
     },
     {
-      "severity": "error",
       "file": "SKILL.md",
-      "message": "<skill> missing output attribute: <skill name=\"Attrs\" purpose=\"Break Attribute Rules\" user-input=\"\">"
+      "message": "<skill> missing output attribute: <skill name=\"Attrs\" purpose=\"Break Attribute Rules\" user-input=\"\">",
+      "severity": "error"
     },
     {
-      "severity": "error",
       "file": "SKILL.md",
-      "message": "<step> missing name attribute: <step task=\"a step with no name\" />"
+      "message": "<step> missing name attribute: <step task=\"a step with no name\" />",
+      "severity": "error"
     },
     {
-      "severity": "error",
       "file": "SKILL.md",
-      "message": "bad when value \"sometimes\" on <step> (use always, if {condition}, unless {condition}, before {event})"
+      "message": "bad when value \"sometimes\" on <step> (use always, if {condition}, unless {condition}, before {event})",
+      "severity": "error"
     },
     {
-      "severity": "error",
       "file": "SKILL.md",
-      "message": "<step> attribute \"trigger\" renamed to when (one condition attribute across the grammar): <step name=\"RENAMED\" trigger=\"the old spelling\" task=\"renamed attribut"
+      "message": "<step> attribute \"trigger\" renamed to when (one condition attribute across the grammar): <step name=\"RENAMED\" trigger=\"the old spelling\" task=\"renamed attribut",
+      "severity": "error"
     },
     {
-      "severity": "error",
       "file": "SKILL.md",
-      "message": "<step> unknown attribute \"colour\": <step name=\"UNKNOWN ATTR\" colour=\"red\" task=\"not in the vocabulary\" />"
+      "message": "<step> unknown attribute \"colour\": <step name=\"UNKNOWN ATTR\" colour=\"red\" task=\"not in the vocabulary\" />",
+      "severity": "error"
     },
     {
-      "severity": "error",
       "file": "SKILL.md",
-      "message": "missing <bootstrap_actions> block"
+      "message": "missing <bootstrap_actions> block",
+      "severity": "error"
     },
     {
-      "severity": "error",
       "file": "SKILL.md",
-      "message": "frontmatter name \"sd-attrs\" does not match <skill name=\"Attrs\">"
+      "message": "frontmatter name \"sd-attrs\" does not match <skill name=\"Attrs\">",
+      "severity": "error"
     }
-  ]
+  ],
+  "passed": false
 }

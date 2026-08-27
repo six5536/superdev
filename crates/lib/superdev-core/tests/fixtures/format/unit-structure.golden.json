@@ -1,46 +1,46 @@
 {
   "files": 1,
-  "passed": false,
   "findings": [
     {
-      "severity": "error",
       "file": "SKILL.md",
-      "message": "frontmatter: name \"sd-structure\" does not match the skill directory \"unit-structure\", which is what the command is named after"
+      "message": "frontmatter: name \"sd-structure\" does not match the skill directory \"unit-structure\", which is what the command is named after",
+      "severity": "error"
     },
     {
-      "severity": "error",
       "file": "SKILL.md",
-      "message": "<skill> user-input must be $ARGUMENTS, got \"\""
+      "message": "<skill> user-input must be $ARGUMENTS, got \"\"",
+      "severity": "error"
     },
     {
-      "severity": "error",
       "file": "SKILL.md",
-      "message": "<loop> needs exactly one of `until`, `for-each`: <loop>"
+      "message": "<loop> needs exactly one of `until`, `for-each`: <loop>",
+      "severity": "error"
     },
     {
-      "severity": "error",
       "file": "SKILL.md",
-      "message": "<loop> has `until` and `for-each`; use one: <loop until=\"a\" for-each=\"b\">"
+      "message": "<loop> has `until` and `for-each`; use one: <loop until=\"a\" for-each=\"b\">",
+      "severity": "error"
     },
     {
-      "severity": "error",
       "file": "SKILL.md",
-      "message": "<loop> has no <step>, <gate> entries"
+      "message": "<loop> has no <step>, <gate> entries",
+      "severity": "error"
     },
     {
-      "severity": "error",
       "file": "SKILL.md",
-      "message": "missing <bootstrap_actions> block"
+      "message": "missing <bootstrap_actions> block",
+      "severity": "error"
     },
     {
-      "severity": "error",
       "file": "SKILL.md",
-      "message": "frontmatter name \"sd-structure\" does not match <skill name=\"Structure\">"
+      "message": "frontmatter name \"sd-structure\" does not match <skill name=\"Structure\">",
+      "severity": "error"
     },
     {
-      "severity": "error",
       "file": "SKILL.md",
-      "message": "<rules> must come after <process_actions>"
+      "message": "<rules> must come after <process_actions>",
+      "severity": "error"
     }
-  ]
+  ],
+  "passed": false
 }

@@ -1,11 +1,11 @@
 {
   "concepts": 1,
-  "passed": true,
   "findings": [
     {
-      "severity": "warning",
       "file": "alpha.md",
-      "message": "footnote [^orphan] has no matching sources[].id"
+      "message": "footnote [^orphan] has no matching sources[].id",
+      "severity": "warning"
     }
-  ]
+  ],
+  "passed": true
 }

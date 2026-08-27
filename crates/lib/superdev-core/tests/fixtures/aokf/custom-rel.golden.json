@@ -1,11 +1,11 @@
 {
   "concepts": 2,
-  "passed": true,
   "findings": [
     {
-      "severity": "warning",
       "file": "alpha.md",
-      "message": "links[0] non-core rel `made-up` (read as relates-to)"
+      "message": "links[0] non-core rel `made-up` (read as relates-to)",
+      "severity": "warning"
     }
-  ]
+  ],
+  "passed": true
 }

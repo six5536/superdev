@@ -1,8 +1,8 @@
 //! check.rs — the per-kind and cross-file checks.
 //!
-//! A behavioural port of the Node reference. Every finding's text is the
-//! contract: `tests/format_parity.rs` holds the reference's output as goldens,
-//! and the wording is compared verbatim.
+//! Began as a behavioural port of the Node reference this replaced. Every
+//! finding's text is the contract: `tests/format_snapshots.rs` records the
+//! report for one tree per failure class and compares it verbatim.
 
 use std::collections::{BTreeSet, HashMap, HashSet};
 use std::sync::LazyLock;

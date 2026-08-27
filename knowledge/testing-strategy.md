@@ -38,12 +38,17 @@ gate are in [CONTRIBUTING](/CONTRIBUTING.md).[^contributing]
   shell scripts; `mise where` answers with a fixture skills checkout, so
   materialisation runs against real files. The fakes make these unix-only;
   Windows runs the rest.
-- **Validator parity.** One fixture bundle per failure class under
-  `tests/fixtures/aokf/`, each with a `.golden.json` captured from the Python
-  validator before that script was deleted. The Rust output is compared to it
-  verbatim, bar two documented normalisations. Those goldens are now the only
-  record of the reference behaviour, so they are regenerated only against a
-  validator worth trusting.
+- **Validator snapshots.** One fixture bundle per failure class under
+  `tests/fixtures/aokf/`, and one file tree per class under
+  `tests/fixtures/format/`, each with a `.golden.json` holding the report the
+  validator produces for it. Both compare verbatim: the goldens are the
+  contract over the finding texts, their severities, the verdict and the order
+  findings arrive in, none of which the inline tests pin. They began as
+  captures from the Python and Node references this code replaced, which are
+  no longer the authority. Regenerate with `UPDATE_GOLDENS=1` and read the
+  diff — a reworded message is the diff working, while a moved severity or a
+  finding that appears or vanishes is a behaviour change and wants the
+  argument one deserves.
 - **MCP integration.** A real rmcp client drives all four tools over an
   in-process duplex pipe against fixture bundles — the transport is the only
   thing stubbed. Assertions cover locators, line numbers, group truncation and

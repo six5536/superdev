@@ -1,36 +1,36 @@
 {
   "concepts": 1,
-  "passed": false,
   "findings": [
     {
-      "severity": "warning",
       "file": "alpha.md",
-      "message": "broken body link: ghost.md"
+      "message": "broken body link: ghost.md",
+      "severity": "warning"
     },
     {
-      "severity": "warning",
       "file": "alpha.md",
-      "message": "`resource` path does not exist: /nowhere.rs"
+      "message": "`resource` path does not exist: /nowhere.rs",
+      "severity": "warning"
     },
     {
-      "severity": "warning",
       "file": "alpha.md",
-      "message": "sources[0].resource does not exist: /also-missing.rs"
+      "message": "sources[0].resource does not exist: /also-missing.rs",
+      "severity": "warning"
     },
     {
-      "severity": "error",
       "file": "alpha.md",
-      "message": "links[0] `to: nowhere-at-all` resolves to no concept id or path"
+      "message": "links[0] `to: nowhere-at-all` resolves to no concept id or path",
+      "severity": "error"
     },
     {
-      "severity": "error",
       "file": "alpha.md",
-      "message": "links[1] `to: /ghost.md` resolves to no concept id or path"
+      "message": "links[1] `to: /ghost.md` resolves to no concept id or path",
+      "severity": "error"
     },
     {
-      "severity": "warning",
       "file": "index.md",
-      "message": "index entry points at missing file: ghost.md"
+      "message": "index entry points at missing file: ghost.md",
+      "severity": "warning"
     }
-  ]
+  ],
+  "passed": false
 }

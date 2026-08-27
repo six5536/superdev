@@ -1,11 +1,11 @@
 {
   "concepts": 1,
-  "passed": false,
   "findings": [
     {
-      "severity": "error",
       "file": "manifest.aokf.yaml",
-      "message": "no manifest (required)"
+      "message": "no manifest (required)",
+      "severity": "error"
     }
-  ]
+  ],
+  "passed": false
 }

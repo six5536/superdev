@@ -1,26 +1,26 @@
 {
   "files": 1,
-  "passed": false,
   "findings": [
     {
-      "severity": "error",
       "file": "schemas/thing.md",
-      "message": "line 12: the yaml contract opens with 3 backticks, expected 4 backticks — the example inside it must be able to carry a fenced block of its own, and a marker this short is closed by the first one"
+      "message": "line 12: the yaml contract opens with 3 backticks, expected 4 backticks — the example inside it must be able to carry a fenced block of its own, and a marker this short is closed by the first one",
+      "severity": "error"
     },
     {
-      "severity": "error",
       "file": "schemas/thing.md",
-      "message": "schema yaml: unknown key \"invented-key\" (the grammar declares target-files, description, line-limit, frontmatter, preamble, sections-ordered, sections, sections-prohibited, example)"
+      "message": "schema yaml: unknown key \"invented-key\" (the grammar declares target-files, description, line-limit, frontmatter, preamble, sections-ordered, sections, sections-prohibited, example)",
+      "severity": "error"
     },
     {
-      "severity": "error",
       "file": "schemas/thing.md",
-      "message": "schema yaml: missing required key \"description\""
+      "message": "schema yaml: missing required key \"description\"",
+      "severity": "error"
     },
     {
-      "severity": "error",
       "file": "schemas/thing.md",
-      "message": "schema yaml: missing required key \"line-limit\""
+      "message": "schema yaml: missing required key \"line-limit\"",
+      "severity": "error"
     }
-  ]
+  ],
+  "passed": false
 }
