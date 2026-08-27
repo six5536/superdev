@@ -14,7 +14,7 @@ tags: [needs-triage]
 `superdev aokf validate` checks that an `index.md` entry points at a file that
 exists, and nothing else about what the entry says. SPEC §9 requires that
 "entries should carry the linked concept's `description`", so an index may
-describe a concept in terms the concept itself does not use, and the bundle
+describe a concept in terms the concept itself does not use, and the canonical knowledge
 still passes. It bites in two directions: an entry silently goes
 stale when the concept is reworded, and an entry can become the only home of a
 fact — which matters because §9 also says indexes may be generated, so a
@@ -57,7 +57,7 @@ exist:
 
 ```rust
 /// `index.md` entries point at files that exist.
-fn check_indexes(bundle: &Bundle, repo_root: &Path, findings: &mut Vec<Finding>) {
+fn check_indexes(knowledge: &Knowledge, repo_root: &Path, findings: &mut Vec<Finding>) {
 ```
 
 That is faithful to SPEC §10, whose warn list names exactly one index rule —
@@ -84,5 +84,5 @@ found by a throwaway script and fixed by hand.
 
 `check_indexes` has no covering tests today, so the change lands on untested
 ground and should bring its own. The blast radius is one function reached only
-from `validate`, and a warning never fails a bundle — only a fatal finding
+from `validate`, and a warning never fails knowledge — only a fatal finding
 does.

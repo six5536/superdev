@@ -1,8 +1,8 @@
 # superdev
 
-superdev sets a repository up for agent-driven development — a
-knowledgebase, a code index, committed skills — and keeps that setup
-current. Under construction; nothing is published yet.
+superdev sets a repository up for agent-driven development — knowledge,
+a code index, committed skills — and keeps that setup current. Under
+construction; nothing is published yet.
 
 ## Install
 

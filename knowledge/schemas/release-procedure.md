@@ -7,7 +7,7 @@ description: How a release is cut, the gates on it, and the steps that cannot be
 
 # Release Procedure Schema
 
-Structural rules for `knowledge/release-procedure.md`, the bundle's
+Structural rules for `knowledge/release-procedure.md`, the canonical knowledge's
 Procedure concept for cutting a release. The document has no headings — a
 lead line, the ordered steps, and a note on credentials — so it declares a
 preamble and no sections.

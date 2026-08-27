@@ -7,7 +7,7 @@ description: The test layers, the key choices behind them, and where they run, i
 
 # Testing Strategy Schema
 
-Structural rules for `knowledge/testing-strategy.md`, the bundle's Reference
+Structural rules for `knowledge/testing-strategy.md`, the canonical knowledge's Reference
 concept for how the project is tested. This is the standing strategy; the
 per-feature cases live in a spec's appended test plan.
 

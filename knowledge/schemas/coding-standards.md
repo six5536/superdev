@@ -7,7 +7,7 @@ description: The behavioural rules, prose rules and per-language conventions CI 
 
 # Coding Standards Schema
 
-Structural rules for `knowledge/coding-standards.md`, the bundle's
+Structural rules for `knowledge/coding-standards.md`, the canonical knowledge's
 Convention concept for how code is written here. The per-language headings
 sit between literal ones, so the rule that a literal beats a pattern is what
 keeps `Canonical reference` from being swallowed by the catch-all.

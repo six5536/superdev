@@ -38,7 +38,7 @@ gate are in [CONTRIBUTING](/CONTRIBUTING.md).[^contributing]
   shell scripts; `mise where` answers with a fixture skills checkout, so
   materialisation runs against real files. The fakes make these unix-only;
   Windows runs the rest.
-- **Validator snapshots.** One fixture bundle per failure class under
+- **Validator snapshots.** One fixture knowledge tree per failure class under
   `tests/fixtures/aokf/`, and one file tree per class under
   `tests/fixtures/format/`, each with a `.golden.json` holding the report the
   validator produces for it. Both compare verbatim: the goldens are the
@@ -50,7 +50,8 @@ gate are in [CONTRIBUTING](/CONTRIBUTING.md).[^contributing]
   finding that appears or vanishes is a behaviour change and wants the
   argument one deserves.
 - **MCP integration.** A real rmcp client drives all four tools over an
-  in-process duplex pipe against fixture bundles — the transport is the only
+  in-process duplex pipe against fixture knowledge trees — the transport is
+  the only
   thing stubbed. Assertions cover locators, line numbers, group truncation and
   the lexical-only degradation. A `FakeEmbedder` keeps vector results
   deterministic; no test downloads the real model.
@@ -66,7 +67,7 @@ gate are in [CONTRIBUTING](/CONTRIBUTING.md).[^contributing]
   locally: `npm run smoke` / `npm run smoke:launcher`.
 - **Manage smoke (manual).** `npm run smoke:manage` runs a real `init` and
   `status` in a scratch repo against the real mise, claude and codegraph, then
-  `aokf validate` and `aokf index` over the bundle that `init` just wrote.
+  `aokf validate` and `aokf index` over the canonical knowledge that `init` just wrote.
   This is the only place the real embedding model is downloaded and loaded.
   Devcontainer-only and never in CI: it needs the network and Claude auth.
 

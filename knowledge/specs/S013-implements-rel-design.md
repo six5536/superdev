@@ -23,7 +23,7 @@ warnings), every generic consumer — the
 [graph traversal](S002-aokf-mcp-server-design.md), search — reads the
 edge as bare `relates-to`, and with no defined inverse the graph
 cannot label the back-edge, so a spec cannot show what implements it.
-The bundle even disagrees with itself: the
+The canonical knowledge even disagrees with itself: the
 [issue tracker](../issue-tracker.md) prescribes `references` for the
 same relationship the templates write as `implements`.
 
@@ -49,9 +49,9 @@ declare-from-the-issue-side rule.
 3. The graph synthesises inverses for the pair both ways: a
    plan → spec `implements` edge shows from the spec side as
    `implemented-by`, not as `relates-to`.
-4. Bundles declaring `aokf: "0.1"` stay conformant — the change is
-   additive. This repo's bundle manifest moves to `aokf: "0.2"`.
-5. The live bundle validates with zero warnings: the P002 plan's
+4. Knowledge declaring `aokf: "0.1"` stays conformant — the change is
+   additive. This repo's knowledge manifest moves to `aokf: "0.2"`.
+5. The live knowledge validates with zero warnings: the P002 plan's
    `implements` link is now core.
 6. The issue-tracker concept prescribes `rel: implements` for an
    issue or plan that implements a spec, declared from the
@@ -87,7 +87,7 @@ declare-from-the-issue-side rule.
 Seams, all existing, as confirmed with the user: validator unit tests
 (the pair passes with no warning; an unknown rel still warns), graph
 unit tests (`inverse_rel` maps the pair both ways; a synthesized
-back-edge is labelled `implemented-by`), and the live-bundle CLI
+back-edge is labelled `implemented-by`), and the live-knowledge CLI
 end-to-end tightened to assert zero warnings — the behaviour-level
 proof the P002 warning is gone. Prior art: the existing non-core-rel
 warning tests, the `inverse_rel` table test, and

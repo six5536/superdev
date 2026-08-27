@@ -17,7 +17,7 @@ links:
 
 Sub-project 2 of superdev (see the
 [CLI core spec](S001-cli-core-blueprint-engine-design.md) for the
-product frame). `superdev mcp aokf` serves the AOKF bundle to agents over
+product frame). `superdev mcp aokf` serves the canonical project knowledge to agents over
 MCP, so querying replaces the wholesale `@knowledge/…` preloading in
 AGENTS.md. The AOKF format is defined in `/.agents/aokf/SPEC.md`.
 
@@ -37,7 +37,7 @@ happens in this sub-project, dogfooded on this repo.
 All logic in `superdev-core`, new `aokf` subsystem; the binary stays thin
 (see [architecture](../architecture.md)).
 
-- **`aokf` (format)** — frontmatter parsing into a `Concept` model, bundle
+- **`aokf` (format)** — frontmatter parsing into a `Concept` model, knowledge
   loading (reserved-file rules), body splitting at markdown headings into
   sections with line ranges, and the link graph (id/path resolution,
   inverse-edge synthesis per SPEC §8). One parser feeds the validator and
@@ -64,7 +64,7 @@ ONNX-runtime alternatives.
 # MCP tool surface
 
 Four tools, stdio only, no resources/prompts. Every hit carries the locator
-set: bundle-relative path, concept id, heading path, line range, snippet,
+set: knowledge-relative path, concept id, heading path, line range, snippet,
 score.
 
 - **`aokf_search`** — `query`, optional `limit`, `types`, `tags`. BM25 +
@@ -72,7 +72,7 @@ score.
   applied pre-fusion. Results grouped by concept.
 - **`aokf_read`** — `id` (or path), optional `heading`: whole concept or
   one section, frontmatter summarised, line numbers on every block.
-- **`aokf_graph`** — two modes. No args: the bundle-wide edge map, one line
+- **`aokf_graph`** — two modes. No args: the knowledge-wide edge map, one line
   per **declared** edge (source, rel, target, note), grouped by source;
   synthesised inverses are omitted as derivable. With `id`: the single-hop
   neighbourhood, both directions, one line per edge with the neighbour's
@@ -81,11 +81,11 @@ score.
   `+N more (rel: …)` truncation line.
 - **`aokf_overview`** — no args: manifest name, concept count, the
   directory tree with each concept's id and description, and a warning
-  block when the bundle currently fails validation.
+  block when the canonical knowledge currently fails validation.
 
 # Index lifecycle
 
-Freshness is lazy, checked on every tool call: bundle file hashes compare
+Freshness is lazy, checked on every tool call: knowledge file hashes compare
 against the manifest (milliseconds); changed, new, or deleted files are
 re-parsed, re-embedded, and updated incrementally. No watcher, no daemon
 state — the server restarts freely and always sees edits on the next call.
@@ -111,8 +111,8 @@ warning in the response, never an error.
 
 Behavioural port of `/.agents/aokf/tools/validator.py`: same findings, same
 level grading, same warning semantics, same `--json` output, same exit
-codes. Parity is proven against a fixture matrix — this repo's live bundle
-plus synthetic bundles per failure class (broken links, duplicate ids,
+codes. Parity is proven against a fixture matrix — this repo's live knowledge
+plus synthetic knowledge trees per failure class (broken links, duplicate ids,
 malformed frontmatter, stamped fields present, bad `verified` entries,
 unmirrored links) — by comparing both implementations' JSON output.
 
@@ -141,8 +141,8 @@ hook and npm script run `cargo run --quiet -- aokf validate knowledge`
 - Tool failures are MCP error payloads, never process exits: unknown id →
   near-miss candidates; parse-broken file → the validator finding for it;
   model unavailable → lexical-only warning.
-- A bundle failing validation still indexes and serves — agents need
-  search most while fixing a broken bundle; `aokf_overview` carries the
+- Knowledge failing validation still indexes and serves — agents need
+  search most while fixing a broken knowledge; `aokf_overview` carries the
   warning block.
 - `mcp aokf` exits 0 on clean stdin close, 2 on startup failure. The
   BrokenPipe-is-success rule stays.
@@ -157,7 +157,7 @@ hook and npm script run `cargo run --quiet -- aokf validate knowledge`
   Python output (fixtures retain the Python results as golden files after
   the script is deleted).
 - **MCP integration**: rmcp client over an in-process duplex stream against
-  fixture bundles — every tool, asserting locators, line numbers,
+  fixture knowledge trees — every tool, asserting locators, line numbers,
   truncation, and the lexical-only degradation.
 - **E2e**: `aokf validate` exit codes in the existing assert_cmd harness;
   one server smoke (initialize + one search + clean shutdown on stdin
@@ -167,7 +167,7 @@ hook and npm script run `cargo run --quiet -- aokf validate knowledge`
 # Out of scope
 
 Update tools (postponed phase); file watchers; HTTP transport; reranking;
-multi-bundle serving; plugin-based distribution of the registration
+multi-knowledge serving; plugin-based distribution of the registration
 (sub-project 3); knowledge upkeep verbs beyond `validate`/`index`
 (sub-project 4).
 

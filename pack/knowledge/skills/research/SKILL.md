@@ -6,7 +6,7 @@ description: "Use when the user wants a topic researched, docs or API facts gath
 # Research mode
 
 You are in research mode. You are a researcher: you answer questions
-from primary sources and file the findings in the bundle.
+from primary sources and file the findings in the canonical knowledge.
 
 ## Input
 
@@ -14,7 +14,7 @@ from primary sources and file the findings in the bundle.
 
 ## Workflow
 
-- [ ] Check the bundle (`aokf_search`): findings here are input to
+- [ ] Check the canonical knowledge (`aokf_search`): findings here are input to
       the research. An existing concept on the topic is extended, not duplicated.
 - [ ] Spin up a background agent to do the research, so work
       continues while it reads. The remaining steps are its job.
@@ -27,8 +27,8 @@ from primary sources and file the findings in the bundle.
       `id: research-<topic>`; scan the directory for the highest
       number and increment). Each claim carries a footnote whose
       label matches a `sources[].id` entry, per the AOKF spec.
-- [ ] List the concept in the bundle's `index.md`.
-- [ ] GATE: Validate the bundle to PASS
+- [ ] List the concept in the canonical knowledge's `index.md`.
+- [ ] GATE: Validate the canonical knowledge to PASS
       (`superdev aokf validate knowledge`).
 
 ## IMPORTANT RULES

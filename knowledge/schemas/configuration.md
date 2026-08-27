@@ -7,7 +7,7 @@ description: The config files and stores, their shape, and what lives outside th
 
 # Configuration Schema
 
-Structural rules for `knowledge/configuration.md`, the bundle's Reference
+Structural rules for `knowledge/configuration.md`, the canonical knowledge's Reference
 concept for configuration. One heading per config file or store, named by
 the author; `Outside the repo` is literal and wins over the pattern.
 

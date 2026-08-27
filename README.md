@@ -10,28 +10,28 @@ superdev sync      # re-apply the blueprint (--dry-run to preview)
 superdev update    # bring pins current, then sync
 ```
 
-`init` writes an AOKF knowledgebase with a full engineering skill set,
-builds a code index, wires up a bash output filter that compacts command
-output before it reaches agent context, and installs the Claude Code
-plugin superdev expects, then records the result in `.superdev/`. Pass
-`--no-knowledge`, `--no-code-index`, `--no-skills`,
+`init` writes canonical project knowledge with a full engineering skill
+set, builds a code index, wires up a bash output filter that compacts
+command output before it reaches agent context, and installs the Claude
+Code plugin superdev expects, then records the result in `.superdev/`.
+Pass `--no-knowledge`, `--no-code-index`, `--no-skills`,
 `--no-bash-output-filter` or `--no-frontend` to leave a capability out.
 Everything it owns can be repaired by re-running `sync`.
 
-It also registers an MCP server for the knowledgebase, so agents search it
-instead of preloading every page of it:
+It also registers an MCP server for the canonical knowledge, so agents
+search it instead of preloading every page of it:
 
 ```sh
-superdev mcp aokf        # serve the knowledgebase over MCP (stdio)
+superdev mcp aokf        # serve the canonical knowledge over MCP (stdio)
 superdev aokf validate   # check it against the AOKF spec; exits 1 on errors
 superdev aokf index      # rebuild the search index from scratch
 ```
 
 The server offers four read-only tools — search, read, graph, overview — and
-keeps itself current: every call re-hashes the bundle and reindexes only what
-changed. Search is hybrid, combining a BM25 index with a small embedding model
-downloaded once per machine, and falls back to keyword-only if that model is
-unavailable.
+keeps itself current: every call re-hashes the canonical knowledge and
+reindexes only what changed. Search is hybrid, combining a BM25 index with a
+small embedding model downloaded once per machine, and falls back to
+keyword-only if that model is unavailable.
 
 ## Where the content comes from
 
@@ -111,7 +111,7 @@ binary for your platform; the crate builds one.
 
 See [CONTRIBUTING](CONTRIBUTING.md) for setup, everyday commands, and the
 release procedure. Project design and conventions live in the
-[`knowledge/`](knowledge/index.md) bundle.
+[`knowledge/`](knowledge/index.md) tree.
 
 ## License
 

@@ -1,16 +1,16 @@
 ---
 name: bootstrap
-description: "Use after superdev init, when docs are stale or scattered, or when agents miss rules that live outside the knowledge bundle."
+description: "Use after superdev init, when docs are stale or scattered, or when agents miss rules that live outside the canonical knowledge."
 ---
 
-<skill name="bootstrap" purpose="Bootstrap the Knowledge Bundle" input="the sources or concepts to focus on, when given" user-input="$ARGUMENTS" output="the bundle, filled and PASSing, with a report: every source harvested (naming its concepts), reduced to summary-and-citation, or left with a reason; every skeleton filled or left TBD with the reason it must accrete">
+<skill name="bootstrap" purpose="Bootstrap the Knowledge" input="the sources or concepts to focus on, when given" user-input="$ARGUMENTS" output="the canonical knowledge, filled and PASSing, with a report: every source harvested (naming its concepts), reduced to summary-and-citation, or left with a reason; every skeleton filled or left TBD with the reason it must accrete">
 
 <goal persona="technical writer">
-You move the repo's stranded facts into the bundle at `knowledge/` and interview the owner for the rest.
+You move the repo's stranded facts into the canonical knowledge at `knowledge/` and interview the owner for the rest.
 </goal>
 
 <constraints>
-A harvest relocates one durable fact from a source into the bundle, leaving a one-line summary and a link behind in the source.
+A harvest relocates one durable fact from a source into the canonical knowledge, leaving a one-line summary and a link behind in the source.
 </constraints>
 
 <bootstrap_actions>
@@ -19,12 +19,12 @@ A harvest relocates one durable fact from a source into the bundle, leaving a on
 </bootstrap_actions>
 
 <process_actions>
-<step name="INVENTORY SOURCES" task="Inventory every prose document in the repo: README, CONTRIBUTING, `docs/`, in-repo wikis, and incumbent agent entry points (`CLAUDE.md`, `AGENTS.md`, `GEMINI.md` and kin) that predate superdev. Skip generated files and the bundle itself. On a re-run, drop sources already summarised and cited" />
+<step name="INVENTORY SOURCES" task="Inventory every prose document in the repo: README, CONTRIBUTING, `docs/`, in-repo wikis, and incumbent agent entry points (`CLAUDE.md`, `AGENTS.md`, `GEMINI.md` and kin) that predate superdev. Skip generated files and the canonical knowledge itself. On a re-run, drop sources already summarised and cited" />
 <step name="ASK ABOUT THE CODE SWEEP" task="Ask the owner: sweep the code too? If yes, add the comments that carry repo-wide conventions, decisions, and gotchas — never API-describing doc comments; those are the environment" />
-<step name="HARVEST SOURCE BY SOURCE" task="Harvest source by source: split each into passages. Knowledge (a convention, decision, reason, or gotcha an agent cannot derive from the environment) lands in the bundle; environment cache (restating `package.json` scripts, `--help` output, file layout, API) stays in place" />
+<step name="HARVEST SOURCE BY SOURCE" task="Harvest source by source: split each into passages. Knowledge (a convention, decision, reason, or gotcha an agent cannot derive from the environment) lands in the canonical knowledge; environment cache (restating `package.json` scripts, `--help` output, file layout, API) stays in place" />
 <step name="LAND SKELETON-FIRST" task="Land knowledge skeleton-first: replace the starter concepts' TBD prompts; create a new concept, frontmatter per the spec, only when nothing fits. Rewrite the source passage to a one-line summary plus a link; record the source in the concept's `sources`" />
 <step name="TRIAGE MARGINAL PASSAGES" task="Passage neither knowledge nor environment cache (marketing prose, a stale claim, an ambiguous rule)? Ask the owner, or leave it with a reason in the report" />
-<step name="RESOLVE INCUMBENT ENTRY POINTS" task="Incumbent entry point? Ask the owner: merge and reduce (durable content into the bundle, always-loaded rules into `AGENTS.md`, the incumbent down to its `@AGENTS.md` import), or leave as found" />
+<step name="RESOLVE INCUMBENT ENTRY POINTS" task="Incumbent entry point? Ask the owner: merge and reduce (durable content into the canonical knowledge, always-loaded rules into `AGENTS.md`, the incumbent down to its `@AGENTS.md` import), or leave as found" />
 <step name="INTERVIEW THE OWNER" task="Interview the owner (`/grill-me`) on the skeletons still carrying TBD prompts that are answerable now: what the project is and its status, constraints and non-goals, first glossary terms, dependency policy, intended conventions. Land each answer in its skeleton" />
 <step name="LEAVE ACCRETING TBDS" task="Leave the TBDs only development can fill (architecture as practised, testing strategy, error-handling conventions); they accrete through the project's own specs and decisions" />
 <gate check="knowledge validates to PASS per the core knowledge block" on-fail="fix every error" />

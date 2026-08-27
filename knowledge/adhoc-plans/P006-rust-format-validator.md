@@ -31,9 +31,9 @@ step with the first.
   a hand-rolled subset of draft 2020-12.
 - Its flags are `--kind`, `--grammar`, `--meta` and `--doc` (lines 969-975).
   There is no `--json`: output is text lines, plus a `DUPLICATION` block.
-- Of the 61 files it checks, 40 are in the bundle — the 39 schemas and their
+- Of the 61 files it checks, 40 are in the canonical knowledge — the 39 schemas and their
   index — and 22 are not: `.agents/core.md` and 21 `.claude/skills/*/SKILL.md`.
-  The format check is therefore wider than the bundle, not a subset of it.
+  The format check is therefore wider than the canonical knowledge, not a subset of it.
 - `knowledge/schemas/*.md` is already walked by both checkers, as an AOKF
   concept and as a `schema` kind. They read different properties of the same
   file, so neither subsumes the other, but nothing merges the two reports.
@@ -59,7 +59,7 @@ step with the first.
   `Finding { path, message, fatal }` at `aokf/validate.rs:38`, with
   `Report::to_json` and `render_human`, and `passed()` as the whole verdict —
   ADR-017 removed the conformance ladder, so there is no level to reconcile.
-- `superdev aokf hook validate` reloads the whole bundle on every edit —
+- `superdev aokf hook validate` reloads the whole knowledge on every edit —
   `validate(&load_bundle(&bundle)?, &root)` in `aokf_cli.rs` — so whole-set
   revalidation on edit is established here.
 - The hook entry is keyed by its command string:
@@ -80,7 +80,7 @@ step with the first.
 
 One command enforces both the AOKF spec and the superdev format, so a
 malformed skill or schema fails a check that runs without Node and cannot
-disagree with the bundle check beside it.
+disagree with the canonical knowledge check beside it.
 
 ## Outcomes
 
@@ -90,7 +90,7 @@ disagree with the bundle check beside it.
   job is done by the Rust types that read it.
 - O3 — nothing in the repo needs Node to validate the format, and
   `scripts/superdev-format/` is gone.
-- O4 — one command, one report and one hook cover the bundle and the format
+- O4 — one command, one report and one hook cover the canonical knowledge and the format
   together, so the two cannot drift and no file is walked twice.
 
 ## Non-goals
@@ -117,8 +117,8 @@ disagree with the bundle check beside it.
 | FR-3 | The grammar is read from YAML at run time into types that reject unknown keys | O2 |
 | FR-4 | A grammar that violates its own constraints fails the run before any file is read, naming the offending key | O2 |
 | FR-5 | One command emits one report covering the AOKF checks and the format checks, with one `--json` shape and one exit code | O4 |
-| FR-6 | Given no paths, the command checks the bundle and the trees the grammar's `roots` names; a positional path overrides both | O4 |
-| FR-7 | One PostToolUse hook runs that same whole-set check on an edit under the bundle or any root, so hook and CI verdicts cannot differ | O4 |
+| FR-6 | Given no paths, the command checks the canonical knowledge and the trees the grammar's `roots` names; a positional path overrides both | O4 |
+| FR-7 | One PostToolUse hook runs that same whole-set check on an edit under the canonical knowledge or any root, so hook and CI verdicts cannot differ | O4 |
 | FR-8 | A format finding fails the run without altering any AOKF finding | O4 |
 | FR-9 | The command renders the grammar as prose, as the reference's `--doc` does today | O1 |
 | FR-10 | `scripts/superdev-format/` no longer exists | O3 |
@@ -128,7 +128,7 @@ disagree with the bundle check beside it.
 
 | ID | Constraint | Budget |
 |----|------------|--------|
-| NFR-1 | A whole-set run stays fast enough to sit in an edit-time hook unnoticed | under 50 ms for the bundle and the 61 format files together, against Node's measured 123 ms for the format half alone |
+| NFR-1 | A whole-set run stays fast enough to sit in an edit-time hook unnoticed | under 50 ms for the canonical knowledge and the 61 format files together, against Node's measured 123 ms for the format half alone |
 | NFR-2 | The port adds no runtime dependency beyond the regex engine the dialect already assumes | one new crate |
 | NFR-3 | The new code clears the repo's coverage gate | 90% lines in each of `crates/lib` and `crates/app` |
 | NFR-4 | `aokf::validate` keeps emitting exactly what it emits today | `validator_parity` passes with its goldens untouched |
@@ -220,7 +220,7 @@ Depends on: W4.
    `crates/lib/superdev-core/src/aokf/validate.rs` needs teaching: ADR-017
    left `passed()` as the whole verdict. `validate` itself is not touched,
    per D-18.
-2. Add the merging caller — one function that loads the bundle once, runs
+2. Add the merging caller — one function that loads the canonical knowledge once, runs
    `aokf::validate` and the format checks over the roots, and returns a single
    `Report` with findings in file order.
 3. Promote the verb — `superdev validate [path...]` with `--json` and the
@@ -234,7 +234,7 @@ Depends on: W2, W5.
 1. Run it where it matters — point `check:aokf` at the merged command and
    rename it, and widen `hook_validate` in
    `crates/app/superdev/src/aokf_cli.rs` so it fires on an edit under the
-   bundle or any declared root. The hook marker and its lock entry are
+   knowledge or any declared root. The hook marker and its lock entry are
    unchanged, per D-20.
 2. Delete the reference — move the grammar to `.agents/format/grammar.yaml`,
    drop the meta-schema, and remove `scripts/superdev-format/`. Hard to
@@ -263,7 +263,7 @@ Depends on: W2, W5.
 | `crates/lib/superdev-core/Cargo.toml` | modified — add `regex` | W4 |
 | `crates/lib/superdev-core/src/aokf/validate.rs` | modified — `Finding` and `Report` are reused as they are; `validate` untouched | W5 |
 | `crates/app/superdev/src/main.rs` | modified — a top-level `Validate` arm, `aokf validate` hidden | W5 |
-| `crates/app/superdev/src/aokf_cli.rs` | modified — the verb runs both checks; the hook fires on bundle or root | W5, W6 |
+| `crates/app/superdev/src/aokf_cli.rs` | modified — the verb runs both checks; the hook fires on knowledge or root | W5, W6 |
 | `.github/workflows/checks.yml`, `.github/PULL_REQUEST_TEMPLATE.md`, `CONTRIBUTING.md` | modified — the renamed check | W6 |
 | `knowledge/development-procedure.md`, `knowledge/definition-of-done.md`, `knowledge/error-handling.md`, `knowledge/software-components.md` | modified — the renamed check and the widened hook | W6 |
 | `package.json` | modified — `check:aokf` renamed and pointed at the merged command | W6 |
@@ -279,7 +279,7 @@ Depends on: W2, W5.
 | After W1 the Node script still reports 61 passes and no findings, and `rg -n 'ledger' scripts/superdev-format/` returns nothing | FR-1 |
 | `cargo test -p superdev-core --test format_parity` passes on every captured golden | FR-2 |
 | `cargo test -p superdev-core --test validator_parity` passes with its goldens unedited | NFR-4 |
-| `superdev validate` with no arguments reports the bundle's concepts and the format's 61 files in one report, with one exit code | FR-5, FR-6 |
+| `superdev validate` with no arguments reports the canonical knowledge's concepts and the format's 61 files in one report, with one exit code | FR-5, FR-6 |
 | `knowledge/schemas/spec.md` appears once in that report, carrying both its AOKF and its format findings | FR-5 |
 | A grammar with a key removed and a key misspelled fails the run naming the key, before any file is read | FR-3, FR-4 |
 | `superdev validate --json` output parses and carries a single `findings` array in the shape aokf already emits | FR-5 |
@@ -335,7 +335,7 @@ Depends on: W2, W5.
 ## Out-of-band notes
 
 The template provenance is gone from all 38 schemas that carried it, taking
-the bundle from 39 warnings to none. Repointing those citations at `/pack/`
+the canonical knowledge from 39 warnings to none. Repointing those citations at `/pack/`
 was the obvious-looking fix and the wrong one: the templates are superseded
 by the schemas themselves, so the pack copies are deleted as soon as these
 changes are backported, and the citation would dangle again.
@@ -357,9 +357,9 @@ a decision the Decisions table did not anticipate.
 
 **NFR-1 is missed, and the number is recorded rather than the budget moved.**
 A whole-set run of the release binary takes 82 ms against a budget of 50 ms.
-The split: 24 ms for the 61 format files, 28 ms to load the bundle, 5 ms for
+The split: 24 ms for the 61 format files, 28 ms to load the canonical knowledge, 5 ms for
 `aokf::validate`, the rest process start and reads. The format half is the one
-this plan owns and it is a fifth of the reference's 123 ms; the bundle load is
+this plan owns and it is a fifth of the reference's 123 ms; the canonical knowledge load is
 the AOKF half's existing cost, which the hook already pays on every edit
 today. Two changes got it there from 165 ms, neither altering a finding: the
 grammar's patterns compile once rather than once per value checked
@@ -367,15 +367,16 @@ grammar's patterns compile once rather than once per value checked
 than strings. Bringing the last 32 ms inside the budget means making
 `load_bundle` faster, which is AOKF work and belongs to its own plan.
 
-**The bundle became a flag.** D-20 kept `aokf validate` as an alias, and the
-merged verb takes a positional path that is the *scope* of the run — FR-6's
-"a positional path overrides both". The two readings collide: the old verb's
-positional was the bundle directory. The bundle moved to `--bundle <DIR>`, and
-a positional path covers the bundle when it is the bundle or contains it, so
-`superdev validate knowledge` and `superdev validate .` both still check it.
-Scope is a positional and configuration is a flag; the alternative was a rule
-that guessed from the directory's contents, and it would have hidden the
-`no manifest (required)` finding for the bundle it was guessing about.
+**The canonical knowledge became a flag.** D-20 kept `aokf validate` as an
+alias, and the merged verb takes a positional path that is the *scope* of the
+run — FR-6's "a positional path overrides both". The two readings collide: the
+old verb's positional was the knowledge directory. That directory moved to
+`--bundle <DIR>`, and a positional path covers the canonical knowledge when it
+is that directory or contains it, so `superdev validate knowledge` and
+`superdev validate .` both still check it. Scope is a positional and
+configuration is a flag; the alternative was a rule that guessed from the
+directory's contents, and it would have hidden the `no manifest (required)`
+finding for the canonical knowledge it was guessing about.
 
 **The embedded grammar lives in the crate, not the pack.** D-6 says where the
 grammar is read from and that a copy ships inside the binary; it does not say
@@ -393,7 +394,7 @@ done originally called for: each is one question with a stated recommendation,
 and neither has enough settled to cut into workstreams. The pack one is
 plan-sized work and will want a plan when it is picked up.
 
-The `--json` report keeps its `bundle` key, naming the bundle directory the
-run was configured with. When a positional path excludes the bundle, `concepts`
-is 0 and no bundle finding appears; the key names the invocation, not what was
+The `--json` report keeps its `bundle` key, naming the canonical knowledge directory the
+run was configured with. When a positional path excludes the canonical knowledge, `concepts`
+is 0 and no knowledge finding appears; the key names the invocation, not what was
 read.

@@ -947,7 +947,7 @@ fn update_help_says_it_may_reach_the_source() {
     );
 }
 
-/// A user who never reads the knowledgebase should still be able to find out
+/// A user who never reads the knowledge should still be able to find out
 /// that content comes from somewhere and can be pointed elsewhere.
 #[test]
 fn the_readme_describes_packs() {

@@ -8,4 +8,4 @@ status: draft
 
 # Done means
 
-TBD: the checklist — tests, docs, knowledgebase updates, review.
+TBD: the checklist — tests, docs, knowledge updates, review.

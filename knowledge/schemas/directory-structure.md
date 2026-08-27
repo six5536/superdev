@@ -7,7 +7,7 @@ description: What lives where in the repository, in knowledge/directory-structur
 
 # Directory Structure Schema
 
-Structural rules for `knowledge/directory-structure.md`, the bundle's
+Structural rules for `knowledge/directory-structure.md`, the canonical knowledge's
 Reference concept for the repository layout. The document is a tree block
 and a note, with no headings, so it declares a preamble and no sections.
 
@@ -43,9 +43,9 @@ example: |
   ---
 
   ```text
-  crates/lib/superdev-core/   # resolution, manifest, lock, bundle reads
+  crates/lib/superdev-core/   # resolution, manifest, lock, knowledge reads
   crates/bin/superdev-cli/    # argument parsing and output
-  knowledge/                  # the AOKF bundle this tool validates
+  knowledge/                  # the canonical project knowledge this tool validates
   .superdev/cache/            # generated, machine-local, safe to delete
   ```
 

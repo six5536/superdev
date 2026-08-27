@@ -7,7 +7,7 @@ description: What the project is, for whom, and its current status, in knowledge
 
 # Project Overview Schema
 
-Structural rules for `knowledge/project-overview.md`, the bundle's Overview
+Structural rules for `knowledge/project-overview.md`, the canonical knowledge's Overview
 concept and the first thing a newcomer reads.
 
 ````yaml
@@ -51,8 +51,8 @@ example: |
   status: stable
   ---
 
-  superdev prepares and validates the knowledge bundle an agent reads, and
-  resolves the content packs that bundle is assembled from. It is for teams
+  superdev prepares and validates the canonical knowledge an agent reads, and
+  resolves the content packs that knowledge is assembled from. It is for teams
   who want their agent's context reviewed like code rather than pasted into a
   prompt. What distinguishes it is that every rule is data the tool enforces,
   not prose the agent is asked to remember. See `knowledge/architecture.md`.
@@ -60,6 +60,6 @@ example: |
   # Status
 
   Pre-1.0 and in use on this repository. Pack resolution, the lockfile and
-  bundle validation are built; schema-driven document validation is in
+  knowledge validation are built; schema-driven document validation is in
   progress; nothing is published to a registry yet.
 ````

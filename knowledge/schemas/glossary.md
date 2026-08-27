@@ -7,7 +7,7 @@ description: The domain terms the project's code and docs assume, one definition
 
 # Glossary Schema
 
-Structural rules for `knowledge/glossary.md`, the bundle's Glossary concept.
+Structural rules for `knowledge/glossary.md`, the canonical knowledge's Glossary concept.
 The document is a list of terms with no headings, so it declares a preamble
 and no sections.
 
@@ -40,7 +40,7 @@ example: |
   type: Glossary
   id: glossary
   title: Domain Glossary
-  description: The terms this project uses — pack, pin, bundle, manifest.
+  description: The terms this project uses — pack, pin, knowledge, manifest.
   status: stable
   ---
 
@@ -49,6 +49,7 @@ example: |
   - Pin — the exact revision a pack source resolved to, recorded in
     `superdev.lock`. A pin is a fact about a fetch that happened, never a
     claim derived from the manifest.
-  - Bundle — the AOKF knowledge tree under `knowledge/`. Distinct from a
-    pack: a pack may carry one, but the bundle is what the agent reads.
+  - Canonical project knowledge — the knowledge tree under `knowledge/`.
+    Distinct from a pack: a pack may carry one, but the canonical
+    knowledge is what the agent reads.
 ````

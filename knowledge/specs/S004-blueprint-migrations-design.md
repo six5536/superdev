@@ -38,7 +38,7 @@ pack](S003-skill-pack-design.md) splits three ways:
    sub-project 2: tools that create and edit concepts with the write classes
    enforced in code.
 6. **Knowledge upkeep** — the knowledge-capture skill, lapsed-verification
-   reporting, keeping the bundle true as the code moves.
+   reporting, keeping the canonical knowledge true as the code moves.
 
 Both 5 and 6 are out of scope here and must not creep in.
 
@@ -67,7 +67,7 @@ fn owned(&self, ctx: &Ctx<'_>) -> Vec<Claim>;
 
 `Claim` is the typed form of a lock entry: `File(path)`, `MisePin(tool)`,
 `JsonKey { path, pointer }`. Components answer from the constants they
-already plan from — the knowledge provider its owned files plus the
+already plan from — the canonical knowledge provider its owned files plus the
 `.mcp.json` server key, the skill pack its non-`custom` skills plus the
 settings hook entry, codegraph and superpowers their pins, frontend nothing.
 

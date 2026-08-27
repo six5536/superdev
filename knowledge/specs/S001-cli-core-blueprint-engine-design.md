@@ -17,8 +17,8 @@ links:
 
 superdev is a Rust tool run inside target repos: `superdev init` sets a repo
 up for agent-driven development, and further verbs keep that setup current.
-It manages external components and natively provides AOKF — the knowledge
-format, its bundle scaffolding, and (later) its MCP server with hybrid
+It manages external components and natively provides AOKF — the canonical knowledge
+format, its knowledge scaffolding, and (later) its MCP server with hybrid
 search and structured update. The first managed repo is goodbye-tinnitus;
 superdev is opinionated for this project's stack (Claude Code, mise, AOKF)
 — generalisation is not a goal yet.
@@ -36,7 +36,7 @@ The product is built as four sub-projects, each with its own spec:
    `superdev aokf` verb family plus template-evolution machinery.
 
 Decisions already made that bind later sub-projects: MCP querying replaces
-wholesale preloading of the bundle in AGENTS.md; embeddings are pluggable
+wholesale preloading of the canonical knowledge in AGENTS.md; embeddings are pluggable
 with a local model as default; existing per-repo skills (double-check,
 grill-me, humanise, self-improve) are absorbed into the skill pack.
 
@@ -179,7 +179,7 @@ binary itself.
 
 Running `superdev init` in a fresh clone of a target repo produces a
 committed, working agent-dev setup (mise pins installed, plugins registered,
-codegraph indexed, AOKF bundle scaffolded); `status` is clean afterwards and
+codegraph indexed, canonical project knowledge scaffolded); `status` is clean afterwards and
 exits 1 when a managed file or version drifts; `sync` restores it; a failed
 apply leaves the repo as it started except for explicitly reported
 irreversible steps. All existing CI gates stay green.

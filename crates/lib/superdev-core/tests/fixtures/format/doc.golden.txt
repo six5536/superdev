@@ -105,7 +105,7 @@ One load. name is the exact tool to invoke.
 Sits inside `<bootstrap_actions>`.
 - `name` (required) — read_file, or any MCP/CLI tool the ecosystem loads context with
 - `path` — for file reads
-- `id` — for knowledge-base reads
+- `id` — for knowledge reads
 - `query` — for search-shaped tools whose target is a question or a code location
 
 ### `process_actions`

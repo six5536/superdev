@@ -7,7 +7,7 @@ description: The invariants behind the architecture, each with its reason, in kn
 
 # Architectural Rules Schema
 
-Structural rules for `knowledge/architectural-rules.md`, the bundle's
+Structural rules for `knowledge/architectural-rules.md`, the canonical knowledge's
 Convention concept for the invariants behind the architecture. The document
 carries no headings at all — it is a lead line and a list — so it declares a
 preamble and no sections.

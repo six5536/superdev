@@ -7,7 +7,7 @@ description: Languages, dependencies with their reasons, and the pinned toolchai
 
 # Technology Stack Schema
 
-Structural rules for `knowledge/technology-stack.md`, the bundle's Reference
+Structural rules for `knowledge/technology-stack.md`, the canonical knowledge's Reference
 concept for what the project is built with. The document has no headings, so
 it declares a preamble and no sections. Whether a dependency may be added at
 all belongs to `dependency-policy`, not here.

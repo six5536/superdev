@@ -2,7 +2,7 @@
 type: Decision
 id: adr-010-concepts-entry-is-the-item
 title: A Knowledge Skeleton Is Any Entry Under concepts/
-description: The knowledge/concepts/ kind names its item by the entry directly beneath it — a file of any extension or a directory — because the bundle ships three scaffolds that are not one .md each.
+description: The knowledge/concepts/ kind names its item by the entry directly beneath it — a file of any extension or a directory — because the canonical knowledge ships three scaffolds that are not one .md each.
 status: stable
 links:
   - rel: implements
@@ -27,12 +27,12 @@ as `knowledge/concepts/<name>.md`. Reorganising the stock content into pack
 layout showed that rule cannot describe what the `knowledge` capability already
 ships. Three of its twenty-five scaffolds are not one `.md` each:
 
-- `manifest.aokf.yaml` — the bundle manifest, not Markdown.
+- `manifest.aokf.yaml` — the canonical knowledge manifest, not Markdown.
 - `plans/index.md` and `specs/index.md` — one level deeper, because the repo
-  bundle keeps plans and specs in their own directories.
+  knowledge keeps plans and specs in their own directories.
 
 Every scaffold's target is `knowledge/` plus its path under `concepts/`, so
-the subtree is an exact mirror of the bundle it seeds. Only the naming rule
+the subtree is an exact mirror of the canonical knowledge it seeds. Only the naming rule
 was too narrow, and it was written before the tree existed to check it
 against. The slice that builds `ContentSet` must enumerate every item the
 components ship today, with identical bytes, so this has to be settled before
@@ -48,7 +48,7 @@ path relative to `concepts/`.
 
 The generalisation is confined to this kind. `knowledge/templates/<name>.md`
 and `agents/<name>.md` keep their `.md` rule: both are flat directories of
-Markdown documents, and nothing in the bundle suggests otherwise.
+Markdown documents, and nothing in the canonical knowledge suggests otherwise.
 
 ## Options considered
 
@@ -56,8 +56,8 @@ Markdown documents, and nothing in the bundle suggests otherwise.
 |--------|------|------|
 | Entry under `concepts/` is the item, file or directory | Describes what ships today without special cases; `plans/` and `specs/` supersede as units, which is how a pack would want to replace them; identical to how a skill directory already behaves | A stray directory under `concepts/` becomes one item rather than several, so a pack replacing it replaces all of it |
 | Keep `<name>.md`, special-case the three | The common rule stays exact | Three names hard-coded in the resolver, which is the drift the layout-as-declaration rule exists to avoid; a pack could never carry them |
-| Keep `<name>.md`, flatten the bundle so every scaffold is one `.md` | The rule holds unchanged | Changes what `init` writes into every repo, breaking the byte-identity the reorganisation slices are built on, for a naming convenience |
-| Any depth: every file under `concepts/` is its own item | Finest possible granularity | `plans/index.md` and `specs/index.md` would supersede independently of the directory they define, and a pack could half-replace a bundle section |
+| Keep `<name>.md`, flatten the canonical knowledge so every scaffold is one `.md` | The rule holds unchanged | Changes what `init` writes into every repo, breaking the byte-identity the reorganisation slices are built on, for a naming convenience |
+| Any depth: every file under `concepts/` is its own item | Finest possible granularity | `plans/index.md` and `specs/index.md` would supersede independently of the directory they define, and a pack could half-replace knowledge section |
 | Declare the skeleton set in `pack.toml` | A stray file is an error | Two sources of truth, rejected in ADR-003 for exactly this kind |
 
 ## Consequences

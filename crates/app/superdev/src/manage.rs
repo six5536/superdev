@@ -37,7 +37,7 @@ pub struct InitArgs {
     /// Skip the bash output filter
     #[arg(long)]
     pub no_bash_output_filter: bool,
-    /// Skip the knowledgebase scaffold
+    /// Skip the knowledge scaffold
     #[arg(long)]
     pub no_knowledge: bool,
     #[arg(long, value_name = "NAME", help = crate::template_select::TEMPLATE_HELP)]

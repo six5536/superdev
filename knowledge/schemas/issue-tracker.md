@@ -7,7 +7,7 @@ description: Where issues live, the filing conventions and the triage label voca
 
 # Issue Tracker Schema
 
-Structural rules for `knowledge/issue-tracker.md`, the bundle's Convention
+Structural rules for `knowledge/issue-tracker.md`, the canonical knowledge's Convention
 concept for how issues are filed and triaged. This is the concept
 `schema-bug-report` defers to for the label vocabulary and the lifecycle.
 
@@ -59,7 +59,7 @@ example: |
   status: stable
   ---
 
-  Issues live in the bundle as Issue concepts under `knowledge/issues/`, not
+  Issues live in the canonical knowledge as Issue concepts under `knowledge/issues/`, not
   in GitHub, so they travel with the tree an agent reads. An issue that turns
   out to need a behaviour decision gets a spec; one that needs work gets a
   plan, linked both ways.

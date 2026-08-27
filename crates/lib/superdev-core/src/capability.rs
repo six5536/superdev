@@ -22,7 +22,7 @@ pub enum Capability {
     CodeIndex,
     /// Command-output filtering before it reaches agent context.
     BashOutputFilter,
-    /// The AOKF knowledgebase (native).
+    /// Canonical project knowledge (native).
     Knowledge,
 }
 

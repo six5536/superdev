@@ -28,7 +28,7 @@
 * [Security Requirements](security-requirements.md) - the vulnerability policy in brief, and the security-relevant guarantees the design makes.
 * [Dependency Policy](dependency-policy.md) - when a dependency may be added and how its version is chosen.
 * [Testing Strategy](testing-strategy.md) - the current test layers, the key choices behind them, and the CI platforms.
-* [Development Procedure](development-procedure.md) - setup, the spec-and-plan change workflow, what to run before a PR, how this repo manages its own skills, and how it serves and searches its own knowledgebase.
+* [Development Procedure](development-procedure.md) - setup, the spec-and-plan change workflow, what to run before a PR, how this repo manages its own skills, and how it serves and searches its own knowledge.
 * [Development Commands](development-commands.md) - the npm-script command set and the pre-PR check list's shape.
 * [Issue Tracker & Triage](issue-tracker.md) - where issues live — one AOKF concept per ticket under knowledge/issues/ — plus the triage label vocabulary.
 * [Definition of Done](definition-of-done.md) - what a change must satisfy before it merges.

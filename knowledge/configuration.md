@@ -185,7 +185,7 @@ skill set now ships with the knowledge capability, and superpowers users can
 `config.toml`; the manifest is the user's file
 ([spec](specs/S009-knowledge-carried-skills-design.md)).
 
-An optional sub-table opts the knowledge bundle out of the local embedding
+An optional sub-table opts the canonical knowledge out of the local embedding
 model and onto an API:
 
 ```toml
@@ -302,8 +302,8 @@ digest is kept; a pack that failed verification leaves nothing behind.
 
 # Outside the repo
 
-- `.mcp.json` at the repo root registers the MCP servers: the knowledge
-  bundle under `mcpServers.superdev-aokf`, and — with code-index enabled —
+- `.mcp.json` at the repo root registers the MCP servers: the canonical knowledge
+  knowledge under `mcpServers.superdev-aokf`, and — with code-index enabled —
   codegraph's under `mcpServers.codegraph`, launched through `mise exec`
   because the pinned binary is on no PATH the client can see. The file is
   shared with the user's own servers, so superdev manages and hashes its
@@ -316,8 +316,8 @@ digest is kept; a pack that failed verification leaves nothing behind.
   are owned files; the general rules (`.agents/professionalism.md`, `.agents/process.md`,
   `.agents/coding.md`) are write-once scaffolds, the user's to adapt.
 - `.claude/settings.json` carries one managed `hooks.PostToolUse` element,
-  owned by the knowledge capability (the hook validates the bundle, so it
-  exists exactly where a bundle does): superdev finds its own element by the
+  owned by the knowledge capability (the hook validates the canonical knowledge, so it
+  exists exactly where knowledge does): superdev finds its own element by the
   command string `superdev aokf hook validate`, adds or updates it, and
   leaves the user's hooks alone. Both files are re-serialised whole on
   write, so key order is not preserved; the lock hashes the merged value, not
@@ -341,7 +341,7 @@ digest is kept; a pack that failed verification leaves nothing behind.
   and how to get raw output (`RTK_DISABLED=1` in the command text, or
   rtk's proxy passthrough)
   ([spec](specs/S012-bash-output-filter-design.md)).
-- `.claude/skills/` holds the pack's three skills and the knowledge
+- `.claude/skills/` holds the pack's three skills and the canonical knowledge
   capability's 25 carried skill directories as owned files, plus the MIT
   notice for the derived set. A `PROJECT.md` beside a skill extends it —
   superdev never writes, hashes or reads that file, so a project layer

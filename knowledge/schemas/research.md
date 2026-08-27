@@ -15,7 +15,7 @@ sources:
 # Research Schema
 
 Structural rules for research findings filed at
-`knowledge/research/research-{nnn}-{topic}.md` and listed in the bundle's
+`knowledge/research/research-{nnn}-{topic}.md` and listed in the canonical knowledge's
 `index.md`. Derived from the research skill's own filing
 statements[^skill-research] and the AOKF spec's frontmatter, sources, and
 footnote mechanics[^aokf-spec]. Alone among these schemas it fixes no body

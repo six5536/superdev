@@ -10,7 +10,7 @@ status: draft
 
 - **A knowledge-capture skill.** The write-side complement to the search-first
   AGENTS.md: teach agents when and how to record durable learnings in the
-  bundle mid-task — concept placement, links, sources. Judged a good idea
+  knowledge mid-task — concept placement, links, sources. Judged a good idea
   during the skill-pack design
   ([spec](specs/S003-skill-pack-design.md)) and deferred to the
   knowledge-upkeep sub-project.

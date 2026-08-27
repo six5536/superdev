@@ -45,7 +45,7 @@ lists as a non-goal.
 
 Something reports the frontmatter, since §9 says an index has none. The bullet
 style and the missing heading are worth a finding too, given every other index
-in the bundle agrees on both.
+in the canonical knowledge agrees on both.
 
 ## Actual behaviour
 

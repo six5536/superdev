@@ -31,16 +31,16 @@ Five skills, absorbed from goodbye-tinnitus and this repo:
 | double-check | this repo's improved copy | verbatim |
 | grill-me | identical in both repos | verbatim |
 | humanise | this repo's rewritten copy | verbatim |
-| self-improve | goodbye-tinnitus | rules land in the knowledgebase, below |
+| self-improve | goodbye-tinnitus | rules land in the canonical knowledge, below |
 | aokf-maintain | this repo | validator command generalised, below |
 
 Plus the PostToolUse validation hook: after any Edit/Write under
-`knowledge/`, validate the bundle and block on errors — the hook managed
+`knowledge/`, validate the canonical knowledge and block on errors — the hook managed
 repos lacked until now.
 
 Excluded: playwright-cli (browser automation belongs with the frontend
 capability's territory, not the skill pack). A knowledge-capture skill —
-teaching agents to write durable learnings into the bundle mid-task — is a
+teaching agents to write durable learnings into the canonical knowledge mid-task — is a
 good idea deferred to the knowledge-upkeep sub-project; noted in
 [backlog](../backlog.md).
 
@@ -48,7 +48,7 @@ good idea deferred to the knowledge-upkeep sub-project; noted in
 
 The goodbye-tinnitus version writes approved rules into a managed block in
 `CLAUDE.md` and keeps an append-only `learning-log.md`. In a managed repo the
-entry point is AGENTS.md and canonical knowledge lives in the AOKF bundle, so:
+entry point is AGENTS.md and canonical knowledge lives in the canonical project knowledge, so:
 
 - Approved rules go into a `knowledge/learned-rules.md` concept
   (`type: Convention`), searchable and validated like any other concept.
@@ -165,7 +165,7 @@ own drift detection instead of a parity test.
 - Component unit tests: plan on missing/drifted/converged files, `custom`
   exclusion from plan and lock, `update skills@<version>` refusal.
 - Hook subcommand tests with stubbed payloads: non-knowledge path exits 0,
-  broken bundle exits 2 with findings, malformed payload exits 2 loudly.
+  broken knowledge exits 2 with findings, malformed payload exits 2 loudly.
 - Registry test asserts the skills slot is available.
 - CLI integration tests cover the capability in init/status/sync golden
   paths; `status` on this repo stays clean in CI.

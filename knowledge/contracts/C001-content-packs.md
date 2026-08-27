@@ -206,9 +206,9 @@ pub enum Owner {
 pub enum ItemKind {
     /// `<owner>/skills/<name>/**` — owned files under `.claude/skills/`.
     Skill,
-    /// `knowledge/concepts/<name>` — a write-once bundle scaffold. `<name>`
+    /// `knowledge/concepts/<name>` — a write-once knowledge scaffold. `<name>`
     /// is any entry directly under `concepts/`, file or directory, and the
-    /// subtree mirrors the repo's `knowledge/`: the bundle ships skeletons
+    /// subtree mirrors the repo's `knowledge/`: the canonical knowledge ships skeletons
     /// that are not one `.md` each — `manifest.aokf.yaml`, and the
     /// `plans/` and `specs/` index directories. ADR-010.
     KnowledgeSkeleton,

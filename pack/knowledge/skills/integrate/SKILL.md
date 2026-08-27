@@ -31,7 +31,7 @@ current.
 - [ ] User-visible change? Add a line to the changelog's Unreleased
       section (`template-changelog`).
 - [ ] New convention, changed interface, or new term? Update the
-      knowledge bundle so later slices follow it: the glossary for
+      knowledge so later slices follow it: the glossary for
       terms; a new concept starts from its template
       (`template-architecture`, `template-api-contracts`,
       `template-coding-standards`, …; see the knowledge-concepts
@@ -40,7 +40,7 @@ current.
       (`template-migration-guide`).
 - [ ] Mark the slice done in the feature's plan (`knowledge/plans/`).
       Last slice? Tag the plan concept `done`.
-- [ ] GATE: Bundle edited? Validate to PASS
+- [ ] GATE: Knowledge edited? Validate to PASS
       (`superdev aokf validate knowledge`).
 
 ## IMPORTANT RULES

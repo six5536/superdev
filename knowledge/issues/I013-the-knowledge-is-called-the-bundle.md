@@ -2,7 +2,7 @@
 type: Issue
 id: issue-013-the-knowledge-is-called-the-bundle
 title: The canonical knowledge is called "the bundle" on every surface, and the word describes nothing
-description: AOKF SPEC §1 names the knowledge tree a "bundle" and the word has spread to 880 places — the --bundle flag, the JSON report key, the Rust API, the skills and the concepts — where it tells a reader nothing about a directory of markdown the repository owns.
+description: The AOKF spec and every document are clear of the word, but "bundle" remains in 625 places — the --bundle flag, the JSON report key and the Rust API — where it tells a reader nothing about a directory of markdown the repository owns.
 status: draft
 tags: [needs-triage]
 ---
@@ -37,18 +37,23 @@ beside it.
 ## Expected behaviour
 
 One name for the canonical knowledge, and one that says what it is:
-`knowledge` on its own, `AOKF knowledge` where the format is the point,
-`canonical knowledge` where authority is the point. A reader who has never
-opened the AOKF spec understands all three.
+**canonical project knowledge**, shortened to **the canonical knowledge** in running
+prose. `AOKF` names the format and its specification, never the tree —
+"the AOKF bundle" and "AOKF knowledge" are both retired. A reader who has
+never opened the specification understands the name.
 
 ## Actual behaviour
 
-880 occurrences across 163 tracked files. The term is defined in exactly one
+625 occurrences across 74 tracked files, 492 of them in `crates/`. The
+remainder are the packaging sense of the word (codegraph's release
+bundles, a pack as a bundle of content), quoted code identifiers, and the
+changelog's record of what shipped. The term was defined in exactly one
 place and used everywhere:
 
-- **AOKF SPEC** — §1 Terminology: "**Bundle**: the directory tree of
-  knowledge documents", and §2 is headed "Bundle structure". 20 uses. This
-  is the origin; everything below quotes it.
+- **AOKF SPEC** — **fixed.** §1 Terminology now reads "**Canonical project
+  knowledge**, or just **the canonical knowledge**", §2 is headed "Knowledge
+  structure", and neither spec copy uses the word. `.agents/` is clear.
+  The code below still carries it.
 - **CLI** — `--bundle <DIR>` on `validate` and `aokf index`; the `validate`
   summary line; the error `no AOKF bundle here — run \`superdev init\``
   (`crates/app/superdev/src/aokf_cli.rs:87`); the covered-paths line
@@ -56,16 +61,15 @@ place and used everywhere:
 - **JSON report** — the `"bundle"` key written at `aokf_cli.rs:134`, read
   back by `crates/app/superdev/tests/cli.rs:171`. A machine-readable name,
   not just prose.
-- **Rust API** — 362 occurrences in `crates/`, including `load_bundle` (33),
-  `bundle_dir` (40), `BundleManifest` and `bundle_root`.
+- **Rust API** — the bulk of the 492 occurrences in `crates/`, including
+  `load_bundle`, `bundle_dir`, `BundleManifest` and `bundle_root`.
 - **MCP** — the `superdev-aokf` server introduces itself as "Read-only
   access to this repository's AOKF knowledge bundle."
-- **Knowledge** — 199 occurrences under `knowledge/`, starting with the
-  first line of `knowledge/issue-tracker.md` ("Issues live as markdown files
-  in this bundle") and including the live manifest's own description,
-  "Canonical project knowledge for superdev, as an AOKF bundle."
-- **Pack** — 111 occurrences under `pack/`, so every repository superdev
-  seeds inherits the word.
+- **Knowledge** — **swept.** `knowledge/`, `.claude/`, `pack/`, the README
+  and CONTRIBUTING no longer use the word for the tree. What remains there
+  is the packaging sense (codegraph's release bundles, a pack as a bundle of
+  content) and quoted code identifiers.
+- **Pack** — **swept**, so no repository superdev seeds inherits the word.
 
 ## Root cause (if known)
 
@@ -82,12 +86,13 @@ downstream of §1.
 
 ## Proposed fix / workaround
 
-- Settle the replacement first: `knowledge` as the bare noun, `AOKF
-  knowledge` where the format matters, `canonical knowledge` where authority
-  matters. `bundle` is retired outright.
-- Change the spec first — §1 Terminology and the §2 heading — and bump the
-  AOKF version, because the manifest's `aokf` key is what tells a consumer
-  which vocabulary a tree targets.
+- ~~Settle the replacement first~~ — settled: **canonical project
+  knowledge**, **the canonical knowledge** in running prose. `bundle` is retired
+  outright, and `AOKF` no longer modifies the noun.
+- ~~Change the spec first~~ — done, in both copies. The AOKF version is
+  **not** bumped yet; the manifest's `aokf` key is what tells a consumer
+  which vocabulary a tree targets, so decide the bump before the sweep
+  lands.
 - Rename the user-facing surfaces: `--bundle` becomes `--knowledge`, with
   the old spelling accepted as a deprecated alias for one release; the JSON
   key `"bundle"` becomes `"knowledge"`; the help text and error strings
@@ -95,9 +100,8 @@ downstream of §1.
 - Rename the API: `load_bundle`, `BundleManifest`, `bundle_dir`,
   `bundle_root`. This is a breaking change to `superdev-core` and belongs in
   one commit with the release note.
-- Sweep the prose in `knowledge/`, `.agents/`, `.claude/` and `pack/` in the
-  same change. `pack/` ships into other repositories, so the live copies and
-  the packed copies must not diverge across releases.
+- ~~Sweep the prose~~ — done in `knowledge/`, `.agents/`, `.claude/`,
+  `pack/`, the README and CONTRIBUTING. The remaining work is code only.
 - Workaround: none. The word is understood by everyone who has read the spec
   and by nobody else.
 

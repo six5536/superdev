@@ -16,8 +16,8 @@ links:
 # Problem
 
 The workflows capability materialises upstream skills that fight the
-knowledge bundle: they write `CONTEXT.md`, `docs/adr/` and `.scratch/`,
-and need a per-repo override file to redirect them into the bundle. The
+knowledge: they write `CONTEXT.md`, `docs/adr/` and `.scratch/`,
+and need a per-repo override file to redirect them into the canonical knowledge. The
 24 aokf-converted skills bake that redirection in, so the provider's
 whole job — chosen by the
 [workflows-provider-default spec](S005-workflows-provider-default-design.md)
@@ -42,7 +42,7 @@ manifest still naming `[workflows]` fails with a guided error.
    knowledge-owned files. `[knowledge] custom` releases any of them by
    name, releasing the whole directory.
 2. A `--no-knowledge` repo gets none of them: the skills are
-   bundle-coupled, so only the skill pack remains there.
+   knowledge-coupled, so only the skill pack remains there.
 3. `init` writes no `[workflows]` table; `--workflows-provider` and
    `--no-workflows` are gone. `update workflows` is an
    unknown-capability error.

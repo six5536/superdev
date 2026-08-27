@@ -51,7 +51,7 @@ The aokf component carries the knowledge-lifecycle skills:
 # The aokf-bootstrap skill
 
 Judgement work an agent does after `superdev init`'s mechanical
-scaffolding: fill the bundle from the two places a repo's knowledge
+scaffolding: fill the canonical knowledge from the two places a repo's knowledge
 already lives — its stranded prose, and the owner's head.
 
 - **Inventory**: every prose document — README, CONTRIBUTING, `docs/`,
@@ -60,14 +60,14 @@ already lives — its stranded prose, and the owner's head.
   only comments carrying repo-wide conventions, decisions and gotchas —
   never API description, which is the environment and stays with the code.
 - **Harvest** is the core move, and it is move-and-reference: the durable
-  fact lands in the bundle, and the source keeps a one-line summary plus a
+  fact lands in the canonical knowledge, and the source keeps a one-line summary plus a
   link, per the no-duplication rule (AOKF §3). Import-only was rejected —
   it creates exactly the two-homes drift the format bans.
 - **Skeleton-first**: harvested material fills the seeded starter concepts'
-  TBDs; new concepts are created only where nothing fits. The knowledge
+  TBDs; new concepts are created only where nothing fits. The canonical knowledge
   seed and the harvest are two halves of one design.
 - **Entry points**: for an incumbent CLAUDE.md/AGENTS.md, the skill asks
-  the user — merge-and-reduce (durable content into the bundle,
+  the user — merge-and-reduce (durable content into the canonical knowledge,
   always-loaded rules into AGENTS.md, CLAUDE.md down to the `@AGENTS.md`
   import) or leave as found. This closes the incumbent-entry-point backlog
   item by making the choice explicit per repo.
@@ -86,13 +86,13 @@ already lives — its stranded prose, and the owner's head.
 - **Completion criterion**: every inventoried source accounted for —
   harvested, reduced to summary-and-citation, or explicitly left with a
   reason — every skeleton filled or left TBD with the reason it must
-  accrete, and the bundle validating clean. Re-running is safe: the
+  accrete, and the canonical knowledge validating clean. Re-running is safe: the
   inventory is whatever remains unaccounted.
 
 # Init hint
 
 Whenever the knowledge capability is enabled, `init` ends with
-`knowledge: run /aokf-bootstrap in Claude Code to fill the bundle from
+`knowledge: run /aokf-bootstrap in Claude Code to fill the canonical knowledge from
 existing docs and an owner interview` — unconditional, like the workflows
 setup hint. An empty repo loses nothing: with no prose to harvest, the
 interview is its whole bootstrap.
@@ -102,7 +102,7 @@ interview is its whole bootstrap.
 Landing this made superdev's own repo enable `[knowledge]`: with the hook
 and `aokf-maintain` owned by the knowledge capability, a skills-only
 manifest would have swept both. The repo's hand-written scaffolds
-(AGENTS.md, the bundle) predate the capability and are untouched; the
+(AGENTS.md, the canonical knowledge) predate the capability and are untouched; the
 owned `.agents` files and the embedded assets were trued up against each
 other (the stale asset took the repo's improved MATT-POCOCK-SKILLS.md,
 the repo took the asset's VALIDATION.md), and `.mcp.json` now names the

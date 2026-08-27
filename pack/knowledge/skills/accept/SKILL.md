@@ -39,7 +39,7 @@ do not work together, and regressions elsewhere in the app.
 - [ ] GATE: Feature undocumented? That is a gap.
 - [ ] GATE: Any gap found? It becomes a new slice.
 - [ ] Clean pass? Tag the spec concept `done`.
-- [ ] GATE: Bundle edited? Validate to PASS
+- [ ] GATE: Knowledge edited? Validate to PASS
       (`superdev aokf validate knowledge`).
 
 ## IMPORTANT RULES

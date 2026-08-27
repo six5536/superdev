@@ -1,12 +1,12 @@
 ---
 name: maintain
-description: "Use when the user asks to maintain, audit, tidy, or check the knowledgebase, KB, or the workflow's records, and regularly between times."
+description: "Use when the user asks to maintain, audit, tidy, or check the canonical knowledge, KB, or the workflow's records, and regularly between times."
 ---
 
-<skill name="maintain" purpose="Maintain the Knowledgebase" input="concepts or checks to focus on, when given" user-input="$ARGUMENTS" output="a report: fixes grouped by check; findings that need a human (lapsed verifications, code-vs-doc conflicts, judgement calls); what was intentionally left alone">
+<skill name="maintain" purpose="Maintain the Knowledge" input="concepts or checks to focus on, when given" user-input="$ARGUMENTS" output="a report: fixes grouped by check; findings that need a human (lapsed verifications, code-vs-doc conflicts, judgement calls); what was intentionally left alone">
 
-<goal persona="bundle's auditor">
-You check the knowledgebase at `knowledge/` — the workflow's records included — and repair what you find.
+<goal persona="knowledge's auditor">
+You check the canonical knowledge at `knowledge/` — the workflow's records included — and repair what you find.
 </goal>
 
 <constraints>
@@ -21,7 +21,7 @@ The MUST NOT rules below are from SPEC §4, §5, §7 — never break these.
 
 <process_actions>
 <loop until="the validator passes">
-<step name="RUN THE VALIDATOR" task="Run the validator per the core validation block. Fix every error; treat warnings as work items. Broken links usually mean a rename the bundle missed — fix the reference, not the target" />
+<step name="RUN THE VALIDATOR" task="Run the validator per the core validation block. Fix every error; treat warnings as work items. Broken links usually mean a rename the canonical knowledge missed — fix the reference, not the target" />
 </loop>
 <step name="SCRIPT THE UNCOVERED CHECKS">Script the checks the validator does not cover (a throwaway script in the scratchpad is fine); don't eyeball them:
 
@@ -36,7 +36,7 @@ The MUST NOT rules below are from SPEC §4, §5, §7 — never break these.
 - Backlog entries taken up but never moved out.
 - The changelog's Unreleased section missing merged user-visible changes.</step>
   <step name="CHECK STRUCTURE">Check structure:
-- No knowledge duplicated between concepts, or between the bundle and README/CONTRIBUTING: the concept summarises and cites via `sources`; detail lives in one home, cross-referenced.
+- No knowledge duplicated between concepts, or between the canonical knowledge and README/CONTRIBUTING: the concept summarises and cites via `sources`; detail lives in one home, cross-referenced.
 - Misplaced content moves; a concept covering two unrelated things splits; near-empty concepts merge into a neighbour (keep the surviving file's `id`, re-point inbound `links` and index lines).
 - Where prose in one concept leans on another's content, ensure a typed `links` entry with the right `rel` plus the mirroring body link. Prefer `id` targets; declare each edge once, from the more natural side.
 - Each `description` is an accurate one-liner; update drifted ones and re-sync the `index.md` entry.</step>

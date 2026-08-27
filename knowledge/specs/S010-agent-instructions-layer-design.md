@@ -68,8 +68,8 @@ registration for `codegraph serve --mcp`. This repo enables
    next sync; no import ever points at a file that will not exist.
 4. `.agents/aokf.md` is owned by the knowledge capability and carries
    what the AGENTS.md scaffold carried: the AOKF spec import, the
-   canonical-knowledge section pointing at the bundle index, the
-   working-with-the-knowledgebase guidance, and the validation rules
+   canonical-knowledge section pointing at the knowledge index, the
+   working-with-the-knowledge guidance, and the validation rules
    that previously lived in their own owned file.
 5. `.agents/codegraph.md` is owned by the code-index capability and
    tells agents the repo has a code index and how to query it: the
@@ -152,7 +152,7 @@ aokf component's items tests.
   Code discovers skills and plugins natively.
 - Tuning codegraph's unlisted MCP tools (`CODEGRAPH_MCP_TOOLS`); the
   default `codegraph_explore` surface is what ships.
-- Any change to the knowledge capability's tools or bundle format.
+- Any change to the knowledge capability's tools or knowledge format.
 
 # Open questions
 

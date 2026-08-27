@@ -39,7 +39,7 @@ fill in the angle-bracket placeholders.
 
 ## Knowledge concepts
 
-Skeletons for the knowledgebase's own concepts, mirroring the bundle index —
+Skeletons for the knowledge concepts, mirroring the knowledge index —
 each carries the concept's frontmatter, ready to fill and file.
 
 * [Project Overview](project-overview.md) - what the project is, for whom, and its current status.

@@ -7,7 +7,7 @@ description: The public surfaces, their contracts and the stability promises, in
 
 # API Contracts Schema
 
-Structural rules for `knowledge/api-contracts.md`, the bundle's Reference
+Structural rules for `knowledge/api-contracts.md`, the canonical knowledge's Reference
 concept for the public surfaces. One heading per surface, named by the
 author; `Stability` is literal and wins over the pattern.
 
@@ -62,7 +62,7 @@ example: |
 
   ```
   superdev sync [--frozen]   resolve packs, write superdev.lock
-  superdev check [path...]   validate the bundle, exit 2 on findings
+  superdev check [path...]   validate the canonical knowledge, exit 2 on findings
   ```
 
   # Stability

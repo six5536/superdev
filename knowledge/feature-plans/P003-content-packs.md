@@ -316,7 +316,7 @@ unplanned, so nothing scheduled can stall behind one.
   narrows them that slice updates this text as part of its own work.
 - Done-check: `superdev --help`, the man page and `README.md` each describe
   packs and none of them says `update` moves pins only to this binary's
-  defaults; a reader who has never seen the knowledgebase can pin a pack from
+  defaults; a reader who has never seen the canonical knowledge can pin a pack from
   the README alone.
 - Cases: none from the test plan. A test asserting the help text names the
   network behaviour would stop it going stale again.

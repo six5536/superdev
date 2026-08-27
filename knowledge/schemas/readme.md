@@ -81,7 +81,7 @@ sections:
 example: |
   # superdev
 
-  Prepares and validates the knowledge bundle your coding agent reads.
+  Prepares and validates the canonical knowledge your coding agent reads.
 
   Agent context is usually prose pasted into a prompt and trusted. superdev
   makes it a reviewed artifact: content arrives as pinned packs, and every
@@ -116,7 +116,7 @@ example: |
   superdev sync --frozen
   ```
 
-  ### Validate the bundle
+  ### Validate the canonical knowledge
 
   ```sh
   superdev check knowledge/

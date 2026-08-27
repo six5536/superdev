@@ -44,7 +44,7 @@ Each phase is a skill; its checklist is `.claude/skills/<phase>/SKILL.md`.
    exist as tests. Failures return to Build.
 7. Integrate — merge the slice; the merged code must build, lint, and
    pass the integration tests and a smoke test; update the changelog,
-   the knowledgebase, and the plan.
+   the canonical knowledge, and the plan.
 8. Accept — at the user's request, once the feature has stopped
    changing: check the whole feature against the acceptance criteria,
    in the project's acceptance environment; check the user
@@ -54,7 +54,7 @@ Each phase is a skill; its checklist is `.claude/skills/<phase>/SKILL.md`.
 
 ## 3. Documents
 
-The process reads and writes the knowledgebase (`knowledge/`):
+The process reads and writes the canonical knowledge (`knowledge/`):
 
 - Specs: `knowledge/specs/Snnn-<feature-slug>.md` — behaviour,
   acceptance criteria, and test plan; tagged `done` at accept.

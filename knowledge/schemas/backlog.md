@@ -7,7 +7,7 @@ description: Ideas under consideration and ideas decided against, with the reaso
 
 # Backlog Schema
 
-Structural rules for `knowledge/backlog.md`, the bundle's Backlog concept.
+Structural rules for `knowledge/backlog.md`, the canonical knowledge's Backlog concept.
 Both halves are required: an idea that was rejected without its reasoning is
 an idea that gets proposed again.
 

@@ -7,7 +7,7 @@ description: The vulnerability policy in brief and the security guarantees the d
 
 # Security Requirements Schema
 
-Structural rules for `knowledge/security-requirements.md`, the bundle's
+Structural rules for `knowledge/security-requirements.md`, the canonical knowledge's
 Policy concept for security. Each guarantee carries its enforcing mechanism,
 which is what makes a change that weakens one recognisable in review.
 

@@ -13,7 +13,7 @@
 * [A symlink inside a pack is skipped in silence, so an item a pack meant to ship quietly disappears](I009-a-skipped-symlink-says-nothing.md) - the walk dropped every symlink without reporting it, so a pack that deduped an item with a link resolved clean while that item was simply absent; fixed in P005 slices 2 and 3, which refuse a symlink anywhere in a pack and name the path.
 * [An index entry may say anything about a concept, and nothing notices](I010-index-entries-are-never-checked-against-their-concept.md) - SPEC §9 says an index entry should carry the linked concept's description, but check_indexes only tests that the target exists, so an index can drift from every concept it lists — or hold the only copy of something — and validate still passes.
 * [The shape SPEC §9 gives an index is described but never enforced](I011-index-shape-is-described-but-not-enforced.md) - SPEC §9 fixes what an index.md looks like — no frontmatter, heading-grouped link lists, one entry per concept — but no validator checks any of it, so an index can carry frontmatter, drop its heading, or mix bullet styles and still pass.
-* [Five findings the repository alone can decide are only warnings, and go unread](I012-five-decidable-findings-only-warn.md) - broken links, missing resources, missing sources, missing index targets and unjoined footnotes are all decidable from the tree, but SPEC §11 makes them warnings; the bundle carried 39 of them unactioned until someone happened to look.
+* [Five findings the repository alone can decide are only warnings, and go unread](I012-five-decidable-findings-only-warn.md) - broken links, missing resources, missing sources, missing index targets and unjoined footnotes are all decidable from the tree, but SPEC §11 makes them warnings; the canonical knowledge carried 39 of them unactioned until someone happened to look.
 * [Sync would revert the schema migration and the conformance decision, and the pre-PR check says so 65 times](I016-sync-would-revert-the-schema-migration.md) - the live tree carries the schema migration and ADR-017; /pack/ still carries what they replaced, so status --drift reports 65 changes and sync would restore 41 deleted templates, put the level ladder back into the AOKF spec, and overwrite 21 rewritten skills.
 
 ## Issue tracker
@@ -22,7 +22,7 @@
 
 ## Naming
 
-* [The canonical knowledge is called "the bundle" on every surface, and the word describes nothing](I013-the-knowledge-is-called-the-bundle.md) - AOKF SPEC §1 names the knowledge tree a "bundle" and the word has spread to 880 places — the --bundle flag, the JSON report key, the Rust API, the skills and the concepts — where it tells a reader nothing about a directory of markdown the repository owns.
+* [The canonical knowledge is called "the bundle" on every surface, and the word describes nothing](I013-the-knowledge-is-called-the-bundle.md) - The AOKF spec and every document are clear of the word, but "bundle" remains in 625 places — the --bundle flag, the JSON report key and the Rust API — where it tells a reader nothing about a directory of markdown the repository owns.
 * [The schema validator is called "format", which already means three other things here](I014-the-schema-validator-is-called-format.md) - the grammar-driven validator lives at src/format/, ships its grammar at .agents/format/ and calls its files "superdev-format", while format! is 457 lines away in the same crate, "pack format" is a glossary term and AOKF is itself a format. It should be called schema-validator.
 
 ## The superdev format

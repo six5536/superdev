@@ -2,7 +2,7 @@
 type: AdhocPlan
 id: adhoc-plan-007-drop-the-aokf-conformance-ladder
 title: Drop the AOKF conformance ladder
-description: ADR-017 in code — the three-level ladder leaves the spec, the validator, the CLI and the parity goldens, a bundle passes or fails, and no file in the tree names a level but the ADR and this plan.
+description: ADR-017 in code — the three-level ladder leaves the spec, the validator, the CLI and the parity goldens, knowledge passes or fails, and no file in the tree names a level but the ADR and this plan.
 status: done
 ---
 
@@ -13,7 +13,7 @@ status: done
 ADR-017 decided that AOKF conformance is pass or fail. The ladder exists so a
 repository adopting AOKF over documentation it already has can be legal before
 it is complete, and no such repository exists — every caller in this tree
-grades at level 2. Meanwhile `--level 0` is a live flag that passes a bundle
+grades at level 2. Meanwhile `--level 0` is a live flag that passes knowledge
 with broken links and no manifest through both the edit-time hook and the
 pre-PR check, neither of which anticipates anything but the default. This plan
 removes the model from the spec, the validator and the CLI without changing a
@@ -69,7 +69,7 @@ against.
 
 ## Outcomes
 
-- O1 — a bundle passes or fails, and no report, finding or message names a
+- O1 — knowledge passes or fails, and no report, finding or message names a
   conformance level.
 - O2 — nothing in the tree names a conformance level: not the CLI, the spec,
   an instruction file, a skill, a test fixture, or a record of past work. The
@@ -127,11 +127,11 @@ Depends on: none.
 
 1. Replace §11 — the ladder table goes; conformance becomes the document check
    passing, with the diff check still independent of it. The sentence "a
-   bundle's level is the highest it fully satisfies" goes with it.
+   knowledge's level is the highest it fully satisfies" goes with it.
 2. Reword what leans on it — §10's items that exist to place a check on the
    ladder, and the two "required at Level 1" phrasings the validator echoes.
 3. Bump the version — `.agents/aokf/SPEC.md` at both declaration sites, and
-   `knowledge/manifest.aokf.yaml`, which names the version the bundle targets.
+   `knowledge/manifest.aokf.yaml`, which names the version the canonical knowledge targets.
 
 ### W2: Collapse the model and hold parity
 
@@ -168,7 +168,7 @@ Depends on: W2.
 
 Depends on: W3.
 
-1. Fix the instruction files — `.agents/aokf.md` no longer says the bundle
+1. Fix the instruction files — `.agents/aokf.md` no longer says the canonical knowledge
    "must PASS at level 2".
 2. Fix the skill — the loop in `.claude/skills/maintain/SKILL.md` ends on
    the validator passing rather than on a level.
@@ -189,7 +189,7 @@ Depends on: W3.
 | File | Change | Workstream |
 |------|--------|------------|
 | `.agents/aokf/SPEC.md` | modified — §11 replaced, §10 reworded, version bumped at both sites | W1 |
-| `knowledge/manifest.aokf.yaml` | modified — the version the bundle targets | W1 |
+| `knowledge/manifest.aokf.yaml` | modified — the version the canonical knowledge targets | W1 |
 | `crates/lib/superdev-core/src/aokf/validate.rs` | modified — `Finding`, `Report`, `achieved_level` deleted, two messages reworded, one inline test | W2 |
 | `crates/lib/superdev-core/tests/validator_parity.rs` | modified — a third normalisation and its header note | W2 |
 | `crates/app/superdev/src/aokf_cli.rs` | modified — `--level` and `DEFAULT_LEVEL` removed | W3 |
@@ -216,7 +216,7 @@ Depends on: W3.
 | `rg -n -e achieved_level -e checked_level -e error_at -e DEFAULT_LEVEL -e CHECKED_LEVEL crates/` returns nothing outside the parity header's provenance note | FR-1, FR-4 |
 | `superdev aokf validate --level 2` fails as an unknown argument | FR-4 |
 | `rg -n 'Level [0-9]' crates/lib/superdev-core/src/` returns nothing | FR-3 |
-| `superdev aokf validate knowledge` on this bundle still reports no findings and exits 0 | FR-2 |
+| `superdev aokf validate knowledge` on this knowledge still reports no findings and exits 0 | FR-2 |
 | Deleting `knowledge/manifest.aokf.yaml` makes it fail, where `--level 0` would once have passed it | FR-2, FR-4 |
 | `rg -n 'level 2' .agents .claude knowledge/api-contracts.md` returns nothing | FR-6 |
 | SPEC §11 names no level, and the version differs from `0.2` at both declaration sites | FR-5 |
@@ -269,7 +269,7 @@ Depends on: W3.
 
 The nine always-warn findings are unaffected: `error_at: None` becomes a
 warning severity and nothing about them changes. They are worth watching all
-the same, because the bundle currently sits at zero warnings, and a model with
+the same, because the canonical knowledge currently sits at zero warnings, and a model with
 one fatal tier makes the warning tier the only place a soft finding can live.
 
 ADR-017 records the option that was rejected rather than deferred — keeping the

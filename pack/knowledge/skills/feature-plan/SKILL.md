@@ -37,7 +37,7 @@ don't build.
 - [ ] Double-check the plan (`/double-check`); fix what it finds.
 - [ ] GATE: Any slice too big to build and verify in one pass? Cut it
       again.
-- [ ] GATE: Validate the bundle to PASS
+- [ ] GATE: Validate the canonical knowledge to PASS
       (`superdev aokf validate knowledge`).
 
 ## IMPORTANT RULES

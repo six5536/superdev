@@ -40,7 +40,7 @@ change: you write the handover the incoming agent works from.
 - The document must stand alone: the reader has no access to this
   session.
 - Reference, never duplicate, what already lives in the repo or the
-  bundle.
+  knowledge.
 - Nothing sensitive leaves the session.
 
 ## Output

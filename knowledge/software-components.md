@@ -41,7 +41,7 @@ All domain logic; no argument parsing. One module per concern:
   The `aokf` and `skillpack` components and the general-rules scaffolds read
   their items from the set through `Ctx`, so adding a file to `/pack` ships it
   with no Rust edit. What the binary owns rather than the pack stays a
-  constant: the knowledge instructions and the AOKF spec describe a version it
+  constant: the canonical knowledge instructions and the AOKF spec describe a version it
   pins and a format its compiled validator enforces, as codegraph's and rtk's
   instruction files do.
 - `pipeline` — the verb pipeline between manifest and engine: `plan_repo`
@@ -61,7 +61,7 @@ All domain logic; no argument parsing. One module per concern:
 - `templates` — the project templates: token substitution, the init-only
   scaffold plan, and `rust_npm`, the embedded table mapping
   `assets/projects/rust-npm/` onto tokenised target paths.
-- `aokf` — the read side of the knowledge bundle, one module per stage:
+- `aokf` — the read side of the canonical knowledge, one module per stage:
   `concept` (frontmatter and section parsing), `bundle` (loading, reserved-file
   rules), `validate` (document check and conformance ladder), `graph` (link
   resolution and inverse synthesis), `embed` (the embedding providers),
@@ -143,7 +143,7 @@ by both `ci.yml` and `release.yml`, so the release gate cannot drift from CI.
 
 - **`checks.yml`**: `cargo fmt --check`, `clippy -D warnings`, `nextest`,
   doctests, `cargo doc -D warnings`, the npm launcher tests, version
-  consistency, the knowledgebase and format validation (`check:validate`), the
+  consistency, the canonical knowledge and format validation (`check:validate`), the
   per-crate coverage gate, and `cargo-deny` for licences/bans/sources. Tests
   and doctests also run on Windows; the OS-independent checks run once, on
   macos.

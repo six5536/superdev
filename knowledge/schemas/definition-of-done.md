@@ -7,7 +7,7 @@ description: The gates a change must satisfy before it merges, in knowledge/defi
 
 # Definition of Done Schema
 
-Structural rules for `knowledge/definition-of-done.md`, the bundle's
+Structural rules for `knowledge/definition-of-done.md`, the canonical knowledge's
 Convention concept for the merge gate. The document has no headings — a lead
 line and the gates — so it declares a preamble and no sections.
 
@@ -50,7 +50,7 @@ example: |
   - One reviewer has approved it, and every review thread is resolved or
     answered.
   - Every doc that describes changed behaviour has been updated in the same
-    PR, including the bundle concepts.
+    PR, including the knowledge concepts.
   - New behaviour carries tests, and a bug fix carries a regression test that
     fails on the unfixed code — demonstrated by running it before the fix.
 ````

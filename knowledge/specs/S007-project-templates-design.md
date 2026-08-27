@@ -82,7 +82,7 @@ target language forbids the slug itself in:
   source refers to a hyphenated crate by its underscore identifier.
 - `{{superdev:project-compact}}` — the slug with the hyphens dropped, for
   reverse-domain app ids: Android forbids `-` in an `applicationId` and
-  iOS forbids `_` in a bundle id, so only alphanumeric segments satisfy
+  iOS forbids `_` in knowledge id, so only alphanumeric segments satisfy
   both.
 - `{{superdev:project-pascal}}` — the slug's segments capitalised and
   joined, for Swift and Kotlin type names, Xcode project and scheme
@@ -190,14 +190,14 @@ before either bootstrap runs — and `Action::WriteFile` sets no mode, so
 
 The exemplar carried copy-paste from unrelated projects — Rust and
 PostgreSQL tool pins, an NDK, another project's launch configs — none of
-which the template inherits. The knowledge bundle stays out too: it is a
+which the template inherits. The canonical knowledge stays out too: it is a
 reserved path that belongs to the aokf component, so the template ships
 `docs/` for `aokf-bootstrap` to harvest and points at it from the README.
 
 # The knowledge seed
 
 The template want surfaced a gap that belongs elsewhere: a fresh
-repo's knowledge bundle is a three-file seed, while a useful one has
+repo's knowledge is a three-file seed, while a useful one has
 this repo's concept structure. The fuller seed goes to the **aokf
 component's scaffold**, not the template — every knowledge-enabled
 repo gets the concept skeleton (glossary, architecture,

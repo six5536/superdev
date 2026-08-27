@@ -7,7 +7,7 @@ description: The error taxonomy or exit codes and the failure-reporting rules ca
 
 # Error Handling Schema
 
-Structural rules for `knowledge/error-handling.md`, the bundle's Convention
+Structural rules for `knowledge/error-handling.md`, the canonical knowledge's Convention
 concept for how failures are classified and reported. `Exit codes` comes
 first and is literal; the mechanism headings after it are the author's to
 name.

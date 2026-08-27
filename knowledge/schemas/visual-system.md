@@ -7,7 +7,7 @@ description: The design tokens later slices build against, in knowledge/visual-s
 
 # Visual System Schema
 
-Structural rules for `knowledge/visual-system.md`, the bundle's Convention
+Structural rules for `knowledge/visual-system.md`, the canonical knowledge's Convention
 concept for the design tokens a UI is built against. Only projects with a UI
 carry this concept; changing a token here is a decision, not a tweak.
 

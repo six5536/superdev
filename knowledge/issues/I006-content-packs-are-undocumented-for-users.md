@@ -40,7 +40,7 @@ Two gaps found at acceptance, one an omission and one an inaccuracy.
 The feature is **undocumented for users**. `README.md` does not mention packs,
 `superdev --help` does not, and neither does the man page — zero occurrences in
 any of them. Everything written about packs during delivery went to the
-knowledgebase (internal) or CONTRIBUTING (contributors). Someone who installs
+knowledge (internal) or CONTRIBUTING (contributors). Someone who installs
 superdev has no way to learn that `[[packs]]` exists, that content now releases
 separately from the binary, or that `update` will move their pin.
 
@@ -95,7 +95,7 @@ was not revisited when slice 11 changed what `update` does.
   add a packs section to `README.md` covering the `[[packs]]` entry, layering
   and base replacement, the two release series, and that `update` is the verb
   that reaches out. Keep it to the README's register — short, and pointing at
-  the knowledgebase for the rest.
+  the canonical knowledge for the rest.
 - Workaround: none; the information exists only in `knowledge/` and
   CONTRIBUTING.
 

@@ -66,7 +66,7 @@ All wrapped as npm scripts (see `package.json`):
 ```sh
 npm run build           # cargo build --workspace
 npm run test            # cargo nextest run --workspace, then check:validate
-npm run check:validate  # validate the bundle and the superdev-format files
+npm run check:validate  # validate the knowledge and the format files
 npm run check:blueprint # the superdev-owned files match the blueprint
 npm run lint            # cargo clippy --workspace
 npm run fmt             # cargo fmt --all
@@ -119,7 +119,7 @@ change dependencies.
 
 ## Standards and tests
 
-The canonical rules live in the knowledgebase, not here:
+The canonical rules live in the canonical knowledge, not here:
 
 - Code, prose, and documentation standards — including the module rules and
   what the rustdoc CI gate enforces — are in
@@ -131,13 +131,13 @@ The canonical rules live in the knowledgebase, not here:
 ## Project layout
 
 - `pack/` — the content superdev ships: skills, agent instructions, the
-  knowledge bundle and the project templates. Symlinked into
+  knowledge and the project templates. Symlinked into
   `superdev-core` as `assets/`, which is where the binary embeds it from.
 - `crates/lib/superdev-core` — all domain logic (no arg parsing).
 - `crates/app/superdev` — the binary: CLI parsing, wiring, output rendering.
 - `packages/` — the npm launcher and per-platform prebuilt-binary packages.
-- `knowledge/` — the AOKF knowledgebase: canonical project knowledge,
-  including the design overview (see `AGENTS.md`). `knowledge/specs/` holds
+- `knowledge/` — canonical project knowledge, including the design
+  overview (see `AGENTS.md`). `knowledge/specs/` holds
   design specs (permanent decision records); `knowledge/plans/` holds
   implementation plans (ephemeral — deleted in the commit that lands them).
 

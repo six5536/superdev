@@ -17,7 +17,7 @@ problem, not the solution.
 
 - [ ] Read existing project knowledge first (`aokf_overview` +
       `aokf_search`).
-- [ ] GATE: Existing project whose bundle is empty or still TBD? Fill
+- [ ] GATE: Existing project whose knowledge is empty or still TBD? Fill
       it with `/bootstrap` first.
 - [ ] Feature: read `project-overview`, `constraints-non-goals` and
       `backlog` (`aokf_read`) for prior scope and rejections.
@@ -33,7 +33,7 @@ problem, not the solution.
       open technology question — and set the visual system with the
       `/frontend-design` skill.
 - [ ] New project: create the README (`template-readme`) and the
-      knowledgebase (`template-project-overview`,
+      knowledge (`template-project-overview`,
       `template-technology-stack`, `template-constraints-non-goals`,
       `template-visual-system`).
 - [ ] Existing project: take the stack and visual system from the
@@ -42,7 +42,7 @@ problem, not the solution.
       backlog; record a rejected idea under decided-against with the
       reasoning; add a term the project will keep to the glossary.
 - [ ] Double-check the frame (`/double-check`); fix what it finds.
-- [ ] GATE: Bundle edited? Validate to PASS
+- [ ] GATE: Knowledge edited? Validate to PASS
       (`superdev aokf validate knowledge`).
 - [ ] GATE: Is the frame clear enough for the spec skill? If not,
       interview the user (`/grill-me`).

@@ -15,7 +15,7 @@ a chore.
 
 ## Workflow
 
-- [ ] Read the knowledge the work touches (`aokf_overview` +
+- [ ] Read the canonical knowledge the work touches (`aokf_overview` +
       `aokf_search`): the conventions and constraints the plan must
       respect.
 - [ ] Read the affected code and its callers (`codegraph_explore`)
@@ -31,7 +31,7 @@ a chore.
 - [ ] File the plan as a draft concept at
       `knowledge/plans/Pnnn-<slug>.md`, listed in the plans index.
 - [ ] Double-check the plan (`/double-check`); fix what it finds.
-- [ ] GATE: Validate the bundle to PASS
+- [ ] GATE: Validate the canonical knowledge to PASS
       (`superdev aokf validate knowledge`).
 
 ## IMPORTANT RULES

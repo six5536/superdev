@@ -7,7 +7,7 @@ description: When a dependency may be added and how its version is chosen, in kn
 
 # Dependency Policy Schema
 
-Structural rules for `knowledge/dependency-policy.md`, the bundle's Policy
+Structural rules for `knowledge/dependency-policy.md`, the canonical knowledge's Policy
 concept for taking on dependencies. The document is a list and nothing else,
 so it declares a preamble and no sections.
 

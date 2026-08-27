@@ -2,7 +2,7 @@
 type: Issue
 id: issue-012-five-decidable-findings-only-warn
 title: Five findings the repository alone can decide are only warnings, and go unread
-description: Broken links, missing resources, missing sources, missing index targets and unjoined footnotes are all decidable from the tree, but SPEC §11 makes them warnings; the bundle carried 39 of them unactioned until someone happened to look.
+description: Broken links, missing resources, missing sources, missing index targets and unjoined footnotes are all decidable from the tree, but SPEC §11 makes them warnings; the canonical knowledge carried 39 of them unactioned until someone happened to look.
 status: draft
 tags: [needs-triage]
 links:
@@ -46,7 +46,7 @@ else the answer could depend on.
 edit-time hook exits 0 too, so the agent that wrote the link is never told.
 
 This is not hypothetical. Until it was noticed during the schema migration the
-bundle carried **39** warnings, every one of them
+knowledge carried **39** warnings, every one of them
 `sources[0].resource does not exist: /knowledge/templates/<name>.md`. They had
 accumulated because the schemas cite the templates they replaced. They were
 real, they were trivial to fix once seen, and they were invisible for as long
@@ -56,7 +56,7 @@ as they existed because nothing ever failed on them.
 
 SPEC §11 closes with:
 
-> Consumers must be permissive. In particular, never reject a bundle for
+> Consumers must be permissive. In particular, never reject knowledge for
 > missing optional fields, unknown `type` values, unknown frontmatter keys,
 > unknown `rel` values, broken links, or a missing `index.md` or manifest.
 
@@ -64,7 +64,7 @@ SPEC §11 closes with:
 5 lists them as warn-only accordingly. The fifth — a footnote label with no
 matching `sources[].id` — follows the same list.
 
-The permissiveness line is aimed at *consumers*: a reader of a bundle should
+The permissiveness line is aimed at *consumers*: a reader of knowledge should
 not refuse to display it over a dangling link. It has been read as a rule for
 *validators* too, which is a different job. A validator that never fails is
 not being permissive, it is being ignored.
@@ -99,7 +99,7 @@ quiet edit — see
 [the conformance decision](../decisions/D017-aokf-conformance-is-pass-or-fail.md),
 which took the same kind of question about the same section.
 
-Workaround until then: read the warnings. The bundle currently sits at zero,
+Workaround until then: read the warnings. The canonical knowledge currently sits at zero,
 so a new one is visible; that is a property of having just cleared them, not
 of the design.
 

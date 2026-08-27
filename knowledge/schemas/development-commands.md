@@ -7,7 +7,7 @@ description: The everyday command set and the traps in it, in knowledge/developm
 
 # Development Commands Schema
 
-Structural rules for `knowledge/development-commands.md`, the bundle's
+Structural rules for `knowledge/development-commands.md`, the canonical knowledge's
 Reference concept for the everyday command set. The document has no
 headings, so it declares a preamble and no sections.
 

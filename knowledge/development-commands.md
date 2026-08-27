@@ -17,7 +17,7 @@ Everything is wrapped as npm scripts (defined in
 What the annotated list does not say:
 
 - `npm run check:validate` is the binary validating this repo against both
-  specs it owns: the AOKF bundle, and the superdev-format files under the
+  specs it owns: the canonical project knowledge, and the superdev-format files under the
   trees the grammar names. It exits 1 on errors, and warnings alone still
   pass. The Claude Code hook runs the same whole-set check by a different
   route (`superdev aokf hook validate`), so the two cannot reach different

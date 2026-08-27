@@ -19,7 +19,7 @@ superdev sync                re-apply the blueprint; --dry-run prints the plan o
 superdev update [TARGET]     bring pins current, then sync;
                              TARGET is `<capability>[@<version>]`;
                              --provider <ID> switches TARGET's provider
-superdev validate [PATH...] check the AOKF bundle and the superdev-format
+superdev validate [PATH...] check the canonical project knowledge and the superdev-format
                              files; exit 1 on errors. A PATH replaces both
                              defaults. --json, --doc renders the grammar as
                              prose, --bundle <DIR>, --repo-root <DIR> for
@@ -27,9 +27,9 @@ superdev validate [PATH...] check the AOKF bundle and the superdev-format
 superdev aokf validate       (hidden; the same verb under its old name)
 superdev aokf index [PATH]   rebuild the search index from scratch
 superdev aokf hook validate  the Claude Code PostToolUse hook: payload on
-                             stdin, validate when the edit touched the bundle
+                             stdin, validate when the edit touched the canonical knowledge
                              or a tree the grammar governs
-superdev mcp aokf            serve the bundle to agents over MCP on stdio
+superdev mcp aokf            serve the canonical knowledge to agents over MCP on stdio
 superdev completions <SHELL> write a completion script to stdout
                              (bash | zsh | fish | powershell | elvish)
 superdev man                 (hidden; roff to stdout, for packaging)
@@ -59,7 +59,7 @@ Every verb acts on the current directory.
   with the directory name. Without a TTY there is no prompt and no template,
   so scripted init is unchanged. Template files are write-once scaffolds:
   existing files win and are reported as kept. A knowledge-enabled init ends
-  with the hint to run `/aokf-bootstrap` in Claude Code — filling the bundle
+  with the hint to run `/aokf-bootstrap` in Claude Code — filling the canonical knowledge
   from existing docs and an owner interview is judgement work the agent does
   after the mechanical scaffolding.
 - **`status`** never writes. It exits `1` on any drift, missing component,
@@ -125,8 +125,8 @@ server use it, `validate` never opens it.
   as text, or as the reference validator's JSON under `--json` — same keys,
   same `bundle` key, same exit codes, so anything scripted against the old
   Python validator still works. Warnings alone exit `0`; any error exits `1`.
-  A `PATH` replaces both defaults: only what it names is read, and the bundle
-  is validated only when a `PATH` is the bundle or contains it. The grammar
+  A `PATH` replaces both defaults: only what it names is read, and the canonical knowledge
+  is validated only when a `PATH` is the canonical knowledge or contains it. The grammar
   comes from `.agents/format/grammar.yaml`, or from the copy inside the binary
   when the repository has none.
 - **`aokf validate`** is the same verb under the name it shipped with, hidden
@@ -136,19 +136,19 @@ server use it, `validate` never opens it.
   syncs lazily on every tool call. It says so when no embedding model loaded
   and the index is lexical-only.
 - **`aokf hook validate`** reads the PostToolUse payload from stdin and exits
-  `0` unless the edited path is under the bundle or under a tree the grammar
+  `0` unless the edited path is under the canonical knowledge or under a tree the grammar
   governs. Then it validates the whole set in-process and, on errors, prints
   them to stderr and exits `2` — which Claude Code hands back to the agent as a
   blocking error. It resolves the repo from `CLAUDE_PROJECT_DIR` when Claude
   Code sets it, else the working directory.
 - **`mcp aokf`** serves one stdio client and exits `0` when that client closes
-  stdin. A missing bundle or an unusable index directory fails at startup
+  stdin. A missing knowledge or an unusable index directory fails at startup
   rather than at every tool call, because a client cannot act on the latter.
 
 # MCP tools
 
 Four read-only tools, stdio only, no resources or prompts. Every hit carries
-the locator set — bundle-relative path, concept id, heading path, line range,
+the locator set — knowledge-relative path, concept id, heading path, line range,
 snippet, score — so the next call can read exactly what matched.
 
 - **`aokf_search`** — `query`, optional `limit` (8 by default, clamped to
@@ -158,18 +158,18 @@ snippet, score — so the next call can read exactly what matched.
   down-ranked after fusion, so finished plans and issues sort below live
   knowledge without leaving the results. Results group by concept,
   strongest concept first.
-- **`aokf_read`** — `id` (or bundle-relative path), optional `heading`: the
+- **`aokf_read`** — `id` (or knowledge-relative path), optional `heading`: the
   whole concept, or one section named by heading or `a > b` heading path.
   `(root)` names the frontmatter-and-preamble section.
-- **`aokf_graph`** — no argument: the bundle-wide map of *declared* edges,
+- **`aokf_graph`** — no argument: the knowledge-wide map of *declared* edges,
   grouped by source. With `id`: that concept's single-hop neighbours in both
   directions. Each group caps at 30 lines and then says how many it dropped.
-- **`aokf_overview`** — the bundle name, its concept count, the directory tree
+- **`aokf_overview`** — the canonical knowledge name, its concept count, the directory tree
   with each concept's id and description, and every validation finding,
   warnings included, whenever there is one.
 
 A tool failure is an MCP error payload, never a process exit: an unknown id
-comes back with near-miss candidates, and a bundle that fails validation still
+comes back with near-miss candidates, and knowledge that fails validation still
 indexes and serves — agents need search most while fixing one. Reading a file
 the parser choked on quotes the parse error instead of guessing at near
 misses.

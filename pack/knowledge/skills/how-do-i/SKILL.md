@@ -31,12 +31,12 @@ skills and process files actually say, not from memory.
         `/prototype` from `/interface-design`, for throwaway code
         answering a question conversation cannot settle;
         `/research` from `/frame` and `/interface-design`, for
-        external facts from primary sources, filed in the bundle.
+        external facts from primary sources, filed in the canonical knowledge.
         All four also run standalone.
-      - Knowledge upkeep: `/bootstrap` (fill the bundle from the
+      - Knowledge upkeep: `/bootstrap` (fill the canonical knowledge from the
         repo and the owner; `/frame` calls it when an existing
-        project's bundle is empty), `/maintain` (audit and repair
-        the bundle and the workflow's records; run regularly).
+        project's knowledge is empty), `/maintain` (audit and repair
+        the canonical knowledge and the workflow's records; run regularly).
 - [ ] Question names a skill outside this map, or asks what else
       exists? Enumerate: the session's available-skills listing is
       the full roster; `.claude/skills/` holds the copies in this

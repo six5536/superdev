@@ -30,7 +30,7 @@ code depends on them.
       module boundaries, auth surface, and the UI.
 - [ ] Does a contract rest on a third-party API or another external
       fact? Establish it with `/research`; the findings land in the
-      bundle for later phases.
+      knowledge for later phases.
 - [ ] Backend interfaces: a written contract
       (`template-interface-contract`), each interface in its native
       language — SQL DDL for the schema, the host language's types or
@@ -50,7 +50,7 @@ code depends on them.
 - [ ] GATE: Does a new interface contradict the architecture or its
       rules? Reject it, or report the conflict for a deliberate
       change.
-- [ ] GATE: Bundle edited? Validate to PASS
+- [ ] GATE: Knowledge edited? Validate to PASS
       (`superdev aokf validate knowledge`).
 - [ ] GATE: Deciding anything internal? Leave it to build.
 

@@ -2,7 +2,7 @@
 type: Decision
 id: adr-017-aokf-conformance-is-pass-or-fail
 title: AOKF Conformance Is Pass or Fail
-description: The conformance ladder goes; a bundle passes or fails, because superdev grades at level 2 everywhere and the flag that reaches the other levels can only weaken a gate.
+description: The conformance ladder goes; knowledge passes or fails, because superdev grades at level 2 everywhere and the flag that reaches the other levels can only weaken a gate.
 status: stable
 links:
   - rel: relates-to
@@ -17,7 +17,7 @@ links:
 
 ## Context
 
-SPEC §11 makes bundle conformance a ladder of three levels, and the validator
+SPEC §11 makes knowledge conformance a ladder of three levels, and the validator
 implements it: `Finding` carries `error_at`, the lowest level at which a
 finding is fatal; `validate` takes a `checked_level` that "decides which
 findings count as errors, and nothing else"; `Report` carries both
@@ -31,15 +31,15 @@ caller grades at 2: `DEFAULT_LEVEL` is 2, the PostToolUse hook passes it,
 nor CI ever passes `--level`.
 
 It exists so a repository adopting AOKF over documentation it already has can
-be a legal bundle before it is a complete one — `type` on everything is level
+be a legal knowledge before it is a complete one — `type` on everything is level
 0, ids and a manifest reach level 1, typed links with body mirroring reach 2.
 That path costs a field in every finding, two in every report, and a flag that
-can quietly weaken the gates: `--level 0` passes a bundle with broken links
+can quietly weaken the gates: `--level 0` passes knowledge with broken links
 and no manifest through a hook and a CI check that both assume the default.
 
 ## Decision
 
-We will drop the ladder. A bundle passes or it fails. `Finding` carries a
+We will drop the ladder. Knowledge passes or it fails. `Finding` carries a
 severity rather than a level, `Report` drops `checked_level` and
 `achieved_level`, `achieved_level` goes entirely, and `--level` is removed. A
 repository adopting AOKF catches up rather than declaring a level it has
@@ -50,7 +50,7 @@ reached.
 | Option | Pros | Cons |
 |--------|------|------|
 | Drop the ladder; pass or fail | One model rather than four; a field leaves every finding and two leave every report; the gates can no longer be weakened by a flag | A repository mid-adoption has no legal intermediate state, so `validate` is red until it has caught up |
-| Keep the ladder as it is | Graduated adoption for repositories with existing documentation, and it is what the spec as published says | A dimension nothing exercises, and `--level 0` silently passes a bundle with broken links through gates written for the default |
+| Keep the ladder as it is | Graduated adoption for repositories with existing documentation, and it is what the spec as published says | A dimension nothing exercises, and `--level 0` silently passes knowledge with broken links through gates written for the default |
 | Keep the ladder, remove `--level` | Keeps the model, closes the foot-gun | Three levels with one reachable value is worse than either — the machinery stays and the reason for it does not |
 
 ## Consequences
@@ -60,7 +60,7 @@ reached.
   any level is now simply fatal.
 - Positive: the hook and the pre-PR check can no longer be weakened by a flag,
   because there is no flag.
-- Negative: SPEC §11 changes and the spec version bumps, so a bundle written
+- Negative: SPEC §11 changes and the spec version bumps, so knowledge written
   against the 0.2 ladder no longer has a level to claim.
 - Negative: `validator_parity` needs a third documented normalisation. Its
   goldens carry `checked_level`, `achieved_level` and a per-finding

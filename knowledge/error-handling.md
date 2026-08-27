@@ -12,7 +12,7 @@ resource: /crates/app/superdev/src/main.rs
 - `0` — success.
 - `1` — a check found something, not an error: `status` found work to do
   (drift, a missing component, an orphaned lock entry to sweep, or a pin behind
-  the registry), or `aokf validate` found errors in the bundle. CI gates on
+  the registry), or `aokf validate` found errors in the canonical knowledge. CI gates on
   both.
 - `2` — usage error (clap), a hard failure, or an I/O failure, rendered as
   `error: <message>` on stderr. A failed `sync` or `init` exits `2`, as does
@@ -35,12 +35,12 @@ that everything gating on the old script's exit code — the hook,
 
 `aokf hook validate` speaks Claude Code's hook protocol instead. It exits `0`
 whenever Claude Code should let the edit through: the payload names no file, or
-names one outside the bundle and the trees the format grammar governs, or names
+names one outside the canonical knowledge and the trees the format grammar governs, or names
 one the repository still validates against. Otherwise the findings go to stderr
 and it exits `2`, which Claude
 Code hands back to the agent as a blocking error. A payload it cannot read or
 parse is a loud `2` too — skipping silently would silently stop validating the
-bundle.
+knowledge.
 
 A missing `superdev` on PATH never reaches any of that: the hook command fails
 to start, which Claude Code reports as a failed command rather than a block.

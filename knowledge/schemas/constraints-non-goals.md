@@ -7,7 +7,7 @@ description: What the project deliberately does not do and the limitations it ac
 
 # Constraints & Non-Goals Schema
 
-Structural rules for `knowledge/constraints-non-goals.md`, the bundle's
+Structural rules for `knowledge/constraints-non-goals.md`, the canonical knowledge's
 Reference concept for the project's deliberate limits.
 
 ````yaml
@@ -53,7 +53,7 @@ example: |
 
   # Non-goals
 
-  - superdev does not run the agent. It prepares and validates the bundle the
+  - superdev does not run the agent. It prepares and validates the canonical knowledge the
     agent reads; anything that executes a model belongs to the host.
   - superdev does not host packs. It fetches from git over the allowed
     transports and nothing else.

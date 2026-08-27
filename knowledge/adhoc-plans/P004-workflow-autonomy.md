@@ -45,7 +45,7 @@ Non-goals:
 - No unattended merge to the default branch. `/execute-feature-plan` works
   on the branch `/frame` created, never on `main`; the user fast-forwards.
 - No validator rule for `Depends-on`. The feature-plan GATE and
-  `/double-check` cover it; `superdev aokf validate` stays a bundle
+  `/double-check` cover it; `superdev aokf validate` stays knowledge
   validator.
 
 ## Current state
@@ -57,7 +57,7 @@ Non-goals:
   states the constraint in prose ("both sit as early as their dependencies
   allow"), which nothing can check.
 - `pack/knowledge/skills/integrate/SKILL.md:31-42` edits the changelog, the
-  bundle and the plan, and commits none of it.
+  knowledge and the plan, and commits none of it.
 - Hooks are `ManagedItem::JsonEntry` against `.claude/settings.json`;
   `crates/lib/superdev-core/src/components/aokf.rs:83-89` declares the
   PostToolUse validation hook that way, and
@@ -163,7 +163,7 @@ not reach the default branch on its own.
    applies to plans cut from here on.
 
 3. **Branch and commit inside stages 1-3** — `/frame` creates the branch per
-   step 1's convention and commits its bundle edits; `/spec` commits the
+   step 1's convention and commits its knowledge edits; `/spec` commits the
    spec; `/interface-design` GATEs on the user's go-ahead, commits the
    contract and the ADRs, and hands to `/execute-feature-plan`.
 
@@ -211,7 +211,7 @@ not reach the default branch on its own.
    the guard on it — the counter is the guarantee.
 
    Register it as a second `ManagedItem::JsonEntry` in `components/aokf.rs`
-   at `hooks.Stop`, marker `superdev run hook`. It ships with the knowledge
+   at `hooks.Stop`, marker `superdev run hook`. It ships with the canonical knowledge
    capability, like the validation hook, so `--no-knowledge` never gets it.
    Document the four new verbs in `knowledge/api-contracts.md`: they join a
    surface that carries a stability promise.
@@ -233,7 +233,7 @@ not reach the default branch on its own.
 | `knowledge/development-procedure.md` | modified — this repo's branch convention and commit points |
 | `pack/knowledge/templates/feature-plan.md` | modified — `Depends-on:` per slice, `## Deferred decisions` |
 | `pack/knowledge/skills/feature-plan/SKILL.md` | modified — state dependencies, order topologically, forward-reference GATE |
-| `pack/knowledge/skills/frame/SKILL.md` | modified — create the branch, commit the bundle edits |
+| `pack/knowledge/skills/frame/SKILL.md` | modified — create the branch, commit the canonical knowledge edits |
 | `pack/knowledge/skills/spec/SKILL.md` | modified — commit the spec |
 | `pack/knowledge/skills/interface-design/SKILL.md` | modified — go-ahead GATE, commit the contract and ADRs, hand off |
 | `pack/knowledge/skills/integrate/SKILL.md` | modified — commit the records after a successful merge |

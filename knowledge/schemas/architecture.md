@@ -7,7 +7,7 @@ description: The system's layers, its subsystems, and the files it reads and wri
 
 # Architecture Schema
 
-Structural rules for `knowledge/architecture.md`, the bundle's Reference
+Structural rules for `knowledge/architecture.md`, the canonical knowledge's Reference
 concept for the system's shape. One named file rather than a family, so
 `target-files` names it exactly. The subsystem headings are the author's to
 choose; the literal headings around them win over the pattern.
@@ -58,15 +58,15 @@ example: |
   type: Reference
   id: architecture
   title: Architecture
-  description: A Rust core owning packs and the bundle, with a thin CLI over it.
+  description: A Rust core owning packs and the canonical knowledge, with a thin CLI over it.
   status: stable
   ---
 
   superdev is a Rust workspace: a core library owns pack resolution, the
-  knowledge bundle and the lockfile, and a thin CLI drives it. The dependency
+  knowledge and the lockfile, and a thin CLI drives it. The dependency
   runs one way, and ADR-012 sets the transport rules the shape enforces.
 
-  - `superdev-core` — pack resolution, manifest and lock handling, bundle
+  - `superdev-core` — pack resolution, manifest and lock handling, knowledge
     reads. Must not know how it was invoked.
   - `superdev-cli` — argument parsing, output formatting, exit codes. Knows
     the core; the core never knows it.

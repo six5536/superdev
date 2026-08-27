@@ -55,7 +55,7 @@ status: stable
 - **Knowledge-carried skill** — one of the 17 aokf-carried skills the
   `knowledge` capability materialises into `.claude/skills/<name>/` as owned
   files, each skill its whole directory: SKILL.md, companions, harness
-  configs. The set exists exactly where a bundle exists. See the
+  configs. The set exists exactly where knowledge exists. See the
   [spec](specs/S009-knowledge-carried-skills-design.md).
 - **Content pack** — a versioned set of superdev's prose content: skills,
   document templates, project templates, knowledge skeletons and the
@@ -104,7 +104,7 @@ status: stable
   than drifted. A name the capability no longer ships reports as having no
   effect instead of failing.
 - **Harvest** — the move `aokf-bootstrap` performs: relocate a durable fact from
-  stranded prose (or an opted-in code comment) into the bundle, leaving a
+  stranded prose (or an opted-in code comment) into the canonical knowledge, leaving a
   one-line summary and a link behind in the source. See the
   [spec](specs/S008-knowledge-owned-skills-design.md).
 - **Claim** — a typed lock entry a component declares it owns: a file, a
@@ -119,7 +119,7 @@ Terms from the knowledge-serving side:
 - **Section** — the unit of retrieval: one heading's body, or the root section
   (frontmatter plus anything before the first heading). A concept is indexed,
   searched and returned section by section, never whole.
-- **Locator** — what a hit carries so it can be read next: bundle-relative
+- **Locator** — what a hit carries so it can be read next: knowledge-relative
   path, concept id, heading path, line range, snippet, score.
 - **Hybrid search** — running the lexical index and the vector index over the
   same sections and merging the two rankings. Exact terms are found by BM25,

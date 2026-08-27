@@ -6,7 +6,7 @@ description: Where issues live — one AOKF concept per ticket under knowledge/i
 status: stable
 ---
 
-Issues live as markdown files in this bundle, not on GitHub. Specs and
+Issues live as markdown files in this knowledge, not on GitHub. Specs and
 plans already live here; issues follow the same conventions. The
 workflow skills read this concept to learn where to publish and fetch:
 `/accept` files gap issues here, `/feature-plan` picks them up, and
@@ -29,7 +29,7 @@ workflow skills read this concept to learn where to publish and fetch:
   [Triage labels](#triage-labels)).
 - An issue or plan that implements a spec declares the link from its own
   side (`implements` → the spec's id), so deleting it leaves no dangling
-  edges in the bundle; one that merely cites or affects a spec uses
+  edges in the canonical knowledge; one that merely cites or affects a spec uses
   `references` the same way.
 - Comments and conversation history append under a `## Comments` heading.
 - A resolved issue stays: swap its state tag to `done` (or keep

@@ -4,17 +4,18 @@
 **Status:** Draft
 **Date:** 2026-08-18
 
-AOKF is a format for a project knowledgebase: a directory of markdown
+AOKF is a format for canonical project knowledge: a directory of markdown
 files with YAML frontmatter, kept inside the project's repository and
 maintained largely by AI agents. Content is unrestricted; architecture
 notes, decisions, conventions, and playbooks are typical. AOKF is a
 superset of the Open Knowledge Format (OKF) v0.2; familiarity with OKF
 is not assumed, and this document stands alone.
 
-The frontmatter identifies each document and carries its trust state:
-what kind of document it is, what it describes, what it derives from,
-how it relates to other documents, who has verified it. These fields
-are constrained because the writers are mostly LLMs: an LLM cannot be
+The frontmatter — the YAML block delimited by `---` at the top of each
+file (§1) — identifies each document and carries its trust state: what
+kind of document it is, what it describes, what it derives from, how it
+relates to other documents, who has verified it. These fields are
+constrained because the writers are mostly LLMs: an LLM cannot be
 relied on to record a fact (an author, a timestamp, a review)
 truthfully, and a validator cannot detect a fabricated value that
 parses. The format therefore:
@@ -37,12 +38,13 @@ closed to agents, that records verification (§7).
 
 ## 1. Terminology
 
-- **Bundle**: the directory tree of knowledge documents.
+- **Canonical project knowledge**, or just **the canonical knowledge**: the
+  directory tree of knowledge documents.
 - **Concept**: one unit of knowledge, one markdown file.
 - **Frontmatter**: the YAML block delimited by `---` at the top of a
   file. **Body**: everything after it.
-- **Manifest**: the optional `manifest.aokf.yaml` at the bundle root,
-  describing the bundle as a whole (§2).
+- **Manifest**: the optional `manifest.aokf.yaml` at the canonical knowledge
+  root, describing the canonical knowledge as a whole (§2).
 - **Source**: a material a concept derives from, recorded in `sources`.
 - **Link**: a directed, typed relationship from one concept to another,
   declared in `links` (§8).
@@ -52,16 +54,16 @@ closed to agents, that records verification (§7).
 - **Agent**: an LLM-driven writer. The write classes exist to bound what
   it may touch.
 
-## 2. Bundle structure
+## 2. Knowledge structure
 
-The bundle is a directory inside the repository (for example
+The canonical knowledge is a directory inside the repository (for example
 `/knowledge`). Subdirectories group concepts however suits the
 project; paths carry no mandated meaning, and identity does not depend
 on them (§5).
 
 ```
-<bundle>/
-  manifest.aokf.yaml  # Optional bundle manifest.
+<knowledge>/
+  manifest.aokf.yaml  # Optional knowledge manifest.
   index.md            # Optional directory listing (§9).
   <concept>.md
   <subdirectory>/
@@ -69,22 +71,22 @@ on them (§5).
     <concept>.md
 ```
 
-Reserved files are `manifest.aokf.yaml` (bundle root only) and
+Reserved files are `manifest.aokf.yaml` (knowledge root only) and
 `index.md` (any directory); neither is a concept. Every other `.md`
 file is a concept. There is no change-log file: git log is the change
 history.
 
-The manifest declares the bundle:
+The manifest declares the canonical knowledge:
 
 ```yaml
-aokf: "0.3" # spec version the bundle targets
+aokf: "0.3" # spec version the canonical knowledge targets
 name: example-knowledge
-description: Knowledgebase for the example project.
+description: Knowledge for the example project.
 ```
 
 `producer`, `generated`, and `counts` keys are stamped (§4): written by
-tooling when a bundle is exported for use outside the repository, never
-present in the working tree.
+tooling when the canonical knowledge is exported for use outside the
+repository, never present in the working tree.
 
 ## 3. Concept documents
 
@@ -128,11 +130,11 @@ tables, fenced code) over freeform prose; there are no required
 sections. Per-claim attribution uses footnotes keyed to `sources[].id`
 (§6).
 
-Knowledge MUST NOT be duplicated between the bundle and the rest of the
-repository. When a document has to exist outside the bundle (a README,
+Knowledge MUST NOT be duplicated between the canonical knowledge and the
+rest of the repository. When a document has to exist outside it (a README,
 contributor docs), the concept covering that ground carries a concise
 summary and cites the file in `sources`; it does not copy the content.
-Knowledge with no such external home lives in the bundle only.
+Knowledge with no such external home lives here only.
 
 ## 4. Write classes
 
@@ -176,7 +178,7 @@ that asserts a fact nobody can check is `restricted` or `stamped`.
 `id` gives a concept an identity that survives file moves.
 
 - An `id` is a slug: lowercase, words separated by `-`. It MUST be
-  unique within the bundle.
+  unique within the canonical knowledge.
 - Once assigned, an `id` MUST NOT change, even when the file is renamed
   or moved. For agent commits the diff check enforces this (§10); a
   human may change one deliberately and take responsibility for the
@@ -314,7 +316,7 @@ meaning of such a link lives in the surrounding prose.
 
 Consumers tolerate broken links, but the validator warns on them
 (§10), since a broken link usually means the target was renamed and the
-knowledgebase has not caught up.
+knowledge has not caught up.
 
 An `index.md` may appear in any directory to list its contents, so a
 reader can see what exists before opening files. It contains no
@@ -342,8 +344,8 @@ Two deterministic layers. Both run without an LLM.
 3. `restricted` fields, when present, are well-formed (`verified`
    entries each have `by` in `human:`/`process:` form and an ISO 8601
    `at`).
-4. `id` values are valid slugs and unique across the bundle. `links`
-   entries each have `rel` and `to`.
+4. `id` values are valid slugs and unique across the canonical
+   knowledge. `links` entries each have `rel` and `to`.
 5. Warn on: broken `/`-paths and relative links, a `links` `to` that
    resolves to nothing, a `links` entry with no mirroring body link,
    `sources` entries the body cites but that lack an `id`, footnote
@@ -365,7 +367,7 @@ enforces the write classes; without it they are only a convention.
 
 ## 11. Conformance
 
-A bundle conforms when all of the following hold.
+Knowledge conforms when all of the following hold.
 
 - Every non-reserved `.md` file passes the document check (§10).
 - Every concept has a unique `id`, and a manifest declares `aokf` and
@@ -374,9 +376,9 @@ A bundle conforms when all of the following hold.
   mirrored by a body link (§8).
 
 A repository conforms if, additionally, its agent commits pass the diff
-check (§10). This is independent of whether the bundle conforms.
+check (§10). This is independent of whether the canonical knowledge conforms.
 
-Consumers must be permissive. In particular, never reject a bundle for
+Consumers must be permissive. In particular, never reject knowledge for
 missing optional fields, unknown `type` values, unknown frontmatter
 keys, unknown `rel` values, broken links, or a missing `index.md` or
 manifest.
@@ -385,4 +387,5 @@ manifest.
 
 This document specifies AOKF **0.3**. Before 1.0 a minor bump may break.
 From 1.0 minor bumps are backward-compatible additions and major bumps may
-break. A bundle declares the version it targets with the manifest's `aokf` key (§2).
+break. The canonical knowledge declares the version it targets with the
+manifest's `aokf` key (§2).

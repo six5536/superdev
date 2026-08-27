@@ -7,7 +7,7 @@ description: The deliverables and the CI/CD that builds them, in knowledge/softw
 
 # Software Components Schema
 
-Structural rules for `knowledge/software-components.md`, the bundle's
+Structural rules for `knowledge/software-components.md`, the canonical knowledge's
 Reference concept for the deliverables. The component headings are the
 author's to name; `CI/CD` is literal and wins over the pattern.
 

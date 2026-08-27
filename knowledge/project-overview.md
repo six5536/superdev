@@ -11,11 +11,11 @@ sources:
 ---
 
 superdev sets a repository up for agent-driven development and keeps that
-setup current. Run inside a target repo, `init` installs the tooling — a
-knowledgebase carrying a full engineering skill set as committed repo
-files, a code index, a skill pack — and records what it did; `status`,
+setup current. Run inside a target repo, `init` installs the tooling —
+knowledge carrying a full engineering skill set as committed repo files,
+a code index, a skill pack — and records what it did; `status`,
 `sync` and `update` keep the repo matching the blueprint compiled into the
-binary.[^readme] `mcp aokf` then serves that knowledgebase back to agents, so
+binary.[^readme] `mcp aokf` then serves that knowledge back to agents, so
 they search it instead of swallowing it whole. It is opinionated for this
 project's stack (Claude Code, mise, AOKF); generalisation is not a goal yet.
 See

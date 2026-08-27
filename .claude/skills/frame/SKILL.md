@@ -35,7 +35,7 @@ You define the problem, not the solution. Frame the project or feature given in 
 <step name="INTERVIEW THE USER" task="/grill-me: resolve the open decisions, the gaps, and every competing reading of the intent" />
 <step name="CHOOSE TECH STACK" when="if new project" task="Choose the tech stack — `/research` settles an open technology question"/>
 <step name="CHOOSE VISUAL SYSTEM" when="if new project" task="set the visual system with `/frontend-design`" />
-<step name="CREATE README AND KNOWLEDGEBASE" when="if new project" task="create the README and the knowledgebase from the templates" />
+<step name="CREATE README AND KNOWLEDGE" when="if new project" task="create the README and the canonical knowledge from the templates" />
 <step name="RECORD THE DECISIONS" task="Record the decisions: move a feature taken up out of the backlog; record a rejected idea under decided-against with the reasoning; add a term the project will keep to the glossary." />
 <loop until="the check finds nothing left to fix" max="3">
 <step name="DOUBLE-CHECK" task="/double-check the frame; fix what it finds" />

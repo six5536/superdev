@@ -22,21 +22,21 @@ setup current. Three layers, detailed in the
 
 - **`superdev-core`** — the domain: the manifest, the components, planning,
   the engine that applies a plan, and the `aokf` subsystem that reads the
-  knowledge bundle back out.
+  knowledge back out.
 - **`superdev` (binary)** — argument parsing, output rendering, exit codes.
 - **The blueprint** — superdev's opinion of a managed repo, compiled into the
   binary: the component set plus a registry of default versions tested
   together. The binary's version is the blueprint version.
 
-# Serving the knowledge bundle
+# Serving the canonical knowledge
 
 Installing the `knowledge` capability is half of it; the other half is reading
-it back. The `aokf` subsystem parses the bundle, validates it, indexes it, and
+it back. The `aokf` subsystem parses the canonical knowledge, validates it, indexes it, and
 serves it to agents over MCP (`superdev mcp aokf`), so an agent queries the
-knowledgebase instead of preloading every concept — the design is in the
+knowledge instead of preloading every concept — the design is in the
 [AOKF MCP server spec](specs/S002-aokf-mcp-server-design.md), the tools
 in [api-contracts](api-contracts.md). Freshness is lazy: every tool call
-re-hashes the bundle and syncs only what changed, so there is no watcher and
+re-hashes the canonical knowledge and syncs only what changed, so there is no watcher and
 no daemon state to go stale.
 
 # Content resolves before planning
@@ -96,7 +96,7 @@ materialised as its whole directory of owned files, and the document
 templates the skills fill in as owned files under `knowledge/templates/`
 ([spec](specs/S009-knowledge-carried-skills-design.md)). It also merges the
 validation hook's PostToolUse entry into `.claude/settings.json`, so hook and
-skills exist exactly where a bundle exists
+skills exist exactly where knowledge exists
 ([spec](specs/S008-knowledge-owned-skills-design.md)).
 
 # Files in a managed repo

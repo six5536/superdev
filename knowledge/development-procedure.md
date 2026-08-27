@@ -2,7 +2,7 @@
 type: Procedure
 id: development-procedure
 title: Development Procedure
-description: Setup, the spec-and-plan change workflow, what to run before a PR, how this repo manages its own skills, and how it serves and searches its own knowledgebase.
+description: Setup, the spec-and-plan change workflow, what to run before a PR, how this repo manages its own skills, and how it serves and searches its own knowledge.
 status: stable
 sources:
   - id: contributing
@@ -26,7 +26,7 @@ no Node.
 2. Implement with focused commits, using
    [Conventional Commits](https://www.conventionalcommits.org/) (`feat:`,
    `fix:`, `docs:`, `test:`, `refactor:`, `chore:`).
-3. Update this knowledgebase when behaviour or design changes.
+3. Update this knowledge when behaviour or design changes.
 4. Before a PR, run the full CI-equivalent check list (see
    [development-commands](development-commands.md)) and meet
    [definition-of-done](definition-of-done.md). CI runs tests on macOS and
@@ -40,8 +40,8 @@ superdev fills the `skills`, `knowledge`, `code-index` and
 and `.superdev/lock.toml`, with `cargo run -- sync` writing the three
 pack skills, the knowledge-carried skill set with its PostToolUse hook
 entry, the `.agents` files, the codegraph pin, index and agent wiring,
-and the rtk pin files with their PreToolUse rewrite hook. The knowledge
-scaffolds (the bundle) were this repo's before the capability was
+and the rtk pin files with their PreToolUse rewrite hook. The canonical knowledge
+scaffolds (the canonical knowledge) were this repo's before the capability was
 enabled, so they are untouched; `frontend` stays off.
 `npm run check:blueprint` is what catches drift in the shipped skill assets —
 in the pre-PR list and in CI, through the product's own drift detection rather
@@ -73,9 +73,9 @@ The managed hook entry names a bare `superdev`, and this repo has no installed
 copy. `scripts/superdev` execs `cargo run` against this tree; symlink it onto
 your PATH once, as [CONTRIBUTING](/CONTRIBUTING.md) says.
 
-# Working with this repo's knowledgebase
+# Working with this repo's knowledge
 
-The bundle is served to agents over MCP. `.mcp.json` and the hook name a
+The canonical knowledge is served to agents over MCP. `.mcp.json` and the hook name a
 bare `superdev`, which the dev shim (`scripts/superdev`, symlinked onto PATH
 per [CONTRIBUTING](/CONTRIBUTING.md)) execs as `cargo run` against this
 tree; `npm run check:validate` runs `cargo run --quiet -- validate`

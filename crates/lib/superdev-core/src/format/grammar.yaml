@@ -270,7 +270,7 @@ kinds:
           path:
             doc: for file reads
           id:
-            doc: for knowledge-base reads
+            doc: for knowledge reads
           query:
             doc: for search-shaped tools whose target is a question or a code location
           when:

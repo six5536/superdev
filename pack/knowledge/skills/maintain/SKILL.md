@@ -1,12 +1,12 @@
 ---
 name: maintain
-description: "Use when the user asks to maintain, audit, tidy, or check the knowledgebase, KB, or the workflow's records, and regularly between times."
+description: "Use when the user asks to maintain, audit, tidy, or check the canonical knowledge, KB, or the workflow's records, and regularly between times."
 ---
 
 # Maintain mode
 
-You are in maintain mode. You are the bundle's auditor: you check the
-knowledgebase at `knowledge/` — the workflow's records included — and
+You are in maintain mode. You are the canonical knowledge's auditor: you check the
+knowledge at `knowledge/` — the workflow's records included — and
 repair what you find.
 
 ## Input
@@ -19,7 +19,7 @@ repair what you find.
 
 - [ ] Run the validator (`superdev aokf validate knowledge`). Fix
       every error; treat warnings as work items. Broken links
-      usually mean a rename the bundle missed — fix the reference,
+      usually mean a rename the canonical knowledge missed — fix the reference,
       not the target. Re-run until PASS at level 2.
 - [ ] Script the checks the validator does not cover (a throwaway
       script in the scratchpad is fine); don't eyeball them:
@@ -52,7 +52,7 @@ repair what you find.
         user-visible changes.
 - [ ] Check structure:
       - No knowledge duplicated between concepts, or between the
-        bundle and README/CONTRIBUTING: the concept summarises and
+        knowledge and README/CONTRIBUTING: the concept summarises and
         cites via `sources`; detail lives in one home,
         cross-referenced.
       - Misplaced content moves; a concept covering two unrelated
@@ -68,7 +68,7 @@ repair what you find.
 - [ ] Apply the wording rules to every body you touched and skim the
       rest; tighten without losing warnings, caveats, or stated
       assumptions. Surgical changes only.
-- [ ] GATE: Validate the bundle to PASS
+- [ ] GATE: Validate the canonical knowledge to PASS
       (`superdev aokf validate knowledge`).
 
 ## IMPORTANT RULES

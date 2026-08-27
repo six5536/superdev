@@ -69,7 +69,7 @@ files are brought into line when touched, not in bulk.
 
 # The code is the canonical reference
 
-README, CLI `--help`, and this knowledgebase all describe actual behaviour.
+README, CLI `--help`, and this knowledge all describe actual behaviour.
 When a doc disagrees with the code, fix the doc — unless the code is wrong, in
 which case fix the code and say so.
 

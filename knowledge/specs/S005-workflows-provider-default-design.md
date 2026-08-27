@@ -138,7 +138,7 @@ ships the matching override file:
   `Spec`, unique id, `draft` until implemented); `wayfinder` and
   `to-tickets` plans go to `knowledge/plans/`, ephemeral, deleted when the
   work lands; decisions and ADRs live as AOKF `Decision` concepts, not
-  `docs/adr/`; nothing the skills write may duplicate ground the bundle
+  `docs/adr/`; nothing the skills write may duplicate ground the canonical knowledge
   covers.
 - workflows disabled → no override file. Today `SUPERPOWERS.md` ships
   unconditionally; that becomes provider-gated.

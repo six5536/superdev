@@ -85,7 +85,7 @@ enum Command {
     /// Serve project subsystems over MCP
     #[command(subcommand)]
     Mcp(aokf_cli::McpCommand),
-    /// AOKF knowledgebase commands
+    /// Canonical project knowledge commands
     #[command(subcommand)]
     Aokf(aokf_cli::AokfCommand),
     /// Write a completion script for the given shell to stdout

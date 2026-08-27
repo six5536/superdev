@@ -23,7 +23,7 @@ You decide only the interfaces that will be expensive to change once other code 
 
 <process_actions>
 <step name="DECIDE WHAT IS EXPENSIVE" task="Decide what is expensive to change: data schema, API contracts, module boundaries, auth surface, and the UI" />
-<step name="ESTABLISH EXTERNAL FACTS" task="Does a contract rest on a third-party API or another external fact? Establish it with `/research`; the findings land in the bundle for later phases" />
+<step name="ESTABLISH EXTERNAL FACTS" task="Does a contract rest on a third-party API or another external fact? Establish it with `/research`; the findings land in the canonical knowledge for later phases" />
 <step name="WRITE BACKEND CONTRACTS" task="Backend interfaces: a written contract per `schema-interface-contract`" />
 <step name="MOCK THE UI" task="UI: a mockup (`/design`; `/frontend-design` for the visual direction) or a throwaway prototype (`/prototype`). Discard it and build against it" />
 <step name="INTERVIEW THE USER" task="Interview the user (`/grill-me`) on each decision and its alternatives before filing the ADR. A question conversation cannot settle gets a runnable answer (`/prototype`)" />
