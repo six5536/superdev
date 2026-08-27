@@ -11,7 +11,7 @@ repair what you find.
 
 ## Input
 
-- The format spec at `.agents/aokf/SPEC.md` and the wording rules at
+- The format spec at `.agents/sokf/SPEC.md` and the wording rules at
   `.agents/professionalism.md`; read both before editing.
 - $ARGUMENTS — concepts or checks to focus on, when given.
 

@@ -21,7 +21,7 @@ macro_rules! asset {
 }
 
 /// The one asset carrying a `{name}` token, replaced with the repo's name.
-const NAMED_ASSET: &str = "knowledge/manifest.aokf.yaml";
+const NAMED_ASSET: &str = "knowledge/manifest.sokf.yaml";
 
 /// The workflow-framework override each provider gets, as
 /// (provider id, target path, embedded asset).
@@ -44,14 +44,14 @@ const CLAUDE_ENTRY_LINE: &str = "@AGENTS.md";
 /// binary and no pack may supply them.
 const BINARY_OWNED: &[(&str, &str, &str)] = &[
     (
-        ".agents/aokf/SPEC.md",
-        asset!("aokf/agents/aokf/SPEC.md"),
-        "AOKF specification",
+        ".agents/sokf/SPEC.md",
+        asset!("knowledge/agents/knowledge/SPEC.md"),
+        "SOKF specification",
     ),
     (
-        ".agents/aokf.md",
-        asset!("aokf/agents/aokf.md"),
-        "knowledge instructions",
+        ".agents/sokf.md",
+        asset!("knowledge/agents/knowledge.md"),
+        "SOKF knowledge instructions",
     ),
 ];
 
@@ -66,8 +66,8 @@ pub(crate) fn binary_owned_count() -> usize {
 /// scaffold a pack adds needs no entry here — it takes the generic reason and
 /// sorts with the concepts, after the structural files that frame them.
 const SKELETON_REASONS: &[(&str, &str)] = &[
-    ("index.md", "bundle index"),
-    ("manifest.aokf.yaml", "bundle manifest"),
+    ("index.md", "knowledge index"),
+    ("manifest.sokf.yaml", "SOKF manifest"),
     ("specs", "specs index"),
     ("plans", "plans index"),
     ("issue-tracker.md", "issue-tracker convention"),
@@ -365,19 +365,19 @@ mod tests {
                 a,
                 Action::WriteFile { path, .. } if path == "AGENTS.md"
             )),
-            "AGENTS.md planned by the aokf component"
+            "AGENTS.md planned by the SOKF component"
         );
         let instructions = actions
             .into_iter()
             .find_map(|a| match a {
-                Action::WriteFile { path, content, .. } if path == ".agents/aokf.md" => {
+                Action::WriteFile { path, content, .. } if path == ".agents/sokf.md" => {
                     Some(content)
                 }
                 _ => None,
             })
             .unwrap();
         // Sibling-relative imports: they resolve from `.agents/`.
-        assert!(instructions.contains("@aokf/SPEC.md"), "{instructions}");
+        assert!(instructions.contains("@sokf/SPEC.md"), "{instructions}");
         assert!(
             instructions.contains("@../knowledge/index.md"),
             "{instructions}"
@@ -398,10 +398,10 @@ mod tests {
                 other => panic!("unexpected action {other:?}"),
             })
             .collect();
-        assert!(paths.contains(&".agents/aokf/SPEC.md"));
-        assert!(paths.contains(&".agents/aokf.md"));
+        assert!(paths.contains(&".agents/sokf/SPEC.md"));
+        assert!(paths.contains(&".agents/sokf.md"));
         let manifest_action = actions.iter().find_map(|a| match a {
-            Action::WriteFile { path, content, .. } if path == "knowledge/manifest.aokf.yaml" => {
+            Action::WriteFile { path, content, .. } if path == "knowledge/manifest.sokf.yaml" => {
                 Some(content)
             }
             _ => None,
@@ -473,7 +473,7 @@ mod tests {
         // A user edit to a scaffold stays untouched…
         std::fs::write(dir.path().join("AGENTS.md"), "customised").unwrap();
         // …but an edit to an owned file is drift.
-        std::fs::write(dir.path().join(".agents/aokf/SPEC.md"), "tampered").unwrap();
+        std::fs::write(dir.path().join(".agents/sokf/SPEC.md"), "tampered").unwrap();
         let replanned = plan_in(dir.path());
         let paths: Vec<String> = replanned
             .iter()
@@ -487,7 +487,7 @@ mod tests {
                 other => panic!("unexpected action {other:?}"),
             })
             .collect();
-        assert_eq!(paths, vec![".agents/aokf/SPEC.md".to_string()]);
+        assert_eq!(paths, vec![".agents/sokf/SPEC.md".to_string()]);
     }
 
     #[test]

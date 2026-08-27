@@ -8,7 +8,7 @@ use std::time::Duration;
 
 use assert_cmd::Command;
 
-/// The repository root: where `aokf validate` finds the live `knowledge/`.
+/// The repository root: where `validate` finds the live SOKF knowledge.
 const REPO_ROOT: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../../..");
 
 fn superdev() -> Command {
@@ -318,8 +318,8 @@ fn write_fixture_bundle(dir: &Path) {
     let bundle = dir.join("knowledge");
     std::fs::create_dir(&bundle).unwrap();
     std::fs::write(
-        bundle.join("manifest.aokf.yaml"),
-        "aokf: \"0.1\"\nname: fixture-knowledge\n",
+        bundle.join("manifest.sokf.yaml"),
+        "sokf: \"0.1\"\nname: fixture-knowledge\n",
     )
     .unwrap();
     std::fs::write(
@@ -343,8 +343,8 @@ fn hook_repo(valid: bool) -> tempfile::TempDir {
     let k = dir.path().join("knowledge");
     std::fs::create_dir_all(&k).unwrap();
     std::fs::write(
-        k.join("manifest.aokf.yaml"),
-        "aokf: \"0.1\"\nname: fixture\n",
+        k.join("manifest.sokf.yaml"),
+        "sokf: \"0.1\"\nname: fixture\n",
     )
     .unwrap();
     let concept = if valid {
@@ -1774,7 +1774,7 @@ fn disabling_skills_sweeps_them_and_releases_the_users_edit() {
     assert!(lock.contains("hooks.PostToolUse"), "{lock}");
     assert!(!lock.contains("[components.skills]"), "{lock}");
     // SOKF's files stay locked: the sweep is targeted at the pack alone.
-    assert!(lock.contains(".agents/aokf/SPEC.md"), "{lock}");
+    assert!(lock.contains(".agents/sokf/SPEC.md"), "{lock}");
     // No provider record, though — SOKF fills no slot, so there is no
     // provider choice for the lock to remember.
     assert!(!lock.contains("[components.knowledge]"), "{lock}");

@@ -8,7 +8,7 @@ sources:
     resource: /.claude/skills/research/SKILL.md
     title: Research Skill
   - id: aokf-spec
-    resource: /.agents/aokf/SPEC.md
+    resource: /.agents/sokf/SPEC.md
     title: AOKF Specification
 ---
 

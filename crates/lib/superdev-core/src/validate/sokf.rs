@@ -33,7 +33,7 @@ const CORE_RELS: [&str; 12] = [
     "implemented-by",
 ];
 
-const MANIFEST: &str = "manifest.aokf.yaml";
+const MANIFEST: &str = "manifest.sokf.yaml";
 
 /// One thing the check found.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -210,7 +210,7 @@ fn check_identities(bundle: &Bundle, findings: &mut Vec<Finding>) -> HashMap<Str
 }
 
 /// The manifest parses and carries no stamped keys (document check); it
-/// exists and declares `aokf` and `name`.
+/// exists and declares `sokf` and `name`.
 fn check_manifest(bundle: &Bundle, findings: &mut Vec<Finding>) {
     if let Some(message) = &bundle.manifest_error {
         findings.push(error(MANIFEST, format!("manifest parse error: {message}")));
@@ -233,7 +233,7 @@ fn check_manifest(bundle: &Bundle, findings: &mut Vec<Finding>) {
             ));
         }
     }
-    for key in ["aokf", "name"] {
+    for key in ["sokf", "name"] {
         if !truthy(&manifest.raw[key]) {
             findings.push(error(MANIFEST, format!("manifest missing `{key}`")));
         }
@@ -745,14 +745,14 @@ mod tests {
         (load_bundle(dir.path()).unwrap(), dir)
     }
 
-    const MANIFEST_YAML: &str = "aokf: \"0.1\"\nname: t\n";
+    const MANIFEST_YAML: &str = "sokf: \"0.1\"\nname: t\n";
     const A_MIRRORED: &str = "---\ntype: T\nid: alpha\nlinks:\n  - rel: depends-on\n    to: beta\n---\nSee [beta](beta.md).\n";
     const B: &str = "---\ntype: T\nid: beta\n---\nx\n";
 
     #[test]
     fn clean_bundle_passes() {
         let (b, _dir) = bundle_with(&[
-            ("manifest.aokf.yaml", MANIFEST_YAML),
+            ("manifest.sokf.yaml", MANIFEST_YAML),
             ("a.md", A_MIRRORED),
             ("beta.md", B),
         ]);
@@ -767,7 +767,7 @@ mod tests {
     #[test]
     fn implements_is_core_and_warns_nothing() {
         let (b, _dir) = bundle_with(&[
-            ("manifest.aokf.yaml", MANIFEST_YAML),
+            ("manifest.sokf.yaml", MANIFEST_YAML),
             (
                 "plan.md",
                 "---\ntype: Plan\nid: alpha\nlinks:\n  - rel: implements\n    to: beta\n---\nSee [beta](spec.md).\n",
@@ -796,7 +796,7 @@ mod tests {
     #[test]
     fn unmirrored_link_fails() {
         let files = [
-            ("manifest.aokf.yaml", MANIFEST_YAML),
+            ("manifest.sokf.yaml", MANIFEST_YAML),
             (
                 "a.md",
                 "---\ntype: T\nid: alpha\nlinks:\n  - rel: depends-on\n    to: beta\n---\nno body link\n",
@@ -817,8 +817,8 @@ mod tests {
         let broken_a = "---\ntype: \"\"\nid: Bad_Slug\ngenerated: {by: agent}\nresource: /nowhere.rs\nverified: {by: nobody, at: yesterday}\nsources:\n  - id: ok-src\n    resource: /beta.md\n  - title: no resource\n  - \"not a mapping\"\n  - resource: /missing.rs\n    id: gone-src\nlinks:\n  - to: beta\n  - rel: Bad Rel\n    to: beta\n  - rel: made-up\n    to: beta\n  - rel: depends-on\n  - rel: depends-on\n    to: nowhere-at-all\n  - rel: depends-on\n    to: beta\n  - \"not a mapping\"\n---\nCites [^ok-src] and [^unknown].\n\nA [broken](nope.md) link and a good [beta](beta.md).\n\n[^ok-src]: Beta\n[^unknown]: nothing\n";
         let (b, _dir) = bundle_with(&[
             (
-                "manifest.aokf.yaml",
-                "aokf: \"0.1\"\ncounts: 3\ngenerated: {by: x}\n",
+                "manifest.sokf.yaml",
+                "sokf: \"0.1\"\ncounts: 3\ngenerated: {by: x}\n",
             ),
             (
                 "index.md",
@@ -848,9 +848,9 @@ mod tests {
                 "error|a.md|`id` is not a valid slug: 'Bad_Slug'",
                 "error|dup.md|duplicate `id` 'beta' (also in beta.md)",
                 "error|nofm.md|no frontmatter: expected a `---` line, then a closing `---`",
-                "error|manifest.aokf.yaml|stamped key `generated` present in the working tree",
-                "error|manifest.aokf.yaml|stamped key `counts` present in the working tree",
-                "error|manifest.aokf.yaml|manifest missing `name`",
+                "error|manifest.sokf.yaml|stamped key `generated` present in the working tree",
+                "error|manifest.sokf.yaml|stamped key `counts` present in the working tree",
+                "error|manifest.sokf.yaml|manifest missing `name`",
                 "error|a.md|missing or empty required field `type`",
                 "error|a.md|stamped field `generated` present in the working tree",
                 "error|a.md|verified[0].by must be `human:<id>` or `process:<id>`, got 'nobody'",
@@ -889,10 +889,10 @@ mod tests {
 
     #[test]
     fn a_manifest_that_is_not_a_mapping_or_will_not_parse() {
-        let (b, _dir) = bundle_with(&[("manifest.aokf.yaml", "- one\n")]);
+        let (b, _dir) = bundle_with(&[("manifest.sokf.yaml", "- one\n")]);
         assert!(validate(&b, &b.root).findings.is_empty());
 
-        let (b, _dir) = bundle_with(&[("manifest.aokf.yaml", "aokf: [unclosed\n")]);
+        let (b, _dir) = bundle_with(&[("manifest.sokf.yaml", "sokf: [unclosed\n")]);
         let r = validate(&b, &b.root);
         assert_eq!(r.findings.len(), 1);
         assert!(r.findings[0].message.starts_with("manifest parse error:"));

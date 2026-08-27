@@ -67,7 +67,7 @@ fn fixture() -> TempDir {
     let repo = tempfile::tempdir().unwrap();
     let bundle = repo.path().join("knowledge");
     std::fs::create_dir_all(bundle.join("notes")).unwrap();
-    std::fs::write(bundle.join("manifest.aokf.yaml"), MANIFEST).unwrap();
+    std::fs::write(bundle.join("manifest.sokf.yaml"), MANIFEST).unwrap();
     std::fs::write(bundle.join("spec.md"), SPEC).unwrap();
     std::fs::write(bundle.join("module-a.md"), MODULE).unwrap();
     std::fs::write(bundle.join("notes/draft.md"), DRAFT).unwrap();

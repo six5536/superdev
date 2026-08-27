@@ -14,7 +14,7 @@ use crate::error::{Error, Result};
 pub struct Bundle {
     /// Absolute path of the bundle directory.
     pub root: PathBuf,
-    /// The root `manifest.aokf.yaml`, when it exists and parses.
+    /// The root `manifest.sokf.yaml`, when it exists and parses.
     pub manifest: Option<BundleManifest>,
     /// Why the manifest did not parse; `None` when it parsed or is absent.
     pub manifest_error: Option<String>,
@@ -27,11 +27,11 @@ pub struct Bundle {
     pub broken: Vec<ParseError>,
 }
 
-/// The bundle-level `manifest.aokf.yaml`.
+/// The bundle-level `manifest.sokf.yaml`.
 #[derive(Debug, Clone)]
 pub struct BundleManifest {
     /// Spec version the bundle targets.
-    pub aokf: Option<String>,
+    pub sokf: Option<String>,
     /// Bundle name.
     pub name: Option<String>,
     /// The whole document, for checks the typed fields drop — stamped keys,
@@ -41,7 +41,7 @@ pub struct BundleManifest {
 
 /// Load every concept under `dir`, recursively.
 ///
-/// `manifest.aokf.yaml` (bundle root only) and `index.md` (any directory) are
+/// `manifest.sokf.yaml` (bundle root only) and `index.md` (any directory) are
 /// reserved by the spec and are not concepts; hidden directories are skipped.
 /// A file that fails to parse lands in [`Bundle::broken`] rather than failing
 /// the load — a bundle with one bad file is still worth serving.
@@ -134,7 +134,7 @@ fn markdown_files(root: &Path) -> Result<(Vec<PathBuf>, Vec<PathBuf>)> {
 /// manifest that does not parse reads as absent, so a consumer sees no
 /// half-read manifest; the validator reports the reason.
 fn load_manifest(root: &Path) -> Result<(Option<BundleManifest>, Option<String>)> {
-    let path = root.join("manifest.aokf.yaml");
+    let path = root.join("manifest.sokf.yaml");
     let text = match fs::read_to_string(&path) {
         Ok(text) => text,
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok((None, None)),
@@ -143,7 +143,7 @@ fn load_manifest(root: &Path) -> Result<(Option<BundleManifest>, Option<String>)
     match serde_yaml_ng::from_str::<Value>(&text) {
         Ok(raw) => Ok((
             Some(BundleManifest {
-                aokf: raw["aokf"].as_str().map(str::to_string),
+                sokf: raw["sokf"].as_str().map(str::to_string),
                 name: raw["name"].as_str().map(str::to_string),
                 raw,
             }),
@@ -170,8 +170,8 @@ mod tests {
     fn loads_concepts_and_skips_reserved_files() {
         let dir = tempfile::tempdir().unwrap();
         std::fs::write(
-            dir.path().join("manifest.aokf.yaml"),
-            "aokf: \"0.1\"\nname: t\n",
+            dir.path().join("manifest.sokf.yaml"),
+            "sokf: \"0.1\"\nname: t\n",
         )
         .unwrap();
         std::fs::write(dir.path().join("index.md"), "# Index\n").unwrap();
@@ -206,7 +206,7 @@ mod tests {
     #[test]
     fn an_unparseable_manifest_reads_as_absent_but_reports_why() {
         let dir = tempfile::tempdir().unwrap();
-        std::fs::write(dir.path().join("manifest.aokf.yaml"), "aokf: [unclosed\n").unwrap();
+        std::fs::write(dir.path().join("manifest.sokf.yaml"), "sokf: [unclosed\n").unwrap();
         let b = load_bundle(dir.path()).unwrap();
         assert!(b.manifest.is_none());
         assert!(b.manifest_error.is_some());
@@ -227,7 +227,7 @@ mod tests {
     #[test]
     fn a_manifest_that_is_not_a_mapping_keeps_its_raw_value() {
         let dir = tempfile::tempdir().unwrap();
-        std::fs::write(dir.path().join("manifest.aokf.yaml"), "- one\n").unwrap();
+        std::fs::write(dir.path().join("manifest.sokf.yaml"), "- one\n").unwrap();
         let b = load_bundle(dir.path()).unwrap();
         assert!(b.manifest_error.is_none());
         assert!(b.manifest.unwrap().raw.is_sequence());

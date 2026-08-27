@@ -1,13 +1,13 @@
-# AOKF — Agent Open Knowledge Format
+# SOKF — Superdev Open Knowledge Format
 
-**Version:** 0.2
+**Version:** 0.3
 **Status:** Draft
 **Date:** 2026-08-18
 
-AOKF is a format for canonical project knowledge: a directory of markdown
+SOKF is a format for canonical project knowledge: a directory of markdown
 files with YAML frontmatter, kept inside the project's repository and
 maintained largely by AI agents. Content is unrestricted; architecture
-notes, decisions, conventions, and playbooks are typical. AOKF is a
+notes, decisions, conventions, and playbooks are typical. SOKF is a
 superset of the Open Knowledge Format (OKF) v0.2; familiarity with OKF
 is not assumed, and this document stands alone.
 
@@ -38,13 +38,16 @@ closed to agents, that records verification (§7).
 
 ## 1. Terminology
 
-- **Canonical project knowledge**, or just **the canonical knowledge**: the
-  directory tree of knowledge documents.
+- **SOKF knowledge**: the directory tree of knowledge documents this
+  format describes. Always named in full — "knowledge" alone is an
+  ordinary English word, and a reader who meets it cannot tell the store
+  from the general noun. The two-word form carries a token that means one
+  thing only.
 - **Concept**: one unit of knowledge, one markdown file.
 - **Frontmatter**: the YAML block delimited by `---` at the top of a
   file. **Body**: everything after it.
-- **Manifest**: the optional `manifest.aokf.yaml` at the canonical knowledge
-  root, describing the canonical knowledge as a whole (§2).
+- **Manifest**: the optional `manifest.sokf.yaml` at the SOKF knowledge
+  root, describing the SOKF knowledge as a whole (§2).
 - **Source**: a material a concept derives from, recorded in `sources`.
 - **Link**: a directed, typed relationship from one concept to another,
   declared in `links` (§8).
@@ -56,14 +59,14 @@ closed to agents, that records verification (§7).
 
 ## 2. Knowledge structure
 
-The canonical knowledge is a directory inside the repository (for example
+The SOKF knowledge is a directory inside the repository (for example
 `/knowledge`). Subdirectories group concepts however suits the
 project; paths carry no mandated meaning, and identity does not depend
 on them (§5).
 
 ```
 <knowledge>/
-  manifest.aokf.yaml  # Optional knowledge manifest.
+  manifest.sokf.yaml  # Optional knowledge manifest.
   index.md            # Optional directory listing (§9).
   <concept>.md
   <subdirectory>/
@@ -71,21 +74,21 @@ on them (§5).
     <concept>.md
 ```
 
-Reserved files are `manifest.aokf.yaml` (knowledge root only) and
+Reserved files are `manifest.sokf.yaml` (knowledge root only) and
 `index.md` (any directory); neither is a concept. Every other `.md`
 file is a concept. There is no change-log file: git log is the change
 history.
 
-The manifest declares the canonical knowledge:
+The manifest declares the SOKF knowledge:
 
 ```yaml
-aokf: "0.2"                 # spec version the canonical knowledge targets
+sokf: "0.3" # spec version the SOKF knowledge targets
 name: example-knowledge
 description: Knowledge for the example project.
 ```
 
 `producer`, `generated`, and `counts` keys are stamped (§4): written by
-tooling when the canonical knowledge is exported for use outside the
+tooling when the SOKF knowledge is exported for use outside the
 repository, never present in the working tree.
 
 ## 3. Concept documents
@@ -130,8 +133,8 @@ tables, fenced code) over freeform prose; there are no required
 sections. Per-claim attribution uses footnotes keyed to `sources[].id`
 (§6).
 
-Knowledge MUST NOT be duplicated between the canonical knowledge and the rest of
-the repository. When a document has to exist outside it (a README,
+Knowledge MUST NOT be duplicated between the SOKF knowledge and the
+rest of the repository. When a document has to exist outside it (a README,
 contributor docs), the concept covering that ground carries a concise
 summary and cites the file in `sources`; it does not copy the content.
 Knowledge with no such external home lives here only.
@@ -140,27 +143,27 @@ Knowledge with no such external home lives here only.
 
 Every frontmatter field and manifest key belongs to one class:
 
-| Class        | Who may write                                            | Enforced by            |
-|--------------|----------------------------------------------------------|------------------------|
-| `open`       | Anyone: humans, agents, tooling.                         | Nothing to enforce.    |
-| `restricted` | Humans and deterministic processes. **Agents MUST NOT add, edit, reorder, or delete.** | Diff check (§10). |
+| Class        | Who may write                                                                          | Enforced by           |
+| ------------ | -------------------------------------------------------------------------------------- | --------------------- |
+| `open`       | Anyone: humans, agents, tooling.                                                       | Nothing to enforce.   |
+| `restricted` | Humans and deterministic processes. **Agents MUST NOT add, edit, reorder, or delete.** | Diff check (§10).     |
 | `stamped`    | Deterministic export tooling, at export time. **MUST NOT appear in the working tree.** | Document check (§10). |
 
 Field reference:
 
-| Field                          | Class      | Notes                                   |
-|--------------------------------|------------|-----------------------------------------|
-| `type`                         | open       | Required. Kind of concept.              |
-| `id`                           | open       | Stable identity slug; immutable once assigned (§5). |
-| `title`                        | open       | Display name; consumers may fall back to the filename. |
-| `description`                  | open       | One-line summary, used by indexes and previews. |
-| `tags`                         | open       | Short labels for grouping concepts across directories. |
-| `resource`                     | open       | Repo path or URL of the thing the concept describes. Absent for abstract concepts. |
-| `status`                       | open       | `draft` \| `stable` \| `deprecated`; absent ⇒ `stable`. |
-| `sources`                      | open       | Entries carry `resource`, `id`, `title` only (§6). |
-| `links`                        | open       | Typed relationships to other concepts (§8). |
-| `verified`                     | restricted | §7.                                     |
-| `generated`                    | stamped    | `{ by, at }`, derived from git history at export. Never hand-written. |
+| Field         | Class      | Notes                                                                              |
+| ------------- | ---------- | ---------------------------------------------------------------------------------- |
+| `type`        | open       | Required. Kind of concept.                                                         |
+| `id`          | open       | Stable identity slug; immutable once assigned (§5).                                |
+| `title`       | open       | Display name; consumers may fall back to the filename.                             |
+| `description` | open       | One-line summary, used by indexes and previews.                                    |
+| `tags`        | open       | Short labels for grouping concepts across directories.                             |
+| `resource`    | open       | Repo path or URL of the thing the concept describes. Absent for abstract concepts. |
+| `status`      | open       | `draft` \| `stable` \| `deprecated`; absent ⇒ `stable`.                            |
+| `sources`     | open       | Entries carry `resource`, `id`, `title` only (§6).                                 |
+| `links`       | open       | Typed relationships to other concepts (§8).                                        |
+| `verified`    | restricted | §7.                                                                                |
+| `generated`   | stamped    | `{ by, at }`, derived from git history at export. Never hand-written.              |
 
 Producer-defined extension keys are permitted and default to `open`.
 Consumers must not reject documents over unknown keys. A project that
@@ -178,7 +181,7 @@ that asserts a fact nobody can check is `restricted` or `stamped`.
 `id` gives a concept an identity that survives file moves.
 
 - An `id` is a slug: lowercase, words separated by `-`. It MUST be
-  unique within the canonical knowledge.
+  unique within the SOKF knowledge.
 - Once assigned, an `id` MUST NOT change, even when the file is renamed
   or moved. For agent commits the diff check enforces this (§10); a
   human may change one deliberately and take responsibility for the
@@ -268,26 +271,26 @@ Tiers are advisory signals, not access control. A concept with no
 Typed relationships are declared in a `links` frontmatter array. Each
 entry is a map:
 
-| Key    | Rule | Meaning                                                          |
-|--------|------|------------------------------------------------------------------|
-| `rel`  | MUST | The relationship type (below).                                   |
-| `to`   | MUST | Target concept: an `id` (preferred) or a `/` repo-root path.     |
-| `note` | MAY  | One-line explanation of this specific edge.                      |
+| Key    | Rule | Meaning                                                      |
+| ------ | ---- | ------------------------------------------------------------ |
+| `rel`  | MUST | The relationship type (below).                               |
+| `to`   | MUST | Target concept: an `id` (preferred) or a `/` repo-root path. |
+| `note` | MAY  | One-line explanation of this specific edge.                  |
 
 A link asserts a directed edge from the containing concept to `to`.
 Consumers resolve `to` as an `id` first, then as a path.
 
 **Relationship vocabulary**, with defined inverses:
 
-| `rel`         | Inverse           | Meaning                                                    |
-|---------------|-------------------|------------------------------------------------------------|
-| `relates-to`  | `relates-to`      | Generic association (symmetric).                           |
-| `part-of`     | `has-part`        | Composition or containment.                                |
-| `depends-on`  | `depended-on-by`  | Requires the target to function.                           |
-| `references`  | `referenced-by`   | Cites or points at the target.                             |
-| `supersedes`  | `superseded-by`   | Replaces the target; the target is deprecated.             |
-| `implements`  | `implemented-by`  | Delivers or realises the target — a plan or issue implementing a spec. |
-| `contradicts` | `contradicts`     | Known conflict (symmetric); resolution belongs in prose.   |
+| `rel`         | Inverse          | Meaning                                                                |
+| ------------- | ---------------- | ---------------------------------------------------------------------- |
+| `relates-to`  | `relates-to`     | Generic association (symmetric).                                       |
+| `part-of`     | `has-part`       | Composition or containment.                                            |
+| `depends-on`  | `depended-on-by` | Requires the target to function.                                       |
+| `references`  | `referenced-by`  | Cites or points at the target.                                         |
+| `supersedes`  | `superseded-by`  | Replaces the target; the target is deprecated.                         |
+| `implements`  | `implemented-by` | Delivers or realises the target — a plan or issue implementing a spec. |
+| `contradicts` | `contradicts`    | Known conflict (symmetric); resolution belongs in prose.               |
 
 Producers SHOULD use a core value where one fits and MAY introduce
 custom values (lowercase kebab-case) where none does. Consumers MUST
@@ -325,8 +328,8 @@ frontmatter. The body is one or more heading-grouped link lists:
 ```markdown
 # Core
 
-* [Planner](planner.md) - pure planning stage; no filesystem writes.
-* [Executor](executor.md) - applies planned actions.
+- [Planner](planner.md) - pure planning stage; no filesystem writes.
+- [Executor](executor.md) - applies planned actions.
 ```
 
 Entries should carry the linked concept's `description`. Indexes may be
@@ -367,17 +370,16 @@ enforces the write classes; without it they are only a convention.
 
 ## 11. Conformance
 
-Knowledge conformance is a ladder; its level is the highest it
-fully satisfies.
+Knowledge conforms when all of the following hold.
 
-| Level | Requirements |
-|-------|--------------|
-| **0** | Every non-reserved `.md` file passes the document check (§10). |
-| **1** | Level 0, plus every concept has a unique `id`, plus a manifest declaring `aokf` and `name`. |
-| **2** | Level 1, plus every `links` entry has a valid `rel` and a `to` that resolves, and is mirrored by a body link (§8). |
+- Every non-reserved `.md` file passes the document check (§10).
+- Every concept has a unique `id`, and a manifest declares `sokf` and
+  `name`.
+- Every `links` entry has a valid `rel` and a `to` that resolves, and is
+  mirrored by a body link (§8).
 
 A repository conforms if, additionally, its agent commits pass the diff
-check (§10). This is independent of the canonical knowledge's level.
+check (§10). This is independent of whether the SOKF knowledge conforms.
 
 Consumers must be permissive. In particular, never reject knowledge for
 missing optional fields, unknown `type` values, unknown frontmatter
@@ -386,6 +388,7 @@ manifest.
 
 ## 12. Versioning
 
-This document specifies AOKF **0.2**. Minor version bumps are
-backward-compatible additions; major bumps may break. The canonical knowledge
-declares the version it targets with the manifest's `aokf` key (§2).
+This document specifies SOKF **0.3**. Before 1.0 a minor bump may break.
+From 1.0 minor bumps are backward-compatible additions and major bumps may
+break. The SOKF knowledge declares the version it targets with the
+manifest's `sokf` key (§2).

@@ -104,7 +104,7 @@ mod tests {
             set.item(
                 knowledge(),
                 ItemKind::KnowledgeSkeleton,
-                "manifest.aokf.yaml"
+                "manifest.sokf.yaml"
             )
             .is_some(),
             "a concept entry keeps its extension"

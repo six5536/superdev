@@ -120,7 +120,7 @@ wrapping a short prompt, the general-rules imports (`.agents/professionalism.md`
 `.agents/process.md` and `.agents/coding.md`, write-once scaffolds every
 managed repo gets),
 and one import per enabled capability's instruction file
-(`.agents/aokf.md`, `.agents/codegraph.md`), rewritten as
+(`.agents/sokf.md`, `.agents/codegraph.md`), rewritten as
 the enabled set changes
 ([spec](specs/S010-agent-instructions-layer-design.md)). Each instruction
 file is owned by its capability, so it exists exactly where the capability

@@ -73,7 +73,7 @@ fn classify(path: &str) -> Option<Position> {
             Some(position(knowledge, ItemKind::Skill, name, rest))
         }
         // A concept entry is a file or a directory: the bundle ships
-        // `manifest.aokf.yaml` and the `plans/` and `specs/` indexes, which
+        // `manifest.sokf.yaml` and the `plans/` and `specs/` indexes, which
         // are not one `.md` each. ADR-010.
         ["knowledge", "concepts", name] => {
             Some(position(knowledge, ItemKind::KnowledgeSkeleton, name, &[]))
@@ -175,12 +175,12 @@ mod tests {
         let items = items_from([
             ("knowledge/concepts/plans/index.md", "plans"),
             ("knowledge/concepts/specs/index.md", "specs"),
-            ("knowledge/concepts/manifest.aokf.yaml", "manifest"),
+            ("knowledge/concepts/manifest.sokf.yaml", "manifest"),
         ]);
         let knowledge = Owner::Knowledge;
         assert_eq!(
             names(&items, knowledge, ItemKind::KnowledgeSkeleton),
-            ["manifest.aokf.yaml", "plans", "specs"]
+            ["manifest.sokf.yaml", "plans", "specs"]
         );
         let plans = items
             .iter()

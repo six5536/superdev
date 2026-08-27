@@ -2,17 +2,17 @@
   "concepts": 1,
   "findings": [
     {
-      "file": "manifest.aokf.yaml",
+      "file": "manifest.sokf.yaml",
       "message": "stamped key `producer` present in the working tree",
       "severity": "error"
     },
     {
-      "file": "manifest.aokf.yaml",
+      "file": "manifest.sokf.yaml",
       "message": "stamped key `generated` present in the working tree",
       "severity": "error"
     },
     {
-      "file": "manifest.aokf.yaml",
+      "file": "manifest.sokf.yaml",
       "message": "stamped key `counts` present in the working tree",
       "severity": "error"
     },

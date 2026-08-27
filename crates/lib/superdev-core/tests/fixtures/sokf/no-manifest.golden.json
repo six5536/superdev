@@ -2,7 +2,7 @@
   "concepts": 1,
   "findings": [
     {
-      "file": "manifest.aokf.yaml",
+      "file": "manifest.sokf.yaml",
       "message": "no manifest (required)",
       "severity": "error"
     }

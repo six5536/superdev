@@ -15,7 +15,7 @@ import-only: a fact with two full homes drifts.
 
 ## Input
 
-- The format spec at `.agents/aokf/SPEC.md`; read it before writing
+- The format spec at `.agents/sokf/SPEC.md`; read it before writing
   concepts.
 - $ARGUMENTS — sources or concepts to focus on, when given.
 

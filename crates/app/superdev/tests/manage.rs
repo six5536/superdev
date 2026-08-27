@@ -184,7 +184,7 @@ fn init_sets_up_a_fresh_repo() {
     assert!(repo.join(".agents/coding.md").is_file());
     assert!(repo.join(".agents/professionalism.md").is_file());
     assert!(repo.join(".agents/process.md").is_file());
-    assert!(repo.join(".agents/aokf.md").is_file());
+    assert!(repo.join(".agents/sokf.md").is_file());
     assert!(repo.join(".agents/codegraph.md").is_file());
     assert!(repo.join(".agents/rtk.md").is_file());
     // The output filter: auto_env activation, the platform-scoped rtk pins
@@ -199,7 +199,7 @@ fn init_sets_up_a_fresh_repo() {
     let settings = sb.read(".claude/settings.json");
     assert!(settings.contains("PreToolUse"), "{settings}");
     assert!(settings.contains("rtk hook claude"), "{settings}");
-    assert!(repo.join(".agents/aokf/SPEC.md").is_file());
+    assert!(repo.join(".agents/sokf/SPEC.md").is_file());
     let mcp = sb.read(".mcp.json");
     assert!(mcp.contains("\"superdev-sokf\""), "{mcp}");
     assert!(mcp.contains("\"codegraph\""), "{mcp}");
@@ -239,14 +239,14 @@ fn init_sets_up_a_fresh_repo() {
 
     // Drift: an owned file edit turns status dirty; dry-run changes nothing;
     // sync repairs it.
-    sb.write(".agents/aokf/SPEC.md", "tampered");
+    sb.write(".agents/sokf/SPEC.md", "tampered");
     let dirty = run(sb.superdev().arg("status"));
     assert_eq!(dirty.code, 1, "stdout: {}", dirty.stdout);
     assert!(dirty.stdout.contains("SPEC.md"), "stdout: {}", dirty.stdout);
     sb.superdev().args(["sync", "--dry-run"]).assert().success();
-    assert_eq!(sb.read(".agents/aokf/SPEC.md"), "tampered");
+    assert_eq!(sb.read(".agents/sokf/SPEC.md"), "tampered");
     sb.superdev().arg("sync").assert().success();
-    assert_ne!(sb.read(".agents/aokf/SPEC.md"), "tampered");
+    assert_ne!(sb.read(".agents/sokf/SPEC.md"), "tampered");
 
     // AGENTS.md is the user's: any content is fine as long as the import
     // line stays, and superdev never rewrites the rest.

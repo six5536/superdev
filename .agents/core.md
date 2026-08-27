@@ -21,7 +21,7 @@ YOU follow the set of rules defined below, reminding yourself of the rules perio
 </workflow>
 
 <knowledge purpose="canonical data store">
-<tool_call name="read_file" path=".agents/aokf/SPEC.md" when="always" />
+<tool_call name="read_file" path=".agents/sokf/SPEC.md" when="always" />
 <tool_call name="aokf_overview" when="always" />
 <retrieval>
   <tool_call name="aokf_graph" when="if following links between concepts" />
