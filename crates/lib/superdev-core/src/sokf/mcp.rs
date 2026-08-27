@@ -20,8 +20,8 @@ use super::concept::{Concept, Status};
 use super::embed::Embedder;
 use super::graph::{Edge, Graph, inverse_rel};
 use super::index::{Hit, Index, IndexDir, SearchOpts, SyncStats};
-use super::validate::validate;
 use crate::error::Error;
+use crate::validate::sokf::validate;
 
 /// Most lines rendered per group before the tail is summarised.
 const GROUP_CAP: usize = 30;

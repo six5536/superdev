@@ -1,7 +1,7 @@
-//! format_snapshots.rs — `format::check_files` over one fixture tree per
-//! failure class, compared to a recorded report.
+//! schema_snapshots.rs — `validate::schema::check_files` over one fixture
+//! tree per failure class, compared to a recorded report.
 //!
-//! Each `tests/fixtures/format/<case>/` holds the files and
+//! Each `tests/fixtures/schema/<case>/` holds the files and
 //! `<case>.golden.json` holds what the checks report for them. The goldens
 //! began as captures from the Node script this code replaced, taken before a
 //! line of the port existed. That script is no longer the authority — these
@@ -14,7 +14,7 @@
 //! Regenerate with:
 //!
 //! ```sh
-//! UPDATE_GOLDENS=1 cargo test -p superdev-core --test format_snapshots
+//! UPDATE_GOLDENS=1 cargo test -p superdev-core --test schema_snapshots
 //! ```
 //!
 //! Then read the diff. A reworded message shows up as a wording diff; a moved
@@ -28,18 +28,18 @@
 
 use std::path::{Path, PathBuf};
 
-use superdev_core::format::{Grammar, check_files, parse_grammar};
+use superdev_core::validate::schema::{Grammar, check_files, parse_grammar};
 
 /// The fixture root.
 fn fixtures() -> PathBuf {
-    Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/format")
+    Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/schema")
 }
 
 /// The grammar as it ships.
 fn grammar() -> Grammar {
     let path = Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("../../..")
-        .join(".agents/format/grammar.yaml");
+        .join(".agents/sokf/grammar.yaml");
     parse_grammar(&std::fs::read_to_string(path).unwrap()).unwrap()
 }
 
@@ -170,7 +170,7 @@ fn the_live_tree_passes() {
             continue;
         }
         for (name, text) in files(&dir) {
-            if superdev_core::format::detect_kind(Path::new(&name), &g, false).is_some() {
+            if superdev_core::validate::schema::detect_kind(Path::new(&name), &g, false).is_some() {
                 inputs.push((name, text));
             }
         }
@@ -179,7 +179,8 @@ fn the_live_tree_passes() {
     let findings = check_files(&inputs, &g);
     // Warnings are expected and do not fail a run: five skills carry frontmatter
     // keys Claude Code reads but the portable Agent Skills spec does not.
-    let fatal: Vec<&superdev_core::format::Finding> = findings.iter().filter(|f| f.fatal).collect();
+    let fatal: Vec<&superdev_core::validate::schema::Finding> =
+        findings.iter().filter(|f| f.fatal).collect();
     assert!(fatal.is_empty(), "{fatal:#?}");
     assert_eq!(
         findings.len(),

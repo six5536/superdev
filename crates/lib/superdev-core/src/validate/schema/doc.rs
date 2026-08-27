@@ -2,7 +2,7 @@
 //!
 //! A behavioural port of the reference's `renderDoc`: the grammar is the only
 //! statement of the language, and this prints it in a form a reader can follow
-//! without reading YAML. `tests/fixtures/format/doc.golden.txt` holds the
+//! without reading YAML. `tests/fixtures/schema/doc.golden.txt` holds the
 //! reference's output for the shipped grammar, captured before any of this
 //! existed.
 //!
@@ -237,7 +237,7 @@ mod tests {
         let path: PathBuf = [
             env!("CARGO_MANIFEST_DIR"),
             "../../..",
-            ".agents/format/grammar.yaml",
+            ".agents/sokf/grammar.yaml",
         ]
         .iter()
         .collect();
@@ -252,7 +252,7 @@ mod tests {
     #[test]
     fn the_render_equals_the_captured_golden() {
         let golden = std::fs::read_to_string(
-            Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/format/doc.golden.txt"),
+            Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/schema/doc.golden.txt"),
         )
         .unwrap();
         assert_eq!(format!("{}\n", render(&live())), golden);

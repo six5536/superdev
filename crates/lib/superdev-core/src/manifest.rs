@@ -6,10 +6,10 @@ use std::path::Path;
 
 use serde::{Deserialize, Serialize};
 
-use crate::aokf::embed::EmbeddingsConfig;
 use crate::capability::{Capability, Cardinality};
 use crate::error::{Error, Result};
 use crate::registry;
+use crate::sokf::embed::EmbeddingsConfig;
 
 /// Repo-relative path of the manifest.
 pub const CONFIG_PATH: &str = ".superdev/config.toml";

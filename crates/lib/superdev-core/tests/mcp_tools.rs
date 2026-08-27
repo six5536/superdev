@@ -7,7 +7,7 @@ use rmcp::ServiceExt;
 use rmcp::model::{CallToolRequestParams, CallToolResult};
 use rmcp::service::{RoleClient, RunningService};
 use serde_json::{Map, Value};
-use superdev_core::aokf::{AokfServer, IndexDir};
+use superdev_core::sokf::{AokfServer, IndexDir};
 use tempfile::TempDir;
 
 const MANIFEST: &str = "aokf: \"0.1\"\nname: fixture-knowledge\n";

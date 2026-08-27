@@ -210,9 +210,9 @@ pub fn inverse_rel(rel: &str) -> &str {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::aokf::load_bundle;
+    use crate::sokf::load_bundle;
 
-    fn bundle_with(files: &[(&str, &str)]) -> crate::aokf::Bundle {
+    fn bundle_with(files: &[(&str, &str)]) -> crate::sokf::Bundle {
         let dir = tempfile::tempdir().unwrap();
         for (p, t) in files {
             let path = dir.path().join(p);

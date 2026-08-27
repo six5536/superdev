@@ -350,8 +350,8 @@ mod tests {
                 std::fs::write(target, content).unwrap();
             }
         }
-        let bundle = crate::aokf::bundle::load_bundle(&dir.path().join("knowledge")).unwrap();
-        let report = crate::aokf::validate::validate(&bundle, dir.path());
+        let bundle = crate::sokf::bundle::load_bundle(&dir.path().join("knowledge")).unwrap();
+        let report = crate::validate::sokf::validate(&bundle, dir.path());
         assert!(report.findings.is_empty(), "{:#?}", report.findings);
         assert!(report.passed());
         assert!(report.concept_count >= 20, "{}", report.concept_count);

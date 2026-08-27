@@ -1,7 +1,7 @@
-//! validate_snapshots.rs — `aokf::validate` over one fixture bundle per
-//! failure class, compared to a recorded report.
+//! sokf_snapshots.rs — `validate::sokf::validate` over one fixture knowledge
+//! tree per failure class, compared to a recorded report.
 //!
-//! Each `tests/fixtures/aokf/<case>/` bundle has a `<case>.golden.json`
+//! Each `tests/fixtures/sokf/<case>/` tree has a `<case>.golden.json`
 //! holding the report this validator produces for it. The goldens began as
 //! captures from `.agents/aokf/tools/validator.py`, the Python reference this
 //! code replaced, and were projected once when ADR-017 removed the
@@ -17,7 +17,7 @@
 //! Regenerate with:
 //!
 //! ```sh
-//! UPDATE_GOLDENS=1 cargo test -p superdev-core --test validate_snapshots
+//! UPDATE_GOLDENS=1 cargo test -p superdev-core --test sokf_snapshots
 //! ```
 //!
 //! Then read the diff. A golden that changes because a message was reworded is
@@ -25,8 +25,8 @@
 //! finding's presence is a behaviour change, and wants the argument any
 //! behaviour change wants.
 //!
-//! The report carries no `bundle` key: [`Report::to_json`] leaves the path to
-//! the caller, which holds the string it was given.
+//! The report carries no knowledge-directory key: [`Report::to_json`] leaves
+//! the path to the caller, which holds the string it was given.
 //!
 //! Known divergence from the old Python reference, deliberately left: a
 //! manifest that parses to a falsy non-mapping (`[]`, `false`). Python coerced
@@ -35,11 +35,12 @@
 
 use std::path::{Path, PathBuf};
 
-use superdev_core::aokf::{load_bundle, validate};
+use superdev_core::sokf::load_bundle;
+use superdev_core::validate::sokf::validate;
 
 /// The fixture root.
 fn fixtures() -> PathBuf {
-    Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/aokf")
+    Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/sokf")
 }
 
 /// Validate `case` and compare its report to the golden, or rewrite the golden
@@ -118,11 +119,11 @@ fn footnote_mismatch() {
     snapshot("footnote-mismatch");
 }
 
-/// The repository's own bundle, validated where it lives. It changes with
+/// The repository's own knowledge, validated where it lives. It changes with
 /// every knowledge edit, so the assertion is the one thing that must hold:
 /// the check CI already gates on.
 #[test]
-fn the_live_knowledge_bundle_conforms() {
+fn the_live_knowledge_conforms() {
     let repo_root = Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("../../..")
         .canonicalize()

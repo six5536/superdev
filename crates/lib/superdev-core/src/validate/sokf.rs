@@ -1,11 +1,12 @@
-//! validate.rs — the document check of SPEC §10 and the conformance
-//! decision of SPEC §11.
+//! validate::sokf — the document check of SPEC §10 and the conformance
+//! decision of SPEC §11, over the SOKF knowledge.
 //!
 //! Began as a behavioural port of the Python reference validator this
 //! replaced — the same findings, with the same severities, in the same order —
 //! and the divergences that were taken deliberately are noted at the check.
-//! Every finding's text is the contract: `tests/validate_snapshots.rs` records
-//! the report for one bundle per failure class and compares it verbatim.
+//! Every finding's text is the contract: `tests/sokf_snapshots.rs` records
+//! the report for one knowledge tree per failure class and compares it
+//! verbatim.
 
 use std::collections::{BTreeSet, HashMap, HashSet};
 use std::path::{Path, PathBuf};
@@ -13,8 +14,8 @@ use std::path::{Path, PathBuf};
 use pulldown_cmark::{Event, Options, Parser, Tag};
 use serde_yaml_ng::Value;
 
-use super::bundle::Bundle;
-use super::concept::Concept;
+use crate::sokf::bundle::Bundle;
+use crate::sokf::concept::Concept;
 
 /// Relationship types the spec defines; anything else reads as `relates-to`.
 const CORE_RELS: [&str; 12] = [
@@ -732,7 +733,7 @@ fn join(parts: impl Iterator<Item = String>) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::aokf::load_bundle;
+    use crate::sokf::load_bundle;
 
     fn bundle_with(files: &[(&str, &str)]) -> (Bundle, tempfile::TempDir) {
         let dir = tempfile::tempdir().unwrap();

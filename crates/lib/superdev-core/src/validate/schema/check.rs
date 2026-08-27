@@ -552,7 +552,7 @@ pub fn check_unit(
 /// declared types, enums, regex validity, and cross-key requirements.
 fn check_keys(
     obj: &serde_yaml_ng::Mapping,
-    table: &crate::format::grammar::Ordered<crate::format::grammar::KeyDef>,
+    table: &crate::validate::schema::grammar::Ordered<crate::validate::schema::grammar::KeyDef>,
     where_: &str,
     errs: &mut Vec<String>,
 ) {
@@ -1158,13 +1158,13 @@ mod tests {
     use std::path::PathBuf;
 
     use super::*;
-    use crate::format::parse_grammar;
+    use crate::validate::schema::parse_grammar;
 
     pub(super) fn grammar() -> Grammar {
         let path: PathBuf = [
             env!("CARGO_MANIFEST_DIR"),
             "../../..",
-            ".agents/format/grammar.yaml",
+            ".agents/sokf/grammar.yaml",
         ]
         .iter()
         .collect();
@@ -1211,7 +1211,7 @@ mod unit_parity {
     use super::*;
 
     fn fixtures() -> PathBuf {
-        [env!("CARGO_MANIFEST_DIR"), "tests/fixtures/format"]
+        [env!("CARGO_MANIFEST_DIR"), "tests/fixtures/schema"]
             .iter()
             .collect()
     }
@@ -1289,7 +1289,7 @@ mod schema_parity {
     use super::*;
 
     fn fixtures() -> PathBuf {
-        [env!("CARGO_MANIFEST_DIR"), "tests/fixtures/format"]
+        [env!("CARGO_MANIFEST_DIR"), "tests/fixtures/schema"]
             .iter()
             .collect()
     }

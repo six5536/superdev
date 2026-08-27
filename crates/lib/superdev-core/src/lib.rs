@@ -5,9 +5,10 @@
 //! [`action`]s needed to match it. The [`engine`] is the only place those
 //! actions run, and it rolls the run back when one fails.
 //!
-//! [`aokf`] is the other half, and reads rather than writes: it parses the
-//! knowledge bundle the `knowledge` capability installs, validates it,
-//! indexes it for hybrid search, and serves it to agents over MCP.
+//! [`sokf`] is the other half, and reads rather than writes: it parses the
+//! SOKF knowledge, indexes it for hybrid search, and serves it to agents over
+//! MCP. [`validate`] checks it — and every other file superdev governs — in
+//! one pass.
 //!
 //! The binary in `crates/app/superdev` parses arguments and calls in here;
 //! the two release in lockstep.
@@ -18,14 +19,14 @@
 #![warn(missing_docs)]
 
 pub mod action;
-pub mod aokf;
+
 pub mod capability;
 pub mod component;
 pub mod components;
 pub mod content;
 pub mod engine;
 pub mod error;
-pub mod format;
+
 pub(crate) mod fsutil;
 pub(crate) mod json_edit;
 pub mod lock;
@@ -36,7 +37,9 @@ pub mod pipeline;
 pub mod registry;
 pub mod report;
 pub mod runner;
+pub mod sokf;
 pub mod templates;
+pub mod validate;
 
 /// The crate version, as compiled in from the workspace `Cargo.toml`.
 ///

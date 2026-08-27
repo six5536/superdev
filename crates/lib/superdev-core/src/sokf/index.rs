@@ -1012,8 +1012,8 @@ mod tests {
     use tempfile::TempDir;
 
     use super::*;
-    use crate::aokf::bundle::{Bundle, load_bundle};
-    use crate::aokf::embed::FakeEmbedder;
+    use crate::sokf::bundle::{Bundle, load_bundle};
+    use crate::sokf::embed::FakeEmbedder;
 
     /// Two headings, so this concept contributes three sections after the edit
     /// in `edited_file_reindexes_only_that_file` and two before it.

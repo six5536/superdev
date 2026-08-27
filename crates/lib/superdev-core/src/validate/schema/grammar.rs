@@ -667,7 +667,7 @@ mod tests {
         let path: PathBuf = [
             env!("CARGO_MANIFEST_DIR"),
             "../../..",
-            ".agents/format/grammar.yaml",
+            ".agents/sokf/grammar.yaml",
         ]
         .iter()
         .collect();

@@ -136,7 +136,7 @@ fn validate_fails_a_broken_bundle_with_exit_1() {
 }
 
 /// A format error fails the run on its own, with no bundle in the picture.
-/// The temporary repository carries no `.agents/format/grammar.yaml` either,
+/// The temporary repository carries no `.agents/sokf/grammar.yaml` either,
 /// so this is also the embedded grammar doing the checking (FR-11).
 #[test]
 fn validate_fails_a_broken_skill_with_exit_1() {

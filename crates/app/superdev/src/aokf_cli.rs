@@ -6,12 +6,12 @@
 use std::io::{self, Read, Write};
 use std::path::{Path, PathBuf};
 
-use superdev_core::aokf::{
+use superdev_core::error::{Error, Result};
+use superdev_core::manifest::{CONFIG_PATH, Manifest};
+use superdev_core::sokf::{
     AokfServer, EmbeddingsConfig, Index, IndexDir, embedder_from, load_bundle,
 };
-use superdev_core::error::{Error, Result};
-use superdev_core::format;
-use superdev_core::manifest::{CONFIG_PATH, Manifest};
+use superdev_core::validate;
 
 /// Bundle directory when the caller names none, relative to the repo root.
 const BUNDLE_DIR: &str = "knowledge";
@@ -115,16 +115,16 @@ pub fn run_mcp(cmd: &McpCommand, root: &Path) -> Result<u8> {
 /// One report over both checks, so the hook and the merge gate cannot reach
 /// different verdicts about the same repository (D-17).
 pub fn run_validate(args: &ValidateArgs, root: &Path) -> Result<u8> {
-    let grammar = format::load_grammar(root)?;
+    let grammar = validate::schema::load_grammar(root)?;
     if args.doc {
-        return out(&format::doc::render(&grammar)).map(|()| 0);
+        return out(&validate::schema::doc::render(&grammar)).map(|()| 0);
     }
     let bundle_dir = bundle_dir(root, args.bundle.as_deref());
     let repo_root = args
         .repo_root
         .as_deref()
         .map_or_else(|| root.to_path_buf(), |p| root.join(p));
-    let run = format::validate_repo(&repo_root, &bundle_dir, &args.paths, &grammar)?;
+    let run = validate::validate_repo(&repo_root, &bundle_dir, &args.paths, &grammar)?;
     if args.json {
         let mut value = run.report.to_json();
         // The bundle path is the caller's string, so core leaves the key to
@@ -151,7 +151,7 @@ pub fn run_validate(args: &ValidateArgs, root: &Path) -> Result<u8> {
 /// What the run covered, for the line above the report: where it looked, and
 /// how many format files it found there. The count is what separates a clean
 /// run from one whose roots resolved to nothing.
-fn scope(args: &ValidateArgs, grammar: &superdev_core::format::Grammar, files: usize) -> String {
+fn scope(args: &ValidateArgs, grammar: &superdev_core::validate::Grammar, files: usize) -> String {
     let where_ = if args.paths.is_empty() {
         format!(
             "bundle: {}, roots: {}",
@@ -230,7 +230,7 @@ fn hook_validate(root: &Path) -> Result<u8> {
         // Not a file edit: nothing to validate.
         return Ok(0);
     };
-    let grammar = format::load_grammar(&root)?;
+    let grammar = validate::schema::load_grammar(&root)?;
     let bundle = root.join(BUNDLE_DIR);
     let edited = Path::new(file_path);
     // The same whole-set check the merge gate runs, fired by an edit anywhere
@@ -242,7 +242,7 @@ fn hook_validate(root: &Path) -> Result<u8> {
     if !watched {
         return Ok(0);
     }
-    let run = format::validate_repo(&root, &bundle, &[], &grammar)?;
+    let run = validate::validate_repo(&root, &bundle, &[], &grammar)?;
     if run.report.passed() {
         return Ok(0);
     }
@@ -276,7 +276,7 @@ fn bundle_dir(root: &Path, path: Option<&Path>) -> PathBuf {
 /// The embedder the manifest asks for, or the local default when the repo has
 /// no manifest. A local model that will not load yields `None`, which leaves
 /// search lexical.
-fn embedder(root: &Path) -> Result<Option<Box<dyn superdev_core::aokf::Embedder>>> {
+fn embedder(root: &Path) -> Result<Option<Box<dyn superdev_core::sokf::Embedder>>> {
     embedder_from(embeddings(root)?.as_ref())
 }
 
