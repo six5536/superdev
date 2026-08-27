@@ -1,6 +1,6 @@
 # superdev grammar 2.0
 
-The closed vocabulary of superdev-format files. This file is the single home of the grammar: validate-awa.mjs drives every structural check from it, and `validate-awa.mjs --doc` prints it as a reference. Change the language here, not in the validator.
+The closed vocabulary of superdev-format files. This file is the single home of the grammar: `superdev validate` drives every structural check from it, and `superdev validate --doc` prints it as a reference. Change the language here, not in the validator.
 
 ## Conditions
 
