@@ -37,10 +37,10 @@ tools:
     command.
   roster:
     - read_file
-    - aokf_read
-    - aokf_search
-    - aokf_overview
-    - aokf_graph
+    - sokf_read
+    - sokf_search
+    - sokf_overview
+    - sokf_graph
     - codegraph_explore
   enforceOnToolCall: false
 kinds:
@@ -435,7 +435,7 @@ kinds:
         pattern: core(?:'s)?\s+`?([a-z][a-z0-9_]*)`?\s+block
         message: references a core block the core does not define
   schema:
-    doc: An AOKF concept wrapping the structural contract of one produced artifact.
+    doc: An SOKF concept wrapping the structural contract of one produced artifact.
     match:
       dir:
         - schemas

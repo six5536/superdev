@@ -177,7 +177,7 @@ pub struct Match {
     /// Filename endings.
     #[serde(default)]
     pub suffix: Vec<String>,
-    /// Names of the immediate parent directory, the way AOKF lets a directory
+    /// Names of the immediate parent directory, the way SOKF lets a directory
     /// carry a concept's kind.
     #[serde(default)]
     pub dir: Vec<String>,
@@ -503,7 +503,7 @@ pub struct RefCheck {
     pub message: String,
 }
 
-/// A schema file: an AOKF concept wrapping one artifact's contract.
+/// A schema file: an SOKF concept wrapping one artifact's contract.
 #[derive(Debug, Clone, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct SchemaKind {

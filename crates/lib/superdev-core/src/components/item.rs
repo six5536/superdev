@@ -227,8 +227,8 @@ mod tests {
             ManagedItem::JsonEntry {
                 path: ".claude/settings.json".into(),
                 pointer: "hooks.PostToolUse".into(),
-                marker: Some("superdev aokf".into()),
-                value_json: r#"{"matcher":"superdev aokf"}"#.into(),
+                marker: Some("superdev hook".into()),
+                value_json: r#"{"matcher":"superdev hook"}"#.into(),
             },
         ];
         // Empty repo: every item is planned, in list order.
@@ -265,7 +265,7 @@ mod tests {
         std::fs::create_dir_all(dir.path().join(".claude")).unwrap();
         std::fs::write(
             dir.path().join(".claude/settings.json"),
-            r#"{"hooks":{"PostToolUse":[{"matcher":"superdev aokf"},{"matcher":"user"}]}}"#,
+            r#"{"hooks":{"PostToolUse":[{"matcher":"superdev hook"},{"matcher":"user"}]}}"#,
         )
         .unwrap();
         assert!(plan_items(dir.path(), &items).is_empty());

@@ -9,7 +9,7 @@ description: Migration guides — old-to-new steps with per-step verification, b
 
 Structural rules for migration guides, matched by name
 (`**/*migration-guide*.md`); the source names no filing directory, and the
-document is not an AOKF concept, so it carries no frontmatter.
+document is not an SOKF concept, so it carries no frontmatter.
 
 ````yaml
 target-files: "**/*migration-guide*.md"

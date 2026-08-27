@@ -13,7 +13,7 @@ links:
     note: The design this summarises.
   - rel: relates-to
     to: spec-aokf-mcp-server
-    note: The read-side design the aokf subsystem implements.
+    note: The read-side design the sokf subsystem implements.
 ---
 
 superdev runs inside a target repo and keeps that repo's agent-development
@@ -21,7 +21,7 @@ setup current. Three layers, detailed in the
 [CLI core & blueprint engine spec](specs/S001-cli-core-blueprint-engine-design.md):
 
 - **`superdev-core`** — the domain: the manifest, the components, planning,
-  the engine that applies a plan, and the `aokf` subsystem that reads the
+  the engine that applies a plan, and the `sokf` subsystem that reads the
   knowledge back out.
 - **`superdev` (binary)** — argument parsing, output rendering, exit codes.
 - **The blueprint** — superdev's opinion of a managed repo, compiled into the
@@ -31,10 +31,10 @@ setup current. Three layers, detailed in the
 # Serving the canonical knowledge
 
 Installing the `knowledge` capability is half of it; the other half is reading
-it back. The `aokf` subsystem parses the canonical knowledge, validates it, indexes it, and
-serves it to agents over MCP (`superdev mcp aokf`), so an agent queries the
+it back. The `sokf` subsystem parses the canonical knowledge, validates it, indexes it, and
+serves it to agents over MCP (`superdev mcp sokf`), so an agent queries the
 knowledge instead of preloading every concept — the design is in the
-[AOKF MCP server spec](specs/S002-aokf-mcp-server-design.md), the tools
+[SOKF MCP server spec](specs/S002-aokf-mcp-server-design.md), the tools
 in [api-contracts](api-contracts.md). Freshness is lazy: every tool call
 re-hashes the canonical knowledge and syncs only what changed, so there is no watcher and
 no daemon state to go stale.
@@ -64,7 +64,7 @@ A capability is a slot; the tool filling it is a swappable provider.
 
 | Capability   | Provider          | Delivered as                    |
 |--------------|-------------------|---------------------------------|
-| `knowledge`  | `aokf`            | files embedded in the binary    |
+
 | `code-index` | `codegraph`       | checksummed release bundle (mise `http`) + `mise exec http:codegraph -- codegraph init` |
 | `frontend`   | `frontend-design` | Claude Code plugin              |
 | `skills`     | `superdev-skills` | owned files in the repo         |
@@ -91,7 +91,7 @@ provenance. Nothing is installed. `sync` writes them to
 `.claude/skills/<name>/SKILL.md`; Claude Code reads them natively, so a
 teammate who clones the repo gets the pack without installing superdev. The
 knowledge capability carries a much larger set the same way: the 17
-aokf-carried skills — the workflow phases and their support skills — each
+SOKF-carried skills — the workflow phases and their support skills — each
 materialised as its whole directory of owned files, and the document
 templates the skills fill in as owned files under `knowledge/templates/`
 ([spec](specs/S009-knowledge-carried-skills-design.md)). It also merges the

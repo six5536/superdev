@@ -9,7 +9,7 @@ description: Code review findings — verdict first, findings ranked by severity
 
 Structural rules for code-review findings documents, matched by name
 (`**/*code-review*.md`); the source names no filing directory, and the
-document is not an AOKF concept, so it carries no frontmatter.
+document is not an SOKF concept, so it carries no frontmatter.
 
 ````yaml
 target-files: "**/*code-review*.md"

@@ -25,7 +25,7 @@ knowledge/                # this canonical project knowledge — canonical proje
 knowledge/specs/          # design specs (permanent decision records)
 knowledge/plans/          # implementation plans (tagged done on landing)
 knowledge/templates/      # document templates (copy-verbatim skeletons)
-.agents/                  # superdev.md aggregator, capability instructions, AOKF spec, agent rules
+.agents/                  # superdev.md aggregator, capability instructions, SOKF spec, agent rules
 .claude/skills/           # committed skills: the skill pack + the knowledge-carried set
 .superdev/                # superdev's own manifest and lock (this repo is self-managed)
 .github/workflows/        # checks.yml (reusable), ci.yml, release.yml, audit.yml
@@ -38,7 +38,7 @@ A pack's tree is its declaration: the directory under `pack/` names the item's
 owning capability and the one below it the kind, so a file's position is what
 makes it an item ([ADR-003](decisions/D003-items-by-layout.md)). `pack.toml`
 carries the format version and metadata, never an item list. The capability
-instruction files (`pack/aokf/agents/`, `pack/codegraph/`, `pack/rtk/`) are not
+instruction files (`pack/sokf/agents/`, `pack/codegraph/`, `pack/rtk/`) are not
 pack content: they describe a version the binary pins or a format the compiled
 validator enforces, so they move with the binary.
 

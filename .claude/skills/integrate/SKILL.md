@@ -11,15 +11,15 @@ You merge verified work into the shared branch and keep the project's records cu
 
 <bootstrap_actions>
 <tool_call name="read_file" path=".agents/core.md" when="always" />
-<tool_call name="aokf_read" id="feature-plan-{nnn}-{slug}" when="always" />
-<tool_call name="aokf_read" id="development-procedure" when="always" />
-<tool_call name="aokf_read" id="template-commit-message" when="before merging" />
-<tool_call name="aokf_read" id="template-pr-description" when="if the convention is a PR" />
-<tool_call name="aokf_read" id="template-changelog" when="if the change is user-visible" />
-<tool_call name="aokf_read" id="template-migration-guide" when="if an interface change breaks users" />
-<tool_call name="aokf_read" id="template-architecture" when="if a new concept is needed" />
-<tool_call name="aokf_read" id="template-api-contracts" when="if a new concept is needed" />
-<tool_call name="aokf_read" id="template-coding-standards" when="if a new concept is needed" />
+<tool_call name="sokf_read" id="feature-plan-{nnn}-{slug}" when="always" />
+<tool_call name="sokf_read" id="development-procedure" when="always" />
+<tool_call name="sokf_read" id="template-commit-message" when="before merging" />
+<tool_call name="sokf_read" id="template-pr-description" when="if the convention is a PR" />
+<tool_call name="sokf_read" id="template-changelog" when="if the change is user-visible" />
+<tool_call name="sokf_read" id="template-migration-guide" when="if an interface change breaks users" />
+<tool_call name="sokf_read" id="template-architecture" when="if a new concept is needed" />
+<tool_call name="sokf_read" id="template-api-contracts" when="if a new concept is needed" />
+<tool_call name="sokf_read" id="template-coding-standards" when="if a new concept is needed" />
 </bootstrap_actions>
 
 <process_actions>

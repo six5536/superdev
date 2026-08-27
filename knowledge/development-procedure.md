@@ -85,7 +85,7 @@ than a binary from last month.
 
 One search trap: specs and plans quote the question you are asking, at length,
 in prose. A search for behaviour will happily return the spec that proposed it
-over the concept that documents it. `aokf_search`'s `types` filter keeps only
+over the concept that documents it. `sokf_search`'s `types` filter keeps only
 the types you name, so scope the hunt — `["Reference", "Convention"]` for how
 things work now, `["Spec"]` when you want the reasoning behind them.
 

@@ -46,7 +46,7 @@ in [docs/ANDROID_DEBUGGING.md](docs/ANDROID_DEBUGGING.md).
 ## Knowledge
 
 The repo's knowledge bundle lives in `knowledge/`, seeded by `superdev init`.
-Run the `aokf-bootstrap` skill after seeding to harvest these docs into it.
+Run the `bootstrap` skill after seeding to harvest these docs into it.
 
 ## Release
 

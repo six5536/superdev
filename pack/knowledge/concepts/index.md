@@ -28,5 +28,5 @@
 * [Development Commands](/knowledge/development-commands.md) - TBD — the everyday command set — build, test, lint, and the rest.
 * [Definition of Done](/knowledge/definition-of-done.md) - TBD — what a change must satisfy before it merges.
 * [Release Procedure](/knowledge/release-procedure.md) - TBD — how a release is cut, verified, and published.
-* [Issue Tracker & Triage](/knowledge/issue-tracker.md) - where issues live — one AOKF concept per ticket under knowledge/issues/ — plus the triage label vocabulary.
+* [Issue Tracker & Triage](/knowledge/issue-tracker.md) - where issues live — one SOKF concept per ticket under knowledge/issues/ — plus the triage label vocabulary.
 * [Templates](/knowledge/templates/index.md) - copy-verbatim skeletons for the documents the process produces — plans, ADRs, reviews, PR descriptions, release docs, and reports.

@@ -29,7 +29,7 @@ only (pre-1.0, no backports).
 - **Destructive writes are recoverable.** Every file superdev overwrites or
   removes is backed up under `.superdev/cache/backup/<timestamp>/` first,
   and a failed apply unwinds ([configuration](configuration.md)).
-- **The MCP surface is read-only.** `superdev mcp aokf` exposes four
+- **The MCP surface is read-only.** `superdev mcp sokf` exposes four
   read-only tools over stdio; nothing writes through it
   ([api-contracts](api-contracts.md)).
 - **A pinned pack applies the bytes it was pinned to, or none.** Every
@@ -55,7 +55,7 @@ only (pre-1.0, no backports).
   are stripped from the authority alone, never from the path: a source whose
   *path* ended `@github.com/six5536/superdev` must not normalise to the
   default pack's key and be treated as the base. A pack declares no
-  executable action, and the instruction files, the AOKF spec and
+  executable action, and the instruction files, the SOKF spec and
   `PROJECT.md` are refused by path before any file is read.
 - **A pack source cannot choose what runs, or what it arrives over.** A
   manifest arrives with a repository, so `source` is not superdev's to trust.

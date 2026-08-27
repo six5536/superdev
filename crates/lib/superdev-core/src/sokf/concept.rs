@@ -1,4 +1,4 @@
-//! concept.rs — one AOKF concept file: frontmatter plus body sections.
+//! concept.rs — one SOKF concept file: frontmatter plus body sections.
 
 use pulldown_cmark::{Event, HeadingLevel, Options, Parser, Tag, TagEnd};
 use serde_yaml_ng::Value;

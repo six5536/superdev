@@ -20,8 +20,8 @@ What the annotated list does not say:
   specs it owns: the canonical project knowledge, and the superdev-format files under the
   trees the grammar names. It exits 1 on errors, and warnings alone still
   pass. The Claude Code hook runs the same whole-set check by a different
-  route (`superdev aokf hook validate`), so the two cannot reach different
-  verdicts. `cargo run -- aokf index` forces a full index rebuild, which
+  route (`superdev hook validate`), so the two cannot reach different
+  verdicts. `cargo run -- sokf index` forces a full index rebuild, which
   nothing routine needs: the MCP server syncs lazily on every call.
 - `npm run check:blueprint` is `cargo run --quiet -- status` — the
   superdev-owned files here (the pack skills, the knowledge-carried skill

@@ -45,12 +45,12 @@ const CLAUDE_ENTRY_LINE: &str = "@AGENTS.md";
 const BINARY_OWNED: &[(&str, &str, &str)] = &[
     (
         ".agents/sokf/SPEC.md",
-        asset!("knowledge/agents/knowledge/SPEC.md"),
+        asset!("sokf/agents/sokf/SPEC.md"),
         "SOKF specification",
     ),
     (
         ".agents/sokf.md",
-        asset!("knowledge/agents/knowledge.md"),
+        asset!("sokf/agents/sokf.md"),
         "SOKF knowledge instructions",
     ),
 ];

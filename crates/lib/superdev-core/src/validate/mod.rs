@@ -287,7 +287,7 @@ mod tests {
         assert!(run.files > 0, "the roots were walked");
         assert!(run.report.passed(), "{:#?}", run.report.findings);
         // The five portability warnings, from files under .claude/skills —
-        // which is a root the AOKF half never walks.
+        // which is a root the SOKF half never walks.
         assert_eq!(run.report.findings.len(), 5);
         assert!(
             run.report
@@ -369,7 +369,7 @@ mod tests {
         assert!(error.to_string().contains("no/such/SKILL.md"));
     }
 
-    /// A format finding fails the run without touching what AOKF reported.
+    /// A format finding fails the run without touching what SOKF reported.
     #[test]
     fn a_schema_error_fails_the_run_beside_the_sokf_findings() {
         let root = repo();

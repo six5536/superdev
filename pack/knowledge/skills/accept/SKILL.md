@@ -20,9 +20,9 @@ do not work together, and regressions elsewhere in the app.
 ## Workflow
 
 - [ ] Read the spec's acceptance criteria, test plan, and behaviour
-      description (`aokf_read`; `aokf_search` when the id is not
+      description (`sokf_read`; `sokf_search` when the id is not
       given).
-- [ ] Read the `testing-strategy` concept (`aokf_read`): it names the
+- [ ] Read the `testing-strategy` concept (`sokf_read`): it names the
       acceptance environment (CI e2e, simulator, staging, device,
       deployed service).
 - [ ] Check every acceptance criterion end to end on the merged code,

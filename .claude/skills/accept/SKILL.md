@@ -12,10 +12,10 @@ You judge the whole feature on merged code, as the user will experience it. This
 <bootstrap_actions>
 <tool_call name="read_file" path=".agents/core.md" when="always" />
 <tool_call name="read_file" path="knowledge/schemas/bug-report.md" when="always" />
-<tool_call name="aokf_read" id="spec-{nnn}-{feature-slug}" when="always" />
-<tool_call name="aokf_read" id="testing-strategy" when="always" />
-<tool_call name="aokf_read" id="template-security-review" when="if the feature touches auth, input handling, or data exposure" />
-<tool_call name="aokf_search" query="{the feature or spec}" when="if the spec id is not given" />
+<tool_call name="sokf_read" id="spec-{nnn}-{feature-slug}" when="always" />
+<tool_call name="sokf_read" id="testing-strategy" when="always" />
+<tool_call name="sokf_read" id="template-security-review" when="if the feature touches auth, input handling, or data exposure" />
+<tool_call name="sokf_search" query="{the feature or spec}" when="if the spec id is not given" />
 </bootstrap_actions>
 
 <process_actions>

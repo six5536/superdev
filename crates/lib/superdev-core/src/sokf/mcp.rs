@@ -1,4 +1,4 @@
-//! mcp.rs — the AOKF MCP server: four read-only tools over one bundle.
+//! mcp.rs — the SOKF MCP server: four read-only tools over one bundle.
 //!
 //! Every call reloads the bundle from disk and syncs the index before it
 //! answers, so a concept edited between calls is visible to the next one; the
@@ -37,7 +37,7 @@ const MAX_LIMIT: usize = 50;
 /// What a tool returns: text, or a message the client shows as a tool error.
 type ToolResult = std::result::Result<CallToolResult, String>;
 
-/// An MCP server over one AOKF bundle.
+/// An MCP server over one SOKF bundle.
 ///
 /// Read-only: no tool writes to the bundle. The index directory is the
 /// server's alone.

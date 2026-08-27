@@ -12,11 +12,11 @@ You decompose, you don't build. Produce the feature's plan as specified in the i
 <bootstrap_actions>
 <tool_call name="read_file" path=".agents/core.md" when="always" />
 <tool_call name="read_file" path="knowledge/schemas/feature-plan.md" when="always" />
-<tool_call name="aokf_read" id="spec-{nnn}-{feature-slug}" when="always" />
-<tool_call name="aokf_read" id="contract-{feature-slug}" when="always" />
-<tool_call name="aokf_read" id="feature-plan-{nnn}-{slug}" when="if re-entering" />
-<tool_call name="aokf_read" id="{gap-issue-id}" when="if re-entering" />
-<tool_call name="aokf_search" query="{the feature or spec}" when="if the spec id is not given" />
+<tool_call name="sokf_read" id="spec-{nnn}-{feature-slug}" when="always" />
+<tool_call name="sokf_read" id="contract-{feature-slug}" when="always" />
+<tool_call name="sokf_read" id="feature-plan-{nnn}-{slug}" when="if re-entering" />
+<tool_call name="sokf_read" id="{gap-issue-id}" when="if re-entering" />
+<tool_call name="sokf_search" query="{the feature or spec}" when="if the spec id is not given" />
 <tool_call name="codegraph_explore" when="before setting the sequence" />
 </bootstrap_actions>
 

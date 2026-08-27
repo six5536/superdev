@@ -12,8 +12,8 @@ You plan one piece of work outside the feature workflow — a refactor, a migrat
 <bootstrap_actions>
 <tool_call name="read_file" path=".agents/core.md" when="always" />
 <tool_call name="read_file" path="knowledge/schemas/adhoc-plan.md" when="always" />
-<tool_call name="aokf_overview" when="always" />
-<tool_call name="aokf_search" query="{the conventions and constraints the plan must respect}" when="always" />
+<tool_call name="sokf_overview" when="always" />
+<tool_call name="sokf_search" query="{the conventions and constraints the plan must respect}" when="always" />
 <tool_call name="codegraph_explore" query="{the affected code and its callers}" when="before setting the steps" />
 </bootstrap_actions>
 

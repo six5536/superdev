@@ -39,7 +39,10 @@ closed to agents, that records verification (§7).
 ## 1. Terminology
 
 - **SOKF knowledge**: the directory tree of knowledge documents this
-  format describes. Always named in full.
+  format describes. Always named in full — "knowledge" alone is an
+  ordinary English word, and a reader who meets it cannot tell the store
+  from the general noun. The two-word form carries a token that means one
+  thing only.
 - **Concept**: one unit of knowledge, one markdown file.
 - **Frontmatter**: the YAML block delimited by `---` at the top of a
   file. **Body**: everything after it.

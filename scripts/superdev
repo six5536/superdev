@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Dev shim: run the working-tree superdev. The managed hook entry says
-# `superdev aokf hook validate`, and this repo has no installed binary —
+# `superdev hook validate`, and this repo has no installed binary —
 # symlink this file into a PATH directory (see CONTRIBUTING).
 set -euo pipefail
 

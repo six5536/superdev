@@ -30,7 +30,6 @@ version = "1.5.0"
 provider = "frontend-design"
 
 [knowledge]
-provider = "aokf"
 
 [skills]
 provider = "superdev-skills"
@@ -221,7 +220,7 @@ with content of its own, keeps it — the name goes into `custom` and the
 adoption reports it. Content byte-identical to the shipped skill is superdev's
 own text and is left managed.
 
-`[knowledge] custom` releases an aokf-carried skill the same way — the whole
+`[knowledge] custom` releases an SOKF-carried skill the same way — the whole
 skill directory, companions included — with the same `init` adoption and the
 same `<capability>: custom names unknown skill '<name>' — no effect` line
 for a name the capability does not ship. The lists are name-guarded: a name
@@ -289,7 +288,7 @@ goes with its files.
 # `cache/`
 
 Machine state, gitignored by `init`: backups of overwritten files under
-`backup/<timestamp>/`, the search index under `aokf-index/` (tantivy, the
+`backup/<timestamp>/`, the search index under `sokf-index/` (tantivy, the
 section vectors, and a manifest of per-file hashes, schema version and model
 id), and each resolved pack under `packs/<digest>/`. Deleting it is safe — the
 next tool call rebuilds the index, and the next `sync` re-fetches a pack.
@@ -303,12 +302,12 @@ digest is kept; a pack that failed verification leaves nothing behind.
 # Outside the repo
 
 - `.mcp.json` at the repo root registers the MCP servers: the canonical knowledge
-  knowledge under `mcpServers.superdev-aokf`, and — with code-index enabled —
+  knowledge under `mcpServers.superdev-sokf`, and — with code-index enabled —
   codegraph's under `mcpServers.codegraph`, launched through `mise exec`
   because the pinned binary is on no PATH the client can see. The file is
   shared with the user's own servers, so superdev manages and hashes its
   own keys and leaves the rest alone, the same rule it applies to
-  `.mise.toml`. A managed repo gets `superdev mcp aokf`; in this repo the
+  `.mise.toml`. A managed repo gets `superdev mcp sokf`; in this repo the
   dev shim makes that resolve to `cargo run` against the working tree.
 - AGENTS.md carries one ensured line, `@.agents/superdev.md`, and is
   otherwise the user's. The aggregator it imports and the per-capability
@@ -318,7 +317,7 @@ digest is kept; a pack that failed verification leaves nothing behind.
 - `.claude/settings.json` carries one managed `hooks.PostToolUse` element,
   owned by the knowledge capability (the hook validates the canonical knowledge, so it
   exists exactly where knowledge does): superdev finds its own element by the
-  command string `superdev aokf hook validate`, adds or updates it, and
+  command string `superdev hook validate`, adds or updates it, and
   leaves the user's hooks alone. Both files are re-serialised whole on
   write, so key order is not preserved; the lock hashes the merged value, not
   the file, so a reformat is not drift. The bash-output-filter capability

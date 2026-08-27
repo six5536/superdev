@@ -158,7 +158,7 @@ mod tests {
     /// must not appear in it on the next save.
     #[test]
     fn a_lock_without_packs_round_trips_byte_identically() {
-        let written = "[components.knowledge]\nprovider = \"aokf\"\n\n[files]\n\"knowledge/index.md\" = \"abc\"\n";
+        let written = "[components.skills]\nprovider = \"superdev-skills\"\n\n[files]\n\"knowledge/index.md\" = \"abc\"\n";
         let lock: Lock = toml_edit::de::from_str(written).unwrap();
         assert!(lock.packs.is_empty());
         assert_eq!(toml_edit::ser::to_string_pretty(&lock).unwrap(), written);
@@ -173,7 +173,7 @@ mod tests {
             "rev = \"assets-v1.4.0\"\n",
             "digest = \"sha256:9f2a\"\n",
             "format = 1\n\n",
-            "[components.knowledge]\nprovider = \"aokf\"\n\n",
+            "[components.skills]\nprovider = \"superdev-skills\"\n\n",
             "[files]\n\"knowledge/index.md\" = \"abc\"\n",
         );
         let lock: Lock = toml_edit::de::from_str(written).unwrap();
@@ -237,7 +237,7 @@ mod tests {
             }],
         );
         lock.files
-            .insert(".agents/aokf/SPEC.md".into(), sha256_hex(b"spec"));
+            .insert(".agents/sokf/SPEC.md".into(), sha256_hex(b"spec"));
         lock.save(dir.path()).unwrap();
         assert_eq!(Lock::load(dir.path()).unwrap(), lock);
     }
@@ -279,7 +279,7 @@ provider = "superdev-skills"
 version = "0.1.0"
 
 [files]
-".agents/aokf/SPEC.md" = "aaaa"
+".agents/sokf/SPEC.md" = "aaaa"
 ".mise.toml:http:codegraph" = "bbbb"
 ".claude/settings.json:hooks.PostToolUse[superdev hook validate]" = "cccc"
 "#;

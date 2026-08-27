@@ -2,14 +2,14 @@
 type: Schema
 id: schema-research
 title: Research Schema
-description: Research findings filed as footnote-cited concepts in knowledge/research/, derived from the research skill and the AOKF spec.
+description: Research findings filed as footnote-cited concepts in knowledge/research/, derived from the research skill and the SOKF spec.
 sources:
   - id: skill-research
     resource: /.claude/skills/research/SKILL.md
     title: Research Skill
-  - id: aokf-spec
+  - id: sokf-spec
     resource: /.agents/sokf/SPEC.md
-    title: AOKF Specification
+    title: SOKF Specification
 ---
 
 # Research Schema
@@ -17,9 +17,9 @@ sources:
 Structural rules for research findings filed at
 `knowledge/research/research-{nnn}-{topic}.md` and listed in the canonical knowledge's
 `index.md`. Derived from the research skill's own filing
-statements[^skill-research] and the AOKF spec's frontmatter, sources, and
-footnote mechanics[^aokf-spec]. Alone among these schemas it fixes no body
-sections and declares no order: AOKF mandates neither, and the shape of an
+statements[^skill-research] and the SOKF spec's frontmatter, sources, and
+footnote mechanics[^sokf-spec]. Alone among these schemas it fixes no body
+sections and declares no order: SOKF mandates neither, and the shape of an
 answer follows the question.
 
 ````yaml
@@ -45,10 +45,10 @@ sections:
     required: true
     repeatable: true
     description: >
-      The findings, under headings of the writer's choosing — AOKF
+      The findings, under headings of the writer's choosing — SOKF
       mandates no fixed body sections and prefers headings, lists, and
       tables over freeform prose. Each claim carries a footnote whose
-      label matches a sources[].id entry, per the AOKF spec.
+      label matches a sources[].id entry, per the SOKF spec.
 
 example: |
   ---
@@ -71,4 +71,4 @@ example: |
 ````
 
 [^skill-research]: Research Skill
-[^aokf-spec]: AOKF Specification
+[^sokf-spec]: SOKF Specification

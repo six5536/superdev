@@ -19,12 +19,12 @@ code depends on them.
 
 ## Workflow
 
-- [ ] Read the spec (`aokf_read`; `aokf_search` when the id is not
+- [ ] Read the spec (`sokf_read`; `sokf_search` when the id is not
       given).
 - [ ] Read the existing interfaces (`codegraph_explore`) before adding
       new ones.
 - [ ] Read the `architecture`, `architectural-rules` and
-      `api-contracts` concepts (`aokf_read`): the existing interfaces
+      `api-contracts` concepts (`sokf_read`): the existing interfaces
       and the rules new ones must follow.
 - [ ] Decide what is expensive to change: data schema, API contracts,
       module boundaries, auth surface, and the UI.

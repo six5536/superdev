@@ -24,12 +24,12 @@ superdev validate [PATH...] check the canonical project knowledge and the superd
                              defaults. --json, --doc renders the grammar as
                              prose, --bundle <DIR>, --repo-root <DIR> for
                              `/`-rooted paths
-superdev aokf validate       (hidden; the same verb under its old name)
-superdev aokf index [PATH]   rebuild the search index from scratch
-superdev aokf hook validate  the Claude Code PostToolUse hook: payload on
+superdev validate       (hidden; the same verb under its old name)
+superdev sokf index [PATH]   rebuild the search index from scratch
+superdev hook validate  the Claude Code PostToolUse hook: payload on
                              stdin, validate when the edit touched the canonical knowledge
                              or a tree the grammar governs
-superdev mcp aokf            serve the canonical knowledge to agents over MCP on stdio
+superdev mcp sokf            serve the canonical knowledge to agents over MCP on stdio
 superdev completions <SHELL> write a completion script to stdout
                              (bash | zsh | fish | powershell | elvish)
 superdev man                 (hidden; roff to stdout, for packaging)
@@ -59,7 +59,7 @@ Every verb acts on the current directory.
   with the directory name. Without a TTY there is no prompt and no template,
   so scripted init is unchanged. Template files are write-once scaffolds:
   existing files win and are reported as kept. A knowledge-enabled init ends
-  with the hint to run `/aokf-bootstrap` in Claude Code — filling the canonical knowledge
+  with the hint to run `/bootstrap` in Claude Code — filling the canonical knowledge
   from existing docs and an owner interview is judgement work the agent does
   after the mechanical scaffolding.
 - **`status`** never writes. It exits `1` on any drift, missing component,
@@ -113,9 +113,9 @@ Every verb acts on the current directory.
   ([spec](specs/S009-knowledge-carried-skills-design.md)).
 
 `validate` with no `PATH` covers the bundle at `--bundle` (default
-`knowledge/`) and every tree the format grammar's `roots` names; `aokf index`
+`knowledge/`) and every tree the format grammar's `roots` names; `sokf index`
 defaults `PATH` to `knowledge/`; the hook always reads the same whole set. The
-search index lives in `.superdev/cache/aokf-index/`; `aokf index` and the
+search index lives in `.superdev/cache/sokf-index/`; `sokf index` and the
 server use it, `validate` never opens it.
 
 - **`validate`** runs both checks and reports once, with findings grouped by
@@ -129,19 +129,19 @@ server use it, `validate` never opens it.
   is validated only when a `PATH` is the canonical knowledge or contains it. The grammar
   comes from `.agents/format/grammar.yaml`, or from the copy inside the binary
   when the repository has none.
-- **`aokf validate`** is the same verb under the name it shipped with, hidden
+- **`validate`** is the same verb under the name it shipped with, hidden
   from help. The hook marker and its lock entry are keyed on that spelling in
   every managed repo, so it stays.
-- **`aokf index`** forces a full rebuild. Nothing else needs it: the server
+- **`sokf index`** forces a full rebuild. Nothing else needs it: the server
   syncs lazily on every tool call. It says so when no embedding model loaded
   and the index is lexical-only.
-- **`aokf hook validate`** reads the PostToolUse payload from stdin and exits
+- **`hook validate`** reads the PostToolUse payload from stdin and exits
   `0` unless the edited path is under the canonical knowledge or under a tree the grammar
   governs. Then it validates the whole set in-process and, on errors, prints
   them to stderr and exits `2` — which Claude Code hands back to the agent as a
   blocking error. It resolves the repo from `CLAUDE_PROJECT_DIR` when Claude
   Code sets it, else the working directory.
-- **`mcp aokf`** serves one stdio client and exits `0` when that client closes
+- **`mcp sokf`** serves one stdio client and exits `0` when that client closes
   stdin. A missing knowledge or an unusable index directory fails at startup
   rather than at every tool call, because a client cannot act on the latter.
 
@@ -151,20 +151,20 @@ Four read-only tools, stdio only, no resources or prompts. Every hit carries
 the locator set — knowledge-relative path, concept id, heading path, line range,
 snippet, score — so the next call can read exactly what matched.
 
-- **`aokf_search`** — `query`, optional `limit` (8 by default, clamped to
+- **`sokf_search`** — `query`, optional `limit` (8 by default, clamped to
   1..50), `types` and `tags`. Filters apply before fusion, so a filtered
   concept cannot re-enter through the other ranking. Settled work — a
   `deprecated` concept, or one tagged `done`, `resolved` or `wontfix` — is
   down-ranked after fusion, so finished plans and issues sort below live
   knowledge without leaving the results. Results group by concept,
   strongest concept first.
-- **`aokf_read`** — `id` (or knowledge-relative path), optional `heading`: the
+- **`sokf_read`** — `id` (or knowledge-relative path), optional `heading`: the
   whole concept, or one section named by heading or `a > b` heading path.
   `(root)` names the frontmatter-and-preamble section.
-- **`aokf_graph`** — no argument: the knowledge-wide map of *declared* edges,
+- **`sokf_graph`** — no argument: the knowledge-wide map of *declared* edges,
   grouped by source. With `id`: that concept's single-hop neighbours in both
   directions. Each group caps at 30 lines and then says how many it dropped.
-- **`aokf_overview`** — the canonical knowledge name, its concept count, the directory tree
+- **`sokf_overview`** — the canonical knowledge name, its concept count, the directory tree
   with each concept's id and description, and every validation finding,
   warnings included, whenever there is one.
 

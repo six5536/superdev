@@ -15,8 +15,8 @@ a chore.
 
 ## Workflow
 
-- [ ] Read the canonical knowledge the work touches (`aokf_overview` +
-      `aokf_search`): the conventions and constraints the plan must
+- [ ] Read the canonical knowledge the work touches (`sokf_overview` +
+      `sokf_search`): the conventions and constraints the plan must
       respect.
 - [ ] Read the affected code and its callers (`codegraph_explore`)
       before setting the steps.

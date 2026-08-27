@@ -14,7 +14,7 @@ from primary sources and file the findings in the canonical knowledge.
 
 ## Workflow
 
-- [ ] Check the canonical knowledge (`aokf_search`): findings here are input to
+- [ ] Check the canonical knowledge (`sokf_search`): findings here are input to
       the research. An existing concept on the topic is extended, not duplicated.
 - [ ] Spin up a background agent to do the research, so work
       continues while it reads. The remaining steps are its job.
@@ -26,7 +26,7 @@ from primary sources and file the findings in the canonical knowledge.
       `knowledge/research/Rnnn-<topic>.md` (`type: Research`,
       `id: research-<topic>`; scan the directory for the highest
       number and increment). Each claim carries a footnote whose
-      label matches a `sources[].id` entry, per the AOKF spec.
+      label matches a `sources[].id` entry, per the SOKF spec.
 - [ ] List the concept in the canonical knowledge's `index.md`.
 - [ ] GATE: Validate the canonical knowledge to PASS
       (`superdev validate`).

@@ -1,4 +1,4 @@
-//! The AOKF MCP server, driven by a real rmcp client over an in-process
+//! The SOKF MCP server, driven by a real rmcp client over an in-process
 //! duplex pipe — the transport is the only thing these tests stub.
 
 use std::path::Path;
@@ -10,7 +10,7 @@ use serde_json::{Map, Value};
 use superdev_core::sokf::{IndexDir, SokfServer};
 use tempfile::TempDir;
 
-const MANIFEST: &str = "aokf: \"0.1\"\nname: fixture-knowledge\n";
+const MANIFEST: &str = "sokf: \"0.1\"\nname: fixture-knowledge\n";
 
 const SPEC: &str = r#"---
 type: Spec

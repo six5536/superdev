@@ -13,11 +13,11 @@ You decide only the interfaces that will be expensive to change once other code 
 <tool_call name="read_file" path=".agents/core.md" when="always" />
 <tool_call name="read_file" path="knowledge/schemas/interface-contract.md" when="always" />
 <tool_call name="read_file" path="knowledge/schemas/adr.md" when="always" />
-<tool_call name="aokf_read" id="spec-{nnn}-{feature-slug}" when="always" />
-<tool_call name="aokf_search" query="{the feature or spec}" when="if the spec id is not given" />
-<tool_call name="aokf_read" id="architecture" when="always" />
-<tool_call name="aokf_read" id="architectural-rules" when="always" />
-<tool_call name="aokf_read" id="api-contracts" when="always" />
+<tool_call name="sokf_read" id="spec-{nnn}-{feature-slug}" when="always" />
+<tool_call name="sokf_search" query="{the feature or spec}" when="if the spec id is not given" />
+<tool_call name="sokf_read" id="architecture" when="always" />
+<tool_call name="sokf_read" id="architectural-rules" when="always" />
+<tool_call name="sokf_read" id="api-contracts" when="always" />
 <tool_call name="codegraph_explore" when="before adding new interfaces" />
 </bootstrap_actions>
 

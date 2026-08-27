@@ -9,7 +9,7 @@ description: Release notes — headline, highlights, breaking changes with migra
 
 Structural rules for release notes, matched by name
 (`**/*release-notes*.md`); the source names no filing directory, and the
-document is not an AOKF concept, so it carries no frontmatter. Distinct from
+document is not an SOKF concept, so it carries no frontmatter. Distinct from
 the changelog: the changelog is the complete record, these are what a user
 is told about one version.
 

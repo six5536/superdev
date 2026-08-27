@@ -15,16 +15,16 @@ setup current. Run inside a target repo, `init` installs the tooling —
 knowledge carrying a full engineering skill set as committed repo files,
 a code index, a skill pack — and records what it did; `status`,
 `sync` and `update` keep the repo matching the blueprint compiled into the
-binary.[^readme] `mcp aokf` then serves that knowledge back to agents, so
+binary.[^readme] `mcp sokf` then serves that knowledge back to agents, so
 they search it instead of swallowing it whole. It is opinionated for this
-project's stack (Claude Code, mise, AOKF); generalisation is not a goal yet.
+project's stack (Claude Code, mise, SOKF); generalisation is not a goal yet.
 See
 [architecture](architecture.md) for the design and
 [software-components](software-components.md) for what implements it.
 
 # Status
 
-Unreleased. The CLI core, the blueprint engine, the AOKF MCP server's read
+Unreleased. The CLI core, the blueprint engine, the SOKF MCP server's read
 side, the skill pack, blueprint migrations and the knowledge-carried skill
 set are built; structured updates through MCP and knowledge upkeep are not.
 Nothing is published to npm or crates.io yet.

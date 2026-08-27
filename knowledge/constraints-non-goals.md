@@ -9,7 +9,7 @@ status: stable
 # Non-goals
 
 - **Generalisation, yet.** superdev is opinionated for one stack — Claude
-  Code, mise, AOKF. Other agent harnesses, tool managers and knowledge
+  Code, mise, SOKF. Other agent harnesses, tool managers and knowledge
   formats stay out of scope until the one stack is proven; the
   capability/provider split ([architecture](architecture.md)) is where
   alternatives would slot in later.

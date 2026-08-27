@@ -131,12 +131,12 @@ mod tests {
     #[test]
     fn describe_names_the_target() {
         let a = Action::WriteFile {
-            path: ".agents/aokf/SPEC.md".into(),
+            path: ".agents/sokf/SPEC.md".into(),
             content: "x".into(),
             ownership: Ownership::Owned,
-            reason: "AOKF spec".into(),
+            reason: "SOKF spec".into(),
         };
-        assert_eq!(a.describe(), "write .agents/aokf/SPEC.md (AOKF spec)");
+        assert_eq!(a.describe(), "write .agents/sokf/SPEC.md (SOKF spec)");
 
         let a = Action::SetMisePin {
             tool: "http:codegraph".into(),

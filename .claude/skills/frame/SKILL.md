@@ -11,19 +11,19 @@ You define the problem, not the solution. Frame the project or feature given in 
 
 <bootstrap_actions>
 <tool_call name="read_file" path=".agents/core.md" when="always" />
-<tool_call name="aokf_overview" when="always" />
-<tool_call name="aokf_search" query="{existing knowledge on the project or feature}" when="always" />
-<tool_call name="aokf_read" id="glossary" when="always" />
-<tool_call name="aokf_read" id="project-overview" when="if framing a feature" />
-<tool_call name="aokf_read" id="constraints-non-goals" when="if framing a feature" />
-<tool_call name="aokf_read" id="backlog" when="if framing a feature" />
-<tool_call name="aokf_read" id="technology-stack" when="if framing a feature" />
-<tool_call name="aokf_read" id="visual-system" when="if framing a feature" />
-<tool_call name="aokf_read" id="template-readme" when="if new project" />
-<tool_call name="aokf_read" id="template-project-overview" when="if new project" />
-<tool_call name="aokf_read" id="template-technology-stack" when="if new project" />
-<tool_call name="aokf_read" id="template-constraints-non-goals" when="if new project" />
-<tool_call name="aokf_read" id="template-visual-system" when="if new project" />
+<tool_call name="sokf_overview" when="always" />
+<tool_call name="sokf_search" query="{existing knowledge on the project or feature}" when="always" />
+<tool_call name="sokf_read" id="glossary" when="always" />
+<tool_call name="sokf_read" id="project-overview" when="if framing a feature" />
+<tool_call name="sokf_read" id="constraints-non-goals" when="if framing a feature" />
+<tool_call name="sokf_read" id="backlog" when="if framing a feature" />
+<tool_call name="sokf_read" id="technology-stack" when="if framing a feature" />
+<tool_call name="sokf_read" id="visual-system" when="if framing a feature" />
+<tool_call name="sokf_read" id="template-readme" when="if new project" />
+<tool_call name="sokf_read" id="template-project-overview" when="if new project" />
+<tool_call name="sokf_read" id="template-technology-stack" when="if new project" />
+<tool_call name="sokf_read" id="template-constraints-non-goals" when="if new project" />
+<tool_call name="sokf_read" id="template-visual-system" when="if new project" />
 <tool_call name="codegraph_explore" query="{existing code}" when="if relevant" />
 </bootstrap_actions>
 

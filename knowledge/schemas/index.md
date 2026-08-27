@@ -30,7 +30,7 @@ a template could only be copied.
 * [Investigation Schema](investigation.md) - investigation write-ups — conclusion first, evidence with sources, ruled-out hypotheses and a recommendation.
 * [Postmortem Schema](postmortem.md) - blameless incident write-ups — impact, timeline, root cause and typed action items.
 * [Status Update Schema](status-update.md) - status updates — TL;DR, done since last update, in progress, blockers with recommended defaults, and next.
-* [Research Schema](research.md) - research findings filed as footnote-cited concepts in knowledge/research/, derived from the research skill and the AOKF spec.
+* [Research Schema](research.md) - research findings filed as footnote-cited concepts in knowledge/research/, derived from the research skill and the SOKF spec.
 
 ## Project files
 

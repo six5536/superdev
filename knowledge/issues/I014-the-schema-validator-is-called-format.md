@@ -3,8 +3,8 @@ type: Chore
 id: issue-014-the-schema-validator-is-called-format
 title: The schema validator is called "format", which already means three other things here
 description: The grammar-driven validator lived at src/format/, shipped its grammar at .agents/format/ and called its files "superdev-format", while format! is 457 lines away in the same crate, "pack format" is a glossary term and the knowledge format is itself a format.
-status: draft
-tags: [needs-triage]
+status: stable
+tags: [done]
 ---
 
 # Chore: rename the schema validator off the word "format"

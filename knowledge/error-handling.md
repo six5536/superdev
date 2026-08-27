@@ -12,11 +12,11 @@ resource: /crates/app/superdev/src/main.rs
 - `0` — success.
 - `1` — a check found something, not an error: `status` found work to do
   (drift, a missing component, an orphaned lock entry to sweep, or a pin behind
-  the registry), or `aokf validate` found errors in the canonical knowledge. CI gates on
+  the registry), or `validate` found errors in the canonical knowledge. CI gates on
   both.
 - `2` — usage error (clap), a hard failure, or an I/O failure, rendered as
   `error: <message>` on stderr. A failed `sync` or `init` exits `2`, as does
-  `mcp aokf` when it cannot start. A provider id the registry does not know —
+  `mcp sokf` when it cannot start. A provider id the registry does not know —
   in the manifest, or behind `update --provider` — exits `2`
   with `<capability> provider must be one of: <ids>`. The validation hook uses
   `2` for its own purpose — see below. `status` reaches `2` in one case: an
@@ -33,7 +33,7 @@ that everything gating on the old script's exit code — the hook,
 
 # The validation hook
 
-`aokf hook validate` speaks Claude Code's hook protocol instead. It exits `0`
+`hook validate` speaks Claude Code's hook protocol instead. It exits `0`
 whenever Claude Code should let the edit through: the payload names no file, or
 names one outside the canonical knowledge and the trees the format grammar governs, or names
 one the repository still validates against. Otherwise the findings go to stderr
@@ -49,7 +49,7 @@ verb anyway.
 
 # MCP tools never exit
 
-Inside `mcp aokf` a failure is a tool error payload, and the process keeps
+Inside `mcp sokf` a failure is a tool error payload, and the process keeps
 serving. An unknown id, a file the parser choked on, an embedding model that
 will not load — each answers the one call that hit it and leaves the session
 alive, because the client's next question may well be answerable. The startup

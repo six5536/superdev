@@ -12,9 +12,9 @@ You describe the feature from outside, as a user or caller sees it. Create or up
 <bootstrap_actions>
 <tool_call name="read_file" path=".agents/core.md" when="always" />
 <tool_call name="read_file" path="knowledge/schemas/spec.md" when="always" />
-<tool_call name="aokf_overview" when="always" />
-<tool_call name="aokf_read" id="glossary" when="always" />
-<tool_call name="aokf_search" query="{prior specs and conventions this spec must not contradict}" when="always" />
+<tool_call name="sokf_overview" when="always" />
+<tool_call name="sokf_read" id="glossary" when="always" />
+<tool_call name="sokf_search" query="{prior specs and conventions this spec must not contradict}" when="always" />
 </bootstrap_actions>
 
 <process_actions>

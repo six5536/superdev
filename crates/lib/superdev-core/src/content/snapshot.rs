@@ -147,7 +147,7 @@ mod tests {
         }
     }
 
-    /// The instruction files and the AOKF spec ship from the pack tree but
+    /// The instruction files and the SOKF spec ship from the pack tree but
     /// are not content: they describe a version the binary pins or a format
     /// the compiled validator enforces. `pack.toml` is metadata.
     #[test]

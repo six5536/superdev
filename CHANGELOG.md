@@ -11,20 +11,68 @@ publish a version it cannot find a heading for.
 
 ## [Unreleased]
 
+### Changed
+
+- **AOKF is SOKF, and it is part of superdev.** The format is renamed —
+  Superdev Open Knowledge Format — and stops being a capability a provider
+  fills. `Capability::Knowledge`, its registry entry and `--no-knowledge` are
+  gone; every `init` writes the knowledge scaffold, the hook and the MCP
+  registration. `[knowledge]` is now a plain top-level table in
+  `.superdev/config.toml` holding `custom` and `embeddings`; a manifest still
+  naming a `provider` there is refused with the edit to make.
+
+  The standing term is **SOKF knowledge**, always in full. "Knowledge" alone
+  is an ordinary English word — `frame/SKILL.md` used it in three senses in
+  forty-three lines — and `sokf` is the token that means one thing only. It
+  anchors every identifier:
+
+  | Was | Is |
+  |-----|----|
+  | `superdev aokf validate` | `superdev validate` |
+  | `superdev aokf index` | `superdev sokf index` |
+  | `superdev aokf hook validate` | `superdev hook validate` |
+  | `superdev mcp aokf` | `superdev mcp sokf` |
+  | `aokf_search`, `aokf_read`, `aokf_graph`, `aokf_overview` | `sokf_search`, `sokf_read`, `sokf_graph`, `sokf_overview` |
+  | `mcpServers.superdev-aokf` | `mcpServers.superdev-sokf` |
+  | `knowledge/manifest.aokf.yaml`, key `aokf` | `knowledge/manifest.sokf.yaml`, key `sokf` |
+  | `.agents/aokf.md`, `.agents/aokf/SPEC.md` | `.agents/sokf.md`, `.agents/sokf/SPEC.md` |
+  | `.agents/format/grammar.yaml` | `.agents/sokf/grammar.yaml` |
+  | `.superdev/cache/aokf-index` | `.superdev/cache/sokf-index` |
+
+  The MCP key and the hook marker are lock keys in every managed repo: one
+  `sync` removes the old entries and writes the new ones, which is what the
+  orphan pass is for. The old `aokf` verb group is gone outright, with no
+  alias — pre-1.0, and there is nothing left for an alias to be compatible
+  with. `.superdev/cache/aokf-index/` is not in the lock, so nothing removes
+  it; delete it by hand if you mind.
+
+  In `superdev-core`, `aokf` and `format` are replaced by `sokf` (the read
+  side) and `validate` (both halves of the check, meeting in the parent
+  rather than inside one of them). This breaks the published API.
+
+  See P008.
+
 ### Added
 
 - **`superdev validate`.** One command checks both specs this repository
-  owns: the AOKF bundle, and the superdev-format files — the skills, the
-  schemas and `.agents/core.md` — against the grammar that defines the
-  language they are written in. One report, findings grouped by file, one
-  exit code, and one PostToolUse hook, so a file both checks have something
-  to say about is reported once and the two cannot reach different verdicts.
-  The grammar is read from `.agents/format/grammar.yaml`, or from the copy
-  inside the binary when a repository has none, and `--doc` prints it as
-  prose. `superdev aokf validate` stays as a hidden alias, because the hook
-  marker is the lock key in every managed repo — but its positional argument
-  is now the scope of the run rather than the bundle, which moved to
-  `--bundle <DIR>`. See P006.
+  owns: the SOKF knowledge, and every document against the schema its `type`
+  names — the skills and `.agents/core.md` included, against the grammar
+  that defines the language they are written in. One report, findings
+  grouped by file, one exit code, and one PostToolUse hook, so a file both
+  checks have something to say about is reported once and the two cannot
+  reach different verdicts. The grammar is read from
+  `.agents/sokf/grammar.yaml`, or from the copy inside the binary when a
+  repository has none, and `--doc` prints it as prose. See P006 and P008.
+
+- **Documents are checked against their schemas.** Forty schemas declared
+  `target-files`, a glob naming the documents each governs, and nothing had
+  ever read it — so no document had ever been checked against the contract
+  that claimed to govern it. Dispatch now runs through the frontmatter
+  `type`, one type to one schema, and `validate` reports a missing required
+  section, a section out of order, a prohibited section, a wrong table column
+  and an over-limit line count. Switching it on found 218 disagreements
+  across this repository; where the documents agreed with each other and not
+  with the schema, the schema was what was wrong. See P008.
 
 ### Removed
 
@@ -34,13 +82,12 @@ publish a version it cannot find a heading for.
   validate the format. The reference's behaviour is held by goldens captured
   from it while it still ran.
 
-- **The AOKF conformance ladder.** A bundle now passes or fails; there is no
-  level to grade against. `superdev aokf validate --level` is gone, and the
-  report drops `checked_level`, `achieved_level` and each finding's
+- **The AOKF conformance ladder.** The knowledge now passes or fails; there
+  is no level to grade against. `--level` is gone, and the report drops `checked_level`, `achieved_level` and each finding's
   `error_at_level`. No verdict changes: every implementation graded at the top
   level already, where a finding was an error exactly when it carried any level
-  at all. What does change is that `--level 0` can no longer wave a bundle with
-  broken links and no manifest past the hook and the pre-PR check. AOKF is
+  at all. What does change is that `--level 0` can no longer wave knowledge with
+  broken links and no manifest past the hook and the pre-PR check. The format is
   0.3; see ADR-017.
 
 ### Added

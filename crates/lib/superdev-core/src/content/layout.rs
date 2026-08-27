@@ -189,14 +189,14 @@ mod tests {
         assert_eq!(plans.files, [("index.md".to_string(), "plans".to_string())]);
     }
 
-    /// The instruction files and the AOKF spec move with the binary, so they
+    /// The instruction files and the SOKF spec move with the binary, so they
     /// sit in the tree without being content. `pack.toml` is metadata.
     #[test]
     fn paths_matching_no_rule_are_not_items() {
         let items = items_from([
             ("pack.toml", "format = 1"),
-            ("aokf/agents/aokf.md", "instructions"),
-            ("aokf/agents/aokf/SPEC.md", "spec"),
+            ("sokf/agents/sokf.md", "instructions"),
+            ("sokf/agents/sokf/SPEC.md", "spec"),
             ("codegraph/codegraph.md", "instructions"),
             ("rtk/rtk.md", "instructions"),
             ("knowledge/concepts", "a file where a directory belongs"),

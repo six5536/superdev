@@ -64,7 +64,7 @@ const DOWNRANK_FACTOR: f32 = 0.25;
 /// Longest snippet, in characters.
 const SNIPPET_CHARS: usize = 200;
 
-/// Where the index lives: `.superdev/cache/aokf-index` in normal use.
+/// Where the index lives: `.superdev/cache/sokf-index` in normal use.
 ///
 /// The directory belongs to the index alone — a rebuild deletes it wholesale.
 #[derive(Debug, Clone)]

@@ -9,7 +9,7 @@ description: Blameless incident write-ups — impact, timeline, root cause and t
 
 Structural rules for incident postmortems, matched by name
 (`**/*postmortem*.md`); the source names no filing directory, and the
-document is not an AOKF concept, so it carries no frontmatter. Blameless is
+document is not an SOKF concept, so it carries no frontmatter. Blameless is
 a structural property here, not a reminder: the document names systems and
 processes, and the only place a person appears is as the owner of an action
 item.

@@ -47,7 +47,7 @@ example: |
   # Templates
 
   Copy-verbatim skeletons for the documents the development process produces.
-  Read one with `aokf_read` (id `template-<name>`), strip the frontmatter, and
+  Read one with `sokf_read` (id `template-<name>`), strip the frontmatter, and
   fill in the angle-bracket placeholders.
 
   ## Planning & design

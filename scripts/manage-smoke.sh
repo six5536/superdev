@@ -10,8 +10,8 @@ git init -q "$scratch/repo"
 cd "$scratch/repo"
 "${OLDPWD}/target/release/superdev" init
 "${OLDPWD}/target/release/superdev" status
-"${OLDPWD}/target/release/superdev" aokf validate knowledge
+"${OLDPWD}/target/release/superdev" validate
 # The only run that exercises the real embedding model: ~130 MB downloaded
 # once into the user cache, then loaded from there. Every other test stubs it.
-"${OLDPWD}/target/release/superdev" aokf index knowledge
+"${OLDPWD}/target/release/superdev" sokf index knowledge
 echo "manage smoke OK"

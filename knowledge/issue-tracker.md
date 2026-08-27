@@ -2,7 +2,7 @@
 type: IssueTracker
 id: issue-tracker
 title: Issue Tracker & Triage
-description: Where issues live — one AOKF concept per ticket under knowledge/issues/ — plus the triage label vocabulary.
+description: Where issues live — one SOKF concept per ticket under knowledge/issues/ — plus the triage label vocabulary.
 status: stable
 ---
 

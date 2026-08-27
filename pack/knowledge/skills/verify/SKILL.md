@@ -19,8 +19,8 @@ the slice fail.
 ## Workflow
 
 - [ ] Read the slice's plan entry and the test-plan cases assigned to
-      it (`aokf_read`).
-- [ ] Read the `definition-of-done` concept (`aokf_read`): the checks
+      it (`sokf_read`).
+- [ ] Read the `definition-of-done` concept (`sokf_read`): the checks
       this slice must pass.
 - [ ] Update the slice onto the merge target named by the
       `development-procedure` concept; every check below runs on that

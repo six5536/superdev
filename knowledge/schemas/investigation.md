@@ -9,7 +9,7 @@ description: Investigation write-ups — conclusion first, evidence with sources
 
 Structural rules for investigation write-ups, matched by name
 (`**/*investigation*.md`); the source names no filing directory, and the
-document is not an AOKF concept, so it carries no frontmatter.
+document is not an SOKF concept, so it carries no frontmatter.
 
 ````yaml
 target-files: "**/*investigation*.md"

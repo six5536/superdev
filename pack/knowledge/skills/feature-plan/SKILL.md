@@ -20,7 +20,7 @@ don't build.
 
 ## Workflow
 
-- [ ] Read the spec (`aokf_read`; `aokf_search` when the id is not
+- [ ] Read the spec (`sokf_read`; `sokf_search` when the id is not
       given). Re-entering? Read the feature's plan and open gap
       issues too.
 - [ ] Check the dependency order and the affected code

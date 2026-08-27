@@ -640,7 +640,7 @@ fn marker_size(marker: &str) -> String {
     format!("{n} {what}{plural}")
 }
 
-/// A schema file: its own AOKF frontmatter, then the fenced contract against
+/// A schema file: its own SOKF frontmatter, then the fenced contract against
 /// the document vocabulary.
 pub fn check_schema(file: &Path, text: &str, errs: &mut Vec<String>, g: &Grammar) {
     let _ = file;
@@ -648,7 +648,7 @@ pub fn check_schema(file: &Path, text: &str, errs: &mut Vec<String>, g: &Grammar
     let d = &k.document;
     let lines: Vec<&str> = text.split('\n').collect();
     let Some(split) = split_frontmatter(&lines) else {
-        errs.push("missing AOKF frontmatter".to_string());
+        errs.push("missing SOKF frontmatter".to_string());
         return;
     };
     for key in &k.frontmatter.required {

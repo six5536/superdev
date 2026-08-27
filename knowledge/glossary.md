@@ -31,7 +31,7 @@ status: stable
   compares against the manifest, and returns actions; it never applies them.
 - **Owned file** — a file superdev writes and keeps current, hashed into
   `lock.toml`. `sync` rewrites it, backing up and reporting any user edit.
-  The embedded AOKF spec and validator are owned.
+  The embedded SOKF spec and validator are owned.
 - **Scaffold** — a file superdev writes once and never touches again, such as
   the starter knowledge concepts. It is the user's from the moment it
   exists, so it cannot drift.
@@ -50,9 +50,9 @@ status: stable
 - **Skill pack** — the two skills the `skills` capability ships as
   owned files under `.claude/skills/`, embedded in the binary and versioned
   with it. Claude Code loads them from there natively, so there is nothing to
-  install. The knowledge-carried skills are not pack skills: the aokf
+  install. The knowledge-carried skills are not pack skills: the SOKF
   component carries them.
-- **Knowledge-carried skill** — one of the 17 aokf-carried skills the
+- **Knowledge-carried skill** — one of the 17 SOKF-carried skills the
   `knowledge` capability materialises into `.claude/skills/<name>/` as owned
   files, each skill its whole directory: SKILL.md, companions, harness
   configs. The set exists exactly where knowledge exists. See the
@@ -103,7 +103,7 @@ status: stable
   drops its hashes from the lock, and `status` reports it as unmanaged rather
   than drifted. A name the capability no longer ships reports as having no
   effect instead of failing.
-- **Harvest** — the move `aokf-bootstrap` performs: relocate a durable fact from
+- **Harvest** — the move `bootstrap` performs: relocate a durable fact from
   stranded prose (or an opted-in code comment) into the canonical knowledge, leaving a
   one-line summary and a link behind in the source. See the
   [spec](specs/S008-knowledge-owned-skills-design.md).

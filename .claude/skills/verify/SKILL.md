@@ -13,11 +13,11 @@ You try to make the slice fail. Check that the slice given in the input above wo
 <tool_call name="read_file" path=".agents/core.md" when="always" />
 <tool_call name="read_file" path="knowledge/schemas/code-review.md" when="always" />
 <tool_call name="read_file" path="knowledge/schemas/investigation.md" when="if a failure needs investigation" />
-<tool_call name="aokf_read" id="feature-plan-{nnn}-{slug}" when="always" />
-<tool_call name="aokf_read" id="spec-{nnn}-{feature-slug}" when="always" />
-<tool_call name="aokf_read" id="contract-{feature-slug}" when="always" />
-<tool_call name="aokf_read" id="definition-of-done" when="always" />
-<tool_call name="aokf_read" id="development-procedure" when="always" />
+<tool_call name="sokf_read" id="feature-plan-{nnn}-{slug}" when="always" />
+<tool_call name="sokf_read" id="spec-{nnn}-{feature-slug}" when="always" />
+<tool_call name="sokf_read" id="contract-{feature-slug}" when="always" />
+<tool_call name="sokf_read" id="definition-of-done" when="always" />
+<tool_call name="sokf_read" id="development-procedure" when="always" />
 </bootstrap_actions>
 
 <process_actions>

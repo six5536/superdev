@@ -18,8 +18,8 @@ feature from outside, as a user or caller sees it.
 ## Workflow
 
 - [ ] Check for prior specs and conventions this spec must not
-      contradict (`aokf_overview` + `aokf_search`).
-- [ ] Read the `glossary` (`aokf_read`); describe behaviour in the
+      contradict (`sokf_overview` + `sokf_search`).
+- [ ] Read the `glossary` (`sokf_read`); describe behaviour in the
       project's terms.
 - [ ] Start the spec from `template-spec`: a draft concept at
       `knowledge/specs/Snnn-<feature-slug>.md`, listed in the specs

@@ -9,7 +9,7 @@ description: Status updates — TL;DR, done since last update, in progress, bloc
 
 Structural rules for status updates, matched by name
 (`**/*status-update*.md`); the source names no filing directory, and the
-document is not an AOKF concept, so it carries no frontmatter. The heading
+document is not an SOKF concept, so it carries no frontmatter. The heading
 carries the date, so a series of these sorts and reads as a series.
 
 ````yaml

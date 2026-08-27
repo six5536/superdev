@@ -22,9 +22,9 @@ It also registers an MCP server for the canonical knowledge, so agents
 search it instead of preloading every page of it:
 
 ```sh
-superdev mcp aokf        # serve the canonical knowledge over MCP (stdio)
-superdev aokf validate   # check it against the AOKF spec; exits 1 on errors
-superdev aokf index      # rebuild the search index from scratch
+superdev mcp sokf        # serve the SOKF knowledge over MCP (stdio)
+superdev validate        # check it against the SOKF spec and the schemas
+superdev sokf index      # rebuild the search index from scratch
 ```
 
 The server offers four read-only tools — search, read, graph, overview — and
@@ -94,7 +94,7 @@ that you did not ask for, so it is the one on a clock. Nothing prompts for
 credentials either: a pack you cannot read anonymously fails rather than
 waiting for you to type.
 
-superdev is opinionated for one stack — Claude Code, mise and AOKF — and is
+superdev is opinionated for one stack — Claude Code, mise and SOKF — and is
 still young: expect the surface to move before 1.0.
 
 ## Install

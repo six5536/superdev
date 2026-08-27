@@ -11,13 +11,13 @@ You build exactly one slice and nothing beyond it. Implement the slice identifie
 
 <bootstrap_actions>
 <tool_call name="read_file" path=".agents/core.md" when="always" />
-<tool_call name="aokf_read" id="feature-plan-{nnn}-{slug}" when="always" />
-<tool_call name="aokf_read" id="spec-{nnn}-{feature-slug}" when="always" />
-<tool_call name="aokf_read" id="contract-{feature-slug}" when="always" />
-<tool_call name="aokf_read" id="coding-standards" when="before writing code and tests" />
-<tool_call name="aokf_read" id="testing-strategy" when="before writing code and tests" />
-<tool_call name="aokf_read" id="visual-system" when="if UI slice" />
-<tool_call name="aokf_read" id="template-commit-message" when="always" />
+<tool_call name="sokf_read" id="feature-plan-{nnn}-{slug}" when="always" />
+<tool_call name="sokf_read" id="spec-{nnn}-{feature-slug}" when="always" />
+<tool_call name="sokf_read" id="contract-{feature-slug}" when="always" />
+<tool_call name="sokf_read" id="coding-standards" when="before writing code and tests" />
+<tool_call name="sokf_read" id="testing-strategy" when="before writing code and tests" />
+<tool_call name="sokf_read" id="visual-system" when="if UI slice" />
+<tool_call name="sokf_read" id="template-commit-message" when="always" />
 <tool_call name="codegraph_explore" query="{the code under change and its callers}" when="before editing" />
 </bootstrap_actions>
 

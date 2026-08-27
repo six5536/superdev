@@ -3,11 +3,34 @@ type: FeatureRequest
 id: issue-015-every-issue-must-be-a-bug-report
 title: The Issue type has one shape, bug-report, so everything filed has to pretend to be a defect
 description: One schema and one template constrain type Issue, so a feature request, a rename or a decision has to invent repro steps and an environment to be filed at all — six of the fourteen issues on file already do, and a feature request has no home but an untracked bullet in the backlog.
-status: draft
-tags: [needs-triage]
+status: stable
+tags: [done]
 ---
 
 # Feature: the Issue type has one shape, bug-report, so everything filed has to pretend to be a defect
+
+## Resolved
+
+P008. `type: Issue` becomes three types, one per shape, each with its own
+schema and template and all sharing the id, the triage tags and the
+lifecycle:
+
+- `BugReport` — a defect: something behaves against its own specification.
+  Symptom, environment, repro, root cause, regression risk.
+- `FeatureRequest` — something absent that should exist. Motivation,
+  proposed behaviour, alternatives considered, scope. Never asked for an
+  error log.
+- `Chore` — scoped mechanical work whose shape is already known. Surfaces
+  and a definition of done. Never asked for a root cause it does not have.
+
+The seventeen issues on file sort nine, six and two, and the six this issue
+named as strained were rewritten into the shape they actually are — this one
+among them. A feature request now has a home in the tracker rather than an
+untracked bullet in the backlog.
+
+The dispatch this rests on is the wider fix: a document's `type` names the
+one schema that governs it, so adding a shape is adding a type, not
+widening an existing contract until it checks nothing.
 
 ## Summary
 

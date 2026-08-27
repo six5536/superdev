@@ -1,6 +1,6 @@
 //! components/skills.rs — shared machinery for capabilities that ship
 //! embedded skills into `.claude/skills/`: the path convention, the item
-//! list, and init-time adoption. The skill pack and the aokf component both
+//! list, and init-time adoption. The skill pack and the SOKF component both
 //! build on it, so the two cannot drift apart in behaviour.
 
 use std::path::Path;

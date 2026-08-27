@@ -17,7 +17,7 @@ current.
 
 ## Workflow
 
-- [ ] Read the slice's plan entry (`aokf_read`) and the
+- [ ] Read the slice's plan entry (`sokf_read`) and the
       `development-procedure` concept: the merge convention (target
       branch, PR or direct, required checks).
 - [ ] The merge target moved since verify? Update the slice onto it

@@ -578,7 +578,7 @@ fn is_actor(text: &str) -> bool {
 ///
 /// Covers the extended forms `datetime.fromisoformat` accepts: a calendar
 /// date, an optional time, and an optional `Z` or `±HH[:MM[:SS]]` offset.
-/// Basic (unpunctuated) and week-date forms are rejected — no AOKF bundle
+/// Basic (unpunctuated) and week-date forms are rejected — no SOKF bundle
 /// writes them, and accepting them costs more than it is worth.
 fn is_iso8601(value: &Value) -> bool {
     let Some(text) = value.as_str() else {

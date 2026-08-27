@@ -50,8 +50,10 @@ rev    = "assets-v1.4.0"
 [[packs]]
 source = "./packs/acme"          # local path: no rev
 
-[knowledge]                       # capability tables: unchanged
-provider = "aokf"
+[code-index]                      # capability tables: unchanged
+provider = "codegraph"
+
+[knowledge]                       # SOKF's own table: not a capability
 ```
 
 ```rust
@@ -231,14 +233,13 @@ pub struct Item {
 }
 
 /// Paths a pack may not carry, refused at resolve with the reason. The
-/// instruction files and the AOKF spec move with the binary that pins or
+/// instruction files and the SOKF spec move with the binary that pins or
 /// validates them; `PROJECT.md` is the project's own extension layer, which
 /// superdev never writes or tracks.
 pub const REJECTED: &[&str] = &[
-    "agents/aokf.md",
+    "agents/sokf.md",
     "agents/codegraph.md",
     "agents/rtk.md",
-    "knowledge/agents/SPEC.md",
 ];
 
 /// Refused wherever it appears: the project's own extension layer, which

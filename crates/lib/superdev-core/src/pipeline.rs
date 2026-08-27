@@ -1079,7 +1079,7 @@ mod tests {
         assert!(none.contains("@coding.md"), "{none}");
         assert!(none.contains("@tools.md"), "{none}");
         assert!(
-            !none.contains("@aokf.md") && !none.contains("@codegraph.md"),
+            !none.contains("@codegraph.md") && !none.contains("@rtk.md"),
             "{none}"
         );
     }
@@ -1138,7 +1138,7 @@ mod tests {
         );
     }
 
-    /// The knowledge capability plans every aokf-carried skill file, so a
+    /// The SOKF component plans every carried skill file, so a
     /// `[knowledge] custom` name can release any of them.
     #[test]
     fn knowledge_plans_the_full_carried_skill_set() {

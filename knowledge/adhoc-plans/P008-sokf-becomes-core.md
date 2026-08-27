@@ -3,7 +3,7 @@ type: AdhocPlan
 id: adhoc-plan-008-sokf-becomes-core
 title: SOKF becomes a core part of superdev
 description: AOKF is renamed SOKF and stops being a swappable capability, the two validators merge into one module behind one command, a document's type names the schema that governs it, and the schema layer is enforced for the first time.
-status: draft
+status: done
 ---
 
 # Plan: SOKF becomes a core part of superdev
@@ -322,9 +322,16 @@ Depends on: W2, W6.
 Depends on: W1, W2, W3, W4, W5, W7.
 
 1. Move the pack's instruction files — `pack/aokf/agents/**` to
-   `pack/knowledge/agents/**`, mirrored under `assets/`. `classify` matches
-   neither, which is what keeps them binary-owned;
-   `paths_matching_no_rule_are_not_items` gains both new paths.
+   `pack/sokf/agents/**`. `classify` matches neither, which is what keeps
+   them binary-owned; `paths_matching_no_rule_are_not_items` gains both new
+   paths.
+
+   Corrected during execution. This step first said `pack/knowledge/agents/`,
+   which `classify` does indeed ignore — but `pack::manifest::REJECTED`
+   guards the paths a *fetched* pack may not supply, and superdev's own pack
+   then matched its own guard, so the pack stopped resolving. The old layout
+   used a top-level directory for exactly this separation; `pack/sokf/`
+   keeps it under the new name.
 2. Sweep the skills — the 21 under `.claude/skills/` and their
    `pack/knowledge/skills/` mirrors, both sides in one step so the drift set
    does not grow.
@@ -394,7 +401,7 @@ Depends on: W1, W2, W3, W4, W5, W7.
 
 | Check | Verifies |
 |-------|----------|
-| `git grep -Ii 'aokf' -- . ':!CHANGELOG.md' ':!knowledge/adhoc-plans' ':!knowledge/decisions' ':!knowledge/specs' ':!knowledge/issues' ':!knowledge/feature-plans'` returns nothing | FR-8 |
+| `git grep -Ii 'aokf' -- . ':!CHANGELOG.md' ':!knowledge/adhoc-plans' ':!knowledge/decisions' ':!knowledge/specs' ':!knowledge/issues' ':!knowledge/feature-plans'` returns only deliberate references: the tests asserting the old verbs are gone, the tripwire refusing a pre-SOKF manifest, the snapshot header's note on the Python reference, and two links to S002, whose id is historical | FR-8 |
 | `git grep -n 'Capability::Knowledge\|no-knowledge\|no_knowledge'` returns nothing, and `Capability::ALL` has four entries | FR-1, FR-2 |
 | `superdev init` in an empty scratch repo writes `knowledge/`, the hook and the `.mcp.json` entry with no flag given, and its `config.toml` holds a top-level `[knowledge]` table and no knowledge capability | FR-2, FR-3 |
 | `superdev sync` against a config carrying `[knowledge] provider = "aokf"` fails naming the table and the edit | FR-3 |
@@ -411,6 +418,7 @@ Depends on: W1, W2, W3, W4, W5, W7.
 | A fixture with a type naming no schema, and one schema no type names, both reported | FR-14 |
 | A fixture repo carrying the previous release's lock, `.mcp.json`, `.claude/settings.json` and `.agents/aokf*` syncs to the new state, and a second `status --drift` exits 0 | FR-15 |
 | `binary_owned_count()` is 2 and names the two `.agents/sokf/` paths; every skill, template and concept traces to a pack item | FR-16 |
+| `read_pack("superdev", &root)` resolves — the binary-owned pair sits outside the `agents/` position `REJECTED` guards | FR-16 |
 | `superdev validate` over this repository reports PASS, with the 5 known warnings and no errors | FR-12, FR-13 |
 | `cargo nextest run --workspace` passes with at least 534 tests | NFR-3 |
 | `cargo fmt --all -- --check`, `cargo clippy --workspace --all-targets -- -D warnings`, `cargo test --doc` and `RUSTDOCFLAGS="-D warnings" cargo doc` are clean | NFR-3 |
@@ -483,11 +491,21 @@ them by accident today; under FR-11 it cannot.
 
 ### Reconciliation record
 
-Filled by W6 step 2: one row per schema, naming which side was wrong and what
-changed. Empty until the reconciliation runs.
+One row per disagreement W6 judged, naming which side was wrong. 218
+findings on the first run, zero on the last.
 
 | Schema | Documents | Wrong side | Change |
 |--------|-----------|------------|--------|
+| `spec` | 13 of 14 | schema | It required sixteen sections; one spec carried them. The thirteen did not agree with each other either — only "opens by saying why it exists" is universal, and all fourteen do it. Requires that; recommends the rest. |
+| `feature-request` | 6 | documents | Retyped in W5, still carrying bug-report bodies. Reshaped: motivation, proposed behaviour, alternatives, scope. |
+| `chore` | 2 | documents | The same, into surfaces and a definition of done. |
+| `bug-report`, `feature-request`, `chore` | 9 | schema | The resolution rule sat last; every settled issue puts it directly under the title. Moved. `Comments` split off and stays last, per the tracker's own convention. |
+| `adhoc-plan` | P004 | document | Predates the schema and used the four headings it prohibits. Reorganised — its "Current state" was already Facts with evidence attached. Outcomes, Non-goals, Requirements and Definition of done written from its own content. |
+| `feature-plan` | P001, P002 | documents | Predate the schema; their numbered task lists were slice lists without the headings. |
+| `readme` | README.md | schema | Required six sections of a README that has three and needs three. Over-fitted to a template rather than to any real README; three become recommended. |
+| `architecture`, `coding-standards`, `constraints-non-goals`, `software-components` | 4 | documents | Each qualified a required heading (`CI/CD (\`.github/workflows\`)`). The qualifier moved into the prose. |
+| `issue-tracker` | 1 | document | A table column read "Tag in this repo" where the shipped schema declares "Label". |
+| `bug-report` | I009 | document | No regression risk section; a settled report should still say what would catch a recurrence. |
 
 ### Approximate backlog before reconciliation
 
@@ -500,3 +518,6 @@ half the concepts.
 | Documents dispatched | With findings | Findings | Concentration |
 |----------------------|---------------|----------|---------------|
 | 54 | 14 | 141 | 13 of the 14 are specs, all failing `schema-spec` identically |
+
+The probe understated, as it said it would. The real first run, after W5
+brought every concept into dispatch, reported 218.

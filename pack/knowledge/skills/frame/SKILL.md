@@ -15,12 +15,12 @@ problem, not the solution.
 
 ## Workflow
 
-- [ ] Read existing project knowledge first (`aokf_overview` +
-      `aokf_search`).
+- [ ] Read existing project knowledge first (`sokf_overview` +
+      `sokf_search`).
 - [ ] GATE: Existing project whose knowledge is empty or still TBD? Fill
       it with `/bootstrap` first.
 - [ ] Feature: read `project-overview`, `constraints-non-goals` and
-      `backlog` (`aokf_read`) for prior scope and rejections.
+      `backlog` (`sokf_read`) for prior scope and rejections.
 - [ ] GATE: If the feature is out of scope or already decided against,
       stop and tell the user why.
 - [ ] GATE: Is the idea too unshaped to state a goal? Widen it with

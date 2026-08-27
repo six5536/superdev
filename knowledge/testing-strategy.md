@@ -30,8 +30,8 @@ gate are in [CONTRIBUTING](/CONTRIBUTING.md).[^contributing]
   tests spawn `sh` for.
 - **CLI end-to-end.** Invoke the real binary (`assert_cmd`) against every
   surface: `--version`, help, completions per shell, `man`, usage-error exit
-  codes, `aokf validate`'s three exit codes and its JSON, `aokf index`, and
-  `mcp aokf`'s startup failures. The manage verbs get five smoke journeys —
+  codes, `validate`'s three exit codes and its JSON, `sokf index`, and
+  `mcp sokf`'s startup failures. The manage verbs get five smoke journeys —
   fresh `init`, `sync` on a fresh clone, a provider switch swept both ways,
   disabling `code-index`, and a failed `init` reporting the manifest it
   leaves behind — against fake `mise`, `claude` and `codegraph` on `PATH` as
@@ -39,7 +39,7 @@ gate are in [CONTRIBUTING](/CONTRIBUTING.md).[^contributing]
   materialisation runs against real files. The fakes make these unix-only;
   Windows runs the rest.
 - **Validator snapshots.** One fixture knowledge tree per failure class under
-  `tests/fixtures/aokf/`, and one file tree per class under
+  `tests/fixtures/sokf/`, and one file tree per class under
   `tests/fixtures/format/`, each with a `.golden.json` holding the report the
   validator produces for it. Both compare verbatim: the goldens are the
   contract over the finding texts, their severities, the verdict and the order
@@ -67,7 +67,7 @@ gate are in [CONTRIBUTING](/CONTRIBUTING.md).[^contributing]
   locally: `npm run smoke` / `npm run smoke:launcher`.
 - **Manage smoke (manual).** `npm run smoke:manage` runs a real `init` and
   `status` in a scratch repo against the real mise, claude and codegraph, then
-  `aokf validate` and `aokf index` over the canonical knowledge that `init` just wrote.
+  `validate` and `sokf index` over the canonical knowledge that `init` just wrote.
   This is the only place the real embedding model is downloaded and loaded.
   Devcontainer-only and never in CI: it needs the network and Claude auth.
 

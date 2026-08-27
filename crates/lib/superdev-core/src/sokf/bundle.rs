@@ -1,4 +1,4 @@
-//! bundle.rs — loading a directory of AOKF concept files.
+//! bundle.rs — loading a directory of SOKF concept files.
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -8,7 +8,7 @@ use serde_yaml_ng::Value;
 use super::concept::{Concept, ParseError, parse_concept};
 use crate::error::{Error, Result};
 
-/// A loaded AOKF bundle: its manifest, the concepts that parsed, and the
+/// A loaded SOKF bundle: its manifest, the concepts that parsed, and the
 /// files that did not.
 #[derive(Debug, Clone)]
 pub struct Bundle {

@@ -19,7 +19,7 @@ status: draft
   facts about the repo it creates — the rust-npm scaffold establishes the
   Rust workspace, the npm launcher and the CI shape — so it could pre-fill
   parts of the `technology-stack` and `architecture` skeletons instead of
-  leaving them TBD, shrinking `aokf-bootstrap`'s interview to the genuinely
+  leaving them TBD, shrinking `bootstrap`'s interview to the genuinely
   human questions. Raised while designing the bootstrap interview phase
   ([spec](specs/S008-knowledge-owned-skills-design.md)).
 

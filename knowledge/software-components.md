@@ -23,7 +23,7 @@ All domain logic; no argument parsing. One module per concern:
 - `manifest` / `lock` — `.superdev/config.toml` and `.superdev/lock.toml`.
 - `component` — the provider trait (`plan` observes and returns actions);
   `action` — the action enum and file ownership.
-- `components::{aokf, plugin, mattskills, codegraph, mise, pin, skillpack}` —
+- `components::{sokf, plugin, codegraph, mise, pin, skillpack}` —
   the providers, plus the shared helpers: targeted `.mise.toml` editing,
   registry-locked pin planning, `item` — the declarative managed-item
   list the static components derive both `plan` and `owned` from — and
@@ -38,10 +38,10 @@ All domain logic; no argument parsing. One module per concern:
   identity a later layer supersedes on, the layout rules that read that
   identity out of a pack tree, and the `ContentSet` a run resolves to. Depends
   on nothing but `std` and `capability`, and never on how a pack is fetched.
-  The `aokf` and `skillpack` components and the general-rules scaffolds read
+  The `sokf` and `skillpack` components and the general-rules scaffolds read
   their items from the set through `Ctx`, so adding a file to `/pack` ships it
   with no Rust edit. What the binary owns rather than the pack stays a
-  constant: the canonical knowledge instructions and the AOKF spec describe a version it
+  constant: the canonical knowledge instructions and the SOKF spec describe a version it
   pins and a format its compiled validator enforces, as codegraph's and rtk's
   instruction files do.
 - `pipeline` — the verb pipeline between manifest and engine: `plan_repo`
@@ -61,12 +61,12 @@ All domain logic; no argument parsing. One module per concern:
 - `templates` — the project templates: token substitution, the init-only
   scaffold plan, and `rust_npm`, the embedded table mapping
   `assets/projects/rust-npm/` onto tokenised target paths.
-- `aokf` — the read side of the canonical knowledge, one module per stage:
+- `sokf` — the read side of the SOKF knowledge, one module per stage:
   `concept` (frontmatter and section parsing), `bundle` (loading, reserved-file
   rules), `validate` (document check and conformance ladder), `graph` (link
   resolution and inverse synthesis), `embed` (the embedding providers),
   `index` (tantivy plus the vector store), `mcp` (the server).
-- The AOKF spec, agent files, starter concept skeleton and the 25 carried
+- The SOKF spec, agent files, starter concept skeleton and the 25 carried
   skill directories the `knowledge` capability writes, the three SKILL.md
   files the `skills` capability writes, and the project templates all live in
   `/pack` at the repository root, reached from the crate as `assets/` through a
@@ -75,8 +75,8 @@ All domain logic; no argument parsing. One module per concern:
   reaches the binary without a Rust edit; the contents are still `include_str!`
   literals, and only the list of them is generated.
 
-The MCP server exposes four read-only tools over stdio — `aokf_search`,
-`aokf_read`, `aokf_graph`, `aokf_overview` (see
+The MCP server exposes four read-only tools over stdio — `sokf_search`,
+`sokf_read`, `sokf_graph`, `sokf_overview` (see
 [api-contracts](api-contracts.md)). It holds one index directory and
 serialises its own tool calls with a mutex: a call keeps the index open across
 its whole body while another call's sync could delete and rebuild that
@@ -91,8 +91,8 @@ and exit codes; `manage.rs` holds the `init`, `status`, `sync` and `update`
 verbs — each loads, calls the core pipeline, renders its lines and turns
 its facts into an exit code. `template_select.rs` decides init's project
 template: flags and TTY-ness feed logic behind a `Prompter` trait, with the
-dialoguer adapter as untested glue. `aokf_cli.rs` holds `aokf validate`, `aokf index` and
-`mcp aokf`: path defaults, printed output, and the current-thread tokio
+dialoguer adapter as untested glue. `validate_cli.rs and sokf_cli.rs` holds `validate`, `sokf index` and
+`mcp sokf`: path defaults, printed output, and the current-thread tokio
 runtime the server blocks on. Also present is the plumbing the release
 pipeline needs:
 `--version`, `completions` (clap_complete), and a hidden `man` subcommand

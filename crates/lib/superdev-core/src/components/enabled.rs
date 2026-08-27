@@ -76,7 +76,7 @@ mod tests {
             // The item-list components derive plan and owned from one list,
             // so their consistency is true by construction; only the
             // hand-written pairs need this simulation.
-            if matches!(component.provider(), "aokf" | "superdev-skills") {
+            if matches!(component.provider(), "knowledge" | "superdev-skills") {
                 continue;
             }
             let dir = tempfile::tempdir().unwrap();

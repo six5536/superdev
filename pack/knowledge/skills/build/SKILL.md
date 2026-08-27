@@ -19,11 +19,11 @@ exactly one slice and nothing beyond it.
 ## Workflow
 
 - [ ] Read the slice's plan entry, the spec's criteria, and the
-      test-plan cases assigned to the slice (`aokf_read`).
+      test-plan cases assigned to the slice (`sokf_read`).
 - [ ] Read the code you are about to change, and its callers
       (`codegraph_explore`), before editing.
 - [ ] Read the `coding-standards` and `testing-strategy` concepts
-      (`aokf_read`) before writing code and tests; for a UI slice,
+      (`sokf_read`) before writing code and tests; for a UI slice,
       also `visual-system`.
 - [ ] Implement the slice using TDD, against its assigned test-plan
       cases. Write tests with the code only where TDD is impractical,

@@ -9,7 +9,7 @@ description: Security reviews — risk verdict, scope and threat model, findings
 
 Structural rules for security review documents, matched by name
 (`**/*security-review*.md`); the source names no filing directory, and the
-document is not an AOKF concept, so it carries no frontmatter. Parallel to
+document is not an SOKF concept, so it carries no frontmatter. Parallel to
 `schema-code-review`, but each finding carries an attack scenario rather
 than a failure scenario: no realistic path from attacker-controlled input to
 impact means the entry is informational, not a finding.

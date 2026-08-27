@@ -15,15 +15,10 @@ pub const SUPPORTED_FORMATS: &[u32] = &[1];
 
 /// Paths a pack may not carry, refused at resolve with the reason.
 ///
-/// The instruction files and the AOKF spec move with the binary that pins or
+/// The instruction files and the SOKF spec move with the binary that pins or
 /// validates them, so a pack supplying one would describe a version or format
 /// this binary does not implement.
-pub const REJECTED: &[&str] = &[
-    "agents/aokf.md",
-    "agents/codegraph.md",
-    "agents/rtk.md",
-    "knowledge/agents/SPEC.md",
-];
+pub const REJECTED: &[&str] = &["agents/sokf.md", "agents/codegraph.md", "agents/rtk.md"];
 
 /// Refused wherever it appears: the project's own extension layer, which
 /// superdev never writes or tracks, so shipping one would take it under
@@ -140,7 +135,7 @@ pub fn check_path(pack: &str, path: &str) -> Result<()> {
         return Err(Error::Pack {
             pack: pack.to_string(),
             message: format!(
-                "carries `{path}` — instruction files and the AOKF spec describe a version this \
+                "carries `{path}` — instruction files and the SOKF spec describe a version this \
                  binary pins or a format its validator enforces, so they ship with the binary"
             ),
         });
@@ -261,7 +256,7 @@ mod tests {
         }
     }
 
-    /// Case 18, first half: the instruction files and the AOKF spec.
+    /// Case 18, first half: the instruction files and the SOKF spec.
     #[test]
     fn a_rejected_path_is_refused_naming_the_file_and_the_reason() {
         for path in REJECTED {
