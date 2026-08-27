@@ -50,7 +50,7 @@ pub enum Action {
     SetJsonKey {
         /// Target path (repo-relative).
         path: String,
-        /// Dotted key path, e.g. `mcpServers.superdev-aokf`.
+        /// Dotted key path, e.g. `mcpServers.superdev-sokf`.
         pointer: String,
         /// The value to set, as a JSON string.
         value_json: String,
@@ -166,20 +166,20 @@ mod tests {
 
         let a = Action::SetJsonKey {
             path: ".mcp.json".into(),
-            pointer: "mcpServers.superdev-aokf".into(),
+            pointer: "mcpServers.superdev-sokf".into(),
             value_json: "{}".into(),
         };
-        assert_eq!(a.describe(), "set mcpServers.superdev-aokf in .mcp.json");
+        assert_eq!(a.describe(), "set mcpServers.superdev-sokf in .mcp.json");
 
         let a = Action::EnsureJsonArrayElement {
             path: ".claude/settings.json".into(),
             pointer: "hooks.PostToolUse".into(),
-            marker: "superdev aokf hook validate".into(),
+            marker: "superdev hook validate".into(),
             value_json: "{}".into(),
         };
         assert_eq!(
             a.describe(),
-            "ensure .claude/settings.json hooks.PostToolUse has the `superdev aokf hook validate` entry"
+            "ensure .claude/settings.json hooks.PostToolUse has the `superdev hook validate` entry"
         );
 
         let a = Action::Remove {
@@ -198,13 +198,13 @@ mod tests {
         let a = Action::Remove {
             claim: Claim::JsonKey {
                 path: ".mcp.json".into(),
-                pointer: "mcpServers.superdev-aokf".into(),
+                pointer: "mcpServers.superdev-sokf".into(),
             },
             reason: "no longer in the blueprint".into(),
         };
         assert_eq!(
             a.describe(),
-            "remove mcpServers.superdev-aokf from .mcp.json"
+            "remove mcpServers.superdev-sokf from .mcp.json"
         );
     }
 }

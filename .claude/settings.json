@@ -4,7 +4,7 @@
       {
         "hooks": [
           {
-            "command": "superdev aokf hook validate",
+            "command": "superdev hook validate",
             "type": "command"
           }
         ],

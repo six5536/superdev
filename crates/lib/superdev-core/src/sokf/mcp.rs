@@ -26,7 +26,7 @@ use crate::validate::sokf::validate;
 /// Most lines rendered per group before the tail is summarised.
 const GROUP_CAP: usize = 30;
 
-/// Most warnings listed by `aokf_overview`.
+/// Most warnings listed by `sokf_overview`.
 const WARNING_CAP: usize = 10;
 
 /// Most hits one search may ask for. Retrieval widens the caller's limit
@@ -41,7 +41,7 @@ type ToolResult = std::result::Result<CallToolResult, String>;
 ///
 /// Read-only: no tool writes to the bundle. The index directory is the
 /// server's alone.
-pub struct AokfServer {
+pub struct SokfServer {
     bundle_dir: PathBuf,
     repo_root: PathBuf,
     index_dir: IndexDir,
@@ -55,12 +55,12 @@ pub struct AokfServer {
     /// syncs would contend on tantivy's writer lock regardless. The bodies are
     /// blocking work by design, so a plain mutex is the whole answer.
     tool_lock: std::sync::Mutex<()>,
-    tool_router: ToolRouter<AokfServer>,
+    tool_router: ToolRouter<SokfServer>,
 }
 
-impl std::fmt::Debug for AokfServer {
+impl std::fmt::Debug for SokfServer {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("AokfServer")
+        f.debug_struct("SokfServer")
             .field("bundle_dir", &self.bundle_dir)
             .field("repo_root", &self.repo_root)
             .field("index_dir", &self.index_dir.0)
@@ -69,7 +69,7 @@ impl std::fmt::Debug for AokfServer {
     }
 }
 
-/// Arguments of `aokf_search`.
+/// Arguments of `sokf_search`.
 #[derive(Debug, Deserialize, JsonSchema)]
 #[schemars(crate = "rmcp::schemars")]
 struct SearchArgs {
@@ -83,7 +83,7 @@ struct SearchArgs {
     tags: Option<Vec<String>>,
 }
 
-/// Arguments of `aokf_read`.
+/// Arguments of `sokf_read`.
 #[derive(Debug, Deserialize, JsonSchema)]
 #[schemars(crate = "rmcp::schemars")]
 struct ReadArgs {
@@ -94,7 +94,7 @@ struct ReadArgs {
     heading: Option<String>,
 }
 
-/// Arguments of `aokf_graph`.
+/// Arguments of `sokf_graph`.
 #[derive(Debug, Deserialize, JsonSchema)]
 #[schemars(crate = "rmcp::schemars")]
 struct GraphArgs {
@@ -103,7 +103,7 @@ struct GraphArgs {
 }
 
 #[tool_router(router = tool_router)]
-impl AokfServer {
+impl SokfServer {
     /// Serve `bundle_dir`, resolving `/`-rooted links against `repo_root` and
     /// keeping the search index in `index_dir`.
     ///
@@ -115,21 +115,21 @@ impl AokfServer {
         repo_root: PathBuf,
         index_dir: IndexDir,
         embedder: Option<Box<dyn Embedder>>,
-    ) -> AokfServer {
-        AokfServer {
+    ) -> SokfServer {
+        SokfServer {
             bundle_dir,
             repo_root,
             index_dir,
             embedder,
             tool_lock: std::sync::Mutex::new(()),
-            tool_router: AokfServer::tool_router(),
+            tool_router: SokfServer::tool_router(),
         }
     }
 
     /// Search the bundle. Returns the best sections, grouped by concept, each
     /// with a `path:start-end` locator to read next.
     #[tool]
-    async fn aokf_search(&self, Parameters(args): Parameters<SearchArgs>) -> ToolResult {
+    async fn sokf_search(&self, Parameters(args): Parameters<SearchArgs>) -> ToolResult {
         let _guard = self.exclusive();
         let (bundle, index, stats) = self.sync().map_err(|e| e.to_string())?;
         let opts = SearchOpts {
@@ -152,7 +152,7 @@ impl AokfServer {
 
     /// Read one concept whole, or one of its sections.
     #[tool]
-    async fn aokf_read(&self, Parameters(args): Parameters<ReadArgs>) -> ToolResult {
+    async fn sokf_read(&self, Parameters(args): Parameters<ReadArgs>) -> ToolResult {
         let _guard = self.exclusive();
         let (bundle, _, _) = self.sync().map_err(|e| e.to_string())?;
         let graph = Graph::build(&bundle);
@@ -170,7 +170,7 @@ impl AokfServer {
     /// Show the link graph: the whole edge map, or one concept's neighbours
     /// in both directions.
     #[tool]
-    async fn aokf_graph(&self, Parameters(args): Parameters<GraphArgs>) -> ToolResult {
+    async fn sokf_graph(&self, Parameters(args): Parameters<GraphArgs>) -> ToolResult {
         let _guard = self.exclusive();
         let (bundle, _, _) = self.sync().map_err(|e| e.to_string())?;
         let graph = Graph::build(&bundle);
@@ -187,7 +187,7 @@ impl AokfServer {
     /// Orient in the bundle: its name, size, directory tree, and anything
     /// validation found wrong.
     #[tool]
-    async fn aokf_overview(&self) -> ToolResult {
+    async fn sokf_overview(&self) -> ToolResult {
         let _guard = self.exclusive();
         let (bundle, _, stats) = self.sync().map_err(|e| e.to_string())?;
         Ok(text(render_overview(&bundle, &stats, &self.repo_root)))
@@ -235,12 +235,12 @@ impl AokfServer {
 }
 
 #[tool_handler(router = self.tool_router)]
-impl ServerHandler for AokfServer {
+impl ServerHandler for SokfServer {
     fn get_info(&self) -> ServerInfo {
         ServerInfo::new(ServerCapabilities::builder().enable_tools().build()).with_instructions(
-            "Read-only access to this repository's AOKF knowledge bundle. Start with \
-             aokf_overview to see what exists, aokf_search to find sections, aokf_read to \
-             read one, and aokf_graph to follow links.",
+            "Read-only access to this repository's SOKF knowledge. Start with \
+             sokf_overview to see what exists, sokf_search to find sections, sokf_read to \
+             read one, and sokf_graph to follow links.",
         )
     }
 }
@@ -869,7 +869,7 @@ mod tests {
 
     #[test]
     fn the_server_debugs_without_leaking_the_embedder() {
-        let server = AokfServer::new(
+        let server = SokfServer::new(
             PathBuf::from("/repo/knowledge"),
             PathBuf::from("/repo"),
             IndexDir(PathBuf::from("/repo/.superdev/cache")),

@@ -625,7 +625,7 @@ mod tests {
         let planned = vec![
             Planned {
                 capability: None,
-                provider: "aokf".into(),
+                provider: "knowledge".into(),
                 actions: vec![write_owned("shared.txt")],
             },
             Planned {
@@ -668,7 +668,7 @@ mod tests {
         let planned = vec![
             Planned {
                 capability: None,
-                provider: "aokf".into(),
+                provider: "knowledge".into(),
                 actions: vec![write_owned("created.txt")],
             },
             Planned {
@@ -753,12 +753,12 @@ mod tests {
         assert!(lock.files.is_empty());
     }
 
-    /// The registration the aokf provider plans, used by the JSON tests.
+    /// The registration the SOKF component plans, used by the JSON tests.
     fn set_mcp_key() -> Action {
         Action::SetJsonKey {
             path: ".mcp.json".into(),
-            pointer: "mcpServers.superdev-aokf".into(),
-            value_json: r#"{"command":"superdev","args":["mcp","aokf"]}"#.into(),
+            pointer: "mcpServers.superdev-sokf".into(),
+            value_json: r#"{"command":"superdev","args":["mcp","sokf"]}"#.into(),
         }
     }
 
@@ -775,7 +775,7 @@ mod tests {
         let mut lock = Lock::default();
         let planned = vec![Planned {
             capability: None,
-            provider: "aokf".into(),
+            provider: "knowledge".into(),
             actions: vec![set_mcp_key()],
         }];
         let result = apply(dir.path(), &fake, &manifest, &planned, &mut lock);
@@ -786,13 +786,13 @@ mod tests {
         assert_eq!(written["mcpServers"]["other"]["command"], "othersrv");
         assert_eq!(written["extra"], true);
         assert_eq!(
-            written["mcpServers"]["superdev-aokf"]["command"],
+            written["mcpServers"]["superdev-sokf"]["command"],
             "superdev"
         );
-        assert_eq!(written["mcpServers"]["superdev-aokf"]["args"][1], "aokf");
+        assert_eq!(written["mcpServers"]["superdev-sokf"]["args"][1], "sokf");
         assert!(
             lock.files
-                .contains_key(".mcp.json:mcpServers.superdev-aokf"),
+                .contains_key(".mcp.json:mcpServers.superdev-sokf"),
             "lock: {:?}",
             lock.files
         );
@@ -806,7 +806,7 @@ mod tests {
         let mut lock = Lock::default();
         let planned = vec![Planned {
             capability: None,
-            provider: "aokf".into(),
+            provider: "knowledge".into(),
             actions: vec![set_mcp_key()],
         }];
         let result = apply(dir.path(), &fake, &manifest, &planned, &mut lock);
@@ -815,8 +815,8 @@ mod tests {
             serde_json::from_str(&std::fs::read_to_string(dir.path().join(".mcp.json")).unwrap())
                 .unwrap();
         assert_eq!(
-            written["mcpServers"]["superdev-aokf"],
-            serde_json::json!({ "command": "superdev", "args": ["mcp", "aokf"] })
+            written["mcpServers"]["superdev-sokf"],
+            serde_json::json!({ "command": "superdev", "args": ["mcp", "sokf"] })
         );
     }
 
@@ -829,13 +829,13 @@ mod tests {
         let mut lock = Lock::default();
         let planned = vec![Planned {
             capability: None,
-            provider: "aokf".into(),
+            provider: "knowledge".into(),
             actions: vec![write_owned("created.txt"), set_mcp_key()],
         }];
         let result = apply(dir.path(), &fake, &manifest, &planned, &mut lock);
         assert!(!result.ok);
         let (description, outcome) = &result.reports[0].outcomes[1];
-        assert_eq!(description, "set mcpServers.superdev-aokf in .mcp.json");
+        assert_eq!(description, "set mcpServers.superdev-sokf in .mcp.json");
         let ActionOutcome::Failed(message) = outcome else {
             panic!("expected a failure, got {outcome:?}");
         };
@@ -860,7 +860,7 @@ mod tests {
         let mut lock = Lock::default();
         let planned = vec![Planned {
             capability: None,
-            provider: "aokf".into(),
+            provider: "knowledge".into(),
             actions: vec![set_mcp_key()],
         }];
         let result = apply(dir.path(), &fake, &manifest, &planned, &mut lock);
@@ -890,8 +890,8 @@ mod tests {
         Action::EnsureJsonArrayElement {
             path: ".claude/settings.json".into(),
             pointer: "hooks.PostToolUse".into(),
-            marker: "superdev aokf hook validate".into(),
-            value_json: r#"{"matcher":"Edit|Write","hooks":[{"type":"command","command":"superdev aokf hook validate"}]}"#.into(),
+            marker: "superdev hook validate".into(),
+            value_json: r#"{"matcher":"Edit|Write","hooks":[{"type":"command","command":"superdev hook validate"}]}"#.into(),
         }
     }
 
@@ -919,15 +919,11 @@ mod tests {
         let entries = written["hooks"]["PostToolUse"].as_array().unwrap();
         assert_eq!(entries.len(), 2);
         assert_eq!(entries[0]["matcher"], "Agent");
-        assert_eq!(
-            entries[1]["hooks"][0]["command"],
-            "superdev aokf hook validate"
-        );
+        assert_eq!(entries[1]["hooks"][0]["command"], "superdev hook validate");
         assert!(written["permissions"].is_object());
         assert!(
-            lock.files.contains_key(
-                ".claude/settings.json:hooks.PostToolUse[superdev aokf hook validate]"
-            ),
+            lock.files
+                .contains_key(".claude/settings.json:hooks.PostToolUse[superdev hook validate]"),
             "lock: {:?}",
             lock.files
         );
@@ -940,7 +936,7 @@ mod tests {
         // A prior release's entry: same marker, different matcher.
         std::fs::write(
             dir.path().join(".claude/settings.json"),
-            r#"{"hooks":{"PostToolUse":[{"matcher":"Write","hooks":[{"type":"command","command":"superdev aokf hook validate"}]}]}}"#,
+            r#"{"hooks":{"PostToolUse":[{"matcher":"Write","hooks":[{"type":"command","command":"superdev hook validate"}]}]}}"#,
         )
         .unwrap();
         let fake = FakeRunner::new();
@@ -981,7 +977,7 @@ mod tests {
         .unwrap();
         assert_eq!(
             written["hooks"]["PostToolUse"][0]["hooks"][0]["command"],
-            "superdev aokf hook validate"
+            "superdev hook validate"
         );
     }
 
@@ -1202,7 +1198,7 @@ mod tests {
         let mut lock = Lock::default();
         let planned = vec![Planned {
             capability: None,
-            provider: "aokf".into(),
+            provider: "knowledge".into(),
             actions: vec![write_owned("owned.txt")],
         }];
         let result = apply(dir.path(), &fake, &manifest, &planned, &mut lock);
@@ -1458,7 +1454,7 @@ mod tests {
         std::fs::write(dir.path().join(".mise.toml"), &mise_toml).unwrap();
         std::fs::write(
             dir.path().join(".mcp.json"),
-            r#"{"mcpServers":{"superdev-aokf":{"command":"superdev","args":["mcp","aokf"]},"mine":{"command":"me"}}}"#,
+            r#"{"mcpServers":{"superdev-sokf":{"command":"superdev","args":["mcp","sokf"]},"mine":{"command":"me"}}}"#,
         )
         .unwrap();
         let fake = FakeRunner::new();
@@ -1472,9 +1468,9 @@ mod tests {
             sha256_hex(pin_value.as_bytes()),
         );
         let mcp_value: serde_json::Value =
-            serde_json::from_str(r#"{"command":"superdev","args":["mcp","aokf"]}"#).unwrap();
+            serde_json::from_str(r#"{"command":"superdev","args":["mcp","sokf"]}"#).unwrap();
         lock.files.insert(
-            ".mcp.json:mcpServers.superdev-aokf".into(),
+            ".mcp.json:mcpServers.superdev-sokf".into(),
             sha256_hex(mcp_value.to_string().as_bytes()),
         );
         let planned = vec![Planned {
@@ -1488,7 +1484,7 @@ mod tests {
                 Action::Remove {
                     claim: Claim::JsonKey {
                         path: ".mcp.json".into(),
-                        pointer: "mcpServers.superdev-aokf".into(),
+                        pointer: "mcpServers.superdev-sokf".into(),
                     },
                     reason: "no longer in the blueprint".into(),
                 },
@@ -1505,7 +1501,7 @@ mod tests {
         let mcp: serde_json::Value =
             serde_json::from_str(&std::fs::read_to_string(dir.path().join(".mcp.json")).unwrap())
                 .unwrap();
-        assert!(mcp["mcpServers"].get("superdev-aokf").is_none());
+        assert!(mcp["mcpServers"].get("superdev-sokf").is_none());
         assert_eq!(mcp["mcpServers"]["mine"]["command"], "me");
         assert!(lock.files.is_empty());
         // No installs follow a removal.

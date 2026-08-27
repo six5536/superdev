@@ -107,7 +107,7 @@ mod tests {
         // Unmodified JSON key → removal.
         std::fs::write(
             dir.path().join(".mcp.json"),
-            r#"{"mcpServers":{"superdev-aokf":{"command":"superdev"}}}"#,
+            r#"{"mcpServers":{"superdev-sokf":{"command":"superdev"}}}"#,
         )
         .unwrap();
         let mcp_value: serde_json::Value =
@@ -123,7 +123,7 @@ mod tests {
             sha256_hex(pin_value.as_bytes()),
         );
         lock.files.insert(
-            ".mcp.json:mcpServers.superdev-aokf".into(),
+            ".mcp.json:mcpServers.superdev-sokf".into(),
             sha256_hex(mcp_value.to_string().as_bytes()),
         );
 
@@ -140,7 +140,7 @@ mod tests {
             "{descs:?}"
         );
         assert!(
-            descs.contains(&"remove mcpServers.superdev-aokf from .mcp.json".into()),
+            descs.contains(&"remove mcpServers.superdev-sokf from .mcp.json".into()),
             "{descs:?}"
         );
         assert_eq!(
@@ -159,7 +159,7 @@ mod tests {
         std::fs::write(dir.path().join(".mcp.json"), r#"{"mcpServers":{}}"#).unwrap();
         let lock = lock_with(&[
             (".mise.toml:http:codegraph", "x"),
-            (".mcp.json:mcpServers.superdev-aokf", "x"),
+            (".mcp.json:mcpServers.superdev-sokf", "x"),
         ]);
         let plan = plan(dir.path(), &lock, &[]).unwrap();
         assert!(plan.actions.is_empty());
@@ -180,7 +180,7 @@ mod tests {
         assert!(plan(dir.path(), &lock, &[]).is_err());
         let dir = tempfile::tempdir().unwrap();
         std::fs::write(dir.path().join(".mcp.json"), "not json").unwrap();
-        let lock = lock_with(&[(".mcp.json:mcpServers.superdev-aokf", "x")]);
+        let lock = lock_with(&[(".mcp.json:mcpServers.superdev-sokf", "x")]);
         assert!(plan(dir.path(), &lock, &[]).is_err());
     }
 }

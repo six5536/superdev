@@ -220,7 +220,7 @@ mod tests {
             },
             ManagedItem::JsonEntry {
                 path: ".mcp.json".into(),
-                pointer: "mcpServers.superdev-aokf".into(),
+                pointer: "mcpServers.superdev-sokf".into(),
                 marker: None,
                 value_json: r#"{"command":"superdev"}"#.into(),
             },
@@ -259,7 +259,7 @@ mod tests {
         // Reformatted and reordered JSON is not drift: parsed compare.
         std::fs::write(
             dir.path().join(".mcp.json"),
-            "{\n  \"mcpServers\": {\"superdev-aokf\": {\"command\": \"superdev\"}, \"theirs\": {}}\n}",
+            "{\n  \"mcpServers\": {\"superdev-sokf\": {\"command\": \"superdev\"}, \"theirs\": {}}\n}",
         )
         .unwrap();
         std::fs::create_dir_all(dir.path().join(".claude")).unwrap();
@@ -294,7 +294,7 @@ mod tests {
             },
             ManagedItem::JsonEntry {
                 path: ".mcp.json".into(),
-                pointer: "mcpServers.superdev-aokf".into(),
+                pointer: "mcpServers.superdev-sokf".into(),
                 marker: None,
                 value_json: "{}".into(),
             },
@@ -310,7 +310,7 @@ mod tests {
             keys,
             vec![
                 "a.txt".to_string(),
-                ".mcp.json:mcpServers.superdev-aokf".to_string(),
+                ".mcp.json:mcpServers.superdev-sokf".to_string(),
                 ".claude/settings.json:hooks.PostToolUse[marker]".to_string(),
             ]
         );

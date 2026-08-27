@@ -281,7 +281,7 @@ version = "0.1.0"
 [files]
 ".agents/aokf/SPEC.md" = "aaaa"
 ".mise.toml:http:codegraph" = "bbbb"
-".claude/settings.json:hooks.PostToolUse[superdev aokf hook validate]" = "cccc"
+".claude/settings.json:hooks.PostToolUse[superdev hook validate]" = "cccc"
 "#;
         let dir = tempfile::tempdir().unwrap();
         std::fs::create_dir(dir.path().join(".superdev")).unwrap();

@@ -47,7 +47,7 @@ pub enum Claim {
     JsonKey {
         /// Repo-relative file path.
         path: String,
-        /// Dotted key path, e.g. `mcpServers.superdev-aokf`.
+        /// Dotted key path, e.g. `mcpServers.superdev-sokf`.
         pointer: String,
     },
 }
@@ -177,7 +177,7 @@ mod tests {
             Claim::MisePin("http:codegraph".into()),
             Claim::JsonKey {
                 path: ".mcp.json".into(),
-                pointer: "mcpServers.superdev-aokf".into(),
+                pointer: "mcpServers.superdev-sokf".into(),
             },
         ];
         for claim in claims {
@@ -200,7 +200,7 @@ mod tests {
         std::fs::write(dir.path().join(".mise.toml"), &mise_toml).unwrap();
         std::fs::write(
             dir.path().join(".mcp.json"),
-            r#"{"mcpServers":{"superdev-aokf":{"command":"superdev"},"theirs":{}}}"#,
+            r#"{"mcpServers":{"superdev-sokf":{"command":"superdev"},"theirs":{}}}"#,
         )
         .unwrap();
 
@@ -220,7 +220,7 @@ mod tests {
 
         let key = Claim::JsonKey {
             path: ".mcp.json".into(),
-            pointer: "mcpServers.superdev-aokf".into(),
+            pointer: "mcpServers.superdev-sokf".into(),
         };
         let value = key.read_current(dir.path()).unwrap().unwrap();
         assert!(value.contains("superdev"), "{value}");
@@ -228,7 +228,7 @@ mod tests {
             .removed_from(&std::fs::read_to_string(dir.path().join(".mcp.json")).unwrap())
             .unwrap()
             .unwrap();
-        assert!(!next.contains("superdev-aokf"), "{next}");
+        assert!(!next.contains("superdev-sokf"), "{next}");
         assert!(next.contains("theirs"), "{next}");
 
         // Absent entries read as None; a gone file reads as None.

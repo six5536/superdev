@@ -201,7 +201,7 @@ fn init_sets_up_a_fresh_repo() {
     assert!(settings.contains("rtk hook claude"), "{settings}");
     assert!(repo.join(".agents/aokf/SPEC.md").is_file());
     let mcp = sb.read(".mcp.json");
-    assert!(mcp.contains("\"superdev-aokf\""), "{mcp}");
+    assert!(mcp.contains("\"superdev-sokf\""), "{mcp}");
     assert!(mcp.contains("\"codegraph\""), "{mcp}");
     assert!(sb.read(".gitignore").contains(".superdev/cache/"));
     assert!(sb.read(".gitignore").contains(".codegraph/"));
@@ -555,10 +555,7 @@ fn disabling_bash_output_filter_sweeps_the_wiring() {
     // The hook key goes; the knowledge capability's validate hook stays.
     let settings = sb.read(".claude/settings.json");
     assert!(!settings.contains("rtk hook claude"), "{settings}");
-    assert!(
-        settings.contains("superdev aokf hook validate"),
-        "{settings}"
-    );
+    assert!(settings.contains("superdev hook validate"), "{settings}");
     let aggregator = sb.read(".agents/superdev.md");
     assert!(!aggregator.contains("@rtk.md"), "{aggregator}");
     let lock = sb.read(".superdev/lock.toml");
@@ -610,7 +607,7 @@ fn disabling_code_index_unpins_codegraph_and_keeps_user_pins() {
     assert!(!sb.repo().join(".agents/codegraph.md").exists());
     let mcp = sb.read(".mcp.json");
     assert!(!mcp.contains("\"codegraph\""), "{mcp}");
-    assert!(mcp.contains("\"superdev-aokf\""), "{mcp}");
+    assert!(mcp.contains("\"superdev-sokf\""), "{mcp}");
     let aggregator = sb.read(".agents/superdev.md");
     assert!(!aggregator.contains("@codegraph.md"), "{aggregator}");
     assert!(aggregator.contains("@sokf.md"), "{aggregator}");

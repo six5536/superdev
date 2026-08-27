@@ -11,12 +11,12 @@
       ],
       "command": "mise"
     },
-    "superdev-aokf": {
+    "superdev-sokf": {
+      "command": "superdev",
       "args": [
         "mcp",
-        "aokf"
-      ],
-      "command": "superdev"
+        "sokf"
+      ]
     }
   }
 }

@@ -92,24 +92,35 @@ fn validate_passes_the_live_repository() {
         .success();
 }
 
-/// The verb `superdev aokf validate` is kept as a hidden alias of the promoted
-/// one, because the hook marker and the lock entry are keyed on the old
-/// spelling (D-20).
+/// The `aokf` verb group is gone, alias and all. It was kept while the hook
+/// marker and the lock key carried the old spelling; both now say `sokf`, so
+/// there is nothing left for the alias to be compatible with.
 #[test]
-fn the_aokf_alias_runs_the_same_check() {
-    let out = superdev()
+fn the_aokf_verb_group_is_gone() {
+    for args in [
+        vec!["aokf", "validate"],
+        vec!["aokf", "index"],
+        vec!["aokf", "hook", "validate"],
+        vec!["mcp", "aokf"],
+    ] {
+        superdev()
+            .current_dir(REPO_ROOT)
+            .args(&args)
+            .assert()
+            .failure()
+            .code(2);
+    }
+    // What replaced them resolves.
+    superdev()
         .current_dir(REPO_ROOT)
-        .args(["aokf", "validate", "--json"])
+        .args(["sokf", "index", "--help"])
         .assert()
         .success();
-    let alias: serde_json::Value = serde_json::from_slice(&out.get_output().stdout).unwrap();
-    let out = superdev()
+    superdev()
         .current_dir(REPO_ROOT)
-        .args(["validate", "--json"])
+        .args(["hook", "validate", "--help"])
         .assert()
         .success();
-    let promoted: serde_json::Value = serde_json::from_slice(&out.get_output().stdout).unwrap();
-    assert_eq!(alias, promoted);
 }
 
 #[test]
@@ -186,7 +197,7 @@ fn validate_doc_renders_the_grammar() {
 }
 
 #[test]
-fn aokf_index_rebuilds_and_reports_lexical_only() {
+fn sokf_index_rebuilds_and_reports_lexical_only() {
     let dir = tempfile::tempdir().unwrap();
     write_fixture_bundle(dir.path());
     // A manifest with no `[knowledge.embeddings]` table: the embedder comes
@@ -202,7 +213,7 @@ fn aokf_index_rebuilds_and_reports_lexical_only() {
     let out = superdev()
         .current_dir(dir.path())
         .env("XDG_CACHE_HOME", blocked_model_cache(dir.path()))
-        .args(["aokf", "index"])
+        .args(["sokf", "index"])
         .assert()
         .success();
     let stdout = String::from_utf8_lossy(&out.get_output().stdout).into_owned();
@@ -212,19 +223,19 @@ fn aokf_index_rebuilds_and_reports_lexical_only() {
         stdout.contains("skipped 1"),
         "no broken-file note: {stdout}"
     );
-    assert!(dir.path().join(".superdev/cache/aokf-index").is_dir());
+    assert!(dir.path().join(".superdev/cache/sokf-index").is_dir());
 }
 
 #[test]
-fn mcp_without_a_bundle_fails_at_startup() {
+fn mcp_without_knowledge_fails_at_startup() {
     let dir = tempfile::tempdir().unwrap();
     let out = superdev()
         .current_dir(dir.path())
-        .args(["mcp", "aokf"])
+        .args(["mcp", "sokf"])
         .assert()
         .code(2);
     let stderr = String::from_utf8_lossy(&out.get_output().stderr).into_owned();
-    assert!(stderr.contains("no AOKF bundle"), "unexpected: {stderr}");
+    assert!(stderr.contains("no SOKF knowledge"), "unexpected: {stderr}");
 }
 
 #[test]
@@ -233,11 +244,11 @@ fn mcp_with_an_unusable_index_dir_fails_at_startup() {
     write_fixture_bundle(dir.path());
     // A file where the index directory belongs: the startup sync cannot write it.
     std::fs::create_dir_all(dir.path().join(".superdev/cache")).unwrap();
-    std::fs::write(dir.path().join(".superdev/cache/aokf-index"), "").unwrap();
+    std::fs::write(dir.path().join(".superdev/cache/sokf-index"), "").unwrap();
     superdev()
         .current_dir(dir.path())
         .env("XDG_CACHE_HOME", blocked_model_cache(dir.path()))
-        .args(["mcp", "aokf"])
+        .args(["mcp", "sokf"])
         .assert()
         .code(2);
 }
@@ -249,7 +260,7 @@ const MCP_REQUESTS: &str = concat!(
     "\n",
     r#"{"jsonrpc":"2.0","method":"notifications/initialized"}"#,
     "\n",
-    r#"{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"aokf_overview","arguments":{}}}"#,
+    r#"{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"sokf_overview","arguments":{}}}"#,
     "\n",
 );
 
@@ -258,7 +269,7 @@ fn mcp_server_initialises_over_stdio() {
     let dir = tempfile::tempdir().unwrap();
     write_fixture_bundle(dir.path());
     let mut child = std::process::Command::new(assert_cmd::cargo::cargo_bin("superdev"))
-        .args(["mcp", "aokf"])
+        .args(["mcp", "sokf"])
         .current_dir(dir.path())
         .env("XDG_CACHE_HOME", blocked_model_cache(dir.path()))
         .stdin(Stdio::piped())
@@ -298,7 +309,7 @@ fn mcp_server_initialises_over_stdio() {
     assert!(replies.contains("\"result\""), "no result in: {replies}");
     assert!(
         replies.contains("fixture-knowledge"),
-        "no bundle name in: {replies}"
+        "no knowledge name in: {replies}"
     );
 }
 
@@ -356,7 +367,7 @@ fn hook_payload(dir: &Path, rel: &str) -> String {
 fn hook_validate_blocks_an_edit_that_broke_the_bundle() {
     let repo = hook_repo(false);
     let out = superdev()
-        .args(["aokf", "hook", "validate"])
+        .args(["hook", "validate"])
         .env("CLAUDE_PROJECT_DIR", repo.path())
         .write_stdin(hook_payload(repo.path(), "knowledge/alpha.md"))
         .assert()
@@ -373,7 +384,7 @@ fn hook_validate_blocks_an_edit_that_broke_the_bundle() {
 fn hook_validate_passes_a_clean_bundle() {
     let repo = hook_repo(true);
     superdev()
-        .args(["aokf", "hook", "validate"])
+        .args(["hook", "validate"])
         .env("CLAUDE_PROJECT_DIR", repo.path())
         .write_stdin(hook_payload(repo.path(), "knowledge/alpha.md"))
         .assert()
@@ -386,7 +397,7 @@ fn hook_validate_ignores_paths_it_does_not_read() {
     // is not the hook's business.
     let repo = hook_repo(false);
     superdev()
-        .args(["aokf", "hook", "validate"])
+        .args(["hook", "validate"])
         .env("CLAUDE_PROJECT_DIR", repo.path())
         .write_stdin(hook_payload(repo.path(), "src/main.rs"))
         .assert()
@@ -402,7 +413,7 @@ fn hook_validate_blocks_an_edit_that_broke_a_skill() {
     std::fs::create_dir_all(&skill).unwrap();
     std::fs::write(skill.join("SKILL.md"), "no frontmatter, no elements\n").unwrap();
     let out = superdev()
-        .args(["aokf", "hook", "validate"])
+        .args(["hook", "validate"])
         .env("CLAUDE_PROJECT_DIR", repo.path())
         .write_stdin(hook_payload(repo.path(), ".claude/skills/broken/SKILL.md"))
         .assert()
@@ -416,7 +427,7 @@ fn hook_validate_falls_back_to_the_working_directory() {
     let repo = hook_repo(false);
     superdev()
         .current_dir(repo.path())
-        .args(["aokf", "hook", "validate"])
+        .args(["hook", "validate"])
         .env_remove("CLAUDE_PROJECT_DIR")
         .write_stdin(hook_payload(repo.path(), "knowledge/alpha.md"))
         .assert()
@@ -435,7 +446,7 @@ fn hook_validate_follows_a_symlinked_working_directory() {
     std::os::unix::fs::symlink(repo.path(), &link).unwrap();
     superdev()
         .current_dir(&link)
-        .args(["aokf", "hook", "validate"])
+        .args(["hook", "validate"])
         .env_remove("CLAUDE_PROJECT_DIR")
         .write_stdin(hook_payload(&link, "knowledge/alpha.md"))
         .assert()
@@ -446,7 +457,7 @@ fn hook_validate_follows_a_symlinked_working_directory() {
 fn hook_validate_is_loud_on_a_malformed_payload() {
     let repo = hook_repo(true);
     let out = superdev()
-        .args(["aokf", "hook", "validate"])
+        .args(["hook", "validate"])
         .env("CLAUDE_PROJECT_DIR", repo.path())
         .write_stdin("not json")
         .assert()
@@ -459,7 +470,7 @@ fn hook_validate_is_loud_on_a_malformed_payload() {
 fn hook_validate_ignores_payloads_without_a_file_path() {
     let repo = hook_repo(false);
     superdev()
-        .args(["aokf", "hook", "validate"])
+        .args(["hook", "validate"])
         .env("CLAUDE_PROJECT_DIR", repo.path())
         .write_stdin(r#"{"tool_input":{}}"#)
         .assert()
@@ -883,7 +894,7 @@ fn a_hand_edited_file_is_still_reported_as_one() {
 fn a_converged_run_reconciles_a_json_key_too() {
     let dir = local_repo();
     let lock = dir.path().join(".superdev/lock.toml");
-    let key = ".mcp.json:mcpServers.superdev-aokf";
+    let key = ".mcp.json:mcpServers.superdev-sokf";
     let real = std::fs::read_to_string(&lock).unwrap();
     assert!(real.contains(key), "the fixture claims no json key: {real}");
     let stale = real
@@ -1476,7 +1487,7 @@ fn init_ignores_a_cache_left_by_the_knowledge_tools() {
     // Only the manifest means initialised.
     let dir = tempfile::tempdir().unwrap();
     std::fs::create_dir_all(dir.path().join(".git")).unwrap();
-    std::fs::create_dir_all(dir.path().join(".superdev/cache/aokf-index")).unwrap();
+    std::fs::create_dir_all(dir.path().join(".superdev/cache/sokf-index")).unwrap();
     superdev()
         .current_dir(dir.path())
         .args([
@@ -1752,7 +1763,7 @@ fn disabling_skills_sweeps_them_and_releases_the_users_edit() {
             .as_array()
             .unwrap()
             .iter()
-            .any(|e| e.to_string().contains("superdev aokf hook validate")),
+            .any(|e| e.to_string().contains("superdev hook validate")),
         "settings: {settings}"
     );
 

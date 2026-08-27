@@ -1,17 +1,20 @@
 //! superdev CLI entry point.
 //!
-//! Argument parsing and exit codes only: the verbs live in [`manage`] and
-//! [`aokf_cli`], the domain logic in `superdev-core`. `completions` and the
-//! hidden `man` are the plumbing the release pipeline needs.
+//! Argument parsing and exit codes only: the verbs live in [`manage`],
+//! [`validate_cli`] and [`sokf_cli`], the domain logic in `superdev-core`.
+//! `completions` and the hidden `man` are the plumbing the release pipeline
+//! needs.
 // Under the nightly coverage job (cargo-llvm-cov sets `coverage_nightly`), enable
 // the attribute used to exclude genuinely untestable glue from coverage. Inert on
 // the stable toolchain used for normal builds and tests.
 #![cfg_attr(coverage_nightly, feature(coverage_attribute))]
 #![warn(missing_docs)]
 
-mod aokf_cli;
+mod cli;
 mod manage;
+mod sokf_cli;
 mod template_select;
+mod validate_cli;
 
 use std::io::{self, Write};
 use std::path::PathBuf;
@@ -77,17 +80,20 @@ enum Command {
         #[arg(long, value_name = "ID")]
         provider: Option<String>,
     },
-    /// Check the knowledge bundle and the superdev-format files
-    Validate(aokf_cli::ValidateArgs),
+    /// Check the SOKF knowledge and the files the grammar governs
+    Validate(validate_cli::ValidateArgs),
     /// Inspect and render the shipped project templates
     #[command(subcommand)]
     Template(manage::TemplateCommand),
     /// Serve project subsystems over MCP
     #[command(subcommand)]
-    Mcp(aokf_cli::McpCommand),
-    /// Canonical project knowledge commands
+    Mcp(sokf_cli::McpCommand),
+    /// SOKF knowledge commands
     #[command(subcommand)]
-    Aokf(aokf_cli::AokfCommand),
+    Sokf(sokf_cli::SokfCommand),
+    /// Agent hook plumbing (reads the hook payload from stdin)
+    #[command(subcommand)]
+    Hook(validate_cli::HookCommand),
     /// Write a completion script for the given shell to stdout
     Completions {
         /// Shell to generate completions for
@@ -122,10 +128,11 @@ fn run(cli: &Cli) -> Result<u8> {
         Some(Command::Update { target, provider }) => {
             manage::update(&root()?, target.as_deref(), provider.as_deref())
         }
-        Some(Command::Validate(args)) => aokf_cli::run_validate(args, &root()?),
+        Some(Command::Validate(args)) => validate_cli::run_validate(args, &root()?),
         Some(Command::Template(cmd)) => manage::template(cmd),
-        Some(Command::Mcp(cmd)) => aokf_cli::run_mcp(cmd, &root()?),
-        Some(Command::Aokf(cmd)) => aokf_cli::run_aokf(cmd, &root()?),
+        Some(Command::Mcp(cmd)) => sokf_cli::run_mcp(cmd, &root()?),
+        Some(Command::Sokf(cmd)) => sokf_cli::run_sokf(cmd, &root()?),
+        Some(Command::Hook(cmd)) => validate_cli::run_hook(cmd, &root()?),
         Some(Command::Completions { shell }) => {
             // Render into a buffer first: clap_complete panics rather than
             // returning an error when a write fails.

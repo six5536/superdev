@@ -190,27 +190,24 @@ mod tests {
     fn pointers_parse_navigate_and_remove() {
         assert_eq!(parse_pointer("a.b"), (vec!["a", "b"], None));
         assert_eq!(
-            parse_pointer("hooks.PostToolUse[superdev aokf hook validate]"),
-            (
-                vec!["hooks", "PostToolUse"],
-                Some("superdev aokf hook validate")
-            )
+            parse_pointer("hooks.PostToolUse[superdev hook validate]"),
+            (vec!["hooks", "PostToolUse"], Some("superdev hook validate"))
         );
 
-        let json = r#"{"mcpServers":{"superdev-aokf":{"command":"superdev"},"mine":{}}}"#;
-        let value = json_value_at("f", json, "mcpServers.superdev-aokf")
+        let json = r#"{"mcpServers":{"superdev-sokf":{"command":"superdev"},"mine":{}}}"#;
+        let value = json_value_at("f", json, "mcpServers.superdev-sokf")
             .unwrap()
             .unwrap();
         assert!(value.contains("superdev"));
         assert_eq!(json_value_at("f", json, "mcpServers.gone").unwrap(), None);
         assert!(json_value_at("f", "not json", "a").is_err());
 
-        let (content, removed) = remove_json_pointer("f", json, "mcpServers.superdev-aokf")
+        let (content, removed) = remove_json_pointer("f", json, "mcpServers.superdev-sokf")
             .unwrap()
             .unwrap();
         assert!(removed.contains("superdev"));
         let root: serde_json::Value = serde_json::from_str(&content).unwrap();
-        assert!(root["mcpServers"].get("superdev-aokf").is_none());
+        assert!(root["mcpServers"].get("superdev-sokf").is_none());
         // The user's key and the (possibly emptied) parent survive.
         assert!(root["mcpServers"].get("mine").is_some());
         assert_eq!(
@@ -218,8 +215,8 @@ mod tests {
             None
         );
 
-        let hooks = r#"{"hooks":{"PostToolUse":[{"matcher":"Agent","hooks":[]},{"matcher":"Edit|Write","hooks":[{"type":"command","command":"superdev aokf hook validate"}]}]}}"#;
-        let pointer = "hooks.PostToolUse[superdev aokf hook validate]";
+        let hooks = r#"{"hooks":{"PostToolUse":[{"matcher":"Agent","hooks":[]},{"matcher":"Edit|Write","hooks":[{"type":"command","command":"superdev hook validate"}]}]}}"#;
+        let pointer = "hooks.PostToolUse[superdev hook validate]";
         assert!(
             json_value_at("f", hooks, pointer)
                 .unwrap()

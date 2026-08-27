@@ -7,7 +7,7 @@ use rmcp::ServiceExt;
 use rmcp::model::{CallToolRequestParams, CallToolResult};
 use rmcp::service::{RoleClient, RunningService};
 use serde_json::{Map, Value};
-use superdev_core::sokf::{AokfServer, IndexDir};
+use superdev_core::sokf::{IndexDir, SokfServer};
 use tempfile::TempDir;
 
 const MANIFEST: &str = "aokf: \"0.1\"\nname: fixture-knowledge\n";
@@ -78,7 +78,7 @@ fn fixture() -> TempDir {
 /// client. The server task ends when the client disconnects.
 async fn serve_and_client(repo: &Path) -> RunningService<RoleClient, ()> {
     let (server_transport, client_transport) = tokio::io::duplex(4096);
-    let server = AokfServer::new(
+    let server = SokfServer::new(
         repo.join("knowledge"),
         repo.to_path_buf(),
         IndexDir(repo.join("index")),
@@ -145,7 +145,7 @@ async fn search_returns_locators() {
 
     let result = call(
         &client,
-        "aokf_search",
+        "sokf_search",
         serde_json::json!({"query": "planning stage"}),
     )
     .await;
@@ -173,7 +173,7 @@ async fn an_absurd_limit_is_answered_not_aborted() {
     // unbounded one takes the process down with it.
     let result = call(
         &client,
-        "aokf_search",
+        "sokf_search",
         serde_json::json!({"query": "planning stage", "limit": u32::MAX}),
     )
     .await;
@@ -188,7 +188,7 @@ async fn read_whole_and_section() {
     let repo = fixture();
     let client = serve_and_client(repo.path()).await;
 
-    let whole = text_of(&call(&client, "aokf_read", serde_json::json!({"id": "module-a"})).await);
+    let whole = text_of(&call(&client, "sokf_read", serde_json::json!({"id": "module-a"})).await);
     assert!(whole.contains("type: Module"), "{whole}");
     assert!(whole.contains("depends-on -> spec-a"), "{whole}");
     assert!(whole.contains("[Role]"), "{whole}");
@@ -198,7 +198,7 @@ async fn read_whole_and_section() {
     let section = text_of(
         &call(
             &client,
-            "aokf_read",
+            "sokf_read",
             serde_json::json!({"id": "module-a", "heading": "Role"}),
         )
         .await,
@@ -210,7 +210,7 @@ async fn read_whole_and_section() {
     let root = text_of(
         &call(
             &client,
-            "aokf_read",
+            "sokf_read",
             serde_json::json!({"id": "module-a", "heading": "(root)"}),
         )
         .await,
@@ -218,7 +218,7 @@ async fn read_whole_and_section() {
     assert!(root.contains("[(root)]"), "{root}");
     assert!(!root.contains("[Role]"), "{root}");
 
-    let unknown = call(&client, "aokf_read", serde_json::json!({"id": "module"})).await;
+    let unknown = call(&client, "sokf_read", serde_json::json!({"id": "module"})).await;
     let text = text_of(&unknown);
     assert_eq!(unknown.is_error, Some(true), "{text}");
     assert!(text.contains("module-a"), "{text}");
@@ -237,7 +237,7 @@ async fn read_of_an_unparseable_file_reports_the_parse_error() {
 
     let result = call(
         &client,
-        "aokf_read",
+        "sokf_read",
         serde_json::json!({"id": "notes/torn.md"}),
     )
     .await;
@@ -253,7 +253,7 @@ async fn read_of_an_unparseable_file_reports_the_parse_error() {
     let rooted = text_of(
         &call(
             &client,
-            "aokf_read",
+            "sokf_read",
             serde_json::json!({"id": "/knowledge/notes/torn.md"}),
         )
         .await,
@@ -267,14 +267,14 @@ async fn graph_map_and_neighbours() {
     let repo = fixture();
     let client = serve_and_client(repo.path()).await;
 
-    let map = text_of(&call(&client, "aokf_graph", serde_json::json!({})).await);
+    let map = text_of(&call(&client, "sokf_graph", serde_json::json!({})).await);
     assert!(
         map.contains("module-a --depends-on--> spec-a  (Reads the mappings.)"),
         "{map}"
     );
 
     let neighbours =
-        text_of(&call(&client, "aokf_graph", serde_json::json!({"id": "spec-a"})).await);
+        text_of(&call(&client, "sokf_graph", serde_json::json!({"id": "spec-a"})).await);
     // spec-a declares nothing; the hop is the inverse of module-a's edge.
     assert!(
         neighbours.contains("<--depends-on-- module-a"),
@@ -289,7 +289,7 @@ async fn overview_orients_and_warns() {
     let repo = fixture();
     let client = serve_and_client(repo.path()).await;
 
-    let text = text_of(&call(&client, "aokf_overview", serde_json::json!({})).await);
+    let text = text_of(&call(&client, "sokf_overview", serde_json::json!({})).await);
     assert!(text.contains("fixture-knowledge"), "{text}");
     assert!(text.contains("3 concepts"), "{text}");
     assert!(text.contains("notes/"), "{text}");
@@ -308,7 +308,7 @@ async fn stale_index_refreshes_between_calls() {
     let before = text_of(
         &call(
             &client,
-            "aokf_search",
+            "sokf_search",
             serde_json::json!({"query": "cadence knob"}),
         )
         .await,
@@ -323,7 +323,7 @@ async fn stale_index_refreshes_between_calls() {
     let after = text_of(
         &call(
             &client,
-            "aokf_search",
+            "sokf_search",
             serde_json::json!({"query": "cadence knob"}),
         )
         .await,

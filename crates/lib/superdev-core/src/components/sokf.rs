@@ -28,9 +28,9 @@ const NAMED_ASSET: &str = "knowledge/manifest.aokf.yaml";
 /// Where agent tools find MCP servers, and superdev's key inside it. The file
 /// is shared with the user's own servers, so only this key is managed.
 const MCP_PATH: &str = ".mcp.json";
-const MCP_POINTER: &str = "mcpServers.superdev-aokf";
+const MCP_POINTER: &str = "mcpServers.superdev-sokf";
 /// The registration itself: the installed binary serving this repo's bundle.
-const MCP_VALUE: &str = r#"{"command":"superdev","args":["mcp","aokf"]}"#;
+const MCP_VALUE: &str = r#"{"command":"superdev","args":["mcp","sokf"]}"#;
 
 /// Claude Code reads CLAUDE.md, not AGENTS.md: without this import, every
 /// rule superdev writes into AGENTS.md is invisible to it. Behaves like the
@@ -84,11 +84,10 @@ const SETTINGS_PATH: &str = ".claude/settings.json";
 /// The array the hook entry lives in.
 const HOOK_POINTER: &str = "hooks.PostToolUse";
 /// What identifies superdev's element among the user's.
-const HOOK_MARKER: &str = "superdev aokf hook validate";
-/// The registration itself: validate the bundle after an Edit/Write. It
-/// ships with this capability, so a `--no-knowledge` repo never gets a hook
-/// blocking edits to a `knowledge/` directory superdev does not manage.
-const HOOK_ELEMENT: &str = r#"{"matcher":"Edit|Write","hooks":[{"type":"command","command":"superdev aokf hook validate"}]}"#;
+const HOOK_MARKER: &str = "superdev hook validate";
+/// The registration itself: validate the repository after an Edit/Write.
+const HOOK_ELEMENT: &str =
+    r#"{"matcher":"Edit|Write","hooks":[{"type":"command","command":"superdev hook validate"}]}"#;
 
 /// Release, at adoption time, every SOKF skill the repo already has under
 /// its own name and with its own content. Returns the lines to print.
@@ -256,9 +255,7 @@ mod tests {
             }
         }
         assert!(
-            descs
-                .iter()
-                .any(|d| d.contains("superdev aokf hook validate")),
+            descs.iter().any(|d| d.contains("superdev hook validate")),
             "{descs:?}"
         );
         // The template library ships with the skills that reference it.
@@ -295,7 +292,7 @@ mod tests {
         assert!(keys.contains(&".claude/skills/bootstrap/SKILL.md".to_string()));
         assert!(keys.contains(&".claude/skills/how-do-i/SESSION-BOUNDARIES.md".to_string()));
         assert!(keys.contains(
-            &".claude/settings.json:hooks.PostToolUse[superdev aokf hook validate]".to_string()
+            &".claude/settings.json:hooks.PostToolUse[superdev hook validate]".to_string()
         ));
     }
 
@@ -306,7 +303,7 @@ mod tests {
         std::fs::create_dir_all(dir.path().join(".claude")).unwrap();
         std::fs::write(
             dir.path().join(SETTINGS_PATH),
-            r#"{"hooks":{"PostToolUse":[{"matcher":"Write","hooks":[{"type":"command","command":"superdev aokf hook validate"}]}]}}"#,
+            r#"{"hooks":{"PostToolUse":[{"matcher":"Write","hooks":[{"type":"command","command":"superdev hook validate"}]}]}}"#,
         )
         .unwrap();
         let actions = plan_in(dir.path());
@@ -453,7 +450,7 @@ mod tests {
                     path, value_json, ..
                 } => {
                     let json =
-                        format!("{{ \"mcpServers\": {{ \"superdev-aokf\": {value_json} }} }}");
+                        format!("{{ \"mcpServers\": {{ \"superdev-sokf\": {value_json} }} }}");
                     std::fs::write(dir.path().join(path), json).unwrap();
                 }
                 Action::EnsureLine { path, line, .. } => {
@@ -551,7 +548,7 @@ mod tests {
         // not drift, because the comparison is semantic.
         std::fs::write(
             dir.path().join(MCP_PATH),
-            "{\n  \"mcpServers\": {\n    \"superdev-aokf\": {\n      \"args\": [\"mcp\", \"aokf\"],\n      \"command\": \"superdev\"\n    }\n  }\n}\n",
+            "{\n  \"mcpServers\": {\n    \"superdev-sokf\": {\n      \"args\": [\"mcp\", \"sokf\"],\n      \"command\": \"superdev\"\n    }\n  }\n}\n",
         )
         .unwrap();
         assert!(
@@ -563,7 +560,7 @@ mod tests {
         // A different command is drift; so is an unparseable file.
         std::fs::write(
             dir.path().join(MCP_PATH),
-            "{\"mcpServers\":{\"superdev-aokf\":{\"command\":\"old\"}}}",
+            "{\"mcpServers\":{\"superdev-sokf\":{\"command\":\"old\"}}}",
         )
         .unwrap();
         assert!(
