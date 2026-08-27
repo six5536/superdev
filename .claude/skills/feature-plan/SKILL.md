@@ -3,57 +3,39 @@ name: feature-plan
 description: "Superdev process: cut the feature into buildable slices, once the interface is clear."
 ---
 
-# Feature-plan mode
+<skill name="feature-plan" purpose="Cut the Feature into Buildable Slices" input="the feature or spec id, when not handed off" user-input="$ARGUMENTS" output="the feature plan, per `schema-feature-plan`">
 
-You are in feature-plan mode. You are a project planner: you
-decompose, you
-don't build.
+<goal persona="project planner">
+You decompose, you don't build. Produce the feature's plan as specified in the input above, following `schema-feature-plan`.
+</goal>
 
-## Input
+<bootstrap_actions>
+<tool_call name="read_file" path=".agents/core.md" when="always" />
+<tool_call name="read_file" path="knowledge/schemas/feature-plan.md" when="always" />
+<tool_call name="aokf_read" id="spec-{nnn}-{feature-slug}" when="always" />
+<tool_call name="aokf_read" id="contract-{feature-slug}" when="always" />
+<tool_call name="aokf_read" id="feature-plan-{nnn}-{slug}" when="if re-entering" />
+<tool_call name="aokf_read" id="{gap-issue-id}" when="if re-entering" />
+<tool_call name="aokf_search" query="{the feature or spec}" when="if the spec id is not given" />
+<tool_call name="codegraph_explore" when="before setting the sequence" />
+</bootstrap_actions>
 
-- The spec: the feature's draft `Spec` concept at
-  `knowledge/specs/Snnn-<feature-slug>.md`, and the interface
-  contract.
-- Re-entry: the feature's plan and the gap issues in
-  `knowledge/issues/` that link the feature's spec, filed by accept.
-- $ARGUMENTS — the feature or spec id, when not handed off.
+<process_actions>
+<step name="CUT SLICES" task="Cut the spec — and any gap issues — into slices small enough to build and verify in one pass" />
+<step name="ORDER SLICES" task="Order the slices per `schema-feature-plan`: dependency first, then risk" />
+<step name="GIVE DONE-CHECKS" task="Give each slice its own done-check" />
+<step name="ASSIGN CASES" task="Assign each of the spec's test-plan cases to a slice per `schema-feature-plan`" />
+<step name="FILE THE PLAN" task="File the slice list as the feature's plan: a draft concept in `knowledge/feature-plans/` per `schema-feature-plan`, listed in that directory's index. Re-entering? Extend the existing plan" />
+<step name="DOUBLE-CHECK" task="`/double-check` the plan; fix what it finds" />
+<gate check="No slice is too big to build and verify in one pass" on-fail="cut it again" />
+<gate check="knowledge validates to PASS per the core knowledge block" on-fail="fix every error" />
+<skill_call name="/build" when="always" input="the first slice" />
+</process_actions>
 
-## Workflow
 
-- [ ] Read the spec (`aokf_read`; `aokf_search` when the id is not
-      given). Re-entering? Read the feature's plan and open gap
-      issues too.
-- [ ] Check the dependency order and the affected code
-      (`codegraph_explore`) before setting the sequence.
-- [ ] Cut the spec — and any gap issues — into slices small enough to
-      build and verify in one pass.
-- [ ] Order by dependency first, then risk: riskiest early.
-- [ ] Give each slice its own done-check.
-- [ ] Assign each of the spec's test-plan cases to a slice; an
-      integration case goes to the slice that completes its boundary.
-- [ ] File the slice list as the feature's plan (`template-feature-plan`): a
-      draft concept at `knowledge/plans/Pnnn-<slug>.md`, listed in the
-      plans index. Re-entering? Extend the existing plan.
-- [ ] Double-check the plan (`/double-check`); fix what it finds.
-- [ ] GATE: Any slice too big to build and verify in one pass? Cut it
-      again.
-- [ ] GATE: Validate the bundle to PASS
-      (`superdev aokf validate knowledge`).
-
-## IMPORTANT RULES
-
-- Decompose only: no code, no design.
-- The plan is the slice list. Build, verify, and integrate read it, so
-  it must be current when this phase ends.
-
-## Output
-
-- The plan: an ordered slice list in `knowledge/plans/`, each slice
-  with its own done-check.
-- Hand the first slice to `/build`.
-
-## Project adaptations
-
-If a `PROJECT.md` exists in this skill's directory, read it now and apply
-it; where it conflicts with this file, `PROJECT.md` wins. If absent,
-continue.
+<rules>
+<rule level="MUST">decompose only</rule>
+<rule level="MUST NOT">write code or design</rule>
+<rule level="MUST">keep the plan current when this phase ends; build, verify, and integrate read it</rule>
+</rules>
+</skill>

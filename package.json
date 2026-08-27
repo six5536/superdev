@@ -1,38 +1,42 @@
 {
-    "name": "@six5536/superdev-workspace",
-    "private": true,
-    "description": "superdev development workspace.",
-    "workspaces": [
-        "packages/superdev"
-    ],
-    "scripts": {
-        "build": "cargo build --workspace",
-        "build:all": "npm run build:linux-x64 && npm run build:linux-arm64 && npm run build:darwin-x64 && npm run build:darwin-arm64",
-        "build:linux-x64": "rustup target add x86_64-unknown-linux-musl && mise exec -- cargo zigbuild --release --target x86_64-unknown-linux-musl -p superdev && install -m 0755 target/x86_64-unknown-linux-musl/release/superdev packages/superdev-linux-x64/bin/superdev",
-        "build:linux-arm64": "rustup target add aarch64-unknown-linux-musl && mise exec -- cargo zigbuild --release --target aarch64-unknown-linux-musl -p superdev && install -m 0755 target/aarch64-unknown-linux-musl/release/superdev packages/superdev-linux-arm64/bin/superdev",
-        "build:darwin-x64": "rustup target add x86_64-apple-darwin && mise exec -- cargo zigbuild --release --target x86_64-apple-darwin -p superdev && install -m 0755 target/x86_64-apple-darwin/release/superdev packages/superdev-darwin-x64/bin/superdev",
-        "build:darwin-arm64": "rustup target add aarch64-apple-darwin && mise exec -- cargo zigbuild --release --target aarch64-apple-darwin -p superdev && install -m 0755 target/aarch64-apple-darwin/release/superdev packages/superdev-darwin-arm64/bin/superdev",
-        "dev": "cargo run -p superdev --",
-        "test": "cargo nextest run --workspace && npm run check:aokf",
-        "check": "cargo check --workspace --tests",
-        "check:aokf": "cargo run --quiet -- aokf validate knowledge",
-        "check:blueprint": "cargo run --quiet -- status --drift",
-        "lint": "cargo clippy --workspace",
-        "fmt": "cargo fmt --all",
-        "coverage": "cargo +nightly llvm-cov nextest --workspace --html",
-        "coverage:summary": "cargo +nightly llvm-cov nextest --workspace --summary-only",
-        "coverage:check": "cargo +nightly llvm-cov clean --workspace && cargo +nightly llvm-cov nextest --workspace --no-report && cargo +nightly llvm-cov report --summary-only --ignore-filename-regex 'crates/app' --fail-under-lines 90 && cargo +nightly llvm-cov report --summary-only --ignore-filename-regex 'crates/lib' --fail-under-lines 90",
-        "test:launcher": "node --test packages/superdev/test/*.test.js",
-        "test:scripts": "node --test scripts/test/*.test.mjs",
-        "smoke": "node scripts/release-smoke.mjs",
-        "smoke:launcher": "node scripts/launcher-smoke.mjs",
-        "smoke:manage": "bash scripts/manage-smoke.sh",
-        "set-version": "node scripts/set-version.mjs",
-        "verify-version": "node scripts/verify-version.mjs",
-        "release": "node scripts/release.mjs",
-        "release:pack": "node scripts/release-pack.mjs"
-    },
-    "devDependencies": {
-        "@types/node": "^26.1.2"
-    }
+  "name": "@six5536/superdev-workspace",
+  "private": true,
+  "description": "superdev development workspace.",
+  "workspaces": [
+    "packages/superdev"
+  ],
+  "scripts": {
+    "build": "cargo build --workspace",
+    "build:all": "npm run build:linux-x64 && npm run build:linux-arm64 && npm run build:darwin-x64 && npm run build:darwin-arm64",
+    "build:linux-x64": "rustup target add x86_64-unknown-linux-musl && mise exec -- cargo zigbuild --release --target x86_64-unknown-linux-musl -p superdev && install -m 0755 target/x86_64-unknown-linux-musl/release/superdev packages/superdev-linux-x64/bin/superdev",
+    "build:linux-arm64": "rustup target add aarch64-unknown-linux-musl && mise exec -- cargo zigbuild --release --target aarch64-unknown-linux-musl -p superdev && install -m 0755 target/aarch64-unknown-linux-musl/release/superdev packages/superdev-linux-arm64/bin/superdev",
+    "build:darwin-x64": "rustup target add x86_64-apple-darwin && mise exec -- cargo zigbuild --release --target x86_64-apple-darwin -p superdev && install -m 0755 target/x86_64-apple-darwin/release/superdev packages/superdev-darwin-x64/bin/superdev",
+    "build:darwin-arm64": "rustup target add aarch64-apple-darwin && mise exec -- cargo zigbuild --release --target aarch64-apple-darwin -p superdev && install -m 0755 target/aarch64-apple-darwin/release/superdev packages/superdev-darwin-arm64/bin/superdev",
+    "dev": "cargo run -p superdev --",
+    "test": "cargo nextest run --workspace && npm run check:aokf",
+    "check": "cargo check --workspace --tests",
+    "check:aokf": "cargo run --quiet -- aokf validate knowledge",
+    "check:blueprint": "cargo run --quiet -- status --drift",
+    "lint": "cargo clippy --workspace",
+    "fmt": "cargo fmt --all",
+    "coverage": "cargo +nightly llvm-cov nextest --workspace --html",
+    "coverage:summary": "cargo +nightly llvm-cov nextest --workspace --summary-only",
+    "coverage:check": "cargo +nightly llvm-cov clean --workspace && cargo +nightly llvm-cov nextest --workspace --no-report && cargo +nightly llvm-cov report --summary-only --ignore-filename-regex 'crates/app' --fail-under-lines 90 && cargo +nightly llvm-cov report --summary-only --ignore-filename-regex 'crates/lib' --fail-under-lines 90",
+    "test:launcher": "node --test packages/superdev/test/*.test.js",
+    "test:scripts": "node --test scripts/test/*.test.mjs",
+    "smoke": "node scripts/release-smoke.mjs",
+    "smoke:launcher": "node scripts/launcher-smoke.mjs",
+    "smoke:manage": "bash scripts/manage-smoke.sh",
+    "set-version": "node scripts/set-version.mjs",
+    "verify-version": "node scripts/verify-version.mjs",
+    "release": "node scripts/release.mjs",
+    "release:pack": "node scripts/release-pack.mjs",
+    "awa": "awa"
+  },
+  "devDependencies": {
+    "@ncoderz/awa": "^1.10.3",
+    "@types/node": "^26.1.2",
+    "yaml": "^2.9.0"
+  },
+  "dependencies": {}
 }

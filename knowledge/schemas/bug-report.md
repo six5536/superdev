@@ -1,0 +1,168 @@
+---
+type: Schema
+id: schema-bug-report
+title: Bug Report Schema
+description: Bug reports filed as Issue concepts in knowledge/issues/ — symptom, repro, root cause and regression risk.
+---
+
+# Bug Report Schema
+
+Structural rules for bug reports filed at
+`knowledge/issues/issue-{nnn}-{slug}.md`, with the feature declared — when
+there is one — by an `implements` or `references` link to its spec. The
+`issue-tracker` concept holds the triage labels and lifecycle: the role tag
+rides in `tags`, `needs-triage` on arrival, and a resolved issue stays,
+retagged `done` or `wontfix`. Because the tags turn over across an issue's
+life, no constraint here pins them.
+
+````yaml
+target-files: "knowledge/issues/issue-*.md"
+description: >
+  Bug report: symptom, environment, exact repro steps, expected vs
+  actual, root cause, and regression risk. Filed as an Issue concept in
+  the issue tracker.
+line-limit: 800
+
+frontmatter:
+  type:
+    const: Issue
+  id:
+    pattern: '^issue-\d{3}-[a-z0-9-]+$'
+  title:
+    description: The one-line symptom.
+  status:
+    enum: [draft, stable, deprecated]
+    description: >
+      draft while the bug is outstanding; the resolution rides in tags,
+      not here.
+
+sections-ordered: true
+sections:
+  - heading-pattern: '^Bug: .+$'
+    level: 1
+    required: true
+    description: >
+      Title heading carrying the one-line symptom, e.g. "Sync fails
+      with ETIMEDOUT on large payloads".
+  - heading: "Summary"
+    level: 2
+    required: true
+    content: prose
+    description: >
+      One or two sentences: what is broken and the impact — who
+      hits it, how often, how bad.
+  - heading: "Environment"
+    level: 2
+    required: true
+    content: bullet-list
+    description: >
+      Version/commit and platform (OS, runtime version, relevant
+      config). Bullet list.
+  - heading: "Steps to reproduce"
+    level: 2
+    required: true
+    content: numbered-list
+    description: >
+      Numbered exact steps — commands verbatim so anyone can rerun
+      them.
+  - heading: "Expected behaviour"
+    level: 2
+    required: true
+    content: prose
+    description: "What should happen."
+  - heading: "Actual behaviour"
+    level: 2
+    required: true
+    content: prose
+    description: >
+      What happens instead. Paste the exact error output/logs in a
+      code block, trimmed to the relevant lines.
+  - heading: "Root cause (if known)"
+    level: 2
+    required: true
+    content: prose
+    description: >
+      Where the defect lives (path/to/file.ts:123) and the
+      mechanism: the specific input/state that takes the code down
+      the wrong path. If not yet known, state the leading
+      hypothesis and what would confirm it.
+  - heading: "Proposed fix / workaround"
+    level: 2
+    required: true
+    content: bullet-list
+    description: >
+      Fix: the change that removes the defect. Workaround: how
+      users can avoid it meanwhile, if any. Bullet list.
+  - heading-pattern: "^(Decided|Resolved|Resolved in part|Won't fix|Comments)$"
+    level: 2
+    repeatable: true
+    content: prose
+    description: >
+      How the issue ended, added when it does: what was decided and by whom,
+      what shipped and where, or why it will not be fixed. Absent while the
+      issue is outstanding, which is what distinguishes an open issue from a
+      settled one at a glance.
+
+  - heading: "Regression risk"
+    level: 2
+    required: true
+    content: prose
+    description: >
+      What else touches this code path; which tests would catch a
+      recurrence.
+
+example: |
+  ---
+  type: Issue
+  id: issue-042-pack-sync-etimedout
+  title: Pack sync fails with ETIMEDOUT on large payloads
+  description: Pack sync fails with ETIMEDOUT on large payloads.
+  status: draft
+  tags: [needs-triage]
+  ---
+
+  # Bug: Pack sync fails with ETIMEDOUT on large payloads
+
+  ## Summary
+
+  Syncing a content pack larger than 50 MB times out on slow links;
+  every user behind such a link hits it on first sync.
+
+  ## Environment
+
+  - Version/commit: v0.1.0 / 4127a3b
+  - Platform: Linux x86_64, default network config
+
+  ## Steps to reproduce
+
+  1. Add a pack source larger than 50 MB to the manifest.
+  2. Run the pack sync command.
+  3. Wait about 30 seconds.
+
+  ## Expected behaviour
+
+  The pack downloads to completion regardless of size.
+
+  ## Actual behaviour
+
+  Sync aborts with a timeout naming the source host:
+
+  ```text
+  Error: connect ETIMEDOUT 203.0.113.7:443
+  ```
+
+  ## Root cause (if known)
+
+  Leading hypothesis: a fixed whole-download socket timeout in the
+  pack resolver; a per-read timeout would confirm it.
+
+  ## Proposed fix / workaround
+
+  - Fix: apply the timeout per read, not per download.
+  - Workaround: sync the pack from a faster link.
+
+  ## Regression risk
+
+  Small-pack sync shares the resolver path; the resolver's sync tests
+  would catch a recurrence.
+````

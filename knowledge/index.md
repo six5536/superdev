@@ -1,14 +1,15 @@
 # Overview
 
 * [Project Overview](project-overview.md) - what superdev is and its current status.
-* [Domain Glossary](glossary.md) - the terms the blueprint engine uses — blueprint, capability, provider, provenance, component, owned file, scaffold, project template, skill pack, knowledge-carried skill, PROJECT.md layer, custom skill, harvest, claim, orphan — plus the search terms section, locator, hybrid search and RRF.
+* [Domain Glossary](glossary.md) - the terms the blueprint engine uses — blueprint, capability, provider, provenance, component, owned file, scaffold, project template, template adoption, skill pack, knowledge-carried skill, content pack, pack source, embedded snapshot, pack item, pack layer, pack format, PROJECT.md layer, custom skill, harvest, claim, orphan — plus the search terms section, locator, hybrid search and RRF.
 * [Known Constraints & Non-Goals](constraints-non-goals.md) - what superdev deliberately does not do, and the accepted limitations of the inherited machinery.
 * [Backlog & Decided Ideas](backlog.md) - ideas under consideration and ideas decided against, with the reasoning.
 
 # Design
 
 * [Specs](specs/index.md) - design specs: permanent decision records, one per significant change.
-* [Plans](plans/index.md) - implementation plans delivering specs, tagged done when they land.
+* [Feature Plans](feature-plans/index.md) - the slice lists delivering specs, tagged done when the last slice lands.
+* [Ad-hoc Plans](adhoc-plans/index.md) - plans for one-off work outside the feature workflow, tagged done when they land.
 * [Decisions](decisions/index.md) - architecture decision records: the interfaces that were expensive to change, with their alternatives.
 * [Contracts](contracts/index.md) - interface contracts build codes against, discarded once the code is canonical.
 * [Issues](issues/index.md) - open tickets, grouped by feature.
@@ -32,4 +33,4 @@
 * [Issue Tracker & Triage](issue-tracker.md) - where issues live — one AOKF concept per ticket under knowledge/issues/ — plus the triage label vocabulary.
 * [Definition of Done](definition-of-done.md) - what a change must satisfy before it merges.
 * [Release Procedure](release-procedure.md) - the changelog gate, the release command, the irreversible push, and the tag-driven pipeline.
-* [Templates](templates/index.md) - copy-verbatim skeletons for the documents the process produces — plans, ADRs, reviews, PR descriptions, release docs, and reports.
+* [Schemas](schemas/index.md) - the structural contract for every document the process produces — what sections it carries, what its frontmatter must say, and a worked example.

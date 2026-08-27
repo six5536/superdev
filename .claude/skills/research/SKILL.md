@@ -3,46 +3,30 @@ name: research
 description: "Use when the user wants a topic researched, docs or API facts gathered, or reading legwork delegated to a background agent."
 ---
 
-# Research mode
+<skill name="research" purpose="Research a Question and File the Findings" input="the question to research" user-input="$ARGUMENTS" output="the findings, filed as a research concept and listed in the bundle's index">
 
-You are in research mode. You are a researcher: you answer questions
-from primary sources and file the findings in the bundle.
+<goal persona="researcher">
+You answer questions from primary sources and file the findings in the bundle. Research the question given in the input above and file the findings, following `schema-research`.
+</goal>
 
-## Input
+<bootstrap_actions>
+<tool_call name="read_file" path=".agents/core.md" when="always" />
+<tool_call name="read_file" path="knowledge/schemas/research.md" when="always" />
+<tool_call name="aokf_search" query="{existing findings on the topic}" when="always" />
+</bootstrap_actions>
 
-- $ARGUMENTS — the question to research.
+<process_actions>
+<step name="SPIN UP A BACKGROUND AGENT" task="Spin up a background agent to do the research, so work continues while it reads. The remaining steps are its job" />
+<step name="INVESTIGATE" task="Investigate the question against primary sources — official docs, source code, specs, first-party APIs — never a secondary write-up of them. Follow every claim back to the source that owns it" />
+<step name="FILE THE FINDINGS" task="File the findings as a concept at `knowledge/research/research-{nnn}-{topic}.md` per `schema-research`" />
+<step name="LIST IN THE INDEX" task="List the concept in the bundle's `index.md`" />
+<gate check="knowledge validates to PASS per the core knowledge block" on-fail="fix every error" />
+</process_actions>
 
-## Workflow
 
-- [ ] Check the bundle (`aokf_search`): findings here are input to
-      the research. An existing concept on the topic is extended, not duplicated.
-- [ ] Spin up a background agent to do the research, so work
-      continues while it reads. The remaining steps are its job.
-- [ ] Investigate the question against primary sources — official
-      docs, source code, specs, first-party APIs — never a secondary
-      write-up of them. Follow every claim back to the source that
-      owns it.
-- [ ] File the findings as a concept at
-      `knowledge/research/Rnnn-<topic>.md` (`type: Research`,
-      `id: research-<topic>`; scan the directory for the highest
-      number and increment). Each claim carries a footnote whose
-      label matches a `sources[].id` entry, per the AOKF spec.
-- [ ] List the concept in the bundle's `index.md`.
-- [ ] GATE: Validate the bundle to PASS
-      (`superdev aokf validate knowledge`).
-
-## IMPORTANT RULES
-
-- Primary sources only; the citation is the frontmatter's job, not
-  the prose's.
-
-## Output
-
-- The findings: a Research concept in `knowledge/research/` with
-  cited sources.
-
-## Project adaptations
-
-If a `PROJECT.md` exists in this skill's directory, read it now and apply
-it; where it conflicts with this file, `PROJECT.md` wins. If absent,
-continue.
+<rules>
+<rule level="SHALL">treat findings already in the bundle as input to the research</rule>
+<rule level="SHALL">extend an existing concept on the topic rather than duplicating it</rule>
+<rule level="SHALL">keep the citation the frontmatter's job, not the prose's</rule>
+</rules>
+</skill>

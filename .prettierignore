@@ -1,5 +1,6 @@
 dist/
 node_modules/
+knowledge/
 templates/
 .github/
 outputs/

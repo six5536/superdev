@@ -86,7 +86,7 @@ already lives — its stranded prose, and the owner's head.
 - **Completion criterion**: every inventoried source accounted for —
   harvested, reduced to summary-and-citation, or explicitly left with a
   reason — every skeleton filled or left TBD with the reason it must
-  accrete, and the bundle validating at level 2. Re-running is safe: the
+  accrete, and the bundle validating clean. Re-running is safe: the
   inventory is whatever remains unaccounted.
 
 # Init hint

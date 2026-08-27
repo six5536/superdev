@@ -4,77 +4,34 @@ description: "Use when template changes should be harvested from a real project,
 disable-model-invocation: true
 ---
 
-# Template-backport mode
+<skill name="template-backport" purpose="Backport a Project into Template Assets" input="the path to the exemplar project and the template name" user-input="$ARGUMENTS" output="the template assets, registered, documented, and verified">
 
-You are in template-backport mode. You are a release engineer: you
-turn a real project into template assets under
-`pack/projects/<name>/` — refreshing a
-shipped template or creating a new one.
+<goal persona="release engineer">
+You turn a real project into template assets under `pack/projects/<name>/` — refreshing a shipped template or creating a new one, from the exemplar given in the input above.
+</goal>
 
-## Input
+<bootstrap_actions>
+<tool_call name="read_file" path=".agents/core.md" when="always" />
+<tool_call name="read_file" path="pack/projects/{name}/" when="if refreshing a shipped template" />
+</bootstrap_actions>
 
-- $ARGUMENTS — the path to the exemplar project and the template
-  name.
+<process_actions>
+<gate check="The exemplar path and template name are confirmed with the user" on-fail="confirm before writing anything" />
+<step name="ESTABLISH TOKENS" task="Establish the exemplar's tokens: read its name, slug, and ident from the package name, workspace name, and crate paths. These concrete values become `{{superdev:project-name}}`, `{{superdev:project-slug}}`, and `{{superdev:project-ident}}` in the assets" />
+<step name="CHOOSE THE FILE SET" task="Choose the file set: walk the exemplar and decide per file whether it belongs in the template. Leave out build artefacts, lockfiles, `.git/`, and anything specific to the exemplar (its changelog entries, secrets, submodules); ask when in doubt" />
+<step name="DIFF EXISTING TEMPLATE" task="Existing template? Diff against its current file set: additions, content changes, and removals are all part of the proposal" />
+<step name="REVERSE-SUBSTITUTE" task="Reverse-substitute exact occurrences: name, then ident, then slug. Review every hit — a slug can sit inside an unrelated word, and when the exemplar's name equals its slug, decide from context (paths and package names are slug; prose and headings are name). Grep the result for any leak of the real name, slug, or ident" />
+<step name="ENCODE ON-DISK PATHS" task="On disk, strip a leading dot from the first path segment (`gitattributes`, `devcontainer/`) and write a tokenised path segment as `\_slug*`; the FILES table restores both in the target paths" />
+<gate check="A per-file summary — add, change, remove, plus any substitution judgement calls — is presented and confirmed" on-fail="wait for the user's confirmation" />
+<step name="WRITE THE ASSETS">Write the assets. Keep the FILES table in `src/templates/<name>.rs`in asset-path sort order, with the array length in its type. New template? Add the module, its`shipped()`entry in`templates.rs`, and its name to `TEMPLATE_HELP`in`template_select.rs`(a test fails if the help line misses a template).</step>
+<step name="DOCUMENT" task="Document: update the template's section in`knowledge/specs/spec-007-project-templates.md`(or add one) and`CHANGELOG.md`" />
+<step name="VERIFY TESTS" task="Verify: `cargo nextest run --workspace`— template content, disjointness, and help-line tests all run here" />
+<step name="VERIFY SCRATCH RENDER">Verify with a scratch render:`cargo run --quiet -- template render <name> --name "Widget Forge" --dir <scratch>`— grep it for exemplar leaks,`bash -n` any shell scripts, parse any JSON.</step>
+</process_actions>
 
-## Workflow
 
-- [ ] GATE: Confirm the exemplar path and template name with the
-      user before writing anything.
-- [ ] Establish the exemplar's tokens: read its name, slug, and
-      ident from the package name, workspace name, and crate paths.
-      These concrete values become `{{superdev:project-name}}`,
-      `{{superdev:project-slug}}`, and `{{superdev:project-ident}}`
-      in the assets.
-- [ ] Choose the file set: walk the exemplar and decide per file
-      whether it belongs in the template. Leave out build artefacts,
-      lockfiles, `.git/`, and anything specific to the exemplar (its
-      changelog entries, secrets, submodules); ask when in doubt.
-- [ ] Existing template? Diff against its current file set:
-      additions, content changes, and removals are all part of the
-      proposal.
-- [ ] Reverse-substitute exact occurrences: name, then ident, then
-      slug. Review every hit — a slug can sit inside an unrelated
-      word, and when the exemplar's name equals its slug, decide
-      from context (paths and package names are slug; prose and
-      headings are name). Grep the result for any leak of the real
-      name, slug, or ident.
-- [ ] On disk, strip a leading dot from the first path segment
-      (`gitattributes`, `devcontainer/`) and write a tokenised path
-      segment as `_slug_`; the FILES table restores both in the
-      target paths.
-- [ ] GATE: Summarise per file — add, change, remove, plus any
-      substitution judgement calls — and wait for confirmation.
-- [ ] Write the assets. Keep the FILES table in
-      `src/templates/<name>.rs` in asset-path sort order, with the
-      array length in its type. New template? Add the module, its
-      `shipped()` entry in `templates.rs`, and its name to
-      `TEMPLATE_HELP` in `template_select.rs` (a test fails if the
-      help line misses a template).
-- [ ] Document: update the template's section in
-      `knowledge/specs/S007-project-templates-design.md` (or add
-      one) and `CHANGELOG.md`.
-- [ ] Verify: `cargo nextest run --workspace` — template content,
-      disjointness, and help-line tests all run here.
-- [ ] Verify with a scratch render:
-      `cargo run --quiet -- template render <name>
-      --name "Widget Forge" --dir <scratch>` — grep it for exemplar
-      leaks, `bash -n` any shell scripts, parse any JSON.
-
-## IMPORTANT RULES
-
-- No file may target a reserved path: `AGENTS.md`, `CLAUDE.md`,
-  `.agents/`, `.claude/`, `.superdev/`, `.mise.toml`, `.mcp.json`,
-  `knowledge/`. A unit test in `templates.rs` fails on a collision;
-  `.gitignore` is the one allowed overlap.
-- Assets stay LF: `pack/**` is `-text` in this repo's
-  `.gitattributes`.
-
-## Output
-
-- The template assets, registered, documented, and verified.
-
-## Project adaptations
-
-If a `PROJECT.md` exists in this skill's directory, read it now and apply
-it; where it conflicts with this file, `PROJECT.md` wins. If absent,
-continue.
+<rules>
+<rule level="MUST NOT">let a template asset target a path superdev's own capabilities own — `AGENTS.md`, `CLAUDE.md`, `.agents/`, `.claude/`, `.superdev/`, `.mise.toml`, `.mcp.json`, `knowledge/` — because a seeded template must stay disjoint from capability files; `.gitignore` is the one allowed overlap, and a unit test in `templates.rs` fails on a collision</rule>
+<rule level="SHALL">keep assets LF: `pack/**` is `-text` in this repo's `.gitattributes`</rule>
+</rules>
+</skill>

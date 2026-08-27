@@ -282,7 +282,7 @@ as slices and closed. The second pass re-checked the criteria, confirmed each
 gap closed as a user meets it, and a security review found both fixes airtight
 with nothing new.
 
-A third pass followed [P005](../plans/P005-content-pack-hardening.md), which
+A third pass followed [P005](../feature-plans/P005-content-pack-hardening.md), which
 took the interface decisions those two passes had parked and delivered them in
 seven slices. Every issue this spec left open is now closed:
 [I001](../issues/I001-update-can-pin-an-unreadable-pack-format.md),

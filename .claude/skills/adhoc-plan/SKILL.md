@@ -3,51 +3,32 @@ name: adhoc-plan
 description: "Superdev process: plan one-off work that does not go through the feature workflow."
 ---
 
-# Adhoc-plan mode
+<skill name="adhoc-plan" purpose="Plan One-off Work Outside the Feature Workflow" input="the work to plan" user-input="$ARGUMENTS" output="an ad-hoc plan filed as a concept; the work follows its steps, and the plan is tagged `done` when it lands">
 
-You are in adhoc-plan mode. You are a project planner: you plan one
-piece of work outside the feature workflow — a refactor, a migration,
-a chore.
+<goal persona="project planner">
+You plan one piece of work outside the feature workflow — a refactor, a migration, a chore. Plan the work given in the input above, following `schema-adhoc-plan`.
+</goal>
 
-## Input
+<bootstrap_actions>
+<tool_call name="read_file" path=".agents/core.md" when="always" />
+<tool_call name="read_file" path="knowledge/schemas/adhoc-plan.md" when="always" />
+<tool_call name="aokf_overview" when="always" />
+<tool_call name="aokf_search" query="{the conventions and constraints the plan must respect}" when="always" />
+<tool_call name="codegraph_explore" query="{the affected code and its callers}" when="before setting the steps" />
+</bootstrap_actions>
 
-- $ARGUMENTS — the work to plan.
+<process_actions>
+<gate check="The work needs no spec and changes no interface that is expensive to change" on-fail="/frame — it is a feature" />
+<step name="DRAFT THE PLAN" task="Draft the plan per `schema-adhoc-plan`" />
+<step name="ORDER THE STEPS" task="Order the steps so the codebase stays working after each one where possible" />
+<step name="INTERVIEW THE USER" task="`/grill-me`: resolve the open questions and the risks that need their judgement" />
+<step name="FILE THE PLAN" task="File the plan as a draft concept in `knowledge/adhoc-plans/`, listed in that directory's index" />
+<step name="DOUBLE-CHECK" task="`/double-check` the plan; fix what it finds" />
+<gate check="knowledge validates to PASS per the core knowledge block" on-fail="fix every error" />
+</process_actions>
 
-## Workflow
 
-- [ ] Read the knowledge the work touches (`aokf_overview` +
-      `aokf_search`): the conventions and constraints the plan must
-      respect.
-- [ ] Read the affected code and its callers (`codegraph_explore`)
-      before setting the steps.
-- [ ] GATE: Does the work need a spec, or change an interface that is
-      expensive to change? It is a feature: go to `/frame`.
-- [ ] Draft the plan from `template-adhoc-plan`: context, goal,
-      ordered steps, files affected, testing, and risks.
-- [ ] Order the steps so the codebase stays working after each one
-      where possible.
-- [ ] Interview the user (`/grill-me`): resolve the open questions
-      and the risks that need their judgement.
-- [ ] File the plan as a draft concept at
-      `knowledge/plans/Pnnn-<slug>.md`, listed in the plans index.
-- [ ] Double-check the plan (`/double-check`); fix what it finds.
-- [ ] GATE: Validate the bundle to PASS
-      (`superdev aokf validate knowledge`).
-
-## IMPORTANT RULES
-
-- Plan only: no code.
-- A change that needs a spec or an interface decision goes through
-  the feature workflow, starting at `/frame`.
-
-## Output
-
-- The plan: a draft concept in `knowledge/plans/` with ordered steps.
-- The work follows the plan's steps; tag the plan `done` when it
-  lands.
-
-## Project adaptations
-
-If a `PROJECT.md` exists in this skill's directory, read it now and apply
-it; where it conflicts with this file, `PROJECT.md` wins. If absent,
-continue.
+<rules>
+<rule level="MUST">plan only: no code</rule>
+</rules>
+</skill>

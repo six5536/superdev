@@ -3,72 +3,41 @@ name: interface-design
 description: "Superdev process: use to design the interface once the spec is clear."
 ---
 
-# Interface-design mode
+<skill name="interface-design" purpose="Design the Interface" input="the feature or spec id, when not handed off" user-input="$ARGUMENTS" output="the interface contract and, for UI, the mockup, with each decision recorded as an ADR">
 
-You are in interface-design mode. You are a systems architect: you
-decide only the interfaces that will be expensive to change once other
-code depends on them.
+<goal persona="systems architect">
+You decide only the interfaces that will be expensive to change once other code depends on them. Design the feature's interfaces as specified in the input above, following `schema-interface-contract` and `schema-adr`.
+</goal>
 
-## Input
+<bootstrap_actions>
+<tool_call name="read_file" path=".agents/core.md" when="always" />
+<tool_call name="read_file" path="knowledge/schemas/interface-contract.md" when="always" />
+<tool_call name="read_file" path="knowledge/schemas/adr.md" when="always" />
+<tool_call name="aokf_read" id="spec-{nnn}-{feature-slug}" when="always" />
+<tool_call name="aokf_search" query="{the feature or spec}" when="if the spec id is not given" />
+<tool_call name="aokf_read" id="architecture" when="always" />
+<tool_call name="aokf_read" id="architectural-rules" when="always" />
+<tool_call name="aokf_read" id="api-contracts" when="always" />
+<tool_call name="codegraph_explore" when="before adding new interfaces" />
+</bootstrap_actions>
 
-- The spec: the feature's draft `Spec` concept at
-  `knowledge/specs/Snnn-<feature-slug>.md`.
-- Re-entry: a contract change requested by build, or a divergence
-  verify says the contract should adopt.
-- $ARGUMENTS — the feature or spec id, when not handed off.
+<process_actions>
+<step name="DECIDE WHAT IS EXPENSIVE" task="Decide what is expensive to change: data schema, API contracts, module boundaries, auth surface, and the UI" />
+<step name="ESTABLISH EXTERNAL FACTS" task="Does a contract rest on a third-party API or another external fact? Establish it with `/research`; the findings land in the bundle for later phases" />
+<step name="WRITE BACKEND CONTRACTS" task="Backend interfaces: a written contract per `schema-interface-contract`" />
+<step name="MOCK THE UI" task="UI: a mockup (`/design`; `/frontend-design` for the visual direction) or a throwaway prototype (`/prototype`). Discard it and build against it" />
+<step name="INTERVIEW THE USER" task="Interview the user (`/grill-me`) on each decision and its alternatives before filing the ADR. A question conversation cannot settle gets a runnable answer (`/prototype`)" />
+<step name="RECORD ADRS" task="Record each decision as an ADR per `schema-adr`, listed in the decisions index" />
+<step name="DOUBLE-CHECK" task="Double-check the contract and ADRs (`/double-check`); fix what it finds" />
+<gate check="A new interface contradicts neither the architecture nor its rules" on-fail="reject it, or report the conflict for a deliberate change" />
+<gate check="knowledge validates to PASS per the core knowledge block" on-fail="fix every error" />
+<gate check="Everything internal is left to build" on-fail="stop deciding it here" />
+<skill_call name="/feature-plan" when="always" />
+</process_actions>
 
-## Workflow
 
-- [ ] Read the spec (`aokf_read`; `aokf_search` when the id is not
-      given).
-- [ ] Read the existing interfaces (`codegraph_explore`) before adding
-      new ones.
-- [ ] Read the `architecture`, `architectural-rules` and
-      `api-contracts` concepts (`aokf_read`): the existing interfaces
-      and the rules new ones must follow.
-- [ ] Decide what is expensive to change: data schema, API contracts,
-      module boundaries, auth surface, and the UI.
-- [ ] Does a contract rest on a third-party API or another external
-      fact? Establish it with `/research`; the findings land in the
-      bundle for later phases.
-- [ ] Backend interfaces: a written contract
-      (`template-interface-contract`), each interface in its native
-      language — SQL DDL for the schema, the host language's types or
-      traits for module APIs, the framework's route definitions for
-      endpoints — or TypeSpec where no native form exists.
-- [ ] UI: a mockup (`/design`; `/frontend-design` for the visual
-      direction) or a throwaway prototype (`/prototype`). Discard it
-      and build against it.
-- [ ] Interview the user (`/grill-me`) on each decision and its
-      alternatives before filing the ADR. A question conversation
-      cannot settle gets a runnable answer (`/prototype`).
-- [ ] Record each decision as an ADR (`template-adr`): a Decision
-      concept at `knowledge/decisions/Dnnn-<slug>.md`, listed in the
-      decisions index, with alternatives and reasoning.
-- [ ] Double-check the contract and ADRs (`/double-check`); fix what
-      it finds.
-- [ ] GATE: Does a new interface contradict the architecture or its
-      rules? Reject it, or report the conflict for a deliberate
-      change.
-- [ ] GATE: Bundle edited? Validate to PASS
-      (`superdev aokf validate knowledge`).
-- [ ] GATE: Deciding anything internal? Leave it to build.
-
-## IMPORTANT RULES
-
-- Leave everything internal to build.
-- A rejected alternative is recorded in the decision's ADR, not in the
-  backlog.
-- Contracts are written in the language the code will enforce; TypeSpec
-  where none exists. Prose describes, it never defines.
-
-## Output
-
-- The interface contract and, for UI, the mockup.
-- Hand off to `/feature-plan`.
-
-## Project adaptations
-
-If a `PROJECT.md` exists in this skill's directory, read it now and apply
-it; where it conflicts with this file, `PROJECT.md` wins. If absent,
-continue.
+<rules>
+<rule level="SHALL">record a rejected alternative in the decision's ADR</rule>
+<rule level="SHALL NOT">record a rejected alternative in the backlog</rule>
+</rules>
+</skill>

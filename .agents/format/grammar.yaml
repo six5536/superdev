@@ -1,0 +1,685 @@
+grammar: superdev
+version: "2.0"
+doc: "The closed vocabulary of superdev-format files. This file is the single home of the
+  grammar: validate-awa.mjs drives every structural check from it, and `validate-awa.mjs --doc`
+  prints it as a reference. Change the language here, not in the validator."
+roots:
+  doc: >
+    Where a bare run looks. A file under a root is checked only when a kind claims it by
+    basename, suffix or directory — never by the default fallback — so an unrelated markdown
+    file beside a claimed one is passed over rather than misread as a unit. The list is data
+    because superdev writes these files into other repositories, where the paths differ; and
+    it is an allowlist because the alternative, naming what to skip, would have to grow to
+    cover every cache, backup, submodule and vendored pack forever.
+  paths:
+    - .agents
+    - .claude/skills
+    - knowledge/schemas
+
+conditions:
+  attribute: when
+  doc: One attribute carries every condition in the language, on every element that can bear one.
+    Absent means unconditional, except on <tool_call>, where the condition is always stated.
+  pattern: ^(always|if .+|before .+|unless .+)$
+  forms:
+    - always — unconditional; the explicit form, required on <tool_call>
+    - if {condition} — runs when the condition holds
+    - unless {condition} — runs except when the condition holds
+    - before {event} — runs ahead of the named event
+  renamedFrom:
+    trigger: renamed to when (one condition attribute across the grammar)
+    if: renamed to when
+    required: renamed to when; an output is produced, not required
+tools:
+  doc: The context-loading tools the ecosystem's units call. Used by the steps-are-not-pure-loads
+    check. Not enforced on <tool_call name>, which may also name a host tool or a validation
+    command.
+  roster:
+    - read_file
+    - aokf_read
+    - aokf_search
+    - aokf_overview
+    - aokf_graph
+    - codegraph_explore
+  enforceOnToolCall: false
+kinds:
+  unit:
+    doc: A skill or prompt file — the executable unit of the format.
+    match:
+      basename:
+        - SKILL.md
+      suffix:
+        - .prompt.md
+      default: true
+    frontmatter:
+      doc: A unit file is a Claude Code skill, so its frontmatter is the host's. Fields and types are
+        from https://code.claude.com/docs/en/skills — every one of them is optional to the host
+        and only description is recommended, so the `required` lists below are superdev being
+        stricter than Claude Code, deliberately.
+      booleanValues:
+        - "true"
+        - "false"
+        - yes
+        - no
+        - on
+        - off
+        - "1"
+        - "0"
+      keys:
+        name:
+          type: string
+          pattern: ^[a-z0-9]+(-[a-z0-9]+)*$
+          portable: true
+          doc: Display name in skill listings. For a personal or project skill the command still comes
+            from the directory name, so the two must agree.
+        description:
+          type: string
+          portable: true
+          maxLength: 1536
+          doc: What the skill does and when to use it. The listing truncates the combined description at
+            1536 characters, so a longer one loses its tail.
+        argument-hint:
+          type: string
+          doc: Autocomplete hint for the arguments the unit takes.
+        arguments:
+          type: stringOrList
+          doc: Named positional arguments for $name substitution.
+        disable-model-invocation:
+          type: boolean
+          doc: true keeps the unit user-invocable only.
+        user-invocable:
+          type: boolean
+          doc: false hides the unit from the / menu; only Claude invokes it.
+        allowed-tools:
+          type: stringOrList
+          portable: true
+          doc: Tools pre-approved for the invoking turn.
+        disallowed-tools:
+          type: stringOrList
+          doc: Tools removed from the pool while the unit is active.
+        model:
+          type: string
+          doc: Model override for the turn.
+        effort:
+          type: string
+          enum:
+            - low
+            - medium
+            - high
+            - xhigh
+            - max
+        context:
+          type: string
+          enum:
+            - fork
+          doc: fork runs the unit in its own subagent context.
+        agent:
+          type: string
+          doc: "Subagent type, with context: fork."
+        background:
+          type: boolean
+          doc: "false waits for the forked subagent, with context: fork."
+        hooks:
+          type: map
+          doc: Hooks registered when the unit is invoked.
+        paths:
+          type: stringOrList
+          doc: Globs that limit when the unit activates.
+        shell:
+          type: string
+          enum:
+            - bash
+            - powershell
+        metadata:
+          type: map
+          portable: true
+          doc: Free-form map for your own tooling.
+        license:
+          type: string
+          portable: true
+        compatibility:
+          type: string
+          portable: true
+          maxLength: 500
+      profiles:
+        - name: claude-code-skill
+          doc: "A skill directory: .claude/skills/{dir}/SKILL.md."
+          match:
+            basename:
+              - SKILL.md
+          required:
+            - name
+            - description
+          nameMatchesDirectory: true
+        - name: prompt
+          doc: A prompt file, whose host takes a smaller set and names the unit in the filename.
+          match:
+            suffix:
+              - .prompt.md
+          required:
+            - description
+          allow:
+            - description
+            - argument-hint
+            - model
+            - name
+        - name: loose
+          doc: A unit file outside either layout — the procedure documents themselves.
+          default: true
+          required:
+            - description
+      portability:
+        spec: Agent Skills
+        url: https://agentskills.io
+        warn: outside the Agent Skills spec — Claude Code accepts it, but claude.ai uploads, the Skills
+          API, and package_skill.py reject the file with a hard error
+      mirrors:
+        - key: name
+          element: skill
+          attr: name
+          basename: SKILL.md
+    root: skill
+    order:
+      - skill
+      - goal
+      - constraints
+      - bootstrap_actions
+      - process_actions
+      - rules
+    removed:
+      inputs: <inputs> is no longer part of the grammar — describe context-borne input in the <skill>
+        input attribute, and fetch everything else with a bootstrap tool_call
+      outputs: <outputs> is no longer part of the grammar — the deliverable is the <skill> output
+        attribute, and the transfer to the next unit is a <skill_call> in <process_actions>
+      agent_cli: <agent_cli> is no longer part of the grammar — a deliverable reported in conversation
+        is the <skill> output attribute; a handoff is a <skill_call> in <process_actions>
+      file: <file> is no longer part of the grammar — the step that writes an artifact names its path,
+        and the <skill> output attribute says what the unit delivers
+    elements:
+      skill:
+        doc: Wraps the whole unit.
+        form: block
+        parent: null
+        occurs:
+          min: 1
+          max: 1
+        attrs:
+          name:
+            required: true
+            doc: the unit name, matching the frontmatter name
+          purpose:
+            required: true
+            doc: imperative title
+          input:
+            doc: what the user types; omitted when the unit takes none
+          user-input:
+            required: true
+            const: $ARGUMENTS
+            doc: the host's own user-input variable
+          output:
+            required: true
+            doc: what the unit delivers, in one line — the artifacts by what they are, not by path, and what
+              is reported in conversation
+        compare:
+          parts:
+            - "@output"
+          label: skill output
+      goal:
+        doc: The unit's mission, in the source's words.
+        form: block
+        parent: skill
+        occurs:
+          min: 1
+          max: 1
+        bodyRequired: true
+        attrs:
+          persona:
+            doc: the role the source assigns; omitted when it assigns none
+        compare:
+          parts:
+            - body
+          label: goal
+      constraints:
+        doc: Load-bearing background that is neither a step nor a norm. Optional.
+        form: block
+        parent: skill
+        occurs:
+          min: 0
+          max: 1
+        bodyRequired: true
+      bootstrap_actions:
+        doc: The unit's context manifest — everything that may enter context, each with the condition
+          under which it does.
+        form: block
+        parent: skill
+        occurs:
+          min: 1
+          max: 1
+        mustContain:
+          anyOf:
+            - tool_call
+      tool_call:
+        doc: One load. name is the exact tool to invoke.
+        form: self-closing
+        parent: bootstrap_actions
+        attrs:
+          name:
+            required: true
+            doc: read_file, or any MCP/CLI tool the ecosystem loads context with
+          path:
+            doc: for file reads
+          id:
+            doc: for knowledge-base reads
+          query:
+            doc: for search-shaped tools whose target is a question or a code location
+          when:
+            required: true
+            condition: true
+        atMostOneOf:
+          - path
+          - id
+          - query
+      process_actions:
+        doc: The ordered work. Optional — a unit may be all norms.
+        form: block
+        parent: skill
+        occurs:
+          min: 0
+          max: 1
+        mustContain:
+          anyOf:
+            - step
+            - gate
+            - skill_call
+            - loop
+      loop:
+        doc: Work that repeats. until repeats a body until a condition holds — a retry or a convergence;
+          for-each repeats it over a collection discovered at run time, which is the one load
+          that cannot be hoisted into bootstrap because its targets are not known yet.
+        form: block
+        parent: process_actions
+        exactlyOneOf:
+          - "@until"
+          - "@for-each"
+        attrs:
+          until:
+            doc: the condition that ends the loop; the body repeats while it does not hold
+          for-each:
+            doc: what is iterated, one pass of the body per item
+          max:
+            doc: an upper bound on passes, for a loop that could otherwise spin; omitted when the condition
+              is the only sane bound
+          when:
+            condition: true
+            doc: marks a loop that runs only on a branch
+        mustContain:
+          anyOf:
+            - step
+            - gate
+      step:
+        doc: One unit of work that leaves something behind. Carries its wording in task, or in the
+          element body when the wording contains a double quote or an angle bracket.
+        form: either
+        parent:
+          - process_actions
+          - loop
+        attrs:
+          name:
+            required: true
+            doc: short uppercase label
+          when:
+            condition: true
+            doc: marks a step that runs only on a branch
+          task:
+            doc: the source wording
+        exactlyOneOf:
+          - "@task"
+          - body
+        compare:
+          parts:
+            - "@name"
+            - "@task|body"
+          skipIf:
+            part: "@task|body"
+            pattern: ^/[a-z-]+$
+          label: step "{@name}"
+      gate:
+        doc: "A blocking check: the criterion that must hold, and the remedy when it does not — often a
+          skill to return to, which should match an edge in the core workflow graph. Gates are
+          not restated as rules."
+        form: self-closing
+        parent:
+          - process_actions
+          - loop
+        attrs:
+          check:
+            required: true
+            doc: the criterion that must hold
+          on-fail:
+            required: true
+            doc: the remedy
+        compare:
+          parts:
+            - "@check"
+            - "@on-fail"
+          label: gate "{@check:40}…"
+      skill_call:
+        doc: The transfer of the work to another unit, at the point in the process where it happens. The
+          last one is the handoff. A unit invoked mid-process that hands the work back is a step
+          instead — a step leaves something behind, a skill_call does not.
+        form: self-closing
+        parent: process_actions
+        attrs:
+          name:
+            required: true
+            doc: the skill or prompt to call, as the user would invoke it
+          input:
+            doc: what travels with the work; omitted when the context carries it
+          when:
+            required: true
+            condition: true
+      rules:
+        doc: The unit's freestanding norms.
+        form: block
+        parent: skill
+        occurs:
+          min: 1
+          max: 1
+        mustContain:
+          anyOf:
+            - rule
+      rule:
+        doc: One norm. The statement stays imperative and carries no modal of its own — the level
+          attribute does that.
+        form: block
+        parent: rules
+        bodyRequired: true
+        attrs:
+          level:
+            required: true
+            enum:
+              - MUST
+              - MUST NOT
+              - SHALL
+              - SHALL NOT
+              - SHOULD
+              - SHOULD NOT
+              - MAY
+        bodyForbid:
+          pattern: ^You\b
+          flags: i
+          message: statement carries its own modal; the level attribute does that
+        compare:
+          parts:
+            - body
+          label: rule [{@level}] "{text:40}…"
+    checks:
+      attributes-free-of-angle-brackets:
+        enabled: true
+        message: attribute value contains a raw < or > — use the element body form instead
+      steps-are-not-pure-loads:
+        enabled: true
+        verbs:
+          - Read
+          - Search
+          - Load
+          - Look up
+          - Take
+        message: step is a pure load — make it a bootstrap tool_call
+      core-block-references:
+        enabled: true
+        appliesTo:
+          - unit
+          - schema
+        pattern: core(?:'s)?\s+`?([a-z][a-z0-9_]*)`?\s+block
+        message: references a core block the core does not define
+  schema:
+    doc: An AOKF concept wrapping the structural contract of one produced artifact.
+    match:
+      dir:
+        - schemas
+      except:
+        - index.md
+    frontmatter:
+      required:
+        - type
+        - id
+        - description
+      slug:
+        - id
+    document:
+      doc: >
+        The vocabulary of the fenced YAML contract inside a schema file — what a schema may say
+        about the documents it governs. This is to a governed document what kinds.unit.elements
+        is to a unit file. The contract opens with fence-marker — four backticks, not the usual
+        three — because the example it carries has to be able to hold a fenced block of its own,
+        and a three-backtick contract is closed by the first one.
+      fences: 1
+      fence-marker: '````'
+      pattern-dialect: >
+        Every pattern and heading-pattern is a regular expression in the Rust regex dialect: no
+        lookaround, no backreferences. Anchor it explicitly; nothing adds anchors for you.
+      keys:
+        target-files:
+          type: string
+          required: true
+          doc: Glob selecting the documents this schema governs.
+        description:
+          type: string
+          required: true
+          doc: The governed artifact in one breath.
+        line-limit:
+          type: integer
+          required: true
+          doc: Line count above which the document must be split rather than trimmed.
+        frontmatter:
+          type: map
+          of: frontmatter-constraint
+          doc: >
+            The governed document's frontmatter contract, one entry per key specific to this
+            artifact. Keys every concept carries — title, description, tags, links — belong to
+            the tool, not to nine repeated copies here.
+        preamble:
+          type: map
+          of: preamble
+          doc: >
+            What the document carries between its frontmatter and its first heading. Some
+            governed documents are entirely preamble — a lead line and a list, no headings at
+            all — so a schema declares preamble, sections, or both, and at least one of them.
+        sections-ordered:
+          type: boolean
+          doc: true when the sections must appear in the order listed.
+        sections:
+          type: list
+          of: section
+          doc: >
+            The governed document's headings, in document order. Omitted by a document that has
+            none; a schema that omits it must declare a preamble instead.
+        sections-prohibited:
+          type: list
+          doc: Headings that must not appear.
+        example:
+          type: string
+          required: true
+          doc: >
+            One complete document instantiating every required section. It must satisfy this
+            schema, which is what makes a schema self-testing.
+      section:
+        doc: >
+          One heading in the governed document. Where a literal heading and a heading-pattern
+          could both match the same text, the literal wins — the pattern dialect has no
+          lookaround, so a catch-all cannot exclude the named headings around it, and without
+          this rule a repeatable pattern sitting mid-document swallows every literal after it.
+        exactlyOneOf:
+          - heading
+          - heading-pattern
+        keys:
+          heading:
+            type: string
+            doc: The exact heading text, matched literally. Beats any pattern that also matches.
+          heading-pattern:
+            type: string
+            format: regex
+            doc: >
+              An anchored regex, for a heading that carries a title of its own. Tried only
+              where no literal heading matches.
+          level:
+            type: integer
+            required: true
+            enum:
+              - 1
+              - 2
+              - 3
+              - 4
+              - 5
+              - 6
+            doc: Markdown heading depth. Nesting is expressed by level, never by containment.
+          required:
+            type: boolean
+            doc: true when the section is always present; omitted when it is optional.
+          repeatable:
+            type: boolean
+            doc: true when the heading may occur more than once.
+          content:
+            type: string
+            enum:
+              - prose
+              - bullet-list
+              - numbered-list
+              - table
+              - code
+            doc: >
+              What the section must contain at least one of. Not exclusive — a section declared
+              prose may still carry a list. code means a fenced block carrying a language tag,
+              for a section whose content is a contract the prose may describe but never define.
+          columns:
+            type: list
+            requires:
+              content: table
+            doc: The required column headers, in order.
+          description:
+            type: string
+            required: true
+            doc: The template's own guidance for this section.
+      preamble:
+        doc: >
+          The content before the governed document's first heading. It has no heading of its
+          own, so it takes no heading, level or repeatable key — only what it must contain.
+        keys:
+          content:
+            type: string
+            enum:
+              - prose
+              - bullet-list
+              - numbered-list
+              - table
+              - code
+            doc: What the preamble must contain at least one of. Not exclusive.
+          columns:
+            type: list
+            requires:
+              content: table
+            doc: The required column headers, in order.
+          description:
+            type: string
+            required: true
+            doc: The template's own guidance for the preamble.
+      frontmatter-constraint:
+        doc: What a schema may say about one frontmatter key of the governed document.
+        keys:
+          const:
+            type: string
+            doc: The key must equal this value.
+          pattern:
+            type: string
+            format: regex
+            doc: The key must match this regex.
+          enum:
+            type: list
+            doc: The key must be one of these values.
+          required:
+            type: boolean
+            doc: Defaults to true; false marks an optional key.
+          description:
+            type: string
+            doc: What the key means for this artifact.
+    compare:
+      descriptionKey: description
+      stopAtKey: example
+  core:
+    doc: "The ecosystem's shared file: Prime Directive plus balanced snake_case blocks inside one
+      root tag named for the ecosystem."
+    match:
+      basename:
+        - core.md
+    requireH1: true
+    balancedTags: true
+    collectBlocks: true
+duplication:
+  doc: One home per statement. A flagged pair means one occurrence must become a reference to the
+    other's home.
+  minTokens: 5
+  threshold: 0.85
+  withinFileKinds:
+    - unit
+    - core
+  crossPairs:
+    - unit|unit
+    - unit|core
+    - unit|schema
+  exemptCrossUnitElements:
+    - step
+    - gate
+  exemptCrossUnitReason: the same work step recurring in two units is two instances of work, not
+    two homes of one statement
+  skeletonConstants:
+    - clarify open points with the user
+    - use todos and tools as needed
+  stopWords:
+    - you
+    - shall
+    - should
+    - must
+    - may
+    - not
+    - no
+    - do
+    - the
+    - a
+    - an
+    - of
+    - to
+    - for
+    - and
+    - or
+    - in
+    - as
+    - is
+    - are
+    - it
+    - its
+    - with
+    - per
+    - on
+    - be
+    - by
+    - that
+    - this
+    - every
+    - from
+    - when
+    - then
+    - than
+    - so
+    - at
+    - if
+    - via
+    - any
+    - can
+    - will
+    - into
+    - was
+    - were
+    - has
+    - have
+    - had

@@ -1,0 +1,6 @@
+# Feature Plans
+
+* [Flatten the superdev-core API](P001-flatten-crate-api.md) - apply the module flatten rule to superdev-core — private submodules, pub use re-exports at lib.rs, callers writing crate::Item.
+* [Agent Instructions Layer](P002-agent-instructions-layer.md) - deliver S010 — the user-owned AGENTS.md with one ensured import, the fenced superdev.md aggregator, per-capability instruction files, codegraph MCP wiring, and the code-index dogfood.
+* [Externally Sourced Content Packs — feature plan](P003-content-packs.md) - deliver S014 in eighteen slices — move the content to /pack, reorganise it into pack layout, derive it from that layout, add the manifest and lock schemas, resolve local then git sources, wire ownership, teach init and update, make each release one command, make a committed path pin portable, dogfood it, then close the gaps acceptance found and the one deferred issue small enough to fix.
+* [Content pack hardening — feature plan](P005-content-pack-hardening.md) - deliver ADR-012 to ADR-016 in seven slices — refuse an unsupported transport, refuse a symlink in a pack and let git decide what one is, give the spawn seam a deadline and an environment, bound the one unprompted request, prove a pin before writing it, and stop recording a digest nothing reads.
