@@ -13,7 +13,6 @@ concept for the system's shape. One named file rather than a family, so
 choose; the literal headings around them win over the pattern.
 
 ````yaml
-target-files: "knowledge/architecture.md"
 description: >
   The system's shape — the top-level layers and the direction of dependency
   between them, a section per subsystem that needs more than a line, and what
@@ -22,7 +21,7 @@ line-limit: 800
 
 frontmatter:
   type:
-    const: Reference
+    const: Architecture
   id:
     const: architecture
   status:

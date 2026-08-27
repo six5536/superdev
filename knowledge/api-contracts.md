@@ -1,5 +1,5 @@
 ---
-type: Reference
+type: ApiContracts
 id: api-contracts
 title: API Contracts
 description: The CLI surface — the manage verbs, the knowledge verbs, the four MCP tools, and the stability promises.

@@ -1,5 +1,5 @@
 ---
-type: Issue
+type: FeatureRequest
 id: issue-012-five-decidable-findings-only-warn
 title: Five findings the repository alone can decide are only warnings, and go unread
 description: Broken links, missing resources, missing sources, missing index targets and unjoined footnotes are all decidable from the tree, but SPEC §11 makes them warnings; the canonical knowledge carried 39 of them unactioned until someone happened to look.

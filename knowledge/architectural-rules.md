@@ -1,5 +1,5 @@
 ---
-type: Convention
+type: ArchitecturalRules
 id: architectural-rules
 title: Architectural Rules
 description: Planning is side-effect free, the engine is the only place that applies, and capabilities are the user-facing names.

@@ -1,5 +1,5 @@
 ---
-type: Issue
+type: BugReport
 id: issue-016-sync-would-revert-the-schema-migration
 title: Sync would revert the schema migration and the conformance decision, and the pre-PR check says so 65 times
 description: The live tree carries the schema migration and ADR-017; /pack/ still carries what they replaced, so status --drift reports 65 changes and sync would restore 41 deleted templates, put the level ladder back into the AOKF spec, and overwrite 21 rewritten skills.

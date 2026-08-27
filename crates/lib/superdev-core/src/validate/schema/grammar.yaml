@@ -463,8 +463,13 @@ kinds:
       keys:
         target-files:
           type: string
-          required: true
-          doc: Glob selecting the documents this schema governs.
+          required: false
+          doc: >
+            Glob selecting the documents this schema governs. Only for documents that carry
+            no frontmatter to dispatch on — CHANGELOG.md, README.md, an index.md, a document
+            filed outside the SOKF knowledge. Every other schema names its documents by the
+            `type` const in its frontmatter contract, one type to one schema, and declares no
+            glob at all.
         description:
           type: string
           required: true

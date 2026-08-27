@@ -12,7 +12,6 @@ concept for how the project is tested. This is the standing strategy; the
 per-feature cases live in a spec's appended test plan.
 
 ````yaml
-target-files: "knowledge/testing-strategy.md"
 description: >
   How tests are run, the layers and what each covers, the deliberate choices
   behind them, and the platforms they run on.
@@ -20,7 +19,7 @@ line-limit: 800
 
 frontmatter:
   type:
-    const: Reference
+    const: TestingStrategy
   id:
     const: testing-strategy
   status:

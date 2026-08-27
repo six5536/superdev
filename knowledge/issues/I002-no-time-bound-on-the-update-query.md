@@ -1,5 +1,5 @@
 ---
-type: Issue
+type: BugReport
 id: issue-002-no-time-bound-on-the-update-query
 title: The default-source query has no time bound, so a black-holed network stalls update
 description: update runs git ls-remote on every untargeted invocation and CommandRunner had no timeout, so a network that neither answered nor refused stalled the command until the OS gave up; fixed in P005 slices 4 and 5, which gave the spawn seam a five-second deadline.

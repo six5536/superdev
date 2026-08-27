@@ -1,5 +1,5 @@
 ---
-type: Issue
+type: BugReport
 id: issue-007-a-pack-source-reaches-git-with-no-scheme-check
 title: A pack source's scheme is unchecked, so the base pack can be fetched over a transport anyone on-path can answer
 description: "superdev allowlisted no scheme, so git:// and http:// normalised onto the default identity and a cloned manifest could have the base pack fetched over an unauthenticated transport; fixed in P005 slice 1 and ADR-012, which allowlist https, ssh and file at parse."

@@ -1,5 +1,5 @@
 ---
-type: Plan
+type: FeaturePlan
 id: plan-flatten-crate-api
 title: Flatten the superdev-core API
 description: Apply the module flatten rule to superdev-core — private submodules, pub use re-exports at lib.rs, callers writing crate::Item.

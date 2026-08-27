@@ -12,7 +12,6 @@ Reference concept for the repository layout. The document is a tree block
 and a note, with no headings, so it declares a preamble and no sections.
 
 ````yaml
-target-files: "knowledge/directory-structure.md"
 description: >
   What lives where in the repository — the annotated tree, and only what the
   tree itself cannot say.
@@ -20,7 +19,7 @@ line-limit: 800
 
 frontmatter:
   type:
-    const: Reference
+    const: DirectoryStructure
   id:
     const: directory-structure
   status:

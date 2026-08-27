@@ -1,5 +1,5 @@
 ---
-type: Plan
+type: FeaturePlan
 id: feature-plan-content-pack-hardening
 title: Content pack hardening — feature plan
 description: Deliver ADR-012 to ADR-016 in seven slices — refuse an unsupported transport, refuse a symlink in a pack and let git decide what one is, give the spawn seam a deadline and an environment, bound the one unprompted request, prove a pin before writing it, and stop recording a digest nothing reads.

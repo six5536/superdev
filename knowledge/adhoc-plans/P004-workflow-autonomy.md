@@ -1,5 +1,5 @@
 ---
-type: Plan
+type: AdhocPlan
 id: adhoc-plan-workflow-autonomy
 title: Workflow autonomy — branch, slice dependencies, unattended delivery
 description: Give the workflow a branch at frame, model slice dependencies in the plan, run stages 4-7 unattended on a general superdev run facility with a Stop hook and a new execute-feature-plan skill, and commit at every successful integrate.

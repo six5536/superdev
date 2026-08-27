@@ -13,7 +13,6 @@ it declares a preamble and no sections. Whether a dependency may be added at
 all belongs to `dependency-policy`, not here.
 
 ````yaml
-target-files: "knowledge/technology-stack.md"
 description: >
   The languages and runtime shape, where toolchain versions are pinned, and
   the dependency set with the reason behind each non-obvious choice.
@@ -21,7 +20,7 @@ line-limit: 800
 
 frontmatter:
   type:
-    const: Reference
+    const: TechnologyStack
   id:
     const: technology-stack
   status:

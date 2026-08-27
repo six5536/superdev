@@ -53,7 +53,7 @@ single verdict.
   golden carries the first, `no-manifest.golden.json`, and one inline test
   asserts the second at `validate.rs:952`.
 - SPEC §11 is the ladder, at `.agents/aokf/SPEC.md:366-378`. The version is
-  declared at line 3 and again at line 387, and `knowledge/manifest.aokf.yaml`
+  declared at line 3 and again at line 387, and `knowledge/manifest.sokf.yaml`
   declares `aokf: "0.2"`.
 - Five live files assert the model in prose: `.agents/aokf.md:28` and
   `.agents/core.md:31` ("PASS at level 2"),
@@ -131,7 +131,7 @@ Depends on: none.
 2. Reword what leans on it — §10's items that exist to place a check on the
    ladder, and the two "required at Level 1" phrasings the validator echoes.
 3. Bump the version — `.agents/aokf/SPEC.md` at both declaration sites, and
-   `knowledge/manifest.aokf.yaml`, which names the version the canonical knowledge targets.
+   `knowledge/manifest.sokf.yaml`, which names the version the canonical knowledge targets.
 
 ### W2: Collapse the model and hold parity
 
@@ -189,7 +189,7 @@ Depends on: W3.
 | File | Change | Workstream |
 |------|--------|------------|
 | `.agents/aokf/SPEC.md` | modified — §11 replaced, §10 reworded, version bumped at both sites | W1 |
-| `knowledge/manifest.aokf.yaml` | modified — the version the canonical knowledge targets | W1 |
+| `knowledge/manifest.sokf.yaml` | modified — the version the canonical knowledge targets | W1 |
 | `crates/lib/superdev-core/src/aokf/validate.rs` | modified — `Finding`, `Report`, `achieved_level` deleted, two messages reworded, one inline test | W2 |
 | `crates/lib/superdev-core/tests/validator_parity.rs` | modified — a third normalisation and its header note | W2 |
 | `crates/app/superdev/src/aokf_cli.rs` | modified — `--level` and `DEFAULT_LEVEL` removed | W3 |
@@ -217,7 +217,7 @@ Depends on: W3.
 | `superdev aokf validate --level 2` fails as an unknown argument | FR-4 |
 | `rg -n 'Level [0-9]' crates/lib/superdev-core/src/` returns nothing | FR-3 |
 | `superdev aokf validate knowledge` on this knowledge still reports no findings and exits 0 | FR-2 |
-| Deleting `knowledge/manifest.aokf.yaml` makes it fail, where `--level 0` would once have passed it | FR-2, FR-4 |
+| Deleting `knowledge/manifest.sokf.yaml` makes it fail, where `--level 0` would once have passed it | FR-2, FR-4 |
 | `rg -n 'level 2' .agents .claude knowledge/api-contracts.md` returns nothing | FR-6 |
 | SPEC §11 names no level, and the version differs from `0.2` at both declaration sites | FR-5 |
 | `npm run coverage:check` passes | NFR-2 |

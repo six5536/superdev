@@ -12,12 +12,19 @@ Structural rules for interface contracts filed at
 the decisions behind it are recorded as ADRs.
 
 ````yaml
-target-files: "knowledge/contracts/contract-*.md"
 description: >
   The interfaces build codes against — data model and API, module
   boundaries, key flows, and cross-cutting concerns — each expressed in
   its native language, or TypeSpec.
 line-limit: 800
+
+frontmatter:
+  type:
+    const: Contract
+  id:
+    pattern: '^contract-[a-z0-9-]+$'
+  status:
+    enum: [draft, stable, deprecated]
 
 sections-ordered: true
 sections:

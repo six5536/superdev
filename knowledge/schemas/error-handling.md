@@ -13,7 +13,6 @@ first and is literal; the mechanism headings after it are the author's to
 name.
 
 ````yaml
-target-files: "knowledge/error-handling.md"
 description: >
   The exit codes or error classes and what each means, and one section per
   failure mechanism callers rely on.
@@ -21,7 +20,7 @@ line-limit: 800
 
 frontmatter:
   type:
-    const: Convention
+    const: ErrorHandling
   id:
     const: error-handling
   status:

@@ -28,7 +28,9 @@ fill in the angle-bracket placeholders.
 
 ## Reports & analysis
 
-* [Bug Report](bug-report.md) - symptom, environment, exact repro steps, expected vs actual, root cause, and regression risk. Filed as an Issue concept in the issue tracker.
+* [Bug Report](bug-report.md) - symptom, environment, exact repro steps, expected vs actual, root cause, and regression risk. One of the three shapes the issue tracker holds.
+* [Feature Request](feature-request.md) - motivation, proposed behaviour, alternatives considered and scope. One of the three shapes the issue tracker holds.
+* [Chore](chore.md) - the surfaces scoped mechanical work reaches and the check that says it is done. One of the three shapes the issue tracker holds.
 * [Investigation](investigation.md) - conclusion-first write-up — question, evidence with sources, ruled-out hypotheses, and recommendation.
 * [Postmortem](postmortem.md) - blameless incident write-up — impact, timeline, root cause, and typed action items.
 * [Status Update](status-update.md) - TL;DR, done since last update, in progress, blockers with recommended defaults, and next.

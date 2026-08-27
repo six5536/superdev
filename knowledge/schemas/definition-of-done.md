@@ -12,7 +12,6 @@ Convention concept for the merge gate. The document has no headings — a lead
 line and the gates — so it declares a preamble and no sections.
 
 ````yaml
-target-files: "knowledge/definition-of-done.md"
 description: >
   What a change must satisfy before it merges, as a list of gates each of
   which is checkable by someone who did not make the change.
@@ -20,7 +19,7 @@ line-limit: 800
 
 frontmatter:
   type:
-    const: Convention
+    const: DefinitionOfDone
   id:
     const: definition-of-done
   status:

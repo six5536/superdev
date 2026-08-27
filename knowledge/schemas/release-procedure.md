@@ -13,7 +13,6 @@ lead line, the ordered steps, and a note on credentials — so it declares a
 preamble and no sections.
 
 ````yaml
-target-files: "knowledge/release-procedure.md"
 description: >
   How a release is triggered, the gates that must pass first, the step that
   publishes irreversibly, and where publish rights come from.
@@ -21,7 +20,7 @@ line-limit: 800
 
 frontmatter:
   type:
-    const: Procedure
+    const: ReleaseProcedure
   id:
     const: release-procedure
   status:

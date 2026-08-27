@@ -2,12 +2,12 @@
 type: Template
 id: template-bug-report
 title: Bug Report Template
-description: Symptom, environment, exact repro steps, expected vs actual, root cause, and regression risk. Filed as an Issue concept in the issue tracker.
+description: Symptom, environment, exact repro steps, expected vs actual, root cause, and regression risk. One of the three shapes the issue tracker holds.
 status: stable
 ---
 
 ---
-type: Issue
+type: BugReport
 id: issue-nnn-<slug>
 title: <one-line symptom>
 description: <one line — the symptom>.

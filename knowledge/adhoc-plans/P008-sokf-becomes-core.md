@@ -253,7 +253,7 @@ Depends on: W2.
    and the commands to the W3 verbs.
 3. Change the manifest in code — `MANIFEST` becomes `manifest.sokf.yaml`,
    `BundleManifest::aokf` becomes `sokf`, and the required-key check follows.
-4. Move this repository's manifest — `knowledge/manifest.aokf.yaml` to
+4. Move this repository's manifest — `knowledge/manifest.sokf.yaml` to
    `knowledge/manifest.sokf.yaml`, `aokf: "0.3"` to `sokf: "0.3"`.
 5. Update the eleven fixtures and regenerate — `UPDATE_GOLDENS=1` over both
    suites, then read the diff: only the manifest filename and key may move.
@@ -375,7 +375,7 @@ Depends on: W1, W2, W3, W4, W5, W7.
 | `.agents/aokf.md`, `.agents/aokf/SPEC.md`, `.agents/format/grammar.yaml` | deleted — succeeded under `.agents/sokf/` | W2, W4 |
 | `.agents/sokf.md`, `.agents/sokf/SPEC.md`, `.agents/sokf/grammar.yaml` | new — instructions, specification, grammar | W2, W4 |
 | `.agents/core.md` | modified — the tool names, the verbs, the gate wording | W7, W8 |
-| `knowledge/manifest.aokf.yaml` | deleted — succeeded by `manifest.sokf.yaml` | W4 |
+| `knowledge/manifest.sokf.yaml` | deleted — succeeded by `manifest.sokf.yaml` | W4 |
 | `knowledge/manifest.sokf.yaml` | new — `sokf` and `name` | W4 |
 | `knowledge/schemas/*.md` | modified — all 40: a type const each, dead globs removed, and reconciled to practice | W5, W6 |
 | `knowledge/**/*.md` | modified — roughly 40 concepts retyped; those the reconciliation finds genuinely malformed corrected | W5, W6 |
@@ -401,7 +401,7 @@ Depends on: W1, W2, W3, W4, W5, W7.
 | `git grep -n 'schema' src/validate/sokf.rs` and `git grep -n 'sokf' src/validate/schema/` both return nothing; `validate/mod.rs` names both | FR-4 |
 | `superdev --help` lists `validate`, `hook`, `sokf`, `mcp`, and no `aokf`; `superdev sokf --help` lists `index` | FR-5 |
 | `superdev mcp sokf` starts, and `tests/mcp_tools.rs` drives `sokf_search`, `sokf_read`, `sokf_graph`, `sokf_overview` | FR-6 |
-| `knowledge/manifest.sokf.yaml` holds `sokf: "0.3"`, and `git grep -l 'manifest.aokf.yaml'` returns nothing outside the changelog | FR-7 |
+| `knowledge/manifest.sokf.yaml` holds `sokf: "0.3"`, and `git grep -l 'manifest.sokf.yaml'` returns nothing outside the changelog | FR-7 |
 | `head -1 .agents/sokf/SPEC.md` reads `# SOKF — Superdev Open Knowledge Format`, and §1 defines "SOKF knowledge" | FR-8 |
 | A test asserts every schema declares a `type` const, that no two are equal, and that every concept's type names a schema | FR-9 |
 | A test asserts `target-files` appears only on schemas whose documents carry no frontmatter | FR-10 |

@@ -13,7 +13,6 @@ carries no headings at all — it is a lead line and a list — so it declares a
 preamble and no sections.
 
 ````yaml
-target-files: "knowledge/architectural-rules.md"
 description: >
   The invariants behind the architecture, each stated so code review can
   enforce it, each with the reason it holds.
@@ -21,7 +20,7 @@ line-limit: 800
 
 frontmatter:
   type:
-    const: Convention
+    const: ArchitecturalRules
   id:
     const: architectural-rules
   status:

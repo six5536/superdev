@@ -12,7 +12,6 @@ concept for configuration. One heading per config file or store, named by
 the author; `Outside the repo` is literal and wins over the pattern.
 
 ````yaml
-target-files: "knowledge/configuration.md"
 description: >
   Where configuration lives, the shape of each file or store, who writes it,
   and what a fresh machine needs that the tree does not carry.
@@ -20,7 +19,7 @@ line-limit: 800
 
 frontmatter:
   type:
-    const: Reference
+    const: Configuration
   id:
     const: configuration
   status:

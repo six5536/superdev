@@ -1,5 +1,5 @@
 ---
-type: Procedure
+type: ReleaseProcedure
 id: release-procedure
 title: Release Procedure
 description: The changelog gate, the release command, the irreversible push, and the tag-driven pipeline.

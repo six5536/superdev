@@ -12,7 +12,6 @@ concept for the design tokens a UI is built against. Only projects with a UI
 carry this concept; changing a token here is a decision, not a tweak.
 
 ````yaml
-target-files: "knowledge/visual-system.md"
 description: >
   The design tokens every UI slice builds against — palette, type roles,
   layout and spacing, the signature element, and the component library.
@@ -20,7 +19,7 @@ line-limit: 800
 
 frontmatter:
   type:
-    const: Convention
+    const: VisualSystem
   id:
     const: visual-system
   status:

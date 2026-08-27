@@ -1,5 +1,5 @@
 ---
-type: Reference
+type: TechnologyStack
 id: technology-stack
 title: Technology Stack
 description: Languages, runtime and dev dependencies, and the pinned toolchain set.

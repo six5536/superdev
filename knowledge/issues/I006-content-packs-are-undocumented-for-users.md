@@ -1,5 +1,5 @@
 ---
-type: Issue
+type: FeatureRequest
 id: issue-006-content-packs-are-undocumented-for-users
 title: Content packs are absent from the user documentation, and the update command now describes itself wrongly
 description: Neither the README nor the CLI help nor the man page mentioned packs, so a user could not discover the feature, and update's description still claimed it moved pins to this binary's defaults; fixed in slice 18, which added a packs section and corrected update on every surface.

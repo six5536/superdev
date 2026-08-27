@@ -12,7 +12,6 @@ Policy concept for security. Each guarantee carries its enforcing mechanism,
 which is what makes a change that weakens one recognisable in review.
 
 ````yaml
-target-files: "knowledge/security-requirements.md"
 description: >
   Where vulnerability reports go and which versions get fixes, and the
   security-relevant guarantees the design makes, each with its mechanism.
@@ -20,7 +19,7 @@ line-limit: 800
 
 frontmatter:
   type:
-    const: Policy
+    const: SecurityRequirements
   id:
     const: security-requirements
   status:

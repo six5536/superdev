@@ -12,7 +12,6 @@ concept for taking on dependencies. The document is a list and nothing else,
 so it declares a preamble and no sections.
 
 ````yaml
-target-files: "knowledge/dependency-policy.md"
 description: >
   When a dependency may be added, who approves it, how versions are chosen and
   kept current, and what gates dependencies automatically.
@@ -20,7 +19,7 @@ line-limit: 800
 
 frontmatter:
   type:
-    const: Policy
+    const: DependencyPolicy
   id:
     const: dependency-policy
   status:

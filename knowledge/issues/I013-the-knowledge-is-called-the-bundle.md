@@ -1,5 +1,5 @@
 ---
-type: Issue
+type: Chore
 id: issue-013-the-knowledge-is-called-the-bundle
 title: The canonical knowledge is called "the bundle" on every surface, and the word describes nothing
 description: The AOKF spec and every document are clear of the word, but "bundle" remains in 625 places — the --bundle flag, the JSON report key and the Rust API — where it tells a reader nothing about a directory of markdown the repository owns.
@@ -113,7 +113,7 @@ report — so the alias and the release note are what keep an existing caller
 working. Dropping the alias without a release is the way this breaks
 silently.
 
-`crates/lib/superdev-core/tests/fixtures/aokf/clean/manifest.aokf.yaml`
+`crates/lib/superdev-core/tests/fixtures/aokf/clean/manifest.sokf.yaml`
 carries the word in a fixture description. The AOKF goldens were rewritten by
 hand when the conformance ladder went (see [the conformance
 decision](../decisions/D017-aokf-conformance-is-pass-or-fail.md)), so nothing

@@ -1,5 +1,5 @@
 ---
-type: Plan
+type: FeaturePlan
 id: plan-agent-instructions-layer
 title: Agent Instructions Layer
 description: Deliver S010 — the user-owned AGENTS.md with one ensured import, the fenced superdev.md aggregator, per-capability instruction files, codegraph MCP wiring, and the code-index dogfood.

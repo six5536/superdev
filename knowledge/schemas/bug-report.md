@@ -8,24 +8,25 @@ description: Bug reports filed as Issue concepts in knowledge/issues/ — sympto
 # Bug Report Schema
 
 Structural rules for bug reports filed at
-`knowledge/issues/issue-{nnn}-{slug}.md`, with the feature declared — when
-there is one — by an `implements` or `references` link to its spec. The
-`issue-tracker` concept holds the triage labels and lifecycle: the role tag
-rides in `tags`, `needs-triage` on arrival, and a resolved issue stays,
+`knowledge/issues/I{nnn}-{slug}.md`, with the feature declared — when there
+is one — by an `implements` or `references` link to its spec. It shares the
+tracker with `schema-feature-request` and `schema-chore`, and is the shape
+for a defect alone: something that behaves against its own specification.
+The `issue-tracker` concept holds the triage labels and lifecycle: the role
+tag rides in `tags`, `needs-triage` on arrival, and a resolved issue stays,
 retagged `done` or `wontfix`. Because the tags turn over across an issue's
 life, no constraint here pins them.
 
 ````yaml
-target-files: "knowledge/issues/issue-*.md"
 description: >
   Bug report: symptom, environment, exact repro steps, expected vs
-  actual, root cause, and regression risk. Filed as an Issue concept in
-  the issue tracker.
+  actual, root cause, and regression risk. One of the three shapes the
+  issue tracker holds.
 line-limit: 800
 
 frontmatter:
   type:
-    const: Issue
+    const: BugReport
   id:
     pattern: '^issue-\d{3}-[a-z0-9-]+$'
   title:
@@ -113,7 +114,7 @@ sections:
 
 example: |
   ---
-  type: Issue
+  type: BugReport
   id: issue-042-pack-sync-etimedout
   title: Pack sync fails with ETIMEDOUT on large payloads
   description: Pack sync fails with ETIMEDOUT on large payloads.

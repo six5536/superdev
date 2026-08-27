@@ -12,7 +12,6 @@ concept for the public surfaces. One heading per surface, named by the
 author; `Stability` is literal and wins over the pattern.
 
 ````yaml
-target-files: "knowledge/api-contracts.md"
 description: >
   The public surfaces — CLI, HTTP API, library — the contract each one offers,
   and what is promised stable.
@@ -20,7 +19,7 @@ line-limit: 800
 
 frontmatter:
   type:
-    const: Reference
+    const: ApiContracts
   id:
     const: api-contracts
   status:

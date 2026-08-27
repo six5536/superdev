@@ -12,7 +12,6 @@ Reference concept for the everyday command set. The document has no
 headings, so it declares a preamble and no sections.
 
 ````yaml
-target-files: "knowledge/development-commands.md"
 description: >
   The everyday command set, what each command runs and when to use it, and the
   commands whose local form does less than CI.
@@ -20,7 +19,7 @@ line-limit: 800
 
 frontmatter:
   type:
-    const: Reference
+    const: DevelopmentCommands
   id:
     const: development-commands
   status:

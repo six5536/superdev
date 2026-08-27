@@ -13,7 +13,6 @@ sit between literal ones, so the rule that a literal beats a pattern is what
 keeps `Canonical reference` from being swallowed by the catch-all.
 
 ````yaml
-target-files: "knowledge/coding-standards.md"
 description: >
   The behavioural rules for making changes, the prose rules, one section per
   language covered, and what wins when docs and code disagree.
@@ -21,7 +20,7 @@ line-limit: 800
 
 frontmatter:
   type:
-    const: Convention
+    const: CodingStandards
   id:
     const: coding-standards
   status:

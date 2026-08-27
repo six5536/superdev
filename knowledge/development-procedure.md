@@ -1,5 +1,5 @@
 ---
-type: Procedure
+type: DevelopmentProcedure
 id: development-procedure
 title: Development Procedure
 description: Setup, the spec-and-plan change workflow, what to run before a PR, how this repo manages its own skills, and how it serves and searches its own knowledge.

@@ -1,5 +1,5 @@
 ---
-type: Plan
+type: FeaturePlan
 id: feature-plan-content-packs
 title: Externally Sourced Content Packs — feature plan
 description: Deliver S014 in eighteen slices — move the content to /pack, reorganise it into pack layout, derive it from that layout, add the manifest and lock schemas, resolve local then git sources, wire ownership, teach init and update, make each release one command, make a committed path pin portable, dogfood it, then close the gaps acceptance found and the one deferred issue small enough to fix.

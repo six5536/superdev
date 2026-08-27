@@ -1,5 +1,5 @@
 ---
-type: Reference
+type: SoftwareComponents
 id: software-components
 title: Software Components
 description: The Rust crates, the npm launcher and platform packages, the platform matrix, and the CI/CD workflows.

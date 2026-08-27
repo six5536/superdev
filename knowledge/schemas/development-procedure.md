@@ -11,7 +11,6 @@ Structural rules for `knowledge/development-procedure.md`, the canonical knowled
 Procedure concept for how a change moves from idea to merge.
 
 ````yaml
-target-files: "knowledge/development-procedure.md"
 description: >
   Setup from clone to working build, the workflow a change follows, and what
   must pass before a PR.
@@ -19,7 +18,7 @@ line-limit: 800
 
 frontmatter:
   type:
-    const: Procedure
+    const: DevelopmentProcedure
   id:
     const: development-procedure
   status:

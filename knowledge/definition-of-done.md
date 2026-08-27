@@ -1,5 +1,5 @@
 ---
-type: Convention
+type: DefinitionOfDone
 id: definition-of-done
 title: Definition of Done
 description: What a change must satisfy before it merges.

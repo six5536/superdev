@@ -27,7 +27,7 @@ as `knowledge/concepts/<name>.md`. Reorganising the stock content into pack
 layout showed that rule cannot describe what the `knowledge` capability already
 ships. Three of its twenty-five scaffolds are not one `.md` each:
 
-- `manifest.aokf.yaml` — the canonical knowledge manifest, not Markdown.
+- `manifest.sokf.yaml` — the canonical knowledge manifest, not Markdown.
 - `plans/index.md` and `specs/index.md` — one level deeper, because the repo
   knowledge keeps plans and specs in their own directories.
 

@@ -209,7 +209,7 @@ pub enum ItemKind {
     /// `knowledge/concepts/<name>` — a write-once knowledge scaffold. `<name>`
     /// is any entry directly under `concepts/`, file or directory, and the
     /// subtree mirrors the repo's `knowledge/`: the canonical knowledge ships skeletons
-    /// that are not one `.md` each — `manifest.aokf.yaml`, and the
+    /// that are not one `.md` each — `manifest.sokf.yaml`, and the
     /// `plans/` and `specs/` index directories. ADR-010.
     KnowledgeSkeleton,
     /// `knowledge/templates/<name>.md` — an owned document template.

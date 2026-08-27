@@ -1,5 +1,5 @@
 ---
-type: Policy
+type: SecurityRequirements
 id: security-requirements
 title: Security Requirements
 description: The vulnerability policy in brief, and the security-relevant guarantees the design makes.

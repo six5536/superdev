@@ -1,5 +1,5 @@
 ---
-type: Issue
+type: FeatureRequest
 id: issue-015-every-issue-must-be-a-bug-report
 title: The Issue type has one shape, bug-report, so everything filed has to pretend to be a defect
 description: One schema and one template constrain type Issue, so a feature request, a rename or a decision has to invent repro steps and an environment to be filed at all — six of the fourteen issues on file already do, and a feature request has no home but an untracked bullet in the backlog.

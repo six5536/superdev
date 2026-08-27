@@ -1,5 +1,5 @@
 ---
-type: Reference
+type: DevelopmentCommands
 id: development-commands
 title: Development Commands
 description: The npm-script command set and the pre-PR check list's shape.

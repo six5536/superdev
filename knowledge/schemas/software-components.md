@@ -12,7 +12,6 @@ Reference concept for the deliverables. The component headings are the
 author's to name; `CI/CD` is literal and wins over the pattern.
 
 ````yaml
-target-files: "knowledge/software-components.md"
 description: >
   The deliverables — libraries, binaries, packages — what each contains and
   where it lives, and the pipelines that build and gate them.
@@ -20,7 +19,7 @@ line-limit: 800
 
 frontmatter:
   type:
-    const: Reference
+    const: SoftwareComponents
   id:
     const: software-components
   status:

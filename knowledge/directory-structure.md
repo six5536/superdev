@@ -1,5 +1,5 @@
 ---
-type: Reference
+type: DirectoryStructure
 id: directory-structure
 title: Directory Structure
 description: What lives where in the repository.

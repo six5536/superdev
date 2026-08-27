@@ -22,9 +22,21 @@ workflow skills read this concept to learn where to publish and fetch:
 - An issue's feature is declared by its `implements` or `references`
   link to the spec, not by the path; an issue without a feature has
   neither.
-- Each issue is an AOKF concept: `type: Issue`, a unique id
-  `issue-nnn-<slug>`, a `title`, a `description`, `status: draft`
-  while open. The `template-bug-report` template carries this shape.
+- Each issue is a SOKF concept with a unique id `issue-nnn-<slug>`, a
+  `title`, a `description`, and `status: draft` while open. Its `type`
+  names which of the three shapes it takes, and so which schema governs
+  it:
+  - `BugReport` — a defect: something behaves against its own
+    specification. Symptom, environment, repro, root cause, regression
+    risk.
+  - `FeatureRequest` — something absent that should exist. Motivation,
+    proposed behaviour, alternatives considered, scope. Never asked for
+    an error log.
+  - `Chore` — scoped mechanical work whose shape is already known: a
+    rename, a migration, a sweep. Surfaces and a definition of done.
+    Never asked for a root cause it does not have.
+  Pick the shape the thing actually is. A rename filed as a bug report
+  has to invent a symptom, which is what having one shape cost.
 - The triage role is a string in the frontmatter `tags` list (see
   [Triage labels](#triage-labels)).
 - An issue or plan that implements a spec declares the link from its own

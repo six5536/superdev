@@ -12,7 +12,6 @@ concept for how issues are filed and triaged. This is the concept
 `schema-bug-report` defers to for the label vocabulary and the lifecycle.
 
 ````yaml
-target-files: "knowledge/issue-tracker.md"
 description: >
   Where issues live, how they are filed and what happens to them when
   resolved, and the triage label vocabulary with who acts on each.
@@ -20,7 +19,7 @@ line-limit: 800
 
 frontmatter:
   type:
-    const: Convention
+    const: IssueTracker
   id:
     const: issue-tracker
   status:

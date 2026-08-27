@@ -1,5 +1,5 @@
 ---
-type: Convention
+type: ErrorHandling
 id: error-handling
 title: Error Handling & Logging
 description: Exit codes, the broken-pipe rule, the validation hook's blocking exit 2, why MCP tool failures never end the process, and how a failed apply reports what it could not undo.

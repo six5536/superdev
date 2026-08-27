@@ -1,5 +1,5 @@
 ---
-type: Reference
+type: Architecture
 id: architecture
 title: Architecture
 description: The core/binary/blueprint layering, the capability-to-provider map, the knowledge-serving side, and the files superdev keeps in a managed repo.

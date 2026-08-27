@@ -1,5 +1,5 @@
 ---
-type: Convention
+type: CodingStandards
 id: coding-standards
 title: Coding Standards
 description: Prose rules, Rust and TypeScript conventions, and the code-is-canonical principle.

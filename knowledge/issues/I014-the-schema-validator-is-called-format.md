@@ -1,5 +1,5 @@
 ---
-type: Issue
+type: Chore
 id: issue-014-the-schema-validator-is-called-format
 title: The schema validator is called "format", which already means three other things here
 description: The grammar-driven validator lives at src/format/, ships its grammar at .agents/format/ and calls its files "superdev-format", while format! is 457 lines away in the same crate, "pack format" is a glossary term and AOKF is itself a format. It should be called schema-validator.

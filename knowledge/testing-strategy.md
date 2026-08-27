@@ -1,5 +1,5 @@
 ---
-type: Reference
+type: TestingStrategy
 id: testing-strategy
 title: Testing Strategy
 description: The current test layers, the key choices behind them, and the CI platforms.

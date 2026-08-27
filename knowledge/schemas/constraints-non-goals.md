@@ -11,7 +11,6 @@ Structural rules for `knowledge/constraints-non-goals.md`, the canonical knowled
 Reference concept for the project's deliberate limits.
 
 ````yaml
-target-files: "knowledge/constraints-non-goals.md"
 description: >
   What the project deliberately does not do, and the limitations it has
   accepted, each with the trade-off behind it.
@@ -19,7 +18,7 @@ line-limit: 800
 
 frontmatter:
   type:
-    const: Reference
+    const: Constraints
   id:
     const: constraints-non-goals
   status:
