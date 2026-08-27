@@ -89,9 +89,9 @@ jobs:
         if: runner.os != 'Windows'
         run: node scripts/verify-version.mjs
 
-      - name: Knowledgebase validation
+      - name: Knowledgebase and format validation
         if: runner.os != 'Windows'
-        run: npm run check:aokf
+        run: npm run check:validate
 
       # `--drift`, not bare `status`: a checkout carries no code index and no
       # installed tools, and provisioning those is not drift from the blueprint.

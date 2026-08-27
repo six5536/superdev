@@ -11,7 +11,28 @@ publish a version it cannot find a heading for.
 
 ## [Unreleased]
 
+### Added
+
+- **`superdev validate`.** One command checks both specs this repository
+  owns: the AOKF bundle, and the superdev-format files — the skills, the
+  schemas and `.agents/core.md` — against the grammar that defines the
+  language they are written in. One report, findings grouped by file, one
+  exit code, and one PostToolUse hook, so a file both checks have something
+  to say about is reported once and the two cannot reach different verdicts.
+  The grammar is read from `.agents/format/grammar.yaml`, or from the copy
+  inside the binary when a repository has none, and `--doc` prints it as
+  prose. `superdev aokf validate` stays as a hidden alias, because the hook
+  marker is the lock key in every managed repo — but its positional argument
+  is now the scope of the run rather than the bundle, which moved to
+  `--bundle <DIR>`. See P006.
+
 ### Removed
+
+- **The Node format validator.** `scripts/superdev-format/` and the
+  meta-schema beside the grammar are gone: the checks are in the binary, the
+  Rust types are the meta-schema, and nothing in the repository needs Node to
+  validate the format. The reference's behaviour is held by goldens captured
+  from it while it still ran.
 
 - **The AOKF conformance ladder.** A bundle now passes or fails; there is no
   level to grade against. `superdev aokf validate --level` is gone, and the

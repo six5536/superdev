@@ -13,9 +13,9 @@
     "build:darwin-x64": "rustup target add x86_64-apple-darwin && mise exec -- cargo zigbuild --release --target x86_64-apple-darwin -p superdev && install -m 0755 target/x86_64-apple-darwin/release/superdev packages/superdev-darwin-x64/bin/superdev",
     "build:darwin-arm64": "rustup target add aarch64-apple-darwin && mise exec -- cargo zigbuild --release --target aarch64-apple-darwin -p superdev && install -m 0755 target/aarch64-apple-darwin/release/superdev packages/superdev-darwin-arm64/bin/superdev",
     "dev": "cargo run -p superdev --",
-    "test": "cargo nextest run --workspace && npm run check:aokf",
+    "test": "cargo nextest run --workspace && npm run check:validate",
     "check": "cargo check --workspace --tests",
-    "check:aokf": "cargo run --quiet -- aokf validate knowledge",
+    "check:validate": "cargo run --quiet -- validate",
     "check:blueprint": "cargo run --quiet -- status --drift",
     "lint": "cargo clippy --workspace",
     "fmt": "cargo fmt --all",
@@ -35,8 +35,7 @@
   },
   "devDependencies": {
     "@ncoderz/awa": "^1.10.3",
-    "@types/node": "^26.1.2",
-    "yaml": "^2.9.0"
+    "@types/node": "^26.1.2"
   },
   "dependencies": {}
 }

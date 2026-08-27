@@ -82,17 +82,38 @@ fn unknown_shell_is_a_usage_error() {
 }
 
 #[test]
-fn aokf_validate_passes_the_live_bundle() {
+fn validate_passes_the_live_repository() {
     superdev()
-        // workspace root, so `aokf validate` resolves <cwd>/knowledge
+        // workspace root, so a bare run resolves <cwd>/knowledge and the
+        // grammar's roots
         .current_dir(REPO_ROOT)
-        .args(["aokf", "validate"])
+        .args(["validate"])
         .assert()
         .success();
 }
 
+/// The verb `superdev aokf validate` is kept as a hidden alias of the promoted
+/// one, because the hook marker and the lock entry are keyed on the old
+/// spelling (D-20).
 #[test]
-fn aokf_validate_fails_a_broken_bundle_with_exit_1() {
+fn the_aokf_alias_runs_the_same_check() {
+    let out = superdev()
+        .current_dir(REPO_ROOT)
+        .args(["aokf", "validate", "--json"])
+        .assert()
+        .success();
+    let alias: serde_json::Value = serde_json::from_slice(&out.get_output().stdout).unwrap();
+    let out = superdev()
+        .current_dir(REPO_ROOT)
+        .args(["validate", "--json"])
+        .assert()
+        .success();
+    let promoted: serde_json::Value = serde_json::from_slice(&out.get_output().stdout).unwrap();
+    assert_eq!(alias, promoted);
+}
+
+#[test]
+fn validate_fails_a_broken_bundle_with_exit_1() {
     let dir = tempfile::tempdir().unwrap();
     std::fs::create_dir(dir.path().join("kb")).unwrap();
     std::fs::write(
@@ -105,28 +126,63 @@ fn aokf_validate_fails_a_broken_bundle_with_exit_1() {
         "---\ntype: T\nid: dup\n---\nx\n",
     )
     .unwrap();
+    // The bundle is a flag now: a positional path is the scope of the run, and
+    // this repository keeps its bundle somewhere other than `knowledge`.
     superdev()
         .current_dir(dir.path())
-        .args(["aokf", "validate", "kb"])
+        .args(["validate", "--bundle", "kb"])
+        .assert()
+        .code(1);
+}
+
+/// A format error fails the run on its own, with no bundle in the picture.
+/// The temporary repository carries no `.agents/format/grammar.yaml` either,
+/// so this is also the embedded grammar doing the checking (FR-11).
+#[test]
+fn validate_fails_a_broken_skill_with_exit_1() {
+    let dir = tempfile::tempdir().unwrap();
+    let skill = dir.path().join(".claude/skills/broken");
+    std::fs::create_dir_all(&skill).unwrap();
+    std::fs::write(skill.join("SKILL.md"), "no frontmatter, no elements\n").unwrap();
+    superdev()
+        .current_dir(dir.path())
+        .args(["validate", ".claude/skills"])
         .assert()
         .code(1);
 }
 
 #[test]
-fn aokf_validate_json_is_machine_readable() {
+fn validate_json_is_machine_readable() {
     let out = superdev()
         .current_dir(REPO_ROOT)
-        .args(["aokf", "validate", "--json"])
+        .args(["validate", "--json"])
         .assert()
         .success();
     let report: serde_json::Value = serde_json::from_slice(&out.get_output().stdout).unwrap();
-    // Zero findings, warnings included: the bundle's own links use only core
-    // rels, which S013 made true by promoting `implements`.
-    assert_eq!(report["findings"], serde_json::json!([]), "{report}");
+    // One findings array over both checks. The live tree carries the five
+    // portability warnings and no errors.
+    let findings = report["findings"].as_array().unwrap();
+    assert!(
+        findings.iter().all(|f| f["severity"] == "warning"),
+        "{report}"
+    );
     assert_eq!(report["passed"], serde_json::json!(true));
     // The bundle path is the CLI's to add: core omits it.
     let bundle = report["bundle"].as_str().unwrap();
     assert!(bundle.ends_with("knowledge"), "unexpected bundle: {bundle}");
+}
+
+/// The grammar is the only statement of the format, and `--doc` prints it.
+#[test]
+fn validate_doc_renders_the_grammar() {
+    let out = superdev()
+        .current_dir(REPO_ROOT)
+        .args(["validate", "--doc"])
+        .assert()
+        .success();
+    let stdout = String::from_utf8_lossy(&out.get_output().stdout).into_owned();
+    assert!(stdout.starts_with("# superdev grammar "), "{stdout}");
+    assert!(stdout.contains("## Element order"), "{stdout}");
 }
 
 #[test]
@@ -307,7 +363,7 @@ fn hook_validate_blocks_an_edit_that_broke_the_bundle() {
         .code(2);
     let stderr = String::from_utf8_lossy(&out.get_output().stderr).into_owned();
     assert!(
-        stderr.contains("AOKF validation failed after editing"),
+        stderr.contains("superdev validation failed after editing"),
         "stderr: {stderr}"
     );
     assert!(stderr.contains("alpha.md"), "stderr: {stderr}");
@@ -325,8 +381,9 @@ fn hook_validate_passes_a_clean_bundle() {
 }
 
 #[test]
-fn hook_validate_ignores_paths_outside_the_bundle() {
-    // Even a broken bundle: an edit elsewhere is not the hook's business.
+fn hook_validate_ignores_paths_it_does_not_read() {
+    // Even a broken bundle: an edit outside the bundle and the grammar's roots
+    // is not the hook's business.
     let repo = hook_repo(false);
     superdev()
         .args(["aokf", "hook", "validate"])
@@ -334,6 +391,24 @@ fn hook_validate_ignores_paths_outside_the_bundle() {
         .write_stdin(hook_payload(repo.path(), "src/main.rs"))
         .assert()
         .code(0);
+}
+
+/// The hook covers the format files too, so an edit that breaks a skill is
+/// caught where the merge gate would catch it (FR-7).
+#[test]
+fn hook_validate_blocks_an_edit_that_broke_a_skill() {
+    let repo = hook_repo(true);
+    let skill = repo.path().join(".claude/skills/broken");
+    std::fs::create_dir_all(&skill).unwrap();
+    std::fs::write(skill.join("SKILL.md"), "no frontmatter, no elements\n").unwrap();
+    let out = superdev()
+        .args(["aokf", "hook", "validate"])
+        .env("CLAUDE_PROJECT_DIR", repo.path())
+        .write_stdin(hook_payload(repo.path(), ".claude/skills/broken/SKILL.md"))
+        .assert()
+        .code(2);
+    let stderr = String::from_utf8_lossy(&out.get_output().stderr).into_owned();
+    assert!(stderr.contains("SKILL.md"), "stderr: {stderr}");
 }
 
 #[test]

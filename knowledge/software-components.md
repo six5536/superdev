@@ -143,7 +143,7 @@ by both `ci.yml` and `release.yml`, so the release gate cannot drift from CI.
 
 - **`checks.yml`**: `cargo fmt --check`, `clippy -D warnings`, `nextest`,
   doctests, `cargo doc -D warnings`, the npm launcher tests, version
-  consistency, the AOKF knowledgebase validation (`check:aokf`), the
+  consistency, the knowledgebase and format validation (`check:validate`), the
   per-crate coverage gate, and `cargo-deny` for licences/bans/sources. Tests
   and doctests also run on Windows; the OS-independent checks run once, on
   macos.

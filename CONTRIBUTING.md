@@ -65,8 +65,8 @@ All wrapped as npm scripts (see `package.json`):
 
 ```sh
 npm run build           # cargo build --workspace
-npm run test            # cargo nextest run --workspace, then check:aokf
-npm run check:aokf      # validate the knowledge/ AOKF bundle
+npm run test            # cargo nextest run --workspace, then check:validate
+npm run check:validate  # validate the bundle and the superdev-format files
 npm run check:blueprint # the superdev-owned files match the blueprint
 npm run lint            # cargo clippy --workspace
 npm run fmt             # cargo fmt --all
@@ -109,7 +109,7 @@ RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps
 npm run test:launcher
 npm run test:scripts
 npm run verify-version
-npm run check:aokf
+npm run check:validate
 npm run check:blueprint
 npm run coverage:check     # slow; needs the nightly toolchain
 ```

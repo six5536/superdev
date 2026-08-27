@@ -19,13 +19,16 @@ superdev sync                re-apply the blueprint; --dry-run prints the plan o
 superdev update [TARGET]     bring pins current, then sync;
                              TARGET is `<capability>[@<version>]`;
                              --provider <ID> switches TARGET's provider
-superdev aokf validate [PATH]
-                             check the bundle against the AOKF spec; exit 1
-                             on errors. --json,
-                             --repo-root <DIR> for `/`-rooted paths
+superdev validate [PATH...] check the AOKF bundle and the superdev-format
+                             files; exit 1 on errors. A PATH replaces both
+                             defaults. --json, --doc renders the grammar as
+                             prose, --bundle <DIR>, --repo-root <DIR> for
+                             `/`-rooted paths
+superdev aokf validate       (hidden; the same verb under its old name)
 superdev aokf index [PATH]   rebuild the search index from scratch
 superdev aokf hook validate  the Claude Code PostToolUse hook: payload on
                              stdin, validate when the edit touched the bundle
+                             or a tree the grammar governs
 superdev mcp aokf            serve the bundle to agents over MCP on stdio
 superdev completions <SHELL> write a completion script to stdout
                              (bash | zsh | fish | powershell | elvish)
@@ -109,23 +112,35 @@ Every verb acts on the current directory.
   guided migration error
   ([spec](specs/S009-knowledge-carried-skills-design.md)).
 
-`aokf validate` and `aokf index` default `PATH` to `knowledge/`; the hook
-always reads the bundle at `knowledge/`. The search index lives in
-`.superdev/cache/aokf-index/`; `aokf index` and the server use it, `aokf
-validate` never opens it.
+`validate` with no `PATH` covers the bundle at `--bundle` (default
+`knowledge/`) and every tree the format grammar's `roots` names; `aokf index`
+defaults `PATH` to `knowledge/`; the hook always reads the same whole set. The
+search index lives in `.superdev/cache/aokf-index/`; `aokf index` and the
+server use it, `validate` never opens it.
 
-- **`aokf validate`** prints findings as text, or as the reference validator's
-  JSON under `--json` — same keys, same `bundle` key, same exit codes, so
-  anything scripted against the old Python validator still works. Warnings
-  alone exit `0`; only an error at or below the graded level exits `1`.
+- **`validate`** runs both checks and reports once, with findings grouped by
+  file, so a file both have something to say about is reported once and the
+  two cannot reach different verdicts
+  ([P006 D-17](adhoc-plans/P006-rust-format-validator.md)). It prints findings
+  as text, or as the reference validator's JSON under `--json` — same keys,
+  same `bundle` key, same exit codes, so anything scripted against the old
+  Python validator still works. Warnings alone exit `0`; any error exits `1`.
+  A `PATH` replaces both defaults: only what it names is read, and the bundle
+  is validated only when a `PATH` is the bundle or contains it. The grammar
+  comes from `.agents/format/grammar.yaml`, or from the copy inside the binary
+  when the repository has none.
+- **`aokf validate`** is the same verb under the name it shipped with, hidden
+  from help. The hook marker and its lock entry are keyed on that spelling in
+  every managed repo, so it stays.
 - **`aokf index`** forces a full rebuild. Nothing else needs it: the server
   syncs lazily on every tool call. It says so when no embedding model loaded
   and the index is lexical-only.
 - **`aokf hook validate`** reads the PostToolUse payload from stdin and exits
-  `0` unless the edited path is under the bundle. Then it validates in-process
-  and, on errors, prints them to stderr and exits `2` — which Claude Code hands
-  back to the agent as a blocking error. It resolves the repo from
-  `CLAUDE_PROJECT_DIR` when Claude Code sets it, else the working directory.
+  `0` unless the edited path is under the bundle or under a tree the grammar
+  governs. Then it validates the whole set in-process and, on errors, prints
+  them to stderr and exits `2` — which Claude Code hands back to the agent as a
+  blocking error. It resolves the repo from `CLAUDE_PROJECT_DIR` when Claude
+  Code sets it, else the working directory.
 - **`mcp aokf`** serves one stdio client and exits `0` when that client closes
   stdin. A missing bundle or an unusable index directory fails at startup
   rather than at every tool call, because a client cannot act on the latter.

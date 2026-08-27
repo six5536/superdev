@@ -26,17 +26,18 @@ resource: /crates/app/superdev/src/main.rs
 A closed stdout pipe is the one I/O failure that is not an error: a reader
 that stops early (`| head`, a pager quit) ends the run at `0`, silently.
 
-`aokf validate`'s three codes are the Python validator's, kept identical so
+`validate`'s three codes are the Python validator's, kept identical so
 that everything gating on the old script's exit code — the hook,
-`npm run check:aokf`, CI — gates the same way on the binary. See
+`npm run check:validate`, CI — gates the same way on the binary. See
 [development-commands](development-commands.md).
 
 # The validation hook
 
 `aokf hook validate` speaks Claude Code's hook protocol instead. It exits `0`
 whenever Claude Code should let the edit through: the payload names no file, or
-names one outside `knowledge/`, or names one the bundle still validates
-against. Otherwise the findings go to stderr and it exits `2`, which Claude
+names one outside the bundle and the trees the format grammar governs, or names
+one the repository still validates against. Otherwise the findings go to stderr
+and it exits `2`, which Claude
 Code hands back to the agent as a blocking error. A payload it cannot read or
 parse is a loud `2` too — skipping silently would silently stop validating the
 bundle.

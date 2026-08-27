@@ -4,7 +4,7 @@
 //! contract: `tests/format_parity.rs` holds the reference's output as goldens,
 //! and the wording is compared verbatim.
 
-use std::collections::BTreeSet;
+use std::collections::{BTreeSet, HashMap, HashSet};
 use std::sync::LazyLock;
 
 use regex::Regex;
@@ -12,6 +12,7 @@ use regex::Regex;
 use std::path::Path;
 
 use super::grammar::{Frontmatter, Grammar};
+use super::re;
 use super::read::{
     Node, fence_map, fm_value, norm, parse_elements, parse_frontmatter, prose_only,
     split_frontmatter, unfenced,
@@ -163,7 +164,7 @@ pub fn check_frontmatter(
                 ));
             }
             if let Some(pattern) = &def.pattern
-                && !Regex::new(pattern).is_ok_and(|re| re.is_match(value))
+                && !re::matches(pattern, value)
             {
                 errs.push(format!(
                     "frontmatter: \"{}\" is \"{value}\", which does not match {pattern}",
@@ -314,7 +315,7 @@ pub fn check_unit(
             } else {
                 forbid.pattern.clone()
             };
-            if Regex::new(&pattern).is_ok_and(|re| re.is_match(&body)) {
+            if re::matches(&pattern, &body) {
                 errs.push(format!(
                     "<{}>: {}: \"{}\"",
                     node.name,
@@ -359,8 +360,7 @@ pub fn check_unit(
                     cut(&node.raw, 70)
                 ));
             }
-            if ad.condition && !Regex::new(&g.conditions.pattern).is_ok_and(|re| re.is_match(value))
-            {
+            if ad.condition && !re::matches(&g.conditions.pattern, value) {
                 let forms = g
                     .conditions
                     .forms
@@ -530,8 +530,8 @@ pub fn check_unit(
             .map(|v| v.split_whitespace().collect::<Vec<&str>>().join(r"\s+"))
             .collect::<Vec<String>>()
             .join("|");
-        let starts = Regex::new(&format!(r"^({verbs})\b")).ok();
-        let mentions = Regex::new(&format!("`?({})`?", g.tools.roster.join("|"))).ok();
+        let starts = re::compile(&format!(r"^({verbs})\b"));
+        let mentions = re::compile(&format!("`?({})`?", g.tools.roster.join("|")));
         if let (Some(starts), Some(mentions)) = (starts, mentions) {
             for node in &raw_nodes {
                 if node.name != "step" {
@@ -657,8 +657,9 @@ pub fn check_schema(file: &Path, text: &str, errs: &mut Vec<String>, g: &Grammar
         }
     }
     for key in &k.frontmatter.slug {
-        let head = Regex::new(&format!("^{key}:")).unwrap();
-        let slug = Regex::new(&format!(r"^{key}:\s*[a-z0-9]+(-[a-z0-9]+)*\s*$")).unwrap();
+        let head = re::compile(&format!("^{key}:")).expect("a key name compiles");
+        let slug = re::compile(&format!(r"^{key}:\s*[a-z0-9]+(-[a-z0-9]+)*\s*$"))
+            .expect("a key name compiles");
         if let Some(line) = split.fm.iter().find(|l| head.is_match(l))
             && !slug.is_match(line)
         {
@@ -810,9 +811,22 @@ fn tokset(text: &str, stop: &[String]) -> BTreeSet<String> {
     out
 }
 
-/// How much of the smaller set the larger one contains.
-fn containment(a: &BTreeSet<String>, b: &BTreeSet<String>) -> f64 {
-    let shared = a.iter().filter(|t| b.contains(*t)).count();
+/// How much of the smaller set the larger one contains, over two sorted token
+/// id lists. Sets of strings say the same thing and are what a `Comparable`
+/// carries; the pair loop runs this often enough that it walks integers.
+fn containment(a: &[u32], b: &[u32]) -> f64 {
+    let (mut i, mut j, mut shared) = (0, 0, 0usize);
+    while i < a.len() && j < b.len() {
+        match a[i].cmp(&b[j]) {
+            std::cmp::Ordering::Less => i += 1,
+            std::cmp::Ordering::Greater => j += 1,
+            std::cmp::Ordering::Equal => {
+                shared += 1;
+                i += 1;
+                j += 1;
+            }
+        }
+    }
     let smaller = a.len().min(b.len());
     if smaller == 0 {
         0.0
@@ -869,7 +883,7 @@ pub fn unit_comparables(file: &str, nodes: &[Node], g: &Grammar) -> Vec<Comparab
         let Some(cmp) = &def.compare else { continue };
         if let Some(skip) = &cmp.skip_if {
             let v = compare_part(&skip.part, node);
-            if Regex::new(&skip.pattern).is_ok_and(|re| re.is_match(&v)) {
+            if re::matches(&skip.pattern, &v) {
                 continue;
             }
         }
@@ -933,13 +947,14 @@ pub fn schema_comparables(file: &str, text: &str, g: &Grammar) -> Vec<Comparable
     }
     let c = &g.kinds.schema.compare;
     let all: Vec<&str> = fences[0].text.split('\n').collect();
-    let stop_at = Regex::new(&format!("^{}:", c.stop_at_key)).unwrap();
+    let stop_at = re::compile(&format!("^{}:", c.stop_at_key)).expect("a key name compiles");
     let lines = match all.iter().position(|l| stop_at.is_match(l)) {
         Some(at) => &all[..at],
         None => &all[..],
     };
 
-    let head = Regex::new(&format!(r"^(\s*){}:\s*([>|])?\s*(.*)$", c.description_key)).unwrap();
+    let head = re::compile(&format!(r"^(\s*){}:\s*([>|])?\s*(.*)$", c.description_key))
+        .expect("a key name compiles");
     let mut items = Vec::new();
     for (i, line) in lines.iter().enumerate() {
         let Some(m) = head.captures(line) else {
@@ -984,34 +999,80 @@ pub fn schema_comparables(file: &str, text: &str, g: &Grammar) -> Vec<Comparable
     items
 }
 
+/// Strings the duplication check decides by, numbered so the pair loop can
+/// compare them without touching a byte of text.
+#[derive(Default)]
+struct Interner(HashMap<String, u32>);
+
+impl Interner {
+    /// This string's number, assigning one if it has none.
+    fn of(&mut self, s: &str) -> u32 {
+        if let Some(id) = self.0.get(s) {
+            return *id;
+        }
+        let id = u32::try_from(self.0.len()).unwrap_or(u32::MAX);
+        self.0.insert(s.to_string(), id);
+        id
+    }
+}
+
+/// One comparable reduced to what the pair loop reads.
+struct Indexed {
+    file: u32,
+    kind: u32,
+    /// Its kind is compared against others in the same file.
+    within_file: bool,
+    /// Its element is exempt from cross-unit comparison.
+    exempt: bool,
+    /// Its tokens, numbered and sorted, for the containment walk.
+    tokens: Vec<u32>,
+}
+
 /// One home per statement. A flagged pair means one occurrence must become a
 /// reference to the other's home.
 #[must_use]
 pub fn check_duplication(items: &[Comparable], g: &Grammar) -> Vec<(String, String)> {
     let d = &g.duplication;
-    let mut cross: Vec<(String, String)> = Vec::new();
+    let mut ids: Interner = Interner::default();
+    let mut cross: HashSet<(u32, u32)> = HashSet::new();
     for pair in &d.cross_pairs {
         if let Some((a, b)) = pair.split_once('|') {
-            cross.push((a.to_string(), b.to_string()));
-            cross.push((b.to_string(), a.to_string()));
+            let (a, b) = (ids.of(a), ids.of(b));
+            cross.insert((a, b));
+            cross.insert((b, a));
         }
     }
+    let unit = ids.of("unit");
+
+    // Every pair is considered, so the loop runs in the tens of thousands for
+    // a whole-set run and everything it decides by is interned first: the
+    // file, the kind and the tokens compare as integers.
+    let indexed: Vec<Indexed> = items
+        .iter()
+        .map(|c| {
+            let mut tokens: Vec<u32> = c.tokens.iter().map(|t| ids.of(t)).collect();
+            tokens.sort_unstable();
+            Indexed {
+                file: ids.of(&c.file),
+                kind: ids.of(&c.kind),
+                within_file: d.within_file_kinds.contains(&c.kind),
+                exempt: d.exempt_cross_unit_elements.contains(&c.element),
+                tokens,
+            }
+        })
+        .collect();
 
     let mut out = Vec::new();
     for i in 0..items.len() {
         for j in (i + 1)..items.len() {
-            let (a, b) = (&items[i], &items[j]);
+            let (a, b) = (&indexed[i], &indexed[j]);
             if a.file == b.file {
-                if !d.within_file_kinds.contains(&a.kind) {
+                if !a.within_file {
                     continue;
                 }
-            } else if !cross.iter().any(|(x, y)| *x == a.kind && *y == b.kind) {
+            } else if !cross.contains(&(a.kind, b.kind)) {
                 continue;
-            } else if a.kind == "unit"
-                && b.kind == "unit"
-                && (d.exempt_cross_unit_elements.contains(&a.element)
-                    || d.exempt_cross_unit_elements.contains(&b.element))
-            {
+            } else if a.kind == unit && b.kind == unit && (a.exempt || b.exempt) {
                 // d.exempt_cross_unit_reason
                 continue;
             }
@@ -1020,6 +1081,7 @@ pub fn check_duplication(items: &[Comparable], g: &Grammar) -> Vec<(String, Stri
             }
             let sim = containment(&a.tokens, &b.tokens);
             if sim >= d.threshold {
+                let (a, b) = (&items[i], &items[j]);
                 let pct = (sim * 100.0).round() as u64;
                 out.push((a.file.clone(), format!(
                     "{pct}% overlap — one occurrence must become a reference: {} ({}): \"{}\" | {} ({}): \"{}\"",

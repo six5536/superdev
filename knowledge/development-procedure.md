@@ -78,8 +78,8 @@ your PATH once, as [CONTRIBUTING](/CONTRIBUTING.md) says.
 The bundle is served to agents over MCP. `.mcp.json` and the hook name a
 bare `superdev`, which the dev shim (`scripts/superdev`, symlinked onto PATH
 per [CONTRIBUTING](/CONTRIBUTING.md)) execs as `cargo run` against this
-tree; `npm run check:aokf` runs `cargo run --quiet -- aokf validate
-knowledge` directly. Compilation is cached, so the cost after the first
+tree; `npm run check:validate` runs `cargo run --quiet -- validate`
+directly. Compilation is cached, so the cost after the first
 build is negligible — and every check tests the code you are editing rather
 than a binary from last month.
 

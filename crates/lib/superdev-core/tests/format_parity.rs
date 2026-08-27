@@ -2,12 +2,12 @@
 //! fixture tree per failure class.
 //!
 //! Each `tests/fixtures/format/<case>/` holds the files, and
-//! `<case>.golden.json` holds what
-//! `scripts/superdev-format/validate-superdev.mjs --json` emitted for them.
-//! The reference still runs while this is being written, which is the whole
-//! reason the goldens were captured before a line of the port existed: once
-//! the script goes, there is nothing left to regenerate them from, and the
-//! AOKF port has already been in that position once.
+//! `<case>.golden.json` holds what the reference emitted for them under
+//! `--json`. The reference — a Node script at `scripts/superdev-format/` — is
+//! gone; the goldens are the only remaining record of the behaviour it
+//! defined, and there is nothing left to regenerate them from. They were
+//! captured before a line of the port existed, for exactly that reason: the
+//! AOKF port had already been in this position once.
 //!
 //! Treat a golden as fixed. Editing one changes the contract these tests exist
 //! to hold, so it needs the same argument a deliberate behaviour change would.

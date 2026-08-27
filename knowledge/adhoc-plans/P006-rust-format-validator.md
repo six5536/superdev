@@ -2,8 +2,8 @@
 type: AdhocPlan
 id: adhoc-plan-006-rust-format-validator
 title: Fold the superdev-format validator into the Rust validator
-description: The grammar-driven format validator moves from a Node script into superdev-core and merges with the AOKF validator behind one command, one report and one hook, proved against goldens captured from the reference while it still runs.
-status: active
+description: The grammar-driven format validator moves from a Node script into superdev-core and merges with the AOKF validator behind one command, one report and one hook, proved against goldens captured from the reference while it still ran.
+status: done
 ---
 
 # Plan: Fold the superdev-format validator into the Rust validator
@@ -257,11 +257,15 @@ Depends on: W2, W5.
 | `crates/lib/superdev-core/src/format/read.rs` | new — fences, frontmatter, elements, prose | W4 |
 | `crates/lib/superdev-core/src/format/check.rs` | new — the per-kind and cross-file checks | W4 |
 | `crates/lib/superdev-core/src/format/doc.rs` | new — the grammar rendered as prose | W5 |
+| `crates/lib/superdev-core/src/format/re.rs` | new — the grammar's patterns, compiled once | W5 |
+| `crates/lib/superdev-core/src/format/grammar.yaml` | new — the embedded copy D-6 calls for | W5 |
 | `crates/lib/superdev-core/src/lib.rs` | modified — declare the module | W3 |
 | `crates/lib/superdev-core/Cargo.toml` | modified — add `regex` | W4 |
 | `crates/lib/superdev-core/src/aokf/validate.rs` | modified — `Finding` and `Report` are reused as they are; `validate` untouched | W5 |
 | `crates/app/superdev/src/main.rs` | modified — a top-level `Validate` arm, `aokf validate` hidden | W5 |
 | `crates/app/superdev/src/aokf_cli.rs` | modified — the verb runs both checks; the hook fires on bundle or root | W5, W6 |
+| `.github/workflows/checks.yml`, `.github/PULL_REQUEST_TEMPLATE.md`, `CONTRIBUTING.md` | modified — the renamed check | W6 |
+| `knowledge/development-procedure.md`, `knowledge/definition-of-done.md`, `knowledge/error-handling.md`, `knowledge/software-components.md` | modified — the renamed check and the widened hook | W6 |
 | `package.json` | modified — `check:aokf` renamed and pointed at the merged command | W6 |
 | `.agents/format/grammar.yaml` | new — the grammar's home, moved from the script's directory | W6 |
 | `scripts/superdev-format/` | deleted — script, grammar and meta-schema | W6 |
@@ -297,10 +301,11 @@ Depends on: W2, W5.
   superdev, under its original marker, and the lock entry is unchanged.
 - `knowledge/adhoc-plans/index.md` lists this plan and its status reads done.
 - The changelog has an Unreleased entry for the promoted command.
-- The pack question is filed as its own plan, since the live tree and
-  `/pack/` diverge until it is answered.
-- The generated-format-docs idea is filed as its own plan, since the doc
-  renderer now exists in the binary with nothing consuming it.
+- The pack question is filed as [issue-016](../issues/I016-sync-would-revert-the-schema-migration.md),
+  since the live tree and `/pack/` diverge until it is answered.
+- The generated-format-docs idea is filed as
+  [issue-017](../issues/I017-the-format-has-no-agent-facing-document.md), since
+  the doc renderer now exists in the binary with nothing consuming it.
 
 ## Risks
 
@@ -346,3 +351,49 @@ a bare run cannot simply walk the repository.
 D-16 is left in the table rather than deleted because its reasoning still
 applies the moment anything else needs an owner: the component model wants
 rethinking as a whole, and the components already depend on each other.
+
+What W5 and W6 settled that the plan left open, recorded here because each is
+a decision the Decisions table did not anticipate.
+
+**NFR-1 is missed, and the number is recorded rather than the budget moved.**
+A whole-set run of the release binary takes 82 ms against a budget of 50 ms.
+The split: 24 ms for the 61 format files, 28 ms to load the bundle, 5 ms for
+`aokf::validate`, the rest process start and reads. The format half is the one
+this plan owns and it is a fifth of the reference's 123 ms; the bundle load is
+the AOKF half's existing cost, which the hook already pays on every edit
+today. Two changes got it there from 165 ms, neither altering a finding: the
+grammar's patterns compile once rather than once per value checked
+(`format/re.rs`), and the duplication check compares interned integers rather
+than strings. Bringing the last 32 ms inside the budget means making
+`load_bundle` faster, which is AOKF work and belongs to its own plan.
+
+**The bundle became a flag.** D-20 kept `aokf validate` as an alias, and the
+merged verb takes a positional path that is the *scope* of the run — FR-6's
+"a positional path overrides both". The two readings collide: the old verb's
+positional was the bundle directory. The bundle moved to `--bundle <DIR>`, and
+a positional path covers the bundle when it is the bundle or contains it, so
+`superdev validate knowledge` and `superdev validate .` both still check it.
+Scope is a positional and configuration is a flag; the alternative was a rule
+that guessed from the directory's contents, and it would have hidden the
+`no manifest (required)` finding for the bundle it was guessing about.
+
+**The embedded grammar lives in the crate, not the pack.** D-6 says where the
+grammar is read from and that a copy ships inside the binary; it does not say
+where that copy lives. `include_str!` cannot reach outside the crate and still
+be packaged, so it is at
+`crates/lib/superdev-core/src/format/grammar.yaml`, with a test holding it
+byte for byte equal to `.agents/format/grammar.yaml`. Writing the grammar into
+the repositories superdev manages — the way `.agents/aokf/SPEC.md` is written,
+as a binary-owned file — is a pack question, and is
+[issue-017](../issues/I017-the-format-has-no-agent-facing-document.md)'s to
+answer alongside the format document.
+
+Both follow-ons are filed as issues rather than as the plans the Definition of
+done originally called for: each is one question with a stated recommendation,
+and neither has enough settled to cut into workstreams. The pack one is
+plan-sized work and will want a plan when it is picked up.
+
+The `--json` report keeps its `bundle` key, naming the bundle directory the
+run was configured with. When a positional path excludes the bundle, `concepts`
+is 0 and no bundle finding appears; the key names the invocation, not what was
+read.

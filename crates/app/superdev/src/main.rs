@@ -77,6 +77,8 @@ enum Command {
         #[arg(long, value_name = "ID")]
         provider: Option<String>,
     },
+    /// Check the knowledge bundle and the superdev-format files
+    Validate(aokf_cli::ValidateArgs),
     /// Inspect and render the shipped project templates
     #[command(subcommand)]
     Template(manage::TemplateCommand),
@@ -120,6 +122,7 @@ fn run(cli: &Cli) -> Result<u8> {
         Some(Command::Update { target, provider }) => {
             manage::update(&root()?, target.as_deref(), provider.as_deref())
         }
+        Some(Command::Validate(args)) => aokf_cli::run_validate(args, &root()?),
         Some(Command::Template(cmd)) => manage::template(cmd),
         Some(Command::Mcp(cmd)) => aokf_cli::run_mcp(cmd, &root()?),
         Some(Command::Aokf(cmd)) => aokf_cli::run_aokf(cmd, &root()?),
