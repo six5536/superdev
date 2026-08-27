@@ -140,9 +140,9 @@ pub struct Finding {
 
 /// Check a set of files against the grammar.
 ///
-/// Findings come back in the reference's order: every file's errors then its
+/// Findings come back in a fixed order: every file's errors then its
 /// warnings, in the order the files were given, then the core-block
-/// references, then duplication. Order is part of the contract — the parity
+/// references, then duplication. Order is part of the contract — the snapshot
 /// goldens compare the list as emitted.
 #[must_use]
 pub fn check_files(files: &[(String, String)], g: &Grammar) -> Vec<Finding> {
@@ -224,6 +224,24 @@ pub fn check_files(files: &[(String, String)], g: &Grammar) -> Vec<Finding> {
     findings
 }
 
+/// One run's report, and what each half of it covered.
+///
+/// The concept count rides in [`Report`], where the AOKF half puts it. The
+/// format half's count rides here instead: [`Report`] is what
+/// `aokf::validate` returns, and it knows nothing about format files. Putting
+/// the count there would push a format concern into the AOKF type, which is
+/// the boundary D-18 exists to hold.
+#[derive(Debug)]
+pub struct RepoReport {
+    /// The findings from both halves, grouped by file.
+    pub report: Report,
+    /// Format files read, which the caller emits as `files` — the key the
+    /// Node reference put at the top of its own JSON. Zero and clean is a run
+    /// that found nothing to check, indistinguishable from a pass unless the
+    /// number is shown.
+    pub files: usize,
+}
+
 /// Validate a repository — its AOKF bundle and its superdev-format files — as
 /// one report.
 ///
@@ -245,7 +263,7 @@ pub fn validate_repo(
     bundle: &Path,
     paths: &[PathBuf],
     g: &Grammar,
-) -> Result<Report> {
+) -> Result<RepoReport> {
     let repo_root = normalise(&std::env::current_dir().unwrap_or_default(), repo_root);
     let bundle = normalise(&repo_root, bundle);
     let paths: Vec<PathBuf> = paths.iter().map(|p| normalise(&repo_root, p)).collect();
@@ -302,9 +320,12 @@ pub fn validate_repo(
     // by file.
     findings.sort_by(|a, b| a.path.cmp(&b.path));
 
-    Ok(Report {
-        findings,
-        concept_count,
+    Ok(RepoReport {
+        report: Report {
+            findings,
+            concept_count,
+        },
+        files: files.len(),
     })
 }
 
@@ -435,23 +456,29 @@ mod tests {
     #[test]
     fn a_bare_run_covers_the_bundle_and_the_roots() {
         let root = repo();
-        let report = validate_repo(&root, &root.join("knowledge"), &[], &live()).unwrap();
+        let run = validate_repo(&root, &root.join("knowledge"), &[], &live()).unwrap();
 
-        assert!(report.concept_count > 0, "the bundle was validated");
-        assert!(report.passed(), "{:#?}", report.findings);
+        assert!(run.report.concept_count > 0, "the bundle was validated");
+        assert!(run.files > 0, "the roots were walked");
+        assert!(run.report.passed(), "{:#?}", run.report.findings);
         // The five portability warnings, from files under .claude/skills —
         // which is a root the AOKF half never walks.
-        assert_eq!(report.findings.len(), 5);
+        assert_eq!(run.report.findings.len(), 5);
         assert!(
-            report
+            run.report
                 .findings
                 .iter()
                 .all(|f| f.path.starts_with(".claude/skills/")),
             "{:#?}",
-            report.findings
+            run.report.findings
         );
 
-        let paths: Vec<&str> = report.findings.iter().map(|f| f.path.as_str()).collect();
+        let paths: Vec<&str> = run
+            .report
+            .findings
+            .iter()
+            .map(|f| f.path.as_str())
+            .collect();
         let mut sorted = paths.clone();
         sorted.sort_unstable();
         assert_eq!(paths, sorted, "findings are grouped by file");
@@ -463,9 +490,9 @@ mod tests {
     fn a_named_path_replaces_the_bundle_and_the_roots() {
         let root = repo();
         let skills = vec![PathBuf::from(".claude/skills")];
-        let report = validate_repo(&root, &root.join("knowledge"), &skills, &live()).unwrap();
-        assert_eq!(report.concept_count, 0, "no bundle was covered");
-        assert_eq!(report.findings.len(), 5);
+        let run = validate_repo(&root, &root.join("knowledge"), &skills, &live()).unwrap();
+        assert_eq!(run.report.concept_count, 0, "no bundle was covered");
+        assert_eq!(run.report.findings.len(), 5);
     }
 
     /// Naming the bundle covers it, and `.` covers everything.
@@ -474,10 +501,9 @@ mod tests {
         let root = repo();
         let bundle = root.join("knowledge");
         for path in [PathBuf::from("knowledge"), PathBuf::from(".")] {
-            let report =
-                validate_repo(&root, &bundle, std::slice::from_ref(&path), &live()).unwrap();
+            let run = validate_repo(&root, &bundle, std::slice::from_ref(&path), &live()).unwrap();
             assert!(
-                report.concept_count > 0,
+                run.report.concept_count > 0,
                 "`{}` covers the bundle",
                 path.display()
             );
@@ -491,9 +517,21 @@ mod tests {
     fn one_named_file_is_checked_alone() {
         let root = repo();
         let one = vec![PathBuf::from(".agents/core.md")];
-        let report = validate_repo(&root, &root.join("knowledge"), &one, &live()).unwrap();
-        assert_eq!(report.concept_count, 0);
-        assert!(report.passed(), "{:#?}", report.findings);
+        let run = validate_repo(&root, &root.join("knowledge"), &one, &live()).unwrap();
+        assert_eq!(run.report.concept_count, 0);
+        assert_eq!(run.files, 1);
+        assert!(run.report.passed(), "{:#?}", run.report.findings);
+    }
+
+    /// A repository the roots find nothing in reports zero files rather than
+    /// the clean pass it would otherwise be indistinguishable from.
+    #[test]
+    fn a_repository_with_no_format_files_reports_none() {
+        let dir = tempfile::tempdir().unwrap();
+        let run = validate_repo(dir.path(), &dir.path().join("knowledge"), &[], &live()).unwrap();
+        assert_eq!(run.files, 0);
+        assert_eq!(run.report.concept_count, 0);
+        assert!(run.report.passed(), "{:#?}", run.report.findings);
     }
 
     /// A path that names nothing is a caller error, not a finding: the run
@@ -526,9 +564,10 @@ mod tests {
         )
         .unwrap();
 
-        assert!(!both.passed());
-        assert_eq!(both.concept_count, clean.concept_count);
+        assert!(!both.report.passed());
+        assert_eq!(both.report.concept_count, clean.report.concept_count);
         let aokf: Vec<&aokf::Finding> = both
+            .report
             .findings
             .iter()
             .filter(|f| f.path.starts_with("knowledge/"))

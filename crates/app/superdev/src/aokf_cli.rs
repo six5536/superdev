@@ -125,27 +125,35 @@ pub fn run_validate(args: &ValidateArgs, root: &Path) -> Result<u8> {
         .repo_root
         .as_deref()
         .map_or_else(|| root.to_path_buf(), |p| root.join(p));
-    let report = format::validate_repo(&repo_root, &bundle_dir, &args.paths, &grammar)?;
+    let run = format::validate_repo(&repo_root, &bundle_dir, &args.paths, &grammar)?;
     if args.json {
-        let mut value = report.to_json();
+        let mut value = run.report.to_json();
         // The bundle path is the caller's string, so core leaves the key to
-        // the caller. The reference validator emits it.
+        // the caller. The reference validator emits it. `files` joins it for
+        // the same reason `concepts` sits in the report: it says what was
+        // read, and a run that read nothing is otherwise a clean pass.
         if let Some(object) = value.as_object_mut() {
             object.insert("bundle".into(), bundle_dir.display().to_string().into());
+            object.insert("files".into(), run.files.into());
         }
         let rendered =
             serde_json::to_string_pretty(&value).map_err(|e| io_error(io::Error::other(e)))?;
         out(&rendered)?;
     } else {
-        out(&format!("superdev validator — {}", scope(args, &grammar)))?;
-        out(report.render_human().trim_end_matches('\n'))?;
+        out(&format!(
+            "superdev validator — {}",
+            scope(args, &grammar, run.files)
+        ))?;
+        out(run.report.render_human().trim_end_matches('\n'))?;
     }
-    Ok(u8::from(!report.passed()))
+    Ok(u8::from(!run.report.passed()))
 }
 
-/// What the run covered, for the line above the report.
-fn scope(args: &ValidateArgs, grammar: &superdev_core::format::Grammar) -> String {
-    if args.paths.is_empty() {
+/// What the run covered, for the line above the report: where it looked, and
+/// how many format files it found there. The count is what separates a clean
+/// run from one whose roots resolved to nothing.
+fn scope(args: &ValidateArgs, grammar: &superdev_core::format::Grammar, files: usize) -> String {
+    let where_ = if args.paths.is_empty() {
         format!(
             "bundle: {}, roots: {}",
             args.bundle
@@ -160,7 +168,9 @@ fn scope(args: &ValidateArgs, grammar: &superdev_core::format::Grammar) -> Strin
             .map(|p| p.display().to_string())
             .collect::<Vec<_>>()
             .join(", ")
-    }
+    };
+    let plural = if files == 1 { "" } else { "s" };
+    format!("{where_} ({files} format file{plural})")
 }
 
 /// Validate or index the bundle.
@@ -233,12 +243,12 @@ fn hook_validate(root: &Path) -> Result<u8> {
     if !watched {
         return Ok(0);
     }
-    let report = format::validate_repo(&root, &bundle, &[], &grammar)?;
-    if report.passed() {
+    let run = format::validate_repo(&root, &bundle, &[], &grammar)?;
+    if run.report.passed() {
         return Ok(0);
     }
     eprintln!("superdev validation failed after editing {file_path} — fix before continuing:");
-    eprintln!("{}", report.render_human().trim_end_matches('\n'));
+    eprintln!("{}", run.report.render_human().trim_end_matches('\n'));
     Ok(2)
 }
 
