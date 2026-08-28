@@ -25,6 +25,7 @@ warn anyway, so nothing fails, so nobody reads them.
 
 ## Motivation
 
+Add `[nowhere](does-not-exist.md)` to any concept and run the validator:
 `PASS`, exit 0, with the finding printed as a warning among any others. The
 edit-time hook exits 0 too, so the agent that wrote the link is never told.
 
@@ -50,7 +51,7 @@ not refuse to display it over a dangling link. It has been read as a rule for
 *validators* too, which is a different job. A validator that never fails is
 not being permissive, it is being ignored.
 
-The five, all at `crates/lib/superdev-core/src/aokf/validate.rs`:
+The five, all at `crates/lib/superdev-core/src/validate/sokf.rs`:
 
 - `broken body link: {target}`
 - `` `resource` path does not exist: {resource} ``

@@ -23,6 +23,8 @@ author had no way to know.
 
 ## Motivation
 
+Ask an agent to add a skill: nothing in its instructions names the element
+vocabulary, the condition forms, or the one-home-per-statement rule.
 `superdev validate --doc` is the only consumer, and it is a flag a person
 types by hand. `format/doc.rs` is 190 lines of ported code held by one golden,
 carrying a language nobody is shown.

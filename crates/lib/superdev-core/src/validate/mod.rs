@@ -37,6 +37,13 @@ pub struct RepoReport {
     /// `files`. Zero and clean is a run that found nothing to check,
     /// indistinguishable from a pass unless the number is shown.
     pub files: usize,
+    /// Schemas read, and documents checked against one. Both for the same
+    /// reason `files` exists: a repository with no `knowledge/schemas/`
+    /// checks no document against any contract, and without the numbers that
+    /// run is indistinguishable from one where every document conformed.
+    pub schemas: usize,
+    /// Documents resolved to a schema and checked.
+    pub documents: usize,
 }
 
 /// Validate a repository — its SOKF knowledge and the files the grammar
@@ -142,6 +149,8 @@ pub fn validate_repo(
         .filter(|(name, _)| name.contains("/schemas/") && !name.ends_with("/index.md"))
         .cloned()
         .collect();
+    let mut schemas = 0;
+    let mut checked = 0;
     if !schema_files.is_empty() {
         // Two documents carry no frontmatter and are named by glob instead.
         for name in ["README.md", "CHANGELOG.md"] {
@@ -150,6 +159,7 @@ pub fn validate_repo(
                 documents.push((name.to_string(), read(&path)?, None));
             }
         }
+        schemas = schema_files.len();
         let (set, mut schema_findings) = schema::document::SchemaSet::load(&schema_files);
         let candidates: Vec<schema::document::Document<'_>> = documents
             .iter()
@@ -159,6 +169,10 @@ pub fn validate_repo(
                 doc_type: doc_type.as_deref(),
             })
             .collect();
+        checked = candidates
+            .iter()
+            .filter(|d| set.governs(d.path, d.doc_type))
+            .count();
         schema_findings.extend(schema::document::check_documents(&candidates, &set));
         findings.extend(schema_findings.into_iter().map(|f| Finding {
             path: f.file,
@@ -176,6 +190,8 @@ pub fn validate_repo(
             concept_count,
         },
         files: files.len(),
+        schemas,
+        documents: checked,
     })
 }
 
@@ -357,6 +373,42 @@ mod tests {
         assert_eq!(run.files, 0);
         assert_eq!(run.report.concept_count, 0);
         assert!(run.report.passed(), "{:#?}", run.report.findings);
+    }
+
+    /// A repository with no `knowledge/schemas/` checks no document against
+    /// any contract, and passes. The counts are the only thing that tells
+    /// that run apart from one where every document conformed — which is the
+    /// state every managed repo is in today, because the pack ships the
+    /// templates and not the schemas.
+    #[test]
+    fn a_repository_with_no_schemas_checks_no_document_and_says_so() {
+        let dir = tempfile::tempdir().unwrap();
+        let knowledge = dir.path().join("knowledge");
+        std::fs::create_dir_all(&knowledge).unwrap();
+        std::fs::write(
+            knowledge.join("manifest.sokf.yaml"),
+            "sokf: \"0.3\"\nname: t\n",
+        )
+        .unwrap();
+        std::fs::write(
+            knowledge.join("a.md"),
+            "---\ntype: Architecture\nid: a\n---\n\n# Whatever\n",
+        )
+        .unwrap();
+        let run = validate_repo(dir.path(), &knowledge, &[], &live()).unwrap();
+        assert_eq!(run.schemas, 0, "no schemas to read");
+        assert_eq!(run.documents, 0, "so no document is checked");
+        assert!(run.report.passed(), "{:#?}", run.report.findings);
+    }
+
+    /// This repository does carry schemas, so the same counts are non-zero —
+    /// the assertion that the check is reachable at all.
+    #[test]
+    fn this_repository_checks_its_documents_against_its_schemas() {
+        let root = repo();
+        let run = validate_repo(&root, &root.join("knowledge"), &[], &live()).unwrap();
+        assert!(run.schemas >= 40, "schemas read: {}", run.schemas);
+        assert!(run.documents >= 80, "documents checked: {}", run.documents);
     }
 
     /// A path that names nothing is a caller error, not a finding: the run

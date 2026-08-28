@@ -30,7 +30,9 @@ lists as a non-goal.
 
 ## Motivation
 
-`aokf validate` passes with no findings — `index.md` is a reserved
+Add frontmatter to `knowledge/decisions/index.md`, change its `*` bullets to
+`-`, delete its `# Decisions` heading, and run the validator: it passes with
+no findings — `index.md` is a reserved
 file, so the per-concept checks never see it, and `check_indexes` only
 resolves link targets. The format validator prints
 `SKIP  [-]  knowledge/decisions/index.md`, because the grammar's

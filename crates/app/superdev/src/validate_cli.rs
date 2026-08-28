@@ -73,6 +73,8 @@ pub fn run_validate(args: &ValidateArgs, root: &Path) -> Result<u8> {
         if let Some(object) = value.as_object_mut() {
             object.insert("knowledge".into(), knowledge.display().to_string().into());
             object.insert("files".into(), run.files.into());
+            object.insert("schemas".into(), run.schemas.into());
+            object.insert("documents".into(), run.documents.into());
         }
         let rendered =
             serde_json::to_string_pretty(&value).map_err(|e| io_error(io::Error::other(e)))?;
@@ -82,6 +84,17 @@ pub fn run_validate(args: &ValidateArgs, root: &Path) -> Result<u8> {
             "superdev validator — {}",
             scope(args, &grammar, run.files)
         ))?;
+        out(&format!(
+            "  documents: {} checked against {} schema{}",
+            run.documents,
+            run.schemas,
+            if run.schemas == 1 { "" } else { "s" }
+        ))?;
+        if run.schemas == 0 {
+            // A repository with no `knowledge/schemas/` checks no document
+            // against any contract. Silence here would read as a clean pass.
+            out("  no schemas found — no document was checked against a contract")?;
+        }
         out(run.report.render_human().trim_end_matches('\n'))?;
     }
     Ok(u8::from(!run.report.passed()))

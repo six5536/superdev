@@ -31,5 +31,6 @@
 
 ## The schema layer
 
+* [The pack ships 43 document templates and no schemas, so schema enforcement runs in this repository and nowhere else](I020-the-schemas-do-not-ship.md) - superdev init writes the templates that produce documents and none of the schemas that check them, so a managed repo has nothing to dispatch against and every document passes unexamined — the capability P008 built reaches no user.
 * [A schema declares content kinds and a frontmatter contract, and the validator reads neither](I018-the-schema-layer-checks-sections-and-nothing-else.md) - p008 made schemas govern documents, but only their sections — the content kind under each heading and the frontmatter constraints beside it are declared on every schema and read by nothing, which is the fault P008 set out to cure, one level down.
 * [validate reads a file named on the command line as a skill, whatever it is](I019-validate-reads-a-named-file-as-a-skill.md) - superdev validate knowledge/architecture.md reports nine errors about missing skill blocks, because a named path takes the grammar's fallback kind; the document is never checked against the schema its type names, so the check a path argument most obviously invites is the one it cannot run.

@@ -179,6 +179,12 @@ impl SchemaSet {
         (set, findings)
     }
 
+    /// Whether any schema governs this document.
+    #[must_use]
+    pub fn governs(&self, path: &str, doc_type: Option<&str>) -> bool {
+        self.governing(path, doc_type).is_some()
+    }
+
     /// The schema governing a document, and how it was found.
     fn governing(&self, path: &str, doc_type: Option<&str>) -> Option<&DocSchema> {
         if let Some(t) = doc_type {
