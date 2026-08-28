@@ -18,7 +18,7 @@ A change is done when (the enforced form is the
 - Line coverage stays ≥ 90% **per crate** — see
   [testing-strategy](testing-strategy.md).
 - Launcher and version-consistency checks pass.
-- The canonical knowledge and the format files validate (`npm run check:validate`, when
+- The SOKF knowledge and every governed file validate (`npm run check:validate`, when
   `knowledge/`, `.agents/` or a skill changed) and the repo matches its own
   blueprint (`npm run check:blueprint`).
 - Documentation is updated wherever behaviour changed: README, this

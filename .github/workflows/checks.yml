@@ -89,7 +89,7 @@ jobs:
         if: runner.os != 'Windows'
         run: node scripts/verify-version.mjs
 
-      - name: Knowledge and format validation
+      - name: Knowledge and schema validation
         if: runner.os != 'Windows'
         run: npm run check:validate
 

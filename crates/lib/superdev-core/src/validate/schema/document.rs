@@ -481,6 +481,24 @@ mod tests {
         assert!(!glob_match("READMEx.md", "README-.md"));
     }
 
+    /// Every character a regex would read as syntax is a literal here, and a
+    /// pattern matches the whole path or nothing. A glob that quietly became
+    /// a regex would govern documents nobody named.
+    #[test]
+    fn a_pattern_is_a_glob_and_not_a_regex() {
+        for meta in ["a+b.md", "a(b).md", "a[b].md", "a{b}.md", "a^b$.md", "a|b.md"] {
+            assert!(glob_match(meta, meta), "{meta} should match itself");
+        }
+        assert!(!glob_match("a+b.md", "aab.md"), "`+` is not a repeat");
+        // `**` away from a separator spans them; `?` is one, and never `/`.
+        assert!(glob_match("a**b.md", "a/x/b.md"));
+        assert!(glob_match("a?.md", "ab.md"));
+        assert!(!glob_match("a?.md", "a/.md"));
+        // Anchored at both ends: a bare name never matches a nested path.
+        assert!(!glob_match("x.md", "a/x.md"));
+        assert!(!glob_match("x", "x.md"));
+    }
+
     /// The reach that made the old globs dangerous is closed by the candidate
     /// list, not by the pattern: `**/*release-notes*.md` still matches such a
     /// path, and no such path is ever offered.

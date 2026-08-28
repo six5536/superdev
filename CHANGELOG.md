@@ -38,6 +38,8 @@ publish a version it cannot find a heading for.
   | `.agents/aokf.md`, `.agents/aokf/SPEC.md` | `.agents/sokf.md`, `.agents/sokf/SPEC.md` |
   | `.agents/format/grammar.yaml` | `.agents/sokf/grammar.yaml` |
   | `.superdev/cache/aokf-index` | `.superdev/cache/sokf-index` |
+  | `validate --bundle <DIR>` | `validate --knowledge <DIR>` |
+  | the `"bundle"` key in `--json` | the `"knowledge"` key |
 
   The MCP key and the hook marker are lock keys in every managed repo: one
   `sync` removes the old entries and writes the new ones, which is what the
@@ -74,7 +76,13 @@ publish a version it cannot find a heading for.
   across this repository, and every one was resolved by bringing the document
   to its schema — except where the documents were unanimous against it, which
   happened once: all nine settled issues put the resolution section directly
-  under the title, where the schema had it last. See P008.
+  under the title, where the schema had it last.
+
+  The report says what it covered: `documents: N checked against M schemas`,
+  and a run that found no schemas says so rather than passing in silence.
+  That matters today, because the content pack ships the templates and not
+  the schemas, so a managed repo has none and checks no document against any
+  contract — see I020. See P008.
 
 ### Removed
 

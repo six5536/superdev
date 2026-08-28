@@ -67,12 +67,17 @@ fn snapshot(case: &str) {
     let docs = read_dir(&dir);
 
     let (set, mut findings) = SchemaSet::load(&schemas);
+    // The types are held here so the documents can borrow them: a `Document`
+    // borrows its type, and leaking one per case to satisfy the lifetime
+    // would be a leak in the test rather than a fix to it.
+    let types: Vec<Option<String>> = docs.iter().map(|(_, text)| doc_type(text)).collect();
     let candidates: Vec<Document<'_>> = docs
         .iter()
-        .map(|(name, text)| Document {
+        .zip(&types)
+        .map(|((name, text), doc_type)| Document {
             path: name,
             text,
-            doc_type: doc_type(text).map(|t| Box::leak(t.into_boxed_str()) as &str),
+            doc_type: doc_type.as_deref(),
         })
         .collect();
     findings.extend(check_documents(&candidates, &set));

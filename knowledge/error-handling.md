@@ -35,7 +35,7 @@ that everything gating on the old script's exit code — the hook,
 
 `hook validate` speaks Claude Code's hook protocol instead. It exits `0`
 whenever Claude Code should let the edit through: the payload names no file, or
-names one outside the canonical knowledge and the trees the format grammar governs, or names
+names one outside the SOKF knowledge and the trees the grammar governs, or names
 one the repository still validates against. Otherwise the findings go to stderr
 and it exits `2`, which Claude
 Code hands back to the agent as a blocking error. A payload it cannot read or

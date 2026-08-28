@@ -408,7 +408,7 @@ fn hook_validate_ignores_paths_it_does_not_read() {
         .code(0);
 }
 
-/// The hook covers the format files too, so an edit that breaks a skill is
+/// The hook covers the governed files too, so an edit that breaks a skill is
 /// caught where the merge gate would catch it (FR-7).
 #[test]
 fn hook_validate_blocks_an_edit_that_broke_a_skill() {

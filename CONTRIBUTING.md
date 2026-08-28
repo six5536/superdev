@@ -66,7 +66,7 @@ All wrapped as npm scripts (see `package.json`):
 ```sh
 npm run build           # cargo build --workspace
 npm run test            # cargo nextest run --workspace, then check:validate
-npm run check:validate  # validate the knowledge and the format files
+npm run check:validate  # the SOKF knowledge, the schemas and the grammar
 npm run check:blueprint # the superdev-owned files match the blueprint
 npm run lint            # cargo clippy --workspace
 npm run fmt             # cargo fmt --all
