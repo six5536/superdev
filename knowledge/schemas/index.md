@@ -27,6 +27,8 @@ a template could only be copied.
 ## Reports & analysis
 
 * [Bug Report Schema](bug-report.md) - bug reports filed as Issue concepts in knowledge/issues/ — symptom, repro, root cause and regression risk.
+* [Feature Request Schema](feature-request.md) - feature requests filed in knowledge/issues/ — motivation, proposed behaviour, alternatives and scope, with no room for invented repro steps.
+* [Chore Schema](chore.md) - scoped mechanical work filed in knowledge/issues/ — the surfaces it touches and what done means, with no room for a root cause it does not have.
 * [Investigation Schema](investigation.md) - investigation write-ups — conclusion first, evidence with sources, ruled-out hypotheses and a recommendation.
 * [Postmortem Schema](postmortem.md) - blameless incident write-ups — impact, timeline, root cause and typed action items.
 * [Status Update Schema](status-update.md) - status updates — TL;DR, done since last update, in progress, blockers with recommended defaults, and next.

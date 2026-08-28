@@ -134,7 +134,7 @@ names.
 | FR-11 | `target-files` resolution is confined to the SOKF knowledge root plus a named allowlist, never matches under `knowledge/schemas/`, and never leaves the repository | O4 |
 | FR-12 | Every schema has been run against its documents and each disagreement resolved on the record | O5 |
 | FR-13 | `superdev validate` reports a document that breaks its schema as an error: a missing required section, a section out of order, a prohibited section, a wrong table column, an over-limit line count | O6 |
-| FR-14 | A concept whose type names no schema is reported, and so is a schema no concept names | O4, O6 |
+| FR-14 | A concept whose type names no schema is reported, and so is a schema that governs nothing — one declaring neither a type const nor a glob | O4, O6 |
 | FR-15 | One `sync` of a repo built by the previous release removes the old hook element, MCP key and `.agents/aokf*`, and writes their replacements | O1, O3 |
 | FR-16 | The specification and the instructions are the only binary-owned files; skills, templates and concepts resolve from the pack | O7 |
 
@@ -253,7 +253,7 @@ Depends on: W2.
    and the commands to the W3 verbs.
 3. Change the manifest in code — `MANIFEST` becomes `manifest.sokf.yaml`,
    `BundleManifest::aokf` becomes `sokf`, and the required-key check follows.
-4. Move this repository's manifest — `knowledge/manifest.sokf.yaml` to
+4. Move this repository's manifest — `knowledge/manifest.aokf.yaml` to
    `knowledge/manifest.sokf.yaml`, `aokf: "0.3"` to `sokf: "0.3"`.
 5. Update the eleven fixtures and regenerate — `UPDATE_GOLDENS=1` over both
    suites, then read the diff: only the manifest filename and key may move.
@@ -301,7 +301,20 @@ Depends on: W2, W6.
 
 1. Dispatch by type — `validate::schema` resolves a concept to its schema
    through the frontmatter `type`, and reports a type naming no schema and a
-   schema no type names (FR-14).
+   schema that governs nothing (FR-14).
+
+   Corrected during execution. This step and FR-14 first said "a schema no
+   type names", which is a different claim: a schema whose type no document
+   *yet* carries. Nine of the forty-one are exactly that — `code-review`,
+   `investigation`, `migration-guide`, `postmortem`, `release-notes`,
+   `research`, `security-review`, `status-update`, `visual-system` — kinds
+   nobody has written here. Reporting them would have made the first run
+   fail on nine contracts doing their job, and the only way to silence it
+   would be deleting the contract or writing a document to satisfy it. What
+   ships instead is the decidable case: a schema declaring neither a type
+   const nor a `target-files` glob can reach no document ever, whatever
+   anyone writes later. That is reported, and the `governs-nothing` fixture
+   is its test.
 2. Scope the glob — `target-files` resolves only for frontmatter-less
    documents, confined to the SOKF knowledge root plus a named allowlist,
    refusing anything under `knowledge/schemas/` or outside the repository
@@ -372,8 +385,8 @@ Depends on: W1, W2, W3, W4, W5, W7.
 | `crates/lib/superdev-core/src/{aokf,format}/` | deleted — both directories | W2 |
 | `crates/lib/superdev-core/src/sokf/*.rs` | new — moved from `aokf/`; `mcp.rs` renames the tools and the server | W2, W3 |
 | `crates/lib/superdev-core/src/lib.rs` | modified — `sokf` and `validate` replace `aokf` and `format` | W2 |
-| `crates/lib/superdev-core/assets/aokf/**` | deleted — succeeded by `assets/knowledge/agents/**` | W8 |
-| `crates/lib/superdev-core/assets/knowledge/agents/**` | new — the instructions and the SOKF specification | W4, W8 |
+| `assets/aokf/**` | deleted — succeeded by `assets/sokf/agents/**` | W8 |
+| `assets/sokf/agents/**` | new — the instructions and the SOKF specification (`assets/` is a symlink to `pack/`) | W4, W8 |
 | `crates/lib/superdev-core/tests/fixtures/sokf/**` | modified — moved; eleven manifests renamed and re-keyed | W2, W4 |
 | `crates/lib/superdev-core/tests/fixtures/schema/**` | modified — moved; one new case per enforcement rule | W2, W7 |
 | `crates/lib/superdev-core/tests/{validate,schema}_snapshots.rs` | modified — new fixture roots; `format_snapshots.rs` deleted | W2, W7 |
@@ -386,7 +399,7 @@ Depends on: W1, W2, W3, W4, W5, W7.
 | `.agents/aokf.md`, `.agents/aokf/SPEC.md`, `.agents/format/grammar.yaml` | deleted — succeeded under `.agents/sokf/` | W2, W4 |
 | `.agents/sokf.md`, `.agents/sokf/SPEC.md`, `.agents/sokf/grammar.yaml` | new — instructions, specification, grammar | W2, W4 |
 | `.agents/core.md` | modified — the tool names, the verbs, the gate wording | W7, W8 |
-| `knowledge/manifest.sokf.yaml` | deleted — succeeded by `manifest.sokf.yaml` | W4 |
+| `knowledge/manifest.aokf.yaml` | deleted — succeeded by `manifest.sokf.yaml` | W4 |
 | `knowledge/manifest.sokf.yaml` | new — `sokf` and `name` | W4 |
 | `knowledge/schemas/*.md` | modified — all 40: a type const each, dead globs removed, and reconciled to practice | W5, W6 |
 | `knowledge/**/*.md` | modified — roughly 40 concepts retyped; those the reconciliation finds genuinely malformed corrected | W5, W6 |
@@ -394,8 +407,8 @@ Depends on: W1, W2, W3, W4, W5, W7.
 | `knowledge/contracts/C001-content-packs.md` | modified — the provider id, the manifest name, the asset path | W8 |
 | `.claude/skills/*/SKILL.md` | modified — 21 skills: tool names, verbs, and the eleven gates | W7, W8 |
 | `pack/knowledge/skills/*/SKILL.md` | modified — the same 21, mirrored | W8 |
-| `pack/aokf/**` | deleted — succeeded by `pack/knowledge/agents/**` | W8 |
-| `pack/{knowledge/agents,agents}/*.md` | new and modified — the pack mirror and the general rules | W8 |
+| `pack/aokf/**` | deleted — succeeded by `pack/sokf/agents/**` | W8 |
+| `pack/{sokf/agents,agents}/*.md` | new and modified — the binary-owned pair and the general rules | W8 |
 | `.gitattributes`, `scripts/superdev`, `scripts/manage-smoke.sh` | modified — the fixture comment, the hook command, the two verbs | W8 |
 | `.superdev/config.toml` | modified — the capability table becomes the top-level one | W8 |
 | `.superdev/lock.toml`, `.mcp.json` | modified — written by `superdev sync` | W8 |
@@ -409,17 +422,17 @@ Depends on: W1, W2, W3, W4, W5, W7.
 | `git grep -n 'Capability::Knowledge\|no-knowledge\|no_knowledge'` returns nothing, and `Capability::ALL` has four entries | FR-1, FR-2 |
 | `superdev init` in an empty scratch repo writes `knowledge/`, the hook and the `.mcp.json` entry with no flag given, and its `config.toml` holds a top-level `[knowledge]` table and no knowledge capability | FR-2, FR-3 |
 | `superdev sync` against a config carrying `[knowledge] provider = "aokf"` fails naming the table and the edit | FR-3 |
-| `git grep -n 'schema' src/validate/sokf.rs` and `git grep -n 'sokf' src/validate/schema/` both return nothing; `validate/mod.rs` names both | FR-4 |
+| `git grep -n 'schema' src/validate/sokf.rs` returns nothing, and the only `sokf` under `src/validate/schema/` is the grammar's own path and the four tool names it governs — no call in either direction; `validate/mod.rs` names both | FR-4 |
 | `superdev --help` lists `validate`, `hook`, `sokf`, `mcp`, and no `aokf`; `superdev sokf --help` lists `index` | FR-5 |
 | `superdev mcp sokf` starts, and `tests/mcp_tools.rs` drives `sokf_search`, `sokf_read`, `sokf_graph`, `sokf_overview` | FR-6 |
-| `knowledge/manifest.sokf.yaml` holds `sokf: "0.3"`, and `git grep -l 'manifest.sokf.yaml'` returns nothing outside the changelog | FR-7 |
+| `knowledge/manifest.sokf.yaml` holds `sokf: "0.3"`, and `git grep -l 'manifest.aokf.yaml'` returns nothing outside the changelog | FR-7 |
 | `head -1 .agents/sokf/SPEC.md` reads `# SOKF — Superdev Open Knowledge Format`, and §1 defines "SOKF knowledge" | FR-8 |
 | A test asserts every schema declares a `type` const, that no two are equal, and that every concept's type names a schema | FR-9 |
 | A test asserts `target-files` appears only on schemas whose documents carry no frontmatter | FR-10 |
 | A test feeds `**/*release-notes*.md` and asserts the resolver refuses `node_modules/`, refuses `knowledge/schemas/`, and stays inside the repository | FR-11 |
 | The reconciliation harness reports zero disagreements across all 40 schemas | FR-12 |
 | One fixture case per rule — missing section, misordered section, prohibited section, wrong table column, over-limit — each failing with its own message and its own golden | FR-13 |
-| A fixture with a type naming no schema, and one schema no type names, both reported | FR-14 |
+| A fixture with a type naming no schema, and one schema declaring neither a type const nor a glob, both reported — `unknown-type` and `governs-nothing` | FR-14 |
 | A fixture repo carrying the previous release's lock, `.mcp.json`, `.claude/settings.json` and `.agents/aokf*` syncs to the new state, and a second `status --drift` exits 0 | FR-15 |
 | `binary_owned_count()` is 2 and names the two `.agents/sokf/` paths; every skill, template and concept traces to a pack item | FR-16 |
 | `read_pack("superdev", &root)` resolves — the binary-owned pair sits outside the `agents/` position `REJECTED` guards | FR-16 |

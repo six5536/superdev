@@ -8,9 +8,10 @@ description: The system's layers, its subsystems, and the files it reads and wri
 # Architecture Schema
 
 Structural rules for `knowledge/architecture.md`, the canonical knowledge's Reference
-concept for the system's shape. One named file rather than a family, so
-`target-files` names it exactly. The subsystem headings are the author's to
-choose; the literal headings around them win over the pattern.
+concept for the system's shape. One named file rather than a family, and it
+carries frontmatter, so the `Architecture` type names it exactly. The subsystem
+headings are the author's to choose; the literal headings around them win over
+the pattern.
 
 ````yaml
 description: >
