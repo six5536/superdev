@@ -22,6 +22,14 @@ The behavioural rules are in [coding.md](/.agents/coding.md): think before
 coding, simplicity first, surgical changes only, and verifiable success
 criteria defined before executing.[^coding]
 
+**Never edit `.agents/core.md`.** It is the Prime Directive, the one file
+every session loads, and it is the owner's to change. Where a skill or a
+concept says the same thing as one of its blocks, the duplication is resolved
+by rewriting the other occurrence into a reference — `core's <block> block`,
+which the validator checks against the blocks core actually defines. The
+validator reports such a pair without saying which side to move; the answer
+here is always the side that is not core.
+
 # Prose
 
 Be concise without losing information; use plain language. British English
