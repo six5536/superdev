@@ -5,7 +5,6 @@ pub(crate) mod item;
 pub mod mise;
 pub mod pin;
 pub mod plugin;
-pub mod rtk;
 pub mod skillpack;
 mod skills;
 pub mod sokf;

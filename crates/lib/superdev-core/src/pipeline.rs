@@ -466,9 +466,6 @@ fn aggregator_content(manifest: &Manifest) -> String {
     if manifest.enabled(Capability::CodeIndex) {
         out.push_str("@codegraph.md\n");
     }
-    if manifest.enabled(Capability::BashOutputFilter) {
-        out.push_str("@rtk.md\n");
-    }
     // Last: which tool to reach for is a rule about the capabilities above,
     // so it reads after the files that introduce them.
     out.push_str("@tools.md\n");
@@ -1059,29 +1056,16 @@ mod tests {
         assert!(all.ends_with("</superdev-system>\n"), "{all}");
         assert!(all.contains("@sokf.md"), "{all}");
         assert!(all.contains("@codegraph.md"), "{all}");
-        assert!(all.contains("@rtk.md"), "{all}");
-        let partial = aggregator_content(&Manifest::default_for(
-            "0.1.0",
-            &[Capability::BashOutputFilter],
-        ));
-        assert!(!partial.contains("@rtk.md"), "{partial}");
-        assert!(partial.contains("@codegraph.md"), "{partial}");
-        // SOKF is not a capability, so no disabled set removes its import.
-        assert!(partial.contains("@sokf.md"), "{partial}");
         // The general rules are not capability-gated: every managed repo
-        // imports them, even with every instruction-shipping capability off.
-        let none = aggregator_content(&Manifest::default_for(
-            "0.1.0",
-            &[Capability::CodeIndex, Capability::BashOutputFilter],
-        ));
+        // imports them, even with the one instruction-shipping capability off.
+        let none = aggregator_content(&Manifest::default_for("0.1.0", &[Capability::CodeIndex]));
+        assert!(!none.contains("@codegraph.md"), "{none}");
+        // SOKF is not a capability, so no disabled set removes its import.
+        assert!(none.contains("@sokf.md"), "{none}");
         assert!(none.contains("@professionalism.md"), "{none}");
         assert!(none.contains("@process.md"), "{none}");
         assert!(none.contains("@coding.md"), "{none}");
         assert!(none.contains("@tools.md"), "{none}");
-        assert!(
-            !none.contains("@codegraph.md") && !none.contains("@rtk.md"),
-            "{none}"
-        );
     }
 
     #[test]

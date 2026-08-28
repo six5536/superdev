@@ -20,9 +20,9 @@ no Node.
    `.claude/skills/` (`/frame` → `/spec` → `/interface-design` →
    `/feature-plan` → `/build` → `/verify` → `/integrate`; see
    `.agents/process.md`): the spec lands in `knowledge/specs/`
-   (permanent decision record), the plan in `knowledge/plans/` (tagged
-   `done` in the commit that completes the work). One-off work takes
-   `/adhoc-plan`.
+   (permanent decision record), the plan in `knowledge/feature-plans/`
+   (tagged `done` in the commit that completes the work). One-off work
+   takes `/adhoc-plan`, and its plan lands in `knowledge/adhoc-plans/`.
 2. Implement with focused commits, using
    [Conventional Commits](https://www.conventionalcommits.org/) (`feat:`,
    `fix:`, `docs:`, `test:`, `refactor:`, `chore:`).
@@ -35,13 +35,12 @@ no Node.
 
 # This repo manages its own skills and knowledge machinery
 
-superdev fills the `skills`, `knowledge`, `code-index` and
-`bash-output-filter` capabilities here: committed `.superdev/config.toml`
-and `.superdev/lock.toml`, with `cargo run -- sync` writing the three
-pack skills, the knowledge-carried skill set with its PostToolUse hook
-entry, the `.agents` files, the codegraph pin, index and agent wiring,
-and the rtk pin files with their PreToolUse rewrite hook. The canonical knowledge
-scaffolds (the canonical knowledge) were this repo's before the capability was
+superdev fills the `skills` and `code-index` capabilities here, and carries
+the SOKF knowledge as part of itself: committed `.superdev/config.toml`
+and `.superdev/lock.toml`, with `cargo run -- sync` writing the two
+pack skills, the SOKF-carried skill set with its PostToolUse hook
+entry, the `.agents` files, and the codegraph pin, index and agent wiring.
+The knowledge scaffolds were this repo's before the component was
 enabled, so they are untouched; `frontend` stays off.
 `npm run check:blueprint` is what catches drift in the shipped skill assets —
 in the pre-PR list and in CI, through the product's own drift detection rather

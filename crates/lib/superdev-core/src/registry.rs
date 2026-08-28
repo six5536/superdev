@@ -50,7 +50,7 @@ pub struct RegistryEntry {
     pub default: bool,
 }
 
-const ENTRIES: [RegistryEntry; 4] = [
+const ENTRIES: [RegistryEntry; 3] = [
     RegistryEntry {
         capability: Capability::Frontend,
         provider: "frontend-design",
@@ -78,62 +78,9 @@ const ENTRIES: [RegistryEntry; 4] = [
         available: true,
         default: true,
     },
-    RegistryEntry {
-        capability: Capability::BashOutputFilter,
-        provider: "rtk",
-        version: Some(Pinned {
-            version: RTK_VERSION,
-            provenance: Provenance::Checksum,
-        }),
-        available: true,
-        default: true,
-    },
 ];
 
 const CODEGRAPH_VERSION: &str = "1.5.0";
-
-const RTK_VERSION: &str = "0.45.0";
-
-/// The pinned rtk release, one checksummed artefact per platform rtk
-/// publishes (`<os>-<arch>`, mise's naming), as `(platform, url, checksum)`.
-/// windows-arm64 has no upstream artefact and is deliberately absent — the
-/// auto_env platform files skip the tool there.
-///
-/// Bump: change `RTK_VERSION`, then refresh every url and checksum together —
-/// the checksum is the provenance, so a version without one cannot be
-/// installed:
-///
-/// ```sh
-/// curl -s https://api.github.com/repos/rtk-ai/rtk/releases/tags/v<version> \
-///   | jq -r '.assets[] | "\(.name) \(.digest)"'
-/// ```
-pub const RTK_PLATFORMS: [(&str, &str, &str); 5] = [
-    (
-        "linux-arm64",
-        "https://github.com/rtk-ai/rtk/releases/download/v0.45.0/rtk-aarch64-unknown-linux-gnu.tar.gz",
-        "sha256:80a746dd305ef944ff50ef011ae4ce3878dd5ba88dfe35d859d05498191637c3",
-    ),
-    (
-        "linux-x64",
-        "https://github.com/rtk-ai/rtk/releases/download/v0.45.0/rtk-x86_64-unknown-linux-musl.tar.gz",
-        "sha256:c4c036fbf181fc55ef329786c8c17e0d427972b053b825944d968a6aafef1ba4",
-    ),
-    (
-        "macos-arm64",
-        "https://github.com/rtk-ai/rtk/releases/download/v0.45.0/rtk-aarch64-apple-darwin.tar.gz",
-        "sha256:064151cfc2d50b24d810b06a0af2e41b9c945e83534e4c438c3d3eae607fc3f4",
-    ),
-    (
-        "macos-x64",
-        "https://github.com/rtk-ai/rtk/releases/download/v0.45.0/rtk-x86_64-apple-darwin.tar.gz",
-        "sha256:9ea02f889d5a2779e4fb700df4587824303c5a57cda22e903e30058079fca0ef",
-    ),
-    (
-        "windows-x64",
-        "https://github.com/rtk-ai/rtk/releases/download/v0.45.0/rtk-x86_64-pc-windows-msvc.zip",
-        "sha256:34cea9009a8099acdaf85147b971d95f65efabfa63fb3aea7d3e2b73e6f517c3",
-    ),
-];
 
 /// The pinned codegraph release, one self-contained bundle per mise platform
 /// (`<os>-<arch>`), as `(platform, url, checksum)`. The bundles vendor their
@@ -253,13 +200,6 @@ mod tests {
     #[test]
     fn every_codegraph_bundle_matches_the_pinned_version() {
         assert_platforms_match_version(CODEGRAPH_VERSION, &CODEGRAPH_PLATFORMS);
-    }
-
-    #[test]
-    fn every_rtk_artefact_matches_the_pinned_version() {
-        assert_platforms_match_version(RTK_VERSION, &RTK_PLATFORMS);
-        // The gap is deliberate: rtk publishes no windows-arm64 artefact.
-        assert!(RTK_PLATFORMS.iter().all(|(p, ..)| *p != "windows-arm64"));
     }
 
     #[test]

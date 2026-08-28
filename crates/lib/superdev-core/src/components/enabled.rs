@@ -4,7 +4,7 @@
 
 use crate::capability::Capability;
 use crate::component::Component;
-use crate::components::{codegraph, plugin, rtk, skillpack, sokf};
+use crate::components::{codegraph, plugin, skillpack, sokf};
 use crate::error::{Error, Result};
 use crate::manifest::Manifest;
 use crate::registry;
@@ -55,7 +55,6 @@ fn component_for(capability: Capability, provider: &str) -> Box<dyn Component> {
         (Capability::Frontend, _) => Box::new(plugin::frontend_design()),
         (Capability::Skills, _) => Box::new(skillpack::SkillPack),
         (Capability::CodeIndex, _) => Box::new(codegraph::Codegraph),
-        (Capability::BashOutputFilter, _) => Box::new(rtk::Rtk),
     }
 }
 
@@ -155,7 +154,7 @@ mod tests {
     fn enabled_skips_disabled_capabilities() {
         let manifest = Manifest::default_for("0.1.0", &[Capability::CodeIndex]);
         let components = enabled(&manifest).unwrap();
-        assert_eq!(components.len(), 4);
+        assert_eq!(components.len(), 3);
         assert!(
             components
                 .iter()

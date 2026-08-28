@@ -2,7 +2,7 @@
 type: Configuration
 id: configuration
 title: Configuration & Environments
-description: The .superdev directory — the config.toml manifest, the lock file, and the gitignored cache — plus the embeddings opt-in, the custom lists, the many-provider skills shape, the guided errors, the .mcp.json and .claude/settings.json merges, the bash-output-filter files, and the user-level model cache.
+description: The .superdev directory — the config.toml manifest, the lock file, and the gitignored cache — plus the embeddings opt-in, the custom lists, the many-provider skills shape, the guided errors, the .mcp.json and .claude/settings.json merges, and the user-level model cache.
 status: stable
 resource: /crates/lib/superdev-core/src/manifest.rs
 ---
@@ -17,10 +17,6 @@ defaults.
 
 ```toml
 blueprint = "0.1.0"      # the superdev version last applied
-
-[bash-output-filter]
-provider = "rtk"
-version = "0.45.0"
 
 [code-index]
 provider = "codegraph"
@@ -179,7 +175,7 @@ entry list are all refused at load with guided errors
 ([spec](specs/S011-skills-cardinality-design.md)). A manifest still naming the
 removed `workflows` capability fails at load with a guided error telling the
 user to delete the table (moving any custom names to `[knowledge]`) — the
-skill set now ships with the knowledge capability, and superpowers users can
+skill set now ships with the SOKF knowledge, and superpowers users can
 `claude plugin install superpowers` by hand. The error never rewrites
 `config.toml`; the manifest is the user's file
 ([spec](specs/S009-knowledge-carried-skills-design.md)).
@@ -315,33 +311,14 @@ digest is kept; a pack that failed verification leaves nothing behind.
   are owned files; the general rules (`.agents/professionalism.md`, `.agents/process.md`,
   `.agents/coding.md`) are write-once scaffolds, the user's to adapt.
 - `.claude/settings.json` carries one managed `hooks.PostToolUse` element,
-  owned by the knowledge capability (the hook validates the canonical knowledge, so it
+  owned by the SOKF component (the hook validates the canonical knowledge, so it
   exists exactly where knowledge does): superdev finds its own element by the
   command string `superdev hook validate`, adds or updates it, and
   leaves the user's hooks alone. Both files are re-serialised whole on
   write, so key order is not preserved; the lock hashes the merged value, not
-  the file, so a reformat is not drift. The bash-output-filter capability
-  manages one `hooks.PreToolUse` element the same way, found by its
-  `mise exec http:rtk -- rtk hook claude` command string; the hook rewrites
-  Bash commands through rtk and is fail-open — only exit code 2 blocks a
-  command in Claude Code, and rtk's hook exits 0 on every failure path.
-  One caveat rides the capability: permission allow/deny rules match the
-  rewritten, rtk-prefixed command string (`rtk git status`, not
-  `git status`), so string-matched rules should account for both forms;
-  rtk's own per-command exclusion config is the opt-out.
-- The bash-output-filter capability owns three whole files: `.miserc.toml`
-  (turns on mise's `auto_env`, which needs mise ≥ 2026.8 — an older
-  observed mise gets a guided error at plan time) and the platform-scoped
-  pin files `mise.unix.toml` and `mise.windows-x64.toml`, holding the
-  checksummed rtk pin for exactly the platforms rtk publishes. A platform
-  without an artefact (windows-arm64) loads neither file and skips the tool
-  silently — which is why the pin is not in the shared `.mise.toml`. Its
-  agent guidance, `.agents/rtk.md`, tells agents output is auto-filtered
-  and how to get raw output (`RTK_DISABLED=1` in the command text, or
-  rtk's proxy passthrough)
-  ([spec](specs/S012-bash-output-filter-design.md)).
-- `.claude/skills/` holds the pack's three skills and the canonical knowledge
-  capability's 25 carried skill directories as owned files, plus the MIT
+  the file, so a reformat is not drift.
+- `.claude/skills/` holds the pack's two skills and the SOKF component's 17
+  carried skill directories as owned files, plus the MIT
   notice for the derived set. A `PROJECT.md` beside a skill extends it —
   superdev never writes, hashes or reads that file, so a project layer
   survives every sync.

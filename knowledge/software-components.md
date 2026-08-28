@@ -18,16 +18,20 @@ implement is in [architecture](architecture.md).
 
 All domain logic; no argument parsing. One module per concern:
 
-- `capability` — the five slots; `registry` — their default providers and
-  versions, baked into the binary.
+- `capability` — the four slots; `registry` — their default providers and
+  versions, baked into the binary. The SOKF knowledge is not among them:
+  it is part of superdev, not a slot a provider fills.
 - `manifest` / `lock` — `.superdev/config.toml` and `.superdev/lock.toml`.
 - `component` — the provider trait (`plan` observes and returns actions);
   `action` — the action enum and file ownership.
-- `components::{sokf, plugin, codegraph, mise, pin, skillpack}` —
-  the providers, plus the shared helpers: targeted `.mise.toml` editing,
-  registry-locked pin planning, `item` — the declarative managed-item
-  list the static components derive both `plan` and `owned` from — and
-  `enabled`, the manifest-to-component resolution.
+- `components::{sokf, plugin, skillpack, codegraph}` — the SOKF
+  component and one provider per slot, plus the shared helpers: `mise`
+  for targeted `.mise.toml` editing, `pin` for registry-locked pin
+  planning, `skills` for the `.claude/skills/` path convention and
+  init-time adoption the skill pack and the SOKF component share,
+  `item` — the declarative managed-item list the static components
+  derive both `plan` and `owned` from — and `enabled`, the
+  manifest-to-component resolution.
 - `pack` — where content comes from: the source a pack is resolved from, the
   normalised identity that decides replace-versus-layer, `pack.toml` with the
   paths and keys a pack may not carry, and `resolve` — the phase that turns
@@ -42,8 +46,8 @@ All domain logic; no argument parsing. One module per concern:
   their items from the set through `Ctx`, so adding a file to `/pack` ships it
   with no Rust edit. What the binary owns rather than the pack stays a
   constant: the canonical knowledge instructions and the SOKF spec describe a version it
-  pins and a format its compiled validator enforces, as codegraph's and rtk's
-  instruction files do.
+  pins and a format its compiled validator enforces, as codegraph's
+  instruction file does.
 - `pipeline` — the verb pipeline between manifest and engine: `plan_repo`
   and `apply_repo`, owning the prune-before-plan and orphans-last ordering.
 - `engine` — applies a plan and unwinds on failure, one file per concern:
@@ -71,8 +75,8 @@ All domain logic; no argument parsing. One module per concern:
   `schema` (documents against the schema their `type` names, and skills and
   the core file against the grammar, with `document`, `check`, `grammar`,
   `read` and `doc` beneath it).
-- The SOKF spec, agent files, starter concept skeleton and the 25 carried
-  skill directories the `knowledge` capability writes, the three SKILL.md
+- The SOKF spec, agent files, starter concept skeleton and the 17 carried
+  skill directories the SOKF component writes, the two SKILL.md
   files the `skills` capability writes, and the project templates all live in
   `/pack` at the repository root, reached from the crate as `assets/` through a
   symlink and embedded at compile time. `superdev-core/build.rs` enumerates

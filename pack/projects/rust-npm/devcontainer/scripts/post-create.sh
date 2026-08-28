@@ -8,8 +8,8 @@ sudo chown -R vscode:vscode /home/vscode 2>/dev/null || true
 sudo chown -R vscode:vscode "${CONTAINER_WORKSPACE_FOLDER}" 2>/dev/null || true
 
 # Every pin the repo carries: the project's own tools from mise.toml (Rust,
-# Node, the cargo tooling), whatever superdev wrote into .mise.toml (codegraph)
-# and the platform config files (rtk). mise merges all of them.
+# Node, the cargo tooling) and whatever superdev wrote into .mise.toml
+# (codegraph). mise merges all of them.
 mise install
 
 # Tools that belong to the container rather than the project, so they go in the

@@ -198,7 +198,6 @@ mod tests {
             ("sokf/agents/sokf.md", "instructions"),
             ("sokf/agents/sokf/SPEC.md", "spec"),
             ("codegraph/codegraph.md", "instructions"),
-            ("rtk/rtk.md", "instructions"),
             ("knowledge/concepts", "a file where a directory belongs"),
             ("knowledge/templates/not-markdown.txt", "wrong extension"),
             ("agents/nested/deeper.md", "too deep"),

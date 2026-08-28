@@ -86,6 +86,25 @@ publish a version it cannot find a heading for.
 
 ### Removed
 
+- **The `bash-output-filter` capability and its rtk provider.** Bash output is
+  no longer rewritten before it reaches the agent: the compaction was not
+  worth what it cost the agent reading it. rtk was the slot's only provider
+  and the slot existed for rtk, so both go, and superdev now manages three
+  capabilities.
+
+  A manifest still carrying `[bash-output-filter]` is refused at load with the
+  edit to make. **Delete that table, then run `superdev sync`**: the orphan
+  pass removes `.miserc.toml`, `mise.unix.toml`, `mise.windows-x64.toml`,
+  `.agents/rtk.md` and the `mise exec http:rtk -- rtk hook claude`
+  `PreToolUse` element, and prunes their lock entries. Any of the five you
+  have edited is released from the lock and left on disk rather than deleted.
+  `--no-bash-output-filter` is gone, and `superdev update
+  bash-output-filter` is now an unknown capability.
+
+  The mise version floor goes with it: `.miserc.toml`'s `auto_env` was the
+  only thing requiring mise 2026.8 or newer, so a managed repository works on
+  an older mise again. See P009.
+
 - **The Node format validator.** `scripts/superdev-format/` and the
   meta-schema beside the grammar are gone: the checks are in the binary, the
   Rust types are the meta-schema, and nothing in the repository needs Node to

@@ -1,7 +1,7 @@
 FROM mcr.microsoft.com/devcontainers/base:ubuntu-24.04
 
 # git comes from a devcontainer feature (see devcontainer.json); everything
-# else — Rust, Node, the cargo tooling, superdev's own codegraph and rtk pins —
+# else — Rust, Node, the cargo tooling, superdev's own codegraph pin —
 # is a mise tool, installed by post-create.sh. So mise itself is the one thing
 # the image has to bootstrap, from a pinned GitHub release verified against
 # committed SHA256s.

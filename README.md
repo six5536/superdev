@@ -7,8 +7,8 @@ setup current.
 set, builds a code index, wires up a bash output filter that compacts
 command output before it reaches agent context, and installs the Claude
 Code plugin superdev expects, then records the result in `.superdev/`.
-Pass `--no-code-index`, `--no-skills`, `--no-bash-output-filter` or
-`--no-frontend` to leave a capability out. The SOKF knowledge has no such
+Pass `--no-code-index`, `--no-skills` or `--no-frontend` to leave a
+capability out. The SOKF knowledge has no such
 flag: it is part of superdev, not a capability something else could fill.
 Everything it owns can be repaired by re-running `sync`.
 ## Install
@@ -129,7 +129,7 @@ rewritten by `update`:
 | `[[packs]]` | the pack inside the binary | Where skills, templates and scaffolds come from. Layers in the order written. |
 | `[knowledge] custom` | empty | SOKF skills you have taken over; superdev stops writing them. |
 | `[knowledge.embeddings]` | the local model | Search on an API instead. The key comes from the environment, never the file. |
-| `[frontend]`, `[skills]`, `[code-index]`, `[bash-output-filter]` | all enabled | One table per capability; an absent table means off. |
+| `[frontend]`, `[skills]`, `[code-index]` | all enabled | One table per capability; an absent table means off. |
 
 
 ```toml

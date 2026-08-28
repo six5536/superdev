@@ -490,12 +490,7 @@ fn skills_repo() -> tempfile::TempDir {
     std::fs::create_dir_all(dir.path().join(".git")).unwrap();
     superdev()
         .current_dir(dir.path())
-        .args([
-            "init",
-            "--no-frontend",
-            "--no-code-index",
-            "--no-bash-output-filter",
-        ])
+        .args(["init", "--no-frontend", "--no-code-index"])
         .assert()
         .success();
     dir
@@ -544,12 +539,7 @@ fn adopting_a_repo_with_its_own_skills_keeps_them() {
 
     let out = superdev()
         .current_dir(dir.path())
-        .args([
-            "init",
-            "--no-frontend",
-            "--no-code-index",
-            "--no-bash-output-filter",
-        ])
+        .args(["init", "--no-frontend", "--no-code-index"])
         .assert()
         .success();
     let stdout = String::from_utf8_lossy(&out.get_output().stdout).into_owned();
@@ -1419,7 +1409,6 @@ fn the_default_path_needs_nothing_outside_the_binary() {
             "init",
             "--no-frontend",
             "--no-code-index",
-            "--no-bash-output-filter",
             "--template",
             "none",
         ])
@@ -1468,13 +1457,7 @@ fn init_no_skills_skips_the_pack() {
     std::fs::create_dir_all(dir.path().join(".git")).unwrap();
     superdev()
         .current_dir(dir.path())
-        .args([
-            "init",
-            "--no-frontend",
-            "--no-code-index",
-            "--no-bash-output-filter",
-            "--no-skills",
-        ])
+        .args(["init", "--no-frontend", "--no-code-index", "--no-skills"])
         .assert()
         .success();
     // The pack's skills are gone; SOKF's are not, because SOKF is not the
@@ -1494,12 +1477,7 @@ fn init_ignores_a_cache_left_by_the_knowledge_tools() {
     std::fs::create_dir_all(dir.path().join(".superdev/cache/sokf-index")).unwrap();
     superdev()
         .current_dir(dir.path())
-        .args([
-            "init",
-            "--no-frontend",
-            "--no-code-index",
-            "--no-bash-output-filter",
-        ])
+        .args(["init", "--no-frontend", "--no-code-index"])
         .assert()
         .success();
     assert!(dir.path().join(".superdev/config.toml").is_file());
@@ -1510,12 +1488,7 @@ fn init_refuses_when_the_manifest_exists() {
     let dir = skills_repo();
     let out = superdev()
         .current_dir(dir.path())
-        .args([
-            "init",
-            "--no-frontend",
-            "--no-code-index",
-            "--no-bash-output-filter",
-        ])
+        .args(["init", "--no-frontend", "--no-code-index"])
         .assert()
         .code(2);
     let stderr = String::from_utf8_lossy(&out.get_output().stderr).into_owned();
@@ -1599,12 +1572,7 @@ fn user_hook_entries_survive_a_sync() {
     .unwrap();
     superdev()
         .current_dir(dir.path())
-        .args([
-            "init",
-            "--no-frontend",
-            "--no-code-index",
-            "--no-bash-output-filter",
-        ])
+        .args(["init", "--no-frontend", "--no-code-index"])
         .assert()
         .success();
     let settings: serde_json::Value = serde_json::from_str(
@@ -1664,12 +1632,7 @@ fn an_uninitialised_repo_says_to_run_init() {
 fn init_local(root: &Path) {
     superdev()
         .current_dir(root)
-        .args([
-            "init",
-            "--no-frontend",
-            "--no-code-index",
-            "--no-bash-output-filter",
-        ])
+        .args(["init", "--no-frontend", "--no-code-index"])
         .assert()
         .success();
 }
@@ -1929,7 +1892,6 @@ fn init_with_a_template_seeds_the_repo_and_records_it() {
             "--no-frontend",
             "--no-skills",
             "--no-code-index",
-            "--no-bash-output-filter",
         ])
         .assert()
         .success();
@@ -1968,13 +1930,7 @@ fn init_without_a_tty_and_without_the_flag_seeds_nothing() {
     std::fs::create_dir_all(dir.path().join(".git")).unwrap();
     superdev()
         .current_dir(dir.path())
-        .args([
-            "init",
-            "--no-frontend",
-            "--no-skills",
-            "--no-code-index",
-            "--no-bash-output-filter",
-        ])
+        .args(["init", "--no-frontend", "--no-skills", "--no-code-index"])
         .assert()
         .success();
     assert!(!dir.path().join("LICENSE").exists(), "no template files");
@@ -2070,12 +2026,7 @@ fn init_always_hints_at_bootstrap() {
     std::fs::create_dir_all(dir.path().join(".git")).unwrap();
     let out = superdev()
         .current_dir(dir.path())
-        .args([
-            "init",
-            "--no-frontend",
-            "--no-code-index",
-            "--no-bash-output-filter",
-        ])
+        .args(["init", "--no-frontend", "--no-code-index"])
         .assert()
         .success();
     let stdout = String::from_utf8_lossy(&out.get_output().stdout).into_owned();
@@ -2089,13 +2040,7 @@ fn init_always_hints_at_bootstrap() {
     std::fs::create_dir_all(bare.path().join(".git")).unwrap();
     let out = superdev()
         .current_dir(bare.path())
-        .args([
-            "init",
-            "--no-frontend",
-            "--no-skills",
-            "--no-code-index",
-            "--no-bash-output-filter",
-        ])
+        .args(["init", "--no-frontend", "--no-skills", "--no-code-index"])
         .assert()
         .success();
     let stdout = String::from_utf8_lossy(&out.get_output().stdout).into_owned();

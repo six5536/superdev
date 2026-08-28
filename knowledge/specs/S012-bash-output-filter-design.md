@@ -3,7 +3,7 @@ type: Spec
 id: spec-bash-output-filter
 title: Bash Output Filter Capability
 description: A new bash-output-filter capability, default provider rtk — a checksummed mise pin, an owned instruction file, and a managed PreToolUse rewrite hook that compacts command output before it reaches agent context.
-status: stable
+status: deprecated
 links:
   - rel: relates-to
     to: spec-agent-instructions-layer

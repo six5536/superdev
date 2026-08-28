@@ -179,26 +179,12 @@ fn init_sets_up_a_fresh_repo() {
     assert!(aggregator.starts_with("<superdev-system>"), "{aggregator}");
     assert!(aggregator.contains("@sokf.md"), "{aggregator}");
     assert!(aggregator.contains("@codegraph.md"), "{aggregator}");
-    assert!(aggregator.contains("@rtk.md"), "{aggregator}");
     assert!(aggregator.contains("@coding.md"), "{aggregator}");
     assert!(repo.join(".agents/coding.md").is_file());
     assert!(repo.join(".agents/professionalism.md").is_file());
     assert!(repo.join(".agents/process.md").is_file());
     assert!(repo.join(".agents/sokf.md").is_file());
     assert!(repo.join(".agents/codegraph.md").is_file());
-    assert!(repo.join(".agents/rtk.md").is_file());
-    // The output filter: auto_env activation, the platform-scoped rtk pins
-    // (windows-arm64 deliberately absent), and the rewrite hook.
-    assert!(sb.read(".miserc.toml").contains("auto_env = true"));
-    let unix_pins = sb.read("mise.unix.toml");
-    assert!(unix_pins.contains("http:rtk"), "{unix_pins}");
-    assert!(unix_pins.contains("linux-arm64"), "{unix_pins}");
-    let windows_pins = sb.read("mise.windows-x64.toml");
-    assert!(windows_pins.contains("windows-x64"), "{windows_pins}");
-    assert!(!windows_pins.contains("windows-arm64"), "{windows_pins}");
-    let settings = sb.read(".claude/settings.json");
-    assert!(settings.contains("PreToolUse"), "{settings}");
-    assert!(settings.contains("rtk hook claude"), "{settings}");
     assert!(repo.join(".agents/sokf/SPEC.md").is_file());
     let mcp = sb.read(".mcp.json");
     assert!(mcp.contains("\"superdev-sokf\""), "{mcp}");
@@ -527,39 +513,6 @@ fn a_workflows_manifest_errors_and_sync_migrates_after_the_table_goes() {
         backup_of(&sb, ".claude/skills/ask-matt/SKILL.md"),
         Some(upstream.to_string())
     );
-    sb.superdev().arg("status").assert().success();
-}
-
-/// Journey: disable the output filter — the sweep removes the auto_env
-/// activation, both platform pin files, the instruction file and the hook
-/// key, and the aggregator loses the import.
-#[test]
-fn disabling_bash_output_filter_sweeps_the_wiring() {
-    let sb = Sandbox::new();
-    sb.superdev().arg("init").assert().success();
-    let config = sb.read(".superdev/config.toml");
-    let edited = remove_table(&config, "[bash-output-filter]");
-    assert!(!edited.contains("rtk"), "{edited}");
-    sb.write(".superdev/config.toml", &edited);
-
-    let dirty = run(sb.superdev().arg("status"));
-    assert_eq!(dirty.code, 1, "stdout: {}", dirty.stdout);
-    let synced = run(sb.superdev().arg("sync"));
-    assert_eq!(synced.code, 0, "stderr: {}", synced.stderr);
-
-    let repo = sb.repo();
-    assert!(!repo.join(".miserc.toml").exists());
-    assert!(!repo.join("mise.unix.toml").exists());
-    assert!(!repo.join("mise.windows-x64.toml").exists());
-    assert!(!repo.join(".agents/rtk.md").exists());
-    // The hook key goes; the knowledge capability's validate hook stays.
-    let settings = sb.read(".claude/settings.json");
-    assert!(!settings.contains("rtk hook claude"), "{settings}");
-    assert!(settings.contains("superdev hook validate"), "{settings}");
-    let aggregator = sb.read(".agents/superdev.md");
-    assert!(!aggregator.contains("@rtk.md"), "{aggregator}");
-    let lock = sb.read(".superdev/lock.toml");
-    assert!(!lock.contains("rtk"), "{lock}");
     sb.superdev().arg("status").assert().success();
 }
 

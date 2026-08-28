@@ -34,9 +34,6 @@ pub struct InitArgs {
     /// Skip the code index
     #[arg(long)]
     pub no_code_index: bool,
-    /// Skip the bash output filter
-    #[arg(long)]
-    pub no_bash_output_filter: bool,
     #[arg(long, value_name = "NAME", help = crate::template_select::TEMPLATE_HELP)]
     pub template: Option<String>,
     /// Project name for template substitution (default: the directory name)
@@ -50,7 +47,6 @@ impl InitArgs {
             (self.no_frontend, Capability::Frontend),
             (self.no_skills, Capability::Skills),
             (self.no_code_index, Capability::CodeIndex),
-            (self.no_bash_output_filter, Capability::BashOutputFilter),
         ];
         flags
             .into_iter()
@@ -447,7 +443,6 @@ mod tests {
             no_frontend: false,
             no_skills: false,
             no_code_index: false,
-            no_bash_output_filter: false,
             template: None,
             name: None,
         };

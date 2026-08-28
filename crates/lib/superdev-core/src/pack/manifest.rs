@@ -18,7 +18,7 @@ pub const SUPPORTED_FORMATS: &[u32] = &[1];
 /// The instruction files and the SOKF spec move with the binary that pins or
 /// validates them, so a pack supplying one would describe a version or format
 /// this binary does not implement.
-pub const REJECTED: &[&str] = &["agents/sokf.md", "agents/codegraph.md", "agents/rtk.md"];
+pub const REJECTED: &[&str] = &["agents/sokf.md", "agents/codegraph.md"];
 
 /// Refused wherever it appears: the project's own extension layer, which
 /// superdev never writes or tracks, so shipping one would take it under

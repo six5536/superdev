@@ -3,7 +3,7 @@ type: AdhocPlan
 id: adhoc-plan-009-drop-the-bash-output-filter
 title: Drop rtk and the bash-output-filter capability
 description: The bash-output-filter slot, its rtk provider, the five things it owns and the flag that disabled it all leave, and a manifest still naming the table gets a guided error.
-status: draft
+status: done
 ---
 
 # Plan: Drop rtk and the bash-output-filter capability
@@ -70,7 +70,8 @@ has the capability, which shapes the order below.
   `<name>` `` and no listing (`manage.rs:379-386`); `workflows` has been
   refused that way since it was dropped (`manage.rs:498`).
 - `cargo check --workspace --all-targets` fails today in `pipeline.rs`: P008 is
-  in flight in the working tree, uncommitted.
+  in flight in the working tree, uncommitted. Resolved before this plan ran:
+  P008 landed, and the baseline was clean at 559 tests.
 
 ## Goal
 
@@ -115,6 +116,12 @@ told so.
 | FR-2 | `Manifest::parse` refuses a manifest carrying `[bash-output-filter]`, naming the table to delete and the files sync then removes | O3 |
 | FR-3 | With the table deleted, sync removes the three mise files, the instruction file and the `PreToolUse` element, and prunes their lock entries | O2 |
 | FR-4 | The `.agents/superdev.md` aggregator carries no `@rtk.md` import | O2 |
+
+FR-4 holds for a managed repository and could not be checked here: this
+repository has no `.agents/superdev.md`. Its `AGENTS.md` reads
+`@.agents/core.md`, and `status --drift` has reported the aggregator missing
+since before this plan. The import was removed at its source, `pipeline.rs`,
+and `aggregator_imports_track_the_enabled_set` is what covers it.
 | FR-5 | `superdev init` offers three capability-disable flags, and `superdev update` names three capabilities | O1 |
 | FR-6 | The knowledge names three capabilities, and `S012` reads `status: deprecated` | O4 |
 
@@ -151,6 +158,15 @@ the component, so it must complete before W2.
    `mise.windows-x64.toml` and `.agents/rtk.md`, drops the `PreToolUse`
    element from `.claude/settings.json`, rewrites `.agents/superdev.md`
    without `@rtk.md`, and prunes the five lock entries.
+
+   Corrected during execution, on the author's instruction. A `sync` of this
+   repository would also overwrite the nineteen skills the schema migration
+   rewrote with the pre-grammar copies the pack still carries — I016, the same
+   reason P008's own re-sync step was never completed. The sweep was therefore
+   applied by hand to exactly what the orphan pass would have planned, after
+   checking all four files against their recorded hashes so NFR-1's release
+   case was known not to apply. `.agents/superdev.md` does not exist here, so
+   there was no aggregator to rewrite.
 3. Commit the sweep on its own. Hard to reverse: after W2 no binary can plan
    these files again, so a revert that reaches them has to reach this commit
    alone, and the commit is also the evidence FR-3 is checked against.
@@ -190,7 +206,8 @@ Depends on: W2.
    the init-journey assertions (`tests/manage.rs:182-201`), and the disable
    journey (`tests/manage.rs:533-565`), which has no capability left to
    disable.
-3. Correct the README — the flag list at `README.md:18`.
+3. Correct the README — the flag list at `README.md:18`, and the manifest
+   table's capability row at `README.md:132`, which this step first missed.
 
 ### W4: Remove what sits outside the blueprint
 
@@ -275,13 +292,13 @@ Depends on: W2, W3.
 
 | Check | Verifies |
 |-------|----------|
-| `rg 'rtk\|bash-output-filter\|BashOutputFilter' crates pack README.md .mise.toml` returns nothing | FR-1 |
+| `rg 'rtk\|bash-output-filter\|BashOutputFilter' crates pack README.md .mise.toml` returns only `manifest.rs`'s guided error and its test — FR-2 requires that message to name the table and the five files, so this row cannot be literally empty | FR-1 |
 | `cargo check --workspace --all-targets` is clean and `cargo test --workspace` passes | FR-1 |
 | `superdev init --help` lists `--no-frontend`, `--no-skills` and `--no-code-index`, and no fourth flag | FR-5 |
 | `superdev update bash-output-filter` fails with ``unknown capability `bash-output-filter` ``, as `workflows` does today | FR-5 |
 | `cargo test -p superdev-core manifest::` passes, including the new test: a config carrying `[bash-output-filter]` is refused with a message naming the table | FR-2 |
 | `git show <W1 commit> --stat` lists `.miserc.toml`, `mise.unix.toml`, `mise.windows-x64.toml` and `.agents/rtk.md` deleted, with `.claude/settings.json`, `.agents/superdev.md` and `.superdev/lock.toml` modified | FR-3, FR-4 |
-| `superdev status --drift` on this repository exits 0 | O2 |
+| `superdev status --drift` names no path this plan touched, and its count is unchanged at 65. It exits 1, not 0, on I016's pre-existing entries — a precondition this plan did not set and does not clear | O2 |
 | `cargo test -p superdev-core orphan::` passes, `each_shape_classifies_by_disk_state` included | NFR-1 |
 | `rg 'rtk\|bash-output-filter' knowledge/` returns hits only in `S011`, `S012`, `P003`, `specs/index.md`, `adhoc-plans/index.md` and this plan | FR-6 |
 | `superdev validate` reports PASS over `knowledge/` | FR-6 |

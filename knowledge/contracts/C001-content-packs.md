@@ -239,7 +239,6 @@ pub struct Item {
 pub const REJECTED: &[&str] = &[
     "agents/sokf.md",
     "agents/codegraph.md",
-    "agents/rtk.md",
 ];
 
 /// Refused wherever it appears: the project's own extension layer, which

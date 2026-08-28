@@ -91,7 +91,7 @@ they are not a promise before 1.0.
   [project templates](S007-project-templates-design.md), knowledge skeletons,
   and the general-rules scaffolds.
 - Not the capability instruction files (`.agents/aokf.md`,
-  `.agents/codegraph.md`, `.agents/rtk.md`) and not the AOKF spec: each
+  `.agents/codegraph.md`) and not the AOKF spec: each
   describes a version the binary pins or a format the compiled validator
   enforces, so it moves with the binary.
 - No command execution. A pack needing work superdev cannot do as a file

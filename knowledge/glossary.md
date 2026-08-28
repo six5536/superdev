@@ -9,9 +9,9 @@ status: stable
 - **Blueprint** — superdev's opinion of a managed repo, compiled into the
   binary: the component set plus the registry of default versions tested
   together. The binary's version is the blueprint version.
-- **Capability** — a functionality slot in a managed repo: `knowledge`,
-  `code-index`, `frontend`, `skills`, `bash-output-filter`. Capability
-  names are what users type; see
+- **Capability** — a functionality slot in a managed repo: `code-index`,
+  `frontend`, `skills`. The SOKF knowledge is not one: it is part of
+  superdev. Capability names are what users type; see
   [architectural-rules](architectural-rules.md).
 - **Cardinality** — how many providers a capability holds at once, declared
   in the blueprint: *single* (one provider, exclusively — alternatives

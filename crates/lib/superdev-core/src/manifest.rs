@@ -236,6 +236,15 @@ impl Manifest {
                         .into(),
                 });
             }
+            if name == "bash-output-filter" {
+                return Err(Error::Manifest {
+                    message: "the bash-output-filter capability was removed — delete the \
+                              [bash-output-filter] table; the next sync then removes \
+                              .miserc.toml, mise.unix.toml, mise.windows-x64.toml, \
+                              .agents/rtk.md and the rtk PreToolUse hook"
+                        .into(),
+                });
+            }
             let Some(capability) = Capability::parse(&name) else {
                 return Err(Error::Manifest {
                     message: format!("unknown capability `{name}`"),
@@ -457,6 +466,19 @@ mod tests {
             Some("9.9.9")
         );
         assert!(m.configs_mut(Capability::CodeIndex).is_empty());
+    }
+
+    #[test]
+    fn a_bash_output_filter_table_gets_the_guided_error() {
+        let err =
+            Manifest::parse("blueprint = \"0.1.0\"\n\n[bash-output-filter]\nprovider = \"rtk\"\n")
+                .unwrap_err()
+                .to_string();
+        assert!(
+            err.contains("the bash-output-filter capability was removed"),
+            "{err}"
+        );
+        assert!(err.contains(".agents/rtk.md"), "{err}");
     }
 
     #[test]

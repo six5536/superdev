@@ -69,7 +69,6 @@ A capability is a slot; the tool filling it is a swappable provider.
 | `code-index` | `codegraph`       | checksummed release bundle (mise `http`) + `mise exec http:codegraph -- codegraph init` |
 | `frontend`   | `frontend-design` | Claude Code plugin              |
 | `skills`     | `superdev-skills` | owned files in the repo         |
-| `bash-output-filter` | `rtk`     | checksummed release binaries in owned, platform-scoped mise config files, plus a PreToolUse rewrite hook |
 
 The registry holds one entry per (capability, provider) pair — its version, its
 checksum where it has one, and whether it is the default — and the manifest
@@ -86,12 +85,12 @@ carries beside the version, so superdev installs the registry version and
 refuses any other — see [api-contracts](api-contracts.md). codegraph's bundles
 vendor their own Node, so a managed repo needs no node of its own.
 
-`skills` refuses any other version for a different reason: the pack's three
+`skills` refuses any other version for a different reason: the pack's two
 skill files are embedded in the binary, which makes this binary the
 provenance. Nothing is installed. `sync` writes them to
 `.claude/skills/<name>/SKILL.md`; Claude Code reads them natively, so a
 teammate who clones the repo gets the pack without installing superdev. The
-knowledge capability carries a much larger set the same way: the 17
+SOKF component carries a much larger set the same way: the 17
 SOKF-carried skills — the workflow phases and their support skills — each
 materialised as its whole directory of owned files, and the document
 templates the skills fill in as owned files under `knowledge/templates/`

@@ -20,19 +20,16 @@ pub enum Capability {
     Skills,
     /// Pre-indexed code knowledge graph.
     CodeIndex,
-    /// Command-output filtering before it reaches agent context.
-    BashOutputFilter,
 }
 
 impl Capability {
     /// Every capability, in canonical apply order: plugins first, then the
     /// code index. The SOKF knowledge is not here — it is part of superdev,
     /// not a slot a provider fills.
-    pub const ALL: [Capability; 4] = [
+    pub const ALL: [Capability; 3] = [
         Capability::Frontend,
         Capability::Skills,
         Capability::CodeIndex,
-        Capability::BashOutputFilter,
     ];
 
     /// Kebab-case name used in the manifest, the lock, and CLI flags.
@@ -41,7 +38,6 @@ impl Capability {
             Capability::Frontend => "frontend",
             Capability::Skills => "skills",
             Capability::CodeIndex => "code-index",
-            Capability::BashOutputFilter => "bash-output-filter",
         }
     }
 

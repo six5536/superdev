@@ -11,22 +11,27 @@ resource: /crates/app/superdev/src/main.rs
 
 ```
 superdev                     print help, exit 0
-superdev init                set this repo up; --no-knowledge, --no-code-index,
-                             --no-bash-output-filter, --no-frontend,
-                             --no-skills each disable a capability
+superdev init                set this repo up; --no-frontend, --no-skills
+                             and --no-code-index each disable a capability.
+                             The SOKF knowledge is always written: it is
+                             not a capability.
 superdev status              report drift; exit 1 when there is work to do
 superdev sync                re-apply the blueprint; --dry-run prints the plan only
 superdev update [TARGET]     bring pins current, then sync;
                              TARGET is `<capability>[@<version>]`;
                              --provider <ID> switches TARGET's provider
-superdev validate [PATH...] check the SOKF knowledge, every document against
+superdev validate [PATH...]  check the SOKF knowledge, every document against
                              the schema its type names, and the files the
                              grammar governs; exit 1 on errors. A PATH
                              replaces both defaults. --json, --doc renders
                              the grammar as prose, --knowledge <DIR>,
                              --repo-root <DIR> for `/`-rooted paths
+superdev template list       list the shipped project templates
+superdev template render     write a template's token-substituted tree into
+  --name <NAME> --dir <DIR>  an empty directory (created if absent)
+  <TEMPLATE>
 superdev sokf index [PATH]   rebuild the search index from scratch
-superdev hook validate  the Claude Code PostToolUse hook: payload on
+superdev hook validate       the Claude Code PostToolUse hook: payload on
                              stdin, validate when the edit touched the canonical knowledge
                              or a tree the grammar governs
 superdev mcp sokf            serve the canonical knowledge to agents over MCP on stdio
@@ -81,13 +86,13 @@ Every verb acts on the current directory.
   pack is for and prints nothing. All of these are reports and none affects
   the exit code — layering is what the manifest asked for, not drift.
 - **`sync`** refuses to run while a registry-locked capability
-  (`code-index`, `skills`, `bash-output-filter`) is pinned anywhere other
+  (`code-index`, `skills`) is pinned anywhere other
   than the registry default, and says to run
-  `superdev update <capability>`. `code-index` and `bash-output-filter`
-  are downloaded by URL and verified against a
+  `superdev update <capability>`. `code-index`
+  is downloaded by URL and verified against a
   checksum baked into this binary beside the version, so no other version has
-  provenance — or a URL; the skill pack's and the knowledge capability's
-  content is embedded in the binary, so
+  provenance — or a URL; the skill pack's content and the SOKF knowledge's are
+  embedded in the binary, so
   the binary is its provenance. On a fresh clone it runs `mise trust` then
   `mise install` before any provider command, because the committed pins need no
   edit yet name tools this machine has never installed — and mise will not
