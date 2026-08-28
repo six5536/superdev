@@ -41,7 +41,7 @@ Spec: <link to the spec at knowledge/specs/Snnn-<feature-slug>.md>
 
 Notes on usage (not part of the document):
 
-- File as `knowledge/plans/Pnnn-<slug>.md`, numbered after the highest
+- File as `knowledge/plans/plan-<nnn>-<kind>-<slug>.md`, numbered after the highest
   existing plan; id `feature-plan-<slug>`.
 - List it in `knowledge/plans/index.md`.
 - Every test-plan case in the spec appears in exactly one slice's

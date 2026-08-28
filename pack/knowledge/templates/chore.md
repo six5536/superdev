@@ -31,3 +31,14 @@ symptom — nothing is broken, or this would be a bug report.>
 
 - <A command, with the result that counts as a pass.>
 - <Something checkable by someone who did not do the work.>
+
+---
+
+Notes on usage (not part of the document):
+
+- File as `knowledge/issues/issue-<nnn>-chore-<slug>.md`, numbered after the
+  highest existing issue. Declare the feature, when there is one, with
+  an `implements` or `references` link to its spec.
+- The `issue-tracker` concept holds the triage labels and lifecycle:
+  the role tag rides in `tags`, and a resolved issue stays, retagged
+  `done` or `wontfix`.

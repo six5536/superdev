@@ -262,7 +262,7 @@ Depends on: W3.
 ## Definition of done
 
 - Every Acceptance row passes on a clean checkout.
-- `knowledge/adhoc-plans/index.md` lists this plan, and its status reads done.
+- `knowledge/plans/index.md` lists this plan, and its status reads done.
 - `superdev sync` in this repository writes the Stop-hook claim, and
   `superdev status` exits 0 afterwards.
 - The process documents — `pack/agents/process.md` and

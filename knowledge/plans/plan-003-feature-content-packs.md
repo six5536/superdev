@@ -250,7 +250,7 @@ unplanned, so nothing scheduled can stall behind one.
 ### Slice 15: Nothing superdev spawns can be talked into running a command
 
 - [x] Done — ticked by integrate at merge.
-- Gap: [I007](../issues/I007-a-pack-source-reaches-git-with-no-scheme-check.md),
+- Gap: [I007](../issues/issue-007-bug-a-pack-source-reaches-git-with-no-scheme-check.md),
   the half of it that needs no decision — and the half that closes the hole.
 - Change: add `-c protocol.ext.allow=never` (and the same for the other
   command-running helpers) to the `verbatim()` overrides every git invocation
@@ -273,7 +273,7 @@ unplanned, so nothing scheduled can stall behind one.
 ### Slice 16: A pack's symlinks are not followed
 
 - [x] Done — ticked by integrate at merge.
-- Gap: [I008](../issues/I008-a-symlinked-file-in-a-pack-is-followed.md).
+- Gap: [I008](../issues/issue-008-bug-a-symlinked-file-in-a-pack-is-followed.md).
 - Change: skip every symlink in a pack tree, not only a linked directory —
   `read_dir` already computes `linked` and acts on it for one case out of two.
 - Done-check: a pack whose item file is a symlink to a file outside the pack
@@ -286,7 +286,7 @@ unplanned, so nothing scheduled can stall behind one.
 ### Slice 17: The lock describes what is on disk, not only what was written
 
 - [x] Done — ticked by integrate at merge.
-- Gap: [I005](../issues/I005-a-backport-leaves-the-lock-stale.md), filed
+- Gap: [I005](../issues/issue-005-bug-a-backport-leaves-the-lock-stale.md), filed
   during delivery rather than by accept, scheduled because it is contained and
   fires on every backport, which is how this repo's owner edits skills.
 - Change: record an owned file's hash whenever the run resolves it as
@@ -303,7 +303,7 @@ unplanned, so nothing scheduled can stall behind one.
 ### Slice 18: Document packs, and what `update` actually does
 
 - [x] Done — ticked by integrate at merge.
-- Gap: [I006](../issues/I006-content-packs-are-undocumented-for-users.md).
+- Gap: [I006](../issues/issue-006-feature-request-content-packs-are-undocumented-for-users.md).
 - Change: correct `update`'s description at
   `crates/app/superdev/src/main.rs` — clap renders it into `--help`, the man
   page and the completions — and the matching rustdoc in `manage.rs`, so both
@@ -327,22 +327,22 @@ Cutting any of these as a slice would only have bounced it to
 `/interface-design`, so they went there on their own. All five are now
 decided — [ADR-012](../decisions/D012-pack-source-schemes-are-allowlisted.md)
 to [ADR-016](../decisions/D016-a-path-pack-records-no-digest.md) — and
-scheduled as [P005](P005-content-pack-hardening.md), except
-[I003](../issues/I003-a-local-pack-cannot-remove-what-it-dropped.md), closed
+scheduled as [P005](plan-005-feature-content-pack-hardening.md), except
+[I003](../issues/issue-003-bug-a-local-pack-cannot-remove-what-it-dropped.md), closed
 `wontfix`: a path pack keeps layering, and the rebuild a pack developer needs
 anyway is the answer.
 
 - **The scheme allowlist**, the other half of
-  [I007](../issues/I007-a-pack-source-reaches-git-with-no-scheme-check.md):
+  [I007](../issues/issue-007-bug-a-pack-source-reaches-git-with-no-scheme-check.md):
   refusing a source whose scheme superdev does not support, rather than
   handing it to git. Defence in depth once slice 15 lands, and a clearer
   error. Which schemes are in the set changes what a manifest may say, which
   [C001](../contracts/C001-content-packs.md) documents as `parse`'s rejections.
-- [I001](../issues/I001-update-can-pin-an-unreadable-pack-format.md) — a
+- [I001](../issues/issue-001-bug-update-can-pin-an-unreadable-pack-format.md) — a
   format range the tag does not carry.
-- [I002](../issues/I002-no-time-bound-on-the-update-query.md) — a deadline on
+- [I002](../issues/issue-002-bug-no-time-bound-on-the-update-query.md) — a deadline on
   the process boundary every component shares.
-- [I003](../issues/I003-a-local-pack-cannot-remove-what-it-dropped.md) — a
+- [I003](../issues/issue-003-bug-a-local-pack-cannot-remove-what-it-dropped.md) — a
   path source that may be the base, which ADR-004 and ADR-011 forbid.
-- [I004](../issues/I004-a-path-packs-digest-churns-and-is-never-checked.md) —
+- [I004](../issues/issue-004-bug-a-path-packs-digest-churns-and-is-never-checked.md) —
   a lock schema whose digest is optional.

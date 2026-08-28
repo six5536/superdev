@@ -35,7 +35,7 @@ do not work together, and regressions elsewhere in the app.
       handling, or data exposure (`template-security-review` for the
       report).
 - [ ] File each gap found (`template-bug-report`): an Issue concept at
-      `knowledge/issues/Innn-<slug>.md`, linked to the spec.
+      `knowledge/issues/issue-<nnn>-bug-<slug>.md`, linked to the spec.
 - [ ] GATE: Feature undocumented? That is a gap.
 - [ ] GATE: Any gap found? It becomes a new slice.
 - [ ] Clean pass? Tag the spec concept `done`.

@@ -299,12 +299,12 @@ Depends on: W2, W5.
   `validator_parity.rs` does about what editing one means.
 - `.claude/settings.json` still carries exactly one PostToolUse entry for
   superdev, under its original marker, and the lock entry is unchanged.
-- `knowledge/adhoc-plans/index.md` lists this plan and its status reads done.
+- `knowledge/plans/index.md` lists this plan and its status reads done.
 - The changelog has an Unreleased entry for the promoted command.
-- The pack question is filed as [issue-016](../issues/I016-sync-would-revert-the-schema-migration.md),
+- The pack question is filed as [issue-016](../issues/issue-016-bug-sync-would-revert-the-schema-migration.md),
   since the live tree and `/pack/` diverge until it is answered.
 - The generated-format-docs idea is filed as
-  [issue-017](../issues/I017-the-format-has-no-agent-facing-document.md), since
+  [issue-017](../issues/issue-017-feature-request-the-format-has-no-agent-facing-document.md), since
   the doc renderer now exists in the binary with nothing consuming it.
 
 ## Risks
@@ -386,7 +386,7 @@ be packaged, so it is at
 byte for byte equal to `.agents/format/grammar.yaml`. Writing the grammar into
 the repositories superdev manages — the way `.agents/aokf/SPEC.md` is written,
 as a binary-owned file — is a pack question, and is
-[issue-017](../issues/I017-the-format-has-no-agent-facing-document.md)'s to
+[issue-017](../issues/issue-017-feature-request-the-format-has-no-agent-facing-document.md)'s to
 answer alongside the format document.
 
 Both follow-ons are filed as issues rather than as the plans the Definition of

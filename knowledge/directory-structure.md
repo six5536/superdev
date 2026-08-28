@@ -23,8 +23,8 @@ crates/app/superdev/      # the binary: CLI parsing, wiring, output
 packages/                 # npm launcher + per-platform binary packages
 knowledge/                # this repository's SOKF knowledge
 knowledge/specs/          # design specs (permanent decision records)
-knowledge/feature-plans/  # slice lists delivering a spec (tagged done on landing)
-knowledge/adhoc-plans/    # one-off work outside the feature workflow
+knowledge/plans/          # plan-<nnn>-feature-<slug> slice lists and
+                          # plan-<nnn>-adhoc-<slug> one-off work
 knowledge/decisions/      # ADRs; permanent
 knowledge/contracts/      # interface contracts
 knowledge/issues/         # gaps and tickets, one concept each

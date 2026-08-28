@@ -28,6 +28,20 @@ named as strained were rewritten into the shape they actually are — this one
 among them. A feature request now has a home in the tracker rather than an
 untracked bullet in the backlog.
 
+The filename carries the kind as well, `issue-<nnn>-<kind>-<slug>.md`, which
+is the rename this issue proposed below. It buys readability rather than
+dispatch: P008 resolved dispatch through the frontmatter `type` (D-12), so
+the kind in the path is for whoever reads the directory listing. The
+mismatch this issue observed — a `target-files` glob of
+`knowledge/issues/issue-*.md` against files named `Innn-<slug>.md` — is gone
+with it: the glob was right and the files were wrong, and the glob itself
+came off the schema when dispatch moved to `type`.
+
+Plans took the same shape at the same time: `knowledge/feature-plans/` and
+`knowledge/adhoc-plans/` merged into `knowledge/plans/` as
+`plan-<nnn>-<kind>-<slug>.md`, with `<kind>` `feature` or `adhoc` and one
+number series across both.
+
 The dispatch this rests on is the wider fix: a document's `type` names the
 one schema that governs it, so adding a shape is adding a type, not
 widening an existing contract until it checks nothing.
@@ -144,9 +158,10 @@ regression risk it does not have.
   the list of kinds and the rule for choosing between them, and stops naming
   bug-report as though it were the only one.
 - Dispatch by filename, because that is the only selector a schema has:
-  `knowledge/issues/Innn-<kind>-<slug>.md`. This costs a one-off rename of
-  the existing fourteen files and their index entries; the alternative,
-  carrying the kind in `tags`, cannot be expressed in `target-files` at all.
+  `knowledge/issues/issue-<nnn>-<kind>-<slug>.md`. This costs a one-off
+  rename of the existing fourteen files and their index entries; the
+  alternative, carrying the kind in `tags`, cannot be expressed in
+  `target-files` at all.
 - Fix `schema-bug-report`'s `target-files` glob to match the files it
   governs.
 - Teach the skills to choose: `/accept` currently hardcodes

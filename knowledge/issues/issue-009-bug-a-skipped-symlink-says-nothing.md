@@ -35,7 +35,7 @@ is read and has no index of its own.
 Against [S014](../specs/S014-content-packs-design.md).
 
 A symlink inside a pack tree is skipped, which is what stops a pack reading a
-file it does not contain ([I008](I008-a-symlinked-file-in-a-pack-is-followed.md)).
+file it does not contain ([I008](issue-008-bug-a-symlinked-file-in-a-pack-is-followed.md)).
 It is skipped in silence, and that is the problem: a pack author who dedupes
 an item with a link — `knowledge/skills/foo/SKILL.md` pointing at a shared
 file one directory up — gets a pack that resolves clean and is missing `foo`.

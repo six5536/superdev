@@ -31,7 +31,7 @@ them — a captive portal, a black-holing proxy — that call sits silent for th
 OS connect timeout, around two minutes on Linux, and then degrades correctly.
 ADR-009 asks the query to fall back to the binary's own pin rather than
 erroring; two silent minutes is neither erroring nor falling back
-([I002](../issues/I002-no-time-bound-on-the-update-query.md)).
+([I002](../issues/issue-002-bug-no-time-bound-on-the-update-query.md)).
 
 It is bounded — `Command::output()` gives the child a null stdin, so git's
 terminal prompt gets EOF and fails fast, and a dropped connect ends when the

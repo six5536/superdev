@@ -12,7 +12,7 @@ current.
 ## Input
 
 - The verified slice's commit, and its entry in the feature's plan at
-  `knowledge/plans/Pnnn-<slug>.md`.
+  `knowledge/plans/plan-<nnn>-<kind>-<slug>.md`.
 - $ARGUMENTS — the slice, when not handed off.
 
 ## Workflow

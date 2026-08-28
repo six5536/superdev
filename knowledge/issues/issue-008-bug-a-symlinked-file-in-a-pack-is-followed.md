@@ -24,7 +24,7 @@ is; a linked manifest would otherwise have picked the format gate with bytes
 no digest covers.
 
 What the skip leaves behind is
-[I009](I009-a-skipped-symlink-says-nothing.md): it is silent, so a pack that
+[I009](issue-009-bug-a-skipped-symlink-says-nothing.md): it is silent, so a pack that
 dedupes an item with a link loses that item without saying so.
 
 ## Summary

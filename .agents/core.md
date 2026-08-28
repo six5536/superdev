@@ -80,6 +80,6 @@ GOOD: The refactor removes four public methods (`create`, `read`, `update`, `del
 </core_principles>
 
 <skill_adaptations>
-If a `PROJECT.md` exists in an invoked skill's directory, read it and apply it; it has precedence for conflicts.
+If a `PROJECT.md` exists in an invoked skill's directory, apply it; it has precedence for conflicts.
 </skill_adaptations>
 </superdev>

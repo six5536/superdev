@@ -11,7 +11,7 @@ exactly one slice and nothing beyond it.
 ## Input
 
 - The slice: an entry in the feature's plan at
-  `knowledge/plans/Pnnn-<slug>.md`.
+  `knowledge/plans/plan-<nnn>-<kind>-<slug>.md`.
 - The spec at `knowledge/specs/Snnn-<feature-slug>.md`, the interface
   contract, and the canonical knowledge.
 - $ARGUMENTS — the slice, when not handed off.

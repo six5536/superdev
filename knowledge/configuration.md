@@ -155,7 +155,7 @@ run happened to write — a converged run writes nothing, and without this a
 file edited into agreement would keep the hash of what it replaced, and be
 reported as a user edit the next time anything wrote it. Only entries the lock
 already holds are refreshed: a file superdev left to the repo at adoption
-stays the repo's ([I005](issues/I005-a-backport-leaves-the-lock-stale.md)).
+stays the repo's ([I005](issues/issue-005-bug-a-backport-leaves-the-lock-stale.md)).
 
 `blueprint` is the version last applied, not the version that wrote the file.
 A successful `sync` stamps this binary's version, rewriting `config.toml` only

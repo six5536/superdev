@@ -58,11 +58,12 @@ The process reads and writes the canonical knowledge (`knowledge/`):
 
 - Specs: `knowledge/specs/Snnn-<feature-slug>.md` — behaviour,
   acceptance criteria, and test plan; tagged `done` at accept.
-- Plans: `knowledge/plans/Pnnn-<slug>.md` — feature plans (the slice
+- Plans: `knowledge/plans/plan-<nnn>-<kind>-<slug>.md` — feature plans (the slice
   list; tagged `done` at the last integrate) and ad-hoc plans (one-off
   work outside the feature workflow).
 - Decisions: `knowledge/decisions/Dnnn-<slug>.md` — ADRs; permanent.
-- Issues: `knowledge/issues/Innn-<slug>.md` — gaps and tickets.
+- Issues: `knowledge/issues/issue-<nnn>-<kind>-<slug>.md` — gaps and
+  tickets; `<kind>` is `bug`, `feature-request` or `chore`.
 - Templates: `knowledge/templates/` — the document skeletons the
   phases use.
 

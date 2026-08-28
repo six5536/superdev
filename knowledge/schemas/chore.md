@@ -8,7 +8,8 @@ description: Scoped mechanical work filed in knowledge/issues/ — the surfaces 
 # Chore Schema
 
 Structural rules for scoped mechanical work filed at
-`knowledge/issues/I{nnn}-{slug}.md`: a rename, a migration, a sweep, a
+`knowledge/issues/issue-{nnn}-chore-{slug}.md`: a rename, a migration, a
+sweep, a
 cleanup. It shares the tracker with `schema-bug-report` and
 `schema-feature-request` — the same id shape, the same triage tags, the same
 lifecycle — and differs in its body: work whose shape is already known

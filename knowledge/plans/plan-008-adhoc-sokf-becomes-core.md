@@ -418,7 +418,7 @@ Depends on: W1, W2, W3, W4, W5, W7.
 
 | Check | Verifies |
 |-------|----------|
-| `git grep -Ii 'aokf' -- . ':!CHANGELOG.md' ':!knowledge/adhoc-plans' ':!knowledge/decisions' ':!knowledge/specs' ':!knowledge/issues' ':!knowledge/feature-plans'` returns only deliberate references: the tests asserting the old verbs are gone, the tripwire refusing a pre-SOKF manifest, the snapshot header's note on the Python reference, and two links to S002, whose id is historical | FR-8 |
+| `git grep -Ii 'aokf' -- . ':!CHANGELOG.md' ':!knowledge/plans' ':!knowledge/decisions' ':!knowledge/specs' ':!knowledge/issues'` returns only deliberate references: the tests asserting the old verbs are gone, the tripwire refusing a pre-SOKF manifest, the snapshot header's note on the Python reference, and two links to S002, whose id is historical | FR-8 |
 | `git grep -n 'Capability::Knowledge\|no-knowledge\|no_knowledge'` returns nothing, and `Capability::ALL` has four entries | FR-1, FR-2 |
 | `superdev init` in an empty scratch repo writes `knowledge/`, the hook and the `.mcp.json` entry with no flag given, and its `config.toml` holds a top-level `[knowledge]` table and no knowledge capability | FR-2, FR-3 |
 | `superdev sync` against a config carrying `[knowledge] provider = "aokf"` fails naming the table and the edit | FR-3 |
@@ -447,7 +447,7 @@ Depends on: W1, W2, W3, W4, W5, W7.
 ## Definition of done
 
 - Every Acceptance row passes on a clean checkout of `feature/content-packs`.
-- `knowledge/adhoc-plans/index.md` lists this plan, and its status reads done.
+- `knowledge/plans/index.md` lists this plan, and its status reads done.
 - The Appendix records, per schema, which side the reconciliation found wrong.
 - The changelog carries one entry per break — the capability, the
   `superdev-core` module rename, the verbs, the MCP server and tools, the

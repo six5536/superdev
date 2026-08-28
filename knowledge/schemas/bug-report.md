@@ -8,7 +8,7 @@ description: Bug reports filed as Issue concepts in knowledge/issues/ — sympto
 # Bug Report Schema
 
 Structural rules for bug reports filed at
-`knowledge/issues/I{nnn}-{slug}.md`, with the feature declared — when there
+`knowledge/issues/issue-{nnn}-bug-{slug}.md`, with the feature declared — when there
 is one — by an `implements` or `references` link to its spec. It shares the
 tracker with `schema-feature-request` and `schema-chore`, and is the shape
 for a defect alone: something that behaves against its own specification.

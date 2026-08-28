@@ -126,7 +126,7 @@ server use it, `validate` never opens it.
 - **`validate`** runs both halves and reports once, with findings grouped by
   file, so a file both have something to say about is reported once and the
   two cannot reach different verdicts
-  ([P006 D-17](adhoc-plans/P006-rust-format-validator.md)). The SOKF half
+  ([P006 D-17](plans/plan-006-adhoc-rust-format-validator.md)). The SOKF half
   checks the knowledge against the specification; the schema half checks each
   document against the schema its frontmatter `type` names — sections present,
   in order, none prohibited, declared table columns, the line limit — and the

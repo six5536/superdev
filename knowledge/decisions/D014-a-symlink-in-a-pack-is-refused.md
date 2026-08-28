@@ -25,7 +25,7 @@ resolve whole or not at all. A symlink inside that
 tree is a file whose content lives somewhere the pack does not cover.
 Following one let a pack name a link to any readable file on the machine and
 have superdev write that file's contents into the working tree
-([I008](../issues/I008-a-symlinked-file-in-a-pack-is-followed.md)), so every
+([I008](../issues/issue-008-bug-a-symlinked-file-in-a-pack-is-followed.md)), so every
 link is now skipped.
 
 Skipped, and nothing said. A pack author who dedupes an item with a link gets
@@ -39,7 +39,7 @@ $ superdev status --drift # exit 0
 That contradicts what `read_pack` says two functions above it: a pack
 carrying a refused file contributes nothing rather than contributing most of
 itself. A skipped link is precisely a pack contributing most of itself
-([I009](../issues/I009-a-skipped-symlink-says-nothing.md)).
+([I009](../issues/issue-009-bug-a-skipped-symlink-says-nothing.md)).
 
 There is a second half, and it is why this is worth deciding rather than
 patching. A symlink does not survive a checkout the same way everywhere. On
@@ -92,7 +92,7 @@ is no tree that digests one way on Linux and another on Windows.
 | Refuse, git deciding for a fetched pack | One rule for the whole tree; matches what `read_pack` promises; the author learns at the pack, naming the path; fixes the cross-platform digest split, which no filesystem check can | One extra git call per fetch; narrows what a pack may contain |
 | Refuse, filesystem check only | Uses the check already written; no extra call | A pack with a link still digests differently on Windows, so a lock written on Linux fails there with an error naming neither cause nor cure |
 | Report each skipped link and carry on | A pack with a link still resolves; the author is told | The pack ships incomplete, which is the thing `read_pack` says it never does, and the report arrives at the user of the pack rather than its author |
-| Follow a link that stays inside the pack | Dedupe works as the author intended | Containment is exactly the check that is easy to get subtly wrong, and getting it wrong is [I008](../issues/I008-a-symlinked-file-in-a-pack-is-followed.md) again |
+| Follow a link that stays inside the pack | Dedupe works as the author intended | Containment is exactly the check that is easy to get subtly wrong, and getting it wrong is [I008](../issues/issue-008-bug-a-symlinked-file-in-a-pack-is-followed.md) again |
 | Materialise an internal link as a copy of its target | Dedupe works, no escape possible | Changes what the digest covers depending on how the tree was written, so two spellings of one pack digest differently |
 | Leave it skipped and silent | No change | An item a pack meant to ship is simply absent, with `sync` silent and `status --drift` green |
 

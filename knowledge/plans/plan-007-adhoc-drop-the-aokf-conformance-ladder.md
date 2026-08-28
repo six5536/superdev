@@ -174,13 +174,13 @@ Depends on: W3.
    the validator passing rather than on a level.
 3. Fix the documented surface — `knowledge/api-contracts.md` drops `--level`
    from the knowledge verbs, and
-   `knowledge/adhoc-plans/P006-rust-format-validator.md` records D-19 as moot.
+   `knowledge/plans/plan-006-adhoc-rust-format-validator.md` records D-19 as moot.
 4. Fix the records that describe the old behaviour — the two open issues
-   `knowledge/issues/I010-index-entries-are-never-checked-against-their-concept.md`
-   and `knowledge/issues/I011-index-shape-is-described-but-not-enforced.md`
+   `knowledge/issues/issue-010-feature-request-index-entries-are-never-checked-against-their-concept.md`
+   and `knowledge/issues/issue-011-feature-request-index-shape-is-described-but-not-enforced.md`
    assert what validate does today, and
    `knowledge/specs/S008-knowledge-owned-skills-design.md` and
-   `knowledge/feature-plans/P002-agent-instructions-layer.md` each name a
+   `knowledge/plans/plan-002-feature-agent-instructions-layer.md` each name a
    level in a verification step. Dropping the phrase leaves what happened
    intact; keeping it leaves an instruction nobody can follow.
 
@@ -198,12 +198,12 @@ Depends on: W3.
 | `.agents/aokf.md` | modified — drops "must PASS at level 2" | W4 |
 | `.claude/skills/maintain/SKILL.md` | modified — the loop's `until` | W4 |
 | `knowledge/api-contracts.md` | modified — `--level` leaves the documented surface | W4 |
-| `knowledge/adhoc-plans/P006-rust-format-validator.md` | modified — D-19 recorded moot | W4 |
+| `knowledge/plans/plan-006-adhoc-rust-format-validator.md` | modified — D-19 recorded moot | W4 |
 | `crates/lib/superdev-core/tests/fixtures/aokf/` | modified — 11 goldens projected: three keys dropped, one message reworded | W2 |
-| `knowledge/issues/I010-index-entries-are-never-checked-against-their-concept.md` | modified — drops the level from what it observes | W4 |
-| `knowledge/issues/I011-index-shape-is-described-but-not-enforced.md` | modified — drops the level from what it observes | W4 |
+| `knowledge/issues/issue-010-feature-request-index-entries-are-never-checked-against-their-concept.md` | modified — drops the level from what it observes | W4 |
+| `knowledge/issues/issue-011-feature-request-index-shape-is-described-but-not-enforced.md` | modified — drops the level from what it observes | W4 |
 | `knowledge/specs/S008-knowledge-owned-skills-design.md` | modified — a verification step names a level | W4 |
-| `knowledge/feature-plans/P002-agent-instructions-layer.md` | modified — a verification step names a level | W4 |
+| `knowledge/plans/plan-002-feature-agent-instructions-layer.md` | modified — a verification step names a level | W4 |
 
 ## Acceptance
 
@@ -228,7 +228,7 @@ Depends on: W3.
 - The goldens' diff is reviewable as a projection: only the three level keys
   and the one reworded message change, and `validator_parity.rs` records the
   transform beside the two normalisations already documented there.
-- `knowledge/adhoc-plans/index.md` lists this plan and its status reads done.
+- `knowledge/plans/index.md` lists this plan and its status reads done.
 - The changelog has an Unreleased entry naming the removed flag, since it is a
   breaking change to a documented surface.
 - ADR-017's follow-up list is empty or each remaining item has an issue.

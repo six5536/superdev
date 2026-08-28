@@ -285,8 +285,8 @@ Depends on: W2, W3.
 | `knowledge/specs/S014-content-packs-design.md` | modified — the instruction-file list | W5 |
 | `knowledge/specs/S012-bash-output-filter-design.md` | modified — `status: deprecated` | W5 |
 | `CHANGELOG.md` | modified — a `Removed` entry under `[Unreleased]` | W5 |
-| `knowledge/adhoc-plans/P009-drop-the-bash-output-filter.md` | new — this plan | W5 |
-| `knowledge/adhoc-plans/index.md` | modified — this plan listed | W5 |
+| `knowledge/plans/plan-009-adhoc-drop-the-bash-output-filter.md` | new — this plan | W5 |
+| `knowledge/plans/index.md` | modified — this plan listed | W5 |
 
 ## Acceptance
 
@@ -300,7 +300,7 @@ Depends on: W2, W3.
 | `git show <W1 commit> --stat` lists `.miserc.toml`, `mise.unix.toml`, `mise.windows-x64.toml` and `.agents/rtk.md` deleted, with `.claude/settings.json`, `.agents/superdev.md` and `.superdev/lock.toml` modified | FR-3, FR-4 |
 | `superdev status --drift` names no path this plan touched, and its count is unchanged at 65. It exits 1, not 0, on I016's pre-existing entries — a precondition this plan did not set and does not clear | O2 |
 | `cargo test -p superdev-core orphan::` passes, `each_shape_classifies_by_disk_state` included | NFR-1 |
-| `rg 'rtk\|bash-output-filter' knowledge/` returns hits only in `S011`, `S012`, `P003`, `specs/index.md`, `adhoc-plans/index.md` and this plan | FR-6 |
+| `rg 'rtk\|bash-output-filter' knowledge/` returns hits only in `S011`, `S012`, `plan-003-feature-content-packs`, `specs/index.md`, `plans/index.md` and this plan | FR-6 |
 | `superdev validate` reports PASS over `knowledge/` | FR-6 |
 
 ## Definition of done
@@ -311,7 +311,7 @@ Depends on: W2, W3.
 - Line coverage stays ≥ 90% per crate.
 - `CHANGELOG.md` carries the removal under `[Unreleased]`, naming the manifest
   edit a user has to make.
-- `knowledge/adhoc-plans/index.md` lists this plan, and its status reads
+- `knowledge/plans/index.md` lists this plan, and its status reads
   `done`.
 - P008 has landed, per D-8.
 

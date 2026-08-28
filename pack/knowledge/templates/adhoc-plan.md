@@ -67,7 +67,7 @@ Non-goals:
 
 Notes on usage (not part of the document):
 
-- File as `knowledge/plans/Pnnn-<slug>.md`, numbered after the highest
+- File as `knowledge/plans/plan-<nnn>-<kind>-<slug>.md`, numbered after the highest
   existing plan; id `adhoc-plan-<slug>`.
 - List it in `knowledge/plans/index.md`.
 - For a feature going through the workflow, use

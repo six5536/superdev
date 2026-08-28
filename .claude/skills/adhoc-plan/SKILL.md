@@ -22,7 +22,7 @@ You plan one piece of work outside the feature workflow — a refactor, a migrat
 <step name="DRAFT THE PLAN" task="Draft the plan per `schema-adhoc-plan`" />
 <step name="ORDER THE STEPS" task="Order the steps so the codebase stays working after each one where possible" />
 <step name="INTERVIEW THE USER" task="`/grill-me`: resolve the open questions and the risks that need their judgement" />
-<step name="FILE THE PLAN" task="File the plan as a draft concept in `knowledge/adhoc-plans/`, listed in that directory's index" />
+<step name="FILE THE PLAN" task="File the plan as a draft concept in `knowledge/plans/`, listed in that directory's index" />
 <step name="DOUBLE-CHECK" task="`/double-check` the plan; fix what it finds" />
 <gate check="`superdev validate` passes: the SOKF knowledge, and every document against its schema" on-fail="fix every error" />
 </process_actions>

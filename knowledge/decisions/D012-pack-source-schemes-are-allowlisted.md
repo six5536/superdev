@@ -44,7 +44,7 @@ templates. `http://` is the same. A manifest is a committed file that arrives
 with a repository, so this is reachable by cloning a branch and running
 `sync`.
 
-[I007](../issues/I007-a-pack-source-reaches-git-with-no-scheme-check.md)'s
+[I007](../issues/issue-007-bug-a-pack-source-reaches-git-with-no-scheme-check.md)'s
 command-execution half is closed: every git call carries
 `-c protocol.ext.allow=never`, so an `ext::` URL — which names a command git
 runs as the connection — runs nothing whatever the machine is configured to

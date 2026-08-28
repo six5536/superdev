@@ -8,8 +8,7 @@
 # Design
 
 * [Specs](specs/index.md) - design specs: permanent decision records, one per significant change.
-* [Feature Plans](feature-plans/index.md) - the slice lists delivering specs, tagged done when the last slice lands.
-* [Ad-hoc Plans](adhoc-plans/index.md) - plans for one-off work outside the feature workflow, tagged done when they land.
+* [Plans](plans/index.md) - the slice lists delivering specs and the plans for one-off work outside the feature workflow, tagged done when they land.
 * [Decisions](decisions/index.md) - architecture decision records: the interfaces that were expensive to change, with their alternatives.
 * [Contracts](contracts/index.md) - interface contracts build codes against, discarded once the code is canonical.
 * [Issues](issues/index.md) - open tickets, grouped by feature.

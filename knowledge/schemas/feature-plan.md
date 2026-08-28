@@ -2,17 +2,18 @@
 type: Schema
 id: schema-feature-plan
 title: Feature Plan Schema
-description: The feature's slice list — per slice a done-check, its test-plan cases and a done marker — filed in knowledge/feature-plans/.
+description: The feature's slice list — per slice a done-check, its test-plan cases and a done marker — filed in knowledge/plans/.
 ---
 
 # Feature Plan Schema
 
-Structural rules for feature plans filed in `knowledge/feature-plans/` and
-listed in its `index.md`. A feature plan and an ad-hoc plan are different
-concepts, not two shapes of one: different type, different directory.
-`schema-adhoc-plan` governs one-off work outside the feature workflow. The
-directory is what selects this schema, so the glob does not repeat the kind;
-the id still asserts it per document.
+Structural rules for feature plans filed at
+`knowledge/plans/plan-{nnn}-feature-{slug}.md` and listed in that
+directory's `index.md`. A feature plan and an ad-hoc plan are different
+concepts, not two shapes of one: `schema-adhoc-plan` governs one-off work
+outside the feature workflow, and the two share the directory and the number
+series. The frontmatter `type` is what selects this schema; the `feature` in
+the path is for whoever reads the listing.
 
 ````yaml
 description: >

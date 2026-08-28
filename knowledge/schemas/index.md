@@ -8,8 +8,8 @@ a template could only be copied.
 ## Planning & design
 
 * [Spec Schema](spec.md) - feature specs filed in knowledge/specs/ — the spec body plus the appended test plan.
-* [Feature Plan Schema](feature-plan.md) - the feature's slice list — per slice a done-check, its test-plan cases and a done marker — filed in knowledge/feature-plans/.
-* [Ad-hoc Plan Schema](adhoc-plan.md) - implementation plans for one-off work outside the feature workflow, filed in knowledge/adhoc-plans/.
+* [Feature Plan Schema](feature-plan.md) - the feature's slice list — per slice a done-check, its test-plan cases and a done marker — filed in knowledge/plans/.
+* [Ad-hoc Plan Schema](adhoc-plan.md) - implementation plans for one-off work outside the feature workflow, filed in knowledge/plans/.
 * [Interface Contract Schema](interface-contract.md) - the interfaces build codes against — data model, module boundaries, key flows — filed in knowledge/contracts/.
 * [ADR Schema](adr.md) - architecture decision records — context, the decision, options considered and consequences — filed in knowledge/decisions/.
 

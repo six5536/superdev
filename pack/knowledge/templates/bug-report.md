@@ -61,7 +61,7 @@ tags: [needs-triage]
 
 Notes on usage (not part of the document):
 
-- File as `knowledge/issues/Innn-<slug>.md`, numbered after the
+- File as `knowledge/issues/issue-<nnn>-bug-<slug>.md`, numbered after the
   highest existing issue. Declare the feature, when there is one, with
   an `implements` or `references` link to its spec.
 - The `issue-tracker` concept holds the triage labels and lifecycle:

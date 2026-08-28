@@ -32,7 +32,7 @@ don't build.
 - [ ] Assign each of the spec's test-plan cases to a slice; an
       integration case goes to the slice that completes its boundary.
 - [ ] File the slice list as the feature's plan (`template-feature-plan`): a
-      draft concept at `knowledge/plans/Pnnn-<slug>.md`, listed in the
+      draft concept at `knowledge/plans/plan-<nnn>-<kind>-<slug>.md`, listed in the
       plans index. Re-entering? Extend the existing plan.
 - [ ] Double-check the plan (`/double-check`); fix what it finds.
 - [ ] GATE: Any slice too big to build and verify in one pass? Cut it

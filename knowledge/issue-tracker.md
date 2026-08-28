@@ -15,8 +15,10 @@ workflow skills read this concept to learn where to publish and fetch:
 # Conventions
 
 - One flat directory: one file per ticket at
-  `knowledge/issues/Innn-<slug>.md`, numbered after the highest
-  existing issue, and never a single combined tickets file.
+  `knowledge/issues/issue-<nnn>-<kind>-<slug>.md`, where `<kind>` is
+  `bug`, `feature-request` or `chore` — the type's own word, so the
+  directory listing sorts by number and reads by kind. Numbered after
+  the highest existing issue, and never a single combined tickets file.
 - The spec, when one exists, is
   `knowledge/specs/Snnn-<feature-slug>.md`.
 - An issue's feature is declared by its `implements` or `references`

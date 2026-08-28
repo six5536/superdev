@@ -21,9 +21,9 @@ Decisions: [ADR-012](../decisions/D012-pack-source-schemes-are-allowlisted.md),
 [ADR-016](../decisions/D016-a-path-pack-records-no-digest.md).
 
 Its own plan rather than a reopening of
-[P003](P003-content-packs.md), which is done and whose spec is accepted. P003's
+[P003](plan-003-feature-content-packs.md), which is done and whose spec is accepted. P003's
 *Not scheduled* list is what became this one, less
-[I003](../issues/I003-a-local-pack-cannot-remove-what-it-dropped.md), closed
+[I003](../issues/issue-003-bug-a-local-pack-cannot-remove-what-it-dropped.md), closed
 `wontfix`.
 
 Ordered by dependency, then risk. Slice 1 is the half of the security issue
@@ -41,7 +41,7 @@ case below is new and drawn from the issue it closes.
 ### Slice 1: Refuse a transport superdev does not fetch over
 
 - [x] Done — ticked by integrate at merge.
-- Gap: [I007](../issues/I007-a-pack-source-reaches-git-with-no-scheme-check.md),
+- Gap: [I007](../issues/issue-007-bug-a-pack-source-reaches-git-with-no-scheme-check.md),
   the half left after slice 15 of P003.
 - Change: add `SUPPORTED_SCHEMES` to `pack/source.rs`. `PackSource::parse`
   refuses a `<name>::<address>` remote helper first — before its address is
@@ -51,7 +51,7 @@ case below is new and drawn from the issue it closes.
   `protocol.{https,ssh,file}.allow=always` and
   `protocol.{git,http,ext}.allow=never`.
   Correct `README.md`, which today says every git URL other than the shorthand
-  "is handed to `git` as written" — [P003](P003-content-packs.md)'s slice 18
+  "is handed to `git` as written" — [P003](plan-003-feature-content-packs.md)'s slice 18
   wrote that knowing this slice would narrow it, and named this slice as the
   one to fix it.
 - `file://` is not optional in the set: every git-source fixture in the suite
@@ -76,7 +76,7 @@ case below is new and drawn from the issue it closes.
 ### Slice 2: A symlink in a pack is refused, not skipped
 
 - [x] Done — ticked by integrate at merge.
-- Gap: [I009](../issues/I009-a-skipped-symlink-says-nothing.md), the half a
+- Gap: [I009](../issues/issue-009-bug-a-skipped-symlink-says-nothing.md), the half a
   filesystem check can reach.
 - Change: `read_dir` and `read_pack` in `pack/resolve.rs` refuse a symlink
   naming the path instead of continuing past it, so the pack root and
@@ -84,7 +84,7 @@ case below is new and drawn from the issue it closes.
   does not follow.
 - Done-check: a path pack containing a symlink fails the run naming the path,
   and so does a fetched pack read back from the cache; the
-  [I008](../issues/I008-a-symlinked-file-in-a-pack-is-followed.md) regression
+  [I008](../issues/issue-008-bug-a-symlinked-file-in-a-pack-is-followed.md) regression
   — a link to a secret outside the pack — still writes nothing;
   superdev's own `pack/` still resolves, and a test asserts it contains no
   symlink so the day one appears is the day that test fails rather than the
@@ -95,7 +95,7 @@ case below is new and drawn from the issue it closes.
 ### Slice 3: Git decides what a symlink is
 
 - [x] Done — ticked by integrate at merge.
-- Gap: [I009](../issues/I009-a-skipped-symlink-says-nothing.md), the
+- Gap: [I009](../issues/issue-009-bug-a-skipped-symlink-says-nothing.md), the
   cross-platform half.
 - Change: after the checkout and before anything is read or digested, `fetch`
   asks git for the pack subtree's index entries and refuses mode `120000` and
@@ -115,7 +115,7 @@ case below is new and drawn from the issue it closes.
 ### Slice 4: The spawn seam carries a deadline and an environment
 
 - [x] Done — ticked by integrate at merge.
-- Gap: [I002](../issues/I002-no-time-bound-on-the-update-query.md), the seam
+- Gap: [I002](../issues/issue-002-bug-no-time-bound-on-the-update-query.md), the seam
   half.
 - Change: add `RunOptions { timeout, env }` to `runner.rs`. `run_with` becomes
   the trait's one required method and `run` defaults onto it, so every existing
@@ -132,7 +132,7 @@ case below is new and drawn from the issue it closes.
 ### Slice 5: The one unprompted request is bounded, and never prompts
 
 - [x] Done — ticked by integrate at merge.
-- Gap: [I002](../issues/I002-no-time-bound-on-the-update-query.md).
+- Gap: [I002](../issues/issue-002-bug-no-time-bound-on-the-update-query.md).
 - Change: `fetch::git` takes the options through. The `ls-remote` query sets a
   deadline of a few seconds; the clone sets none, because the user pinned the
   pack and asked for it. Both set `GIT_TERMINAL_PROMPT=0`. `README.md` today
@@ -153,7 +153,7 @@ case below is new and drawn from the issue it closes.
   assert. They now start from a repo whose cache already holds the release
   they move to, which is the state a second `update` on a synced repo starts
   from. What they assert is unchanged. Cases 17 and 20 did pass untouched.
-- Gap: [I001](../issues/I001-update-can-pin-an-unreadable-pack-format.md).
+- Gap: [I001](../issues/issue-001-bug-update-can-pin-an-unreadable-pack-format.md).
 - Change: `update_pins` takes `&Lock` and resolves the entry it is about to
   move before writing it. On a refusal the pin stays where it is and the reason
   is reported in the line that would have announced the move. `manage.rs`
@@ -175,7 +175,7 @@ case below is new and drawn from the issue it closes.
 ### Slice 7: A path pack records no digest
 
 - [x] Done — ticked by integrate at merge.
-- Gap: [I004](../issues/I004-a-path-packs-digest-churns-and-is-never-checked.md).
+- Gap: [I004](../issues/issue-004-bug-a-path-packs-digest-churns-and-is-never-checked.md).
 - Change: `PackLock.digest` becomes `Option<String>`, omitted for a path
   source; `resolve_one`'s path arm records none and the git arm's three
   readers take it by `as_deref`. Re-run `sync` so this repository's own
@@ -189,6 +189,6 @@ case below is new and drawn from the issue it closes.
 
 ## Not scheduled
 
-- [I003](../issues/I003-a-local-pack-cannot-remove-what-it-dropped.md) is
+- [I003](../issues/issue-003-bug-a-local-pack-cannot-remove-what-it-dropped.md) is
   closed `wontfix`: a path pack keeps layering, and the rebuild a pack
   developer needs anyway is the answer.

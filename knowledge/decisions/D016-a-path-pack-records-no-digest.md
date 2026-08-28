@@ -35,7 +35,7 @@ every commit touching any file under `pack/` rewrites that one line, and any
 two branches editing content conflict on it. A commit made without running
 `sync` leaves a digest that does not describe the tree, and nothing reports
 that either
-([I004](../issues/I004-a-path-packs-digest-churns-and-is-never-checked.md)).
+([I004](../issues/issue-004-bug-a-path-packs-digest-churns-and-is-never-checked.md)).
 This repository is the first to commit such a line, and met both immediately.
 
 [ADR-011](D011-path-pack-identity-is-root-relative.md) considered omitting

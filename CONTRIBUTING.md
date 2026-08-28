@@ -138,9 +138,8 @@ The canonical rules live in the canonical knowledge, not here:
 - `packages/` — the npm launcher and per-platform prebuilt-binary packages.
 - `knowledge/` — canonical project knowledge, including the design
   overview (see `AGENTS.md`). `knowledge/specs/` holds design specs
-  (permanent decision records); `knowledge/feature-plans/` and
-  `knowledge/adhoc-plans/` hold implementation plans, kept and tagged
-  `done` when they land; `knowledge/schemas/` holds the contract each
+  (permanent decision records); `knowledge/plans/` holds implementation
+  plans, feature and ad-hoc, kept and tagged `done` when they land; `knowledge/schemas/` holds the contract each
   document type is checked against.
 
 ## Commits and pull requests

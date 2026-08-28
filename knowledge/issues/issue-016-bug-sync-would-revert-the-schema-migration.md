@@ -73,7 +73,7 @@ back to 0.2 with the level ladder in it.
 
 The rule is `pack-backport`'s and it is the right one: an edit to a live copy
 ships only when it is backported, and until then `sync` treats it as drift.
-Both the [format validator plan](../adhoc-plans/P006-rust-format-validator.md)
+Both the [format validator plan](../plans/plan-006-adhoc-rust-format-validator.md)
 and the schema migration list the backport as a non-goal and a follow-on, so the divergence is expected. What is missing is anything in the
 tree that says so — the check reports 65 anonymous "write" lines, and the two
 plans that own the debt say it in a Definition-of-done bullet nobody reads
@@ -99,6 +99,6 @@ while looking at a failing check.
 The backport is the fix and it is also the risk: `sync` writes over live files,
 so a backport that lands the pack content without first reconciling the lock
 hashes reports every touched file as user-edited and backs it up — the failure
-[I005](I005-a-backport-leaves-the-lock-stale.md) already recorded. The
+[I005](issue-005-bug-a-backport-leaves-the-lock-stale.md) already recorded. The
 `pack-backport` skill exists for this, and `superdev status --drift` returning
 0 is what proves the job finished.

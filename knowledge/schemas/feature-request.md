@@ -8,7 +8,8 @@ description: Feature requests filed in knowledge/issues/ — motivation, propose
 # Feature Request Schema
 
 Structural rules for feature requests filed at
-`knowledge/issues/I{nnn}-{slug}.md`. It shares the tracker with
+`knowledge/issues/issue-{nnn}-feature-request-{slug}.md`. It shares the
+tracker with
 `schema-bug-report` and `schema-chore` — the same id shape, the same triage
 tags, the same lifecycle — and differs only in its body: a request for
 something absent states why it is wanted and what it would do, and is never

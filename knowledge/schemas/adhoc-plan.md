@@ -2,16 +2,17 @@
 type: Schema
 id: schema-adhoc-plan
 title: Ad-hoc Plan Schema
-description: Implementation plans for one-off work outside the feature workflow, filed in knowledge/adhoc-plans/.
+description: Implementation plans for one-off work outside the feature workflow, filed in knowledge/plans/.
 ---
 
 # Ad-hoc Plan Schema
 
-Structural rules for the ad-hoc plans filed in `knowledge/adhoc-plans/` and
-listed in its `index.md`. For a feature going through the workflow,
-`schema-feature-plan` applies instead: it is a different concept with its own
-type and its own directory, produced by the feature-plan phase and read by
-build, verify, and integrate.
+Structural rules for the ad-hoc plans filed at
+`knowledge/plans/plan-{nnn}-adhoc-{slug}.md` and listed in that directory's
+`index.md`. For a feature going through the workflow, `schema-feature-plan`
+applies instead: it is a different concept with its own type, sharing this
+directory and this number series, produced by the feature-plan phase and read
+by build, verify, and integrate.
 
 The document separates what is known from what is intended: Facts carry
 evidence, Requirements and Decisions carry intent, Acceptance and Definition
@@ -355,7 +356,7 @@ example: |
   ## Definition of done
 
   - Every Acceptance row passes on a clean checkout of the branch.
-  - `knowledge/adhoc-plans/index.md` lists this plan, and its status reads done.
+  - `knowledge/plans/index.md` lists this plan, and its status reads done.
   - The `http` question from D-2 is filed as its own plan or issue and
     linked below.
 

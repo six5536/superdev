@@ -282,15 +282,15 @@ as slices and closed. The second pass re-checked the criteria, confirmed each
 gap closed as a user meets it, and a security review found both fixes airtight
 with nothing new.
 
-A third pass followed [P005](../feature-plans/P005-content-pack-hardening.md), which
+A third pass followed [P005](../plans/plan-005-feature-content-pack-hardening.md), which
 took the interface decisions those two passes had parked and delivered them in
 seven slices. Every issue this spec left open is now closed:
-[I001](../issues/I001-update-can-pin-an-unreadable-pack-format.md),
-[I002](../issues/I002-no-time-bound-on-the-update-query.md),
-[I004](../issues/I004-a-path-packs-digest-churns-and-is-never-checked.md),
-[I007](../issues/I007-a-pack-source-reaches-git-with-no-scheme-check.md) and
-[I009](../issues/I009-a-skipped-symlink-says-nothing.md).
-[I003](../issues/I003-a-local-pack-cannot-remove-what-it-dropped.md) is closed
+[I001](../issues/issue-001-bug-update-can-pin-an-unreadable-pack-format.md),
+[I002](../issues/issue-002-bug-no-time-bound-on-the-update-query.md),
+[I004](../issues/issue-004-bug-a-path-packs-digest-churns-and-is-never-checked.md),
+[I007](../issues/issue-007-bug-a-pack-source-reaches-git-with-no-scheme-check.md) and
+[I009](../issues/issue-009-bug-a-skipped-symlink-says-nothing.md).
+[I003](../issues/issue-003-bug-a-local-pack-cannot-remove-what-it-dropped.md) is closed
 `wontfix`: a path pack keeps layering, and the rebuild a pack developer needs
 anyway is the answer.
 
@@ -318,11 +318,11 @@ Settled during delivery:
   enumerates it, so a new file needs no table.
 
   Three limits came with the pin, filed rather than fixed:
-  [I003](../issues/I003-a-local-pack-cannot-remove-what-it-dropped.md), a
+  [I003](../issues/issue-003-bug-a-local-pack-cannot-remove-what-it-dropped.md), a
   layer cannot remove what it dropped, and
-  [I004](../issues/I004-a-path-packs-digest-churns-and-is-never-checked.md),
+  [I004](../issues/issue-004-bug-a-path-packs-digest-churns-and-is-never-checked.md),
   the recorded digest churns and is checked by nothing, and
-  [I005](../issues/I005-a-backport-leaves-the-lock-stale.md), a backport
+  [I005](../issues/issue-005-bug-a-backport-leaves-the-lock-stale.md), a backport
   leaves the lock describing the file it replaced.
 
 # Test plan: externally sourced content packs
