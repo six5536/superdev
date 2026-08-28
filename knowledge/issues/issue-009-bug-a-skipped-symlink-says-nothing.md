@@ -1,20 +1,20 @@
 ---
 type: BugReport
-id: issue-009-a-skipped-symlink-says-nothing
+id: issue-009-bug-a-skipped-symlink-says-nothing
 title: A symlink inside a pack is skipped in silence, so an item a pack meant to ship quietly disappears
 description: The walk dropped every symlink without reporting it, so a pack that deduped an item with a link resolved clean while that item was simply absent; fixed in P005 slices 2 and 3, which refuse a symlink anywhere in a pack and name the path.
 status: stable
 tags: [done]
 links:
   - rel: references
-    to: spec-content-packs
+    to: spec-014-content-packs
 ---
 
 # Bug: a skipped symlink says nothing
 
 ## Decided
 
-[ADR-014](../decisions/D014-a-symlink-in-a-pack-is-refused.md). A symlink
+[ADR-014](../decisions/adr-014-a-symlink-in-a-pack-is-refused.md). A symlink
 anywhere in a pack fails the run naming the path, as the pack root and
 `pack.toml` already do — one rule for the whole tree, and `read_pack` means
 what it says.
@@ -32,7 +32,7 @@ is read and has no index of its own.
 
 ## Summary
 
-Against [S014](../specs/S014-content-packs-design.md).
+Against [S014](../specs/spec-014-content-packs.md).
 
 A symlink inside a pack tree is skipped, which is what stops a pack reading a
 file it does not contain ([I008](issue-008-bug-a-symlinked-file-in-a-pack-is-followed.md)).

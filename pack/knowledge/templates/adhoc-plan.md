@@ -8,7 +8,7 @@ status: stable
 
 ---
 type: Plan
-id: adhoc-plan-<slug>
+id: plan-<nnn>-adhoc-<slug>
 title: <short title of the task>
 description: <one line — what this plan delivers>.
 status: draft

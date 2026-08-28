@@ -1,13 +1,13 @@
 ---
 type: FeatureRequest
-id: issue-011-index-shape-is-described-but-not-enforced
+id: issue-011-feature-request-index-shape-is-described-but-not-enforced
 title: The shape SPEC §9 gives an index is described but never enforced
 description: SPEC §9 fixes what an index.md looks like — no frontmatter, heading-grouped link lists, one entry per concept — but no validator checks any of it, so an index can carry frontmatter, drop its heading, or mix bullet styles and still pass.
 status: draft
 tags: [needs-triage]
 links:
   - rel: references
-    to: adhoc-plan-006-rust-format-validator
+    to: plan-006-adhoc-rust-format-validator
 ---
 
 # Feature: the shape SPEC §9 gives an index is described but never enforced

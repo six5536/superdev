@@ -26,7 +26,7 @@ frontmatter:
   type:
     const: FeaturePlan
   id:
-    pattern: '^feature-plan-\d{3}-[a-z0-9-]+$'
+    pattern: '^plan-\d{3}-feature-[a-z0-9-]+$'
   status:
     enum: [draft, stable, deprecated]
     description: >

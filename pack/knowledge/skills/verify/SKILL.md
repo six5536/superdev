@@ -12,7 +12,7 @@ the slice fail.
 
 - The slice's commit, and its done-check from the feature's plan at
   `knowledge/plans/plan-<nnn>-<kind>-<slug>.md`.
-- The spec at `knowledge/specs/Snnn-<feature-slug>.md` (test plan
+- The spec at `knowledge/specs/spec-<nnn>-<feature-slug>.md` (test plan
   included) and the interface contract.
 - $ARGUMENTS — the slice, when not handed off.
 

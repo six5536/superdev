@@ -57,7 +57,7 @@ All domain logic; no argument parsing. One module per concern:
 - `runner` — the process seam. `run_with` is its one required method, taking
   a `RunOptions` that carries a deadline and extra environment; `run` defaults
   onto it with neither, so a caller wanting only a command writes what it
-  always did ([ADR-015](decisions/D015-the-spawn-seam-carries-a-deadline.md)).
+  always did ([ADR-015](decisions/adr-015-the-spawn-seam-carries-a-deadline.md)).
   An expired deadline is an `Error::Command` like any other failed spawn.
   `report` — plan and apply rendering; `error` —
   the crate's error type; `fsutil` and `json_edit` — the pure file and
@@ -86,7 +86,7 @@ All domain logic; no argument parsing. One module per concern:
 
 The MCP server exposes four read-only tools over stdio — `sokf_search`,
 `sokf_read`, `sokf_graph`, `sokf_overview` (see
-[api-contracts](api-contracts.md)). It holds one index directory and
+[contract-003-mcp-sokf](contracts/public/contract-003-mcp-sokf.md)). It holds one index directory and
 serialises its own tool calls with a mutex: a call keeps the index open across
 its whole body while another call's sync could delete and rebuild that
 directory underneath it. Search is hybrid — tantivy BM25 and cosine over
@@ -105,7 +105,7 @@ dialoguer adapter as untested glue. `validate_cli.rs` holds `validate` and the h
 runtime the server blocks on. Also present is the plumbing the release
 pipeline needs:
 `--version`, `completions` (clap_complete), and a hidden `man` subcommand
-(clap_mangen). The CLI contract is in [api-contracts](api-contracts.md).
+(clap_mangen). The CLI contract is in [contract-002-cli-superdev](contracts/public/contract-002-cli-superdev.md).
 
 # Publishing
 

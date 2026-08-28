@@ -1,24 +1,24 @@
 ---
 type: FeaturePlan
-id: feature-plan-content-pack-hardening
+id: plan-005-feature-content-pack-hardening
 title: Content pack hardening — feature plan
 description: Deliver ADR-012 to ADR-016 in seven slices — refuse an unsupported transport, refuse a symlink in a pack and let git decide what one is, give the spawn seam a deadline and an environment, bound the one unprompted request, prove a pin before writing it, and stop recording a digest nothing reads.
 status: stable
 tags: [done]
 links:
   - rel: references
-    to: spec-content-packs
+    to: spec-014-content-packs
 ---
 
 # Feature plan: content pack hardening
 
-The five decisions taken against the issues [S014](../specs/S014-content-packs-design.md)'s
-acceptance left open. Contract: [C001](../contracts/C001-content-packs.md).
-Decisions: [ADR-012](../decisions/D012-pack-source-schemes-are-allowlisted.md),
-[ADR-013](../decisions/D013-update-proves-a-pin-before-it-writes-it.md),
-[ADR-014](../decisions/D014-a-symlink-in-a-pack-is-refused.md),
-[ADR-015](../decisions/D015-the-spawn-seam-carries-a-deadline.md),
-[ADR-016](../decisions/D016-a-path-pack-records-no-digest.md).
+The five decisions taken against the issues [S014](../specs/spec-014-content-packs.md)'s
+acceptance left open. Contract: [C001](../contracts/private/contract-001-interface-content-packs.md).
+Decisions: [ADR-012](../decisions/adr-012-pack-source-schemes-are-allowlisted.md),
+[ADR-013](../decisions/adr-013-update-proves-a-pin-before-it-writes-it.md),
+[ADR-014](../decisions/adr-014-a-symlink-in-a-pack-is-refused.md),
+[ADR-015](../decisions/adr-015-the-spawn-seam-carries-a-deadline.md),
+[ADR-016](../decisions/adr-016-a-path-pack-records-no-digest.md).
 
 Its own plan rather than a reopening of
 [P003](plan-003-feature-content-packs.md), which is done and whose spec is accepted. P003's
@@ -69,7 +69,7 @@ case below is new and drawn from the issue it closes.
   `parse` approves must still run no command. That is the case that proves the
   override half is not decoration — `parse` cannot see a rewrite, and only the
   *named* refusal outranks a user config that says `protocol.ext.allow = always`
-  ([ADR-012](../decisions/D012-pack-source-schemes-are-allowlisted.md) carries
+  ([ADR-012](../decisions/adr-012-pack-source-schemes-are-allowlisted.md) carries
   the measurements). `GIT_CONFIG_GLOBAL` points git at the fixture config; the
   spawned git inherits it.
 

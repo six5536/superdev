@@ -41,7 +41,7 @@ status: stable
   template version as provenance; the engine never revisits the files —
   updates happen only through the `template-update` skill, as user edits.
   `rust-npm` is the first — see the
-  [spec](specs/S007-project-templates-design.md).
+  [spec](specs/spec-007-project-templates.md).
 - **Template adoption** — taking a project template into a repo that was
   never seeded from one: the `template-update` skill's first run there,
   merging the rendered template into the existing shape with the user
@@ -56,7 +56,7 @@ status: stable
   `knowledge` capability materialises into `.claude/skills/<name>/` as owned
   files, each skill its whole directory: SKILL.md, companions, harness
   configs. The set exists exactly where knowledge exists. See the
-  [spec](specs/S009-knowledge-carried-skills-design.md).
+  [spec](specs/spec-009-knowledge-carried-skills.md).
 - **Content pack** — a versioned set of superdev's prose content: skills,
   document templates, project templates, knowledge skeletons and the
   general-rules scaffolds. A pack is resolved from a pinned source and
@@ -67,7 +67,7 @@ status: stable
   a local filesystem path. Sources are compared by a normalised identity —
   scheme, userinfo, port, `.git` suffix and trailing slash removed, host and
   path lowercased — so every spelling of one repository is one source
-  ([ADR-004](decisions/D004-base-pack-identity.md)). Naming one in `config.toml` is the trust
+  ([ADR-004](decisions/adr-004-base-pack-identity.md)). Naming one in `config.toml` is the trust
   decision, exactly as adding a crate to `Cargo.toml` is. superdev
   guarantees only that the pinned bytes are the bytes applied; it makes no
   claim about the content.
@@ -83,7 +83,7 @@ status: stable
   `knowledge/templates/<name>.md`, `skills/<name>/`, `agents/<name>.md`,
   `projects/<name>/`. Superseding replaces a whole item, never part of one,
   and only ever within the same owner. See
-  [ADR-003](decisions/D003-items-by-layout.md).
+  [ADR-003](decisions/adr-003-items-by-layout.md).
 - **Pack layer** — the precedence order among content sources. Layer 0 is the
   embedded snapshot; a pack from the snapshot's own source replaces it
   outright, so what that pack drops leaves the repo, while a pack from any
@@ -106,7 +106,7 @@ status: stable
 - **Harvest** — the move `bootstrap` performs: relocate a durable fact from
   stranded prose (or an opted-in code comment) into the canonical knowledge, leaving a
   one-line summary and a link behind in the source. See the
-  [spec](specs/S008-knowledge-owned-skills-design.md).
+  [spec](specs/spec-008-knowledge-owned-skills.md).
 - **Claim** — a typed lock entry a component declares it owns: a file, a
   `.mise.toml` pin, or a managed JSON key. The orphan pass subtracts the live
   claims from the lock, which is how a migration is derived.

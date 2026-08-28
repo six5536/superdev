@@ -22,7 +22,7 @@ feature from outside, as a user or caller sees it.
 - [ ] Read the `glossary` (`sokf_read`); describe behaviour in the
       project's terms.
 - [ ] Start the spec from `template-spec`: a draft concept at
-      `knowledge/specs/Snnn-<feature-slug>.md`, listed in the specs
+      `knowledge/specs/spec-<nnn>-<feature-slug>.md`, listed in the specs
       index.
 - [ ] Describe the observable behaviour.
 - [ ] Write acceptance criteria as pass/fail checks (given/when/then).

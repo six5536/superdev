@@ -1,6 +1,6 @@
 ---
 type: AdhocPlan
-id: adhoc-plan-009-drop-the-bash-output-filter
+id: plan-009-adhoc-drop-the-bash-output-filter
 title: Drop rtk and the bash-output-filter capability
 description: The bash-output-filter slot, its rtk provider, the five things it owns and the flag that disabled it all leave, and a manifest still naming the table gets a guided error.
 status: done
@@ -35,8 +35,8 @@ has the capability, which shapes the order below.
   `[knowledge]` and `[workflows]` with a message naming the edit
   (`manifest.rs:217-235`), tested at `manifest.rs:443-451`.
 - A retired spec keeps its document and takes `status: deprecated` —
-  `S005-workflows-provider-default-design.md:6` and
-  `S006-workflows-skill-overrides-design.md:6`, both left listed in
+  `spec-005-workflows-provider-default.md:6` and
+  `spec-006-workflows-skill-overrides.md:6`, both left listed in
   `specs/index.md` and still cited in prose by `S008:25`.
 - `--no-bash-output-filter` is declared at `manage.rs:36-39`, mapped at
   `manage.rs:53`, and used at 12 sites in `crates/app/superdev/tests/cli.rs`.
@@ -237,7 +237,7 @@ Depends on: W2, W3.
    quotes `REJECTED` verbatim and binds, so it drops `agents/rtk.md` with the
    code; `S014:94` lists the instruction files that exist and drops
    `.agents/rtk.md` from that list.
-5. Deprecate the spec — `S012-bash-output-filter-design.md` frontmatter reads
+5. Deprecate the spec — `spec-012-bash-output-filter.md` frontmatter reads
    `status: deprecated`, following `S005` and `S006`.
 6. Record the change — a `Removed` entry under `## [Unreleased]` in
    `CHANGELOG.md` naming the guided error and the files sync removes.
@@ -281,9 +281,9 @@ Depends on: W2, W3.
 | `knowledge/configuration.md` | modified — the example, the merge notes, the owned-files section, the description | W5 |
 | `knowledge/index.md` | modified — the configuration entry's description | W5 |
 | `knowledge/development-procedure.md` | modified — the capabilities this repo enables | W5 |
-| `knowledge/contracts/C001-content-packs.md` | modified — the quoted `REJECTED` constant | W5 |
-| `knowledge/specs/S014-content-packs-design.md` | modified — the instruction-file list | W5 |
-| `knowledge/specs/S012-bash-output-filter-design.md` | modified — `status: deprecated` | W5 |
+| `knowledge/contracts/contract-001-content-packs.md` | modified — the quoted `REJECTED` constant | W5 |
+| `knowledge/specs/spec-014-content-packs.md` | modified — the instruction-file list | W5 |
+| `knowledge/specs/spec-012-bash-output-filter.md` | modified — `status: deprecated` | W5 |
 | `CHANGELOG.md` | modified — a `Removed` entry under `[Unreleased]` | W5 |
 | `knowledge/plans/plan-009-adhoc-drop-the-bash-output-filter.md` | new — this plan | W5 |
 | `knowledge/plans/index.md` | modified — this plan listed | W5 |

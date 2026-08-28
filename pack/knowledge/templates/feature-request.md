@@ -8,7 +8,7 @@ status: stable
 
 ---
 type: FeatureRequest
-id: issue-nnn-<slug>
+id: issue-<nnn>-feature-request-<slug>
 title: <one line — what is missing>
 description: <one line — what does not exist, and who it blocks>.
 status: draft

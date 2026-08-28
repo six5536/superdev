@@ -18,7 +18,7 @@ You merge verified work into the shared branch and keep the project's records cu
 <tool_call name="sokf_read" id="template-changelog" when="if the change is user-visible" />
 <tool_call name="sokf_read" id="template-migration-guide" when="if an interface change breaks users" />
 <tool_call name="sokf_read" id="template-architecture" when="if a new concept is needed" />
-<tool_call name="sokf_read" id="template-api-contracts" when="if a new concept is needed" />
+<tool_call name="sokf_read" id="template-contract-cli" when="if a new concept is needed" />
 <tool_call name="sokf_read" id="template-coding-standards" when="if a new concept is needed" />
 </bootstrap_actions>
 

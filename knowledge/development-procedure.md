@@ -58,13 +58,13 @@ next `sync` overwrites it.
 
 Two things the pin does not do. It **layers** rather than replacing, because
 only the blueprint's default git source is the base
-([ADR-004](decisions/D004-base-pack-identity.md)), so **deleting or renaming**
+([ADR-004](decisions/adr-004-base-pack-identity.md)), so **deleting or renaming**
 an item under `pack/` does not remove its live copy — that still needs a
 rebuild, and `status --drift` stays green until then
 ([I003](issues/issue-003-bug-a-local-pack-cannot-remove-what-it-dropped.md)). What it
 no longer does is record a digest for the pin: a path pack has none, so a
 commit touching `pack/` no longer rewrites a lock line
-([ADR-016](decisions/D016-a-path-pack-records-no-digest.md)). Run `sync` with
+([ADR-016](decisions/adr-016-a-path-pack-records-no-digest.md)). Run `sync` with
 such a commit anyway — the per-file hashes still move when a live copy does,
 and a lock that has stopped describing what is on disk is the failure
 [I005](issues/issue-005-bug-a-backport-leaves-the-lock-stale.md) closed.

@@ -13,7 +13,7 @@ do not work together, and regressions elsewhere in the app.
 ## Input
 
 - The merged feature and the spec at
-  `knowledge/specs/Snnn-<feature-slug>.md`: its acceptance criteria,
+  `knowledge/specs/spec-<nnn>-<feature-slug>.md`: its acceptance criteria,
   test plan, and behaviour description.
 - $ARGUMENTS — the feature or spec id.
 

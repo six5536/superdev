@@ -28,7 +28,7 @@ frontmatter:
   type:
     const: BugReport
   id:
-    pattern: '^issue-\d{3}-[a-z0-9-]+$'
+    pattern: '^issue-\d{3}-bug-[a-z0-9-]+$'
   title:
     description: The one-line symptom.
   status:

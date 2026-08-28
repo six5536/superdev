@@ -12,7 +12,7 @@ code depends on them.
 ## Input
 
 - The spec: the feature's draft `Spec` concept at
-  `knowledge/specs/Snnn-<feature-slug>.md`.
+  `knowledge/specs/spec-<nnn>-<feature-slug>.md`.
 - Re-entry: a contract change requested by build, or a divergence
   verify says the contract should adopt.
 - $ARGUMENTS — the feature or spec id, when not handed off.
@@ -23,16 +23,16 @@ code depends on them.
       given).
 - [ ] Read the existing interfaces (`codegraph_explore`) before adding
       new ones.
-- [ ] Read the `architecture`, `architectural-rules` and
-      `api-contracts` concepts (`sokf_read`): the existing interfaces
-      and the rules new ones must follow.
+- [ ] Read the `architecture` and `architectural-rules` concepts
+      (`sokf_read`) and the public contracts (`sokf_search`): the existing
+      interfaces and the rules new ones must follow.
 - [ ] Decide what is expensive to change: data schema, API contracts,
       module boundaries, auth surface, and the UI.
 - [ ] Does a contract rest on a third-party API or another external
       fact? Establish it with `/research`; the findings land in the
       knowledge for later phases.
 - [ ] Backend interfaces: a written contract
-      (`template-interface-contract`), each interface in its native
+      (`template-contract-interface`), each interface in its native
       language — SQL DDL for the schema, the host language's types or
       traits for module APIs, the framework's route definitions for
       endpoints — or TypeSpec where no native form exists.
@@ -43,7 +43,7 @@ code depends on them.
       alternatives before filing the ADR. A question conversation
       cannot settle gets a runnable answer (`/prototype`).
 - [ ] Record each decision as an ADR (`template-adr`): a Decision
-      concept at `knowledge/decisions/Dnnn-<slug>.md`, listed in the
+      concept at `knowledge/decisions/adr-<nnn>-<slug>.md`, listed in the
       decisions index, with alternatives and reasoning.
 - [ ] Double-check the contract and ADRs (`/double-check`); fix what
       it finds.

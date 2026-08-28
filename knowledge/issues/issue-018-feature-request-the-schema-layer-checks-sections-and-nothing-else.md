@@ -1,6 +1,6 @@
 ---
 type: FeatureRequest
-id: issue-018-the-schema-layer-checks-sections-and-nothing-else
+id: issue-018-feature-request-the-schema-layer-checks-sections-and-nothing-else
 title: A schema declares content kinds and a frontmatter contract, and the validator reads neither
 description: P008 made schemas govern documents, but only their sections — the content kind under each heading and the frontmatter constraints beside it are declared on every schema and read by nothing, which is the fault P008 set out to cure, one level down.
 status: draft
@@ -30,7 +30,7 @@ Measured on this repository today:
   the open question below, not a reason to leave the field unread.
 - **Frontmatter contracts.** `schema-spec` declares
   `id: pattern '^spec-\d{3}-[a-z0-9-]+$'`; the fourteen specs on file carry
-  ids like `spec-implements-rel`, which matches nothing. Every one of them
+  ids like `spec-013-implements-rel`, which matches nothing. Every one of them
   would fail a check that does not exist. The `status` enums and the `title`
   and `description` constraints are in the same position.
 

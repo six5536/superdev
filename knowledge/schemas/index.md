@@ -10,8 +10,27 @@ a template could only be copied.
 * [Spec Schema](spec.md) - feature specs filed in knowledge/specs/ — the spec body plus the appended test plan.
 * [Feature Plan Schema](feature-plan.md) - the feature's slice list — per slice a done-check, its test-plan cases and a done marker — filed in knowledge/plans/.
 * [Ad-hoc Plan Schema](adhoc-plan.md) - implementation plans for one-off work outside the feature workflow, filed in knowledge/plans/.
-* [Interface Contract Schema](interface-contract.md) - the interfaces build codes against — data model, module boundaries, key flows — filed in knowledge/contracts/.
 * [ADR Schema](adr.md) - architecture decision records — context, the decision, options considered and consequences — filed in knowledge/decisions/.
+
+## Contracts
+
+One document per contract. The interface contract is private to a feature and discarded once the code is canonical; the rest are promised outward and live in knowledge/contracts/public/.
+
+* [Interface Contract Schema](contract-interface.md) - the interfaces build codes against — data model, module boundaries, key flows — filed in knowledge/contracts/private/.
+* [CLI Contract Schema](contract-cli.md) - one command-line surface — its commands, their behaviour, the exit codes and the stability promise, in knowledge/contracts/public/.
+* [REST Contract Schema](contract-rest.md) - one HTTP API — its endpoints in TypeSpec, the authentication, the error responses and the stability promise, in knowledge/contracts/public/.
+* [GraphQL Contract Schema](contract-graphql.md) - one GraphQL API — its SDL, endpoint, error and limit behaviour, and the stability promise, in knowledge/contracts/public/.
+* [RPC Contract Schema](contract-rpc.md) - one RPC service — its IDL, transport, authentication, error codes and stability promise, in knowledge/contracts/public/.
+* [MCP Contract Schema](contract-mcp.md) - one MCP server — its transport, the tools it exposes, how failures are reported and the stability promise, in knowledge/contracts/public/.
+* [Library Contract Schema](contract-library.md) - one published library — what ships, its exported API in the host language, its errors and the stability promise, in knowledge/contracts/public/.
+* [UI Contract Schema](contract-ui.md) - the user-facing surface — its routes, its screens and their states, the platforms supported, and the stability promise, in knowledge/contracts/public/.
+* [Event Contract Schema](contract-events.md) - one published message or event stream — its transport, payloads, delivery guarantees and stability promise, in knowledge/contracts/public/.
+* [Data Contract Schema](contract-data.md) - the persisted store — its schema, the constraints it holds, how it migrates, and the stability promise, in knowledge/contracts/public/.
+* [Configuration Contract Schema](contract-config.md) - what a deployer must supply to run the software — the settings, where they come from, which source wins, and the stability promise, in knowledge/contracts/public/.
+* [File Format Contract Schema](contract-file-format.md) - one file others read or write — where it lives, its shape, how a reader treats the unexpected, and the stability promise, in knowledge/contracts/public/.
+* [Deployment Contract Schema](contract-deployment.md) - what a deployer must provide to run the software — the artifact, the runtime it needs, its health and lifecycle, and the stability promise, in knowledge/contracts/public/.
+* [Authorisation Contract Schema](contract-authz.md) - what a caller may do — the principals, the role and scope vocabulary, the permissions and the boundaries every surface enforces, in knowledge/contracts/public/.
+* [Telemetry Contract Schema](contract-telemetry.md) - the signal operators build on — the metrics, the log shape, the traces, and the stability promise, in knowledge/contracts/public/.
 
 ## Change delivery
 
@@ -44,7 +63,6 @@ a template could only be copied.
 * [Architecture Schema](architecture.md) - the system's layers, its subsystems, and the files it reads and writes, in knowledge/architecture.md.
 * [Architectural Rules Schema](architectural-rules.md) - the invariants behind the architecture, each with its reason, in knowledge/architectural-rules.md.
 * [Software Components Schema](software-components.md) - the deliverables and the CI/CD that builds them, in knowledge/software-components.md.
-* [API Contracts Schema](api-contracts.md) - the public surfaces, their contracts and the stability promises, in knowledge/api-contracts.md.
 * [Configuration Schema](configuration.md) - the config files and stores, their shape, and what lives outside the repo, in knowledge/configuration.md.
 * [Directory Structure Schema](directory-structure.md) - what lives where in the repository, in knowledge/directory-structure.md.
 * [Technology Stack Schema](technology-stack.md) - languages, dependencies with their reasons, and the pinned toolchain, in knowledge/technology-stack.md.

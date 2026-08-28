@@ -1,20 +1,20 @@
 ---
 type: BugReport
-id: issue-002-no-time-bound-on-the-update-query
+id: issue-002-bug-no-time-bound-on-the-update-query
 title: The default-source query has no time bound, so a black-holed network stalls update
 description: update runs git ls-remote on every untargeted invocation and CommandRunner had no timeout, so a network that neither answered nor refused stalled the command until the OS gave up; fixed in P005 slices 4 and 5, which gave the spawn seam a five-second deadline.
 status: stable
 tags: [done]
 links:
   - rel: references
-    to: spec-content-packs
+    to: spec-014-content-packs
 ---
 
 # Bug: the default-source query has no time bound
 
 ## Decided
 
-[ADR-015](../decisions/D015-the-spawn-seam-carries-a-deadline.md).
+[ADR-015](../decisions/adr-015-the-spawn-seam-carries-a-deadline.md).
 `CommandRunner` gains an options form of `run` carrying a timeout and extra
 environment, defaulted so every existing call site is unchanged and
 `run_with` is the one required method. No dependency: a deadline over
@@ -30,7 +30,7 @@ which is what made it need the seam.
 
 ## Summary
 
-Against [S014](../specs/S014-content-packs-design.md).
+Against [S014](../specs/spec-014-content-packs.md).
 
 `superdev update` asks the default pack source for its newest release on every
 untargeted run. `CommandRunner` spawns and waits with no deadline, so on a

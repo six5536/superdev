@@ -9,9 +9,28 @@ fill in the angle-bracket placeholders.
 * [Spec](spec.md) - what done looks like from outside — behaviour, acceptance criteria, UI states, edge cases, out of scope. Filed as a draft concept in `knowledge/specs/`, tagged done at accept.
 * [Feature Plan](feature-plan.md) - the feature's slice list — per slice a done-check, the assigned test-plan cases, and a done marker. Produced by the feature-plan phase.
 * [Ad-hoc Plan](adhoc-plan.md) - ad-hoc implementation plan for one-off work outside the feature workflow — context, goal, ordered steps, files affected, testing, and risks.
-* [Interface Contract](interface-contract.md) - the interfaces build codes against — data model and API, module boundaries, key flows, and cross-cutting concerns — each in its native language, or TypeSpec.
 * [ADR](adr.md) - architecture decision record — context, the decision, options considered, and consequences. Filed as a Decision concept in `knowledge/decisions/`.
 * [Test Plan](test-plan.md) - scope, risks driving the plan, automated and manual cases, regression coverage, and exit criteria. Appended to the spec concept.
+
+## Contracts
+
+One document per contract — the interface contract private to a feature, the rest promised outward.
+
+* [Interface Contract](contract-interface.md) - the interfaces build codes against — data model and API, module boundaries, key flows, and cross-cutting concerns — each in its native language, or TypeSpec.
+* [CLI Contract](contract-cli.md) - one command-line surface, its behaviour, exit codes and stability promise.
+* [REST Contract](contract-rest.md) - one HTTP API in TypeSpec, its authentication, errors and stability promise.
+* [GraphQL Contract](contract-graphql.md) - one graph in SDL, its endpoint, errors, limits and deprecation policy.
+* [RPC Contract](contract-rpc.md) - one RPC service in its IDL, its transport, errors and wire compatibility.
+* [MCP Contract](contract-mcp.md) - one MCP server, the tools it exposes, its errors and stability promise.
+* [Library Contract](contract-library.md) - one published library, its exported API, errors and stability promise.
+* [UI Contract](contract-ui.md) - the routes, the screens and their states, and what is promised not to move.
+* [Event Contract](contract-events.md) - one published message stream, its payloads, delivery guarantees and stability promise.
+* [Data Contract](contract-data.md) - the persisted store, its schema, the constraints it holds and how it migrates.
+* [Configuration Contract](contract-config.md) - the settings a deployer supplies, where they come from, which source wins.
+* [File Format Contract](contract-file-format.md) - one file others read or write, its shape, compatibility rules and stability promise.
+* [Deployment Contract](contract-deployment.md) - what is published, what the runtime must provide, and how it starts and stops.
+* [Authorisation Contract](contract-authz.md) - the principals, the role and scope vocabulary, the permissions and the boundary every surface enforces.
+* [Telemetry Contract](contract-telemetry.md) - the metrics, the log shape and the traces operators build on.
 
 ## Change delivery
 
@@ -52,7 +71,6 @@ each carries the concept's frontmatter, ready to fill and file.
 * [Architectural Rules](architectural-rules.md) - the invariants behind the architecture, each with its reason.
 * [Software Components](software-components.md) - the deliverables and the CI/CD that builds them.
 * [Configuration](configuration.md) - the config files and stores, their shape, and what lives outside the repo.
-* [API Contracts](api-contracts.md) - the public surfaces, their contracts, and the stability promises.
 * [Error Handling](error-handling.md) - the error taxonomy or exit codes, and the failure-reporting rules.
 * [Directory Structure](directory-structure.md) - what lives where in the repository.
 * [Technology Stack](technology-stack.md) - languages, dependencies with their reasons, and the pinned toolchain.

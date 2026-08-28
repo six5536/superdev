@@ -1,13 +1,13 @@
 ---
 type: BugReport
-id: issue-007-a-pack-source-reaches-git-with-no-scheme-check
+id: issue-007-bug-a-pack-source-reaches-git-with-no-scheme-check
 title: A pack source's scheme is unchecked, so the base pack can be fetched over a transport anyone on-path can answer
 description: "superdev allowlisted no scheme, so git:// and http:// normalised onto the default identity and a cloned manifest could have the base pack fetched over an unauthenticated transport; fixed in P005 slice 1 and ADR-012, which allowlist https, ssh and file at parse."
 status: stable
 tags: [done]
 links:
   - rel: references
-    to: spec-content-packs
+    to: spec-014-content-packs
   - rel: relates-to
     to: security-requirements
 ---
@@ -28,7 +28,7 @@ going to need.
 
 ## Decided
 
-[ADR-012](../decisions/D012-pack-source-schemes-are-allowlisted.md). A pack
+[ADR-012](../decisions/adr-012-pack-source-schemes-are-allowlisted.md). A pack
 source may name only `https`, `ssh` or `file`, allowlisted in both places
 this issue said it could be:
 
@@ -66,7 +66,7 @@ re-admit are precisely the two with no authentication.
 
 ## Summary
 
-Against [S014](../specs/S014-content-packs-design.md).
+Against [S014](../specs/spec-014-content-packs.md).
 
 `[[packs]].source` is passed to `git clone` as the URL with no validation of
 its scheme and no `--` end-of-options separator. Git's `ext::` transport takes
@@ -136,7 +136,7 @@ vetted inherit the base pack's standing.
   `file` closes every unknown helper at once, where naming `ext` closes one.
   Refusing an unsupported scheme in `PackSource::parse` gives the better
   error and refuses before anything spawns. Either narrows what a manifest
-  may say, which [C001](../contracts/C001-content-packs.md) documents as
+  may say, which [C001](../contracts/private/contract-001-interface-content-packs.md) documents as
   `parse`'s rejections, so it is an interface decision — and the reason this
   half stayed unscheduled while the other landed.
 - Workaround: read the manifest of a repository before running `sync` in it.

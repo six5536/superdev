@@ -8,7 +8,7 @@ status: stable
 
 ---
 type: Decision
-id: adr-nnn-<slug>
+id: adr-<nnn>-<slug>
 title: <decision title>
 description: <one line — the decision in a sentence>.
 status: stable
@@ -45,8 +45,8 @@ status: stable
 
 Notes on usage (not part of the document):
 
-- File as `knowledge/decisions/Dnnn-<slug>.md`, numbered after the
-  highest existing decision; id `adr-nnn-<slug>`.
+- File as `knowledge/decisions/adr-<nnn>-<slug>.md`, numbered after the
+  highest existing decision; the id is the filename without `.md`.
 - List it in `knowledge/decisions/index.md`.
 - A superseded ADR is never edited: the new ADR names it, and its
   Status line is updated to point forward.

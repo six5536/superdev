@@ -13,7 +13,7 @@
 * [Architectural Rules](/knowledge/architectural-rules.md) - TBD — the rules the architecture depends on, stated so a change cannot silently break them.
 * [Software Components](/knowledge/software-components.md) - TBD — the deployable and buildable units, what each contains, and how they depend on each other.
 * [Configuration & Environments](/knowledge/configuration.md) - TBD — configuration files and environment variables, what reads them, and their precedence.
-* [API Contracts](/knowledge/api-contracts.md) - TBD — the interfaces this project promises to others — CLI, HTTP, library, or protocol surfaces.
+* [Contracts](/knowledge/contracts/index.md) - TBD — the contracts this project promises to others, public and per-feature.
 * [Error Handling & Logging](/knowledge/error-handling.md) - TBD — how failures are reported — exit codes, error shapes, logging, and recovery paths.
 * [Directory Structure](/knowledge/directory-structure.md) - TBD — what lives where in the repository, and the rules for adding something new.
 * [Technology Stack](/knowledge/technology-stack.md) - TBD — languages, runtimes, key dependencies, and the pinned toolchain set.

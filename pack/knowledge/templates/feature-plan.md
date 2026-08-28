@@ -8,7 +8,7 @@ status: stable
 
 ---
 type: Plan
-id: feature-plan-<slug>
+id: plan-<nnn>-feature-<slug>
 title: <feature title> — feature plan
 description: <one line — the feature this plan delivers>.
 status: draft
@@ -16,7 +16,7 @@ status: draft
 
 # Feature plan: <feature title>
 
-Spec: <link to the spec at knowledge/specs/Snnn-<feature-slug>.md>
+Spec: <link to the spec at knowledge/specs/spec-<nnn>-<feature-slug>.md>
 
 ## Slices
 

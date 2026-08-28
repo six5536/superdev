@@ -12,7 +12,7 @@ exactly one slice and nothing beyond it.
 
 - The slice: an entry in the feature's plan at
   `knowledge/plans/plan-<nnn>-<kind>-<slug>.md`.
-- The spec at `knowledge/specs/Snnn-<feature-slug>.md`, the interface
+- The spec at `knowledge/specs/spec-<nnn>-<feature-slug>.md`, the interface
   contract, and the canonical knowledge.
 - $ARGUMENTS — the slice, when not handed off.
 

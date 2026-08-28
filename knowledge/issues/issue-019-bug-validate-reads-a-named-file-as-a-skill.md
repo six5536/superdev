@@ -1,6 +1,6 @@
 ---
 type: BugReport
-id: issue-019-validate-reads-a-named-file-as-a-skill
+id: issue-019-bug-validate-reads-a-named-file-as-a-skill
 title: validate reads a file named on the command line as a skill, whatever it is
 description: superdev validate knowledge/architecture.md reports nine errors about missing skill blocks, because a named path takes the grammar's fallback kind; the document is never checked against the schema its type names, so the check a path argument most obviously invites is the one it cannot run.
 status: draft

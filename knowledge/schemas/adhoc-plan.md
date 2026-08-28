@@ -31,7 +31,7 @@ frontmatter:
   type:
     const: AdhocPlan
   id:
-    pattern: '^adhoc-plan-\d{3}-[a-z0-9-]+$'
+    pattern: '^plan-\d{3}-adhoc-[a-z0-9-]+$'
   status:
     enum: [draft, active, done, abandoned]
     description: >

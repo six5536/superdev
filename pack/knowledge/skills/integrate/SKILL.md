@@ -33,7 +33,7 @@ current.
 - [ ] New convention, changed interface, or new term? Update the
       knowledge so later slices follow it: the glossary for
       terms; a new concept starts from its template
-      (`template-architecture`, `template-api-contracts`,
+      (`template-architecture`, `template-contract-cli`,
       `template-coding-standards`, …; see the knowledge-concepts
       section of `templates/index.md`).
 - [ ] Interface change breaks users? Write the migration guide

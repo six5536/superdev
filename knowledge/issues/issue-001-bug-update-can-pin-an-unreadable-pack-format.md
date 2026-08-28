@@ -1,20 +1,20 @@
 ---
 type: BugReport
-id: issue-001-update-can-pin-an-unreadable-pack-format
+id: issue-001-bug-update-can-pin-an-unreadable-pack-format
 title: update can move a pin to a pack format this binary cannot read, and cannot move it back
 description: update persisted a moved pin before sync validated it, and a pin never moves backwards, so a content release in a newer format left every later sync and update failing until the manifest was hand-edited; fixed in P005 slice 6, which proves a pin before writing it.
 status: stable
 tags: [done]
 links:
   - rel: references
-    to: spec-content-packs
+    to: spec-014-content-packs
 ---
 
 # Bug: `update` can pin a pack format this binary cannot read
 
 ## Decided
 
-[ADR-013](../decisions/D013-update-proves-a-pin-before-it-writes-it.md).
+[ADR-013](../decisions/adr-013-update-proves-a-pin-before-it-writes-it.md).
 `update` will resolve a moved pin before saving the manifest, and keep the old
 pin when resolution refuses, reporting the reason in the line that would have
 announced the move. It proves the one entry rather than the whole manifest, so
@@ -29,12 +29,12 @@ all stop being things a saved pin can name. The never-backwards rule needs no
 relaxing once a pin can no longer arrive somewhere unreadable.
 
 `update_pins` gains the lock, which resolution reads. Recorded in
-[C001](../contracts/C001-content-packs.md).
+[C001](../contracts/private/contract-001-interface-content-packs.md).
 
 
 ## Summary
 
-Against [S014](../specs/S014-content-packs-design.md).
+Against [S014](../specs/spec-014-content-packs.md).
 
 `superdev update` moves the default pin to the newest release the source
 carries without knowing whether this binary can read it. If a content release

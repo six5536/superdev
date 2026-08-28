@@ -8,7 +8,7 @@ status: stable
 
 ---
 type: Chore
-id: issue-nnn-<slug>
+id: issue-<nnn>-chore-<slug>
 title: <one line — the work>
 description: <one line — what changes, and why it is worth doing>.
 status: draft

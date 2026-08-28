@@ -8,7 +8,7 @@ description: Feature specs filed in knowledge/specs/ — the spec body plus the 
 # Spec Schema
 
 Structural rules for feature specs filed at
-`knowledge/specs/S{nnn}-{feature-slug}.md` and listed in
+`knowledge/specs/spec-{nnn}-{feature-slug}.md` and listed in
 `knowledge/specs/index.md`. The test plan is appended to the spec as further
 sections.
 

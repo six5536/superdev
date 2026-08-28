@@ -116,7 +116,7 @@ mod tests {
     fn each_position_names_its_owner_kind_and_name() {
         let items = items_from([
             ("knowledge/skills/frame/SKILL.md", "frame"),
-            ("knowledge/concepts/api-contracts.md", "concept"),
+            ("knowledge/concepts/contracts/public/index.md", "concept"),
             ("knowledge/templates/adr.md", "template"),
             ("skills/double-check/SKILL.md", "pack skill"),
             ("agents/coding.md", "rules"),
@@ -126,7 +126,7 @@ mod tests {
         assert_eq!(names(&items, knowledge, ItemKind::Skill), ["frame"]);
         assert_eq!(
             names(&items, knowledge, ItemKind::KnowledgeSkeleton),
-            ["api-contracts.md"]
+            ["contracts"]
         );
         assert_eq!(names(&items, knowledge, ItemKind::DocTemplate), ["adr"]);
         assert_eq!(

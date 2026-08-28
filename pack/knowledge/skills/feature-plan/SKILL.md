@@ -12,7 +12,7 @@ don't build.
 ## Input
 
 - The spec: the feature's draft `Spec` concept at
-  `knowledge/specs/Snnn-<feature-slug>.md`, and the interface
+  `knowledge/specs/spec-<nnn>-<feature-slug>.md`, and the interface
   contract.
 - Re-entry: the feature's plan and the gap issues in
   `knowledge/issues/` that link the feature's spec, filed by accept.

@@ -1,6 +1,6 @@
 ---
 type: AdhocPlan
-id: adhoc-plan-008-sokf-becomes-core
+id: plan-008-adhoc-sokf-becomes-core
 title: SOKF becomes a core part of superdev
 description: AOKF is renamed SOKF and stops being a swappable capability, the two validators merge into one module behind one command, a document's type names the schema that governs it, and the schema layer is enforced for the first time.
 status: done
@@ -72,7 +72,7 @@ and the enforcement are one design.
 - `superdev-core` is published to crates.io (`release.yml:278`), so the module
   rename is a public API break. The workspace is at 0.2.0 and the changelog
   permits breaking changes in a minor while pre-1.0.
-- `knowledge/contracts/C001-content-packs.md` pins `[knowledge] provider =
+- `knowledge/contracts/contract-001-content-packs.md` pins `[knowledge] provider =
   "aokf"` (`:54`), the manifest scaffold rule (`:212`) and the `agents/aokf.md`
   asset path (`:238`), so this plan is an interface change to a live contract.
 - Baseline: 534 tests passing, `superdev validate` clean over 61 files with 5
@@ -404,7 +404,7 @@ Depends on: W1, W2, W3, W4, W5, W7.
 | `knowledge/schemas/*.md` | modified — all 40: a type const each, dead globs removed, and reconciled to practice | W5, W6 |
 | `knowledge/**/*.md` | modified — roughly 40 concepts retyped; those the reconciliation finds genuinely malformed corrected | W5, W6 |
 | `knowledge/issue-tracker.md`, `knowledge/issues/index.md` | modified — the issue types I015 asked for | W5 |
-| `knowledge/contracts/C001-content-packs.md` | modified — the provider id, the manifest name, the asset path | W8 |
+| `knowledge/contracts/contract-001-content-packs.md` | modified — the provider id, the manifest name, the asset path | W8 |
 | `.claude/skills/*/SKILL.md` | modified — 21 skills: tool names, verbs, and the eleven gates | W7, W8 |
 | `pack/knowledge/skills/*/SKILL.md` | modified — the same 21, mirrored | W8 |
 | `pack/aokf/**` | deleted — succeeded by `pack/sokf/agents/**` | W8 |

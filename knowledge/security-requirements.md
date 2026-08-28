@@ -31,7 +31,7 @@ only (pre-1.0, no backports).
   and a failed apply unwinds ([configuration](configuration.md)).
 - **The MCP surface is read-only.** `superdev mcp sokf` exposes four
   read-only tools over stdio; nothing writes through it
-  ([api-contracts](api-contracts.md)).
+  ([contract-003-mcp-sokf](contracts/public/contract-003-mcp-sokf.md)).
 - **A pinned pack applies the bytes it was pinned to, or none.** Every
   resolved *git* pack is verified against the digest the lock recorded for
   that rev — over paths as well as contents, so a rename is a different pack, and
@@ -41,17 +41,17 @@ only (pre-1.0, no backports).
   pack has no pinned bytes to verify — it is a directory on this machine, read
   afresh every run, and trusting it is the same decision as naming it — so it
   records no digest at all rather than one nothing checks
-  ([ADR-016](decisions/D016-a-path-pack-records-no-digest.md)). A tag
+  ([ADR-016](decisions/adr-016-a-path-pack-records-no-digest.md)). A tag
   that moved is the case this exists for: the user re-pins, which is itself
   the new trust decision. A git source is fetched by spawning the user's own
-  `git` ([ADR-007](decisions/D007-git-fetch-by-spawn.md)), so credentials,
+  `git` ([ADR-007](decisions/adr-007-git-fetch-by-spawn.md)), so credentials,
   ssh agents and forge access are theirs; superdev stores no token and adds
   no auth surface.
 - **A pack source names one repository, whichever way it is spelled.** The
   key that decides whether a pack replaces the embedded content or merely
   layers over it is the source with its scheme, userinfo, port, `.git`
   suffix and trailing slash removed
-  ([ADR-004](decisions/D004-base-pack-identity.md)). Userinfo and the port
+  ([ADR-004](decisions/adr-004-base-pack-identity.md)). Userinfo and the port
   are stripped from the authority alone, never from the path: a source whose
   *path* ended `@github.com/six5536/superdev` must not normalise to the
   default pack's key and be treated as the base. A pack declares no
@@ -71,7 +71,7 @@ only (pre-1.0, no backports).
   precedes every operand, so a value's shape decides nothing.
 
   Both halves are load-bearing and neither is sufficient
-  ([ADR-012](decisions/D012-pack-source-schemes-are-allowlisted.md)). `parse`
+  ([ADR-012](decisions/adr-012-pack-source-schemes-are-allowlisted.md)). `parse`
   cannot see a `url.<base>.insteadOf` rewrite, which turns an approved
   `https://` source into whatever the machine's config says after superdev has
   handed it over. And among the overrides only the named `never` lines are
@@ -85,13 +85,13 @@ only (pre-1.0, no backports).
   embedding model download (or the explicit embeddings-API opt-in), fetching
   a pack the lock does not already have cached, and the one query `update`
   makes of the default pack source
-  ([ADR-009](decisions/D009-update-queries-default-source.md)). That query is
+  ([ADR-009](decisions/adr-009-update-queries-default-source.md)). That query is
   the narrowest of these: it runs on the untargeted `update` alone, asks only
   the source superdev itself ships, and a failure to reach it degrades to the
   pin the binary carries rather than failing the run. It is also the only
   spawn superdev bounds — a few seconds, because it is the only one made on
   superdev's own initiative
-  ([ADR-015](decisions/D015-the-spawn-seam-carries-a-deadline.md)); a clone,
+  ([ADR-015](decisions/adr-015-the-spawn-seam-carries-a-deadline.md)); a clone,
   a toolchain install and the model download are all things the user asked
   for and are left to take as long as they take. Every git call carries
   `GIT_TERMINAL_PROMPT=0`, so none can stop for a credential prompt. The

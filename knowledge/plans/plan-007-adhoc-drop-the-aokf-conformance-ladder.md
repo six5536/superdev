@@ -1,6 +1,6 @@
 ---
 type: AdhocPlan
-id: adhoc-plan-007-drop-the-aokf-conformance-ladder
+id: plan-007-adhoc-drop-the-aokf-conformance-ladder
 title: Drop the AOKF conformance ladder
 description: ADR-017 in code — the three-level ladder leaves the spec, the validator, the CLI and the parity goldens, knowledge passes or fails, and no file in the tree names a level but the ADR and this plan.
 status: done
@@ -179,7 +179,7 @@ Depends on: W3.
    `knowledge/issues/issue-010-feature-request-index-entries-are-never-checked-against-their-concept.md`
    and `knowledge/issues/issue-011-feature-request-index-shape-is-described-but-not-enforced.md`
    assert what validate does today, and
-   `knowledge/specs/S008-knowledge-owned-skills-design.md` and
+   `knowledge/specs/spec-008-knowledge-owned-skills.md` and
    `knowledge/plans/plan-002-feature-agent-instructions-layer.md` each name a
    level in a verification step. Dropping the phrase leaves what happened
    intact; keeping it leaves an instruction nobody can follow.
@@ -202,7 +202,7 @@ Depends on: W3.
 | `crates/lib/superdev-core/tests/fixtures/aokf/` | modified — 11 goldens projected: three keys dropped, one message reworded | W2 |
 | `knowledge/issues/issue-010-feature-request-index-entries-are-never-checked-against-their-concept.md` | modified — drops the level from what it observes | W4 |
 | `knowledge/issues/issue-011-feature-request-index-shape-is-described-but-not-enforced.md` | modified — drops the level from what it observes | W4 |
-| `knowledge/specs/S008-knowledge-owned-skills-design.md` | modified — a verification step names a level | W4 |
+| `knowledge/specs/spec-008-knowledge-owned-skills.md` | modified — a verification step names a level | W4 |
 | `knowledge/plans/plan-002-feature-agent-instructions-layer.md` | modified — a verification step names a level | W4 |
 
 ## Acceptance

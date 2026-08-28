@@ -75,7 +75,7 @@ example: |
 
   Resolves each manifest source to a pinned revision, refusing transports
   outside the allowlist, and records the pin in the lockfile. The interface
-  detail lives in `knowledge/contracts/contract-pack-source.md`.
+  detail lives in `knowledge/contracts/private/contract-pack-source.md`.
 
   # Files and artefacts
 

@@ -1,13 +1,13 @@
 ---
 type: FeaturePlan
-id: plan-agent-instructions-layer
+id: plan-002-feature-agent-instructions-layer
 title: Agent Instructions Layer
 description: Deliver S010 — the user-owned AGENTS.md with one ensured import, the fenced superdev.md aggregator, per-capability instruction files, codegraph MCP wiring, and the code-index dogfood.
 status: stable
 tags: [done]
 links:
   - rel: implements
-    to: spec-agent-instructions-layer
+    to: spec-010-agent-instructions-layer
 ---
 
 # Feature plan: agent instructions layer
@@ -15,7 +15,7 @@ links:
 ## Goal
 
 Implement the
-[agent instructions layer spec](/knowledge/specs/S010-agent-instructions-layer-design.md):
+[agent instructions layer spec](/knowledge/specs/spec-010-agent-instructions-layer.md):
 AGENTS.md becomes the user's file, superdev's guidance moves behind one
 ensured import, and code-index gains its agent wiring.
 

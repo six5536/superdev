@@ -1,0 +1,140 @@
+---
+type: Schema
+id: schema-contract-graphql
+title: GraphQL Contract Schema
+description: One GraphQL API — its SDL, endpoint, error and limit behaviour, and the stability promise, in knowledge/contracts/public/.
+---
+
+# GraphQL Contract Schema
+
+Structural rules for one public GraphQL contract, filed at
+`knowledge/contracts/public/contract-{nnn}-graphql-{slug}.md`. One endpoint and one schema, so the sections
+differ from a REST surface: there are no per-route status codes to tabulate,
+and deprecation stands in for versioning.
+
+Pick by protocol. A resource-shaped HTTP surface is a
+[rest contract](contract-rest.md); a compiled service IDL is an
+[rpc contract](contract-rpc.md).
+
+````yaml
+description: >
+  One GraphQL API offered to callers — the schema in SDL, where it is served
+  and how a caller authenticates, what a partial failure looks like, the limits
+  a query must stay within, and what is promised stable.
+line-limit: 400
+
+frontmatter:
+  type:
+    const: GraphqlContract
+  id:
+    pattern: '^contract-\d{3}-graphql-[a-z0-9-]+$'
+    description: >
+      contract-{nnn}-graphql-{slug}, the slug naming which graph. The
+      number is the next free one across knowledge/contracts/, public and
+      private together.
+  status:
+    enum: [draft, stable, deprecated]
+
+sections-ordered: true
+sections:
+  - heading: "Schema"
+    level: 1
+    required: true
+    content: code
+    description: >
+      The surface in SDL — types, queries, mutations, subscriptions, and the
+      `@deprecated` directives currently in force. One fenced `graphql` block.
+      Every field a caller may select is defined here.
+  - heading: "Endpoint and authentication"
+    level: 1
+    required: true
+    content: prose
+    description: >
+      The URL, the methods accepted, whether persisted queries or introspection
+      are available in production, what a caller presents to authenticate, and
+      the response to a missing or rejected credential.
+  - heading: "Errors"
+    level: 1
+    required: true
+    content: prose
+    description: >
+      How failures reach the caller — the `errors` array beside partial `data`,
+      the extension fields carrying a machine-readable code, and which
+      conditions are transport-level failures instead.
+  - heading: "Limits"
+    level: 1
+    content: prose
+    description: >
+      Query depth, complexity budget, pagination caps and rate limits, and what
+      a caller sees on exceeding one. Omit where the graph imposes none.
+  - heading: "Stability"
+    level: 1
+    required: true
+    content: prose
+    description: >
+      What may be added without notice, how a field is deprecated and how long
+      it then survives, and the rare change that forces a second endpoint.
+
+example: |
+  ---
+  type: GraphqlContract
+  id: contract-001-graphql-widget
+  title: GraphQL Contract
+  description: The widget graph — one endpoint, deprecation in place of versioning.
+  status: stable
+  ---
+
+  # Schema
+
+  ```graphql
+  type Widget {
+    id: ID!
+    name: String!
+    owner: String @deprecated(reason: "use ownerAccount; removed after 2026-06")
+    ownerAccount: Account
+  }
+
+  type Account {
+    id: ID!
+    displayName: String!
+  }
+
+  type Query {
+    widget(id: ID!): Widget
+    widgets(first: Int = 20, after: String): [Widget!]!
+  }
+
+  type Mutation {
+    createWidget(name: String!): Widget!
+  }
+  ```
+
+  # Endpoint and authentication
+
+  `POST /graphql`, JSON body. `GET` is accepted for persisted queries only.
+  Introspection is on in every environment, because the schema is public.
+  A bearer token in the `Authorization` header identifies the caller; an
+  anonymous request may read `widgets` and may not mutate.
+
+  # Errors
+
+  A resolver failure returns HTTP 200 with `data` partially populated and one
+  entry per failure in `errors`, each carrying `extensions.code` — one of
+  `BAD_USER_INPUT`, `UNAUTHENTICATED`, `FORBIDDEN`, `INTERNAL`. Only a
+  malformed request body or a rejected token fails at the transport, as 400 or
+  401. A caller must therefore read `errors` even on a 200.
+
+  # Limits
+
+  Query depth is capped at 10 and complexity at 1000 points, one point per
+  field and 20 per list. `widgets` returns at most 100 per page. Exceeding any
+  of these is `BAD_USER_INPUT` with the budget in the extension, before
+  execution starts.
+
+  # Stability
+
+  Types and fields are added without notice, and a caller must tolerate fields
+  it did not ask for appearing in the schema. A field going away is marked
+  `@deprecated` with a date, stays for at least six months, and is announced in
+  the release notes. Nothing else removes a field, and there is no `/graphql/v2`.
+````

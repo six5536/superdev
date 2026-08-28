@@ -1,15 +1,17 @@
 ---
 type: BugReport
-id: issue-016-sync-would-revert-the-schema-migration
+id: issue-016-bug-sync-would-revert-the-schema-migration
 title: Sync would revert the schema migration and the conformance decision, and the pre-PR check says so 65 times
 description: The live tree carries the schema migration and ADR-017; /pack/ still carries what they replaced, so status --drift reports 65 changes and sync would restore 41 deleted templates, put the level ladder back into the AOKF spec, and overwrite 21 rewritten skills.
 status: draft
 tags: [needs-triage]
 links:
   - rel: relates-to
-    to: adhoc-plan-006-rust-format-validator
+    to: plan-006-adhoc-rust-format-validator
   - rel: relates-to
     to: adr-017-aokf-conformance-is-pass-or-fail
+  - rel: relates-to
+    to: issue-021-chore-backport-the-knowledge-design-to-the-pack
 ---
 
 # Bug: sync would revert the schema migration and the conformance decision
@@ -22,7 +24,7 @@ replaced, so the blueprint and the working tree now disagree about 65 files.
 `superdev sync` closes that gap in the wrong direction: it restores the 41
 templates the schemas replaced, rewrites `.agents/aokf/SPEC.md` and
 `.agents/aokf.md` back to the conformance ladder
-[ADR-017](../decisions/D017-aokf-conformance-is-pass-or-fail.md) removed, recreates
+[ADR-017](../decisions/adr-017-aokf-conformance-is-pass-or-fail.md) removed, recreates
 `knowledge/plans/index.md` after the plans were split, puts the old
 `.agents/superdev.md` aggregator back with its `AGENTS.md` line, and overwrites
 21 rewritten skills. `npm run check:blueprint` is a pre-PR check, so a
@@ -84,6 +86,10 @@ while looking at a failing check.
 - Backport the migration into `/pack/`: the 39 schemas replacing the 41
   templates, the split plan indexes, the rewritten skills, and the aggregator's
   removal. This is the plan-sized piece of work, and it is what closes the 65.
+  It is now filed as its own chore,
+  [I021](issue-021-chore-backport-the-knowledge-design-to-the-pack.md), which
+  also records that the divergence is deliberate while the knowledge design is
+  still moving — the answer this issue asked for under Expected behaviour.
 - Backport ADR-017's edits to `.agents/aokf/SPEC.md` and `.agents/aokf.md`
   separately and first. They are binary-owned, two files, and the consequence
   of leaving them is a spec version going backwards.

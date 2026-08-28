@@ -8,7 +8,7 @@ status: stable
 
 ---
 type: Spec
-id: spec-<feature-slug>
+id: spec-<nnn>-<feature-slug>
 title: <feature name>
 description: <one line — what done looks like, from outside>.
 status: draft
@@ -63,7 +63,7 @@ status: draft
 
 Notes on usage (not part of the document):
 
-- File as `knowledge/specs/Snnn-<feature-slug>.md`, numbered after the
+- File as `knowledge/specs/spec-<nnn>-<feature-slug>.md`, numbered after the
   highest existing spec; id `spec-<feature-slug>`.
 - List it in `knowledge/specs/index.md`.
 - The test plan (`template-test-plan`) is appended to this document as

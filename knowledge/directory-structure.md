@@ -26,7 +26,9 @@ knowledge/specs/          # design specs (permanent decision records)
 knowledge/plans/          # plan-<nnn>-feature-<slug> slice lists and
                           # plan-<nnn>-adhoc-<slug> one-off work
 knowledge/decisions/      # ADRs; permanent
-knowledge/contracts/      # interface contracts
+knowledge/contracts/      # contracts, by audience:
+                          # public/ promised to callers,
+                          # private/ per-feature, build codes against it
 knowledge/issues/         # gaps and tickets, one concept each
 knowledge/schemas/        # the contract each document type is checked against
 .agents/                  # the entry point, capability instructions, SOKF spec, agent rules
@@ -40,7 +42,7 @@ submodules/               # read-only reference checkouts (git submodules)
 
 A pack's tree is its declaration: the directory under `pack/` names the item's
 owning capability and the one below it the kind, so a file's position is what
-makes it an item ([ADR-003](decisions/D003-items-by-layout.md)). `pack.toml`
+makes it an item ([ADR-003](decisions/adr-003-items-by-layout.md)). `pack.toml`
 carries the format version and metadata, never an item list. The capability
 instruction files (`pack/sokf/agents/`, `pack/codegraph/`) are not
 pack content: they describe a version the binary pins or a format the compiled

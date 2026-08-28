@@ -1,6 +1,6 @@
 ---
 type: AdhocPlan
-id: adhoc-plan-006-rust-format-validator
+id: plan-006-adhoc-rust-format-validator
 title: Fold the superdev-format validator into the Rust validator
 description: The grammar-driven format validator moves from a Node script into superdev-core and merges with the AOKF validator behind one command, one report and one hook, proved against goldens captured from the reference while it still ran.
 status: done

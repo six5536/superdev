@@ -13,7 +13,7 @@ sources:
 Releases are tag-driven; the authoritative walkthrough is
 [CONTRIBUTING → Releasing](/CONTRIBUTING.md).[^contributing] There are two
 release paths and each is one command
-([ADR-008](decisions/D008-one-command-per-release.md)). The invariants:
+([ADR-008](decisions/adr-008-one-command-per-release.md)). The invariants:
 
 1. **Changelog first.** A `## [X.Y.Z]` section must exist in `CHANGELOG.md`
    before cutting a release. `npm run release` and the release workflow both

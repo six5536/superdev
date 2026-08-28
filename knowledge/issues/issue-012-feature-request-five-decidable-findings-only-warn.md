@@ -1,6 +1,6 @@
 ---
 type: FeatureRequest
-id: issue-012-five-decidable-findings-only-warn
+id: issue-012-feature-request-five-decidable-findings-only-warn
 title: Five findings the repository alone can decide are only warnings, and go unread
 description: Broken links, missing resources, missing sources, missing index targets and unjoined footnotes are all decidable from the tree, but SPEC §11 makes them warnings; the canonical knowledge carried 39 of them unactioned until someone happened to look.
 status: draft
@@ -94,7 +94,7 @@ loudly it complains.
 
 This changes SPEC §11, so it wants the treatment ADR-017 had rather than a
 quiet edit — see
-[the conformance decision](../decisions/D017-aokf-conformance-is-pass-or-fail.md),
+[the conformance decision](../decisions/adr-017-aokf-conformance-is-pass-or-fail.md),
 which took the same kind of question about the same section.
 
 Workaround until then: read the warnings. The canonical knowledge currently sits at zero,

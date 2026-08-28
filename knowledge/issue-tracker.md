@@ -20,11 +20,11 @@ workflow skills read this concept to learn where to publish and fetch:
   directory listing sorts by number and reads by kind. Numbered after
   the highest existing issue, and never a single combined tickets file.
 - The spec, when one exists, is
-  `knowledge/specs/Snnn-<feature-slug>.md`.
+  `knowledge/specs/spec-<nnn>-<feature-slug>.md`.
 - An issue's feature is declared by its `implements` or `references`
   link to the spec, not by the path; an issue without a feature has
   neither.
-- Each issue is a SOKF concept with a unique id `issue-nnn-<slug>`, a
+- Each issue is a SOKF concept with a unique id `issue-<nnn>-<kind>-<slug>`, a
   `title`, a `description`, and `status: draft` while open. Its `type`
   names which of the three shapes it takes, and so which schema governs
   it:

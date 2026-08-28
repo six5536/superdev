@@ -1,13 +1,13 @@
 ---
 type: FeatureRequest
-id: issue-006-content-packs-are-undocumented-for-users
+id: issue-006-feature-request-content-packs-are-undocumented-for-users
 title: Content packs are absent from the user documentation, and the update command now describes itself wrongly
 description: Neither the README nor the CLI help nor the man page mentioned packs, so a user could not discover the feature, and update's description still claimed it moved pins to this binary's defaults; fixed in slice 18, which added a packs section and corrected update on every surface.
 status: stable
 tags: [done]
 links:
   - rel: references
-    to: spec-content-packs
+    to: spec-014-content-packs
 ---
 
 # Feature: content packs are undocumented, and `update` describes itself wrongly
@@ -33,7 +33,7 @@ rather than in a subcommand's summary.
 
 ## Summary
 
-Against [S014](../specs/S014-content-packs-design.md).
+Against [S014](../specs/spec-014-content-packs.md).
 
 Two gaps found at acceptance, one an omission and one an inaccuracy.
 
@@ -53,7 +53,7 @@ update    Move version pins to this binary's defaults, then sync
 That was true before this feature. It is not true now: `update` asks the
 default pack source for its newest release and moves the pin there, *ahead* of
 this binary's default, which is the whole point of
-[ADR-009](../decisions/D009-update-queries-default-source.md). The same
+[ADR-009](../decisions/adr-009-update-queries-default-source.md). The same
 sentence is in `README.md` and in the man page, and it tells a user the one
 verb that reaches the network does not.
 

@@ -47,14 +47,14 @@ source = "./packs/acme"              # a path on this machine: no rev
 It is a top-level array rather than a capability table because the two
 absences differ: an absent capability means disabled, while an absent pack
 list means the pack compiled into the binary
-([ADR-001](decisions/D001-packs-manifest-section.md)). Nothing about a repo
+([ADR-001](decisions/adr-001-packs-manifest-section.md)). Nothing about a repo
 that names no pack changes, and `sync` never adds an entry to a manifest that
 lacks one.
 
 Entries layer in the order written, and a later item of the same name wins.
 An entry naming the source the embedded pack is a copy of *replaces* it
 rather than layering over it, so what that rev drops leaves the repo
-([ADR-004](decisions/D004-base-pack-identity.md)); every other entry sits
+([ADR-004](decisions/adr-004-base-pack-identity.md)); every other entry sits
 above. Two entries naming one source are refused — each pack appears once,
 as each capability provider does.
 A source is compared normalised, so any spelling of one repository is one
@@ -66,7 +66,7 @@ one superdev fetches over — `https`, `ssh` or `file`, spelled in lower case as
 git itself matches them — so an ssh alias, an `insteadOf` prefix and a mirror
 all keep working, while `git://`, `http://` and an `ext::`-style remote helper
 are refused when the manifest is parsed, naming the source
-([ADR-012](decisions/D012-pack-source-schemes-are-allowlisted.md)). The scp
+([ADR-012](decisions/adr-012-pack-source-schemes-are-allowlisted.md)). The scp
 form and a bare alias carry their transport implicitly and are ssh; the
 shorthand is https. A path is resolved against
 the repo root, not the working directory — the file is committed, so it means
@@ -75,7 +75,7 @@ compared, so two spellings of one directory are one pack. Its identity is that
 canonical location written relative to the repo root, with forward slashes, so
 the lock it lands in reads the same in every checkout and on every platform; a
 pack beside the repo keeps its `..`
-([ADR-011](decisions/D011-path-pack-identity-is-root-relative.md)). A directory
+([ADR-011](decisions/adr-011-path-pack-identity-is-root-relative.md)). A directory
 and a repository are never the same source, however alike their identities
 read. It is read from disk
 on every run, so editing a local pack and running `sync` again lands the new
@@ -87,7 +87,7 @@ edit without first knowing that absence means the embedded pack. `update` —
 only its untargeted form, never `update <capability>` — asks the default
 source for the newest `assets-v<major>.<minor>.<patch>` tag it carries and
 moves that pin there, ahead of what the binary embeds if need be
-([ADR-009](decisions/D009-update-queries-default-source.md)). That is the one
+([ADR-009](decisions/adr-009-update-queries-default-source.md)). That is the one
 path by which a content fix reaches an unchanged binary, and the one place
 superdev reaches the network without being asked to fetch something. A pin
 never moves backwards and never below what the binary carries; a pin naming
@@ -97,7 +97,7 @@ resolved before the pin naming it is written, and a release this binary would
 refuse — an unknown `format`, a `REJECTED` path, an unparseable `pack.toml`, a
 symlink — leaves the pin where it was with the reason reported in the line
 that would have announced the move
-([ADR-013](decisions/D013-update-proves-a-pin-before-it-writes-it.md)).
+([ADR-013](decisions/adr-013-update-proves-a-pin-before-it-writes-it.md)).
 Written first, such a pin would be a state no superdev command could leave:
 `update` saves the manifest before the `sync` that validates it, and never
 moves a pin backwards. One entry is proven, not the manifest, so a second pack
@@ -110,7 +110,7 @@ where the binary would put it. Being the one request nobody asked for, it is
 also the one on a clock: a few seconds, after which a network that neither
 answers nor refuses is reported as unreachable like any other, rather than
 holding the command for the OS connect timeout
-([ADR-015](decisions/D015-the-spawn-seam-carries-a-deadline.md)). No git call
+([ADR-015](decisions/adr-015-the-spawn-seam-carries-a-deadline.md)). No git call
 superdev makes prompts for credentials, so a source that needs them fails
 instead of waiting for someone to type. A manifest an earlier binary wrote gains the
 default entry on the first `update`, which is the only command that adds one.
@@ -129,7 +129,7 @@ Following a link would put bytes from anywhere on the machine into the repo as
 pack content; stepping over one leaves the pack shipping everything except the
 item its author meant the link to stand for, with `sync` silent and
 `status --drift` green, which is the outcome `read_pack` promises never
-happens ([ADR-014](decisions/D014-a-symlink-in-a-pack-is-refused.md)). A pack
+happens ([ADR-014](decisions/adr-014-a-symlink-in-a-pack-is-refused.md)). A pack
 author who wanted to deduplicate an item copies the file instead.
 
 What counts as a symlink is decided by whoever knows. For a fetched pack it is
@@ -172,13 +172,13 @@ entries, one per pack, each with its own `provider`, `version` and
 shape on rewrites; the array form appears only from two entries up. The
 same pack listed twice, the array form on an exclusive slot, and an empty
 entry list are all refused at load with guided errors
-([spec](specs/S011-skills-cardinality-design.md)). A manifest still naming the
+([spec](specs/spec-011-skills-cardinality.md)). A manifest still naming the
 removed `workflows` capability fails at load with a guided error telling the
 user to delete the table (moving any custom names to `[knowledge]`) — the
 skill set now ships with the SOKF knowledge, and superpowers users can
 `claude plugin install superpowers` by hand. The error never rewrites
 `config.toml`; the manifest is the user's file
-([spec](specs/S009-knowledge-carried-skills-design.md)).
+([spec](specs/spec-009-knowledge-carried-skills.md)).
 
 An optional sub-table opts the canonical knowledge out of the local embedding
 model and onto an API:
@@ -261,7 +261,7 @@ are both absent for a path source, and absent together: a directory is read
 afresh every run, so there are no pinned bytes to name or to check against,
 and a digest recorded there would be rewritten by every commit touching the
 pack and read by nothing
-([ADR-016](decisions/D016-a-path-pack-records-no-digest.md)). The per-file hashes
+([ADR-016](decisions/adr-016-a-path-pack-records-no-digest.md)). The per-file hashes
 stay in `files` with everything else, which is what makes a dropped pack's
 files orphans by the ordinary rule. Absent when no pack was named.
 
@@ -290,7 +290,7 @@ id), and each resolved pack under `packs/<digest>/`. Deleting it is safe — the
 next tool call rebuilds the index, and the next `sync` re-fetches a pack.
 
 A pack is cached by its digest so a later run reaches the network only for
-bytes this machine does not have ([ADR-005](decisions/D005-pack-cache-and-fetch.md)):
+bytes this machine does not have ([ADR-005](decisions/adr-005-pack-cache-and-fetch.md)):
 a steady-state `sync`, a CI `status --drift` and a `--dry-run` after any
 previous resolve all stay offline. Only what verified against the lock's
 digest is kept; a pack that failed verification leaves nothing behind.

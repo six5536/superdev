@@ -20,6 +20,10 @@
 
 * [The Issue type has one shape, bug-report, so everything filed has to pretend to be a defect](issue-015-feature-request-every-issue-must-be-a-bug-report.md) - one schema and one template constrain type Issue, so a feature request, a rename or a decision has to invent repro steps and an environment to be filed at all — six of the fourteen issues on file already do, and a feature request has no home but an untracked bullet in the backlog.
 
+## The pack
+
+* [The pack has not been backported since the knowledge design started moving, and holds neither the schemas nor the types they name](issue-021-chore-backport-the-knowledge-design-to-the-pack.md) - four plans have reshaped the live knowledge design and none has been backported, so /pack/ still ships 56 templates the schemas replaced, 20 concepts typed against a vocabulary that no longer exists, and a manifest declaring SOKF 0.2.
+
 ## Naming
 
 * [The canonical knowledge is called "the bundle" on every surface, and the word describes nothing](issue-013-chore-the-knowledge-is-called-the-bundle.md) - the specification, the documents and the CLI are clear of the word, but "bundle" remains in 365 places inside crates/ — load_bundle, bundle_dir, BundleManifest, bundle_root — where it tells a reader nothing about a directory of markdown the repository owns.

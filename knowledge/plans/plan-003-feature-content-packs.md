@@ -1,22 +1,22 @@
 ---
 type: FeaturePlan
-id: feature-plan-content-packs
+id: plan-003-feature-content-packs
 title: Externally Sourced Content Packs — feature plan
 description: Deliver S014 in eighteen slices — move the content to /pack, reorganise it into pack layout, derive it from that layout, add the manifest and lock schemas, resolve local then git sources, wire ownership, teach init and update, make each release one command, make a committed path pin portable, dogfood it, then close the gaps acceptance found and the one deferred issue small enough to fix.
 status: stable
 tags: [done]
 links:
   - rel: implements
-    to: spec-content-packs
+    to: spec-014-content-packs
 ---
 
 # Feature plan: externally sourced content packs
 
-Spec: [S014](../specs/S014-content-packs-design.md). Contract:
-[C001](../contracts/C001-content-packs.md). Decisions:
-[ADR-001](../decisions/D001-packs-manifest-section.md) …
-[ADR-006](../decisions/D006-pack-at-repo-root.md),
-[ADR-011](../decisions/D011-path-pack-identity-is-root-relative.md).
+Spec: [S014](../specs/spec-014-content-packs.md). Contract:
+[C001](../contracts/private/contract-001-interface-content-packs.md). Decisions:
+[ADR-001](../decisions/adr-001-packs-manifest-section.md) …
+[ADR-006](../decisions/adr-006-pack-at-repo-root.md),
+[ADR-011](../decisions/adr-011-path-pack-identity-is-root-relative.md).
 
 Ordered by dependency, then risk. Slice 1 carries the Windows symlink risk
 and slice 8 the layering semantics; both sit as early as their dependencies
@@ -144,7 +144,7 @@ only variable when the Windows job runs.
 - Change: add `PackSource::Git` resolution by spawning the user's `git`
   through the injected `CommandRunner` — `clone --depth 1
   --filter=blob:none --sparse --branch <rev>` then `sparse-checkout set pack`
-  ([ADR-007](../decisions/D007-git-fetch-by-spawn.md)), with the commit-sha
+  ([ADR-007](../decisions/adr-007-git-fetch-by-spawn.md)), with the commit-sha
   path implemented explicitly since `--branch` does not take one. Add the
   digest over a pack tree, verification against the lock's recorded digest,
   and the cache under `.superdev/cache/packs/<digest>/`.
@@ -176,7 +176,7 @@ only variable when the Windows job runs.
 - Change: `init` writes the blueprint's default pack entry explicitly.
   `update` asks the default source for its newest release tag and moves that
   pin there, even ahead of the blueprint's default
-  ([ADR-009](../decisions/D009-update-queries-default-source.md)); with no
+  ([ADR-009](../decisions/adr-009-update-queries-default-source.md)); with no
   network it moves no further than the blueprint's default and says it could
   not check. A pin naming another source is reported and left alone, and a
   manifest carrying no entry gains the default one.
@@ -195,7 +195,7 @@ only variable when the Windows job runs.
   which bumps `pack.toml` and cuts `assets-vA.B.C` alone. Make the binary
   release workflow ignore `assets-v*` tags so a content release runs no
   five-platform build. Record both flows in CONTRIBUTING and
-  `release-procedure` ([ADR-008](../decisions/D008-one-command-per-release.md)).
+  `release-procedure` ([ADR-008](../decisions/adr-008-one-command-per-release.md)).
 - Done-check: `release X.Y.Z` produces one commit carrying both tags with
   `DEFAULT_PACK.rev` naming the pack tag it cut — no second step, nothing to
   reconcile by hand; `release:pack` cuts one tag and triggers no binary
@@ -211,7 +211,7 @@ only variable when the Windows job runs.
   A pack outside the root keeps its `..` prefix; where no relative form exists
   — a different Windows drive — the canonical absolute path stands. Keys are
   compared only within a source kind, so a directory can never key as the base
-  pack ([ADR-011](../decisions/D011-path-pack-identity-is-root-relative.md)).
+  pack ([ADR-011](../decisions/adr-011-path-pack-identity-is-root-relative.md)).
   Four call sites in `resolve.rs` and `is_default` in `source.rs` follow.
 - Raised by slice 14's build: the lock is committed, so until this lands
   dogfooding writes one contributor's absolute paths into a tracked file and
@@ -325,8 +325,8 @@ unplanned, so nothing scheduled can stall behind one.
 
 Cutting any of these as a slice would only have bounced it to
 `/interface-design`, so they went there on their own. All five are now
-decided — [ADR-012](../decisions/D012-pack-source-schemes-are-allowlisted.md)
-to [ADR-016](../decisions/D016-a-path-pack-records-no-digest.md) — and
+decided — [ADR-012](../decisions/adr-012-pack-source-schemes-are-allowlisted.md)
+to [ADR-016](../decisions/adr-016-a-path-pack-records-no-digest.md) — and
 scheduled as [P005](plan-005-feature-content-pack-hardening.md), except
 [I003](../issues/issue-003-bug-a-local-pack-cannot-remove-what-it-dropped.md), closed
 `wontfix`: a path pack keeps layering, and the rebuild a pack developer needs
@@ -337,7 +337,7 @@ anyway is the answer.
   refusing a source whose scheme superdev does not support, rather than
   handing it to git. Defence in depth once slice 15 lands, and a clearer
   error. Which schemes are in the set changes what a manifest may say, which
-  [C001](../contracts/C001-content-packs.md) documents as `parse`'s rejections.
+  [C001](../contracts/private/contract-001-interface-content-packs.md) documents as `parse`'s rejections.
 - [I001](../issues/issue-001-bug-update-can-pin-an-unreadable-pack-format.md) — a
   format range the tag does not carry.
 - [I002](../issues/issue-002-bug-no-time-bound-on-the-update-query.md) — a deadline on

@@ -26,7 +26,7 @@ frontmatter:
   type:
     const: Chore
   id:
-    pattern: '^issue-\d{3}-[a-z0-9-]+$'
+    pattern: '^issue-\d{3}-chore-[a-z0-9-]+$'
   title:
     description: The one-line statement of the work.
   status:

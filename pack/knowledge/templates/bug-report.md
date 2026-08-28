@@ -8,7 +8,7 @@ status: stable
 
 ---
 type: BugReport
-id: issue-nnn-<slug>
+id: issue-<nnn>-bug-<slug>
 title: <one-line symptom>
 description: <one line — the symptom>.
 status: draft

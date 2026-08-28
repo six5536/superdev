@@ -1,6 +1,6 @@
 ---
 type: BugReport
-id: issue-020-the-schemas-do-not-ship
+id: issue-020-bug-the-schemas-do-not-ship
 title: The pack ships 43 document templates and no schemas, so schema enforcement runs in this repository and nowhere else
 description: superdev init writes the templates that produce documents and none of the schemas that check them, so a managed repo has nothing to dispatch against and every document passes unexamined — the capability P008 built reaches no user.
 status: draft

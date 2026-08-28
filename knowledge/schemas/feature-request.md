@@ -25,7 +25,7 @@ frontmatter:
   type:
     const: FeatureRequest
   id:
-    pattern: '^issue-\d{3}-[a-z0-9-]+$'
+    pattern: '^issue-\d{3}-feature-request-[a-z0-9-]+$'
   title:
     description: The one-line statement of what is missing.
   status:

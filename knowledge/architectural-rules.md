@@ -17,8 +17,8 @@ The invariants behind the [architecture](architecture.md):
   Resolving content is the one exception, and sits outside the repo: it reads
   local paths, may spawn `git` for a pinned pack, and populates the machine's
   own cache under `.superdev/cache/packs/`
-  ([ADR-002](decisions/D002-resolve-before-plan.md),
-  [ADR-005](decisions/D005-pack-cache-and-fetch.md)). It runs to completion
+  ([ADR-002](decisions/adr-002-resolve-before-plan.md),
+  [ADR-005](decisions/adr-005-pack-cache-and-fetch.md)). It runs to completion
   before any plan exists, so there is nothing yet to roll back — and putting
   it after planning would mean planning read the network, which is what keeps
   `status` free of it.
