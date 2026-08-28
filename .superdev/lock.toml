@@ -3,10 +3,6 @@ source = "./pack"
 identity = "pack"
 format = 1
 
-[components.bash-output-filter]
-provider = "rtk"
-version = "0.45.0"
-
 [components.code-index]
 provider = "codegraph"
 version = "1.5.0"
@@ -22,10 +18,8 @@ version = "0.2.0"
 ".agents/aokf.md" = "8e972ab9812894155754c4117a907eadff76a3e47b4e54b927d4c1e00023b3db"
 ".agents/aokf/SPEC.md" = "84d5390c2af278c58f9aae5fd92bcc116c8929e42c3d19199c954b0cb4042cff"
 ".agents/codegraph.md" = "e17d5ae6efffd72a5bed4f85ab360dccea8d3d81aaec79b2e8e98261380cc2d6"
-".agents/rtk.md" = "6d12890d2525b3730326923982bfbf1a940c0e5362ffbff20e3de19a064c4c48"
 ".agents/superdev.md" = "a99e4f8682382ea1fdf21478b18755438ca304b9eaec36ea0bc7515e4e05ecc0"
 ".claude/settings.json:hooks.PostToolUse[superdev aokf hook validate]" = "fc402a3befe55700af20e66b8ca79e5819eb0037cee9c6c85a23c41fb816314d"
-".claude/settings.json:hooks.PreToolUse[mise exec http:rtk -- rtk hook claude]" = "6bb35e2df2e56802503dd19f3a159a6b7446bd8fc8c7854994f239df08921d77"
 ".claude/skills/accept/SKILL.md" = "2dec4a41cbe6c25988fc9c00a6b0eb0bec27b5d10021839621e672f8d1d9d049"
 ".claude/skills/adhoc-plan/SKILL.md" = "716bb0ec726f6c0597fa2c17cd523b50f5f446d4087d32bc21fba74b46d22ba1"
 ".claude/skills/bootstrap/SKILL.md" = "c7d2d967d764de7b49bc3e09833d97ade30ae8bcf21e262541d941be2b5279ce"
@@ -54,6 +48,3 @@ version = "0.2.0"
 ".mcp.json:mcpServers.codegraph" = "e0b059437b618fb326f87d47078490f74cd2459e45fc2b8414fe211dc023f45d"
 ".mcp.json:mcpServers.superdev-aokf" = "941cb52a797645cb1458c19ac0f08927703ed1e64f41cec289472387b3b4ab8d"
 ".mise.toml:http:codegraph" = "e4be6ff16fe91dc165523e8762aa56b0ec9f99e244e396006499017dcf0a3377"
-".miserc.toml" = "87942eccb857b746393f1ff23d8443bffb97c218c87f3ab35af5649cbafc0d3f"
-"mise.unix.toml" = "598ac6cc207154e59757ea93fa6d84409772ee5e680befbda21258851ad59895"
-"mise.windows-x64.toml" = "df7dc0441796369826ba5695381a1a476a45addd23ac00a5ffbb056a17094cf4"
