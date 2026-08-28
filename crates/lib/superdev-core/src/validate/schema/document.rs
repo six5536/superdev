@@ -111,6 +111,13 @@ impl DocSchema {
         self.frontmatter.r#type.as_ref()?.r#const.as_deref()
     }
 
+    /// Whether this schema names its documents by glob — the fallback for
+    /// documents that carry no frontmatter to dispatch on.
+    #[must_use]
+    pub fn declares_glob(&self) -> bool {
+        self.target_files.is_some()
+    }
+
     /// Parse a schema document's yaml contract. `None` when the document
     /// carries no contract to read — `check_schema` reports that; this is not
     /// the place to report it twice.
@@ -244,12 +251,15 @@ fn check_one(doc: &Document<'_>, schema: &DocSchema, findings: &mut Vec<Finding>
     };
 
     let lines: Vec<&str> = doc.text.split('\n').collect();
+    // Counted as an editor counts them, so a document at exactly its limit
+    // passes: `split` yields a trailing empty element for the final newline,
+    // and reporting that as one line over is an off-by-one nobody can act on.
+    let count = doc.text.lines().count();
     if let Some(limit) = schema.line_limit
-        && lines.len() > limit
+        && count > limit
     {
         push(format!(
-            "{} lines, over {}'s limit of {limit} — split it rather than trimming it",
-            lines.len(),
+            "{count} lines, over {}'s limit of {limit} — split it rather than trimming it",
             schema.name
         ));
     }
@@ -486,7 +496,9 @@ mod tests {
     /// a regex would govern documents nobody named.
     #[test]
     fn a_pattern_is_a_glob_and_not_a_regex() {
-        for meta in ["a+b.md", "a(b).md", "a[b].md", "a{b}.md", "a^b$.md", "a|b.md"] {
+        for meta in [
+            "a+b.md", "a(b).md", "a[b].md", "a{b}.md", "a^b$.md", "a|b.md",
+        ] {
             assert!(glob_match(meta, meta), "{meta} should match itself");
         }
         assert!(!glob_match("a+b.md", "aab.md"), "`+` is not a repeat");
@@ -582,6 +594,31 @@ mod tests {
             "{messages:?}"
         );
         assert!(messages.iter().any(|m| m.contains("over")), "{messages:?}");
+    }
+
+    /// The limit is inclusive, and a trailing newline is not a line. A
+    /// document written to exactly its limit passes; one line more does not.
+    #[test]
+    fn a_document_at_exactly_its_limit_passes() {
+        let schema = schema_of("frontmatter:\n  type:\n    const: T\nline-limit: 3\n");
+        let at = Document {
+            path: "a.md",
+            text: "one\ntwo\nthree\n",
+            doc_type: Some("T"),
+        };
+        let mut findings = Vec::new();
+        check_one(&at, &schema, &mut findings);
+        assert!(findings.is_empty(), "{findings:#?}");
+
+        let over = Document {
+            path: "a.md",
+            text: "one\ntwo\nthree\nfour\n",
+            doc_type: Some("T"),
+        };
+        let mut findings = Vec::new();
+        check_one(&over, &schema, &mut findings);
+        assert_eq!(findings.len(), 1, "{findings:#?}");
+        assert!(findings[0].message.starts_with("4 lines, over"));
     }
 
     #[test]

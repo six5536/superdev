@@ -241,21 +241,27 @@ mod tests {
             .unwrap()
     }
 
+    /// The two copies of the grammar are one file. The binary keeps a copy so
+    /// a repository without `.agents/sokf/grammar.yaml` still validates; this
+    /// is what stops the two drifting.
     #[test]
     fn the_embedded_grammar_equals_the_repository_copy() {
         let file = std::fs::read_to_string(repo().join(GRAMMAR_PATH)).unwrap();
         assert_eq!(
             EMBEDDED_GRAMMAR, file,
-            "copy {GRAMMAR_PATH} to crates/lib/superdev-core/src/format/grammar.yaml"
+            "copy {GRAMMAR_PATH} to crates/lib/superdev-core/src/validate/schema/grammar.yaml"
         );
     }
 
+    /// With no file to read, the embedded copy is used.
     #[test]
     fn a_repository_without_the_grammar_validates_from_the_embedded_copy() {
         let empty = tempfile::tempdir().unwrap();
         assert_eq!(load_grammar(empty.path()).unwrap().grammar, "superdev");
     }
 
+    /// A grammar that violates its own constraints fails before any file is
+    /// read, naming the key at fault.
     #[test]
     fn an_unreadable_grammar_fails_naming_the_key() {
         let dir = tempfile::tempdir().unwrap();

@@ -2,7 +2,7 @@
   "findings": [
     {
       "file": "a.md",
-      "message": "34 lines, over thing.md's limit of 20 — split it rather than trimming it",
+      "message": "33 lines, over thing.md's limit of 20 — split it rather than trimming it",
       "severity": "error"
     }
   ],

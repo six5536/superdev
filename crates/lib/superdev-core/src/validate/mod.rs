@@ -286,14 +286,8 @@ mod tests {
         schema::load_grammar(&repo()).unwrap()
     }
 
-    /// The two copies of the grammar are one file. D-6 keeps a copy inside the
-    /// binary so a repository without `.agents/sokf/grammar.yaml` still
-    /// validates; this is what stops the two drifting.
-    /// With no file to read, the embedded copy is used.
-    /// A grammar that violates its own constraints fails before any file is
-    /// read, naming the key at fault.
-    /// A bare run covers the bundle and every root, names every file the same
-    /// way, and reports each file once.
+    /// A bare run covers the knowledge and every root, names every file the
+    /// same way, and reports each file once.
     #[test]
     fn a_bare_run_covers_the_bundle_and_the_roots() {
         let root = repo();
@@ -399,6 +393,32 @@ mod tests {
         assert_eq!(run.schemas, 0, "no schemas to read");
         assert_eq!(run.documents, 0, "so no document is checked");
         assert!(run.report.passed(), "{:#?}", run.report.findings);
+    }
+
+    /// A glob is the fallback for documents that carry no frontmatter, so a
+    /// schema declaring a `type` const has no use for one. Dispatch takes the
+    /// type and ignores the glob, which would leave the glob reading as a
+    /// second, live way in; this is what keeps the two from both being true of
+    /// one schema.
+    #[test]
+    fn a_schema_dispatching_by_type_declares_no_glob() {
+        let dir = repo().join("knowledge/schemas");
+        let mut both = Vec::new();
+        for entry in std::fs::read_dir(&dir).unwrap() {
+            let path = entry.unwrap().path();
+            if path.extension().is_none_or(|e| e != "md") || path.ends_with("index.md") {
+                continue;
+            }
+            let name = relative(&repo(), &path);
+            let text = std::fs::read_to_string(&path).unwrap();
+            let Some(schema) = schema::document::DocSchema::parse(&name, &text) else {
+                continue;
+            };
+            if schema.type_const().is_some() && schema.declares_glob() {
+                both.push(name);
+            }
+        }
+        assert!(both.is_empty(), "these declare both: {both:#?}");
     }
 
     /// This repository does carry schemas, so the same counts are non-zero —
