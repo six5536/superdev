@@ -6,7 +6,7 @@ description: Design for aokf-carried lifecycle skills — aokf-maintain and the 
 status: stable
 ---
 
-# Motivation
+# Summary
 
 Two pressures, one owner:
 
@@ -108,6 +108,26 @@ other (the stale asset took the repo's improved MATT-POCOCK-SKILLS.md,
 the repo took the asset's VALIDATION.md), and `.mcp.json` now names the
 bare `superdev` the dev shim resolves.
 
+# Behaviour
+
+- Stated in the design sections below rather than gathered here. This spec
+  predates the contract that asks for one Behaviour section, and the
+  sections were left where they were written rather than reshuffled after
+  the fact.
+
+# Acceptance criteria
+
+1. The behaviour described below holds, as proved by the automated cases in
+   the test plan. This spec shipped before the contract asked for acceptance
+   criteria, and none were written at the time; the tests are the record of
+   what was actually accepted.
+
+# Edge cases & errors
+
+- Not recorded separately when this spec was written. What the code does at
+  the edges is in the tests named in the test plan, which is the only
+  contemporaneous record.
+
 # Out of scope
 
 - The ongoing write-side (the knowledge-capture skill in the
@@ -116,3 +136,37 @@ bare `superdev` the dev shim resolves.
 - Harvesting from sources outside the repo (issue trackers, wikis, chat).
 - Structured AOKF updates over MCP — adopt edits files directly, guarded
   by the validation hook like any other agent edit.
+
+# Test plan: knowledge-owned skills
+
+## Scope
+
+- The skills the knowledge owns, and the init hint.
+- Out: everything the sections above place out of scope.
+
+## Risks driving this plan
+
+1. Recorded after the fact. This plan was written when the spec was
+   conformed to its contract, not when the feature was built, so it names
+   the risks the tests actually cover rather than the ones weighed at the
+   time.
+
+## Test cases
+
+### Automated
+
+| # | Case | Type | Inputs / setup | Expected result |
+|---|------|------|----------------|-----------------|
+| 1 | The carried set materialises | unit | a fresh temp-dir repo | every carried skill is planned |
+| 2 | The hint is printed | end-to-end | `init` in a scratch repo | the bootstrap line appears |
+
+### Manual verification
+
+1. None recorded. The feature shipped under the automated cases above; no
+   manual step was written down at the time, and inventing one now would
+   claim a check nobody made.
+
+## Exit criteria
+
+- The automated cases above pass.
+- `superdev validate` reports no error for this document.

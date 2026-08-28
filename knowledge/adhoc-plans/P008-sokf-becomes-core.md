@@ -496,13 +496,13 @@ findings on the first run, zero on the last.
 
 | Schema | Documents | Wrong side | Change |
 |--------|-----------|------------|--------|
-| `spec` | 13 of 14 | schema | It required sixteen sections; one spec carried them. The thirteen did not agree with each other either — only "opens by saying why it exists" is universal, and all fourteen do it. Requires that; recommends the rest. |
+| `spec` | 13 of 14 | **documents** | Corrected. First judged the schema wrong and relaxed it to what the corpus shared. That misapplied D-15: the thirteen did not agree with each other either — 12 of 14 had `Out of scope`, 10 had `Testing`, nothing else above 6 — so the precondition was never met, and relaxing ratified the drift the validator exists to catch. The schema is restored in full and all thirteen conformed. |
 | `feature-request` | 6 | documents | Retyped in W5, still carrying bug-report bodies. Reshaped: motivation, proposed behaviour, alternatives, scope. |
 | `chore` | 2 | documents | The same, into surfaces and a definition of done. |
 | `bug-report`, `feature-request`, `chore` | 9 | schema | The resolution rule sat last; every settled issue puts it directly under the title. Moved. `Comments` split off and stays last, per the tracker's own convention. |
 | `adhoc-plan` | P004 | document | Predates the schema and used the four headings it prohibits. Reorganised — its "Current state" was already Facts with evidence attached. Outcomes, Non-goals, Requirements and Definition of done written from its own content. |
 | `feature-plan` | P001, P002 | documents | Predate the schema; their numbered task lists were slice lists without the headings. |
-| `readme` | README.md | schema | Required six sections of a README that has three and needs three. Over-fitted to a template rather than to any real README; three become recommended. |
+| `readme` | README.md | **document** | Corrected, for the same reason: one document is not a corpus, so "the documents agree" was vacuous. The schema is restored and the README gained `Quick start`, `Usage` and `Configuration` — which it needed anyway, and which found a stale `--no-knowledge` in the prose. |
 | `architecture`, `coding-standards`, `constraints-non-goals`, `software-components` | 4 | documents | Each qualified a required heading (`CI/CD (\`.github/workflows\`)`). The qualifier moved into the prose. |
 | `issue-tracker` | 1 | document | A table column read "Tag in this repo" where the shipped schema declares "Label". |
 | `bug-report` | I009 | document | No regression risk section; a settled report should still say what would catch a recurrence. |
@@ -521,3 +521,16 @@ half the concepts.
 
 The probe understated, as it said it would. The real first run, after W5
 brought every concept into dispatch, reported 218.
+
+Of those 218, 143 were first resolved by relaxing a schema and then
+re-resolved by conforming the documents — 140 for `schema-spec` and 3 for
+`schema-readme`. The lesson is D-15's, sharpened: the test is whether the
+documents agree **with each other**. Inconsistent documents are evidence of
+inconsistency, not of a wrong standard, and a validator that bends to them
+is one that ratifies drift. Every other judgement in the table above went to
+the documents from the start.
+
+The twelve older specs are conformed in shape with thin content where the
+record does not carry more: no test plan was written for them at the time,
+so their plans name the automated cases that exist and say plainly that no
+manual step was recorded, rather than inventing one.

@@ -13,7 +13,7 @@ links:
     to: spec-knowledge-owned-skills
 ---
 
-# Problem
+# Summary
 
 The workflows capability materialises upstream skills that fight the
 knowledge: they write `CONTEXT.md`, `docs/adr/` and `.scratch/`,
@@ -89,6 +89,19 @@ guidance; after the table is deleted, sync swaps ownership and sweeps
 the dropped skills. Prior art: the S008 relocation tests and the
 provider-switch sweep tests this change deletes.
 
+# Acceptance criteria
+
+1. The behaviour described below holds, as proved by the automated cases in
+   the test plan. This spec shipped before the contract asked for acceptance
+   criteria, and none were written at the time; the tests are the record of
+   what was actually accepted.
+
+# Edge cases & errors
+
+- Not recorded separately when this spec was written. What the code does at
+  the edges is in the tests named in the test plan, which is the only
+  contemporaneous record.
+
 # Out of scope
 
 - Choosing which converted skills ship per repo — `[knowledge] custom`
@@ -100,3 +113,38 @@ provider-switch sweep tests this change deletes.
 # Open questions
 
 None.
+
+# Test plan: knowledge-carried skills
+
+## Scope
+
+- The registry, manifest load, the component's items, and adoption.
+- Out: everything the sections above place out of scope.
+
+## Risks driving this plan
+
+1. Recorded after the fact. This plan was written when the spec was
+   conformed to its contract, not when the feature was built, so it names
+   the risks the tests actually cover rather than the ones weighed at the
+   time.
+
+## Test cases
+
+### Automated
+
+| # | Case | Type | Inputs / setup | Expected result |
+|---|------|------|----------------|-----------------|
+| 1 | The workflows capability is gone | unit | the registry | no such entry |
+| 2 | A workflows table is refused | unit | a manifest carrying one | the guided error |
+| 3 | The component's items | unit | a temp-dir repo | the full set, custom release honoured, hook intact |
+
+### Manual verification
+
+1. None recorded. The feature shipped under the automated cases above; no
+   manual step was written down at the time, and inventing one now would
+   claim a check nobody made.
+
+## Exit criteria
+
+- The automated cases above pass.
+- `superdev validate` reports no error for this document.

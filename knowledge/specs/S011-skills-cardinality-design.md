@@ -11,7 +11,7 @@ links:
     to: spec-skill-pack
 ---
 
-# Problem
+# Summary
 
 Every capability holds exactly one provider — the manifest has one
 table per slot, and the [glossary](../glossary.md) records that every
@@ -135,6 +135,19 @@ Prior art: the existing manifest parse tests, the registry
 one-default-per-capability test, and the S009 provider-switch sweep
 tests' descendants.
 
+# Acceptance criteria
+
+1. The behaviour described below holds, as proved by the automated cases in
+   the test plan. This spec shipped before the contract asked for acceptance
+   criteria, and none were written at the time; the tests are the record of
+   what was actually accepted.
+
+# Edge cases & errors
+
+- Not recorded separately when this spec was written. What the code does at
+  the edges is in the tests named in the test plan, which is the only
+  contemporaneous record.
+
 # Out of scope
 
 - Shipping or registering a second skill pack (including superpowers).
@@ -148,3 +161,38 @@ tests' descendants.
 How `status` labels a many slot's per-pack report lines, and the
 serialised order of entries, are implementation judgement; the
 per-entry planning and sweeping above are not.
+
+# Test plan: skills capability cardinality
+
+## Scope
+
+- Manifest parsing of the many slot, and the collision refusal.
+- Out: everything the sections above place out of scope.
+
+## Risks driving this plan
+
+1. Recorded after the fact. This plan was written when the spec was
+   conformed to its contract, not when the feature was built, so it names
+   the risks the tests actually cover rather than the ones weighed at the
+   time.
+
+## Test cases
+
+### Automated
+
+| # | Case | Type | Inputs / setup | Expected result |
+|---|------|------|----------------|-----------------|
+| 1 | A multi-entry slot parses | unit | the array form | one config per entry, in order |
+| 2 | A duplicated provider is refused | unit | the same provider twice | the guided error |
+| 3 | The array form on a single slot | unit | an exclusive capability | the guided error naming the single-table form |
+
+### Manual verification
+
+1. None recorded. The feature shipped under the automated cases above; no
+   manual step was written down at the time, and inventing one now would
+   claim a check nobody made.
+
+## Exit criteria
+
+- The automated cases above pass.
+- `superdev validate` reports no error for this document.

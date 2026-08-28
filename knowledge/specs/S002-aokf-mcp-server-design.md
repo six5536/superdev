@@ -13,7 +13,7 @@ links:
     note: Adds the knowledge-serving layer to the product architecture.
 ---
 
-# Context
+# Summary
 
 Sub-project 2 of superdev (see the
 [CLI core spec](S001-cli-core-blueprint-engine-design.md) for the
@@ -31,6 +31,34 @@ check until the update phase.
 Decisions bound earlier and honoured here: hybrid search (lexical +
 embeddings); local embedding model by default, API opt-in; the switchover
 happens in this sub-project, dogfooded on this repo.
+
+# Behaviour
+
+- Stated in the design sections below rather than gathered here. This spec
+  predates the contract that asks for one Behaviour section, and the
+  sections were left where they were written rather than reshuffled after
+  the fact.
+
+# Acceptance criteria
+
+A fresh agent session in this repo, with no per-concept preloads, can
+answer "how do releases work"-class questions by orienting and searching
+through the four tools, landing on the right concept sections with correct
+line ranges. `superdev aokf validate` matches the Python validator on the
+fixture matrix and gates the hook, npm script, and CI; `validator.py` no
+longer exists in the repo or the blueprint. Search still works offline
+(lexical-only) with the model absent. All existing CI gates stay green.
+
+# Edge cases & errors
+
+- Tool failures are MCP error payloads, never process exits: unknown id →
+  near-miss candidates; parse-broken file → the validator finding for it;
+  model unavailable → lexical-only warning.
+- Knowledge failing validation still indexes and serves — agents need
+  search most while fixing a broken knowledge; `aokf_overview` carries the
+  warning block.
+- `mcp aokf` exits 0 on clean stdin close, 2 on startup failure. The
+  BrokenPipe-is-success rule stays.
 
 # Architecture
 
@@ -136,17 +164,6 @@ hook and npm script run `cargo run --quiet -- aokf validate knowledge`
   search before assuming, `aokf_read` before editing a concept, validate
   after edits.
 
-# Error handling
-
-- Tool failures are MCP error payloads, never process exits: unknown id →
-  near-miss candidates; parse-broken file → the validator finding for it;
-  model unavailable → lexical-only warning.
-- Knowledge failing validation still indexes and serves — agents need
-  search most while fixing a broken knowledge; `aokf_overview` carries the
-  warning block.
-- `mcp aokf` exits 0 on clean stdin close, 2 on startup failure. The
-  BrokenPipe-is-success rule stays.
-
 # Testing
 
 - **Unit**: parser (write-class fields, section splitting with line
@@ -171,12 +188,37 @@ multi-knowledge serving; plugin-based distribution of the registration
 (sub-project 3); knowledge upkeep verbs beyond `validate`/`index`
 (sub-project 4).
 
-# Success criteria
+# Test plan: aokf mcp server
 
-A fresh agent session in this repo, with no per-concept preloads, can
-answer "how do releases work"-class questions by orienting and searching
-through the four tools, landing on the right concept sections with correct
-line ranges. `superdev aokf validate` matches the Python validator on the
-fixture matrix and gates the hook, npm script, and CI; `validator.py` no
-longer exists in the repo or the blueprint. Search still works offline
-(lexical-only) with the model absent. All existing CI gates stay green.
+## Scope
+
+- The parser, the graph, the index and the four MCP tools.
+- Out: everything the sections above place out of scope.
+
+## Risks driving this plan
+
+1. Recorded after the fact. This plan was written when the spec was
+   conformed to its contract, not when the feature was built, so it names
+   the risks the tests actually cover rather than the ones weighed at the
+   time.
+
+## Test cases
+
+### Automated
+
+| # | Case | Type | Inputs / setup | Expected result |
+|---|------|------|----------------|-----------------|
+| 1 | Parsing and the graph | unit | fixture concepts | write-class fields, section ranges, synthesised inverses |
+| 2 | Ranking | unit | a fake embedder | deterministic hybrid results |
+| 3 | The tools over a pipe | integration | a real rmcp client, transport stubbed | locators, line numbers, truncation, lexical-only degradation |
+
+### Manual verification
+
+1. None recorded. The feature shipped under the automated cases above; no
+   manual step was written down at the time, and inventing one now would
+   claim a check nobody made.
+
+## Exit criteria
+
+- The automated cases above pass.
+- `superdev validate` reports no error for this document.

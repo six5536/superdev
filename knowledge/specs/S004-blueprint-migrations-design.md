@@ -13,7 +13,7 @@ links:
     note: Reuses the custom-skill rule — superdev never takes back what it did not write.
 ---
 
-# Goal
+# Summary
 
 Let a managed repo follow the blueprint as the blueprint changes. Today
 superdev only ever adds: a file it stops shipping stays forever, a renamed
@@ -155,3 +155,61 @@ Dogfooding is quiet here: this repo's `CLAUDE.md` already imports
 `AGENTS.md` and every lock entry is still claimed, so it exercises the no-op
 path. The real proof is a fresh goodbye-tinnitus adoption, where the import
 line decides whether Claude Code loads superdev's rules at all.
+# Behaviour
+
+- Stated in the design sections below rather than gathered here. This spec
+  predates the contract that asks for one Behaviour section, and the
+  sections were left where they were written rather than reshuffled after
+  the fact.
+
+# Acceptance criteria
+
+1. The behaviour described below holds, as proved by the automated cases in
+   the test plan. This spec shipped before the contract asked for acceptance
+   criteria, and none were written at the time; the tests are the record of
+   what was actually accepted.
+
+# Edge cases & errors
+
+- Not recorded separately when this spec was written. What the code does at
+  the edges is in the tests named in the test plan, which is the only
+  contemporaneous record.
+
+# Out of scope
+
+- Scripted migrations. The difference between the lock and the claims is the migration, which is the decision this spec records.
+
+# Test plan: blueprint migrations
+
+## Scope
+
+- `owned()` per component, the orphan pass, and the blueprint version.
+- Out: everything the sections above place out of scope.
+
+## Risks driving this plan
+
+1. Recorded after the fact. This plan was written when the spec was
+   conformed to its contract, not when the feature was built, so it names
+   the risks the tests actually cover rather than the ones weighed at the
+   time.
+
+## Test cases
+
+### Automated
+
+| # | Case | Type | Inputs / setup | Expected result |
+|---|------|------|----------------|-----------------|
+| 1 | `owned()` matches what apply locks | unit | each component against a temp-dir repo | the claim set equals the lock's |
+| 2 | Orphan classification | unit | extra, modified and absent lock entries | removed, released and dropped respectively |
+| 3 | A disabled capability | unit | a manifest with the capability removed | its whole claim set orphans |
+
+### Manual verification
+
+1. None recorded. The feature shipped under the automated cases above; no
+   manual step was written down at the time, and inventing one now would
+   claim a check nobody made.
+
+## Exit criteria
+
+- The automated cases above pass.
+- `superdev validate` reports no error for this document.

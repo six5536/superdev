@@ -13,7 +13,7 @@ links:
     note: Introduced the AGENTS.md scaffold this spec retires.
 ---
 
-# Problem
+# Summary
 
 superdev writes AGENTS.md as a scaffold — introduced by the
 [CLI core & blueprint engine spec](S001-cli-core-blueprint-engine-design.md) —
@@ -142,6 +142,19 @@ observable files and reports, not rendering internals. Prior art: the
 S008 relocation tests, the existing init and disable journeys, and the
 aokf component's items tests.
 
+# Acceptance criteria
+
+1. The behaviour described below holds, as proved by the automated cases in
+   the test plan. This spec shipped before the contract asked for acceptance
+   criteria, and none were written at the time; the tests are the record of
+   what was actually accepted.
+
+# Edge cases & errors
+
+- Not recorded separately when this spec was written. What the code does at
+  the edges is in the tests named in the test plan, which is the only
+  contemporaneous record.
+
 # Out of scope
 
 - Rewriting or trimming existing repos' AGENTS.md content — the file is
@@ -158,3 +171,38 @@ aokf component's items tests.
 
 The exact wording of the general prompt, the instruction files and the
 trim hint is implementation judgement; the structure above is not.
+
+# Test plan: agent instructions layer
+
+## Scope
+
+- The component's items, the aggregator, and the codegraph wiring.
+- Out: everything the sections above place out of scope.
+
+## Risks driving this plan
+
+1. Recorded after the fact. This plan was written when the spec was
+   conformed to its contract, not when the feature was built, so it names
+   the risks the tests actually cover rather than the ones weighed at the
+   time.
+
+## Test cases
+
+### Automated
+
+| # | Case | Type | Inputs / setup | Expected result |
+|---|------|------|----------------|-----------------|
+| 1 | AGENTS.md is never written | unit | a fresh repo | the ensured line only |
+| 2 | The aggregator tracks the enabled set | unit | manifests with capabilities on and off | one import per enabled capability |
+| 3 | Disabling sweeps the wiring | end-to-end | `init` then disable code-index | file, MCP key and import all removed |
+
+### Manual verification
+
+1. None recorded. The feature shipped under the automated cases above; no
+   manual step was written down at the time, and inventing one now would
+   claim a check nobody made.
+
+## Exit criteria
+
+- The automated cases above pass.
+- `superdev validate` reports no error for this document.

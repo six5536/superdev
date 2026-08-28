@@ -6,13 +6,48 @@ description: Design for provider-carried skill overrides — the mattpocock-skil
 status: deprecated
 ---
 
-# Motivation
+# Summary
 
 superdev wants its own `grilling` — upstream's wording with the
 question-format block replaced by "use any question type tool" — in this
 repo and every managed repo. The override is *of* a mattpocock-skills
 skill, so it must install exactly where that provider is installed:
 never into a superpowers repo, never into a repo without workflows.
+
+# Behaviour
+
+- Stated in the design sections below rather than gathered here. This spec
+  predates the contract that asks for one Behaviour section, and the
+  sections were left where they were written rather than reshuffled after
+  the fact.
+
+# Acceptance criteria
+
+1. The behaviour described below holds, as proved by the automated cases in
+   the test plan. This spec shipped before the contract asked for acceptance
+   criteria, and none were written at the time; the tests are the record of
+   what was actually accepted.
+
+# Edge cases & errors
+
+With deliberate overrides intra-component, any cross-component path
+collision is a fault — say upstream someday ships a skill named like a
+pack skill. Silent resolution would pick a winner nobody chose and
+oscillate across syncs, so superdev refuses with a way out:
+
+- **Plan time**: `plan_repo` checks every enabled component's claims
+  for duplicate lock keys. A duplicate fails `sync` and is reported by
+  `status`, naming both capabilities and the path; the message carries
+  the remedy — add the name to one side's `custom` list, or upgrade
+  superdev (a release can resolve the clash with an override or a
+  rename).
+- **Apply time**: the engine fails an action that writes a lock key
+  another entry already wrote in the same run — the backstop for
+  checkout-derived paths the planner cannot enumerate on a first sync.
+  The failure unwinds like any other.
+
+Both checks read data that already exists (the collected claims, the
+run's written keys).
 
 # Decision
 
@@ -68,27 +103,6 @@ capability:
   as today, which also declines the override — consistent with custom
   as the opt-out.
 
-# Accidental collisions
-
-With deliberate overrides intra-component, any cross-component path
-collision is a fault — say upstream someday ships a skill named like a
-pack skill. Silent resolution would pick a winner nobody chose and
-oscillate across syncs, so superdev refuses with a way out:
-
-- **Plan time**: `plan_repo` checks every enabled component's claims
-  for duplicate lock keys. A duplicate fails `sync` and is reported by
-  `status`, naming both capabilities and the path; the message carries
-  the remedy — add the name to one side's `custom` list, or upgrade
-  superdev (a release can resolve the clash with an override or a
-  rename).
-- **Apply time**: the engine fails an action that writes a lock key
-  another entry already wrote in the same run — the backstop for
-  checkout-derived paths the planner cannot enumerate on a first sync.
-  The failure unwinds like any other.
-
-Both checks read data that already exists (the collected claims, the
-run's written keys).
-
 # Out of scope
 
 - General cross-capability shadowing (see Decision). Accidental
@@ -97,3 +111,36 @@ run's written keys).
 - Overrides for the superpowers provider — it delivers skills as a
   plugin, not files; there is nothing to overlay.
 - A prefer-upstream-while-managed knob.
+
+# Test plan: workflows skill overrides
+
+## Scope
+
+- Override resolution and the collision refusal.
+- Out: everything the sections above place out of scope.
+
+## Risks driving this plan
+
+1. Recorded after the fact. This plan was written when the spec was
+   conformed to its contract, not when the feature was built, so it names
+   the risks the tests actually cover rather than the ones weighed at the
+   time.
+
+## Test cases
+
+### Automated
+
+| # | Case | Type | Inputs / setup | Expected result |
+|---|------|------|----------------|-----------------|
+| 1 | Two providers claim one skill | unit | both enabled | the run is refused, naming the file and the way out |
+
+### Manual verification
+
+1. None recorded. The feature shipped under the automated cases above; no
+   manual step was written down at the time, and inventing one now would
+   claim a check nobody made.
+
+## Exit criteria
+
+- The automated cases above pass.
+- `superdev validate` reports no error for this document.

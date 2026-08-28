@@ -11,7 +11,7 @@ links:
     to: spec-cli-core-blueprint-engine
 ---
 
-# Problem
+# Summary
 
 Agents in a managed repo spend context on raw command output — full
 git diffs, verbose test logs, directory listings — most of which the
@@ -163,6 +163,19 @@ Prior art: the codegraph component's tests (pin + instruction file +
 managed MCP key) and the knowledge capability's validation-hook key
 tests.
 
+# Acceptance criteria
+
+1. The behaviour described below holds, as proved by the automated cases in
+   the test plan. This spec shipped before the contract asked for acceptance
+   criteria, and none were written at the time; the tests are the record of
+   what was actually accepted.
+
+# Edge cases & errors
+
+- Not recorded separately when this spec was written. What the code does at
+  the edges is in the tests named in the test plan, which is the only
+  contemporaneous record.
+
 # Out of scope
 
 - Filtering anything other than Bash tool calls — file reads and
@@ -184,3 +197,38 @@ the sweep rules are not. The windows-x64 half of the `auto_env`
 scheme is verified only from mise's documented platform names, not
 on Windows hardware — the implementation should confirm it on the
 Windows CI runner.
+
+# Test plan: bash output filter capability
+
+## Scope
+
+- The component's plan and claims, and the hook registration.
+- Out: everything the sections above place out of scope.
+
+## Risks driving this plan
+
+1. Recorded after the fact. This plan was written when the spec was
+   conformed to its contract, not when the feature was built, so it names
+   the risks the tests actually cover rather than the ones weighed at the
+   time.
+
+## Test cases
+
+### Automated
+
+| # | Case | Type | Inputs / setup | Expected result |
+|---|------|------|----------------|-----------------|
+| 1 | Plans the pins and files when missing | unit | a fresh repo | the expected action list |
+| 2 | Plans nothing when converged | unit | an applied repo | an empty plan |
+| 3 | Repairs drift | unit | an edited owned file | the file is replanned |
+
+### Manual verification
+
+1. None recorded. The feature shipped under the automated cases above; no
+   manual step was written down at the time, and inventing one now would
+   claim a check nobody made.
+
+## Exit criteria
+
+- The automated cases above pass.
+- `superdev validate` reports no error for this document.

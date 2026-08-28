@@ -16,7 +16,7 @@ links:
     note: Reuses the custom-release mechanism; drops the pack's grill-me skill.
 ---
 
-# Goal
+# Summary
 
 Make [mattpocock/skills](https://github.com/mattpocock/skills) the default
 workflows provider and relegate Superpowers to a supported secondary. The
@@ -29,6 +29,31 @@ each capability to one hardcoded component and ignores the manifest's
 `provider` field entirely — the [blueprint
 engine](S001-cli-core-blueprint-engine-design.md)'s
 capability-to-provider map exists only in prose.
+
+# Behaviour
+
+- Stated in the design sections below rather than gathered here. This spec
+  predates the contract that asks for one Behaviour section, and the
+  sections were left where they were written rather than reshuffled after
+  the fact.
+
+# Acceptance criteria
+
+1. The behaviour described below holds, as proved by the automated cases in
+   the test plan. This spec shipped before the contract asked for acceptance
+   criteria, and none were written at the time; the tests are the record of
+   what was actually accepted.
+
+# Edge cases & errors
+
+- Unknown provider (manifest or `--provider`): error naming the valid ids,
+  exit 2.
+- Materialisation failures (missing tool, unreadable checkout, unwritable
+  target): fail the run loudly; per-file journal entries unwind what was
+  written.
+- Planned materialisation and sweeps are planned actions: `status` exits 1
+  while any remain. The setup, uninstall, unknown-custom and import-update
+  lines are reports and never move the exit code.
 
 # Registry-backed provider selection
 
@@ -167,17 +192,6 @@ plan failure. A repo that had marked `grill-me` custom upgrades cleanly.
 Typo protection drops from a hard stop to a visible status line — a typo
 also produces the real skill's drift plan, so it stays discoverable.
 
-# Errors and exit codes
-
-- Unknown provider (manifest or `--provider`): error naming the valid ids,
-  exit 2.
-- Materialisation failures (missing tool, unreadable checkout, unwritable
-  target): fail the run loudly; per-file journal entries unwind what was
-  written.
-- Planned materialisation and sweeps are planned actions: `status` exits 1
-  while any remain. The setup, uninstall, unknown-custom and import-update
-  lines are reports and never move the exit code.
-
 # Dogfooding: this repo switches
 
 This repo currently manages only the skills capability, and its own
@@ -235,3 +249,38 @@ act of the sub-project switches it:
   single providers.
 - Structured AOKF update over MCP and knowledge upkeep remain the later
   sub-projects.
+
+# Test plan: workflows provider default
+
+## Scope
+
+- The registry, provider resolution, and the CLI flag.
+- Out: everything the sections above place out of scope.
+
+## Risks driving this plan
+
+1. Recorded after the fact. This plan was written when the spec was
+   conformed to its contract, not when the feature was built, so it names
+   the risks the tests actually cover rather than the ones weighed at the
+   time.
+
+## Test cases
+
+### Automated
+
+| # | Case | Type | Inputs / setup | Expected result |
+|---|------|------|----------------|-----------------|
+| 1 | The registry holds one default per capability | unit | the entry table | exactly one default |
+| 2 | Resolution refuses an unknown provider | unit | a manifest naming one | an error listing the valid ids |
+| 3 | The flag selects a provider | end-to-end | `init` with the flag | the manifest records it |
+
+### Manual verification
+
+1. None recorded. The feature shipped under the automated cases above; no
+   manual step was written down at the time, and inventing one now would
+   claim a check nobody made.
+
+## Exit criteria
+
+- The automated cases above pass.
+- `superdev validate` reports no error for this document.

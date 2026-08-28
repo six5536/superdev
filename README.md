@@ -1,7 +1,29 @@
 # superdev
 
 superdev sets a repository up for agent-driven development and keeps that
-setup current. Run it inside the repo you want managed:
+setup current.
+
+`init` writes canonical project knowledge with a full engineering skill
+set, builds a code index, wires up a bash output filter that compacts
+command output before it reaches agent context, and installs the Claude
+Code plugin superdev expects, then records the result in `.superdev/`.
+Pass `--no-code-index`, `--no-skills`, `--no-bash-output-filter` or
+`--no-frontend` to leave a capability out. The SOKF knowledge has no such
+flag: it is part of superdev, not a capability something else could fill.
+Everything it owns can be repaired by re-running `sync`.
+## Install
+
+```sh
+npm install -g @six5536/superdev   # prebuilt binaries for Linux, macOS, Windows
+cargo install superdev             # build from source
+```
+
+Either way the command is `superdev`. The npm package pulls a prebuilt
+binary for your platform; the crate builds one.
+
+## Quick start
+
+Run it inside the repo you want managed:
 
 ```sh
 superdev init      # install the tooling and record what was installed
@@ -10,13 +32,11 @@ superdev sync      # re-apply the blueprint (--dry-run to preview)
 superdev update    # bring pins current, then sync
 ```
 
-`init` writes canonical project knowledge with a full engineering skill
-set, builds a code index, wires up a bash output filter that compacts
-command output before it reaches agent context, and installs the Claude
-Code plugin superdev expects, then records the result in `.superdev/`.
-Pass `--no-knowledge`, `--no-code-index`, `--no-skills`,
-`--no-bash-output-filter` or `--no-frontend` to leave a capability out.
-Everything it owns can be repaired by re-running `sync`.
+`init` is safe to re-run, and everything superdev owns can be repaired by
+`sync`. A file you have edited is never overwritten in silence: `status`
+reports it, and `sync` backs it up before writing.
+
+## Usage
 
 It also registers an MCP server for the canonical knowledge, so agents
 search it instead of preloading every page of it:
@@ -33,7 +53,7 @@ reindexes only what changed. Search is hybrid, combining a BM25 index with a
 small embedding model downloaded once per machine, and falls back to
 keyword-only if that model is unavailable.
 
-## Where the content comes from
+### Where the content comes from
 
 The skills, templates and scaffolds superdev writes are a *content pack*. One
 ships inside the binary, and `.superdev/config.toml` records which pack a repo
@@ -97,15 +117,43 @@ waiting for you to type.
 superdev is opinionated for one stack — Claude Code, mise and SOKF — and is
 still young: expect the surface to move before 1.0.
 
-## Install
+## Configuration
 
-```sh
-npm install -g @six5536/superdev   # prebuilt binaries for Linux, macOS, Windows
-cargo install superdev             # build from source
+Everything superdev keeps in a repo lives under `.superdev/`.
+`config.toml` is what the repo wants — committed, hand-editable, and
+rewritten by `update`:
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `blueprint` | the version that ran `init` | The superdev version this repo's setup was written by. |
+| `[[packs]]` | the pack inside the binary | Where skills, templates and scaffolds come from. Layers in the order written. |
+| `[knowledge] custom` | empty | SOKF skills you have taken over; superdev stops writing them. |
+| `[knowledge.embeddings]` | the local model | Search on an API instead. The key comes from the environment, never the file. |
+| `[frontend]`, `[skills]`, `[code-index]`, `[bash-output-filter]` | all enabled | One table per capability; an absent table means off. |
+
+
+```toml
+blueprint = "0.2.0"                  # the superdev version that wrote this
+
+[[packs]]                            # where content comes from (above)
+source = "github:six5536/superdev"
+rev    = "assets-v0.1.0"
+
+[knowledge]                          # the SOKF knowledge's own settings
+custom = ["maintain"]                # skills you have taken over
+[knowledge.embeddings]               # optional: search on an API instead
+provider = "openai"                  #   of the local model
+model    = "text-embedding-3-small"
+
+[code-index]                         # one table per enabled capability
+provider = "codegraph"
+version  = "1.5.0"
 ```
 
-Either way the command is `superdev`. The npm package pulls a prebuilt
-binary for your platform; the crate builds one.
+An absent capability table means that capability is off. `lock.toml`
+beside it is what superdev actually applied, and `cache/` is machine
+state, gitignored by `init`. The API key for an embeddings provider comes
+from the environment and never from the file.
 
 ## Development
 

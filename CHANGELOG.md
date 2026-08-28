@@ -71,8 +71,10 @@ publish a version it cannot find a heading for.
   `type`, one type to one schema, and `validate` reports a missing required
   section, a section out of order, a prohibited section, a wrong table column
   and an over-limit line count. Switching it on found 218 disagreements
-  across this repository; where the documents agreed with each other and not
-  with the schema, the schema was what was wrong. See P008.
+  across this repository, and every one was resolved by bringing the document
+  to its schema — except where the documents were unanimous against it, which
+  happened once: all nine settled issues put the resolution section directly
+  under the title, where the schema had it last. See P008.
 
 ### Removed
 

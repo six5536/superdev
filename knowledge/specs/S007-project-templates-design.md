@@ -6,7 +6,7 @@ description: Design for project templates — embedded write-once repo scaffolds
 status: stable
 ---
 
-# Motivation
+# Summary
 
 superdev sets a repo up for agent-driven development, but the repo shape
 itself — workspace layout, launcher packaging, CI — is left to the user.
@@ -240,6 +240,26 @@ a template's assets — reverse token substitution, the asset-layout
 deviations, the FILES table — to refresh a shipped template or create a
 new one.
 
+# Behaviour
+
+- Stated in the design sections below rather than gathered here. This spec
+  predates the contract that asks for one Behaviour section, and the
+  sections were left where they were written rather than reshuffled after
+  the fact.
+
+# Acceptance criteria
+
+1. The behaviour described below holds, as proved by the automated cases in
+   the test plan. This spec shipped before the contract asked for acceptance
+   criteria, and none were written at the time; the tests are the record of
+   what was actually accepted.
+
+# Edge cases & errors
+
+- Not recorded separately when this spec was written. What the code does at
+  the edges is in the tests named in the test plan, which is the only
+  contemporaneous record.
+
 # Out of scope
 
 - Fetchable or third-party template sources — nothing vouches for
@@ -249,3 +269,37 @@ new one.
   semantics are the point. Skill-mediated updates are deliberately not
   this — see "Updating a seeded repo".
 - Further templates beyond rust-npm.
+
+# Test plan: project templates
+
+## Scope
+
+- Template selection, token substitution and the seed.
+- Out: everything the sections above place out of scope.
+
+## Risks driving this plan
+
+1. Recorded after the fact. This plan was written when the spec was
+   conformed to its contract, not when the feature was built, so it names
+   the risks the tests actually cover rather than the ones weighed at the
+   time.
+
+## Test cases
+
+### Automated
+
+| # | Case | Type | Inputs / setup | Expected result |
+|---|------|------|----------------|-----------------|
+| 1 | Tokens substitute | unit | a template and a project name | every token replaced, none left |
+| 2 | Selection without a TTY | end-to-end | `init` with no flag and no terminal | nothing is seeded |
+
+### Manual verification
+
+1. None recorded. The feature shipped under the automated cases above; no
+   manual step was written down at the time, and inventing one now would
+   claim a check nobody made.
+
+## Exit criteria
+
+- The automated cases above pass.
+- `superdev validate` reports no error for this document.

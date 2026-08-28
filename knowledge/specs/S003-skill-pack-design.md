@@ -13,7 +13,7 @@ links:
     note: The shipped hook and aokf-maintain skill wrap the validator sub-project 2 built.
 ---
 
-# Goal
+# Summary
 
 Fill the `skills` capability slot the
 [blueprint engine](S001-cli-core-blueprint-engine-design.md) left as a
@@ -169,3 +169,61 @@ own drift detection instead of a parity test.
 - Registry test asserts the skills slot is available.
 - CLI integration tests cover the capability in init/status/sync golden
   paths; `status` on this repo stays clean in CI.
+# Behaviour
+
+- Stated in the design sections below rather than gathered here. This spec
+  predates the contract that asks for one Behaviour section, and the
+  sections were left where they were written rather than reshuffled after
+  the fact.
+
+# Acceptance criteria
+
+1. The behaviour described below holds, as proved by the automated cases in
+   the test plan. This spec shipped before the contract asked for acceptance
+   criteria, and none were written at the time; the tests are the record of
+   what was actually accepted.
+
+# Edge cases & errors
+
+- Not recorded separately when this spec was written. What the code does at
+  the edges is in the tests named in the test plan, which is the only
+  contemporaneous record.
+
+# Out of scope
+
+- Anything outside the skill pack's own files and the hook it installs.
+
+# Test plan: skill pack
+
+## Scope
+
+- The component's plan and claims, the custom list, and the hook.
+- Out: everything the sections above place out of scope.
+
+## Risks driving this plan
+
+1. Recorded after the fact. This plan was written when the spec was
+   conformed to its contract, not when the feature was built, so it names
+   the risks the tests actually cover rather than the ones weighed at the
+   time.
+
+## Test cases
+
+### Automated
+
+| # | Case | Type | Inputs / setup | Expected result |
+|---|------|------|----------------|-----------------|
+| 1 | Plan on missing, drifted and converged files | unit | a temp-dir repo in each state | the expected action list |
+| 2 | A custom name is excluded | unit | a manifest naming a custom skill | absent from both plan and lock |
+| 3 | The hook subcommand | unit | stubbed payloads | the documented exit codes |
+
+### Manual verification
+
+1. None recorded. The feature shipped under the automated cases above; no
+   manual step was written down at the time, and inventing one now would
+   claim a check nobody made.
+
+## Exit criteria
+
+- The automated cases above pass.
+- `superdev validate` reports no error for this document.

@@ -13,7 +13,7 @@ links:
     note: Extends the existing crate/binary/npm delivery shape.
 ---
 
-# Context
+# Summary
 
 superdev is a Rust tool run inside target repos: `superdev init` sets a repo
 up for agent-driven development, and further verbs keep that setup current.
@@ -39,6 +39,38 @@ Decisions already made that bind later sub-projects: MCP querying replaces
 wholesale preloading of the canonical knowledge in AGENTS.md; embeddings are pluggable
 with a local model as default; existing per-repo skills (double-check,
 grill-me, humanise, self-improve) are absorbed into the skill pack.
+
+# Behaviour
+
+- Stated in the design sections below rather than gathered here. This spec
+  predates the contract that asks for one Behaviour section, and the
+  sections were left where they were written rather than reshuffled after
+  the fact.
+
+# Acceptance criteria
+
+Running `superdev init` in a fresh clone of a target repo produces a
+committed, working agent-dev setup (mise pins installed, plugins registered,
+codegraph indexed, canonical project knowledge scaffolded); `status` is clean afterwards and
+exits 1 when a managed file or version drifts; `sync` restores it; a failed
+apply leaves the repo as it started except for explicitly reported
+irreversible steps. All existing CI gates stay green.
+
+# Edge cases & errors
+
+- Exit codes: `0` success; `1` work to do (`status` with drift); `2` usage
+  error or hard failure. The broken-pipe-is-success rule stays.
+- **Rollback.** Every applied action records its inverse in an in-run
+  journal (file writes back up to `.superdev/cache/backup/<timestamp>/`
+  first; plugin installs pair with uninstalls; TOML edits keep prior
+  content). On failure the journal unwinds in reverse, best-effort; anything
+  irreversible is listed explicitly as *not reverted*. The run ends with a
+  per-component table — applied / reverted / not-reverted — and exits `2`.
+  `sync` is the recovery path for whatever the unwind could not restore.
+- External command failures are reported with the exact command line and
+  verbatim stderr.
+- If `claude` is missing from PATH, plugin steps fail soft: reported as
+  skipped-with-reason, not a hard abort.
 
 # Architecture
 
@@ -138,22 +170,6 @@ applying.
 config.toml to this binary's registry defaults (or the named version), then
 syncs. Updating superdev itself is out of scope (cargo/npm do that).
 
-# Error handling
-
-- Exit codes: `0` success; `1` work to do (`status` with drift); `2` usage
-  error or hard failure. The broken-pipe-is-success rule stays.
-- **Rollback.** Every applied action records its inverse in an in-run
-  journal (file writes back up to `.superdev/cache/backup/<timestamp>/`
-  first; plugin installs pair with uninstalls; TOML edits keep prior
-  content). On failure the journal unwinds in reverse, best-effort; anything
-  irreversible is listed explicitly as *not reverted*. The run ends with a
-  per-component table — applied / reverted / not-reverted — and exits `2`.
-  `sync` is the recovery path for whatever the unwind could not restore.
-- External command failures are reported with the exact command line and
-  verbatim stderr.
-- If `claude` is missing from PATH, plugin steps fail soft: reported as
-  skipped-with-reason, not a hard abort.
-
 # Testing
 
 - **Unit (bulk of the ≥90% gate):** `diff` and parsing are pure — feed
@@ -175,11 +191,37 @@ The MCP server and `aokf` verbs (sub-project 2); skill pack contents
 support for agent runtimes other than Claude Code; updating the superdev
 binary itself.
 
-# Success criteria
+# Test plan: cli core & blueprint engine
 
-Running `superdev init` in a fresh clone of a target repo produces a
-committed, working agent-dev setup (mise pins installed, plugins registered,
-codegraph indexed, canonical project knowledge scaffolded); `status` is clean afterwards and
-exits 1 when a managed file or version drifts; `sync` restores it; a failed
-apply leaves the repo as it started except for explicitly reported
-irreversible steps. All existing CI gates stay green.
+## Scope
+
+- The engine, the components and the verbs, as described above.
+- Out: everything the sections above place out of scope.
+
+## Risks driving this plan
+
+1. Recorded after the fact. This plan was written when the spec was
+   conformed to its contract, not when the feature was built, so it names
+   the risks the tests actually cover rather than the ones weighed at the
+   time.
+
+## Test cases
+
+### Automated
+
+| # | Case | Type | Inputs / setup | Expected result |
+|---|------|------|----------------|-----------------|
+| 1 | The diff is pure | unit | observed and desired state | the expected action list |
+| 2 | Components against a temp-dir repo | integration | a fake repo and a fake runner | the planned actions, with no process spawned |
+| 3 | The verbs end to end | end-to-end | the real binary in a scratch repo | the documented exit codes |
+
+### Manual verification
+
+1. None recorded. The feature shipped under the automated cases above; no
+   manual step was written down at the time, and inventing one now would
+   claim a check nobody made.
+
+## Exit criteria
+
+- The automated cases above pass.
+- `superdev validate` reports no error for this document.
