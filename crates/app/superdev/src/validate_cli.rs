@@ -27,7 +27,7 @@ pub struct ValidateArgs {
     pub doc: bool,
     /// SOKF knowledge directory (default: `knowledge`)
     #[arg(long, value_name = "DIR")]
-    pub bundle: Option<PathBuf>,
+    pub knowledge: Option<PathBuf>,
     /// Repository root for `/`-rooted paths (default: this repo)
     #[arg(long)]
     pub repo_root: Option<PathBuf>,
@@ -58,7 +58,7 @@ pub fn run_validate(args: &ValidateArgs, root: &Path) -> Result<u8> {
     if args.doc {
         return out(&validate::schema::doc::render(&grammar)).map(|()| 0);
     }
-    let knowledge = knowledge_dir(root, args.bundle.as_deref());
+    let knowledge = knowledge_dir(root, args.knowledge.as_deref());
     let repo_root = args
         .repo_root
         .as_deref()
@@ -71,7 +71,7 @@ pub fn run_validate(args: &ValidateArgs, root: &Path) -> Result<u8> {
         // the report: it says what was read, and a run that read nothing is
         // otherwise a clean pass.
         if let Some(object) = value.as_object_mut() {
-            object.insert("bundle".into(), knowledge.display().to_string().into());
+            object.insert("knowledge".into(), knowledge.display().to_string().into());
             object.insert("files".into(), run.files.into());
         }
         let rendered =
@@ -93,8 +93,10 @@ pub fn run_validate(args: &ValidateArgs, root: &Path) -> Result<u8> {
 fn scope(args: &ValidateArgs, grammar: &validate::Grammar, files: usize) -> String {
     let where_ = if args.paths.is_empty() {
         format!(
-            "knowledge: {}, roots: {}",
-            args.bundle
+            // `./` so the value reads as a path rather than repeating the
+            // label: the default directory is called `knowledge` too.
+            "knowledge: ./{}, roots: {}",
+            args.knowledge
                 .as_deref()
                 .unwrap_or(Path::new(KNOWLEDGE_DIR))
                 .display(),

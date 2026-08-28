@@ -31,8 +31,9 @@ setup current. Three layers, detailed in the
 # Serving the canonical knowledge
 
 Installing the `knowledge` capability is half of it; the other half is reading
-it back. The `sokf` subsystem parses the canonical knowledge, validates it, indexes it, and
-serves it to agents over MCP (`superdev mcp sokf`), so an agent queries the
+it back. The `sokf` subsystem parses the SOKF knowledge, indexes it and
+serves it to agents over MCP (`superdev mcp sokf`) — the `validate` subsystem
+checks it — so an agent queries the
 knowledge instead of preloading every concept — the design is in the
 [SOKF MCP server spec](specs/S002-aokf-mcp-server-design.md), the tools
 in [api-contracts](api-contracts.md). Freshness is lazy: every tool call

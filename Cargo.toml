@@ -27,7 +27,7 @@ clap_mangen = "0.3"
 dialoguer = "0.12.0"
 model2vec-rs = { version = "0.2.1", default-features = false, features = ["fancy-regex", "local-only"] }
 pulldown-cmark = { version = "0.13.4", default-features = false }
-# The superdev-format checks. Already in the tree through tantivy, so
+# The grammar-driven checks. Already in the tree through tantivy, so
 # declaring it directly adds nothing to the build; the grammar's patterns are
 # written for this dialect, which is why the format has no lookaround.
 regex = "1.13.1"

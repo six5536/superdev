@@ -124,7 +124,7 @@ fn the_aokf_verb_group_is_gone() {
 }
 
 #[test]
-fn validate_fails_a_broken_bundle_with_exit_1() {
+fn validate_fails_broken_knowledge_with_exit_1() {
     let dir = tempfile::tempdir().unwrap();
     std::fs::create_dir(dir.path().join("kb")).unwrap();
     std::fs::write(
@@ -137,16 +137,17 @@ fn validate_fails_a_broken_bundle_with_exit_1() {
         "---\ntype: T\nid: dup\n---\nx\n",
     )
     .unwrap();
-    // The bundle is a flag now: a positional path is the scope of the run, and
-    // this repository keeps its bundle somewhere other than `knowledge`.
+    // The knowledge directory is a flag: a positional path is the scope of
+    // the run, and this repository keeps its knowledge somewhere other than
+    // `knowledge`.
     superdev()
         .current_dir(dir.path())
-        .args(["validate", "--bundle", "kb"])
+        .args(["validate", "--knowledge", "kb"])
         .assert()
         .code(1);
 }
 
-/// A format error fails the run on its own, with no bundle in the picture.
+/// A grammar error fails the run on its own, with no knowledge in the picture.
 /// The temporary repository carries no `.agents/sokf/grammar.yaml` either,
 /// so this is also the embedded grammar doing the checking (FR-11).
 #[test]
@@ -178,9 +179,12 @@ fn validate_json_is_machine_readable() {
         "{report}"
     );
     assert_eq!(report["passed"], serde_json::json!(true));
-    // The bundle path is the CLI's to add: core omits it.
-    let bundle = report["bundle"].as_str().unwrap();
-    assert!(bundle.ends_with("knowledge"), "unexpected bundle: {bundle}");
+    // The knowledge path is the CLI's to add: core omits it.
+    let knowledge = report["knowledge"].as_str().unwrap();
+    assert!(
+        knowledge.ends_with("knowledge"),
+        "unexpected knowledge path: {knowledge}"
+    );
 }
 
 /// The grammar is the only statement of the format, and `--doc` prints it.

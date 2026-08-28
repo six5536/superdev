@@ -38,17 +38,24 @@ gate are in [CONTRIBUTING](/CONTRIBUTING.md).[^contributing]
   shell scripts; `mise where` answers with a fixture skills checkout, so
   materialisation runs against real files. The fakes make these unix-only;
   Windows runs the rest.
-- **Validator snapshots.** One fixture knowledge tree per failure class under
-  `tests/fixtures/sokf/`, and one file tree per class under
-  `tests/fixtures/format/`, each with a `.golden.json` holding the report the
-  validator produces for it. Both compare verbatim: the goldens are the
-  contract over the finding texts, their severities, the verdict and the order
-  findings arrive in, none of which the inline tests pin. They began as
-  captures from the Python and Node references this code replaced, which are
-  no longer the authority. Regenerate with `UPDATE_GOLDENS=1` and read the
-  diff — a reworded message is the diff working, while a moved severity or a
-  finding that appears or vanishes is a behaviour change and wants the
-  argument one deserves.
+- **Validator snapshots.** Three trees, one per half of the check and one for
+  the rules that join them, each case carrying a `.golden.json` of the report
+  it produces: `tests/fixtures/sokf/` holds one knowledge tree per failure
+  class of the specification checks, `tests/fixtures/schema/` one file tree
+  per failure class of the grammar checks, and `tests/fixtures/documents/`
+  one case per document rule — a missing section, a misordered one, a
+  prohibited one, wrong table columns, an over-limit line count, a type
+  naming no schema, two schemas claiming one type, and a schema that governs
+  nothing.
+
+  All three compare verbatim: the goldens are the contract over the finding
+  texts, their severities, the verdict and the order findings arrive in, none
+  of which the inline tests pin. The first two began as captures from the
+  Python and Node references this code replaced, which are no longer the
+  authority. Regenerate with `UPDATE_GOLDENS=1` and read the diff — a
+  reworded message is the diff working, while a moved severity or a finding
+  that appears or vanishes is a behaviour change and wants the argument one
+  deserves.
 - **MCP integration.** A real rmcp client drives all four tools over an
   in-process duplex pipe against fixture knowledge trees — the transport is
   the only

@@ -19,12 +19,12 @@ superdev sync                re-apply the blueprint; --dry-run prints the plan o
 superdev update [TARGET]     bring pins current, then sync;
                              TARGET is `<capability>[@<version>]`;
                              --provider <ID> switches TARGET's provider
-superdev validate [PATH...] check the canonical project knowledge and the superdev-format
-                             files; exit 1 on errors. A PATH replaces both
-                             defaults. --json, --doc renders the grammar as
-                             prose, --bundle <DIR>, --repo-root <DIR> for
-                             `/`-rooted paths
-superdev validate       (hidden; the same verb under its old name)
+superdev validate [PATH...] check the SOKF knowledge, every document against
+                             the schema its type names, and the files the
+                             grammar governs; exit 1 on errors. A PATH
+                             replaces both defaults. --json, --doc renders
+                             the grammar as prose, --knowledge <DIR>,
+                             --repo-root <DIR> for `/`-rooted paths
 superdev sokf index [PATH]   rebuild the search index from scratch
 superdev hook validate  the Claude Code PostToolUse hook: payload on
                              stdin, validate when the edit touched the canonical knowledge
@@ -112,26 +112,36 @@ Every verb acts on the current directory.
   guided migration error
   ([spec](specs/S009-knowledge-carried-skills-design.md)).
 
-`validate` with no `PATH` covers the bundle at `--bundle` (default
-`knowledge/`) and every tree the format grammar's `roots` names; `sokf index`
+`validate` with no `PATH` covers the SOKF knowledge at `--knowledge` (default
+`knowledge/`) and every tree the grammar's `roots` names; `sokf index`
 defaults `PATH` to `knowledge/`; the hook always reads the same whole set. The
 search index lives in `.superdev/cache/sokf-index/`; `sokf index` and the
 server use it, `validate` never opens it.
 
-- **`validate`** runs both checks and reports once, with findings grouped by
+- **`validate`** runs both halves and reports once, with findings grouped by
   file, so a file both have something to say about is reported once and the
   two cannot reach different verdicts
-  ([P006 D-17](adhoc-plans/P006-rust-format-validator.md)). It prints findings
-  as text, or as the reference validator's JSON under `--json` — same keys,
-  same `bundle` key, same exit codes, so anything scripted against the old
-  Python validator still works. Warnings alone exit `0`; any error exits `1`.
-  A `PATH` replaces both defaults: only what it names is read, and the canonical knowledge
-  is validated only when a `PATH` is the canonical knowledge or contains it. The grammar
-  comes from `.agents/format/grammar.yaml`, or from the copy inside the binary
-  when the repository has none.
-- **`validate`** is the same verb under the name it shipped with, hidden
-  from help. The hook marker and its lock entry are keyed on that spelling in
-  every managed repo, so it stays.
+  ([P006 D-17](adhoc-plans/P006-rust-format-validator.md)). The SOKF half
+  checks the knowledge against the specification; the schema half checks each
+  document against the schema its frontmatter `type` names — sections present,
+  in order, none prohibited, declared table columns, the line limit — and the
+  skills and `.agents/core.md` against the grammar. A document whose `type`
+  names no schema is reported, because a type that resolves to nothing reads
+  as governed and is not.
+
+  Documents with no frontmatter to dispatch on — `README.md`, `CHANGELOG.md` —
+  are named by a schema's `target-files` glob instead. The glob is matched
+  against the candidate list, never against the filesystem, which is what
+  bounds it: nothing outside the SOKF knowledge and that named pair is ever a
+  candidate.
+
+  It prints findings as text, or as JSON under `--json`: `passed`, `concepts`,
+  `files`, `findings`, and a `knowledge` key carrying the directory the run
+  covered. Warnings alone exit `0`; any error exits `1`. A `PATH` replaces
+  both defaults: only what it names is read, and the knowledge is validated
+  only when a `PATH` is the knowledge or contains it. The grammar comes from
+  `.agents/sokf/grammar.yaml`, or from the copy inside the binary when the
+  repository has none.
 - **`sokf index`** forces a full rebuild. Nothing else needs it: the server
   syncs lazily on every tool call. It says so when no embedding model loaded
   and the index is lexical-only.

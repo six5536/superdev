@@ -1,6 +1,7 @@
 grammar: superdev
 version: "2.0"
-doc: "The closed vocabulary of superdev-format files. This file is the single home of the
+doc: "The closed vocabulary of the files this grammar governs — skills, schemas and the
+  core file. This file is the single home of the
   grammar: `superdev validate` drives every structural check from it, and
   `superdev validate --doc` prints it as a reference. Change the language here, not in the
   validator."

@@ -1,4 +1,4 @@
-//! read.rs — turning a superdev-format file into the pieces the checks read.
+//! read.rs — turning a governed file into the pieces the checks read.
 //!
 //! A behavioural port of the Node reference's readers. Two of them carry bugs
 //! that were found and fixed once already, so the port keeps their shape

@@ -1,4 +1,4 @@
-//! grammar.rs — the superdev-format grammar, as types.
+//! grammar.rs — the grammar, as types.
 //!
 //! Every struct is `#[serde(deny_unknown_fields)]`, so a typo in the grammar
 //! is a deserialisation error naming the key. That is the job the JSON

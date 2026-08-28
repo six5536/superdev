@@ -63,9 +63,14 @@ All domain logic; no argument parsing. One module per concern:
   `assets/projects/rust-npm/` onto tokenised target paths.
 - `sokf` — the read side of the SOKF knowledge, one module per stage:
   `concept` (frontmatter and section parsing), `bundle` (loading, reserved-file
-  rules), `validate` (document check and conformance ladder), `graph` (link
-  resolution and inverse synthesis), `embed` (the embedding providers),
-  `index` (tantivy plus the vector store), `mcp` (the server).
+  rules), `graph` (link resolution and inverse synthesis), `embed` (the
+  embedding providers), `index` (tantivy plus the vector store), `mcp` (the
+  server).
+- `validate` — the check, both halves meeting in the parent so neither
+  imports the other: `sokf` (the specification's document checks) and
+  `schema` (documents against the schema their `type` names, and skills and
+  the core file against the grammar, with `document`, `check`, `grammar`,
+  `read` and `doc` beneath it).
 - The SOKF spec, agent files, starter concept skeleton and the 25 carried
   skill directories the `knowledge` capability writes, the three SKILL.md
   files the `skills` capability writes, and the project templates all live in
@@ -91,8 +96,8 @@ and exit codes; `manage.rs` holds the `init`, `status`, `sync` and `update`
 verbs — each loads, calls the core pipeline, renders its lines and turns
 its facts into an exit code. `template_select.rs` decides init's project
 template: flags and TTY-ness feed logic behind a `Prompter` trait, with the
-dialoguer adapter as untested glue. `validate_cli.rs and sokf_cli.rs` holds `validate`, `sokf index` and
-`mcp sokf`: path defaults, printed output, and the current-thread tokio
+dialoguer adapter as untested glue. `validate_cli.rs` holds `validate` and the hook, `sokf_cli.rs`
+`sokf index` and `mcp sokf`: path defaults, printed output, and the current-thread tokio
 runtime the server blocks on. Also present is the plumbing the release
 pipeline needs:
 `--version`, `completions` (clap_complete), and a hidden `man` subcommand
