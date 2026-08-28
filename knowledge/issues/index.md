@@ -28,3 +28,8 @@
 ## The authoring format
 
 * [The format the agent must write in has no document, and the renderer that would produce one has no consumer](I017-the-format-has-no-agent-facing-document.md) - every skill and schema is written in superdev-format, and the only statement of it is a 700-line grammar file the agent is never pointed at; the doc renderer ported for exactly this now exists in the binary with nothing calling it but a flag nobody runs.
+
+## The schema layer
+
+* [A schema declares content kinds and a frontmatter contract, and the validator reads neither](I018-the-schema-layer-checks-sections-and-nothing-else.md) - p008 made schemas govern documents, but only their sections — the content kind under each heading and the frontmatter constraints beside it are declared on every schema and read by nothing, which is the fault P008 set out to cure, one level down.
+* [validate reads a file named on the command line as a skill, whatever it is](I019-validate-reads-a-named-file-as-a-skill.md) - superdev validate knowledge/architecture.md reports nine errors about missing skill blocks, because a named path takes the grammar's fallback kind; the document is never checked against the schema its type names, so the check a path argument most obviously invites is the one it cannot run.

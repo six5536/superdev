@@ -8,15 +8,17 @@ description: Investigation write-ups — conclusion first, evidence with sources
 # Investigation Schema
 
 Structural rules for investigation write-ups, matched by name
-(`**/*investigation*.md`); the source names no filing directory, and the
-document is not an SOKF concept, so it carries no frontmatter.
+(`**/*investigation*.md`); the source names no filing directory, and filed in the knowledge as a concept.
 
 ````yaml
-target-files: "**/*investigation*.md"
 description: >
   Conclusion-first write-up — question, evidence with sources, ruled-out
   hypotheses, and recommendation.
 line-limit: 800
+
+frontmatter:
+  type:
+    const: Investigation
 
 sections-ordered: true
 sections:

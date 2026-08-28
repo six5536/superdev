@@ -190,19 +190,6 @@ impl SchemaSet {
                 .is_some_and(|g| glob_match(g, path))
         })
     }
-
-    /// How many schemas dispatch by type, for the caller that wants to know
-    /// whether any schemas were read at all.
-    #[must_use]
-    pub fn len(&self) -> usize {
-        self.by_type.len() + self.by_glob.len()
-    }
-
-    /// Whether no schema was read.
-    #[must_use]
-    pub fn is_empty(&self) -> bool {
-        self.len() == 0
-    }
 }
 
 /// One document to check: its repo-relative path, its text, and the `type`
@@ -328,19 +315,17 @@ fn check_one(doc: &Document<'_>, schema: &DocSchema, findings: &mut Vec<Finding>
         }
     }
 
-    check_columns(doc, schema, &headings, &lines, &mut push);
+    check_columns(schema, &headings, &lines, &mut push);
 }
 
 /// Every table a rule declares columns for must carry exactly those columns,
 /// in that order: the columns are the contract a reader relies on.
 fn check_columns(
-    doc: &Document<'_>,
     schema: &DocSchema,
     headings: &[(usize, String)],
     lines: &[&str],
     push: &mut impl FnMut(String),
 ) {
-    let _ = doc;
     for rule in &schema.sections {
         if rule.columns.is_empty() {
             continue;

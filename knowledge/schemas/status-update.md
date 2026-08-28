@@ -8,16 +8,18 @@ description: Status updates — TL;DR, done since last update, in progress, bloc
 # Status Update Schema
 
 Structural rules for status updates, matched by name
-(`**/*status-update*.md`); the source names no filing directory, and the
-document is not an SOKF concept, so it carries no frontmatter. The heading
+(`**/*status-update*.md`); the source names no filing directory, and filed in the knowledge as a concept. The heading
 carries the date, so a series of these sorts and reads as a series.
 
 ````yaml
-target-files: "**/*status-update*.md"
 description: >
   One update in a series: the state in a sentence, what landed since the last
   one, what is moving, what is blocked and on whom, and what comes next.
 line-limit: 800
+
+frontmatter:
+  type:
+    const: StatusUpdate
 
 sections-ordered: true
 sections:

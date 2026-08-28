@@ -364,7 +364,11 @@ Depends on: W1, W2, W3, W4, W5, W7.
 | `crates/lib/superdev-core/src/components/enabled.rs` | modified — appended, not resolved | W1 |
 | `crates/lib/superdev-core/src/validate/mod.rs` | new — `validate_repo`, `RepoReport`, `Report`, `Finding` | W2 |
 | `crates/lib/superdev-core/src/validate/sokf.rs` | new — moved from `aokf/validate.rs` | W2, W4 |
-| `crates/lib/superdev-core/src/validate/schema/*.rs` | new — moved from `format/`; gains dispatch and the document rules | W2, W7 |
+| `crates/lib/superdev-core/src/validate/schema/*.rs` | new — moved from `format/` | W2 |
+| `crates/lib/superdev-core/src/validate/schema/document.rs` | new — dispatch by type, the glob for frontmatter-less documents, and the section, column and line-limit rules | W7 |
+| `crates/lib/superdev-core/tests/document_snapshots.rs` | new — one case per rule | W7 |
+| `crates/lib/superdev-core/tests/fixtures/documents/**` | new — eight cases and their goldens | W7 |
+| `crates/lib/superdev-core/src/pack/resolve.rs` | modified — the rejected-path test follows `REJECTED` | W8 |
 | `crates/lib/superdev-core/src/{aokf,format}/` | deleted — both directories | W2 |
 | `crates/lib/superdev-core/src/sokf/*.rs` | new — moved from `aokf/`; `mcp.rs` renames the tools and the server | W2, W3 |
 | `crates/lib/superdev-core/src/lib.rs` | modified — `sokf` and `validate` replace `aokf` and `format` | W2 |

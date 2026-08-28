@@ -8,18 +8,20 @@ description: Release notes — headline, highlights, breaking changes with migra
 # Release Notes Schema
 
 Structural rules for release notes, matched by name
-(`**/*release-notes*.md`); the source names no filing directory, and the
-document is not an SOKF concept, so it carries no frontmatter. Distinct from
+(`**/*release-notes*.md`); the source names no filing directory, and filed in the knowledge as a concept. Distinct from
 the changelog: the changelog is the complete record, these are what a user
 is told about one version.
 
 ````yaml
-target-files: "**/*release-notes*.md"
 description: >
   One version announced to its users: the headline, the highlights worth
   trying, what breaks and the exact migration step, the fixes, and how to
   upgrade.
 line-limit: 800
+
+frontmatter:
+  type:
+    const: ReleaseNotes
 
 sections-ordered: true
 sections:

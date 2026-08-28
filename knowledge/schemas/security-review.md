@@ -8,19 +8,21 @@ description: Security reviews — risk verdict, scope and threat model, findings
 # Security Review Schema
 
 Structural rules for security review documents, matched by name
-(`**/*security-review*.md`); the source names no filing directory, and the
-document is not an SOKF concept, so it carries no frontmatter. Parallel to
+(`**/*security-review*.md`); the source names no filing directory, and filed in the knowledge as a concept. Parallel to
 `schema-code-review`, but each finding carries an attack scenario rather
 than a failure scenario: no realistic path from attacker-controlled input to
 impact means the entry is informational, not a finding.
 
 ````yaml
-target-files: "**/*security-review*.md"
 description: >
   Security review findings: the risk verdict first, the scope and threat model
   assumed, findings ranked by severity each with a concrete attack scenario,
   the areas checked and found sound, and non-blocking hardening.
 line-limit: 800
+
+frontmatter:
+  type:
+    const: SecurityReview
 
 sections-ordered: true
 sections:

@@ -8,16 +8,18 @@ description: Migration guides — old-to-new steps with per-step verification, b
 # Migration Guide Schema
 
 Structural rules for migration guides, matched by name
-(`**/*migration-guide*.md`); the source names no filing directory, and the
-document is not an SOKF concept, so it carries no frontmatter.
+(`**/*migration-guide*.md`); the source names no filing directory, and filed in the knowledge as a concept.
 
 ````yaml
-target-files: "**/*migration-guide*.md"
 description: >
   Old-to-new migration: what changed and who must act, a before/after table,
   prerequisites, ordered steps each with its own verification, the behavioural
   differences that do not show up as errors, rollback, and troubleshooting.
 line-limit: 800
+
+frontmatter:
+  type:
+    const: MigrationGuide
 
 sections-ordered: true
 sections:

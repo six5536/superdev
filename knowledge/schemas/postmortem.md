@@ -8,19 +8,21 @@ description: Blameless incident write-ups — impact, timeline, root cause and t
 # Postmortem Schema
 
 Structural rules for incident postmortems, matched by name
-(`**/*postmortem*.md`); the source names no filing directory, and the
-document is not an SOKF concept, so it carries no frontmatter. Blameless is
+(`**/*postmortem*.md`); the source names no filing directory, and filed in the knowledge as a concept. Blameless is
 a structural property here, not a reminder: the document names systems and
 processes, and the only place a person appears is as the owner of an action
 item.
 
 ````yaml
-target-files: "**/*postmortem*.md"
 description: >
   Blameless incident write-up: impact, the timeline from trigger to
   resolution, the root cause including why the defenses missed it, what went
   well and poorly, and typed action items with owners.
 line-limit: 800
+
+frontmatter:
+  type:
+    const: Postmortem
 
 sections-ordered: true
 sections:

@@ -8,15 +8,17 @@ description: Code review findings — verdict first, findings ranked by severity
 # Code Review Schema
 
 Structural rules for code-review findings documents, matched by name
-(`**/*code-review*.md`); the source names no filing directory, and the
-document is not an SOKF concept, so it carries no frontmatter.
+(`**/*code-review*.md`); the source names no filing directory, and filed in the knowledge as a concept.
 
 ````yaml
-target-files: "**/*code-review*.md"
 description: >
   Code review findings: verdict first, findings ranked by severity with
   concrete failure scenarios, and what was checked and found fine.
 line-limit: 800
+
+frontmatter:
+  type:
+    const: CodeReview
 
 sections-ordered: true
 sections:
