@@ -29,7 +29,7 @@ YOU follow the set of rules defined below, reminding yourself of the rules perio
   <tool_call name="sokf_read" when="if the concept id is known" />
 </retrieval>
 <validation when="if anything under `knowledge/` changed" until="the validator passes">
-  <tool_call name="superdev validate" when="always" />
+  <tool_call name="superdev validate --fix" when="always" />
 </validation>
 </knowledge>
 

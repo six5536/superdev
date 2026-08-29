@@ -23,6 +23,12 @@ What the annotated list does not say:
   route (`superdev hook validate`), so the two cannot reach different
   verdicts. `cargo run -- sokf index` forces a full index rebuild, which
   nothing routine needs: the MCP server syncs lazily on every call.
+- `cargo run -- validate --fix` is the same check with its repairs applied
+  first: a link naming a concept by path becomes the id form, and every
+  `<!-- sokf:links -->` block is regenerated. Run it before committing a
+  knowledge change. It is not what CI runs, and not what the hook runs —
+  a gate that repairs what it is measuring reports on a repository nobody
+  wrote.
 - `npm run check:blueprint` is `cargo run --quiet -- status` — the
   superdev-owned files here (the pack skills, the knowledge-carried skill
   set with its hook entry, and the `.agents` files) still match the

@@ -23,7 +23,8 @@ superdev update [TARGET]     bring pins current, then sync;
 superdev validate [PATH...]  check the SOKF knowledge, every document against
                              the schema its type names, and the files the
                              grammar governs; exit 1 on errors. A PATH
-                             replaces both defaults. --json, --doc renders
+                             replaces both defaults. --fix repairs the
+                             knowledge's links first, --json, --doc renders
                              the grammar as prose, --knowledge <DIR>,
                              --repo-root <DIR> for `/`-rooted paths
 superdev template list       list the shipped project templates
@@ -149,6 +150,22 @@ server use it, `validate` never opens it.
   only when a `PATH` is the knowledge or contains it. The grammar comes from
   `.agents/sokf/grammar.yaml`, or from the copy inside the binary when the
   repository has none.
+
+  **`--fix`** is the one way `validate` writes. Before checking, it repairs
+  what is mechanically repairable in the SOKF knowledge: a body or index link
+  naming a concept by path becomes the id form of SPEC §8, and every
+  document's `<!-- sokf:links -->` block is regenerated from the ids its body
+  cites (§9). A link's id comes from the target document's own `id`, or from
+  the filename stem where the path resolves to nothing and the stem names a
+  concept — a link a rename left behind. Nothing else is touched: an image, a
+  reference-style link, a path naming a file that is no concept, and every
+  byte of prose and frontmatter are left as written.
+
+  It writes only inside the resolved knowledge directory, covers it on the
+  same condition the check does — so a `PATH` naming something else repairs
+  nothing — and is idempotent: a second run writes nothing. The report then
+  describes the repository as `--fix` left it, and names each file rewritten,
+  under a `repaired` key in JSON. `hook validate` never passes it.
 - **`sokf index`** forces a full rebuild. Nothing else needs it: the server
   syncs lazily on every tool call. It says so when no embedding model loaded
   and the index is lexical-only.

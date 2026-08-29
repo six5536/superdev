@@ -290,9 +290,9 @@ a consumer treats each repo-internal source as a derivation edge.
 Producers SHOULD declare each edge once, from whichever side is more
 natural; a consumer building a graph SHOULD synthesise the inverse edge.
 
-**Body links.** A body link whose target is a concept SHOULD address it
-by `id`, as a reference-style markdown link whose label is `sokf:`
-followed by that id:
+**Body links.** A body link whose target is a concept MUST address it by
+`id`, as a reference-style markdown link whose label is `sokf:` followed
+by that id:
 
 ```markdown
 The planner reads [config][sokf:config] before it plans.
