@@ -201,14 +201,17 @@ pub fn validate_repo(
 ///
 /// The repairs are [`fix`]'s; this is where the run resolves the same paths
 /// [`validate_repo`] resolves, so `--fix` and the check that follows it read
-/// one knowledge directory.
+/// one knowledge directory — and cover it on the same condition, so naming a
+/// skill on the command line checks that skill and repairs nothing.
 ///
 /// # Errors
 /// The knowledge is unreadable, or a document cannot be written.
-pub fn fix_repo(repo_root: &Path, bundle: &Path) -> Result<Repair> {
+pub fn fix_repo(repo_root: &Path, bundle: &Path, paths: &[PathBuf]) -> Result<Repair> {
     let repo_root = normalise(&std::env::current_dir().unwrap_or_default(), repo_root);
     let bundle = normalise(&repo_root, bundle);
-    if !bundle.is_dir() {
+    let paths: Vec<PathBuf> = paths.iter().map(|p| normalise(&repo_root, p)).collect();
+    let covered = paths.is_empty() || paths.iter().any(|p| bundle.starts_with(p));
+    if !covered || !bundle.is_dir() {
         return Ok(Repair::default());
     }
     let knowledge = load_bundle(&bundle)?;

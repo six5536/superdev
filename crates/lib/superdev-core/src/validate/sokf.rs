@@ -54,7 +54,7 @@ pub struct Finding {
     /// What is wrong.
     pub message: String,
     /// Whether this fails the bundle. `false` for the spec's always-warn
-    /// items (SPEC §10 item 5), which report without failing.
+    /// items (SPEC §10 item 6), which report without failing.
     pub fatal: bool,
 }
 
@@ -399,7 +399,9 @@ fn check_body_links(
         };
         match resolve_target(file, directory, context.repo_root) {
             Some(resolved) => {
-                if let Some(id) = context.ids.by_path.get(&resolved) {
+                if let Some(id) = context.ids.by_path.get(&resolved)
+                    && !link.image
+                {
                     findings.push(error(
                         path,
                         format!(
@@ -410,10 +412,36 @@ fn check_body_links(
                 }
                 targets.paths.insert(resolved);
             }
-            None => findings.push(warning(path, format!("broken body link: {}", link.dest))),
+            // A path that resolves to nothing may still name a concept: an
+            // `id` survives a rename where the path does not (SPEC §5), so a
+            // stem that answers to one is a link the id form repairs (D-8).
+            None => match stem_id(file, context.ids).filter(|_| !link.image) {
+                Some(id) => {
+                    findings.push(error(
+                        path,
+                        format!(
+                            "body link names a concept by path: {} — write it as [{ID_LABEL}{id}]",
+                            link.dest
+                        ),
+                    ));
+                    targets.ids.insert(id);
+                }
+                None => findings.push(warning(path, format!("broken body link: {}", link.dest))),
+            },
         }
     }
     targets
+}
+
+/// The concept `id` a link's filename stem names, when the path itself
+/// resolves to nothing and the stem answers to one.
+///
+/// This is D-8's fallback: an `id` survives a rename where the path does not,
+/// and for all but the schemas the two are the same word, so a link left
+/// stale by a move is repairable without guessing.
+pub(crate) fn stem_id(file: &str, ids: &Identities) -> Option<String> {
+    let stem = Path::new(file).file_stem()?.to_str()?;
+    ids.by_id.contains_key(stem).then(|| stem.to_string())
 }
 
 /// What a body links to, in both forms, for §8 mirroring.
@@ -688,7 +716,9 @@ fn check_indexes(bundle: &Bundle, context: &Context, findings: &mut Vec<Finding>
             };
             match resolve_target(file, &directory, context.repo_root) {
                 Some(resolved) => {
-                    if let Some(id) = context.ids.by_path.get(&resolved) {
+                    if let Some(id) = context.ids.by_path.get(&resolved)
+                        && !link.image
+                    {
                         findings.push(error(
                             path,
                             format!(
@@ -698,10 +728,21 @@ fn check_indexes(bundle: &Bundle, context: &Context, findings: &mut Vec<Finding>
                         ));
                     }
                 }
-                None => findings.push(warning(
-                    path,
-                    format!("index entry points at missing file: {}", link.dest),
-                )),
+                // As in a body: a path that resolves to nothing still names a
+                // concept when its stem answers to one (D-8).
+                None => match stem_id(file, context.ids).filter(|_| !link.image) {
+                    Some(id) => findings.push(error(
+                        path,
+                        format!(
+                            "index entry names a concept by path: {} — write it as [{ID_LABEL}{id}]",
+                            link.dest
+                        ),
+                    )),
+                    None => findings.push(warning(
+                        path,
+                        format!("index entry points at missing file: {}", link.dest),
+                    )),
+                },
             }
         }
         check_definition_block(path, text, &body, context, findings);
@@ -738,6 +779,10 @@ pub(crate) struct BodyLink {
     /// Whether the link is written inline, `[text](dest)`. Only an inline
     /// link can be rewritten in place without touching a definition.
     pub(crate) inline: bool,
+    /// Whether this is an image, `![alt](dest)`. An image names a picture,
+    /// never a concept, so the id form is not asked of one — but it still
+    /// counts as a body target, as it always has.
+    pub(crate) image: bool,
 }
 
 /// What one pass over a body found.
@@ -781,24 +826,24 @@ pub(crate) fn scan_body(text: &str) -> BodyScan {
     let mut footnotes = BTreeSet::new();
     for (event, span) in parser.into_offset_iter() {
         match event {
-            Event::Start(
-                Tag::Link {
-                    link_type,
-                    dest_url,
-                    id,
-                    ..
-                }
-                | Tag::Image {
-                    link_type,
-                    dest_url,
-                    id,
-                    ..
-                },
-            ) => links.push(BodyLink {
+            Event::Start(Tag::Link {
+                link_type,
+                dest_url,
+                id,
+                ..
+            }) => links.push(BodyLink {
                 id: id.strip_prefix(ID_LABEL).map(str::to_string),
                 dest: dest_url.to_string(),
                 span,
                 inline: matches!(link_type, LinkType::Inline),
+                image: false,
+            }),
+            Event::Start(Tag::Image { dest_url, .. }) => links.push(BodyLink {
+                id: None,
+                dest: dest_url.to_string(),
+                span,
+                inline: false,
+                image: true,
             }),
             Event::Start(Tag::FootnoteDefinition(label)) | Event::FootnoteReference(label) => {
                 footnotes.insert(label.to_string());

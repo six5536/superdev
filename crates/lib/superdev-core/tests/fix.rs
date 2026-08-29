@@ -84,7 +84,7 @@ fn the_pass_repairs_a_tree_and_then_leaves_it_alone() {
     let dir = seed(BEFORE);
     let knowledge = dir.path().join("knowledge");
 
-    let first = fix_repo(dir.path(), &knowledge).unwrap();
+    let first = fix_repo(dir.path(), &knowledge, &[]).unwrap();
     assert_eq!(
         first.written,
         vec![
@@ -96,7 +96,7 @@ fn the_pass_repairs_a_tree_and_then_leaves_it_alone() {
     );
     assert_tree(dir.path(), AFTER);
 
-    let second = fix_repo(dir.path(), &knowledge).unwrap();
+    let second = fix_repo(dir.path(), &knowledge, &[]).unwrap();
     assert!(second.written.is_empty(), "{:?}", second.written);
     assert_tree(dir.path(), AFTER);
 }
@@ -106,7 +106,7 @@ fn the_pass_repairs_a_tree_and_then_leaves_it_alone() {
 fn the_repaired_tree_validates_clean() {
     let dir = seed(BEFORE);
     let knowledge = dir.path().join("knowledge");
-    fix_repo(dir.path(), &knowledge).unwrap();
+    fix_repo(dir.path(), &knowledge, &[]).unwrap();
 
     let bundle = superdev_core::sokf::load_bundle(&knowledge).unwrap();
     let report = validate::validate(&bundle, dir.path());
@@ -139,7 +139,7 @@ fn deleting_every_block_breaks_no_link() {
     assert!(!report.findings.is_empty(), "the blocks are reported");
     assert!(!report.passed(), "a stale block fails the run");
 
-    fix_repo(dir.path(), &knowledge).unwrap();
+    fix_repo(dir.path(), &knowledge, &[]).unwrap();
     let bundle = superdev_core::sokf::load_bundle(&knowledge).unwrap();
     assert!(
         validate::validate(&bundle, dir.path()).findings.is_empty(),
@@ -168,7 +168,7 @@ fn renaming_a_concept_breaks_no_link() {
 
     assert!(!report.passed(), "a stale block fails the run");
 
-    fix_repo(dir.path(), &knowledge).unwrap();
+    fix_repo(dir.path(), &knowledge, &[]).unwrap();
     let beta = std::fs::read_to_string(knowledge.join("sub/beta.md")).unwrap();
     assert!(
         beta.contains("[sokf:alpha]: /knowledge/renamed.md"),
@@ -191,7 +191,7 @@ fn nothing_outside_the_knowledge_is_written() {
         .map(|p| std::fs::read_to_string(dir.path().join(p)).unwrap())
         .collect();
 
-    fix_repo(dir.path(), &dir.path().join("knowledge")).unwrap();
+    fix_repo(dir.path(), &dir.path().join("knowledge"), &[]).unwrap();
 
     for (path, was) in outside.iter().zip(before) {
         assert_eq!(std::fs::read_to_string(dir.path().join(path)).unwrap(), was);
@@ -203,6 +203,81 @@ fn nothing_outside_the_knowledge_is_written() {
 #[test]
 fn a_missing_knowledge_directory_repairs_nothing() {
     let dir = tempfile::tempdir().unwrap();
-    let repair = fix_repo(dir.path(), &dir.path().join("knowledge")).unwrap();
+    let repair = fix_repo(dir.path(), &dir.path().join("knowledge"), &[]).unwrap();
     assert!(repair.written.is_empty());
+}
+
+/// D-8's fallback: a path a rename left behind still names a concept through
+/// its stem, and the pass repairs it. A path naming nothing stays a broken
+/// link, and an image stays an image.
+#[test]
+fn a_stale_path_is_repaired_through_its_stem() {
+    let dir = seed(&[
+        ("README.md", "readme\n"),
+        (
+            "knowledge/manifest.sokf.yaml",
+            "sokf: \"0.4\"\nname: fixture\n",
+        ),
+        (
+            "knowledge/alpha.md",
+            "---\ntype: Note\nid: alpha\n---\n\n\
+             Beta moved, so [beta](beta.md) resolves to nothing — but `beta` is still\n\
+             its id. [Nothing](no-such-thing.md) names no concept, and\n\
+             ![a diagram](diagram.png) is a picture.\n",
+        ),
+        (
+            "knowledge/moved/beta.md",
+            "---\ntype: Note\nid: beta\n---\n\nBody.\n",
+        ),
+    ]);
+    let knowledge = dir.path().join("knowledge");
+
+    let bundle = superdev_core::sokf::load_bundle(&knowledge).unwrap();
+    let report = validate::validate(&bundle, dir.path());
+    let messages: Vec<&str> = report.findings.iter().map(|f| f.message.as_str()).collect();
+    assert_eq!(
+        messages,
+        [
+            "body link names a concept by path: beta.md — write it as [sokf:beta]",
+            "broken body link: no-such-thing.md",
+            "broken body link: diagram.png",
+        ],
+        "the image is a broken link, never a concept named by path"
+    );
+
+    fix_repo(dir.path(), &knowledge, &[]).unwrap();
+    let alpha = std::fs::read_to_string(knowledge.join("alpha.md")).unwrap();
+    assert!(alpha.contains("[beta][sokf:beta]"), "{alpha}");
+    assert!(alpha.contains("[Nothing](no-such-thing.md)"), "{alpha}");
+    assert!(alpha.contains("![a diagram](diagram.png)"), "{alpha}");
+    assert!(
+        alpha.contains("[sokf:beta]: /knowledge/moved/beta.md"),
+        "{alpha}"
+    );
+}
+
+/// `--fix` covers the knowledge on the same condition the check does: a run
+/// told to look at one directory elsewhere repairs nothing.
+#[test]
+fn a_named_path_that_is_not_the_knowledge_repairs_nothing() {
+    let dir = seed(BEFORE);
+    let knowledge = dir.path().join("knowledge");
+    let before = std::fs::read_to_string(knowledge.join("alpha.md")).unwrap();
+
+    let elsewhere = vec![dir.path().join("README.md")];
+    let repair = fix_repo(dir.path(), &knowledge, &elsewhere).unwrap();
+    assert!(repair.written.is_empty(), "{:?}", repair.written);
+    assert_eq!(
+        std::fs::read_to_string(knowledge.join("alpha.md")).unwrap(),
+        before
+    );
+
+    // Naming the knowledge itself covers it, as it does for the check.
+    let named = vec![knowledge.clone()];
+    assert!(
+        !fix_repo(dir.path(), &knowledge, &named)
+            .unwrap()
+            .written
+            .is_empty()
+    );
 }

@@ -70,7 +70,7 @@ pub fn run_validate(args: &ValidateArgs, root: &Path) -> Result<u8> {
     // Repair first, then check: the report is then the state the repository
     // is left in, not the one it arrived in.
     let repaired = if args.fix {
-        validate::fix_repo(&repo_root, &knowledge)?.written
+        validate::fix_repo(&repo_root, &knowledge, &args.paths)?.written
     } else {
         Vec::new()
     };

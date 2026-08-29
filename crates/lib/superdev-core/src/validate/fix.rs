@@ -18,7 +18,7 @@ use std::path::Path;
 
 use super::sokf::{
     ID_LABEL, Identities, canonical, definition_block, identities, link_path, render_block,
-    resolve_target, scan_body,
+    resolve_target, scan_body, stem_id,
 };
 use crate::error::{Error, Result};
 use crate::sokf::bundle::Bundle;
@@ -46,20 +46,18 @@ pub fn fix(bundle: &Bundle, repo_root: &Path) -> Result<Repair> {
     let root = canonical(&bundle.root).unwrap_or_else(|| bundle.root.clone());
 
     let mut repair = Repair::default();
-    let documents = bundle
+    let mut documents: Vec<&str> = bundle
         .concepts
         .iter()
-        .map(|c| (c.path.as_str(), Some(c.body.as_str())))
-        .chain(bundle.indexes.iter().map(|(p, _)| (p.as_str(), None)));
-    let mut documents: Vec<(&str, Option<&str>)> = documents.collect();
-    documents.sort_by_key(|(path, _)| *path);
+        .map(|c| c.path.as_str())
+        .chain(bundle.indexes.iter().map(|(p, _)| p.as_str()))
+        .collect();
+    documents.sort_unstable();
 
-    for (path, body) in documents {
+    for path in documents {
         let file = bundle.root.join(path);
         let text = read(&file)?;
-        // A concept's body is a verbatim suffix of its file, so the
-        // frontmatter is everything before it and is never rewritten.
-        let head = body.map_or(0, |body| text.len() - body.len());
+        let head = body_offset(&text);
         let fixed = format!(
             "{}{}",
             &text[..head],
@@ -72,6 +70,30 @@ pub fn fix(bundle: &Bundle, repo_root: &Path) -> Result<Repair> {
         repair.written.push(path.to_string());
     }
     Ok(repair)
+}
+
+/// Where a document's body starts: after the frontmatter's closing `---`, or
+/// at byte 0 when there is none.
+///
+/// Read from the text this pass is about to rewrite, not from the copy the
+/// bundle parsed, so a file edited between the load and the write is repaired
+/// as it now stands or not at all — never sliced against a length it no
+/// longer has. The split matches `parse_concept`'s, which is what keeps the
+/// frontmatter out of every rewrite.
+fn body_offset(text: &str) -> usize {
+    let is_fence = |line: &str| line.trim_end_matches(['\n', '\r']) == "---";
+    let mut lines = text.split_inclusive('\n');
+    let Some(first) = lines.next().filter(|line| is_fence(line)) else {
+        return 0;
+    };
+    let mut offset = first.len();
+    for line in lines {
+        offset += line.len();
+        if is_fence(line) {
+            return offset;
+        }
+    }
+    0
 }
 
 /// One document body, with its path links converted and its definition block
@@ -88,21 +110,27 @@ fn repair_body(body: &str, file: &Path, repo_root: &Path, ids: &Identities) -> S
 ///
 /// Only an inline link is rewritten. A reference-style link carries its
 /// destination in a definition the author wrote, and moving that is a
-/// different edit from the one this pass makes; the check keeps naming it.
+/// different edit from the one this pass makes; the check names it with the
+/// label to write. An image is skipped for good: it names a picture, never a
+/// concept, and the check asks nothing of one.
 fn convert_links(body: &str, directory: &Path, repo_root: &Path, ids: &Identities) -> String {
     let mut edits: Vec<(std::ops::Range<usize>, String)> = Vec::new();
     for link in scan_body(body).links {
-        if link.id.is_some() || !link.inline {
+        if link.id.is_some() || !link.inline || link.image {
             continue;
         }
         let Some(file) = link_path(&link.dest) else {
             continue;
         };
-        let Some(target) = resolve_target(file, directory, repo_root) else {
+        // The target's own `id` where the path resolves; its stem where the
+        // path resolves to nothing but the stem names a concept, which is a
+        // link a rename left behind (D-8). Anything else — a source file, a
+        // README, a path naming nothing — stays as written.
+        let Some(id) = resolve_target(file, directory, repo_root)
+            .and_then(|target| ids.by_path.get(&target).cloned())
+            .or_else(|| stem_id(file, ids))
+        else {
             continue;
-        };
-        let Some(id) = ids.by_path.get(&target) else {
-            continue; // Not a concept: a source file or a README stays a path.
         };
         if let Some(text) = inline_text(body, &link.span) {
             edits.push((link.span.clone(), format!("[{text}][{ID_LABEL}{id}]")));
@@ -201,6 +229,22 @@ mod tests {
     fn an_empty_block_leaves_the_body_alone() {
         assert_eq!(with_block("Text.\n", ""), "Text.\n");
         assert_eq!(with_block("", ""), "");
+    }
+
+    /// The split matches `parse_concept`'s, which is what keeps a rewrite off
+    /// the frontmatter.
+    #[test]
+    fn the_body_starts_after_the_frontmatter() {
+        for (text, want) in [
+            ("---\ntype: T\n---\nbody\n", "body\n"),
+            ("---\r\ntype: T\r\n---\r\nbody\r\n", "body\r\n"),
+            ("---\ntype: T\n---\n", ""),
+            ("no frontmatter\n", "no frontmatter\n"),
+            ("---\nunterminated\n", "---\nunterminated\n"),
+            ("", ""),
+        ] {
+            assert_eq!(&text[body_offset(text)..], want, "{text:?}");
+        }
     }
 
     #[test]
