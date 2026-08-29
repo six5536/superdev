@@ -16,7 +16,7 @@ use pulldown_cmark::{BrokenLink, CowStr, Event, LinkType, Options, Parser, Tag};
 use serde_yaml_ng::Value;
 
 use crate::sokf::bundle::Bundle;
-use crate::sokf::concept::Concept;
+use crate::sokf::concept::{Concept, links_block_offset};
 
 /// Relationship types the spec defines; anything else reads as `relates-to`.
 const CORE_RELS: [&str; 12] = [
@@ -40,8 +40,10 @@ const MANIFEST: &str = "manifest.sokf.yaml";
 /// (SPEC §8): `[text][sokf:<id>]`.
 pub(crate) const ID_LABEL: &str = "sokf:";
 
-/// The line opening a document's generated definition block (SPEC §9).
-pub(crate) const BLOCK_MARKER: &str = "<!-- sokf:links -->";
+/// The line opening a document's generated definition block (SPEC §9). The
+/// format owns it: `concept.rs` cuts a document's sections at the block, so
+/// the two cannot disagree about where one starts.
+pub(crate) use crate::sokf::concept::LINKS_BLOCK as BLOCK_MARKER;
 
 /// What repairs every finding this module raises about the block.
 const REPAIR: &str = "run `superdev validate --fix`";
@@ -869,16 +871,7 @@ pub(crate) struct DefinitionBlock {
 /// own plan and schemas write one — is an example and not a block. The block
 /// runs from there to the end of the file: SPEC §9 puts nothing after it.
 pub(crate) fn definition_block(text: &str) -> Option<DefinitionBlock> {
-    let mut start = None;
-    for (event, span) in Parser::new_ext(text, Options::empty()).into_offset_iter() {
-        if let Event::Html(html) = event
-            && html.trim_end() == BLOCK_MARKER
-        {
-            start = Some(span.start);
-        }
-    }
-    let start = start?;
-
+    let start = links_block_offset(text)?;
     let definitions = text[start..]
         .lines()
         .skip(1)

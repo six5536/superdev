@@ -5,6 +5,9 @@ use serde_yaml_ng::Value;
 
 use crate::lock::sha256_hex;
 
+/// The line opening a document's generated definition block (SPEC §9).
+pub const LINKS_BLOCK: &str = "<!-- sokf:links -->";
+
 /// Publication state of a concept; an absent frontmatter `status` is
 /// [`Status::Stable`], as the spec requires.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -214,11 +217,17 @@ fn frontmatter_text(title: Option<&str>, description: Option<&str>, tags: &[Stri
 /// Split the document into the root section plus one section per heading.
 ///
 /// Each section runs from its heading line to the line before the next
-/// heading, or to the end of the file. The root section covers the
+/// heading, or to the end of the document. The root section covers the
 /// frontmatter and any body text preceding the first heading.
+///
+/// The document ends where its generated definition block begins (SPEC §9).
+/// The block is a rendering aid no consumer reads, and every one of its lines
+/// is a path — so a section carrying it would be retrieved and embedded on
+/// the paths of the concepts it cites rather than on what it says.
 fn split_sections(text: &str, fm_end_line: usize, frontmatter_text: &str) -> Vec<Section> {
     let starts = line_starts(text);
-    let last_line = starts.len();
+    let last_line =
+        links_block_offset(text).map_or(starts.len(), |at| line_of(&starts, at).saturating_sub(1));
     let body_start = starts.get(fm_end_line).copied().unwrap_or(text.len());
     let headings = headings(&text[body_start..], body_start, &starts);
 
@@ -298,6 +307,25 @@ fn line_of(starts: &[usize], offset: usize) -> usize {
     starts.partition_point(|&start| start <= offset)
 }
 
+/// Where a document's generated definition block starts (SPEC §9), or `None`
+/// when it has none.
+///
+/// The marker is found through the markdown parser, not by searching the
+/// text, so one written inside a fenced example — as this repository's own
+/// plans and schemas write one — is an example and not a block.
+#[must_use]
+pub fn links_block_offset(text: &str) -> Option<usize> {
+    let mut start = None;
+    for (event, span) in Parser::new_ext(text, Options::empty()).into_offset_iter() {
+        if let Event::Html(html) = event
+            && html.trim_end() == LINKS_BLOCK
+        {
+            start = Some(span.start);
+        }
+    }
+    start
+}
+
 /// Lines `first..=last` of `text`, trailing whitespace trimmed; empty when
 /// the range is.
 fn slice_lines<'a>(text: &'a str, starts: &[usize], first: usize, last: usize) -> &'a str {
@@ -355,6 +383,36 @@ mod tests {
         assert!(root.heading_path.is_empty());
         assert_eq!(root.start_line, 1);
         assert!(root.text.contains("Pure planning stage."));
+    }
+
+    /// The generated definition block (SPEC §9) is a rendering aid no
+    /// consumer reads, so no section carries it: a section that did would be
+    /// retrieved and embedded on the paths of the concepts it cites. The body
+    /// still has it, which is what the validator checks.
+    #[test]
+    fn sections_stop_at_the_definition_block() {
+        let text = "---\ntype: Module\nid: planner\n---\n\n# Role\n\nReads [config][sokf:config].\n\n<!-- sokf:links -->\n[sokf:config]: /knowledge/config.md\n";
+        let c = parse_concept("planner.md", text).unwrap();
+        assert!(c.body.contains("[sokf:config]: /knowledge/config.md"));
+        for section in &c.sections {
+            assert!(
+                !section.text.contains("sokf:links") && !section.text.contains("/knowledge/"),
+                "{section:?}"
+            );
+        }
+        let role = c.sections.last().unwrap();
+        assert_eq!(role.heading_path, vec!["Role"]);
+        assert_eq!(role.text, "# Role\n\nReads [config][sokf:config].");
+    }
+
+    /// A marker inside a fenced example is an example, not a block — which is
+    /// how this repository's own plans and schemas write one.
+    #[test]
+    fn a_fenced_marker_does_not_end_the_document() {
+        let text = "---\ntype: Module\nid: planner\n---\n\n# Role\n\n```markdown\n<!-- sokf:links -->\n[sokf:x]: /k/x.md\n```\n\nAfter the fence.\n";
+        let c = parse_concept("planner.md", text).unwrap();
+        assert!(links_block_offset(text).is_none());
+        assert!(c.sections.last().unwrap().text.contains("After the fence."));
     }
 
     #[test]
