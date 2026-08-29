@@ -13,8 +13,8 @@ differ from a REST surface: there are no per-route status codes to tabulate,
 and deprecation stands in for versioning.
 
 Pick by protocol. A resource-shaped HTTP surface is a
-[rest contract](contract-rest.md); a compiled service IDL is an
-[rpc contract](contract-rpc.md).
+[rest contract][sokf:schema-contract-rest]; a compiled service IDL is an
+[rpc contract][sokf:schema-contract-rpc].
 
 ````yaml
 description: >
@@ -138,3 +138,7 @@ example: |
   `@deprecated` with a date, stays for at least six months, and is announced in
   the release notes. Nothing else removes a field, and there is no `/graphql/v2`.
 ````
+
+<!-- sokf:links -->
+[sokf:schema-contract-rest]: /knowledge/schemas/contract-rest.md
+[sokf:schema-contract-rpc]: /knowledge/schemas/contract-rpc.md

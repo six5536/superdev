@@ -15,11 +15,11 @@ This is the one contract no surface can own. Each API contract's
 Authentication section says what a caller presents and how identity is
 established — who you are. This document says what that identity may then do,
 which is the same answer whether the caller arrived over
-[rest](contract-rest.md), [rpc](contract-rpc.md),
-[graphql](contract-graphql.md), [mcp](contract-mcp.md) or the
-[cli](contract-cli.md), and a rebuild cannot infer it from any one of them.
+[rest][sokf:schema-contract-rest], [rpc][sokf:schema-contract-rpc],
+[graphql][sokf:schema-contract-graphql], [mcp][sokf:schema-contract-mcp] or the
+[cli][sokf:schema-contract-cli], and a rebuild cannot infer it from any one of them.
 Row-level rules the store itself enforces are stated here and implemented in
-the [data contract](contract-data.md); the vulnerability policy and the
+the [data contract][sokf:schema-contract-data]; the vulnerability policy and the
 guarantees the design makes are the security-requirements concept, not a
 contract.
 
@@ -150,3 +150,11 @@ example: |
   is tightened in two steps: one release logs what the new rule would refuse,
   the next enforces it.
 ````
+
+<!-- sokf:links -->
+[sokf:schema-contract-cli]: /knowledge/schemas/contract-cli.md
+[sokf:schema-contract-data]: /knowledge/schemas/contract-data.md
+[sokf:schema-contract-graphql]: /knowledge/schemas/contract-graphql.md
+[sokf:schema-contract-mcp]: /knowledge/schemas/contract-mcp.md
+[sokf:schema-contract-rest]: /knowledge/schemas/contract-rest.md
+[sokf:schema-contract-rpc]: /knowledge/schemas/contract-rpc.md

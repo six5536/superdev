@@ -18,9 +18,9 @@ shipped plan and issue templates mint `rel: implements`, and the implement and
 code-review skills navigate by it to find the spec behind a piece of work. The
 core vocabulary did not know the rel, so the format's own tooling degraded it —
 a permanent warning on every run, every generic consumer — including the
-[graph traversal](spec-002-aokf-mcp-server.md) — reading the edge as bare
+[graph traversal][sokf:spec-002-aokf-mcp-server] — reading the edge as bare
 `relates-to`, and no inverse, so a spec could not show what implements it.
-The knowledge disagreed with itself: the [issue tracker](../issue-tracker.md)
+The knowledge disagreed with itself: the [issue tracker][sokf:issue-tracker]
 prescribed `references` for the relationship the templates wrote as
 `implements`.
 
@@ -135,3 +135,7 @@ None.
 - `superdev validate` reports zero warnings on the live knowledge.
 - The embedded spec and this repository's copy agree, which the existing
   byte-equality test covers.
+
+<!-- sokf:links -->
+[sokf:issue-tracker]: /knowledge/issue-tracker.md
+[sokf:spec-002-aokf-mcp-server]: /knowledge/specs/spec-002-aokf-mcp-server.md

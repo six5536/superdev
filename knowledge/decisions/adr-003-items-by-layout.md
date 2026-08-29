@@ -17,7 +17,7 @@ links:
 
 ## Context
 
-[The spec](../specs/spec-014-content-packs.md) says a later layer
+[The spec][sokf:spec-014-content-packs] says a later layer
 supersedes "an earlier item of the same name", which only means something
 once *item* is defined. The existing code already treats a skill as a whole
 directory — `skill_dir_items` materialises "each skill its whole directory:
@@ -46,7 +46,7 @@ one, and only ever within the same owner.
 
 The owner is part of the identity because two capabilities both write into
 `.claude/skills/`, each with its own `custom` list, and
-[configuration](../configuration.md) guarantees the lists are name-guarded —
+[configuration][sokf:configuration] guarantees the lists are name-guarded —
 "a name in one capability's list never releases another capability's file".
 A flat skill namespace would break that guarantee and `--no-<capability>`
 with it.
@@ -71,11 +71,17 @@ with it.
 - Negative: the tree is one level deeper than a flat kind layout, and the
   asset tree must be reorganised before the first pack can be cut.
 - The knowledge-skeleton line above reads `knowledge/concepts/<name>.md`;
-  [ADR-010](adr-010-concepts-entry-is-the-item.md) widens it to any entry under
+  [ADR-010][sokf:adr-010-concepts-entry-is-the-item] widens it to any entry under
   `concepts/`, file or directory, because three shipped scaffolds are not one
   `.md` each.
 - Follow-ups: a pack may not carry `PROJECT.md`. The
-  [glossary](../glossary.md) reserves it as the project's own extension layer
+  [glossary][sokf:glossary] reserves it as the project's own extension layer
   — "superdev never writes or tracks the file" — so shipping one would take it
   under management and break that contract. The resolver rejects it by path,
   as it rejects the capability instruction files and the AOKF spec.
+
+<!-- sokf:links -->
+[sokf:adr-010-concepts-entry-is-the-item]: /knowledge/decisions/adr-010-concepts-entry-is-the-item.md
+[sokf:configuration]: /knowledge/configuration.md
+[sokf:glossary]: /knowledge/glossary.md
+[sokf:spec-014-content-packs]: /knowledge/specs/spec-014-content-packs.md

@@ -19,7 +19,7 @@ links:
 
 ## Context
 
-[Content packs](../specs/spec-014-content-packs.md) give the binary a
+[Content packs][sokf:spec-014-content-packs] give the binary a
 default pack pin, `DEFAULT_PACK.rev`, which must name a rev whose `/pack/`
 is the content that binary embedded. Left to a human, that is a second thing
 to get right at every binary release: tag the pack, then cut a binary naming
@@ -58,7 +58,7 @@ means today.
 ## Consequences
 
 - Positive: neither release has a step a human can forget or mistype; the
-  `npm run release` script [release-procedure](../release-procedure.md)
+  `npm run release` script [release-procedure][sokf:release-procedure]
   describes, which already keeps 18 version locations in lockstep, keeps two
   more.
 - Positive: a content fix ships with no binary build, which is the point of
@@ -67,5 +67,10 @@ means today.
   and the release notes must be clear about which is being cut.
 - Follow-ups: `update` reaches a content release by asking the default source
   for its newest release
-  ([ADR-009](adr-009-update-queries-default-source.md)); without that, a content
+  ([ADR-009][sokf:adr-009-update-queries-default-source]); without that, a content
   release reaches only repos that hand-pin it.
+
+<!-- sokf:links -->
+[sokf:adr-009-update-queries-default-source]: /knowledge/decisions/adr-009-update-queries-default-source.md
+[sokf:release-procedure]: /knowledge/release-procedure.md
+[sokf:spec-014-content-packs]: /knowledge/specs/spec-014-content-packs.md

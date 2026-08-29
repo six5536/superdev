@@ -21,9 +21,9 @@ links:
 
 Every resolved pack gets a `[[packs]]` record in `.superdev/lock.toml`
 carrying a digest over its whole tree. For a git pack that digest is the
-promise [S014](../specs/spec-014-content-packs.md) makes: the next run proves it got the same bytes the pin was
+promise [S014][sokf:spec-014-content-packs] makes: the next run proves it got the same bytes the pin was
 made against, and a mismatch fails the run
-([security-requirements](../security-requirements.md)).
+([security-requirements][sokf:security-requirements]).
 
 A path pack has no such promise to keep. There is no pinned rev whose bytes
 could have moved — the directory is read from disk every run, and being
@@ -35,10 +35,10 @@ every commit touching any file under `pack/` rewrites that one line, and any
 two branches editing content conflict on it. A commit made without running
 `sync` leaves a digest that does not describe the tree, and nothing reports
 that either
-([I004](../issues/issue-004-bug-a-path-packs-digest-churns-and-is-never-checked.md)).
+([I004][sokf:issue-004-bug-a-path-packs-digest-churns-and-is-never-checked]).
 This repository is the first to commit such a line, and met both immediately.
 
-[ADR-011](adr-011-path-pack-identity-is-root-relative.md) considered omitting
+[ADR-011][sokf:adr-011-path-pack-identity-is-root-relative] considered omitting
 `identity` for a path source and rejected it — "the field becomes optional
 for one source kind, a schema that has to explain itself". That objection is
 real and applies here too, so the difference has to be worth it.
@@ -108,9 +108,17 @@ re-synced, which is the workflow a path source exists to remove.
 - Neutral: `status`'s content reporting is unaffected — it reads the manifest
   and the resolution, never the recorded digest.
 - Neutral: the guarantee in
-  [security-requirements](../security-requirements.md) is unchanged in
+  [security-requirements][sokf:security-requirements] is unchanged in
   substance. It is about a *pinned* pack applying the bytes it was pinned to,
   and a directory is not pinned. The wording gains that distinction.
-- Follow-ups: [C001](../contracts/private/contract-001-interface-content-packs.md) carries the new
-  shape; [configuration](../configuration.md) documents the lock's fields and
+- Follow-ups: [C001][sokf:contract-001-interface-content-packs] carries the new
+  shape; [configuration][sokf:configuration] documents the lock's fields and
   gains the optional digest at integrate.
+
+<!-- sokf:links -->
+[sokf:adr-011-path-pack-identity-is-root-relative]: /knowledge/decisions/adr-011-path-pack-identity-is-root-relative.md
+[sokf:configuration]: /knowledge/configuration.md
+[sokf:contract-001-interface-content-packs]: /knowledge/contracts/private/contract-001-interface-content-packs.md
+[sokf:issue-004-bug-a-path-packs-digest-churns-and-is-never-checked]: /knowledge/issues/issue-004-bug-a-path-packs-digest-churns-and-is-never-checked.md
+[sokf:security-requirements]: /knowledge/security-requirements.md
+[sokf:spec-014-content-packs]: /knowledge/specs/spec-014-content-packs.md

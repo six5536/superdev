@@ -19,8 +19,8 @@ links:
 
 ## Context
 
-[S014](../specs/spec-014-content-packs.md) gives a pack a `format` and has a binary refuse one it does not know.
-[ADR-009](adr-009-update-queries-default-source.md) makes `update` ask the
+[S014][sokf:spec-014-content-packs] gives a pack a `format` and has a binary refuse one it does not know.
+[ADR-009][sokf:adr-009-update-queries-default-source] makes `update` ask the
 default source for its newest release and move the pin there — the one path
 by which a content fix reaches a binary that has not changed. The pin moves
 on the tag alone. Nothing about `assets-vX.Y.Z` says what the pack it names
@@ -48,7 +48,7 @@ Nobody can reach it today: no release above `format = 1` exists. It becomes
 reachable the first time one is cut, which is exactly when it would reach
 everyone at once. The format is the sharpest case but not the only one: a tag
 that names a pack with a `REJECTED` path, an unparseable `pack.toml`, or —
-once [ADR-014](adr-014-a-symlink-in-a-pack-is-refused.md) lands — a symlink,
+once [ADR-014][sokf:adr-014-a-symlink-in-a-pack-is-refused] lands — a symlink,
 all fail the same way once the pin is saved.
 
 ## Decision
@@ -116,6 +116,13 @@ can no longer arrive somewhere unreadable.
   inside one module and neither is on a component's path.
 - Neutral: a pin the user hand-edited to something unreadable is unaffected.
   `update` does not move it, and `sync` reports it — which it already does.
-- Follow-ups: [contract-002-cli-superdev](../contracts/public/contract-002-cli-superdev.md) states what `update`
-  guarantees about the pin it saves; [C001](../contracts/private/contract-001-interface-content-packs.md)
+- Follow-ups: [contract-002-cli-superdev][sokf:contract-002-cli-superdev] states what `update`
+  guarantees about the pin it saves; [C001][sokf:contract-001-interface-content-packs]
   records the lock parameter.
+
+<!-- sokf:links -->
+[sokf:adr-009-update-queries-default-source]: /knowledge/decisions/adr-009-update-queries-default-source.md
+[sokf:adr-014-a-symlink-in-a-pack-is-refused]: /knowledge/decisions/adr-014-a-symlink-in-a-pack-is-refused.md
+[sokf:contract-001-interface-content-packs]: /knowledge/contracts/private/contract-001-interface-content-packs.md
+[sokf:contract-002-cli-superdev]: /knowledge/contracts/public/contract-002-cli-superdev.md
+[sokf:spec-014-content-packs]: /knowledge/specs/spec-014-content-packs.md

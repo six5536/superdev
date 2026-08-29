@@ -6,7 +6,7 @@ description: Planning is side-effect free, the engine is the only place that app
 status: stable
 ---
 
-The invariants behind the [architecture](architecture.md):
+The invariants behind the [architecture][sokf:architecture]:
 
 - **Components observe and plan; they never change anything.** `plan` reads
   the repo and the manifest and returns actions. Running it twice changes
@@ -17,8 +17,8 @@ The invariants behind the [architecture](architecture.md):
   Resolving content is the one exception, and sits outside the repo: it reads
   local paths, may spawn `git` for a pinned pack, and populates the machine's
   own cache under `.superdev/cache/packs/`
-  ([ADR-002](decisions/adr-002-resolve-before-plan.md),
-  [ADR-005](decisions/adr-005-pack-cache-and-fetch.md)). It runs to completion
+  ([ADR-002][sokf:adr-002-resolve-before-plan],
+  [ADR-005][sokf:adr-005-pack-cache-and-fetch]). It runs to completion
   before any plan exists, so there is nothing yet to roll back — and putting
   it after planning would mean planning read the network, which is what keeps
   `status` free of it.
@@ -36,4 +36,10 @@ The invariants behind the [architecture](architecture.md):
   Swapping a provider must not change what a user types.
 - **Domain logic lives in `superdev-core`**; the binary stays a thin
   argument-parsing and wiring layer — see
-  [software-components](software-components.md).
+  [software-components][sokf:software-components].
+
+<!-- sokf:links -->
+[sokf:adr-002-resolve-before-plan]: /knowledge/decisions/adr-002-resolve-before-plan.md
+[sokf:adr-005-pack-cache-and-fetch]: /knowledge/decisions/adr-005-pack-cache-and-fetch.md
+[sokf:architecture]: /knowledge/architecture.md
+[sokf:software-components]: /knowledge/software-components.md

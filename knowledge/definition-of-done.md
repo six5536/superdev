@@ -16,7 +16,7 @@ A change is done when (the enforced form is the
 - Formatting, clippy (`--all-targets -- -D warnings`), tests, and doctests
   pass.
 - Line coverage stays ≥ 90% **per crate** — see
-  [testing-strategy](testing-strategy.md).
+  [testing-strategy][sokf:testing-strategy].
 - Launcher and version-consistency checks pass.
 - The SOKF knowledge and every governed file validate (`npm run check:validate`, when
   `knowledge/`, `.agents/` or a skill changed) and the repo matches its own
@@ -27,3 +27,6 @@ A change is done when (the enforced form is the
   regression test that fails on the unfixed code.
 
 [^pr-template]: PR checklist
+
+<!-- sokf:links -->
+[sokf:testing-strategy]: /knowledge/testing-strategy.md

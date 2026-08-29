@@ -13,6 +13,27 @@ publish a version it cannot find a heading for.
 
 ### Changed
 
+- **SOKF 0.4: a body link addresses a concept by id.** Breaking change to the
+  knowledge format. A link between concepts is now written as a
+  reference-style link labelled `sokf:<id>` — `[config][sokf:config]` — and
+  resolves through the id, so renaming or moving a document breaks nothing
+  that cites it. Each document carries a generated `<!-- sokf:links -->` block
+  at its foot giving every cited id its current repo-root path; the block is
+  what makes the link navigate in a plain markdown renderer, and resolution
+  never reads it. A link to anything that is not a concept stays a path.
+
+  Five new findings, all errors: a path link to a concept, a `sokf:` label
+  naming no concept, a missing definition, a stale one, and two ids sharing a
+  kind and a number. `knowledge/manifest.sokf.yaml` declares `sokf: "0.4"`;
+  a 0.3 knowledge whose body links name paths no longer conforms.
+
+- **`superdev validate --fix`.** Converts a path link to the id form, reading
+  the target document's own `id`, and regenerates every definition block. It
+  writes only inside the SOKF knowledge, is idempotent, and is never run by
+  `superdev hook validate` — the hook fires after an edit, so a hook that
+  repaired would rewrite the file the agent is still working in. Run it before
+  committing.
+
 - **AOKF is SOKF, and it is part of superdev.** The format is renamed —
   Superdev Open Knowledge Format — and stops being a capability a provider
   fills. `Capability::Knowledge`, its registry entry and `--no-knowledge` are

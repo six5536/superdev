@@ -29,7 +29,7 @@ vocabulary, the condition forms, or the one-home-per-statement rule.
 types by hand. `format/doc.rs` is 190 lines of ported code held by one golden,
 carrying a language nobody is shown.
 
-The [format validator plan](../plans/plan-006-adhoc-rust-format-validator.md)
+The [format validator plan][sokf:plan-006-adhoc-rust-format-validator]
 ports the renderer under D-13 — deleting the reference was one-way, so the
 option had to survive the port — and lists generating `.agents/format.md` from
 it as a non-goal, because wiring it up decides what that file is and who owns
@@ -70,3 +70,6 @@ cannot drift from the grammar it describes.
   test the way the doc golden is held.
 - Meanwhile `cargo run --quiet -- validate --doc` answers any question about
   the language, and is worth naming wherever the format is discussed.
+
+<!-- sokf:links -->
+[sokf:plan-006-adhoc-rust-format-validator]: /knowledge/plans/plan-006-adhoc-rust-format-validator.md

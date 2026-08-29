@@ -22,7 +22,7 @@ Two pressures, one owner:
 
 Both resolve the same way the skill-overrides spec resolved provider
 content: the capability that owns the domain carries the machinery
-([spec](spec-006-workflows-skill-overrides.md)).
+([spec][sokf:spec-006-workflows-skill-overrides]).
 
 # Decision
 
@@ -131,7 +131,7 @@ bare `superdev` the dev shim resolves.
 # Out of scope
 
 - The ongoing write-side (the knowledge-capture skill in the
-  [backlog](../backlog.md)) — adopt is the one-shot adoption-time bulk
+  [backlog][sokf:backlog]) — adopt is the one-shot adoption-time bulk
   version; capturing learnings mid-task stays its own design.
 - Harvesting from sources outside the repo (issue trackers, wikis, chat).
 - Structured AOKF updates over MCP — adopt edits files directly, guarded
@@ -170,3 +170,7 @@ bare `superdev` the dev shim resolves.
 
 - The automated cases above pass.
 - `superdev validate` reports no error for this document.
+
+<!-- sokf:links -->
+[sokf:backlog]: /knowledge/backlog.md
+[sokf:spec-006-workflows-skill-overrides]: /knowledge/specs/spec-006-workflows-skill-overrides.md

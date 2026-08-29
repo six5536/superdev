@@ -12,7 +12,7 @@ Structural rules for one public telemetry contract, filed at
 promised surface: a dashboard or an alert binds to them, and renaming one
 breaks a consumer who never called an API.
 
-Not to be confused with the [event contract](contract-events.md). Events are
+Not to be confused with the [event contract][sokf:schema-contract-events]. Events are
 published as a product feature and consumed as data; this is operational
 signal, consumed by whoever runs the software. The error taxonomy itself —
 which failures exist and what each means — belongs to the error-handling
@@ -114,3 +114,6 @@ example: |
   release so a dashboard can be moved without a gap. A removed metric or log
   field is announced in the release notes one release ahead.
 ````
+
+<!-- sokf:links -->
+[sokf:schema-contract-events]: /knowledge/schemas/contract-events.md

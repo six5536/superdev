@@ -19,9 +19,9 @@ links:
 
 ## Context
 
-[The spec](../specs/spec-014-content-packs.md) lets a pack come from a
+[The spec][sokf:spec-014-content-packs] lets a pack come from a
 directory on this machine.
-[ADR-004](adr-004-base-pack-identity.md) settled that a source is compared on a
+[ADR-004][sokf:adr-004-base-pack-identity] settled that a source is compared on a
 normalised identity, and made a path source's identity its canonicalised
 absolute path — the spelling that makes two ways of writing one directory into
 one pack.
@@ -70,7 +70,7 @@ the repository it was taken from. A git source ignores the argument.
 Two keys are compared only within a source kind. An absolute path could never
 be mistaken for a repository key; a relative one could, and a directory named
 `github.com/six5536/superdev` keying as the base pack would silently replace
-the embedded content — the failure [ADR-004](adr-004-base-pack-identity.md) calls
+the embedded content — the failure [ADR-004][sokf:adr-004-base-pack-identity] calls
 the worst available here. A directory and a repository are different sources
 however alike their keys read.
 
@@ -101,7 +101,13 @@ however alike their keys read.
 - Negative: `identity` grows a parameter that a git source does not use, and
   every call site must have the root to hand. All of them are in the resolver,
   which does.
-- Follow-ups: [C001](../contracts/private/contract-001-interface-content-packs.md) states a path
+- Follow-ups: [C001][sokf:contract-001-interface-content-packs] states a path
   source's key as its canonicalised absolute path and must be corrected;
-  [configuration](../configuration.md) describes the lock's identity field
+  [configuration][sokf:configuration] describes the lock's identity field
   and gains the relative form at integrate.
+
+<!-- sokf:links -->
+[sokf:adr-004-base-pack-identity]: /knowledge/decisions/adr-004-base-pack-identity.md
+[sokf:configuration]: /knowledge/configuration.md
+[sokf:contract-001-interface-content-packs]: /knowledge/contracts/private/contract-001-interface-content-packs.md
+[sokf:spec-014-content-packs]: /knowledge/specs/spec-014-content-packs.md

@@ -14,7 +14,7 @@ links:
 
 ## Decided
 
-[ADR-016](../decisions/adr-016-a-path-pack-records-no-digest.md).
+[ADR-016][sokf:adr-016-a-path-pack-records-no-digest].
 `PackLock.digest` becomes optional and is omitted for a path source. The
 churn goes, nothing false is recorded, and nothing is lost: the value was
 written and never read, and whether the live files match the pack is checked
@@ -27,7 +27,7 @@ which is the workflow a path source exists to remove.
 
 ## Summary
 
-Against [S014](../specs/spec-014-content-packs.md).
+Against [S014][sokf:spec-014-content-packs].
 
 A path pack is re-read from disk every run, so its digest is recorded but never
 verified — the verification path a git pack goes through is skipped entirely.
@@ -78,3 +78,7 @@ one for every entry.
 
 `PackLock`'s shape and `resolve_one`'s path arm; the committed lock in this
 repository is the first one affected.
+
+<!-- sokf:links -->
+[sokf:adr-016-a-path-pack-records-no-digest]: /knowledge/decisions/adr-016-a-path-pack-records-no-digest.md
+[sokf:spec-014-content-packs]: /knowledge/specs/spec-014-content-packs.md

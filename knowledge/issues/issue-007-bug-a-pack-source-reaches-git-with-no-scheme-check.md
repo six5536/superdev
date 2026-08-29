@@ -28,7 +28,7 @@ going to need.
 
 ## Decided
 
-[ADR-012](../decisions/adr-012-pack-source-schemes-are-allowlisted.md). A pack
+[ADR-012][sokf:adr-012-pack-source-schemes-are-allowlisted]. A pack
 source may name only `https`, `ssh` or `file`, allowlisted in both places
 this issue said it could be:
 
@@ -66,7 +66,7 @@ re-admit are precisely the two with no authentication.
 
 ## Summary
 
-Against [S014](../specs/spec-014-content-packs.md).
+Against [S014][sokf:spec-014-content-packs].
 
 `[[packs]].source` is passed to `git clone` as the URL with no validation of
 its scheme and no `--` end-of-options separator. Git's `ext::` transport takes
@@ -77,7 +77,7 @@ a fetch that has already happened.
 The manifest is a committed file, so this is reachable by cloning a branch and
 running `sync` in it: a fork, a contributor's PR, any untrusted project. It
 narrows the local-by-default guarantee in
-[security-requirements](../security-requirements.md) further than that concept
+[security-requirements][sokf:security-requirements] further than that concept
 describes.
 
 Not exploitable on a stock git — 2.51.1 refuses `ext` by default, verified with
@@ -136,7 +136,7 @@ vetted inherit the base pack's standing.
   `file` closes every unknown helper at once, where naming `ext` closes one.
   Refusing an unsupported scheme in `PackSource::parse` gives the better
   error and refuses before anything spawns. Either narrows what a manifest
-  may say, which [C001](../contracts/private/contract-001-interface-content-packs.md) documents as
+  may say, which [C001][sokf:contract-001-interface-content-packs] documents as
   `parse`'s rejections, so it is an interface decision — and the reason this
   half stayed unscheduled while the other landed.
 - Workaround: read the manifest of a repository before running `sync` in it.
@@ -147,3 +147,9 @@ vetted inherit the base pack's standing.
 an allowlist risks refusing a spelling someone legitimately uses, so the
 existing `only_the_shorthand_is_expanded_for_git` cases should all still pass.
 A test would assert an `ext::` source is refused before any command runs.
+
+<!-- sokf:links -->
+[sokf:adr-012-pack-source-schemes-are-allowlisted]: /knowledge/decisions/adr-012-pack-source-schemes-are-allowlisted.md
+[sokf:contract-001-interface-content-packs]: /knowledge/contracts/private/contract-001-interface-content-packs.md
+[sokf:security-requirements]: /knowledge/security-requirements.md
+[sokf:spec-014-content-packs]: /knowledge/specs/spec-014-content-packs.md

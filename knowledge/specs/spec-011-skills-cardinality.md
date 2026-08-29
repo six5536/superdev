@@ -14,15 +14,15 @@ links:
 # Summary
 
 Every capability holds exactly one provider — the manifest has one
-table per slot, and the [glossary](../glossary.md) records that every
+table per slot, and the [glossary][sokf:glossary] records that every
 slot currently has exactly one entry. That exclusivity is right where
 providers compete (a repo wants one code indexer, one knowledge
 format), but wrong for skills: skill packs are additive, not rival. A
 repo owner who wants a second pack alongside superdev's has no way to
 say so in `config.toml` — the slot model, introduced by the
-[CLI core & blueprint engine spec](spec-001-cli-core-blueprint-engine.md),
+[CLI core & blueprint engine spec][sokf:spec-001-cli-core-blueprint-engine],
 forces a choice the domain doesn't have. Today the slot holds only
-superdev's own pack, from the [skill pack spec](spec-003-skill-pack.md).
+superdev's own pack, from the [skill pack spec][sokf:spec-003-skill-pack].
 
 # Solution
 
@@ -108,7 +108,7 @@ one default that `init` enables.
   deliberate manifest edits.
 - No second pack ships with this change. Re-registering superpowers —
   de-registered by the
-  [knowledge-carried skills spec](spec-009-knowledge-carried-skills.md)
+  [knowledge-carried skills spec][sokf:spec-009-knowledge-carried-skills]
   — or adding any other pack is a product decision for its own spec;
   this one is the model and the manifest surface.
 - The lock mirrors the manifest's per-entry granularity so the orphan
@@ -196,3 +196,9 @@ per-entry planning and sweeping above are not.
 
 - The automated cases above pass.
 - `superdev validate` reports no error for this document.
+
+<!-- sokf:links -->
+[sokf:glossary]: /knowledge/glossary.md
+[sokf:spec-001-cli-core-blueprint-engine]: /knowledge/specs/spec-001-cli-core-blueprint-engine.md
+[sokf:spec-003-skill-pack]: /knowledge/specs/spec-003-skill-pack.md
+[sokf:spec-009-knowledge-carried-skills]: /knowledge/specs/spec-009-knowledge-carried-skills.md

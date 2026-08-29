@@ -301,10 +301,10 @@ Depends on: W2, W5.
   superdev, under its original marker, and the lock entry is unchanged.
 - `knowledge/plans/index.md` lists this plan and its status reads done.
 - The changelog has an Unreleased entry for the promoted command.
-- The pack question is filed as [issue-016](../issues/issue-016-bug-sync-would-revert-the-schema-migration.md),
+- The pack question is filed as [issue-016][sokf:issue-016-bug-sync-would-revert-the-schema-migration],
   since the live tree and `/pack/` diverge until it is answered.
 - The generated-format-docs idea is filed as
-  [issue-017](../issues/issue-017-feature-request-the-format-has-no-agent-facing-document.md), since
+  [issue-017][sokf:issue-017-feature-request-the-format-has-no-agent-facing-document], since
   the doc renderer now exists in the binary with nothing consuming it.
 
 ## Risks
@@ -386,7 +386,7 @@ be packaged, so it is at
 byte for byte equal to `.agents/format/grammar.yaml`. Writing the grammar into
 the repositories superdev manages — the way `.agents/aokf/SPEC.md` is written,
 as a binary-owned file — is a pack question, and is
-[issue-017](../issues/issue-017-feature-request-the-format-has-no-agent-facing-document.md)'s to
+[issue-017][sokf:issue-017-feature-request-the-format-has-no-agent-facing-document]'s to
 answer alongside the format document.
 
 Both follow-ons are filed as issues rather than as the plans the Definition of
@@ -398,3 +398,7 @@ The `--json` report keeps its `bundle` key, naming the canonical knowledge direc
 run was configured with. When a positional path excludes the canonical knowledge, `concepts`
 is 0 and no knowledge finding appears; the key names the invocation, not what was
 read.
+
+<!-- sokf:links -->
+[sokf:issue-016-bug-sync-would-revert-the-schema-migration]: /knowledge/issues/issue-016-bug-sync-would-revert-the-schema-migration.md
+[sokf:issue-017-feature-request-the-format-has-no-agent-facing-document]: /knowledge/issues/issue-017-feature-request-the-format-has-no-agent-facing-document.md

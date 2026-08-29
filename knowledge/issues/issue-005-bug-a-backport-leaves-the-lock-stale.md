@@ -37,7 +37,7 @@ there is nothing left to reconcile against, so that entry still releases.
 
 ## Summary
 
-Against [S014](../specs/spec-014-content-packs.md).
+Against [S014][sokf:spec-014-content-packs].
 
 `apply` records a file's hash only when it writes that file. The backport
 workflow — edit the live copy to try it, mirror it into `pack/`, then `sync` —
@@ -94,3 +94,6 @@ a file that is, in fact, exactly right.
 
 `engine/apply.rs` and every component's `owned` set. A test would resolve a
 file that already matches and assert its hash lands in the lock.
+
+<!-- sokf:links -->
+[sokf:spec-014-content-packs]: /knowledge/specs/spec-014-content-packs.md

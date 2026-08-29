@@ -19,7 +19,7 @@ links:
 # Summary
 
 Every file superdev writes into a managed repo is compiled into the binary
-by the [blueprint engine](spec-001-cli-core-blueprint-engine.md),
+by the [blueprint engine][sokf:spec-001-cli-core-blueprint-engine],
 so content and code share one release cadence: correcting a skill or adding
 a template costs a five-platform release. This feature makes that content a
 **content pack** — a versioned set resolved from a pinned **pack source** —
@@ -87,8 +87,8 @@ they are not a promise before 1.0.
 ## What a pack may carry
 
 - Skills and document templates as the
-  [knowledge capability carries them](spec-009-knowledge-carried-skills.md),
-  [project templates](spec-007-project-templates.md), knowledge skeletons,
+  [knowledge capability carries them][sokf:spec-009-knowledge-carried-skills],
+  [project templates][sokf:spec-007-project-templates], knowledge skeletons,
   and the general-rules scaffolds.
 - Not the capability instruction files (`.agents/aokf.md`,
   `.agents/codegraph.md`) and not the AOKF spec: each
@@ -262,9 +262,9 @@ would break the only promise the trust model makes.
 Settled at interface design; kept here as pointers.
 
 - Where pack entries live in the manifest — a top-level `[[packs]]` array
-  ([ADR-001](../decisions/adr-001-packs-manifest-section.md)).
+  ([ADR-001][sokf:adr-001-packs-manifest-section]).
 - How two pack sources are compared for identity — normalised, and the base
-  named by `status` ([ADR-004](../decisions/adr-004-base-pack-identity.md)).
+  named by `status` ([ADR-004][sokf:adr-004-base-pack-identity]).
 
 Still open:
 
@@ -282,15 +282,15 @@ as slices and closed. The second pass re-checked the criteria, confirmed each
 gap closed as a user meets it, and a security review found both fixes airtight
 with nothing new.
 
-A third pass followed [P005](../plans/plan-005-feature-content-pack-hardening.md), which
+A third pass followed [P005][sokf:plan-005-feature-content-pack-hardening], which
 took the interface decisions those two passes had parked and delivered them in
 seven slices. Every issue this spec left open is now closed:
-[I001](../issues/issue-001-bug-update-can-pin-an-unreadable-pack-format.md),
-[I002](../issues/issue-002-bug-no-time-bound-on-the-update-query.md),
-[I004](../issues/issue-004-bug-a-path-packs-digest-churns-and-is-never-checked.md),
-[I007](../issues/issue-007-bug-a-pack-source-reaches-git-with-no-scheme-check.md) and
-[I009](../issues/issue-009-bug-a-skipped-symlink-says-nothing.md).
-[I003](../issues/issue-003-bug-a-local-pack-cannot-remove-what-it-dropped.md) is closed
+[I001][sokf:issue-001-bug-update-can-pin-an-unreadable-pack-format],
+[I002][sokf:issue-002-bug-no-time-bound-on-the-update-query],
+[I004][sokf:issue-004-bug-a-path-packs-digest-churns-and-is-never-checked],
+[I007][sokf:issue-007-bug-a-pack-source-reaches-git-with-no-scheme-check] and
+[I009][sokf:issue-009-bug-a-skipped-symlink-says-nothing].
+[I003][sokf:issue-003-bug-a-local-pack-cannot-remove-what-it-dropped] is closed
 `wontfix`: a path pack keeps layering, and the rebuild a pack developer needs
 anyway is the answer.
 
@@ -318,11 +318,11 @@ Settled during delivery:
   enumerates it, so a new file needs no table.
 
   Three limits came with the pin, filed rather than fixed:
-  [I003](../issues/issue-003-bug-a-local-pack-cannot-remove-what-it-dropped.md), a
+  [I003][sokf:issue-003-bug-a-local-pack-cannot-remove-what-it-dropped], a
   layer cannot remove what it dropped, and
-  [I004](../issues/issue-004-bug-a-path-packs-digest-churns-and-is-never-checked.md),
+  [I004][sokf:issue-004-bug-a-path-packs-digest-churns-and-is-never-checked],
   the recorded digest churns and is checked by nothing, and
-  [I005](../issues/issue-005-bug-a-backport-leaves-the-lock-stale.md), a backport
+  [I005][sokf:issue-005-bug-a-backport-leaves-the-lock-stale], a backport
   leaves the lock describing the file it replaced.
 
 # Test plan: externally sourced content packs
@@ -345,7 +345,7 @@ Settled during delivery:
    pinned. This is the single failure that would invalidate the trust model.
 2. **Network creeping into the steady state.** A request during `sync` or
    `status` breaks the CI drift gate and the "local by default" guarantee in
-   [security-requirements](../security-requirements.md) that the non-PIE musl
+   [security-requirements][sokf:security-requirements] that the non-PIE musl
    acceptance rests on.
 3. **Wrong layer resolution.** An item that should supersede does not, one
    that should not does, a pack from the default source layers instead of
@@ -418,3 +418,19 @@ Settled during delivery:
 - Every automated case passes on all CI platforms.
 - The three manual checks are signed off.
 - No test in the suite reaches the network.
+
+<!-- sokf:links -->
+[sokf:adr-001-packs-manifest-section]: /knowledge/decisions/adr-001-packs-manifest-section.md
+[sokf:adr-004-base-pack-identity]: /knowledge/decisions/adr-004-base-pack-identity.md
+[sokf:issue-001-bug-update-can-pin-an-unreadable-pack-format]: /knowledge/issues/issue-001-bug-update-can-pin-an-unreadable-pack-format.md
+[sokf:issue-002-bug-no-time-bound-on-the-update-query]: /knowledge/issues/issue-002-bug-no-time-bound-on-the-update-query.md
+[sokf:issue-003-bug-a-local-pack-cannot-remove-what-it-dropped]: /knowledge/issues/issue-003-bug-a-local-pack-cannot-remove-what-it-dropped.md
+[sokf:issue-004-bug-a-path-packs-digest-churns-and-is-never-checked]: /knowledge/issues/issue-004-bug-a-path-packs-digest-churns-and-is-never-checked.md
+[sokf:issue-005-bug-a-backport-leaves-the-lock-stale]: /knowledge/issues/issue-005-bug-a-backport-leaves-the-lock-stale.md
+[sokf:issue-007-bug-a-pack-source-reaches-git-with-no-scheme-check]: /knowledge/issues/issue-007-bug-a-pack-source-reaches-git-with-no-scheme-check.md
+[sokf:issue-009-bug-a-skipped-symlink-says-nothing]: /knowledge/issues/issue-009-bug-a-skipped-symlink-says-nothing.md
+[sokf:plan-005-feature-content-pack-hardening]: /knowledge/plans/plan-005-feature-content-pack-hardening.md
+[sokf:security-requirements]: /knowledge/security-requirements.md
+[sokf:spec-001-cli-core-blueprint-engine]: /knowledge/specs/spec-001-cli-core-blueprint-engine.md
+[sokf:spec-007-project-templates]: /knowledge/specs/spec-007-project-templates.md
+[sokf:spec-009-knowledge-carried-skills]: /knowledge/specs/spec-009-knowledge-carried-skills.md

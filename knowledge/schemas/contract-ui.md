@@ -16,8 +16,8 @@ A spec describes one feature's behaviour while it is being built and is
 discarded from the reader's mind once it ships; this document is the surface as
 it now stands, and is read by anyone rebuilding or linking to it. Routes here
 are the ones a browser or a deep link addresses, not the API paths behind them
-— those belong to the [rest](contract-rest.md) or
-[graphql](contract-graphql.md) contract.
+— those belong to the [rest][sokf:schema-contract-rest] or
+[graphql][sokf:schema-contract-graphql] contract.
 
 ````yaml
 description: >
@@ -119,3 +119,7 @@ example: |
   path for that year — a working link that starts 404ing is a break, not a
   cleanup. A removed screen is announced in the release notes one release ahead.
 ````
+
+<!-- sokf:links -->
+[sokf:schema-contract-graphql]: /knowledge/schemas/contract-graphql.md
+[sokf:schema-contract-rest]: /knowledge/schemas/contract-rest.md

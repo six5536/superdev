@@ -15,7 +15,7 @@ links:
 ## Goal
 
 Implement the
-[agent instructions layer spec](/knowledge/specs/spec-010-agent-instructions-layer.md):
+[agent instructions layer spec][sokf:spec-010-agent-instructions-layer]:
 AGENTS.md becomes the user's file, superdev's guidance moves behind one
 ensured import, and code-index gains its agent wiring.
 
@@ -61,3 +61,6 @@ directory-structure); flip the spec to `stable` and tag this plan
 Verify: `superdev status` exits 0, `superdev aokf validate
 knowledge` passes, and the full pre-PR check set is
 green.
+
+<!-- sokf:links -->
+[sokf:spec-010-agent-instructions-layer]: /knowledge/specs/spec-010-agent-instructions-layer.md

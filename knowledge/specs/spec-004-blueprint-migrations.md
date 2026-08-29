@@ -28,9 +28,9 @@ is invisible unless `CLAUDE.md` imports it.
 # Sub-project decomposition
 
 The remaining work after the [blueprint
-engine](spec-001-cli-core-blueprint-engine.md), the [AOKF MCP
-server](spec-002-aokf-mcp-server.md) and the [skill
-pack](spec-003-skill-pack.md) splits three ways:
+engine][sokf:spec-001-cli-core-blueprint-engine], the [AOKF MCP
+server][sokf:spec-002-aokf-mcp-server] and the [skill
+pack][sokf:spec-003-skill-pack] splits three ways:
 
 4. **Blueprint migrations** — this spec: pruning what the blueprint dropped,
    and the entry-point fix.
@@ -87,7 +87,7 @@ For each lock entry no live claim covers:
   overwrite, journalled so a later failure restores it.
 - **Modified** — the user's work under superdev's old name. Left exactly as
   it is, dropped from the lock, and reported once. This is the
-  [skill pack](spec-003-skill-pack.md)'s custom rule again:
+  [skill pack][sokf:spec-003-skill-pack]'s custom rule again:
   superdev takes back only what it wrote.
 - **Already gone** — leaves the lock silently.
 - **Unreadable, or now a directory** — fails loudly, as everywhere else the
@@ -213,3 +213,8 @@ line decides whether Claude Code loads superdev's rules at all.
 
 - The automated cases above pass.
 - `superdev validate` reports no error for this document.
+
+<!-- sokf:links -->
+[sokf:spec-001-cli-core-blueprint-engine]: /knowledge/specs/spec-001-cli-core-blueprint-engine.md
+[sokf:spec-002-aokf-mcp-server]: /knowledge/specs/spec-002-aokf-mcp-server.md
+[sokf:spec-003-skill-pack]: /knowledge/specs/spec-003-skill-pack.md

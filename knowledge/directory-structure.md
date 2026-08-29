@@ -42,7 +42,7 @@ submodules/               # read-only reference checkouts (git submodules)
 
 A pack's tree is its declaration: the directory under `pack/` names the item's
 owning capability and the one below it the kind, so a file's position is what
-makes it an item ([ADR-003](decisions/adr-003-items-by-layout.md)). `pack.toml`
+makes it an item ([ADR-003][sokf:adr-003-items-by-layout]). `pack.toml`
 carries the format version and metadata, never an item list. The capability
 instruction files (`pack/sokf/agents/`, `pack/codegraph/`) are not
 pack content: they describe a version the binary pins or a format the compiled
@@ -52,9 +52,13 @@ validator enforces, so they move with the binary.
 what keeps the content inside the published crate while leaving it browsable at
 the root, and it is why a Windows checkout needs `core.symlinks=true`
 (see [CONTRIBUTING](/CONTRIBUTING.md)). Crate and package contents are detailed
-in [software-components](software-components.md). Top-level docs (README,
+in [software-components][sokf:software-components]. Top-level docs (README,
 CONTRIBUTING, CHANGELOG, SECURITY, CODE_OF_CONDUCT) are the public,
 GitHub-surfaced files; AGENTS.md is the agent entry point that loads this
 knowledge.[^contributing]
 
 [^contributing]: Contributing guide (project layout)
+
+<!-- sokf:links -->
+[sokf:adr-003-items-by-layout]: /knowledge/decisions/adr-003-items-by-layout.md
+[sokf:software-components]: /knowledge/software-components.md

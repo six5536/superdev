@@ -27,7 +27,7 @@ Code plugin install on their machine.
 This also makes provider selection real. Today `components::enabled` maps
 each capability to one hardcoded component and ignores the manifest's
 `provider` field entirely — the [blueprint
-engine](spec-001-cli-core-blueprint-engine.md)'s
+engine][sokf:spec-001-cli-core-blueprint-engine]'s
 capability-to-provider map exists only in prose.
 
 # Behaviour
@@ -120,7 +120,7 @@ files loses nothing.
   attributed files, without hardcoding the upstream skill list. Upgrades
   are then self-cleaning: a skill the next release drops becomes an
   unclaimed lock entry and the
-  [orphan pass](spec-004-blueprint-migrations.md) sweeps it, and a
+  [orphan pass][sokf:spec-004-blueprint-migrations] sweeps it, and a
   provider switch sweeps the whole set.
 - **User edits.** Same rules as the skill pack: owned files are overwritten
   with backup and a note. `[workflows]` gains the same `custom = [...]`
@@ -184,7 +184,7 @@ and two variants in one picker is noise. No removal code — the next sync
 finds the unclaimed lock entry and the orphan pass sweeps it, or releases
 it with a report where the user had edited it.
 
-The [skill pack](spec-003-skill-pack.md)'s custom-list validation
+The [skill pack][sokf:spec-003-skill-pack]'s custom-list validation
 softens with it: a `[skills] custom` name that is not in the pack becomes
 the report line
 `skills: custom names unknown skill '<name>' — no effect` instead of a
@@ -284,3 +284,8 @@ act of the sub-project switches it:
 
 - The automated cases above pass.
 - `superdev validate` reports no error for this document.
+
+<!-- sokf:links -->
+[sokf:spec-001-cli-core-blueprint-engine]: /knowledge/specs/spec-001-cli-core-blueprint-engine.md
+[sokf:spec-003-skill-pack]: /knowledge/specs/spec-003-skill-pack.md
+[sokf:spec-004-blueprint-migrations]: /knowledge/specs/spec-004-blueprint-migrations.md

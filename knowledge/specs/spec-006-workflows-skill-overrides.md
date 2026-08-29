@@ -51,7 +51,7 @@ run's written keys).
 
 # Decision
 
-A [skill override](../glossary.md) is carried by the provider component
+A [skill override][sokf:glossary] is carried by the provider component
 it overrides, not by the superdev skill pack and not by a new
 capability:
 
@@ -144,3 +144,6 @@ capability:
 
 - The automated cases above pass.
 - `superdev validate` reports no error for this document.
+
+<!-- sokf:links -->
+[sokf:glossary]: /knowledge/glossary.md

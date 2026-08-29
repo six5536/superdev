@@ -13,9 +13,9 @@ service is defined in the IDL its own toolchain compiles, and the wire
 compatibility rules are the IDL's, not HTTP's.
 
 Pick by protocol. A resource-shaped HTTP surface is a
-[rest contract](contract-rest.md); a single-endpoint schema with client-chosen
-selections is a [graphql contract](contract-graphql.md); a stream a consumer
-subscribes to rather than calls is an [event contract](contract-events.md).
+[rest contract][sokf:schema-contract-rest]; a single-endpoint schema with client-chosen
+selections is a [graphql contract][sokf:schema-contract-graphql]; a stream a consumer
+subscribes to rather than calls is an [event contract][sokf:schema-contract-events].
 
 ````yaml
 description: >
@@ -141,3 +141,8 @@ example: |
   fields it does not know. A change that breaks either rule opens
   `widgets.v2`, and `widgets.v1` then serves for six further months.
 ````
+
+<!-- sokf:links -->
+[sokf:schema-contract-events]: /knowledge/schemas/contract-events.md
+[sokf:schema-contract-graphql]: /knowledge/schemas/contract-graphql.md
+[sokf:schema-contract-rest]: /knowledge/schemas/contract-rest.md

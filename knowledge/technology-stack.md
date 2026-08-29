@@ -20,7 +20,7 @@ used only by the coverage job, and the cargo tooling below.[^mise-toml] Setup
 detail lives in [CONTRIBUTING](/CONTRIBUTING.md).
 
 Adding a dependency requires explicit approval and the latest version at the
-time, per the [dependency policy](dependency-policy.md). The current
+time, per the [dependency policy][sokf:dependency-policy]. The current
 set:[^cargo-toml]
 
 - **Rust**: `clap` (derive), `clap_complete` + `clap_mangen` (completions and
@@ -48,7 +48,7 @@ set:[^cargo-toml]
 
 The embedding model is pinned like a dependency:
 `minishlab/potion-retrieval-32M`, at commit `6fc8051…`, fetched once per
-machine into the user cache ([configuration](configuration.md)). Every crate
+machine into the user cache ([configuration][sokf:configuration]). Every crate
 above is pure Rust, which is the point — the static-musl release builds rule
 out anything wanting an ONNX runtime or a C toolchain. `cargo-deny`'s allow
 list gained `CDLA-Permissive-2.0` for this: it arrives as `webpki-roots`,
@@ -62,3 +62,7 @@ shim needs one on the host.
 
 [^cargo-toml]: Workspace manifest (dependency set)
 [^mise-toml]: Pinned tool versions
+
+<!-- sokf:links -->
+[sokf:configuration]: /knowledge/configuration.md
+[sokf:dependency-policy]: /knowledge/dependency-policy.md

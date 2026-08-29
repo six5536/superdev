@@ -94,9 +94,12 @@ loudly it complains.
 
 This changes SPEC §11, so it wants the treatment ADR-017 had rather than a
 quiet edit — see
-[the conformance decision](../decisions/adr-017-aokf-conformance-is-pass-or-fail.md),
+[the conformance decision][sokf:adr-017-aokf-conformance-is-pass-or-fail],
 which took the same kind of question about the same section.
 
 Workaround until then: read the warnings. The canonical knowledge currently sits at zero,
 so a new one is visible; that is a property of having just cleared them, not
 of the design.
+
+<!-- sokf:links -->
+[sokf:adr-017-aokf-conformance-is-pass-or-fail]: /knowledge/decisions/adr-017-aokf-conformance-is-pass-or-fail.md

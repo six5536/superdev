@@ -20,9 +20,9 @@ knowledge: they write `CONTEXT.md`, `docs/adr/` and `.scratch/`,
 and need a per-repo override file to redirect them into the canonical knowledge. The
 24 aokf-converted skills bake that redirection in, so the provider's
 whole job — chosen by the
-[workflows-provider-default spec](spec-005-workflows-provider-default.md)
+[workflows-provider-default spec][sokf:spec-005-workflows-provider-default]
 and overlaid by the
-[skill-overrides spec](spec-006-workflows-skill-overrides.md) — is
+[skill-overrides spec][sokf:spec-006-workflows-skill-overrides] — is
 done better by the knowledge capability. Keeping both means name
 collisions in `.claude/skills/` and two sources of truth for one flow.
 
@@ -32,7 +32,7 @@ Drop the workflows capability entirely. The aokf component carries the
 converted skill set — 25 skills, the derived set plus
 `aokf-bootstrap` and `aokf-maintain` — as owned files under `.claude/skills/`, exactly as it
 already carries its two lifecycle skills
-([knowledge-owned skills](spec-008-knowledge-owned-skills.md)). A
+([knowledge-owned skills][sokf:spec-008-knowledge-owned-skills]). A
 manifest still naming `[workflows]` fails with a guided error.
 
 # Behaviour
@@ -148,3 +148,8 @@ None.
 
 - The automated cases above pass.
 - `superdev validate` reports no error for this document.
+
+<!-- sokf:links -->
+[sokf:spec-005-workflows-provider-default]: /knowledge/specs/spec-005-workflows-provider-default.md
+[sokf:spec-006-workflows-skill-overrides]: /knowledge/specs/spec-006-workflows-skill-overrides.md
+[sokf:spec-008-knowledge-owned-skills]: /knowledge/specs/spec-008-knowledge-owned-skills.md

@@ -12,11 +12,11 @@ links:
 
 # Feature plan: externally sourced content packs
 
-Spec: [S014](../specs/spec-014-content-packs.md). Contract:
-[C001](../contracts/private/contract-001-interface-content-packs.md). Decisions:
-[ADR-001](../decisions/adr-001-packs-manifest-section.md) …
-[ADR-006](../decisions/adr-006-pack-at-repo-root.md),
-[ADR-011](../decisions/adr-011-path-pack-identity-is-root-relative.md).
+Spec: [S014][sokf:spec-014-content-packs]. Contract:
+[C001][sokf:contract-001-interface-content-packs]. Decisions:
+[ADR-001][sokf:adr-001-packs-manifest-section] …
+[ADR-006][sokf:adr-006-pack-at-repo-root],
+[ADR-011][sokf:adr-011-path-pack-identity-is-root-relative].
 
 Ordered by dependency, then risk. Slice 1 carries the Windows symlink risk
 and slice 8 the layering semantics; both sit as early as their dependencies
@@ -144,7 +144,7 @@ only variable when the Windows job runs.
 - Change: add `PackSource::Git` resolution by spawning the user's `git`
   through the injected `CommandRunner` — `clone --depth 1
   --filter=blob:none --sparse --branch <rev>` then `sparse-checkout set pack`
-  ([ADR-007](../decisions/adr-007-git-fetch-by-spawn.md)), with the commit-sha
+  ([ADR-007][sokf:adr-007-git-fetch-by-spawn]), with the commit-sha
   path implemented explicitly since `--branch` does not take one. Add the
   digest over a pack tree, verification against the lock's recorded digest,
   and the cache under `.superdev/cache/packs/<digest>/`.
@@ -176,7 +176,7 @@ only variable when the Windows job runs.
 - Change: `init` writes the blueprint's default pack entry explicitly.
   `update` asks the default source for its newest release tag and moves that
   pin there, even ahead of the blueprint's default
-  ([ADR-009](../decisions/adr-009-update-queries-default-source.md)); with no
+  ([ADR-009][sokf:adr-009-update-queries-default-source]); with no
   network it moves no further than the blueprint's default and says it could
   not check. A pin naming another source is reported and left alone, and a
   manifest carrying no entry gains the default one.
@@ -195,7 +195,7 @@ only variable when the Windows job runs.
   which bumps `pack.toml` and cuts `assets-vA.B.C` alone. Make the binary
   release workflow ignore `assets-v*` tags so a content release runs no
   five-platform build. Record both flows in CONTRIBUTING and
-  `release-procedure` ([ADR-008](../decisions/adr-008-one-command-per-release.md)).
+  `release-procedure` ([ADR-008][sokf:adr-008-one-command-per-release]).
 - Done-check: `release X.Y.Z` produces one commit carrying both tags with
   `DEFAULT_PACK.rev` naming the pack tag it cut — no second step, nothing to
   reconcile by hand; `release:pack` cuts one tag and triggers no binary
@@ -211,7 +211,7 @@ only variable when the Windows job runs.
   A pack outside the root keeps its `..` prefix; where no relative form exists
   — a different Windows drive — the canonical absolute path stands. Keys are
   compared only within a source kind, so a directory can never key as the base
-  pack ([ADR-011](../decisions/adr-011-path-pack-identity-is-root-relative.md)).
+  pack ([ADR-011][sokf:adr-011-path-pack-identity-is-root-relative]).
   Four call sites in `resolve.rs` and `is_default` in `source.rs` follow.
 - Raised by slice 14's build: the lock is committed, so until this lands
   dogfooding writes one contributor's absolute paths into a tracked file and
@@ -250,7 +250,7 @@ unplanned, so nothing scheduled can stall behind one.
 ### Slice 15: Nothing superdev spawns can be talked into running a command
 
 - [x] Done — ticked by integrate at merge.
-- Gap: [I007](../issues/issue-007-bug-a-pack-source-reaches-git-with-no-scheme-check.md),
+- Gap: [I007][sokf:issue-007-bug-a-pack-source-reaches-git-with-no-scheme-check],
   the half of it that needs no decision — and the half that closes the hole.
 - Change: add `-c protocol.ext.allow=never` (and the same for the other
   command-running helpers) to the `verbatim()` overrides every git invocation
@@ -273,7 +273,7 @@ unplanned, so nothing scheduled can stall behind one.
 ### Slice 16: A pack's symlinks are not followed
 
 - [x] Done — ticked by integrate at merge.
-- Gap: [I008](../issues/issue-008-bug-a-symlinked-file-in-a-pack-is-followed.md).
+- Gap: [I008][sokf:issue-008-bug-a-symlinked-file-in-a-pack-is-followed].
 - Change: skip every symlink in a pack tree, not only a linked directory —
   `read_dir` already computes `linked` and acts on it for one case out of two.
 - Done-check: a pack whose item file is a symlink to a file outside the pack
@@ -286,7 +286,7 @@ unplanned, so nothing scheduled can stall behind one.
 ### Slice 17: The lock describes what is on disk, not only what was written
 
 - [x] Done — ticked by integrate at merge.
-- Gap: [I005](../issues/issue-005-bug-a-backport-leaves-the-lock-stale.md), filed
+- Gap: [I005][sokf:issue-005-bug-a-backport-leaves-the-lock-stale], filed
   during delivery rather than by accept, scheduled because it is contained and
   fires on every backport, which is how this repo's owner edits skills.
 - Change: record an owned file's hash whenever the run resolves it as
@@ -303,7 +303,7 @@ unplanned, so nothing scheduled can stall behind one.
 ### Slice 18: Document packs, and what `update` actually does
 
 - [x] Done — ticked by integrate at merge.
-- Gap: [I006](../issues/issue-006-feature-request-content-packs-are-undocumented-for-users.md).
+- Gap: [I006][sokf:issue-006-feature-request-content-packs-are-undocumented-for-users].
 - Change: correct `update`'s description at
   `crates/app/superdev/src/main.rs` — clap renders it into `--help`, the man
   page and the completions — and the matching rustdoc in `manage.rs`, so both
@@ -325,24 +325,45 @@ unplanned, so nothing scheduled can stall behind one.
 
 Cutting any of these as a slice would only have bounced it to
 `/interface-design`, so they went there on their own. All five are now
-decided — [ADR-012](../decisions/adr-012-pack-source-schemes-are-allowlisted.md)
-to [ADR-016](../decisions/adr-016-a-path-pack-records-no-digest.md) — and
-scheduled as [P005](plan-005-feature-content-pack-hardening.md), except
-[I003](../issues/issue-003-bug-a-local-pack-cannot-remove-what-it-dropped.md), closed
+decided — [ADR-012][sokf:adr-012-pack-source-schemes-are-allowlisted]
+to [ADR-016][sokf:adr-016-a-path-pack-records-no-digest] — and
+scheduled as [P005][sokf:plan-005-feature-content-pack-hardening], except
+[I003][sokf:issue-003-bug-a-local-pack-cannot-remove-what-it-dropped], closed
 `wontfix`: a path pack keeps layering, and the rebuild a pack developer needs
 anyway is the answer.
 
 - **The scheme allowlist**, the other half of
-  [I007](../issues/issue-007-bug-a-pack-source-reaches-git-with-no-scheme-check.md):
+  [I007][sokf:issue-007-bug-a-pack-source-reaches-git-with-no-scheme-check]:
   refusing a source whose scheme superdev does not support, rather than
   handing it to git. Defence in depth once slice 15 lands, and a clearer
   error. Which schemes are in the set changes what a manifest may say, which
-  [C001](../contracts/private/contract-001-interface-content-packs.md) documents as `parse`'s rejections.
-- [I001](../issues/issue-001-bug-update-can-pin-an-unreadable-pack-format.md) — a
+  [C001][sokf:contract-001-interface-content-packs] documents as `parse`'s rejections.
+- [I001][sokf:issue-001-bug-update-can-pin-an-unreadable-pack-format] — a
   format range the tag does not carry.
-- [I002](../issues/issue-002-bug-no-time-bound-on-the-update-query.md) — a deadline on
+- [I002][sokf:issue-002-bug-no-time-bound-on-the-update-query] — a deadline on
   the process boundary every component shares.
-- [I003](../issues/issue-003-bug-a-local-pack-cannot-remove-what-it-dropped.md) — a
+- [I003][sokf:issue-003-bug-a-local-pack-cannot-remove-what-it-dropped] — a
   path source that may be the base, which ADR-004 and ADR-011 forbid.
-- [I004](../issues/issue-004-bug-a-path-packs-digest-churns-and-is-never-checked.md) —
+- [I004][sokf:issue-004-bug-a-path-packs-digest-churns-and-is-never-checked] —
   a lock schema whose digest is optional.
+
+<!-- sokf:links -->
+[sokf:adr-001-packs-manifest-section]: /knowledge/decisions/adr-001-packs-manifest-section.md
+[sokf:adr-006-pack-at-repo-root]: /knowledge/decisions/adr-006-pack-at-repo-root.md
+[sokf:adr-007-git-fetch-by-spawn]: /knowledge/decisions/adr-007-git-fetch-by-spawn.md
+[sokf:adr-008-one-command-per-release]: /knowledge/decisions/adr-008-one-command-per-release.md
+[sokf:adr-009-update-queries-default-source]: /knowledge/decisions/adr-009-update-queries-default-source.md
+[sokf:adr-011-path-pack-identity-is-root-relative]: /knowledge/decisions/adr-011-path-pack-identity-is-root-relative.md
+[sokf:adr-012-pack-source-schemes-are-allowlisted]: /knowledge/decisions/adr-012-pack-source-schemes-are-allowlisted.md
+[sokf:adr-016-a-path-pack-records-no-digest]: /knowledge/decisions/adr-016-a-path-pack-records-no-digest.md
+[sokf:contract-001-interface-content-packs]: /knowledge/contracts/private/contract-001-interface-content-packs.md
+[sokf:issue-001-bug-update-can-pin-an-unreadable-pack-format]: /knowledge/issues/issue-001-bug-update-can-pin-an-unreadable-pack-format.md
+[sokf:issue-002-bug-no-time-bound-on-the-update-query]: /knowledge/issues/issue-002-bug-no-time-bound-on-the-update-query.md
+[sokf:issue-003-bug-a-local-pack-cannot-remove-what-it-dropped]: /knowledge/issues/issue-003-bug-a-local-pack-cannot-remove-what-it-dropped.md
+[sokf:issue-004-bug-a-path-packs-digest-churns-and-is-never-checked]: /knowledge/issues/issue-004-bug-a-path-packs-digest-churns-and-is-never-checked.md
+[sokf:issue-005-bug-a-backport-leaves-the-lock-stale]: /knowledge/issues/issue-005-bug-a-backport-leaves-the-lock-stale.md
+[sokf:issue-006-feature-request-content-packs-are-undocumented-for-users]: /knowledge/issues/issue-006-feature-request-content-packs-are-undocumented-for-users.md
+[sokf:issue-007-bug-a-pack-source-reaches-git-with-no-scheme-check]: /knowledge/issues/issue-007-bug-a-pack-source-reaches-git-with-no-scheme-check.md
+[sokf:issue-008-bug-a-symlinked-file-in-a-pack-is-followed]: /knowledge/issues/issue-008-bug-a-symlinked-file-in-a-pack-is-followed.md
+[sokf:plan-005-feature-content-pack-hardening]: /knowledge/plans/plan-005-feature-content-pack-hardening.md
+[sokf:spec-014-content-packs]: /knowledge/specs/spec-014-content-packs.md

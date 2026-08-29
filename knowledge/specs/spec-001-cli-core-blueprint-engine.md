@@ -75,8 +75,8 @@ irreversible steps. All existing CI gates stay green.
 # Architecture
 
 Three layers, in the existing workspace shape (see
-[software-components](../software-components.md) and
-[architecture](../architecture.md)):
+[software-components][sokf:software-components] and
+[architecture][sokf:architecture]):
 
 - **`superdev-core`** — all domain logic: blueprint model, component
   definitions, state observation, diffing, planning. Pure where possible;
@@ -225,3 +225,7 @@ binary itself.
 
 - The automated cases above pass.
 - `superdev validate` reports no error for this document.
+
+<!-- sokf:links -->
+[sokf:architecture]: /knowledge/architecture.md
+[sokf:software-components]: /knowledge/software-components.md

@@ -24,7 +24,7 @@ replaced, so the blueprint and the working tree now disagree about 65 files.
 `superdev sync` closes that gap in the wrong direction: it restores the 41
 templates the schemas replaced, rewrites `.agents/aokf/SPEC.md` and
 `.agents/aokf.md` back to the conformance ladder
-[ADR-017](../decisions/adr-017-aokf-conformance-is-pass-or-fail.md) removed, recreates
+[ADR-017][sokf:adr-017-aokf-conformance-is-pass-or-fail] removed, recreates
 `knowledge/plans/index.md` after the plans were split, puts the old
 `.agents/superdev.md` aggregator back with its `AGENTS.md` line, and overwrites
 21 rewritten skills. `npm run check:blueprint` is a pre-PR check, so a
@@ -75,7 +75,7 @@ back to 0.2 with the level ladder in it.
 
 The rule is `pack-backport`'s and it is the right one: an edit to a live copy
 ships only when it is backported, and until then `sync` treats it as drift.
-Both the [format validator plan](../plans/plan-006-adhoc-rust-format-validator.md)
+Both the [format validator plan][sokf:plan-006-adhoc-rust-format-validator]
 and the schema migration list the backport as a non-goal and a follow-on, so the divergence is expected. What is missing is anything in the
 tree that says so — the check reports 65 anonymous "write" lines, and the two
 plans that own the debt say it in a Definition-of-done bullet nobody reads
@@ -87,7 +87,7 @@ while looking at a failing check.
   templates, the split plan indexes, the rewritten skills, and the aggregator's
   removal. This is the plan-sized piece of work, and it is what closes the 65.
   It is now filed as its own chore,
-  [I021](issue-021-chore-backport-the-knowledge-design-to-the-pack.md), which
+  [I021][sokf:issue-021-chore-backport-the-knowledge-design-to-the-pack], which
   also records that the divergence is deliberate while the knowledge design is
   still moving — the answer this issue asked for under Expected behaviour.
 - Backport ADR-017's edits to `.agents/aokf/SPEC.md` and `.agents/aokf.md`
@@ -105,6 +105,12 @@ while looking at a failing check.
 The backport is the fix and it is also the risk: `sync` writes over live files,
 so a backport that lands the pack content without first reconciling the lock
 hashes reports every touched file as user-edited and backs it up — the failure
-[I005](issue-005-bug-a-backport-leaves-the-lock-stale.md) already recorded. The
+[I005][sokf:issue-005-bug-a-backport-leaves-the-lock-stale] already recorded. The
 `pack-backport` skill exists for this, and `superdev status --drift` returning
 0 is what proves the job finished.
+
+<!-- sokf:links -->
+[sokf:adr-017-aokf-conformance-is-pass-or-fail]: /knowledge/decisions/adr-017-aokf-conformance-is-pass-or-fail.md
+[sokf:issue-005-bug-a-backport-leaves-the-lock-stale]: /knowledge/issues/issue-005-bug-a-backport-leaves-the-lock-stale.md
+[sokf:issue-021-chore-backport-the-knowledge-design-to-the-pack]: /knowledge/issues/issue-021-chore-backport-the-knowledge-design-to-the-pack.md
+[sokf:plan-006-adhoc-rust-format-validator]: /knowledge/plans/plan-006-adhoc-rust-format-validator.md

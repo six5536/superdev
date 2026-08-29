@@ -19,10 +19,10 @@ links:
 
 ## Context
 
-[Externally sourced content packs](../specs/spec-014-content-packs.md)
-layers content by item, and [ADR-003](adr-003-items-by-layout.md) reads an item's
+[Externally sourced content packs][sokf:spec-014-content-packs]
+layers content by item, and [ADR-003][sokf:adr-003-items-by-layout] reads an item's
 identity out of the pack tree. [The
-contract](../contracts/private/contract-001-interface-content-packs.md) wrote the knowledge-skeleton kind
+contract][sokf:contract-001-interface-content-packs] wrote the knowledge-skeleton kind
 as `knowledge/concepts/<name>.md`. Reorganising the stock content into pack
 layout showed that rule cannot describe what the `knowledge` capability already
 ships. Three of its twenty-five scaffolds are not one `.md` each:
@@ -72,3 +72,8 @@ Markdown documents, and nothing in the canonical knowledge suggests otherwise.
 - Negative: a directory dropped under `concepts/` by accident becomes a
   single item. As in ADR-003, the resolver reports what it found, so this is
   visible rather than silent.
+
+<!-- sokf:links -->
+[sokf:adr-003-items-by-layout]: /knowledge/decisions/adr-003-items-by-layout.md
+[sokf:contract-001-interface-content-packs]: /knowledge/contracts/private/contract-001-interface-content-packs.md
+[sokf:spec-014-content-packs]: /knowledge/specs/spec-014-content-packs.md

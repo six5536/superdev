@@ -24,12 +24,12 @@ is; a linked manifest would otherwise have picked the format gate with bytes
 no digest covers.
 
 What the skip leaves behind is
-[I009](issue-009-bug-a-skipped-symlink-says-nothing.md): it is silent, so a pack that
+[I009][sokf:issue-009-bug-a-skipped-symlink-says-nothing]: it is silent, so a pack that
 dedupes an item with a link loses that item without saying so.
 
 ## Summary
 
-Against [S014](../specs/spec-014-content-packs.md).
+Against [S014][sokf:spec-014-content-packs].
 
 A pack's tree is walked by `read_dir`, which deliberately skips a symlinked
 **directory** — but the same guard does not cover a symlinked **file**.
@@ -40,7 +40,7 @@ written into the repository as that pack item.
 The written path is always in-pack, so this is not a traversal *write*; what
 escapes is the *content*. A pack can name any file the user running superdev
 can read and have its contents materialised into the working tree, where it is
-liable to be committed. [security-requirements](../security-requirements.md)
+liable to be committed. [security-requirements][sokf:security-requirements]
 says a pack declares no executable action and refuses rejected paths before
 reading; it does not cover a path the pack reaches by link.
 
@@ -94,3 +94,8 @@ hand.
 `pack/resolve.rs`'s walker, and any pack that legitimately ships a symlink —
 superdev's own `/pack/` does not. A test would put a symlinked file in a
 fixture pack and assert it is not among the resolved files.
+
+<!-- sokf:links -->
+[sokf:issue-009-bug-a-skipped-symlink-says-nothing]: /knowledge/issues/issue-009-bug-a-skipped-symlink-says-nothing.md
+[sokf:security-requirements]: /knowledge/security-requirements.md
+[sokf:spec-014-content-packs]: /knowledge/specs/spec-014-content-packs.md

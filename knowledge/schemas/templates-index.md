@@ -52,10 +52,10 @@ example: |
 
   ## Planning & design
 
-  * [Spec](spec.md) - what done looks like from outside — behaviour, acceptance criteria, UI states, edge cases, out of scope. Filed as a draft concept in `knowledge/specs/`, tagged done at accept.
-  * [ADR](adr.md) - architecture decision record — context, the decision, options considered, and consequences. Filed as a Decision concept in `knowledge/decisions/`.
+  * [Spec][sokf:template-spec] - what done looks like from outside — behaviour, acceptance criteria, UI states, edge cases, out of scope. Filed as a draft concept in `knowledge/specs/`, tagged done at accept.
+  * [ADR][sokf:template-adr] - architecture decision record — context, the decision, options considered, and consequences. Filed as a Decision concept in `knowledge/decisions/`.
 
   ## Change delivery
 
-  * [Code Review](code-review.md) - verdict first, findings ranked by severity with concrete failure scenarios, and what was checked and found fine.
+  * [Code Review][sokf:template-code-review] - verdict first, findings ranked by severity with concrete failure scenarios, and what was checked and found fine.
 ````

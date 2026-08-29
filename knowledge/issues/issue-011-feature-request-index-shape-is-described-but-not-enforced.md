@@ -25,7 +25,7 @@ would not.
 The natural home is a schema over `knowledge/**/index.md`, which is what
 schemas are for. That cannot run until schemas are applied to the documents
 they govern, which
-[the format-validator plan](../plans/plan-006-adhoc-rust-format-validator.md)
+[the format-validator plan][sokf:plan-006-adhoc-rust-format-validator]
 lists as a non-goal.
 
 ## Motivation
@@ -79,3 +79,6 @@ about to describe nothing into one covering eight live files.
 
 It cannot be enforced until schema-to-document validation exists, so this
 issue is blocked behind that work rather than behind the port itself.
+
+<!-- sokf:links -->
+[sokf:plan-006-adhoc-rust-format-validator]: /knowledge/plans/plan-006-adhoc-rust-format-validator.md

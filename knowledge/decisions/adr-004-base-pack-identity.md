@@ -17,7 +17,7 @@ links:
 
 ## Context
 
-[The spec](../specs/spec-014-content-packs.md) gives a pack entry two
+[The spec][sokf:spec-014-content-packs] gives a pack entry two
 possible meanings. From the snapshot's own source it *replaces* layer 0, so
 what that rev drops leaves the repo. From anywhere else it *layers* on top,
 adding and superseding but never removing. superdev has to tell them apart.
@@ -55,4 +55,8 @@ match shows up on the next command.
 - Negative: normalisation is a comparison superdev must get right, and two
   genuinely different sources that normalise alike would be conflated.
 - Follow-ups: the `status` content line is part of the observable surface and
-  belongs in [contract-002-cli-superdev](../contracts/public/contract-002-cli-superdev.md) at integrate.
+  belongs in [contract-002-cli-superdev][sokf:contract-002-cli-superdev] at integrate.
+
+<!-- sokf:links -->
+[sokf:contract-002-cli-superdev]: /knowledge/contracts/public/contract-002-cli-superdev.md
+[sokf:spec-014-content-packs]: /knowledge/specs/spec-014-content-packs.md

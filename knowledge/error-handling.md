@@ -29,7 +29,7 @@ that stops early (`| head`, a pager quit) ends the run at `0`, silently.
 `validate`'s three codes are the Python validator's, kept identical so
 that everything gating on the old script's exit code — the hook,
 `npm run check:validate`, CI — gates the same way on the binary. See
-[development-commands](development-commands.md).
+[development-commands][sokf:development-commands].
 
 # The validation hook
 
@@ -73,5 +73,9 @@ whatever the unwind could not restore.
 
 External command failures carry the exact command line and verbatim stderr. A
 missing `claude` is not fatal: plugin steps are optional and report as skipped
-with the reason. See [architectural-rules](architectural-rules.md) for why the
+with the reason. See [architectural-rules][sokf:architectural-rules] for why the
 engine is the only place any of this can happen.
+
+<!-- sokf:links -->
+[sokf:architectural-rules]: /knowledge/architectural-rules.md
+[sokf:development-commands]: /knowledge/development-commands.md

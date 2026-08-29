@@ -11,6 +11,18 @@ Structural rules for `knowledge/backlog.md`, the canonical knowledge's Backlog c
 Both halves are required: an idea that was rejected without its reasoning is
 an idea that gets proposed again.
 
+An entry here is candidate work, or work decided against, so this file belongs
+beside the [issue tracker][sokf:issue-tracker] rather than with anyone's
+notes: the tracker holds the work already filed, and this holds what is not
+filed yet and what will not be. FRAME reads it whole at the start of every
+feature, for prior scope and prior rejections.
+
+A passing thought is neither, and does not belong here. That goes to
+`knowledge/ideas/` (the [idea schema][sokf:schema-idea]), which is unofficial and
+carries no obligation to appear in this file. An idea reaches the backlog only
+by being taken up as candidate work, at which point it is an entry like any
+other.
+
 ````yaml
 description: >
   Ideas under consideration and ideas decided against, each with the reasoning
@@ -61,5 +73,9 @@ example: |
 
   - A plugin API for custom pack transports. Every transport is a new
     unauthenticated channel to audit, which is exactly what ADR-012 refuses.
-    See `knowledge/decisions/adr-012-pack-transport-allowlist.md`.
+    See [ADR-012][sokf:adr-012-pack-source-schemes-are-allowlisted].
 ````
+
+<!-- sokf:links -->
+[sokf:issue-tracker]: /knowledge/issue-tracker.md
+[sokf:schema-idea]: /knowledge/schemas/idea.md

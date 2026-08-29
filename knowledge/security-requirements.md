@@ -20,18 +20,18 @@ only (pre-1.0, no backports).
 - **Pinned installs are checksummed.** The code-index bundle installs only
   the registry version this binary carries, verified against its compiled-in
   sha256 — superdev refuses any other version rather than fetch unverified
-  content ([architecture](architecture.md)).
+  content ([architecture][sokf:architecture]).
 - **No secrets in files.** The embeddings API key comes from
   `OPENAI_API_KEY` and is never read from or written to the manifest
-  ([configuration](configuration.md)). Publishing uses npm trusted
+  ([configuration][sokf:configuration]). Publishing uses npm trusted
   publishing (OIDC) — no long-lived npm token exists; only crates.io still
   holds a token, as a CI secret.
 - **Destructive writes are recoverable.** Every file superdev overwrites or
   removes is backed up under `.superdev/cache/backup/<timestamp>/` first,
-  and a failed apply unwinds ([configuration](configuration.md)).
+  and a failed apply unwinds ([configuration][sokf:configuration]).
 - **The MCP surface is read-only.** `superdev mcp sokf` exposes four
   read-only tools over stdio; nothing writes through it
-  ([contract-003-mcp-sokf](contracts/public/contract-003-mcp-sokf.md)).
+  ([contract-003-mcp-sokf][sokf:contract-003-mcp-sokf]).
 - **A pinned pack applies the bytes it was pinned to, or none.** Every
   resolved *git* pack is verified against the digest the lock recorded for
   that rev — over paths as well as contents, so a rename is a different pack, and
@@ -41,17 +41,17 @@ only (pre-1.0, no backports).
   pack has no pinned bytes to verify — it is a directory on this machine, read
   afresh every run, and trusting it is the same decision as naming it — so it
   records no digest at all rather than one nothing checks
-  ([ADR-016](decisions/adr-016-a-path-pack-records-no-digest.md)). A tag
+  ([ADR-016][sokf:adr-016-a-path-pack-records-no-digest]). A tag
   that moved is the case this exists for: the user re-pins, which is itself
   the new trust decision. A git source is fetched by spawning the user's own
-  `git` ([ADR-007](decisions/adr-007-git-fetch-by-spawn.md)), so credentials,
+  `git` ([ADR-007][sokf:adr-007-git-fetch-by-spawn]), so credentials,
   ssh agents and forge access are theirs; superdev stores no token and adds
   no auth surface.
 - **A pack source names one repository, whichever way it is spelled.** The
   key that decides whether a pack replaces the embedded content or merely
   layers over it is the source with its scheme, userinfo, port, `.git`
   suffix and trailing slash removed
-  ([ADR-004](decisions/adr-004-base-pack-identity.md)). Userinfo and the port
+  ([ADR-004][sokf:adr-004-base-pack-identity]). Userinfo and the port
   are stripped from the authority alone, never from the path: a source whose
   *path* ended `@github.com/six5536/superdev` must not normalise to the
   default pack's key and be treated as the base. A pack declares no
@@ -71,7 +71,7 @@ only (pre-1.0, no backports).
   precedes every operand, so a value's shape decides nothing.
 
   Both halves are load-bearing and neither is sufficient
-  ([ADR-012](decisions/adr-012-pack-source-schemes-are-allowlisted.md)). `parse`
+  ([ADR-012][sokf:adr-012-pack-source-schemes-are-allowlisted]). `parse`
   cannot see a `url.<base>.insteadOf` rewrite, which turns an approved
   `https://` source into whatever the machine's config says after superdev has
   handed it over. And among the overrides only the named `never` lines are
@@ -85,17 +85,29 @@ only (pre-1.0, no backports).
   embedding model download (or the explicit embeddings-API opt-in), fetching
   a pack the lock does not already have cached, and the one query `update`
   makes of the default pack source
-  ([ADR-009](decisions/adr-009-update-queries-default-source.md)). That query is
+  ([ADR-009][sokf:adr-009-update-queries-default-source]). That query is
   the narrowest of these: it runs on the untargeted `update` alone, asks only
   the source superdev itself ships, and a failure to reach it degrades to the
   pin the binary carries rather than failing the run. It is also the only
   spawn superdev bounds — a few seconds, because it is the only one made on
   superdev's own initiative
-  ([ADR-015](decisions/adr-015-the-spawn-seam-carries-a-deadline.md)); a clone,
+  ([ADR-015][sokf:adr-015-the-spawn-seam-carries-a-deadline]); a clone,
   a toolchain install and the model download are all things the user asked
   for and are left to take as long as they take. Every git call carries
   `GIT_TERMINAL_PROMPT=0`, so none can stop for a credential prompt. The
   accepted non-PIE musl binaries rest on exactly this — see
-  [constraints-non-goals](constraints-non-goals.md).
+  [constraints-non-goals][sokf:constraints-non-goals].
 
 [^security-md]: Security policy
+
+<!-- sokf:links -->
+[sokf:adr-004-base-pack-identity]: /knowledge/decisions/adr-004-base-pack-identity.md
+[sokf:adr-007-git-fetch-by-spawn]: /knowledge/decisions/adr-007-git-fetch-by-spawn.md
+[sokf:adr-009-update-queries-default-source]: /knowledge/decisions/adr-009-update-queries-default-source.md
+[sokf:adr-012-pack-source-schemes-are-allowlisted]: /knowledge/decisions/adr-012-pack-source-schemes-are-allowlisted.md
+[sokf:adr-015-the-spawn-seam-carries-a-deadline]: /knowledge/decisions/adr-015-the-spawn-seam-carries-a-deadline.md
+[sokf:adr-016-a-path-pack-records-no-digest]: /knowledge/decisions/adr-016-a-path-pack-records-no-digest.md
+[sokf:architecture]: /knowledge/architecture.md
+[sokf:configuration]: /knowledge/configuration.md
+[sokf:constraints-non-goals]: /knowledge/constraints-non-goals.md
+[sokf:contract-003-mcp-sokf]: /knowledge/contracts/public/contract-003-mcp-sokf.md

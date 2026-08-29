@@ -4,8 +4,8 @@
     {
       "file": "plan-001-second.md",
       "message": "duplicate `plan` number 001 (also in plan-001-first.md)",
-      "severity": "warning"
+      "severity": "error"
     }
   ],
-  "passed": true
+  "passed": false
 }

@@ -19,7 +19,7 @@ links:
 
 ## Context
 
-[The spec](../specs/spec-014-content-packs.md) allows a pack source to be
+[The spec][sokf:spec-014-content-packs] allows a pack source to be
 a git URL, and the trust model rests on the user's own credentials — superdev
 stores no token and adds no auth surface. superdev has never invoked git: its
 only git awareness is `root.join(".git").exists()`, a filesystem test. `ureq`
@@ -53,14 +53,14 @@ No archive job, no artifact, no registry.
 | Spawn `git` | Any forge, ssh, self-hosted and private repos, on the user's own credentials; no new crate; matches the existing rule that unpinned tools are spawned directly; releasing a pack is just a tag | Depends on a binary superdev does not pin, and on its version and config |
 | HTTPS tarball via `ureq` | No subprocess; fully in-process tests; no reliance on the user's git | Per-forge URL construction, so github-and-gitlab-shorthand only — no ssh, no self-hosted, no private repo without a stored token |
 | Tarball for shorthand, git for the rest | Fast common path, full generality underneath | Two fetch paths whose results, errors and digests must stay identical |
-| A pure-Rust git library | No subprocess, works everywhere | A large dependency tree against a deliberately tight [dependency-policy](../dependency-policy.md), to replace a binary every user has |
+| A pure-Rust git library | No subprocess, works everywhere | A large dependency tree against a deliberately tight [dependency-policy][sokf:dependency-policy], to replace a binary every user has |
 
 ## Consequences
 
 - Positive: releasing content is `git tag assets-vX.Y.Z && git push --follow-tags`.
   The pack-archive CI job the plan carried is not needed.
 - Positive: no rule conflict —
-  [architectural-rules](../architectural-rules.md) already says tools superdev
+  [architectural-rules][sokf:architectural-rules] already says tools superdev
   does not pin are spawned directly, as `claude` is.
 - Negative: git becomes a runtime requirement for resolving a git source, and
   its absence must fail with a message that says so.
@@ -73,4 +73,9 @@ No archive job, no artifact, no registry.
 - The resolver takes the `CommandRunner` the rest of the codebase spawns
   through, so no test reaches a real network and the fetch is scripted like
   every other command. It is the one side-effect outside the engine, and
-  [architectural-rules](../architectural-rules.md) states the exception.
+  [architectural-rules][sokf:architectural-rules] states the exception.
+
+<!-- sokf:links -->
+[sokf:architectural-rules]: /knowledge/architectural-rules.md
+[sokf:dependency-policy]: /knowledge/dependency-policy.md
+[sokf:spec-014-content-packs]: /knowledge/specs/spec-014-content-packs.md

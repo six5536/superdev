@@ -28,10 +28,10 @@ A new single-cardinality capability named for the function:
 `bash-output-filter`, default provider rtk. Its component pins the
 rtk binary through the checksummed mise pin (the codegraph pattern
 from the
-[CLI core & blueprint engine spec](spec-001-cli-core-blueprint-engine.md)),
+[CLI core & blueprint engine spec][sokf:spec-001-cli-core-blueprint-engine]),
 platform-scoped so unpublished platforms skip it cleanly,
 ships an owned instruction file imported by the aggregator following
-the [agent instructions layer](spec-010-agent-instructions-layer.md),
+the [agent instructions layer][sokf:spec-010-agent-instructions-layer],
 and manages a PreToolUse hook in the harness settings that rewrites
 Bash commands to their rtk equivalents — so filtering still happens
 when an agent forgets the instructions.
@@ -82,7 +82,7 @@ when an agent forgets the instructions.
 # Design decisions
 
 - The slot is named for the function, never the tool, per the
-  [architectural rules](../architectural-rules.md). `bash-output-filter`
+  [architectural rules][sokf:architectural-rules]. `bash-output-filter`
   was chosen (with the user) over broader names like context-economy
   to scope the slot to command output — a future context-reduction
   tool of a different kind should get its own slot, not squat in this
@@ -232,3 +232,8 @@ Windows CI runner.
 
 - The automated cases above pass.
 - `superdev validate` reports no error for this document.
+
+<!-- sokf:links -->
+[sokf:architectural-rules]: /knowledge/architectural-rules.md
+[sokf:spec-001-cli-core-blueprint-engine]: /knowledge/specs/spec-001-cli-core-blueprint-engine.md
+[sokf:spec-010-agent-instructions-layer]: /knowledge/specs/spec-010-agent-instructions-layer.md

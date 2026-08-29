@@ -11,7 +11,7 @@ Structural rules for one public deployment contract, filed at
 `knowledge/contracts/public/contract-{nnn}-deployment-{slug}.md`. What is published, what the runtime must give
 it, and how an orchestrator knows it is alive.
 
-The boundary with the [configuration contract](contract-config.md) is shape
+The boundary with the [configuration contract][sokf:schema-contract-config] is shape
 against value. This document says the process listens on one HTTP port and
 needs a Postgres it can reach; that one names the setting that carries the port
 number, its type and its default.
@@ -114,3 +114,6 @@ example: |
   changed port or path is announced one minor release ahead in the release
   notes.
 ````
+
+<!-- sokf:links -->
+[sokf:schema-contract-config]: /knowledge/schemas/contract-config.md

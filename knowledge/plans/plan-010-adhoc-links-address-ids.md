@@ -3,7 +3,7 @@ type: AdhocPlan
 id: plan-010-adhoc-links-address-ids
 title: Links address ids
 description: SOKF 0.4 gives a body link an id-addressed form, superdev validate --fix converts the tree to it, and a renamed or moved concept stops breaking the documents that cite it.
-status: draft
+status: done
 ---
 
 # Plan: Links address ids

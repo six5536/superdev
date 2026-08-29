@@ -14,7 +14,7 @@ links:
 
 ## Decided
 
-[ADR-015](../decisions/adr-015-the-spawn-seam-carries-a-deadline.md).
+[ADR-015][sokf:adr-015-the-spawn-seam-carries-a-deadline].
 `CommandRunner` gains an options form of `run` carrying a timeout and extra
 environment, defaulted so every existing call site is unchanged and
 `run_with` is the one required method. No dependency: a deadline over
@@ -30,7 +30,7 @@ which is what made it need the seam.
 
 ## Summary
 
-Against [S014](../specs/spec-014-content-packs.md).
+Against [S014][sokf:spec-014-content-packs].
 
 `superdev update` asks the default pack source for its newest release on every
 untargeted run. `CommandRunner` spawns and waits with no deadline, so on a
@@ -93,3 +93,7 @@ call as hanging indefinitely; it does not. `Command::output()` gives the child
 a null stdin, so git's terminal credential prompt gets EOF and fails fast, and
 a dropped connect is bounded by the OS. Slow and unbounded by superdev, but
 finite — which is why this is an issue rather than a blocker on that slice.
+
+<!-- sokf:links -->
+[sokf:adr-015-the-spawn-seam-carries-a-deadline]: /knowledge/decisions/adr-015-the-spawn-seam-carries-a-deadline.md
+[sokf:spec-014-content-packs]: /knowledge/specs/spec-014-content-packs.md

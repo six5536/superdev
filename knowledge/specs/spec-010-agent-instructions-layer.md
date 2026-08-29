@@ -16,7 +16,7 @@ links:
 # Summary
 
 superdev writes AGENTS.md as a scaffold — introduced by the
-[CLI core & blueprint engine spec](spec-001-cli-core-blueprint-engine.md) —
+[CLI core & blueprint engine spec][sokf:spec-001-cli-core-blueprint-engine] —
 and fills it with its own
 content, so the file agents read first is superdev's, not the user's. A
 user who wants their own agent rules must edit around superdev's
@@ -39,7 +39,7 @@ superdev-owned file: a `<superdev-system>` fence wrapping a short
 general prompt plus one import per enabled capability's instruction
 file. Each capability that has something to tell agents ships its own
 instruction file, following the capability-carried-files pattern of the
-[knowledge-owned skills spec](spec-008-knowledge-owned-skills.md) —
+[knowledge-owned skills spec][sokf:spec-008-knowledge-owned-skills] —
 knowledge moves its current AGENTS.md content into
 `.agents/aokf.md`; code-index gains `.agents/codegraph.md` and an MCP
 registration for `codegraph serve --mcp`. This repo enables
@@ -206,3 +206,7 @@ trim hint is implementation judgement; the structure above is not.
 
 - The automated cases above pass.
 - `superdev validate` reports no error for this document.
+
+<!-- sokf:links -->
+[sokf:spec-001-cli-core-blueprint-engine]: /knowledge/specs/spec-001-cli-core-blueprint-engine.md
+[sokf:spec-008-knowledge-owned-skills]: /knowledge/specs/spec-008-knowledge-owned-skills.md

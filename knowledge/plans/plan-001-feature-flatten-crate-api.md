@@ -15,7 +15,7 @@ links:
 ## Goal
 
 Bring `superdev-core` to the module rules in
-[coding-standards](/knowledge/coding-standards.md): submodules declared
+[coding-standards][sokf:coding-standards]: submodules declared
 privately, their API re-exported with `pub use`, flattened at `lib.rs` so
 callers write `superdev_core::Item` instead of
 `superdev_core::manifest::Manifest`.
@@ -57,3 +57,6 @@ Flatten one module at a time, keeping the suite green per step:
 a two-segment `superdev_core::x::Y` path except into deliberately-kept
 namespaces, and every gate (tests, clippy, rustdoc, check:aokf,
 check:blueprint) passes.
+
+<!-- sokf:links -->
+[sokf:coding-standards]: /knowledge/coding-standards.md

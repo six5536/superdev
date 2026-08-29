@@ -12,11 +12,11 @@ Structural rules for one data contract, filed at
 reading or migrating it may rely on.
 
 This is the storage shape, not the wire shape. An API's models are defined by
-its own contract — [rest](contract-rest.md), [rpc](contract-rpc.md),
-[graphql](contract-graphql.md) — and the two differ on purpose: a field the API
+its own contract — [rest][sokf:schema-contract-rest], [rpc][sokf:schema-contract-rpc],
+[graphql][sokf:schema-contract-graphql] — and the two differ on purpose: a field the API
 never exposes still lives here, and a field the API composes from three columns
 does not. A file the software exchanges rather than queries is a
-[file-format contract](contract-file-format.md).
+[file-format contract][sokf:schema-contract-file-format].
 
 ````yaml
 description: >
@@ -133,3 +133,9 @@ example: |
   change in any release. A column reporting depends on is deprecated in the
   release notes one release before it goes.
 ````
+
+<!-- sokf:links -->
+[sokf:schema-contract-file-format]: /knowledge/schemas/contract-file-format.md
+[sokf:schema-contract-graphql]: /knowledge/schemas/contract-graphql.md
+[sokf:schema-contract-rest]: /knowledge/schemas/contract-rest.md
+[sokf:schema-contract-rpc]: /knowledge/schemas/contract-rpc.md

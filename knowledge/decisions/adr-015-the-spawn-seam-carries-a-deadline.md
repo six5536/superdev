@@ -19,19 +19,19 @@ links:
 
 ## Context
 
-`CommandRunner` is the one process boundary in the codebase — [S014](../specs/spec-014-content-packs.md) fetches
+`CommandRunner` is the one process boundary in the codebase — [S014][sokf:spec-014-content-packs] fetches
 a pack through it — and it is a plain `Command::output()`. Nothing superdev spawns has a deadline, and `run`
 passes no environment.
 
 That was unremarkable while every spawn answered something the user had asked
-for. [ADR-009](adr-009-update-queries-default-source.md) changed it: `update`
+for. [ADR-009][sokf:adr-009-update-queries-default-source] changed it: `update`
 now runs `git ls-remote` against the default source on every untargeted
 invocation, unprompted. On a network that drops packets rather than refusing
 them — a captive portal, a black-holing proxy — that call sits silent for the
 OS connect timeout, around two minutes on Linux, and then degrades correctly.
 ADR-009 asks the query to fall back to the binary's own pin rather than
 erroring; two silent minutes is neither erroring nor falling back
-([I002](../issues/issue-002-bug-no-time-bound-on-the-update-query.md)).
+([I002][sokf:issue-002-bug-no-time-bound-on-the-update-query]).
 
 It is bounded — `Command::output()` gives the child a null stdin, so git's
 terminal prompt gets EOF and fails fast, and a dropped connect ends when the
@@ -96,7 +96,7 @@ makes possible.
 
 No dependency. A deadline over `std::process` is a spawn, a reader thread per
 pipe, and a poll that kills on expiry — well under the bar the
-[dependency policy](../dependency-policy.md) sets for reaching outside the
+[dependency policy][sokf:dependency-policy] sets for reaching outside the
 standard library.
 
 ## Options considered
@@ -105,7 +105,7 @@ standard library.
 |--------|------|------|
 | An options struct on the seam, defaulted | One required method, one implementation; existing callers untouched; the next concern that needs the boundary has somewhere to go | A struct a caller has to construct, and two ways to call one seam |
 | A second method, `run_timeout` | Smaller than a struct | The environment still has nowhere to go, so a third method follows, and then a fourth |
-| Timeout inside pack's git wrapper | Touches nothing shared | Either bypasses the one spawn seam, which [the architectural rules](../architectural-rules.md) forbid, or reimplements it beside itself |
+| Timeout inside pack's git wrapper | Touches nothing shared | Either bypasses the one spawn seam, which [the architectural rules][sokf:architectural-rules] forbid, or reimplements it beside itself |
 | A crate — `wait-timeout`, or an async runtime | Somebody else's edge cases | A dependency for forty lines of thread code, against a policy that says reach for the standard library first |
 | Deadline every spawn | One rule, no caller has to think | Ends a legitimately long clone or toolchain install, and turns a slow link into a failure the user cannot lengthen |
 | Leave it | The run completes and degrades to the right answer; it is only slow | Silent for two minutes on a command the user did not ask to make a request at all |
@@ -127,8 +127,18 @@ standard library.
 - Negative: killing a child is best effort. A process that ignores the signal
   outlives the deadline, and superdev reports the timeout rather than
   pretending otherwise.
-- Follow-ups: [C001](../contracts/private/contract-001-interface-content-packs.md) records the seam
+- Follow-ups: [C001][sokf:contract-001-interface-content-packs] records the seam
   change, since resolution is its only caller today;
-  [architecture](../architecture.md) and
-  [software-components](../software-components.md) describe `CommandRunner`
+  [architecture][sokf:architecture] and
+  [software-components][sokf:software-components] describe `CommandRunner`
   and gain the options form at integrate.
+
+<!-- sokf:links -->
+[sokf:adr-009-update-queries-default-source]: /knowledge/decisions/adr-009-update-queries-default-source.md
+[sokf:architectural-rules]: /knowledge/architectural-rules.md
+[sokf:architecture]: /knowledge/architecture.md
+[sokf:contract-001-interface-content-packs]: /knowledge/contracts/private/contract-001-interface-content-packs.md
+[sokf:dependency-policy]: /knowledge/dependency-policy.md
+[sokf:issue-002-bug-no-time-bound-on-the-update-query]: /knowledge/issues/issue-002-bug-no-time-bound-on-the-update-query.md
+[sokf:software-components]: /knowledge/software-components.md
+[sokf:spec-014-content-packs]: /knowledge/specs/spec-014-content-packs.md

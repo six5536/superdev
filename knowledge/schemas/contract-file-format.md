@@ -14,7 +14,7 @@ tools — a manifest, a lock file, an export.
 
 One file has one contract. A file a deployer or user edits to configure a run
 is not one of these: it belongs to the [configuration
-contract](contract-config.md), which defines its shape alongside the
+contract][sokf:schema-contract-config], which defines its shape alongside the
 environment variables it mirrors. What is left for this schema is every file
 nobody configures anything with.
 
@@ -112,3 +112,6 @@ example: |
   format change that old readers cannot ignore comes with a `widget migrate`
   step and a note in the migration guide.
 ````
+
+<!-- sokf:links -->
+[sokf:schema-contract-config]: /knowledge/schemas/contract-config.md

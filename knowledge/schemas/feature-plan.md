@@ -72,7 +72,7 @@ example: |
 
   # Feature plan: Pack source transport allowlist
 
-  Spec: [spec-001-pack-source-allowlist](../specs/spec-001-pack-source-allowlist.md)
+  Spec: [spec-001-pack-source-allowlist][sokf:spec-001-pack-source-allowlist]
 
   ## Slices
 

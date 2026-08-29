@@ -11,27 +11,27 @@ links:
 
 # Interface contract: externally sourced content packs
 
-The interfaces [S014](../../specs/spec-014-content-packs.md) adds: a
-`[[packs]]` manifest section ([ADR-001](../../decisions/adr-001-packs-manifest-section.md)),
+The interfaces [S014][sokf:spec-014-content-packs] adds: a
+`[[packs]]` manifest section ([ADR-001][sokf:adr-001-packs-manifest-section]),
 a resolver that runs before planning and hands components their content
-through `Ctx` ([ADR-002](../../decisions/adr-002-resolve-before-plan.md)), a content
+through `Ctx` ([ADR-002][sokf:adr-002-resolve-before-plan]), a content
 set keyed by items the pack layout names
-([ADR-003](../../decisions/adr-003-items-by-layout.md)), source identity that
-decides replace-versus-layer ([ADR-004](../../decisions/adr-004-base-pack-identity.md),
-[ADR-011](../../decisions/adr-011-path-pack-identity-is-root-relative.md)),
+([ADR-003][sokf:adr-003-items-by-layout]), source identity that
+decides replace-versus-layer ([ADR-004][sokf:adr-004-base-pack-identity],
+[ADR-011][sokf:adr-011-path-pack-identity-is-root-relative]),
 and a machine-local cache with on-demand fetching
-([ADR-005](../../decisions/adr-005-pack-cache-and-fetch.md)). The decisions taken
+([ADR-005][sokf:adr-005-pack-cache-and-fetch]). The decisions taken
 against the issues acceptance left open are folded in where they land: the
 transport allowlist
-([ADR-012](../../decisions/adr-012-pack-source-schemes-are-allowlisted.md)), the
+([ADR-012][sokf:adr-012-pack-source-schemes-are-allowlisted]), the
 pin `update` proves before it writes
-([ADR-013](../../decisions/adr-013-update-proves-a-pin-before-it-writes-it.md)),
+([ADR-013][sokf:adr-013-update-proves-a-pin-before-it-writes-it]),
 the symlink refusal
-([ADR-014](../../decisions/adr-014-a-symlink-in-a-pack-is-refused.md)), the
+([ADR-014][sokf:adr-014-a-symlink-in-a-pack-is-refused]), the
 deadline on the process seam
-([ADR-015](../../decisions/adr-015-the-spawn-seam-carries-a-deadline.md)) and the
+([ADR-015][sokf:adr-015-the-spawn-seam-carries-a-deadline]) and the
 digest a path pack no longer records
-([ADR-016](../../decisions/adr-016-a-path-pack-records-no-digest.md)).
+([ADR-016][sokf:adr-016-a-path-pack-records-no-digest]).
 A working document:
 build codes against it and it is discarded once the code is canonical.
 
@@ -491,12 +491,12 @@ pub enum Error {
   verification. Knows nothing about components or capabilities. A git source
   is fetched by spawning the user's `git` through the injected
   `CommandRunner` — shallow, blobless and sparse
-  ([ADR-007](../../decisions/adr-007-git-fetch-by-spawn.md)).
+  ([ADR-007][sokf:adr-007-git-fetch-by-spawn]).
 - `superdev-core::content` — new. Owns `ItemKind`, `Item`, `Origin`,
   `Shadowed`, `ContentSet`, and the layout rules that turn a directory tree
   into items. Depends on nothing but `std`.
 - `/pack/` — the stock content at the repo root, in pack layout, with its own
-  `pack.toml` ([ADR-006](../../decisions/adr-006-pack-at-repo-root.md)). It is the
+  `pack.toml` ([ADR-006][sokf:adr-006-pack-at-repo-root]). It is the
   first-party pack and the reference a third-party author copies, so it
   carries nothing that exists only to serve superdev's build.
   `crates/lib/superdev-core/assets` is a relative symlink to it, which is what
@@ -567,3 +567,19 @@ the locked values → no fetch → `plan_repo` finds nothing → exit 0.
   — so a wrong identity match is visible on the next command. Pack-over-pack
   shadowing prints per item. A pending pin under `Offline` prints as pending
   with `sync` named as the next step.
+
+<!-- sokf:links -->
+[sokf:adr-001-packs-manifest-section]: /knowledge/decisions/adr-001-packs-manifest-section.md
+[sokf:adr-002-resolve-before-plan]: /knowledge/decisions/adr-002-resolve-before-plan.md
+[sokf:adr-003-items-by-layout]: /knowledge/decisions/adr-003-items-by-layout.md
+[sokf:adr-004-base-pack-identity]: /knowledge/decisions/adr-004-base-pack-identity.md
+[sokf:adr-005-pack-cache-and-fetch]: /knowledge/decisions/adr-005-pack-cache-and-fetch.md
+[sokf:adr-006-pack-at-repo-root]: /knowledge/decisions/adr-006-pack-at-repo-root.md
+[sokf:adr-007-git-fetch-by-spawn]: /knowledge/decisions/adr-007-git-fetch-by-spawn.md
+[sokf:adr-011-path-pack-identity-is-root-relative]: /knowledge/decisions/adr-011-path-pack-identity-is-root-relative.md
+[sokf:adr-012-pack-source-schemes-are-allowlisted]: /knowledge/decisions/adr-012-pack-source-schemes-are-allowlisted.md
+[sokf:adr-013-update-proves-a-pin-before-it-writes-it]: /knowledge/decisions/adr-013-update-proves-a-pin-before-it-writes-it.md
+[sokf:adr-014-a-symlink-in-a-pack-is-refused]: /knowledge/decisions/adr-014-a-symlink-in-a-pack-is-refused.md
+[sokf:adr-015-the-spawn-seam-carries-a-deadline]: /knowledge/decisions/adr-015-the-spawn-seam-carries-a-deadline.md
+[sokf:adr-016-a-path-pack-records-no-digest]: /knowledge/decisions/adr-016-a-path-pack-records-no-digest.md
+[sokf:spec-014-content-packs]: /knowledge/specs/spec-014-content-packs.md

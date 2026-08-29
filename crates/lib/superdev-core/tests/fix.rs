@@ -137,6 +137,7 @@ fn deleting_every_block_breaks_no_link() {
         report.findings
     );
     assert!(!report.findings.is_empty(), "the blocks are reported");
+    assert!(!report.passed(), "a stale block fails the run");
 
     fix_repo(dir.path(), &knowledge).unwrap();
     let bundle = superdev_core::sokf::load_bundle(&knowledge).unwrap();
@@ -164,6 +165,8 @@ fn renaming_a_concept_breaks_no_link() {
         "{:#?}",
         report.findings
     );
+
+    assert!(!report.passed(), "a stale block fails the run");
 
     fix_repo(dir.path(), &knowledge).unwrap();
     let beta = std::fs::read_to_string(knowledge.join("sub/beta.md")).unwrap();

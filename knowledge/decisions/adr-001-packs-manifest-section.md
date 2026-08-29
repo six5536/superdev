@@ -17,7 +17,7 @@ links:
 
 ## Context
 
-[Externally sourced content packs](../specs/spec-014-content-packs.md)
+[Externally sourced content packs][sokf:spec-014-content-packs]
 adds a second thing a repo can want: not only which provider fills a
 capability, but which content source superdev resolves skills and templates
 from. `config.toml` already has a plural shape — the `skills` slot's
@@ -49,9 +49,14 @@ array parses as empty and resolves from the embedded snapshot.
 ## Consequences
 
 - Positive: existing manifests are untouched and keep parsing; the capability
-  rules in [configuration](../configuration.md) need no exception.
+  rules in [configuration][sokf:configuration] need no exception.
 - Negative: `config.toml` grows a second array-of-tables idiom, so the file's
   shape is marginally less uniform.
-- Follow-ups: [configuration](../configuration.md) documents the new section;
+- Follow-ups: [configuration][sokf:configuration] documents the new section;
   `update` learns which entry's pin it may move (see
-  [ADR-004](adr-004-base-pack-identity.md)).
+  [ADR-004][sokf:adr-004-base-pack-identity]).
+
+<!-- sokf:links -->
+[sokf:adr-004-base-pack-identity]: /knowledge/decisions/adr-004-base-pack-identity.md
+[sokf:configuration]: /knowledge/configuration.md
+[sokf:spec-014-content-packs]: /knowledge/specs/spec-014-content-packs.md

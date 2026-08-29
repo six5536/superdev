@@ -16,7 +16,7 @@ links:
 # Summary
 
 Sub-project 2 of superdev (see the
-[CLI core spec](spec-001-cli-core-blueprint-engine.md) for the
+[CLI core spec][sokf:spec-001-cli-core-blueprint-engine] for the
 product frame). `superdev mcp aokf` serves the canonical project knowledge to agents over
 MCP, so querying replaces the wholesale `@knowledge/…` preloading in
 AGENTS.md. The AOKF format is defined in `/.agents/aokf/SPEC.md`.
@@ -63,7 +63,7 @@ longer exists in the repo or the blueprint. Search still works offline
 # Architecture
 
 All logic in `superdev-core`, new `aokf` subsystem; the binary stays thin
-(see [architecture](../architecture.md)).
+(see [architecture][sokf:architecture]).
 
 - **`aokf` (format)** — frontmatter parsing into a `Concept` model, knowledge
   loading (reserved-file rules), body splitting at markdown headings into
@@ -222,3 +222,7 @@ multi-knowledge serving; plugin-based distribution of the registration
 
 - The automated cases above pass.
 - `superdev validate` reports no error for this document.
+
+<!-- sokf:links -->
+[sokf:architecture]: /knowledge/architecture.md
+[sokf:spec-001-cli-core-blueprint-engine]: /knowledge/specs/spec-001-cli-core-blueprint-engine.md

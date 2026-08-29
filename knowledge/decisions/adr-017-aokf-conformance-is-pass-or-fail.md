@@ -73,6 +73,9 @@ reached.
   `.agents/aokf.md` and `.agents/core.md`, which both say "PASS at level 2";
   `maintain`, whose loop ends on the same phrase; `api-contracts.md`, which
   documents `--level 0..2`; and D-19 in the
-  [format validator plan](../plans/plan-006-adhoc-rust-format-validator.md), which
+  [format validator plan][sokf:plan-006-adhoc-rust-format-validator], which
   keeps format findings out of `achieved_level` and is moot once there is no
   `achieved_level` to keep them out of.
+
+<!-- sokf:links -->
+[sokf:plan-006-adhoc-rust-format-validator]: /knowledge/plans/plan-006-adhoc-rust-format-validator.md

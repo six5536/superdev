@@ -26,7 +26,7 @@ and the lock's hashes can prove a file changed without supplying what to
 write in its place.
 
 That collides with the promise in
-[the spec](../specs/spec-014-content-packs.md) that a repo whose content
+[the spec][sokf:spec-014-content-packs] that a repo whose content
 is committed keeps working offline. It does, while nothing has drifted. The
 moment something has, superdev needs the pack's actual bytes.
 
@@ -55,8 +55,13 @@ and a `--dry-run` after any previous resolve all stay offline.
 - Negative: `.superdev/cache/` grows a second sizeable tree; eviction of
   digests no lock references is work this decision creates.
 - Follow-ups: the "local by default" guarantee in
-  [security-requirements](../security-requirements.md) narrows from *no
+  [security-requirements][sokf:security-requirements] narrows from *no
   network input at runtime* to *no network except resolving a pin superdev
-  does not already hold*; [constraints-non-goals](../constraints-non-goals.md)
+  does not already hold*; [constraints-non-goals][sokf:constraints-non-goals]
   cites that sentence for the non-PIE musl acceptance and must be revisited
   with it, at integrate.
+
+<!-- sokf:links -->
+[sokf:constraints-non-goals]: /knowledge/constraints-non-goals.md
+[sokf:security-requirements]: /knowledge/security-requirements.md
+[sokf:spec-014-content-packs]: /knowledge/specs/spec-014-content-packs.md

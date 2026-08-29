@@ -21,9 +21,9 @@ links:
 
 The default pack pin is compiled into the binary, so it can never advance
 past that binary on its own. Left there, a content release
-([ADR-008](adr-008-one-command-per-release.md)) reaches only repos whose owner
+([ADR-008][sokf:adr-008-one-command-per-release]) reaches only repos whose owner
 hand-edits `config.toml` — and
-[the spec](../specs/spec-014-content-packs.md)'s goal, shipping a skill
+[the spec][sokf:spec-014-content-packs]'s goal, shipping a skill
 fix without a five-platform release, is mostly unmet.
 
 `update` already means "bring pins current", is always typed deliberately,
@@ -53,9 +53,14 @@ pin no further than the blueprint's default and says it could not check.
   latest skills", whether the fix shipped in a binary or not.
 - Negative: `update` becomes a network-touching verb. The narrowing of the
   "local by default" guarantee in
-  [security-requirements](../security-requirements.md) must cover it as well
+  [security-requirements][sokf:security-requirements] must cover it as well
   as resolution, and its failure must degrade to the blueprint default rather
   than erroring.
 - Negative: third-party pins never move by themselves, so their owners must
   track releases some other way. That is the trust model working as intended,
   and the docs should say so plainly.
+
+<!-- sokf:links -->
+[sokf:adr-008-one-command-per-release]: /knowledge/decisions/adr-008-one-command-per-release.md
+[sokf:security-requirements]: /knowledge/security-requirements.md
+[sokf:spec-014-content-packs]: /knowledge/specs/spec-014-content-packs.md

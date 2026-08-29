@@ -44,7 +44,7 @@ without a human watching.
 - Since P003 slice 3, `build.rs` derives the embedded file table from
   `/pack` and items are read by layout rules, so a new skill directory ships
   with no Rust edit. No test asserts an exhaustive skill set.
-- [development-procedure](../development-procedure.md) names no branching
+- [development-procedure][sokf:development-procedure] names no branching
   convention, although `/integrate` and `/verify` both send the reader there
   for the merge target.
 
@@ -380,3 +380,6 @@ branch `/frame` created; the user fast-forwards `main` when they choose.
 This changes today's practice, where each slice reaches `main` almost
 immediately, and it is the trade the design rests on: unattended work must
 not reach the default branch on its own.
+
+<!-- sokf:links -->
+[sokf:development-procedure]: /knowledge/development-procedure.md

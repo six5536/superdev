@@ -14,7 +14,7 @@ links:
 
 ## Decided
 
-[ADR-014](../decisions/adr-014-a-symlink-in-a-pack-is-refused.md). A symlink
+[ADR-014][sokf:adr-014-a-symlink-in-a-pack-is-refused]. A symlink
 anywhere in a pack fails the run naming the path, as the pack root and
 `pack.toml` already do — one rule for the whole tree, and `read_pack` means
 what it says.
@@ -32,10 +32,10 @@ is read and has no index of its own.
 
 ## Summary
 
-Against [S014](../specs/spec-014-content-packs.md).
+Against [S014][sokf:spec-014-content-packs].
 
 A symlink inside a pack tree is skipped, which is what stops a pack reading a
-file it does not contain ([I008](issue-008-bug-a-symlinked-file-in-a-pack-is-followed.md)).
+file it does not contain ([I008][sokf:issue-008-bug-a-symlinked-file-in-a-pack-is-followed]).
 It is skipped in silence, and that is the problem: a pack author who dedupes
 an item with a link — `knowledge/skills/foo/SKILL.md` pointing at a shared
 file one directory up — gets a pack that resolves clean and is missing `foo`.
@@ -101,3 +101,8 @@ and enters the digest. A lock written on Linux for a pack containing a link
 therefore fails on Windows with "resolved to different bytes than the lock
 recorded", which is both wrong and unactionable. Refusing the link everywhere
 would not fix that by itself, since Windows never sees a link to refuse.
+
+<!-- sokf:links -->
+[sokf:adr-014-a-symlink-in-a-pack-is-refused]: /knowledge/decisions/adr-014-a-symlink-in-a-pack-is-refused.md
+[sokf:issue-008-bug-a-symlinked-file-in-a-pack-is-followed]: /knowledge/issues/issue-008-bug-a-symlinked-file-in-a-pack-is-followed.md
+[sokf:spec-014-content-packs]: /knowledge/specs/spec-014-content-packs.md

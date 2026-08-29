@@ -78,7 +78,7 @@ Every verb acts on the current directory.
   blueprint-version line print as reports and never affect the exit code.
   A `content:` line names where the content came from, because which entry
   superdev treated as layer 0 is inferred from the source and would otherwise
-  be invisible ([ADR-004](../../decisions/adr-004-base-pack-identity.md)):
+  be invisible ([ADR-004][sokf:adr-004-base-pack-identity]):
   `content: embedded pack <version>` when no entry replaced it,
   `content: base <source> at <rev>` when one did, `content: layer <source>`
   per pack above it, and `content: <source> not resolved` for a pin `status`
@@ -112,12 +112,12 @@ Every verb acts on the current directory.
   default, then syncs. Bare `update` moves versions and leaves every provider
   alone — and it alone moves the pack pin, asking the default source for its
   newest release and taking that even when it is past what this binary embeds
-  ([ADR-009](../../decisions/adr-009-update-queries-default-source.md)); a targeted
+  ([ADR-009][sokf:adr-009-update-queries-default-source]); a targeted
   `update <capability>` makes no such request. `update workflows` is an
   unknown-capability error: the capability was
   removed, and a manifest still carrying its table fails at load with the
   guided migration error
-  ([spec](../../specs/spec-009-knowledge-carried-skills.md)).
+  ([spec][sokf:spec-009-knowledge-carried-skills]).
 
 `validate` with no `PATH` covers the SOKF knowledge at `--knowledge` (default
 `knowledge/`) and every tree the grammar's `roots` names; `sokf index`
@@ -128,7 +128,7 @@ server use it, `validate` never opens it.
 - **`validate`** runs both halves and reports once, with findings grouped by
   file, so a file both have something to say about is reported once and the
   two cannot reach different verdicts
-  ([P006 D-17](../../plans/plan-006-adhoc-rust-format-validator.md)). The SOKF half
+  ([P006 D-17][sokf:plan-006-adhoc-rust-format-validator]). The SOKF half
   checks the knowledge against the specification; the schema half checks each
   document against the schema its frontmatter `type` names — sections present,
   in order, none prohibited, declared table columns, the line limit — and the
@@ -159,14 +159,23 @@ server use it, `validate` never opens it.
   blocking error. It resolves the repo from `CLAUDE_PROJECT_DIR` when Claude
   Code sets it, else the working directory.
 - **`mcp sokf`** starts the MCP server; its contract is
-  [contract-003-mcp-sokf](contract-003-mcp-sokf.md).
+  [contract-003-mcp-sokf][sokf:contract-003-mcp-sokf].
 
 A usage error (unknown flag or subcommand) exits `2` — the npm launcher's
 smoke test relies on that code. `completions` and `man` render into a buffer
 before writing, because `clap_complete` panics rather than returning an error
-when a write fails. Exit codes are in [error-handling](../../error-handling.md); the
-manifest the verbs read is in [configuration](../../configuration.md).
+when a write fails. Exit codes are in [error-handling][sokf:error-handling]; the
+manifest the verbs read is in [configuration][sokf:configuration].
 
 # Stability
 
 Unreleased. Every verb, flag and exit code above may change without notice.
+
+<!-- sokf:links -->
+[sokf:adr-004-base-pack-identity]: /knowledge/decisions/adr-004-base-pack-identity.md
+[sokf:adr-009-update-queries-default-source]: /knowledge/decisions/adr-009-update-queries-default-source.md
+[sokf:configuration]: /knowledge/configuration.md
+[sokf:contract-003-mcp-sokf]: /knowledge/contracts/public/contract-003-mcp-sokf.md
+[sokf:error-handling]: /knowledge/error-handling.md
+[sokf:plan-006-adhoc-rust-format-validator]: /knowledge/plans/plan-006-adhoc-rust-format-validator.md
+[sokf:spec-009-knowledge-carried-skills]: /knowledge/specs/spec-009-knowledge-carried-skills.md

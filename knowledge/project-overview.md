@@ -19,8 +19,8 @@ binary.[^readme] `mcp sokf` then serves that knowledge back to agents, so
 they search it instead of swallowing it whole. It is opinionated for this
 project's stack (Claude Code, mise, SOKF); generalisation is not a goal yet.
 See
-[architecture](architecture.md) for the design and
-[software-components](software-components.md) for what implements it.
+[architecture][sokf:architecture] for the design and
+[software-components][sokf:software-components] for what implements it.
 
 # Status
 
@@ -30,3 +30,7 @@ set are built; structured updates through MCP and knowledge upkeep are not.
 Nothing is published to npm or crates.io yet.
 
 [^readme]: Repository README (the user-facing pitch and command tour)
+
+<!-- sokf:links -->
+[sokf:architecture]: /knowledge/architecture.md
+[sokf:software-components]: /knowledge/software-components.md

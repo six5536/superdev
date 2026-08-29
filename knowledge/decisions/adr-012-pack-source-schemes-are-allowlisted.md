@@ -21,10 +21,10 @@ links:
 
 ## Context
 
-`[[packs]].source` is handed to `git clone` as the URL. [S014](../specs/spec-014-content-packs.md) makes naming
+`[[packs]].source` is handed to `git clone` as the URL. [S014][sokf:spec-014-content-packs] makes naming
 a source the user's trust decision; it says nothing about the transport that
 source is reached over.
-[ADR-004](adr-004-base-pack-identity.md) makes the comparison key deliberately
+[ADR-004][sokf:adr-004-base-pack-identity] makes the comparison key deliberately
 blind to the scheme, so that one repository written four ways is one source —
 and so that an entry naming superdev's own repository *replaces* the embedded
 content rather than layering over it.
@@ -44,7 +44,7 @@ templates. `http://` is the same. A manifest is a committed file that arrives
 with a repository, so this is reachable by cloning a branch and running
 `sync`.
 
-[I007](../issues/issue-007-bug-a-pack-source-reaches-git-with-no-scheme-check.md)'s
+[I007][sokf:issue-007-bug-a-pack-source-reaches-git-with-no-scheme-check]'s
 command-execution half is closed: every git call carries
 `-c protocol.ext.allow=never`, so an `ext::` URL — which names a command git
 runs as the connection — runs nothing whatever the machine is configured to
@@ -53,7 +53,7 @@ permit. That closes one helper by name. It cannot close a set that is whatever
 `git://`, which is a built-in transport and needs no helper at all.
 
 The remaining half narrows what a manifest may say, which
-[C001](../contracts/private/contract-001-interface-content-packs.md) documents as `parse`'s rejections.
+[C001][sokf:contract-001-interface-content-packs] documents as `parse`'s rejections.
 That is why it stayed unscheduled while the other landed.
 
 ## Decision
@@ -167,8 +167,16 @@ made git default `protocol.file.allow` to `user` has no path here.
   a protocol by name and rewrites URLs into it — which needs no manifest to
   exploit and so is not a boundary superdev is defending.
 - Neutral: a path source is untouched. It names a directory, not a URL.
-- Follow-ups: [C001](../contracts/private/contract-001-interface-content-packs.md) gains
+- Follow-ups: [C001][sokf:contract-001-interface-content-packs] gains
   `SUPPORTED_SCHEMES` and the new rejection on `parse`;
-  [security-requirements](../security-requirements.md) states the guarantee;
-  [configuration](../configuration.md) documents the accepted spellings at
+  [security-requirements][sokf:security-requirements] states the guarantee;
+  [configuration][sokf:configuration] documents the accepted spellings at
   integrate.
+
+<!-- sokf:links -->
+[sokf:adr-004-base-pack-identity]: /knowledge/decisions/adr-004-base-pack-identity.md
+[sokf:configuration]: /knowledge/configuration.md
+[sokf:contract-001-interface-content-packs]: /knowledge/contracts/private/contract-001-interface-content-packs.md
+[sokf:issue-007-bug-a-pack-source-reaches-git-with-no-scheme-check]: /knowledge/issues/issue-007-bug-a-pack-source-reaches-git-with-no-scheme-check.md
+[sokf:security-requirements]: /knowledge/security-requirements.md
+[sokf:spec-014-content-packs]: /knowledge/specs/spec-014-content-packs.md

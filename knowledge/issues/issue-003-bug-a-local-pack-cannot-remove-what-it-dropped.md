@@ -16,8 +16,8 @@ links:
 
 Decided 2026-08-26. The layering rule stands and nothing is built for this.
 
-A path pack layers because [ADR-004](../decisions/adr-004-base-pack-identity.md)
-and [ADR-011](../decisions/adr-011-path-pack-identity-is-root-relative.md)
+A path pack layers because [ADR-004][sokf:adr-004-base-pack-identity]
+and [ADR-011][sokf:adr-011-path-pack-identity-is-root-relative]
 deliberately keep a directory from being the base, and the only people who
 meet this are the ones developing a pack — for whom the binary has to be
 rebuilt anyway before the removal is real. Letting an entry declare itself the
@@ -39,7 +39,7 @@ A contributor who retires a skill and pushes without rebuilding gets a green
 CI on a repo that still ships it.
 ## Summary
 
-Against [S014](../specs/spec-014-content-packs.md).
+Against [S014][sokf:spec-014-content-packs].
 
 This repository resolves its own content from `/pack/` so an edit lands with no
 rebuild. Additions and modifications work. **Removals do not**: delete a skill
@@ -73,8 +73,8 @@ Step 2 prints `knowledge (aokf): ok` and writes nothing.
 
 An entry replaces the embedded snapshot only when it *is* the snapshot's
 source, which `is_base` tests by identity and only a git source can satisfy
-([ADR-004](../decisions/adr-004-base-pack-identity.md),
-[ADR-011](../decisions/adr-011-path-pack-identity-is-root-relative.md)). A path
+([ADR-004][sokf:adr-004-base-pack-identity],
+[ADR-011][sokf:adr-011-path-pack-identity-is-root-relative]). A path
 pack therefore layers, and a layer adds and supersedes but never removes — by
 design, since a stranger's pack must not delete superdev's content. The
 dogfood is the first case where the layering source and the base are meant to
@@ -98,3 +98,8 @@ be the same content, which is where the rule stops fitting.
 `pack/resolve.rs`'s base decision and the orphan pass. A test would drop an
 item from a local pack and assert the live copy goes, or that the run says why
 it cannot.
+
+<!-- sokf:links -->
+[sokf:adr-004-base-pack-identity]: /knowledge/decisions/adr-004-base-pack-identity.md
+[sokf:adr-011-path-pack-identity-is-root-relative]: /knowledge/decisions/adr-011-path-pack-identity-is-root-relative.md
+[sokf:spec-014-content-packs]: /knowledge/specs/spec-014-content-packs.md

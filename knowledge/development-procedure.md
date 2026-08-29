@@ -29,8 +29,8 @@ no Node.
    `fix:`, `docs:`, `test:`, `refactor:`, `chore:`).
 3. Update this knowledge when behaviour or design changes.
 4. Before a PR, run the full CI-equivalent check list (see
-   [development-commands](development-commands.md)) and meet
-   [definition-of-done](definition-of-done.md). CI runs tests on macOS and
+   [development-commands][sokf:development-commands]) and meet
+   [definition-of-done][sokf:definition-of-done]. CI runs tests on macOS and
    Windows, the blueprint-drift check on every platform, and the coverage gate
    on Linux.
 
@@ -58,16 +58,16 @@ next `sync` overwrites it.
 
 Two things the pin does not do. It **layers** rather than replacing, because
 only the blueprint's default git source is the base
-([ADR-004](decisions/adr-004-base-pack-identity.md)), so **deleting or renaming**
+([ADR-004][sokf:adr-004-base-pack-identity]), so **deleting or renaming**
 an item under `pack/` does not remove its live copy — that still needs a
 rebuild, and `status --drift` stays green until then
-([I003](issues/issue-003-bug-a-local-pack-cannot-remove-what-it-dropped.md)). What it
+([I003][sokf:issue-003-bug-a-local-pack-cannot-remove-what-it-dropped]). What it
 no longer does is record a digest for the pin: a path pack has none, so a
 commit touching `pack/` no longer rewrites a lock line
-([ADR-016](decisions/adr-016-a-path-pack-records-no-digest.md)). Run `sync` with
+([ADR-016][sokf:adr-016-a-path-pack-records-no-digest]). Run `sync` with
 such a commit anyway — the per-file hashes still move when a live copy does,
 and a lock that has stopped describing what is on disk is the failure
-[I005](issues/issue-005-bug-a-backport-leaves-the-lock-stale.md) closed.
+[I005][sokf:issue-005-bug-a-backport-leaves-the-lock-stale] closed.
 
 The managed hook entry names a bare `superdev`, and this repo has no installed
 copy. `scripts/superdev` execs `cargo run` against this tree; symlink it onto
@@ -90,3 +90,11 @@ the types you name, so scope the hunt — `["Reference", "Convention"]` for how
 things work now, `["Spec"]` when you want the reasoning behind them.
 
 [^contributing]: Contributing guide
+
+<!-- sokf:links -->
+[sokf:adr-004-base-pack-identity]: /knowledge/decisions/adr-004-base-pack-identity.md
+[sokf:adr-016-a-path-pack-records-no-digest]: /knowledge/decisions/adr-016-a-path-pack-records-no-digest.md
+[sokf:definition-of-done]: /knowledge/definition-of-done.md
+[sokf:development-commands]: /knowledge/development-commands.md
+[sokf:issue-003-bug-a-local-pack-cannot-remove-what-it-dropped]: /knowledge/issues/issue-003-bug-a-local-pack-cannot-remove-what-it-dropped.md
+[sokf:issue-005-bug-a-backport-leaves-the-lock-stale]: /knowledge/issues/issue-005-bug-a-backport-leaves-the-lock-stale.md

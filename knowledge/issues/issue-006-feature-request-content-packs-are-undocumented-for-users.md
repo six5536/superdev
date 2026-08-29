@@ -33,7 +33,7 @@ rather than in a subcommand's summary.
 
 ## Summary
 
-Against [S014](../specs/spec-014-content-packs.md).
+Against [S014][sokf:spec-014-content-packs].
 
 Two gaps found at acceptance, one an omission and one an inaccuracy.
 
@@ -53,7 +53,7 @@ update    Move version pins to this binary's defaults, then sync
 That was true before this feature. It is not true now: `update` asks the
 default pack source for its newest release and moves the pin there, *ahead* of
 this binary's default, which is the whole point of
-[ADR-009](../decisions/adr-009-update-queries-default-source.md). The same
+[ADR-009][sokf:adr-009-update-queries-default-source]. The same
 sentence is in `README.md` and in the man page, and it tells a user the one
 verb that reaches the network does not.
 
@@ -93,3 +93,7 @@ pin past what the binary carries.
   the canonical knowledge for the rest.
 - Workaround: none; the information exists only in `knowledge/` and
   CONTRIBUTING.
+
+<!-- sokf:links -->
+[sokf:adr-009-update-queries-default-source]: /knowledge/decisions/adr-009-update-queries-default-source.md
+[sokf:spec-014-content-packs]: /knowledge/specs/spec-014-content-packs.md

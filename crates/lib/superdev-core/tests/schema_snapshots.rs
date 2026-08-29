@@ -155,7 +155,7 @@ fn duplication() {
 }
 
 /// The live tree passes, which is the check CI gates on and the widest input
-/// these checks have: one core file, 54 schemas and 23 skills.
+/// these checks have: one core file, 55 schemas and 23 skills.
 #[test]
 fn the_live_tree_passes() {
     let root = Path::new(env!("CARGO_MANIFEST_DIR"))
@@ -175,7 +175,7 @@ fn the_live_tree_passes() {
             }
         }
     }
-    assert_eq!(inputs.len(), 78, "the roots hold 78 claimed files");
+    assert_eq!(inputs.len(), 79, "the roots hold 79 claimed files");
     let findings = check_files(&inputs, &g);
     // Warnings are expected and do not fail a run: five skills carry frontmatter
     // keys Claude Code reads but the portable Agent Skills spec does not.

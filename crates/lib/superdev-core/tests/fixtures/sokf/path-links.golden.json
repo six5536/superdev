@@ -4,13 +4,13 @@
     {
       "file": "alpha.md",
       "message": "body link names a concept by path: beta.md — write it as [sokf:beta]",
-      "severity": "warning"
+      "severity": "error"
     },
     {
       "file": "index.md",
       "message": "index entry names a concept by path: alpha.md — write it as [sokf:alpha]",
-      "severity": "warning"
+      "severity": "error"
     }
   ],
-  "passed": true
+  "passed": false
 }

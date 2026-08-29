@@ -79,7 +79,7 @@ gate are in [CONTRIBUTING](/CONTRIBUTING.md).[^contributing]
   Devcontainer-only and never in CI: it needs the network and Claude auth.
 
 Domain logic in `superdev-core` carries the bulk of the tests as pure units —
-see [architecture](architecture.md).
+see [architecture][sokf:architecture].
 
 # Key choices
 
@@ -92,6 +92,10 @@ see [architecture](architecture.md).
 # CI platforms
 
 Tests run on **Linux, macOS, and Windows** — see
-[software-components](software-components.md) for the workflow layout.
+[software-components][sokf:software-components] for the workflow layout.
 
 [^contributing]: Contributing guide (test layers and commands)
+
+<!-- sokf:links -->
+[sokf:architecture]: /knowledge/architecture.md
+[sokf:software-components]: /knowledge/software-components.md

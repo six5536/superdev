@@ -14,7 +14,7 @@ links:
 
 ## Decided
 
-[ADR-013](../decisions/adr-013-update-proves-a-pin-before-it-writes-it.md).
+[ADR-013][sokf:adr-013-update-proves-a-pin-before-it-writes-it].
 `update` will resolve a moved pin before saving the manifest, and keep the old
 pin when resolution refuses, reporting the reason in the line that would have
 announced the move. It proves the one entry rather than the whole manifest, so
@@ -29,12 +29,12 @@ all stop being things a saved pin can name. The never-backwards rule needs no
 relaxing once a pin can no longer arrive somewhere unreadable.
 
 `update_pins` gains the lock, which resolution reads. Recorded in
-[C001](../contracts/private/contract-001-interface-content-packs.md).
+[C001][sokf:contract-001-interface-content-packs].
 
 
 ## Summary
 
-Against [S014](../specs/spec-014-content-packs.md).
+Against [S014][sokf:spec-014-content-packs].
 
 `superdev update` moves the default pin to the newest release the source
 carries without knowing whether this binary can read it. If a content release
@@ -100,3 +100,8 @@ the state absorbing.
 `manage.rs`'s update path. A test would cut a fixture repo tagged with a
 format the binary refuses and assert the pin does not move and the run still
 succeeds.
+
+<!-- sokf:links -->
+[sokf:adr-013-update-proves-a-pin-before-it-writes-it]: /knowledge/decisions/adr-013-update-proves-a-pin-before-it-writes-it.md
+[sokf:contract-001-interface-content-packs]: /knowledge/contracts/private/contract-001-interface-content-packs.md
+[sokf:spec-014-content-packs]: /knowledge/specs/spec-014-content-packs.md

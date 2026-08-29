@@ -13,7 +13,7 @@ sources:
 Releases are tag-driven; the authoritative walkthrough is
 [CONTRIBUTING → Releasing](/CONTRIBUTING.md).[^contributing] There are two
 release paths and each is one command
-([ADR-008](decisions/adr-008-one-command-per-release.md)). The invariants:
+([ADR-008][sokf:adr-008-one-command-per-release]). The invariants:
 
 1. **Changelog first.** A `## [X.Y.Z]` section must exist in `CHANGELOG.md`
    before cutting a release. `npm run release` and the release workflow both
@@ -34,7 +34,7 @@ release paths and each is one command
 4. The workflow verifies, runs the full check gate, cross-builds, dry-runs
    every publish, publishes (platform packages → launcher → cargo), and
    creates the GitHub Release — see
-   [software-components](software-components.md) for the job breakdown.
+   [software-components][sokf:software-components] for the job breakdown.
    Prerelease tags (`vX.Y.Z-rc.N`) publish under npm's `next` dist-tag and
    never become `latest`.
 5. **`npm run release:pack [A.B.C]`** cuts a content release alone — the
@@ -64,3 +64,7 @@ package added later; the steps are in
 [CONTRIBUTING → Adding a platform package](/CONTRIBUTING.md).
 
 [^contributing]: Contributing guide (releasing, authoritative walkthrough)
+
+<!-- sokf:links -->
+[sokf:adr-008-one-command-per-release]: /knowledge/decisions/adr-008-one-command-per-release.md
+[sokf:software-components]: /knowledge/software-components.md

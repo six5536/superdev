@@ -244,7 +244,7 @@ pub(crate) fn identities(
             match numbers.get(&(kind.clone(), number)) {
                 // A number is what an author reuses; the id it belongs to is
                 // what a reader has to find. Naming both is the whole finding.
-                Some(first) => findings.push(warning(
+                Some(first) => findings.push(error(
                     path,
                     format!("duplicate `{kind}` number {number:03} (also in {first})"),
                 )),
@@ -387,7 +387,7 @@ fn check_body_links(
         if let Some(id) = &link.id {
             targets.ids.insert(id.clone());
             if !context.ids.by_id.contains_key(id) {
-                findings.push(warning(
+                findings.push(error(
                     path,
                     format!("body link [{ID_LABEL}{id}] names no concept"),
                 ));
@@ -400,7 +400,7 @@ fn check_body_links(
         match resolve_target(file, directory, context.repo_root) {
             Some(resolved) => {
                 if let Some(id) = context.ids.by_path.get(&resolved) {
-                    findings.push(warning(
+                    findings.push(error(
                         path,
                         format!(
                             "body link names a concept by path: {} — write it as [{ID_LABEL}{id}]",
@@ -456,7 +456,7 @@ fn check_definition_block(
         match defined.get(id.as_str()) {
             None => {
                 named = true;
-                findings.push(warning(
+                findings.push(error(
                     path,
                     format!(
                         "[{ID_LABEL}{id}] has no definition in the {BLOCK_MARKER} block ({REPAIR})"
@@ -465,7 +465,7 @@ fn check_definition_block(
             }
             Some(have) if have != want => {
                 named = true;
-                findings.push(warning(
+                findings.push(error(
                     path,
                     format!("[{ID_LABEL}{id}] is defined as {have}, but the concept is at {want} ({REPAIR})"),
                 ));
@@ -485,7 +485,7 @@ fn check_definition_block(
             continue;
         };
         named = true;
-        findings.push(warning(
+        findings.push(error(
             path,
             format!("the {BLOCK_MARKER} block defines [{ID_LABEL}{id}], which {stray} ({REPAIR})"),
         ));
@@ -494,7 +494,7 @@ fn check_definition_block(
         // Every id is defined at the right path, so what differs is the
         // block's form: its order, its spacing, or something else written
         // into it. One finding, since no id is at fault.
-        findings.push(warning(
+        findings.push(error(
             path,
             format!("the {BLOCK_MARKER} block is not in generated form ({REPAIR})"),
         ));
@@ -676,7 +676,7 @@ fn check_indexes(bundle: &Bundle, context: &Context, findings: &mut Vec<Finding>
         for link in &body.links {
             if let Some(id) = &link.id {
                 if !context.ids.by_id.contains_key(id) {
-                    findings.push(warning(
+                    findings.push(error(
                         path,
                         format!("index entry [{ID_LABEL}{id}] names no concept"),
                     ));
@@ -689,7 +689,7 @@ fn check_indexes(bundle: &Bundle, context: &Context, findings: &mut Vec<Finding>
             match resolve_target(file, &directory, context.repo_root) {
                 Some(resolved) => {
                     if let Some(id) = context.ids.by_path.get(&resolved) {
-                        findings.push(warning(
+                        findings.push(error(
                             path,
                             format!(
                                 "index entry names a concept by path: {} — write it as [{ID_LABEL}{id}]",
@@ -1192,8 +1192,8 @@ mod tests {
                 "error|a.md|verified[0].by must be `human:<id>` or `process:<id>`, got 'nobody'",
                 "error|a.md|verified[0].at is not ISO 8601: 'yesterday'",
                 "warning|a.md|broken body link: nope.md",
-                "warning|a.md|body link names a concept by path: beta.md — write it as [sokf:beta]",
-                "warning|a.md|body link [sokf:not-here] names no concept",
+                "error|a.md|body link names a concept by path: beta.md — write it as [sokf:beta]",
+                "error|a.md|body link [sokf:not-here] names no concept",
                 "warning|a.md|`resource` path does not exist: /nowhere.rs",
                 "error|a.md|sources[1] missing `resource`",
                 "error|a.md|sources[2] is not a mapping",
@@ -1205,21 +1205,21 @@ mod tests {
                 "error|a.md|links[3] missing `to`",
                 "error|a.md|links[4] `to: nowhere-at-all` resolves to no concept id or path",
                 "error|a.md|links[6] is not a mapping",
-                "warning|a.md|the <!-- sokf:links --> block defines [sokf:stray], which the body does not cite (run `superdev validate --fix`)",
+                "error|a.md|the <!-- sokf:links --> block defines [sokf:stray], which the body does not cite (run `superdev validate --fix`)",
                 "error|dup.md|verified[1].at is not ISO 8601: '2026-13-45'",
                 "error|dup.md|verified[2] is not a mapping",
                 "error|dup.md|`links` must be a list",
                 "error|other.md|no `id` (required)",
                 "error|other.md|`verified` must be a mapping or a list of mappings",
                 "error|other.md|`sources` must be a list",
-                "warning|index.md|index entry names a concept by path: beta.md — write it as [sokf:beta]",
+                "error|index.md|index entry names a concept by path: beta.md — write it as [sokf:beta]",
                 "warning|index.md|index entry points at missing file: missing.md",
             ]
         );
         assert!(!r.passed());
         assert!(
             r.render_human()
-                .ends_with("FAIL (23 error(s), 10 warning(s))\n")
+                .ends_with("FAIL (27 error(s), 6 warning(s))\n")
         );
         assert_eq!(
             r.to_json()["findings"][0]["file"],

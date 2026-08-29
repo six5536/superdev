@@ -24,12 +24,12 @@ Components today read their content from `include_str!` constants, so
 content something superdev must go and get — from the network, from a local
 path, or from the machine-local cache — which is I/O.
 
-[architectural-rules](../architectural-rules.md) settles what may happen
+[architectural-rules][sokf:architectural-rules] settles what may happen
 where: "Components observe and plan; they never change anything… The engine
 is the only side-effect site." Resolution is a side effect, so it cannot
 happen inside `plan`. This is not a preference the feature may trade away;
 `status` and `--dry-run` are free precisely because planning is pure, and
-[the spec](../specs/spec-014-content-packs.md) leans on that when it
+[the spec][sokf:spec-014-content-packs] leans on that when it
 promises `status` never reaches the network.
 
 ## Decision
@@ -60,3 +60,7 @@ purity: it reads content from `Ctx` instead of from a constant.
   nothing to the repo, so the promise it makes — "prints the plan only" —
   still holds; the alternative is a dry run that cannot name what it would
   write.
+
+<!-- sokf:links -->
+[sokf:architectural-rules]: /knowledge/architectural-rules.md
+[sokf:spec-014-content-packs]: /knowledge/specs/spec-014-content-packs.md

@@ -29,14 +29,14 @@ Environment, read on every run:
 | `[knowledge.embeddings]` | table | absent — embedding is local and offline | opts the index onto an API |
 | `[template]` | table | absent | the project template `init` seeded the repo from, and its token values |
 
-The behaviour behind each key is in [configuration](../../configuration.md);
+The behaviour behind each key is in [configuration][sokf:configuration];
 what is promised here is the key, its shape and its default.
 
 # Sources and precedence
 
 - A command-line flag, where the command defines one. `validate` takes
   `--knowledge <DIR>` and `--repo-root <DIR>`; the flags themselves are
-  defined by [contract-002-cli-superdev](contract-002-cli-superdev.md).
+  defined by [contract-002-cli-superdev][sokf:contract-002-cli-superdev].
 - The environment, for the three variables above and nothing else.
 - `.superdev/config.toml`, for everything else.
 - The built-in defaults: the registry default per capability, and the pack
@@ -103,3 +103,7 @@ superdev by any path other than that one variable.
 Unreleased. Key names, defaults and the variables above may change without
 notice. What holds even so: a manifest superdev cannot understand fails at
 load with the edit to make, and never by being rewritten.
+
+<!-- sokf:links -->
+[sokf:configuration]: /knowledge/configuration.md
+[sokf:contract-002-cli-superdev]: /knowledge/contracts/public/contract-002-cli-superdev.md

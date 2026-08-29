@@ -22,7 +22,7 @@ has been backported for none of them. Backporting after each would mean
 rewriting the same files repeatedly while the design is still moving, so
 the divergence is deliberate and this chore is the record of it. It is
 done in one pass once the design settles, which is what
-[I016](issue-016-bug-sync-would-revert-the-schema-migration.md) asked for:
+[I016][sokf:issue-016-bug-sync-would-revert-the-schema-migration] asked for:
 something in the tree that says the drift is known and owned.
 
 ## Surfaces
@@ -35,13 +35,22 @@ something in the tree that says the drift is known and owned.
   schema. `cargo run -- validate --knowledge pack/knowledge/concepts`
   reports 19 errors, of which 18 are "names no schema".
 - `pack/knowledge/concepts/manifest.sokf.yaml` declares `sokf: "0.2"`
-  against a live tree at 0.3, which
-  [P010](../plans/plan-010-adhoc-links-address-ids.md) takes to 0.4.
-- `pack/knowledge/concepts/index.md` — 24 links, which P010's rule makes
-  id links.
+  against a live tree [P010][sokf:plan-010-adhoc-links-address-ids] took
+  to 0.4.
+- `pack/sokf/agents/sokf/SPEC.md` is SOKF 0.3 — it carries neither §8's
+  id-addressed body link nor §9's generated definition block, so the
+  specification a managed repository reads is a version behind the binary
+  that checks it. `pack/sokf/agents/sokf.md` likewise tells the agent
+  nothing about the link form or about `superdev validate --fix`. Both are
+  binary-owned, so `sync` rewrites the live copies from them: until they
+  are backported, running `sync` reverts this repository's own spec.
+- `pack/knowledge/concepts/index.md` and `pack/knowledge/templates/index.md`
+  were converted with P010 rather than left, since a starter repository
+  whose index fails its own hook is not a starter repository. They are the
+  only two files under `pack/` that P010 touched.
 - `knowledge/schemas/` ships nowhere: the pack carries the 56 templates
   that produce documents and none of the 54 schemas that check them, which
-  is [I020](issue-020-bug-the-schemas-do-not-ship.md).
+  is [I020][sokf:issue-020-bug-the-schemas-do-not-ship].
 - `pack/knowledge/skills/` (17) and `pack/knowledge/templates/` (48),
   against the live copies P008 and later work rewrote.
 - `pack/agents/process.md` and `pack/sokf/agents/` — binary-owned, so
@@ -65,6 +74,12 @@ something in the tree that says the drift is known and owned.
 Deliberately deferred while the knowledge design moves. P010 and P011 both
 name the pack as a non-goal for this reason, so their drift lands here
 rather than being backported piecemeal. The `pack-backport` skill and
-[I005](issue-005-bug-a-backport-leaves-the-lock-stale.md)'s lock
+[I005][sokf:issue-005-bug-a-backport-leaves-the-lock-stale]'s lock
 reconciliation are the mechanics; the size is the reason it waits for one
 pass rather than five.
+
+<!-- sokf:links -->
+[sokf:issue-005-bug-a-backport-leaves-the-lock-stale]: /knowledge/issues/issue-005-bug-a-backport-leaves-the-lock-stale.md
+[sokf:issue-016-bug-sync-would-revert-the-schema-migration]: /knowledge/issues/issue-016-bug-sync-would-revert-the-schema-migration.md
+[sokf:issue-020-bug-the-schemas-do-not-ship]: /knowledge/issues/issue-020-bug-the-schemas-do-not-ship.md
+[sokf:plan-010-adhoc-links-address-ids]: /knowledge/plans/plan-010-adhoc-links-address-ids.md

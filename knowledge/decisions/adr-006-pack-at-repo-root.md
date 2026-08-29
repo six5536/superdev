@@ -19,12 +19,12 @@ links:
 
 ## Context
 
-[Externally sourced content packs](../specs/spec-014-content-packs.md)
+[Externally sourced content packs][sokf:spec-014-content-packs]
 turns superdev's shipped content into a pack. It is also the part of this
 repository a visitor most wants to read, and it sits three levels down at
 `crates/lib/superdev-core/assets/`, where nothing about the path suggests it
 holds anything but build inputs.
-[ADR-003](adr-003-items-by-layout.md) already reorganises that tree into pack
+[ADR-003][sokf:adr-003-items-by-layout] already reorganises that tree into pack
 layout, so relocating it at the same time costs almost nothing.
 
 The constraint is packaging. All 254 files reach the published crate today
@@ -65,7 +65,7 @@ crate is published.
   standalone pack — the reference a third-party author copies, with nothing in
   it that only exists to serve superdev's build.
 - Positive: nothing is added to crates.io or to the version lockstep
-  ([release-procedure](../release-procedure.md) counts 18 locations today).
+  ([release-procedure][sokf:release-procedure] counts 18 locations today).
 - Negative: this is the repo's first tracked symlink, and Git for Windows
   needs `core.symlinks=true` plus Developer Mode or elevation to materialise
   one. Without it the link checks out as a text file and
@@ -81,6 +81,12 @@ crate is published.
   - `.gitattributes` carries `crates/lib/superdev-core/assets/** -text` to
     keep owned content LF through a Windows checkout; the pattern must follow
     the real files to `pack/**`.
-  - [directory-structure](../directory-structure.md) is updated at integrate.
+  - [directory-structure][sokf:directory-structure] is updated at integrate.
   - The `no_template_asset_is_named_cargo_toml` test retargets to
     `pack/projects/`.
+
+<!-- sokf:links -->
+[sokf:adr-003-items-by-layout]: /knowledge/decisions/adr-003-items-by-layout.md
+[sokf:directory-structure]: /knowledge/directory-structure.md
+[sokf:release-procedure]: /knowledge/release-procedure.md
+[sokf:spec-014-content-packs]: /knowledge/specs/spec-014-content-packs.md

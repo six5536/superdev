@@ -16,11 +16,11 @@ links:
 # Summary
 
 Fill the `skills` capability slot the
-[blueprint engine](spec-001-cli-core-blueprint-engine.md) left as a
+[blueprint engine][sokf:spec-001-cli-core-blueprint-engine] left as a
 placeholder: ship a curated skill set and the AOKF validation hook into every
 managed repo, versioned with the binary, with a clean path for per-project
 customisation. The hook and the aokf-maintain skill wrap the validator built
-for the [AOKF MCP server](spec-002-aokf-mcp-server.md).
+for the [AOKF MCP server][sokf:spec-002-aokf-mcp-server].
 
 # Contents
 
@@ -42,7 +42,7 @@ Excluded: playwright-cli (browser automation belongs with the frontend
 capability's territory, not the skill pack). A knowledge-capture skill —
 teaching agents to write durable learnings into the canonical knowledge mid-task — is a
 good idea deferred to the knowledge-upkeep sub-project; noted in
-[backlog](../backlog.md).
+[backlog][sokf:backlog].
 
 ## self-improve adaptation
 
@@ -227,3 +227,8 @@ own drift detection instead of a parity test.
 
 - The automated cases above pass.
 - `superdev validate` reports no error for this document.
+
+<!-- sokf:links -->
+[sokf:backlog]: /knowledge/backlog.md
+[sokf:spec-001-cli-core-blueprint-engine]: /knowledge/specs/spec-001-cli-core-blueprint-engine.md
+[sokf:spec-002-aokf-mcp-server]: /knowledge/specs/spec-002-aokf-mcp-server.md

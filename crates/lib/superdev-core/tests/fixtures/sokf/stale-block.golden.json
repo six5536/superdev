@@ -4,18 +4,18 @@
     {
       "file": "alpha.md",
       "message": "[sokf:beta] has no definition in the <!-- sokf:links --> block (run `superdev validate --fix`)",
-      "severity": "warning"
+      "severity": "error"
     },
     {
       "file": "alpha.md",
       "message": "[sokf:gamma] is defined as /moved/gamma.md, but the concept is at /gamma.md (run `superdev validate --fix`)",
-      "severity": "warning"
+      "severity": "error"
     },
     {
       "file": "alpha.md",
       "message": "the <!-- sokf:links --> block defines [sokf:delta], which the body does not cite (run `superdev validate --fix`)",
-      "severity": "warning"
+      "severity": "error"
     }
   ],
-  "passed": true
+  "passed": false
 }

@@ -14,9 +14,9 @@ precedence between them.
 
 Two boundaries, because configuration touches two neighbours. **A
 configuration file is configuration**: its shape is defined here, in the File
-section, not as a [file-format contract](contract-file-format.md) — that schema
+section, not as a [file-format contract][sokf:schema-contract-file-format] — that schema
 takes the files nobody configures anything with, a lock file or an export.
-**Flags are defined by the [CLI contract](contract-cli.md)**, which is where a
+**Flags are defined by the [CLI contract][sokf:schema-contract-cli]**, which is where a
 caller reads them; how a flag, a variable and a file setting resolve against
 each other is defined here, because no one of the three owns the precedence.
 
@@ -132,3 +132,7 @@ example: |
   read under both names for one minor release, with a warning naming the new
   one, and only the new name survives the next major.
 ````
+
+<!-- sokf:links -->
+[sokf:schema-contract-cli]: /knowledge/schemas/contract-cli.md
+[sokf:schema-contract-file-format]: /knowledge/schemas/contract-file-format.md
