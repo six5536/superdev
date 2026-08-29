@@ -53,6 +53,10 @@ something in the tree that says the drift is known and owned.
   is [I020][sokf:issue-020-bug-the-schemas-do-not-ship].
 - `pack/knowledge/skills/` (17) and `pack/knowledge/templates/` (48),
   against the live copies P008 and later work rewrote.
+- `.agents/sokf/changelog.md` is new and has no pack counterpart, so §12's
+  link to it dangles in a managed repository. The backport ships it as a
+  third binary-owned file: `pack/sokf/agents/sokf/changelog.md`, an entry
+  in `BINARY_OWNED`, and a kind in `content/layout.rs`.
 - `pack/agents/process.md` and `pack/sokf/agents/` — binary-owned, so
   `sync` rewrites the live copies from them.
 
