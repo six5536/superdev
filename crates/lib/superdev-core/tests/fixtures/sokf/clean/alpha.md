@@ -20,6 +20,9 @@ links:
 
 # Role
 
-Alpha depends on [beta](beta.md).[^beta-src]
+Alpha depends on [beta][sokf:beta].[^beta-src]
 
 [^beta-src]: Beta source
+
+<!-- sokf:links -->
+[sokf:beta]: /beta.md

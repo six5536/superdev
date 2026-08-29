@@ -11,11 +11,13 @@
 //! repository, which is what stops the hook and the merge gate reaching
 //! different verdicts about the same tree (D-17).
 
+pub mod fix;
 pub mod schema;
 pub mod sokf;
 
 use std::path::{Component, Path, PathBuf};
 
+pub use fix::Repair;
 pub use schema::Grammar;
 pub use sokf::{Finding, Report, validate};
 
@@ -193,6 +195,31 @@ pub fn validate_repo(
         schemas,
         documents: checked,
     })
+}
+
+/// Repair the SOKF knowledge's links in place, ahead of validating it.
+///
+/// The repairs are [`fix`]'s; this is where the run resolves the same paths
+/// [`validate_repo`] resolves, so `--fix` and the check that follows it read
+/// one knowledge directory.
+///
+/// # Errors
+/// The knowledge is unreadable, or a document cannot be written.
+pub fn fix_repo(repo_root: &Path, bundle: &Path) -> Result<Repair> {
+    let repo_root = normalise(&std::env::current_dir().unwrap_or_default(), repo_root);
+    let bundle = normalise(&repo_root, bundle);
+    if !bundle.is_dir() {
+        return Ok(Repair::default());
+    }
+    let knowledge = load_bundle(&bundle)?;
+    let prefix = relative(&repo_root, &bundle);
+    let mut repair = fix::fix(&knowledge, &repo_root)?;
+    if !prefix.is_empty() {
+        for path in &mut repair.written {
+            *path = format!("{prefix}/{path}");
+        }
+    }
+    Ok(repair)
 }
 
 /// Every claimed file under `dir`, named relative to `repo_root` and sorted,

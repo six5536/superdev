@@ -1,0 +1,16 @@
+{
+  "concepts": 2,
+  "findings": [
+    {
+      "file": "alpha.md",
+      "message": "body link names a concept by path: beta.md — write it as [sokf:beta]",
+      "severity": "warning"
+    },
+    {
+      "file": "index.md",
+      "message": "index entry names a concept by path: alpha.md — write it as [sokf:alpha]",
+      "severity": "warning"
+    }
+  ],
+  "passed": true
+}

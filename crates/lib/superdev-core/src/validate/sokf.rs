@@ -8,10 +8,11 @@
 //! the report for one knowledge tree per failure class and compares it
 //! verbatim.
 
-use std::collections::{BTreeSet, HashMap, HashSet};
+use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
+use std::ops::Range;
 use std::path::{Path, PathBuf};
 
-use pulldown_cmark::{Event, Options, Parser, Tag};
+use pulldown_cmark::{BrokenLink, CowStr, Event, LinkType, Options, Parser, Tag};
 use serde_yaml_ng::Value;
 
 use crate::sokf::bundle::Bundle;
@@ -34,6 +35,16 @@ const CORE_RELS: [&str; 12] = [
 ];
 
 const MANIFEST: &str = "manifest.sokf.yaml";
+
+/// The reference-label prefix that marks a body link as id-addressed
+/// (SPEC §8): `[text][sokf:<id>]`.
+pub(crate) const ID_LABEL: &str = "sokf:";
+
+/// The line opening a document's generated definition block (SPEC §9).
+pub(crate) const BLOCK_MARKER: &str = "<!-- sokf:links -->";
+
+/// What repairs every finding this module raises about the block.
+const REPAIR: &str = "run `superdev validate --fix`";
 
 /// One thing the check found.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -128,13 +139,24 @@ impl Report {
     }
 }
 
+/// The concepts the knowledge can be addressed by, both ways round.
+pub(crate) struct Identities {
+    /// Concept `id` to bundle-relative path, for the ids that are unique and
+    /// well-formed.
+    pub(crate) by_id: HashMap<String, String>,
+    /// Canonical filesystem path to concept `id`, so a path link can be told
+    /// from a link to a file that is no concept.
+    pub(crate) by_path: HashMap<PathBuf, String>,
+    /// Concept `id` to repo-root path, which is what the definition block
+    /// records (SPEC §9).
+    pub(crate) repo_paths: BTreeMap<String, String>,
+}
+
 /// What every per-concept check needs beyond the concept itself.
 struct Context<'a> {
     bundle_root: &'a Path,
     repo_root: &'a Path,
-    /// Concept `id` to bundle-relative path, for the ids that are unique and
-    /// well-formed.
-    ids: &'a HashMap<String, String>,
+    ids: &'a Identities,
 }
 
 /// Run the document check (SPEC §10) and decide conformance (SPEC §11).
@@ -143,7 +165,7 @@ struct Context<'a> {
 #[must_use]
 pub fn validate(bundle: &Bundle, repo_root: &Path) -> Report {
     let mut findings = Vec::new();
-    let ids = check_identities(bundle, &mut findings);
+    let ids = identities(bundle, repo_root, &mut findings);
     check_manifest(bundle, &mut findings);
 
     let context = Context {
@@ -154,7 +176,7 @@ pub fn validate(bundle: &Bundle, repo_root: &Path) -> Report {
     for concept in &bundle.concepts {
         check_concept(concept, &context, &mut findings);
     }
-    check_indexes(bundle, repo_root, &mut findings);
+    check_indexes(bundle, &context, &mut findings);
 
     Report {
         findings,
@@ -163,8 +185,13 @@ pub fn validate(bundle: &Bundle, repo_root: &Path) -> Report {
 }
 
 /// First pass, in bundle path order: report the files that did not parse and
-/// index the ids of the files that did.
-fn check_identities(bundle: &Bundle, findings: &mut Vec<Finding>) -> HashMap<String, String> {
+/// index the ids of the files that did, each way a later check needs to read
+/// them.
+pub(crate) fn identities(
+    bundle: &Bundle,
+    repo_root: &Path,
+    findings: &mut Vec<Finding>,
+) -> Identities {
     let mut files: Vec<(&str, Result<&Concept, &str>)> = bundle
         .concepts
         .iter()
@@ -178,7 +205,14 @@ fn check_identities(bundle: &Bundle, findings: &mut Vec<Finding>) -> HashMap<Str
         .collect();
     files.sort_by_key(|(path, _)| *path);
 
-    let mut ids: HashMap<String, String> = HashMap::new();
+    let mut ids = Identities {
+        by_id: HashMap::new(),
+        by_path: HashMap::new(),
+        repo_paths: BTreeMap::new(),
+    };
+    // Kind and number to the first id that claimed them, for SPEC §5's
+    // uniqueness read the way an author actually breaks it: a reused number.
+    let mut numbers: HashMap<(String, u32), String> = HashMap::new();
     for (path, entry) in files {
         let concept = match entry {
             Ok(concept) => concept,
@@ -197,16 +231,54 @@ fn check_identities(bundle: &Bundle, findings: &mut Vec<Finding>) -> HashMap<Str
                 path,
                 format!("`id` is not a valid slug: {}", repr_str(&id)),
             ));
-        } else if let Some(first) = ids.get(&id) {
+            continue;
+        }
+        if let Some(first) = ids.by_id.get(&id) {
             findings.push(error(
                 path,
                 format!("duplicate `id` {} (also in {first})", repr_str(&id)),
             ));
-        } else {
-            ids.insert(id, path.to_string());
+            continue;
         }
+        if let Some((kind, number)) = kind_and_number(&id) {
+            match numbers.get(&(kind.clone(), number)) {
+                // A number is what an author reuses; the id it belongs to is
+                // what a reader has to find. Naming both is the whole finding.
+                Some(first) => findings.push(warning(
+                    path,
+                    format!("duplicate `{kind}` number {number:03} (also in {first})"),
+                )),
+                None => {
+                    numbers.insert((kind, number), path.to_string());
+                }
+            }
+        }
+        if let Some(canonical) = canonical(&bundle.root.join(path)) {
+            ids.by_path.insert(canonical, id.clone());
+        }
+        ids.repo_paths
+            .insert(id.clone(), repo_path(repo_root, &bundle.root.join(path)));
+        ids.by_id.insert(id, path.to_string());
     }
     ids
+}
+
+/// The kind and number an id leads with, as in `plan-010-…`, or `None` when
+/// it is not numbered. Only the first numeric segment counts: an id whose
+/// tail carries a digit-only word is still numbered by its head.
+fn kind_and_number(id: &str) -> Option<(String, u32)> {
+    let (kind, rest) = id.split_once('-')?;
+    let number = rest.split('-').next()?;
+    number.parse().ok().map(|n| (kind.to_string(), n))
+}
+
+/// `path` as SPEC §9 writes it in a definition: rooted at the repository.
+fn repo_path(repo_root: &Path, path: &Path) -> String {
+    let relative = path
+        .strip_prefix(repo_root)
+        .map(|p| format!("/{}", p.display()))
+        .unwrap_or_else(|_| path.display().to_string());
+    relative.replace('\\', "/")
 }
 
 /// The manifest parses and carries no stamped keys (document check); it
@@ -267,19 +339,8 @@ fn check_concept(concept: &Concept, context: &Context, findings: &mut Vec<Findin
         .join(path)
         .parent()
         .map_or_else(|| context.bundle_root.to_path_buf(), Path::to_path_buf);
-    let (links, footnotes) = markdown_links_and_footnotes(&concept.body);
-    let mut body_targets: HashSet<PathBuf> = HashSet::new();
-    for target in &links {
-        let Some(file) = link_path(target) else {
-            continue;
-        };
-        match resolve_target(file, &directory, context.repo_root) {
-            Some(resolved) => {
-                body_targets.insert(resolved);
-            }
-            None => findings.push(warning(path, format!("broken body link: {target}"))),
-        }
-    }
+    let body = scan_body(&concept.body);
+    let targets = check_body_links(path, &body, &directory, context, findings);
 
     if let Some(resource) = fm["resource"].as_str()
         && resource.starts_with('/')
@@ -295,8 +356,8 @@ fn check_concept(concept: &Concept, context: &Context, findings: &mut Vec<Findin
     }
 
     let source_ids = check_sources(path, &fm["sources"], context.repo_root, findings);
-    for label in footnotes {
-        if !source_ids.contains(&label) {
+    for label in &body.footnotes {
+        if !source_ids.contains(label) {
             findings.push(warning(
                 path,
                 format!("footnote [^{label}] has no matching sources[].id"),
@@ -304,14 +365,140 @@ fn check_concept(concept: &Concept, context: &Context, findings: &mut Vec<Findin
         }
     }
 
-    check_links(
-        path,
-        &fm["links"],
-        context,
-        &directory,
-        &body_targets,
-        findings,
-    );
+    check_links(path, &fm["links"], context, &directory, &targets, findings);
+    check_definition_block(path, &concept.body, &body, context, findings);
+}
+
+/// Where a document's body links point, and what is wrong with them.
+///
+/// A link to a concept addresses it by id (SPEC §8), so a path that lands on
+/// one is reported with the id it should carry; a path that lands anywhere
+/// else — a source file, a README — is left alone, and one that lands
+/// nowhere is the broken link the spec has always warned about.
+fn check_body_links(
+    path: &str,
+    body: &BodyScan,
+    directory: &Path,
+    context: &Context,
+    findings: &mut Vec<Finding>,
+) -> Targets {
+    let mut targets = Targets::default();
+    for link in &body.links {
+        if let Some(id) = &link.id {
+            targets.ids.insert(id.clone());
+            if !context.ids.by_id.contains_key(id) {
+                findings.push(warning(
+                    path,
+                    format!("body link [{ID_LABEL}{id}] names no concept"),
+                ));
+            }
+            continue;
+        }
+        let Some(file) = link_path(&link.dest) else {
+            continue;
+        };
+        match resolve_target(file, directory, context.repo_root) {
+            Some(resolved) => {
+                if let Some(id) = context.ids.by_path.get(&resolved) {
+                    findings.push(warning(
+                        path,
+                        format!(
+                            "body link names a concept by path: {} — write it as [{ID_LABEL}{id}]",
+                            link.dest
+                        ),
+                    ));
+                }
+                targets.paths.insert(resolved);
+            }
+            None => findings.push(warning(path, format!("broken body link: {}", link.dest))),
+        }
+    }
+    targets
+}
+
+/// What a body links to, in both forms, for §8 mirroring.
+#[derive(Default)]
+struct Targets {
+    ids: BTreeSet<String>,
+    paths: BTreeSet<PathBuf>,
+}
+
+/// The generated definition block matches the ids the body cites, at their
+/// current paths (SPEC §9).
+///
+/// Nothing here changes what a link means — resolution reads the id and never
+/// the block — so every finding says the one command that repairs it.
+fn check_definition_block(
+    path: &str,
+    text: &str,
+    body: &BodyScan,
+    context: &Context,
+    findings: &mut Vec<Finding>,
+) {
+    let cited = body.cited_ids();
+    let block = definition_block(text);
+    let expected = render_block(&cited, &context.ids.repo_paths);
+    let actual = block.as_ref().map_or("", |b| &text[b.start..]);
+    if actual == expected {
+        return;
+    }
+
+    let defined: BTreeMap<&str, &str> = block
+        .iter()
+        .flat_map(|b| b.definitions.iter())
+        .map(|(id, dest)| (id.as_str(), dest.as_str()))
+        .collect();
+    let mut named = false;
+    for id in &cited {
+        let Some(want) = context.ids.repo_paths.get(id) else {
+            continue; // Reported already: the label names no concept.
+        };
+        match defined.get(id.as_str()) {
+            None => {
+                named = true;
+                findings.push(warning(
+                    path,
+                    format!(
+                        "[{ID_LABEL}{id}] has no definition in the {BLOCK_MARKER} block ({REPAIR})"
+                    ),
+                ));
+            }
+            Some(have) if have != want => {
+                named = true;
+                findings.push(warning(
+                    path,
+                    format!("[{ID_LABEL}{id}] is defined as {have}, but the concept is at {want} ({REPAIR})"),
+                ));
+            }
+            Some(_) => {}
+        }
+    }
+    for id in defined.keys() {
+        // A definition the generated block would not carry: either nothing
+        // cites it, or what it names is no concept — the other half of the
+        // broken edge reported above.
+        let stray = if !cited.contains(*id) {
+            "the body does not cite"
+        } else if !context.ids.repo_paths.contains_key(*id) {
+            "names no concept"
+        } else {
+            continue;
+        };
+        named = true;
+        findings.push(warning(
+            path,
+            format!("the {BLOCK_MARKER} block defines [{ID_LABEL}{id}], which {stray} ({REPAIR})"),
+        ));
+    }
+    if !named {
+        // Every id is defined at the right path, so what differs is the
+        // block's form: its order, its spacing, or something else written
+        // into it. One finding, since no id is at fault.
+        findings.push(warning(
+            path,
+            format!("the {BLOCK_MARKER} block is not in generated form ({REPAIR})"),
+        ));
+    }
 }
 
 /// `verified` is a mapping or a list of mappings, each with a well-formed
@@ -409,7 +596,7 @@ fn check_links(
     value: &Value,
     context: &Context,
     directory: &Path,
-    body_targets: &HashSet<PathBuf>,
+    targets: &Targets,
     findings: &mut Vec<Finding>,
 ) {
     if value.is_null() {
@@ -448,7 +635,7 @@ fn check_links(
         }
         // An `id` first, then a path (SPEC §8).
         let to = py_str(to);
-        let target = match context.ids.get(&to) {
+        let target = match context.ids.by_id.get(&to) {
             Some(concept_path) => canonical(&context.bundle_root.join(concept_path)),
             None => resolve_target(&to, directory, context.repo_root),
         };
@@ -459,7 +646,15 @@ fn check_links(
             ));
             continue;
         };
-        if !body_targets.contains(&target) {
+        // Either body form mirrors the edge: an id link names the target
+        // directly, a path link resolves to the same file.
+        let mirrored = targets.paths.contains(&target)
+            || context
+                .ids
+                .by_path
+                .get(&target)
+                .is_some_and(|id| targets.ids.contains(id));
+        if !mirrored {
             findings.push(error(
                 path,
                 format!("{at} `to: {to}` has no mirroring body link"),
@@ -468,25 +663,48 @@ fn check_links(
     }
 }
 
-/// `index.md` entries point at files that exist.
-fn check_indexes(bundle: &Bundle, repo_root: &Path, findings: &mut Vec<Finding>) {
+/// `index.md` entries address concepts the same way a concept body does, and
+/// point at files that exist.
+fn check_indexes(bundle: &Bundle, context: &Context, findings: &mut Vec<Finding>) {
     for (path, text) in &bundle.indexes {
         let directory = bundle
             .root
             .join(path)
             .parent()
             .map_or_else(|| bundle.root.clone(), Path::to_path_buf);
-        for target in markdown_links_and_footnotes(text).0 {
-            let Some(file) = link_path(&target) else {
+        let body = scan_body(text);
+        for link in &body.links {
+            if let Some(id) = &link.id {
+                if !context.ids.by_id.contains_key(id) {
+                    findings.push(warning(
+                        path,
+                        format!("index entry [{ID_LABEL}{id}] names no concept"),
+                    ));
+                }
+                continue;
+            }
+            let Some(file) = link_path(&link.dest) else {
                 continue;
             };
-            if resolve_target(file, &directory, repo_root).is_none() {
-                findings.push(warning(
+            match resolve_target(file, &directory, context.repo_root) {
+                Some(resolved) => {
+                    if let Some(id) = context.ids.by_path.get(&resolved) {
+                        findings.push(warning(
+                            path,
+                            format!(
+                                "index entry names a concept by path: {} — write it as [{ID_LABEL}{id}]",
+                                link.dest
+                            ),
+                        ));
+                    }
+                }
+                None => findings.push(warning(
                     path,
-                    format!("index entry points at missing file: {target}"),
-                ));
+                    format!("index entry points at missing file: {}", link.dest),
+                )),
             }
         }
+        check_definition_block(path, text, &body, context, findings);
     }
 }
 
@@ -506,33 +724,151 @@ fn warning(path: &str, message: String) -> Finding {
     }
 }
 
-/// Every link destination in document order, and every footnote label.
+/// One link found in a document body.
+#[derive(Debug, Clone)]
+pub(crate) struct BodyLink {
+    /// The id a `sokf:` label addresses (SPEC §8), or `None` when the link
+    /// names a path or a URL.
+    pub(crate) id: Option<String>,
+    /// The destination as the parser resolved it. Empty for a `sokf:` label
+    /// the definition block does not define.
+    pub(crate) dest: String,
+    /// Byte range of the whole link in the text it was scanned from.
+    pub(crate) span: Range<usize>,
+    /// Whether the link is written inline, `[text](dest)`. Only an inline
+    /// link can be rewritten in place without touching a definition.
+    pub(crate) inline: bool,
+}
+
+/// What one pass over a body found.
+pub(crate) struct BodyScan {
+    /// Every link, in document order.
+    pub(crate) links: Vec<BodyLink>,
+    /// Every footnote label, defined or referenced.
+    pub(crate) footnotes: BTreeSet<String>,
+}
+
+impl BodyScan {
+    /// The ids the body addresses by `sokf:` label, in ascending order —
+    /// which is the order the definition block is written in (SPEC §9).
+    pub(crate) fn cited_ids(&self) -> BTreeSet<String> {
+        self.links.iter().filter_map(|l| l.id.clone()).collect()
+    }
+}
+
+/// Every link and footnote label in a body, in document order.
 ///
-/// The reference validator matches inline links with a regular expression;
+/// The reference validator matched inline links with a regular expression;
 /// reading them from the markdown parser instead drops the ones inside code
 /// fences and picks up reference-style links.
-fn markdown_links_and_footnotes(text: &str) -> (Vec<String>, BTreeSet<String>) {
-    let mut links = Vec::new();
-    let mut labels = BTreeSet::new();
-    for event in Parser::new_ext(
+///
+/// The parser is built with a broken-link callback because it must be: with
+/// no callback, pulldown-cmark emits a reference link whose definition is
+/// missing as literal text rather than as a link, so a `sokf:` label would
+/// disappear from this scan the moment its definition went stale — and
+/// resolution would then depend on the block, which SPEC §9 forbids.
+pub(crate) fn scan_body(text: &str) -> BodyScan {
+    let mut broken = |_: BrokenLink<'_>| -> Option<(CowStr<'_>, CowStr<'_>)> {
+        Some((CowStr::Borrowed(""), CowStr::Borrowed("")))
+    };
+    let parser = Parser::new_with_broken_link_callback(
         text,
         Options::ENABLE_FOOTNOTES | Options::ENABLE_OLD_FOOTNOTES,
-    ) {
+        Some(&mut broken),
+    );
+
+    let mut links = Vec::new();
+    let mut footnotes = BTreeSet::new();
+    for (event, span) in parser.into_offset_iter() {
         match event {
-            Event::Start(Tag::Link { dest_url, .. } | Tag::Image { dest_url, .. }) => {
-                links.push(dest_url.to_string());
-            }
+            Event::Start(
+                Tag::Link {
+                    link_type,
+                    dest_url,
+                    id,
+                    ..
+                }
+                | Tag::Image {
+                    link_type,
+                    dest_url,
+                    id,
+                    ..
+                },
+            ) => links.push(BodyLink {
+                id: id.strip_prefix(ID_LABEL).map(str::to_string),
+                dest: dest_url.to_string(),
+                span,
+                inline: matches!(link_type, LinkType::Inline),
+            }),
             Event::Start(Tag::FootnoteDefinition(label)) | Event::FootnoteReference(label) => {
-                labels.insert(label.to_string());
+                footnotes.insert(label.to_string());
             }
             _ => {}
         }
     }
-    (links, labels)
+    BodyScan { links, footnotes }
+}
+
+/// A document's generated definition block (SPEC §9), as it stands on disk.
+pub(crate) struct DefinitionBlock {
+    /// Byte offset of the `<!-- sokf:links -->` line.
+    pub(crate) start: usize,
+    /// Each definition's id and destination, in the order written.
+    pub(crate) definitions: Vec<(String, String)>,
+}
+
+/// The definition block at the foot of `text`, when it has one.
+///
+/// The marker is found through the markdown parser, not by searching the
+/// text, so a marker written inside a fenced example — as this repository's
+/// own plan and schemas write one — is an example and not a block. The block
+/// runs from there to the end of the file: SPEC §9 puts nothing after it.
+pub(crate) fn definition_block(text: &str) -> Option<DefinitionBlock> {
+    let mut start = None;
+    for (event, span) in Parser::new_ext(text, Options::empty()).into_offset_iter() {
+        if let Event::Html(html) = event
+            && html.trim_end() == BLOCK_MARKER
+        {
+            start = Some(span.start);
+        }
+    }
+    let start = start?;
+
+    let definitions = text[start..]
+        .lines()
+        .skip(1)
+        .filter_map(parse_definition)
+        .collect();
+    Some(DefinitionBlock { start, definitions })
+}
+
+/// One `[sokf:<id>]: <dest>` definition line.
+fn parse_definition(line: &str) -> Option<(String, String)> {
+    let rest = line.strip_prefix('[')?.strip_prefix(ID_LABEL)?;
+    let (id, dest) = rest.split_once("]:")?;
+    Some((id.to_string(), dest.trim().to_string()))
+}
+
+/// The definition block a document citing `ids` should carry, or an empty
+/// string when it cites none. `paths` maps a concept id to its repo-root
+/// path; an id it does not answer is left out, having been reported already.
+pub(crate) fn render_block(ids: &BTreeSet<String>, paths: &BTreeMap<String, String>) -> String {
+    let definitions: Vec<String> = ids
+        .iter()
+        .filter_map(|id| {
+            paths
+                .get(id)
+                .map(|path| format!("[{ID_LABEL}{id}]: {path}"))
+        })
+        .collect();
+    if definitions.is_empty() {
+        return String::new();
+    }
+    format!("{BLOCK_MARKER}\n{}\n", definitions.join("\n"))
 }
 
 /// The file part of a link target, or `None` when it names no file.
-fn link_path(target: &str) -> Option<&str> {
+pub(crate) fn link_path(target: &str) -> Option<&str> {
     let path = target.split('#').next().unwrap_or_default();
     (!path.is_empty()
         && !path.starts_with("http://")
@@ -543,7 +879,7 @@ fn link_path(target: &str) -> Option<&str> {
 
 /// Resolve a link or `to` path to an existing file (SPEC §9): `/` from the
 /// repository root, anything else from the linking file's directory.
-fn resolve_target(target: &str, directory: &Path, repo_root: &Path) -> Option<PathBuf> {
+pub(crate) fn resolve_target(target: &str, directory: &Path, repo_root: &Path) -> Option<PathBuf> {
     let file = link_path(target)?;
     let path = match file.strip_prefix('/') {
         Some(rooted) => repo_root.join(rooted.trim_start_matches('/')),
@@ -553,7 +889,7 @@ fn resolve_target(target: &str, directory: &Path, repo_root: &Path) -> Option<Pa
 }
 
 /// The canonical path, or `None` when nothing is there.
-fn canonical(path: &Path) -> Option<PathBuf> {
+pub(crate) fn canonical(path: &Path) -> Option<PathBuf> {
     std::fs::canonicalize(path).ok()
 }
 
@@ -746,7 +1082,7 @@ mod tests {
     }
 
     const MANIFEST_YAML: &str = "sokf: \"0.1\"\nname: t\n";
-    const A_MIRRORED: &str = "---\ntype: T\nid: alpha\nlinks:\n  - rel: depends-on\n    to: beta\n---\nSee [beta](beta.md).\n";
+    const A_MIRRORED: &str = "---\ntype: T\nid: alpha\nlinks:\n  - rel: depends-on\n    to: beta\n---\nSee [beta][sokf:beta].\n\n<!-- sokf:links -->\n[sokf:beta]: /beta.md\n";
     const B: &str = "---\ntype: T\nid: beta\n---\nx\n";
 
     #[test]
@@ -770,11 +1106,11 @@ mod tests {
             ("manifest.sokf.yaml", MANIFEST_YAML),
             (
                 "plan.md",
-                "---\ntype: Plan\nid: alpha\nlinks:\n  - rel: implements\n    to: beta\n---\nSee [beta](spec.md).\n",
+                "---\ntype: Plan\nid: alpha\nlinks:\n  - rel: implements\n    to: beta\n---\nSee [beta][sokf:beta].\n\n<!-- sokf:links -->\n[sokf:beta]: /spec.md\n",
             ),
             (
                 "spec.md",
-                "---\ntype: Spec\nid: beta\nlinks:\n  - rel: implemented-by\n    to: alpha\n---\nSee [alpha](plan.md).\n",
+                "---\ntype: Spec\nid: beta\nlinks:\n  - rel: implemented-by\n    to: alpha\n---\nSee [alpha][sokf:alpha].\n\n<!-- sokf:links -->\n[sokf:alpha]: /plan.md\n",
             ),
         ]);
         let r = validate(&b, &b.root);
@@ -814,7 +1150,7 @@ mod tests {
     /// reports exactly this for the same files.
     #[test]
     fn every_check_fires_on_a_deliberately_broken_bundle() {
-        let broken_a = "---\ntype: \"\"\nid: Bad_Slug\ngenerated: {by: agent}\nresource: /nowhere.rs\nverified: {by: nobody, at: yesterday}\nsources:\n  - id: ok-src\n    resource: /beta.md\n  - title: no resource\n  - \"not a mapping\"\n  - resource: /missing.rs\n    id: gone-src\nlinks:\n  - to: beta\n  - rel: Bad Rel\n    to: beta\n  - rel: made-up\n    to: beta\n  - rel: depends-on\n  - rel: depends-on\n    to: nowhere-at-all\n  - rel: depends-on\n    to: beta\n  - \"not a mapping\"\n---\nCites [^ok-src] and [^unknown].\n\nA [broken](nope.md) link and a good [beta](beta.md).\n\n[^ok-src]: Beta\n[^unknown]: nothing\n";
+        let broken_a = "---\ntype: \"\"\nid: Bad_Slug\ngenerated: {by: agent}\nresource: /nowhere.rs\nverified: {by: nobody, at: yesterday}\nsources:\n  - id: ok-src\n    resource: /beta.md\n  - title: no resource\n  - \"not a mapping\"\n  - resource: /missing.rs\n    id: gone-src\nlinks:\n  - to: beta\n  - rel: Bad Rel\n    to: beta\n  - rel: made-up\n    to: beta\n  - rel: depends-on\n  - rel: depends-on\n    to: nowhere-at-all\n  - rel: depends-on\n    to: beta\n  - \"not a mapping\"\n---\nCites [^ok-src] and [^unknown].\n\nA [broken](nope.md) link, a good [beta](beta.md), and one [naming nothing][sokf:not-here].\n\n[^ok-src]: Beta\n[^unknown]: nothing\n\n<!-- sokf:links -->\n[sokf:stray]: /stray.md\n";
         let (b, _dir) = bundle_with(&[
             (
                 "manifest.sokf.yaml",
@@ -856,6 +1192,8 @@ mod tests {
                 "error|a.md|verified[0].by must be `human:<id>` or `process:<id>`, got 'nobody'",
                 "error|a.md|verified[0].at is not ISO 8601: 'yesterday'",
                 "warning|a.md|broken body link: nope.md",
+                "warning|a.md|body link names a concept by path: beta.md — write it as [sokf:beta]",
+                "warning|a.md|body link [sokf:not-here] names no concept",
                 "warning|a.md|`resource` path does not exist: /nowhere.rs",
                 "error|a.md|sources[1] missing `resource`",
                 "error|a.md|sources[2] is not a mapping",
@@ -867,19 +1205,21 @@ mod tests {
                 "error|a.md|links[3] missing `to`",
                 "error|a.md|links[4] `to: nowhere-at-all` resolves to no concept id or path",
                 "error|a.md|links[6] is not a mapping",
+                "warning|a.md|the <!-- sokf:links --> block defines [sokf:stray], which the body does not cite (run `superdev validate --fix`)",
                 "error|dup.md|verified[1].at is not ISO 8601: '2026-13-45'",
                 "error|dup.md|verified[2] is not a mapping",
                 "error|dup.md|`links` must be a list",
                 "error|other.md|no `id` (required)",
                 "error|other.md|`verified` must be a mapping or a list of mappings",
                 "error|other.md|`sources` must be a list",
+                "warning|index.md|index entry names a concept by path: beta.md — write it as [sokf:beta]",
                 "warning|index.md|index entry points at missing file: missing.md",
             ]
         );
         assert!(!r.passed());
         assert!(
             r.render_human()
-                .ends_with("FAIL (23 error(s), 6 warning(s))\n")
+                .ends_with("FAIL (23 error(s), 10 warning(s))\n")
         );
         assert_eq!(
             r.to_json()["findings"][0]["file"],

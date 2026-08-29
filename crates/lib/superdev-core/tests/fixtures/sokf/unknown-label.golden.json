@@ -1,0 +1,21 @@
+{
+  "concepts": 1,
+  "findings": [
+    {
+      "file": "alpha.md",
+      "message": "body link [sokf:gamma] names no concept",
+      "severity": "warning"
+    },
+    {
+      "file": "alpha.md",
+      "message": "the <!-- sokf:links --> block defines [sokf:gamma], which names no concept (run `superdev validate --fix`)",
+      "severity": "warning"
+    },
+    {
+      "file": "index.md",
+      "message": "index entry [sokf:gamma] names no concept",
+      "severity": "warning"
+    }
+  ],
+  "passed": true
+}

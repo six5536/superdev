@@ -2050,3 +2050,88 @@ fn init_always_hints_at_bootstrap() {
     );
     assert!(bare.path().join("knowledge/index.md").is_file());
 }
+
+/// A repo whose knowledge carries the one fault `--fix` exists for: a body
+/// link that names a concept by path.
+fn path_link_repo() -> tempfile::TempDir {
+    let dir = tempfile::tempdir().unwrap();
+    let k = dir.path().join("knowledge");
+    std::fs::create_dir_all(&k).unwrap();
+    std::fs::write(
+        k.join("manifest.sokf.yaml"),
+        "sokf: \"0.4\"\nname: fixture\n",
+    )
+    .unwrap();
+    std::fs::write(
+        k.join("alpha.md"),
+        "---\ntype: Note\nid: alpha\n---\n\nAlpha cites [beta](beta.md).\n",
+    )
+    .unwrap();
+    std::fs::write(
+        k.join("beta.md"),
+        "---\ntype: Note\nid: beta\n---\n\nBody.\n",
+    )
+    .unwrap();
+    dir
+}
+
+/// `--fix` converts the tree and names what it wrote; a second run has
+/// nothing to do (NFR-4).
+#[test]
+fn validate_fix_converts_and_settles() {
+    let repo = path_link_repo();
+    let alpha = repo.path().join("knowledge/alpha.md");
+    let out = superdev()
+        .current_dir(repo.path())
+        .args(["validate", "--fix"])
+        .assert()
+        .success();
+    let stdout = String::from_utf8_lossy(&out.get_output().stdout).into_owned();
+    assert!(stdout.contains("repaired: 1 file(s)"), "{stdout}");
+    assert!(stdout.contains("knowledge/alpha.md"), "{stdout}");
+
+    let text = std::fs::read_to_string(&alpha).unwrap();
+    assert!(text.contains("[beta][sokf:beta]"), "{text}");
+    assert!(text.contains("[sokf:beta]: /knowledge/beta.md"), "{text}");
+
+    let out = superdev()
+        .current_dir(repo.path())
+        .args(["validate", "--fix"])
+        .assert()
+        .success();
+    let stdout = String::from_utf8_lossy(&out.get_output().stdout).into_owned();
+    assert!(stdout.contains("repaired: 0 file(s)"), "{stdout}");
+    assert_eq!(std::fs::read_to_string(&alpha).unwrap(), text);
+}
+
+/// Without the flag, `validate` reports and writes nothing.
+#[test]
+fn validate_without_fix_writes_nothing() {
+    let repo = path_link_repo();
+    let alpha = repo.path().join("knowledge/alpha.md");
+    let before = std::fs::read_to_string(&alpha).unwrap();
+    let _ = superdev()
+        .current_dir(repo.path())
+        .args(["validate"])
+        .assert();
+    assert_eq!(std::fs::read_to_string(&alpha).unwrap(), before);
+}
+
+/// The hook never repairs (D-7): it fires after an edit, so a hook that wrote
+/// would rewrite the file the agent is still working in.
+#[test]
+fn hook_validate_writes_no_file() {
+    let repo = path_link_repo();
+    let alpha = repo.path().join("knowledge/alpha.md");
+    let before = std::fs::read_to_string(&alpha).unwrap();
+    let _ = superdev()
+        .args(["hook", "validate"])
+        .env("CLAUDE_PROJECT_DIR", repo.path())
+        .write_stdin(hook_payload(repo.path(), "knowledge/alpha.md"))
+        .assert();
+    assert_eq!(
+        std::fs::read_to_string(&alpha).unwrap(),
+        before,
+        "the hook repaired a file"
+    );
+}

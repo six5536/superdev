@@ -19,6 +19,10 @@ pub struct ValidateArgs {
     /// Files or directories to check (default: the SOKF knowledge and the
     /// trees the grammar governs)
     pub paths: Vec<PathBuf>,
+    /// Repair what is mechanically repairable before checking: convert body
+    /// links to the id form and regenerate every definition block
+    #[arg(long)]
+    pub fix: bool,
     /// Emit JSON instead of text
     #[arg(long)]
     pub json: bool,
@@ -63,6 +67,13 @@ pub fn run_validate(args: &ValidateArgs, root: &Path) -> Result<u8> {
         .repo_root
         .as_deref()
         .map_or_else(|| root.to_path_buf(), |p| root.join(p));
+    // Repair first, then check: the report is then the state the repository
+    // is left in, not the one it arrived in.
+    let repaired = if args.fix {
+        validate::fix_repo(&repo_root, &knowledge)?.written
+    } else {
+        Vec::new()
+    };
     let run = validate::validate_repo(&repo_root, &knowledge, &args.paths, &grammar)?;
     if args.json {
         let mut value = run.report.to_json();
@@ -75,6 +86,9 @@ pub fn run_validate(args: &ValidateArgs, root: &Path) -> Result<u8> {
             object.insert("files".into(), run.files.into());
             object.insert("schemas".into(), run.schemas.into());
             object.insert("documents".into(), run.documents.into());
+            if args.fix {
+                object.insert("repaired".into(), repaired.clone().into());
+            }
         }
         let rendered =
             serde_json::to_string_pretty(&value).map_err(|e| io_error(io::Error::other(e)))?;
@@ -94,6 +108,14 @@ pub fn run_validate(args: &ValidateArgs, root: &Path) -> Result<u8> {
             // A repository with no `knowledge/schemas/` checks no document
             // against any contract. Silence here would read as a clean pass.
             out("  no schemas found — no document was checked against a contract")?;
+        }
+        if args.fix {
+            // What was rewritten, named: `--fix` writes files, and a run that
+            // says only that it passed hides which ones.
+            out(&format!("  repaired: {} file(s)", repaired.len()))?;
+            for path in &repaired {
+                out(&format!("    {path}"))?;
+            }
         }
         out(run.report.render_human().trim_end_matches('\n'))?;
     }

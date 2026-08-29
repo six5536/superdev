@@ -119,6 +119,26 @@ fn footnote_mismatch() {
     snapshot("footnote-mismatch");
 }
 
+#[test]
+fn path_links() {
+    snapshot("path-links");
+}
+
+#[test]
+fn unknown_label() {
+    snapshot("unknown-label");
+}
+
+#[test]
+fn stale_block() {
+    snapshot("stale-block");
+}
+
+#[test]
+fn duplicate_number() {
+    snapshot("duplicate-number");
+}
+
 /// The repository's own knowledge, validated where it lives. It changes with
 /// every knowledge edit, so the assertion is the one thing that must hold:
 /// the check CI already gates on.

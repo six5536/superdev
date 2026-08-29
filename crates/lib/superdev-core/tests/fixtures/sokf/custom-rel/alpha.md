@@ -8,4 +8,7 @@ links:
 
 # Role
 
-Alpha does something unnameable to [beta](beta.md).
+Alpha does something unnameable to [beta][sokf:beta].
+
+<!-- sokf:links -->
+[sokf:beta]: /beta.md

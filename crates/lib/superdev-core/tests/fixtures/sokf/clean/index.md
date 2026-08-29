@@ -1,4 +1,8 @@
 # Core
 
-* [Alpha](alpha.md) - the first concept.
-* [Beta](beta.md) - the second concept.
+* [Alpha][sokf:alpha] - the first concept.
+* [Beta][sokf:beta] - the second concept.
+
+<!-- sokf:links -->
+[sokf:alpha]: /alpha.md
+[sokf:beta]: /beta.md

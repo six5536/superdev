@@ -1,8 +1,8 @@
 # SOKF — Superdev Open Knowledge Format
 
-**Version:** 0.3
+**Version:** 0.4
 **Status:** Draft
-**Date:** 2026-08-18
+**Date:** 2026-08-28
 
 SOKF is a format for canonical project knowledge: a directory of markdown
 files with YAML frontmatter, kept inside the project's repository and
@@ -82,7 +82,7 @@ history.
 The manifest declares the SOKF knowledge:
 
 ```yaml
-sokf: "0.3" # spec version the SOKF knowledge targets
+sokf: "0.4" # spec version the SOKF knowledge targets
 name: example-knowledge
 description: Knowledge for the example project.
 ```
@@ -119,14 +119,18 @@ links:
 
 # Role
 
-The planner reads [config](config.md) and filesystem state and emits a
+The planner reads [config][sokf:config] and filesystem state and emits a
 list of actions.[^config-src] It never writes.
 
 [^config-src]: Config source
+
+<!-- sokf:links -->
+[sokf:config]: /knowledge/config.md
 ```
 
-The `depends-on` entry is mirrored by the `[config](config.md)` body
-link, as §8 requires.
+The `depends-on` entry is mirrored by the `[config][sokf:config]` body
+link, as §8 requires. That link names the target's `id`, not its path;
+the definition below it is generated, and §9 says what reads it.
 
 The body is standard markdown. Prefer structure (headings, lists,
 tables, fenced code) over freeform prose; there are no required
@@ -302,9 +306,28 @@ Producers SHOULD declare each edge once, from whichever side is more
 natural; a consumer building a graph SHOULD synthesise the inverse
 edge, so backlinks exist without writing every edge twice.
 
+**Body links.** A body link whose target is a concept SHOULD address it
+by `id`, written as a reference-style markdown link whose label is
+`sokf:` followed by that id:
+
+```markdown
+The planner reads [config][sokf:config] before it plans.
+```
+
+A consumer resolves the label's id against the SOKF knowledge, exactly
+as it resolves a `to` (above), and MUST NOT resolve through the
+reference definition that makes the link navigable in a plain markdown
+renderer; §9 says where that definition comes from. A link to anything
+that is not a concept — a source file, a README, a URL — names a path
+or a URL, as markdown always has.
+
+A label of the form `sokf:<id>` naming no concept is a broken edge, not
+an unresolved reference: a consumer reports it rather than rendering it
+as literal text.
+
 **Body mirroring.** For every `links` entry the body MUST contain at
-least one plain markdown link to the same target, so the edge is
-visible to a reader of the markdown alone. A body link with no
+least one markdown link to the same target, in either form, so the edge
+is visible to a reader of the markdown alone. A body link with no
 corresponding `links` entry is an untyped `relates-to` edge; the
 meaning of such a link lives in the surrounding prose.
 
@@ -320,6 +343,29 @@ meaning of such a link lives in the surrounding prose.
 Consumers tolerate broken links, but the validator warns on them
 (§10), since a broken link usually means the target was renamed and the
 knowledge has not caught up.
+
+**The generated definition block.** A document that carries an
+id-addressed body link (§8) MUST carry, at its foot, one HTML comment
+line reading exactly `<!-- sokf:links -->` followed by one reference
+definition per cited id, each naming that concept's current
+repo-root path, in ascending id order:
+
+```markdown
+<!-- sokf:links -->
+[sokf:config]: /knowledge/config.md
+[sokf:planner]: /knowledge/core/planner.md
+```
+
+The block is **generated**, not authored: it is written by tooling from
+the SOKF knowledge as it stands, and rewritten whenever a concept
+moves. Nothing else follows it.
+
+The block exists so a plain markdown renderer — a repository host, an
+editor preview — follows the link. It is not the resolution path: a
+consumer resolves the id (§8) and MUST NOT read the block, so a block
+that is stale, or absent, changes nothing about what a link means. A
+validator reports a stale or missing block, since the remedy is to
+regenerate it (§10).
 
 An `index.md` may appear in any directory to list its contents, so a
 reader can see what exists before opening files. It contains no
@@ -349,7 +395,11 @@ Two deterministic layers. Both run without an LLM.
    `at`).
 4. `id` values are valid slugs and unique across the canonical
    knowledge. `links` entries each have `rel` and `to`.
-5. Warn on: broken `/`-paths and relative links, a `links` `to` that
+5. Body links address concepts by id (§8): a `sokf:<id>` label resolves
+   to a concept, and a path link resolves to something that is not one.
+   The generated definition block (§9) defines each cited id, and only
+   the cited ids, at their current paths.
+6. Warn on: broken `/`-paths and relative links, a `links` `to` that
    resolves to nothing, a `links` entry with no mirroring body link,
    `sources` entries the body cites but that lack an `id`, footnote
    labels with no matching source, `index.md` entries pointing at
@@ -377,6 +427,8 @@ Knowledge conforms when all of the following hold.
   `name`.
 - Every `links` entry has a valid `rel` and a `to` that resolves, and is
   mirrored by a body link (§8).
+- Every body link to a concept addresses it by id, and every document
+  carrying one carries a current definition block (§9).
 
 A repository conforms if, additionally, its agent commits pass the diff
 check (§10). This is independent of whether the SOKF knowledge conforms.
@@ -388,7 +440,11 @@ manifest.
 
 ## 12. Versioning
 
-This document specifies SOKF **0.3**. Before 1.0 a minor bump may break.
+This document specifies SOKF **0.4**. Before 1.0 a minor bump may break.
+0.4 breaks 0.3: a body link to a concept now addresses it by id (§8),
+and a document carrying one carries a generated definition block (§9).
+A 0.3 knowledge whose body links name paths conforms to 0.3 and not to
+0.4; `superdev validate --fix` converts one to the other.
 From 1.0 minor bumps are backward-compatible additions and major bumps may
 break. The SOKF knowledge declares the version it targets with the
 manifest's `sokf` key (§2).
