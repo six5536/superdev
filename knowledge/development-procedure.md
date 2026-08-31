@@ -25,11 +25,15 @@ no Node.
    (`lifecycle: done` in the commit that completes the work). One-off
    work takes `/adhoc-plan`, and its plan is filed beside it as
    `plan-<nnn>-adhoc-<slug>`.
-2. Implement with focused commits, using
+2. One branch per feature: `/frame` cuts `feature/<slug>` off `main`, and
+   an adhoc plan that touches code runs on `adhoc/<slug>`. A human
+   fast-forwards `main`; an unattended run commits and merges only on the
+   feature's branch (ADR-021).
+3. Implement with focused commits, using
    [Conventional Commits](https://www.conventionalcommits.org/) (`feat:`,
    `fix:`, `docs:`, `test:`, `refactor:`, `chore:`).
-3. Update this knowledge when behaviour or design changes.
-4. Before a PR, run the full CI-equivalent check list (see
+4. Update this knowledge when behaviour or design changes.
+5. Before a PR, run the full CI-equivalent check list (see
    [development-commands][sokf:development-commands]) and meet
    [definition-of-done][sokf:definition-of-done]. CI runs tests on macOS and
    Windows, the blueprint-drift check on every platform, and the coverage gate
