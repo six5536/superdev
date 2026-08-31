@@ -37,6 +37,7 @@ superdev run begin           arm an unattended run: create the run state
   [--next <TEXT>]
 superdev run advance         record a step forward: rewrite next, reset the
   --next <TEXT>              watchdog, refresh the owner
+  [--session <ID>]
 superdev run end             end the run: remove the state; harmless when
                              none exists
 superdev hook validate       the Claude Code PostToolUse hook: payload on

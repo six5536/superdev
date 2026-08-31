@@ -12,6 +12,7 @@
 
 mod cli;
 mod manage;
+mod run;
 mod sokf_cli;
 mod template_select;
 mod validate_cli;
@@ -91,6 +92,9 @@ enum Command {
     /// SOKF knowledge commands
     #[command(subcommand)]
     Sokf(sokf_cli::SokfCommand),
+    /// Drive the state of an unattended workflow run
+    #[command(subcommand)]
+    Run(run::RunCommand),
     /// Agent hook plumbing (reads the hook payload from stdin)
     #[command(subcommand)]
     Hook(validate_cli::HookCommand),
@@ -132,6 +136,7 @@ fn run(cli: &Cli) -> Result<u8> {
         Some(Command::Template(cmd)) => manage::template(cmd),
         Some(Command::Mcp(cmd)) => sokf_cli::run_mcp(cmd, &root()?),
         Some(Command::Sokf(cmd)) => sokf_cli::run_sokf(cmd, &root()?),
+        Some(Command::Run(cmd)) => run::run(cmd, &root()?),
         Some(Command::Hook(cmd)) => validate_cli::run_hook(cmd, &root()?),
         Some(Command::Completions { shell }) => {
             // Render into a buffer first: clap_complete panics rather than

@@ -24,6 +24,8 @@ unexpected_cfgs = { level = "warn", check-cfg = ['cfg(coverage_nightly)'] }
 [dependencies]
 superdev-core.workspace = true
 clap = { workspace = true }
+serde = { workspace = true }
+toml_edit = { workspace = true }
 clap_complete = { workspace = true }
 clap_mangen = { workspace = true }
 serde_json = { workspace = true }
