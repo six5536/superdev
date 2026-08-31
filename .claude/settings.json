@@ -10,6 +10,16 @@
         ],
         "matcher": "Edit|Write"
       }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "command": "superdev hook run",
+            "type": "command"
+          }
+        ]
+      }
     ]
   },
   "permissions": {}

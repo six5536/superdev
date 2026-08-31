@@ -98,6 +98,14 @@ const HOOK_MARKER: &str = "superdev hook validate";
 const HOOK_ELEMENT: &str =
     r#"{"matcher":"Edit|Write","hooks":[{"type":"command","command":"superdev hook validate"}]}"#;
 
+/// The array the Stop entry lives in.
+const STOP_POINTER: &str = "hooks.Stop";
+/// What identifies superdev's element among the user's.
+const STOP_MARKER: &str = "superdev hook run";
+/// The registration itself: continue an active unattended run, or let the
+/// turn end. Without a run state the hook is invisible (contract-009).
+const STOP_ELEMENT: &str = r#"{"hooks":[{"type":"command","command":"superdev hook run"}]}"#;
+
 /// Release, at adoption time, every SOKF skill the repo already has under
 /// its own name and with its own content. Returns the lines to print.
 pub(crate) fn adopt_existing(
@@ -191,6 +199,12 @@ fn items(ctx: &Ctx<'_>) -> Vec<ManagedItem> {
         marker: Some(HOOK_MARKER.into()),
         value_json: HOOK_ELEMENT.into(),
     });
+    items.push(ManagedItem::JsonEntry {
+        path: SETTINGS_PATH.into(),
+        pointer: STOP_POINTER.into(),
+        marker: Some(STOP_MARKER.into()),
+        value_json: STOP_ELEMENT.into(),
+    });
     items
 }
 
@@ -267,6 +281,7 @@ mod tests {
             descs.iter().any(|d| d.contains("superdev hook validate")),
             "{descs:?}"
         );
+        assert!(descs.iter().any(|d| d.contains("hooks.Stop")), "{descs:?}");
         // The schema library ships with the skills that reference it.
         for item in content.items_of(OWNER, ItemKind::DocSchema) {
             let name = &item.name;
@@ -303,6 +318,7 @@ mod tests {
         assert!(keys.contains(
             &".claude/settings.json:hooks.PostToolUse[superdev hook validate]".to_string()
         ));
+        assert!(keys.contains(&".claude/settings.json:hooks.Stop[superdev hook run]".to_string()));
     }
 
     #[test]
@@ -468,10 +484,33 @@ mod tests {
                     std::fs::write(p, content).unwrap();
                 }
                 Action::EnsureJsonArrayElement {
-                    path, value_json, ..
+                    path,
+                    pointer,
+                    value_json,
+                    ..
                 } => {
-                    let json = format!("{{ \"hooks\": {{ \"PostToolUse\": [{value_json}] }} }}");
-                    std::fs::write(dir.path().join(path), json).unwrap();
+                    // Merge by pointer: two entries share the settings file.
+                    let p = dir.path().join(path);
+                    let mut root: serde_json::Value = std::fs::read_to_string(&p)
+                        .ok()
+                        .and_then(|t| serde_json::from_str(&t).ok())
+                        .unwrap_or_else(|| serde_json::json!({}));
+                    let mut cursor = &mut root;
+                    for seg in pointer.split('.') {
+                        cursor = cursor
+                            .as_object_mut()
+                            .unwrap()
+                            .entry(seg)
+                            .or_insert_with(|| serde_json::json!({}));
+                    }
+                    if !cursor.is_array() {
+                        *cursor = serde_json::json!([]);
+                    }
+                    cursor
+                        .as_array_mut()
+                        .unwrap()
+                        .push(serde_json::from_str(&value_json).unwrap());
+                    std::fs::write(p, serde_json::to_string(&root).unwrap()).unwrap();
                 }
                 other => panic!("unexpected action {other:?}"),
             }
