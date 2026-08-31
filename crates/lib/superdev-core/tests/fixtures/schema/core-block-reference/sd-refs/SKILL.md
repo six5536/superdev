@@ -10,7 +10,7 @@ Name the core's workflow block, which exists, and its file_naming block, which d
 </goal>
 
 <bootstrap_actions>
-<tool_call name="read_file" path=".agents/core.md" when="always" />
+<tool_call name="read_file" path=".agents/superdev.md" when="always" />
 </bootstrap_actions>
 
 <process_actions>

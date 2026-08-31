@@ -210,7 +210,10 @@ fn schema_set(bundle: &Bundle) -> Result<SchemaSet> {
     let mut files: Vec<(String, String)> = Vec::new();
     for concept in &bundle.concepts {
         if concept.path.starts_with("schemas/") {
-            files.push((concept.path.clone(), read(&bundle.root.join(&concept.path))?));
+            files.push((
+                concept.path.clone(),
+                read(&bundle.root.join(&concept.path))?,
+            ));
         }
     }
     Ok(SchemaSet::load(&files).0)
@@ -405,16 +408,20 @@ mod tests {
             &"issues/done/issue-001-bug-a.md -> issues/open/issue-001-bug-a.md".to_string()
         ));
         assert!(
-            repair
-                .written
-                .contains(&"issues/issue-002-bug-b.md -> issues/done/issue-002-bug-b.md".to_string())
+            repair.written.contains(
+                &"issues/issue-002-bug-b.md -> issues/done/issue-002-bug-b.md".to_string()
+            )
         );
         assert!(knowledge.join("issues/open/issue-001-bug-a.md").is_file());
         assert!(knowledge.join("issues/done/issue-002-bug-b.md").is_file());
 
         let citing = std::fs::read_to_string(knowledge.join("citing.md")).unwrap();
-        assert!(citing.contains("[sokf:issue-001-bug-a]: /knowledge/issues/open/issue-001-bug-a.md"));
-        assert!(citing.contains("[sokf:issue-002-bug-b]: /knowledge/issues/done/issue-002-bug-b.md"));
+        assert!(
+            citing.contains("[sokf:issue-001-bug-a]: /knowledge/issues/open/issue-001-bug-a.md")
+        );
+        assert!(
+            citing.contains("[sokf:issue-002-bug-b]: /knowledge/issues/done/issue-002-bug-b.md")
+        );
 
         let bundle = load_bundle(&knowledge).unwrap();
         assert!(

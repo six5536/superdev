@@ -14,7 +14,7 @@ The MUST NOT rules below are from SPEC §4, §5, §7 — never break these.
 </constraints>
 
 <bootstrap_actions>
-<tool_call name="read_file" path=".agents/core.md" when="always" />
+<tool_call name="read_file" path=".agents/superdev.md" when="always" />
 <tool_call name="read_file" path=".agents/sokf/SPEC.md" when="before editing" />
 <tool_call name="read_file" path=".agents/professionalism.md" when="before editing" />
 </bootstrap_actions>

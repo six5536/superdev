@@ -10,7 +10,7 @@ You build exactly one slice and nothing beyond it. Implement the slice identifie
 </goal>
 
 <bootstrap_actions>
-<tool_call name="read_file" path=".agents/core.md" when="always" />
+<tool_call name="read_file" path=".agents/superdev.md" when="always" />
 <tool_call name="sokf_read" id="feature-plan-{nnn}-{slug}" when="always" />
 <tool_call name="sokf_read" id="issue-{nnn}-{kind}-{slug}" when="always" />
 <tool_call name="sokf_read" id="{each contract the framed issue links}" when="always" />

@@ -11,7 +11,7 @@ You bring the repo's files up to date with the project template shipped in the i
 </goal>
 
 <bootstrap_actions>
-<tool_call name="read_file" path=".agents/core.md" when="always" />
+<tool_call name="read_file" path=".agents/superdev.md" when="always" />
 <tool_call name="read_file" path=".superdev/config.toml" when="if exists" />
 </bootstrap_actions>
 

@@ -11,6 +11,17 @@ publish a version it cannot find a heading for.
 
 ## [Unreleased]
 
+### Fixed
+
+- **The core file is checked again.** The grammar's core kind matched the
+  file by the basename `core.md`, which the aggregator rename removed, so
+  `.agents/superdev.md` was claimed by no kind and skipped by every
+  `superdev validate` run. The kind now matches `superdev.md`, and the
+  `unit|core` duplication pair is gone: the core file is a generated
+  aggregator that embeds the units' prose by design, so the pair could only
+  ever fire on intended content. The skill bootstraps and the CLI contract
+  that still named `.agents/core.md` now name `.agents/superdev.md`.
+
 ### Changed
 
 - **Documents are filed by lifecycle.** Breaking change to the knowledge

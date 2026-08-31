@@ -630,13 +630,14 @@ kinds:
       root tag named for the ecosystem."
     match:
       basename:
-        - core.md
+        - superdev.md
     requireH1: true
     balancedTags: true
     collectBlocks: true
 duplication:
   doc: One home per statement. A flagged pair means one occurrence must become a reference to the
-    other's home.
+    other's home. There is no unit|core pair; the core file is a generated aggregator that embeds
+    the units' prose by design.
   minTokens: 5
   threshold: 0.85
   withinFileKinds:
@@ -644,7 +645,6 @@ duplication:
     - core
   crossPairs:
     - unit|unit
-    - unit|core
     - unit|schema
   exemptCrossUnitElements:
     - step

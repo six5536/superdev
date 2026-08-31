@@ -10,7 +10,7 @@ Brainstorm ideas, explore solutions, and evaluate options for the topic given in
 </goal>
 
 <bootstrap_actions>
-<tool_call name="read_file" path=".agents/core.md" when="always" />
+<tool_call name="read_file" path=".agents/superdev.md" when="always" />
 <tool_call name="sokf_search" query="{existing knowledge on the topic}" when="always" />
 <tool_call name="sokf_read" id="architecture" when="if exists" />
 <tool_call name="codegraph_explore" query="{existing code}" when="if relevant" />

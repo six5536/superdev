@@ -154,7 +154,10 @@ mod tests {
     const ISSUE_SCHEMA: &str = "---\ntype: Schema\n---\n````yaml\nfrontmatter:\n  type:\n    const: BugReport\n  lifecycle:\n    enum: [open, done, wontfix]\n````\n";
 
     fn set() -> SchemaSet {
-        let files = vec![("schemas/bug-report.md".to_string(), ISSUE_SCHEMA.to_string())];
+        let files = vec![(
+            "schemas/bug-report.md".to_string(),
+            ISSUE_SCHEMA.to_string(),
+        )];
         let (set, findings) = SchemaSet::load(&files);
         assert!(findings.is_empty());
         set
@@ -170,7 +173,10 @@ mod tests {
 
     #[test]
     fn a_filed_document_with_a_valid_value_passes() {
-        let findings = check(&[subject("issues/open/issue-001-bug-x.md", Some("open"))], &set());
+        let findings = check(
+            &[subject("issues/open/issue-001-bug-x.md", Some("open"))],
+            &set(),
+        );
         assert!(findings.is_empty());
     }
 
@@ -184,7 +190,10 @@ mod tests {
 
     #[test]
     fn a_value_outside_the_enum_names_value_and_enum() {
-        let findings = check(&[subject("issues/open/issue-001-bug-x.md", Some("closed"))], &set());
+        let findings = check(
+            &[subject("issues/open/issue-001-bug-x.md", Some("closed"))],
+            &set(),
+        );
         assert_eq!(findings.len(), 1);
         assert!(findings[0].message.contains("`closed`"));
         assert!(findings[0].message.contains("open, done, wontfix"));
@@ -192,14 +201,20 @@ mod tests {
 
     #[test]
     fn a_misfiled_document_is_reported_with_its_folder() {
-        let findings = check(&[subject("issues/done/issue-001-bug-x.md", Some("open"))], &set());
+        let findings = check(
+            &[subject("issues/done/issue-001-bug-x.md", Some("open"))],
+            &set(),
+        );
         assert_eq!(findings.len(), 1);
         assert!(findings[0].message.contains("`done/`"));
     }
 
     #[test]
     fn an_unfiled_document_is_reported_with_its_target() {
-        let findings = check(&[subject("issues/issue-001-bug-x.md", Some("open"))], &set());
+        let findings = check(
+            &[subject("issues/issue-001-bug-x.md", Some("open"))],
+            &set(),
+        );
         assert_eq!(findings.len(), 1);
         assert!(findings[0].message.contains("unfiled"));
         assert!(findings[0].message.contains("`open/`"));
@@ -234,6 +249,9 @@ mod tests {
             Some("contracts/public/open/c.md")
         );
         assert_eq!(target("issues/open/i.md", "open", &allowed), None);
-        assert_eq!(target("i.md", "open", &allowed).as_deref(), Some("open/i.md"));
+        assert_eq!(
+            target("i.md", "open", &allowed).as_deref(),
+            Some("open/i.md")
+        );
     }
 }

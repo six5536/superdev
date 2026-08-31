@@ -23,6 +23,8 @@ workflow.
 * [Links address ids][sokf:plan-010-adhoc-links-address-ids] - SOKF 0.4 gives a body link an id-addressed form, superdev validate --fix converts the tree to it, and a renamed or moved concept stops breaking the documents that cite it.
 * [Documents are filed by lifecycle][sokf:plan-011-adhoc-filing-by-lifecycle] - one lifecycle field replaces two vocabularies, every document sits in a folder named for its state, and a document left in the base directory is unfiled — an error the fix pass repairs.
 * [The workflow becomes contract-driven][sokf:plan-012-adhoc-contract-driven-workflow] - the seven-phase spec-driven workflow becomes five contract-driven phases — criteria move into the feature-request as EARS sentences, contracts become durable in public/ and internal/, the spec documents are migrated and deleted, and the skills merge to match.
+* [Bring every schema in line with its own rules and the workflow][sokf:plan-014-adhoc-schema-review-findings] - the schema review's findings land — worked examples satisfy their own schemas, the report schemas gain identity and filing, stale vocabulary leaves, the contract, ADR and idea shapes unify, and the pack mirror stays byte-identical.
+* [Integrate runs /code-review once, at the last slice][sokf:plan-015-adhoc-code-review-at-the-last-slice] - the per-slice /code-review in integrate becomes one feature-wide review at the last slice, over the whole diff, with findings returning to build as today.
 
 <!-- sokf:links -->
 [sokf:plan-001-feature-flatten-crate-api]: /knowledge/plans/open/plan-001-feature-flatten-crate-api.md
@@ -38,3 +40,5 @@ workflow.
 [sokf:plan-011-adhoc-filing-by-lifecycle]: /knowledge/plans/done/plan-011-adhoc-filing-by-lifecycle.md
 [sokf:plan-012-adhoc-contract-driven-workflow]: /knowledge/plans/done/plan-012-adhoc-contract-driven-workflow.md
 [sokf:plan-013-feature-workflow-autonomy]: /knowledge/plans/done/plan-013-feature-workflow-autonomy.md
+[sokf:plan-014-adhoc-schema-review-findings]: /knowledge/plans/open/plan-014-adhoc-schema-review-findings.md
+[sokf:plan-015-adhoc-code-review-at-the-last-slice]: /knowledge/plans/open/plan-015-adhoc-code-review-at-the-last-slice.md

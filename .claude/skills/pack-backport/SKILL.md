@@ -15,7 +15,7 @@ The pack under `/pack/` is the source of truth; the files under `.claude/skills/
 </constraints>
 
 <bootstrap_actions>
-<tool_call name="read_file" path=".agents/core.md" when="always" />
+<tool_call name="read_file" path=".agents/superdev.md" when="always" />
 </bootstrap_actions>
 
 <process_actions>

@@ -142,7 +142,7 @@ server use it, `validate` never opens it.
   checks the knowledge against the specification; the schema half checks each
   document against the schema its frontmatter `type` names — sections present,
   in order, none prohibited, declared table columns, the line limit — and the
-  skills and `.agents/core.md` against the grammar. A document whose `type`
+  skills and `.agents/superdev.md` against the grammar. A document whose `type`
   names no schema is reported, because a type that resolves to nothing reads
   as governed and is not.
 

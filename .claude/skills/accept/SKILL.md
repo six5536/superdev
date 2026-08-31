@@ -10,7 +10,7 @@ You judge the whole feature on merged code, as the user will experience it. This
 </goal>
 
 <bootstrap_actions>
-<tool_call name="read_file" path=".agents/core.md" when="always" />
+<tool_call name="read_file" path=".agents/superdev.md" when="always" />
 <tool_call name="read_file" path="knowledge/schemas/bug-report.md" when="always" />
 <tool_call name="sokf_read" id="issue-{nnn}-{kind}-{slug}" when="always" />
 <tool_call name="sokf_read" id="testing-strategy" when="always" />

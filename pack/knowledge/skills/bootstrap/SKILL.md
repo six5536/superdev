@@ -14,7 +14,7 @@ A harvest relocates one durable fact from a source into the canonical knowledge,
 </constraints>
 
 <bootstrap_actions>
-<tool_call name="read_file" path=".agents/core.md" when="always" />
+<tool_call name="read_file" path=".agents/superdev.md" when="always" />
 <tool_call name="read_file" path=".agents/sokf/SPEC.md" when="before writing concepts" />
 </bootstrap_actions>
 

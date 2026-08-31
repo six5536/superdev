@@ -1173,9 +1173,13 @@ mod tests {
 
     #[test]
     fn the_live_core_passes_and_defines_its_blocks() {
-        let path: PathBuf = [env!("CARGO_MANIFEST_DIR"), "../../..", ".agents/superdev.md"]
-            .iter()
-            .collect();
+        let path: PathBuf = [
+            env!("CARGO_MANIFEST_DIR"),
+            "../../..",
+            ".agents/superdev.md",
+        ]
+        .iter()
+        .collect();
         let text = std::fs::read_to_string(path).unwrap();
         let mut errs = Vec::new();
         let blocks = check_core(&text, &mut errs, &grammar());

@@ -11,7 +11,7 @@ You turn a real project into template assets under `pack/projects/<name>/` — r
 </goal>
 
 <bootstrap_actions>
-<tool_call name="read_file" path=".agents/core.md" when="always" />
+<tool_call name="read_file" path=".agents/superdev.md" when="always" />
 <tool_call name="read_file" path="pack/projects/{name}/" when="if refreshing a shipped template" />
 </bootstrap_actions>
 

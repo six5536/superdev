@@ -10,7 +10,7 @@ You write throwaway code that answers one design question.
 </goal>
 
 <bootstrap_actions>
-<tool_call name="read_file" path=".agents/core.md" when="always" />
+<tool_call name="read_file" path=".agents/superdev.md" when="always" />
 <tool_call name="read_file" path=".claude/skills/prototype/LOGIC.md" when="if logic branch" />
 <tool_call name="read_file" path=".claude/skills/prototype/UI.md" when="if UI branch" />
 </bootstrap_actions>

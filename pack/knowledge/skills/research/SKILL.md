@@ -10,7 +10,7 @@ You answer questions from primary sources and file the findings in the canonical
 </goal>
 
 <bootstrap_actions>
-<tool_call name="read_file" path=".agents/core.md" when="always" />
+<tool_call name="read_file" path=".agents/superdev.md" when="always" />
 <tool_call name="read_file" path="knowledge/schemas/research.md" when="always" />
 <tool_call name="sokf_search" query="{existing findings on the topic}" when="always" />
 </bootstrap_actions>
