@@ -106,6 +106,14 @@ publish a version it cannot find a heading for.
   hook's `hooks.Stop` entry into `.claude/settings.json` beside the
   PostToolUse one, claimed in the lock the same way. See P013.
 
+- **A feature plan models its dependencies.** Each slice carries a
+  `Depends-on:` line — slice numbers in either direction, or none — and
+  the plan may carry a `Deferred decisions` section holding the questions
+  an unattended run could not answer. The slice list is ordered so every
+  slice follows its dependencies, a forward reference never renumbers the
+  slices already written, and the feature-plan skill refuses a cycle. See
+  P013.
+
 - **`superdev validate`.** One command checks both specs this repository
   owns: the SOKF knowledge, and every document against the schema its `type`
   names — the skills and `.agents/core.md` included, against the grammar

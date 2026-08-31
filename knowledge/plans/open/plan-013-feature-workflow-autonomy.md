@@ -84,7 +84,7 @@ decisions are ADR-018 through ADR-021 and the seam is
 
 ### Slice 4: Dependencies in the plan format
 
-- [ ] Done — ticked by integrate at merge.
+- [x] Done — ticked by integrate at merge.
 - Depends-on: none.
 - Change: `Depends-on:` per slice and a `## Deferred decisions` section
   in the feature-plan template and `schema-feature-plan`, in `pack/` and

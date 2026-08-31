@@ -37,6 +37,10 @@
 * [validate reads a file named on the command line as a skill, whatever it is][sokf:issue-019-bug-validate-reads-a-named-file-as-a-skill] - superdev validate knowledge/architecture.md reports nine errors about missing skill blocks, because a named path takes the grammar's fallback kind; the document is never checked against the schema its type names, so the check a path argument most obviously invites is the one it cannot run.
 * [A schema's worked example is the thing agents copy, and it is the one part of the schema nothing checks][sokf:issue-022-feature-request-a-schemas-worked-example-is-checked-by-nothing] - every schema carries an `example:` block showing a conforming document, and no check reads it — five of the twenty-three example ids on file broke their own schema's id pattern, left behind by a migration that changed the pattern and not the example.
 
+## The engine
+
+* [A claimed file superdev never wrote has no lock hash, so its first rewrite misreports as a user edit][sokf:issue-025-bug-a-claim-never-written-gets-no-lock-hash] - the lock reconcile refreshes existing entries and never adds one for a claim already satisfied on disk, so all 53 shipped schemas were unrecorded and each first rewrite reports "overwrote a user-edited file" and spawns a backup.
+
 ## The workflow
 
 * [The workflow cannot deliver a feature unattended][sokf:issue-024-feature-request-the-workflow-cannot-run-unattended] - every phase boundary stops and waits for the user, no feature gets a branch of its own, a plan models no slice dependencies, and integrate leaves its record edits uncommitted.
@@ -67,3 +71,4 @@
 [sokf:issue-022-feature-request-a-schemas-worked-example-is-checked-by-nothing]: /knowledge/issues/open/issue-022-feature-request-a-schemas-worked-example-is-checked-by-nothing.md
 [sokf:issue-023-feature-request-a-concept-path-written-outside-the-knowledge-is-checked-by-nothing]: /knowledge/issues/open/issue-023-feature-request-a-concept-path-written-outside-the-knowledge-is-checked-by-nothing.md
 [sokf:issue-024-feature-request-the-workflow-cannot-run-unattended]: /knowledge/issues/open/issue-024-feature-request-the-workflow-cannot-run-unattended.md
+[sokf:issue-025-bug-a-claim-never-written-gets-no-lock-hash]: /knowledge/issues/open/issue-025-bug-a-claim-never-written-gets-no-lock-hash.md
