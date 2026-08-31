@@ -13,7 +13,7 @@
 //! have to enumerate what to exclude, forever; scoping the input needs one
 //! rule.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 use serde::Deserialize;
 
@@ -367,7 +367,7 @@ pub fn check_examples(schemas: &[(String, String)]) -> Vec<Finding> {
             doc_type: None,
         };
         let mut broke = Vec::new();
-        check_one(&doc, &schema, &mut broke);
+        check_one(&doc, &schema, true, &mut broke);
         check_link_form(file, &lines[body_start..], &mut broke);
         findings.extend(broke.into_iter().map(|f| Finding {
             message: format!("example: {}", f.message),
@@ -379,30 +379,100 @@ pub fn check_examples(schemas: &[(String, String)]) -> Vec<Finding> {
 
 /// The form of an example body's links, per ADR-025: a concept link takes
 /// the `[text][sokf:<id>]` reference form, so a link whose target is a path
-/// into the knowledge — the `knowledge/` directory, in either the repo-root
-/// or the bare form — is an error. No id or target is resolved: a fictional
+/// into the knowledge is an error, and so is a `sokf:` destination — the
+/// concept-link form misspelled. No id or target is resolved: a fictional
 /// `sokf:` label passes, a URL or a repository path outside the knowledge
 /// keeps its ordinary markdown form, and an image names a picture, never a
 /// concept, so nothing is asked of one.
+///
+/// A reference link's destination comes from its definition line, so
+/// definitions are read directly — which also catches one nothing
+/// references, for which the markdown parser emits no event. The
+/// `sokf:`-labelled definitions of the generated block stay exempt: their
+/// knowledge paths are the accepted form's own plumbing.
 fn check_link_form(file: &str, body: &[&str], findings: &mut Vec<Finding>) {
-    for link in sokf::scan_body(&body.join("\n")).links {
+    let mut push = |message: String| {
+        findings.push(Finding {
+            file: file.to_string(),
+            message,
+            fatal: true,
+        });
+    };
+    let scan = sokf::scan_body(&body.join("\n"));
+    let image_dests: BTreeSet<&str> = scan
+        .links
+        .iter()
+        .filter(|l| l.image)
+        .map(|l| l.dest.as_str())
+        .collect();
+    for link in &scan.links {
         if link.id.is_some() || link.image {
             continue;
         }
-        let Some(path) = sokf::link_path(&link.dest) else {
+        if link.dest.starts_with(sokf::ID_LABEL) {
+            push(format!(
+                "body link writes `{}` as a destination — a concept link takes the \
+                 [text][sokf:<id>] reference form",
+                link.dest
+            ));
+            continue;
+        }
+        if !link.inline {
+            continue; // The destination is a definition's; reported below.
+        }
+        if let Some(path) = sokf::link_path(&link.dest)
+            && into_knowledge(path)
+        {
+            push(format!(
+                "body link names a path into the knowledge: {} — a concept link takes \
+                 the [text][sokf:<id>] form",
+                link.dest
+            ));
+        }
+    }
+    let fenced = super::read::fence_map(body);
+    for (line, _) in body.iter().zip(&fenced).filter(|&(_, f)| !f) {
+        let Some((label, target)) = link_definition(line) else {
             continue;
         };
-        if path.trim_start_matches('/').starts_with("knowledge/") {
-            findings.push(Finding {
-                file: file.to_string(),
-                message: format!(
-                    "body link names a path into the knowledge: {} — a concept link takes \
-                     the [text][sokf:<id>] form",
-                    link.dest
-                ),
-                fatal: true,
-            });
+        if label.starts_with(sokf::ID_LABEL) || image_dests.contains(target) {
+            continue;
         }
+        if let Some(path) = sokf::link_path(target)
+            && into_knowledge(path)
+        {
+            push(format!(
+                "body link names a path into the knowledge: {target} — a concept link takes \
+                 the [text][sokf:<id>] form"
+            ));
+        }
+    }
+}
+
+/// One `[label]: target` link definition line, footnotes excluded.
+fn link_definition(line: &str) -> Option<(&str, &str)> {
+    let rest = line.trim_start().strip_prefix('[')?;
+    let (label, rest) = rest.split_once("]:")?;
+    if label.starts_with('^') {
+        return None; // A footnote definition carries text, not a target.
+    }
+    Some((label, rest.split_whitespace().next().unwrap_or("")))
+}
+
+/// Whether a link target reads as a path into the knowledge — the
+/// `knowledge/` directory, spelled from the repository root, bare, or behind
+/// leading `./` and `../` segments. Form only, never resolved.
+fn into_knowledge(path: &str) -> bool {
+    let mut path = path;
+    loop {
+        let trimmed = path.trim_start_matches('/');
+        path = match trimmed
+            .strip_prefix("./")
+            .or_else(|| trimmed.strip_prefix("../"))
+        {
+            Some(rest) => rest,
+            None => break trimmed.starts_with("knowledge/"),
+        };
     }
 }
 
@@ -436,13 +506,15 @@ pub fn check_documents(docs: &[Document<'_>], set: &SchemaSet) -> Vec<Finding> {
             }
             continue;
         };
-        check_one(doc, schema, &mut findings);
+        check_one(doc, schema, false, &mut findings);
     }
     findings
 }
 
-/// One document against one schema.
-fn check_one(doc: &Document<'_>, schema: &DocSchema, findings: &mut Vec<Finding>) {
+/// One document against one schema. `example` marks a schema's example,
+/// which the filing check never reads, so `lifecycle` binds here rather
+/// than being deferred to it.
+fn check_one(doc: &Document<'_>, schema: &DocSchema, example: bool, findings: &mut Vec<Finding>) {
     let mut push = |message: String| {
         findings.push(Finding {
             file: doc.path.to_string(),
@@ -472,8 +544,16 @@ fn check_one(doc: &Document<'_>, schema: &DocSchema, findings: &mut Vec<Finding>
     }
 
     // One fence reading for the whole check: nested and `~~~` fences are
-    // read as `read::fence_map` reads them everywhere else.
-    let fenced = super::read::fence_map(&lines);
+    // read as `read::fence_map` reads them everywhere else. The frontmatter
+    // block is masked with the fences: a YAML comment opens with `#`, which
+    // is a comment and not a heading, so nothing in the block may satisfy a
+    // required section or trigger a prohibited one.
+    let mut fenced = super::read::fence_map(&lines);
+    if let Some(split) = super::read::split_frontmatter(&lines) {
+        for masked in fenced.iter_mut().take(split.body_start) {
+            *masked = true;
+        }
+    }
     let headings = headings(&lines, &fenced);
 
     for banned in &schema.sections_prohibited {
@@ -573,7 +653,7 @@ fn check_one(doc: &Document<'_>, schema: &DocSchema, findings: &mut Vec<Finding>
     }
 
     check_columns(schema, &headings, &positions, &lines, &fenced, &mut push);
-    check_frontmatter(&lines, schema, &mut push);
+    check_frontmatter(&lines, schema, example, &mut push);
 }
 
 /// The body of the section whose heading is the `h`-th: from the line after
@@ -602,13 +682,20 @@ fn body_range(
 /// satisfy a scalar constraint and is a mismatch like any other. A
 /// `lifecycle` key with an enum is the filing check's (P011), which reports
 /// absence, the value against the enum, and the folder; reading it here too
-/// would say one fault twice. Without an enum nothing else reads the key,
+/// would say one fault twice. That deferral covers real, filed documents
+/// only: inside an `example`, which the filing check never reads, the key
+/// binds here or nowhere. Without an enum nothing else reads the key,
 /// and its constraints bind here like any other's.
-fn check_frontmatter(lines: &[&str], schema: &DocSchema, push: &mut impl FnMut(String)) {
+fn check_frontmatter(
+    lines: &[&str],
+    schema: &DocSchema,
+    example: bool,
+    push: &mut impl FnMut(String),
+) {
     let fm = super::read::split_frontmatter(lines).map_or_else(Vec::new, |s| s.fm);
     let entries = super::read::parse_frontmatter(&fm);
     for (key, constraint) in schema.frontmatter.iter() {
-        if key == "lifecycle" && schema.lifecycle_enum().is_some() {
+        if !example && key == "lifecycle" && schema.lifecycle_enum().is_some() {
             continue;
         }
         let Some(c) = constraint else { continue };
@@ -990,7 +1077,7 @@ mod tests {
             doc_type: Some("T"),
         };
         let mut findings = Vec::new();
-        check_one(&doc, &schema, &mut findings);
+        check_one(&doc, &schema, false, &mut findings);
         assert_eq!(findings.len(), 1, "{findings:#?}");
         assert!(findings[0].message.contains("missing required section"));
     }
@@ -1008,7 +1095,7 @@ mod tests {
             doc_type: Some("T"),
         };
         let mut findings = Vec::new();
-        check_one(&doc, &schema, &mut findings);
+        check_one(&doc, &schema, false, &mut findings);
         assert_eq!(findings.len(), 1, "{findings:#?}");
         assert!(findings[0].message.contains("orders them the other way"));
     }
@@ -1024,7 +1111,7 @@ mod tests {
             doc_type: Some("T"),
         };
         let mut findings = Vec::new();
-        check_one(&doc, &schema, &mut findings);
+        check_one(&doc, &schema, false, &mut findings);
         let messages: Vec<&str> = findings.iter().map(|f| f.message.as_str()).collect();
         assert!(
             messages.iter().any(|m| m.contains("prohibited section")),
@@ -1044,7 +1131,7 @@ mod tests {
             doc_type: Some("T"),
         };
         let mut findings = Vec::new();
-        check_one(&at, &schema, &mut findings);
+        check_one(&at, &schema, false, &mut findings);
         assert!(findings.is_empty(), "{findings:#?}");
 
         let over = Document {
@@ -1053,7 +1140,7 @@ mod tests {
             doc_type: Some("T"),
         };
         let mut findings = Vec::new();
-        check_one(&over, &schema, &mut findings);
+        check_one(&over, &schema, false, &mut findings);
         assert_eq!(findings.len(), 1, "{findings:#?}");
         assert!(findings[0].message.starts_with("4 lines, over"));
     }
@@ -1072,6 +1159,7 @@ mod tests {
                 doc_type: Some("T"),
             },
             &schema,
+            false,
             &mut findings,
         );
         assert_eq!(findings.len(), 1, "{findings:#?}");
@@ -1086,6 +1174,7 @@ mod tests {
                 doc_type: Some("T"),
             },
             &schema,
+            false,
             &mut ok,
         );
         assert!(ok.is_empty(), "{ok:#?}");
@@ -1139,7 +1228,7 @@ mod tests {
             doc_type: Some("T"),
         };
         let mut findings = Vec::new();
-        check_one(&doc, &schema, &mut findings);
+        check_one(&doc, &schema, false, &mut findings);
         assert_eq!(findings.len(), 1, "{findings:#?}");
         assert_eq!(findings[0].file, "a.md");
         assert!(findings[0].message.contains("\"Items\""), "{findings:#?}");
@@ -1160,7 +1249,7 @@ mod tests {
             doc_type: Some("T"),
         };
         let mut findings = Vec::new();
-        check_one(&doc, &schema, &mut findings);
+        check_one(&doc, &schema, false, &mut findings);
         assert!(findings.is_empty(), "{findings:#?}");
     }
 
@@ -1184,7 +1273,7 @@ mod tests {
                 doc_type: Some("T"),
             };
             let mut findings = Vec::new();
-            check_one(&ok, &schema, &mut findings);
+            check_one(&ok, &schema, false, &mut findings);
             assert!(findings.is_empty(), "{kind}: {findings:#?}");
 
             let bad = Document {
@@ -1193,7 +1282,7 @@ mod tests {
                 doc_type: Some("T"),
             };
             let mut findings = Vec::new();
-            check_one(&bad, &schema, &mut findings);
+            check_one(&bad, &schema, false, &mut findings);
             assert_eq!(findings.len(), 1, "{kind}: {findings:#?}");
             assert!(findings[0].message.contains(kind), "{kind}: {findings:#?}");
         }
@@ -1213,7 +1302,7 @@ mod tests {
             doc_type: Some("T"),
         };
         let mut findings = Vec::new();
-        check_one(&doc, &schema, &mut findings);
+        check_one(&doc, &schema, false, &mut findings);
         assert!(findings.is_empty(), "{findings:#?}");
 
         // A bullet after the section's end does not count.
@@ -1223,7 +1312,7 @@ mod tests {
             doc_type: Some("T"),
         };
         let mut findings = Vec::new();
-        check_one(&after, &schema, &mut findings);
+        check_one(&after, &schema, false, &mut findings);
         assert_eq!(findings.len(), 1, "{findings:#?}");
     }
 
@@ -1241,7 +1330,7 @@ mod tests {
             doc_type: Some("T"),
         };
         let mut findings = Vec::new();
-        check_one(&fenced_only, &schema, &mut findings);
+        check_one(&fenced_only, &schema, false, &mut findings);
         assert_eq!(findings.len(), 1, "{findings:#?}");
 
         let bullet_after_fence = Document {
@@ -1250,7 +1339,7 @@ mod tests {
             doc_type: Some("T"),
         };
         let mut findings = Vec::new();
-        check_one(&bullet_after_fence, &schema, &mut findings);
+        check_one(&bullet_after_fence, &schema, false, &mut findings);
         assert!(findings.is_empty(), "{findings:#?}");
     }
 
@@ -1268,7 +1357,7 @@ mod tests {
             doc_type: Some("T"),
         };
         let mut findings = Vec::new();
-        check_one(&doc, &schema, &mut findings);
+        check_one(&doc, &schema, false, &mut findings);
         assert_eq!(findings.len(), 1, "{findings:#?}");
         assert!(findings[0].message.contains("no bullet"), "{findings:#?}");
 
@@ -1281,7 +1370,7 @@ mod tests {
             doc_type: Some("T"),
         };
         let mut findings = Vec::new();
-        check_one(&doc, &schema, &mut findings);
+        check_one(&doc, &schema, false, &mut findings);
         assert!(findings.is_empty(), "{findings:#?}");
     }
 
@@ -1299,7 +1388,7 @@ mod tests {
             doc_type: Some("T"),
         };
         let mut findings = Vec::new();
-        check_one(&doc, &schema, &mut findings);
+        check_one(&doc, &schema, false, &mut findings);
         assert!(findings.is_empty(), "{findings:#?}");
     }
 
@@ -1316,7 +1405,7 @@ mod tests {
             doc_type: Some("T"),
         };
         let mut findings = Vec::new();
-        check_one(&doc, &schema, &mut findings);
+        check_one(&doc, &schema, false, &mut findings);
         assert_eq!(findings.len(), 1, "{findings:#?}");
         assert!(
             findings[0].message.contains("no paragraph line"),
@@ -1364,7 +1453,7 @@ mod tests {
             doc_type: Some("T"),
         };
         let mut findings = Vec::new();
-        check_one(&doc, &schema, &mut findings);
+        check_one(&doc, &schema, false, &mut findings);
         assert_eq!(findings.len(), 1, "{findings:#?}");
         assert_eq!(findings[0].file, "a.md");
         assert!(
@@ -1382,7 +1471,7 @@ mod tests {
             doc_type: Some("T"),
         };
         let mut findings = Vec::new();
-        check_one(&ok, &schema, &mut findings);
+        check_one(&ok, &schema, false, &mut findings);
         assert!(findings.is_empty(), "{findings:#?}");
     }
 
@@ -1400,7 +1489,7 @@ mod tests {
             doc_type: Some("T"),
         };
         let mut findings = Vec::new();
-        check_one(&doc, &schema, &mut findings);
+        check_one(&doc, &schema, false, &mut findings);
         let messages: Vec<&str> = findings.iter().map(|f| f.message.as_str()).collect();
         assert_eq!(findings.len(), 2, "{findings:#?}");
         assert!(
@@ -1430,7 +1519,7 @@ mod tests {
             doc_type: Some("T"),
         };
         let mut findings = Vec::new();
-        check_one(&doc, &schema, &mut findings);
+        check_one(&doc, &schema, false, &mut findings);
         assert!(findings.is_empty(), "{findings:#?}");
     }
 
@@ -1449,7 +1538,7 @@ mod tests {
             doc_type: Some("T"),
         };
         let mut findings = Vec::new();
-        check_one(&doc, &schema, &mut findings);
+        check_one(&doc, &schema, false, &mut findings);
         assert!(findings.is_empty(), "{findings:#?}");
     }
 
@@ -1468,7 +1557,7 @@ mod tests {
             doc_type: Some("T"),
         };
         let mut findings = Vec::new();
-        check_one(&doc, &schema, &mut findings);
+        check_one(&doc, &schema, false, &mut findings);
         let messages: Vec<&str> = findings.iter().map(|f| f.message.as_str()).collect();
         assert_eq!(findings.len(), 2, "{findings:#?}");
         assert_eq!(findings[0].file, "a.md");
@@ -1499,7 +1588,7 @@ mod tests {
             doc_type: Some("T"),
         };
         let mut findings = Vec::new();
-        check_one(&broken, &schema, &mut findings);
+        check_one(&broken, &schema, false, &mut findings);
         assert_eq!(findings.len(), 1, "{findings:#?}");
         assert!(
             findings[0].message.contains("`id` is `t-1`")
@@ -1513,7 +1602,7 @@ mod tests {
             doc_type: Some("T"),
         };
         let mut findings = Vec::new();
-        check_one(&ok, &schema, &mut findings);
+        check_one(&ok, &schema, false, &mut findings);
         assert!(findings.is_empty(), "{findings:#?}");
     }
 
@@ -1531,7 +1620,7 @@ mod tests {
             doc_type: Some("T"),
         };
         let mut findings = Vec::new();
-        check_one(&doc, &schema, &mut findings);
+        check_one(&doc, &schema, false, &mut findings);
         assert!(findings.is_empty(), "{findings:#?}");
 
         // A key carrying only a comment is absent.
@@ -1542,7 +1631,7 @@ mod tests {
             doc_type: Some("T"),
         };
         let mut findings = Vec::new();
-        check_one(&doc, &schema, &mut findings);
+        check_one(&doc, &schema, false, &mut findings);
         assert_eq!(findings.len(), 1, "{findings:#?}");
         assert!(
             findings[0].message.contains("`id` is absent"),
@@ -1564,7 +1653,7 @@ mod tests {
             doc_type: Some("T"),
         };
         let mut findings = Vec::new();
-        check_one(&doc, &schema, &mut findings);
+        check_one(&doc, &schema, false, &mut findings);
         assert!(findings.is_empty(), "{findings:#?}");
     }
 
@@ -1582,7 +1671,7 @@ mod tests {
             doc_type: Some("T"),
         };
         let mut findings = Vec::new();
-        check_one(&doc, &with_enum, &mut findings);
+        check_one(&doc, &with_enum, false, &mut findings);
         assert!(
             findings.is_empty(),
             "the filing check reports it: {findings:#?}"
@@ -1591,7 +1680,7 @@ mod tests {
         let without_enum =
             schema_of("frontmatter:\n  type:\n    const: T\n  lifecycle:\n    required: true\n");
         let mut findings = Vec::new();
-        check_one(&doc, &without_enum, &mut findings);
+        check_one(&doc, &without_enum, false, &mut findings);
         assert_eq!(findings.len(), 1, "{findings:#?}");
         assert!(
             findings[0].message.contains("`lifecycle` is absent"),
@@ -1611,7 +1700,7 @@ mod tests {
             doc_type: Some("T"),
         };
         let mut findings = Vec::new();
-        check_one(&doc, &schema, &mut findings);
+        check_one(&doc, &schema, false, &mut findings);
         assert_eq!(findings.len(), 1, "{findings:#?}");
         assert!(
             findings[0].message.contains("`id` is not a scalar"),
@@ -1863,6 +1952,116 @@ mod tests {
         );
         let findings = check_examples(&schemas);
         assert!(findings.is_empty(), "{findings:#?}");
+    }
+
+    /// Review finding 1 (code-review-002): an example's `lifecycle` binds
+    /// here. The filing check owns the key only for real, filed documents,
+    /// which an example is not — deferring it inside the example check made
+    /// the constraint bind nothing.
+    #[test]
+    fn an_example_lifecycle_breaking_its_enum_is_a_finding_on_the_schema_file() {
+        let contract = "frontmatter:\n  type:\n    const: T\n  lifecycle:\n    required: true\n\
+                        \x20   enum: [open, done]\n";
+        let wrong = with_example(contract, "---\ntype: T\nlifecycle: bananas\n---\n\n# A\n");
+        let findings = check_examples(&wrong);
+        assert_eq!(findings.len(), 1, "{findings:#?}");
+        assert!(
+            findings[0]
+                .message
+                .contains("example: frontmatter `lifecycle` is `bananas`"),
+            "{findings:#?}"
+        );
+
+        let absent = with_example(contract, "---\ntype: T\n---\n\n# A\n");
+        let findings = check_examples(&absent);
+        assert_eq!(findings.len(), 1, "{findings:#?}");
+        assert!(
+            findings[0]
+                .message
+                .contains("example: frontmatter `lifecycle` is absent"),
+            "{findings:#?}"
+        );
+    }
+
+    /// Review finding 2 (code-review-002): a knowledge path behind leading
+    /// `./` or `../` segments is still a path into the knowledge.
+    #[test]
+    fn a_dot_segmented_knowledge_path_in_an_example_is_a_finding() {
+        let schemas = with_example(
+            "frontmatter:\n  type:\n    const: T\n",
+            "---\ntype: T\n---\n\n# A\n\nSee [a](./knowledge/a.md) and [b](../knowledge/b.md).\n",
+        );
+        let findings = check_examples(&schemas);
+        assert_eq!(findings.len(), 2, "{findings:#?}");
+        assert!(
+            findings
+                .iter()
+                .all(|f| f.message.contains("path into the knowledge")),
+            "{findings:#?}"
+        );
+    }
+
+    /// Review finding 3 (code-review-002): a YAML frontmatter comment is a
+    /// comment, not a heading — it neither satisfies a required section nor
+    /// triggers a prohibited one.
+    #[test]
+    fn a_frontmatter_comment_is_not_a_heading() {
+        let text = "---\ntype: Schema\n---\n\n````yaml\nfrontmatter:\n  type:\n    const: T\n\
+                    sections-prohibited: [Banned]\nsections:\n  - heading: A\n    level: 1\n\
+                    \x20   required: true\n````\n";
+        let (set, findings) = SchemaSet::load(&[("s.md".to_string(), text.to_string())]);
+        assert!(findings.is_empty(), "{findings:#?}");
+        let found = check_documents(
+            &[Document {
+                path: "a.md",
+                text: "---\ntype: T\n# A\n# Banned\n---\n\nprose\n",
+                doc_type: Some("T"),
+            }],
+            &set,
+        );
+        assert_eq!(found.len(), 1, "{found:#?}");
+        assert!(
+            found[0].message.contains("missing required section \"A\""),
+            "{found:#?}"
+        );
+    }
+
+    /// Review finding 4 (code-review-002): an inline `(sokf:<id>)`
+    /// destination is the concept-link form misspelled — the reference form
+    /// `[text][sokf:<id>]` is the accepted one.
+    #[test]
+    fn an_inline_sokf_destination_in_an_example_is_a_finding() {
+        let schemas = with_example(
+            "frontmatter:\n  type:\n    const: T\n",
+            "---\ntype: T\n---\n\n# A\n\nSee [config](sokf:config).\n",
+        );
+        let findings = check_examples(&schemas);
+        assert_eq!(findings.len(), 1, "{findings:#?}");
+        assert!(
+            findings[0].message.contains("sokf:config")
+                && findings[0].message.contains("[text][sokf:<id>]"),
+            "{findings:#?}"
+        );
+    }
+
+    /// Review finding 5 (code-review-002): a link definition naming a
+    /// knowledge path is caught even when nothing references it — while the
+    /// `sokf:`-labelled definitions of the generated block stay exempt, being
+    /// the accepted form's own plumbing.
+    #[test]
+    fn an_unreferenced_definition_naming_a_knowledge_path_is_a_finding() {
+        let schemas = with_example(
+            "frontmatter:\n  type:\n    const: T\n",
+            "---\ntype: T\n---\n\n# A\n\nprose\n\n[stray]: /knowledge/x.md\n",
+        );
+        let findings = check_examples(&schemas);
+        assert_eq!(findings.len(), 1, "{findings:#?}");
+        assert!(
+            findings[0]
+                .message
+                .contains("path into the knowledge: /knowledge/x.md"),
+            "{findings:#?}"
+        );
     }
 
     /// A schema with no example is the grammar check's finding, not this
