@@ -22,6 +22,8 @@ to the contracts it touched, and git holds the history.
 
 * [Run State Interface Contract][sokf:contract-009-interface-run-state] - the interface between the unattended loop's skill and its Stop hook — the run-state file, the verbs that write it, the hook's decision table, and the managed hook entry that arms it.
 
+* [Document Schemas Interface Contract][sokf:contract-010-interface-document-schemas] - the declaration vocabulary a document schema may carry — frontmatter constraints, section rules and content kinds — and what each declaration obliges the validator to check.
+
 <!-- sokf:links -->
 [sokf:contract-002-cli-superdev]: /knowledge/contracts/public/active/contract-002-cli-superdev.md
 [sokf:contract-003-mcp-sokf]: /knowledge/contracts/public/active/contract-003-mcp-sokf.md
@@ -31,3 +33,4 @@ to the contracts it touched, and git holds the history.
 [sokf:contract-007-interface-pack-resolution]: /knowledge/contracts/internal/active/contract-007-interface-pack-resolution.md
 [sokf:contract-008-file-format-template]: /knowledge/contracts/public/active/contract-008-file-format-template.md
 [sokf:contract-009-interface-run-state]: /knowledge/contracts/internal/active/contract-009-interface-run-state.md
+[sokf:contract-010-interface-document-schemas]: /knowledge/contracts/internal/active/contract-010-interface-document-schemas.md

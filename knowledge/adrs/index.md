@@ -22,6 +22,8 @@
 * [Run State Is a Session-Owned File Behind CLI Verbs, and the Hook Owns the Counter][sokf:adr-019-run-state-is-a-session-owned-file-behind-cli-verbs] - an unattended run is armed by .superdev/cache/run.toml, created exclusively by superdev run begin and owned by one session; the Stop hook body is superdev hook run, and the hook alone increments the watchdog counter, capped at ten continues without progress.
 * [A Blocked Run Ends Rather Than Pauses][sokf:adr-020-a-blocked-run-ends] - a run that hits a question only the user can answer writes it into the plan's deferred decisions and ends, releasing the run state; resuming is a fresh invocation that re-reads the plan and the answers.
 * [Nothing Unattended Reaches the Default Branch][sokf:adr-021-nothing-unattended-reaches-the-default-branch] - a feature runs on the branch /frame creates and an adhoc plan touching code on adhoc/<slug>; an unattended run commits and merges only there, and a human fast-forwards the default branch.
+* [A Frontmatter Key Is Required by a Per-Key Flag][sokf:adr-022-a-frontmatter-key-is-required-by-a-per-key-flag] - a schema marks a required frontmatter key with a `required` flag beside that key's constraints, mirroring the section rules' own vocabulary, so requiredness reads where the key is declared.
+* [A Content Kind Binds by Presence][sokf:adr-023-a-content-kind-binds-by-presence] - a section satisfies its declared content kind when the kind's form appears in its body — a bullet for bullet-list, a fenced block for code — with other content tolerated, so the kind names the section's substance rather than policing every line.
 
 <!-- sokf:links -->
 [sokf:adr-001-packs-manifest-section]: /knowledge/adrs/active/adr-001-packs-manifest-section.md
@@ -45,3 +47,5 @@
 [sokf:adr-019-run-state-is-a-session-owned-file-behind-cli-verbs]: /knowledge/adrs/active/adr-019-run-state-is-a-session-owned-file-behind-cli-verbs.md
 [sokf:adr-020-a-blocked-run-ends]: /knowledge/adrs/active/adr-020-a-blocked-run-ends.md
 [sokf:adr-021-nothing-unattended-reaches-the-default-branch]: /knowledge/adrs/active/adr-021-nothing-unattended-reaches-the-default-branch.md
+[sokf:adr-022-a-frontmatter-key-is-required-by-a-per-key-flag]: /knowledge/adrs/active/adr-022-a-frontmatter-key-is-required-by-a-per-key-flag.md
+[sokf:adr-023-a-content-kind-binds-by-presence]: /knowledge/adrs/active/adr-023-a-content-kind-binds-by-presence.md

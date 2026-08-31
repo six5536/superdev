@@ -4,6 +4,13 @@ id: issue-018-feature-request-the-schema-layer-checks-sections-and-nothing-else
 title: A schema declares content kinds and a frontmatter contract, and the validator reads neither
 description: P008 made schemas govern documents, but only their sections — the content kind under each heading and the frontmatter constraints beside it are declared on every schema and read by nothing, which is the fault P008 set out to cure, one level down.
 lifecycle: open
+links:
+  - rel: references
+    to: contract-002-cli-superdev
+    note: validate's schema half grows the content-kind and frontmatter checks.
+  - rel: references
+    to: contract-010-interface-document-schemas
+    note: New — the declaration vocabulary the schemas write and the validator reads.
 ---
 
 # Feature: the schema layer checks sections and nothing else
@@ -25,8 +32,8 @@ ever checked; the fix left two smaller versions of the same thing in place.
 Measured on this repository today:
 
 - **Content kinds.** 33 sections declare a `content` kind their body does not
-  match, across ten schemas. Whether all 33 are real is the open question
-  below, not a reason to leave the field unread.
+  match, across ten schemas — nearer 10 under the lead-in rule framing
+  settled (Comments), and either count is a field read by nothing.
 - **Frontmatter contracts.** `schema-adhoc-plan` declares
   `id: pattern '^plan-\d{3}-adhoc-[a-z0-9-]+$'` and the `title` and
   `description` constraints beside it, and no check reads any of them — an
@@ -122,5 +129,13 @@ frontmatter check covers both present values and required-key presence,
 with the schemas gaining the vocabulary to mark a key required; and
 issue-022's example checking stays a separate feature.
 
+2026-08-31 — Contract-design landed the trace: the
+[CLI contract][sokf:contract-002-cli-superdev]'s validate bullet grows
+the new checks, and the new
+[document-schemas interface contract][sokf:contract-010-interface-document-schemas]
+fixes the declaration vocabulary, per ADR-022 and ADR-023.
+
 <!-- sokf:links -->
+[sokf:contract-002-cli-superdev]: /knowledge/contracts/public/active/contract-002-cli-superdev.md
+[sokf:contract-010-interface-document-schemas]: /knowledge/contracts/internal/active/contract-010-interface-document-schemas.md
 [sokf:issue-022-feature-request-a-schemas-worked-example-is-checked-by-nothing]: /knowledge/issues/open/issue-022-feature-request-a-schemas-worked-example-is-checked-by-nothing.md

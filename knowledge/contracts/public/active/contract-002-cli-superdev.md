@@ -146,10 +146,16 @@ server use it, `validate` never opens it.
   ([P006 D-17][sokf:plan-006-adhoc-rust-format-validator]). The SOKF half
   checks the knowledge against the specification; the schema half checks each
   document against the schema its frontmatter `type` names — sections present,
-  in order, none prohibited, declared table columns, the line limit — and the
+  in order, none prohibited, declared table columns, the line limit, each
+  section's declared content kind present in its body, and the frontmatter
+  contract: a key marked required is present, and a present value satisfies
+  its `const`, `pattern` or `enum` (the vocabulary is
+  [contract-010][sokf:contract-010-interface-document-schemas]) — and the
   skills and `.agents/superdev.md` against the grammar. A document whose `type`
   names no schema is reported, because a type that resolves to nothing reads
-  as governed and is not.
+  as governed and is not; a schema declaring a rule the validator cannot read
+  — an unknown content kind, a pattern that does not compile — is reported
+  itself.
 
   Documents with no frontmatter to dispatch on — `README.md`, `CHANGELOG.md` —
   are named by a schema's `target-files` glob instead. The glob is matched
@@ -227,5 +233,6 @@ Unreleased. Every verb, flag and exit code above may change without notice.
 [sokf:configuration]: /knowledge/configuration.md
 [sokf:contract-003-mcp-sokf]: /knowledge/contracts/public/active/contract-003-mcp-sokf.md
 [sokf:contract-009-interface-run-state]: /knowledge/contracts/internal/active/contract-009-interface-run-state.md
+[sokf:contract-010-interface-document-schemas]: /knowledge/contracts/internal/active/contract-010-interface-document-schemas.md
 [sokf:error-handling]: /knowledge/error-handling.md
 [sokf:plan-006-adhoc-rust-format-validator]: /knowledge/plans/done/plan-006-adhoc-rust-format-validator.md
