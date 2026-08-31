@@ -179,7 +179,7 @@ fn init_sets_up_a_fresh_repo() {
     assert!(aggregator.starts_with("# Prime Directive"), "{aggregator}");
     assert!(aggregator.contains("<knowledge"), "{aggregator}");
     assert!(aggregator.contains("<code-exploration"), "{aggregator}");
-    assert!(aggregator.contains("<professionalism>"), "{aggregator}");
+    assert!(aggregator.contains("<grammar_rules>"), "{aggregator}");
     assert!(repo.join(".agents/sokf/SPEC.md").is_file());
     assert!(repo.join(".agents/sokf/changelog.md").is_file());
     assert!(repo.join(".agents/sokf/grammar.yaml").is_file());

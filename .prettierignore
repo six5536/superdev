@@ -6,7 +6,8 @@ templates/
 outputs/
 coverage/
 outputs/**
-.awa/
+.agents/
+.claude/
 *.lock
 schema/
 submodules/
