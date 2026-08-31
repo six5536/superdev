@@ -67,7 +67,7 @@ decisions are ADR-018 through ADR-021 and the seam is
 
 ### Slice 3: The managed Stop entry
 
-- [ ] Done — ticked by integrate at merge.
+- [x] Done — ticked by integrate at merge.
 - Depends-on: 2.
 - Change: `components/sokf.rs` declares the `hooks.Stop` JsonEntry with
   marker `superdev hook run`, claimed in the lock beside the PostToolUse

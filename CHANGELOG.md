@@ -102,7 +102,9 @@ publish a version it cannot find a heading for.
   run is armed for the payload's session it refuses to let the turn end,
   naming the next step, and it lets the run die after ten continues
   without an advance. Without a run state it is invisible, and it fails
-  open on an unreadable one. See P013.
+  open on an unreadable one. The knowledge capability's sync writes the
+  hook's `hooks.Stop` entry into `.claude/settings.json` beside the
+  PostToolUse one, claimed in the lock the same way. See P013.
 
 - **`superdev validate`.** One command checks both specs this repository
   owns: the SOKF knowledge, and every document against the schema its `type`
