@@ -12,6 +12,7 @@ workflow.
 * [Externally Sourced Content Packs — feature plan][sokf:plan-003-feature-content-packs] - deliver S014 in eighteen slices — move the content to /pack, reorganise it into pack layout, derive it from that layout, add the manifest and lock schemas, resolve local then git sources, wire ownership, teach init and update, make each release one command, make a committed path pin portable, dogfood it, then close the gaps acceptance found and the one deferred issue small enough to fix.
 * [Content pack hardening — feature plan][sokf:plan-005-feature-content-pack-hardening] - deliver ADR-012 to ADR-016 in seven slices — refuse an unsupported transport, refuse a symlink in a pack and let git decide what one is, give the spawn seam a deadline and an environment, bound the one unprompted request, prove a pin before writing it, and stop recording a digest nothing reads.
 * [Workflow autonomy][sokf:plan-013-feature-workflow-autonomy] - eight slices delivering the unattended workflow — the run state and its verbs, the Stop hook, the managed hook entry, the plan format's dependencies, the branching and commit conventions, the driver skill, and the records.
+* [Schema layer enforcement — feature plan][sokf:plan-016-feature-schema-layer-enforcement] - three slices making the validator read what the schemas declare — content kinds, the frontmatter contract, and the required-key vocabulary — each landing with the reconciliation it surfaces.
 
 ## Ad-hoc plans
 
@@ -42,3 +43,4 @@ workflow.
 [sokf:plan-013-feature-workflow-autonomy]: /knowledge/plans/done/plan-013-feature-workflow-autonomy.md
 [sokf:plan-014-adhoc-schema-review-findings]: /knowledge/plans/done/plan-014-adhoc-schema-review-findings.md
 [sokf:plan-015-adhoc-code-review-at-the-last-slice]: /knowledge/plans/done/plan-015-adhoc-code-review-at-the-last-slice.md
+[sokf:plan-016-feature-schema-layer-enforcement]: /knowledge/plans/open/plan-016-feature-schema-layer-enforcement.md
