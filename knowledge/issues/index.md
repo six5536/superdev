@@ -14,7 +14,6 @@
 * [An index entry may say anything about a concept, and nothing notices][sokf:issue-010-feature-request-index-entries-are-never-checked-against-their-concept] - SPEC §9 says an index entry should carry the linked concept's description, but check_indexes only tests that the target exists, so an index can drift from every concept it lists — or hold the only copy of something — and validate still passes.
 * [The shape SPEC §9 gives an index is described but never enforced][sokf:issue-011-feature-request-index-shape-is-described-but-not-enforced] - SPEC §9 fixes what an index.md looks like — no frontmatter, heading-grouped link lists, one entry per concept — but no validator checks any of it, so an index can carry frontmatter, drop its heading, or mix bullet styles and still pass.
 * [Five findings the repository alone can decide are only warnings, and go unread][sokf:issue-012-feature-request-five-decidable-findings-only-warn] - broken links, missing resources, missing sources, missing index targets and unjoined footnotes are all decidable from the tree, but SPEC §11 makes them warnings; the canonical knowledge carried 39 of them unactioned until someone happened to look.
-* [Sync would revert the schema migration and the conformance decision, and the pre-PR check says so 65 times][sokf:issue-016-bug-sync-would-revert-the-schema-migration] - the live tree carries the schema migration and ADR-017; /pack/ still carries what they replaced, so status --drift reports 65 changes and sync would restore 41 deleted templates, put the level ladder back into the AOKF spec, and overwrite 21 rewritten skills.
 
 ## Issue tracker
 
@@ -22,7 +21,6 @@
 
 ## The pack
 
-* [The pack has not been backported since the knowledge design started moving, and holds neither the schemas nor the types they name][sokf:issue-021-chore-backport-the-knowledge-design-to-the-pack] - four plans have reshaped the live knowledge design and none has been backported, so /pack/ still ships 56 templates the schemas replaced, 20 concepts typed against a vocabulary that no longer exists, and a manifest declaring SOKF 0.2.
 
 ## Naming
 
@@ -35,29 +33,32 @@
 
 ## The schema layer
 
-* [The pack ships 43 document templates and no schemas, so schema enforcement runs in this repository and nowhere else][sokf:issue-020-bug-the-schemas-do-not-ship] - superdev init writes the templates that produce documents and none of the schemas that check them, so a managed repo has nothing to dispatch against and every document passes unexamined — the capability P008 built reaches no user.
 * [A schema declares content kinds and a frontmatter contract, and the validator reads neither][sokf:issue-018-feature-request-the-schema-layer-checks-sections-and-nothing-else] - P008 made schemas govern documents, but only their sections — the content kind under each heading and the frontmatter constraints beside it are declared on every schema and read by nothing, which is the fault P008 set out to cure, one level down.
 * [validate reads a file named on the command line as a skill, whatever it is][sokf:issue-019-bug-validate-reads-a-named-file-as-a-skill] - superdev validate knowledge/architecture.md reports nine errors about missing skill blocks, because a named path takes the grammar's fallback kind; the document is never checked against the schema its type names, so the check a path argument most obviously invites is the one it cannot run.
+* [A schema's worked example is the thing agents copy, and it is the one part of the schema nothing checks][sokf:issue-022-feature-request-a-schemas-worked-example-is-checked-by-nothing] - every schema carries an `example:` block showing a conforming document, and no check reads it — five of the twenty-three example ids on file broke their own schema's id pattern, left behind by a migration that changed the pattern and not the example.
+
+## Link checking
+
+* [A skill naming a concept by path breaks silently when that concept moves, because link checking stops at the knowledge directory][sokf:issue-023-feature-request-a-concept-path-written-outside-the-knowledge-is-checked-by-nothing] - P010 made a link inside the SOKF knowledge survive a rename, but the eleven concept paths written in skills and agent files are checked by nothing, so the failure P010 removed from the knowledge still stands one directory away.
 
 <!-- sokf:links -->
-[sokf:issue-001-bug-update-can-pin-an-unreadable-pack-format]: /knowledge/issues/issue-001-bug-update-can-pin-an-unreadable-pack-format.md
-[sokf:issue-002-bug-no-time-bound-on-the-update-query]: /knowledge/issues/issue-002-bug-no-time-bound-on-the-update-query.md
-[sokf:issue-003-bug-a-local-pack-cannot-remove-what-it-dropped]: /knowledge/issues/issue-003-bug-a-local-pack-cannot-remove-what-it-dropped.md
-[sokf:issue-004-bug-a-path-packs-digest-churns-and-is-never-checked]: /knowledge/issues/issue-004-bug-a-path-packs-digest-churns-and-is-never-checked.md
-[sokf:issue-005-bug-a-backport-leaves-the-lock-stale]: /knowledge/issues/issue-005-bug-a-backport-leaves-the-lock-stale.md
-[sokf:issue-006-feature-request-content-packs-are-undocumented-for-users]: /knowledge/issues/issue-006-feature-request-content-packs-are-undocumented-for-users.md
-[sokf:issue-007-bug-a-pack-source-reaches-git-with-no-scheme-check]: /knowledge/issues/issue-007-bug-a-pack-source-reaches-git-with-no-scheme-check.md
-[sokf:issue-008-bug-a-symlinked-file-in-a-pack-is-followed]: /knowledge/issues/issue-008-bug-a-symlinked-file-in-a-pack-is-followed.md
-[sokf:issue-009-bug-a-skipped-symlink-says-nothing]: /knowledge/issues/issue-009-bug-a-skipped-symlink-says-nothing.md
-[sokf:issue-010-feature-request-index-entries-are-never-checked-against-their-concept]: /knowledge/issues/issue-010-feature-request-index-entries-are-never-checked-against-their-concept.md
-[sokf:issue-011-feature-request-index-shape-is-described-but-not-enforced]: /knowledge/issues/issue-011-feature-request-index-shape-is-described-but-not-enforced.md
-[sokf:issue-012-feature-request-five-decidable-findings-only-warn]: /knowledge/issues/issue-012-feature-request-five-decidable-findings-only-warn.md
-[sokf:issue-013-chore-the-knowledge-is-called-the-bundle]: /knowledge/issues/issue-013-chore-the-knowledge-is-called-the-bundle.md
-[sokf:issue-014-chore-the-schema-validator-is-called-format]: /knowledge/issues/issue-014-chore-the-schema-validator-is-called-format.md
-[sokf:issue-015-feature-request-every-issue-must-be-a-bug-report]: /knowledge/issues/issue-015-feature-request-every-issue-must-be-a-bug-report.md
-[sokf:issue-016-bug-sync-would-revert-the-schema-migration]: /knowledge/issues/issue-016-bug-sync-would-revert-the-schema-migration.md
-[sokf:issue-017-feature-request-the-format-has-no-agent-facing-document]: /knowledge/issues/issue-017-feature-request-the-format-has-no-agent-facing-document.md
-[sokf:issue-018-feature-request-the-schema-layer-checks-sections-and-nothing-else]: /knowledge/issues/issue-018-feature-request-the-schema-layer-checks-sections-and-nothing-else.md
-[sokf:issue-019-bug-validate-reads-a-named-file-as-a-skill]: /knowledge/issues/issue-019-bug-validate-reads-a-named-file-as-a-skill.md
-[sokf:issue-020-bug-the-schemas-do-not-ship]: /knowledge/issues/issue-020-bug-the-schemas-do-not-ship.md
-[sokf:issue-021-chore-backport-the-knowledge-design-to-the-pack]: /knowledge/issues/issue-021-chore-backport-the-knowledge-design-to-the-pack.md
+[sokf:issue-001-bug-update-can-pin-an-unreadable-pack-format]: /knowledge/issues/done/issue-001-bug-update-can-pin-an-unreadable-pack-format.md
+[sokf:issue-002-bug-no-time-bound-on-the-update-query]: /knowledge/issues/done/issue-002-bug-no-time-bound-on-the-update-query.md
+[sokf:issue-003-bug-a-local-pack-cannot-remove-what-it-dropped]: /knowledge/issues/wontfix/issue-003-bug-a-local-pack-cannot-remove-what-it-dropped.md
+[sokf:issue-004-bug-a-path-packs-digest-churns-and-is-never-checked]: /knowledge/issues/done/issue-004-bug-a-path-packs-digest-churns-and-is-never-checked.md
+[sokf:issue-005-bug-a-backport-leaves-the-lock-stale]: /knowledge/issues/done/issue-005-bug-a-backport-leaves-the-lock-stale.md
+[sokf:issue-006-feature-request-content-packs-are-undocumented-for-users]: /knowledge/issues/done/issue-006-feature-request-content-packs-are-undocumented-for-users.md
+[sokf:issue-007-bug-a-pack-source-reaches-git-with-no-scheme-check]: /knowledge/issues/done/issue-007-bug-a-pack-source-reaches-git-with-no-scheme-check.md
+[sokf:issue-008-bug-a-symlinked-file-in-a-pack-is-followed]: /knowledge/issues/done/issue-008-bug-a-symlinked-file-in-a-pack-is-followed.md
+[sokf:issue-009-bug-a-skipped-symlink-says-nothing]: /knowledge/issues/done/issue-009-bug-a-skipped-symlink-says-nothing.md
+[sokf:issue-010-feature-request-index-entries-are-never-checked-against-their-concept]: /knowledge/issues/open/issue-010-feature-request-index-entries-are-never-checked-against-their-concept.md
+[sokf:issue-011-feature-request-index-shape-is-described-but-not-enforced]: /knowledge/issues/open/issue-011-feature-request-index-shape-is-described-but-not-enforced.md
+[sokf:issue-012-feature-request-five-decidable-findings-only-warn]: /knowledge/issues/open/issue-012-feature-request-five-decidable-findings-only-warn.md
+[sokf:issue-013-chore-the-knowledge-is-called-the-bundle]: /knowledge/issues/open/issue-013-chore-the-knowledge-is-called-the-bundle.md
+[sokf:issue-014-chore-the-schema-validator-is-called-format]: /knowledge/issues/done/issue-014-chore-the-schema-validator-is-called-format.md
+[sokf:issue-015-feature-request-every-issue-must-be-a-bug-report]: /knowledge/issues/done/issue-015-feature-request-every-issue-must-be-a-bug-report.md
+[sokf:issue-017-feature-request-the-format-has-no-agent-facing-document]: /knowledge/issues/open/issue-017-feature-request-the-format-has-no-agent-facing-document.md
+[sokf:issue-018-feature-request-the-schema-layer-checks-sections-and-nothing-else]: /knowledge/issues/open/issue-018-feature-request-the-schema-layer-checks-sections-and-nothing-else.md
+[sokf:issue-019-bug-validate-reads-a-named-file-as-a-skill]: /knowledge/issues/open/issue-019-bug-validate-reads-a-named-file-as-a-skill.md
+[sokf:issue-022-feature-request-a-schemas-worked-example-is-checked-by-nothing]: /knowledge/issues/open/issue-022-feature-request-a-schemas-worked-example-is-checked-by-nothing.md
+[sokf:issue-023-feature-request-a-concept-path-written-outside-the-knowledge-is-checked-by-nothing]: /knowledge/issues/open/issue-023-feature-request-a-concept-path-written-outside-the-knowledge-is-checked-by-nothing.md

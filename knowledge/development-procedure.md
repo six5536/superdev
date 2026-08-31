@@ -2,7 +2,7 @@
 type: DevelopmentProcedure
 id: development-procedure
 title: Development Procedure
-description: Setup, the spec-and-plan change workflow, what to run before a PR, how this repo manages its own skills, and how it serves and searches its own knowledge.
+description: Setup, the contract-driven change workflow, what to run before a PR, how this repo manages its own skills, and how it serves and searches its own knowledge.
 status: stable
 sources:
   - id: contributing
@@ -17,13 +17,14 @@ no Node.
 # Workflow
 
 1. Significant changes travel the knowledge-carried workflow skills in
-   `.claude/skills/` (`/frame` → `/spec` → `/interface-design` →
-   `/feature-plan` → `/build` → `/verify` → `/integrate`; see
-   `.agents/process.md`): the spec lands in `knowledge/specs/`
-   (permanent decision record), the plan in `knowledge/plans/` as
-   `plan-<nnn>-feature-<slug>.md` (tagged `done` in the commit that
-   completes the work). One-off work takes `/adhoc-plan`, and its plan
-   lands beside it as `plan-<nnn>-adhoc-<slug>.md`.
+   `.claude/skills/` (`/frame` → `/contract-design` → `/feature-plan` →
+   `/build` → `/integrate`; see `.agents/process.md`): the feature is
+   framed as a tracker issue whose acceptance criteria are EARS
+   sentences, the contracts it touches are updated in place and linked
+   from the issue, and the plan is filed as `plan-<nnn>-feature-<slug>`
+   (`lifecycle: done` in the commit that completes the work). One-off
+   work takes `/adhoc-plan`, and its plan is filed beside it as
+   `plan-<nnn>-adhoc-<slug>`.
 2. Implement with focused commits, using
    [Conventional Commits](https://www.conventionalcommits.org/) (`feat:`,
    `fix:`, `docs:`, `test:`, `refactor:`, `chore:`).
@@ -83,18 +84,19 @@ directly. Compilation is cached, so the cost after the first
 build is negligible — and every check tests the code you are editing rather
 than a binary from last month.
 
-One search trap: specs and plans quote the question you are asking, at length,
-in prose. A search for behaviour will happily return the spec that proposed it
-over the concept that documents it. `sokf_search`'s `types` filter keeps only
-the types you name, so scope the hunt — `["Reference", "Convention"]` for how
-things work now, `["Spec"]` when you want the reasoning behind them.
+One search trap: plans and issues quote the question you are asking, at
+length, in prose. A search for behaviour will happily return the plan that
+proposed it over the concept that documents it. `sokf_search`'s `types` and
+`lifecycle` filters scope the hunt — filter to the reference kinds for how
+things work now, to `["FeaturePlan", "AdhocPlan"]` or the decision kinds
+when you want the reasoning behind them.
 
 [^contributing]: Contributing guide
 
 <!-- sokf:links -->
-[sokf:adr-004-base-pack-identity]: /knowledge/decisions/adr-004-base-pack-identity.md
-[sokf:adr-016-a-path-pack-records-no-digest]: /knowledge/decisions/adr-016-a-path-pack-records-no-digest.md
+[sokf:adr-004-base-pack-identity]: /knowledge/adrs/active/adr-004-base-pack-identity.md
+[sokf:adr-016-a-path-pack-records-no-digest]: /knowledge/adrs/active/adr-016-a-path-pack-records-no-digest.md
 [sokf:definition-of-done]: /knowledge/definition-of-done.md
 [sokf:development-commands]: /knowledge/development-commands.md
-[sokf:issue-003-bug-a-local-pack-cannot-remove-what-it-dropped]: /knowledge/issues/issue-003-bug-a-local-pack-cannot-remove-what-it-dropped.md
-[sokf:issue-005-bug-a-backport-leaves-the-lock-stale]: /knowledge/issues/issue-005-bug-a-backport-leaves-the-lock-stale.md
+[sokf:issue-003-bug-a-local-pack-cannot-remove-what-it-dropped]: /knowledge/issues/wontfix/issue-003-bug-a-local-pack-cannot-remove-what-it-dropped.md
+[sokf:issue-005-bug-a-backport-leaves-the-lock-stale]: /knowledge/issues/done/issue-005-bug-a-backport-leaves-the-lock-stale.md

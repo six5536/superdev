@@ -1,5 +1,5 @@
 ---
-type: Reference
+type: TechnologyStack
 id: technology-stack
 title: Technology Stack
 description: TBD — languages, runtimes, key dependencies, and the pinned toolchain set.

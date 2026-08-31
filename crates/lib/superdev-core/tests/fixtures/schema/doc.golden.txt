@@ -171,9 +171,19 @@ Sits inside `<process_actions>`.
 <rules>…</rules>
 ```
 
-The unit's freestanding norms.
+The unit's freestanding norms, loose or gathered into sets.
 Sits inside `<skill>`.
 Occurs 1–1 times.
+
+### `set`
+
+```xml
+<set name="…">…</set>
+```
+
+A named group of rules; the name states the scope its rules share, and a rule outside that scope does not belong in the set.
+Sits inside `<rules>`.
+- `name` (required) — the scope the set's rules share
 
 ### `rule`
 
@@ -182,7 +192,7 @@ Occurs 1–1 times.
 ```
 
 One norm. The statement stays imperative and carries no modal of its own — the level attribute does that.
-Sits inside `<rules>`.
+Sits inside `<rules>` or `<set>`.
 - `level` (required) —  One of MUST, MUST NOT, SHALL, SHALL NOT, SHOULD, SHOULD NOT, MAY.
 
 ## Element order

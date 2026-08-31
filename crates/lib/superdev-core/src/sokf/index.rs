@@ -30,7 +30,7 @@ use crate::lock::sha256_hex;
 
 /// Layout version of the index. Bump it when the tantivy schema or the vector
 /// file changes shape; a stored index at another version is rebuilt.
-pub const SCHEMA_VERSION: u32 = 2;
+pub const SCHEMA_VERSION: u32 = 3;
 
 /// Tantivy's indexing heap, shared across its writer threads.
 const WRITER_HEAP_BYTES: usize = 50_000_000;
@@ -53,9 +53,9 @@ const CANDIDATE_FACTOR: usize = 4;
 /// outweighs either one's ordering.
 const RRF_K: f32 = 60.0;
 
-/// Tags that mark settled work — a finished plan or map (`done`), a resolved
-/// wayfinder ticket, a rejected issue. Sections carrying one are down-ranked.
-const DOWNRANK_TAGS: [&str; 3] = ["done", "resolved", "wontfix"];
+/// The `lifecycle` values that mean live work. Any other value — `done`,
+/// `wontfix`, `abandoned`, `deprecated` — marks the document settled.
+const LIVE_LIFECYCLES: [&str; 2] = ["open", "active"];
 
 /// Multiplier applied to a settled section's fused score, chosen so settled
 /// work sorts below live knowledge but never disappears from results.
@@ -114,6 +114,9 @@ pub struct SearchOpts {
     pub kinds: Vec<String>,
     /// Keep only concepts carrying one of these tags; empty means every tag.
     pub tags: Vec<String>,
+    /// Keep only concepts whose `lifecycle` is one of these; empty means
+    /// every lifecycle, the concepts carrying none included.
+    pub lifecycle: Vec<String>,
 }
 
 impl Default for SearchOpts {
@@ -122,6 +125,7 @@ impl Default for SearchOpts {
             limit: DEFAULT_LIMIT,
             kinds: Vec::new(),
             tags: Vec::new(),
+            lifecycle: Vec::new(),
         }
     }
 }
@@ -144,18 +148,19 @@ struct SectionDoc {
     start_line: usize,
     end_line: usize,
     snippet: String,
-    tags: Vec<String>,
     status: String,
+    lifecycle: Option<String>,
 }
 
 impl SectionDoc {
-    /// Settled work: deprecated, or tagged as done/resolved/wontfix.
+    /// Settled work: a `lifecycle` value that is not a live one, or a
+    /// deprecated concept. `status` stays read because documents outside the
+    /// lifecycle-governed directories still use it.
     fn settled(&self) -> bool {
-        self.status == "deprecated"
-            || self
-                .tags
-                .iter()
-                .any(|tag| DOWNRANK_TAGS.contains(&tag.as_str()))
+        self.lifecycle
+            .as_deref()
+            .is_some_and(|value| !LIVE_LIFECYCLES.contains(&value))
+            || self.status == "deprecated"
     }
 }
 
@@ -243,12 +248,13 @@ impl Index {
     /// the embedder the sync used. Anything else, including `None`, leaves
     /// search lexical.
     ///
-    /// [`SearchOpts::kinds`] and [`SearchOpts::tags`] filter both lists before
-    /// they are fused by reciprocal rank fusion, so a filtered concept cannot
-    /// re-enter through the other list.
+    /// [`SearchOpts::kinds`], [`SearchOpts::tags`] and
+    /// [`SearchOpts::lifecycle`] filter both lists before they are fused by
+    /// reciprocal rank fusion, so a filtered concept cannot re-enter through
+    /// the other list.
     ///
-    /// Sections of settled work — a `deprecated` concept, or one tagged
-    /// `done`, `resolved` or `wontfix` — are down-ranked after fusion, so
+    /// Sections of settled work — a `lifecycle` value that is not a live
+    /// one, or a `deprecated` concept — are down-ranked after fusion, so
     /// finished plans, issues and maps sort below live knowledge without
     /// leaving the results.
     ///
@@ -425,6 +431,7 @@ struct Fields {
     kind: Field,
     tags: Field,
     status: Field,
+    lifecycle: Field,
     text: Field,
 }
 
@@ -443,6 +450,7 @@ fn schema() -> (Schema, Fields) {
         kind: builder.add_text_field("kind", STRING | STORED),
         tags: builder.add_text_field("tags", STRING | STORED),
         status: builder.add_text_field("status", STRING | STORED),
+        lifecycle: builder.add_text_field("lifecycle", STRING | STORED),
         text: builder.add_text_field("text", TEXT | STORED),
     };
     (builder.build(), fields)
@@ -658,6 +666,9 @@ fn add_concept(writer: &IndexWriter, fields: &Fields, concept: &Concept) -> Resu
             doc.add_text(fields.tags, tag);
         }
         doc.add_text(fields.status, status_str(&concept.status));
+        if let Some(lifecycle) = &concept.lifecycle {
+            doc.add_text(fields.lifecycle, lifecycle);
+        }
         doc.add_text(fields.text, &section.text);
         writer.add_document(doc).map_err(index_error)?;
     }
@@ -896,8 +907,9 @@ pub(crate) fn rrf(lists: &[Vec<DocKey>]) -> Vec<(DocKey, f32)> {
     scored
 }
 
-/// The `kinds`/`tags` filter as a query: any of the kinds, and any of the
-/// tags. `None` when nothing was filtered.
+/// The `kinds`/`tags`/`lifecycle` filter as a query: any of the kinds, any of
+/// the tags, and any of the lifecycle values. `None` when nothing was
+/// filtered.
 fn filter_query(fields: &Fields, opts: &SearchOpts) -> Option<Box<dyn Query>> {
     let any = |field: Field, values: &[String]| -> Option<Box<dyn Query>> {
         let clauses: Vec<Box<dyn Query>> = values
@@ -906,10 +918,14 @@ fn filter_query(fields: &Fields, opts: &SearchOpts) -> Option<Box<dyn Query>> {
             .collect();
         (!clauses.is_empty()).then(|| Box::new(BooleanQuery::union(clauses)) as Box<dyn Query>)
     };
-    let groups: Vec<Box<dyn Query>> = [any(fields.kind, &opts.kinds), any(fields.tags, &opts.tags)]
-        .into_iter()
-        .flatten()
-        .collect();
+    let groups: Vec<Box<dyn Query>> = [
+        any(fields.kind, &opts.kinds),
+        any(fields.tags, &opts.tags),
+        any(fields.lifecycle, &opts.lifecycle),
+    ]
+    .into_iter()
+    .flatten()
+    .collect();
     (!groups.is_empty()).then(|| Box::new(BooleanQuery::intersection(groups)) as Box<dyn Query>)
 }
 
@@ -960,12 +976,8 @@ fn read_doc(
         start_line: number(fields.start_line).unwrap_or_default() as usize,
         end_line: number(fields.end_line).unwrap_or_default() as usize,
         snippet: snippet(text(fields.text).unwrap_or_default()),
-        tags: doc
-            .get_all(fields.tags)
-            .filter_map(|value| value.as_str())
-            .map(str::to_string)
-            .collect(),
         status: text(fields.status).unwrap_or("stable").to_string(),
+        lifecycle: text(fields.lifecycle).map(str::to_string),
         path,
     };
     Ok((key, section))
@@ -1141,12 +1153,19 @@ mod tests {
         assert_eq!(mismatched, lexical);
     }
 
-    /// Three concepts sharing one vocabulary; only their settledness differs.
+    /// Five concepts sharing one vocabulary; only their settledness differs.
+    /// `finished` and `closed` settle by `lifecycle`, `retired` by the SOKF
+    /// `status` the kinds outside the lifecycle directories still use, and
+    /// `open-issue` carries a live `lifecycle` value.
     const LIVE: &str = "---\ntype: Note\nid: live\n---\nquartz lantern meadow guide\n";
     const FINISHED: &str =
-        "---\ntype: Plan\nid: finished\ntags: [done]\n---\nquartz lantern meadow guide\n";
+        "---\ntype: Plan\nid: finished\nlifecycle: abandoned\n---\nquartz lantern meadow guide\n";
     const RETIRED: &str =
         "---\ntype: Spec\nid: retired\nstatus: deprecated\n---\nquartz lantern meadow guide\n";
+    const CLOSED: &str =
+        "---\ntype: BugReport\nid: closed\nlifecycle: done\n---\nquartz lantern meadow guide\n";
+    const OPEN_ISSUE: &str =
+        "---\ntype: BugReport\nid: open-issue\nlifecycle: open\n---\nquartz lantern meadow guide\n";
 
     #[test]
     fn settled_work_is_downranked_not_dropped() {
@@ -1155,6 +1174,8 @@ mod tests {
         fs::create_dir(&bundle_dir).unwrap();
         fs::write(bundle_dir.join("finished.md"), FINISHED).unwrap();
         fs::write(bundle_dir.join("retired.md"), RETIRED).unwrap();
+        fs::write(bundle_dir.join("closed.md"), CLOSED).unwrap();
+        fs::write(bundle_dir.join("open-issue.md"), OPEN_ISSUE).unwrap();
         fs::write(bundle_dir.join("live.md"), LIVE).unwrap();
         let bundle = load_bundle(&bundle_dir).unwrap();
         let (idx, _) =
@@ -1162,19 +1183,53 @@ mod tests {
 
         let hits = idx.search("quartz", None, &SearchOpts::default()).unwrap();
         // Identical text, so ranking is decided by settledness alone: the
-        // live concept first, the done-tagged plan and the deprecated spec
-        // down-ranked behind it — but still present.
-        assert_eq!(hits.len(), 3);
-        assert_eq!(hits[0].concept_id.as_deref(), Some("live"));
-        assert!(hits[1].score < hits[0].score);
-        let trailing: HashSet<_> = hits[1..]
+        // live concepts first, the settled three down-ranked behind them —
+        // but still present.
+        assert_eq!(hits.len(), 5);
+        let leading: HashSet<_> = hits[..2]
+            .iter()
+            .map(|hit| hit.concept_id.clone().unwrap())
+            .collect();
+        assert_eq!(
+            leading,
+            HashSet::from(["live".to_string(), "open-issue".to_string()])
+        );
+        assert!(hits[2].score < hits[1].score);
+        let trailing: HashSet<_> = hits[2..]
             .iter()
             .map(|hit| hit.concept_id.clone().unwrap())
             .collect();
         assert_eq!(
             trailing,
-            HashSet::from(["finished".to_string(), "retired".to_string()])
+            HashSet::from([
+                "finished".to_string(),
+                "retired".to_string(),
+                "closed".to_string()
+            ])
         );
+    }
+
+    #[test]
+    fn the_lifecycle_filter_keeps_only_the_named_values() {
+        let dir = tempfile::tempdir().unwrap();
+        let bundle_dir = dir.path().join("bundle");
+        fs::create_dir(&bundle_dir).unwrap();
+        fs::write(bundle_dir.join("closed.md"), CLOSED).unwrap();
+        fs::write(bundle_dir.join("open-issue.md"), OPEN_ISSUE).unwrap();
+        fs::write(bundle_dir.join("live.md"), LIVE).unwrap();
+        let bundle = load_bundle(&bundle_dir).unwrap();
+        let (idx, _) =
+            Index::open_and_sync(&IndexDir(dir.path().join("idx")), &bundle, None).unwrap();
+
+        let opts = SearchOpts {
+            lifecycle: vec!["open".to_string()],
+            ..SearchOpts::default()
+        };
+        let hits = idx.search("quartz", None, &opts).unwrap();
+        // The open issue alone: the done one is filtered out, and so is the
+        // concept carrying no lifecycle at all.
+        assert_eq!(hits.len(), 1);
+        assert_eq!(hits[0].concept_id.as_deref(), Some("open-issue"));
     }
 
     #[test]

@@ -69,9 +69,8 @@ mod tests {
         for (owner, kind, least) in [
             (knowledge(), ItemKind::Skill, 15),
             (knowledge(), ItemKind::KnowledgeSkeleton, 20),
-            (knowledge(), ItemKind::DocTemplate, 40),
+            (knowledge(), ItemKind::DocSchema, 50),
             (Owner::Capability(Capability::Skills), ItemKind::Skill, 2),
-            (Owner::Repo, ItemKind::AgentScaffold, 3),
             (Owner::Repo, ItemKind::ProjectTemplate, 2),
         ] {
             let found = set.items_of(owner, kind).count();
@@ -88,17 +87,10 @@ mod tests {
     fn items_are_named_as_their_pattern_spells_it() {
         let set = snapshot();
         assert!(set.item(knowledge(), ItemKind::Skill, "frame").is_some());
+        assert!(set.item(knowledge(), ItemKind::DocSchema, "adr").is_some());
         assert!(
-            set.item(knowledge(), ItemKind::DocTemplate, "adr")
-                .is_some()
-        );
-        assert!(
-            set.item(knowledge(), ItemKind::DocTemplate, "adr.md")
+            set.item(knowledge(), ItemKind::DocSchema, "adr.md")
                 .is_none()
-        );
-        assert!(
-            set.item(Owner::Repo, ItemKind::AgentScaffold, "coding")
-                .is_some()
         );
         assert!(
             set.item(
@@ -147,13 +139,14 @@ mod tests {
         }
     }
 
-    /// The instruction files and the SOKF spec ship from the pack tree but
-    /// are not content: they describe a version the binary pins or a format
-    /// the compiled validator enforces. `pack.toml` is metadata.
+    /// The SOKF spec and changelog ship from the pack tree but are not
+    /// content: they describe a format the compiled validator enforces.
+    /// `pack.toml` is metadata. The third binary-owned file, the grammar,
+    /// ships from the validator's embedded copy and has no pack file.
     #[test]
     fn what_is_not_content_stays_out_of_the_snapshot() {
         let files: usize = items().iter().map(|i| i.files.len()).sum();
-        let not_content = sokf::binary_owned_count() + 1 /* codegraph */ + 1 /* pack.toml */;
+        let not_content = (sokf::binary_owned_count() - 1) + 1 /* pack.toml */;
         assert_eq!(
             files + not_content,
             FILES.len(),

@@ -6,11 +6,11 @@ description: Prose rules, Rust and TypeScript conventions, and the code-is-canon
 status: stable
 sources:
   - id: prose
-    resource: /.agents/professionalism.md
-    title: Professional language rules
+    resource: /.agents/superdev.md
+    title: The professionalism block of the agent instructions
   - id: coding
-    resource: /.agents/coding.md
-    title: Coding behaviour rules
+    resource: /.agents/superdev.md
+    title: The coding block of the agent instructions
   - id: checks
     resource: /.github/workflows/checks.yml
     title: The CI gate enforcing these
@@ -18,12 +18,13 @@ sources:
 
 # Approach
 
-The behavioural rules are in [coding.md](/.agents/coding.md): think before
-coding, simplicity first, surgical changes only, and verifiable success
-criteria defined before executing.[^coding]
+The behavioural rules are in the coding block of
+[superdev.md](/.agents/superdev.md): think before coding, simplicity first,
+surgical changes only, and verifiable success criteria defined before
+executing.[^coding]
 
-**Never edit `.agents/core.md`.** It is the Prime Directive, the one file
-every session loads, and it is the owner's to change. Where a skill or a
+**Never edit `.agents/superdev.md`.** It is the Prime Directive, the one file
+every session loads, and the binary rewrites it on sync. Where a skill or a
 concept says the same thing as one of its blocks, the duplication is resolved
 by rewriting the other occurrence into a reference — `core's <block> block`,
 which the validator checks against the blocks core actually defines. The
@@ -34,7 +35,7 @@ here is always the side that is not core.
 
 Be concise without losing information; use plain language. British English
 spelling (`behaviour`, `normalise`). The full rules are in
-[professionalism.md](/.agents/professionalism.md); the core: no jargon, no
+the professionalism block of [superdev.md](/.agents/superdev.md); the core: no jargon, no
 filler, no drama, no hedging, and negation only where it carries
 meaning.[^prose]
 

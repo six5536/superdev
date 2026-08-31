@@ -78,6 +78,10 @@ pub struct Concept {
     pub description: Option<String>,
     /// Publication state.
     pub status: Status,
+    /// Work state of the document — `open`, `done`, `active`, … — the
+    /// extension key whose value names the folder the document is filed in.
+    /// `None` on the many kinds that carry no lifecycle.
+    pub lifecycle: Option<String>,
     /// Grouping labels.
     pub tags: Vec<String>,
     /// Repo path or URL of the thing described.
@@ -148,6 +152,7 @@ pub fn parse_concept(path: &str, text: &str) -> Result<Concept, ParseError> {
             Some("deprecated") => Status::Deprecated,
             _ => Status::Stable,
         },
+        lifecycle: string_field(&raw, "lifecycle"),
         resource: string_field(&raw, "resource"),
         sources: sequence_field(&raw, "sources")
             .iter()

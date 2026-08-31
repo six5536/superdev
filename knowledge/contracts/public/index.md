@@ -10,8 +10,8 @@ contract, each with its own stability promise.
 * [Lock Format Contract][sokf:contract-006-file-format-lock] - what superdev records of the last apply — the per-capability components, the file hashes, the resolved packs — and what a reader may conclude from it.
 
 <!-- sokf:links -->
-[sokf:contract-002-cli-superdev]: /knowledge/contracts/public/contract-002-cli-superdev.md
-[sokf:contract-003-mcp-sokf]: /knowledge/contracts/public/contract-003-mcp-sokf.md
-[sokf:contract-004-config-superdev]: /knowledge/contracts/public/contract-004-config-superdev.md
-[sokf:contract-005-file-format-pack]: /knowledge/contracts/public/contract-005-file-format-pack.md
-[sokf:contract-006-file-format-lock]: /knowledge/contracts/public/contract-006-file-format-lock.md
+[sokf:contract-002-cli-superdev]: /knowledge/contracts/public/active/contract-002-cli-superdev.md
+[sokf:contract-003-mcp-sokf]: /knowledge/contracts/public/active/contract-003-mcp-sokf.md
+[sokf:contract-004-config-superdev]: /knowledge/contracts/public/active/contract-004-config-superdev.md
+[sokf:contract-005-file-format-pack]: /knowledge/contracts/public/active/contract-005-file-format-pack.md
+[sokf:contract-006-file-format-lock]: /knowledge/contracts/public/active/contract-006-file-format-lock.md

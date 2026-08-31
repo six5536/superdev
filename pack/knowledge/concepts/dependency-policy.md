@@ -1,5 +1,5 @@
 ---
-type: Policy
+type: DependencyPolicy
 id: dependency-policy
 title: Dependency Policy
 description: TBD — when a dependency may be added and how its version is chosen.

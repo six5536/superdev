@@ -1173,7 +1173,7 @@ mod tests {
 
     #[test]
     fn the_live_core_passes_and_defines_its_blocks() {
-        let path: PathBuf = [env!("CARGO_MANIFEST_DIR"), "../../..", ".agents/core.md"]
+        let path: PathBuf = [env!("CARGO_MANIFEST_DIR"), "../../..", ".agents/superdev.md"]
             .iter()
             .collect();
         let text = std::fs::read_to_string(path).unwrap();
@@ -1359,6 +1359,6 @@ mod schema_parity {
             assert!(errs.is_empty(), "{}: {errs:?}", path.display());
             checked += 1;
         }
-        assert_eq!(checked, 55, "every schema is checked");
+        assert_eq!(checked, 54, "every schema is checked");
     }
 }

@@ -11,8 +11,7 @@ status: draft
 - **A knowledge-capture skill.** The write-side complement to the search-first
   AGENTS.md: teach agents when and how to record durable learnings in the
   knowledge mid-task — concept placement, links, sources. Judged a good idea
-  during the skill-pack design
-  ([spec][sokf:spec-003-skill-pack]) and deferred to the
+  during the skill-pack design and deferred to the
   knowledge-upkeep sub-project.
 
 - **Template pre-filled knowledge skeletons.** A project template fixes
@@ -20,16 +19,14 @@ status: draft
   Rust workspace, the npm launcher and the CI shape — so it could pre-fill
   parts of the `technology-stack` and `architecture` skeletons instead of
   leaving them TBD, shrinking `bootstrap`'s interview to the genuinely
-  human questions. Raised while designing the bootstrap interview phase
-  ([spec][sokf:spec-008-knowledge-owned-skills]).
+  human questions. Raised while designing the bootstrap interview phase.
 
 - **Comment-preserving manifest stamping.** `sync` rewrites `config.toml`
   through the whole-file `Manifest::save` when it stamps the blueprint
   version, dropping any hand-written comments — the rewrite `update` always
   did, now implicit in every post-upgrade sync. A targeted `toml_edit` edit
   of the one key would keep a hand-editable file's comments. Raised in the
-  blueprint-migrations final review
-  ([spec][sokf:spec-004-blueprint-migrations]).
+  blueprint-migrations final review.
 
 # Decided against
 
@@ -44,6 +41,3 @@ status: draft
 
 <!-- sokf:links -->
 [sokf:architecture]: /knowledge/architecture.md
-[sokf:spec-003-skill-pack]: /knowledge/specs/spec-003-skill-pack.md
-[sokf:spec-004-blueprint-migrations]: /knowledge/specs/spec-004-blueprint-migrations.md
-[sokf:spec-008-knowledge-owned-skills]: /knowledge/specs/spec-008-knowledge-owned-skills.md

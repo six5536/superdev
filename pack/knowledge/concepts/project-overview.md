@@ -1,5 +1,5 @@
 ---
-type: Reference
+type: Overview
 id: project-overview
 title: Project Overview
 description: TBD — what the project is, who it serves, and its current status.

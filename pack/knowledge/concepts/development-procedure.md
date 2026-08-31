@@ -1,5 +1,5 @@
 ---
-type: Reference
+type: DevelopmentProcedure
 id: development-procedure
 title: Development Procedure
 description: TBD — setup, the change workflow, and what to run before a PR.

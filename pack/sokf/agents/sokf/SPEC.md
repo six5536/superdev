@@ -1,35 +1,31 @@
 # SOKF — Superdev Open Knowledge Format
 
-**Version:** 0.3
+**Version:** 0.4
 **Status:** Draft
-**Date:** 2026-08-18
+**Date:** 2026-08-28
 
 SOKF is a format for canonical project knowledge: a directory of markdown
 files with YAML frontmatter, kept inside the project's repository and
 maintained largely by AI agents. Content is unrestricted; architecture
 notes, decisions, conventions, and playbooks are typical. SOKF is a
-superset of the Open Knowledge Format (OKF) v0.2; familiarity with OKF
-is not assumed, and this document stands alone.
+superset of the Open Knowledge Format (OKF) v0.2.
 
-The frontmatter — the YAML block delimited by `---` at the top of each
-file (§1) — identifies each document and carries its trust state: what
-kind of document it is, what it describes, what it derives from, how it
-relates to other documents, who has verified it. These fields are
-constrained because the writers are mostly LLMs: an LLM cannot be
-relied on to record a fact (an author, a timestamp, a review)
-truthfully, and a validator cannot detect a fabricated value that
-parses. The format therefore:
+The frontmatter (§1) identifies each document and carries its trust
+state: what kind of document it is, what it describes, what it derives
+from, how it relates to other documents, who has verified it. The
+writers are mostly LLMs, and an LLM cannot be relied on to record a fact
+— an author, a timestamp, a review — truthfully, while a validator
+cannot detect a fabricated value that parses. Frontmatter therefore
+carries only fields checkable against the repository, fields that are
+explicitly judgements, and one field, closed to agents, that records
+verification (§7). Two rules follow:
 
-1. Assigns every frontmatter field a **write class** (§4) stating who
-   may write it. Fields an agent cannot produce truthfully are closed
-   to agents; a git diff check enforces this (§10).
-2. Stores no metadata that git already records. Authorship, change
-   times, and prior content come from version control, not from
-   frontmatter, where a stored copy could diverge.
-
-Frontmatter is limited to fields that are checkable against the
-repository, fields that are explicitly judgements, and one field,
-closed to agents, that records verification (§7).
+1. Every frontmatter field has a **write class** (§4) stating who may
+   write it. Fields an agent cannot produce truthfully are closed to
+   agents; a git diff check enforces this (§10).
+2. No metadata git already records is stored. Authorship, change times,
+   and prior content come from version control, not from frontmatter,
+   where a stored copy could diverge.
 
 > The key words MUST, MUST NOT, SHOULD, and MAY are used as defined in
 > RFC 2119.
@@ -39,10 +35,8 @@ closed to agents, that records verification (§7).
 ## 1. Terminology
 
 - **SOKF knowledge**: the directory tree of knowledge documents this
-  format describes. Always named in full — "knowledge" alone is an
-  ordinary English word, and a reader who meets it cannot tell the store
-  from the general noun. The two-word form carries a token that means one
-  thing only.
+  format describes; always named in full, since "knowledge" alone is an
+  ordinary English word.
 - **Concept**: one unit of knowledge, one markdown file.
 - **Frontmatter**: the YAML block delimited by `---` at the top of a
   file. **Body**: everything after it.
@@ -54,8 +48,7 @@ closed to agents, that records verification (§7).
 - **Actor**: a string identifying who did something: `human:<id>` for a
   person, `process:<id>` for a deterministic automated process,
   `<producer>/<version>` for an agent or tool (§7).
-- **Agent**: an LLM-driven writer. The write classes exist to bound what
-  it may touch.
+- **Agent**: an LLM-driven writer.
 
 ## 2. Knowledge structure
 
@@ -82,7 +75,7 @@ history.
 The manifest declares the SOKF knowledge:
 
 ```yaml
-sokf: "0.3" # spec version the SOKF knowledge targets
+sokf: "0.4" # spec version the SOKF knowledge targets
 name: example-knowledge
 description: Knowledge for the example project.
 ```
@@ -119,14 +112,18 @@ links:
 
 # Role
 
-The planner reads [config](config.md) and filesystem state and emits a
+The planner reads [config][sokf:config] and filesystem state and emits a
 list of actions.[^config-src] It never writes.
 
 [^config-src]: Config source
+
+<!-- sokf:links -->
+[sokf:config]: /knowledge/config.md
 ```
 
-The `depends-on` entry is mirrored by the `[config](config.md)` body
-link, as §8 requires.
+The `depends-on` entry is mirrored by the `[config][sokf:config]` body
+link, as §8 requires. The link names the target's `id`, not its path;
+the definition below it is generated (§9).
 
 The body is standard markdown. Prefer structure (headings, lists,
 tables, fenced code) over freeform prose; there are no required
@@ -166,15 +163,10 @@ Field reference:
 | `generated`   | stamped    | `{ by, at }`, derived from git history at export. Never hand-written.              |
 
 Producer-defined extension keys are permitted and default to `open`.
-Consumers must not reject documents over unknown keys. A project that
-adds an extension carrying a factual claim an agent cannot verify should
-declare it `restricted` in its own conventions.
-
-The classes aren't general permissions; an agent edits `status` and
-`links` freely. The line they draw is narrower: an `open` field is
-either checkable by reading the repo (`resource` points somewhere, or
-it doesn't) or openly a judgement (`description`, `status`). A field
-that asserts a fact nobody can check is `restricted` or `stamped`.
+Consumers must not reject documents over unknown keys. A project
+classifies a new key in its own conventions: `open` if the value is
+checkable against the repository or is openly a judgement, `restricted`
+or `stamped` if it asserts a fact nobody can check.
 
 ## 5. Identity
 
@@ -188,8 +180,8 @@ that asserts a fact nobody can check is `restricted` or `stamped`.
   broken references.
 - When `id` is absent, the concept's identity is its repo-root-relative
   file path.
-- `id` is the preferred target for typed links (§8), precisely because
-  it is stable where paths are not.
+- `id` is the preferred target for typed links (§8): it is stable where
+  paths are not.
 
 ## 6. Sources
 
@@ -220,13 +212,11 @@ The planner never writes to the filesystem.[^planner-src]
 [^planner-src]: Planner source
 ```
 
-The footnote label is the join key into `sources`. Keys, not positions:
-agents constantly rewrite these documents, and a positional reference
-misattributes silently the moment the list is reordered.
+The footnote label is the join key into `sources`. It is a key, not a
+position, so reordering the list does not change what a footnote
+attributes.
 
-There is no per-source author, usage count, or last-modified date. For
-repo paths, git supplies author and recency on demand; for URLs, the
-writer cannot verify them, so they must not be recorded.
+There is no per-source author, usage count, or last-modified date.
 
 ## 7. Verification
 
@@ -248,14 +238,13 @@ verified:
 Rules:
 
 - An entry may be added only by the actor it names.
-- Agents MUST NOT touch the field at all. When an agent rewrites a
+- Agents MUST NOT touch the field. When an agent rewrites a
   concept's content, it leaves existing `verified` entries in place;
   whether a verification still applies is derived, not edited (below).
 - A verification covers the file as it stood at `at`. A consumer or
   validator compares each entry's `at` against the file's last content
   change in git: verification older than the last change is **lapsed**
-  and confers no trust. This comparison is deterministic and needs no
-  field an agent could corrupt.
+  and confers no trust.
 
 **Trust tiers**, derived from the non-lapsed entries, lowest to highest:
 
@@ -289,7 +278,7 @@ Consumers resolve `to` as an `id` first, then as a path.
 | `depends-on`  | `depended-on-by` | Requires the target to function.                                       |
 | `references`  | `referenced-by`  | Cites or points at the target.                                         |
 | `supersedes`  | `superseded-by`  | Replaces the target; the target is deprecated.                         |
-| `implements`  | `implemented-by` | Delivers or realises the target — a plan or issue implementing a spec. |
+| `implements`  | `implemented-by` | Delivers or realises the target — a plan or issue implementing a feature request or contract. |
 | `contradicts` | `contradicts`    | Known conflict (symmetric); resolution belongs in prose.               |
 
 Producers SHOULD use a core value where one fits and MAY introduce
@@ -299,31 +288,63 @@ no `derived-from` value: derivation is recorded in `sources` (§6), and
 a consumer treats each repo-internal source as a derivation edge.
 
 Producers SHOULD declare each edge once, from whichever side is more
-natural; a consumer building a graph SHOULD synthesise the inverse
-edge, so backlinks exist without writing every edge twice.
+natural; a consumer building a graph SHOULD synthesise the inverse edge.
+
+**Body links.** A body link whose target is a concept MUST address it by
+`id`, as a reference-style markdown link whose label is `sokf:` followed
+by that id:
+
+```markdown
+The planner reads [config][sokf:config] before it plans.
+```
+
+A consumer resolves the label's id against the SOKF knowledge exactly as
+it resolves a `to` (above), and MUST NOT resolve through the reference
+definition (§9). A `sokf:<id>` label naming no concept is a broken edge,
+not an unresolved reference: a consumer reports it rather than rendering
+it as literal text. A link to anything that is not a concept — a source
+file, a README, a URL — names a path or a URL, as markdown always has.
 
 **Body mirroring.** For every `links` entry the body MUST contain at
-least one plain markdown link to the same target, so the edge is
-visible to a reader of the markdown alone. A body link with no
-corresponding `links` entry is an untyped `relates-to` edge; the
-meaning of such a link lives in the surrounding prose.
+least one markdown link to the same target, in either form, so the edge
+is visible to a reader of the markdown alone. A body link with no
+corresponding `links` entry is an untyped `relates-to` edge; its meaning
+lives in the surrounding prose.
 
 ## 9. Paths and indexes
 
 - Paths beginning with `/` resolve from the **repository root**. This is
   the recommended form for links and for path-valued fields
-  (`resource`, `sources[].resource`), since it survives moving a concept
-  between subdirectories.
+  (`resource`, `sources[].resource`).
 - Relative paths resolve from the containing file, as standard markdown.
 - Absolute URLs work as anywhere else.
 
-Consumers tolerate broken links, but the validator warns on them
-(§10), since a broken link usually means the target was renamed and the
-knowledge has not caught up.
+Consumers tolerate broken links; the validator warns on them (§10).
 
-An `index.md` may appear in any directory to list its contents, so a
-reader can see what exists before opening files. It contains no
-frontmatter. The body is one or more heading-grouped link lists:
+**The generated definition block.** A document that carries an
+id-addressed body link (§8) MUST carry, at its foot, one HTML comment
+line reading exactly `<!-- sokf:links -->` followed by one reference
+definition per cited id, each naming that concept's current
+repo-root path, in ascending id order:
+
+```markdown
+<!-- sokf:links -->
+[sokf:config]: /knowledge/config.md
+[sokf:planner]: /knowledge/core/planner.md
+```
+
+The block is **generated**, not authored: tooling writes it and rewrites
+it whenever a concept moves. Nothing else follows it.
+
+It exists so a plain markdown renderer — a repository host, an editor
+preview — follows the link. It is not the resolution path: a consumer
+resolves the id (§8) and MUST NOT read the block, so a stale or absent
+block changes nothing about what a link means. The validator still
+reports one; the remedy is to regenerate it (§10).
+
+An `index.md` may appear in any directory to list its contents. It
+contains no frontmatter. The body is one or more heading-grouped link
+lists:
 
 ```markdown
 # Core
@@ -337,7 +358,7 @@ generated; consumers may synthesise one when absent.
 
 ## 10. Validation
 
-Two deterministic layers. Both run without an LLM.
+Two deterministic layers.
 
 **Document check** — any time, per file:
 
@@ -347,9 +368,13 @@ Two deterministic layers. Both run without an LLM.
 3. `restricted` fields, when present, are well-formed (`verified`
    entries each have `by` in `human:`/`process:` form and an ISO 8601
    `at`).
-4. `id` values are valid slugs and unique across the canonical
-   knowledge. `links` entries each have `rel` and `to`.
-5. Warn on: broken `/`-paths and relative links, a `links` `to` that
+4. `id` values are valid slugs and unique across the SOKF knowledge.
+   `links` entries each have `rel` and `to`.
+5. Body links address concepts by id (§8): a `sokf:<id>` label resolves
+   to a concept, and a path link resolves to something that is not one.
+   The generated definition block (§9) defines each cited id, and only
+   the cited ids, at their current paths.
+6. Warn on: broken `/`-paths and relative links, a `links` `to` that
    resolves to nothing, a `links` entry with no mirroring body link,
    `sources` entries the body cites but that lack an `id`, footnote
    labels with no matching source, `index.md` entries pointing at
@@ -365,9 +390,6 @@ Two deterministic layers. Both run without an LLM.
 3. In an agent commit, a modified concept keeps its `id`. An agent may
    assign an `id` to a new concept; it must not change an existing one.
 
-A violation of either rule fails the check. The diff check is what
-enforces the write classes; without it they are only a convention.
-
 ## 11. Conformance
 
 Knowledge conforms when all of the following hold.
@@ -377,18 +399,16 @@ Knowledge conforms when all of the following hold.
   `name`.
 - Every `links` entry has a valid `rel` and a `to` that resolves, and is
   mirrored by a body link (§8).
+- Every body link to a concept addresses it by id, and every document
+  carrying one carries a current definition block (§9).
 
 A repository conforms if, additionally, its agent commits pass the diff
 check (§10). This is independent of whether the SOKF knowledge conforms.
 
-Consumers must be permissive. In particular, never reject knowledge for
-missing optional fields, unknown `type` values, unknown frontmatter
-keys, unknown `rel` values, broken links, or a missing `index.md` or
-manifest.
+Consumers must be permissive: never reject knowledge for missing
+optional fields, unknown `type` values, unknown frontmatter keys,
+unknown `rel` values, broken links, or a missing `index.md` or manifest.
 
 ## 12. Versioning
 
-This document specifies SOKF **0.3**. Before 1.0 a minor bump may break.
-From 1.0 minor bumps are backward-compatible additions and major bumps may
-break. The SOKF knowledge declares the version it targets with the
-manifest's `sokf` key (§2).
+See: [changelog.md](changelog.md).

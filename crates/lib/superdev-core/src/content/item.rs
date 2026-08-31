@@ -29,8 +29,8 @@ pub enum ItemKind {
     /// is any entry directly under `concepts/`, file or directory, because
     /// the bundle ships scaffolds that are not one `.md` each. ADR-010.
     KnowledgeSkeleton,
-    /// `knowledge/templates/<name>.md` — an owned document template.
-    DocTemplate,
+    /// `knowledge/schemas/<name>.md` — an owned document schema.
+    DocSchema,
     /// `agents/<name>.md` — a write-once general-rules scaffold.
     AgentScaffold,
     /// `projects/<name>/**` — write-once repo scaffolds, token-substituted.

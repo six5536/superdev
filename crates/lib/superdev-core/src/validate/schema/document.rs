@@ -70,18 +70,28 @@ impl SectionRule {
     }
 }
 
-/// The frontmatter constraints a schema declares. Only `type` is read here:
-/// the rest is the SOKF half's business.
+/// The frontmatter constraints a schema declares. Only `type` and
+/// `lifecycle` are read here: the rest is the SOKF half's business.
 #[derive(Debug, Clone, Default, Deserialize)]
 struct FrontmatterContract {
     #[serde(default)]
     r#type: Option<TypeConstraint>,
+    #[serde(default)]
+    lifecycle: Option<LifecycleConstraint>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
 struct TypeConstraint {
     #[serde(default)]
     r#const: Option<String>,
+}
+
+/// The `lifecycle` enum a schema declares; declaring one is what puts the
+/// schema's documents in scope of the filing check.
+#[derive(Debug, Clone, Deserialize)]
+struct LifecycleConstraint {
+    #[serde(default)]
+    r#enum: Vec<String>,
 }
 
 /// A schema's contract, as far as document checking needs it.
@@ -116,6 +126,17 @@ impl DocSchema {
     #[must_use]
     pub fn declares_glob(&self) -> bool {
         self.target_files.is_some()
+    }
+
+    /// The `lifecycle` values this schema admits; `None` when it declares
+    /// none and its documents are outside the filing check.
+    #[must_use]
+    pub fn lifecycle_enum(&self) -> Option<&[String]> {
+        self.frontmatter
+            .lifecycle
+            .as_ref()
+            .map(|l| l.r#enum.as_slice())
+            .filter(|values| !values.is_empty())
     }
 
     /// Parse a schema document's yaml contract. `None` when the document
@@ -190,6 +211,13 @@ impl SchemaSet {
     #[must_use]
     pub fn governs(&self, path: &str, doc_type: Option<&str>) -> bool {
         self.governing(path, doc_type).is_some()
+    }
+
+    /// The `lifecycle` enum the schema governing `doc_type` declares, when it
+    /// declares one.
+    #[must_use]
+    pub fn lifecycle_enum(&self, doc_type: &str) -> Option<&[String]> {
+        self.by_type.get(doc_type)?.lifecycle_enum()
     }
 
     /// The schema governing a document, and how it was found.

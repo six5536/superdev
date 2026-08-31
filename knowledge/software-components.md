@@ -178,7 +178,7 @@ Cross-registry atomicity is impossible, so the guarantee is *ordered,
 dry-run-gated and recoverable* rather than truly atomic.
 
 <!-- sokf:links -->
-[sokf:adr-015-the-spawn-seam-carries-a-deadline]: /knowledge/decisions/adr-015-the-spawn-seam-carries-a-deadline.md
+[sokf:adr-015-the-spawn-seam-carries-a-deadline]: /knowledge/adrs/active/adr-015-the-spawn-seam-carries-a-deadline.md
 [sokf:architecture]: /knowledge/architecture.md
-[sokf:contract-002-cli-superdev]: /knowledge/contracts/public/contract-002-cli-superdev.md
-[sokf:contract-003-mcp-sokf]: /knowledge/contracts/public/contract-003-mcp-sokf.md
+[sokf:contract-002-cli-superdev]: /knowledge/contracts/public/active/contract-002-cli-superdev.md
+[sokf:contract-003-mcp-sokf]: /knowledge/contracts/public/active/contract-003-mcp-sokf.md

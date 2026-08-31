@@ -13,6 +13,22 @@ publish a version it cannot find a heading for.
 
 ### Changed
 
+- **Documents are filed by lifecycle.** Breaking change to the knowledge
+  layout. Issues, plans, specs, decisions and contracts each carry one
+  `lifecycle` frontmatter key — `open`/`done`/`wontfix` for issues,
+  `open`/`done`/`abandoned` for plans, `active`/`deprecated` for specs,
+  decisions and contracts — and every document sits in a folder named
+  exactly its value (`knowledge/issues/open/`, `knowledge/plans/done/`),
+  with each kind's base directory holding only `index.md`. The `status`
+  key and the `done`/`wontfix`/`needs-triage` tags that answered the same
+  question are gone from these kinds. Three new findings, all errors: a
+  value outside the schema's enum, a folder disagreeing with the value,
+  and an unfiled document in a base directory; `superdev validate --fix`
+  repairs the filing by moving the file and regenerating the definition
+  blocks that name it. `sokf_search` down-ranks any non-live `lifecycle`
+  and takes a `lifecycle` filter, and `sokf_overview` and `sokf_read`
+  report each concept's value.
+
 - **SOKF 0.4: a body link addresses a concept by id.** Breaking change to the
   knowledge format. A link between concepts is now written as a
   reference-style link labelled `sokf:<id>` — `[config][sokf:config]` — and

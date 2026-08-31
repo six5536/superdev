@@ -8,10 +8,9 @@
 
 # Design
 
-* [Specs](specs/index.md) - design specs: permanent decision records, one per significant change.
-* [Plans](plans/index.md) - the slice lists delivering specs and the plans for one-off work outside the feature workflow, tagged done when they land.
-* [Decisions](decisions/index.md) - architecture decision records: the interfaces that were expensive to change, with their alternatives.
-* [Contracts](contracts/index.md) - the contracts promised outward, and the per-feature interface contracts build codes against.
+* [Plans](plans/index.md) - the slice lists delivering features and the plans for one-off work outside the feature workflow, filed done when they land.
+* [ADRs](adrs/index.md) - architecture decision records: the interfaces that were expensive to change, with their alternatives.
+* [Contracts](contracts/index.md) - the durable contracts describing the app: promised outward in public/, binding modules in internal/.
 * [Issues](issues/index.md) - open tickets, grouped by feature.
 * [Architecture][sokf:architecture] - the core/binary/blueprint layering, the capability-to-provider map, the knowledge-serving side, and the files superdev keeps in a managed repo.
 * [Architectural Rules][sokf:architectural-rules] - planning is side-effect free, the engine is the only place that applies, and capabilities are the user-facing names.
@@ -27,9 +26,9 @@
 * [Security Requirements][sokf:security-requirements] - the vulnerability policy in brief, and the security-relevant guarantees the design makes.
 * [Dependency Policy][sokf:dependency-policy] - when a dependency may be added and how its version is chosen.
 * [Testing Strategy][sokf:testing-strategy] - the current test layers, the key choices behind them, and the CI platforms.
-* [Development Procedure][sokf:development-procedure] - setup, the spec-and-plan change workflow, what to run before a PR, how this repo manages its own skills, and how it serves and searches its own knowledge.
+* [Development Procedure][sokf:development-procedure] - setup, the contract-driven change workflow, what to run before a PR, how this repo manages its own skills, and how it serves and searches its own knowledge.
 * [Development Commands][sokf:development-commands] - the npm-script command set and the pre-PR check list's shape.
-* [Issue Tracker & Triage][sokf:issue-tracker] - where issues live — one SOKF concept per ticket under knowledge/issues/ — plus the triage label vocabulary.
+* [Issue Tracker & Triage][sokf:issue-tracker] - where issues live — one SOKF concept per ticket in the issue tracker, filed by lifecycle — plus the triage label vocabulary.
 * [Definition of Done][sokf:definition-of-done] - what a change must satisfy before it merges.
 * [Release Procedure][sokf:release-procedure] - the changelog gate, the release command, the irreversible push, and the tag-driven pipeline.
 * [Schemas](schemas/index.md) - the structural contract for every document the process produces — what sections it carries, what its frontmatter must say, and a worked example.

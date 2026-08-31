@@ -81,8 +81,8 @@ fn classify(path: &str) -> Option<Position> {
         ["knowledge", "concepts", name, rest @ ..] if !rest.is_empty() => {
             Some(position(knowledge, ItemKind::KnowledgeSkeleton, name, rest))
         }
-        ["knowledge", "templates", file] if let Some(name) = file.strip_suffix(".md") => {
-            Some(position(knowledge, ItemKind::DocTemplate, name, &[]))
+        ["knowledge", "schemas", file] if let Some(name) = file.strip_suffix(".md") => {
+            Some(position(knowledge, ItemKind::DocSchema, name, &[]))
         }
         ["skills", name, rest @ ..] if !rest.is_empty() => Some(position(
             Owner::Capability(Capability::Skills),
@@ -117,7 +117,7 @@ mod tests {
         let items = items_from([
             ("knowledge/skills/frame/SKILL.md", "frame"),
             ("knowledge/concepts/contracts/public/index.md", "concept"),
-            ("knowledge/templates/adr.md", "template"),
+            ("knowledge/schemas/adr.md", "schema"),
             ("skills/double-check/SKILL.md", "pack skill"),
             ("agents/coding.md", "rules"),
             ("projects/rust-npm/README.md", "project"),
@@ -128,7 +128,7 @@ mod tests {
             names(&items, knowledge, ItemKind::KnowledgeSkeleton),
             ["contracts"]
         );
-        assert_eq!(names(&items, knowledge, ItemKind::DocTemplate), ["adr"]);
+        assert_eq!(names(&items, knowledge, ItemKind::DocSchema), ["adr"]);
         assert_eq!(
             names(
                 &items,
@@ -189,17 +189,16 @@ mod tests {
         assert_eq!(plans.files, [("index.md".to_string(), "plans".to_string())]);
     }
 
-    /// The instruction files and the SOKF spec move with the binary, so they
+    /// The SOKF spec, changelog and grammar move with the binary, so they
     /// sit in the tree without being content. `pack.toml` is metadata.
     #[test]
     fn paths_matching_no_rule_are_not_items() {
         let items = items_from([
             ("pack.toml", "format = 1"),
-            ("sokf/agents/sokf.md", "instructions"),
             ("sokf/agents/sokf/SPEC.md", "spec"),
-            ("codegraph/codegraph.md", "instructions"),
+            ("sokf/agents/sokf/changelog.md", "changelog"),
             ("knowledge/concepts", "a file where a directory belongs"),
-            ("knowledge/templates/not-markdown.txt", "wrong extension"),
+            ("knowledge/schemas/not-markdown.txt", "wrong extension"),
             ("agents/nested/deeper.md", "too deep"),
         ]);
         assert!(items.is_empty(), "unexpected items: {items:?}");

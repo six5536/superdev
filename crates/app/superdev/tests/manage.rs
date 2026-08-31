@@ -172,20 +172,17 @@ fn init_sets_up_a_fresh_repo() {
     assert!(repo.join(".superdev/config.toml").is_file());
     assert!(repo.join(".superdev/lock.toml").is_file());
     // A fresh AGENTS.md holds only superdev's import; the rest is the user's
-    // to write. The fenced aggregator points at the enabled capabilities'
-    // instruction files.
+    // to write. The aggregator carries the instructions themselves, with the
+    // code-exploration section present because code-index is enabled.
     assert_eq!(sb.read("AGENTS.md"), "@.agents/superdev.md\n");
     let aggregator = sb.read(".agents/superdev.md");
-    assert!(aggregator.starts_with("<superdev-system>"), "{aggregator}");
-    assert!(aggregator.contains("@sokf.md"), "{aggregator}");
-    assert!(aggregator.contains("@codegraph.md"), "{aggregator}");
-    assert!(aggregator.contains("@coding.md"), "{aggregator}");
-    assert!(repo.join(".agents/coding.md").is_file());
-    assert!(repo.join(".agents/professionalism.md").is_file());
-    assert!(repo.join(".agents/process.md").is_file());
-    assert!(repo.join(".agents/sokf.md").is_file());
-    assert!(repo.join(".agents/codegraph.md").is_file());
+    assert!(aggregator.starts_with("# Prime Directive"), "{aggregator}");
+    assert!(aggregator.contains("<knowledge"), "{aggregator}");
+    assert!(aggregator.contains("<code-exploration"), "{aggregator}");
+    assert!(aggregator.contains("<professionalism>"), "{aggregator}");
     assert!(repo.join(".agents/sokf/SPEC.md").is_file());
+    assert!(repo.join(".agents/sokf/changelog.md").is_file());
+    assert!(repo.join(".agents/sokf/grammar.yaml").is_file());
     let mcp = sb.read(".mcp.json");
     assert!(mcp.contains("\"superdev-sokf\""), "{mcp}");
     assert!(mcp.contains("\"codegraph\""), "{mcp}");
@@ -555,15 +552,15 @@ fn disabling_code_index_unpins_codegraph_and_keeps_user_pins() {
     assert!(!lock.contains("[components.code-index]"), "{lock}");
     // The capabilities still enabled keep their records: the sweep is targeted.
     assert!(lock.contains("[components.skills]"), "{lock}");
-    // The agent wiring goes with the capability: instruction file, MCP key
-    // and aggregator import — while the knowledge wiring stays.
-    assert!(!sb.repo().join(".agents/codegraph.md").exists());
+    // The agent wiring goes with the capability: MCP key and the
+    // aggregator's code-exploration section — while the knowledge wiring
+    // stays.
     let mcp = sb.read(".mcp.json");
     assert!(!mcp.contains("\"codegraph\""), "{mcp}");
     assert!(mcp.contains("\"superdev-sokf\""), "{mcp}");
     let aggregator = sb.read(".agents/superdev.md");
-    assert!(!aggregator.contains("@codegraph.md"), "{aggregator}");
-    assert!(aggregator.contains("@sokf.md"), "{aggregator}");
+    assert!(!aggregator.contains("<code-exploration"), "{aggregator}");
+    assert!(aggregator.contains("<knowledge"), "{aggregator}");
     sb.superdev().arg("status").assert().success();
 }
 

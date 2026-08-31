@@ -147,8 +147,8 @@ mod tests {
     fn set() -> ContentSet {
         ContentSet::from_layer(
             vec![
-                item(knowledge(), ItemKind::DocTemplate, "adr.md"),
-                item(knowledge(), ItemKind::DocTemplate, "spec.md"),
+                item(knowledge(), ItemKind::DocSchema, "adr.md"),
+                item(knowledge(), ItemKind::DocSchema, "spec.md"),
                 item(knowledge(), ItemKind::Skill, "frame"),
                 item(Owner::Repo, ItemKind::AgentScaffold, "coding.md"),
             ],
@@ -160,7 +160,7 @@ mod tests {
     fn an_item_is_found_by_its_whole_identity() {
         let set = set();
         assert!(
-            set.item(knowledge(), ItemKind::DocTemplate, "adr.md")
+            set.item(knowledge(), ItemKind::DocSchema, "adr.md")
                 .is_some()
         );
         // Right name, wrong kind: not the same item.
@@ -174,7 +174,7 @@ mod tests {
     fn items_of_returns_one_kind_in_name_order() {
         let set = set();
         let names: Vec<&str> = set
-            .items_of(knowledge(), ItemKind::DocTemplate)
+            .items_of(knowledge(), ItemKind::DocSchema)
             .map(|i| i.name.as_str())
             .collect();
         assert_eq!(names, ["adr.md", "spec.md"]);

@@ -1,5 +1,5 @@
 ---
-type: Reference
+type: DevelopmentCommands
 id: development-commands
 title: Development Commands
 description: TBD — the everyday command set — build, test, lint, and the rest.

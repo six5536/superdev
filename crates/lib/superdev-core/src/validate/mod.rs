@@ -12,6 +12,7 @@
 //! different verdicts about the same tree (D-17).
 
 pub mod fix;
+pub mod lifecycle;
 pub mod schema;
 pub mod sokf;
 
@@ -77,6 +78,7 @@ pub fn validate_repo(
     let mut findings = Vec::new();
     let mut concept_count = 0;
     let mut documents: Vec<(String, String, Option<String>)> = Vec::new();
+    let mut subjects: Vec<lifecycle::Subject> = Vec::new();
 
     // Named explicitly, so unreadable knowledge is an error rather than a
     // silent skip; unnamed, so a repository without any is simply a repository
@@ -100,6 +102,11 @@ pub fn validate_repo(
             if path.contains("/schemas/") || path.ends_with("/index.md") || path == "index.md" {
                 continue;
             }
+            subjects.push(lifecycle::Subject {
+                path: path.clone(),
+                doc_type: concept.kind.clone(),
+                lifecycle: concept.lifecycle.clone(),
+            });
             documents.push((
                 path,
                 read(&bundle.join(&concept.path))?,
@@ -176,6 +183,9 @@ pub fn validate_repo(
             .filter(|d| set.governs(d.path, d.doc_type))
             .count();
         schema_findings.extend(schema::document::check_documents(&candidates, &set));
+        // The filing check: a document's `lifecycle` against the folder
+        // carrying it, in scope wherever its schema declares the enum.
+        findings.extend(lifecycle::check(&subjects, &set));
         findings.extend(schema_findings.into_iter().map(|f| Finding {
             path: f.file,
             message: f.message,
@@ -219,7 +229,12 @@ pub fn fix_repo(repo_root: &Path, bundle: &Path, paths: &[PathBuf]) -> Result<Re
     let mut repair = fix::fix(&knowledge, &repo_root)?;
     if !prefix.is_empty() {
         for path in &mut repair.written {
-            *path = format!("{prefix}/{path}");
+            // A move entry is `from -> to`; both sides get the prefix.
+            *path = path
+                .split(" -> ")
+                .map(|p| format!("{prefix}/{p}"))
+                .collect::<Vec<_>>()
+                .join(" -> ");
         }
     }
     Ok(repair)
@@ -381,7 +396,7 @@ mod tests {
     #[test]
     fn one_named_file_is_checked_alone() {
         let root = repo();
-        let one = vec![PathBuf::from(".agents/core.md")];
+        let one = vec![PathBuf::from("knowledge/schemas/adr.md")];
         let run = validate_repo(&root, &root.join("knowledge"), &one, &live()).unwrap();
         assert_eq!(run.report.concept_count, 0);
         assert_eq!(run.files, 1);

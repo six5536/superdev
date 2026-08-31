@@ -41,7 +41,7 @@ status: stable
   template version as provenance; the engine never revisits the files —
   updates happen only through the `template-update` skill, as user edits.
   `rust-npm` is the first — see the
-  [spec][sokf:spec-007-project-templates].
+  [template contract][sokf:contract-008-file-format-template].
 - **Template adoption** — taking a project template into a repo that was
   never seeded from one: the `template-update` skill's first run there,
   merging the rendered template into the existing shape with the user
@@ -55,8 +55,7 @@ status: stable
 - **Knowledge-carried skill** — one of the 17 SOKF-carried skills the
   `knowledge` capability materialises into `.claude/skills/<name>/` as owned
   files, each skill its whole directory: SKILL.md, companions, harness
-  configs. The set exists exactly where knowledge exists. See the
-  [spec][sokf:spec-009-knowledge-carried-skills].
+  configs. The set exists exactly where knowledge exists.
 - **Content pack** — a versioned set of superdev's prose content: skills,
   document templates, project templates, knowledge skeletons and the
   general-rules scaffolds. A pack is resolved from a pinned source and
@@ -105,8 +104,7 @@ status: stable
   effect instead of failing.
 - **Harvest** — the move `bootstrap` performs: relocate a durable fact from
   stranded prose (or an opted-in code comment) into the canonical knowledge, leaving a
-  one-line summary and a link behind in the source. See the
-  [spec][sokf:spec-008-knowledge-owned-skills].
+  one-line summary and a link behind in the source.
 - **Claim** — a typed lock entry a component declares it owns: a file, a
   `.mise.toml` pin, or a managed JSON key. The orphan pass subtracts the live
   claims from the lock, which is how a migration is derived.
@@ -127,16 +125,21 @@ Terms from the knowledge-serving side:
 - **Reciprocal rank fusion (RRF)** — how those two rankings merge: each list
   contributes `1/(60 + rank)` per section and the sums are sorted. It needs no
   score calibration between BM25 and cosine, which is the whole reason for it.
+- **Lifecycle** — the one field that says whether a document is live or
+  settled, on every issue, plan, decision and contract. Its value names
+  the folder the document sits in — `knowledge/issues/open/`,
+  `knowledge/plans/done/` — and `superdev validate --fix` moves a document
+  whose folder disagrees. SOKF `status` no longer appears on these kinds: it
+  answered the same question in a second vocabulary, and an absent `status`
+  reads as `stable` by the SOKF spec, so dropping it changed nothing.
 
 The files these terms describe are in [configuration][sokf:configuration]; the
 layering is in [architecture][sokf:architecture].
 
 <!-- sokf:links -->
-[sokf:adr-003-items-by-layout]: /knowledge/decisions/adr-003-items-by-layout.md
-[sokf:adr-004-base-pack-identity]: /knowledge/decisions/adr-004-base-pack-identity.md
+[sokf:adr-003-items-by-layout]: /knowledge/adrs/active/adr-003-items-by-layout.md
+[sokf:adr-004-base-pack-identity]: /knowledge/adrs/active/adr-004-base-pack-identity.md
 [sokf:architectural-rules]: /knowledge/architectural-rules.md
 [sokf:architecture]: /knowledge/architecture.md
 [sokf:configuration]: /knowledge/configuration.md
-[sokf:spec-007-project-templates]: /knowledge/specs/spec-007-project-templates.md
-[sokf:spec-008-knowledge-owned-skills]: /knowledge/specs/spec-008-knowledge-owned-skills.md
-[sokf:spec-009-knowledge-carried-skills]: /knowledge/specs/spec-009-knowledge-carried-skills.md
+[sokf:contract-008-file-format-template]: /knowledge/contracts/public/active/contract-008-file-format-template.md

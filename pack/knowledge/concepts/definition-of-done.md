@@ -1,5 +1,5 @@
 ---
-type: Convention
+type: DefinitionOfDone
 id: definition-of-done
 title: Definition of Done
 description: TBD — what a change must satisfy before it merges.

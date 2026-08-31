@@ -39,7 +39,7 @@ The invariants behind the [architecture][sokf:architecture]:
   [software-components][sokf:software-components].
 
 <!-- sokf:links -->
-[sokf:adr-002-resolve-before-plan]: /knowledge/decisions/adr-002-resolve-before-plan.md
-[sokf:adr-005-pack-cache-and-fetch]: /knowledge/decisions/adr-005-pack-cache-and-fetch.md
+[sokf:adr-002-resolve-before-plan]: /knowledge/adrs/active/adr-002-resolve-before-plan.md
+[sokf:adr-005-pack-cache-and-fetch]: /knowledge/adrs/active/adr-005-pack-cache-and-fetch.md
 [sokf:architecture]: /knowledge/architecture.md
 [sokf:software-components]: /knowledge/software-components.md

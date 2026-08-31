@@ -1,5 +1,5 @@
 ---
-type: Convention
+type: ArchitecturalRules
 id: architectural-rules
 title: Architectural Rules
 description: TBD — the rules the architecture depends on, stated so a change cannot silently break them.

@@ -24,7 +24,7 @@ You write throwaway code that answers one design question.
   <gate check="The question is unambiguous, or the user is reachable" on-fail="match the surrounding code (backend module → logic; page or component → UI) and state the assumption at the top of the prototype" />
   <step name="BUILD" task="Build it per the chosen branch file" />
   <step name="FOLD DECISIONS" task="Fold each validated decision into the real code" />
-  <step name="CAPTURE THE PROTOTYPE" task="Capture the prototype as a primary source: commit it to a throwaway branch, out of main, and leave a pointer to that branch — with the verdict and the question it settled — on the issue, spec, or plan driving the work" />
+  <step name="CAPTURE THE PROTOTYPE" task="Capture the prototype as a primary source: commit it to a throwaway branch, out of main, and leave a pointer to that branch — with the verdict and the question it settled — on the issue or plan driving the work" />
   </process_actions>
 
 

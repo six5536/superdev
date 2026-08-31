@@ -1,1 +1,1 @@
-@.agents/core.md
+@.agents/superdev.md

@@ -1,5 +1,5 @@
 ---
-type: Reference
+type: DirectoryStructure
 id: directory-structure
 title: Directory Structure
 description: TBD — what lives where in the repository, and the rules for adding something new.

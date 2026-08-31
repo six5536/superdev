@@ -1,3 +1,0 @@
-# Specs
-
-No specs yet.

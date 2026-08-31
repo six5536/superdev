@@ -378,7 +378,7 @@ kinds:
             required: true
             condition: true
       rules:
-        doc: The unit's freestanding norms.
+        doc: The unit's freestanding norms, loose or gathered into sets.
         form: block
         parent: skill
         occurs:
@@ -387,11 +387,26 @@ kinds:
         mustContain:
           anyOf:
             - rule
+            - set
+      set:
+        doc: A named group of rules; the name states the scope its rules share, and a rule outside
+          that scope does not belong in the set.
+        form: block
+        parent: rules
+        attrs:
+          name:
+            required: true
+            doc: the scope the set's rules share
+        mustContain:
+          anyOf:
+            - rule
       rule:
         doc: One norm. The statement stays imperative and carries no modal of its own — the level
           attribute does that.
         form: block
-        parent: rules
+        parent:
+          - rules
+          - set
         bodyRequired: true
         attrs:
           level:

@@ -1,9 +1,12 @@
 //! validate::fix — the repair pass behind `superdev validate --fix`.
 //!
-//! Two repairs, both mechanical, both derived from the same knowledge the
-//! check reads: a body link that names a concept by path is rewritten to
-//! address it by `id` (SPEC §8), and every document's generated definition
-//! block is rewritten from the ids its body cites (SPEC §9).
+//! Three repairs, all mechanical, all derived from the same knowledge the
+//! check reads: a document whose folder disagrees with its `lifecycle` is
+//! moved into the folder that value names, a body link that names a concept
+//! by path is rewritten to address it by `id` (SPEC §8), and every
+//! document's generated definition block is rewritten from the ids its body
+//! cites (SPEC §9). The moves run first, so every definition block is
+//! written against the path a document ends the pass at.
 //!
 //! Nothing here decides anything. The check names a fault and this undoes it,
 //! so a file the check has nothing to say about is not written at all — which
@@ -16,17 +19,20 @@
 use std::collections::BTreeSet;
 use std::path::Path;
 
+use super::lifecycle;
+use super::schema::document::SchemaSet;
 use super::sokf::{
     ID_LABEL, Identities, canonical, definition_block, identities, link_path, render_block,
     resolve_target, scan_body, stem_id,
 };
 use crate::error::{Error, Result};
-use crate::sokf::bundle::Bundle;
+use crate::sokf::bundle::{Bundle, load_bundle};
 
 /// What one repair pass changed.
 #[derive(Debug, Default)]
 pub struct Repair {
-    /// Knowledge-relative paths rewritten, in path order.
+    /// Knowledge-relative paths rewritten, in path order; a moved document
+    /// appears as `from -> to`.
     pub written: Vec<String>,
 }
 
@@ -40,12 +46,28 @@ pub struct Repair {
 /// outside the SOKF knowledge — which is a bug, not a user error, and stops
 /// the pass rather than writing.
 pub fn fix(bundle: &Bundle, repo_root: &Path) -> Result<Repair> {
+    let root = canonical(&bundle.root).unwrap_or_else(|| bundle.root.clone());
+    let mut repair = Repair::default();
+
+    // Filing first: move each document into the folder its `lifecycle`
+    // names, then reload, so the link repairs below read and write the
+    // paths the documents end the pass at.
+    let moves = lifecycle::moves(bundle, &schema_set(bundle)?);
+    let moved;
+    let bundle = if moves.is_empty() {
+        bundle
+    } else {
+        for (from, to) in &moves {
+            move_within(&root, &bundle.root.join(from), &bundle.root.join(to))?;
+            repair.written.push(format!("{from} -> {to}"));
+        }
+        moved = load_bundle(&bundle.root)?;
+        &moved
+    };
+
     // The check's findings are the caller's business; here they are the
     // by-product of building the id maps the repairs read.
     let ids = identities(bundle, repo_root, &mut Vec::new());
-    let root = canonical(&bundle.root).unwrap_or_else(|| bundle.root.clone());
-
-    let mut repair = Repair::default();
     let mut documents: Vec<&str> = bundle
         .concepts
         .iter()
@@ -179,6 +201,48 @@ fn with_block(body: &str, block: &str) -> String {
     }
 }
 
+/// The schema set the filing repair reads, from the bundle's own
+/// `schemas/` concepts, re-read whole because the contract parser wants the
+/// full file. A bundle shipping no schemas yields an empty set, and the
+/// pass moves nothing. Load findings are dropped here: the check reports
+/// them; this is not the place to report them twice.
+fn schema_set(bundle: &Bundle) -> Result<SchemaSet> {
+    let mut files: Vec<(String, String)> = Vec::new();
+    for concept in &bundle.concepts {
+        if concept.path.starts_with("schemas/") {
+            files.push((concept.path.clone(), read(&bundle.root.join(&concept.path))?));
+        }
+    }
+    Ok(SchemaSet::load(&files).0)
+}
+
+/// Rename `from` to `to`, creating the state folder, refusing either side
+/// outside `root`.
+fn move_within(root: &Path, from: &Path, to: &Path) -> Result<()> {
+    for path in [from, to] {
+        let resolved = canonical(path).unwrap_or_else(|| path.to_path_buf());
+        if !resolved.starts_with(root) {
+            return Err(Error::Io {
+                path: path.to_path_buf(),
+                source: std::io::Error::other(format!(
+                    "refusing to move outside the SOKF knowledge at {}",
+                    root.display()
+                )),
+            });
+        }
+    }
+    if let Some(parent) = to.parent() {
+        std::fs::create_dir_all(parent).map_err(|source| Error::Io {
+            path: parent.to_path_buf(),
+            source,
+        })?;
+    }
+    std::fs::rename(from, to).map_err(|source| Error::Io {
+        path: from.to_path_buf(),
+        source,
+    })
+}
+
 fn read(path: &Path) -> Result<String> {
     std::fs::read_to_string(path).map_err(|source| Error::Io {
         path: path.to_path_buf(),
@@ -289,6 +353,68 @@ mod tests {
             a,
             "---\ntype: T\nid: alpha\n---\nSee [beta][sokf:beta] and [readme](/README.md).\n\n<!-- sokf:links -->\n[sokf:beta]: /knowledge/sub/beta.md\n"
         );
+
+        let bundle = load_bundle(&knowledge).unwrap();
+        assert!(
+            fix(&bundle, dir.path()).unwrap().written.is_empty(),
+            "the pass is idempotent"
+        );
+    }
+
+    /// The filing repair moves a misfiled and an unfiled document, and the
+    /// definition blocks citing them are rewritten against the paths they
+    /// end at — one pass, one clean tree.
+    #[test]
+    fn the_pass_files_by_lifecycle_before_repairing_links() {
+        let dir = tempfile::tempdir().unwrap();
+        let knowledge = dir.path().join("knowledge");
+        std::fs::create_dir_all(knowledge.join("schemas")).unwrap();
+        std::fs::create_dir_all(knowledge.join("issues/done")).unwrap();
+        std::fs::write(
+            knowledge.join("manifest.sokf.yaml"),
+            "sokf: \"0.4\"\nname: t\n",
+        )
+        .unwrap();
+        std::fs::write(
+            knowledge.join("schemas/bug-report.md"),
+            "---\ntype: Schema\nid: schema-bug-report\n---\n````yaml\nfrontmatter:\n  type:\n    const: BugReport\n  lifecycle:\n    enum: [open, done, wontfix]\n````\n",
+        )
+        .unwrap();
+        // Misfiled: sits in done/ while open.
+        std::fs::write(
+            knowledge.join("issues/done/issue-001-bug-a.md"),
+            "---\ntype: BugReport\nid: issue-001-bug-a\nlifecycle: open\n---\nx\n",
+        )
+        .unwrap();
+        // Unfiled: sits in the base directory.
+        std::fs::write(
+            knowledge.join("issues/issue-002-bug-b.md"),
+            "---\ntype: BugReport\nid: issue-002-bug-b\nlifecycle: done\n---\nx\n",
+        )
+        .unwrap();
+        // Cites both, so its definition block must name the moved paths.
+        std::fs::write(
+            knowledge.join("citing.md"),
+            "---\ntype: T\nid: citing\n---\nSee [a][sokf:issue-001-bug-a] and [b][sokf:issue-002-bug-b].\n\n<!-- sokf:links -->\n[sokf:issue-001-bug-a]: /knowledge/issues/done/issue-001-bug-a.md\n[sokf:issue-002-bug-b]: /knowledge/issues/issue-002-bug-b.md\n",
+        )
+        .unwrap();
+
+        let bundle = load_bundle(&knowledge).unwrap();
+        let repair = fix(&bundle, dir.path()).unwrap();
+        assert!(repair.written.contains(
+            &"issues/done/issue-001-bug-a.md -> issues/open/issue-001-bug-a.md".to_string()
+        ));
+        assert!(
+            repair
+                .written
+                .contains(&"issues/issue-002-bug-b.md -> issues/done/issue-002-bug-b.md".to_string())
+        );
+        assert!(knowledge.join("issues/open/issue-001-bug-a.md").is_file());
+        assert!(knowledge.join("issues/done/issue-002-bug-b.md").is_file());
+
+        let citing = std::fs::read_to_string(knowledge.join("citing.md")).unwrap();
+        assert!(citing.contains("[sokf:issue-001-bug-a]: /knowledge/issues/open/issue-001-bug-a.md"));
+        assert!(citing.contains("[sokf:issue-002-bug-b]: /knowledge/issues/done/issue-002-bug-b.md"));
 
         let bundle = load_bundle(&knowledge).unwrap();
         assert!(

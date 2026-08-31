@@ -171,14 +171,12 @@ entries, one per pack, each with its own `provider`, `version` and
 `custom`. The single `[skills]` table is the one-entry case and keeps its
 shape on rewrites; the array form appears only from two entries up. The
 same pack listed twice, the array form on an exclusive slot, and an empty
-entry list are all refused at load with guided errors
-([spec][sokf:spec-011-skills-cardinality]). A manifest still naming the
+entry list are all refused at load with guided errors. A manifest still naming the
 removed `workflows` capability fails at load with a guided error telling the
 user to delete the table (moving any custom names to `[knowledge]`) — the
 skill set now ships with the SOKF knowledge, and superpowers users can
 `claude plugin install superpowers` by hand. The error never rewrites
-`config.toml`; the manifest is the user's file
-([spec][sokf:spec-009-knowledge-carried-skills]).
+`config.toml`; the manifest is the user's file.
 
 An optional sub-table opts the canonical knowledge out of the local embedding
 model and onto an API:
@@ -333,19 +331,17 @@ The capability set is in [architecture][sokf:architecture]; the file-ownership
 rules that decide what gets hashed are in [glossary][sokf:glossary].
 
 <!-- sokf:links -->
-[sokf:adr-001-packs-manifest-section]: /knowledge/decisions/adr-001-packs-manifest-section.md
-[sokf:adr-004-base-pack-identity]: /knowledge/decisions/adr-004-base-pack-identity.md
-[sokf:adr-005-pack-cache-and-fetch]: /knowledge/decisions/adr-005-pack-cache-and-fetch.md
-[sokf:adr-009-update-queries-default-source]: /knowledge/decisions/adr-009-update-queries-default-source.md
-[sokf:adr-011-path-pack-identity-is-root-relative]: /knowledge/decisions/adr-011-path-pack-identity-is-root-relative.md
-[sokf:adr-012-pack-source-schemes-are-allowlisted]: /knowledge/decisions/adr-012-pack-source-schemes-are-allowlisted.md
-[sokf:adr-013-update-proves-a-pin-before-it-writes-it]: /knowledge/decisions/adr-013-update-proves-a-pin-before-it-writes-it.md
-[sokf:adr-014-a-symlink-in-a-pack-is-refused]: /knowledge/decisions/adr-014-a-symlink-in-a-pack-is-refused.md
-[sokf:adr-015-the-spawn-seam-carries-a-deadline]: /knowledge/decisions/adr-015-the-spawn-seam-carries-a-deadline.md
-[sokf:adr-016-a-path-pack-records-no-digest]: /knowledge/decisions/adr-016-a-path-pack-records-no-digest.md
+[sokf:adr-001-packs-manifest-section]: /knowledge/adrs/active/adr-001-packs-manifest-section.md
+[sokf:adr-004-base-pack-identity]: /knowledge/adrs/active/adr-004-base-pack-identity.md
+[sokf:adr-005-pack-cache-and-fetch]: /knowledge/adrs/active/adr-005-pack-cache-and-fetch.md
+[sokf:adr-009-update-queries-default-source]: /knowledge/adrs/active/adr-009-update-queries-default-source.md
+[sokf:adr-011-path-pack-identity-is-root-relative]: /knowledge/adrs/active/adr-011-path-pack-identity-is-root-relative.md
+[sokf:adr-012-pack-source-schemes-are-allowlisted]: /knowledge/adrs/active/adr-012-pack-source-schemes-are-allowlisted.md
+[sokf:adr-013-update-proves-a-pin-before-it-writes-it]: /knowledge/adrs/active/adr-013-update-proves-a-pin-before-it-writes-it.md
+[sokf:adr-014-a-symlink-in-a-pack-is-refused]: /knowledge/adrs/active/adr-014-a-symlink-in-a-pack-is-refused.md
+[sokf:adr-015-the-spawn-seam-carries-a-deadline]: /knowledge/adrs/active/adr-015-the-spawn-seam-carries-a-deadline.md
+[sokf:adr-016-a-path-pack-records-no-digest]: /knowledge/adrs/active/adr-016-a-path-pack-records-no-digest.md
 [sokf:architecture]: /knowledge/architecture.md
 [sokf:glossary]: /knowledge/glossary.md
-[sokf:issue-005-bug-a-backport-leaves-the-lock-stale]: /knowledge/issues/issue-005-bug-a-backport-leaves-the-lock-stale.md
-[sokf:spec-009-knowledge-carried-skills]: /knowledge/specs/spec-009-knowledge-carried-skills.md
-[sokf:spec-011-skills-cardinality]: /knowledge/specs/spec-011-skills-cardinality.md
+[sokf:issue-005-bug-a-backport-leaves-the-lock-stale]: /knowledge/issues/done/issue-005-bug-a-backport-leaves-the-lock-stale.md
 [sokf:technology-stack]: /knowledge/technology-stack.md

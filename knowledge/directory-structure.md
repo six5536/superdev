@@ -22,13 +22,12 @@ crates/lib/superdev-core/ # all domain logic (no arg parsing)
 crates/app/superdev/      # the binary: CLI parsing, wiring, output
 packages/                 # npm launcher + per-platform binary packages
 knowledge/                # this repository's SOKF knowledge
-knowledge/specs/          # design specs (permanent decision records)
 knowledge/plans/          # plan-<nnn>-feature-<slug> slice lists and
                           # plan-<nnn>-adhoc-<slug> one-off work
-knowledge/decisions/      # ADRs; permanent
-knowledge/contracts/      # contracts, by audience:
+knowledge/adrs/           # ADRs; permanent
+knowledge/contracts/      # durable contracts, by audience:
                           # public/ promised to callers,
-                          # private/ per-feature, build codes against it
+                          # internal/ binding modules, build codes against it
 knowledge/issues/         # gaps and tickets, one concept each
 knowledge/schemas/        # the contract each document type is checked against
 .agents/                  # the entry point, capability instructions, SOKF spec, agent rules
@@ -60,5 +59,5 @@ knowledge.[^contributing]
 [^contributing]: Contributing guide (project layout)
 
 <!-- sokf:links -->
-[sokf:adr-003-items-by-layout]: /knowledge/decisions/adr-003-items-by-layout.md
+[sokf:adr-003-items-by-layout]: /knowledge/adrs/active/adr-003-items-by-layout.md
 [sokf:software-components]: /knowledge/software-components.md

@@ -1,5 +1,5 @@
 ---
-type: Reference
+type: ReleaseProcedure
 id: release-procedure
 title: Release Procedure
 description: TBD — how a release is cut, verified, and published.

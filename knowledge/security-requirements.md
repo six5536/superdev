@@ -101,13 +101,13 @@ only (pre-1.0, no backports).
 [^security-md]: Security policy
 
 <!-- sokf:links -->
-[sokf:adr-004-base-pack-identity]: /knowledge/decisions/adr-004-base-pack-identity.md
-[sokf:adr-007-git-fetch-by-spawn]: /knowledge/decisions/adr-007-git-fetch-by-spawn.md
-[sokf:adr-009-update-queries-default-source]: /knowledge/decisions/adr-009-update-queries-default-source.md
-[sokf:adr-012-pack-source-schemes-are-allowlisted]: /knowledge/decisions/adr-012-pack-source-schemes-are-allowlisted.md
-[sokf:adr-015-the-spawn-seam-carries-a-deadline]: /knowledge/decisions/adr-015-the-spawn-seam-carries-a-deadline.md
-[sokf:adr-016-a-path-pack-records-no-digest]: /knowledge/decisions/adr-016-a-path-pack-records-no-digest.md
+[sokf:adr-004-base-pack-identity]: /knowledge/adrs/active/adr-004-base-pack-identity.md
+[sokf:adr-007-git-fetch-by-spawn]: /knowledge/adrs/active/adr-007-git-fetch-by-spawn.md
+[sokf:adr-009-update-queries-default-source]: /knowledge/adrs/active/adr-009-update-queries-default-source.md
+[sokf:adr-012-pack-source-schemes-are-allowlisted]: /knowledge/adrs/active/adr-012-pack-source-schemes-are-allowlisted.md
+[sokf:adr-015-the-spawn-seam-carries-a-deadline]: /knowledge/adrs/active/adr-015-the-spawn-seam-carries-a-deadline.md
+[sokf:adr-016-a-path-pack-records-no-digest]: /knowledge/adrs/active/adr-016-a-path-pack-records-no-digest.md
 [sokf:architecture]: /knowledge/architecture.md
 [sokf:configuration]: /knowledge/configuration.md
 [sokf:constraints-non-goals]: /knowledge/constraints-non-goals.md
-[sokf:contract-003-mcp-sokf]: /knowledge/contracts/public/contract-003-mcp-sokf.md
+[sokf:contract-003-mcp-sokf]: /knowledge/contracts/public/active/contract-003-mcp-sokf.md

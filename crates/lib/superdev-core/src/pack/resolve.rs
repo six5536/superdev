@@ -628,7 +628,7 @@ mod tests {
         assert!(
             resolved
                 .content
-                .item(knowledge(), ItemKind::Skill, "verify")
+                .item(knowledge(), ItemKind::Skill, "integrate")
                 .is_some()
         );
     }
@@ -1448,7 +1448,7 @@ mod tests {
         let dir = repo.path().join("packs/acme");
         write_pack(&dir, "brand-new", "# Brand new\n");
         fs::create_dir_all(dir.join("agents")).unwrap();
-        fs::write(dir.join("agents/sokf.md"), "not yours to ship\n").unwrap();
+        fs::write(dir.join("agents/superdev.md"), "not yours to ship\n").unwrap();
         let err = resolve(
             repo.path(),
             &FakeRunner::new(),
@@ -1457,7 +1457,7 @@ mod tests {
             ResolveMode::Fetching,
         )
         .unwrap_err();
-        assert!(err.to_string().contains("agents/sokf.md"), "{err}");
+        assert!(err.to_string().contains("agents/superdev.md"), "{err}");
     }
 
     /// A relative source is the repo's, whatever directory the command runs

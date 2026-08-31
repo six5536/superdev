@@ -66,5 +66,5 @@ package added later; the steps are in
 [^contributing]: Contributing guide (releasing, authoritative walkthrough)
 
 <!-- sokf:links -->
-[sokf:adr-008-one-command-per-release]: /knowledge/decisions/adr-008-one-command-per-release.md
+[sokf:adr-008-one-command-per-release]: /knowledge/adrs/active/adr-008-one-command-per-release.md
 [sokf:software-components]: /knowledge/software-components.md

@@ -4,16 +4,18 @@
 * [Domain Glossary][sokf:glossary] - TBD — the project's domain terms, each with one precise definition.
 * [Known Constraints & Non-Goals][sokf:constraints-non-goals] - TBD — accepted limitations and the things this project deliberately does not do.
 * [Backlog & Decided Ideas][sokf:backlog] - TBD — ideas under consideration and ideas decided against, with the reasoning.
+* [Ideas](ideas/index.md) - thoughts captured for considering later, one document each; not candidate work.
 
 # Design
 
-* [Specs](/knowledge/specs/index.md) - design specs — permanent decision records, one per significant change.
-* [Plans](/knowledge/plans/index.md) - implementation plans delivering specs, tagged done when they land.
+* [Plans](plans/index.md) - the slice lists delivering features and the plans for one-off work outside the feature workflow, filed done when they land.
+* [ADRs](adrs/index.md) - architecture decision records: the choices that were expensive to make, with their alternatives.
+* [Contracts](contracts/index.md) - the durable contracts describing the app: promised outward in public/, binding modules in internal/.
+* [Issues](issues/index.md) - open tickets, grouped by feature.
 * [Architecture][sokf:architecture] - TBD — the system's shape — the main parts, how they relate, and where the seams are.
 * [Architectural Rules][sokf:architectural-rules] - TBD — the rules the architecture depends on, stated so a change cannot silently break them.
 * [Software Components][sokf:software-components] - TBD — the deployable and buildable units, what each contains, and how they depend on each other.
 * [Configuration & Environments][sokf:configuration] - TBD — configuration files and environment variables, what reads them, and their precedence.
-* [Contracts](/knowledge/contracts/index.md) - TBD — the contracts this project promises to others, public and per-feature.
 * [Error Handling & Logging][sokf:error-handling] - TBD — how failures are reported — exit codes, error shapes, logging, and recovery paths.
 * [Directory Structure][sokf:directory-structure] - TBD — what lives where in the repository, and the rules for adding something new.
 * [Technology Stack][sokf:technology-stack] - TBD — languages, runtimes, key dependencies, and the pinned toolchain set.
@@ -26,10 +28,10 @@
 * [Testing Strategy][sokf:testing-strategy] - TBD — the test layers, the key choices behind them, and where they run.
 * [Development Procedure][sokf:development-procedure] - TBD — setup, the change workflow, and what to run before a PR.
 * [Development Commands][sokf:development-commands] - TBD — the everyday command set — build, test, lint, and the rest.
+* [Issue Tracker & Triage][sokf:issue-tracker] - where issues live — one SOKF concept per ticket in the issue tracker, filed by lifecycle — plus the triage label vocabulary.
 * [Definition of Done][sokf:definition-of-done] - TBD — what a change must satisfy before it merges.
 * [Release Procedure][sokf:release-procedure] - TBD — how a release is cut, verified, and published.
-* [Issue Tracker & Triage][sokf:issue-tracker] - where issues live — one SOKF concept per ticket under knowledge/issues/ — plus the triage label vocabulary.
-* [Templates](/knowledge/templates/index.md) - copy-verbatim skeletons for the documents the process produces — plans, ADRs, reviews, PR descriptions, release docs, and reports.
+* [Schemas](schemas/index.md) - the structural contract for every document the process produces — what sections it carries, what its frontmatter must say, and a worked example.
 
 <!-- sokf:links -->
 [sokf:architectural-rules]: /knowledge/architectural-rules.md

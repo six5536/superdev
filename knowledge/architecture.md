@@ -8,17 +8,10 @@ links:
   - rel: relates-to
     to: software-components
     note: The crates and packages these layers ship as.
-  - rel: relates-to
-    to: spec-001-cli-core-blueprint-engine
-    note: The design this summarises.
-  - rel: relates-to
-    to: spec-002-aokf-mcp-server
-    note: The read-side design the sokf subsystem implements.
 ---
 
 superdev runs inside a target repo and keeps that repo's agent-development
-setup current. Three layers, detailed in the
-[CLI core & blueprint engine spec][sokf:spec-001-cli-core-blueprint-engine]:
+setup current. Three layers:
 
 - **`superdev-core`** — the domain: the manifest, the components, planning,
   the engine that applies a plan, and the `sokf` subsystem that reads the
@@ -34,9 +27,8 @@ Installing the `knowledge` capability is half of it; the other half is reading
 it back. The `sokf` subsystem parses the SOKF knowledge, indexes it and
 serves it to agents over MCP (`superdev mcp sokf`) — the `validate` subsystem
 checks it — so an agent queries the
-knowledge instead of preloading every concept — the design is in the
-[SOKF MCP server spec][sokf:spec-002-aokf-mcp-server], the tools
-in [contract-003-mcp-sokf][sokf:contract-003-mcp-sokf]. Freshness is lazy: every tool call
+knowledge instead of preloading every concept — the tools are in
+[contract-003-mcp-sokf][sokf:contract-003-mcp-sokf]. Freshness is lazy: every tool call
 re-hashes the canonical knowledge and syncs only what changed, so there is no watcher and
 no daemon state to go stale.
 
@@ -77,8 +69,7 @@ many-provider shape is in
 [configuration][sokf:configuration]. Every capability currently has exactly one
 registry entry; an id no entry matches fails with `<capability> provider must
 be one of: …`. A manifest still naming the removed `workflows` capability fails at
-load with a guided error
-([spec][sokf:spec-009-knowledge-carried-skills]).
+load with a guided error.
 
 `code-index` is fetched by URL and verified against a checksum this binary
 carries beside the version, so superdev installs the registry version and
@@ -93,11 +84,9 @@ teammate who clones the repo gets the pack without installing superdev. The
 SOKF component carries a much larger set the same way: the 17
 SOKF-carried skills — the workflow phases and their support skills — each
 materialised as its whole directory of owned files, and the document
-templates the skills fill in as owned files under `knowledge/templates/`
-([spec][sokf:spec-009-knowledge-carried-skills]). It also merges the
+templates the skills fill in as owned files under `knowledge/templates/`. It also merges the
 validation hook's PostToolUse entry into `.claude/settings.json`, so hook and
-skills exist exactly where knowledge exists
-([spec][sokf:spec-008-knowledge-owned-skills]).
+skills exist exactly where knowledge exists.
 
 # Files and artefacts
 
@@ -123,8 +112,7 @@ wrapping a short prompt, the general-rules imports (`.agents/professionalism.md`
 managed repo gets),
 and one import per enabled capability's instruction file
 (`.agents/sokf.md`, `.agents/codegraph.md`), rewritten as
-the enabled set changes
-([spec][sokf:spec-010-agent-instructions-layer]). Each instruction
+the enabled set changes. Each instruction
 file is owned by its capability, so it exists exactly where the capability
 does; codegraph's also comes with the `mcpServers.codegraph` registration
 that serves the index over MCP.
@@ -134,15 +122,10 @@ components claim is what `sync` removes, so a dropped file, a rename's old copy
 and a disabled capability's pins all follow one rule.
 
 <!-- sokf:links -->
-[sokf:adr-002-resolve-before-plan]: /knowledge/decisions/adr-002-resolve-before-plan.md
-[sokf:adr-003-items-by-layout]: /knowledge/decisions/adr-003-items-by-layout.md
+[sokf:adr-002-resolve-before-plan]: /knowledge/adrs/active/adr-002-resolve-before-plan.md
+[sokf:adr-003-items-by-layout]: /knowledge/adrs/active/adr-003-items-by-layout.md
 [sokf:configuration]: /knowledge/configuration.md
-[sokf:contract-002-cli-superdev]: /knowledge/contracts/public/contract-002-cli-superdev.md
-[sokf:contract-003-mcp-sokf]: /knowledge/contracts/public/contract-003-mcp-sokf.md
+[sokf:contract-002-cli-superdev]: /knowledge/contracts/public/active/contract-002-cli-superdev.md
+[sokf:contract-003-mcp-sokf]: /knowledge/contracts/public/active/contract-003-mcp-sokf.md
 [sokf:directory-structure]: /knowledge/directory-structure.md
 [sokf:software-components]: /knowledge/software-components.md
-[sokf:spec-001-cli-core-blueprint-engine]: /knowledge/specs/spec-001-cli-core-blueprint-engine.md
-[sokf:spec-002-aokf-mcp-server]: /knowledge/specs/spec-002-aokf-mcp-server.md
-[sokf:spec-008-knowledge-owned-skills]: /knowledge/specs/spec-008-knowledge-owned-skills.md
-[sokf:spec-009-knowledge-carried-skills]: /knowledge/specs/spec-009-knowledge-carried-skills.md
-[sokf:spec-010-agent-instructions-layer]: /knowledge/specs/spec-010-agent-instructions-layer.md

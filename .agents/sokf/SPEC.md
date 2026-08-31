@@ -278,7 +278,7 @@ Consumers resolve `to` as an `id` first, then as a path.
 | `depends-on`  | `depended-on-by` | Requires the target to function.                                       |
 | `references`  | `referenced-by`  | Cites or points at the target.                                         |
 | `supersedes`  | `superseded-by`  | Replaces the target; the target is deprecated.                         |
-| `implements`  | `implemented-by` | Delivers or realises the target — a plan or issue implementing a spec. |
+| `implements`  | `implemented-by` | Delivers or realises the target — a plan or issue implementing a feature request or contract. |
 | `contradicts` | `contradicts`    | Known conflict (symmetric); resolution belongs in prose.               |
 
 Producers SHOULD use a core value where one fits and MAY introduce
@@ -411,7 +411,4 @@ unknown `rel` values, broken links, or a missing `index.md` or manifest.
 
 ## 12. Versioning
 
-Before 1.0 a minor bump may break. From 1.0 minor bumps are
-backward-compatible additions and major bumps may break. The SOKF
-knowledge declares the version it targets with the manifest's `sokf` key
-(§2). Per-version changes: [changelog.md](changelog.md).
+See: [changelog.md](changelog.md).

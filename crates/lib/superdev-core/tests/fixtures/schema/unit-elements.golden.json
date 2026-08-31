@@ -18,7 +18,7 @@
     },
     {
       "file": "SKILL.md",
-      "message": "unknown tag <made_up> (unit files use only skill/goal/constraints/bootstrap_actions/tool_call/process_actions/loop/step/gate/skill_call/rules/rule)",
+      "message": "unknown tag <made_up> (unit files use only skill/goal/constraints/bootstrap_actions/tool_call/process_actions/loop/step/gate/skill_call/rules/set/rule)",
       "severity": "error"
     },
     {
@@ -28,7 +28,7 @@
     },
     {
       "file": "SKILL.md",
-      "message": "<rule> must sit directly inside <rules>, found inside <process_actions>",
+      "message": "<rule> must sit directly inside <rules> or <set>, found inside <process_actions>",
       "severity": "error"
     },
     {

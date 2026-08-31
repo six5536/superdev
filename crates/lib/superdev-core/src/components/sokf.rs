@@ -39,9 +39,10 @@ const CLAUDE_ENTRY_PATH: &str = "CLAUDE.md";
 const CLAUDE_ENTRY_LINE: &str = "@AGENTS.md";
 
 /// The files the binary owns rather than the pack: (target path, content,
-/// reason). The instructions describe a version this binary pins and the
-/// spec a format its compiled validator enforces, so both move with the
-/// binary and no pack may supply them.
+/// reason). Each describes a format this binary's compiled validator
+/// enforces, so all move with the binary and no pack may supply them. The
+/// grammar ships from the validator's own embedded copy, so the file a
+/// repository carries is byte-identical to the one the binary checks with.
 const BINARY_OWNED: &[(&str, &str, &str)] = &[
     (
         ".agents/sokf/SPEC.md",
@@ -49,9 +50,14 @@ const BINARY_OWNED: &[(&str, &str, &str)] = &[
         "SOKF specification",
     ),
     (
-        ".agents/sokf.md",
-        asset!("sokf/agents/sokf.md"),
-        "SOKF knowledge instructions",
+        ".agents/sokf/changelog.md",
+        asset!("sokf/agents/sokf/changelog.md"),
+        "SOKF changelog",
+    ),
+    (
+        ".agents/sokf/grammar.yaml",
+        crate::validate::schema::EMBEDDED_GRAMMAR,
+        "SOKF schema grammar",
     ),
 ];
 
@@ -68,7 +74,10 @@ pub(crate) fn binary_owned_count() -> usize {
 const SKELETON_REASONS: &[(&str, &str)] = &[
     ("index.md", "knowledge index"),
     ("manifest.sokf.yaml", "SOKF manifest"),
-    ("specs", "specs index"),
+    ("adrs", "ADRs index"),
+    ("contracts", "contracts indexes"),
+    ("ideas", "ideas index"),
+    ("issues", "issues index"),
     ("plans", "plans index"),
     ("issue-tracker.md", "issue-tracker convention"),
 ];
@@ -156,11 +165,11 @@ fn items(ctx: &Ctx<'_>) -> Vec<ManagedItem> {
             });
         }
     }
-    for item in ctx.content.items_of(OWNER, ItemKind::DocTemplate) {
+    for item in ctx.content.items_of(OWNER, ItemKind::DocSchema) {
         items.push(ManagedItem::OwnedFile {
-            path: format!("knowledge/templates/{}.md", item.name),
+            path: format!("knowledge/schemas/{}.md", item.name),
             content: item.files[0].1.clone(),
-            reason: "document template".to_string(),
+            reason: "document schema".to_string(),
         });
     }
     items.push(ManagedItem::EnsureLine {
@@ -258,14 +267,14 @@ mod tests {
             descs.iter().any(|d| d.contains("superdev hook validate")),
             "{descs:?}"
         );
-        // The template library ships with the skills that reference it.
-        for item in content.items_of(OWNER, ItemKind::DocTemplate) {
+        // The schema library ships with the skills that reference it.
+        for item in content.items_of(OWNER, ItemKind::DocSchema) {
             let name = &item.name;
             assert!(
                 descs
                     .iter()
-                    .any(|d| d.contains(&format!("knowledge/templates/{name}.md"))),
-                "knowledge/templates/{name}.md missing from {descs:?}"
+                    .any(|d| d.contains(&format!("knowledge/schemas/{name}.md"))),
+                "knowledge/schemas/{name}.md missing from {descs:?}"
             );
         }
     }
@@ -355,7 +364,7 @@ mod tests {
     }
 
     #[test]
-    fn agents_md_is_never_planned_and_the_instructions_are() {
+    fn agents_md_is_never_planned_and_the_grammar_matches_the_validator() {
         // AGENTS.md is the user's file: the repo-level entry ensures its one
         // import line; this component must not touch it.
         let dir = tempfile::tempdir().unwrap();
@@ -367,21 +376,18 @@ mod tests {
             )),
             "AGENTS.md planned by the SOKF component"
         );
-        let instructions = actions
+        let grammar = actions
             .into_iter()
             .find_map(|a| match a {
-                Action::WriteFile { path, content, .. } if path == ".agents/sokf.md" => {
+                Action::WriteFile { path, content, .. }
+                    if path == crate::validate::schema::GRAMMAR_PATH =>
+                {
                     Some(content)
                 }
                 _ => None,
             })
             .unwrap();
-        // Sibling-relative imports: they resolve from `.agents/`.
-        assert!(instructions.contains("@sokf/SPEC.md"), "{instructions}");
-        assert!(
-            instructions.contains("@../knowledge/index.md"),
-            "{instructions}"
-        );
+        assert_eq!(grammar, crate::validate::schema::EMBEDDED_GRAMMAR);
     }
 
     #[test]
@@ -399,7 +405,8 @@ mod tests {
             })
             .collect();
         assert!(paths.contains(&".agents/sokf/SPEC.md"));
-        assert!(paths.contains(&".agents/sokf.md"));
+        assert!(paths.contains(&".agents/sokf/changelog.md"));
+        assert!(paths.contains(&".agents/sokf/grammar.yaml"));
         let manifest_action = actions.iter().find_map(|a| match a {
             Action::WriteFile { path, content, .. } if path == "knowledge/manifest.sokf.yaml" => {
                 Some(content)

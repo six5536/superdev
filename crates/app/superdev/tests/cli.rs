@@ -505,8 +505,8 @@ fn init_materialises_the_skill_pack() {
         assert!(
             std::fs::read_to_string(&path)
                 .unwrap()
-                .contains("Project adaptations"),
-            "{name} lacks the PROJECT.md trailer"
+                .contains(&format!("<skill name=\"{name}\"")),
+            "{name} lacks its skill element"
         );
     }
     // The hook and the lifecycle skills belong to SOKF, which no flag
@@ -1353,7 +1353,7 @@ fn a_pack_supersedes_the_embedded_item_of_the_same_name() {
         "# Frame, the acme way\n"
     );
     assert!(
-        dir.path().join(".claude/skills/verify/SKILL.md").is_file(),
+        dir.path().join(".claude/skills/integrate/SKILL.md").is_file(),
         "what the pack does not carry still comes from the embedded copy"
     );
 }
@@ -1419,8 +1419,8 @@ fn the_default_path_needs_nothing_outside_the_binary() {
         ".claude/skills/frame/SKILL.md",
         ".claude/skills/double-check/SKILL.md",
         "knowledge/index.md",
-        "knowledge/templates/adr.md",
-        ".agents/coding.md",
+        "knowledge/schemas/adr.md",
+        ".agents/sokf/grammar.yaml",
     ];
     for path in carried {
         assert!(dir.path().join(path).is_file(), "missing {path}");
@@ -1556,7 +1556,7 @@ fn a_drifted_skill_is_drift_until_marked_custom() {
     assert!(
         std::fs::read_to_string(&skill)
             .unwrap()
-            .contains("Project adaptations")
+            .contains("<skill name=\"template-update\"")
     );
 }
 

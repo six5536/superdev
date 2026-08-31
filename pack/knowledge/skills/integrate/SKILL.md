@@ -1,63 +1,57 @@
 ---
 name: integrate
-description: "Superdev process: merge the slice once its verification has passed."
+description: "Superdev process: verify the slice against its cases and the contracts, then merge it and bring the records up to date."
 ---
 
-# Integrate mode
+<skill name="integrate" purpose="Verify and Merge the Slice" input="the slice, when not handed off" user-input="$ARGUMENTS" output="the slice verified against its cases and merged, the changelog and the canonical knowledge brought up to date, and the slice ticked in the feature's plan">
 
-You are in integrate mode. You are the integration manager: you merge
-verified work into the shared branch and keep the project's records
-current.
+<goal persona="integration manager">
+First you try to make the slice fail; only what survives is merged. Verify the slice given in the input above against its cases and the contracts, then integrate it and keep the project's records current.
+</goal>
 
-## Input
+<bootstrap_actions>
+<tool_call name="read_file" path=".agents/core.md" when="always" />
+<tool_call name="read_file" path="knowledge/schemas/code-review.md" when="always" />
+<tool_call name="read_file" path="knowledge/schemas/investigation.md" when="if a failure needs investigation" />
+<tool_call name="sokf_read" id="feature-plan-{nnn}-{slug}" when="always" />
+<tool_call name="sokf_read" id="issue-{nnn}-{kind}-{slug}" when="always" />
+<tool_call name="sokf_graph" id="issue-{nnn}-{kind}-{slug}" when="always" />
+<tool_call name="sokf_read" id="{each contract the framed issue links}" when="always" />
+<tool_call name="sokf_read" id="definition-of-done" when="always" />
+<tool_call name="sokf_read" id="development-procedure" when="always" />
+<tool_call name="sokf_read" id="schema-changelog" when="if the change is user-visible" />
+<tool_call name="sokf_read" id="schema-migration-guide" when="if a contract change breaks users" />
+</bootstrap_actions>
 
-- The verified slice's commit, and its entry in the feature's plan at
-  `knowledge/plans/plan-<nnn>-<kind>-<slug>.md`.
-- $ARGUMENTS — the slice, when not handed off.
+<process_actions>
+<step name="UPDATE ONTO THE MERGE TARGET" task="Update the slice onto the merge target named by the `development-procedure` concept; every check below runs on that state" />
+<gate check="The update onto the merge target is conflict-free" on-fail="/build with the conflict as input" />
+<step name="RUN CHECKS" task="Run the full build, tests, typecheck and lint" />
+<step name="RUN THE SLICE'S CASES" task="Run the slice's cases from the plan, including manual ones, and confirm each covers the criteria it names" />
+<step name="CHECK THE DONE-CHECK" task="Check the diff against the slice's done-check" />
+<step name="CHECK CONTRACTS" task="Check the diff's interfaces against the contracts the framed issue links" />
+<step name="REVIEW THE DIFF" task="Review the diff for correctness and for simplifications (`/code-review`); simplifications return to build as findings, they are not applied here" />
+<step name="CHECK RENDERED UI" task="UI: check the rendered result (`/run`)" />
+<step name="WRITE FINDINGS" task="Write findings per `schema-code-review`; use `schema-investigation` for a failure that needs investigation" />
+<gate check="Every case in the slice has an implemented test, or the plan marks it manual" on-fail="/build" />
+<gate check="No acceptance criterion is ambiguous or wrong" on-fail="/frame — the criterion lives in the issue" />
+<gate check="No case is ambiguous or wrong" on-fail="/feature-plan — the case lives in the plan" />
+<gate check="The diff does not diverge from the contracts" on-fail="/build; a divergence a contract should adopt returns to /contract-design" />
+<gate check="Every check passed and the done-check is met" on-fail="/build with the failure as input" />
+<step name="MERGE" task="Merge the slice per the convention the `development-procedure` concept states: target branch, commit style, PR or direct, required checks" />
+<step name="UPDATE CHANGELOG" task="User-visible change? Add a line to the changelog's Unreleased section" />
+<step name="UPDATE THE KNOWLEDGE" task="New convention, changed interface, or new term? Update the canonical knowledge so later slices follow it: the glossary for terms; a new concept starts from its schema (see the knowledge-concepts section of `knowledge/schemas/index.md`)" />
+<step name="WRITE MIGRATION GUIDE" task="Contract change breaks users? Write the migration guide" />
+<step name="MARK THE SLICE DONE" task="Mark the slice done in the feature's plan concept. Last slice? Set the plan's `lifecycle` to `done`; `superdev validate --fix` refiles it" />
+<gate check="`superdev validate` passes: the SOKF knowledge, and every document against its schema" on-fail="fix every error" />
+<skill_call name="/build" when="if a next slice remains" input="the next slice" />
+<skill_call name="/feature-plan" when="if the slice list needs re-cutting" />
+</process_actions>
 
-## Workflow
 
-- [ ] Read the slice's plan entry (`sokf_read`) and the
-      `development-procedure` concept: the merge convention (target
-      branch, PR or direct, required checks).
-- [ ] The merge target moved since verify? Update the slice onto it
-      again.
-- [ ] Run the full build, the linter, all integration tests, and a
-      smoke test.
-- [ ] GATE: Conflict, or a check failed? Return to `/build` with the
-      failure as input.
-- [ ] Merge the slice per the convention (`template-commit-message`,
-      `template-pr-description`).
-- [ ] User-visible change? Add a line to the changelog's Unreleased
-      section (`template-changelog`).
-- [ ] New convention, changed interface, or new term? Update the
-      knowledge so later slices follow it: the glossary for
-      terms; a new concept starts from its template
-      (`template-architecture`, `template-contract-cli`,
-      `template-coding-standards`, …; see the knowledge-concepts
-      section of `templates/index.md`).
-- [ ] Interface change breaks users? Write the migration guide
-      (`template-migration-guide`).
-- [ ] Mark the slice done in the feature's plan (`knowledge/plans/`).
-      Last slice? Tag the plan concept `done`.
-- [ ] GATE: Knowledge edited? Validate to PASS
-      (`superdev validate`).
-
-## IMPORTANT RULES
-
-- No new code.
-- Record at merge time; later slices depend on it.
-
-## Output
-
-- Slices remain: hand the next slice to `/build`; return to
-  `/feature-plan` when the slice list needs re-cutting.
-- Last slice: done, or `/frame` for the next feature. `/accept` runs
-  when the user asks for it.
-- Merge conflict or failed check: return to `/build`.
-
-## Project adaptations
-
-If a `PROJECT.md` exists in this skill's directory, read it now and apply
-it; where it conflicts with this file, `PROJECT.md` wins. If absent,
-continue.
+<rules>
+<rule level="MUST NOT">change the code while verifying; findings, simplifications included, return to build</rule>
+<rule level="SHALL">report failures with their output</rule>
+<rule level="SHALL">record at merge time; later slices depend on it</rule>
+</rules>
+</skill>

@@ -81,6 +81,9 @@ struct SearchArgs {
     types: Option<Vec<String>>,
     /// Keep only concepts carrying one of these tags.
     tags: Option<Vec<String>>,
+    /// Keep only concepts whose `lifecycle` is one of these values, e.g.
+    /// `["open"]` for live issues and plans.
+    lifecycle: Option<Vec<String>>,
 }
 
 /// Arguments of `sokf_read`.
@@ -136,6 +139,7 @@ impl SokfServer {
             limit: hit_limit(args.limit),
             kinds: args.types.unwrap_or_default(),
             tags: args.tags.unwrap_or_default(),
+            lifecycle: args.lifecycle.unwrap_or_default(),
         };
         // The embedder that built the vectors is the only one that can search
         // them; anything else silently degrades to lexical.
@@ -424,6 +428,9 @@ fn render_concept(
         format!("type: {}", concept.kind),
         format!("status: {}", status_word(concept.status)),
     ];
+    if let Some(lifecycle) = &concept.lifecycle {
+        lines.push(format!("lifecycle: {lifecycle}"));
+    }
     if let Some(title) = &concept.title {
         lines.push(format!("title: {title}"));
     }
@@ -614,8 +621,12 @@ fn render_overview(bundle: &Bundle, stats: &SyncStats, repo_root: &std::path::Pa
         });
         for concept in concepts {
             let identity = concept.id.clone().unwrap_or_else(|| concept.path.clone());
+            let lifecycle = concept
+                .lifecycle
+                .as_ref()
+                .map_or(String::new(), |value| format!(" [{value}]"));
             lines.push(format!(
-                "  {}",
+                "  {}{lifecycle}",
                 named(
                     &identity,
                     concept.description.as_deref().unwrap_or_default()

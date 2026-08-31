@@ -1,5 +1,5 @@
 ---
-type: Reference
+type: SoftwareComponents
 id: software-components
 title: Software Components
 description: TBD — the deployable and buildable units, what each contains, and how they depend on each other.
@@ -9,3 +9,7 @@ status: draft
 # Components
 
 TBD: one entry per crate/package/service — purpose, key modules, dependencies.
+
+# CI/CD
+
+TBD: the pipelines that build, test, and release these components.

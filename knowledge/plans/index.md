@@ -1,9 +1,9 @@
 # Plans
 
 Implementation plans, numbered in one series across both kinds so a
-number names one plan. `plan-<nnn>-feature-<slug>.md` delivers a spec as a
-slice list; `plan-<nnn>-adhoc-<slug>.md` covers one-off work outside the
-feature workflow.
+number names one plan. A feature plan delivers a framed feature as a
+slice list; an ad-hoc plan covers one-off work outside the feature
+workflow.
 
 ## Feature plans
 
@@ -20,17 +20,19 @@ feature workflow.
 * [SOKF becomes a core part of superdev][sokf:plan-008-adhoc-sokf-becomes-core] - AOKF is renamed SOKF and stops being a swappable capability, the two validators merge into one module behind one command, a document's type names the schema that governs it, and the schema layer is enforced for the first time.
 * [Drop rtk and the bash-output-filter capability][sokf:plan-009-adhoc-drop-the-bash-output-filter] - the bash-output-filter slot, its rtk provider, the five things it owns and the flag that disabled it all leave, and a manifest still naming the table gets a guided error.
 * [Links address ids][sokf:plan-010-adhoc-links-address-ids] - SOKF 0.4 gives a body link an id-addressed form, superdev validate --fix converts the tree to it, and a renamed or moved concept stops breaking the documents that cite it.
-* [Documents are filed by lifecycle][sokf:plan-011-adhoc-filing-by-lifecycle] - one lifecycle field replaces two vocabularies, live work stays in its directory and settled work drops into a subfolder named for its state, and the fix pass keeps the two in agreement.
+* [Documents are filed by lifecycle][sokf:plan-011-adhoc-filing-by-lifecycle] - one lifecycle field replaces two vocabularies, every document sits in a folder named for its state, and a document left in the base directory is unfiled — an error the fix pass repairs.
+* [The workflow becomes contract-driven][sokf:plan-012-adhoc-contract-driven-workflow] - the seven-phase spec-driven workflow becomes five contract-driven phases — criteria move into the feature-request as EARS sentences, contracts become durable in public/ and internal/, the spec documents are migrated and deleted, and the skills merge to match.
 
 <!-- sokf:links -->
-[sokf:plan-001-feature-flatten-crate-api]: /knowledge/plans/plan-001-feature-flatten-crate-api.md
-[sokf:plan-002-feature-agent-instructions-layer]: /knowledge/plans/plan-002-feature-agent-instructions-layer.md
-[sokf:plan-003-feature-content-packs]: /knowledge/plans/plan-003-feature-content-packs.md
-[sokf:plan-004-adhoc-workflow-autonomy]: /knowledge/plans/plan-004-adhoc-workflow-autonomy.md
-[sokf:plan-005-feature-content-pack-hardening]: /knowledge/plans/plan-005-feature-content-pack-hardening.md
-[sokf:plan-006-adhoc-rust-format-validator]: /knowledge/plans/plan-006-adhoc-rust-format-validator.md
-[sokf:plan-007-adhoc-drop-the-aokf-conformance-ladder]: /knowledge/plans/plan-007-adhoc-drop-the-aokf-conformance-ladder.md
-[sokf:plan-008-adhoc-sokf-becomes-core]: /knowledge/plans/plan-008-adhoc-sokf-becomes-core.md
-[sokf:plan-009-adhoc-drop-the-bash-output-filter]: /knowledge/plans/plan-009-adhoc-drop-the-bash-output-filter.md
-[sokf:plan-010-adhoc-links-address-ids]: /knowledge/plans/plan-010-adhoc-links-address-ids.md
-[sokf:plan-011-adhoc-filing-by-lifecycle]: /knowledge/plans/plan-011-adhoc-filing-by-lifecycle.md
+[sokf:plan-001-feature-flatten-crate-api]: /knowledge/plans/open/plan-001-feature-flatten-crate-api.md
+[sokf:plan-002-feature-agent-instructions-layer]: /knowledge/plans/done/plan-002-feature-agent-instructions-layer.md
+[sokf:plan-003-feature-content-packs]: /knowledge/plans/done/plan-003-feature-content-packs.md
+[sokf:plan-004-adhoc-workflow-autonomy]: /knowledge/plans/open/plan-004-adhoc-workflow-autonomy.md
+[sokf:plan-005-feature-content-pack-hardening]: /knowledge/plans/done/plan-005-feature-content-pack-hardening.md
+[sokf:plan-006-adhoc-rust-format-validator]: /knowledge/plans/done/plan-006-adhoc-rust-format-validator.md
+[sokf:plan-007-adhoc-drop-the-aokf-conformance-ladder]: /knowledge/plans/done/plan-007-adhoc-drop-the-aokf-conformance-ladder.md
+[sokf:plan-008-adhoc-sokf-becomes-core]: /knowledge/plans/done/plan-008-adhoc-sokf-becomes-core.md
+[sokf:plan-009-adhoc-drop-the-bash-output-filter]: /knowledge/plans/done/plan-009-adhoc-drop-the-bash-output-filter.md
+[sokf:plan-010-adhoc-links-address-ids]: /knowledge/plans/done/plan-010-adhoc-links-address-ids.md
+[sokf:plan-011-adhoc-filing-by-lifecycle]: /knowledge/plans/done/plan-011-adhoc-filing-by-lifecycle.md
+[sokf:plan-012-adhoc-contract-driven-workflow]: /knowledge/plans/done/plan-012-adhoc-contract-driven-workflow.md
