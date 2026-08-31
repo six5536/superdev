@@ -30,10 +30,17 @@ line-limit: 800
 
 frontmatter:
   type:
+    required: true
     const: Research
   id:
+    required: true
     pattern: '^research-\d{3}-[a-z0-9-]+$'
+  title:
+    required: true
+  description:
+    required: true
   sources:
+    required: true
     description: >
       Required here, unlike most concepts: every entry carries an id, and
       that id is the label of the footnote that cites it. The label is the

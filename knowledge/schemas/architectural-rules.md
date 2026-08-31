@@ -20,9 +20,15 @@ line-limit: 800
 
 frontmatter:
   type:
+    required: true
     const: ArchitecturalRules
   id:
+    required: true
     const: architectural-rules
+  title:
+    required: true
+  description:
+    required: true
   status:
     enum: [draft, stable, deprecated]
 

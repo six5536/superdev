@@ -18,9 +18,15 @@ line-limit: 800
 
 frontmatter:
   type:
+    required: true
     const: DevelopmentProcedure
   id:
+    required: true
     const: development-procedure
+  title:
+    required: true
+  description:
+    required: true
   status:
     enum: [draft, stable, deprecated]
 

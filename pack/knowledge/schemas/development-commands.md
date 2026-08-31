@@ -19,9 +19,15 @@ line-limit: 800
 
 frontmatter:
   type:
+    required: true
     const: DevelopmentCommands
   id:
+    required: true
     const: development-commands
+  title:
+    required: true
+  description:
+    required: true
   status:
     enum: [draft, stable, deprecated]
 

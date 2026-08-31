@@ -19,9 +19,15 @@ line-limit: 800
 
 frontmatter:
   type:
+    required: true
     const: IssueTracker
   id:
+    required: true
     const: issue-tracker
+  title:
+    required: true
+  description:
+    required: true
   status:
     enum: [draft, stable, deprecated]
 

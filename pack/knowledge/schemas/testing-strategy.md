@@ -19,9 +19,15 @@ line-limit: 800
 
 frontmatter:
   type:
+    required: true
     const: TestingStrategy
   id:
+    required: true
     const: testing-strategy
+  title:
+    required: true
+  description:
+    required: true
   status:
     enum: [draft, stable, deprecated]
 

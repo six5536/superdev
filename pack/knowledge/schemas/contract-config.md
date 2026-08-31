@@ -29,14 +29,20 @@ line-limit: 400
 
 frontmatter:
   type:
+    required: true
     const: ConfigContract
   id:
+    required: true
     pattern: '^contract-\d{3}-config-[a-z0-9-]+$'
     description: >
       contract-{nnn}-config-{slug}, the slug naming which configurable surface. The
       number is the next free one across every contract, public and
       internal together and every lifecycle folder — a duplicate is
       an error.
+  title:
+    required: true
+  description:
+    required: true
   lifecycle:
     enum: [active, deprecated]
 

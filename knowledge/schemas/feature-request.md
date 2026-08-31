@@ -26,11 +26,16 @@ line-limit: 800
 
 frontmatter:
   type:
+    required: true
     const: FeatureRequest
   id:
+    required: true
     pattern: '^issue-\d{3}-feature-request-[a-z0-9-]+$'
   title:
+    required: true
     description: The one-line statement of what is missing.
+  description:
+    required: true
   lifecycle:
     enum: [open, done, wontfix]
     description: >

@@ -79,10 +79,12 @@ impl SectionRule {
 /// One frontmatter key's constraints, as a schema's `frontmatter:` block
 /// declares them. A key declared with only a `description` deserialises to
 /// an empty constraint and binds nothing — guidance, per ADR-022. Fields
-/// outside these three (`description`, `required`) are ignored here: the
-/// required-key check is its own slice.
+/// outside these four (`description`) are ignored here.
 #[derive(Debug, Clone, Default, Deserialize)]
 struct KeyConstraint {
+    /// Whether the key's absence is an error (ADR-022).
+    #[serde(default)]
+    required: bool,
     /// The one value the key must carry, when present.
     #[serde(default)]
     r#const: Option<String>,
@@ -433,34 +435,38 @@ fn check_one(doc: &Document<'_>, schema: &DocSchema, findings: &mut Vec<Finding>
     check_frontmatter(doc, schema, &mut push);
 }
 
-/// Every present frontmatter value against the contract its schema declares:
-/// `const`, `pattern` and `enum` bind, and a key declared with only a
-/// `description` is guidance (ADR-022). An absent key is not reported here —
-/// requiring one is the `required` flag's business. A constraint compares
-/// against the value's scalar string form; a value with no scalar form — a
-/// list, a map, a folded block — cannot satisfy a scalar constraint and is a
-/// mismatch like any other. `lifecycle` is the filing check's (P011), which
-/// already reports a value outside its enum; reading it here too would say
-/// one fault twice.
+/// Every frontmatter key against the contract its schema declares: `const`,
+/// `pattern` and `enum` bind a present value, `required` makes absence an
+/// error, and a key declared with only a `description` is guidance
+/// (ADR-022). A constraint compares against the value's scalar string form;
+/// a value with no scalar form — a list, a map, a folded block — cannot
+/// satisfy a scalar constraint and is a mismatch like any other. `lifecycle`
+/// is the filing check's (P011), which already reports a value outside its
+/// enum; reading it here too would say one fault twice.
 fn check_frontmatter(doc: &Document<'_>, schema: &DocSchema, push: &mut impl FnMut(String)) {
     let fm = frontmatter_block(doc.text);
-    if fm.is_empty() {
-        return;
-    }
     let entries = super::read::parse_frontmatter(&fm);
     for (key, constraint) in schema.frontmatter.iter() {
         if key == "lifecycle" {
             continue;
         }
         let Some(c) = constraint else { continue };
-        if c.r#const.is_none() && c.pattern.is_none() && c.r#enum.is_empty() {
-            continue;
-        }
-        let Some(entry) = entries.iter().find(|e| e.key == key) else {
+        // Written with nothing after the colon is as absent as no line.
+        let entry = entries
+            .iter()
+            .find(|e| e.key == key)
+            .filter(|e| e.scalar.is_some() || e.block.is_some());
+        let Some(entry) = entry else {
+            if c.required {
+                push(format!(
+                    "frontmatter `{key}` is absent, and {} requires it",
+                    schema.name
+                ));
+            }
             continue;
         };
-        if entry.scalar.is_none() && entry.block.is_none() {
-            continue; // Written with nothing after the colon: absent.
+        if c.r#const.is_none() && c.pattern.is_none() && c.r#enum.is_empty() {
+            continue;
         }
         let scalar = if entry.is_folded || entry.block.is_some() {
             None
@@ -1173,6 +1179,70 @@ mod tests {
         };
         let mut findings = Vec::new();
         check_one(&doc, &schema, &mut findings);
+        assert!(findings.is_empty(), "{findings:#?}");
+    }
+
+    /// Covers I018 criterion 4: an absent key marked `required: true` is an
+    /// error naming the document, the key and the schema (ADR-022). A key
+    /// written with nothing after the colon is as absent as no line.
+    #[test]
+    fn an_absent_required_key_is_a_finding() {
+        let schema = schema_of(
+            "frontmatter:\n  type:\n    const: T\n  id:\n    required: true\n\
+             \x20   pattern: '^t-\\d{3}$'\n  title:\n    required: true\n",
+        );
+        let doc = Document {
+            path: "a.md",
+            text: "---\ntype: T\ntitle:\n---\n\n# A\n",
+            doc_type: Some("T"),
+        };
+        let mut findings = Vec::new();
+        check_one(&doc, &schema, &mut findings);
+        let messages: Vec<&str> = findings.iter().map(|f| f.message.as_str()).collect();
+        assert_eq!(findings.len(), 2, "{findings:#?}");
+        assert_eq!(findings[0].file, "a.md");
+        assert!(
+            messages
+                .iter()
+                .any(|m| m.contains("`id` is absent") && m.contains("s requires it")),
+            "{messages:?}"
+        );
+        assert!(
+            messages.iter().any(|m| m.contains("`title` is absent")),
+            "{messages:?}"
+        );
+    }
+
+    /// Covers I018 criteria 3 and 4: a present key marked required is not an
+    /// absence finding, and its value checks bind as they would without the
+    /// flag.
+    #[test]
+    fn a_present_required_key_gets_its_value_checks() {
+        let schema = schema_of(
+            "frontmatter:\n  type:\n    const: T\n  id:\n    required: true\n\
+             \x20   pattern: '^t-\\d{3}$'\n",
+        );
+        let broken = Document {
+            path: "a.md",
+            text: "---\ntype: T\nid: t-1\n---\n\n# A\n",
+            doc_type: Some("T"),
+        };
+        let mut findings = Vec::new();
+        check_one(&broken, &schema, &mut findings);
+        assert_eq!(findings.len(), 1, "{findings:#?}");
+        assert!(
+            findings[0].message.contains("`id` is `t-1`")
+                && findings[0].message.contains("pattern"),
+            "{findings:#?}"
+        );
+
+        let ok = Document {
+            path: "a.md",
+            text: "---\ntype: T\nid: t-001\n---\n\n# A\n",
+            doc_type: Some("T"),
+        };
+        let mut findings = Vec::new();
+        check_one(&ok, &schema, &mut findings);
         assert!(findings.is_empty(), "{findings:#?}");
     }
 

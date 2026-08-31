@@ -19,9 +19,15 @@ line-limit: 800
 
 frontmatter:
   type:
+    required: true
     const: VisualSystem
   id:
+    required: true
     const: visual-system
+  title:
+    required: true
+  description:
+    required: true
   status:
     enum: [draft, stable, deprecated]
 

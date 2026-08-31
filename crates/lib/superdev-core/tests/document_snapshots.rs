@@ -165,3 +165,8 @@ fn frontmatter_mismatch() {
 fn uncompilable_pattern() {
     snapshot("uncompilable-pattern");
 }
+
+#[test]
+fn missing_required_key() {
+    snapshot("missing-required-key");
+}

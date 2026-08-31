@@ -20,9 +20,15 @@ line-limit: 800
 
 frontmatter:
   type:
+    required: true
     const: CodingStandards
   id:
+    required: true
     const: coding-standards
+  title:
+    required: true
+  description:
+    required: true
   status:
     enum: [draft, stable, deprecated]
 

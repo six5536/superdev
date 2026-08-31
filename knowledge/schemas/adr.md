@@ -21,9 +21,15 @@ line-limit: 800
 
 frontmatter:
   type:
+    required: true
     const: Decision
   id:
+    required: true
     pattern: '^adr-\d{3}-[a-z0-9-]+$'
+  title:
+    required: true
+  description:
+    required: true
   lifecycle:
     enum: [active, deprecated]
     description: >

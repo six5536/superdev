@@ -19,9 +19,15 @@ line-limit: 800
 
 frontmatter:
   type:
+    required: true
     const: DefinitionOfDone
   id:
+    required: true
     const: definition-of-done
+  title:
+    required: true
+  description:
+    required: true
   status:
     enum: [draft, stable, deprecated]
 

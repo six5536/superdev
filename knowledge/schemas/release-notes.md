@@ -22,9 +22,15 @@ line-limit: 800
 
 frontmatter:
   type:
+    required: true
     const: ReleaseNotes
   id:
+    required: true
     pattern: '^release-notes-\d{3}-[a-z0-9-]+$'
+  title:
+    required: true
+  description:
+    required: true
 
 sections-ordered: true
 sections:

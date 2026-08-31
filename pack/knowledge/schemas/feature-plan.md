@@ -24,9 +24,15 @@ line-limit: 800
 
 frontmatter:
   type:
+    required: true
     const: FeaturePlan
   id:
+    required: true
     pattern: '^plan-\d{3}-feature-[a-z0-9-]+$'
+  title:
+    required: true
+  description:
+    required: true
   lifecycle:
     enum: [open, done, abandoned]
     description: >

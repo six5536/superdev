@@ -22,9 +22,15 @@ line-limit: 800
 
 frontmatter:
   type:
+    required: true
     const: Architecture
   id:
+    required: true
     const: architecture
+  title:
+    required: true
+  description:
+    required: true
   status:
     enum: [draft, stable, deprecated]
 

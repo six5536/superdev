@@ -23,14 +23,20 @@ line-limit: 800
 
 frontmatter:
   type:
+    required: true
     const: InterfaceContract
   id:
+    required: true
     pattern: '^contract-\d{3}-interface-[a-z0-9-]+$'
     description: >
       contract-{nnn}-interface-{slug}, the slug naming the interface. The
       number is the next free one across every contract, public and
       internal together and every lifecycle folder — a duplicate is
       an error.
+  title:
+    required: true
+  description:
+    required: true
   lifecycle:
     enum: [active, deprecated]
 

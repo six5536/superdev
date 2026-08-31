@@ -20,9 +20,15 @@ line-limit: 800
 
 frontmatter:
   type:
+    required: true
     const: ErrorHandling
   id:
+    required: true
     const: error-handling
+  title:
+    required: true
+  description:
+    required: true
   status:
     enum: [draft, stable, deprecated]
 

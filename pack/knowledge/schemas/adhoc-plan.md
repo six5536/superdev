@@ -30,9 +30,15 @@ description: >
 line-limit: 800
 frontmatter:
   type:
+    required: true
     const: AdhocPlan
   id:
+    required: true
     pattern: '^plan-\d{3}-adhoc-[a-z0-9-]+$'
+  title:
+    required: true
+  description:
+    required: true
   lifecycle:
     enum: [open, done, abandoned]
     description: >

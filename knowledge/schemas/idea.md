@@ -31,12 +31,18 @@ line-limit: 400
 
 frontmatter:
   type:
+    required: true
     const: Idea
   id:
+    required: true
     pattern: '^idea-\d{3}-[a-z0-9-]+$'
     description: >
       idea-{nnn}-{slug}, the slug naming the idea rather than the problem, so
       two ideas about one problem stay apart.
+  title:
+    required: true
+  description:
+    required: true
   status:
     enum: [draft, stable, deprecated]
 

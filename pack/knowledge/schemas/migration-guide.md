@@ -20,9 +20,15 @@ line-limit: 800
 
 frontmatter:
   type:
+    required: true
     const: MigrationGuide
   id:
+    required: true
     pattern: '^migration-guide-\d{3}-[a-z0-9-]+$'
+  title:
+    required: true
+  description:
+    required: true
 
 sections-ordered: true
 sections:

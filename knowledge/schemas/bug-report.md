@@ -26,11 +26,16 @@ line-limit: 800
 
 frontmatter:
   type:
+    required: true
     const: BugReport
   id:
+    required: true
     pattern: '^issue-\d{3}-bug-[a-z0-9-]+$'
   title:
+    required: true
     description: The one-line symptom.
+  description:
+    required: true
   lifecycle:
     enum: [open, done, wontfix]
     description: >

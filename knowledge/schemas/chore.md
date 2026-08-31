@@ -24,11 +24,16 @@ line-limit: 800
 
 frontmatter:
   type:
+    required: true
     const: Chore
   id:
+    required: true
     pattern: '^issue-\d{3}-chore-[a-z0-9-]+$'
   title:
+    required: true
     description: The one-line statement of the work.
+  description:
+    required: true
   lifecycle:
     enum: [open, done, wontfix]
     description: >

@@ -27,14 +27,20 @@ line-limit: 400
 
 frontmatter:
   type:
+    required: true
     const: UiContract
   id:
+    required: true
     pattern: '^contract-\d{3}-ui-[a-z0-9-]+$'
     description: >
       contract-{nnn}-ui-{slug}, the slug naming which user interface. The
       number is the next free one across every contract, public and
       internal together and every lifecycle folder — a duplicate is
       an error.
+  title:
+    required: true
+  description:
+    required: true
   lifecycle:
     enum: [active, deprecated]
 

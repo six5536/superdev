@@ -31,9 +31,15 @@ line-limit: 800
 
 frontmatter:
   type:
+    required: true
     const: Backlog
   id:
+    required: true
     const: backlog
+  title:
+    required: true
+  description:
+    required: true
   status:
     enum: [draft, stable, deprecated]
 

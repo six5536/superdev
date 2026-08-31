@@ -18,9 +18,15 @@ line-limit: 800
 
 frontmatter:
   type:
+    required: true
     const: Overview
   id:
+    required: true
     const: project-overview
+  title:
+    required: true
+  description:
+    required: true
   status:
     enum: [draft, stable, deprecated]
 

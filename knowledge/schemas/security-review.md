@@ -23,9 +23,15 @@ line-limit: 800
 
 frontmatter:
   type:
+    required: true
     const: SecurityReview
   id:
+    required: true
     pattern: '^security-review-\d{3}-[a-z0-9-]+$'
+  title:
+    required: true
+  description:
+    required: true
 
 sections-ordered: true
 sections:
