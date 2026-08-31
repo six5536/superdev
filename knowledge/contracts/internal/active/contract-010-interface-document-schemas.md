@@ -73,7 +73,9 @@ pub fn check_documents(docs: &[Document<'_>], set: &SchemaSet) -> Vec<Finding>;
   kind when the form appears in its body: one bullet, one numbered
   item, one table, one fenced block, or — for prose — one plain
   paragraph line; other content beside the form is tolerated
-  (ADR-023).
+  (ADR-023). The body runs to the next heading at the section's own
+  level or shallower, so a subsection's content counts; lines inside
+  fenced blocks are not content.
 - **A mis-declared schema is its own finding** — a `content` outside
   the five kinds, a `pattern` that does not compile: reported against
   the schema file, and the unreadable rule binds nothing.

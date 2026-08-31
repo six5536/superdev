@@ -11,6 +11,19 @@ publish a version it cannot find a heading for.
 
 ## [Unreleased]
 
+### Added
+
+- **A section's declared content kind binds.** `superdev validate` reads
+  each section rule's `content` kind — prose, bullet-list, numbered-list,
+  table or code — and reports, as an error naming the document, the
+  section and the schema, a matched section whose body lacks the kind's
+  form: one bullet, one numbered item, one table, one fenced block, or one
+  plain paragraph line. Presence is what binds, so a lead-in sentence
+  before a list passes and content beside the form is tolerated; a
+  subsection's content counts, and lines inside fenced blocks do not. A
+  schema declaring a kind outside the five is reported on the schema file
+  itself and binds nothing.
+
 ### Fixed
 
 - **The core file is checked again.** The grammar's core kind matched the

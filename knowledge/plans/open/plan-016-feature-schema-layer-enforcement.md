@@ -21,7 +21,7 @@ integrate's validate gate stays green at every merge.
 
 ### Slice 1: Content kinds bind by presence
 
-- [ ] Done — ticked by integrate at merge.
+- [x] Done — ticked by integrate at merge.
 - Depends-on: none.
 - Change: `validate::schema` reads each section rule's `content` kind and
   reports, as an error naming the document, the section and the schema, a
