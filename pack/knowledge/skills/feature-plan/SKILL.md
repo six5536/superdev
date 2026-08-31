@@ -10,7 +10,7 @@ You decompose, you don't build. Produce the feature's plan as specified in the i
 </goal>
 
 <bootstrap_actions>
-<tool_call name="read_file" path=".agents/core.md" when="always" />
+<tool_call name="read_file" path=".agents/superdev.md" when="always" />
 <tool_call name="read_file" path="knowledge/schemas/feature-plan.md" when="always" />
 <tool_call name="sokf_read" id="issue-{nnn}-{kind}-{slug}" when="always" />
 <tool_call name="sokf_read" id="{each contract the framed issue links}" when="always" />
@@ -22,12 +22,13 @@ You decompose, you don't build. Produce the feature's plan as specified in the i
 
 <process_actions>
 <step name="CUT SLICES" task="Cut the feature — its acceptance criteria and any gap issues — into slices small enough to build and verify in one pass" />
-<step name="ORDER SLICES" task="Order the slices per `schema-feature-plan`: dependency first, then risk" />
+<step name="ORDER SLICES" task="State each slice's `Depends-on`, then order the slices per `schema-feature-plan`: topologically — every slice after its dependencies — and riskiest early among the ready. A forward reference is legal; adding a slice never renumbers the ones already written" />
 <step name="GIVE DONE-CHECKS" task="Give each slice its own done-check" />
 <step name="WRITE CASES" task="Write each slice's cases inline — `schema-feature-plan`'s slice rule says how a case names the criteria it covers, where an integration or e2e case sits, and that every criterion is covered" />
 <step name="FILE THE PLAN" task="File the slice list as the feature's plan: an open concept (`plan-{nnn}-feature-{slug}`, `lifecycle: open`) per `schema-feature-plan`, listed in the plans index. Re-entering? Extend the existing plan" />
 <step name="DOUBLE-CHECK" task="`/double-check` the plan; fix what it finds" />
 <gate check="No slice is too big to build and verify in one pass" on-fail="cut it again" />
+<gate check="The `Depends-on` graph has no cycle" on-fail="re-cut the slices until it has none" />
 <gate check="`superdev validate` passes: the SOKF knowledge, and every document against its schema" on-fail="fix every error" />
 <skill_call name="/build" when="always" input="the first slice" />
 </process_actions>

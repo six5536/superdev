@@ -2,7 +2,7 @@
 type: Schema
 id: schema-feature-plan
 title: Feature Plan Schema
-description: The feature's slice list — per slice a done-check, its test-plan cases and a done marker — filed among the plans.
+description: The feature's slice list — per slice its dependencies, a done-check, its test-plan cases and a done marker — filed among the plans.
 ---
 
 # Feature Plan Schema
@@ -17,9 +17,9 @@ the path is for whoever reads the listing.
 
 ````yaml
 description: >
-  The feature's slice list — per slice a done-check, the assigned
-  test-plan cases, and a done marker. Produced by the feature-plan phase;
-  read by build and integrate.
+  The feature's slice list — per slice its dependencies, a done-check,
+  the assigned test-plan cases, and a done marker. Produced by the
+  feature-plan phase; read by build and integrate.
 line-limit: 800
 
 frontmatter:
@@ -49,7 +49,9 @@ sections:
     level: 2
     required: true
     description: >
-      Ordered by dependency first, then risk: riskiest early.
+      Ordered by dependency first, then risk: every slice after the
+      slices it depends on, and the riskiest early. A dependency cycle
+      is an error the planner refuses.
   - heading-pattern: '^Slice \d+: .+$'
     level: 3
     required: true
@@ -57,7 +59,11 @@ sections:
     content: bullet-list
     description: >
       One slice, named ("Slice {n}: {name}"). Body: a "- [ ] Done —
-      ticked by integrate at merge." checkbox; Change: what this slice
+      ticked by integrate at merge." checkbox; Depends-on: the numbers
+      of the slices this one needs done first, or "none" — a forward
+      reference is legal, and adding a slice never renumbers the ones
+      already written, so list order reads and dependencies bind;
+      Change: what this slice
       changes, and where; Done-check: the pass/fail check integrate runs
       against this slice; Cases: the slice's test cases, written inline,
       one per line, each naming the acceptance criteria it covers
@@ -66,6 +72,16 @@ sections:
       which usually puts the heaviest cases last — and every acceptance
       criterion in the feature-request is covered by at least one case
       across the plan.
+
+  - heading: "Deferred decisions"
+    level: 2
+    content: bullet-list
+    description: >
+      Questions only the user can answer, written by an unattended run
+      when a gate returns to frame or contract-design: one bullet per
+      question, naming the slice it blocks. The run ends by putting
+      these to the user in sequence; the answers are recorded here and
+      the next run reads them.
 
 example: |
   ---
@@ -85,6 +101,7 @@ example: |
   ### Slice 1: Scheme parsing and refusal
 
   - [ ] Done — ticked by integrate at merge.
+  - Depends-on: none.
   - Change: parse the pack-source scheme in the manifest loader; refuse
     any transport that is not https, ssh, or file.
   - Done-check: a git:// source fails at parse naming the source; an
@@ -97,6 +114,7 @@ example: |
   ### Slice 2: Refusal message
 
   - [ ] Done — ticked by integrate at merge.
+  - Depends-on: 1.
   - Change: error output naming the offending source.
   - Done-check: the e2e run shows the refusal naming the source.
   - Cases:
