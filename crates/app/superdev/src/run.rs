@@ -5,7 +5,7 @@
 //! exclusive create is what makes a second run a refusal instead of a race.
 
 use std::fs::{self, OpenOptions};
-use std::io::{self, Write};
+use std::io::{self, Read, Write};
 use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -17,6 +17,10 @@ use crate::cli::out;
 /// Where the state lives, relative to the repo root. It is machine state:
 /// `.superdev/cache/` is gitignored by `init`.
 const RUN_STATE_PATH: &str = ".superdev/cache/run.toml";
+
+/// The watchdog cap (ADR-019): at this many continues without an `advance`,
+/// the hook stops continuing the run.
+pub const CONTINUE_CAP: u32 = 10;
 
 /// The run state, present exactly while a run is active. An absent file
 /// means no run.
@@ -166,6 +170,75 @@ fn end(root: &Path) -> Result<u8> {
         Err(source) => return Err(Error::Io { path, source }),
     }
     Ok(0)
+}
+
+/// The Stop hook body: payload on stdin. Exit 0 lets the turn end; exit 2
+/// blocks the stop and hands stderr back as the instruction to continue.
+/// An unreadable payload is a loud exit 2, matching `hook validate`.
+pub fn hook_run(root: &Path) -> Result<u8> {
+    // Hooks run with the project as the working directory, but Claude Code
+    // also names it explicitly; prefer the explicit form.
+    let root =
+        std::env::var_os("CLAUDE_PROJECT_DIR").map_or_else(|| root.to_path_buf(), PathBuf::from);
+    let mut payload = String::new();
+    if let Err(e) = io::stdin().read_to_string(&mut payload) {
+        eprintln!("superdev hook: could not read the stop payload from stdin: {e}");
+        return Ok(2);
+    }
+    hook_run_on(&payload, &root)
+}
+
+/// The decision for one Stop payload. An unreadable run state is a report
+/// and exit 0 — a Stop hook that fails closed holds every session in the
+/// repo open.
+fn hook_run_on(payload: &str, root: &Path) -> Result<u8> {
+    let parsed: serde_json::Value = match serde_json::from_str(payload) {
+        Ok(parsed) => parsed,
+        Err(e) => {
+            eprintln!("superdev hook: malformed stop payload on stdin: {e}");
+            return Ok(2);
+        }
+    };
+    let session = parsed["session_id"].as_str().unwrap_or_default();
+    let path = state_path(root);
+    let mut state = match fs::read_to_string(&path) {
+        Err(e) if e.kind() == io::ErrorKind::NotFound => return Ok(0),
+        Err(e) => {
+            eprintln!("superdev hook: run state unreadable, letting the turn end: {e}");
+            return Ok(0);
+        }
+        Ok(text) => match toml_edit::de::from_str::<RunState>(&text) {
+            Ok(state) => state,
+            Err(e) => {
+                eprintln!(
+                    "superdev hook: run state malformed, letting the turn end: {}: {e}",
+                    path.display()
+                );
+                return Ok(0);
+            }
+        },
+    };
+    if state.session_id.is_empty() && !session.is_empty() {
+        // An unclaimed run: the first Stop payload's session becomes the
+        // owner (contract-009).
+        state.session_id = session.to_string();
+    }
+    if state.session_id != session || state.next.is_empty() || state.continues >= CONTINUE_CAP {
+        return Ok(0);
+    }
+    state.continues += 1;
+    fs::write(&path, render(&state)).map_err(|source| Error::Io {
+        path: path.clone(),
+        source,
+    })?;
+    eprintln!(
+        "An unattended superdev run is active ({} of {CONTINUE_CAP} continues since \
+         the last advance). Do not stop. Continue with: {}. Record each step \
+         forward with `superdev run advance --next <TEXT>`; end the run with \
+         `superdev run end`.",
+        state.continues, state.next
+    );
+    Ok(2)
 }
 
 /// Read and parse the state. Absent is a guided error naming `begin`;
@@ -334,6 +407,73 @@ mod tests {
             "an empty flag is no flag"
         );
         assert_eq!(owner(None, None), "");
+    }
+
+    fn stop_payload(session: &str) -> String {
+        format!(r#"{{"session_id":"{session}","hook_event_name":"Stop"}}"#)
+    }
+
+    #[test]
+    fn the_hook_lets_the_turn_end_when_nothing_says_otherwise() {
+        let dir = tempfile::tempdir().unwrap();
+        // No state at all.
+        assert_eq!(hook_run_on(&stop_payload("s"), dir.path()).unwrap(), 0);
+
+        // A foreign session's turn, an empty next, and a spent counter each
+        // exit 0 without touching the counter.
+        begin(dir.path(), "mine", "step").unwrap();
+        assert_eq!(hook_run_on(&stop_payload("other"), dir.path()).unwrap(), 0);
+        let path = state_path(dir.path());
+        assert_eq!(load(&path).unwrap().continues, 0);
+
+        advance(dir.path(), "mine", "").unwrap();
+        assert_eq!(hook_run_on(&stop_payload("mine"), dir.path()).unwrap(), 0);
+
+        let mut state = load(&path).unwrap();
+        state.next = "step".to_string();
+        state.continues = CONTINUE_CAP;
+        std::fs::write(&path, render(&state)).unwrap();
+        assert_eq!(hook_run_on(&stop_payload("mine"), dir.path()).unwrap(), 0);
+        assert_eq!(load(&path).unwrap().continues, CONTINUE_CAP);
+    }
+
+    #[test]
+    fn an_armed_run_continues_counts_and_dies_at_the_cap() {
+        let dir = tempfile::tempdir().unwrap();
+        begin(dir.path(), "mine", "slice 2").unwrap();
+        let path = state_path(dir.path());
+        for expected in 1..=CONTINUE_CAP {
+            assert_eq!(hook_run_on(&stop_payload("mine"), dir.path()).unwrap(), 2);
+            assert_eq!(load(&path).unwrap().continues, expected);
+        }
+        // The cap is spent; the run dies.
+        assert_eq!(hook_run_on(&stop_payload("mine"), dir.path()).unwrap(), 0);
+        // An advance revives it.
+        advance(dir.path(), "mine", "slice 3").unwrap();
+        assert_eq!(hook_run_on(&stop_payload("mine"), dir.path()).unwrap(), 2);
+        assert_eq!(load(&path).unwrap().continues, 1);
+    }
+
+    #[test]
+    fn an_unclaimed_run_is_adopted_by_the_first_stop_payload() {
+        let dir = tempfile::tempdir().unwrap();
+        begin(dir.path(), "", "step").unwrap();
+        assert_eq!(
+            hook_run_on(&stop_payload("adopter"), dir.path()).unwrap(),
+            2
+        );
+        assert_eq!(load(&state_path(dir.path())).unwrap().session_id, "adopter");
+    }
+
+    #[test]
+    fn a_malformed_payload_is_loud_and_a_malformed_state_fails_open() {
+        let dir = tempfile::tempdir().unwrap();
+        assert_eq!(hook_run_on("not json", dir.path()).unwrap(), 2);
+
+        let path = state_path(dir.path());
+        std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+        std::fs::write(&path, "not = [toml").unwrap();
+        assert_eq!(hook_run_on(&stop_payload("s"), dir.path()).unwrap(), 0);
     }
 
     #[test]

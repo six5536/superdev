@@ -43,12 +43,15 @@ pub enum HookCommand {
     /// PostToolUse: validate after an Edit/Write under the SOKF knowledge or
     /// a tree the grammar governs
     Validate,
+    /// Stop: continue an active unattended run, or let the turn end
+    Run,
 }
 
 /// Run one hook.
 pub fn run_hook(cmd: &HookCommand, root: &Path) -> Result<u8> {
     match cmd {
         HookCommand::Validate => hook_validate(root),
+        HookCommand::Run => crate::run::hook_run(root),
     }
 }
 

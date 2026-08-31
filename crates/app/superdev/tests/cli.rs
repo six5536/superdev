@@ -396,6 +396,39 @@ fn hook_validate_passes_a_clean_bundle() {
 }
 
 #[test]
+fn hook_run_continues_an_armed_run_naming_next() {
+    let repo = tempfile::tempdir().unwrap();
+    let cache = repo.path().join(".superdev/cache");
+    std::fs::create_dir_all(&cache).unwrap();
+    std::fs::write(
+        cache.join("run.toml"),
+        "session_id = \"s1\"\nnext = \"build slice 2\"\ncontinues = 0\nstarted = \"2026-08-31T00:00:00Z\"\npid = 1\n",
+    )
+    .unwrap();
+    let out = superdev()
+        .args(["hook", "run"])
+        .env("CLAUDE_PROJECT_DIR", repo.path())
+        .write_stdin(r#"{"session_id":"s1","hook_event_name":"Stop"}"#)
+        .assert()
+        .code(2);
+    let stderr = String::from_utf8_lossy(&out.get_output().stderr).into_owned();
+    assert!(stderr.contains("build slice 2"), "stderr: {stderr}");
+    assert!(stderr.contains("superdev run advance"), "stderr: {stderr}");
+}
+
+#[test]
+fn hook_run_is_invisible_without_a_run() {
+    let repo = tempfile::tempdir().unwrap();
+    superdev()
+        .args(["hook", "run"])
+        .env("CLAUDE_PROJECT_DIR", repo.path())
+        .write_stdin(r#"{"session_id":"s1","hook_event_name":"Stop"}"#)
+        .assert()
+        .code(0)
+        .stderr("");
+}
+
+#[test]
 fn hook_validate_ignores_paths_it_does_not_read() {
     // Even a broken bundle: an edit outside the bundle and the grammar's roots
     // is not the hook's business.
