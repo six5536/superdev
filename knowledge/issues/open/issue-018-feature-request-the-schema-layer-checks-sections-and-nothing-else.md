@@ -40,19 +40,47 @@ its authority.
 
 ## Proposed behaviour
 
-`validate` reports a section whose body is not the kind its schema declares —
-prose, bullet-list, numbered-list or table — and a frontmatter value that
-breaks the constraint beside it, in the same shape as the section findings:
-the document, the rule, and the schema that declares it.
+`validate` reports, as errors in the same shape as the section findings —
+the document, the rule, and the schema that declares it:
+
+- a section whose body is not the kind its schema declares — prose,
+  bullet-list, numbered-list, table or code. The kind binds the section's
+  substance, so a list section may open with a lead-in sentence before its
+  list;
+- a present frontmatter value that breaks the `const`, `pattern` or `enum`
+  beside it. A key declared with only a description is guidance and is not
+  checked;
+- an absent frontmatter key its schema marks required. The schemas gain a
+  way to mark one, and each of the 53 declares which of its keys are —
+  today nothing distinguishes "must carry a title" from "a title means
+  this".
+
+A schema that itself declares a content kind outside that vocabulary, a
+constraint the validator cannot read, or an unparseable `pattern` is
+reported as a schema finding, so a mis-declared rule surfaces on the schema
+rather than silently binding nothing.
 
 ## Acceptance criteria
 
-1. [event] WHEN a section's body is not the content kind its schema
-   declares THE SYSTEM SHALL report the document, the rule and the
+1. [event] WHEN a section's body does not match the content kind its
+   schema declares — prose, bullet-list, numbered-list, table or code —
+   THE SYSTEM SHALL report an error naming the document, the section and
+   the schema.
+2. [ubiquitous] THE SYSTEM SHALL accept a lead-in sentence before the
+   list in a bullet-list or numbered-list section.
+3. [event] WHEN a present frontmatter value breaks the `const`, `pattern`
+   or `enum` its schema declares for that key THE SYSTEM SHALL report an
+   error naming the document, the key and the schema.
+4. [event] WHEN a frontmatter key a schema marks required is absent THE
+   SYSTEM SHALL report an error naming the document, the key and the
    schema.
-2. [event] WHEN a frontmatter value breaks a constraint its schema
-   declares THE SYSTEM SHALL report it in the same shape as a section
-   finding.
+5. [conditional] IF a schema declares a content kind outside the
+   vocabulary or a `pattern` that does not compile THE SYSTEM SHALL
+   report the schema file itself.
+6. [ubiquitous] THE SYSTEM SHALL report PASS on this repository once the
+   feature's reconciliation lands: every live document satisfies its
+   schema's content kinds and frontmatter contract, or the schema was
+   deliberately corrected.
 
 ## Alternatives considered
 
@@ -60,22 +88,39 @@ the document, the rule, and the schema that declares it.
   throws away the guidance the descriptions carry for an agent writing a new
   document — which is most of what a schema is for.
 - Check frontmatter only, and leave content kinds. The frontmatter half is
-  unambiguous and would land in an afternoon; the content half needs the
-  question below settled first. A defensible order, not a different outcome.
+  unambiguous and would land in an afternoon; the content half needed the
+  lead-in question settled first. A defensible order, not a different
+  outcome.
+- Land the checks as warnings and promote them once the tree is clean.
+  Rejected: warnings here go unactioned (I012 measured 39), and ADR-017
+  made knowledge validation pass-or-fail.
+- Check values only and leave key presence unstated. Rejected by the user:
+  a schema that cannot require a key cannot express its own contract, and
+  SOKF requires only `type`.
 
 ## Scope
 
-- In: the `content` kinds, the `frontmatter` constraints, and the
-  reconciliation each will need — 33 mismatches for the first; the second's
-  count is re-derived when the check exists.
+- In: the `content` kinds; the `frontmatter` `const`, `pattern` and `enum`
+  checks on present values; the vocabulary for marking a key required and
+  the pass over the 53 schemas that declares it; and the reconciliation of
+  every live finding the new checks surface.
+- Out: checking each schema's worked example against its own schema —
+  that is [issue-022][sokf:issue-022-feature-request-a-schemas-worked-example-is-checked-by-nothing],
+  which lands on top of this machinery.
+- Out: index shape and index-entry checks — I011 and I010.
 - Out: whether `schema-templates-index` should exist at all. It governs
   `knowledge/templates/index.md`, and indexes carry no frontmatter and are
   deliberately excluded from the candidate list, so it is the one schema left
-  that can never fire. Index shape is I011's.
+  that can never fire.
 
-## Open questions
+## Comments
 
-- Does a `bullet-list` section admit a leading sentence before the bullets?
-  Most such sections here have one, so the answer decides whether the count
-  is 33 or nearer 10. Recommended default: yes — the kind describes the
-  section's substance, not its first line.
+2026-08-31 — Framing settled four decisions with the user: a list section
+admits a lead-in sentence (the kind binds the section's substance); the
+new findings are errors, per ADR-017's pass-or-fail stance; the
+frontmatter check covers both present values and required-key presence,
+with the schemas gaining the vocabulary to mark a key required; and
+issue-022's example checking stays a separate feature.
+
+<!-- sokf:links -->
+[sokf:issue-022-feature-request-a-schemas-worked-example-is-checked-by-nothing]: /knowledge/issues/open/issue-022-feature-request-a-schemas-worked-example-is-checked-by-nothing.md
