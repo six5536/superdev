@@ -3,7 +3,7 @@ type: AdhocPlan
 id: plan-015-adhoc-code-review-at-the-last-slice
 title: Integrate runs /code-review once, at the last slice
 description: The per-slice /code-review in integrate becomes one feature-wide review at the last slice, over the whole diff, with findings returning to build as today.
-lifecycle: open
+lifecycle: done
 links:
   - rel: relates-to
     to: plan-013-feature-workflow-autonomy

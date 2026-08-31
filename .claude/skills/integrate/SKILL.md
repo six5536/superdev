@@ -11,7 +11,7 @@ First you try to make the slice fail; only what survives is merged. Verify the s
 
 <bootstrap_actions>
 <tool_call name="read_file" path=".agents/superdev.md" when="always" />
-<tool_call name="read_file" path="knowledge/schemas/code-review.md" when="always" />
+<tool_call name="read_file" path="knowledge/schemas/code-review.md" when="if the last slice" />
 <tool_call name="read_file" path="knowledge/schemas/investigation.md" when="if a failure needs investigation" />
 <tool_call name="sokf_read" id="feature-plan-{nnn}-{slug}" when="always" />
 <tool_call name="sokf_read" id="issue-{nnn}-{kind}-{slug}" when="always" />
@@ -30,9 +30,10 @@ First you try to make the slice fail; only what survives is merged. Verify the s
 <step name="RUN THE SLICE'S CASES" task="Run the slice's cases from the plan, including manual ones, and confirm each covers the criteria it names" />
 <step name="CHECK THE DONE-CHECK" task="Check the diff against the slice's done-check" />
 <step name="CHECK CONTRACTS" task="Check the diff's interfaces against the contracts the framed issue links" />
-<step name="REVIEW THE DIFF" task="Review the diff for correctness and for simplifications (`/code-review`); simplifications return to build as findings, they are not applied here" />
+<step name="REVIEW THE DIFF" when="if the last slice" task="Review the whole feature diff against the merge target for correctness and for simplifications (`/code-review`); findings return to build, they are not applied here" />
 <step name="CHECK RENDERED UI" task="UI: check the rendered result (`/run`)" />
-<step name="WRITE FINDINGS" task="Write findings per `schema-code-review`; use `schema-investigation` for a failure that needs investigation" />
+<step name="WRITE FINDINGS" when="if the last slice" task="Write the review's findings per `schema-code-review`" />
+<step name="WRITE INVESTIGATION" task="Write an investigation per `schema-investigation` for a failure that needs one" />
 <gate check="Every case in the slice has an implemented test, or the plan marks it manual" on-fail="/build" />
 <gate check="No acceptance criterion is ambiguous or wrong" on-fail="/frame — the criterion lives in the issue" />
 <gate check="No case is ambiguous or wrong" on-fail="/feature-plan — the case lives in the plan" />

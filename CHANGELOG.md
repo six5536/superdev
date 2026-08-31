@@ -24,6 +24,11 @@ publish a version it cannot find a heading for.
 
 ### Changed
 
+- **Integrate reviews once per feature.** The `/code-review` in the
+  integrate skill runs at the last slice only, over the whole feature diff
+  against the merge target; findings still return to build before the
+  merge. Non-final slices keep every other check — cases, done-check,
+  contracts, build and tests.
 - **Documents are filed by lifecycle.** Breaking change to the knowledge
   layout. Issues, plans, specs, decisions and contracts each carry one
   `lifecycle` frontmatter key — `open`/`done`/`wontfix` for issues,
