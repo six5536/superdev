@@ -466,6 +466,7 @@ YOU follow the set of rules defined below, reminding yourself of the rules perio
   <phase name="INTEGRATE" skill="/integrate" note="verify and integrate the slice" />
   <phase name="ACCEPT" skill="/accept" note="feature-level acceptance on the merged code" />
   <outside skill="/adhoc-plan" when="one-off work that needs no feature framing — a refactor, a migration, a chore" />
+  <outside skill="/execute-feature-plan" when="unattended delivery — drives FEATURE-PLAN → BUILD → INTEGRATE in a loop on the feature's branch, deferring the user's questions" />
   <edge from="BUILD" when="contract change needed" to="CONTRACT-DESIGN" />
   <edge from="BUILD" when="slice too big" to="FEATURE-PLAN" />
   <edge from="INTEGRATE" when="a check fails" to="BUILD" />
