@@ -155,3 +155,13 @@ fn missing_content() {
 fn unknown_content_kind() {
     snapshot("unknown-content-kind");
 }
+
+#[test]
+fn frontmatter_mismatch() {
+    snapshot("frontmatter-mismatch");
+}
+
+#[test]
+fn uncompilable_pattern() {
+    snapshot("uncompilable-pattern");
+}

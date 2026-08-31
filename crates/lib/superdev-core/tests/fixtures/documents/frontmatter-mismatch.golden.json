@@ -1,0 +1,20 @@
+{
+  "findings": [
+    {
+      "file": "a.md",
+      "message": "frontmatter `id` is `thing-1-short`, and thing.md declares pattern `^thing-\\d{3}-[a-z0-9-]+$`",
+      "severity": "error"
+    },
+    {
+      "file": "a.md",
+      "message": "frontmatter `status` is `stale`, and thing.md declares one of: draft, stable",
+      "severity": "error"
+    },
+    {
+      "file": "a.md",
+      "message": "frontmatter `category` is `opinion`, and thing.md declares const `reference`",
+      "severity": "error"
+    }
+  ],
+  "passed": false
+}

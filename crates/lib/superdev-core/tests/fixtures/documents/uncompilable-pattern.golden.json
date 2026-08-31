@@ -1,0 +1,10 @@
+{
+  "findings": [
+    {
+      "file": "thing.md",
+      "message": "schema: frontmatter `id` declares pattern `(unclosed` — it does not compile, and binds nothing",
+      "severity": "error"
+    }
+  ],
+  "passed": false
+}

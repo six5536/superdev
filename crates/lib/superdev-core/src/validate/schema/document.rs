@@ -18,6 +18,7 @@ use std::collections::BTreeMap;
 use serde::Deserialize;
 
 use super::Finding;
+use super::grammar::Ordered;
 use super::re;
 
 /// One section rule from a schema's contract.
@@ -75,26 +76,20 @@ impl SectionRule {
     }
 }
 
-/// The frontmatter constraints a schema declares. Only `type` and
-/// `lifecycle` are read here: the rest is the SOKF half's business.
+/// One frontmatter key's constraints, as a schema's `frontmatter:` block
+/// declares them. A key declared with only a `description` deserialises to
+/// an empty constraint and binds nothing — guidance, per ADR-022. Fields
+/// outside these three (`description`, `required`) are ignored here: the
+/// required-key check is its own slice.
 #[derive(Debug, Clone, Default, Deserialize)]
-struct FrontmatterContract {
-    #[serde(default)]
-    r#type: Option<TypeConstraint>,
-    #[serde(default)]
-    lifecycle: Option<LifecycleConstraint>,
-}
-
-#[derive(Debug, Clone, Deserialize)]
-struct TypeConstraint {
+struct KeyConstraint {
+    /// The one value the key must carry, when present.
     #[serde(default)]
     r#const: Option<String>,
-}
-
-/// The `lifecycle` enum a schema declares; declaring one is what puts the
-/// schema's documents in scope of the filing check.
-#[derive(Debug, Clone, Deserialize)]
-struct LifecycleConstraint {
+    /// The anchored regex a present value must match.
+    #[serde(default)]
+    pattern: Option<String>,
+    /// The values a present one must be among.
     #[serde(default)]
     r#enum: Vec<String>,
 }
@@ -115,15 +110,23 @@ pub struct DocSchema {
     sections: Vec<SectionRule>,
     #[serde(default, rename = "sections-prohibited")]
     sections_prohibited: Vec<String>,
+    /// Every key's constraint block, in declaration order. `Option` because
+    /// a schema may write a key with nothing under it — an empty contract,
+    /// binding nothing, rather than a schema that fails to parse.
     #[serde(default)]
-    frontmatter: FrontmatterContract,
+    frontmatter: Ordered<Option<KeyConstraint>>,
 }
 
 impl DocSchema {
+    /// The constraints declared for `key`, when there are any.
+    fn constraint(&self, key: &str) -> Option<&KeyConstraint> {
+        self.frontmatter.get(key)?.as_ref()
+    }
+
     /// The `type` this schema governs, when it dispatches by type.
     #[must_use]
     pub fn type_const(&self) -> Option<&str> {
-        self.frontmatter.r#type.as_ref()?.r#const.as_deref()
+        self.constraint("type")?.r#const.as_deref()
     }
 
     /// Whether this schema names its documents by glob — the fallback for
@@ -137,11 +140,7 @@ impl DocSchema {
     /// none and its documents are outside the filing check.
     #[must_use]
     pub fn lifecycle_enum(&self) -> Option<&[String]> {
-        self.frontmatter
-            .lifecycle
-            .as_ref()
-            .map(|l| l.r#enum.as_slice())
-            .filter(|values| !values.is_empty())
+        Some(self.constraint("lifecycle")?.r#enum.as_slice()).filter(|values| !values.is_empty())
     }
 
     /// Parse a schema document's yaml contract. `None` when the document
@@ -194,6 +193,20 @@ impl SchemaSet {
                             "schema: section {} declares content `{kind}` — the kinds are \
                              prose, bullet-list, numbered-list, table and code",
                             rule.label()
+                        ),
+                        fatal: true,
+                    });
+                }
+            }
+            for (key, constraint) in schema.frontmatter.iter() {
+                if let Some(pattern) = constraint.as_ref().and_then(|c| c.pattern.as_deref())
+                    && re::compile(pattern).is_none()
+                {
+                    findings.push(Finding {
+                        file: file.clone(),
+                        message: format!(
+                            "schema: frontmatter `{key}` declares pattern `{pattern}` — it does \
+                             not compile, and binds nothing"
                         ),
                         fatal: true,
                     });
@@ -417,6 +430,81 @@ fn check_one(doc: &Document<'_>, schema: &DocSchema, findings: &mut Vec<Finding>
     }
 
     check_columns(schema, &headings, &lines, &mut push);
+    check_frontmatter(doc, schema, &mut push);
+}
+
+/// Every present frontmatter value against the contract its schema declares:
+/// `const`, `pattern` and `enum` bind, and a key declared with only a
+/// `description` is guidance (ADR-022). An absent key is not reported here —
+/// requiring one is the `required` flag's business. A constraint compares
+/// against the value's scalar string form; a value with no scalar form — a
+/// list, a map, a folded block — cannot satisfy a scalar constraint and is a
+/// mismatch like any other. `lifecycle` is the filing check's (P011), which
+/// already reports a value outside its enum; reading it here too would say
+/// one fault twice.
+fn check_frontmatter(doc: &Document<'_>, schema: &DocSchema, push: &mut impl FnMut(String)) {
+    let fm = frontmatter_block(doc.text);
+    if fm.is_empty() {
+        return;
+    }
+    let entries = super::read::parse_frontmatter(&fm);
+    for (key, constraint) in schema.frontmatter.iter() {
+        if key == "lifecycle" {
+            continue;
+        }
+        let Some(c) = constraint else { continue };
+        if c.r#const.is_none() && c.pattern.is_none() && c.r#enum.is_empty() {
+            continue;
+        }
+        let Some(entry) = entries.iter().find(|e| e.key == key) else {
+            continue;
+        };
+        if entry.scalar.is_none() && entry.block.is_none() {
+            continue; // Written with nothing after the colon: absent.
+        }
+        let scalar = if entry.is_folded || entry.block.is_some() {
+            None
+        } else {
+            entry.scalar.as_deref()
+        };
+        let spell = scalar.map_or("is not a scalar".to_string(), |v| format!("is `{v}`"));
+        if let Some(want) = c.r#const.as_deref()
+            && scalar != Some(want)
+        {
+            push(format!(
+                "frontmatter `{key}` {spell}, and {} declares const `{want}`",
+                schema.name
+            ));
+        }
+        if let Some(pattern) = c.pattern.as_deref()
+            && re::compile(pattern).is_some()
+            && !scalar.is_some_and(|v| re::matches(pattern, v))
+        {
+            push(format!(
+                "frontmatter `{key}` {spell}, and {} declares pattern `{pattern}`",
+                schema.name
+            ));
+        }
+        if !c.r#enum.is_empty() && !scalar.is_some_and(|v| c.r#enum.iter().any(|a| a == v)) {
+            push(format!(
+                "frontmatter `{key}` {spell}, and {} declares one of: {}",
+                schema.name,
+                c.r#enum.join(", ")
+            ));
+        }
+    }
+}
+
+/// The frontmatter block's lines, between the opening `---` and the line
+/// that closes it; empty when the document carries none.
+fn frontmatter_block(text: &str) -> Vec<&str> {
+    let Some(rest) = text.strip_prefix("---\n") else {
+        return Vec::new();
+    };
+    let Some(end) = rest.find("\n---") else {
+        return Vec::new();
+    };
+    rest[..end].split('\n').collect()
 }
 
 /// The form a content kind demands, as a finding names it.
@@ -676,7 +764,7 @@ mod tests {
                 sections_ordered: false,
                 sections: Vec::new(),
                 sections_prohibited: Vec::new(),
-                frontmatter: FrontmatterContract::default(),
+                frontmatter: Ordered::default(),
             }],
         };
         // Nothing from node_modules is a candidate, so nothing is governed.
@@ -980,6 +1068,150 @@ mod tests {
             &[Document {
                 path: "a.md",
                 text: "# T\n\n## Body\n\nanything\n",
+                doc_type: Some("T"),
+            }],
+            &set,
+        );
+        assert!(found.is_empty(), "{found:#?}");
+    }
+
+    /// Covers I018 criterion 3: the finding names the document, the key and
+    /// the schema.
+    #[test]
+    fn a_present_value_breaking_its_pattern_is_a_finding() {
+        let schema =
+            schema_of("frontmatter:\n  type:\n    const: T\n  id:\n    pattern: '^t-\\d{3}$'\n");
+        let doc = Document {
+            path: "a.md",
+            text: "---\ntype: T\nid: t-1\n---\n\n# A\n",
+            doc_type: Some("T"),
+        };
+        let mut findings = Vec::new();
+        check_one(&doc, &schema, &mut findings);
+        assert_eq!(findings.len(), 1, "{findings:#?}");
+        assert_eq!(findings[0].file, "a.md");
+        assert!(
+            findings[0].message.contains("`id` is `t-1`"),
+            "{findings:#?}"
+        );
+        assert!(
+            findings[0].message.contains("s declares pattern"),
+            "{findings:#?}"
+        );
+
+        let ok = Document {
+            path: "a.md",
+            text: "---\ntype: T\nid: t-001\n---\n\n# A\n",
+            doc_type: Some("T"),
+        };
+        let mut findings = Vec::new();
+        check_one(&ok, &schema, &mut findings);
+        assert!(findings.is_empty(), "{findings:#?}");
+    }
+
+    /// Covers I018 criterion 3: a value outside its `enum`, and one differing
+    /// from its `const`, are each findings.
+    #[test]
+    fn a_value_outside_its_enum_or_differing_from_its_const_is_a_finding() {
+        let schema = schema_of(
+            "frontmatter:\n  type:\n    const: T\n  status:\n    enum: [draft, stable]\n\
+             \x20 category:\n    const: reference\n",
+        );
+        let doc = Document {
+            path: "a.md",
+            text: "---\ntype: T\nstatus: stale\ncategory: opinion\n---\n\n# A\n",
+            doc_type: Some("T"),
+        };
+        let mut findings = Vec::new();
+        check_one(&doc, &schema, &mut findings);
+        let messages: Vec<&str> = findings.iter().map(|f| f.message.as_str()).collect();
+        assert_eq!(findings.len(), 2, "{findings:#?}");
+        assert!(
+            messages
+                .iter()
+                .any(|m| m.contains("`status` is `stale`") && m.contains("one of: draft, stable")),
+            "{messages:?}"
+        );
+        assert!(
+            messages
+                .iter()
+                .any(|m| m.contains("`category` is `opinion`") && m.contains("const `reference`")),
+            "{messages:?}"
+        );
+    }
+
+    /// Covers I018 criterion 3: a key declared with only a `description` is
+    /// guidance and passes any value.
+    #[test]
+    fn a_key_with_only_a_description_passes_any_value() {
+        let schema = schema_of(
+            "frontmatter:\n  type:\n    const: T\n  title:\n    description: What it is called.\n",
+        );
+        let doc = Document {
+            path: "a.md",
+            text: "---\ntype: T\ntitle: Anything at all\n---\n\n# A\n",
+            doc_type: Some("T"),
+        };
+        let mut findings = Vec::new();
+        check_one(&doc, &schema, &mut findings);
+        assert!(findings.is_empty(), "{findings:#?}");
+    }
+
+    /// Covers I018 criterion 4: an absent key with constraints is not
+    /// reported — requiring one is the `required` flag's business.
+    #[test]
+    fn an_absent_key_with_constraints_is_not_reported() {
+        let schema = schema_of(
+            "frontmatter:\n  type:\n    const: T\n  id:\n    pattern: '^t-\\d{3}$'\n\
+             \x20 status:\n    enum: [draft, stable]\n",
+        );
+        // `status:` with nothing after the colon is as absent as no line.
+        let doc = Document {
+            path: "a.md",
+            text: "---\ntype: T\nstatus:\n---\n\n# A\n",
+            doc_type: Some("T"),
+        };
+        let mut findings = Vec::new();
+        check_one(&doc, &schema, &mut findings);
+        assert!(findings.is_empty(), "{findings:#?}");
+    }
+
+    /// A value with no scalar form — a list, a folded block — cannot satisfy
+    /// a scalar constraint, and the mismatch is reported like any other.
+    #[test]
+    fn a_non_scalar_value_with_a_scalar_constraint_is_a_finding() {
+        let schema =
+            schema_of("frontmatter:\n  type:\n    const: T\n  id:\n    pattern: '^t-\\d{3}$'\n");
+        let doc = Document {
+            path: "a.md",
+            text: "---\ntype: T\nid:\n  - t-001\n---\n\n# A\n",
+            doc_type: Some("T"),
+        };
+        let mut findings = Vec::new();
+        check_one(&doc, &schema, &mut findings);
+        assert_eq!(findings.len(), 1, "{findings:#?}");
+        assert!(
+            findings[0].message.contains("`id` is not a scalar"),
+            "{findings:#?}"
+        );
+    }
+
+    /// Covers I018 criterion 5: a `pattern` that does not compile is reported
+    /// on the schema file, and the unreadable rule binds nothing.
+    #[test]
+    fn an_uncompilable_pattern_is_reported_on_the_schema_file() {
+        let text = "---\ntype: Schema\n---\n\n````yaml\nfrontmatter:\n  type:\n    const: T\n\
+                    \x20 id:\n    pattern: '(unclosed'\n````\n";
+        let (set, findings) = SchemaSet::load(&[("s.md".into(), text.into())]);
+        assert_eq!(findings.len(), 1, "{findings:#?}");
+        assert_eq!(findings[0].file, "s.md");
+        assert!(findings[0].message.contains("(unclosed"), "{findings:#?}");
+
+        // The rule binds nothing: an id of any shape passes.
+        let found = check_documents(
+            &[Document {
+                path: "a.md",
+                text: "---\ntype: T\nid: whatever\n---\n\n# A\n",
                 doc_type: Some("T"),
             }],
             &set,
