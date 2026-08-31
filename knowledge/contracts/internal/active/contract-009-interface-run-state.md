@@ -85,7 +85,9 @@ pub const CONTINUE_CAP: u32 = 10;
   payload's session is not the owner, `next` is empty, or `continues`
   has reached `CONTINUE_CAP` — otherwise it increments `continues` and
   exits `2` naming `next`, which Claude Code feeds back as the
-  instruction to keep going. The payload's `stop_hook_active` never
+  instruction to keep going. A payload without a session id matches
+  nothing — it neither adopts nor drives a run — so an unclaimed run is
+  driven only after adoption. The payload's `stop_hook_active` never
   gates the decision: exit `2` stays effective while it is true, and
   the counter is the guard
   ([research-001][sokf:research-001-claude-code-stop-hook-behaviour]).

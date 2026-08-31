@@ -486,31 +486,22 @@ mod tests {
                 Action::EnsureJsonArrayElement {
                     path,
                     pointer,
+                    marker,
                     value_json,
-                    ..
                 } => {
-                    // Merge by pointer: two entries share the settings file.
-                    let p = dir.path().join(path);
-                    let mut root: serde_json::Value = std::fs::read_to_string(&p)
-                        .ok()
-                        .and_then(|t| serde_json::from_str(&t).ok())
-                        .unwrap_or_else(|| serde_json::json!({}));
-                    let mut cursor = &mut root;
-                    for seg in pointer.split('.') {
-                        cursor = cursor
-                            .as_object_mut()
-                            .unwrap()
-                            .entry(seg)
-                            .or_insert_with(|| serde_json::json!({}));
-                    }
-                    if !cursor.is_array() {
-                        *cursor = serde_json::json!([]);
-                    }
-                    cursor
-                        .as_array_mut()
-                        .unwrap()
-                        .push(serde_json::from_str(&value_json).unwrap());
-                    std::fs::write(p, serde_json::to_string(&root).unwrap()).unwrap();
+                    // The production editor, so the harness cannot drift
+                    // from apply semantics; two entries share the file.
+                    let p = dir.path().join(&path);
+                    let existing = std::fs::read_to_string(&p).unwrap_or_else(|_| "{}".into());
+                    let (content, _) = crate::json_edit::edit_json_array_element(
+                        &path,
+                        &existing,
+                        &pointer,
+                        &marker,
+                        &value_json,
+                    )
+                    .unwrap();
+                    std::fs::write(p, content).unwrap();
                 }
                 other => panic!("unexpected action {other:?}"),
             }

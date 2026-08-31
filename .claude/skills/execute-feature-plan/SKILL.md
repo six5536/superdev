@@ -18,7 +18,7 @@ You drive the loop and decide nothing a phase owns. Take the feature given in th
 
 <process_actions>
 <gate check="The framed issue's contracts are settled and committed on the feature's branch" on-fail="/contract-design — the go-ahead is the user's" />
-<gate check="The working tree is on the feature's branch, not the default branch" on-fail="stop; nothing unattended runs on the default branch" />
+<gate check="The working tree is on the feature's branch" on-fail="stop; nothing unattended runs on the default branch" />
 <step name="BEGIN THE RUN" task="`superdev run begin --next <the first step>`; a refusal names the run that owns the working tree — stop and report it" />
 <step name="CUT THE PLAN" when="if no plan exists" task="`/feature-plan`; the cutting rules live there" />
 <loop until="no slice is ready: every slice is done, deferred, or blocked by a deferred decision">

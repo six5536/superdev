@@ -113,25 +113,41 @@ fn begin(root: &Path, owner: &str, next: &str) -> Result<u8> {
         started: iso8601_utc(unix_now()),
         pid: std::process::id(),
     };
-    let mut file = match OpenOptions::new().write(true).create_new(true).open(&path) {
-        Ok(file) => file,
-        Err(e) if e.kind() == io::ErrorKind::AlreadyExists => {
-            // The refusal names the standing run so a stale one is
-            // diagnosable without opening the file.
-            let standing = load(&path)
-                .map(|s| format!("owner: {}, started {}", claimed(&s.session_id), s.started))
-                .unwrap_or_else(|_| "unreadable state".to_string());
-            return Err(run_error(
-                &path,
-                format!("a run is already active ({standing}); `superdev run end` clears it"),
-            ));
+    let mut retried = false;
+    let mut file = loop {
+        match OpenOptions::new().write(true).create_new(true).open(&path) {
+            Ok(file) => break file,
+            Err(e) if e.kind() == io::ErrorKind::AlreadyExists => {
+                // An empty file is an interrupted begin, not a run: clear it
+                // and try once more.
+                if !retried && fs::metadata(&path).is_ok_and(|m| m.len() == 0) {
+                    retried = true;
+                    eprintln!("superdev run: clearing an empty state left by an interrupted begin");
+                    let _ = fs::remove_file(&path);
+                    continue;
+                }
+                // The refusal names the standing run so a stale one is
+                // diagnosable without opening the file.
+                let standing = load(&path)
+                    .map(|s| format!("owner: {}, started {}", claimed(&s.session_id), s.started))
+                    .unwrap_or_else(|_| "unreadable state".to_string());
+                return Err(run_error(
+                    &path,
+                    format!("a run is already active ({standing}); `superdev run end` clears it"),
+                ));
+            }
+            Err(source) => return Err(Error::Io { path, source }),
         }
-        Err(source) => return Err(Error::Io { path, source }),
     };
     if let Err(source) = file.write_all(render(&state).as_bytes()) {
         // A partial file would wedge every later begin; remove what this
         // begin created before reporting.
-        let _ = fs::remove_file(&path);
+        if let Err(e) = fs::remove_file(&path) {
+            eprintln!(
+                "superdev run: could not remove the partial state at {}: {e}",
+                path.display()
+            );
+        }
         return Err(Error::Io { path, source });
     }
     out(&format!(
@@ -152,10 +168,7 @@ fn advance(root: &Path, owner: &str, next: &str) -> Result<u8> {
     if !owner.is_empty() {
         state.session_id = owner.to_string();
     }
-    fs::write(&path, render(&state)).map_err(|source| Error::Io {
-        path: path.clone(),
-        source,
-    })?;
+    write_state(&path, &state)?;
     out(&format!("run advanced — next: {}", named(&state.next)))?;
     Ok(0)
 }
@@ -200,25 +213,21 @@ fn hook_run_on(payload: &str, root: &Path) -> Result<u8> {
         }
     };
     let session = parsed["session_id"].as_str().unwrap_or_default();
+    if session.is_empty() {
+        // A payload without a session matches nothing: an unclaimed run is
+        // driven only after adoption (contract-009).
+        return Ok(0);
+    }
     let path = state_path(root);
-    let mut state = match fs::read_to_string(&path) {
-        Err(e) if e.kind() == io::ErrorKind::NotFound => return Ok(0),
+    let mut state = match read_state(&path) {
+        Ok(None) => return Ok(0),
+        Ok(Some(state)) => state,
         Err(e) => {
             eprintln!("superdev hook: run state unreadable, letting the turn end: {e}");
             return Ok(0);
         }
-        Ok(text) => match toml_edit::de::from_str::<RunState>(&text) {
-            Ok(state) => state,
-            Err(e) => {
-                eprintln!(
-                    "superdev hook: run state malformed, letting the turn end: {}: {e}",
-                    path.display()
-                );
-                return Ok(0);
-            }
-        },
     };
-    if state.session_id.is_empty() && !session.is_empty() {
+    if state.session_id.is_empty() {
         // An unclaimed run: the first Stop payload's session becomes the
         // owner (contract-009).
         state.session_id = session.to_string();
@@ -227,10 +236,12 @@ fn hook_run_on(payload: &str, root: &Path) -> Result<u8> {
         return Ok(0);
     }
     state.continues += 1;
-    fs::write(&path, render(&state)).map_err(|source| Error::Io {
-        path: path.clone(),
-        source,
-    })?;
+    if let Err(e) = write_state(&path, &state) {
+        // A hook that fails closed holds every session open; report and let
+        // the turn end.
+        eprintln!("superdev hook: could not record the continue, letting the turn end: {e}");
+        return Ok(0);
+    }
     eprintln!(
         "An unattended superdev run is active ({} of {CONTINUE_CAP} continues since \
          the last advance). Do not stop. Continue with: {}. Record each step \
@@ -241,17 +252,12 @@ fn hook_run_on(payload: &str, root: &Path) -> Result<u8> {
     Ok(2)
 }
 
-/// Read and parse the state. Absent is a guided error naming `begin`;
-/// malformed names the parser's complaint.
-fn load(path: &Path) -> Result<RunState> {
+/// Read and parse the state: `None` when no run is active, an error when
+/// the file exists and cannot be read or parsed. Callers own the policy.
+fn read_state(path: &Path) -> Result<Option<RunState>> {
     let text = match fs::read_to_string(path) {
         Ok(text) => text,
-        Err(e) if e.kind() == io::ErrorKind::NotFound => {
-            return Err(run_error(
-                path,
-                "no run is active; `superdev run begin` starts one".to_string(),
-            ));
-        }
+        Err(e) if e.kind() == io::ErrorKind::NotFound => return Ok(None),
         Err(source) => {
             return Err(Error::Io {
                 path: path.to_path_buf(),
@@ -259,9 +265,36 @@ fn load(path: &Path) -> Result<RunState> {
             });
         }
     };
-    toml_edit::de::from_str(&text).map_err(|e| Error::Toml {
+    toml_edit::de::from_str(&text)
+        .map(Some)
+        .map_err(|e| Error::Toml {
+            path: path.to_path_buf(),
+            message: e.to_string(),
+        })
+}
+
+/// The state for a verb that needs one: absent is a guided error naming
+/// `begin`.
+fn load(path: &Path) -> Result<RunState> {
+    read_state(path)?.ok_or_else(|| {
+        run_error(
+            path,
+            "no run is active; `superdev run begin` starts one".to_string(),
+        )
+    })
+}
+
+/// Replace the state atomically: a temp file in the same directory, then a
+/// rename, so no reader ever sees a torn write.
+fn write_state(path: &Path, state: &RunState) -> Result<()> {
+    let tmp = path.with_extension("toml.tmp");
+    fs::write(&tmp, render(state)).map_err(|source| Error::Io {
+        path: tmp.clone(),
+        source,
+    })?;
+    fs::rename(&tmp, path).map_err(|source| Error::Io {
         path: path.to_path_buf(),
-        message: e.to_string(),
+        source,
     })
 }
 
@@ -463,6 +496,26 @@ mod tests {
             2
         );
         assert_eq!(load(&state_path(dir.path())).unwrap().session_id, "adopter");
+    }
+
+    #[test]
+    fn a_payload_without_a_session_neither_adopts_nor_drives() {
+        let dir = tempfile::tempdir().unwrap();
+        begin(dir.path(), "", "step").unwrap();
+        assert_eq!(hook_run_on(&stop_payload(""), dir.path()).unwrap(), 0);
+        let state = load(&state_path(dir.path())).unwrap();
+        assert_eq!(state.session_id, "", "not adopted");
+        assert_eq!(state.continues, 0, "not driven");
+    }
+
+    #[test]
+    fn an_interrupted_begin_is_cleared_by_the_next_begin() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = state_path(dir.path());
+        std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+        std::fs::write(&path, "").unwrap();
+        assert_eq!(begin(dir.path(), "s", "step").unwrap(), 0);
+        assert_eq!(load(&path).unwrap().session_id, "s");
     }
 
     #[test]
