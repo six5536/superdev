@@ -7,7 +7,10 @@ lifecycle: open
 links:
   - rel: references
     to: contract-002-cli-superdev
-    note: The CLI contract governs what validate promises a path argument.
+    note: >
+      The validate bullet's PATH sentence now promises bare-run parity
+      for a named document (ADR-026), replacing "only what it names is
+      read".
 ---
 
 # Bug: validate reads a file named on the command line as a skill

@@ -166,14 +166,23 @@ server use it, `validate` never opens it.
   Documents with no frontmatter to dispatch on — `README.md`, `CHANGELOG.md` —
   are named by a schema's `target-files` glob instead. The glob is matched
   against the candidate list, never against the filesystem, which is what
-  bounds it: nothing outside the SOKF knowledge and that named pair is ever a
-  candidate.
+  bounds it: nothing outside the SOKF knowledge, that named pair, and a
+  file named on the command line is ever a candidate.
 
   It prints findings as text, or as JSON under `--json`: `passed`, `concepts`,
   `files`, `findings`, and a `knowledge` key carrying the directory the run
   covered. Warnings alone exit `0`; any error exits `1`. A `PATH` replaces
-  both defaults: only what it names is read, and the knowledge is validated
-  only when a `PATH` is the knowledge or contains it. The grammar comes from
+  both defaults for what is reported: findings name only what it covers. A
+  `PATH` naming a document — dispatched by its frontmatter `type` or a
+  schema's `target-files` glob — is reported with bare-run parity: exactly
+  the findings a bare run gives that file, schema, filing and link findings
+  alike, so the run reads the knowledge and the schema set even though it
+  reports one file
+  ([ADR-026][sokf:adr-026-a-named-document-is-checked-with-bare-run-parity]).
+  A file no schema and no grammar kind claims takes the grammar's fallback
+  kind, which keeps a skill outside the roots checkable; an unreadable
+  `PATH` fails naming itself. The knowledge is validated as a whole only
+  when a `PATH` is the knowledge or contains it. The grammar comes from
   `.agents/sokf/grammar.yaml`, or from the copy inside the binary when the
   repository has none.
 
@@ -236,6 +245,7 @@ Unreleased. Every verb, flag and exit code above may change without notice.
 <!-- sokf:links -->
 [sokf:adr-004-base-pack-identity]: /knowledge/adrs/active/adr-004-base-pack-identity.md
 [sokf:adr-009-update-queries-default-source]: /knowledge/adrs/active/adr-009-update-queries-default-source.md
+[sokf:adr-026-a-named-document-is-checked-with-bare-run-parity]: /knowledge/adrs/active/adr-026-a-named-document-is-checked-with-bare-run-parity.md
 [sokf:configuration]: /knowledge/configuration.md
 [sokf:contract-003-mcp-sokf]: /knowledge/contracts/public/active/contract-003-mcp-sokf.md
 [sokf:contract-009-interface-run-state]: /knowledge/contracts/internal/active/contract-009-interface-run-state.md
