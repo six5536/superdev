@@ -98,7 +98,11 @@ publish a version it cannot find a heading for.
   refuses a second run naming the owner, `advance` records a step forward —
   rewriting the next step, resetting the watchdog counter and refreshing
   the owning session — and `end` removes it, harmlessly when none exists.
-  The state is the seam the Stop hook will read; see P013.
+  `superdev hook run` is the Claude Code Stop hook that reads it: while a
+  run is armed for the payload's session it refuses to let the turn end,
+  naming the next step, and it lets the run die after ten continues
+  without an advance. Without a run state it is invisible, and it fails
+  open on an unreadable one. See P013.
 
 - **`superdev validate`.** One command checks both specs this repository
   owns: the SOKF knowledge, and every document against the schema its `type`

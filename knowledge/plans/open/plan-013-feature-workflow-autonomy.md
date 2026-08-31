@@ -45,7 +45,7 @@ decisions are ADR-018 through ADR-021 and the seam is
 
 ### Slice 2: The Stop hook
 
-- [ ] Done — ticked by integrate at merge.
+- [x] Done — ticked by integrate at merge.
 - Depends-on: 1.
 - Change: `hook run` beside `hook validate` in the hook namespace: the
   decision table of contract-009, the hook-owned counter, the cap of
