@@ -23,6 +23,15 @@ publish a version it cannot find a heading for.
   by frontmatter `type`, or frontmatter that is not YAML — is an error on
   the schema file too; a schema that names its documents by glob governs
   frontmatter-less documents, so its example owes no frontmatter block.
+- **An example's links bind by form and never resolve.** Inside a
+  schema's example, a concept link takes the `[text][sokf:<id>]`
+  reference form: a link or link definition whose target is a path into
+  the knowledge, and a `sokf:` destination written inline, are each an
+  error on the schema file (ADR-025). No id or target is resolved — a
+  fictional `sokf:` label passes, and a URL or a repository path outside
+  the knowledge keeps its ordinary markdown form, as does an image. An
+  example's `lifecycle` also binds here: the filing check, which owns
+  the key for real documents, never reads an example.
 - **Required frontmatter keys bind.** `superdev validate` reads the
   per-key `required: true` flag a schema declares (ADR-022) and reports,
   as an error naming the document, the key and the schema, an absent key

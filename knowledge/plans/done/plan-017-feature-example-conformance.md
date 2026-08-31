@@ -3,7 +3,7 @@ type: FeaturePlan
 id: plan-017-feature-example-conformance
 title: Example conformance — feature plan
 description: Two slices making validate check each schema's example against the schema that declares it — the document check in place, then link form without resolution — each landing with the reconciliation it surfaces.
-lifecycle: open
+lifecycle: done
 links:
   - rel: implements
     to: issue-022-feature-request-a-schemas-worked-example-is-checked-by-nothing
@@ -55,7 +55,7 @@ integrate's validate gate stays green at every merge.
 
 ### Slice 2: Link form binds inside the example, without resolution
 
-- [ ] Done — ticked by integrate at merge.
+- [x] Done — ticked by integrate at merge.
 - Depends-on: 1.
 - Change: the example check reads the example body's markdown links and
   reports, as an error on the schema file, a link whose target is a

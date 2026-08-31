@@ -45,4 +45,4 @@ workflow.
 [sokf:plan-014-adhoc-schema-review-findings]: /knowledge/plans/done/plan-014-adhoc-schema-review-findings.md
 [sokf:plan-015-adhoc-code-review-at-the-last-slice]: /knowledge/plans/done/plan-015-adhoc-code-review-at-the-last-slice.md
 [sokf:plan-016-feature-schema-layer-enforcement]: /knowledge/plans/done/plan-016-feature-schema-layer-enforcement.md
-[sokf:plan-017-feature-example-conformance]: /knowledge/plans/open/plan-017-feature-example-conformance.md
+[sokf:plan-017-feature-example-conformance]: /knowledge/plans/done/plan-017-feature-example-conformance.md
