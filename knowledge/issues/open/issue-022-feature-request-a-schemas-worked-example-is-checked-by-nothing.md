@@ -52,19 +52,46 @@ unread, so an example may teach a path link where the format now requires
 
 ## Proposed behaviour
 
-`validate` checks each schema's `example:` block against the schema that
-declares it, and reports a failure the way it reports any other schema
-finding, naming the schema and what the example broke.
+`validate` reads each schema's `example:` block as a document and checks
+it against the schema that declares it, reporting a failure the way it
+reports any other schema finding — naming the schema file and what the
+example broke. The example has a known governing schema — the one it sits
+in — so this needs no dispatch: the document check that already runs over
+a real document runs over the example with the schema handed to it.
 
-The example is a document with a known governing schema — the one it sits
-in — so this needs no dispatch: the check that already runs over a real
-document runs over the example with the schema handed to it.
+The check covers the schema layer — the frontmatter contract, the
+sections, their order and content kinds — and the form of the example's
+body links, never their destination. A link to a concept takes the
+`[text][sokf:<id>]` reference form; a path link into the knowledge is
+refused. No id or target is resolved, so an example cites fictional
+concepts freely, and a link pointing outside the knowledge — a URL, a
+repository path — keeps its ordinary markdown form. An example that does
+not parse as a document at all is itself a schema finding.
 
 ## Acceptance criteria
 
-1. [event] WHEN a schema's `example:` block breaks the schema that
-   declares it THE SYSTEM SHALL report the schema and what the example
-   broke, as it reports any other schema finding.
+1. [event] WHEN a schema's example, read as a document, breaks the
+   declaring schema's frontmatter contract — a value failing its `const`,
+   `pattern` or `enum`, or an absent required key — THE SYSTEM SHALL
+   report an error naming the schema file and what the example broke.
+2. [event] WHEN a schema's example breaks the declaring schema's section
+   rules — a required section absent, sections misordered, a prohibited
+   section present, or a section's body lacking its declared content kind
+   — THE SYSTEM SHALL report an error naming the schema file and what
+   the example broke.
+3. [event] WHEN a schema's example links to a concept by a path into the
+   knowledge THE SYSTEM SHALL report an error naming the schema file;
+   the `[text][sokf:<id>]` form is the accepted form for a concept link.
+4. [ubiquitous] THE SYSTEM SHALL accept, without resolution, an example
+   whose ids and `sokf:` labels name nothing in the knowledge, and an
+   example link whose target is outside the knowledge — a URL or a
+   repository path — in its ordinary markdown form.
+5. [event] WHEN a schema's example does not parse as a document — no
+   frontmatter block, or frontmatter that is not YAML — THE SYSTEM SHALL
+   report an error naming the schema file.
+6. [ubiquitous] THE SYSTEM SHALL report PASS on this repository once the
+   feature's reconciliation lands: every schema's example satisfies its
+   own schema, or the schema was deliberately corrected.
 
 ## Alternatives considered
 
@@ -87,11 +114,11 @@ document runs over the example with the schema handed to it.
 - In: the check reaching every schema, including those a managed
   repository ships once
   [the schemas ship][sokf:issue-020-bug-the-schemas-do-not-ship].
-- Out: the frontmatter and content-kind checks themselves. This issue
-  wants the example fed to whatever checks exist;
+- Out: the frontmatter and content-kind checks themselves —
   [I018][sokf:issue-018-feature-request-the-schema-layer-checks-sections-and-nothing-else]
-  is what makes those checks read a schema's frontmatter contract at all,
-  and until it lands an example-id check needs its own pattern match.
+  delivered them; this issue feeds the example to those checks.
+- Out: resolving an example's links or ids against the knowledge. The
+  check reads form alone; an example's content is fictional by design.
 - Out: fenced examples in documents that are not schemas. A plan or a spec
   may show whatever illustrates its argument.
 
@@ -103,6 +130,13 @@ their own frontmatter constraints: 18 carried a `type` the schema's
 Plan-014 fixed every instance by hand. The count strengthens the case
 for the checker: the five id faults first recorded here were the
 surfaced fraction of a fault class five times that size.
+
+2026-08-31 — Framing settled the check's reach with the user: the
+schema-layer document check plus link form. A concept link in an example
+must take the `[text][sokf:<id>]` form and a path link into the
+knowledge is refused, but no target is ever resolved — an example's
+content is fictional by design, and a link may point outside the
+knowledge, where it keeps its ordinary markdown form.
 
 <!-- sokf:links -->
 [sokf:issue-018-feature-request-the-schema-layer-checks-sections-and-nothing-else]: /knowledge/issues/done/issue-018-feature-request-the-schema-layer-checks-sections-and-nothing-else.md
