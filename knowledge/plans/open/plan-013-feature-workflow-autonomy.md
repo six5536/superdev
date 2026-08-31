@@ -135,7 +135,7 @@ decisions are ADR-018 through ADR-021 and the seam is
 
 ### Slice 7: The driver skill
 
-- [ ] Done — ticked by integrate at merge.
+- [x] Done — ticked by integrate at merge.
 - Depends-on: 2, 3, 4, 5, 6.
 - Change: a new `execute-feature-plan` skill in
   `pack/knowledge/skills/` carrying the loop — cut the plan when none

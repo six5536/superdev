@@ -106,6 +106,15 @@ publish a version it cannot find a heading for.
   hook's `hooks.Stop` entry into `.claude/settings.json` beside the
   PostToolUse one, claimed in the lock the same way. See P013.
 
+- **`/execute-feature-plan`.** A knowledge-carried skill drives
+  feature-plan, build and integrate in a loop on the feature's branch:
+  it cuts the plan when none exists, takes each slice whose dependencies
+  are done through build and integrate in a subagent, retries a failing
+  slice at most twice before deferring it, writes the questions only the
+  user can answer into the plan's deferred decisions, and ends by putting
+  them to the user in sequence. It drives `superdev run`, so the Stop
+  hook enforces the loop where Claude Code is present. See P013.
+
 - **The workflow branches and commits.** `/frame` cuts `feature/<slug>`
   off the default branch — a repo whose development-procedure concept
   names its own convention keeps it — and commits the framed issue there;
