@@ -67,8 +67,11 @@ pub fn check_documents(docs: &[Document<'_>], set: &SchemaSet) -> Vec<Finding>;
   frontmatter-less. A `type` naming no schema is an error.
 - **Frontmatter** — `const`, `pattern` and `enum` bind a key's present
   value; `required` makes absence an error; a key declared with only a
-  `description` is guidance (ADR-022). `lifecycle`'s enum additionally
-  puts the document in scope of the filing check (P011).
+  `description` is guidance (ADR-022). A constraint compares against the
+  value's scalar string form, so a value with no scalar form — a list, a
+  map, a folded block — cannot satisfy one. `lifecycle` belongs to the
+  filing check (P011), which reports its value against the enum and its
+  folder, so one fault is said once.
 - **Content kinds** — a closed set of five. A section satisfies its
   kind when the form appears in its body: one bullet, one numbered
   item, one table, one fenced block, or — for prose — one plain

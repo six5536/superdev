@@ -50,7 +50,7 @@ integrate's validate gate stays green at every merge.
 
 ### Slice 2: The frontmatter contract binds on present values
 
-- [ ] Done — ticked by integrate at merge.
+- [x] Done — ticked by integrate at merge.
 - Depends-on: none.
 - Change: `DocSchema` parses every frontmatter key's constraint block —
   today it reads only `type` and `lifecycle` — and reports, as an error

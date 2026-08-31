@@ -23,6 +23,15 @@ publish a version it cannot find a heading for.
   subsection's content counts, and lines inside fenced blocks do not. A
   schema declaring a kind outside the five is reported on the schema file
   itself and binds nothing.
+- **The frontmatter contract binds on present values.** `superdev validate`
+  reads every frontmatter key's constraint block and reports, as an error
+  naming the document, the key and the schema, a present value that breaks
+  its `const`, `pattern` or `enum`. Constraints compare against the value's
+  scalar string form, so a value with no scalar form — a list, a map, a
+  folded block — cannot satisfy one. A key declared with only a
+  `description` is guidance; an absent key is not reported. A `pattern`
+  that does not compile is reported on the schema file itself and binds
+  nothing.
 
 ### Fixed
 
