@@ -151,7 +151,13 @@ server use it, `validate` never opens it.
   contract: a key marked required is present, and a present value satisfies
   its `const`, `pattern` or `enum` (the vocabulary is
   [contract-010][sokf:contract-010-interface-document-schemas]) — and the
-  skills and `.agents/superdev.md` against the grammar. A document whose `type`
+  skills and `.agents/superdev.md` against the grammar. Each schema's
+  `example:` block is itself checked as a document against the schema that
+  declares it — the same document check, plus link form: a concept link
+  takes the `[text][sokf:<id>]` form and a path link into the knowledge is
+  refused, with no id or target resolved — and every failure, including an
+  example that does not parse as a document, is a finding on the schema
+  file. A document whose `type`
   names no schema is reported, because a type that resolves to nothing reads
   as governed and is not; a schema declaring a rule the validator cannot read
   — an unknown content kind, a pattern that does not compile — is reported

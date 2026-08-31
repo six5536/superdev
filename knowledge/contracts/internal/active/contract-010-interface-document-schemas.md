@@ -12,6 +12,12 @@ links:
   - rel: references
     to: adr-023-a-content-kind-binds-by-presence
     note: Fixes what a content kind demands of a section's body.
+  - rel: references
+    to: adr-024-a-schemas-example-is-checked-in-place-against-its-own-schema
+    note: Fixes where and how the example check runs.
+  - rel: references
+    to: adr-025-an-examples-links-bind-by-form-and-never-resolve
+    note: Fixes the example check's reach over body links.
 ---
 
 # Interface contract: document schemas
@@ -23,8 +29,10 @@ repository and every managed one — are one side of the interface; the
 binds: the validator checks it, and a declaration the validator cannot
 read is reported on the schema itself. The decisions behind the
 vocabulary's newest rows are
-[ADR-022][sokf:adr-022-a-frontmatter-key-is-required-by-a-per-key-flag]
-and [ADR-023][sokf:adr-023-a-content-kind-binds-by-presence].
+[ADR-022][sokf:adr-022-a-frontmatter-key-is-required-by-a-per-key-flag],
+[ADR-023][sokf:adr-023-a-content-kind-binds-by-presence],
+[ADR-024][sokf:adr-024-a-schemas-example-is-checked-in-place-against-its-own-schema]
+and [ADR-025][sokf:adr-025-an-examples-links-bind-by-form-and-never-resolve].
 
 ## Data model & API
 
@@ -54,6 +62,9 @@ sections:
     content: <kind>          # prose | bullet-list | numbered-list | table | code
     columns: [<c1>, <c2>]    # a declared table carries exactly these
     description: <guidance>  # prose, unchecked
+
+example: |                   # one conforming document; checked (ADR-024)
+  <a complete document satisfying this schema>
 ```
 
 ```rust
@@ -82,6 +93,18 @@ pub fn check_documents(docs: &[Document<'_>], set: &SchemaSet) -> Vec<Finding>;
 - **A mis-declared schema is its own finding** — a `content` outside
   the five kinds, a `pattern` that does not compile: reported against
   the schema file, and the unreadable rule binds nothing.
+- **The example is checked in place** — the `example:` block is read as
+  a document and run through this same check with the declaring schema
+  handed to it, no dispatch; every failure, including an example that
+  does not parse as a document, is a finding on the schema file
+  (ADR-024).
+- **An example's links bind by form, never by destination** — a concept
+  link in an example takes the `[text][sokf:<id>]` form and a path link
+  into the knowledge is an error, but no id or target is resolved: a
+  fictional `sokf:` label passes, and a link outside the knowledge — a
+  URL, a repository path — keeps its ordinary markdown form (ADR-025).
+  This is the one place the link rules differ from a real document's,
+  where ids must resolve.
 
 ## Module boundaries
 
@@ -98,6 +121,9 @@ pub fn check_documents(docs: &[Document<'_>], set: &SchemaSet) -> Vec<Finding>;
   sections (presence, order, prohibition, columns, line limit) →
   content kinds → frontmatter contract → findings grouped per file,
   one verdict.
+- example check: parse each schema's `example:` block as a document →
+  run the document check with the declaring schema → check link form →
+  findings land on the schema file, in the same run and verdict.
 
 ## Cross-cutting concerns
 
@@ -116,3 +142,5 @@ pub fn check_documents(docs: &[Document<'_>], set: &SchemaSet) -> Vec<Finding>;
 <!-- sokf:links -->
 [sokf:adr-022-a-frontmatter-key-is-required-by-a-per-key-flag]: /knowledge/adrs/active/adr-022-a-frontmatter-key-is-required-by-a-per-key-flag.md
 [sokf:adr-023-a-content-kind-binds-by-presence]: /knowledge/adrs/active/adr-023-a-content-kind-binds-by-presence.md
+[sokf:adr-024-a-schemas-example-is-checked-in-place-against-its-own-schema]: /knowledge/adrs/active/adr-024-a-schemas-example-is-checked-in-place-against-its-own-schema.md
+[sokf:adr-025-an-examples-links-bind-by-form-and-never-resolve]: /knowledge/adrs/active/adr-025-an-examples-links-bind-by-form-and-never-resolve.md

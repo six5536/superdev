@@ -24,6 +24,8 @@
 * [Nothing Unattended Reaches the Default Branch][sokf:adr-021-nothing-unattended-reaches-the-default-branch] - a feature runs on the branch /frame creates and an adhoc plan touching code on adhoc/<slug>; an unattended run commits and merges only there, and a human fast-forwards the default branch.
 * [A Frontmatter Key Is Required by a Per-Key Flag][sokf:adr-022-a-frontmatter-key-is-required-by-a-per-key-flag] - a schema marks a required frontmatter key with a `required` flag beside that key's constraints, mirroring the section rules' own vocabulary, so requiredness reads where the key is declared.
 * [A Content Kind Binds by Presence][sokf:adr-023-a-content-kind-binds-by-presence] - a section satisfies its declared content kind when the kind's form appears in its body — a bullet for bullet-list, a fenced block for code — with other content tolerated, so the kind names the section's substance rather than policing every line.
+* [A Schema's Example Is Checked in Place Against Its Own Schema][sokf:adr-024-a-schemas-example-is-checked-in-place-against-its-own-schema] - validate reads each schema's example block as a document and runs the document check with the declaring schema handed to it, so a failure is a finding on the schema file and the example never leaves the file agents read it from.
+* [An Example's Links Bind by Form and Never Resolve][sokf:adr-025-an-examples-links-bind-by-form-and-never-resolve] - inside a schema's example a concept link must take the sokf id form and a path link into the knowledge is refused, but no id or target is resolved — an example's content is fictional by design, and a link outside the knowledge keeps its ordinary markdown form.
 
 <!-- sokf:links -->
 [sokf:adr-001-packs-manifest-section]: /knowledge/adrs/active/adr-001-packs-manifest-section.md
@@ -49,3 +51,5 @@
 [sokf:adr-021-nothing-unattended-reaches-the-default-branch]: /knowledge/adrs/active/adr-021-nothing-unattended-reaches-the-default-branch.md
 [sokf:adr-022-a-frontmatter-key-is-required-by-a-per-key-flag]: /knowledge/adrs/active/adr-022-a-frontmatter-key-is-required-by-a-per-key-flag.md
 [sokf:adr-023-a-content-kind-binds-by-presence]: /knowledge/adrs/active/adr-023-a-content-kind-binds-by-presence.md
+[sokf:adr-024-a-schemas-example-is-checked-in-place-against-its-own-schema]: /knowledge/adrs/active/adr-024-a-schemas-example-is-checked-in-place-against-its-own-schema.md
+[sokf:adr-025-an-examples-links-bind-by-form-and-never-resolve]: /knowledge/adrs/active/adr-025-an-examples-links-bind-by-form-and-never-resolve.md

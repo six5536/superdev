@@ -7,6 +7,12 @@ lifecycle: open
 links:
   - rel: relates-to
     to: issue-018-feature-request-the-schema-layer-checks-sections-and-nothing-else
+  - rel: references
+    to: contract-010-interface-document-schemas
+    note: The vocabulary gains the example key's obligation and the link-form rule, per ADR-024 and ADR-025.
+  - rel: references
+    to: contract-002-cli-superdev
+    note: validate's schema half grows the example check.
 ---
 
 # Feature: a schema's worked example is checked by nothing
@@ -138,6 +144,15 @@ knowledge is refused, but no target is ever resolved — an example's
 content is fictional by design, and a link may point outside the
 knowledge, where it keeps its ordinary markdown form.
 
+2026-08-31 — Contract-design landed the trace: the
+[document-schemas interface contract][sokf:contract-010-interface-document-schemas]
+gains the example key's obligation and the link-form rule, per ADR-024
+and ADR-025, and the
+[CLI contract][sokf:contract-002-cli-superdev]'s validate bullet grows
+the example check.
+
 <!-- sokf:links -->
+[sokf:contract-002-cli-superdev]: /knowledge/contracts/public/active/contract-002-cli-superdev.md
+[sokf:contract-010-interface-document-schemas]: /knowledge/contracts/internal/active/contract-010-interface-document-schemas.md
 [sokf:issue-018-feature-request-the-schema-layer-checks-sections-and-nothing-else]: /knowledge/issues/done/issue-018-feature-request-the-schema-layer-checks-sections-and-nothing-else.md
 [sokf:issue-020-bug-the-schemas-do-not-ship]: /knowledge/issues/done/issue-020-bug-the-schemas-do-not-ship.md
