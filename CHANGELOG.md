@@ -13,6 +13,16 @@ publish a version it cannot find a heading for.
 
 ### Added
 
+- **A schema's worked example is checked.** `superdev validate` reads each
+  schema's `example:` block as a document and checks it against the schema
+  that declares it — the frontmatter contract, the sections, their order
+  and their content kinds — reporting every failure as an error on the
+  schema file, prefixed `example:` so the reader sees the example broke
+  rather than the schema's own shape (ADR-024). An example that does not
+  parse as a document — no frontmatter block where the schema dispatches
+  by frontmatter `type`, or frontmatter that is not YAML — is an error on
+  the schema file too; a schema that names its documents by glob governs
+  frontmatter-less documents, so its example owes no frontmatter block.
 - **Required frontmatter keys bind.** `superdev validate` reads the
   per-key `required: true` flag a schema declares (ADR-022) and reports,
   as an error naming the document, the key and the schema, an absent key

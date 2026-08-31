@@ -45,8 +45,10 @@ gate are in [CONTRIBUTING](/CONTRIBUTING.md).[^contributing]
   per failure class of the grammar checks, and `tests/fixtures/documents/`
   one case per document rule — a missing section, a misordered one, a
   prohibited one, wrong table columns, an over-limit line count, a type
-  naming no schema, two schemas claiming one type, and a schema that governs
-  nothing.
+  naming no schema, two schemas claiming one type, a schema that governs
+  nothing, a section starving its content kind, a kind outside the five, the
+  frontmatter contract broken, an uncompilable pattern, a missing required
+  key, and a schema whose example breaks its own contract.
 
   All three compare verbatim: the goldens are the contract over the finding
   texts, their severities, the verdict and the order findings arrive in, none

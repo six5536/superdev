@@ -24,7 +24,7 @@ integrate's validate gate stays green at every merge.
 
 ### Slice 1: The example is checked in place against its own schema
 
-- [ ] Done — ticked by integrate at merge.
+- [x] Done — ticked by integrate at merge.
 - Depends-on: none.
 - Change: `DocSchema` parses the `example:` key; `validate` reads each
   schema's example as a document and runs the existing document check
