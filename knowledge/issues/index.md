@@ -37,6 +37,10 @@
 * [validate reads a file named on the command line as a skill, whatever it is][sokf:issue-019-bug-validate-reads-a-named-file-as-a-skill] - superdev validate knowledge/architecture.md reports nine errors about missing skill blocks, because a named path takes the grammar's fallback kind; the document is never checked against the schema its type names, so the check a path argument most obviously invites is the one it cannot run.
 * [A schema's worked example is the thing agents copy, and it is the one part of the schema nothing checks][sokf:issue-022-feature-request-a-schemas-worked-example-is-checked-by-nothing] - every schema carries an `example:` block showing a conforming document, and no check reads it — five of the twenty-three example ids on file broke their own schema's id pattern, left behind by a migration that changed the pattern and not the example.
 
+## The workflow
+
+* [The workflow cannot deliver a feature unattended][sokf:issue-024-feature-request-the-workflow-cannot-run-unattended] - every phase boundary stops and waits for the user, no feature gets a branch of its own, a plan models no slice dependencies, and integrate leaves its record edits uncommitted.
+
 ## Link checking
 
 * [A skill naming a concept by path breaks silently when that concept moves, because link checking stops at the knowledge directory][sokf:issue-023-feature-request-a-concept-path-written-outside-the-knowledge-is-checked-by-nothing] - P010 made a link inside the SOKF knowledge survive a rename, but the eleven concept paths written in skills and agent files are checked by nothing, so the failure P010 removed from the knowledge still stands one directory away.
@@ -62,3 +66,4 @@
 [sokf:issue-019-bug-validate-reads-a-named-file-as-a-skill]: /knowledge/issues/open/issue-019-bug-validate-reads-a-named-file-as-a-skill.md
 [sokf:issue-022-feature-request-a-schemas-worked-example-is-checked-by-nothing]: /knowledge/issues/open/issue-022-feature-request-a-schemas-worked-example-is-checked-by-nothing.md
 [sokf:issue-023-feature-request-a-concept-path-written-outside-the-knowledge-is-checked-by-nothing]: /knowledge/issues/open/issue-023-feature-request-a-concept-path-written-outside-the-knowledge-is-checked-by-nothing.md
+[sokf:issue-024-feature-request-the-workflow-cannot-run-unattended]: /knowledge/issues/open/issue-024-feature-request-the-workflow-cannot-run-unattended.md
