@@ -63,6 +63,14 @@ publish a version it cannot find a heading for.
 
 ### Fixed
 
+- **A named path reaches the schema half.** `superdev validate <path>`
+  builds the bare run's context: the run reads the knowledge and the
+  schema set, a named file joins the document candidates — dispatched by
+  its frontmatter `type` or a schema's `target-files` glob — and findings
+  name only files the paths cover, so a named document gets the bare
+  run's schema, filing and link findings for that file and none about
+  any other file (ADR-026, I019). The grammar's fallback still misreads
+  a named document as a skill; the next slice removes that.
 - **The document checks read YAML as YAML and say each fault once.** A
   schema contract that fails to deserialize is reported on the schema
   file instead of silently governing nothing. Frontmatter values compare

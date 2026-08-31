@@ -18,7 +18,7 @@ bare-run parity, with the fallback kind only for files nothing claims.
 
 ### Slice 1: The schema half reaches a named path
 
-- [ ] Done — ticked by integrate at merge.
+- [x] Done — ticked by integrate at merge.
 - Depends-on: none.
 - Change: `validate_repo` in
   `crates/lib/superdev-core/src/validate/mod.rs` builds the bare run's
