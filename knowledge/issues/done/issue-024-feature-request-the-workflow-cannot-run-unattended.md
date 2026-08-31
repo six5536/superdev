@@ -3,7 +3,7 @@ type: FeatureRequest
 id: issue-024-feature-request-the-workflow-cannot-run-unattended
 title: The workflow cannot deliver a feature unattended
 description: Every phase boundary stops and waits for the user, no feature gets a branch of its own, a plan models no slice dependencies, and integrate leaves its record edits uncommitted.
-lifecycle: open
+lifecycle: done
 links:
   - rel: references
     to: plan-004-adhoc-workflow-autonomy
@@ -17,6 +17,19 @@ links:
 ---
 
 # Feature: the workflow cannot deliver a feature unattended
+
+## Resolved
+
+Delivered by [plan-013][sokf:plan-013-feature-workflow-autonomy] in eight
+slices on 2026-08-31: the `superdev run` verbs and the `hook run` Stop
+hook (contract-009, ADR-018/019), the managed `hooks.Stop` entry, the
+feature-plan format's `Depends-on` and deferred decisions, the branching
+and commit conventions in the workflow skills (ADR-021), and the
+`/execute-feature-plan` driver (ADR-020). The loop's machinery is
+unit- and e2e-tested and was rehearsed live: a headless session under the
+armed hook was held at its turn boundary, acted on the named next step,
+and released the run. Full-workflow rehearsal in anger is the next
+feature's delivery; `/accept` runs at the user's request.
 
 ## Summary
 
@@ -161,4 +174,5 @@ The decisions are ADR-018 through ADR-021, and the Stop hook body is
 <!-- sokf:links -->
 [sokf:contract-002-cli-superdev]: /knowledge/contracts/public/active/contract-002-cli-superdev.md
 [sokf:contract-009-interface-run-state]: /knowledge/contracts/internal/active/contract-009-interface-run-state.md
-[sokf:plan-004-adhoc-workflow-autonomy]: /knowledge/plans/open/plan-004-adhoc-workflow-autonomy.md
+[sokf:plan-004-adhoc-workflow-autonomy]: /knowledge/plans/done/plan-004-adhoc-workflow-autonomy.md
+[sokf:plan-013-feature-workflow-autonomy]: /knowledge/plans/done/plan-013-feature-workflow-autonomy.md

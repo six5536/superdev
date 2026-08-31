@@ -111,6 +111,12 @@ status: stable
 - **Orphan** — a lock entry no live claim covers. `sync` removes it when its
   content still hashes to the locked value, and otherwise releases it: left in
   place, dropped from the lock, reported once.
+- **Run** — one unattended pass over a feature plan: armed by
+  `.superdev/cache/run.toml`, written only by the `superdev run`
+  verbs, owned by one session, and enforced by the `superdev hook run`
+  Stop hook. A watchdog bounds it — ten turn boundaries without an
+  `advance` and the run dies — and a blocked run ends, leaving its
+  questions in the plan's deferred decisions.
 
 Terms from the knowledge-serving side:
 

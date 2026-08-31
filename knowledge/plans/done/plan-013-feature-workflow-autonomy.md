@@ -3,7 +3,7 @@ type: FeaturePlan
 id: plan-013-feature-workflow-autonomy
 title: Workflow autonomy — feature plan
 description: Eight slices delivering the unattended workflow — the run state and its verbs, the Stop hook, the managed hook entry, the plan format's dependencies, the branching and commit conventions, the driver skill, and the records.
-lifecycle: open
+lifecycle: done
 links:
   - rel: implements
     to: issue-024-feature-request-the-workflow-cannot-run-unattended
@@ -159,7 +159,7 @@ decisions are ADR-018 through ADR-021 and the seam is
 
 ### Slice 8: Records and rehearsal
 
-- [ ] Done — ticked by integrate at merge.
+- [x] Done — ticked by integrate at merge.
 - Depends-on: 7.
 - Change: the changelog entry for the verbs, the hook and the skill;
   the glossary's run term; the development-procedure commit points;
@@ -175,6 +175,6 @@ decisions are ADR-018 through ADR-021 and the seam is
 
 <!-- sokf:links -->
 [sokf:contract-009-interface-run-state]: /knowledge/contracts/internal/active/contract-009-interface-run-state.md
-[sokf:issue-024-feature-request-the-workflow-cannot-run-unattended]: /knowledge/issues/open/issue-024-feature-request-the-workflow-cannot-run-unattended.md
-[sokf:plan-004-adhoc-workflow-autonomy]: /knowledge/plans/open/plan-004-adhoc-workflow-autonomy.md
+[sokf:issue-024-feature-request-the-workflow-cannot-run-unattended]: /knowledge/issues/done/issue-024-feature-request-the-workflow-cannot-run-unattended.md
+[sokf:plan-004-adhoc-workflow-autonomy]: /knowledge/plans/done/plan-004-adhoc-workflow-autonomy.md
 [sokf:research-001-claude-code-stop-hook-behaviour]: /knowledge/research/research-001-claude-code-stop-hook-behaviour.md

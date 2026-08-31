@@ -28,7 +28,9 @@ no Node.
 2. One branch per feature: `/frame` cuts `feature/<slug>` off `main`, and
    an adhoc plan that touches code runs on `adhoc/<slug>`. A human
    fast-forwards `main`; an unattended run commits and merges only on the
-   feature's branch (ADR-021).
+   feature's branch (ADR-021). The phases commit their own records:
+   `/frame` the framed issue, `/contract-design` the contracts and ADRs,
+   `/integrate` the changelog, knowledge and plan edits at each merge.
 3. Implement with focused commits, using
    [Conventional Commits](https://www.conventionalcommits.org/) (`feat:`,
    `fix:`, `docs:`, `test:`, `refactor:`, `chore:`).

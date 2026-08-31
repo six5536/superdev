@@ -3,7 +3,7 @@ type: AdhocPlan
 id: plan-004-adhoc-workflow-autonomy
 title: Workflow autonomy — branch, slice dependencies, unattended delivery
 description: Give the workflow a branch at frame, model slice dependencies in the plan, run stages 4-7 unattended on a general superdev run facility with a Stop hook and a new execute-feature-plan skill, and commit at every successful integrate.
-lifecycle: open
+lifecycle: done
 links:
   - rel: relates-to
     to: development-procedure
@@ -307,6 +307,12 @@ Depends on: W3.
 
 ## Out-of-band notes
 
+- Superseded by
+  [issue-024][sokf:issue-024-feature-request-the-workflow-cannot-run-unattended],
+  delivered by [plan-013][sokf:plan-013-feature-workflow-autonomy] against
+  the five-phase workflow; the decisions are ADR-018 to ADR-021 and the
+  seam is contract-009.
+
 - Sequenced behind P003: start once its last slice is merged and P003 is
   tagged `done`. The pack layout this plan edits is on `main` already, but its
   closing slices cut the pack release and dogfood the pin, and the new skills
@@ -383,3 +389,5 @@ not reach the default branch on its own.
 
 <!-- sokf:links -->
 [sokf:development-procedure]: /knowledge/development-procedure.md
+[sokf:issue-024-feature-request-the-workflow-cannot-run-unattended]: /knowledge/issues/done/issue-024-feature-request-the-workflow-cannot-run-unattended.md
+[sokf:plan-013-feature-workflow-autonomy]: /knowledge/plans/done/plan-013-feature-workflow-autonomy.md

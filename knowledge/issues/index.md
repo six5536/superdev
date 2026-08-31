@@ -70,5 +70,5 @@
 [sokf:issue-019-bug-validate-reads-a-named-file-as-a-skill]: /knowledge/issues/open/issue-019-bug-validate-reads-a-named-file-as-a-skill.md
 [sokf:issue-022-feature-request-a-schemas-worked-example-is-checked-by-nothing]: /knowledge/issues/open/issue-022-feature-request-a-schemas-worked-example-is-checked-by-nothing.md
 [sokf:issue-023-feature-request-a-concept-path-written-outside-the-knowledge-is-checked-by-nothing]: /knowledge/issues/open/issue-023-feature-request-a-concept-path-written-outside-the-knowledge-is-checked-by-nothing.md
-[sokf:issue-024-feature-request-the-workflow-cannot-run-unattended]: /knowledge/issues/open/issue-024-feature-request-the-workflow-cannot-run-unattended.md
+[sokf:issue-024-feature-request-the-workflow-cannot-run-unattended]: /knowledge/issues/done/issue-024-feature-request-the-workflow-cannot-run-unattended.md
 [sokf:issue-025-bug-a-claim-never-written-gets-no-lock-hash]: /knowledge/issues/open/issue-025-bug-a-claim-never-written-gets-no-lock-hash.md

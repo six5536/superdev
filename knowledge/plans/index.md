@@ -28,7 +28,7 @@ workflow.
 [sokf:plan-001-feature-flatten-crate-api]: /knowledge/plans/open/plan-001-feature-flatten-crate-api.md
 [sokf:plan-002-feature-agent-instructions-layer]: /knowledge/plans/done/plan-002-feature-agent-instructions-layer.md
 [sokf:plan-003-feature-content-packs]: /knowledge/plans/done/plan-003-feature-content-packs.md
-[sokf:plan-004-adhoc-workflow-autonomy]: /knowledge/plans/open/plan-004-adhoc-workflow-autonomy.md
+[sokf:plan-004-adhoc-workflow-autonomy]: /knowledge/plans/done/plan-004-adhoc-workflow-autonomy.md
 [sokf:plan-005-feature-content-pack-hardening]: /knowledge/plans/done/plan-005-feature-content-pack-hardening.md
 [sokf:plan-006-adhoc-rust-format-validator]: /knowledge/plans/done/plan-006-adhoc-rust-format-validator.md
 [sokf:plan-007-adhoc-drop-the-aokf-conformance-ladder]: /knowledge/plans/done/plan-007-adhoc-drop-the-aokf-conformance-ladder.md
@@ -37,4 +37,4 @@ workflow.
 [sokf:plan-010-adhoc-links-address-ids]: /knowledge/plans/done/plan-010-adhoc-links-address-ids.md
 [sokf:plan-011-adhoc-filing-by-lifecycle]: /knowledge/plans/done/plan-011-adhoc-filing-by-lifecycle.md
 [sokf:plan-012-adhoc-contract-driven-workflow]: /knowledge/plans/done/plan-012-adhoc-contract-driven-workflow.md
-[sokf:plan-013-feature-workflow-autonomy]: /knowledge/plans/open/plan-013-feature-workflow-autonomy.md
+[sokf:plan-013-feature-workflow-autonomy]: /knowledge/plans/done/plan-013-feature-workflow-autonomy.md
