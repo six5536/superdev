@@ -14,6 +14,7 @@ workflow.
 * [Workflow autonomy][sokf:plan-013-feature-workflow-autonomy] - eight slices delivering the unattended workflow — the run state and its verbs, the Stop hook, the managed hook entry, the plan format's dependencies, the branching and commit conventions, the driver skill, and the records.
 * [Schema layer enforcement — feature plan][sokf:plan-016-feature-schema-layer-enforcement] - three slices making the validator read what the schemas declare — content kinds, the frontmatter contract, and the required-key vocabulary — each landing with the reconciliation it surfaces.
 * [Example conformance — feature plan][sokf:plan-017-feature-example-conformance] - two slices making validate check each schema's example against the schema that declares it — the document check in place, then link form without resolution — each landing with the reconciliation it surfaces.
+* [Validate path dispatch — feature plan][sokf:plan-018-feature-validate-path-dispatch] - two slices making validate check a named file as what it is — the schema half reaches a named path first, then the grammar half stops misreading documents and parity is proved end to end.
 
 ## Ad-hoc plans
 
@@ -46,3 +47,4 @@ workflow.
 [sokf:plan-015-adhoc-code-review-at-the-last-slice]: /knowledge/plans/done/plan-015-adhoc-code-review-at-the-last-slice.md
 [sokf:plan-016-feature-schema-layer-enforcement]: /knowledge/plans/done/plan-016-feature-schema-layer-enforcement.md
 [sokf:plan-017-feature-example-conformance]: /knowledge/plans/done/plan-017-feature-example-conformance.md
+[sokf:plan-018-feature-validate-path-dispatch]: /knowledge/plans/open/plan-018-feature-validate-path-dispatch.md
