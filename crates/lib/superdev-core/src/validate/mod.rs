@@ -131,57 +131,21 @@ pub fn validate_repo(
         }));
     }
 
+    // The schema set. In a bare run the schemas come from the roots about to
+    // be walked — `knowledge/schemas` is one of them — so a repository whose
+    // schemas were not read simply checks no documents, rather than reporting
+    // every one of them as ungoverned. A named run does not walk the roots,
+    // so its schema set comes from the resolved knowledge's own schemas
+    // directory: the same files, read the same way (ADR-026).
     let mut files = Vec::new();
-    if paths.is_empty() {
+    let is_schema = |name: &str| name.contains("/schemas/") && !name.ends_with("/index.md");
+    let schema_files: Vec<(String, String)> = if paths.is_empty() {
         for root in &g.roots.paths {
             let dir = repo_root.join(root);
             if dir.is_dir() {
                 collect(&repo_root, &dir, g, &mut files)?;
             }
         }
-    } else {
-        for path in &paths {
-            if path.is_dir() {
-                collect(&repo_root, path, g, &mut files)?;
-                continue;
-            }
-            let name = relative(&repo_root, path);
-            let text = read(path)?;
-            if schema::detect_kind(path, g, true).is_some() {
-                // A file named on the command line is checked whatever it is
-                // called, as the reference does: the fallback kind applies
-                // where the walk would have passed it over.
-                files.push((name.clone(), text.clone()));
-            }
-            // A named file joins the document candidates, so the schema half
-            // reaches it (ADR-026). Schemas and indexes stay out, as they do
-            // above; a knowledge concept is already a candidate.
-            if !name.contains("/schemas/")
-                && !name.ends_with("/index.md")
-                && name != "index.md"
-                && !documents.iter().any(|(p, ..)| *p == name)
-            {
-                let doc_type = frontmatter_type(&text);
-                documents.push((name, text, doc_type));
-            }
-        }
-    }
-
-    findings.extend(schema::check_files(&files, g).into_iter().map(|f| Finding {
-        path: f.file,
-        message: f.message,
-        fatal: f.fatal,
-    }));
-
-    // Documents against the schemas that govern them. In a bare run the
-    // schemas come from the files just walked — `knowledge/schemas` is one of
-    // the grammar's roots — so a repository whose schemas were not read simply
-    // checks no documents, rather than reporting every one of them as
-    // ungoverned. A named run does not walk the roots, so its schema set
-    // comes from the resolved knowledge's own schemas directory: the same
-    // files, read the same way (ADR-026).
-    let is_schema = |name: &str| name.contains("/schemas/") && !name.ends_with("/index.md");
-    let schema_files: Vec<(String, String)> = if paths.is_empty() {
         files
             .iter()
             .filter(|(name, _)| is_schema(name))
@@ -193,8 +157,52 @@ pub fn validate_repo(
         if dir.is_dir() {
             collect(&repo_root, &dir, g, &mut walked)?;
         }
-        walked.into_iter().filter(|(name, _)| is_schema(name)).collect()
+        walked
+            .into_iter()
+            .filter(|(name, _)| is_schema(name))
+            .collect()
     };
+    // Loaded ahead of the named loop below, because dispatch decides what a
+    // named file is before the grammar sees it (ADR-026).
+    let (set, mut schema_findings) = schema::document::SchemaSet::load(&schema_files);
+
+    for path in &paths {
+        if path.is_dir() {
+            collect(&repo_root, path, g, &mut files)?;
+            continue;
+        }
+        let name = relative(&repo_root, path);
+        let text = read(path)?;
+        let doc_type = frontmatter_type(&text);
+        // A file dispatched as a document — by its frontmatter `type` or by
+        // a schema's `target-files` glob — never takes the grammar's
+        // fallback kind; the fallback applies only to a file no schema and
+        // no grammar kind claims, which is what keeps a skill outside the
+        // roots checkable. A kind that claims the file positively keeps it,
+        // so a named schema file is still checked as a schema.
+        let dispatched = doc_type.is_some() || set.governs(&name, None);
+        if schema::detect_kind(path, g, !dispatched).is_some() {
+            files.push((name.clone(), text.clone()));
+        }
+        // A named file joins the document candidates, so the schema half
+        // reaches it (ADR-026). Schemas and indexes stay out, as they do
+        // above; a knowledge concept is already a candidate.
+        if !name.contains("/schemas/")
+            && !name.ends_with("/index.md")
+            && name != "index.md"
+            && !documents.iter().any(|(p, ..)| *p == name)
+        {
+            documents.push((name, text, doc_type));
+        }
+    }
+
+    findings.extend(schema::check_files(&files, g).into_iter().map(|f| Finding {
+        path: f.file,
+        message: f.message,
+        fatal: f.fatal,
+    }));
+
+    // Documents against the schemas that govern them.
     let mut schemas = 0;
     let mut checked = 0;
     if !schema_files.is_empty() {
@@ -207,7 +215,6 @@ pub fn validate_repo(
             }
         }
         schemas = schema_files.len();
-        let (set, mut schema_findings) = schema::document::SchemaSet::load(&schema_files);
         // Each schema's example against the schema declaring it, in place —
         // findings land on the schema file (ADR-024).
         schema_findings.extend(schema::document::check_examples(&schema_files));
@@ -459,17 +466,38 @@ mod tests {
         }
     }
 
-    /// One file is checked on its own, whatever it is called: the fallback
-    /// kind applies to a file named on the command line, where the walk would
-    /// have passed it over.
+    /// A named schema file keeps its grammar kind: the schema kind claims it
+    /// positively, so it is checked as a schema and never as a document
+    /// candidate (I019 criterion 1).
     #[test]
     fn one_named_file_is_checked_alone() {
         let root = repo();
         let one = vec![PathBuf::from("knowledge/schemas/adr.md")];
         let run = validate_repo(&root, &root.join("knowledge"), &one, &live()).unwrap();
         assert_eq!(run.report.concept_count, 0);
-        assert_eq!(run.files, 1);
+        assert_eq!(run.files, 1, "the schema kind claimed the file");
+        assert_eq!(run.documents, 0, "never a document candidate");
         assert!(run.report.passed(), "{:#?}", run.report.findings);
+    }
+
+    /// A named file with no frontmatter that no glob and no grammar kind
+    /// claims takes the fallback kind, so a skill outside the roots stays
+    /// checkable (I019 criterion 4).
+    #[test]
+    fn a_named_file_nothing_claims_takes_the_fallback_kind() {
+        let dir = parity_repo();
+        std::fs::write(dir.path().join("notes.md"), "no frontmatter here\n").unwrap();
+        let one = vec![PathBuf::from("notes.md")];
+        let run = validate_repo(dir.path(), &dir.path().join("knowledge"), &one, &live()).unwrap();
+        assert_eq!(run.files, 1, "the fallback kind claimed the file");
+        assert!(
+            run.report
+                .findings
+                .iter()
+                .any(|f| f.path == "notes.md" && f.fatal),
+            "the grammar checked the file as a unit: {:#?}",
+            run.report.findings
+        );
     }
 
     /// A repository the roots find nothing in reports zero files rather than
@@ -678,28 +706,23 @@ example: |
 
         assert!(named.schemas > 0, "the schema set was loaded");
         assert!(named.documents > 0, "the named file was checked");
-        let bare_for_file: Vec<&Finding> = bare
+        let bare_for_file: Vec<(&str, &str, bool)> = bare
             .report
             .findings
             .iter()
             .filter(|f| f.path == "knowledge/a.md")
+            .map(|f| (f.path.as_str(), f.message.as_str(), f.fatal))
             .collect();
         assert!(!bare_for_file.is_empty(), "the fixture violates its schema");
-        for finding in &bare_for_file {
-            assert!(
-                named
-                    .report
-                    .findings
-                    .iter()
-                    .any(|f| f.path == finding.path && f.message == finding.message),
-                "bare finding missing from the named run: {finding:#?}\nnamed: {:#?}",
-                named.report.findings
-            );
-        }
-        assert!(
-            named.report.findings.iter().all(|f| f.path == "knowledge/a.md"),
-            "{:#?}",
-            named.report.findings
+        let named_all: Vec<(&str, &str, bool)> = named
+            .report
+            .findings
+            .iter()
+            .map(|f| (f.path.as_str(), f.message.as_str(), f.fatal))
+            .collect();
+        assert_eq!(
+            named_all, bare_for_file,
+            "the named run's findings are exactly the bare run's for the file"
         );
     }
 
@@ -742,7 +765,11 @@ example: |
             named.report.findings
         );
         assert!(
-            named.report.findings.iter().all(|f| f.path == "knowledge/b.md"),
+            named
+                .report
+                .findings
+                .iter()
+                .all(|f| f.path == "knowledge/b.md"),
             "{:#?}",
             named.report.findings
         );
@@ -757,14 +784,21 @@ example: |
         let g = live();
         let bare = validate_repo(dir.path(), &knowledge, &[], &g).unwrap();
         assert!(
-            bare.report.findings.iter().any(|f| f.path == "knowledge/b.md"),
+            bare.report
+                .findings
+                .iter()
+                .any(|f| f.path == "knowledge/b.md"),
             "the bare run reports the uncovered file: {:#?}",
             bare.report.findings
         );
         let one = vec![PathBuf::from("knowledge/a.md")];
         let named = validate_repo(dir.path(), &knowledge, &one, &g).unwrap();
         assert!(
-            named.report.findings.iter().all(|f| f.path != "knowledge/b.md"),
+            named
+                .report
+                .findings
+                .iter()
+                .all(|f| f.path != "knowledge/b.md"),
             "{:#?}",
             named.report.findings
         );

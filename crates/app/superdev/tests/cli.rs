@@ -175,6 +175,55 @@ fn validate_fails_an_unreadable_path_naming_it() {
     assert!(stderr.contains("no/such/file.md"), "{stderr}");
 }
 
+/// A named document is checked as what it is: the concept passes with no
+/// skill-grammar finding, matching the bare run's verdict for that file
+/// (I019 criterion 1, ADR-026).
+#[test]
+fn validate_checks_a_named_document_as_the_bare_run_does() {
+    let out = superdev()
+        .current_dir(REPO_ROOT)
+        .args(["validate", "knowledge/architecture.md"])
+        .assert()
+        .success();
+    let stdout = String::from_utf8_lossy(&out.get_output().stdout).into_owned();
+    assert!(stdout.contains("no findings"), "{stdout}");
+    assert!(!stdout.contains("missing <"), "{stdout}");
+}
+
+/// For a concept, README.md and a skill alike, a named run reports exactly
+/// the findings the bare run reports for that file (I019 criteria 1 and 2,
+/// ADR-026).
+#[test]
+fn a_named_runs_findings_equal_the_bare_runs_for_that_file() {
+    let out = superdev()
+        .current_dir(REPO_ROOT)
+        .args(["validate", "--json"])
+        .assert()
+        .success();
+    let bare: serde_json::Value = serde_json::from_slice(&out.get_output().stdout).unwrap();
+    for file in [
+        "knowledge/architecture.md",
+        "README.md",
+        ".claude/skills/handoff/SKILL.md",
+    ] {
+        let bare_for_file: Vec<&serde_json::Value> = bare["findings"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .filter(|f| f["file"] == file)
+            .collect();
+        let out = superdev()
+            .current_dir(REPO_ROOT)
+            .args(["validate", "--json", file])
+            .assert()
+            .success();
+        let named: serde_json::Value = serde_json::from_slice(&out.get_output().stdout).unwrap();
+        let named_findings: Vec<&serde_json::Value> =
+            named["findings"].as_array().unwrap().iter().collect();
+        assert_eq!(named_findings, bare_for_file, "{file}");
+    }
+}
+
 #[test]
 fn validate_json_is_machine_readable() {
     let out = superdev()
