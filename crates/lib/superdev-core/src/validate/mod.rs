@@ -456,7 +456,7 @@ mod tests {
             }
             let name = relative(&repo(), &path);
             let text = std::fs::read_to_string(&path).unwrap();
-            let Some(schema) = schema::document::DocSchema::parse(&name, &text) else {
+            let Ok(Some(schema)) = schema::document::DocSchema::parse(&name, &text) else {
                 continue;
             };
             if schema.type_const().is_some() && schema.declares_glob() {

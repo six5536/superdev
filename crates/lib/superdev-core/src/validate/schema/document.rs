@@ -145,15 +145,24 @@ impl DocSchema {
         Some(self.constraint("lifecycle")?.r#enum.as_slice()).filter(|values| !values.is_empty())
     }
 
-    /// Parse a schema document's yaml contract. `None` when the document
+    /// Parse a schema document's yaml contract. `Ok(None)` when the document
     /// carries no contract to read — `check_schema` reports that; this is not
-    /// the place to report it twice.
-    #[must_use]
-    pub fn parse(name: &str, text: &str) -> Option<DocSchema> {
+    /// the place to report it twice. `Err` when the contract is there but
+    /// does not deserialize into this vocabulary — a schema that would
+    /// otherwise drop silently and govern nothing.
+    ///
+    /// # Errors
+    ///
+    /// The deserialization error, worded by serde.
+    pub fn parse(name: &str, text: &str) -> Result<Option<DocSchema>, String> {
         let fences = super::read::extract_yaml(text);
-        let mut schema: DocSchema = serde_yaml_ng::from_str(&fences.first()?.text).ok()?;
+        let Some(fence) = fences.first() else {
+            return Ok(None);
+        };
+        let mut schema: DocSchema =
+            serde_yaml_ng::from_str(&fence.text).map_err(|e| e.to_string())?;
         schema.name = name.to_string();
-        Some(schema)
+        Ok(Some(schema))
     }
 }
 
@@ -182,38 +191,22 @@ impl SchemaSet {
         let mut set = SchemaSet::default();
         let mut findings = Vec::new();
         for (file, text) in schemas {
-            let Some(schema) = DocSchema::parse(file, text) else {
-                continue;
+            let schema = match DocSchema::parse(file, text) {
+                Ok(Some(schema)) => schema,
+                // No contract to read; `check_schema` reports that.
+                Ok(None) => continue,
+                // A contract that does not deserialize would otherwise drop
+                // silently, leaving its documents ungoverned with only a
+                // misleading "type X names no schema" to show for it.
+                Err(e) => {
+                    findings.push(Finding {
+                        file: file.clone(),
+                        message: format!("schema: the contract does not deserialize — {e}"),
+                        fatal: true,
+                    });
+                    continue;
+                }
             };
-            for rule in &schema.sections {
-                if let Some(kind) = rule.content.as_deref()
-                    && !CONTENT_KINDS.contains(&kind)
-                {
-                    findings.push(Finding {
-                        file: file.clone(),
-                        message: format!(
-                            "schema: section {} declares content `{kind}` — the kinds are \
-                             prose, bullet-list, numbered-list, table and code",
-                            rule.label()
-                        ),
-                        fatal: true,
-                    });
-                }
-            }
-            for (key, constraint) in schema.frontmatter.iter() {
-                if let Some(pattern) = constraint.as_ref().and_then(|c| c.pattern.as_deref())
-                    && re::compile(pattern).is_none()
-                {
-                    findings.push(Finding {
-                        file: file.clone(),
-                        message: format!(
-                            "schema: frontmatter `{key}` declares pattern `{pattern}` — it does \
-                             not compile, and binds nothing"
-                        ),
-                        fatal: true,
-                    });
-                }
-            }
             match (schema.type_const(), schema.target_files.as_deref()) {
                 (Some(t), _) => {
                     if let Some(first) = set.by_type.get(t) {
@@ -268,6 +261,51 @@ impl SchemaSet {
     }
 }
 
+/// The declarations the document checks cannot read, reported on the schema
+/// itself: a `content` kind outside the vocabulary, a `pattern` that does
+/// not compile. Each binds nothing. `validate` reports these through the
+/// grammar's own schema check, so it does not call this — one fault, said
+/// once; this is for callers checking documents without that pass.
+#[must_use]
+pub fn check_declarations(schemas: &[(String, String)]) -> Vec<Finding> {
+    let mut findings = Vec::new();
+    for (file, text) in schemas {
+        let Ok(Some(schema)) = DocSchema::parse(file, text) else {
+            continue; // `SchemaSet::load` reports a contract that fails.
+        };
+        for rule in &schema.sections {
+            if let Some(kind) = rule.content.as_deref()
+                && !CONTENT_KINDS.contains(&kind)
+            {
+                findings.push(Finding {
+                    file: file.clone(),
+                    message: format!(
+                        "schema: section {} declares content `{kind}` — the kinds are {}",
+                        rule.label(),
+                        CONTENT_KINDS.join(", ")
+                    ),
+                    fatal: true,
+                });
+            }
+        }
+        for (key, constraint) in schema.frontmatter.iter() {
+            if let Some(pattern) = constraint.as_ref().and_then(|c| c.pattern.as_deref())
+                && re::compile(pattern).is_none()
+            {
+                findings.push(Finding {
+                    file: file.clone(),
+                    message: format!(
+                        "schema: frontmatter `{key}` declares pattern `{pattern}` — it does \
+                         not compile, and binds nothing"
+                    ),
+                    fatal: true,
+                });
+            }
+        }
+    }
+    findings
+}
+
 /// One document to check: its repo-relative path, its text, and the `type`
 /// its frontmatter declares.
 pub struct Document<'a> {
@@ -313,7 +351,13 @@ fn check_one(doc: &Document<'_>, schema: &DocSchema, findings: &mut Vec<Finding>
         });
     };
 
-    let lines: Vec<&str> = doc.text.split('\n').collect();
+    // `\r` is stripped so a CRLF document reads as its LF twin: the same
+    // frontmatter, the same headings, the same content.
+    let lines: Vec<&str> = doc
+        .text
+        .split('\n')
+        .map(|l| l.strip_suffix('\r').unwrap_or(l))
+        .collect();
     // Counted as an editor counts them, so a document at exactly its limit
     // passes: `split` yields a trailing empty element for the final newline,
     // and reporting that as one line over is an off-by-one nobody can act on.
@@ -327,7 +371,10 @@ fn check_one(doc: &Document<'_>, schema: &DocSchema, findings: &mut Vec<Finding>
         ));
     }
 
-    let headings = headings(&lines);
+    // One fence reading for the whole check: nested and `~~~` fences are
+    // read as `read::fence_map` reads them everywhere else.
+    let fenced = super::read::fence_map(&lines);
+    let headings = headings(&lines, &fenced);
 
     for banned in &schema.sections_prohibited {
         if headings.iter().any(|(_, h)| h == banned) {
@@ -399,9 +446,9 @@ fn check_one(doc: &Document<'_>, schema: &DocSchema, findings: &mut Vec<Finding>
     // table, one fenced block, or one plain paragraph line; other content
     // beside the form is tolerated. The body runs to the next heading at the
     // section's own level or shallower, so a subsection's content counts. A
-    // kind outside the vocabulary was reported on the schema at load and
-    // binds nothing.
-    let positions = heading_positions(&lines);
+    // kind outside the vocabulary is reported on the schema — by the
+    // grammar's schema check — and binds nothing.
+    let positions = heading_positions(&lines, &fenced);
     for &(h, r) in &matched {
         let rule = &schema.sections[r];
         let Some(kind) = rule.content.as_deref() else {
@@ -414,14 +461,8 @@ fn check_one(doc: &Document<'_>, schema: &DocSchema, findings: &mut Vec<Finding>
         if kind == "table" && !rule.columns.is_empty() {
             continue;
         }
-        let start = positions[h] + 1;
-        let end = headings
-            .iter()
-            .enumerate()
-            .skip(h + 1)
-            .find(|(_, (level, _))| *level <= headings[h].0)
-            .map_or(lines.len(), |(j, _)| positions[j]);
-        if !body_has(kind, &lines[start..end]) {
+        let (start, end) = body_range(h, &headings, &positions, lines.len());
+        if !body_has(kind, &lines[start..end], &fenced[start..end]) {
             push(format!(
                 "section {} carries no {}, and {} declares {kind} content",
                 rule.label(),
@@ -431,8 +472,26 @@ fn check_one(doc: &Document<'_>, schema: &DocSchema, findings: &mut Vec<Finding>
         }
     }
 
-    check_columns(schema, &headings, &lines, &mut push);
-    check_frontmatter(doc, schema, &mut push);
+    check_columns(schema, &headings, &positions, &lines, &fenced, &mut push);
+    check_frontmatter(&lines, schema, &mut push);
+}
+
+/// The body of the section whose heading is the `h`-th: from the line after
+/// its heading to the next heading at the section's own level or shallower,
+/// so a subsection's content counts (contract-010).
+fn body_range(
+    h: usize,
+    headings: &[(usize, String)],
+    positions: &[usize],
+    total: usize,
+) -> (usize, usize) {
+    let end = headings
+        .iter()
+        .enumerate()
+        .skip(h + 1)
+        .find(|(_, (level, _))| *level <= headings[h].0)
+        .map_or(total, |(j, _)| positions[j]);
+    (positions[h] + 1, end)
 }
 
 /// Every frontmatter key against the contract its schema declares: `const`,
@@ -440,23 +499,34 @@ fn check_one(doc: &Document<'_>, schema: &DocSchema, findings: &mut Vec<Finding>
 /// error, and a key declared with only a `description` is guidance
 /// (ADR-022). A constraint compares against the value's scalar string form;
 /// a value with no scalar form — a list, a map, a folded block — cannot
-/// satisfy a scalar constraint and is a mismatch like any other. `lifecycle`
-/// is the filing check's (P011), which already reports a value outside its
-/// enum; reading it here too would say one fault twice.
-fn check_frontmatter(doc: &Document<'_>, schema: &DocSchema, push: &mut impl FnMut(String)) {
-    let fm = frontmatter_block(doc.text);
+/// satisfy a scalar constraint and is a mismatch like any other. A
+/// `lifecycle` key with an enum is the filing check's (P011), which reports
+/// absence, the value against the enum, and the folder; reading it here too
+/// would say one fault twice. Without an enum nothing else reads the key,
+/// and its constraints bind here like any other's.
+fn check_frontmatter(lines: &[&str], schema: &DocSchema, push: &mut impl FnMut(String)) {
+    let fm = super::read::split_frontmatter(lines).map_or_else(Vec::new, |s| s.fm);
     let entries = super::read::parse_frontmatter(&fm);
     for (key, constraint) in schema.frontmatter.iter() {
-        if key == "lifecycle" {
+        if key == "lifecycle" && schema.lifecycle_enum().is_some() {
             continue;
         }
         let Some(c) = constraint else { continue };
-        // Written with nothing after the colon is as absent as no line.
-        let entry = entries
-            .iter()
-            .find(|e| e.key == key)
-            .filter(|e| e.scalar.is_some() || e.block.is_some());
-        let Some(entry) = entry else {
+        let entry = entries.iter().find(|e| e.key == key);
+        // What the key carries: the value on its own line as YAML reads it —
+        // comments stripped, quotes removed — or the block under it, whose
+        // comment-only lines are comments rather than a block. A key with
+        // nothing else after the colon is as absent as no line.
+        let folded = entry.is_some_and(|e| e.is_folded);
+        let block = entry.is_some_and(|e| {
+            e.block
+                .as_ref()
+                .is_some_and(|b| b.iter().any(|l| !l.trim_start().starts_with('#')))
+        });
+        let value = entry
+            .filter(|_| !folded)
+            .and_then(|e| line_scalar(rest_of(&fm, e)));
+        if !folded && !block && value.is_none() {
             if c.required {
                 push(format!(
                     "frontmatter `{key}` is absent, and {} requires it",
@@ -464,14 +534,14 @@ fn check_frontmatter(doc: &Document<'_>, schema: &DocSchema, push: &mut impl FnM
                 ));
             }
             continue;
-        };
+        }
         if c.r#const.is_none() && c.pattern.is_none() && c.r#enum.is_empty() {
             continue;
         }
-        let scalar = if entry.is_folded || entry.block.is_some() {
+        let scalar = if folded || block {
             None
         } else {
-            entry.scalar.as_deref()
+            value.as_deref()
         };
         let spell = scalar.map_or("is not a scalar".to_string(), |v| format!("is `{v}`"));
         if let Some(want) = c.r#const.as_deref()
@@ -501,16 +571,33 @@ fn check_frontmatter(doc: &Document<'_>, schema: &DocSchema, push: &mut impl FnM
     }
 }
 
-/// The frontmatter block's lines, between the opening `---` and the line
-/// that closes it; empty when the document carries none.
-fn frontmatter_block(text: &str) -> Vec<&str> {
-    let Some(rest) = text.strip_prefix("---\n") else {
-        return Vec::new();
-    };
-    let Some(end) = rest.find("\n---") else {
-        return Vec::new();
-    };
-    rest[..end].split('\n').collect()
+/// What follows the colon on an entry's own line, verbatim.
+fn rest_of<'a>(fm: &[&'a str], entry: &super::read::FmEntry) -> &'a str {
+    fm[entry.line - 1]
+        .split_once(':')
+        .map_or("", |(_, rest)| rest)
+}
+
+/// The value on a key's own line, as YAML reads it: a leading quote runs to
+/// its closing quote, and in a plain scalar a `#` — first on the line, or
+/// preceded by whitespace — opens a comment. `None` when nothing but a
+/// comment follows the colon.
+fn line_scalar(rest: &str) -> Option<String> {
+    let rest = rest.trim();
+    for quote in ['"', '\''] {
+        if let Some(body) = rest.strip_prefix(quote) {
+            return body.split_once(quote).map(|(value, _)| value.to_string());
+        }
+    }
+    let mut end = rest.len();
+    for (i, _) in rest.match_indices('#') {
+        if i == 0 || rest.as_bytes()[i - 1].is_ascii_whitespace() {
+            end = i;
+            break;
+        }
+    }
+    let value = rest[..end].trim_end();
+    (!value.is_empty()).then(|| value.to_string())
 }
 
 /// The form a content kind demands, as a finding names it.
@@ -524,33 +611,26 @@ fn form_of(kind: &str) -> &'static str {
     }
 }
 
-/// Whether the kind's form appears in a section body. Lines inside fenced
-/// blocks are not content: they neither satisfy a kind nor break one — the
-/// fence itself is what satisfies `code`.
-fn body_has(kind: &str, body: &[&str]) -> bool {
-    let mut fenced = false;
-    for line in body {
-        let trimmed = line.trim_start();
-        if trimmed.starts_with("```") {
-            if !fenced && kind == "code" {
+/// Whether the kind's form appears in a section body. `fenced` is the
+/// body's slice of the document's fence map: lines inside fenced blocks are
+/// not content — they neither satisfy a kind nor break one — and the fence
+/// itself is what satisfies `code`.
+fn body_has(kind: &str, body: &[&str], fenced: &[bool]) -> bool {
+    for (line, &in_fence) in body.iter().zip(fenced) {
+        if in_fence {
+            // A section heading is never inside a fence, so a fenced line
+            // here means a block opened within this body.
+            if kind == "code" {
                 return true;
             }
-            fenced = !fenced;
             continue;
         }
-        if fenced {
-            continue;
-        }
+        let trimmed = line.trim_start();
         let found = match kind {
             "bullet-list" => is_bullet(trimmed),
             "numbered-list" => is_numbered(trimmed),
             "table" => trimmed.starts_with('|'),
-            "prose" => {
-                !trimmed.is_empty()
-                    && !is_bullet(trimmed)
-                    && !is_numbered(trimmed)
-                    && !trimmed.starts_with('|')
-            }
+            "prose" => is_paragraph(trimmed),
             // `code` is satisfied by a fence alone, handled above.
             _ => false,
         };
@@ -559,6 +639,28 @@ fn body_has(kind: &str, body: &[&str]) -> bool {
         }
     }
     false
+}
+
+/// A plain paragraph line: words, on a line that is not a list item, a
+/// table row, a deeper heading, an HTML comment, a `[label]: target` link
+/// definition, or a divider.
+fn is_paragraph(trimmed: &str) -> bool {
+    !trimmed.is_empty()
+        && !is_bullet(trimmed)
+        && !is_numbered(trimmed)
+        && !trimmed.starts_with('|')
+        && !trimmed.starts_with('#')
+        && !trimmed.starts_with("<!--")
+        && !is_link_definition(trimmed)
+        && trimmed.chars().any(char::is_alphanumeric)
+}
+
+/// `[label]: target` — a markdown link reference definition.
+fn is_link_definition(trimmed: &str) -> bool {
+    trimmed
+        .strip_prefix('[')
+        .and_then(|rest| rest.split_once(']'))
+        .is_some_and(|(_, after)| after.starts_with(':'))
 }
 
 /// `- `, `* ` or `+ ` opens a bullet.
@@ -576,22 +678,27 @@ fn is_numbered(trimmed: &str) -> bool {
 }
 
 /// Every table a rule declares columns for must carry exactly those columns,
-/// in that order: the columns are the contract a reader relies on.
+/// in that order: the columns are the contract a reader relies on. The table
+/// is sought in the same body range the content check reads, so one in a
+/// subsection counts (contract-010).
 fn check_columns(
     schema: &DocSchema,
     headings: &[(usize, String)],
+    positions: &[usize],
     lines: &[&str],
+    fenced: &[bool],
     push: &mut impl FnMut(String),
 ) {
     for rule in &schema.sections {
         if rule.columns.is_empty() {
             continue;
         }
-        for (index, (level, text)) in heading_positions(lines).into_iter().zip(headings.iter()) {
+        for (h, (level, text)) in headings.iter().enumerate() {
             if !rule.matches(*level, text) {
                 continue;
             }
-            let Some(header) = table_header(lines, index) else {
+            let (start, end) = body_range(h, headings, positions, lines.len());
+            let Some(header) = table_header(&lines[start..end], &fenced[start..end]) else {
                 push(format!(
                     "section {} carries no table, and {} declares its columns",
                     rule.label(),
@@ -611,21 +718,13 @@ fn check_columns(
     }
 }
 
-/// The first table's header cells after `from`, stopping at the next heading.
-fn table_header(lines: &[&str], from: usize) -> Option<Vec<String>> {
-    let mut fenced = false;
-    for line in lines.iter().skip(from + 1) {
+/// The first table's header cells in a section body, fenced lines skipped.
+fn table_header(body: &[&str], fenced: &[bool]) -> Option<Vec<String>> {
+    for (line, &in_fence) in body.iter().zip(fenced) {
+        if in_fence {
+            continue;
+        }
         let trimmed = line.trim_start();
-        if trimmed.starts_with("```") {
-            fenced = !fenced;
-            continue;
-        }
-        if fenced {
-            continue;
-        }
-        if trimmed.starts_with('#') {
-            return None;
-        }
         if trimmed.starts_with('|') {
             return Some(
                 trimmed
@@ -640,27 +739,21 @@ fn table_header(lines: &[&str], from: usize) -> Option<Vec<String>> {
 }
 
 /// Every heading outside a fenced block, as (level, text).
-fn headings(lines: &[&str]) -> Vec<(usize, String)> {
-    heading_positions(lines)
+fn headings(lines: &[&str], fenced: &[bool]) -> Vec<(usize, String)> {
+    heading_positions(lines, fenced)
         .into_iter()
         .map(|i| parse_heading(lines[i]).expect("a heading line parses"))
         .collect()
 }
 
 /// The line index of every heading outside a fenced block.
-fn heading_positions(lines: &[&str]) -> Vec<usize> {
-    let mut out = Vec::new();
-    let mut fenced = false;
-    for (i, line) in lines.iter().enumerate() {
-        if line.trim_start().starts_with("```") {
-            fenced = !fenced;
-            continue;
-        }
-        if !fenced && parse_heading(line).is_some() {
-            out.push(i);
-        }
-    }
-    out
+fn heading_positions(lines: &[&str], fenced: &[bool]) -> Vec<usize> {
+    lines
+        .iter()
+        .enumerate()
+        .filter(|&(i, line)| !fenced[i] && parse_heading(line).is_some())
+        .map(|(i, _)| i)
+        .collect()
 }
 
 /// `## Title` as (2, "Title").
@@ -780,7 +873,9 @@ mod tests {
 
     fn schema_of(yaml: &str) -> DocSchema {
         let text = format!("---\ntype: Schema\n---\n\n````yaml\n{yaml}\n````\n");
-        DocSchema::parse("s", &text).expect("the contract parses")
+        DocSchema::parse("s", &text)
+            .expect("the contract deserializes")
+            .expect("the contract is there")
     }
 
     #[test]
@@ -1058,13 +1153,88 @@ mod tests {
         assert!(findings.is_empty(), "{findings:#?}");
     }
 
+    /// A fence inside a fence stays fenced: the nested marker the schemas'
+    /// own worked examples use does not flip the reading, so fence-interior
+    /// lines are never content, and a `~~~` fence satisfies `code`.
+    #[test]
+    fn a_nested_fence_stays_fenced() {
+        let schema = schema_of(
+            "frontmatter:\n  type:\n    const: T\nsections:\n  - heading: Items\n    level: 2\n    content: bullet-list\n",
+        );
+        let doc = Document {
+            path: "a.md",
+            text: "# T\n\n## Items\n\n````yaml\n```\n- inside a fence\n```\n````\n",
+            doc_type: Some("T"),
+        };
+        let mut findings = Vec::new();
+        check_one(&doc, &schema, &mut findings);
+        assert_eq!(findings.len(), 1, "{findings:#?}");
+        assert!(findings[0].message.contains("no bullet"), "{findings:#?}");
+
+        let schema = schema_of(
+            "frontmatter:\n  type:\n    const: T\nsections:\n  - heading: Run\n    level: 2\n    content: code\n",
+        );
+        let doc = Document {
+            path: "a.md",
+            text: "# T\n\n## Run\n\n~~~sh\nls\n~~~\n",
+            doc_type: Some("T"),
+        };
+        let mut findings = Vec::new();
+        check_one(&doc, &schema, &mut findings);
+        assert!(findings.is_empty(), "{findings:#?}");
+    }
+
+    /// A table in a subsection satisfies its section's columns rule: the
+    /// table is sought in the same body range the content check reads.
+    #[test]
+    fn a_table_in_a_subsection_satisfies_a_columns_rule() {
+        let schema = schema_of(
+            "frontmatter:\n  type:\n    const: T\nsections:\n  - heading: Data\n    level: 2\n\
+             \x20   content: table\n    columns: [A, B]\n",
+        );
+        let doc = Document {
+            path: "a.md",
+            text: "# T\n\n## Data\n\nA lead-in line.\n\n### Sub\n\n| A | B |\n|---|---|\n| 1 | 2 |\n",
+            doc_type: Some("T"),
+        };
+        let mut findings = Vec::new();
+        check_one(&doc, &schema, &mut findings);
+        assert!(findings.is_empty(), "{findings:#?}");
+    }
+
+    /// Link definitions, HTML comments, deeper headings and dividers are not
+    /// paragraph lines, so a prose section of nothing else is a finding.
+    #[test]
+    fn link_definitions_and_comments_are_not_prose() {
+        let schema = schema_of(
+            "frontmatter:\n  type:\n    const: T\nsections:\n  - heading: Notes\n    level: 2\n    content: prose\n",
+        );
+        let doc = Document {
+            path: "a.md",
+            text: "# T\n\n## Notes\n\n---\n\n<!-- sokf:links -->\n[sokf:x]: /knowledge/x.md\n",
+            doc_type: Some("T"),
+        };
+        let mut findings = Vec::new();
+        check_one(&doc, &schema, &mut findings);
+        assert_eq!(findings.len(), 1, "{findings:#?}");
+        assert!(
+            findings[0].message.contains("no paragraph line"),
+            "{findings:#?}"
+        );
+    }
+
     /// Covers I018 criterion 5: a kind outside the five is reported on the
-    /// schema file, and the unreadable rule binds nothing.
+    /// schema file — by `check_declarations`; `validate` says it through the
+    /// grammar's schema check instead — and the unreadable rule binds
+    /// nothing.
     #[test]
     fn a_kind_outside_the_five_is_reported_on_the_schema_file() {
         let text = "---\ntype: Schema\n---\n\n````yaml\nfrontmatter:\n  type:\n    const: T\n\
                     sections:\n  - heading: Body\n    level: 2\n    content: essay\n````\n";
-        let (set, findings) = SchemaSet::load(&[("s.md".into(), text.into())]);
+        let schemas = [("s.md".to_string(), text.to_string())];
+        let (set, findings) = SchemaSet::load(&schemas);
+        assert!(findings.is_empty(), "{findings:#?}");
+        let findings = check_declarations(&schemas);
         assert_eq!(findings.len(), 1, "{findings:#?}");
         assert_eq!(findings[0].file, "s.md");
         assert!(findings[0].message.contains("essay"), "{findings:#?}");
@@ -1246,6 +1416,88 @@ mod tests {
         assert!(findings.is_empty(), "{findings:#?}");
     }
 
+    /// A YAML comment is not part of the value: a trailing `# …` is stripped
+    /// before the comparison, and a comment line under a key is a comment,
+    /// not a block.
+    #[test]
+    fn a_yaml_comment_is_not_part_of_the_value() {
+        let schema = schema_of(
+            "frontmatter:\n  type:\n    const: T\n  status:\n    enum: [draft, stable]\n",
+        );
+        let doc = Document {
+            path: "a.md",
+            text: "---\ntype: T # accepted 2026\nstatus: draft # note\n# a full-line comment\n---\n\n# A\n",
+            doc_type: Some("T"),
+        };
+        let mut findings = Vec::new();
+        check_one(&doc, &schema, &mut findings);
+        assert!(findings.is_empty(), "{findings:#?}");
+
+        // A key carrying only a comment is absent.
+        let schema = schema_of("frontmatter:\n  type:\n    const: T\n  id:\n    required: true\n");
+        let doc = Document {
+            path: "a.md",
+            text: "---\ntype: T\nid: # to be assigned\n---\n\n# A\n",
+            doc_type: Some("T"),
+        };
+        let mut findings = Vec::new();
+        check_one(&doc, &schema, &mut findings);
+        assert_eq!(findings.len(), 1, "{findings:#?}");
+        assert!(
+            findings[0].message.contains("`id` is absent"),
+            "{findings:#?}"
+        );
+    }
+
+    /// A CRLF document reads as its LF twin: the frontmatter parses and the
+    /// checks bind.
+    #[test]
+    fn a_crlf_document_reads_as_its_lf_twin() {
+        let schema = schema_of(
+            "frontmatter:\n  type:\n    const: T\n  id:\n    required: true\n\
+             \x20   pattern: '^t-\\d{3}$'\n",
+        );
+        let doc = Document {
+            path: "a.md",
+            text: "---\r\ntype: T\r\nid: t-001\r\n---\r\n\r\n# A\r\n",
+            doc_type: Some("T"),
+        };
+        let mut findings = Vec::new();
+        check_one(&doc, &schema, &mut findings);
+        assert!(findings.is_empty(), "{findings:#?}");
+    }
+
+    /// `lifecycle` with an enum belongs to the filing check; without one,
+    /// its constraints bind here like any other key's (one fault, said once).
+    #[test]
+    fn lifecycle_without_an_enum_binds_like_any_other_key() {
+        let with_enum = schema_of(
+            "frontmatter:\n  type:\n    const: T\n  lifecycle:\n    required: true\n\
+             \x20   enum: [open, done]\n",
+        );
+        let doc = Document {
+            path: "a.md",
+            text: "---\ntype: T\n---\n\n# A\n",
+            doc_type: Some("T"),
+        };
+        let mut findings = Vec::new();
+        check_one(&doc, &with_enum, &mut findings);
+        assert!(
+            findings.is_empty(),
+            "the filing check reports it: {findings:#?}"
+        );
+
+        let without_enum =
+            schema_of("frontmatter:\n  type:\n    const: T\n  lifecycle:\n    required: true\n");
+        let mut findings = Vec::new();
+        check_one(&doc, &without_enum, &mut findings);
+        assert_eq!(findings.len(), 1, "{findings:#?}");
+        assert!(
+            findings[0].message.contains("`lifecycle` is absent"),
+            "{findings:#?}"
+        );
+    }
+
     /// A value with no scalar form — a list, a folded block — cannot satisfy
     /// a scalar constraint, and the mismatch is reported like any other.
     #[test]
@@ -1267,12 +1519,16 @@ mod tests {
     }
 
     /// Covers I018 criterion 5: a `pattern` that does not compile is reported
-    /// on the schema file, and the unreadable rule binds nothing.
+    /// on the schema file — by `check_declarations` — and the unreadable
+    /// rule binds nothing.
     #[test]
     fn an_uncompilable_pattern_is_reported_on_the_schema_file() {
         let text = "---\ntype: Schema\n---\n\n````yaml\nfrontmatter:\n  type:\n    const: T\n\
                     \x20 id:\n    pattern: '(unclosed'\n````\n";
-        let (set, findings) = SchemaSet::load(&[("s.md".into(), text.into())]);
+        let schemas = [("s.md".to_string(), text.to_string())];
+        let (set, findings) = SchemaSet::load(&schemas);
+        assert!(findings.is_empty(), "{findings:#?}");
+        let findings = check_declarations(&schemas);
         assert_eq!(findings.len(), 1, "{findings:#?}");
         assert_eq!(findings[0].file, "s.md");
         assert!(findings[0].message.contains("(unclosed"), "{findings:#?}");
@@ -1289,12 +1545,31 @@ mod tests {
         assert!(found.is_empty(), "{found:#?}");
     }
 
+    /// A contract that does not deserialize is a finding, never a schema
+    /// that silently governs nothing.
+    #[test]
+    fn a_contract_that_does_not_deserialize_is_a_finding() {
+        let text = "---\ntype: Schema\n---\n\n````yaml\nfrontmatter:\n  type:\n    const: T\n\
+                    \x20 status:\n    enum:\n      - draft: what it means\n````\n";
+        let (_, findings) = SchemaSet::load(&[("s.md".to_string(), text.to_string())]);
+        assert_eq!(findings.len(), 1, "{findings:#?}");
+        assert_eq!(findings[0].file, "s.md");
+        assert!(
+            findings[0].message.contains("does not deserialize"),
+            "{findings:#?}"
+        );
+    }
+
     #[test]
     fn headings_inside_a_fence_are_not_headings() {
         let lines: Vec<&str> = "# Real\n\n```\n# Fenced\n```\n\n## Also real\n"
             .split('\n')
             .collect();
-        let found: Vec<String> = headings(&lines).into_iter().map(|(_, h)| h).collect();
+        let fenced = super::super::read::fence_map(&lines);
+        let found: Vec<String> = headings(&lines, &fenced)
+            .into_iter()
+            .map(|(_, h)| h)
+            .collect();
         assert_eq!(found, ["Real", "Also real"]);
     }
 }

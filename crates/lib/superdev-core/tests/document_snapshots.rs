@@ -20,7 +20,9 @@
 
 use std::path::{Path, PathBuf};
 
-use superdev_core::validate::schema::document::{Document, SchemaSet, check_documents};
+use superdev_core::validate::schema::document::{
+    Document, SchemaSet, check_declarations, check_documents,
+};
 
 /// The fixture root.
 fn fixtures() -> PathBuf {
@@ -67,6 +69,10 @@ fn snapshot(case: &str) {
     let docs = read_dir(&dir);
 
     let (set, mut findings) = SchemaSet::load(&schemas);
+    // `validate` reports unreadable declarations through the grammar's own
+    // schema check; this harness runs only the document layer, so it asks
+    // for them explicitly.
+    findings.extend(check_declarations(&schemas));
     // The types are held here so the documents can borrow them: a `Document`
     // borrows its type, and leaking one per case to satisfy the lifetime
     // would be a leak in the test rather than a fix to it.

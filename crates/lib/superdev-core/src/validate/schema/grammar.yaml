@@ -618,7 +618,7 @@ kinds:
             doc: The key must be one of these values.
           required:
             type: boolean
-            doc: Defaults to true; false marks an optional key.
+            doc: true makes the key's absence an error; a key without the flag is optional.
           description:
             type: string
             doc: What the key means for this artifact.
