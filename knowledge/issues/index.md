@@ -45,6 +45,9 @@
 
 * [The workflow cannot deliver a feature unattended][sokf:issue-024-feature-request-the-workflow-cannot-run-unattended] - every phase boundary stops and waits for the user, no feature gets a branch of its own, a plan models no slice dependencies, and integrate leaves its record edits uncommitted.
 
+* [Run the next real feature through /execute-feature-plan and record the outcome][sokf:issue-026-chore-rehearse-the-driver-on-a-real-feature] - the loop's machinery is tested and was rehearsed with shell steps, but the driver's prose — slice picking, the retry bound, deferral, the end-of-run queue — has not driven a real multi-slice plan; the next feature is the rehearsal.
+* [The README says nothing about the unattended run][sokf:issue-027-feature-request-the-unattended-run-is-undocumented-for-users] - the run verbs, the Stop hook and /execute-feature-plan exist on the CLI, in the man page and in the workflow skills, but the README never mentions them, so a user cannot discover unattended delivery.
+
 ## Link checking
 
 * [A skill naming a concept by path breaks silently when that concept moves, because link checking stops at the knowledge directory][sokf:issue-023-feature-request-a-concept-path-written-outside-the-knowledge-is-checked-by-nothing] - P010 made a link inside the SOKF knowledge survive a rename, but the eleven concept paths written in skills and agent files are checked by nothing, so the failure P010 removed from the knowledge still stands one directory away.
@@ -72,3 +75,5 @@
 [sokf:issue-023-feature-request-a-concept-path-written-outside-the-knowledge-is-checked-by-nothing]: /knowledge/issues/open/issue-023-feature-request-a-concept-path-written-outside-the-knowledge-is-checked-by-nothing.md
 [sokf:issue-024-feature-request-the-workflow-cannot-run-unattended]: /knowledge/issues/done/issue-024-feature-request-the-workflow-cannot-run-unattended.md
 [sokf:issue-025-bug-a-claim-never-written-gets-no-lock-hash]: /knowledge/issues/open/issue-025-bug-a-claim-never-written-gets-no-lock-hash.md
+[sokf:issue-026-chore-rehearse-the-driver-on-a-real-feature]: /knowledge/issues/open/issue-026-chore-rehearse-the-driver-on-a-real-feature.md
+[sokf:issue-027-feature-request-the-unattended-run-is-undocumented-for-users]: /knowledge/issues/open/issue-027-feature-request-the-unattended-run-is-undocumented-for-users.md
