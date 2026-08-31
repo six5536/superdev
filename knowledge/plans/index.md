@@ -43,4 +43,4 @@ workflow.
 [sokf:plan-013-feature-workflow-autonomy]: /knowledge/plans/done/plan-013-feature-workflow-autonomy.md
 [sokf:plan-014-adhoc-schema-review-findings]: /knowledge/plans/done/plan-014-adhoc-schema-review-findings.md
 [sokf:plan-015-adhoc-code-review-at-the-last-slice]: /knowledge/plans/done/plan-015-adhoc-code-review-at-the-last-slice.md
-[sokf:plan-016-feature-schema-layer-enforcement]: /knowledge/plans/open/plan-016-feature-schema-layer-enforcement.md
+[sokf:plan-016-feature-schema-layer-enforcement]: /knowledge/plans/done/plan-016-feature-schema-layer-enforcement.md

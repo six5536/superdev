@@ -3,7 +3,7 @@ type: FeaturePlan
 id: plan-016-feature-schema-layer-enforcement
 title: Schema layer enforcement — feature plan
 description: Three slices making the validator read what the schemas declare — content kinds, the frontmatter contract, and the required-key vocabulary — each landing with the reconciliation it surfaces.
-lifecycle: open
+lifecycle: done
 ---
 
 # Feature plan: the schema layer's declarations bind
@@ -76,7 +76,7 @@ integrate's validate gate stays green at every merge.
 
 ### Slice 3: Required keys, declared across the schemas
 
-- [ ] Done — ticked by integrate at merge.
+- [x] Done — ticked by integrate at merge.
 - Depends-on: 2.
 - Change: the per-key `required: true` flag (ADR-022) is read, and an
   absent key marked required is an error naming the document, the key

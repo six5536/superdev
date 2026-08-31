@@ -13,6 +13,15 @@ publish a version it cannot find a heading for.
 
 ### Added
 
+- **Required frontmatter keys bind.** `superdev validate` reads the
+  per-key `required: true` flag a schema declares (ADR-022) and reports,
+  as an error naming the document, the key and the schema, an absent key
+  marked required; a present one keeps its value checks. The shipped
+  schemas each declare their required keys — `type`, `id`, `title` and
+  `description` on every frontmatter-carrying kind, `sources` on
+  research — so a filed document that loses its identity or its listing
+  line fails validation instead of passing unexamined.
+
 - **A section's declared content kind binds.** `superdev validate` reads
   each section rule's `content` kind — prose, bullet-list, numbered-list,
   table or code — and reports, as an error naming the document, the
@@ -35,6 +44,17 @@ publish a version it cannot find a heading for.
 
 ### Fixed
 
+- **The document checks read YAML as YAML and say each fault once.** A
+  schema contract that fails to deserialize is reported on the schema
+  file instead of silently governing nothing. Frontmatter values compare
+  with comments stripped and quotes removed, and a CRLF document reads
+  as its LF twin. Fences follow one reading everywhere — nested and
+  tilde fences included — for content kinds, headings and tables; a
+  columns rule finds its table in a subsection; the prose kind ignores
+  link definitions, HTML comments, deeper headings and dividers. A
+  `lifecycle` key is skipped only where the filing check owns it, and an
+  unreadable declaration earns one finding, through the grammar's schema
+  check.
 - **The core file is checked again.** The grammar's core kind matched the
   file by the basename `core.md`, which the aggregator rename removed, so
   `.agents/superdev.md` was claimed by no kind and skipped by every
