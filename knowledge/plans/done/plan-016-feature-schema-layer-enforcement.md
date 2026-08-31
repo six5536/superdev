@@ -100,4 +100,4 @@ integrate's validate gate stays green at every merge.
 <!-- sokf:links -->
 [sokf:contract-002-cli-superdev]: /knowledge/contracts/public/active/contract-002-cli-superdev.md
 [sokf:contract-010-interface-document-schemas]: /knowledge/contracts/internal/active/contract-010-interface-document-schemas.md
-[sokf:issue-018-feature-request-the-schema-layer-checks-sections-and-nothing-else]: /knowledge/issues/open/issue-018-feature-request-the-schema-layer-checks-sections-and-nothing-else.md
+[sokf:issue-018-feature-request-the-schema-layer-checks-sections-and-nothing-else]: /knowledge/issues/done/issue-018-feature-request-the-schema-layer-checks-sections-and-nothing-else.md

@@ -69,7 +69,7 @@
 [sokf:issue-014-chore-the-schema-validator-is-called-format]: /knowledge/issues/done/issue-014-chore-the-schema-validator-is-called-format.md
 [sokf:issue-015-feature-request-every-issue-must-be-a-bug-report]: /knowledge/issues/done/issue-015-feature-request-every-issue-must-be-a-bug-report.md
 [sokf:issue-017-feature-request-the-format-has-no-agent-facing-document]: /knowledge/issues/open/issue-017-feature-request-the-format-has-no-agent-facing-document.md
-[sokf:issue-018-feature-request-the-schema-layer-checks-sections-and-nothing-else]: /knowledge/issues/open/issue-018-feature-request-the-schema-layer-checks-sections-and-nothing-else.md
+[sokf:issue-018-feature-request-the-schema-layer-checks-sections-and-nothing-else]: /knowledge/issues/done/issue-018-feature-request-the-schema-layer-checks-sections-and-nothing-else.md
 [sokf:issue-019-bug-validate-reads-a-named-file-as-a-skill]: /knowledge/issues/open/issue-019-bug-validate-reads-a-named-file-as-a-skill.md
 [sokf:issue-022-feature-request-a-schemas-worked-example-is-checked-by-nothing]: /knowledge/issues/open/issue-022-feature-request-a-schemas-worked-example-is-checked-by-nothing.md
 [sokf:issue-023-feature-request-a-concept-path-written-outside-the-knowledge-is-checked-by-nothing]: /knowledge/issues/open/issue-023-feature-request-a-concept-path-written-outside-the-knowledge-is-checked-by-nothing.md

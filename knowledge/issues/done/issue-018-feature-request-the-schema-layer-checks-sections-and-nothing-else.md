@@ -3,7 +3,7 @@ type: FeatureRequest
 id: issue-018-feature-request-the-schema-layer-checks-sections-and-nothing-else
 title: A schema declares content kinds and a frontmatter contract, and the validator reads neither
 description: P008 made schemas govern documents, but only their sections — the content kind under each heading and the frontmatter constraints beside it are declared on every schema and read by nothing, which is the fault P008 set out to cure, one level down.
-lifecycle: open
+lifecycle: done
 links:
   - rel: references
     to: contract-002-cli-superdev
@@ -14,6 +14,21 @@ links:
 ---
 
 # Feature: the schema layer checks sections and nothing else
+
+## Resolved
+
+Delivered by [plan-016][sokf:plan-016-feature-schema-layer-enforcement].
+Acceptance on 2026-08-31 walked all six criteria end to end against the
+feature branch head, with the full test suite passing (625 tests): a
+content-kind, pattern, enum and required-key fault each report an error
+naming the document, the rule and the schema; a lead-in sentence before a
+list passes; a mis-declared schema — an unknown content kind, an
+uncompilable pattern — is reported on the schema file and binds nothing;
+and `superdev validate` reports PASS on this repository. The behaviour is
+documented in
+[contract-002][sokf:contract-002-cli-superdev] and
+[contract-010][sokf:contract-010-interface-document-schemas]. A security
+review of the feature diff found no vulnerabilities.
 
 ## Summary
 
@@ -139,3 +154,4 @@ fixes the declaration vocabulary, per ADR-022 and ADR-023.
 [sokf:contract-002-cli-superdev]: /knowledge/contracts/public/active/contract-002-cli-superdev.md
 [sokf:contract-010-interface-document-schemas]: /knowledge/contracts/internal/active/contract-010-interface-document-schemas.md
 [sokf:issue-022-feature-request-a-schemas-worked-example-is-checked-by-nothing]: /knowledge/issues/open/issue-022-feature-request-a-schemas-worked-example-is-checked-by-nothing.md
+[sokf:plan-016-feature-schema-layer-enforcement]: /knowledge/plans/done/plan-016-feature-schema-layer-enforcement.md

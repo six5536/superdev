@@ -105,5 +105,5 @@ for the checker: the five id faults first recorded here were the
 surfaced fraction of a fault class five times that size.
 
 <!-- sokf:links -->
-[sokf:issue-018-feature-request-the-schema-layer-checks-sections-and-nothing-else]: /knowledge/issues/open/issue-018-feature-request-the-schema-layer-checks-sections-and-nothing-else.md
+[sokf:issue-018-feature-request-the-schema-layer-checks-sections-and-nothing-else]: /knowledge/issues/done/issue-018-feature-request-the-schema-layer-checks-sections-and-nothing-else.md
 [sokf:issue-020-bug-the-schemas-do-not-ship]: /knowledge/issues/done/issue-020-bug-the-schemas-do-not-ship.md
