@@ -25,7 +25,7 @@ decisions are ADR-018 through ADR-021 and the seam is
 
 ### Slice 1: The run state and its verbs
 
-- [ ] Done — ticked by integrate at merge.
+- [x] Done — ticked by integrate at merge.
 - Depends-on: none.
 - Change: a `run` module in `crates/app/superdev` owning
   `.superdev/cache/run.toml` per contract-009, and the `run begin`,

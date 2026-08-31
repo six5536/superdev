@@ -93,6 +93,13 @@ publish a version it cannot find a heading for.
 
 ### Added
 
+- **`superdev run`.** Three verbs own the state of an unattended workflow
+  run, `.superdev/cache/run.toml`: `begin` creates it exclusively and
+  refuses a second run naming the owner, `advance` records a step forward —
+  rewriting the next step, resetting the watchdog counter and refreshing
+  the owning session — and `end` removes it, harmlessly when none exists.
+  The state is the seam the Stop hook will read; see P013.
+
 - **`superdev validate`.** One command checks both specs this repository
   owns: the SOKF knowledge, and every document against the schema its `type`
   names — the skills and `.agents/core.md` included, against the grammar
