@@ -80,9 +80,12 @@ pub fn run(cmd: &RunCommand, root: &Path) -> Result<u8> {
 
 /// The owning session: the flag wins, then the environment, else unclaimed
 /// (empty) — the Stop hook adopts the first Stop payload's session for an
-/// unclaimed run (contract-009).
+/// unclaimed run (contract-009). An empty flag is no flag.
 fn owner(flag: Option<&str>, env: Option<&str>) -> String {
-    flag.or(env).unwrap_or_default().to_string()
+    flag.filter(|f| !f.is_empty())
+        .or(env)
+        .unwrap_or_default()
+        .to_string()
 }
 
 fn state_path(root: &Path) -> PathBuf {
@@ -121,8 +124,12 @@ fn begin(root: &Path, owner: &str, next: &str) -> Result<u8> {
         }
         Err(source) => return Err(Error::Io { path, source }),
     };
-    file.write_all(render(&state, &path)?.as_bytes())
-        .map_err(|source| Error::Io { path, source })?;
+    if let Err(source) = file.write_all(render(&state).as_bytes()) {
+        // A partial file would wedge every later begin; remove what this
+        // begin created before reporting.
+        let _ = fs::remove_file(&path);
+        return Err(Error::Io { path, source });
+    }
     out(&format!(
         "run begun — owner: {}, next: {}",
         claimed(&state.session_id),
@@ -141,7 +148,7 @@ fn advance(root: &Path, owner: &str, next: &str) -> Result<u8> {
     if !owner.is_empty() {
         state.session_id = owner.to_string();
     }
-    fs::write(&path, render(&state, &path)?).map_err(|source| Error::Io {
+    fs::write(&path, render(&state)).map_err(|source| Error::Io {
         path: path.clone(),
         source,
     })?;
@@ -185,11 +192,10 @@ fn load(path: &Path) -> Result<RunState> {
     })
 }
 
-fn render(state: &RunState, path: &Path) -> Result<String> {
-    toml_edit::ser::to_string(state).map_err(|e| Error::Toml {
-        path: path.to_path_buf(),
-        message: e.to_string(),
-    })
+/// The state as TOML. A plain struct of scalars serialises (the
+/// `Lock::save` precedent).
+fn render(state: &RunState) -> String {
+    toml_edit::ser::to_string(state).expect("the run state serialises")
 }
 
 /// A run-state failure, worded for the caller: the path locates it, the
@@ -277,7 +283,7 @@ mod tests {
         let path = state_path(dir.path());
         let mut state = load(&path).unwrap();
         state.continues = 7;
-        std::fs::write(&path, render(&state, &path).unwrap()).unwrap();
+        std::fs::write(&path, render(&state)).unwrap();
 
         assert_eq!(advance(dir.path(), "session-9", "slice 2").unwrap(), 0);
         let state = load(&path).unwrap();
@@ -322,6 +328,11 @@ mod tests {
     fn the_owner_is_flag_then_environment_then_unclaimed() {
         assert_eq!(owner(Some("flag"), Some("env")), "flag");
         assert_eq!(owner(None, Some("env")), "env");
+        assert_eq!(
+            owner(Some(""), Some("env")),
+            "env",
+            "an empty flag is no flag"
+        );
         assert_eq!(owner(None, None), "");
     }
 
