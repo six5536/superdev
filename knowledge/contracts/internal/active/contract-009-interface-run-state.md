@@ -85,7 +85,10 @@ pub const CONTINUE_CAP: u32 = 10;
   payload's session is not the owner, `next` is empty, or `continues`
   has reached `CONTINUE_CAP` — otherwise it increments `continues` and
   exits `2` naming `next`, which Claude Code feeds back as the
-  instruction to keep going.
+  instruction to keep going. The payload's `stop_hook_active` never
+  gates the decision: exit `2` stays effective while it is true, and
+  the counter is the guard
+  ([research-001][sokf:research-001-claude-code-stop-hook-behaviour]).
 - A second `begin` while state exists: refused, naming the owning
   session and `superdev run end` as the way to clear a stale run.
 
@@ -106,9 +109,15 @@ pub const CONTINUE_CAP: u32 = 10;
 - Observability: `begin`, `advance` and `end` print the transition;
   the refusal names the owner; the exit-2 message names `next`; `end`
   with no state is harmless and says so.
+- Platform interaction: any tool use in a continued turn resets Claude
+  Code's eight-consecutive-block override, so the override never ends a
+  productive run, and a text-only stall dies at eight before
+  `CONTINUE_CAP` fires; no `CLAUDE_CODE_STOP_HOOK_BLOCK_CAP` entry
+  ships ([research-001][sokf:research-001-claude-code-stop-hook-behaviour]).
 
 <!-- sokf:links -->
 [sokf:adr-018-loop-in-the-skill-enforcement-in-the-hook]: /knowledge/adrs/active/adr-018-loop-in-the-skill-enforcement-in-the-hook.md
 [sokf:adr-019-run-state-is-a-session-owned-file-behind-cli-verbs]: /knowledge/adrs/active/adr-019-run-state-is-a-session-owned-file-behind-cli-verbs.md
 [sokf:adr-020-a-blocked-run-ends]: /knowledge/adrs/active/adr-020-a-blocked-run-ends.md
 [sokf:contract-002-cli-superdev]: /knowledge/contracts/public/active/contract-002-cli-superdev.md
+[sokf:research-001-claude-code-stop-hook-behaviour]: /knowledge/research/research-001-claude-code-stop-hook-behaviour.md

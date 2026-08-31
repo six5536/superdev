@@ -50,6 +50,11 @@ continues without an advance the hook lets the run die.
   the owner and how to clear it; two git worktrees have separate caches
   and run in parallel naturally.
 - Positive: a run that stops progressing dies within ten turn boundaries.
+- Positive: Claude Code's own override — eight consecutive Stop blocks
+  without progress — composes rather than conflicts: tool use resets it,
+  so it never ends a productive run, a text-only stall dies at eight, and
+  no cap-raising environment entry ships
+  ([research-001][sokf:research-001-claude-code-stop-hook-behaviour]).
 - Negative: the cap is a fixed constant; a legitimate step that crosses
   more than ten boundaries without an `advance` dies with it. The skill's
   discipline — advance at every real step — is what keeps that from
@@ -58,3 +63,6 @@ continues without an advance the hook lets the run die.
   its stability promise once released.
 - Follow-ups: the state file's shape and the verbs' behaviour are fixed
   in the run-state interface contract.
+
+<!-- sokf:links -->
+[sokf:research-001-claude-code-stop-hook-behaviour]: /knowledge/research/research-001-claude-code-stop-hook-behaviour.md

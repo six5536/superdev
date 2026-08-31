@@ -11,6 +11,7 @@ workflow.
 * [Agent Instructions Layer][sokf:plan-002-feature-agent-instructions-layer] - deliver S010 — the user-owned AGENTS.md with one ensured import, the fenced superdev.md aggregator, per-capability instruction files, codegraph MCP wiring, and the code-index dogfood.
 * [Externally Sourced Content Packs — feature plan][sokf:plan-003-feature-content-packs] - deliver S014 in eighteen slices — move the content to /pack, reorganise it into pack layout, derive it from that layout, add the manifest and lock schemas, resolve local then git sources, wire ownership, teach init and update, make each release one command, make a committed path pin portable, dogfood it, then close the gaps acceptance found and the one deferred issue small enough to fix.
 * [Content pack hardening — feature plan][sokf:plan-005-feature-content-pack-hardening] - deliver ADR-012 to ADR-016 in seven slices — refuse an unsupported transport, refuse a symlink in a pack and let git decide what one is, give the spawn seam a deadline and an environment, bound the one unprompted request, prove a pin before writing it, and stop recording a digest nothing reads.
+* [Workflow autonomy][sokf:plan-013-feature-workflow-autonomy] - eight slices delivering the unattended workflow — the run state and its verbs, the Stop hook, the managed hook entry, the plan format's dependencies, the branching and commit conventions, the driver skill, and the records.
 
 ## Ad-hoc plans
 
@@ -36,3 +37,4 @@ workflow.
 [sokf:plan-010-adhoc-links-address-ids]: /knowledge/plans/done/plan-010-adhoc-links-address-ids.md
 [sokf:plan-011-adhoc-filing-by-lifecycle]: /knowledge/plans/done/plan-011-adhoc-filing-by-lifecycle.md
 [sokf:plan-012-adhoc-contract-driven-workflow]: /knowledge/plans/done/plan-012-adhoc-contract-driven-workflow.md
+[sokf:plan-013-feature-workflow-autonomy]: /knowledge/plans/open/plan-013-feature-workflow-autonomy.md

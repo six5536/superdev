@@ -33,6 +33,10 @@
 * [Release Procedure][sokf:release-procedure] - the changelog gate, the release command, the irreversible push, and the tag-driven pipeline.
 * [Schemas](schemas/index.md) - the structural contract for every document the process produces — what sections it carries, what its frontmatter must say, and a worked example.
 
+# Research
+
+* [Claude Code Stop-hook Behaviour][sokf:research-001-claude-code-stop-hook-behaviour] - the Stop hook's payload, the consecutive-block cap and what resets it, the CLAUDE_CODE_STOP_HOOK_BLOCK_CAP variable, exit 2 under stop_hook_active, CLAUDE_PROJECT_DIR, and session_id across resume.
+
 <!-- sokf:links -->
 [sokf:architectural-rules]: /knowledge/architectural-rules.md
 [sokf:architecture]: /knowledge/architecture.md
@@ -50,6 +54,7 @@
 [sokf:issue-tracker]: /knowledge/issue-tracker.md
 [sokf:project-overview]: /knowledge/project-overview.md
 [sokf:release-procedure]: /knowledge/release-procedure.md
+[sokf:research-001-claude-code-stop-hook-behaviour]: /knowledge/research/research-001-claude-code-stop-hook-behaviour.md
 [sokf:security-requirements]: /knowledge/security-requirements.md
 [sokf:software-components]: /knowledge/software-components.md
 [sokf:technology-stack]: /knowledge/technology-stack.md
