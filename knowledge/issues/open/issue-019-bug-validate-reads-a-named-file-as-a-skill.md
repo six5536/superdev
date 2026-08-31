@@ -4,6 +4,10 @@ id: issue-019-bug-validate-reads-a-named-file-as-a-skill
 title: validate reads a file named on the command line as a skill, whatever it is
 description: superdev validate knowledge/architecture.md reports nine errors about missing skill blocks, because a named path takes the grammar's fallback kind; the document is never checked against the schema its type names, so the check a path argument most obviously invites is the one it cannot run.
 lifecycle: open
+links:
+  - rel: references
+    to: contract-002-cli-superdev
+    note: The CLI contract governs what validate promises a path argument.
 ---
 
 # Bug: validate reads a file named on the command line as a skill
@@ -28,9 +32,24 @@ names, never runs at all.
 
 ## Expected behaviour
 
-The named document is checked as what it is: its frontmatter `type` names a
-schema, so the schema's rules apply, exactly as they do when the same
-document is reached by a bare run.
+The named document is checked as what it is, with full parity to the bare
+run. These sentences are the acceptance criteria:
+
+1. WHEN validate is invoked with a path to a file whose frontmatter `type`
+   names a schema, THE SYSTEM SHALL report for that file exactly the
+   findings a bare run reports for it — schema, filing and link findings
+   alike — and no findings about any other file.
+2. WHEN validate is invoked with a path to a frontmatter-less file a
+   schema names by `target-files` glob (README.md, CHANGELOG.md), THE
+   SYSTEM SHALL check it against that schema, never the skill grammar.
+3. WHEN validate is invoked with a path to a file whose `type` names no
+   schema, THE SYSTEM SHALL report that fault as the bare run does.
+4. WHEN validate is invoked with a path to a file with no frontmatter
+   that no glob and no grammar kind claims positively, THE SYSTEM SHALL
+   check it as the grammar's fallback kind — a skill outside the roots
+   stays checkable, as today.
+5. IF the named path cannot be read, THEN THE SYSTEM SHALL fail naming
+   the path.
 
 ## Actual behaviour
 
@@ -74,3 +93,14 @@ The fallback is what lets `validate <a-skill-outside-the-roots>` work, and a
 test covers that path; the change must leave it. The whole-repository run
 does not use the fallback at all, so the blast radius is the path-argument
 branch only, which the CLI end-to-end tests exercise directly.
+
+## Comments
+
+2026-08-31, framing: the user chose full parity over a self-contained
+schema-only check — a named document run loads the knowledge and the
+schema set, so the file gets exactly the findings a bare run gives it,
+link resolution included. The path argument's promise is public CLI
+behaviour, governed by [contract-002][sokf:contract-002-cli-superdev].
+
+<!-- sokf:links -->
+[sokf:contract-002-cli-superdev]: /knowledge/contracts/public/active/contract-002-cli-superdev.md
