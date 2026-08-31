@@ -106,6 +106,16 @@ publish a version it cannot find a heading for.
   hook's `hooks.Stop` entry into `.claude/settings.json` beside the
   PostToolUse one, claimed in the lock the same way. See P013.
 
+- **The workflow branches and commits.** `/frame` cuts `feature/<slug>`
+  off the default branch — a repo whose development-procedure concept
+  names its own convention keeps it — and commits the framed issue there;
+  `/adhoc-plan` cuts `adhoc/<slug>` when its work touches code.
+  `/contract-design` ends on the user's go-ahead and commits the contract
+  and decision-record edits; `/integrate` commits the changelog,
+  knowledge and plan edits after a successful merge. Nothing unattended
+  reaches the default branch; a human fast-forwards it (ADR-021). See
+  P013.
+
 - **A feature plan models its dependencies.** Each slice carries a
   `Depends-on:` line — slice numbers in either direction, or none — and
   the plan may carry a `Deferred decisions` section holding the questions

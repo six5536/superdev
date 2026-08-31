@@ -101,7 +101,7 @@ decisions are ADR-018 through ADR-021 and the seam is
 
 ### Slice 5: Branching conventions
 
-- [ ] Done — ticked by integrate at merge.
+- [x] Done — ticked by integrate at merge.
 - Depends-on: none.
 - Change: `/frame` creates `feature/<slug>` off the default branch and
   commits the framed issue; `/adhoc-plan` creates `adhoc/<slug>` when
@@ -119,7 +119,7 @@ decisions are ADR-018 through ADR-021 and the seam is
 
 ### Slice 6: Commit points
 
-- [ ] Done — ticked by integrate at merge.
+- [x] Done — ticked by integrate at merge.
 - Depends-on: 5.
 - Change: `/contract-design` ends with the go-ahead gate and commits the
   contract and ADR edits; `/integrate` commits the changelog, knowledge
