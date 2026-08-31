@@ -157,7 +157,13 @@ from the environment and never from the file.
 
 ## Development
 
-See [CONTRIBUTING](CONTRIBUTING.md) for setup, everyday commands, and the
+```sh
+mise install     # install all pinned tools
+npm install      # install the JS workspace
+npm test         # run the test suite
+```
+
+See [CONTRIBUTING](CONTRIBUTING.md) for everyday commands and the
 release procedure. Project design and conventions live in the
 [`knowledge/`](knowledge/index.md) tree.
 

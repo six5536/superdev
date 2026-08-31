@@ -414,13 +414,13 @@ pub enum Error {
 
 ## Key flows
 
-**Default `init`, offline.** The manifest `init` builds carries the default
+- **Default `init`, offline.** The manifest `init` builds carries the default
 `[[packs]]` entry naming `DEFAULT_PACK`, so `resolve` sees a pin at exactly
 the rev this binary embeds → returns the snapshot's `ContentSet` with no cache
 read and no network → `plan_repo` → apply. An empty `manifest.packs` takes the
 same path, and is what every manifest written before packs existed carries.
 
-**Pinning a newer rev.** `sync` → `resolve(Fetching)` finds the pin absent
+- **Pinning a newer rev.** `sync` → `resolve(Fetching)` finds the pin absent
 from the lock → fetches into `.superdev/cache/packs/<digest>/` → parses
 `pack.toml`, refuses an unknown `format`, refuses a `REJECTED` path → the
 entry's identity matches `DEFAULT_PACK`, so its items replace the snapshot's
@@ -428,11 +428,11 @@ rather than layering → `plan_repo` writes the changed items and the orphan
 pass removes what the new rev dropped → apply records `PackLock` and the
 per-file hashes.
 
-**CI drift check.** `status` → `resolve(Offline)` → every pack's digest is in
+- **CI drift check.** `status` → `resolve(Offline)` → every pack's digest is in
 the lock and its cache entry present, or its files are committed and hash to
 the locked values → no fetch → `plan_repo` finds nothing → exit 0.
 
-**Repairing drift offline.** A pack-provided skill was hand-edited. `sync` →
+- **Repairing drift offline.** A pack-provided skill was hand-edited. `sync` →
 `resolve(Fetching)` finds the pack cached → no fetch → `plan_repo` emits the
 `WriteFile` → apply backs the file up and rewrites it.
 

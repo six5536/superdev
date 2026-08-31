@@ -1,0 +1,10 @@
+{
+  "findings": [
+    {
+      "file": "a.md",
+      "message": "section \"Items\" carries no bullet, and thing.md declares bullet-list content",
+      "severity": "error"
+    }
+  ],
+  "passed": false
+}

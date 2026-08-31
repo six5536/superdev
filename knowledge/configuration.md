@@ -244,7 +244,24 @@ as behind; a pin above it is deliberate and left alone.
 
 What superdev last applied. Committed, never hand-edited. It records the
 provider and version applied per capability, plus a sha256 of every file
-superdev owns. Entries superdev merges into a shared file are hashed under
+superdev owns:
+
+```toml
+[[packs]]
+source = "./pack"
+identity = "pack"
+format = 1
+
+[components.code-index]
+provider = "codegraph"
+version = "1.5.0"
+
+[files]
+".agents/superdev.md" = "6d4c7c25…"
+".mise.toml:codegraph" = "90becaf4…"
+```
+
+Entries superdev merges into a shared file are hashed under
 `<file>:<pointer>` instead — `.mise.toml:<tool>` for a pin,
 `.claude/settings.json:hooks.PostToolUse[<marker>]` for the hook. Drift is
 found by comparing a file against the content the blueprint wants, not against
@@ -284,7 +301,16 @@ goes with its files.
 Machine state, gitignored by `init`: backups of overwritten files under
 `backup/<timestamp>/`, the search index under `sokf-index/` (tantivy, the
 section vectors, and a manifest of per-file hashes, schema version and model
-id), and each resolved pack under `packs/<digest>/`. Deleting it is safe — the
+id), and each resolved pack under `packs/<digest>/`:
+
+```
+cache/
+  backup/<timestamp>/
+  sokf-index/
+  packs/<digest>/
+```
+
+Deleting it is safe — the
 next tool call rebuilds the index, and the next `sync` re-fetches a pack.
 
 A pack is cached by its digest so a later run reaches the network only for

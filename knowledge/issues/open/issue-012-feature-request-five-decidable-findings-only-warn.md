@@ -84,13 +84,13 @@ else the answer could depend on.
 
 ## Scope
 
-Split the tier by decidability rather than by tradition. A finding the
+- In: split the tier by decidability rather than by tradition. A finding the
 repository alone can settle is an error; a finding whose answer lies outside
 the repository stays a warning. That keeps the three that earn the tier — the
 portability warning, the non-core `rel`, the soft length limit — and moves the
 five.
 
-Two of the five want thought before they move, and they are the reason this is
+- Open question: two of the five want thought before they move, and they are the reason this is
 an issue rather than a patch. A broken body link and a missing index target
 are exactly what ordinary work-in-progress produces: the link is written
 before the file it points at lands. Making them fatal means the PostToolUse
@@ -99,12 +99,12 @@ working towards. That is an argument about those two specifically, not about
 the class, and it may be answered by when the check runs rather than by how
 loudly it complains.
 
-This changes SPEC §11, so it wants the treatment ADR-017 had rather than a
+- This changes SPEC §11, so it wants the treatment ADR-017 had rather than a
 quiet edit — see
 [the conformance decision][sokf:adr-017-aokf-conformance-is-pass-or-fail],
 which took the same kind of question about the same section.
 
-Workaround until then: read the warnings. The canonical knowledge currently sits at zero,
+- Workaround until then: read the warnings. The canonical knowledge currently sits at zero,
 so a new one is visible; that is a property of having just cleared them, not
 of the design.
 

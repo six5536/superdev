@@ -74,7 +74,7 @@ files are brought into line when touched, not in bulk.
 
 # TypeScript / JavaScript
 
-- Only use `index.ts` when necessary; otherwise name files descriptively.
+Only use `index.ts` when necessary; otherwise name files descriptively.
 
 # Canonical reference
 

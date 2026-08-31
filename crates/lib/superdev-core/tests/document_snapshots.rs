@@ -145,3 +145,13 @@ fn duplicate_type() {
 fn governs_nothing() {
     snapshot("governs-nothing");
 }
+
+#[test]
+fn missing_content() {
+    snapshot("missing-content");
+}
+
+#[test]
+fn unknown_content_kind() {
+    snapshot("unknown-content-kind");
+}

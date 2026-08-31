@@ -76,15 +76,15 @@ in the canonical knowledge agrees on both.
 
 ## Scope
 
-Repurpose `schema-templates-index`, which today governs
-`knowledge/templates/index.md` — a file that goes away when the schemas
-supersede the templates in the pack. Retarget it at `knowledge/**/index.md` as
-`schema-bundle-index`, describing: no frontmatter, a level-1 heading, optional
-repeatable level-2 groups, and entries as a bullet list. That turns a schema
-about to describe nothing into one covering eight live files.
-
-It cannot be enforced until schema-to-document validation exists, so this
-issue is blocked behind that work rather than behind the port itself.
+- In: repurpose `schema-templates-index`, which today governs
+  `knowledge/templates/index.md` — a file that goes away when the schemas
+  supersede the templates in the pack. Retarget it at `knowledge/**/index.md`
+  as `schema-bundle-index`, describing: no frontmatter, a level-1 heading,
+  optional repeatable level-2 groups, and entries as a bullet list. That turns
+  a schema about to describe nothing into one covering eight live files.
+- Blocked: it cannot be enforced until schema-to-document validation exists,
+  so this issue is blocked behind that work rather than behind the port
+  itself.
 
 <!-- sokf:links -->
 [sokf:plan-006-adhoc-rust-format-validator]: /knowledge/plans/done/plan-006-adhoc-rust-format-validator.md

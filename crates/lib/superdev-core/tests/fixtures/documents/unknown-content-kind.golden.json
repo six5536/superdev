@@ -1,0 +1,10 @@
+{
+  "findings": [
+    {
+      "file": "thing.md",
+      "message": "schema: section \"Body\" declares content `essay` — the kinds are prose, bullet-list, numbered-list, table and code",
+      "severity": "error"
+    }
+  ],
+  "passed": false
+}

@@ -36,20 +36,20 @@ callers write `superdev_core::Item` instead of
 
 ### Slice 1: inventory the surface
 
-Inventory the current cross-crate surface (`grep superdev_core::` in
-   the binary and tests) to get the exact re-export list.
+- Inventory the current cross-crate surface (`grep superdev_core::` in
+  the binary and tests) to get the exact re-export list.
 
 ### Slice 2: flatten module by module
 
-Flatten one module at a time, keeping the suite green per step:
-   `manifest`, `lock`, `capability`, `registry`, `component`, `action`,
-   `pipeline`, `engine`, `orphan`, `report`, `runner`, `error`,
-   `templates`, then decide `aokf` and `components`.
+- Flatten one module at a time, keeping the suite green per step:
+  `manifest`, `lock`, `capability`, `registry`, `component`, `action`,
+  `pipeline`, `engine`, `orphan`, `report`, `runner`, `error`,
+  `templates`, then decide `aokf` and `components`.
 
 ### Slice 3: doc pass
 
- `#![warn(missing_docs)]` stays satisfied; rustdoc links
-   updated.
+- `#![warn(missing_docs)]` stays satisfied; rustdoc links
+  updated.
 
 ## Done when
 

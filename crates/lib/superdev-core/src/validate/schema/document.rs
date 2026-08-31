@@ -46,6 +46,11 @@ pub struct SectionRule {
     pub columns: Vec<String>,
 }
 
+/// The content kinds a section rule may declare — the closed vocabulary of
+/// contract-010. A kind outside this set is reported on the schema and binds
+/// nothing.
+const CONTENT_KINDS: [&str; 5] = ["prose", "bullet-list", "numbered-list", "table", "code"];
+
 impl SectionRule {
     /// How the rule names its section, for a finding.
     fn label(&self) -> String {
@@ -179,6 +184,21 @@ impl SchemaSet {
             let Some(schema) = DocSchema::parse(file, text) else {
                 continue;
             };
+            for rule in &schema.sections {
+                if let Some(kind) = rule.content.as_deref()
+                    && !CONTENT_KINDS.contains(&kind)
+                {
+                    findings.push(Finding {
+                        file: file.clone(),
+                        message: format!(
+                            "schema: section {} declares content `{kind}` — the kinds are \
+                             prose, bullet-list, numbered-list, table and code",
+                            rule.label()
+                        ),
+                        fatal: true,
+                    });
+                }
+            }
             match (schema.type_const(), schema.target_files.as_deref()) {
                 (Some(t), _) => {
                     if let Some(first) = set.by_type.get(t) {
@@ -310,8 +330,8 @@ fn check_one(doc: &Document<'_>, schema: &DocSchema, findings: &mut Vec<Finding>
     // author-named sections would swallow every literal section after it,
     // and the schema's declaration order would be load-bearing in a way no
     // author would expect.
-    let mut matched: Vec<usize> = Vec::new();
-    for (level, text) in &headings {
+    let mut matched: Vec<(usize, usize)> = Vec::new();
+    for (h, (level, text)) in headings.iter().enumerate() {
         let literal = schema
             .sections
             .iter()
@@ -323,12 +343,12 @@ fn check_one(doc: &Document<'_>, schema: &DocSchema, findings: &mut Vec<Finding>
                 .position(|r| r.heading.is_none() && r.matches(*level, text))
         };
         if let Some(i) = literal.or_else(by_pattern) {
-            matched.push(i);
+            matched.push((h, i));
         }
     }
 
     for (i, rule) in schema.sections.iter().enumerate() {
-        if rule.required && !matched.contains(&i) {
+        if rule.required && !matched.iter().any(|&(_, r)| r == i) {
             push(format!(
                 "missing required section {} ({})",
                 rule.label(),
@@ -341,9 +361,9 @@ fn check_one(doc: &Document<'_>, schema: &DocSchema, findings: &mut Vec<Finding>
         // A repeatable rule may recur, so compare only the first appearance
         // of each: a plan with three workstreams is ordered, not out of order.
         let mut first: Vec<usize> = Vec::new();
-        for i in &matched {
-            if !first.contains(i) {
-                first.push(*i);
+        for &(_, i) in &matched {
+            if !first.contains(&i) {
+                first.push(i);
             }
         }
         for pair in first.windows(2) {
@@ -359,7 +379,106 @@ fn check_one(doc: &Document<'_>, schema: &DocSchema, findings: &mut Vec<Finding>
         }
     }
 
+    // Each matched section must carry the form its rule's `content` kind
+    // names — presence, per ADR-023: one bullet, one numbered item, one
+    // table, one fenced block, or one plain paragraph line; other content
+    // beside the form is tolerated. The body runs to the next heading at the
+    // section's own level or shallower, so a subsection's content counts. A
+    // kind outside the vocabulary was reported on the schema at load and
+    // binds nothing.
+    let positions = heading_positions(&lines);
+    for &(h, r) in &matched {
+        let rule = &schema.sections[r];
+        let Some(kind) = rule.content.as_deref() else {
+            continue;
+        };
+        if !CONTENT_KINDS.contains(&kind) {
+            continue;
+        }
+        // A declared table's absence is check_columns' finding already.
+        if kind == "table" && !rule.columns.is_empty() {
+            continue;
+        }
+        let start = positions[h] + 1;
+        let end = headings
+            .iter()
+            .enumerate()
+            .skip(h + 1)
+            .find(|(_, (level, _))| *level <= headings[h].0)
+            .map_or(lines.len(), |(j, _)| positions[j]);
+        if !body_has(kind, &lines[start..end]) {
+            push(format!(
+                "section {} carries no {}, and {} declares {kind} content",
+                rule.label(),
+                form_of(kind),
+                schema.name
+            ));
+        }
+    }
+
     check_columns(schema, &headings, &lines, &mut push);
+}
+
+/// The form a content kind demands, as a finding names it.
+fn form_of(kind: &str) -> &'static str {
+    match kind {
+        "bullet-list" => "bullet",
+        "numbered-list" => "numbered item",
+        "table" => "table",
+        "code" => "fenced block",
+        _ => "paragraph line",
+    }
+}
+
+/// Whether the kind's form appears in a section body. Lines inside fenced
+/// blocks are not content: they neither satisfy a kind nor break one — the
+/// fence itself is what satisfies `code`.
+fn body_has(kind: &str, body: &[&str]) -> bool {
+    let mut fenced = false;
+    for line in body {
+        let trimmed = line.trim_start();
+        if trimmed.starts_with("```") {
+            if !fenced && kind == "code" {
+                return true;
+            }
+            fenced = !fenced;
+            continue;
+        }
+        if fenced {
+            continue;
+        }
+        let found = match kind {
+            "bullet-list" => is_bullet(trimmed),
+            "numbered-list" => is_numbered(trimmed),
+            "table" => trimmed.starts_with('|'),
+            "prose" => {
+                !trimmed.is_empty()
+                    && !is_bullet(trimmed)
+                    && !is_numbered(trimmed)
+                    && !trimmed.starts_with('|')
+            }
+            // `code` is satisfied by a fence alone, handled above.
+            _ => false,
+        };
+        if found {
+            return true;
+        }
+    }
+    false
+}
+
+/// `- `, `* ` or `+ ` opens a bullet.
+fn is_bullet(trimmed: &str) -> bool {
+    ["- ", "* ", "+ "].iter().any(|b| trimmed.starts_with(b))
+}
+
+/// Digits then `. ` or `) ` opens a numbered item.
+fn is_numbered(trimmed: &str) -> bool {
+    let digits = trimmed.len()
+        - trimmed
+            .trim_start_matches(|c: char| c.is_ascii_digit())
+            .len();
+    digits > 0 && (trimmed[digits..].starts_with(". ") || trimmed[digits..].starts_with(") "))
 }
 
 /// Every table a rule declares columns for must carry exactly those columns,
@@ -715,6 +834,157 @@ mod tests {
         let (_, findings) = SchemaSet::load(&[("a.md".into(), text.into())]);
         assert_eq!(findings.len(), 1, "{findings:#?}");
         assert!(findings[0].message.contains("governs nothing"));
+    }
+
+    /// Covers I018 criterion 1: the finding names the document, the section
+    /// and the schema.
+    #[test]
+    fn a_bullet_list_section_without_a_bullet_is_a_finding() {
+        let schema = schema_of(
+            "frontmatter:\n  type:\n    const: T\nsections:\n  - heading: Items\n    level: 2\n    content: bullet-list\n",
+        );
+        let doc = Document {
+            path: "a.md",
+            text: "# T\n\n## Items\n\nOnly prose here.\n",
+            doc_type: Some("T"),
+        };
+        let mut findings = Vec::new();
+        check_one(&doc, &schema, &mut findings);
+        assert_eq!(findings.len(), 1, "{findings:#?}");
+        assert_eq!(findings[0].file, "a.md");
+        assert!(findings[0].message.contains("\"Items\""), "{findings:#?}");
+        assert!(findings[0].message.contains("s declares"), "{findings:#?}");
+        assert!(findings[0].message.contains("bullet-list"), "{findings:#?}");
+    }
+
+    /// Covers I018 criterion 2: the kind binds the section's substance, so a
+    /// lead-in sentence before the list passes.
+    #[test]
+    fn a_lead_in_sentence_before_the_bullets_passes() {
+        let schema = schema_of(
+            "frontmatter:\n  type:\n    const: T\nsections:\n  - heading: Items\n    level: 2\n    content: bullet-list\n",
+        );
+        let doc = Document {
+            path: "a.md",
+            text: "# T\n\n## Items\n\nThe list below is the substance:\n\n- one\n- two\n",
+            doc_type: Some("T"),
+        };
+        let mut findings = Vec::new();
+        check_one(&doc, &schema, &mut findings);
+        assert!(findings.is_empty(), "{findings:#?}");
+    }
+
+    /// One pass and one fail body per remaining kind — numbered-list, table,
+    /// code, prose. Presence of the form satisfies; its absence is a finding.
+    #[test]
+    fn each_kind_binds_by_presence() {
+        let cases = [
+            ("numbered-list", "1. first\n2. second\n", "just prose\n"),
+            ("table", "| A | B |\n|---|---|\n| 1 | 2 |\n", "just prose\n"),
+            ("code", "```sh\nls\n```\n", "just prose\n"),
+            ("prose", "A paragraph line.\n", "- only\n- bullets\n"),
+        ];
+        for (kind, pass, fail) in cases {
+            let schema = schema_of(&format!(
+                "frontmatter:\n  type:\n    const: T\nsections:\n  - heading: Body\n    level: 2\n    content: {kind}\n"
+            ));
+            let ok = Document {
+                path: "a.md",
+                text: &format!("# T\n\n## Body\n\n{pass}"),
+                doc_type: Some("T"),
+            };
+            let mut findings = Vec::new();
+            check_one(&ok, &schema, &mut findings);
+            assert!(findings.is_empty(), "{kind}: {findings:#?}");
+
+            let bad = Document {
+                path: "a.md",
+                text: &format!("# T\n\n## Body\n\n{fail}"),
+                doc_type: Some("T"),
+            };
+            let mut findings = Vec::new();
+            check_one(&bad, &schema, &mut findings);
+            assert_eq!(findings.len(), 1, "{kind}: {findings:#?}");
+            assert!(findings[0].message.contains(kind), "{kind}: {findings:#?}");
+        }
+    }
+
+    /// A section's body runs to the next heading at its own level or
+    /// shallower, so the form may sit in a subsection — "no bullet anywhere"
+    /// is what the finding means.
+    #[test]
+    fn a_form_in_a_subsection_satisfies_the_section() {
+        let schema = schema_of(
+            "frontmatter:\n  type:\n    const: T\nsections:\n  - heading: Items\n    level: 2\n    content: bullet-list\n",
+        );
+        let doc = Document {
+            path: "a.md",
+            text: "# T\n\n## Items\n\n### Grouped\n\n- one\n\n## Next\n\nprose\n",
+            doc_type: Some("T"),
+        };
+        let mut findings = Vec::new();
+        check_one(&doc, &schema, &mut findings);
+        assert!(findings.is_empty(), "{findings:#?}");
+
+        // A bullet after the section's end does not count.
+        let after = Document {
+            path: "a.md",
+            text: "# T\n\n## Items\n\nprose\n\n## Next\n\n- one\n",
+            doc_type: Some("T"),
+        };
+        let mut findings = Vec::new();
+        check_one(&after, &schema, &mut findings);
+        assert_eq!(findings.len(), 1, "{findings:#?}");
+    }
+
+    /// Lines inside a fenced block are not content: a `-` in a fence
+    /// satisfies nothing, a `#` in a fence ends no section, and the bullet
+    /// after the fence still counts.
+    #[test]
+    fn lines_inside_a_fence_are_not_content() {
+        let schema = schema_of(
+            "frontmatter:\n  type:\n    const: T\nsections:\n  - heading: Items\n    level: 2\n    content: bullet-list\n",
+        );
+        let fenced_only = Document {
+            path: "a.md",
+            text: "# T\n\n## Items\n\n```\n- not a bullet\n```\n",
+            doc_type: Some("T"),
+        };
+        let mut findings = Vec::new();
+        check_one(&fenced_only, &schema, &mut findings);
+        assert_eq!(findings.len(), 1, "{findings:#?}");
+
+        let bullet_after_fence = Document {
+            path: "a.md",
+            text: "# T\n\n## Items\n\n```\n# not a heading\n```\n\n- a bullet\n",
+            doc_type: Some("T"),
+        };
+        let mut findings = Vec::new();
+        check_one(&bullet_after_fence, &schema, &mut findings);
+        assert!(findings.is_empty(), "{findings:#?}");
+    }
+
+    /// Covers I018 criterion 5: a kind outside the five is reported on the
+    /// schema file, and the unreadable rule binds nothing.
+    #[test]
+    fn a_kind_outside_the_five_is_reported_on_the_schema_file() {
+        let text = "---\ntype: Schema\n---\n\n````yaml\nfrontmatter:\n  type:\n    const: T\n\
+                    sections:\n  - heading: Body\n    level: 2\n    content: essay\n````\n";
+        let (set, findings) = SchemaSet::load(&[("s.md".into(), text.into())]);
+        assert_eq!(findings.len(), 1, "{findings:#?}");
+        assert_eq!(findings[0].file, "s.md");
+        assert!(findings[0].message.contains("essay"), "{findings:#?}");
+
+        // The rule binds nothing: a body of any shape passes.
+        let found = check_documents(
+            &[Document {
+                path: "a.md",
+                text: "# T\n\n## Body\n\nanything\n",
+                doc_type: Some("T"),
+            }],
+            &set,
+        );
+        assert!(found.is_empty(), "{found:#?}");
     }
 
     #[test]
