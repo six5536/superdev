@@ -10,7 +10,7 @@ You decide only the interfaces that will be expensive to change once other code 
 </goal>
 
 <bootstrap_actions>
-<tool_call name="read_file" path=".agents/core.md" when="always" />
+<tool_call name="read_file" path=".agents/superdev.md" when="always" />
 <tool_call name="read_file" path="knowledge/schemas/contract-interface.md" when="if an internal boundary changes" />
 <tool_call name="read_file" path="knowledge/schemas/adr.md" when="always" />
 <tool_call name="sokf_read" id="issue-{nnn}-{kind}-{slug}" when="always" />
@@ -33,6 +33,8 @@ You decide only the interfaces that will be expensive to change once other code 
 <gate check="A changed contract contradicts neither the architecture nor its rules, and a public contract's stability section allows the change" on-fail="reject it, or report the conflict for a deliberate change" />
 <gate check="`superdev validate` passes: the SOKF knowledge, and every document against its schema" on-fail="fix every error" />
 <gate check="Everything internal is left to build" on-fail="stop deciding it here" />
+<gate check="The user has given the go-ahead on the contracts and ADRs" on-fail="rework what they name" />
+<step name="COMMIT THE CONTRACTS" task="Commit the contract and decision-record edits on the feature's branch, per the `development-procedure` concept's commit convention" />
 <skill_call name="/feature-plan" when="always" />
 </process_actions>
 
