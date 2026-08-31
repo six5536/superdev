@@ -8,6 +8,12 @@ links:
   - rel: references
     to: plan-004-adhoc-workflow-autonomy
     note: The adhoc plan that designed this work against the seven-phase workflow.
+  - rel: references
+    to: contract-002-cli-superdev
+    note: Adds the superdev run verbs and the hook run Stop hook.
+  - rel: references
+    to: contract-009-interface-run-state
+    note: New — the run-state seam between the driver skill and the Stop hook.
 ---
 
 # Feature: the workflow cannot deliver a feature unattended
@@ -144,5 +150,15 @@ from it; it is refiled `done` with a note once those records exist. The
 retry bound is two returns to build. `/adhoc-plan` branches
 `adhoc/<slug>`.
 
+Contract design, 2026-08-31: the
+[CLI contract][sokf:contract-002-cli-superdev] gains the `superdev run`
+verbs and the `hook run` Stop hook; the run-state seam between the driver
+skill and that hook is the new
+[run-state interface contract][sokf:contract-009-interface-run-state].
+The decisions are ADR-018 through ADR-021, and the Stop hook body is
+`superdev hook run` with a watchdog cap of ten.
+
 <!-- sokf:links -->
+[sokf:contract-002-cli-superdev]: /knowledge/contracts/public/active/contract-002-cli-superdev.md
+[sokf:contract-009-interface-run-state]: /knowledge/contracts/internal/active/contract-009-interface-run-state.md
 [sokf:plan-004-adhoc-workflow-autonomy]: /knowledge/plans/open/plan-004-adhoc-workflow-autonomy.md

@@ -18,6 +18,11 @@
 * [A Path Pack Records No Digest][sokf:adr-016-a-path-pack-records-no-digest] - the lock's digest becomes optional and is omitted for a path source, because a directory is read afresh every run so the value is never checked, and recording it rewrites one committed line on every content commit.
 * [AOKF Conformance Is Pass or Fail][sokf:adr-017-aokf-conformance-is-pass-or-fail] - the conformance ladder goes; knowledge passes or fails, because superdev grades at level 2 everywhere and the flag that reaches the other levels can only weaken a gate.
 
+* [The Unattended Loop Is a Skill, Enforced by a Hook That Never Parses a Plan][sokf:adr-018-loop-in-the-skill-enforcement-in-the-hook] - the loop over feature-plan, build and integrate lives in a knowledge-carried skill, and a managed Stop hook keeps the turn going by reading only the run state — so the slice format stays pack content and a repo without the hook still gets the behaviour.
+* [Run State Is a Session-Owned File Behind CLI Verbs, and the Hook Owns the Counter][sokf:adr-019-run-state-is-a-session-owned-file-behind-cli-verbs] - an unattended run is armed by .superdev/cache/run.toml, created exclusively by superdev run begin and owned by one session; the Stop hook body is superdev hook run, and the hook alone increments the watchdog counter, capped at ten continues without progress.
+* [A Blocked Run Ends Rather Than Pauses][sokf:adr-020-a-blocked-run-ends] - a run that hits a question only the user can answer writes it into the plan's deferred decisions and ends, releasing the run state; resuming is a fresh invocation that re-reads the plan and the answers.
+* [Nothing Unattended Reaches the Default Branch][sokf:adr-021-nothing-unattended-reaches-the-default-branch] - a feature runs on the branch /frame creates and an adhoc plan touching code on adhoc/<slug>; an unattended run commits and merges only there, and a human fast-forwards the default branch.
+
 <!-- sokf:links -->
 [sokf:adr-001-packs-manifest-section]: /knowledge/adrs/active/adr-001-packs-manifest-section.md
 [sokf:adr-002-resolve-before-plan]: /knowledge/adrs/active/adr-002-resolve-before-plan.md
@@ -36,3 +41,7 @@
 [sokf:adr-015-the-spawn-seam-carries-a-deadline]: /knowledge/adrs/active/adr-015-the-spawn-seam-carries-a-deadline.md
 [sokf:adr-016-a-path-pack-records-no-digest]: /knowledge/adrs/active/adr-016-a-path-pack-records-no-digest.md
 [sokf:adr-017-aokf-conformance-is-pass-or-fail]: /knowledge/adrs/active/adr-017-aokf-conformance-is-pass-or-fail.md
+[sokf:adr-018-loop-in-the-skill-enforcement-in-the-hook]: /knowledge/adrs/active/adr-018-loop-in-the-skill-enforcement-in-the-hook.md
+[sokf:adr-019-run-state-is-a-session-owned-file-behind-cli-verbs]: /knowledge/adrs/active/adr-019-run-state-is-a-session-owned-file-behind-cli-verbs.md
+[sokf:adr-020-a-blocked-run-ends]: /knowledge/adrs/active/adr-020-a-blocked-run-ends.md
+[sokf:adr-021-nothing-unattended-reaches-the-default-branch]: /knowledge/adrs/active/adr-021-nothing-unattended-reaches-the-default-branch.md

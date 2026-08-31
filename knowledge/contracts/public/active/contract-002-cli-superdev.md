@@ -2,7 +2,7 @@
 type: CliContract
 id: contract-002-cli-superdev
 title: CLI Contract
-description: The superdev command line — the manage verbs, the knowledge verbs, and what each one promises its callers.
+description: The superdev command line — the manage verbs, the knowledge verbs, the run verbs, and what each one promises its callers.
 lifecycle: active
 resource: /crates/app/superdev/src/main.rs
 ---
@@ -32,9 +32,18 @@ superdev template render     write a template's token-substituted tree into
   --name <NAME> --dir <DIR>  an empty directory (created if absent)
   <TEMPLATE>
 superdev sokf index [PATH]   rebuild the search index from scratch
+superdev run begin           arm an unattended run: create the run state
+  [--session <ID>]           exclusively; refuses when one exists
+  [--next <TEXT>]
+superdev run advance         record a step forward: rewrite next, reset the
+  --next <TEXT>              watchdog, refresh the owner
+superdev run end             end the run: remove the state; harmless when
+                             none exists
 superdev hook validate       the Claude Code PostToolUse hook: payload on
                              stdin, validate when the edit touched the canonical knowledge
                              or a tree the grammar governs
+superdev hook run            the Claude Code Stop hook: payload on stdin,
+                             continue an active run or let the turn end
 superdev mcp sokf            serve the canonical knowledge to agents over MCP on stdio
 superdev completions <SHELL> write a completion script to stdout
                              (bash | zsh | fish | powershell | elvish)
@@ -168,12 +177,31 @@ server use it, `validate` never opens it.
 - **`sokf index`** forces a full rebuild. Nothing else needs it: the server
   syncs lazily on every tool call. It says so when no embedding model loaded
   and the index is lexical-only.
+- **`run`** owns the state of an unattended workflow run,
+  `.superdev/cache/run.toml` — the shared seam between the driver skill and
+  the Stop hook, fixed in
+  [contract-009-interface-run-state][sokf:contract-009-interface-run-state].
+  `begin` creates it exclusively and refuses when one exists, naming the
+  owning session and `run end` as the way to clear it. `advance --next`
+  rewrites the next step, resets the watchdog counter and refreshes the
+  owning session. `end` removes the state, and says so harmlessly when none
+  exists. No `run` verb touches git, the network, or any file outside the
+  cache.
 - **`hook validate`** reads the PostToolUse payload from stdin and exits
   `0` unless the edited path is under the canonical knowledge or under a tree the grammar
   governs. Then it validates the whole set in-process and, on errors, prints
   them to stderr and exits `2` — which Claude Code hands back to the agent as a
   blocking error. It resolves the repo from `CLAUDE_PROJECT_DIR` when Claude
   Code sets it, else the working directory.
+- **`hook run`** reads the Stop payload from stdin and the run state from the
+  cache, and exits `0` when the state is absent, the payload's session is not
+  the owner, the next step is empty, or the watchdog counter has reached its
+  cap — otherwise it increments the counter and exits `2` naming the next
+  step, which Claude Code feeds back as the instruction to keep going. An
+  unreadable payload is a loud exit `2`, like `hook validate`; an unreadable
+  run state is reported and exits `0`, because a Stop hook that fails closed
+  holds every session in the repo open. It resolves the repo the same way
+  `hook validate` does.
 - **`mcp sokf`** starts the MCP server; its contract is
   [contract-003-mcp-sokf][sokf:contract-003-mcp-sokf].
 
@@ -192,5 +220,6 @@ Unreleased. Every verb, flag and exit code above may change without notice.
 [sokf:adr-009-update-queries-default-source]: /knowledge/adrs/active/adr-009-update-queries-default-source.md
 [sokf:configuration]: /knowledge/configuration.md
 [sokf:contract-003-mcp-sokf]: /knowledge/contracts/public/active/contract-003-mcp-sokf.md
+[sokf:contract-009-interface-run-state]: /knowledge/contracts/internal/active/contract-009-interface-run-state.md
 [sokf:error-handling]: /knowledge/error-handling.md
 [sokf:plan-006-adhoc-rust-format-validator]: /knowledge/plans/done/plan-006-adhoc-rust-format-validator.md
