@@ -44,3 +44,11 @@ issue's framing may be revised over time. Details: TBD at framing.
 
 - In: TBD.
 - Out: TBD.
+
+## Comments
+
+2026-08-31, the user: it might help to have dedicated skills for ideas
+and for issues — with how they would interact with `/frame` an open
+question. Candidate answer for criterion 1; the knowledge already holds
+an `ideas/` folder and `schema-idea` with no skill that files into
+them.
