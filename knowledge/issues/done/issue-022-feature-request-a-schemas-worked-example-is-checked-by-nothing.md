@@ -3,7 +3,7 @@ type: FeatureRequest
 id: issue-022-feature-request-a-schemas-worked-example-is-checked-by-nothing
 title: A schema's worked example is the thing agents copy, and it is the one part of the schema nothing checks
 description: Every schema carries an `example:` block showing a conforming document, and no check reads it — five of the twenty-three example ids on file broke their own schema's id pattern, left behind by a migration that changed the pattern and not the example.
-lifecycle: open
+lifecycle: done
 links:
   - rel: relates-to
     to: issue-018-feature-request-the-schema-layer-checks-sections-and-nothing-else
@@ -16,6 +16,23 @@ links:
 ---
 
 # Feature: a schema's worked example is checked by nothing
+
+## Resolved
+
+Delivered by [plan-017][sokf:plan-017-feature-example-conformance] in an
+unattended run. Acceptance on 2026-08-31 walked all six criteria end to
+end against the feature branch head with the full suite passing
+(640 tests): every fault class — a frontmatter value or required key, a
+section or content kind, a path link into the knowledge, an example that
+does not parse — reports an error on the schema file prefixed
+`example:`; a conforming example with fictional `sokf:` labels and
+external links passes without resolution; and `superdev validate`
+reports PASS on this repository. The behaviour is documented in
+[contract-002][sokf:contract-002-cli-superdev] and
+[contract-010][sokf:contract-010-interface-document-schemas], the
+feature-wide review's five findings were fixed before the merge
+(code-review-002), and a security review of the feature diff found no
+vulnerabilities.
 
 ## Summary
 
@@ -156,3 +173,4 @@ the example check.
 [sokf:contract-010-interface-document-schemas]: /knowledge/contracts/internal/active/contract-010-interface-document-schemas.md
 [sokf:issue-018-feature-request-the-schema-layer-checks-sections-and-nothing-else]: /knowledge/issues/done/issue-018-feature-request-the-schema-layer-checks-sections-and-nothing-else.md
 [sokf:issue-020-bug-the-schemas-do-not-ship]: /knowledge/issues/done/issue-020-bug-the-schemas-do-not-ship.md
+[sokf:plan-017-feature-example-conformance]: /knowledge/plans/done/plan-017-feature-example-conformance.md
