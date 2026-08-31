@@ -53,11 +53,13 @@ pub struct RepoReport {
 /// governs — as one report.
 ///
 /// With `paths` empty the run covers the whole repository: the bundle, and
-/// every tree the grammar's `roots` names. A non-empty `paths` replaces both.
-/// The bundle is then validated only when one of the given paths is the
-/// bundle or contains it, so naming one skill checks that skill and nothing
-/// else. Findings are grouped by file, so a file both checks have something to
-/// say about is reported once.
+/// every tree the grammar's `roots` names. A non-empty `paths` replaces both
+/// for what is reported: findings name only files the paths cover. The run
+/// still reads the knowledge and the schema set, and a named file joins the
+/// document candidates, so a named document gets exactly the findings a bare
+/// run gives it (ADR-026). The bundle is validated as a whole only when one
+/// of the given paths is the bundle or contains it. Findings are grouped by
+/// file, so a file both checks have something to say about is reported once.
 ///
 /// Each half is called, not changed: its findings arrive exactly as it emits
 /// them, with the SOKF half's knowledge-relative paths respelt against the
@@ -74,6 +76,8 @@ pub fn validate_repo(
     let repo_root = normalise(&std::env::current_dir().unwrap_or_default(), repo_root);
     let bundle = normalise(&repo_root, bundle);
     let paths: Vec<PathBuf> = paths.iter().map(|p| normalise(&repo_root, p)).collect();
+    // What the paths cover, spelt the way findings are; empty covers all.
+    let scopes: Vec<String> = paths.iter().map(|p| relative(&repo_root, p)).collect();
 
     let mut findings = Vec::new();
     let mut concept_count = 0;
@@ -81,10 +85,13 @@ pub fn validate_repo(
     let mut subjects: Vec<lifecycle::Subject> = Vec::new();
 
     // Named explicitly, so unreadable knowledge is an error rather than a
-    // silent skip; unnamed, so a repository without any is simply a repository
-    // whose governed files are still worth checking.
+    // silent skip. A named run loads the knowledge too — a named document
+    // gets bare-run parity only with the candidates and the links in hand
+    // (ADR-026) — but the knowledge is reported as a whole only when
+    // `covered`; the coverage filter below drops the rest.
     let named = paths.iter().any(|p| bundle.starts_with(p));
-    if named || (paths.is_empty() && bundle.is_dir()) {
+    let covered = named || paths.is_empty();
+    if named || bundle.is_dir() {
         let knowledge = load_bundle(&bundle)?;
         let prefix = relative(&repo_root, &bundle);
         let spell = |path: &str| {
@@ -114,7 +121,9 @@ pub fn validate_repo(
             ));
         }
         let report = sokf::validate(&knowledge, &repo_root);
-        concept_count = report.concept_count;
+        if covered {
+            concept_count = report.concept_count;
+        }
         findings.extend(report.findings.into_iter().map(|f| Finding {
             path: spell(&f.path),
             message: f.message,
@@ -134,11 +143,26 @@ pub fn validate_repo(
         for path in &paths {
             if path.is_dir() {
                 collect(&repo_root, path, g, &mut files)?;
-            } else if schema::detect_kind(path, g, true).is_some() {
+                continue;
+            }
+            let name = relative(&repo_root, path);
+            let text = read(path)?;
+            if schema::detect_kind(path, g, true).is_some() {
                 // A file named on the command line is checked whatever it is
                 // called, as the reference does: the fallback kind applies
                 // where the walk would have passed it over.
-                files.push((relative(&repo_root, path), read(path)?));
+                files.push((name.clone(), text.clone()));
+            }
+            // A named file joins the document candidates, so the schema half
+            // reaches it (ADR-026). Schemas and indexes stay out, as they do
+            // above; a knowledge concept is already a candidate.
+            if !name.contains("/schemas/")
+                && !name.ends_with("/index.md")
+                && name != "index.md"
+                && !documents.iter().any(|(p, ..)| *p == name)
+            {
+                let doc_type = frontmatter_type(&text);
+                documents.push((name, text, doc_type));
             }
         }
     }
@@ -149,22 +173,36 @@ pub fn validate_repo(
         fatal: f.fatal,
     }));
 
-    // Documents against the schemas that govern them. The schemas come from
-    // the files just walked — `knowledge/schemas` is one of the grammar's
-    // roots — so a repository whose schemas were not read simply checks no
-    // documents, rather than reporting every one of them as ungoverned.
-    let schema_files: Vec<(String, String)> = files
-        .iter()
-        .filter(|(name, _)| name.contains("/schemas/") && !name.ends_with("/index.md"))
-        .cloned()
-        .collect();
+    // Documents against the schemas that govern them. In a bare run the
+    // schemas come from the files just walked — `knowledge/schemas` is one of
+    // the grammar's roots — so a repository whose schemas were not read simply
+    // checks no documents, rather than reporting every one of them as
+    // ungoverned. A named run does not walk the roots, so its schema set
+    // comes from the resolved knowledge's own schemas directory: the same
+    // files, read the same way (ADR-026).
+    let is_schema = |name: &str| name.contains("/schemas/") && !name.ends_with("/index.md");
+    let schema_files: Vec<(String, String)> = if paths.is_empty() {
+        files
+            .iter()
+            .filter(|(name, _)| is_schema(name))
+            .cloned()
+            .collect()
+    } else {
+        let dir = bundle.join("schemas");
+        let mut walked = Vec::new();
+        if dir.is_dir() {
+            collect(&repo_root, &dir, g, &mut walked)?;
+        }
+        walked.into_iter().filter(|(name, _)| is_schema(name)).collect()
+    };
     let mut schemas = 0;
     let mut checked = 0;
     if !schema_files.is_empty() {
         // Two documents carry no frontmatter and are named by glob instead.
+        // Skipped when already a candidate, as a named README.md is.
         for name in ["README.md", "CHANGELOG.md"] {
             let path = repo_root.join(name);
-            if path.is_file() {
+            if path.is_file() && !documents.iter().any(|(p, ..)| p == name) {
                 documents.push((name.to_string(), read(&path)?, None));
             }
         }
@@ -183,7 +221,7 @@ pub fn validate_repo(
             .collect();
         checked = candidates
             .iter()
-            .filter(|d| set.governs(d.path, d.doc_type))
+            .filter(|d| set.governs(d.path, d.doc_type) && covers(&scopes, d.path))
             .count();
         schema_findings.extend(schema::document::check_documents(&candidates, &set));
         // The filing check: a document's `lifecycle` against the folder
@@ -195,6 +233,9 @@ pub fn validate_repo(
             fatal: f.fatal,
         }));
     }
+    // Findings name only what the paths cover (ADR-026): the run reads the
+    // whole knowledge for parity, and reports the files it was asked about.
+    findings.retain(|f| covers(&scopes, &f.path));
     // Stable, so each half keeps the order it emitted while the two interleave
     // by file.
     findings.sort_by(|a, b| a.path.cmp(&b.path));
@@ -283,6 +324,31 @@ fn walk(dir: &Path, g: &Grammar, out: &mut Vec<PathBuf>) -> Result<()> {
         }
     }
     Ok(())
+}
+
+/// Whether the named scopes cover `file` — it is one of them, or under one.
+/// An empty list is a bare run and covers everything, as does a scope that
+/// names the repository root itself.
+fn covers(scopes: &[String], file: &str) -> bool {
+    scopes.is_empty()
+        || scopes.iter().any(|s| {
+            s.is_empty()
+                || file == s
+                || file
+                    .strip_prefix(s.as_str())
+                    .is_some_and(|rest| rest.starts_with('/'))
+        })
+}
+
+/// The frontmatter `type` of `text`, when the file opens with one — the
+/// dispatch key a file named on the command line joins the candidates with.
+fn frontmatter_type(text: &str) -> Option<String> {
+    let lines: Vec<&str> = text.lines().collect();
+    let split = schema::read::split_frontmatter(&lines)?;
+    schema::read::parse_frontmatter(&split.fm)
+        .into_iter()
+        .find(|e| e.key == "type")
+        .and_then(|e| e.scalar)
 }
 
 fn read(path: &Path) -> Result<String> {
@@ -523,5 +589,184 @@ mod tests {
     #[test]
     fn a_path_outside_the_repository_keeps_its_own_spelling() {
         assert_eq!(relative(Path::new("/a"), Path::new("/b/c.md")), "/b/c.md");
+    }
+
+    /// The repository the named-run parity tests share: a manifest, one
+    /// schema, a concept violating it, and a concept whose type names no
+    /// schema.
+    fn parity_repo() -> tempfile::TempDir {
+        let dir = tempfile::tempdir().unwrap();
+        let knowledge = dir.path().join("knowledge");
+        std::fs::create_dir_all(knowledge.join("schemas")).unwrap();
+        std::fs::write(
+            knowledge.join("manifest.sokf.yaml"),
+            "sokf: \"0.3\"\nname: t\n",
+        )
+        .unwrap();
+        std::fs::write(
+            knowledge.join("schemas/thing.md"),
+            r#"---
+type: Schema
+id: schema-thing
+title: Thing Schema
+description: A governed thing, for the test.
+---
+
+# Thing Schema
+
+Structural rules for a thing.
+
+````yaml
+description: A governed thing.
+
+frontmatter:
+  type:
+    const: Thing
+
+sections:
+  - heading: "First"
+    level: 2
+    required: true
+    content: prose
+  - heading: "Second"
+    level: 2
+    required: true
+    content: prose
+
+example: |
+  ---
+  type: Thing
+  ---
+
+  # A thing
+
+  ## First
+
+  Prose.
+
+  ## Second
+
+  More prose.
+````
+"#,
+        )
+        .unwrap();
+        std::fs::write(
+            knowledge.join("a.md"),
+            "---\ntype: Thing\nid: a\n---\n\n# A\n\n## First\n\nx\n",
+        )
+        .unwrap();
+        std::fs::write(
+            knowledge.join("b.md"),
+            "---\ntype: Invented\nid: b\n---\n\n# B\n\nx\n",
+        )
+        .unwrap();
+        dir
+    }
+
+    /// A named concept gets every finding the bare run reports for that
+    /// file, and the run reports nothing about any other file (I019
+    /// criterion 1, ADR-026).
+    #[test]
+    fn a_named_concept_gets_the_bare_runs_findings_for_that_file() {
+        let dir = parity_repo();
+        let knowledge = dir.path().join("knowledge");
+        let g = live();
+        let bare = validate_repo(dir.path(), &knowledge, &[], &g).unwrap();
+        let one = vec![PathBuf::from("knowledge/a.md")];
+        let named = validate_repo(dir.path(), &knowledge, &one, &g).unwrap();
+
+        assert!(named.schemas > 0, "the schema set was loaded");
+        assert!(named.documents > 0, "the named file was checked");
+        let bare_for_file: Vec<&Finding> = bare
+            .report
+            .findings
+            .iter()
+            .filter(|f| f.path == "knowledge/a.md")
+            .collect();
+        assert!(!bare_for_file.is_empty(), "the fixture violates its schema");
+        for finding in &bare_for_file {
+            assert!(
+                named
+                    .report
+                    .findings
+                    .iter()
+                    .any(|f| f.path == finding.path && f.message == finding.message),
+                "bare finding missing from the named run: {finding:#?}\nnamed: {:#?}",
+                named.report.findings
+            );
+        }
+        assert!(
+            named.report.findings.iter().all(|f| f.path == "knowledge/a.md"),
+            "{:#?}",
+            named.report.findings
+        );
+    }
+
+    /// A named README.md is dispatched by `schema-readme`'s glob, and
+    /// CHANGELOG.md likewise (I019 criterion 2): the schema set loads and
+    /// the named file is the one document checked.
+    #[test]
+    fn a_named_readme_or_changelog_is_dispatched_by_glob() {
+        let root = repo();
+        let g = live();
+        for name in ["README.md", "CHANGELOG.md"] {
+            let one = vec![PathBuf::from(name)];
+            let run = validate_repo(&root, &root.join("knowledge"), &one, &g).unwrap();
+            assert!(run.schemas > 0, "{name}: the schema set was loaded");
+            assert_eq!(run.documents, 1, "{name} is governed by a glob schema");
+            assert!(
+                run.report.findings.iter().all(|f| f.path == name),
+                "{name}: {:#?}",
+                run.report.findings
+            );
+        }
+    }
+
+    /// A named file whose type names no schema gets the bare run's
+    /// unknown-type finding (I019 criterion 3).
+    #[test]
+    fn a_named_file_with_an_unknown_type_gets_the_unknown_type_finding() {
+        let dir = parity_repo();
+        let one = vec![PathBuf::from("knowledge/b.md")];
+        let named =
+            validate_repo(dir.path(), &dir.path().join("knowledge"), &one, &live()).unwrap();
+        assert!(
+            named
+                .report
+                .findings
+                .iter()
+                .any(|f| f.path == "knowledge/b.md"
+                    && f.message.contains("type `Invented` names no schema")),
+            "{:#?}",
+            named.report.findings
+        );
+        assert!(
+            named.report.findings.iter().all(|f| f.path == "knowledge/b.md"),
+            "{:#?}",
+            named.report.findings
+        );
+    }
+
+    /// A named run reports no finding about a file the paths do not cover
+    /// (I019 criterion 1), where the bare run does report that file.
+    #[test]
+    fn a_named_run_reports_nothing_outside_its_paths() {
+        let dir = parity_repo();
+        let knowledge = dir.path().join("knowledge");
+        let g = live();
+        let bare = validate_repo(dir.path(), &knowledge, &[], &g).unwrap();
+        assert!(
+            bare.report.findings.iter().any(|f| f.path == "knowledge/b.md"),
+            "the bare run reports the uncovered file: {:#?}",
+            bare.report.findings
+        );
+        let one = vec![PathBuf::from("knowledge/a.md")];
+        let named = validate_repo(dir.path(), &knowledge, &one, &g).unwrap();
+        assert!(
+            named.report.findings.iter().all(|f| f.path != "knowledge/b.md"),
+            "{:#?}",
+            named.report.findings
+        );
     }
 }

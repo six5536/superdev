@@ -163,6 +163,18 @@ fn validate_fails_a_broken_skill_with_exit_1() {
         .code(1);
 }
 
+/// An unreadable `PATH` fails naming itself (contract-002; I019 criterion 5).
+#[test]
+fn validate_fails_an_unreadable_path_naming_it() {
+    let out = superdev()
+        .current_dir(REPO_ROOT)
+        .args(["validate", "no/such/file.md"])
+        .assert()
+        .code(2);
+    let stderr = String::from_utf8_lossy(&out.get_output().stderr).into_owned();
+    assert!(stderr.contains("no/such/file.md"), "{stderr}");
+}
+
 #[test]
 fn validate_json_is_machine_readable() {
     let out = superdev()
