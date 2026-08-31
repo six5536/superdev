@@ -20,6 +20,7 @@ use serde::Deserialize;
 use super::Finding;
 use super::grammar::Ordered;
 use super::re;
+use crate::validate::sokf;
 
 /// One section rule from a schema's contract.
 #[derive(Debug, Clone, Deserialize)]
@@ -339,7 +340,7 @@ pub fn check_examples(schemas: &[(String, String)]) -> Vec<Finding> {
             .split('\n')
             .map(|l| l.strip_suffix('\r').unwrap_or(l))
             .collect();
-        match super::read::split_frontmatter(&lines) {
+        let body_start = match super::read::split_frontmatter(&lines) {
             Some(split) => {
                 let fm = split.fm.join("\n");
                 if let Err(e) = serde_yaml_ng::from_str::<serde_yaml_ng::Value>(&fm) {
@@ -348,6 +349,7 @@ pub fn check_examples(schemas: &[(String, String)]) -> Vec<Finding> {
                     ));
                     continue;
                 }
+                split.body_start
             }
             None => {
                 if schema.type_const().is_some() {
@@ -356,8 +358,9 @@ pub fn check_examples(schemas: &[(String, String)]) -> Vec<Finding> {
                     );
                     continue;
                 }
+                0
             }
-        }
+        };
         let doc = Document {
             path: file,
             text: example,
@@ -365,12 +368,42 @@ pub fn check_examples(schemas: &[(String, String)]) -> Vec<Finding> {
         };
         let mut broke = Vec::new();
         check_one(&doc, &schema, &mut broke);
+        check_link_form(file, &lines[body_start..], &mut broke);
         findings.extend(broke.into_iter().map(|f| Finding {
             message: format!("example: {}", f.message),
             ..f
         }));
     }
     findings
+}
+
+/// The form of an example body's links, per ADR-025: a concept link takes
+/// the `[text][sokf:<id>]` reference form, so a link whose target is a path
+/// into the knowledge — the `knowledge/` directory, in either the repo-root
+/// or the bare form — is an error. No id or target is resolved: a fictional
+/// `sokf:` label passes, a URL or a repository path outside the knowledge
+/// keeps its ordinary markdown form, and an image names a picture, never a
+/// concept, so nothing is asked of one.
+fn check_link_form(file: &str, body: &[&str], findings: &mut Vec<Finding>) {
+    for link in sokf::scan_body(&body.join("\n")).links {
+        if link.id.is_some() || link.image {
+            continue;
+        }
+        let Some(path) = sokf::link_path(&link.dest) else {
+            continue;
+        };
+        if path.trim_start_matches('/').starts_with("knowledge/") {
+            findings.push(Finding {
+                file: file.to_string(),
+                message: format!(
+                    "body link names a path into the knowledge: {} — a concept link takes \
+                     the [text][sokf:<id>] form",
+                    link.dest
+                ),
+                fatal: true,
+            });
+        }
+    }
 }
 
 /// One document to check: its repo-relative path, its text, and the `type`
@@ -1772,6 +1805,64 @@ mod tests {
                 && findings[0].message.contains("not YAML"),
             "{findings:#?}"
         );
+    }
+
+    /// Covers I022 criterion 3: an example body link whose target is a path
+    /// into the knowledge is an error naming the schema file — the
+    /// `[text][sokf:<id>]` form is the accepted form for a concept link
+    /// (ADR-025). Inline and reference forms are both refused.
+    #[test]
+    fn an_example_link_into_the_knowledge_is_a_finding_on_the_schema_file() {
+        let schemas = with_example(
+            "frontmatter:\n  type:\n    const: T\n",
+            "---\ntype: T\n---\n\n# A\n\nSee [the plan](/knowledge/plans/open/plan-001-x.md)\n\
+             and [the config][cfg].\n\n[cfg]: knowledge/config.md\n",
+        );
+        let findings = check_examples(&schemas);
+        assert_eq!(findings.len(), 2, "{findings:#?}");
+        assert!(findings.iter().all(|f| f.file == "s.md"), "{findings:#?}");
+        let messages: Vec<&str> = findings.iter().map(|f| f.message.as_str()).collect();
+        assert!(
+            messages.iter().any(|m| m.contains(
+                "example: body link names a path into the knowledge: \
+                 /knowledge/plans/open/plan-001-x.md"
+            ) && m.contains("[text][sokf:<id>]")),
+            "{messages:?}"
+        );
+        assert!(
+            messages.iter().any(|m| m.contains(
+                "example: body link names a path into the knowledge: knowledge/config.md"
+            )),
+            "{messages:?}"
+        );
+    }
+
+    /// Covers I022 criterion 4: a `[text][sokf:<id>]` link naming no real
+    /// concept passes — no id is resolved, with or without a definition
+    /// block, and the definition's knowledge path is never read as a target.
+    #[test]
+    fn a_fictional_sokf_label_in_an_example_passes() {
+        let schemas = with_example(
+            "frontmatter:\n  type:\n    const: T\n",
+            "---\ntype: T\n---\n\n# A\n\nSee [config][sokf:no-such-concept] and \
+             [ghost][sokf:undefined-label].\n\n<!-- sokf:links -->\n\
+             [sokf:no-such-concept]: /knowledge/config.md\n",
+        );
+        let findings = check_examples(&schemas);
+        assert!(findings.is_empty(), "{findings:#?}");
+    }
+
+    /// Covers I022 criterion 4: a URL link and a repository-path link outside
+    /// the knowledge each pass in their ordinary markdown form.
+    #[test]
+    fn a_url_and_a_repository_path_outside_the_knowledge_pass() {
+        let schemas = with_example(
+            "frontmatter:\n  type:\n    const: T\n",
+            "---\ntype: T\n---\n\n# A\n\nSee [docs](https://docs.rs/clap), \
+             [the source](/crates/lib/superdev-core/src/lib.rs) and [the readme](README.md).\n",
+        );
+        let findings = check_examples(&schemas);
+        assert!(findings.is_empty(), "{findings:#?}");
     }
 
     /// A schema with no example is the grammar check's finding, not this
