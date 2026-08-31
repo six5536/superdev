@@ -21,7 +21,7 @@
 use std::path::{Path, PathBuf};
 
 use superdev_core::validate::schema::document::{
-    Document, SchemaSet, check_declarations, check_documents,
+    Document, SchemaSet, check_declarations, check_documents, check_examples,
 };
 
 /// The fixture root.
@@ -73,6 +73,8 @@ fn snapshot(case: &str) {
     // schema check; this harness runs only the document layer, so it asks
     // for them explicitly.
     findings.extend(check_declarations(&schemas));
+    // Each schema's example against the schema declaring it (ADR-024).
+    findings.extend(check_examples(&schemas));
     // The types are held here so the documents can borrow them: a `Document`
     // borrows its type, and leaking one per case to satisfy the lifetime
     // would be a leak in the test rather than a fix to it.
@@ -175,4 +177,9 @@ fn uncompilable_pattern() {
 #[test]
 fn missing_required_key() {
     snapshot("missing-required-key");
+}
+
+#[test]
+fn broken_example() {
+    snapshot("broken-example");
 }

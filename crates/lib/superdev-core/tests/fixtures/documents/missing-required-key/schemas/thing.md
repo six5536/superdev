@@ -26,5 +26,11 @@ frontmatter:
     enum: [draft, stable]
 
 example: |
-  x
+  ---
+  type: Thing
+  id: thing-001-a-thing
+  title: A thing
+  ---
+
+  # A thing
 ````

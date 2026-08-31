@@ -19,5 +19,9 @@ frontmatter:
     pattern: '(unclosed'
 
 example: |
-  x
+  ---
+  type: Thing
+  ---
+
+  # A thing
 ````

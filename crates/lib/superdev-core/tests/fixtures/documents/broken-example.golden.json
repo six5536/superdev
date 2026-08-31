@@ -1,0 +1,35 @@
+{
+  "findings": [
+    {
+      "file": "notyaml.md",
+      "message": "example: does not parse as a document — the frontmatter is not YAML: did not find expected ',' or ']' at line 2 column 1, while parsing a flow sequence at line 1 column 7",
+      "severity": "error"
+    },
+    {
+      "file": "thing.md",
+      "message": "example: missing required section \"Context\" (thing.md)",
+      "severity": "error"
+    },
+    {
+      "file": "thing.md",
+      "message": "example: section \"Items\" carries no bullet, and thing.md declares bullet-list content",
+      "severity": "error"
+    },
+    {
+      "file": "thing.md",
+      "message": "example: frontmatter `id` is `thing-1`, and thing.md declares pattern `^thing-\\d{3}-[a-z0-9-]+$`",
+      "severity": "error"
+    },
+    {
+      "file": "thing.md",
+      "message": "example: frontmatter `title` is absent, and thing.md requires it",
+      "severity": "error"
+    },
+    {
+      "file": "unparsed.md",
+      "message": "example: does not parse as a document — no frontmatter block",
+      "severity": "error"
+    }
+  ],
+  "passed": false
+}

@@ -23,5 +23,13 @@ sections:
     content: bullet-list
 
 example: |
-  x
+  ---
+  type: Thing
+  ---
+
+  # A thing
+
+  ## Items
+
+  - one
 ````

@@ -117,6 +117,11 @@ pub struct DocSchema {
     /// binding nothing, rather than a schema that fails to parse.
     #[serde(default)]
     frontmatter: Ordered<Option<KeyConstraint>>,
+    /// The worked example — one document satisfying this schema, checked in
+    /// place by `check_examples` (ADR-024). Absence is the grammar's schema
+    /// check's finding, not this module's.
+    #[serde(default)]
+    example: Option<String>,
 }
 
 impl DocSchema {
@@ -302,6 +307,68 @@ pub fn check_declarations(schemas: &[(String, String)]) -> Vec<Finding> {
                 });
             }
         }
+    }
+    findings
+}
+
+/// Every schema's example against the schema that declares it — in place,
+/// with no dispatch, per ADR-024. Every failure is a finding on the schema
+/// file, prefixed `example:` so a reader sees the example broke rather than
+/// the schema's own shape. An example that does not parse as a document is a
+/// finding too: a type-dispatched schema's example must open with a
+/// frontmatter block whose text is YAML, while a glob-dispatched schema's
+/// documents carry no frontmatter, so its example owes none.
+#[must_use]
+pub fn check_examples(schemas: &[(String, String)]) -> Vec<Finding> {
+    let mut findings = Vec::new();
+    for (file, text) in schemas {
+        let Ok(Some(schema)) = DocSchema::parse(file, text) else {
+            continue; // `SchemaSet::load` reports a contract that fails.
+        };
+        let Some(example) = schema.example.as_deref() else {
+            continue; // The grammar's schema check reports a missing example.
+        };
+        let mut push = |message: String| {
+            findings.push(Finding {
+                file: file.clone(),
+                message,
+                fatal: true,
+            });
+        };
+        let lines: Vec<&str> = example
+            .split('\n')
+            .map(|l| l.strip_suffix('\r').unwrap_or(l))
+            .collect();
+        match super::read::split_frontmatter(&lines) {
+            Some(split) => {
+                let fm = split.fm.join("\n");
+                if let Err(e) = serde_yaml_ng::from_str::<serde_yaml_ng::Value>(&fm) {
+                    push(format!(
+                        "example: does not parse as a document — the frontmatter is not YAML: {e}"
+                    ));
+                    continue;
+                }
+            }
+            None => {
+                if schema.type_const().is_some() {
+                    push(
+                        "example: does not parse as a document — no frontmatter block".to_string(),
+                    );
+                    continue;
+                }
+            }
+        }
+        let doc = Document {
+            path: file,
+            text: example,
+            doc_type: None,
+        };
+        let mut broke = Vec::new();
+        check_one(&doc, &schema, &mut broke);
+        findings.extend(broke.into_iter().map(|f| Finding {
+            message: format!("example: {}", f.message),
+            ..f
+        }));
     }
     findings
 }
@@ -864,6 +931,7 @@ mod tests {
                 sections: Vec::new(),
                 sections_prohibited: Vec::new(),
                 frontmatter: Ordered::default(),
+                example: None,
             }],
         };
         // Nothing from node_modules is a candidate, so nothing is governed.
@@ -1558,6 +1626,168 @@ mod tests {
             findings[0].message.contains("does not deserialize"),
             "{findings:#?}"
         );
+    }
+
+    /// One schema file carrying the given yaml contract and an `example:`
+    /// block holding `example`, as `check_examples` takes them.
+    fn with_example(contract: &str, example: &str) -> Vec<(String, String)> {
+        let indented: String = example
+            .split('\n')
+            .map(|l| {
+                if l.is_empty() {
+                    String::new()
+                } else {
+                    format!("  {l}")
+                }
+            })
+            .collect::<Vec<_>>()
+            .join("\n");
+        let text =
+            format!("---\ntype: Schema\n---\n\n````yaml\n{contract}example: |\n{indented}\n````\n");
+        vec![("s.md".to_string(), text)]
+    }
+
+    /// Covers I022 criterion 1: an example whose `id` breaks the declaring
+    /// schema's own pattern is an error naming the schema file, prefixed so a
+    /// reader sees the example broke.
+    #[test]
+    fn an_example_id_breaking_its_own_pattern_is_a_finding_on_the_schema_file() {
+        let schemas = with_example(
+            "frontmatter:\n  type:\n    const: T\n  id:\n    pattern: '^t-\\d{3}$'\n",
+            "---\ntype: T\nid: t-1\n---\n\n# A\n",
+        );
+        let findings = check_examples(&schemas);
+        assert_eq!(findings.len(), 1, "{findings:#?}");
+        assert_eq!(findings[0].file, "s.md");
+        assert!(
+            findings[0].message.starts_with("example: "),
+            "{findings:#?}"
+        );
+        assert!(
+            findings[0].message.contains("`id` is `t-1`")
+                && findings[0].message.contains("pattern"),
+            "{findings:#?}"
+        );
+    }
+
+    /// Covers I022 criterion 1: an example lacking a key the declaring schema
+    /// marks required is an error naming the schema file.
+    #[test]
+    fn an_example_lacking_a_required_key_is_a_finding_on_the_schema_file() {
+        let schemas = with_example(
+            "frontmatter:\n  type:\n    required: true\n    const: T\n  id:\n    required: true\n",
+            "---\ntype: T\n---\n\n# A\n",
+        );
+        let findings = check_examples(&schemas);
+        assert_eq!(findings.len(), 1, "{findings:#?}");
+        assert_eq!(findings[0].file, "s.md");
+        assert!(
+            findings[0]
+                .message
+                .contains("example: frontmatter `id` is absent"),
+            "{findings:#?}"
+        );
+    }
+
+    /// Covers I022 criterion 2: an example missing a required section, and
+    /// one whose section body lacks its declared content kind, are each
+    /// errors naming the schema file.
+    #[test]
+    fn an_example_breaking_the_section_rules_is_a_finding_on_the_schema_file() {
+        let schemas = with_example(
+            "frontmatter:\n  type:\n    const: T\nsections:\n  - heading: Context\n    level: 2\n\
+             \x20   required: true\n  - heading: Items\n    level: 2\n    content: bullet-list\n",
+            "---\ntype: T\n---\n\n# A\n\n## Items\n\nprose only\n",
+        );
+        let findings = check_examples(&schemas);
+        let messages: Vec<&str> = findings.iter().map(|f| f.message.as_str()).collect();
+        assert_eq!(findings.len(), 2, "{findings:#?}");
+        assert!(findings.iter().all(|f| f.file == "s.md"), "{findings:#?}");
+        assert!(
+            messages
+                .iter()
+                .any(|m| m.contains("example: missing required section \"Context\"")),
+            "{messages:?}"
+        );
+        assert!(
+            messages
+                .iter()
+                .any(|m| m.contains("example: section \"Items\" carries no bullet")),
+            "{messages:?}"
+        );
+    }
+
+    /// Covers I022 criterion 6: an example satisfying its schema yields no
+    /// finding — one dispatched by type with its frontmatter, and one
+    /// dispatched by glob, whose documents carry no frontmatter at all.
+    #[test]
+    fn a_conforming_example_yields_no_finding() {
+        let by_type = with_example(
+            "frontmatter:\n  type:\n    required: true\n    const: T\n  id:\n    required: true\n\
+             \x20   pattern: '^t-\\d{3}$'\nsections:\n  - heading: Context\n    level: 2\n\
+             \x20   required: true\n    content: prose\n",
+            "---\ntype: T\nid: t-001\n---\n\n# A\n\n## Context\n\nWhy it exists.\n",
+        );
+        let findings = check_examples(&by_type);
+        assert!(findings.is_empty(), "{findings:#?}");
+
+        let by_glob = with_example(
+            "target-files: 'README.md'\nsections:\n  - heading: Install\n    level: 2\n\
+             \x20   required: true\n    content: code\n",
+            "# X\n\n## Install\n\n```sh\nls\n```\n",
+        );
+        let findings = check_examples(&by_glob);
+        assert!(findings.is_empty(), "{findings:#?}");
+    }
+
+    /// Covers I022 criterion 5: an example with no frontmatter block, and one
+    /// whose frontmatter is not YAML, are each errors naming the schema file.
+    /// The block is owed only where the schema dispatches by type — a
+    /// glob-dispatched schema's documents carry no frontmatter to show.
+    #[test]
+    fn an_example_that_does_not_parse_as_a_document_is_a_finding() {
+        let no_block = with_example("frontmatter:\n  type:\n    const: T\n", "# A\n\nprose\n");
+        let findings = check_examples(&no_block);
+        assert_eq!(findings.len(), 1, "{findings:#?}");
+        assert_eq!(findings[0].file, "s.md");
+        assert!(
+            findings[0]
+                .message
+                .contains("example: does not parse as a document")
+                && findings[0].message.contains("no frontmatter block"),
+            "{findings:#?}"
+        );
+
+        let not_yaml = with_example(
+            "frontmatter:\n  type:\n    const: T\n",
+            "---\ntype: [unclosed\n---\n\n# A\n",
+        );
+        let findings = check_examples(&not_yaml);
+        assert_eq!(findings.len(), 1, "{findings:#?}");
+        assert_eq!(findings[0].file, "s.md");
+        assert!(
+            findings[0]
+                .message
+                .contains("example: does not parse as a document")
+                && findings[0].message.contains("not YAML"),
+            "{findings:#?}"
+        );
+    }
+
+    /// A schema with no example is the grammar check's finding, not this
+    /// one's — and a contract that does not deserialize is `SchemaSet::load`'s
+    /// — so neither is said twice here.
+    #[test]
+    fn a_missing_example_and_a_broken_contract_are_not_reported_here() {
+        let text =
+            "---\ntype: Schema\n---\n\n````yaml\nfrontmatter:\n  type:\n    const: T\n````\n";
+        let findings = check_examples(&[("s.md".to_string(), text.to_string())]);
+        assert!(findings.is_empty(), "{findings:#?}");
+
+        let broken = "---\ntype: Schema\n---\n\n````yaml\nfrontmatter:\n  type:\n    const: T\n\
+                      \x20 status:\n    enum:\n      - draft: what it means\n````\n";
+        let findings = check_examples(&[("s.md".to_string(), broken.to_string())]);
+        assert!(findings.is_empty(), "{findings:#?}");
     }
 
     #[test]

@@ -25,5 +25,9 @@ frontmatter:
     description: Guidance only, binding nothing.
 
 example: |
-  x
+  ---
+  type: Thing
+  ---
+
+  # A thing
 ````

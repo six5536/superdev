@@ -36,5 +36,17 @@ sections-prohibited:
   - "Overview"
 
 example: |
-  x
+  ---
+  type: Thing
+  ---
+
+  # A thing
+
+  ## First
+
+  Prose.
+
+  ## Second
+
+  More prose.
 ````

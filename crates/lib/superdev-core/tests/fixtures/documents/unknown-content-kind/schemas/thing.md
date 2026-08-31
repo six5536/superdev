@@ -23,5 +23,13 @@ sections:
     content: essay
 
 example: |
-  x
+  ---
+  type: Thing
+  ---
+
+  # A thing
+
+  ## Body
+
+  Anything.
 ````
