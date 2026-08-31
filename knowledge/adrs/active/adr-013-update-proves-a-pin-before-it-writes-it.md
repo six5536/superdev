@@ -13,7 +13,6 @@ links:
 
 # ADR-013: `update` proves a pin before it writes it
 
-- Status: accepted
 - Date: 2026-08-26
 - Deciders: project owner
 

@@ -8,7 +8,6 @@ lifecycle: active
 
 # ADR-020: A Blocked Run Ends Rather Than Pauses
 
-- Status: accepted
 - Date: 2026-08-31
 - Deciders: superdev maintainers
 

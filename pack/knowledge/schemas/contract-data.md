@@ -33,15 +33,22 @@ frontmatter:
     description: >
       contract-{nnn}-data-{slug}, the slug naming which store. The
       number is the next free one across every contract, public and
-      private together and every lifecycle folder — a duplicate is
+      internal together and every lifecycle folder — a duplicate is
       an error.
   lifecycle:
     enum: [active, deprecated]
 
 sections-ordered: true
 sections:
-  - heading: "Store"
+  - heading-pattern: '^Data contract: .+$'
     level: 1
+    required: true
+    content: prose
+    description: >
+      One paragraph: the surface this contract binds and for whom —
+      link the ADRs behind it.
+  - heading: "Store"
+    level: 2
     required: true
     content: prose
     description: >
@@ -49,7 +56,7 @@ sections:
       who else may read it. A store no one outside the owning component reads
       is still a contract with the next release of that component.
   - heading: "Schema"
-    level: 1
+    level: 2
     required: true
     content: code
     description: >
@@ -57,7 +64,7 @@ sections:
       documents, the key layout. One fenced block, tagged. Prose describes;
       this block defines.
   - heading: "Constraints"
-    level: 1
+    level: 2
     required: true
     content: bullet-list
     description: >
@@ -65,7 +72,7 @@ sections:
       nullable and what is not, retention and deletion, and any ordering or
       uniqueness a reader may depend on.
   - heading: "Migration"
-    level: 1
+    level: 2
     required: true
     content: prose
     description: >
@@ -73,7 +80,7 @@ sections:
       downtime, whether old and new code read the same rows during a rollout,
       and how a migration is rolled back.
   - heading: "Stability"
-    level: 1
+    level: 2
     required: true
     content: prose
     description: >
@@ -89,13 +96,18 @@ example: |
   lifecycle: active
   ---
 
-  # Store
+  # Data contract: widget store
+
+  The widget store: Postgres, owned by the API service and read by
+  reporting.
+
+  ## Store
 
   Postgres 16, one database per environment. The API service owns every write.
   Reporting connects with a read-only role and may read `widget` but never
   `widget_audit`, which carries user identifiers.
 
-  # Schema
+  ## Schema
 
   ```sql
   CREATE TABLE widget (
@@ -110,7 +122,7 @@ example: |
       ON widget (tenant_id, lower(name)) WHERE deleted_at IS NULL;
   ```
 
-  # Constraints
+  ## Constraints
 
   - `id` is a v7 uuid, so insertion order and creation order agree.
   - A name is unique per tenant, case-insensitively, among live rows only.
@@ -119,7 +131,7 @@ example: |
   - The retention job removes soft-deleted rows ninety days after
     `deleted_at`, which is the point after which a restore is impossible.
 
-  # Migration
+  ## Migration
 
   Expand then contract, always. A release adds a nullable column and
   backfills; the next reads it; a third makes it `NOT NULL` and drops what it
@@ -127,7 +139,7 @@ example: |
   deploy. A migration that cannot be split this way takes a maintenance window,
   and its rollback is a restore from the pre-migration snapshot.
 
-  # Stability
+  ## Stability
 
   `widget` is read by reporting, so its columns are added, never removed or
   retyped, within a major version. `widget_audit` is private to the API and may

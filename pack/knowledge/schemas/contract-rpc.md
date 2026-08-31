@@ -32,15 +32,22 @@ frontmatter:
     description: >
       contract-{nnn}-rpc-{slug}, the slug naming which RPC service. The
       number is the next free one across every contract, public and
-      private together and every lifecycle folder — a duplicate is
+      internal together and every lifecycle folder — a duplicate is
       an error.
   lifecycle:
     enum: [active, deprecated]
 
 sections-ordered: true
 sections:
-  - heading: "Services"
+  - heading-pattern: '^RPC contract: .+$'
     level: 1
+    required: true
+    content: prose
+    description: >
+      One paragraph: the surface this contract binds and for whom —
+      link the ADRs behind it.
+  - heading: "Services"
+    level: 2
     required: true
     content: code
     description: >
@@ -48,7 +55,7 @@ sections:
       JSON-RPC schema. One fenced block, tagged. Field numbers and reserved
       tags are part of the contract and appear here.
   - heading: "Transport"
-    level: 1
+    level: 2
     required: true
     content: prose
     description: >
@@ -56,7 +63,7 @@ sections:
       the deadline and message-size limits it must respect, and which methods
       stream in which direction.
   - heading: "Authentication"
-    level: 1
+    level: 2
     required: true
     content: prose
     description: >
@@ -64,7 +71,7 @@ sections:
       and how it expires, and the status returned for a missing or rejected
       credential.
   - heading: "Errors"
-    level: 1
+    level: 2
     required: true
     content: table
     columns: [Code, Condition]
@@ -73,7 +80,7 @@ sections:
       which are safe to retry. Error detail payloads are defined in the IDL
       above.
   - heading: "Stability"
-    level: 1
+    level: 2
     required: true
     content: prose
     description: >
@@ -90,7 +97,11 @@ example: |
   lifecycle: active
   ---
 
-  # Services
+  # RPC contract: widget
+
+  The widget gRPC service: get and watch, over mTLS.
+
+  ## Services
 
   ```protobuf
   syntax = "proto3";
@@ -111,21 +122,21 @@ example: |
   }
   ```
 
-  # Transport
+  ## Transport
 
   gRPC over HTTP/2 on port 8443, TLS required, ALPN `h2`. The default deadline
   is five seconds and the server rejects a call arriving without one. Messages
   are capped at 4 MiB. `Watch` streams from server to client and stays open
   until the client cancels or the deadline passes.
 
-  # Authentication
+  ## Authentication
 
   A bearer token on the `authorization` metadata key, issued by the tenant's
   identity provider and valid for one hour. A missing or expired token is
   `UNAUTHENTICATED`; a token scoped to another tenant is `NOT_FOUND`, so the
   service never confirms that an unreachable widget exists.
 
-  # Errors
+  ## Errors
 
   | Code | Condition |
   |------|-----------|
@@ -135,7 +146,7 @@ example: |
   | `RESOURCE_EXHAUSTED` | the caller is over its rate limit; safe to retry with backoff |
   | `UNAVAILABLE` | the server is restarting; safe to retry |
 
-  # Stability
+  ## Stability
 
   Field numbers are never reused: a removed field is `reserved`, as `3` is
   above. Fields are added to a message, never retyped, and a client must ignore

@@ -15,7 +15,6 @@ links:
 
 # ADR-012: A pack source's transport is allowlisted
 
-- Status: accepted
 - Date: 2026-08-26
 - Deciders: project owner
 

@@ -13,7 +13,6 @@ links:
 
 # ADR-016: A path pack records no digest
 
-- Status: accepted
 - Date: 2026-08-26
 - Deciders: project owner
 

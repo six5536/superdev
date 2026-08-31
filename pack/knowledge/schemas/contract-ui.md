@@ -12,9 +12,8 @@ Structural rules for one public user-interface contract, filed at
 on: which routes exist, what each screen can be showing, and what is promised
 not to move.
 
-A spec describes one feature's behaviour while it is being built and is
-discarded from the reader's mind once it ships; this document is the surface as
-it now stands, and is read by anyone rebuilding or linking to it. Routes here
+A feature request describes one change and is settled once it ships;
+this document is the surface as it now stands, and is read by anyone rebuilding or linking to it. Routes here
 are the ones a browser or a deep link addresses, not the API paths behind them
 — those belong to the [rest][sokf:schema-contract-rest] or
 [graphql][sokf:schema-contract-graphql] contract.
@@ -34,15 +33,22 @@ frontmatter:
     description: >
       contract-{nnn}-ui-{slug}, the slug naming which user interface. The
       number is the next free one across every contract, public and
-      private together and every lifecycle folder — a duplicate is
+      internal together and every lifecycle folder — a duplicate is
       an error.
   lifecycle:
     enum: [active, deprecated]
 
 sections-ordered: true
 sections:
-  - heading: "Routes"
+  - heading-pattern: '^UI contract: .+$'
     level: 1
+    required: true
+    content: prose
+    description: >
+      One paragraph: the surface this contract binds and for whom —
+      link the ADRs behind it.
+  - heading: "Routes"
+    level: 2
     required: true
     content: table
     columns: [Path, Screen, Purpose]
@@ -51,7 +57,7 @@ sections:
       reachable only by navigation is still a route. Include what an unknown
       path does.
   - heading: "Screens and states"
-    level: 1
+    level: 2
     required: true
     content: bullet-list
     description: >
@@ -59,14 +65,14 @@ sections:
       populated, unauthorised — and what the user can do from each. A state
       with no design is a state a rebuild will get wrong.
   - heading: "Platforms and accessibility"
-    level: 1
+    level: 2
     content: prose
     description: >
       The browsers, devices or OS versions supported, the viewport range the
       layout holds at, and the accessibility conformance promised. Omit where a
       separate standard governs all of it, and name that standard under Routes.
   - heading: "Stability"
-    level: 1
+    level: 2
     required: true
     content: prose
     description: >
@@ -83,7 +89,11 @@ example: |
   lifecycle: active
   ---
 
-  # Routes
+  # UI contract: widget app
+
+  The widget web app: four routes, links promised for a year.
+
+  ## Routes
 
   | Path | Screen | Purpose |
   |------|--------|---------|
@@ -95,7 +105,7 @@ example: |
   An unknown path renders the not-found screen with a link to `/`, and never
   redirects, so a mistyped link is visibly wrong rather than silently rerouted.
 
-  # Screens and states
+  ## Screens and states
 
   - **Widget list** — loading (skeleton rows), empty (a create prompt, no empty
     table), error (a retry, the last good list kept on screen), populated.
@@ -106,14 +116,14 @@ example: |
   - **Settings** — populated only. It loads with the shell, so it has no
     loading state of its own.
 
-  # Platforms and accessibility
+  ## Platforms and accessibility
 
   The last two major versions of Chrome, Firefox, Safari and Edge, and Safari
   on iOS 17 or later. The layout holds from 360 px to 2560 px wide. WCAG 2.2 AA:
   every action reachable by keyboard, every state announced to a screen reader,
   and no colour used as the only carrier of meaning.
 
-  # Stability
+  ## Stability
 
   The four routes above are promised for a year from any release that
   announces a change. A route that moves leaves a permanent redirect at the old

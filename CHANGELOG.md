@@ -24,6 +24,18 @@ publish a version it cannot find a heading for.
 
 ### Changed
 
+- **The schemas keep their own rules.** Every schema's worked example now
+  satisfies its own frontmatter constraints (26 were stale). The seven
+  report schemas — code review, security review, investigation,
+  postmortem, status update, release notes, migration guide — gain an id
+  pattern (`{kind}-{nnn}-{slug}`) and file under `knowledge/reports/`.
+  Contracts, ADRs and ideas each take one shape: a title heading over
+  level-2 sections; ADR state lives in `lifecycle`, a `supersedes` link
+  and `status: draft` in place of the body Status bullet, and the six
+  public contracts, all 21 live ADRs and idea-001 are restyled to match. The removed
+  spec workflow's vocabulary is gone from the schemas, the contract
+  number series says "public and internal", and the constraints schema's
+  type is `ConstraintsNonGoals`.
 - **Integrate reviews once per feature.** The `/code-review` in the
   integrate skill runs at the last slice only, over the whole feature diff
   against the merge target; findings still return to build before the

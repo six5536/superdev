@@ -13,7 +13,6 @@ links:
 
 # ADR-006: The stock pack lives at the repo root
 
-- Status: accepted
 - Date: 2026-08-25
 - Deciders: project owner
 

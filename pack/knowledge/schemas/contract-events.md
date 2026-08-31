@@ -26,22 +26,29 @@ frontmatter:
     description: >
       contract-{nnn}-events-{slug}, the slug naming which message stream. The
       number is the next free one across every contract, public and
-      private together and every lifecycle folder — a duplicate is
+      internal together and every lifecycle folder — a duplicate is
       an error.
   lifecycle:
     enum: [active, deprecated]
 
 sections-ordered: true
 sections:
-  - heading: "Transport"
+  - heading-pattern: '^Events contract: .+$'
     level: 1
+    required: true
+    content: prose
+    description: >
+      One paragraph: the surface this contract binds and for whom —
+      link the ADRs behind it.
+  - heading: "Transport"
+    level: 2
     required: true
     content: prose
     description: >
       Where the messages appear — broker, topic, queue or webhook endpoint —
       how a consumer subscribes, and how it authenticates.
   - heading: "Messages"
-    level: 1
+    level: 2
     required: true
     content: code
     description: >
@@ -49,7 +56,7 @@ sections:
       or TypeSpec. One fenced block, tagged. Every field a consumer may read is
       defined here, not described in the prose.
   - heading: "Ordering and delivery"
-    level: 1
+    level: 2
     required: true
     content: bullet-list
     description: >
@@ -57,7 +64,7 @@ sections:
       exactly-once, the retry and dead-letter behaviour, and which field makes
       a message idempotent.
   - heading: "Stability"
-    level: 1
+    level: 2
     required: true
     content: prose
     description: >
@@ -73,13 +80,17 @@ example: |
   lifecycle: active
   ---
 
-  # Transport
+  # Events contract: widget lifecycle
+
+  The widget lifecycle stream on Kafka: created and deleted events.
+
+  ## Transport
 
   Kafka, topic `widgets.lifecycle`, six partitions keyed by widget id.
   Consumers authenticate with SASL/SCRAM against their own principal; a
   principal may read the topic and never write it.
 
-  # Messages
+  ## Messages
 
   ```json
   {
@@ -96,7 +107,7 @@ example: |
   }
   ```
 
-  # Ordering and delivery
+  ## Ordering and delivery
 
   - Ordered per widget id, because the partition key is the widget id. There is
     no ordering across widgets.
@@ -104,7 +115,7 @@ example: |
   - A handler that fails is retried five times with backoff, then the message
     goes to `widgets.lifecycle.dlq` and the stream moves on.
 
-  # Stability
+  ## Stability
 
   Fields are added to a payload, never removed or retyped, so a consumer must
   ignore fields it does not know. A new `type` value may appear at any time and

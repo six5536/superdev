@@ -26,15 +26,22 @@ frontmatter:
     description: >
       contract-{nnn}-rest-{slug}, the slug naming which HTTP API. The
       number is the next free one across every contract, public and
-      private together and every lifecycle folder — a duplicate is
+      internal together and every lifecycle folder — a duplicate is
       an error.
   lifecycle:
     enum: [active, deprecated]
 
 sections-ordered: true
 sections:
-  - heading: "Endpoints"
+  - heading-pattern: '^REST contract: .+$'
     level: 1
+    required: true
+    content: prose
+    description: >
+      One paragraph: the surface this contract binds and for whom —
+      link the ADRs behind it.
+  - heading: "Endpoints"
+    level: 2
     required: true
     content: code
     description: >
@@ -42,14 +49,14 @@ sections:
       codes. One fenced `typespec` block. Every field a caller may read or send
       appears here, not in the prose.
   - heading: "Authentication"
-    level: 1
+    level: 2
     required: true
     content: prose
     description: >
       What a caller presents, where it goes, how it is obtained and how it
       expires. The response to a missing or rejected credential.
   - heading: "Errors"
-    level: 1
+    level: 2
     required: true
     content: table
     columns: [Status, Condition]
@@ -57,7 +64,7 @@ sections:
       The statuses a caller must handle and what provokes each. The error body
       shape belongs in the TypeSpec above.
   - heading: "Stability"
-    level: 1
+    level: 2
     required: true
     content: prose
     description: >
@@ -73,7 +80,11 @@ example: |
   lifecycle: active
   ---
 
-  # Endpoints
+  # REST contract: widget API
+
+  The widget HTTP API: read and create widgets, versioned in the path.
+
+  ## Endpoints
 
   ```typespec
   @service(#{ title: "Widgets" })
@@ -97,14 +108,14 @@ example: |
   }
   ```
 
-  # Authentication
+  ## Authentication
 
   A bearer token in the `Authorization` header, issued by the tenant's identity
   provider and valid for one hour. A missing or expired token is `401`; a token
   valid but scoped to another tenant is `404`, never `403`, so the API never
   confirms that an unreachable widget exists.
 
-  # Errors
+  ## Errors
 
   | Status | Condition |
   |--------|-----------|
@@ -113,7 +124,7 @@ example: |
   | 404    | no such widget, or one outside the caller's tenant |
   | 429    | the caller is over its rate limit; `Retry-After` is set |
 
-  # Stability
+  ## Stability
 
   The version sits in the path. Within `/v1` fields are added to responses and
   optional fields to requests, never removed or retyped; a caller must ignore

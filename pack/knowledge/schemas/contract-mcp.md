@@ -26,15 +26,22 @@ frontmatter:
     description: >
       contract-{nnn}-mcp-{slug}, the slug naming which MCP server. The
       number is the next free one across every contract, public and
-      private together and every lifecycle folder — a duplicate is
+      internal together and every lifecycle folder — a duplicate is
       an error.
   lifecycle:
     enum: [active, deprecated]
 
 sections-ordered: true
 sections:
-  - heading: "Server"
+  - heading-pattern: '^MCP contract: .+$'
     level: 1
+    required: true
+    content: prose
+    description: >
+      One paragraph: the surface this contract binds and for whom —
+      link the ADRs behind it.
+  - heading: "Server"
+    level: 2
     required: true
     content: prose
     description: >
@@ -42,27 +49,27 @@ sections:
       many — what it serves, when it exits, and what it refuses at startup
       rather than per call.
   - heading: "Tools"
-    level: 1
+    level: 2
     required: true
     content: bullet-list
     description: >
       One entry per tool: its name, its arguments with defaults and limits,
       what comes back, and the ranking or filtering a caller can rely on.
   - heading: "Resources and prompts"
-    level: 1
+    level: 2
     content: prose
     description: >
       What the server exposes beyond tools. Omit the section on a server that
       exposes neither, and say so under Server instead.
   - heading: "Errors"
-    level: 1
+    level: 2
     required: true
     content: prose
     description: >
       How a failed call reaches the agent — an error payload against a process
       exit — and what the server does with input it cannot resolve.
   - heading: "Stability"
-    level: 1
+    level: 2
     required: true
     content: prose
     description: >
@@ -78,31 +85,35 @@ example: |
   lifecycle: active
   ---
 
-  # Server
+  # MCP contract: widget
+
+  The widget MCP server: two read-only tools over stdio.
+
+  ## Server
 
   `widget mcp` serves one stdio client and exits 0 when that client closes
   stdin. A missing widget store fails at startup rather than at every tool
   call, because a client cannot act on the latter.
 
-  # Tools
+  ## Tools
 
   - **`widget_search`** — `query`, optional `limit` (8 by default, clamped to
     1..50). Results are grouped by widget, strongest first.
   - **`widget_read`** — `id`: the whole widget, or the near-miss candidates
     when no widget carries that id.
 
-  # Resources and prompts
+  ## Resources and prompts
 
   None. The server exposes tools only, so a client that lists resources gets an
   empty set rather than an error.
 
-  # Errors
+  ## Errors
 
   A tool failure is an MCP error payload, never a process exit: the client
   stays connected and can call again. An unknown id comes back with near-miss
   candidates rather than an empty result.
 
-  # Stability
+  ## Stability
 
   Unreleased. Tool names, their arguments and their result shapes may change
   without notice until 1.0, after which a removed argument gets one minor

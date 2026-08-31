@@ -13,7 +13,6 @@ links:
 
 # ADR-008: One command per release, two tag series
 
-- Status: accepted
 - Date: 2026-08-25
 - Deciders: project owner
 

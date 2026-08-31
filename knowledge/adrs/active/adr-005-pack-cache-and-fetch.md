@@ -13,7 +13,6 @@ links:
 
 # ADR-005: Resolved packs are cached locally and fetched only on demand
 
-- Status: accepted
 - Date: 2026-08-25
 - Deciders: project owner
 

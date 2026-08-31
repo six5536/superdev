@@ -26,22 +26,29 @@ frontmatter:
     description: >
       contract-{nnn}-library-{slug}, the slug naming which published library. The
       number is the next free one across every contract, public and
-      private together and every lifecycle folder — a duplicate is
+      internal together and every lifecycle folder — a duplicate is
       an error.
   lifecycle:
     enum: [active, deprecated]
 
 sections-ordered: true
 sections:
-  - heading: "Package"
+  - heading-pattern: '^Library contract: .+$'
     level: 1
+    required: true
+    content: prose
+    description: >
+      One paragraph: the surface this contract binds and for whom —
+      link the ADRs behind it.
+  - heading: "Package"
+    level: 2
     required: true
     content: prose
     description: >
       The published name, the registry it goes to, the runtimes or toolchain
       versions supported, and any feature flags that change the surface.
   - heading: "Public API"
-    level: 1
+    level: 2
     required: true
     content: code
     description: >
@@ -49,14 +56,14 @@ sections:
       interfaces, as a caller sees them. One fenced block per module, tagged
       with its language. Anything absent here is private.
   - heading: "Errors"
-    level: 1
+    level: 2
     content: prose
     description: >
       The error type callers match on, what each variant means, and what the
       library panics or throws on rather than returning. Omit where the API
       block above says it in full.
   - heading: "Stability"
-    level: 1
+    level: 2
     required: true
     content: prose
     description: >
@@ -72,13 +79,18 @@ example: |
   lifecycle: active
   ---
 
-  # Package
+  # Library contract: widget-core
+
+  widget-core on crates.io: the parser and its error type, semver from
+  1.0.
+
+  ## Package
 
   Published as `widget-core` on crates.io. Rust 1.85 or later, edition 2024, no
   default features. The `serde` feature adds `Serialize` and `Deserialize` to
   every public type and changes nothing else.
 
-  # Public API
+  ## Public API
 
   ```rust
   pub struct Widget {
@@ -94,13 +106,13 @@ example: |
   pub fn parse(input: &str) -> Result<Widget, ParseError>;
   ```
 
-  # Errors
+  ## Errors
 
   `parse` returns `ParseError` and never panics on caller input. `Empty` means
   the input held no widget; `BadField` names the first field that failed. A
   panic from this crate is a bug in the crate, not a caller error.
 
-  # Stability
+  ## Stability
 
   Semver from 1.0. Adding a variant to `ParseError` is breaking, so the enum is
   `#[non_exhaustive]`; adding a field to `Widget` is not. A deprecated item

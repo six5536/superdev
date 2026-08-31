@@ -7,7 +7,13 @@ lifecycle: active
 resource: /crates/lib/superdev-core/src/lock.rs
 ---
 
-# Files
+# File format contract: lock
+
+What superdev records of the last apply: the per-capability components,
+the file hashes and the resolved packs, and what a reader may conclude
+from it.
+
+## Files
 
 `.superdev/lock.toml`, committed. superdev writes it and nothing else should:
 it records what the last apply actually did, so a hand edit makes it a record
@@ -18,7 +24,7 @@ see what a sync changed, and CI reads it to tell a clean tree from a drifted
 one. Its counterpart is the manifest, which says what the repo *wants*; the
 lock says what it *got*.
 
-# Shape
+## Shape
 
 ```toml
 [[packs]]                             # one entry per pack the apply resolved
@@ -45,7 +51,7 @@ is the user's. `[[packs]]` is absent when no pack was named. `rev` and
 `digest` are absent together for a path source: a directory is read afresh
 every run, so there are no pinned bytes to name.
 
-# Compatibility
+## Compatibility
 
 A reader may conclude two things from a hash and nothing more: superdev wrote
 that file, and it wrote those bytes. Drift is not decided here — it is found
@@ -63,7 +69,7 @@ A lock from an older binary loads. Sections it lacks are treated as absent
 rather than as an error, which is what lets an upgrade sync rather than
 demanding a re-init.
 
-# Stability
+## Stability
 
 Unreleased. The table names and the hash algorithm may change without notice.
 What holds even so: the file is superdev's to write, a hand edit is not

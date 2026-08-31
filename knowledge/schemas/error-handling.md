@@ -46,7 +46,7 @@ sections:
 
 example: |
   ---
-  type: Convention
+  type: ErrorHandling
   id: error-handling
   title: Error Handling & Logging
   description: Three exit codes, and a finding is not a failure.

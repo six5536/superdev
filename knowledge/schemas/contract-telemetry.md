@@ -33,15 +33,22 @@ frontmatter:
     description: >
       contract-{nnn}-telemetry-{slug}, the slug naming which emitting component. The
       number is the next free one across every contract, public and
-      private together and every lifecycle folder — a duplicate is
+      internal together and every lifecycle folder — a duplicate is
       an error.
   lifecycle:
     enum: [active, deprecated]
 
 sections-ordered: true
 sections:
-  - heading: "Metrics"
+  - heading-pattern: '^Telemetry contract: .+$'
     level: 1
+    required: true
+    content: prose
+    description: >
+      One paragraph: the surface this contract binds and for whom —
+      link the ADRs behind it.
+  - heading: "Metrics"
+    level: 2
     required: true
     content: table
     columns: [Name, Type, Labels, Meaning]
@@ -50,7 +57,7 @@ sections:
       which are bounded — an unbounded label is a cardinality incident, and the
       table is where that is caught.
   - heading: "Logs"
-    level: 1
+    level: 2
     required: true
     content: prose
     description: >
@@ -58,13 +65,13 @@ sections:
       each is used, and what the software promises never to log. A field a
       query depends on is as much a contract as a metric name.
   - heading: "Traces"
-    level: 1
+    level: 2
     content: prose
     description: >
       The spans emitted, how context is propagated in and out, and the sampling
       a consumer should expect. Omit where the software emits none.
   - heading: "Stability"
-    level: 1
+    level: 2
     required: true
     content: prose
     description: >
@@ -80,7 +87,12 @@ example: |
   lifecycle: active
   ---
 
-  # Metrics
+  # Telemetry contract: widget API
+
+  What the widget API emits: three metrics, structured logs, OTLP
+  traces.
+
+  ## Metrics
 
   | Name | Type | Labels | Meaning |
   |------|------|--------|---------|
@@ -92,7 +104,7 @@ example: |
   contract, `method` an HTTP verb, `status` a three-digit code. No label
   carries a widget id, a tenant id or anything else unbounded.
 
-  # Logs
+  ## Logs
 
   One JSON object per line on stdout. Every line carries `ts` (RFC 3339),
   `level`, `msg`, `service`, `version` and, inside a request, `trace_id` and
@@ -101,14 +113,14 @@ example: |
   quiet. Request bodies, tokens and anything from the `Authorization` header
   are never logged at any level.
 
-  # Traces
+  ## Traces
 
   OTLP over gRPC to the collector named by configuration. One server span per
   request, named for the route template, with a child span per database query.
   Incoming `traceparent` is honoured and propagated outward. Sampling is
   head-based at 1% by default, and every trace carrying an error is kept.
 
-  # Stability
+  ## Stability
 
   The metric names, their label sets and the log fields above are stable within
   a major version. A renamed metric is emitted under both names for one minor

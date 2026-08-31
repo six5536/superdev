@@ -29,7 +29,7 @@ frontmatter:
     description: >
       contract-{nnn}-interface-{slug}, the slug naming the interface. The
       number is the next free one across every contract, public and
-      private together and every lifecycle folder — a duplicate is
+      internal together and every lifecycle folder — a duplicate is
       an error.
   lifecycle:
     enum: [active, deprecated]
@@ -81,6 +81,14 @@ sections:
       to know it works).
 
 example: |
+  ---
+  type: InterfaceContract
+  id: contract-001-interface-pack-source-allowlist
+  title: Pack source allowlist interface
+  description: The transport check pack source parsing enforces.
+  lifecycle: active
+  ---
+
   # Interface contract: pack source allowlist
 
   Adds a transport check to pack source parsing; decisions in ADR-012.

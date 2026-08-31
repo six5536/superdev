@@ -8,7 +8,6 @@ lifecycle: active
 
 # ADR-021: Nothing Unattended Reaches the Default Branch
 
-- Status: accepted
 - Date: 2026-08-31
 - Deciders: superdev maintainers
 

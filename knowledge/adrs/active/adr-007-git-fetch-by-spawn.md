@@ -13,7 +13,6 @@ links:
 
 # ADR-007: Git pack sources are fetched by spawning git
 
-- Status: accepted
 - Date: 2026-08-25
 - Deciders: project owner
 

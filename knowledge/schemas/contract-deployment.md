@@ -31,15 +31,22 @@ frontmatter:
     description: >
       contract-{nnn}-deployment-{slug}, the slug naming which deployable. The
       number is the next free one across every contract, public and
-      private together and every lifecycle folder — a duplicate is
+      internal together and every lifecycle folder — a duplicate is
       an error.
   lifecycle:
     enum: [active, deprecated]
 
 sections-ordered: true
 sections:
-  - heading: "Artifact"
+  - heading-pattern: '^Deployment contract: .+$'
     level: 1
+    required: true
+    content: prose
+    description: >
+      One paragraph: the surface this contract binds and for whom —
+      link the ADRs behind it.
+  - heading: "Artifact"
+    level: 2
     required: true
     content: prose
     description: >
@@ -47,7 +54,7 @@ sections:
       what tag scheme, for which platforms, and how a deployer verifies it is
       the one this project built.
   - heading: "Runtime"
-    level: 1
+    level: 2
     required: true
     content: prose
     description: >
@@ -55,7 +62,7 @@ sections:
       writable paths, the resource floor below which it fails rather than
       degrades, and the services it cannot start without.
   - heading: "Health and lifecycle"
-    level: 1
+    level: 2
     required: true
     content: bullet-list
     description: >
@@ -63,7 +70,7 @@ sections:
       what each actually tests, startup ordering, the shutdown signal and the
       grace period, and what an in-flight request sees during a restart.
   - heading: "Stability"
-    level: 1
+    level: 2
     required: true
     content: prose
     description: >
@@ -79,7 +86,11 @@ example: |
   lifecycle: active
   ---
 
-  # Artifact
+  # Deployment contract: widget API
+
+  The widget API container: what it publishes and what it needs to run.
+
+  ## Artifact
 
   A container image at `ghcr.io/example/widget-api`, published for
   `linux/amd64` and `linux/arm64`. Tags are the release version, plus `major`
@@ -87,7 +98,7 @@ example: |
   with cosign against the repository's OIDC identity, and a deployer that does
   not verify the signature is trusting the registry instead.
 
-  # Runtime
+  ## Runtime
 
   One process, listening on `8080` for HTTP and `9090` for metrics. It runs as
   uid 65532 and needs no writable path outside `/tmp`, so the root filesystem
@@ -96,7 +107,7 @@ example: |
   without a reachable Postgres — a missing one is a startup error, not a
   degraded mode.
 
-  # Health and lifecycle
+  ## Health and lifecycle
 
   - `GET /healthz` is liveness: the process answers. It touches nothing else,
     so a slow database never restarts a healthy process.
@@ -107,7 +118,7 @@ example: |
   - `SIGTERM` stops new connections and drains for thirty seconds; requests in
     flight finish, and anything still running at the deadline is cut.
 
-  # Stability
+  ## Stability
 
   The ports, the two endpoint paths and the shutdown behaviour are stable
   within a major version — automation may depend on them. The base image and

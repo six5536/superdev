@@ -7,7 +7,12 @@ lifecycle: active
 resource: /crates/lib/superdev-core/src/manifest.rs
 ---
 
-# Settings
+# Config contract: superdev
+
+What a managed repo supplies to superdev: the manifest keys, the three
+environment variables, and which source defines what.
+
+## Settings
 
 Environment, read on every run:
 
@@ -32,7 +37,7 @@ Environment, read on every run:
 The behaviour behind each key is in [configuration][sokf:configuration];
 what is promised here is the key, its shape and its default.
 
-# Sources and precedence
+## Sources and precedence
 
 - A command-line flag, where the command defines one. `validate` takes
   `--knowledge <DIR>` and `--repo-root <DIR>`; the flags themselves are
@@ -52,7 +57,7 @@ committed.
 Both the manifest and the environment are read afresh on every run. No value
 is cached between commands.
 
-# File
+## File
 
 ```toml
 blueprint = "0.2.0"                  # the superdev version last applied
@@ -88,7 +93,7 @@ carry fails with `<capability> provider must be one of: …`, and a manifest
 still naming the removed `workflows` capability fails at load with the edit to
 make. Neither error rewrites the file: the manifest is the user's.
 
-# Secrets
+## Secrets
 
 `OPENAI_API_KEY` is the only credential superdev reads, and only when
 `[knowledge.embeddings]` opts the index onto an API. It is read from the
@@ -98,7 +103,7 @@ No git call superdev makes prompts for credentials, so a pack source needing
 them fails rather than waiting for someone to type — a credential never enters
 superdev by any path other than that one variable.
 
-# Stability
+## Stability
 
 Unreleased. Key names, defaults and the variables above may change without
 notice. What holds even so: a manifest superdev cannot understand fails at

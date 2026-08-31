@@ -38,15 +38,22 @@ frontmatter:
     description: >
       contract-{nnn}-authz-{slug}, the slug naming which authorisation model. The
       number is the next free one across every contract, public and
-      private together and every lifecycle folder — a duplicate is
+      internal together and every lifecycle folder — a duplicate is
       an error.
   lifecycle:
     enum: [active, deprecated]
 
 sections-ordered: true
 sections:
-  - heading: "Principals"
+  - heading-pattern: '^Authz contract: .+$'
     level: 1
+    required: true
+    content: prose
+    description: >
+      One paragraph: the surface this contract binds and for whom —
+      link the ADRs behind it.
+  - heading: "Principals"
+    level: 2
     required: true
     content: prose
     description: >
@@ -54,7 +61,7 @@ sections:
       caller — and where each one's identity comes from. Name the surface
       contract that establishes it rather than restating the authentication.
   - heading: "Roles and scopes"
-    level: 1
+    level: 2
     required: true
     content: table
     columns: [Name, Kind, Meaning]
@@ -63,7 +70,7 @@ sections:
       policy or a database column and not in this table is a name a rebuild
       will get wrong.
   - heading: "Permissions"
-    level: 1
+    level: 2
     required: true
     content: table
     columns: [Action, Resource, Requires]
@@ -71,7 +78,7 @@ sections:
       What each action needs, in terms of the vocabulary above. One row per
       action a caller can attempt, including the ones every caller may take.
   - heading: "Boundaries"
-    level: 1
+    level: 2
     required: true
     content: prose
     description: >
@@ -80,7 +87,7 @@ sections:
       the resource exists is a disclosure, and the choice belongs here rather
       than in each surface.
   - heading: "Stability"
-    level: 1
+    level: 2
     required: true
     content: prose
     description: >
@@ -97,7 +104,12 @@ example: |
   lifecycle: active
   ---
 
-  # Principals
+  # Authz contract: widget
+
+  Who may do what to a widget: three roles enforced at the API boundary,
+  one tenancy rule everywhere.
+
+  ## Principals
 
   Three. An **end user**, identified by the bearer token the HTTP API contract
   describes, always belonging to exactly one tenant. A **service account**,
@@ -105,7 +117,7 @@ example: |
   and the migration job. An **anonymous caller**, holding no token, which
   reaches only the health endpoints.
 
-  # Roles and scopes
+  ## Roles and scopes
 
   | Name | Kind | Meaning |
   |------|------|---------|
@@ -119,7 +131,7 @@ example: |
   must permit an action for it to succeed, so a token scoped `widgets:read`
   cannot write even when its holder is an `owner`.
 
-  # Permissions
+  ## Permissions
 
   | Action | Resource | Requires |
   |--------|----------|----------|
@@ -130,7 +142,7 @@ example: |
   | read all tenants | widget | the reporting service account |
   | health check | none | any caller, including anonymous |
 
-  # Boundaries
+  ## Boundaries
 
   Every widget belongs to one tenant, and a principal reaches only its own —
   the rule holds above every row in the table. It is enforced twice: the API
@@ -143,7 +155,7 @@ example: |
   attempting an action above its role is told `403`, because there the
   existence is not a secret and the message can name the role required.
 
-  # Stability
+  ## Stability
 
   Role and scope names are stable within a major version. A token carrying a
   scope that no longer exists is rejected outright rather than downgraded,

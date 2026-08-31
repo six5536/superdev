@@ -36,7 +36,7 @@ preamble:
 
 example: |
   ---
-  type: Reference
+  type: TechnologyStack
   id: technology-stack
   title: Technology Stack
   description: Rust 2021 with a pinned toolchain, and a deliberately small dependency set.

@@ -13,7 +13,9 @@ tracker with
 `schema-bug-report` and `schema-chore` — the same id shape, the same
 lifecycle — and differs only in its body: a request for
 something absent states why it is wanted and what it would do, and is never
-asked for an error log or a regression risk it does not have.
+asked for an error log or a regression risk it does not have. Each contract
+the feature touches is declared by an `implements` or `references` link
+with a note saying what changed, added as CONTRACT-DESIGN updates it.
 
 ````yaml
 description: >
@@ -49,11 +51,13 @@ sections:
     content: prose
     description: >
       How it ended, added when it does: what was decided and by whom, what
-      shipped and where, or why it will not be done. Sits directly under the
-      title, before the report itself, because a reader who opens a settled
-      issue wants the verdict before the evidence — every settled issue on
-      file puts it there. Absent while the issue is outstanding, which is
-      what distinguishes an open one from a settled one at a glance.
+      shipped and where, or why it will not be done. accept records its
+      verdict here when it walks the criteria on the merged code. Sits
+      directly under the title, before the report itself, because a reader
+      who opens a settled issue wants the verdict before the evidence —
+      every settled issue on file puts it there. Absent while the issue is
+      outstanding, which is what distinguishes an open one from a settled
+      one at a glance.
   - heading: "Summary"
     level: 2
     required: true

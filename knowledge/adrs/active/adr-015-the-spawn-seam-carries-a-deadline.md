@@ -13,7 +13,6 @@ links:
 
 # ADR-015: The spawn seam carries a deadline and an environment
 
-- Status: accepted
 - Date: 2026-08-26
 - Deciders: project owner
 

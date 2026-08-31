@@ -1,5 +1,5 @@
 ---
-type: Constraints
+type: ConstraintsNonGoals
 id: constraints-non-goals
 title: Known Constraints & Non-Goals
 description: TBD — accepted limitations and the things this project deliberately does not do.

@@ -15,7 +15,7 @@ worth writing down before it is lost, kept for considering later. It is not
 candidate work, so it belongs in neither the [backlog][sokf:backlog] nor the
 [issue tracker][sokf:issue-tracker], and it carries no obligation to appear
 in either. An idea that is taken up leaves for whichever of them fits — or
-straight for a spec — and stops being an idea.
+straight for a feature request — and stops being an idea.
 
 One section is required, because the cost of capture decides how much gets
 captured, and a thought is lost while its author is filling in headings. Most
@@ -51,33 +51,34 @@ sections:
       so its author recognises it months later, which is the only thing this
       document has to do.
   - heading: "Motivation"
-    level: 1
+    level: 2
     content: prose
     description: >
       What is wrong or missing now, where it came up, or simply what prompted
       the thought. Optional, like everything below it.
   - heading: "Sketch"
-    level: 1
+    level: 2
     content: prose
     description: >
       How it might work — the mechanism, where it would live, what would have
       to change. Enough to judge, never enough to build: a design belongs in a
-      spec, which is where an idea goes once it is taken up.
+      feature request and its contracts, which is where an idea goes once
+      it is taken up.
   - heading: "Trade-offs"
-    level: 1
+    level: 2
     content: bullet-list
     description: >
       What it would cost, what it risks, and what it rules out. Worth adding
       the moment one is obvious, because that is what a later reader needs and
       what the author will have forgotten.
   - heading: "Open questions"
-    level: 1
+    level: 2
     content: bullet-list
     description: >
       What is not yet known, one per line. Often the whole of an idea on the
       day it is captured.
   - heading: "Next step"
-    level: 1
+    level: 2
     content: prose
     description: >
       The one thing that would move this — a spike, a measurement, a decision
@@ -99,19 +100,19 @@ example: |
   is saved rather than when it is read. A list view then concatenates strings
   instead of running the renderer once per row.
 
-  # Motivation
+  ## Motivation
 
   The list view renders every widget on every request. At a thousand widgets it
   spends most of its time in the renderer, and the renderer's output depends
   only on the widget — the same input produces the same output every time.
 
-  # Sketch
+  ## Sketch
 
   A `rendered` column on `widget`, written in the same transaction as the
   widget itself, so the two cannot disagree. The list view reads it directly.
   A renderer change means a backfill, which is a migration like any other.
 
-  # Trade-offs
+  ## Trade-offs
 
   - The store grows by roughly the size of the corpus again.
   - Every renderer change becomes a migration, which is a cost paid by whoever
@@ -119,12 +120,12 @@ example: |
   - It rules out per-viewer rendering: a widget that renders differently for
     different readers cannot be cached this way without a key per reader.
 
-  # Open questions
+  ## Open questions
 
   - Is the renderer genuinely pure? It reads the tenant's locale today.
   - Would an in-memory cache do, given the list view is the only hot reader?
 
-  # Next step
+  ## Next step
 
   Measure. A profile of the list view at a thousand widgets will say whether
   the renderer is the cost, and the locale question decides whether the cache

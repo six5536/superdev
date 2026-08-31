@@ -7,8 +7,9 @@ description: Release notes — headline, highlights, breaking changes with migra
 
 # Release Notes Schema
 
-Structural rules for release notes, matched by name
-(`**/*release-notes*.md`); the source names no filing directory, and filed in the knowledge as a concept. Distinct from
+Structural rules for release notes, filed at
+`knowledge/reports/release-notes-{nnn}-{slug}.md`, listed in that
+directory's index and selected by frontmatter `type`. Distinct from
 the changelog: the changelog is the complete record, these are what a user
 is told about one version.
 
@@ -22,6 +23,8 @@ line-limit: 800
 frontmatter:
   type:
     const: ReleaseNotes
+  id:
+    pattern: '^release-notes-\d{3}-[a-z0-9-]+$'
 
 sections-ordered: true
 sections:
@@ -66,6 +69,13 @@ sections:
       comparison for this version.
 
 example: |
+  ---
+  type: ReleaseNotes
+  id: release-notes-001-v0-2-0
+  title: superdev v0.2.0
+  description: What a user is told about superdev v0.2.0.
+  ---
+
   # superdev v0.2.0
 
   Pack sources are now refused unless they use an authenticated transport,

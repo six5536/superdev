@@ -7,8 +7,9 @@ description: Code review findings — verdict first, findings ranked by severity
 
 # Code Review Schema
 
-Structural rules for code-review findings documents, matched by name
-(`**/*code-review*.md`); the source names no filing directory, and filed in the knowledge as a concept.
+Structural rules for code-review findings documents, filed at
+`knowledge/reports/code-review-{nnn}-{slug}.md`, listed in that
+directory's index and selected by frontmatter `type`.
 
 ````yaml
 description: >
@@ -19,6 +20,8 @@ line-limit: 800
 frontmatter:
   type:
     const: CodeReview
+  id:
+    pattern: '^code-review-\d{3}-[a-z0-9-]+$'
 
 sections-ordered: true
 sections:
@@ -69,6 +72,13 @@ sections:
       worth adopting later. Delete if empty.
 
 example: |
+  ---
+  type: CodeReview
+  id: code-review-001-pack-allowlist
+  title: Code review of feature/pack-allowlist
+  description: Review of the pack transport allowlist change; one correctness issue to fix before merge.
+  ---
+
   # Code review: feature/pack-allowlist
 
   ## Verdict

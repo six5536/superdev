@@ -35,7 +35,7 @@ preamble:
 
 example: |
   ---
-  type: Policy
+  type: DependencyPolicy
   id: dependency-policy
   title: Dependency Policy
   description: When a dependency may be added and how its version is chosen.

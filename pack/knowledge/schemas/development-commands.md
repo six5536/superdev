@@ -35,7 +35,7 @@ preamble:
 
 example: |
   ---
-  type: Reference
+  type: DevelopmentCommands
   id: development-commands
   title: Development Commands
   description: The everyday command set and the pre-PR check list.

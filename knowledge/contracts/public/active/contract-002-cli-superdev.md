@@ -7,7 +7,12 @@ lifecycle: active
 resource: /crates/app/superdev/src/main.rs
 ---
 
-# Commands
+# CLI contract: superdev
+
+The superdev command line: the manage verbs, the knowledge verbs and
+the run verbs, and what each one promises its callers.
+
+## Commands
 
 ```
 superdev                     print help, exit 0
@@ -52,7 +57,7 @@ superdev man                 (hidden; roff to stdout, for packaging)
 -V, --version                print `superdev x.y.z` and exit
 ```
 
-# Behaviour
+## Behaviour
 
 Every verb acts on the current directory.
 
@@ -212,7 +217,7 @@ before writing, because `clap_complete` panics rather than returning an error
 when a write fails. Exit codes are in [error-handling][sokf:error-handling]; the
 manifest the verbs read is in [configuration][sokf:configuration].
 
-# Stability
+## Stability
 
 Unreleased. Every verb, flag and exit code above may change without notice.
 

@@ -11,7 +11,6 @@ links:
 
 # ADR-017: AOKF conformance is pass or fail
 
-- Status: accepted
 - Date: 2026-08-27
 - Deciders: project owner
 

@@ -13,7 +13,7 @@ and no sections.
 
 ````yaml
 description: >
-  The domain terms this project's code, issues and specs rely on, one
+  The domain terms this project's code, issues and plans rely on, one
   definition each, in plain language or in terms already defined above.
 line-limit: 800
 
@@ -31,7 +31,7 @@ preamble:
     One bullet per term: the term, then its definition in one or two
     sentences, using plain language or terms already defined above, linking the
     concept that details it. Group related terms under a short lead-in line
-    when the list outgrows one screen. Every term the code, issues or specs
+    when the list outgrows one screen. Every term the code, issues or plans
     rely on belongs here; synonyms the project avoids do not.
 
 example: |

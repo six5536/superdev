@@ -7,8 +7,9 @@ description: Investigation write-ups — conclusion first, evidence with sources
 
 # Investigation Schema
 
-Structural rules for investigation write-ups, matched by name
-(`**/*investigation*.md`); the source names no filing directory, and filed in the knowledge as a concept.
+Structural rules for investigation write-ups, filed at
+`knowledge/reports/investigation-{nnn}-{slug}.md`, listed in that
+directory's index and selected by frontmatter `type`.
 
 ````yaml
 description: >
@@ -19,6 +20,8 @@ line-limit: 800
 frontmatter:
   type:
     const: Investigation
+  id:
+    pattern: '^investigation-\d{3}-[a-z0-9-]+$'
 
 sections-ordered: true
 sections:
@@ -77,6 +80,13 @@ sections:
       needed" — with rationale.
 
 example: |
+  ---
+  type: Investigation
+  id: investigation-001-pack-sync-second-run
+  title: Why pack sync fails on the second run
+  description: Conclusion, evidence and a recommendation for the second-run sync failure.
+  ---
+
   # Investigation: Why does pack sync fail on the second run?
 
   ## Conclusion

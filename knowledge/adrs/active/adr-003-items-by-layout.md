@@ -11,7 +11,6 @@ links:
 
 # ADR-003: A pack's items are named by its directory layout
 
-- Status: accepted
 - Date: 2026-08-25
 - Deciders: project owner
 

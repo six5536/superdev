@@ -13,7 +13,6 @@ links:
 
 # ADR-014: A symlink in a pack is refused, and git decides what one is
 
-- Status: accepted
 - Date: 2026-08-26
 - Deciders: project owner
 

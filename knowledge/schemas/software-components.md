@@ -52,7 +52,7 @@ sections:
 
 example: |
   ---
-  type: Reference
+  type: SoftwareComponents
   id: software-components
   title: Software Components
   description: A core library, a CLI binary, and the workflows that build them.

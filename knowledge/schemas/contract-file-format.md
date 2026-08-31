@@ -33,22 +33,29 @@ frontmatter:
     description: >
       contract-{nnn}-file-format-{slug}, the slug naming which file format. The
       number is the next free one across every contract, public and
-      private together and every lifecycle folder — a duplicate is
+      internal together and every lifecycle folder — a duplicate is
       an error.
   lifecycle:
     enum: [active, deprecated]
 
 sections-ordered: true
 sections:
-  - heading: "Files"
+  - heading-pattern: '^File format contract: .+$'
     level: 1
+    required: true
+    content: prose
+    description: >
+      One paragraph: the surface this contract binds and for whom —
+      link the ADRs behind it.
+  - heading: "Files"
+    level: 2
     required: true
     content: prose
     description: >
       The paths or glob the format covers, who writes each file — the tool, the
       user, or both — and which of them is authoritative when they disagree.
   - heading: "Shape"
-    level: 1
+    level: 2
     required: true
     content: code
     description: >
@@ -56,7 +63,7 @@ sections:
       every key, a DTD, a grammar. One fenced block, tagged. Prose around it
       describes; this block defines.
   - heading: "Compatibility"
-    level: 1
+    level: 2
     required: true
     content: prose
     description: >
@@ -64,7 +71,7 @@ sections:
       field it does not recognise, and a file a newer release wrote. The rule
       that lets old and new tools share one file.
   - heading: "Stability"
-    level: 1
+    level: 2
     required: true
     content: prose
     description: >
@@ -80,14 +87,19 @@ example: |
   lifecycle: active
   ---
 
-  # Files
+  # File format contract: widget.toml
+
+  The hand-edited project manifest: where it lives, its keys, and how a
+  reader treats the unexpected.
+
+  ## Files
 
   `widget.toml` at the repository root, hand-edited and committed. The tool
   rewrites it only on `widget init`; every other command reads it and reports
   what it would change. The file on disk is authoritative — the tool never
   merges a remote copy over it.
 
-  # Shape
+  ## Shape
 
   ```toml
   # Every key the format defines. Only `name` is required.
@@ -99,14 +111,14 @@ example: |
   release = false              # boolean
   ```
 
-  # Compatibility
+  ## Compatibility
 
   An unknown key is kept and ignored, so a file written by a newer release
   still loads. A missing optional takes the default above. A `version` the
   reader does not understand is a hard error naming the release that added it,
   because guessing at a format is worse than refusing it.
 
-  # Stability
+  ## Stability
 
   Keys are added, never removed or retyped, within a major version. A key due
   for removal warns for one minor release and is ignored in the next major. A

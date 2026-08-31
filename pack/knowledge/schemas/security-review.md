@@ -7,8 +7,9 @@ description: Security reviews — risk verdict, scope and threat model, findings
 
 # Security Review Schema
 
-Structural rules for security review documents, matched by name
-(`**/*security-review*.md`); the source names no filing directory, and filed in the knowledge as a concept. Parallel to
+Structural rules for security review documents, filed at
+`knowledge/reports/security-review-{nnn}-{slug}.md`, listed in that
+directory's index and selected by frontmatter `type`. Parallel to
 `schema-code-review`, but each finding carries an attack scenario rather
 than a failure scenario: no realistic path from attacker-controlled input to
 impact means the entry is informational, not a finding.
@@ -23,6 +24,8 @@ line-limit: 800
 frontmatter:
   type:
     const: SecurityReview
+  id:
+    pattern: '^security-review-\d{3}-[a-z0-9-]+$'
 
 sections-ordered: true
 sections:
@@ -82,6 +85,13 @@ sections:
       Omit the section when empty.
 
 example: |
+  ---
+  type: SecurityReview
+  id: security-review-001-pack-allowlist
+  title: Security review of feature/pack-allowlist
+  description: Review of the pack transport allowlist change against its threat model.
+  ---
+
   # Security review: feature/pack-allowlist
 
   ## Verdict

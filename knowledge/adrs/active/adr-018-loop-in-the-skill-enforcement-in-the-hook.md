@@ -8,7 +8,6 @@ lifecycle: active
 
 # ADR-018: The Unattended Loop Is a Skill, Enforced by a Hook That Never Parses a Plan
 
-- Status: accepted
 - Date: 2026-08-31
 - Deciders: superdev maintainers
 

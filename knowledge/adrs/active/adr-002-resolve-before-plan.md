@@ -13,7 +13,6 @@ links:
 
 # ADR-002: Content resolves before planning
 
-- Status: accepted
 - Date: 2026-08-25
 - Deciders: project owner
 

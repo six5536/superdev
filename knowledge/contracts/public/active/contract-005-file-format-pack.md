@@ -7,7 +7,12 @@ lifecycle: active
 resource: /crates/lib/superdev-core/src/pack
 ---
 
-# Files
+# File format contract: pack
+
+What a content pack must look like for superdev to read it: pack.toml,
+the tree that names each item, and what is refused.
+
+## Files
 
 `pack.toml` at the root of the pack, and the tree beneath it. A pack is
 authored outside this repository — in a git repository superdev fetches by
@@ -18,7 +23,7 @@ superdev only reads it. It resolves the pack on every `sync`, and a path
 source is read afresh each run, so editing a local pack and syncing again
 lands the new bytes with no rebuild. Nothing superdev does writes into a pack.
 
-# Shape
+## Shape
 
 ```toml
 # pack.toml at the pack root. Unknown keys within a known format are ignored.
@@ -49,7 +54,7 @@ copy wins. Two paths are refused wherever a pack carries them —
 pins them — as is any file named `PROJECT.md`, which is the project's own
 extension layer and never superdev's to write.
 
-# Compatibility
+## Compatibility
 
 An unknown key inside a known `format` is ignored, so a pack written for a
 later superdev still loads as long as the format number has not moved. An
@@ -69,7 +74,7 @@ Packs layer in the order the manifest writes them, and a later item of the
 same `(owner, kind, name)` wins. An author therefore replaces a stock item by
 carrying the same path, and adds one by carrying a new name.
 
-# Stability
+## Stability
 
 Unreleased. `format = 1` is the only format this binary reads, and the layout
 table above is what that number means. A layout change that a format-1 pack

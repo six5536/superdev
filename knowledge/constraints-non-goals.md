@@ -1,5 +1,5 @@
 ---
-type: Constraints
+type: ConstraintsNonGoals
 id: constraints-non-goals
 title: Known Constraints & Non-Goals
 description: What superdev deliberately does not do, and the accepted limitations of the inherited machinery.

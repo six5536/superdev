@@ -25,22 +25,29 @@ frontmatter:
     description: >
       contract-{nnn}-cli-{slug}, the slug naming which command line. The
       number is the next free one across every contract, public and
-      private together and every lifecycle folder — a duplicate is
+      internal together and every lifecycle folder — a duplicate is
       an error.
   lifecycle:
     enum: [active, deprecated]
 
 sections-ordered: true
 sections:
-  - heading: "Commands"
+  - heading-pattern: '^CLI contract: .+$'
     level: 1
+    required: true
+    content: prose
+    description: >
+      One paragraph: the surface this contract binds and for whom —
+      link the ADRs behind it.
+  - heading: "Commands"
+    level: 2
     required: true
     content: code
     description: >
       The usage block: one line per command and flag, as `--help` would print
       it. Prose describes the surface; this block defines it.
   - heading: "Behaviour"
-    level: 1
+    level: 2
     required: true
     content: bullet-list
     description: >
@@ -48,14 +55,14 @@ sections:
       and the behaviour callers rely on. Anything a script would break on
       belongs here.
   - heading: "Exit codes"
-    level: 1
+    level: 2
     content: table
     columns: [Code, Meaning]
     description: >
       The codes callers branch on. Omit the section where the project defines
       them once for every binary and the error-handling concept carries them.
   - heading: "Stability"
-    level: 1
+    level: 2
     required: true
     content: prose
     description: >
@@ -71,7 +78,11 @@ example: |
   lifecycle: active
   ---
 
-  # Commands
+  # CLI contract: widget
+
+  The widget command line: build, check and publish, stable from 1.0.
+
+  ## Commands
 
   ```
   widget build [--release]   compile the project into ./out
@@ -79,7 +90,7 @@ example: |
   widget publish --to <URL>  upload ./out to a registry
   ```
 
-  # Behaviour
+  ## Behaviour
 
   - **`build`** writes only under `./out` and refuses a dirty working tree.
   - **`check`** never writes. It reads every source under PATH, or the whole
@@ -87,7 +98,7 @@ example: |
   - **`publish`** requires a prior `build`, and refuses a URL outside the
     configured registry allowlist.
 
-  # Exit codes
+  ## Exit codes
 
   | Code | Meaning |
   |------|---------|
@@ -95,7 +106,7 @@ example: |
   | 1    | the command found something to report |
   | 2    | usage error — unknown flag or subcommand |
 
-  # Stability
+  ## Stability
 
   The commands, their flags and the exit codes are stable from 1.0: they are
   added, never removed or repurposed, within a major version. A command due for

@@ -55,7 +55,7 @@ sections:
 
 example: |
   ---
-  type: Reference
+  type: Architecture
   id: architecture
   title: Architecture
   description: A Rust core owning packs and the canonical knowledge, with a thin CLI over it.

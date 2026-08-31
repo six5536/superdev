@@ -52,7 +52,7 @@ sections:
 
 example: |
   ---
-  type: Reference
+  type: Configuration
   id: configuration
   title: Configuration & Environments
   description: superdev.yaml is hand-edited, superdev.lock is tool-written, the cache is machine-local.

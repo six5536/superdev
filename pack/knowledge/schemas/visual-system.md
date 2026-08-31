@@ -71,7 +71,7 @@ sections:
 
 example: |
   ---
-  type: Convention
+  type: VisualSystem
   id: visual-system
   title: Visual System
   description: The design tokens the UI is built against — quiet, dense, one accent.

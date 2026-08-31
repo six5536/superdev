@@ -31,15 +31,22 @@ frontmatter:
     description: >
       contract-{nnn}-graphql-{slug}, the slug naming which graph. The
       number is the next free one across every contract, public and
-      private together and every lifecycle folder — a duplicate is
+      internal together and every lifecycle folder — a duplicate is
       an error.
   lifecycle:
     enum: [active, deprecated]
 
 sections-ordered: true
 sections:
-  - heading: "Schema"
+  - heading-pattern: '^GraphQL contract: .+$'
     level: 1
+    required: true
+    content: prose
+    description: >
+      One paragraph: the surface this contract binds and for whom —
+      link the ADRs behind it.
+  - heading: "Schema"
+    level: 2
     required: true
     content: code
     description: >
@@ -47,7 +54,7 @@ sections:
       `@deprecated` directives currently in force. One fenced `graphql` block.
       Every field a caller may select is defined here.
   - heading: "Endpoint and authentication"
-    level: 1
+    level: 2
     required: true
     content: prose
     description: >
@@ -55,7 +62,7 @@ sections:
       are available in production, what a caller presents to authenticate, and
       the response to a missing or rejected credential.
   - heading: "Errors"
-    level: 1
+    level: 2
     required: true
     content: prose
     description: >
@@ -63,13 +70,13 @@ sections:
       the extension fields carrying a machine-readable code, and which
       conditions are transport-level failures instead.
   - heading: "Limits"
-    level: 1
+    level: 2
     content: prose
     description: >
       Query depth, complexity budget, pagination caps and rate limits, and what
       a caller sees on exceeding one. Omit where the graph imposes none.
   - heading: "Stability"
-    level: 1
+    level: 2
     required: true
     content: prose
     description: >
@@ -85,7 +92,11 @@ example: |
   lifecycle: active
   ---
 
-  # Schema
+  # GraphQL contract: widget graph
+
+  The widget graph: one endpoint, deprecation in place of versioning.
+
+  ## Schema
 
   ```graphql
   type Widget {
@@ -110,14 +121,14 @@ example: |
   }
   ```
 
-  # Endpoint and authentication
+  ## Endpoint and authentication
 
   `POST /graphql`, JSON body. `GET` is accepted for persisted queries only.
   Introspection is on in every environment, because the schema is public.
   A bearer token in the `Authorization` header identifies the caller; an
   anonymous request may read `widgets` and may not mutate.
 
-  # Errors
+  ## Errors
 
   A resolver failure returns HTTP 200 with `data` partially populated and one
   entry per failure in `errors`, each carrying `extensions.code` — one of
@@ -125,14 +136,14 @@ example: |
   malformed request body or a rejected token fails at the transport, as 400 or
   401. A caller must therefore read `errors` even on a 200.
 
-  # Limits
+  ## Limits
 
   Query depth is capped at 10 and complexity at 1000 points, one point per
   field and 20 per list. `widgets` returns at most 100 per page. Exceeding any
   of these is `BAD_USER_INPUT` with the budget in the extension, before
   execution starts.
 
-  # Stability
+  ## Stability
 
   Types and fields are added without notice, and a caller must tolerate fields
   it did not ask for appearing in the schema. A field going away is marked

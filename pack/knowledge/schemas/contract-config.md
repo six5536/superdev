@@ -35,15 +35,22 @@ frontmatter:
     description: >
       contract-{nnn}-config-{slug}, the slug naming which configurable surface. The
       number is the next free one across every contract, public and
-      private together and every lifecycle folder — a duplicate is
+      internal together and every lifecycle folder — a duplicate is
       an error.
   lifecycle:
     enum: [active, deprecated]
 
 sections-ordered: true
 sections:
-  - heading: "Settings"
+  - heading-pattern: '^Config contract: .+$'
     level: 1
+    required: true
+    content: prose
+    description: >
+      One paragraph: the surface this contract binds and for whom —
+      link the ADRs behind it.
+  - heading: "Settings"
+    level: 2
     required: true
     content: table
     columns: [Name, Type, Default, Meaning]
@@ -52,7 +59,7 @@ sections:
       setting with no default is required, and the row says so. A setting the
       software reads but does not document is a setting a rebuild loses.
   - heading: "Sources and precedence"
-    level: 1
+    level: 2
     required: true
     content: bullet-list
     description: >
@@ -60,21 +67,21 @@ sections:
       strongest first, and what happens when two sources disagree. Say whether
       a value is read once at startup or re-read while running.
   - heading: "File"
-    level: 1
+    level: 2
     content: code
     description: >
       The configuration file's own shape, in its own language or as an example
       carrying every key, plus the path it is read from and what an unknown key
       does. Omit the section on software configured entirely by environment.
   - heading: "Secrets"
-    level: 1
+    level: 2
     content: prose
     description: >
       Which settings carry credentials, how they are supplied, and what the
       software promises never to log or echo. Omit where none of the settings
       is sensitive.
   - heading: "Stability"
-    level: 1
+    level: 2
     required: true
     content: prose
     description: >
@@ -90,7 +97,12 @@ example: |
   lifecycle: active
   ---
 
-  # Settings
+  # Config contract: widget
+
+  What widget reads to start: four settings, from the environment or
+  `widget.toml`.
+
+  ## Settings
 
   | Name | Type | Default | Meaning |
   |------|------|---------|---------|
@@ -99,7 +111,7 @@ example: |
   | `WIDGET_TOKEN` | string | none — required | the registry credential |
   | `WIDGET_LOG` | one of `debug`, `info`, `warn` | `info` | log verbosity |
 
-  # Sources and precedence
+  ## Sources and precedence
 
   - A command-line flag, where the command defines one.
   - The environment.
@@ -109,7 +121,7 @@ example: |
 
   Every value is read once at startup. Changing one takes a restart.
 
-  # File
+  ## File
 
   ```toml
   # widget.toml — every key optional; each mirrors the variable of the same name.
@@ -121,13 +133,13 @@ example: |
   An unknown key is a startup error naming the key and the nearest known one,
   because a typo in a config file is otherwise a silent default.
 
-  # Secrets
+  ## Secrets
 
   `WIDGET_TOKEN` is a credential. It is read from the environment only — never
   from the file, so it cannot be committed — and it is redacted wherever the
   configuration is printed, including the startup banner and the error text.
 
-  # Stability
+  ## Stability
 
   Names and defaults are stable within a major version. A renamed setting is
   read under both names for one minor release, with a warning naming the new

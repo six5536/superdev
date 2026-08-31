@@ -13,7 +13,6 @@ links:
 
 # ADR-011: A path pack's identity is relative to the repo root
 
-- Status: accepted
 - Date: 2026-08-26
 - Deciders: project owner
 

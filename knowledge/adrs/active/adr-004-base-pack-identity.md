@@ -11,7 +11,6 @@ links:
 
 # ADR-004: The base pack is identified by normalised source
 
-- Status: accepted
 - Date: 2026-08-25
 - Deciders: project owner
 

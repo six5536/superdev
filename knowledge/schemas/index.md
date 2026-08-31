@@ -7,7 +7,7 @@ a template could only be copied.
 
 ## Planning & design
 
-* [Feature Plan Schema][sokf:schema-feature-plan] - the feature's slice list — per slice a done-check, its test-plan cases and a done marker — filed among the plans.
+* [Feature Plan Schema][sokf:schema-feature-plan] - the feature's slice list — per slice its dependencies, a done-check, its test-plan cases and a done marker — filed among the plans.
 * [Ad-hoc Plan Schema][sokf:schema-adhoc-plan] - implementation plans for one-off work outside the feature workflow, filed among the plans.
 * [Idea Schema][sokf:schema-idea] - a thought captured for considering later — what it is, plus whatever reasoning exists at the time — filed in knowledge/ideas/.
 * [ADR Schema][sokf:schema-adr] - architecture decision records — context, the decision, options considered and consequences — filed among the ADRs.
@@ -46,7 +46,7 @@ One document per contract, all durable. An interface contract is internal — ke
 ## Reports & analysis
 
 * [Bug Report Schema][sokf:schema-bug-report] - bug reports filed in the issue tracker — symptom, repro, root cause and regression risk.
-* [Feature Request Schema][sokf:schema-feature-request] - feature requests filed in the issue tracker — motivation, proposed behaviour, alternatives and scope, with no room for invented repro steps.
+* [Feature Request Schema][sokf:schema-feature-request] - feature requests filed in the issue tracker — motivation, proposed behaviour, EARS acceptance criteria, alternatives and scope, with no room for invented repro steps.
 * [Chore Schema][sokf:schema-chore] - scoped mechanical work filed in the issue tracker — the surfaces it touches and what done means, with no room for a root cause it does not have.
 * [Investigation Schema][sokf:schema-investigation] - investigation write-ups — conclusion first, evidence with sources, ruled-out hypotheses and a recommendation.
 * [Postmortem Schema][sokf:schema-postmortem] - blameless incident write-ups — impact, timeline, root cause and typed action items.

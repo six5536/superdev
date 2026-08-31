@@ -7,8 +7,9 @@ description: Migration guides — old-to-new steps with per-step verification, b
 
 # Migration Guide Schema
 
-Structural rules for migration guides, matched by name
-(`**/*migration-guide*.md`); the source names no filing directory, and filed in the knowledge as a concept.
+Structural rules for migration guides, filed at
+`knowledge/reports/migration-guide-{nnn}-{slug}.md`, listed in that
+directory's index and selected by frontmatter `type`.
 
 ````yaml
 description: >
@@ -20,6 +21,8 @@ line-limit: 800
 frontmatter:
   type:
     const: MigrationGuide
+  id:
+    pattern: '^migration-guide-\d{3}-[a-z0-9-]+$'
 
 sections-ordered: true
 sections:
@@ -82,6 +85,13 @@ sections:
       One bullet per symptom or error message, with its cause and fix.
 
 example: |
+  ---
+  type: MigrationGuide
+  id: migration-guide-001-superdev-0-1-to-0-2
+  title: Migrating from superdev 0.1 to 0.2
+  description: The steps from superdev 0.1 to 0.2, each with its verification.
+  ---
+
   # Migrating from superdev 0.1 to 0.2
 
   Pack sources must now name an allowed transport. If every source in your

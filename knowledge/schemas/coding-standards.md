@@ -60,7 +60,7 @@ sections:
 
 example: |
   ---
-  type: Convention
+  type: CodingStandards
   id: coding-standards
   title: Coding Standards
   description: Rust and TypeScript, gated by fmt, clippy and eslint in CI.

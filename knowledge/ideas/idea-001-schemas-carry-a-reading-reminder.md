@@ -16,7 +16,7 @@ that it states what is promised to callers and must not be edited without a
 stability note. It learns that from the document it already has, not from a
 second file it would have had to know to fetch.
 
-# Motivation
+## Motivation
 
 An agent reads a document mid-task, with the document in context and its
 schema nowhere. The frontmatter says `type: PublicContracts`, which is a name,
@@ -31,7 +31,7 @@ The knowledge base already solves the human half of this. A person browsing
 `knowledge/contracts/public/` reads the index blurb and the directory name.
 An agent handed one file has neither.
 
-# Sketch
+## Sketch
 
 Add `reminder` to the schema contract vocabulary, beside `description` and
 `line-limit`, in `.agents/sokf/grammar.yaml` under
@@ -51,7 +51,7 @@ adding a key. It costs nothing to specify and gets the wrong text: a
 description is a summary written for an index, and the reminder wants an
 imperative written for whoever is about to edit.
 
-# Trade-offs
+## Trade-offs
 
 - Eighty-nine governed documents each gain a line, and the sweep to add them
   is one-off but real.
@@ -69,7 +69,7 @@ imperative written for whoever is about to edit.
 - The benefit is asserted, not measured. Nothing here says how much behaviour
   actually changes.
 
-# Open questions
+## Open questions
 
 - Verbatim, or a pattern the author may vary per document?
 - Preamble prose, or an HTML comment — invisible when the markdown renders,
@@ -79,7 +79,7 @@ imperative written for whoever is about to edit.
   the schema, and how often that happens is not known.
 - One line, or does a longer reminder pay for itself on the high-stakes types?
 
-# Next step
+## Next step
 
 Spike it on two schemas and compare. Pick one where a careless edit is
 expensive — a public contract, where an unnoted change breaks a promise — and

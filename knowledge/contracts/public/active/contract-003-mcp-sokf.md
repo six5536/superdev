@@ -7,7 +7,12 @@ lifecycle: active
 resource: /crates/lib/superdev-core/src/sokf/mcp.rs
 ---
 
-# Server
+# MCP contract: sokf
+
+The SOKF knowledge served to agents: four read-only tools over stdio,
+and what each one promises.
+
+## Server
 
 `superdev mcp sokf` serves one stdio client and exits `0` when that client
 closes stdin. A missing knowledge or an unusable index directory fails at
@@ -16,7 +21,7 @@ latter. The server exposes tools only — no resources, no prompts. It reads the
 index at `.superdev/cache/sokf-index/` and syncs it lazily on every tool call,
 so there is no watcher and no daemon state to go stale.
 
-# Tools
+## Tools
 
 Four read-only tools. Every hit carries the locator set — knowledge-relative
 path, concept id, heading path, line range, snippet, score — so the next call
@@ -39,7 +44,7 @@ can read exactly what matched.
   with each concept's id and description, and every validation finding,
   warnings included, whenever there is one.
 
-# Errors
+## Errors
 
 A tool failure is an MCP error payload, never a process exit: an unknown id
 comes back with near-miss candidates, and knowledge that fails validation still
@@ -47,7 +52,7 @@ indexes and serves — agents need search most while fixing one. Reading a file
 the parser choked on quotes the parse error instead of guessing at near
 misses.
 
-# Stability
+## Stability
 
 Unreleased. The tool names, their arguments and their result shapes may change
 without notice.

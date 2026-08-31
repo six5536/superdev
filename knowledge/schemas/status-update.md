@@ -7,8 +7,9 @@ description: Status updates — TL;DR, done since last update, in progress, bloc
 
 # Status Update Schema
 
-Structural rules for status updates, matched by name
-(`**/*status-update*.md`); the source names no filing directory, and filed in the knowledge as a concept. The heading
+Structural rules for status updates, filed at
+`knowledge/reports/status-update-{nnn}-{slug}.md`, listed in that
+directory's index and selected by frontmatter `type`. The heading
 carries the date, so a series of these sorts and reads as a series.
 
 ````yaml
@@ -20,6 +21,8 @@ line-limit: 800
 frontmatter:
   type:
     const: StatusUpdate
+  id:
+    pattern: '^status-update-\d{3}-[a-z0-9-]+$'
 
 sections-ordered: true
 sections:
@@ -71,6 +74,13 @@ sections:
       Omit the section when empty.
 
 example: |
+  ---
+  type: StatusUpdate
+  id: status-update-001-pack-transport-allowlist
+  title: Pack transport allowlist — 2026-08-26
+  description: Where the pack transport allowlist work stands on 2026-08-26.
+  ---
+
   # Status: Pack transport allowlist — 2026-08-26
 
   ## TL;DR

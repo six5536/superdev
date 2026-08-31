@@ -95,6 +95,15 @@ document runs over the example with the schema handed to it.
 - Out: fenced examples in documents that are not schemas. A plan or a spec
   may show whatever illustrates its argument.
 
+## Comments
+
+2026-08-31 — A hand review of all 53 schemas found 26 examples breaking
+their own frontmatter constraints: 18 carried a `type` the schema's
+`const` refuses, and 8 omitted frontmatter the schema constrains.
+Plan-014 fixed every instance by hand. The count strengthens the case
+for the checker: the five id faults first recorded here were the
+surfaced fraction of a fault class five times that size.
+
 <!-- sokf:links -->
 [sokf:issue-018-feature-request-the-schema-layer-checks-sections-and-nothing-else]: /knowledge/issues/open/issue-018-feature-request-the-schema-layer-checks-sections-and-nothing-else.md
 [sokf:issue-020-bug-the-schemas-do-not-ship]: /knowledge/issues/done/issue-020-bug-the-schemas-do-not-ship.md

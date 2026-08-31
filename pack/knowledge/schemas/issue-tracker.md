@@ -29,7 +29,7 @@ preamble:
   content: prose
   description: >
     Where issues live — in-repo files, GitHub, elsewhere — and how they relate
-    to specs and plans.
+    to contracts and plans.
 
 sections-ordered: true
 sections:
@@ -51,7 +51,7 @@ sections:
 
 example: |
   ---
-  type: Convention
+  type: IssueTracker
   id: issue-tracker
   title: Issue Tracker & Triage
   description: Where issues live and the triage label vocabulary.
@@ -60,8 +60,8 @@ example: |
 
   Issues live in the canonical knowledge as Issue concepts in the issue
   tracker, not in GitHub, so they travel with the tree an agent reads. An issue that turns
-  out to need a behaviour decision gets a spec; one that needs work gets a
-  plan, linked both ways.
+  out to need a behaviour decision is framed as a feature request whose
+  contracts record it; one that needs work gets a plan, linked both ways.
 
   # Conventions
 

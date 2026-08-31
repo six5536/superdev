@@ -39,7 +39,7 @@ preamble:
 
 example: |
   ---
-  type: Procedure
+  type: ReleaseProcedure
   id: release-procedure
   title: Release Procedure
   description: How a release is cut, the gates, and the irreversible steps.

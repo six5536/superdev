@@ -7,8 +7,9 @@ description: Blameless incident write-ups — impact, timeline, root cause and t
 
 # Postmortem Schema
 
-Structural rules for incident postmortems, matched by name
-(`**/*postmortem*.md`); the source names no filing directory, and filed in the knowledge as a concept. Blameless is
+Structural rules for incident postmortems, filed at
+`knowledge/reports/postmortem-{nnn}-{slug}.md`, listed in that
+directory's index and selected by frontmatter `type`. Blameless is
 a structural property here, not a reminder: the document names systems and
 processes, and the only place a person appears is as the owner of an action
 item.
@@ -23,6 +24,8 @@ line-limit: 800
 frontmatter:
   type:
     const: Postmortem
+  id:
+    pattern: '^postmortem-\d{3}-[a-z0-9-]+$'
 
 sections-ordered: true
 sections:
@@ -85,6 +88,13 @@ sections:
       is a wish.
 
 example: |
+  ---
+  type: Postmortem
+  id: postmortem-001-pack-sync-outage
+  title: Pack sync outage 2026-08-24
+  description: The 2026-08-24 pack sync outage — impact, root cause and action items.
+  ---
+
   # Postmortem: Pack sync outage 2026-08-24
 
   - Date of incident: 2026-08-24, 09:12–10:41 UTC

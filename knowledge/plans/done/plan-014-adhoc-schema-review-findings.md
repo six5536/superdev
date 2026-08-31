@@ -3,7 +3,7 @@ type: AdhocPlan
 id: plan-014-adhoc-schema-review-findings
 title: Bring every schema in line with its own rules and the workflow
 description: The schema review's findings land — worked examples satisfy their own schemas, the report schemas gain identity and filing, stale vocabulary leaves, the contract, ADR and idea shapes unify, and the pack mirror stays byte-identical.
-lifecycle: open
+lifecycle: done
 links:
   - rel: references
     to: issue-022-feature-request-a-schemas-worked-example-is-checked-by-nothing

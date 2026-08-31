@@ -11,7 +11,6 @@ links:
 
 # ADR-001: Pack entries are a top-level manifest array
 
-- Status: accepted
 - Date: 2026-08-25
 - Deciders: project owner
 

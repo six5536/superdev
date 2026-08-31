@@ -18,7 +18,7 @@ line-limit: 800
 
 frontmatter:
   type:
-    const: Constraints
+    const: ConstraintsNonGoals
   id:
     const: constraints-non-goals
   status:
@@ -43,7 +43,7 @@ sections:
 
 example: |
   ---
-  type: Reference
+  type: ConstraintsNonGoals
   id: constraints-non-goals
   title: Known Constraints & Non-Goals
   description: What superdev deliberately does not do, and the accepted limitations.

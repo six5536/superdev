@@ -8,7 +8,6 @@ lifecycle: active
 
 # ADR-019: Run State Is a Session-Owned File Behind CLI Verbs, and the Hook Owns the Counter
 
-- Status: accepted
 - Date: 2026-08-31
 - Deciders: superdev maintainers
 

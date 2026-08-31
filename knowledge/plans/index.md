@@ -40,5 +40,5 @@ workflow.
 [sokf:plan-011-adhoc-filing-by-lifecycle]: /knowledge/plans/done/plan-011-adhoc-filing-by-lifecycle.md
 [sokf:plan-012-adhoc-contract-driven-workflow]: /knowledge/plans/done/plan-012-adhoc-contract-driven-workflow.md
 [sokf:plan-013-feature-workflow-autonomy]: /knowledge/plans/done/plan-013-feature-workflow-autonomy.md
-[sokf:plan-014-adhoc-schema-review-findings]: /knowledge/plans/open/plan-014-adhoc-schema-review-findings.md
+[sokf:plan-014-adhoc-schema-review-findings]: /knowledge/plans/done/plan-014-adhoc-schema-review-findings.md
 [sokf:plan-015-adhoc-code-review-at-the-last-slice]: /knowledge/plans/done/plan-015-adhoc-code-review-at-the-last-slice.md

@@ -67,7 +67,9 @@ sections:
       changes, and where; Done-check: the pass/fail check integrate runs
       against this slice; Cases: the slice's test cases, written inline,
       one per line, each naming the acceptance criteria it covers
-      ("covers 1, 3"). A case belongs to exactly one slice — an
+      ("covers 1, 3") — when the framed issue is a bug, its numbered
+      repro steps and expected behaviour stand in for criteria numbers.
+      A case belongs to exactly one slice — an
       integration or e2e case to the slice that completes its boundary,
       which usually puts the heaviest cases last — and every acceptance
       criterion in the feature-request is covered by at least one case

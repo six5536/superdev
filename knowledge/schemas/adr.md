@@ -10,7 +10,8 @@ description: Architecture decision records — context, the decision, options co
 Structural rules for architecture decision records, filed among the
 ADRs as `adr-{nnn}-{slug}`, numbered after the highest across all of its kind's folders — a duplicate number is an error — and placed in its lifecycle folder by `superdev validate --fix`,
 and listed in the ADRs' `index.md`. A superseded ADR is never edited: the new
-ADR names it, and its Status line is updated to point forward.
+ADR declares a `supersedes` link to it, and its `lifecycle` moves to
+`deprecated`.
 
 ````yaml
 description: >
@@ -27,8 +28,13 @@ frontmatter:
     enum: [active, deprecated]
     description: >
       The folder is the value: active while the decision stands,
-      deprecated when superseded. The decision's own state — proposed,
-      accepted, superseded — rides in the body Status line.
+      deprecated when superseded — the superseding ADR carries the
+      `supersedes` link.
+  status:
+    enum: [draft, stable]
+    description: >
+      draft while the decision is proposed; absent means stable, the
+      accepted state.
 
 sections-ordered: true
 sections:
@@ -38,9 +44,8 @@ sections:
     content: bullet-list
     description: >
       The decision title, e.g. "ADR-012: Use SQLite for local
-      persistence", followed by a bullet list of Status (proposed |
-      accepted | superseded by ADR-NNN | deprecated), Date (YYYY-MM-DD),
-      and Deciders (who made/approved the call).
+      persistence", followed by a bullet list of Date (YYYY-MM-DD) and
+      Deciders (who made/approved the call).
   - heading: "Context"
     level: 2
     required: true
@@ -85,7 +90,6 @@ example: |
 
   # ADR-012: Refuse non-allowlisted pack transports
 
-  - Status: accepted
   - Date: 2026-08-26
   - Deciders: superdev maintainers
 

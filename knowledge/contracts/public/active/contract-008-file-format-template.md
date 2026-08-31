@@ -17,7 +17,12 @@ sources:
     title: web-react-android-ios-native template tree
 ---
 
-# Files
+# File format contract: template
+
+What a project template is: where its tree lives in the pack, the five
+substitution tokens, and the write-once promise to a seeded repo.
+
+## Files
 
 A template is a directory tree under `pack/projects/<name>/` — a pack item
 per the [pack format][sokf:contract-005-file-format-pack], written by
@@ -32,7 +37,7 @@ belongs to the knowledge component: every knowledge-enabled repo gets the
 concept skeleton from that component's scaffold, template or not, so no
 template ships one.
 
-# Shape
+## Shape
 
 ```text
 pack/projects/<name>/        # one template; <name> is <platforms>-<stack>
@@ -54,7 +59,7 @@ that position; the derivations live on `Tokens`, so `substitute` and
 user-defined variables, and a name that yields an empty slug falls back
 to `project`.
 
-## Template: rust-npm
+### Template: rust-npm
 
 The first shipped template, derived from this repo's shape.[^rust-npm-src]
 
@@ -79,7 +84,7 @@ The first shipped template, derived from this repo's shape.[^rust-npm-src]
   two seeded projects never share one `target/`; `.gitattributes`
   forces `*.sh` and `.devcontainer/**` to LF.
 
-## Template: web-react-android-ios-native
+### Template: web-react-android-ios-native
 
 The second shipped template: one product as three native codebases,
 backported from a real three-platform project.[^web-src] Naming
@@ -109,7 +114,7 @@ templates are UTF-8 `include_str!`) and the Xcode project, which
 `gradle` via `setup-gradle` rather than `./gradlew`, so CI is green
 before either bootstrap runs.
 
-# Compatibility
+## Compatibility
 
 Anything that is not one of the five tokens passes through untouched —
 including GitHub Actions' `${{ … }}`, which template CI files
@@ -121,7 +126,7 @@ through an interpreter; a file that needs its executable bit (`gradlew`)
 says so in the template's docs. The manifest's `[template]` table gains
 an optional `version`; manifests from before the field parse unchanged.
 
-# Stability
+## Stability
 
 The token vocabulary is promised: a token's meaning never changes, and a
 new spelling may be added but never replaces one. The write-once promise

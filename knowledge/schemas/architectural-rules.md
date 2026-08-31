@@ -36,7 +36,7 @@ preamble:
 
 example: |
   ---
-  type: Convention
+  type: ArchitecturalRules
   id: architectural-rules
   title: Architectural Rules
   description: The core never knows its caller, and the lockfile is never hand-derived.
