@@ -88,4 +88,4 @@ the next undeclared key will stand just as quietly.
 <!-- sokf:links -->
 [sokf:contract-002-cli-superdev]: /knowledge/contracts/public/active/contract-002-cli-superdev.md
 [sokf:issue-035-feature-request-a-contract-does-not-define-its-interface]: /knowledge/issues/done/issue-035-feature-request-a-contract-does-not-define-its-interface.md
-[sokf:issue-036-feature-request-validate-prints-warnings-by-default]: /knowledge/issues/open/issue-036-feature-request-validate-prints-warnings-by-default.md
+[sokf:issue-036-feature-request-validate-prints-warnings-by-default]: /knowledge/issues/done/issue-036-feature-request-validate-prints-warnings-by-default.md
