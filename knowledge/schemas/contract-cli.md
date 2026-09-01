@@ -65,25 +65,44 @@ sections:
     level: 2
     required: true
     content: code
+    block-language: yaml
+    block-entry-keys: [about, args, flags, exit]
     description: >
-      The usage block: one line per command and flag, as `--help` would print
-      it. Prose describes the surface; this block defines it.
+      The definition of the command line, keyed by the path a user types
+      ("widget", "widget build"). One entry per command the binary offers,
+      each carrying `about`, its positional `args` in order, its `flags` as a
+      map of long form to `{type, about}` — `type: bool` for a switch, else
+      the value name — and `exit`, a map of code to what it means for that
+      command. A caller reproduces the command line from this block alone;
+      prose around it describes and never defines. The framework's own help
+      and version flags are stated once under Behaviour rather than repeated
+      in every entry.
   - heading: "Behaviour"
     level: 2
     required: true
     content: bullet-list
     item-pattern: '\b(MUST|SHALL|SHOULD|MAY|REQUIRED|RECOMMENDED|OPTIONAL)\b'
     description: >
-      One entry per command — what it reads, what it writes, what it refuses,
-      and the behaviour callers rely on. Anything a script would break on
-      belongs here.
+      What the definition block cannot state: what each command reads and
+      writes, what it refuses, and the ordering a script depends on. One
+      requirement per entry, never a restatement of the block.
   - heading: "Exit codes"
     level: 2
+    required: true
     content: table
     columns: [Code, Meaning]
     description: >
-      The codes callers branch on. Omit the section where the project defines
-      them once for every binary and the error-handling concept carries them.
+      Every code the binary returns, and what it means across commands. A
+      command whose code carries a narrower meaning states it in its own
+      `exit` entry.
+  - heading: "Streams"
+    level: 2
+    required: true
+    content: prose
+    content-pattern: '\b(MUST|SHALL|SHOULD|MAY|REQUIRED|RECOMMENDED|OPTIONAL)\b'
+    description: >
+      What the binary writes to stdout and to stderr, what it reads from
+      stdin, and every command that departs from the rule.
   - heading: "Stability"
     level: 2
     required: true
@@ -108,10 +127,29 @@ example: |
 
   ## Commands
 
-  ```
-  widget build [--release]   compile the project into ./out
-  widget check [PATH...]     validate the sources; PATH replaces the default
-  widget publish --to <URL>  upload ./out to a registry
+  ```yaml
+  widget:
+    about: Build, check and publish a widget project.
+    args: []
+    flags: {}
+    exit: { 0: help printed }
+  widget build:
+    about: Compile the project into ./out.
+    args: []
+    flags:
+      --release: { type: bool, about: Optimise, and strip debug symbols. }
+    exit: { 0: built, 1: a source failed to compile, 2: usage error }
+  widget check:
+    about: Validate the sources without writing.
+    args: [PATH]
+    flags: {}
+    exit: { 0: no findings, 1: a finding, 2: usage error }
+  widget publish:
+    about: Upload ./out to a registry.
+    args: []
+    flags:
+      --to: { type: URL, about: The registry to upload to. }
+    exit: { 0: uploaded, 2: usage error, or a URL outside the allowlist }
   ```
 
   ## Behaviour
@@ -130,6 +168,12 @@ example: |
   | 0    | success |
   | 1    | the command found something to report |
   | 2    | usage error — unknown flag or subcommand |
+
+  ## Streams
+
+  Every command MUST write its report to stdout and its diagnostics to
+  stderr, and MUST read nothing from stdin. `publish` MUST write its progress
+  to stderr, so a piped stdout carries the uploaded manifest alone.
 
   ## Stability
 

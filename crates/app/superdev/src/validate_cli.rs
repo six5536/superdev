@@ -34,7 +34,7 @@ pub struct ValidateArgs {
     #[arg(long, value_name = "DIR")]
     pub knowledge: Option<PathBuf>,
     /// Repository root for `/`-rooted paths (default: this repo)
-    #[arg(long)]
+    #[arg(long, value_name = "DIR")]
     pub repo_root: Option<PathBuf>,
 }
 

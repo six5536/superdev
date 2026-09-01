@@ -11,6 +11,8 @@
 #![warn(missing_docs)]
 
 mod cli;
+#[cfg(test)]
+mod contract;
 mod manage;
 mod run;
 mod sokf_cli;

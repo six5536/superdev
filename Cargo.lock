@@ -2036,6 +2036,7 @@ dependencies = [
  "dialoguer",
  "serde",
  "serde_json",
+ "serde_yaml_ng",
  "superdev-core",
  "tempfile",
  "tokio",
