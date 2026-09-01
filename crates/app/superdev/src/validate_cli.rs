@@ -84,7 +84,7 @@ pub fn run_validate(args: &ValidateArgs, root: &Path) -> Result<u8> {
     };
     let run = validate::validate_repo(&repo_root, &knowledge, &args.paths, &grammar)?;
     if args.json {
-        let mut value = run.report.to_json();
+        let mut value = run.report.to_json(listing(args));
         // The knowledge path is the caller's string, so core leaves the key to
         // the caller. `files` joins it for the same reason `concepts` sits in
         // the report: it says what was read, and a run that read nothing is

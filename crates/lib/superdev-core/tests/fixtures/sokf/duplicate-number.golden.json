@@ -1,5 +1,6 @@
 {
   "concepts": 3,
+  "errors": 1,
   "findings": [
     {
       "file": "plan-001-second.md",
@@ -7,5 +8,6 @@
       "severity": "error"
     }
   ],
-  "passed": false
+  "passed": false,
+  "warnings": 0
 }

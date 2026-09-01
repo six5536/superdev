@@ -132,15 +132,17 @@ impl Report {
         self.findings.len() - self.errors()
     }
 
-    /// The report as JSON.
+    /// The report as JSON, reporting what the text output reports: both
+    /// counts always, and the findings that listing would have printed.
     ///
     /// The reference validator also emits the bundle path as given on its
     /// command line; that is the caller's string, so the caller adds it.
     #[must_use]
-    pub fn to_json(&self) -> serde_json::Value {
+    pub fn to_json(&self, warnings: Warnings) -> serde_json::Value {
         let findings: Vec<serde_json::Value> = self
             .findings
             .iter()
+            .filter(|f| f.fatal || warnings == Warnings::Listed)
             .map(|f| {
                 serde_json::json!({
                     "severity": f.severity(),
@@ -152,6 +154,8 @@ impl Report {
         serde_json::json!({
             "concepts": self.concept_count,
             "passed": self.passed(),
+            "errors": self.errors(),
+            "warnings": self.warnings(),
             "findings": findings,
         })
     }
@@ -1302,6 +1306,52 @@ mod tests {
         }
     }
 
+    #[test]
+    fn the_json_states_both_counts_and_lists_what_the_text_run_listed() {
+        let r = mixed();
+        for listing in [Warnings::Listed, Warnings::Counted] {
+            let json = r.to_json(listing);
+            assert_eq!(json["errors"], serde_json::json!(1), "{json}");
+            assert_eq!(json["warnings"], serde_json::json!(2), "{json}");
+        }
+        let listed = r.to_json(Warnings::Listed);
+        assert_eq!(listed["findings"].as_array().unwrap().len(), 3);
+
+        let counted = r.to_json(Warnings::Counted);
+        let severities: Vec<&str> = counted["findings"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|f| f["severity"].as_str().unwrap())
+            .collect();
+        assert_eq!(severities, ["error"], "{counted}");
+    }
+
+    /// The two renderers report the same run, so a consumer reading either
+    /// reaches the same numbers.
+    #[test]
+    fn the_json_counts_and_the_summary_line_agree() {
+        for r in [mixed(), report_of(&[("advisory", false)]), report_of(&[])] {
+            for listing in [Warnings::Listed, Warnings::Counted] {
+                let json = r.to_json(listing);
+                let summary = r.render_human(listing);
+                let summary = summary.lines().next_back().unwrap();
+                assert!(
+                    summary.contains(&format!(
+                        "({} error(s), {} warning(s))",
+                        json["errors"], json["warnings"]
+                    )),
+                    "{summary} against {json}"
+                );
+                assert_eq!(
+                    json["passed"],
+                    serde_json::json!(summary.starts_with("PASS")),
+                    "{summary} against {json}"
+                );
+            }
+        }
+    }
+
     const MANIFEST_YAML: &str = "sokf: \"0.1\"\nname: t\n";
     const A_MIRRORED: &str = "---\ntype: T\nid: alpha\nlinks:\n  - rel: depends-on\n    to: beta\n---\nSee [beta][sokf:beta].\n\n<!-- sokf:links -->\n[sokf:beta]: /beta.md\n";
     const B: &str = "---\ntype: T\nid: beta\n---\nx\n";
@@ -1428,7 +1478,10 @@ mod tests {
         assert!(r.passed());
         assert_eq!(r.concept_count, 2);
         assert!(r.render_human(Warnings::Listed).contains("no findings"));
-        assert_eq!(r.to_json()["passed"], serde_json::json!(true));
+        assert_eq!(
+            r.to_json(Warnings::Listed)["passed"],
+            serde_json::json!(true)
+        );
     }
 
     #[test]
@@ -1592,7 +1645,7 @@ mod tests {
                 .ends_with("FAIL (32 error(s), 1 warning(s))\n")
         );
         assert_eq!(
-            r.to_json()["findings"][0]["file"],
+            r.to_json(Warnings::Listed)["findings"][0]["file"],
             serde_json::json!("a.md")
         );
     }

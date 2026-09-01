@@ -28,6 +28,11 @@
 //! The report carries no knowledge-directory key: [`Report::to_json`] leaves
 //! the path to the caller, which holds the string it was given.
 //!
+//! Every golden is captured with the warnings listed. What a run prints by
+//! default is the CLI's decision (ADR-040); these record the findings, and a
+//! severity a default run would not print is exactly the one nothing else
+//! would catch.
+//!
 //! Known divergence from the old Python reference, deliberately left: a
 //! manifest that parses to a falsy non-mapping (`[]`, `false`). Python coerced
 //! it to `{}` and reported the missing `aokf` and `name`; this reports the
@@ -36,7 +41,7 @@
 use std::path::{Path, PathBuf};
 
 use superdev_core::sokf::load_bundle;
-use superdev_core::validate::sokf::validate;
+use superdev_core::validate::sokf::{Warnings, validate};
 
 /// The fixture root.
 fn fixtures() -> PathBuf {
@@ -50,7 +55,7 @@ fn snapshot(case: &str) {
     let path = dir.with_extension("golden.json");
 
     let bundle = load_bundle(&dir).unwrap();
-    let ours = validate(&bundle, &dir).to_json();
+    let ours = validate(&bundle, &dir).to_json(Warnings::Listed);
 
     if std::env::var_os("UPDATE_GOLDENS").is_some() {
         let mut text = serde_json::to_string_pretty(&ours).unwrap();

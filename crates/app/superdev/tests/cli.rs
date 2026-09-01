@@ -261,14 +261,22 @@ fn validate_checks_a_named_document_as_the_bare_run_does() {
 /// For a concept, README.md and a skill alike, a named run reports exactly
 /// the findings the bare run reports for that file (I019 criteria 1 and 2,
 /// ADR-026).
+///
+/// Both runs ask for the warnings. The only one of the three files that
+/// carries a finding carries warnings, so a default run would compare two
+/// empty lists and prove nothing.
 #[test]
 fn a_named_runs_findings_equal_the_bare_runs_for_that_file() {
     let out = superdev()
         .current_dir(REPO_ROOT)
-        .args(["validate", "--json"])
+        .args(["validate", "--json", "--warnings"])
         .assert()
         .success();
     let bare: serde_json::Value = serde_json::from_slice(&out.get_output().stdout).unwrap();
+    assert!(
+        !bare["findings"].as_array().unwrap().is_empty(),
+        "the live tree has findings to compare: {bare}"
+    );
     for file in [
         "knowledge/architecture.md",
         "README.md",
@@ -282,7 +290,7 @@ fn a_named_runs_findings_equal_the_bare_runs_for_that_file() {
             .collect();
         let out = superdev()
             .current_dir(REPO_ROOT)
-            .args(["validate", "--json", file])
+            .args(["validate", "--json", "--warnings", file])
             .assert()
             .success();
         let named: serde_json::Value = serde_json::from_slice(&out.get_output().stdout).unwrap();
@@ -296,7 +304,7 @@ fn a_named_runs_findings_equal_the_bare_runs_for_that_file() {
 fn validate_json_is_machine_readable() {
     let out = superdev()
         .current_dir(REPO_ROOT)
-        .args(["validate", "--json"])
+        .args(["validate", "--json", "--warnings"])
         .assert()
         .success();
     let report: serde_json::Value = serde_json::from_slice(&out.get_output().stdout).unwrap();
@@ -313,6 +321,41 @@ fn validate_json_is_machine_readable() {
     assert!(
         knowledge.ends_with("knowledge"),
         "unexpected knowledge path: {knowledge}"
+    );
+}
+
+/// `--json` reports what the text output reports: both counts always, and the
+/// findings the text run listed (ADR-040). A consumer that read the counts off
+/// `findings` would now undercount, which is why the counts are there.
+#[test]
+fn validate_json_states_both_counts_and_lists_what_the_text_run_listed() {
+    let report = |args: &[&str]| -> serde_json::Value {
+        let out = superdev()
+            .current_dir(REPO_ROOT)
+            .args(args)
+            .assert()
+            .success();
+        serde_json::from_slice(&out.get_output().stdout).unwrap()
+    };
+    let counted = report(&["validate", "--json"]);
+    let listed = report(&["validate", "--json", "--warnings"]);
+
+    for r in [&counted, &listed] {
+        assert_eq!(r["errors"], serde_json::json!(0), "{r}");
+        assert!(
+            r["warnings"].as_u64().unwrap() > 0,
+            "the live tree carries warnings: {r}"
+        );
+    }
+    assert_eq!(counted["warnings"], listed["warnings"]);
+    assert!(
+        counted["findings"].as_array().unwrap().is_empty(),
+        "a default run lists no warning: {counted}"
+    );
+    assert_eq!(
+        listed["findings"].as_array().unwrap().len() as u64,
+        listed["warnings"].as_u64().unwrap(),
+        "--warnings lists every one it counted: {listed}"
     );
 }
 

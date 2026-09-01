@@ -1,5 +1,6 @@
 {
   "concepts": 3,
+  "errors": 3,
   "findings": [
     {
       "file": "blank-type.md",
@@ -17,5 +18,6 @@
       "severity": "error"
     }
   ],
-  "passed": false
+  "passed": false,
+  "warnings": 0
 }
