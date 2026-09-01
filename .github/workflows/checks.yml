@@ -53,7 +53,7 @@ jobs:
           node-version: 24
 
       - name: Install cargo-nextest
-        uses: taiki-e/install-action@v2.85.6
+        uses: taiki-e/install-action@v2.87.1
         with:
           tool: cargo-nextest
 
@@ -122,7 +122,7 @@ jobs:
           node-version: 24
 
       - name: Install cargo-llvm-cov and cargo-nextest
-        uses: taiki-e/install-action@v2.85.6
+        uses: taiki-e/install-action@v2.87.1
         with:
           tool: cargo-llvm-cov,cargo-nextest
 
