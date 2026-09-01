@@ -65,7 +65,7 @@ issue and criterion they cover ("I029 c1").
 
 ### Slice 3: The skill's explicit go-ahead
 
-- [ ] Done — ticked by integrate at merge.
+- [x] Done — ticked by integrate at merge.
 - Depends-on: none.
 - Change: the contract-design skill restructured per ADR-028, in
   `.claude/skills/contract-design/SKILL.md` and its pack mirror: the
