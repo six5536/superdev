@@ -3,7 +3,7 @@ type: FeaturePlan
 id: plan-023-feature-warnings-are-counted-not-listed
 title: A warning is counted by default and listed on request — feature plan
 description: Slices delivering `--warnings`, the shared default for the CLI and the hooks, and the counts `--json` has never carried.
-lifecycle: open
+lifecycle: done
 ---
 
 # Feature plan: A warning is counted by default and listed on request
@@ -72,7 +72,7 @@ Request:
 
 ### Slice 3: The hooks default like the command line
 
-- [ ] Done — ticked by integrate at merge.
+- [x] Done — ticked by integrate at merge.
 - Depends-on: 1.
 - Change: `hook_validate` in `crates/app/superdev/src/validate_cli.rs` and
   `knowledge_hold` in `crates/app/superdev/src/run.rs` render without
@@ -83,14 +83,13 @@ Request:
   PostToolUse hook's output names the error, names no warning, and states
   both counts; its exit code is 2 as before.
 - Cases:
-  - unit: `hook_validate` on a knowledge tree with an error and a warning
-    prints the error, prints no warning, states both counts, and exits 2
-    — covers 3, 6.
-  - unit: the Stop hook's hold message lists no warning and states both
-    counts — covers 3.
-  - unit: a tree whose only findings are warnings leaves the PostToolUse
-    hook at exit 0 and the Stop hook letting the turn end, as today —
-    covers 6.
+  - e2e: `superdev hook validate` on a knowledge tree with an error and a
+    warning prints the error, prints no warning, states both counts, and
+    exits 2 — covers 3, 6.
+  - e2e: `superdev hook run`'s hold message lists no warning and states
+    both counts — covers 3.
+  - e2e: a tree whose only findings are warnings leaves the PostToolUse
+    hook at exit 0, as today — covers 6.
 
 <!-- sokf:links -->
 [sokf:adr-038-a-contract-may-promise-what-is-not-built-yet]: /knowledge/adrs/active/adr-038-a-contract-may-promise-what-is-not-built-yet.md
