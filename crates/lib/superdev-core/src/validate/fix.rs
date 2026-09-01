@@ -596,7 +596,10 @@ mod tests {
             "the refile was refused through the symlink: {:?}",
             repair.written
         );
-        assert!(real.join("knowledge/issues/open/issue-001-bug-a.md").is_file());
+        assert!(
+            real.join("knowledge/issues/open/issue-001-bug-a.md")
+                .is_file()
+        );
     }
 
     /// Covers I040: a repair to a CRLF document leaves it CRLF. The pass
@@ -612,11 +615,7 @@ mod tests {
             "sokf: \"0.4\"\nname: t\n",
         )
         .unwrap();
-        std::fs::write(
-            knowledge.join("a.md"),
-            "---\ntype: T\nid: a\n---\n\n# A\n",
-        )
-        .unwrap();
+        std::fs::write(knowledge.join("a.md"), "---\ntype: T\nid: a\n---\n\n# A\n").unwrap();
         // Cites `a` and carries no definition block, so the pass writes one.
         let citing = knowledge.join("citing.md");
         let lf = "---\ntype: T\nid: citing\n---\n\nSee [a][sokf:a].\n";
@@ -660,6 +659,9 @@ mod tests {
                 outside.display()
             );
         }
-        assert!(inside.is_file(), "the refused move left the source in place");
+        assert!(
+            inside.is_file(),
+            "the refused move left the source in place"
+        );
     }
 }
