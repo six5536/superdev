@@ -101,6 +101,14 @@ pub enum Warnings {
     Counted,
 }
 
+impl Warnings {
+    /// Whether a report rendered this way lists `finding`. One rule, so the
+    /// text and the JSON cannot disagree about what a run showed.
+    fn lists(self, finding: &Finding) -> bool {
+        finding.fatal || self == Self::Listed
+    }
+}
+
 /// The outcome of one validation run.
 #[derive(Debug, Clone)]
 pub struct Report {
@@ -142,7 +150,7 @@ impl Report {
         let findings: Vec<serde_json::Value> = self
             .findings
             .iter()
-            .filter(|f| f.fatal || warnings == Warnings::Listed)
+            .filter(|f| warnings.lists(f))
             .map(|f| {
                 serde_json::json!({
                     "severity": f.severity(),
@@ -170,7 +178,7 @@ impl Report {
             lines.push("  ✓ no findings".to_string());
         }
         for finding in &self.findings {
-            if !finding.fatal && warnings == Warnings::Counted {
+            if !warnings.lists(finding) {
                 continue;
             }
             let severity = finding.severity();
