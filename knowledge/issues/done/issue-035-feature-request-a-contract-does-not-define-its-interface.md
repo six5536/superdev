@@ -3,7 +3,7 @@ type: FeatureRequest
 id: issue-035-feature-request-a-contract-does-not-define-its-interface
 title: A contract describes its interface in prose instead of defining it, so nothing can be built from it
 description: The contracts name their surfaces in narrative rather than defining them, so a caller cannot reproduce an interface from its contract — the MCP contract carries no tool schema at all, and the CLI contract's usage block has already drifted from the binary.
-lifecycle: open
+lifecycle: done
 links:
   - rel: references
     to: issue-034-feature-request-normative-shapes-are-described-but-not-enforced
@@ -171,6 +171,27 @@ until that slice lands, and
 [I034][sokf:issue-034-feature-request-normative-shapes-are-described-but-not-enforced]
 stays open with it.
 
+Accepted on the merged code at `006f475`. Criterion 4 now passes:
+plan-021 slice 12 bound the template contract's two surfaces in both
+directions, so all nine active contracts are bound — 002 by the command
+tree and the exit-code probes, 003 by the served tool list, 004 to 006
+and 008 by their readers and their declared sets, and 007, 009 and 010
+by the internal-interface text bind.
+
+The second walk re-checked every criterion rather than trusting the
+first, because five defects were fixed under the feature between the two
+runs. 41 tests cover the fifteen criteria and pass; `validate` is clean
+over the shipped knowledge and the pack mirror, whose schemas are
+byte-identical; no contract carries a `pending` marker. Criterion 2 was
+driven end to end rather than by its unit test: dropping `about` from one
+command entry of the CLI contract makes `validate` exit 1 naming the
+contract, the section, the entry and the key.
+
+The evidence is no longer Linux-only. I039, I040 and I041 are fixed and
+the macOS and Windows jobs run the whole suite, so the acceptance
+environment the testing-strategy names is available on all three
+platforms for the first time in this feature.
+
 The evidence for the passing criteria is 38 shape and drift tests
 green on Linux, `validate` clean over the shipped knowledge and the
 pack mirror, and the exit-code probes driving every declared pair or
@@ -184,7 +205,7 @@ predate this feature
 [sokf:adr-029-a-contract-is-a-binding-surface-not-a-specification]: /knowledge/adrs/deprecated/adr-029-a-contract-is-a-binding-surface-not-a-specification.md
 [sokf:contract-008-text-format-template]: /knowledge/contracts/public/active/contract-008-text-format-template.md
 [sokf:contract-010-interface-document-schemas]: /knowledge/contracts/internal/active/contract-010-interface-document-schemas.md
-[sokf:issue-034-feature-request-normative-shapes-are-described-but-not-enforced]: /knowledge/issues/open/issue-034-feature-request-normative-shapes-are-described-but-not-enforced.md
+[sokf:issue-034-feature-request-normative-shapes-are-described-but-not-enforced]: /knowledge/issues/done/issue-034-feature-request-normative-shapes-are-described-but-not-enforced.md
 [sokf:issue-038-bug-the-template-format-contract-is-bound-by-no-drift-test]: /knowledge/issues/done/issue-038-bug-the-template-format-contract-is-bound-by-no-drift-test.md
 [sokf:issue-039-bug-validate-fix-refuses-to-refile-under-a-symlinked-root]: /knowledge/issues/done/issue-039-bug-validate-fix-refuses-to-refile-under-a-symlinked-root.md
 [sokf:issue-040-bug-validate-reports-findings-on-a-windows-checkout-that-linux-does-not]: /knowledge/issues/done/issue-040-bug-validate-reports-findings-on-a-windows-checkout-that-linux-does-not.md

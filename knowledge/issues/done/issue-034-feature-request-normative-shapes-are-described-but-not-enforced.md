@@ -3,7 +3,7 @@ type: FeatureRequest
 id: issue-034-feature-request-normative-shapes-are-described-but-not-enforced
 title: The shapes of normative text are described to the writer and checked by nothing
 description: EARS criteria and the contract style standard live in schema description prose the validator never reads, so a malformed criterion or a requirement buried in narrative passes validate.
-lifecycle: open
+lifecycle: done
 links:
   - rel: references
     to: contract-010-interface-document-schemas
@@ -118,13 +118,13 @@ the contract itself unbuildable, which is what a contract is for.
 carries the raised bar; this issue closes with it, so the mechanism and
 the standard it serves are accepted together.
 
-Acceptance walked I035 on the merged code at `19ac275` and found one
-criterion outstanding, so both issues stay open until plan-021 slice 12
-lands.
+Accepted with I035 on the merged code at `006f475`: slice 12 closed the
+outstanding criterion, and the mechanism this issue delivered is accepted
+with the standard it serves, as its Comments said it would be.
 
 <!-- sokf:links -->
 [sokf:adr-029-a-contract-is-a-binding-surface-not-a-specification]: /knowledge/adrs/deprecated/adr-029-a-contract-is-a-binding-surface-not-a-specification.md
 [sokf:contract-010-interface-document-schemas]: /knowledge/contracts/internal/active/contract-010-interface-document-schemas.md
 [sokf:issue-011-feature-request-index-shape-is-described-but-not-enforced]: /knowledge/issues/open/issue-011-feature-request-index-shape-is-described-but-not-enforced.md
 [sokf:issue-033-bug-two-contracts-escaped-the-modal-sweep]: /knowledge/issues/done/issue-033-bug-two-contracts-escaped-the-modal-sweep.md
-[sokf:issue-035-feature-request-a-contract-does-not-define-its-interface]: /knowledge/issues/open/issue-035-feature-request-a-contract-does-not-define-its-interface.md
+[sokf:issue-035-feature-request-a-contract-does-not-define-its-interface]: /knowledge/issues/done/issue-035-feature-request-a-contract-does-not-define-its-interface.md

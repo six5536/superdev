@@ -96,4 +96,4 @@ Request:
     covers 6.
 
 <!-- sokf:links -->
-[sokf:issue-034-feature-request-normative-shapes-are-described-but-not-enforced]: /knowledge/issues/open/issue-034-feature-request-normative-shapes-are-described-but-not-enforced.md
+[sokf:issue-034-feature-request-normative-shapes-are-described-but-not-enforced]: /knowledge/issues/done/issue-034-feature-request-normative-shapes-are-described-but-not-enforced.md
