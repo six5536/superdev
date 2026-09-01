@@ -287,7 +287,11 @@ them, so the block above states them once here rather than in each entry.
   that capability's version to the new provider's registry default. Bare
   `update` MUST move the pack pin to the newest release the default source
   carries; a targeted `update <capability>` MUST NOT make that request.
-- **`validate`** MUST report both halves once, findings grouped by file. A
+- **`validate`** MUST report both halves once, findings grouped by file. It
+  MUST list every error, MUST NOT list a warning unless `--warnings` asks
+  for one, and MUST state both counts either way; `hook validate` and
+  `hook run` MUST report on the same default, so one rule holds whoever ran
+  the check (ADR-040). A
   `PATH` MUST replace both defaults for what is reported, and a `PATH`
   naming a document MUST be reported with bare-run parity. `--fix` is the
   one way `validate` writes: without it `validate` MUST NOT write. `--fix`

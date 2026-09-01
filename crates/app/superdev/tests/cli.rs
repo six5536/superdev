@@ -567,6 +567,86 @@ fn hook_validate_passes_a_clean_bundle() {
         .code(0);
 }
 
+/// A knowledge carrying one error — a concept with no `type` — and one
+/// warning, a non-core `rel` read as `relates-to`.
+fn mixed_severity_repo() -> tempfile::TempDir {
+    let dir = tempfile::tempdir().unwrap();
+    let k = dir.path().join("knowledge");
+    std::fs::create_dir_all(&k).unwrap();
+    std::fs::write(
+        k.join("manifest.sokf.yaml"),
+        "sokf: \"0.1\"\nname: fixture\n",
+    )
+    .unwrap();
+    std::fs::write(k.join("alpha.md"), "---\nid: alpha\n---\n\nMissing type.\n").unwrap();
+    std::fs::write(
+        k.join("beta.md"),
+        "---\ntype: Note\nid: beta\nlinks:\n  - rel: made-up\n    to: gamma\n---\n\n\
+         Beta names [gamma][sokf:gamma].\n\n<!-- sokf:links -->\n[sokf:gamma]: /knowledge/gamma.md\n",
+    )
+    .unwrap();
+    std::fs::write(
+        k.join("gamma.md"),
+        "---\ntype: Note\nid: gamma\n---\n\nBody.\n",
+    )
+    .unwrap();
+    dir
+}
+
+/// The PostToolUse hook defaults like a bare `validate`: it names the error,
+/// counts the warning without naming it, and blocks as it did (ADR-040).
+#[test]
+fn hook_validate_counts_the_warnings_it_does_not_list() {
+    let repo = mixed_severity_repo();
+    let out = superdev()
+        .args(["hook", "validate"])
+        .env("CLAUDE_PROJECT_DIR", repo.path())
+        .write_stdin(hook_payload(repo.path(), "knowledge/alpha.md"))
+        .assert()
+        .code(2);
+    let stderr = String::from_utf8_lossy(&out.get_output().stderr).into_owned();
+    assert!(stderr.contains("[error]"), "the error is named: {stderr}");
+    assert!(
+        !stderr.contains("[warning]"),
+        "no warning is listed: {stderr}"
+    );
+    assert!(
+        stderr.contains("FAIL (1 error(s), 1 warning(s))"),
+        "both counts stand: {stderr}"
+    );
+}
+
+/// A knowledge whose only fault is a warning leaves the hook at `0`, as it
+/// always has: the default changes what is shown and never what is decided.
+#[test]
+fn hook_validate_still_passes_a_knowledge_whose_only_fault_is_a_warning() {
+    let repo = tempfile::tempdir().unwrap();
+    let k = repo.path().join("knowledge");
+    std::fs::create_dir_all(&k).unwrap();
+    std::fs::write(
+        k.join("manifest.sokf.yaml"),
+        "sokf: \"0.1\"\nname: fixture\n",
+    )
+    .unwrap();
+    std::fs::write(
+        k.join("beta.md"),
+        "---\ntype: Note\nid: beta\nlinks:\n  - rel: made-up\n    to: gamma\n---\n\n\
+         Beta names [gamma][sokf:gamma].\n\n<!-- sokf:links -->\n[sokf:gamma]: /knowledge/gamma.md\n",
+    )
+    .unwrap();
+    std::fs::write(
+        k.join("gamma.md"),
+        "---\ntype: Note\nid: gamma\n---\n\nBody.\n",
+    )
+    .unwrap();
+    superdev()
+        .args(["hook", "validate"])
+        .env("CLAUDE_PROJECT_DIR", repo.path())
+        .write_stdin(hook_payload(repo.path(), "knowledge/beta.md"))
+        .assert()
+        .code(0);
+}
+
 /// A knowledge whose only fault is a link the rest of the tree has not caught
 /// up with. `kind` picks which of the two: a body link, or an index entry.
 fn forward_reference_repo(kind: &str) -> tempfile::TempDir {
@@ -657,6 +737,34 @@ fn hook_run_continues_an_armed_run_naming_next() {
     let stderr = String::from_utf8_lossy(&out.get_output().stderr).into_owned();
     assert!(stderr.contains("build slice 2"), "stderr: {stderr}");
     assert!(stderr.contains("superdev run advance"), "stderr: {stderr}");
+}
+
+/// The Stop hook defaults like a bare `validate` too: it holds the turn on
+/// the error, names it, and states the warning count without naming the
+/// warning (ADR-040).
+#[test]
+fn hook_run_counts_the_warnings_it_does_not_list() {
+    let repo = mixed_severity_repo();
+    let out = superdev()
+        .args(["hook", "run"])
+        .env("CLAUDE_PROJECT_DIR", repo.path())
+        .write_stdin(r#"{"session_id":"s1","hook_event_name":"Stop"}"#)
+        .assert()
+        .code(2);
+    let stderr = String::from_utf8_lossy(&out.get_output().stderr).into_owned();
+    assert!(
+        stderr.contains("the knowledge has findings"),
+        "stderr: {stderr}"
+    );
+    assert!(stderr.contains("[error]"), "the error is named: {stderr}");
+    assert!(
+        !stderr.contains("[warning]"),
+        "no warning is listed: {stderr}"
+    );
+    assert!(
+        stderr.contains("FAIL (1 error(s), 1 warning(s))"),
+        "both counts stand: {stderr}"
+    );
 }
 
 #[test]

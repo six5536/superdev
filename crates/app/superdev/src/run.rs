@@ -323,7 +323,7 @@ fn knowledge_hold(root: &Path, session: &str) -> Option<u8> {
         "superdev: the knowledge has findings, so this turn does not end \
          ({held} of {HOLD_CAP}). Fix them, or say why they stand:\n{}",
         run.report
-            .render_human(superdev_core::validate::sokf::Warnings::Listed)
+            .render_human(superdev_core::validate::sokf::Warnings::Counted)
             .trim_end_matches('\n')
     );
     Some(2)
