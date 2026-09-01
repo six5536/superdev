@@ -890,4 +890,125 @@ mod tests {
         assert!(shown.contains("/repo/knowledge"));
         assert!(shown.contains("embedder: None"));
     }
+
+    /// The MCP contract's declared tools: name to (argument, required, type).
+    fn declared_tools() -> std::collections::BTreeMap<String, BTreeMap<String, (bool, String)>> {
+        let path: std::path::PathBuf = [
+            env!("CARGO_MANIFEST_DIR"),
+            "../../..",
+            "knowledge/contracts/public/active/contract-003-mcp-sokf.md",
+        ]
+        .iter()
+        .collect();
+        let text = std::fs::read_to_string(path).expect("the MCP contract is on file");
+        let block = text
+            .split("```json\n")
+            .nth(1)
+            .and_then(|rest| rest.split("\n```").next())
+            .expect("the Tools section carries a json block");
+        let raw: BTreeMap<String, serde_json::Value> =
+            serde_json::from_str(block).expect("the definition block parses as json");
+        raw.into_iter()
+            .map(|(name, entry)| {
+                let args = entry
+                    .get("arguments")
+                    .and_then(|v| v.as_object())
+                    .map(|map| {
+                        map.iter()
+                            .map(|(arg, spec)| {
+                                let required = spec
+                                    .get("required")
+                                    .and_then(serde_json::Value::as_bool)
+                                    .unwrap_or(false);
+                                let ty = spec
+                                    .get("type")
+                                    .and_then(|t| t.as_str())
+                                    .unwrap_or("")
+                                    .to_string();
+                                (arg.clone(), (required, ty))
+                            })
+                            .collect()
+                    })
+                    .unwrap_or_default();
+                (name, args)
+            })
+            .collect()
+    }
+
+    /// The served tools, in the same shape. An optional argument's type
+    /// arrives as a union with `null`; the type it declares is the other one.
+    fn served_tools() -> std::collections::BTreeMap<String, BTreeMap<String, (bool, String)>> {
+        SokfServer::tool_router()
+            .list_all()
+            .into_iter()
+            .map(|tool| {
+                let required: Vec<String> = tool
+                    .input_schema
+                    .get("required")
+                    .and_then(|v| v.as_array())
+                    .map(|items| {
+                        items
+                            .iter()
+                            .filter_map(|v| v.as_str().map(ToString::to_string))
+                            .collect()
+                    })
+                    .unwrap_or_default();
+                let args = tool
+                    .input_schema
+                    .get("properties")
+                    .and_then(|v| v.as_object())
+                    .map(|props| {
+                        props
+                            .iter()
+                            .map(|(arg, spec)| {
+                                let ty = match spec.get("type") {
+                                    Some(serde_json::Value::String(s)) => s.clone(),
+                                    Some(serde_json::Value::Array(items)) => items
+                                        .iter()
+                                        .filter_map(serde_json::Value::as_str)
+                                        .find(|s| *s != "null")
+                                        .unwrap_or("")
+                                        .to_string(),
+                                    _ => String::new(),
+                                };
+                                (arg.clone(), (required.contains(arg), ty))
+                            })
+                            .collect()
+                    })
+                    .unwrap_or_default();
+                (tool.name.to_string(), args)
+            })
+            .collect()
+    }
+
+    /// Covers I035 criteria 4 and 7: every tool the server offers is declared
+    /// in the contract with the same arguments, types and requiredness, and
+    /// the contract declares no tool the server does not offer (ADR-036).
+    #[test]
+    fn the_served_tools_match_the_contract() {
+        let served = served_tools();
+        let declared = declared_tools();
+        let missing: Vec<&String> = served
+            .keys()
+            .filter(|k| !declared.contains_key(*k))
+            .collect();
+        assert!(
+            missing.is_empty(),
+            "the server offers tools the contract does not declare: {missing:?}"
+        );
+        let extra: Vec<&String> = declared
+            .keys()
+            .filter(|k| !served.contains_key(*k))
+            .collect();
+        assert!(
+            extra.is_empty(),
+            "the contract declares tools the server does not offer: {extra:?}"
+        );
+        for (name, want) in &declared {
+            assert_eq!(
+                &served[name], want,
+                "`{name}`'s arguments differ between the server and its contract"
+            );
+        }
+    }
 }

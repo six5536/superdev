@@ -132,9 +132,10 @@ fn the_ears_declaration_ships_to_managed_repositories() {
 /// The ADR-032 assignment: which contract-kind sections declare that their
 /// entries bind, and which are definitional and declare nothing. Kept here
 /// rather than derived, so a section quietly losing its declaration fails.
-const PROMISE_ITEMS: [(&str, &[&str]); 5] = [
+/// `mcp` Tools left this set when it became a definition block (ADR-033): a
+/// block defines the surface, and the keyword rule is for a list of promises.
+const PROMISE_ITEMS: [(&str, &[&str]); 4] = [
     ("cli", &["Behaviour"]),
-    ("mcp", &["Tools"]),
     ("data", &["Constraints"]),
     ("deployment", &["Health and lifecycle"]),
     ("events", &["Ordering and delivery"]),
@@ -220,6 +221,9 @@ fn a_definitional_section_declares_no_shape() {
         ("ui", "Screens and states"),
         ("telemetry", "Metrics"),
         ("authz", "Permissions"),
+        // Definition blocks: their shape is the block contract's to bind.
+        ("cli", "Commands"),
+        ("mcp", "Tools"),
     ] {
         for root in ["knowledge/schemas", "pack/knowledge/schemas"] {
             let text =

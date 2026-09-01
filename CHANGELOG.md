@@ -13,6 +13,12 @@ publish a version it cannot find a heading for.
 
 ### Added
 
+- **The MCP contract defines its tools.** `contract-003` carries every tool's
+  arguments — name, type, requiredness and meaning — and its result shape in
+  a JSON block, where before it named four tools in prose and carried no
+  schema at all. A test compares the block to the tools the server actually
+  serves, in both directions, so an argument cannot be added, removed or
+  retyped without its contract moving with it.
 - **The CLI contract defines the command line.** `contract-002` carries every
   command, positional argument, flag and exit code superdev offers in a YAML
   block a caller can build from, and a test walks the command tree and

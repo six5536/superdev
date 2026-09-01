@@ -69,7 +69,7 @@ Request:
 
 ### Slice 3: The MCP contract defines its tools
 
-- [ ] Done — ticked by integrate at merge.
+- [x] Done — ticked by integrate at merge.
 - Depends-on: 1.
 - Change: `schema-contract-mcp` gains the definition section it has
   never had, declaring each tool's input schema and result shape in

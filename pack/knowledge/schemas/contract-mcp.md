@@ -74,11 +74,16 @@ sections:
   - heading: "Tools"
     level: 2
     required: true
-    content: bullet-list
-    item-pattern: '\b(MUST|SHALL|SHOULD|MAY|REQUIRED|RECOMMENDED|OPTIONAL)\b'
+    content: code
+    block-language: json
+    block-entry-keys: [about, arguments, result]
     description: >
-      One entry per tool: its name, its arguments with defaults and limits,
-      what comes back, and the ranking or filtering a caller can rely on.
+      The definition of the served tools, keyed by tool name. One entry per
+      tool the server offers, each carrying `about`, `arguments` as a map of
+      argument name to `{type, required, about}`, and `result` — what comes
+      back. A caller reproduces every call from this block alone; the
+      ranking, filtering and limits a caller relies on are stated in prose
+      around it.
   - heading: "Resources and prompts"
     level: 2
     content: prose
@@ -123,10 +128,30 @@ example: |
 
   ## Tools
 
-  - **`widget_search`** — `query`, optional `limit` (8 by default, clamped to
-    1..50). Results MUST be grouped by widget, strongest first.
-  - **`widget_read`** — `id`: the whole widget. An id no widget carries MUST
-    come back with near-miss candidates.
+  ```json
+  {
+    "widget_search": {
+      "about": "Search the widgets, best first.",
+      "arguments": {
+        "query": { "type": "string", "required": true,
+                   "about": "What to look for." },
+        "limit": { "type": "integer", "required": false,
+                   "about": "Most hits to return; 8 by default, clamped to 1..50." }
+      },
+      "result": "One block per hit: the widget id, its name, and the score."
+    },
+    "widget_read": {
+      "about": "Read one widget whole.",
+      "arguments": {
+        "id": { "type": "string", "required": true, "about": "The widget's id." }
+      },
+      "result": "The widget, or the near-miss candidates when no widget carries that id."
+    }
+  }
+  ```
+
+  Results MUST be grouped by widget, strongest first, and `limit` MUST be
+  clamped rather than refused.
 
   ## Resources and prompts
 
