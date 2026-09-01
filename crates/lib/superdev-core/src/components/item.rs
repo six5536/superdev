@@ -75,7 +75,16 @@ pub(crate) fn plan_items(root: &Path, items: &[ManagedItem]) -> Vec<Action> {
                 reason,
             } => {
                 let existing = std::fs::read_to_string(root.join(path)).ok();
-                if existing.as_deref() != Some(content.as_str()) {
+                // A line at a time: superdev writes LF, and git hands a
+                // Windows checkout CRLF for every path `.gitattributes` does
+                // not pin. A file that says what superdev would write is not
+                // drift, whatever ends its lines — otherwise `status` calls a
+                // whole managed tree drifted and `sync` rewrites all of it
+                // (I040).
+                let differs = existing
+                    .as_deref()
+                    .is_none_or(|have| crate::fsutil::lines(have) != crate::fsutil::lines(content));
+                if differs {
                     actions.push(Action::WriteFile {
                         path: path.clone(),
                         content: content.clone(),
@@ -201,6 +210,26 @@ mod tests {
             content: content.into(),
             reason: "test".into(),
         }
+    }
+
+    /// Covers I040: a file carrying what superdev would write is not drift
+    /// because git gave it CRLF. Compared byte for byte, a Windows checkout
+    /// made every managed file drift at once — `status` called the whole
+    /// tree stale and `sync` rewrote all of it.
+    #[test]
+    fn a_crlf_copy_of_what_superdev_writes_is_not_drift() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::write(dir.path().join("owned.txt"), "one\r\ntwo\r\n").unwrap();
+        assert!(
+            plan_items(dir.path(), &[owned("owned.txt", "one\ntwo\n")]).is_empty(),
+            "a CRLF copy of the wanted content was planned as a write"
+        );
+        // A real difference is still a difference.
+        assert_eq!(
+            plan_items(dir.path(), &[owned("owned.txt", "one\nthree\n")]).len(),
+            1,
+            "a changed line was not planned as a write"
+        );
     }
 
     #[test]

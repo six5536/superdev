@@ -130,7 +130,7 @@ pub fn fix(bundle: &Bundle, repo_root: &Path) -> Result<Repair> {
         // A line at a time, matching the check: a document whose only
         // difference from the repair is what ends its lines needs no repair,
         // so the pass does not rewrite a CRLF file into an LF one (I040).
-        if super::lines(&fixed) == super::lines(text) {
+        if crate::fsutil::lines(&fixed) == crate::fsutil::lines(text) {
             continue;
         }
         write_within(&root, &bundle.root.join(path), &fixed)?;

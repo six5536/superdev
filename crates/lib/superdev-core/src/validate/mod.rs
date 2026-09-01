@@ -397,26 +397,6 @@ fn frontmatter_type(text: &str) -> Option<String> {
     schema::read::fm_value(&split.fm, "type")
 }
 
-/// `text` split into lines, each without its terminator, so a CRLF document
-/// reads as its LF twin: the same frontmatter, the same fences, the same
-/// headings, the same generated block.
-///
-/// superdev governs repositories whose checkout settings it does not own, and
-/// git hands a Windows checkout CRLF for every path `.gitattributes` does not
-/// pin. A line is the same line either way, so the checks compare lines with
-/// the terminator already gone rather than every reader remembering to
-/// normalise first — which is the trap that left the validator reporting a
-/// Windows checkout as ungoverned (I040).
-///
-/// Unlike [`str::lines`] the empty final element a trailing newline produces
-/// is kept, because the checks index by line number and report on it.
-#[must_use]
-pub(crate) fn lines(text: &str) -> Vec<&str> {
-    text.split('\n')
-        .map(|line| line.strip_suffix('\r').unwrap_or(line))
-        .collect()
-}
-
 fn read(path: &Path) -> Result<String> {
     std::fs::read_to_string(path).map_err(|source| Error::Io {
         path: path.to_path_buf(),

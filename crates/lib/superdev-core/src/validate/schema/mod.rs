@@ -252,8 +252,8 @@ mod tests {
         // one file with two sets of line endings. What the lines say is what
         // must match (I040).
         assert_eq!(
-            crate::validate::lines(EMBEDDED_GRAMMAR),
-            crate::validate::lines(&file),
+            crate::fsutil::lines(EMBEDDED_GRAMMAR),
+            crate::fsutil::lines(&file),
             "copy {GRAMMAR_PATH} to crates/lib/superdev-core/src/validate/schema/grammar.yaml"
         );
     }
