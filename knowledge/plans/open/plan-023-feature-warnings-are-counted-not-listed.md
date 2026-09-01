@@ -15,7 +15,7 @@ Request:
 
 ### Slice 1: The report lists a warning only when asked
 
-- [ ] Done — ticked by integrate at merge.
+- [x] Done — ticked by integrate at merge.
 - Depends-on: none.
 - Change: `ValidateArgs` gains `--warnings`, which
   [contract-002][sokf:contract-002-cli-superdev] already declares, so this

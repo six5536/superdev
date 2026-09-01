@@ -212,6 +212,17 @@ publish a version it cannot find a heading for.
 
 ### Changed
 
+- **`superdev validate` counts its warnings and lists them on request.** A run
+  lists every error and closes with both counts, as before; the warnings
+  themselves now appear only under **`--warnings`** (ADR-040). Warnings are
+  what the repository alone cannot settle — a custom `rel`, a frontmatter key
+  whose portability depends on where a skill is published — so none of them is
+  actionable for the edit in hand, and this repository reprinted the same five
+  on every hook-triggered run. The counts are read from the findings and not
+  from what was printed, so a warning nobody listed is still counted. **No
+  verdict moves**: the same findings are found, and the same exit codes are
+  returned.
+
 - **A contract now defines its interface, not describes it.** Every
   contract-kind schema demands a definition block carrying the whole surface
   a caller depends on — commands and flags, tool schemas, settings, file
