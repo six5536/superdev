@@ -106,8 +106,21 @@ the binding. Once this is done:
   drift (I011, I010), which the same mechanism may later serve; shapes
   for bug-report repro steps and chore done-lists.
 
+## Comments
+
+Acceptance withheld. Every criterion here passes on the feature head:
+the two declarations land, the EARS tag is enforced, the fifteen
+contract-kind schemas declare their promise shapes and the corpus
+conforms. The owner read the swept CLI contract and judged the result
+insufficient — the shapes make a contract's sentences bind, and leave
+the contract itself unbuildable, which is what a contract is for.
+[I035][sokf:issue-035-feature-request-a-contract-does-not-define-its-interface]
+carries the raised bar; this issue closes with it, so the mechanism and
+the standard it serves are accepted together.
+
 <!-- sokf:links -->
 [sokf:adr-029-a-contract-is-a-binding-surface-not-a-specification]: /knowledge/adrs/active/adr-029-a-contract-is-a-binding-surface-not-a-specification.md
 [sokf:contract-010-interface-document-schemas]: /knowledge/contracts/internal/active/contract-010-interface-document-schemas.md
 [sokf:issue-011-feature-request-index-shape-is-described-but-not-enforced]: /knowledge/issues/open/issue-011-feature-request-index-shape-is-described-but-not-enforced.md
 [sokf:issue-033-bug-two-contracts-escaped-the-modal-sweep]: /knowledge/issues/done/issue-033-bug-two-contracts-escaped-the-modal-sweep.md
+[sokf:issue-035-feature-request-a-contract-does-not-define-its-interface]: /knowledge/issues/open/issue-035-feature-request-a-contract-does-not-define-its-interface.md

@@ -39,6 +39,7 @@
 * [validate follows symlinks out of the repo and can echo what it reads][sokf:issue-031-bug-validate-follows-symlinks-out-of-the-repo] - the walk and the file reads follow symlinks, so a hostile checkout can point a governed name at any readable file — the PostToolUse hook then reads it automatically, and finding messages that quote source lines can carry excerpts into the transcript.
 * [validate does unbounded work on adversarial input][sokf:issue-032-bug-validate-does-unbounded-work-on-adversarial-input] - a file with a 100k-key frontmatter takes 41 s and 100k findings because the frontmatter is re-parsed per check, and reads carry no size cap — a hostile file can stall the PostToolUse hook or flood the transcript.
 * [The shapes of normative text are described to the writer and checked by nothing][sokf:issue-034-feature-request-normative-shapes-are-described-but-not-enforced] - EARS criteria and the contract style standard live in schema description prose the validator never reads, so a malformed criterion or a requirement buried in narrative passes validate.
+* [A contract describes its interface in prose instead of defining it, so nothing can be built from it][sokf:issue-035-feature-request-a-contract-does-not-define-its-interface] - the contracts name their surfaces in narrative rather than defining them, so a caller cannot reproduce an interface from its contract — the MCP contract carries no tool schema at all, and the CLI contract's usage block has already drifted from the binary.
 
 ## The engine
 
@@ -91,3 +92,4 @@
 [sokf:issue-032-bug-validate-does-unbounded-work-on-adversarial-input]: /knowledge/issues/open/issue-032-bug-validate-does-unbounded-work-on-adversarial-input.md
 [sokf:issue-033-bug-two-contracts-escaped-the-modal-sweep]: /knowledge/issues/done/issue-033-bug-two-contracts-escaped-the-modal-sweep.md
 [sokf:issue-034-feature-request-normative-shapes-are-described-but-not-enforced]: /knowledge/issues/open/issue-034-feature-request-normative-shapes-are-described-but-not-enforced.md
+[sokf:issue-035-feature-request-a-contract-does-not-define-its-interface]: /knowledge/issues/open/issue-035-feature-request-a-contract-does-not-define-its-interface.md
