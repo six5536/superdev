@@ -20,7 +20,8 @@ pub struct ValidateArgs {
     /// trees the grammar governs)
     pub paths: Vec<PathBuf>,
     /// Repair what is mechanically repairable before checking: convert body
-    /// links to the id form and regenerate every definition block
+    /// links to the id form, refill every include block from its source, and
+    /// regenerate every definition block
     #[arg(long)]
     pub fix: bool,
     /// Emit JSON instead of text

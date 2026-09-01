@@ -13,6 +13,13 @@ publish a version it cannot find a heading for.
 
 ### Added
 
+- **A knowledge document can include another's body.** A concept carries a
+  `<!-- sokf:include <id> -->` … `<!-- /sokf:include -->` marker pair, and
+  `superdev validate --fix` materializes the named concept's body between
+  the markers, refreshing every copy when the source changes; bare
+  `validate` reports a stale, empty or unresolvable include block as an
+  error (ADR-027). Shared prose gets one authored home while every file
+  stays self-contained on disk.
 - **A schema's worked example is checked.** `superdev validate` reads each
   schema's `example:` block as a document and checks it against the schema
   that declares it — the frontmatter contract, the sections, their order

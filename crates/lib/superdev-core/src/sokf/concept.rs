@@ -8,6 +8,13 @@ use crate::lock::sha256_hex;
 /// The line opening a document's generated definition block (SPEC §9).
 pub const LINKS_BLOCK: &str = "<!-- sokf:links -->";
 
+/// What the line opening an include block starts with (SPEC §9); the concept
+/// id and the comment's closing ` -->` follow.
+pub const INCLUDE_OPEN: &str = "<!-- sokf:include ";
+
+/// The line closing an include block.
+pub const INCLUDE_CLOSE: &str = "<!-- /sokf:include -->";
+
 /// Publication state of a concept; an absent frontmatter `status` is
 /// [`Status::Stable`], as the spec requires.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -331,6 +338,73 @@ pub fn links_block_offset(text: &str) -> Option<usize> {
     start
 }
 
+/// One include block (SPEC §9): shared content materialized in place between
+/// a marker pair. The content between the markers is generated, not authored.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct IncludeBlock {
+    /// The concept id the open marker names.
+    pub id: String,
+    /// Byte offset just past the open marker's line: where content starts.
+    pub content_start: usize,
+    /// Byte offset of the close marker's line: where content ends.
+    pub content_end: usize,
+}
+
+/// Every include block in `text`, plus the marker faults that stop one from
+/// binding. Markers are found through the markdown parser, like
+/// [`links_block_offset`], so a marker inside a fenced example is an example
+/// and not a marker.
+#[must_use]
+pub fn include_blocks(text: &str) -> (Vec<IncludeBlock>, Vec<String>) {
+    let mut blocks = Vec::new();
+    let mut faults = Vec::new();
+    // The open marker of the block being read: (id, content_start).
+    let mut open: Option<(String, usize)> = None;
+    for (event, span) in Parser::new_ext(text, Options::empty()).into_offset_iter() {
+        let Event::Html(html) = event else { continue };
+        // One HTML event can span several lines; walk them with offsets.
+        let mut at = span.start;
+        for line in html.split_inclusive('\n') {
+            let trimmed = line.trim_end();
+            if let Some(rest) = trimmed.strip_prefix(INCLUDE_OPEN)
+                && let Some(id) = rest.strip_suffix("-->")
+            {
+                if open.is_some() {
+                    faults.push(format!(
+                        "include block for `{}` opens inside another; includes do not nest",
+                        id.trim()
+                    ));
+                } else {
+                    open = Some((id.trim().to_string(), at + line.len()));
+                }
+            } else if trimmed == INCLUDE_CLOSE {
+                match open.take() {
+                    Some((id, content_start)) => blocks.push(IncludeBlock {
+                        id,
+                        content_start,
+                        content_end: at,
+                    }),
+                    None => faults.push(format!("`{INCLUDE_CLOSE}` with no open marker")),
+                }
+            }
+            at += line.len();
+        }
+    }
+    if let Some((id, _)) = open {
+        faults.push(format!("include block for `{id}` is never closed"));
+    }
+    (blocks, faults)
+}
+
+/// What an include block carries of `body`: everything above the generated
+/// definition block, trimmed. This is what the source concept contributes
+/// wherever it is included.
+#[must_use]
+pub fn included_text(body: &str) -> String {
+    let cut = links_block_offset(body).unwrap_or(body.len());
+    body[..cut].trim().to_string()
+}
+
 /// Lines `first..=last` of `text`, trailing whitespace trimmed; empty when
 /// the range is.
 fn slice_lines<'a>(text: &'a str, starts: &[usize], first: usize, last: usize) -> &'a str {
@@ -379,6 +453,51 @@ mod tests {
         // The hash covers the text parsed, so the index never has to re-read
         // the file to learn what it indexed.
         assert_eq!(c.content_hash, sha256_hex(DOC.as_bytes()));
+    }
+
+    #[test]
+    fn include_blocks_carry_their_id_and_content_span() {
+        let text =
+            "Intro.\n\n<!-- sokf:include style -->\nThe rules.\n<!-- /sokf:include -->\n\nTail.\n";
+        let (blocks, faults) = include_blocks(text);
+        assert!(faults.is_empty(), "{faults:?}");
+        assert_eq!(blocks.len(), 1);
+        assert_eq!(blocks[0].id, "style");
+        assert_eq!(
+            &text[blocks[0].content_start..blocks[0].content_end],
+            "The rules.\n"
+        );
+    }
+
+    #[test]
+    fn an_include_marker_inside_a_fence_is_an_example() {
+        let text = "```markdown\n<!-- sokf:include style -->\n```\n";
+        let (blocks, faults) = include_blocks(text);
+        assert!(blocks.is_empty());
+        assert!(faults.is_empty(), "{faults:?}");
+    }
+
+    #[test]
+    fn marker_faults_are_named() {
+        let (_, unclosed) = include_blocks("<!-- sokf:include a -->\nx\n");
+        assert_eq!(unclosed, vec!["include block for `a` is never closed"]);
+        let (_, stray) = include_blocks("<!-- /sokf:include -->\n");
+        assert_eq!(stray.len(), 1);
+        assert!(stray[0].contains("no open marker"), "{stray:?}");
+        let (_, nested) = include_blocks(
+            "<!-- sokf:include a -->\n<!-- sokf:include b -->\n<!-- /sokf:include -->\n",
+        );
+        assert!(
+            nested.iter().any(|f| f.contains("do not nest")),
+            "{nested:?}"
+        );
+    }
+
+    #[test]
+    fn included_text_stops_at_the_definition_block() {
+        let body = "The rules.\n\n<!-- sokf:links -->\n[sokf:beta]: /beta.md\n";
+        assert_eq!(included_text(body), "The rules.");
+        assert_eq!(included_text("Bare.\n"), "Bare.");
     }
 
     #[test]

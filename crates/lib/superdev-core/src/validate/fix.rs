@@ -1,12 +1,15 @@
 //! validate::fix — the repair pass behind `superdev validate --fix`.
 //!
-//! Three repairs, all mechanical, all derived from the same knowledge the
+//! Four repairs, all mechanical, all derived from the same knowledge the
 //! check reads: a document whose folder disagrees with its `lifecycle` is
 //! moved into the folder that value names, a body link that names a concept
-//! by path is rewritten to address it by `id` (SPEC §8), and every
-//! document's generated definition block is rewritten from the ids its body
-//! cites (SPEC §9). The moves run first, so every definition block is
-//! written against the path a document ends the pass at.
+//! by path is rewritten to address it by `id` (SPEC §8), every include
+//! block is refilled from the body of the concept its marker names, and
+//! every document's generated definition block is rewritten from the ids
+//! its body cites (SPEC §9). The moves run first, so every definition block
+//! is written against the path a document ends the pass at; links convert
+//! before includes copy, so a copied body is the converted one and one pass
+//! converges.
 //!
 //! Nothing here decides anything. The check names a fault and this undoes it,
 //! so a file the check has nothing to say about is not written at all — which
@@ -16,7 +19,7 @@
 //! hook: the hook fires after an edit, so a hook that repaired would rewrite
 //! the file the agent is still working in.
 
-use std::collections::BTreeSet;
+use std::collections::{BTreeSet, HashMap, HashSet};
 use std::path::Path;
 
 use super::lifecycle;
@@ -27,6 +30,7 @@ use super::sokf::{
 };
 use crate::error::{Error, Result};
 use crate::sokf::bundle::{Bundle, load_bundle};
+use crate::sokf::concept::{INCLUDE_OPEN, include_blocks, included_text};
 
 /// What one repair pass changed.
 #[derive(Debug, Default)]
@@ -76,22 +80,87 @@ pub fn fix(bundle: &Bundle, repo_root: &Path) -> Result<Repair> {
         .collect();
     documents.sort_unstable();
 
+    // Pass 1: convert links in memory. An include below copies its source's
+    // converted body, so one run converges instead of chasing itself.
+    let mut converted: Vec<(&str, String, usize, String)> = Vec::new();
     for path in documents {
         let file = bundle.root.join(path);
         let text = read(&file)?;
         let head = body_offset(&text);
+        let directory = file
+            .parent()
+            .map_or_else(|| file.clone(), Path::to_path_buf);
+        let body = convert_links(&text[head..], &directory, repo_root, &ids);
+        converted.push((path, text, head, body));
+    }
+
+    // Include sources: each concept's converted body, by id.
+    let sources: HashMap<&str, String> = bundle
+        .concepts
+        .iter()
+        .filter_map(|c| {
+            let id = c.id.as_deref()?;
+            let body = converted.iter().find(|(p, ..)| *p == c.path)?.3.clone();
+            Some((id, body))
+        })
+        .collect();
+    let concepts: HashSet<&str> = bundle.concepts.iter().map(|c| c.path.as_str()).collect();
+
+    // Pass 2: materialize include blocks (concepts carry them; an index has
+    // no frontmatter and no include), regenerate the definition block, and
+    // write what changed.
+    for (path, text, head, body) in &converted {
+        let body = if concepts.contains(path) {
+            materialize(body, &sources)
+        } else {
+            body.clone()
+        };
+        let cited: BTreeSet<String> = scan_body(&body).cited_ids();
         let fixed = format!(
             "{}{}",
-            &text[..head],
-            repair_body(&text[head..], &file, repo_root, &ids)
+            &text[..*head],
+            with_block(&body, &render_block(&cited, &ids.repo_paths))
         );
-        if fixed == text {
+        if fixed == *text {
             continue;
         }
-        write_within(&root, &file, &fixed)?;
-        repair.written.push(path.to_string());
+        write_within(&root, &bundle.root.join(path), &fixed)?;
+        repair.written.push((*path).to_string());
     }
     Ok(repair)
+}
+
+/// Every include block refilled from its source's converted body (SPEC §9).
+/// A faulty marker pair, an id naming no source, and a source that itself
+/// carries an include block are left as written; the check reports them.
+fn materialize(body: &str, sources: &HashMap<&str, String>) -> String {
+    let (blocks, faults) = include_blocks(body);
+    if !faults.is_empty() {
+        return body.to_string();
+    }
+    let mut out = String::with_capacity(body.len());
+    let mut cursor = 0;
+    for block in blocks {
+        let Some(source) = sources.get(block.id.as_str()) else {
+            continue;
+        };
+        let content = included_text(source);
+        if content.contains(INCLUDE_OPEN) {
+            continue;
+        }
+        // The check compares trimmed, so a block it accepts is not rewritten.
+        if body[block.content_start..block.content_end].trim() == content {
+            continue;
+        }
+        out.push_str(&body[cursor..block.content_start]);
+        if !content.is_empty() {
+            out.push_str(&content);
+            out.push('\n');
+        }
+        cursor = block.content_end;
+    }
+    out.push_str(&body[cursor..]);
+    out
 }
 
 /// Where a document's body starts: after the frontmatter's closing `---`, or
@@ -116,15 +185,6 @@ fn body_offset(text: &str) -> usize {
         }
     }
     0
-}
-
-/// One document body, with its path links converted and its definition block
-/// regenerated.
-fn repair_body(body: &str, file: &Path, repo_root: &Path, ids: &Identities) -> String {
-    let directory = file.parent().unwrap_or(file);
-    let converted = convert_links(body, directory, repo_root, ids);
-    let cited: BTreeSet<String> = scan_body(&converted).cited_ids();
-    with_block(&converted, &render_block(&cited, &ids.repo_paths))
 }
 
 /// Every inline link that names a concept by path, rewritten to address it by

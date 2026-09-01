@@ -342,6 +342,24 @@ resolves the id (§8) and MUST NOT read the block, so a stale or absent
 block changes nothing about what a link means. The validator still
 reports one; the remedy is to regenerate it (§10).
 
+**The include block.** A concept document MAY materialize another
+concept's body in place, between a marker pair:
+
+```markdown
+<!-- sokf:include <id> -->
+…the named concept's body…
+<!-- /sokf:include -->
+```
+
+The open marker names a concept by `id`. The content between the
+markers is **generated**, not authored: `superdev validate --fix` fills
+it with the named concept's body — that body's own definition block
+excluded — and refreshes every copy when the source changes. Author the
+marker pair, never the content; ids the copied content cites join this
+document's definition block. The validator reports a stale, empty or
+unresolvable include block as an error (§10). Include blocks do not
+nest: a concept that carries one cannot itself be included.
+
 An `index.md` may appear in any directory to list its contents. It
 contains no frontmatter. The body is one or more heading-grouped link
 lists:
@@ -373,7 +391,8 @@ Two deterministic layers.
 5. Body links address concepts by id (§8): a `sokf:<id>` label resolves
    to a concept, and a path link resolves to something that is not one.
    The generated definition block (§9) defines each cited id, and only
-   the cited ids, at their current paths.
+   the cited ids, at their current paths. An include block (§9) names a
+   concept, carries its current body, and does not nest.
 6. Warn on: broken `/`-paths and relative links, a `links` `to` that
    resolves to nothing, a `links` entry with no mirroring body link,
    `sources` entries the body cites but that lack an `id`, footnote

@@ -16,7 +16,9 @@ use pulldown_cmark::{BrokenLink, CowStr, Event, LinkType, Options, Parser, Tag};
 use serde_yaml_ng::Value;
 
 use crate::sokf::bundle::Bundle;
-use crate::sokf::concept::{Concept, links_block_offset};
+use crate::sokf::concept::{
+    Concept, INCLUDE_OPEN, include_blocks, included_text, links_block_offset,
+};
 
 /// Relationship types the spec defines; anything else reads as `relates-to`.
 const CORE_RELS: [&str; 12] = [
@@ -159,6 +161,8 @@ struct Context<'a> {
     bundle_root: &'a Path,
     repo_root: &'a Path,
     ids: &'a Identities,
+    /// Concept id to that concept's body, for the include check's sources.
+    bodies: &'a HashMap<&'a str, &'a str>,
 }
 
 /// Run the document check (SPEC §10) and decide conformance (SPEC §11).
@@ -170,10 +174,16 @@ pub fn validate(bundle: &Bundle, repo_root: &Path) -> Report {
     let ids = identities(bundle, repo_root, &mut findings);
     check_manifest(bundle, &mut findings);
 
+    let bodies: HashMap<&str, &str> = bundle
+        .concepts
+        .iter()
+        .filter_map(|c| c.id.as_deref().map(|id| (id, c.body.as_str())))
+        .collect();
     let context = Context {
         bundle_root: &bundle.root,
         repo_root,
         ids: &ids,
+        bodies: &bodies,
     };
     for concept in &bundle.concepts {
         check_concept(concept, &context, &mut findings);
@@ -369,6 +379,47 @@ fn check_concept(concept: &Concept, context: &Context, findings: &mut Vec<Findin
 
     check_links(path, &fm["links"], context, &directory, &targets, findings);
     check_definition_block(path, &concept.body, &body, context, findings);
+    check_include_blocks(path, &concept.body, context, findings);
+}
+
+/// Every include block carries its source's current content (SPEC §9).
+///
+/// The content between the markers is generated, so every content finding
+/// says the one command that repairs it; a marker fault is the author's.
+fn check_include_blocks(path: &str, text: &str, context: &Context, findings: &mut Vec<Finding>) {
+    let (blocks, faults) = include_blocks(text);
+    for fault in faults {
+        findings.push(error(path, fault));
+    }
+    for block in blocks {
+        let Some(source) = context.bodies.get(block.id.as_str()) else {
+            findings.push(error(
+                path,
+                format!("include block names no concept: `{}`", block.id),
+            ));
+            continue;
+        };
+        let expected = included_text(source);
+        if expected.contains(INCLUDE_OPEN) {
+            findings.push(error(
+                path,
+                format!(
+                    "include block names `{}`, which itself carries an include block; includes do not nest",
+                    block.id
+                ),
+            ));
+            continue;
+        }
+        let actual = text[block.content_start..block.content_end].trim();
+        if actual == expected {
+            continue;
+        }
+        let state = if actual.is_empty() { "empty" } else { "stale" };
+        findings.push(error(
+            path,
+            format!("the include block for `{}` is {state} ({REPAIR})", block.id),
+        ));
+    }
 }
 
 /// Where a document's body links point, and what is wrong with them.
@@ -1122,6 +1173,102 @@ mod tests {
     const MANIFEST_YAML: &str = "sokf: \"0.1\"\nname: t\n";
     const A_MIRRORED: &str = "---\ntype: T\nid: alpha\nlinks:\n  - rel: depends-on\n    to: beta\n---\nSee [beta][sokf:beta].\n\n<!-- sokf:links -->\n[sokf:beta]: /beta.md\n";
     const B: &str = "---\ntype: T\nid: beta\n---\nx\n";
+
+    /// The include source: one line of content.
+    const STYLE: &str = "---\ntype: T\nid: style\n---\nThe rules.\n";
+
+    /// A host document whose include block carries `content`.
+    fn host_with(content: &str) -> String {
+        format!(
+            "---\ntype: T\nid: host\n---\nIntro.\n\n<!-- sokf:include style -->\n{content}<!-- /sokf:include -->\n"
+        )
+    }
+
+    fn include_findings(host: &str) -> Vec<Finding> {
+        let (b, _dir) = bundle_with(&[
+            ("manifest.sokf.yaml", MANIFEST_YAML),
+            ("style.md", STYLE),
+            ("beta.md", B),
+            ("host.md", host),
+        ]);
+        let r = validate(&b, &b.root);
+        r.findings
+            .into_iter()
+            .filter(|f| f.path == "host.md")
+            .collect()
+    }
+
+    #[test]
+    fn a_materialized_include_block_passes() {
+        let findings = include_findings(&host_with("The rules.\n"));
+        assert!(findings.is_empty(), "{findings:?}");
+    }
+
+    #[test]
+    fn a_stale_include_block_is_an_error_naming_the_id() {
+        let findings = include_findings(&host_with("Old copy.\n"));
+        assert_eq!(findings.len(), 1);
+        assert!(
+            findings[0].message
+                == "the include block for `style` is stale (run `superdev validate --fix`)",
+            "{findings:?}"
+        );
+        assert!(findings[0].fatal);
+    }
+
+    #[test]
+    fn an_empty_include_block_is_an_error() {
+        let findings = include_findings(&host_with(""));
+        assert_eq!(findings.len(), 1);
+        assert!(
+            findings[0].message.contains("`style` is empty"),
+            "{findings:?}"
+        );
+    }
+
+    #[test]
+    fn an_include_naming_no_concept_is_an_error() {
+        let host = host_with("x\n").replace("include style", "include ghost");
+        let findings = include_findings(&host);
+        assert!(
+            findings
+                .iter()
+                .any(|f| f.message == "include block names no concept: `ghost`"),
+            "{findings:?}"
+        );
+    }
+
+    #[test]
+    fn including_a_concept_that_includes_is_refused() {
+        let nested_source =
+            "---\ntype: T\nid: style\n---\n<!-- sokf:include beta -->\n<!-- /sokf:include -->\n";
+        let (b, _dir) = bundle_with(&[
+            ("manifest.sokf.yaml", MANIFEST_YAML),
+            ("style.md", nested_source),
+            ("beta.md", B),
+            ("host.md", &host_with("x\n")),
+        ]);
+        let r = validate(&b, &b.root);
+        assert!(
+            r.findings
+                .iter()
+                .any(|f| f.path == "host.md" && f.message.contains("do not nest")),
+            "{:?}",
+            r.findings
+        );
+    }
+
+    #[test]
+    fn an_unclosed_include_marker_is_an_error() {
+        let host = "---\ntype: T\nid: host\n---\n<!-- sokf:include style -->\nx\n";
+        let findings = include_findings(host);
+        assert!(
+            findings
+                .iter()
+                .any(|f| f.message == "include block for `style` is never closed"),
+            "{findings:?}"
+        );
+    }
 
     #[test]
     fn clean_bundle_passes() {

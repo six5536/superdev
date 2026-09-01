@@ -309,3 +309,87 @@ fn a_named_path_that_is_not_the_knowledge_repairs_nothing() {
             .is_empty()
     );
 }
+
+/// The include tree: a style source, a host with an empty include block, and
+/// a second includer already carrying a stale copy.
+const INCLUDES: &[(&str, &str)] = &[
+    (
+        "knowledge/manifest.sokf.yaml",
+        "sokf: \"0.4\"\nname: fixture\n",
+    ),
+    (
+        "knowledge/style.md",
+        "---\ntype: Note\nid: style\n---\n\nCite [alpha][sokf:alpha].\n\n\
+         <!-- sokf:links -->\n[sokf:alpha]: /knowledge/alpha.md\n",
+    ),
+    (
+        "knowledge/alpha.md",
+        "---\ntype: Note\nid: alpha\n---\n\nThe first.\n",
+    ),
+    (
+        "knowledge/host.md",
+        "---\ntype: Note\nid: host\n---\n\nIntro.\n\n\
+         <!-- sokf:include style -->\n<!-- /sokf:include -->\n",
+    ),
+    (
+        "knowledge/other.md",
+        "---\ntype: Note\nid: other\n---\n\n\
+         <!-- sokf:include style -->\nAn old copy.\n<!-- /sokf:include -->\n",
+    ),
+];
+
+/// An empty include block is filled with the source's body — its definition
+/// block excluded, its citations joining the host's own block — a stale copy
+/// is refreshed, and a second run writes nothing.
+#[test]
+fn include_blocks_are_materialized_and_then_left_alone() {
+    let dir = seed(INCLUDES);
+    let knowledge = dir.path().join("knowledge");
+
+    let first = fix_repo(dir.path(), &knowledge, &[]).unwrap();
+    assert_eq!(
+        first.written,
+        vec!["knowledge/host.md".to_string(), "knowledge/other.md".into()]
+    );
+    let host = std::fs::read_to_string(knowledge.join("host.md")).unwrap();
+    assert_eq!(
+        host,
+        "---\ntype: Note\nid: host\n---\n\nIntro.\n\n\
+         <!-- sokf:include style -->\nCite [alpha][sokf:alpha].\n<!-- /sokf:include -->\n\n\
+         <!-- sokf:links -->\n[sokf:alpha]: /knowledge/alpha.md\n"
+    );
+    let other = std::fs::read_to_string(knowledge.join("other.md")).unwrap();
+    assert!(other.contains("Cite [alpha][sokf:alpha]."), "{other}");
+    assert!(!other.contains("An old copy."), "{other}");
+
+    let second = fix_repo(dir.path(), &knowledge, &[]).unwrap();
+    assert!(second.written.is_empty(), "{:?}", second.written);
+
+    let bundle = superdev_core::sokf::load_bundle(&knowledge).unwrap();
+    let report = validate::validate(&bundle, dir.path());
+    assert!(report.findings.is_empty(), "{:#?}", report.findings);
+}
+
+/// Editing the source stales every includer; the next pass rewrites them all.
+#[test]
+fn editing_the_source_rewrites_every_includer() {
+    let dir = seed(INCLUDES);
+    let knowledge = dir.path().join("knowledge");
+    fix_repo(dir.path(), &knowledge, &[]).unwrap();
+
+    std::fs::write(
+        knowledge.join("style.md"),
+        "---\ntype: Note\nid: style\n---\n\nNew rules.\n",
+    )
+    .unwrap();
+    let repair = fix_repo(dir.path(), &knowledge, &[]).unwrap();
+    assert_eq!(
+        repair.written,
+        vec!["knowledge/host.md".to_string(), "knowledge/other.md".into()]
+    );
+    for name in ["host.md", "other.md"] {
+        let text = std::fs::read_to_string(knowledge.join(name)).unwrap();
+        assert!(text.contains("New rules."), "{name}: {text}");
+        assert!(!text.contains("Cite [alpha]"), "{name}: {text}");
+    }
+}
