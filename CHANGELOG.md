@@ -165,7 +165,7 @@ publish a version it cannot find a heading for.
 
 - **A contract's promise sections now declare that they bind.** The fifteen
   contract-kind schemas carry the RFC 2119 keyword as an `item-pattern` on
-  sections where every entry is a promise — cli Behaviour, mcp Tools, data
+  sections where every entry is a promise — cli Behaviour, data
   Constraints, deployment Health and lifecycle, events Ordering and
   delivery — and as a `content-pattern` on sections whose job is promises,
   Stability among them (ADR-032). Definitional sections declare nothing:

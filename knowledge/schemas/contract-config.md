@@ -14,7 +14,7 @@ precedence between them.
 
 Two boundaries, because configuration touches two neighbours. **A
 configuration file is configuration**: its shape is defined here, in the File
-section, not as a [file-format contract][sokf:schema-contract-text-format] — that schema
+section, not as a [text-format contract][sokf:schema-contract-text-format] — that schema
 takes the files nobody configures anything with, a lock file or an export.
 **Flags are defined by the [CLI contract][sokf:schema-contract-cli]**, which is where a
 caller reads them; how a flag, a variable and a file setting resolve against

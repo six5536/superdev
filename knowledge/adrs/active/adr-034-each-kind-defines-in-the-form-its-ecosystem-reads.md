@@ -52,5 +52,5 @@ superdev reads only the forms its own binary already parses.
   already has, and the CLI form fits a command line rather than being
   bent to fit a language built for APIs.
 - Negative: a reviewer meets more than one form across the kinds.
-- Follow-ups: ADR-035 makes each declared form checkable, and the
-  fifteen schemas name their form.
+- Follow-ups: ADR-035 makes each declared form checkable, and every
+  contract-kind schema names its form.

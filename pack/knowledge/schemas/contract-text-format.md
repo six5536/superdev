@@ -7,7 +7,7 @@ description: One text file others read or write — where it lives, its shape as
 
 # Text Format Contract Schema
 
-Structural rules for one public file-format contract, filed at
+Structural rules for one public text-format contract, filed at
 `contract-{nnn}-text-format-{slug}`, a public contract placed in its lifecycle folder by `superdev validate --fix`. A format is a public contract when someone
 outside this repository writes the file by hand or reads it with their own
 tools — a manifest, a lock file, an export.

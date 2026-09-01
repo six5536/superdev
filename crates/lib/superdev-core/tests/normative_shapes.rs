@@ -293,8 +293,11 @@ fn the_format_kind_is_split_and_the_old_one_is_gone() {
     }
 }
 
-/// Covers I035 criterion 9: no document, index or link names the retired
-/// kind, so the split left nothing dangling.
+/// Covers I035 criterion 9: nothing a writer builds against names the
+/// retired kind. The records that say what changed — the ADR, the framed
+/// issue, the review reports and the indexes that summarise them —
+/// legitimately name it, so the hunt is scoped to the schemas and contracts
+/// a writer reads to build.
 #[test]
 fn nothing_names_the_retired_format_kind() {
     fn walk(dir: &std::path::Path, found: &mut Vec<String>) {
@@ -307,17 +310,15 @@ fn nothing_names_the_retired_format_kind() {
                 walk(&path, found);
             } else if path.extension().is_some_and(|e| e == "md") {
                 let text = std::fs::read_to_string(&path).unwrap_or_default();
-                // The ADR that retired the kind names it, as the record of
-                // what changed; nothing else may.
-                let name = path.file_name().unwrap().to_str().unwrap();
-                if name.starts_with("adr-037") || name.starts_with("code-review-") {
-                    continue;
-                }
                 for needle in [
                     "schema-contract-file-format",
                     "-file-format-pack",
                     "-file-format-lock",
                     "-file-format-template",
+                    // The kind's own name, not only its id token: prose
+                    // naming a retired kind misleads as much as a link does.
+                    "file-format contract",
+                    "FileFormatContract",
                 ] {
                     if text.contains(needle) {
                         found.push(format!("{}: {needle}", path.display()));
@@ -327,11 +328,17 @@ fn nothing_names_the_retired_format_kind() {
         }
     }
     let mut found = Vec::new();
-    walk(&repo("knowledge"), &mut found);
-    walk(&repo("pack"), &mut found);
+    for root in [
+        "knowledge/schemas",
+        "knowledge/contracts",
+        "pack/knowledge/schemas",
+        "pack/knowledge/concepts",
+    ] {
+        walk(&repo(root), &mut found);
+    }
     assert!(
         found.is_empty(),
-        "the retired kind is still named: {found:#?}"
+        "the retired kind is still named where a writer builds: {found:#?}"
     );
 }
 

@@ -71,7 +71,7 @@ binds. All applied before merge.
 - Suggested fix: Restate what the command does instead. Applied:
   "`mcp sokf` MUST serve the canonical knowledge over stdio".
 
-### 5. A sweep edit weakened a format promise — `knowledge/contracts/public/active/contract-005-text-format-pack.md:82`
+### 5. A sweep edit weakened a format promise — `knowledge/contracts/public/active/contract-005-file-format-pack.md:82`
 
 - Severity: minor
 - Category: correctness
@@ -82,7 +82,7 @@ binds. All applied before merge.
   backward-compatible addition and breaks no rule on file.
 - Suggested fix: "MUST NOT require a bump". Applied.
 
-### 6. A sweep edit turned a ceiling into a permission — `knowledge/contracts/public/active/contract-006-text-format-lock.md:56`
+### 6. A sweep edit turned a ceiling into a permission — `knowledge/contracts/public/active/contract-006-file-format-lock.md:56`
 
 - Severity: minor
 - Category: correctness

@@ -56,5 +56,7 @@ contracts are swept to conform.
   accepted as its cost, and the corpus it produced cannot be built
   from: the MCP contract carried no tool schema and the CLI contract's
   usage block drifted from the binary unnoticed. A contract now defines
-  its interface. The four style rules survive in the contract-style
-  fragment as the rules a validator cannot settle.
+  its interface. Three of the four style rules survive in the
+  contract-style fragment; "bind only what callers rely on" is the one
+  ADR-033 replaced, with the demand that a contract define the whole of
+  what it names.

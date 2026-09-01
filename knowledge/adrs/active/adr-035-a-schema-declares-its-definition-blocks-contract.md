@@ -43,7 +43,7 @@ and its completeness is the drift test's (ADR-036).
 
 | Option | Pros | Cons |
 |--------|------|------|
-| Declared block contract | The schema config defines the check, as it does for every other rule; one mechanism serves all fifteen kinds | Reaches only the languages the binary parses |
+| Declared block contract | The schema config defines the check, as it does for every other rule; one mechanism serves every kind | Reaches only the languages the binary parses |
 | A checker per kind inside the validator | Precise for every kind, including the ones it cannot parse | Fifteen policies inside the binary that a schema author can neither see nor change |
 | Reuse `content-pattern` for key names | Nothing new to build | Matches text, so it cannot tell which entry a key belongs to — the completeness question itself |
 | Compile every block through its own toolchain | Exact for SDL, protobuf and TypeSpec | Puts a Node toolchain on the PostToolUse hook's path for every edit |

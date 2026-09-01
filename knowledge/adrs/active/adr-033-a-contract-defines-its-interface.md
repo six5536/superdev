@@ -53,8 +53,10 @@ validator cannot settle.
 
 - Positive: a contract is usable as a generator's input, and a
   reviewer can tell completeness from prose quality.
-- Negative: the nine contracts on file are rewritten, and a contract
-  now costs more to write than to describe.
+- Negative: the contracts on file are rewritten — the CLI, MCP,
+  config and document-schema contracts substantially, the rest as the
+  new demands reach them — and a contract now costs more to write than
+  to describe.
 - Follow-ups: ADR-034 names each kind's form, ADR-035 makes the block
   checkable, ADR-036 binds a contract to its implementation, and
   ADR-037 splits the file-format kind.

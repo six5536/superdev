@@ -16,7 +16,7 @@ its own contract — [rest][sokf:schema-contract-rest], [rpc][sokf:schema-contra
 [graphql][sokf:schema-contract-graphql] — and the two differ on purpose: a field the API
 never exposes still lives here, and a field the API composes from three columns
 does not. A file the software exchanges rather than queries is a
-[file-format contract][sokf:schema-contract-text-format].
+[text-format contract][sokf:schema-contract-text-format].
 
 <!-- sokf:include contract-style -->
 **Contract style — a contract defines its interface** (superdev
