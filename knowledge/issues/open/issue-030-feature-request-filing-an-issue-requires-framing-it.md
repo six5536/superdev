@@ -52,3 +52,10 @@ and for issues — with how they would interact with `/frame` an open
 question. Candidate answer for criterion 1; the knowledge already holds
 an `ideas/` folder and `schema-idea` with no skill that files into
 them.
+
+2026-09-01, the user: does the backlog still make sense beside issues
+and ideas? Candidate answer: retire it. Once filing is lightweight, an
+"under consideration" entry is an unframed open issue; "decided
+against" already has homes — the `wontfix` lifecycle for rejected work,
+ADRs for rejected design alternatives. The framing decides the
+taxonomy and where the backlog's four current entries migrate.

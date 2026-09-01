@@ -49,6 +49,9 @@
 
 * [Run the next real feature through /execute-feature-plan and record the outcome][sokf:issue-026-chore-rehearse-the-driver-on-a-real-feature] - the loop's machinery is tested and was rehearsed with shell steps, but the driver's prose — slice picking, the retry bound, deferral, the end-of-run queue — has not driven a real multi-slice plan; the next feature is the rehearsal.
 * [The README says nothing about the unattended run][sokf:issue-027-feature-request-the-unattended-run-is-undocumented-for-users] - the run verbs, the Stop hook and /execute-feature-plan exist on the CLI, in the man page and in the workflow skills, but the README never mentions them, so a user cannot discover unattended delivery.
+* [contract-design commits contract edits before the user has seen them][sokf:issue-028-bug-contract-design-commits-before-the-go-ahead] - a /contract-design session writes the contracts and ADRs, commits them, and only then asks whether to continue with /feature-plan, so the review its go-ahead gate promises never happens.
+* [contract-design writes contracts as verbose prose][sokf:issue-029-bug-contract-design-writes-verbose-prose] - contract documents come out as long prose where a contract needs precision — clear normative statements and constructs that aid them, such as tables, lists and typed shapes.
+* [filing an issue requires framing it, so framings go stale before the work starts][sokf:issue-030-feature-request-filing-an-issue-requires-framing-it] - the workflow has no lightweight filing — /frame does the full framing at creation, but framing belongs at the point the issue is taken up, because a framing made at filing can be out of date by the time the work starts.
 
 ## Link checking
 
@@ -79,5 +82,8 @@
 [sokf:issue-025-bug-a-claim-never-written-gets-no-lock-hash]: /knowledge/issues/open/issue-025-bug-a-claim-never-written-gets-no-lock-hash.md
 [sokf:issue-026-chore-rehearse-the-driver-on-a-real-feature]: /knowledge/issues/open/issue-026-chore-rehearse-the-driver-on-a-real-feature.md
 [sokf:issue-027-feature-request-the-unattended-run-is-undocumented-for-users]: /knowledge/issues/open/issue-027-feature-request-the-unattended-run-is-undocumented-for-users.md
+[sokf:issue-028-bug-contract-design-commits-before-the-go-ahead]: /knowledge/issues/open/issue-028-bug-contract-design-commits-before-the-go-ahead.md
+[sokf:issue-029-bug-contract-design-writes-verbose-prose]: /knowledge/issues/open/issue-029-bug-contract-design-writes-verbose-prose.md
+[sokf:issue-030-feature-request-filing-an-issue-requires-framing-it]: /knowledge/issues/open/issue-030-feature-request-filing-an-issue-requires-framing-it.md
 [sokf:issue-031-bug-validate-follows-symlinks-out-of-the-repo]: /knowledge/issues/open/issue-031-bug-validate-follows-symlinks-out-of-the-repo.md
 [sokf:issue-032-bug-validate-does-unbounded-work-on-adversarial-input]: /knowledge/issues/open/issue-032-bug-validate-does-unbounded-work-on-adversarial-input.md
