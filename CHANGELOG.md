@@ -13,6 +13,14 @@ publish a version it cannot find a heading for.
 
 ### Added
 
+- **A schema can bind the shape of a definition block.** A section rule
+  declares `block-language` — `yaml` or `json` — plus `block-keys` and
+  `block-entry-keys`, and `superdev validate` parses the section's fenced
+  block and reports a missing key naming the file, the section, the entry
+  and the key (ADR-035). A block that will not parse, one whose fence
+  carries the wrong tag, and a section with no block at all each report
+  what is wrong; a block in a language the validator does not read
+  declares no `block-language`, and its drift test binds it instead.
 - **An acceptance criterion's EARS tag is checked.** A feature-request
   criterion that does not open with `[ubiquitous]`, `[event]`, `[state]`,
   `[conditional]`, `[optional]`, `[complex]` or `TBD — ` fails
