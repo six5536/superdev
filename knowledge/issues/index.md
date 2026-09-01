@@ -13,7 +13,7 @@
 * [A symlink inside a pack is skipped in silence, so an item a pack meant to ship quietly disappears][sokf:issue-009-bug-a-skipped-symlink-says-nothing] - the walk dropped every symlink without reporting it, so a pack that deduped an item with a link resolved clean while that item was simply absent; fixed in P005 slices 2 and 3, which refuse a symlink anywhere in a pack and name the path.
 * [An index entry may say anything about a concept, and nothing notices][sokf:issue-010-feature-request-index-entries-are-never-checked-against-their-concept] - SPEC §9 says an index entry should carry the linked concept's description, but check_indexes only tests that the target exists, so an index can drift from every concept it lists — or hold the only copy of something — and validate still passes.
 * [The shape SPEC §9 gives an index is described but never enforced][sokf:issue-011-feature-request-index-shape-is-described-but-not-enforced] - SPEC §9 fixes what an index.md looks like — no frontmatter, heading-grouped link lists, one entry per concept — but no validator checks any of it, so an index can carry frontmatter, drop its heading, or mix bullet styles and still pass.
-* [Five findings the repository alone can decide are only warnings, and go unread][sokf:issue-012-feature-request-five-decidable-findings-only-warn] - broken links, missing resources, missing sources, missing index targets and unjoined footnotes are all decidable from the tree, but SPEC §11 makes them warnings; the canonical knowledge carried 39 of them unactioned until someone happened to look.
+* [Five findings the repository alone can decide are only warnings, and go unread][sokf:issue-012-feature-request-five-decidable-findings-only-warn] - broken links, missing resources, missing sources, missing index targets and unjoined footnotes are all decidable from the tree, but SPEC §11 made them warnings; the canonical knowledge carried 39 of them unactioned until someone happened to look; all five now fail the run, gated at the turn rather than the edit (ADR-039).
 
 ## Issue tracker
 
@@ -79,7 +79,7 @@
 [sokf:issue-009-bug-a-skipped-symlink-says-nothing]: /knowledge/issues/done/issue-009-bug-a-skipped-symlink-says-nothing.md
 [sokf:issue-010-feature-request-index-entries-are-never-checked-against-their-concept]: /knowledge/issues/open/issue-010-feature-request-index-entries-are-never-checked-against-their-concept.md
 [sokf:issue-011-feature-request-index-shape-is-described-but-not-enforced]: /knowledge/issues/open/issue-011-feature-request-index-shape-is-described-but-not-enforced.md
-[sokf:issue-012-feature-request-five-decidable-findings-only-warn]: /knowledge/issues/open/issue-012-feature-request-five-decidable-findings-only-warn.md
+[sokf:issue-012-feature-request-five-decidable-findings-only-warn]: /knowledge/issues/done/issue-012-feature-request-five-decidable-findings-only-warn.md
 [sokf:issue-013-chore-the-knowledge-is-called-the-bundle]: /knowledge/issues/open/issue-013-chore-the-knowledge-is-called-the-bundle.md
 [sokf:issue-014-chore-the-schema-validator-is-called-format]: /knowledge/issues/done/issue-014-chore-the-schema-validator-is-called-format.md
 [sokf:issue-015-feature-request-every-issue-must-be-a-bug-report]: /knowledge/issues/done/issue-015-feature-request-every-issue-must-be-a-bug-report.md

@@ -138,6 +138,25 @@ publish a version it cannot find a heading for.
   the platform's separator, so one report carried two spellings of a path
   and a Windows caller was handed back one they never typed. The error now
   uses the repository-relative, forward-slashed spelling every finding uses.
+- **A link to a file that is not there fails the run.** Five findings the
+  repository alone can settle — a broken body link, a missing `resource`, a
+  missing `sources[].resource`, an index entry naming a missing file, and a
+  footnote label matching no `sources[].id` — were warnings, so nothing
+  failed and nobody read them: the canonical knowledge carried 39 unactioned
+  until someone happened to look. They are errors (ADR-039). A non-core `rel`
+  stays a warning and is now the only one the document check emits: the tier
+  is split by decidability rather than emptied. **SPEC §10 and §11 change with
+  them** — permissiveness binds a consumer displaying knowledge, not a
+  validator checking a repository.
+- **A turn does not end while the knowledge carries an error.** Two of the
+  five are what work in progress looks like: a link written before the file
+  it points at lands. The PostToolUse hook no longer blocks on those, because
+  it is handed one edited file and cannot see whether the target arrives in
+  the next edit — so a plan citing the concepts its own slices will add stays
+  writable. The Stop hook holds the turn instead, naming what stands, which
+  is where a document is claimed to be finished. It lets the turn end on
+  knowledge it cannot read, and stops after three holds, so a finding nobody
+  can settle stalls nothing.
 - **The template contract is bound to the templates.** `contract-008` names
   the five substitution tokens and carries one section per shipped template,
   and both are now compared to the binary in each direction: a token the
