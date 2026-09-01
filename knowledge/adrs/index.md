@@ -40,6 +40,7 @@
 * [The File-Format Kind Splits into Text and Binary][sokf:adr-037-the-file-format-kind-splits-into-text-and-binary] - the file-format contract kind becomes two — a text format, whose shape is a schema or a worked example carrying every key, and a binary format, whose shape is a byte layout — and the three contracts on file are renamed to the kind they belong to.
 * [A Contract May Promise What Is Not Built Yet][sokf:adr-038-a-contract-may-promise-what-is-not-built-yet] - a contract element marked pending is bound in reverse — the drift test fails when the implementation has it, so the marker cannot outlive its purpose — and accept refuses a contract still carrying one, so a promise cannot ship unbuilt.
 * [A repository-decidable finding is an error, and the turn is where the gate closes][sokf:adr-039-a-decidable-finding-is-an-error-and-the-turn-is-the-gate] - the five findings the repository alone can settle become errors with no warning tier; the edit-time hook stops judging the two that span files, and the Stop hook refuses to end a turn while the knowledge carries an error, under a cap and failing open.
+* [A warning is counted by default and listed on request][sokf:adr-040-a-warning-is-counted-by-default-and-listed-on-request] - validate lists errors and counts warnings; `--warnings` lists them, the CLI and the PostToolUse hook default alike, and `--json` reports the same information as the text output, which means carrying both counts it does not carry today.
 
 <!-- sokf:links -->
 [sokf:adr-001-packs-manifest-section]: /knowledge/adrs/active/adr-001-packs-manifest-section.md
@@ -81,3 +82,4 @@
 [sokf:adr-037-the-file-format-kind-splits-into-text-and-binary]: /knowledge/adrs/active/adr-037-the-file-format-kind-splits-into-text-and-binary.md
 [sokf:adr-038-a-contract-may-promise-what-is-not-built-yet]: /knowledge/adrs/active/adr-038-a-contract-may-promise-what-is-not-built-yet.md
 [sokf:adr-039-a-decidable-finding-is-an-error-and-the-turn-is-the-gate]: /knowledge/adrs/active/adr-039-a-decidable-finding-is-an-error-and-the-turn-is-the-gate.md
+[sokf:adr-040-a-warning-is-counted-by-default-and-listed-on-request]: /knowledge/adrs/active/adr-040-a-warning-is-counted-by-default-and-listed-on-request.md
