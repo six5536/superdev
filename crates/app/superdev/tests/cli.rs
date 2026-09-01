@@ -123,10 +123,18 @@ fn a_bare_run_counts_the_warnings_and_the_flag_lists_them() {
             .to_string()
     };
     assert_eq!(summary(&counted), summary(&listed));
+    let line = summary(&counted);
+    assert!(line.starts_with("PASS (0 error(s), "), "{line}");
+    let count: u32 = line
+        .rsplit_once(", ")
+        .and_then(|(_, tail)| tail.split_once(' '))
+        .expect("the summary names a warning count")
+        .0
+        .parse()
+        .expect("the warning count is a number");
     assert!(
-        summary(&counted).starts_with("PASS (0 error(s), ")
-            && !summary(&counted).contains("0 warning(s)"),
-        "the count of the warnings it did not list: {counted}"
+        count > 0,
+        "the warnings it did not list are counted: {line}"
     );
 }
 

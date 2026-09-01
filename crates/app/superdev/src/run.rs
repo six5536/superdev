@@ -11,6 +11,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use serde::{Deserialize, Serialize};
 use superdev_core::error::{Error, Result};
+use superdev_core::validate::sokf::Warnings;
 
 use crate::cli::out;
 
@@ -323,7 +324,7 @@ fn knowledge_hold(root: &Path, session: &str) -> Option<u8> {
         "superdev: the knowledge has findings, so this turn does not end \
          ({held} of {HOLD_CAP}). Fix them, or say why they stand:\n{}",
         run.report
-            .render_human(superdev_core::validate::sokf::Warnings::Counted)
+            .render_human(Warnings::Counted)
             .trim_end_matches('\n')
     );
     Some(2)
