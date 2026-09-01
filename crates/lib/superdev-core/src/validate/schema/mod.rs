@@ -247,8 +247,13 @@ mod tests {
     #[test]
     fn the_embedded_grammar_equals_the_repository_copy() {
         let file = std::fs::read_to_string(repo().join(GRAMMAR_PATH)).unwrap();
+        // A line at a time: `.gitattributes` pins `.agents/**` to LF and not
+        // the embedded copy under `crates/`, so a Windows checkout holds the
+        // one file with two sets of line endings. What the lines say is what
+        // must match (I040).
         assert_eq!(
-            EMBEDDED_GRAMMAR, file,
+            crate::validate::lines(EMBEDDED_GRAMMAR),
+            crate::validate::lines(&file),
             "copy {GRAMMAR_PATH} to crates/lib/superdev-core/src/validate/schema/grammar.yaml"
         );
     }
