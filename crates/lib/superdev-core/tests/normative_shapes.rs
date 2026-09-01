@@ -335,9 +335,23 @@ fn nothing_names_the_retired_format_kind() {
     );
 }
 
+/// The section rules a schema declares, parsed from its yaml contract.
+fn section_rules(text: &str) -> Vec<serde_yaml_ng::Value> {
+    let block = text
+        .split("````yaml\n")
+        .nth(1)
+        .and_then(|rest| rest.split("\n````").next())
+        .expect("a schema carries a yaml contract");
+    let y: serde_yaml_ng::Value = serde_yaml_ng::from_str(block).expect("the yaml contract parses");
+    y.get("sections")
+        .and_then(|s| s.as_sequence())
+        .cloned()
+        .unwrap_or_default()
+}
+
 /// Covers I035 criterion 1: every contract kind declares how its interface is
-/// defined — a fenced definition block, or the tables that are its native
-/// structured form — and says the block must carry the whole surface.
+/// defined — a section whose content is a code block, or the tables that are
+/// its native structured form — and that section demands the whole surface.
 #[test]
 fn every_contract_kind_declares_a_definition_form() {
     // These kinds define through tables rather than a fenced block: a
@@ -359,22 +373,50 @@ fn every_contract_kind_declares_a_definition_form() {
             if root == "knowledge/schemas" {
                 seen += 1;
             }
-            if BY_TABLE.contains(&kind.as_str()) {
+            let rules = section_rules(&text);
+            let wanted = if BY_TABLE.contains(&kind.as_str()) {
+                "table"
+            } else {
+                "code"
+            };
+            let definitions: Vec<&serde_yaml_ng::Value> = rules
+                .iter()
+                .filter(|r| r.get("content").and_then(|c| c.as_str()) == Some(wanted))
+                .collect();
+            assert!(
+                !definitions.is_empty(),
+                "{root}/{name} declares no section whose content is {wanted}"
+            );
+            // Where the validator can read the block's language, the
+            // section must declare what the block carries — otherwise the
+            // block is a fence the validator opens and does not check.
+            // Completeness against reality is the drift test's to bind; no
+            // wording in a description can decide it.
+            for rule in &definitions {
+                let Some(language) = rule.get("block-language").and_then(|l| l.as_str()) else {
+                    continue;
+                };
                 assert!(
-                    text.contains("content: table"),
-                    "{root}/{name} defines through tables and declares none"
+                    ["yaml", "json"].contains(&language),
+                    "{root}/{name}: block-language `{language}` is one the validator cannot read"
                 );
-                continue;
+                let keys = rule.get("block-keys").is_some();
+                let entry_keys = rule.get("block-entry-keys").is_some();
+                assert!(
+                    keys || entry_keys,
+                    "{root}/{name}: the block is parsed and nothing about it is checked"
+                );
             }
-            assert!(
-                text.contains("content: code"),
-                "{root}/{name} declares no definition block"
-            );
-            // The block must be demanded whole, not as a sample.
-            assert!(
-                text.contains("alone") || text.contains("Every ") || text.contains("every "),
-                "{root}/{name} does not demand the whole surface"
-            );
+            // A table definition binds by its columns, which the schema
+            // engine checks.
+            if wanted == "table" {
+                assert!(
+                    definitions.iter().any(|r| r
+                        .get("columns")
+                        .is_some_and(|c| c.as_sequence().is_some_and(|s| s.len() >= 2))),
+                    "{root}/{name}: no table section declares the columns it binds"
+                );
+            }
         }
     }
     assert_eq!(seen, 16, "every contract kind was read");

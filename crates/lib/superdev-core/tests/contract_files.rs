@@ -7,6 +7,7 @@
 //! reads it in production, and every key that reader writes must appear in
 //! the contract. An element on one side and not the other fails.
 
+use std::collections::BTreeSet;
 use std::path::PathBuf;
 
 fn repo(path: &str) -> PathBuf {
@@ -61,6 +62,7 @@ fn every_key_the_manifest_writes_is_declared() {
          name = \"rust-npm\"\n\
          project-name = \"Widget\"\n\
          project-slug = \"widget\"\n\
+         version = \"0.2.0\"\n\
          [[packs]]\n\
          source = \"github:six5536/superdev\"\n\
          rev = \"assets-v1.4.0\"\n\
@@ -79,28 +81,38 @@ fn every_key_the_manifest_writes_is_declared() {
     .expect("the fully-populated manifest parses");
 
     let written = full.to_toml();
-    let mut missing = Vec::new();
-    for line in written.lines() {
-        let trimmed = line.trim();
-        let key = if trimmed.starts_with('[') {
-            trimmed.trim_matches(['[', ']']).to_string()
-        } else if let Some((name, _)) = trimmed.split_once('=') {
-            name.trim().to_string()
-        } else {
-            continue;
-        };
-        if key.is_empty() {
-            continue;
+    // Compare key paths, not bare words: `version` under one table must not
+    // satisfy `version` under another.
+    let paths = |toml: &str| -> BTreeSet<String> {
+        let mut out = BTreeSet::new();
+        let mut table = String::new();
+        for line in toml.lines() {
+            // A trailing comment is not part of a key or a table name.
+            let trimmed = line.split_once(" #").map_or(line, |(before, _)| before);
+            let trimmed = trimmed.trim();
+            if trimmed.starts_with('#') || trimmed.is_empty() {
+                continue;
+            }
+            if trimmed.starts_with('[') {
+                table = trimmed.trim_matches(['[', ']']).to_string();
+                out.insert(table.clone());
+            } else if let Some((name, _)) = trimmed.split_once('=') {
+                let name = name.trim();
+                out.insert(if table.is_empty() {
+                    name.to_string()
+                } else {
+                    format!("{table}.{name}")
+                });
+            }
         }
-        // A capability table is named by the capability, and the contract
-        // declares the shape once per capability it ships.
-        if !declared.contains(&key) {
-            missing.push(key);
-        }
-    }
+        out
+    };
+    let written_paths = paths(&written);
+    let declared_paths = paths(&declared);
+    let missing: Vec<&String> = written_paths.difference(&declared_paths).collect();
     assert!(
         missing.is_empty(),
-        "superdev writes keys the config contract does not declare: {missing:?}\n\
+        "DEFECT — superdev writes keys the config contract does not declare: {missing:?}\n\
          written:\n{written}"
     );
 }

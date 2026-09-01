@@ -122,7 +122,7 @@ superdev template:
   args: []
   flags: {}
   exit:
-    0: help printed
+    2: no subcommand named
 superdev template list:
   about: List the shipped project templates
   args: []
@@ -149,7 +149,7 @@ superdev sokf:
   args: []
   flags: {}
   exit:
-    0: help printed
+    2: no subcommand named
 superdev sokf index:
   about: Rebuild the search index from scratch
   args: [PATH]
@@ -164,7 +164,7 @@ superdev run:
   args: []
   flags: {}
   exit:
-    0: help printed
+    2: no subcommand named
 superdev run begin:
   about: "Arm an unattended run: create the run state exclusively"
   args: []
@@ -202,7 +202,7 @@ superdev hook:
   args: []
   flags: {}
   exit:
-    0: help printed
+    2: no subcommand named
 superdev hook validate:
   about: "PostToolUse: validate after an Edit/Write under the SOKF knowledge or a tree the grammar governs"
   args: []
@@ -222,7 +222,7 @@ superdev mcp:
   args: []
   flags: {}
   exit:
-    0: help printed
+    2: no subcommand named
 superdev mcp sokf:
   about: Serve the SOKF knowledge over stdio
   args: []
