@@ -94,5 +94,5 @@ Request:
 <!-- sokf:links -->
 [sokf:adr-038-a-contract-may-promise-what-is-not-built-yet]: /knowledge/adrs/active/adr-038-a-contract-may-promise-what-is-not-built-yet.md
 [sokf:contract-002-cli-superdev]: /knowledge/contracts/public/active/contract-002-cli-superdev.md
-[sokf:issue-036-feature-request-validate-prints-warnings-by-default]: /knowledge/issues/open/issue-036-feature-request-validate-prints-warnings-by-default.md
+[sokf:issue-036-feature-request-validate-prints-warnings-by-default]: /knowledge/issues/done/issue-036-feature-request-validate-prints-warnings-by-default.md
 [sokf:issue-043-bug-the-cli-contracts-json-keys-are-bound-by-no-test]: /knowledge/issues/open/issue-043-bug-the-cli-contracts-json-keys-are-bound-by-no-test.md

@@ -3,7 +3,7 @@ type: FeatureRequest
 id: issue-036-feature-request-validate-prints-warnings-by-default
 title: validate prints warnings by default, which is context noise for an agent
 description: Every validate run — the CLI and the PostToolUse hook alike — prints its warnings, so an agent editing one file reads unrelated advisory findings on every pass; warnings should be off by default and asked for.
-lifecycle: open
+lifecycle: done
 links:
   - rel: references
     to: adr-040-a-warning-is-counted-by-default-and-listed-on-request
