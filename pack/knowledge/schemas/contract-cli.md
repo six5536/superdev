@@ -87,7 +87,10 @@ sections:
       two. A caller reproduces the command line from this block alone; prose
       around it describes and never defines. The framework's own help and
       version flags are stated once under Behaviour rather than repeated in
-      every entry.
+      every entry. An entry the implementation has yet to build carries
+      `pending`, naming the slice that will build it; the binding test
+      reverses for it, so the marker fails once the work lands, and
+      acceptance refuses a contract still carrying one (ADR-038).
   - heading: "Behaviour"
     level: 2
     required: true

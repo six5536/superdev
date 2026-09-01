@@ -14,7 +14,7 @@
 //! SUPERDEV_PRINT_CLI=1 cargo test -p superdev --bin superdev cli_surface
 //! ```
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 use clap::CommandFactory;
 
@@ -249,6 +249,20 @@ fn declared() -> BTreeMap<String, Surface> {
         .collect()
 }
 
+/// Every command an entry marks `pending`, naming the slice that will build
+/// it. A pending element is a promise the contract makes ahead of the code
+/// (ADR-038); acceptance refuses a contract still carrying one.
+fn pending_commands() -> BTreeSet<String> {
+    let text = std::fs::read_to_string(contract_path()).expect("the CLI contract is on file");
+    let block = fenced_block(&text, "yaml").expect("the Commands section carries a yaml block");
+    let raw: BTreeMap<String, serde_yaml_ng::Value> =
+        serde_yaml_ng::from_str(&block).expect("the definition block parses as yaml");
+    raw.into_iter()
+        .filter(|(_, entry)| entry.get("pending").is_some())
+        .map(|(path, _)| path)
+        .collect()
+}
+
 /// Every `exit` key an entry declares, so a code can be read as a code.
 fn declared_exit_keys() -> BTreeMap<String, Vec<serde_yaml_ng::Value>> {
     let text = std::fs::read_to_string(contract_path()).expect("the CLI contract is on file");
@@ -350,6 +364,22 @@ mod tests {
             }
         }
         let declared = declared();
+
+        // A pending element is bound in reverse (ADR-038): the contract
+        // promises it, the binary must not have it yet, and the marker
+        // fails the moment the work lands.
+        let pending = pending_commands();
+        let built_pending: Vec<&String> =
+            pending.iter().filter(|p| built.contains_key(*p)).collect();
+        assert!(
+            built_pending.is_empty(),
+            "DONE — these are marked pending and the binary now offers them; \
+             drop the marker: {built_pending:?}"
+        );
+        let declared: BTreeMap<String, Surface> = declared
+            .into_iter()
+            .filter(|(path, _)| !pending.contains(path))
+            .collect();
 
         // The two directions are different things (ADR-038): what the
         // contract has yet to promise is a defect, what the binary has yet

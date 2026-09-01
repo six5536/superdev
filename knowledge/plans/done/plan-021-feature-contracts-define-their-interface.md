@@ -3,7 +3,7 @@ type: FeaturePlan
 id: plan-021-feature-contracts-define-their-interface
 title: Contracts define their interfaces — feature plan
 description: Slices delivering the definition-block vocabulary, each kind's declared form, the drift tests that bind a contract to its implementation, and the split of the file-format kind.
-lifecycle: open
+lifecycle: done
 links:
   - rel: implements
     to: issue-035-feature-request-a-contract-does-not-define-its-interface
@@ -199,7 +199,7 @@ Request:
 
 ### Slice 11: A pending element is bound in reverse
 
-- [ ] Done — ticked by integrate at merge.
+- [x] Done — ticked by integrate at merge.
 - Depends-on: 9.
 - Change: a contract element may carry a `pending` marker naming the
   slice that will build it; the drift tests bind such an element in

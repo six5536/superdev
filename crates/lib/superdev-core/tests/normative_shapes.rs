@@ -530,3 +530,46 @@ fn the_plan_orders_a_contract_gap_first() {
         );
     }
 }
+
+/// Covers I035 criteria 14 and 15: the pending marker is declared where a
+/// contract writer meets it, acceptance refuses a contract still carrying
+/// one, and no contract on file carries one (ADR-038).
+#[test]
+fn a_pending_promise_is_declared_bounded_and_absent() {
+    for p in [
+        "knowledge/schemas/contract-cli.md",
+        "pack/knowledge/schemas/contract-cli.md",
+    ] {
+        let text = std::fs::read_to_string(repo(p)).unwrap();
+        assert!(
+            text.contains("carries\n      `pending`"),
+            "{p} does not declare the pending marker"
+        );
+    }
+    for p in [
+        ".claude/skills/accept/SKILL.md",
+        "pack/knowledge/skills/accept/SKILL.md",
+    ] {
+        let text = std::fs::read_to_string(repo(p)).unwrap();
+        assert!(
+            text.contains("still marks an element `pending`"),
+            "{p} does not refuse a pending marker at acceptance"
+        );
+    }
+    // A promise may outrun its code while a feature runs, never once it
+    // settles — and this feature has settled.
+    for dir in [
+        "knowledge/contracts/public/active",
+        "knowledge/contracts/internal/active",
+    ] {
+        for entry in std::fs::read_dir(repo(dir)).expect("the contracts are on file") {
+            let path = entry.unwrap().path();
+            let text = std::fs::read_to_string(&path).unwrap();
+            assert!(
+                !text.contains("\n  pending:"),
+                "{} still promises something unbuilt",
+                path.display()
+            );
+        }
+    }
+}
