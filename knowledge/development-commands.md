@@ -19,9 +19,10 @@ What the annotated list does not say:
 - `npm run check:validate` is the binary validating this repo against both
   specs it owns: the SOKF knowledge, and the files the grammar governs under the
   trees the grammar names. It exits 1 on errors, and warnings alone still
-  pass. The Claude Code hook runs the same whole-set check by a different
-  route (`superdev hook validate`), so the two cannot reach different
-  verdicts. `cargo run -- sokf index` forces a full index rebuild, which
+  pass. It lists its errors and counts its warnings; `--warnings` lists them
+  too (ADR-040). The Claude Code hook runs the same whole-set check by a
+  different route (`superdev hook validate`), so the two cannot reach
+  different verdicts. `cargo run -- sokf index` forces a full index rebuild, which
   nothing routine needs: the MCP server syncs lazily on every call.
 - `cargo run -- validate --fix` is the same check with its repairs applied
   first: a link naming a concept by path becomes the id form, and every
