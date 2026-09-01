@@ -30,9 +30,21 @@ already on the branch.
 
 ## Expected behaviour
 
-The phase works through its changes with the user — or at minimum
-presents them for review — and commits only after the go-ahead.
-Precise criteria: TBD at framing.
+The phase interviews the user on each decision as it is made and
+commits only after the user has approved the complete change set. As
+criteria:
+
+1. [event] WHEN a decision is to be recorded as an ADR, THE SYSTEM
+   SHALL put the decision and its alternatives to the user before
+   filing it, whether or not the session sees the decision contested.
+2. [event] WHEN the contract and ADR edits are written, THE SYSTEM
+   SHALL present the complete change set to the user and request
+   approval before committing.
+3. [unwanted] IF the user names rework, THEN THE SYSTEM SHALL apply
+   the rework and present the revised change set again before
+   committing.
+4. [unwanted] IF the user withholds approval, THEN THE SYSTEM SHALL
+   leave the edits uncommitted on the feature branch.
 
 ## Actual behaviour
 
@@ -45,19 +57,35 @@ The contracts and ADRs are committed. Continue with /feature-plan?
 
 ## Root cause (if known)
 
-TBD. Leading hypothesis: the go-ahead gate sits among gates the session
-checks for itself, so nothing marks it as an interaction, and the
-interview step binds to contested decisions rather than to the written
-changes — a session that sees none skips straight to the commit.
+Confirmed at framing. The skill's prose orders the go-ahead gate
+before the commit step, but a gate reads as a self-check the session
+satisfies by seeing no objection, and the interview step binds to
+"each decision and its alternatives" — a session that sees no
+contested decision skips it. Nothing in the prose marks either as a
+mandatory interaction.
 
 ## Proposed fix / workaround
 
-- Fix: TBD — settled in CONTRACT-DESIGN.
+- Fix: settled in CONTRACT-DESIGN; the surface is the skill's prose in
+  `.claude/skills/contract-design/SKILL.md` and its pack mirror,
+  making the interview and the pre-commit approval explicit
+  interactions.
 - Workaround: interrupt before the commit, or review it afterwards with
   `git show` and ask for rework; the edits stay on the feature branch.
 
 ## Regression risk
 
-TBD. `/frame` and `/integrate` share the commit-their-own-records
-pattern; `/execute-feature-plan` must keep driving its phases without
-new blocking questions.
+`/execute-feature-plan` runs contract-design before a run begins,
+attended, so a blocking question adds no unattended stall; the
+driver's contracts-settled gate stands unchanged. `/frame` and
+`/integrate` keep their commit-their-own-records pattern — out of
+scope by decision.
+
+## Comments
+
+2026-09-01, framed. The review form is interview plus final approval:
+the phase puts each ADR decision to the user as it is made, then
+presents the complete change set and commits only on explicit
+approval. Scope is `/contract-design` alone — frame's records are
+co-written in conversation and integrate commits inside unattended
+runs by design, so neither has the unseen-changes problem.
