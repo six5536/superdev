@@ -89,3 +89,10 @@ presents the complete change set and commits only on explicit
 approval. Scope is `/contract-design` alone — frame's records are
 co-written in conversation and integrate commits inside unattended
 runs by design, so neither has the unseen-changes problem.
+
+2026-09-01, contract-design. The fix is decided in ADR-028:
+restructured process steps — the interview binds to every ADR
+decision, a present-the-change-set step precedes the commit, and the
+commit is conditioned on explicit approval. Hook enforcement and a
+gate-owner vocabulary were rejected there. No contract changes for
+this half; the fix is the skill's prose.

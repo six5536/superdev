@@ -8,6 +8,9 @@ links:
   - rel: references
     to: issue-028-bug-contract-design-commits-before-the-go-ahead
     note: Shares a cause — the phase settles its output without review — and ships in the same fix.
+  - rel: references
+    to: contract-002-cli-superdev
+    note: The --fix bullet grows the include-block materialization that carries the standard into the schemas (ADR-027).
 ---
 
 # Bug: contract-design writes contracts as verbose prose
@@ -96,5 +99,15 @@ not-a-spec bound as a scope rule, and the standard is kind-agnostic by
 construction. Back-catalog decision: sweep all nine active contracts
 now, so the corpus stops teaching the old style by example.
 
+2026-09-01, contract-design. The standard is carried into all 15
+contract-kind schemas by a materialized include block (ADR-027) — the
+user rejected a skill companion because a writer editing a contract
+outside the skill reads only the schema, and rejected inheritance as
+heavier than the need — so
+[contract-002][sokf:contract-002-cli-superdev]'s `--fix` bullet grows
+the materialization. The standard itself is ADR-029; the skill's
+restructured interaction is ADR-028.
+
 <!-- sokf:links -->
+[sokf:contract-002-cli-superdev]: /knowledge/contracts/public/active/contract-002-cli-superdev.md
 [sokf:issue-028-bug-contract-design-commits-before-the-go-ahead]: /knowledge/issues/open/issue-028-bug-contract-design-commits-before-the-go-ahead.md

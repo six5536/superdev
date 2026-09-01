@@ -27,6 +27,9 @@
 * [A Schema's Example Is Checked in Place Against Its Own Schema][sokf:adr-024-a-schemas-example-is-checked-in-place-against-its-own-schema] - validate reads each schema's example block as a document and runs the document check with the declaring schema handed to it, so a failure is a finding on the schema file and the example never leaves the file agents read it from.
 * [An Example's Links Bind by Form and Never Resolve][sokf:adr-025-an-examples-links-bind-by-form-and-never-resolve] - inside a schema's example a concept link must take the sokf id form and a path link into the knowledge is refused, but no id or target is resolved — an example's content is fictional by design, and a link outside the knowledge keeps its ordinary markdown form.
 * [A Named Document Is Checked with Bare-Run Parity][sokf:adr-026-a-named-document-is-checked-with-bare-run-parity] - validate dispatches a path argument by its frontmatter type or a schema's target-files glob and reports for that file exactly the findings a bare run gives it — the run reads the knowledge and the schema set to do so, and the grammar's fallback kind applies only to a file nothing claims.
+* [An Include Block Materializes Shared Content in Place][sokf:adr-027-an-include-block-materializes-shared-content-in-place] - a knowledge document carries shared content between sokf:include markers — validate --fix splices the named concept's body in place and validate errors on a stale copy — so a schema stays self-contained on disk while the content has one authored home.
+* [The Contract-Design Go-Ahead Is an Explicit Interaction][sokf:adr-028-the-contract-design-go-ahead-is-an-explicit-interaction] - the contract-design skill interviews the user on every ADR decision, presents the complete change set, and commits only on explicit approval — restructured process steps rather than hook enforcement or a new gate vocabulary.
+* [A Contract Is a Binding Surface, Not a Specification][sokf:adr-029-a-contract-is-a-binding-surface-not-a-specification] - contract documents state each requirement as one RFC 2119 sentence, define enumerable surfaces in their kind's native structured form, bind only what callers rely on, and link the reasoning to ADRs without restating it — one standard for every contract kind.
 
 <!-- sokf:links -->
 [sokf:adr-001-packs-manifest-section]: /knowledge/adrs/active/adr-001-packs-manifest-section.md
@@ -55,3 +58,6 @@
 [sokf:adr-024-a-schemas-example-is-checked-in-place-against-its-own-schema]: /knowledge/adrs/active/adr-024-a-schemas-example-is-checked-in-place-against-its-own-schema.md
 [sokf:adr-025-an-examples-links-bind-by-form-and-never-resolve]: /knowledge/adrs/active/adr-025-an-examples-links-bind-by-form-and-never-resolve.md
 [sokf:adr-026-a-named-document-is-checked-with-bare-run-parity]: /knowledge/adrs/active/adr-026-a-named-document-is-checked-with-bare-run-parity.md
+[sokf:adr-027-an-include-block-materializes-shared-content-in-place]: /knowledge/adrs/active/adr-027-an-include-block-materializes-shared-content-in-place.md
+[sokf:adr-028-the-contract-design-go-ahead-is-an-explicit-interaction]: /knowledge/adrs/active/adr-028-the-contract-design-go-ahead-is-an-explicit-interaction.md
+[sokf:adr-029-a-contract-is-a-binding-surface-not-a-specification]: /knowledge/adrs/active/adr-029-a-contract-is-a-binding-surface-not-a-specification.md

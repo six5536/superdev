@@ -188,9 +188,12 @@ server use it, `validate` never opens it.
 
   **`--fix`** is the one way `validate` writes. Before checking, it repairs
   what is mechanically repairable in the SOKF knowledge: a body or index link
-  naming a concept by path becomes the id form of SPEC §8, and every
+  naming a concept by path becomes the id form of SPEC §8, every
   document's `<!-- sokf:links -->` block is regenerated from the ids its body
-  cites (§9). A link's id comes from the target document's own `id`, or from
+  cites (§9), and every `<!-- sokf:include -->` block is refilled with the
+  body of the concept its marker names
+  ([ADR-027][sokf:adr-027-an-include-block-materializes-shared-content-in-place]);
+  bare `validate` reports a stale or empty include block as an error. A link's id comes from the target document's own `id`, or from
   the filename stem where the path resolves to nothing and the stem names a
   concept — a link a rename left behind. Nothing else is touched: an image, a
   reference-style link, a path naming a file that is no concept, and every
@@ -246,6 +249,7 @@ Unreleased. Every verb, flag and exit code above may change without notice.
 [sokf:adr-004-base-pack-identity]: /knowledge/adrs/active/adr-004-base-pack-identity.md
 [sokf:adr-009-update-queries-default-source]: /knowledge/adrs/active/adr-009-update-queries-default-source.md
 [sokf:adr-026-a-named-document-is-checked-with-bare-run-parity]: /knowledge/adrs/active/adr-026-a-named-document-is-checked-with-bare-run-parity.md
+[sokf:adr-027-an-include-block-materializes-shared-content-in-place]: /knowledge/adrs/active/adr-027-an-include-block-materializes-shared-content-in-place.md
 [sokf:configuration]: /knowledge/configuration.md
 [sokf:contract-003-mcp-sokf]: /knowledge/contracts/public/active/contract-003-mcp-sokf.md
 [sokf:contract-009-interface-run-state]: /knowledge/contracts/internal/active/contract-009-interface-run-state.md
