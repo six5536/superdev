@@ -147,6 +147,30 @@ fn validate_fails_broken_knowledge_with_exit_1() {
         .code(1);
 }
 
+/// Covers I012 criteria 1 and 2 (ADR-039): a link naming a file that is not
+/// there fails the run on its own. It was a warning, so the run passed and
+/// the finding went unread — 39 of them did, until someone happened to look.
+#[test]
+fn a_broken_link_alone_fails_the_run() {
+    let dir = tempfile::tempdir().unwrap();
+    std::fs::create_dir(dir.path().join("kb")).unwrap();
+    std::fs::write(
+        dir.path().join("kb/a.md"),
+        "---\ntype: T\nid: a\n---\n\nA [dangling](does-not-exist.md) link.\n",
+    )
+    .unwrap();
+    let out = superdev()
+        .current_dir(dir.path())
+        .args(["validate", "--knowledge", "kb"])
+        .assert()
+        .code(1);
+    let stdout = String::from_utf8_lossy(&out.get_output().stdout).into_owned();
+    assert!(
+        stdout.contains("broken body link: does-not-exist.md"),
+        "the finding names the target: {stdout}"
+    );
+}
+
 /// A grammar error fails the run on its own, with no knowledge in the picture.
 /// The temporary repository carries no `.agents/sokf/grammar.yaml` either,
 /// so this is also the embedded grammar doing the checking (FR-11).

@@ -4,8 +4,8 @@
     {
       "file": "alpha.md",
       "message": "footnote [^orphan] has no matching sources[].id",
-      "severity": "warning"
+      "severity": "error"
     }
   ],
-  "passed": true
+  "passed": false
 }
