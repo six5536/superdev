@@ -1,5 +1,6 @@
 {
   "concepts": 3,
+  "errors": 2,
   "findings": [
     {
       "file": "beta.md",
@@ -12,5 +13,6 @@
       "severity": "error"
     }
   ],
-  "passed": false
+  "passed": false,
+  "warnings": 0
 }

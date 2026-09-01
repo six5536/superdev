@@ -1,5 +1,6 @@
 {
   "concepts": 1,
+  "errors": 4,
   "findings": [
     {
       "file": "manifest.sokf.yaml",
@@ -22,5 +23,6 @@
       "severity": "error"
     }
   ],
-  "passed": false
+  "passed": false,
+  "warnings": 0
 }

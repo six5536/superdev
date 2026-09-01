@@ -1,5 +1,7 @@
 {
   "concepts": 2,
+  "errors": 0,
   "findings": [],
-  "passed": true
+  "passed": true,
+  "warnings": 0
 }

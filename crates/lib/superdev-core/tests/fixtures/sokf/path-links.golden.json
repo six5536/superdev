@@ -1,5 +1,6 @@
 {
   "concepts": 2,
+  "errors": 2,
   "findings": [
     {
       "file": "alpha.md",
@@ -12,5 +13,6 @@
       "severity": "error"
     }
   ],
-  "passed": false
+  "passed": false,
+  "warnings": 0
 }
