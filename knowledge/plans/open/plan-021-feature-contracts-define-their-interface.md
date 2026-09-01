@@ -165,5 +165,56 @@ Request:
   - e2e: a full validate run over both trees reports zero errors with
     every declared demand enforced — covers 10.
 
+### Slice 9: A drift test says which kind of red it is
+
+- [ ] Done — ticked by integrate at merge.
+- Depends-on: 2, 3, 5, 6.
+- Change: every drift test reports its two directions apart per ADR-038 —
+  an element the contract declares and the implementation lacks is named
+  a pending promise, an element the implementation has and the contract
+  omits is named a defect — across the CLI, MCP, file and interface
+  tests.
+- Done-check: removing an element from a contract and removing one from
+  an implementation produce findings a reader can tell apart without
+  reading the diff.
+- Cases:
+  - unit: a declared element the implementation lacks reports as a
+    pending promise, naming the element — covers 12.
+  - unit: an implemented element the contract omits reports as a defect,
+    naming the element — covers 12.
+
+### Slice 10: The plan orders a contract gap first
+
+- [ ] Done — ticked by integrate at merge.
+- Depends-on: none.
+- Change: `schema-feature-plan` states the ordering rule of ADR-038 — a
+  slice that closes a contract-implementation gap sorts before slices
+  that do not, alongside dependency order and riskiest-early — and the
+  feature-plan skill's ORDER SLICES step names it, in both trees.
+- Done-check: the schema and the skill state the rule, and the mirrors
+  are byte-identical.
+- Cases:
+  - integration: the plan schema and the feature-plan skill both state
+    the ordering rule, in both trees — covers 13.
+
+### Slice 11: A pending element is bound in reverse
+
+- [ ] Done — ticked by integrate at merge.
+- Depends-on: 9.
+- Change: a contract element may carry a `pending` marker naming the
+  slice that will build it; the drift tests bind such an element in
+  reverse, failing once the implementation has it; the contract-kind
+  schemas declare the marker; and `accept` refuses a contract still
+  carrying one.
+- Done-check: a pending element passes while unbuilt, fails once built,
+  and fails acceptance either way.
+- Cases:
+  - unit: a pending element the implementation lacks passes, and the
+    same element once implemented fails naming the marker — covers 14.
+  - integration: a contract carrying a pending marker fails the
+    acceptance check, naming the contract and the element — covers 15.
+  - integration: no contract on file carries a pending marker — covers
+    15.
+
 <!-- sokf:links -->
 [sokf:issue-035-feature-request-a-contract-does-not-define-its-interface]: /knowledge/issues/open/issue-035-feature-request-a-contract-does-not-define-its-interface.md

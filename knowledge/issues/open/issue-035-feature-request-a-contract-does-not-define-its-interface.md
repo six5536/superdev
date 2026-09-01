@@ -66,7 +66,13 @@ about how it works inside. Once this is done:
   never a toolchain.
 - The contract leads. When the implemented interface and its contract
   disagree, a test fails naming the difference, so changing an interface
-  means editing its contract first. Each schema states that obligation;
+  means editing its contract first. The failure says which way the
+  difference runs: an element the implementation carries and the contract
+  omits is a defect, and one the contract promises and the
+  implementation has yet to keep is a promise outstanding. A contract may
+  mark such a promise pending, naming the slice that will build it; the
+  marker fails once the work lands, and acceptance refuses a contract
+  still carrying one. Each schema states that obligation;
   this repository carries such a test for every contract whose interface
   it implements, including one that runs the binary and asserts each
   declared exit code.
@@ -107,6 +113,17 @@ about how it works inside. Once this is done:
     pack mirror clean with every new demand enforced.
 11. [ubiquitous] THE SYSTEM SHALL record the superseding of ADR-029 and
     document each new demand in the changelog.
+12. [event] WHEN a drift test fails THE SYSTEM SHALL name whether the
+    element is a defect the implementation carries undeclared, or a
+    promise the contract makes and the implementation has yet to keep.
+13. [ubiquitous] THE SYSTEM SHALL order a slice that closes a
+    contract-implementation gap before slices that do not.
+14. [event] WHEN a contract element marked pending is implemented THE
+    SYSTEM SHALL fail its drift test, so the marker cannot outlive the
+    work it names.
+15. [event] WHEN acceptance walks a contract still carrying a pending
+    marker THE SYSTEM SHALL refuse it, naming the contract and the
+    element.
 
 ## Alternatives considered
 
