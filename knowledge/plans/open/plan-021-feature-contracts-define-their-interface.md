@@ -185,7 +185,7 @@ Request:
 
 ### Slice 10: The plan orders a contract gap first
 
-- [ ] Done — ticked by integrate at merge.
+- [x] Done — ticked by integrate at merge.
 - Depends-on: none.
 - Change: `schema-feature-plan` states the ordering rule of ADR-038 — a
   slice that closes a contract-implementation gap sorts before slices

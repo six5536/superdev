@@ -511,3 +511,22 @@ fn every_drift_test_names_the_direction_it_failed_in() {
         }
     }
 }
+
+/// Covers I035 criterion 13: the plan schema and the feature-plan skill both
+/// state that a slice closing a contract-implementation gap sorts first
+/// (ADR-038), in the live tree and in the pack mirror.
+#[test]
+fn the_plan_orders_a_contract_gap_first() {
+    for p in [
+        "knowledge/schemas/feature-plan.md",
+        "pack/knowledge/schemas/feature-plan.md",
+        ".claude/skills/feature-plan/SKILL.md",
+        "pack/knowledge/skills/feature-plan/SKILL.md",
+    ] {
+        let text = std::fs::read_to_string(repo(p)).expect("the file is on file");
+        assert!(
+            text.contains("contract-implementation gap"),
+            "{p} does not state the ordering rule"
+        );
+    }
+}

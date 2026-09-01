@@ -22,7 +22,7 @@ You decompose, you don't build. Produce the feature's plan as specified in the i
 
 <process_actions>
 <step name="CUT SLICES" task="Cut the feature — its acceptance criteria and any gap issues — into slices small enough to build and verify in one pass" />
-<step name="ORDER SLICES" task="State each slice's `Depends-on`, then order the slices per `schema-feature-plan`: topologically — every slice after its dependencies — and riskiest early among the ready. A forward reference is legal; adding a slice never renumbers the ones already written" />
+<step name="ORDER SLICES" task="State each slice's `Depends-on`, then order the slices per `schema-feature-plan`: topologically — every slice after its dependencies — then a slice closing a contract-implementation gap before the slices that do not, and riskiest early among what is left. A forward reference is legal; adding a slice never renumbers the ones already written" />
 <step name="GIVE DONE-CHECKS" task="Give each slice its own done-check" />
 <step name="WRITE CASES" task="Write each slice's cases inline — `schema-feature-plan`'s slice rule says how a case names the criteria it covers, where an integration or e2e case sits, and that every criterion is covered" />
 <step name="FILE THE PLAN" task="File the slice list as the feature's plan: an open concept (`plan-{nnn}-feature-{slug}`, `lifecycle: open`) per `schema-feature-plan`, listed in the plans index. Re-entering? Extend the existing plan" />

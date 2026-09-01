@@ -55,9 +55,12 @@ sections:
     level: 2
     required: true
     description: >
-      Ordered by dependency first, then risk: every slice after the
-      slices it depends on, and the riskiest early. A dependency cycle
-      is an error the planner refuses.
+      Ordered by dependency first, then by the gap a slice closes, then
+      by risk: every slice after the slices it depends on; a slice that
+      closes a contract-implementation gap before the slices that do
+      not, so a contract's promise is not left failing the slices that
+      do not own it (ADR-038); and the riskiest early among what is
+      left. A dependency cycle is an error the planner refuses.
   - heading-pattern: '^Slice \d+: .+$'
     level: 3
     required: true
