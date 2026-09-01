@@ -19,7 +19,7 @@ issue and criterion they cover ("I029 c1").
 
 ### Slice 1: The include mechanism
 
-- [ ] Done — ticked by integrate at merge.
+- [x] Done — ticked by integrate at merge.
 - Depends-on: none.
 - Change: the SOKF SPEC gains the include-block section beside the
   generated definition block (§9); `validate --fix` materializes
