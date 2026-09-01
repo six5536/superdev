@@ -180,7 +180,18 @@ pub fn validate_repo(
             continue;
         }
         let name = relative(&repo_root, path);
-        let text = read(path)?;
+        // A named path that cannot be read is reported the way every finding
+        // spells a path — repository-relative and forward-slashed — rather
+        // than as the absolute, platform-separated spelling the reader failed
+        // on. The two differ on Windows, where the caller would otherwise be
+        // handed back a path they did not type (I041).
+        let text = read(path).map_err(|e| match e {
+            Error::Io { source, .. } => Error::Io {
+                path: PathBuf::from(&name),
+                source,
+            },
+            other => other,
+        })?;
         // A file the bare pipeline already treats keeps that treatment: the
         // walk brought it in, the knowledge holds it — a concept is already
         // a candidate, and a file under the bundle that is no concept gets

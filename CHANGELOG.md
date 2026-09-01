@@ -134,6 +134,11 @@ publish a version it cannot find a heading for.
   turning a one-line fix into a whole-file diff. The engine's own reads are
   unchanged: they hash what they read to tell a superdev-written file from a
   user-edited one.
+- **An unreadable named path is reported as it was typed.** `superdev
+  validate <path>` reported a path it could not read absolutised and with
+  the platform's separator, so one report carried two spellings of a path
+  and a Windows caller was handed back one they never typed. The error now
+  uses the repository-relative, forward-slashed spelling every finding uses.
 - **`validate --fix` refiles under a symlinked root.** The guard that keeps
   a repair inside the knowledge resolved the destination of a move, which
   does not exist until the move creates it, and fell back to comparing an

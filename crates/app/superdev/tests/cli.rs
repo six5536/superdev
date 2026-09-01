@@ -172,7 +172,13 @@ fn validate_fails_an_unreadable_path_naming_it() {
         .assert()
         .code(2);
     let stderr = String::from_utf8_lossy(&out.get_output().stderr).into_owned();
-    assert!(stderr.contains("no/such/file.md"), "{stderr}");
+    // The path as it was given, not the absolute platform-separated spelling
+    // the reader failed on: a substring check passes on the second by
+    // accident everywhere `/` is the separator, and fails on Windows (I041).
+    assert!(
+        stderr.starts_with("error: no/such/file.md:"),
+        "the path is not named as it was given: {stderr}"
+    );
 }
 
 /// A named document is checked as what it is: the concept passes with no
