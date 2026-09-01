@@ -60,7 +60,7 @@ decided by
 
 ### Slice 2: The five findings fail the run
 
-- [ ] Not started.
+- [x] Done — ticked by integrate at merge.
 - Depends-on: none.
 - Change: the five findings the repository alone settles become errors
   in `validate::sokf` — a broken body link, a missing `resource`, a

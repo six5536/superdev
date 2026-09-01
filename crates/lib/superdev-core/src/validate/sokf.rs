@@ -362,7 +362,7 @@ fn check_concept(concept: &Concept, context: &Context, findings: &mut Vec<Findin
             .join(resource.trim_start_matches('/'))
             .exists()
     {
-        findings.push(warning(
+        findings.push(error(
             path,
             format!("`resource` path does not exist: {resource}"),
         ));
@@ -371,7 +371,7 @@ fn check_concept(concept: &Concept, context: &Context, findings: &mut Vec<Findin
     let source_ids = check_sources(path, &fm["sources"], context.repo_root, findings);
     for label in &body.footnotes {
         if !source_ids.contains(label) {
-            findings.push(warning(
+            findings.push(error(
                 path,
                 format!("footnote [^{label}] has no matching sources[].id"),
             ));
@@ -486,7 +486,7 @@ fn check_body_links(
                     ));
                     targets.ids.insert(id);
                 }
-                None => findings.push(warning(path, format!("broken body link: {}", link.dest))),
+                None => findings.push(error(path, format!("broken body link: {}", link.dest))),
             },
         }
     }
@@ -670,7 +670,7 @@ fn check_sources(
             && resource.starts_with('/')
             && !repo_root.join(resource.trim_start_matches('/')).exists()
         {
-            findings.push(warning(
+            findings.push(error(
                 path,
                 format!("sources[{index}].resource does not exist: {resource}"),
             ));
@@ -800,7 +800,7 @@ fn check_indexes(bundle: &Bundle, context: &Context, findings: &mut Vec<Finding>
                             link.dest
                         ),
                     )),
-                    None => findings.push(warning(
+                    None => findings.push(error(
                         path,
                         format!("index entry points at missing file: {}", link.dest),
                     )),
@@ -1399,14 +1399,14 @@ mod tests {
                 "error|a.md|stamped field `generated` present in the working tree",
                 "error|a.md|verified[0].by must be `human:<id>` or `process:<id>`, got 'nobody'",
                 "error|a.md|verified[0].at is not ISO 8601: 'yesterday'",
-                "warning|a.md|broken body link: nope.md",
+                "error|a.md|broken body link: nope.md",
                 "error|a.md|body link names a concept by path: beta.md — write it as [sokf:beta]",
                 "error|a.md|body link [sokf:not-here] names no concept",
-                "warning|a.md|`resource` path does not exist: /nowhere.rs",
+                "error|a.md|`resource` path does not exist: /nowhere.rs",
                 "error|a.md|sources[1] missing `resource`",
                 "error|a.md|sources[2] is not a mapping",
-                "warning|a.md|sources[3].resource does not exist: /missing.rs",
-                "warning|a.md|footnote [^unknown] has no matching sources[].id",
+                "error|a.md|sources[3].resource does not exist: /missing.rs",
+                "error|a.md|footnote [^unknown] has no matching sources[].id",
                 "error|a.md|links[0] missing `rel`",
                 "error|a.md|links[1] `rel` is not lowercase kebab-case: 'Bad Rel'",
                 "warning|a.md|links[2] non-core rel `made-up` (read as relates-to)",
@@ -1421,13 +1421,13 @@ mod tests {
                 "error|other.md|`verified` must be a mapping or a list of mappings",
                 "error|other.md|`sources` must be a list",
                 "error|index.md|index entry names a concept by path: beta.md — write it as [sokf:beta]",
-                "warning|index.md|index entry points at missing file: missing.md",
+                "error|index.md|index entry points at missing file: missing.md",
             ]
         );
         assert!(!r.passed());
         assert!(
             r.render_human()
-                .ends_with("FAIL (27 error(s), 6 warning(s))\n")
+                .ends_with("FAIL (32 error(s), 1 warning(s))\n")
         );
         assert_eq!(
             r.to_json()["findings"][0]["file"],

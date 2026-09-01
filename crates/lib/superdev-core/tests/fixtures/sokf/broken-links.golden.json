@@ -4,17 +4,17 @@
     {
       "file": "alpha.md",
       "message": "broken body link: ghost.md",
-      "severity": "warning"
+      "severity": "error"
     },
     {
       "file": "alpha.md",
       "message": "`resource` path does not exist: /nowhere.rs",
-      "severity": "warning"
+      "severity": "error"
     },
     {
       "file": "alpha.md",
       "message": "sources[0].resource does not exist: /also-missing.rs",
-      "severity": "warning"
+      "severity": "error"
     },
     {
       "file": "alpha.md",
@@ -29,7 +29,7 @@
     {
       "file": "index.md",
       "message": "index entry points at missing file: ghost.md",
-      "severity": "warning"
+      "severity": "error"
     }
   ],
   "passed": false
