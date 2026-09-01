@@ -61,7 +61,8 @@ superdev man                 (hidden; roff to stdout, for packaging)
 
 Every verb acts on the current directory.
 
-- **`init`** refuses a directory that is not a git repo, and refuses a re-run
+- **`init`** MUST refuse a directory that is not a git repo, and MUST
+  refuse a re-run
   once `.superdev/config.toml` exists (it points at `sync`). The guard is the
   manifest rather than the directory, because the knowledge verbs create
   `.superdev/cache/` in repos that were never initialised. It writes the
@@ -81,17 +82,18 @@ Every verb acts on the current directory.
   flag, init prompts — template list first, then the project name prefilled
   with the directory name. Without a TTY there is no prompt and no template,
   so scripted init is unchanged. Template files are write-once scaffolds:
-  existing files win and are reported as kept. A knowledge-enabled init ends
+  an existing file MUST win and be reported as kept. A knowledge-enabled init ends
   with the hint to run `/bootstrap` in Claude Code — filling the canonical knowledge
   from existing docs and an owner interview is judgement work the agent does
   after the mechanical scaffolding.
-- **`status`** never writes. It exits `1` on any drift, missing component,
+- **`status`** MUST NOT write. It MUST exit `1` on any drift, missing
+  component,
   planned removal, or pin behind this binary's registry, so CI can gate on it.
   Each skill released by `[skills] custom` prints as
   `skills: <name> custom, unmanaged`, and each one released by
   `[knowledge] custom` the same way under its own capability name — a released
   skill is the user's file, not drift, so it leaves the code alone. Released orphans and the
-  blueprint-version line print as reports and never affect the exit code.
+  blueprint-version line print as reports and MUST NOT affect the exit code.
   A `content:` line names where the content came from, because which entry
   superdev treated as layer 0 is inferred from the source and would otherwise
   be invisible ([ADR-004][sokf:adr-004-base-pack-identity]):
@@ -101,9 +103,10 @@ Every verb acts on the current directory.
   could not satisfy — which it never fetches to satisfy. One pack hiding
   another's item prints
   `content: <winner> supersedes <loser>'s <item>`; hiding layer 0's is what a
-  pack is for and prints nothing. All of these are reports and none affects
+  pack is for and prints nothing. All of these are reports and MUST NOT
+  affect
   the exit code — layering is what the manifest asked for, not drift.
-- **`sync`** refuses to run while a registry-locked capability
+- **`sync`** MUST refuse to run while a registry-locked capability
   (`code-index`, `skills`) is pinned anywhere other
   than the registry default, and says to run
   `superdev update <capability>`. `code-index`
@@ -120,7 +123,7 @@ Every verb acts on the current directory.
   fails rolls back before anything is deleted; an orphan the user has edited is
   released instead of removed. A successful run stamps this binary's version as
   the manifest's `blueprint`.
-- **`update`** rejects an explicit `code-index@<version>` or
+- **`update`** MUST reject an explicit `code-index@<version>` or
   `skills@<version>` for the same reason. Every other
   capability takes an explicit version. `--provider <id>` is the only CLI path
   that switches a provider: it needs a capability target, rewrites that
@@ -169,7 +172,7 @@ server use it, `validate` never opens it.
 
   It prints findings as text, or as JSON under `--json`: `passed`, `concepts`,
   `files`, `findings`, and a `knowledge` key carrying the directory the run
-  covered. Warnings alone exit `0`; any error exits `1`. A `PATH` replaces
+  covered. Warnings alone MUST exit `0`; any error MUST exit `1`. A `PATH` replaces
   both defaults for what is reported: findings name only what it covers. A
   `PATH` naming a document — dispatched by its frontmatter `type` or a
   schema's `target-files` glob — is reported with bare-run parity: exactly
@@ -184,7 +187,8 @@ server use it, `validate` never opens it.
   `.agents/sokf/grammar.yaml`, or from the copy inside the binary when the
   repository has none.
 
-  **`--fix`** is the one way `validate` writes. Before checking, it repairs
+  **`--fix`** is the one way `validate` writes: without it `validate`
+  MUST NOT write. Before checking, it repairs
   what is mechanically repairable in the SOKF knowledge: a body or index link
   naming a concept by path becomes the id form of SPEC §8, every
   document's `<!-- sokf:links -->` block is regenerated from the ids its body
@@ -197,9 +201,9 @@ server use it, `validate` never opens it.
   reference-style link, a path naming a file that is no concept, and every
   byte of prose and frontmatter are left as written.
 
-  It writes only inside the resolved knowledge directory, covers it on the
+  It MUST write only inside the resolved knowledge directory, covers it on the
   same condition the check does — so a `PATH` naming something else repairs
-  nothing — and is idempotent: a second run writes nothing. The report then
+  nothing — and is idempotent: a second run MUST write nothing. The report then
   describes the repository as `--fix` left it, and names each file rewritten,
   under a `repaired` key in JSON. `hook validate` never passes it.
 - **`sokf index`** forces a full rebuild. Nothing else needs it: the server
@@ -209,12 +213,12 @@ server use it, `validate` never opens it.
   `.superdev/cache/run.toml` — the shared seam between the driver skill and
   the Stop hook, fixed in
   [contract-009-interface-run-state][sokf:contract-009-interface-run-state].
-  `begin` creates it exclusively and refuses when one exists, naming the
+  `begin` creates it exclusively and MUST refuse when one exists, naming the
   owning session and `run end` as the way to clear it. `advance --next`
   rewrites the next step, resets the watchdog counter and refreshes the
   owning session. `end` removes the state, and says so harmlessly when none
-  exists. No `run` verb touches git, the network, or any file outside the
-  cache.
+  exists. A `run` verb MUST NOT touch git, the network, or any file outside
+  the cache.
 - **`hook validate`** reads the PostToolUse payload from stdin and exits
   `0` unless the edited path is under the canonical knowledge or under a tree the grammar
   governs. Then it validates the whole set in-process and, on errors, prints
@@ -233,7 +237,7 @@ server use it, `validate` never opens it.
 - **`mcp sokf`** starts the MCP server; its contract is
   [contract-003-mcp-sokf][sokf:contract-003-mcp-sokf].
 
-A usage error (unknown flag or subcommand) exits `2` — the npm launcher's
+A usage error (unknown flag or subcommand) MUST exit `2` — the npm launcher's
 smoke test relies on that code. `completions` and `man` render into a buffer
 before writing, so a failed write is an error and never partial output. Exit
 codes are in [error-handling][sokf:error-handling]; the manifest the verbs
@@ -241,7 +245,7 @@ read is in [configuration][sokf:configuration].
 
 ## Stability
 
-Unreleased. Every verb, flag and exit code above may change without notice.
+Unreleased. Every verb, flag and exit code above MAY change without notice.
 
 <!-- sokf:links -->
 [sokf:adr-004-base-pack-identity]: /knowledge/adrs/active/adr-004-base-pack-identity.md

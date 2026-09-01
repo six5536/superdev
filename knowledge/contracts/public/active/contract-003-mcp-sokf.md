@@ -14,10 +14,10 @@ and what each one promises.
 
 ## Server
 
-`superdev mcp sokf` serves one stdio client and exits `0` when that client
-closes stdin. A missing knowledge or an unusable index directory fails at
-startup rather than at every tool call. The server exposes tools only — no
-resources, no prompts. It reads the index at `.superdev/cache/sokf-index/`
+`superdev mcp sokf` serves one stdio client and MUST exit `0` when that
+client closes stdin. A missing knowledge or an unusable index directory
+MUST fail at startup rather than at every tool call. The server MUST
+expose tools only — no resources, no prompts. It reads the index at `.superdev/cache/sokf-index/`
 and syncs it lazily on every tool call; there is no watcher and no daemon
 state.
 
@@ -28,9 +28,9 @@ path, concept id, heading path, line range, snippet, score — so the next call
 can read exactly what matched.
 
 - **`sokf_search`** — `query`, optional `limit` (8 by default, clamped to
-  1..50), `types` and `tags`. Filters apply before fusion, so a filtered
+  1..50), `types` and `tags`. Filters MUST apply before fusion, so a filtered
   concept cannot re-enter through the other ranking. Settled work — a
-  `deprecated` concept, or one tagged `done`, `resolved` or `wontfix` — is
+  `deprecated` concept, or one tagged `done`, `resolved` or `wontfix` — MUST be
   down-ranked after fusion, so finished plans and issues sort below live
   knowledge without leaving the results. Results group by concept,
   strongest concept first.
@@ -46,12 +46,12 @@ can read exactly what matched.
 
 ## Errors
 
-A tool failure is an MCP error payload, never a process exit: an unknown id
+A tool failure MUST be an MCP error payload, never a process exit: an unknown id
 comes back with near-miss candidates, and knowledge that fails validation
 still indexes and serves. Reading a file the parser choked on quotes the
 parse error instead of guessing at near misses.
 
 ## Stability
 
-Unreleased. The tool names, their arguments and their result shapes may change
-without notice.
+Unreleased. The tool names, their arguments and their result shapes MAY
+change without notice.

@@ -49,4 +49,4 @@ workflow.
 [sokf:plan-016-feature-schema-layer-enforcement]: /knowledge/plans/done/plan-016-feature-schema-layer-enforcement.md
 [sokf:plan-017-feature-example-conformance]: /knowledge/plans/done/plan-017-feature-example-conformance.md
 [sokf:plan-018-feature-validate-path-dispatch]: /knowledge/plans/done/plan-018-feature-validate-path-dispatch.md
-[sokf:plan-019-feature-contract-design-review]: /knowledge/plans/done/plan-019-feature-contract-design-review.md
+[sokf:plan-019-feature-contract-design-review]: /knowledge/plans/open/plan-019-feature-contract-design-review.md

@@ -52,6 +52,7 @@
 * [contract-design commits contract edits before the user has seen them][sokf:issue-028-bug-contract-design-commits-before-the-go-ahead] - a /contract-design session writes the contracts and ADRs, commits them, and only then asks whether to continue with /feature-plan, so the review its go-ahead gate promises never happens.
 * [contract-design writes contracts as verbose prose][sokf:issue-029-bug-contract-design-writes-verbose-prose] - contract documents come out as long prose where a contract needs precision — clear normative statements and constructs that aid them, such as tables, lists and typed shapes.
 * [filing an issue requires framing it, so framings go stale before the work starts][sokf:issue-030-feature-request-filing-an-issue-requires-framing-it] - the workflow has no lightweight filing — /frame does the full framing at creation, but framing belongs at the point the issue is taken up, because a framing made at filing can be out of date by the time the work starts.
+* [Contracts 002 and 003 carry no RFC 2119 keyword after the sweep][sokf:issue-033-bug-two-contracts-escaped-the-modal-sweep] - the binding-surface sweep trimmed the CLI and MCP contracts but never gave their promises modal verbs, so I029's criterion 1 fails on both and criterion 5 fails with them — or the standard needs to learn the difference between describing behaviour and stating a requirement.
 
 ## Link checking
 
@@ -87,3 +88,4 @@
 [sokf:issue-030-feature-request-filing-an-issue-requires-framing-it]: /knowledge/issues/open/issue-030-feature-request-filing-an-issue-requires-framing-it.md
 [sokf:issue-031-bug-validate-follows-symlinks-out-of-the-repo]: /knowledge/issues/open/issue-031-bug-validate-follows-symlinks-out-of-the-repo.md
 [sokf:issue-032-bug-validate-does-unbounded-work-on-adversarial-input]: /knowledge/issues/open/issue-032-bug-validate-does-unbounded-work-on-adversarial-input.md
+[sokf:issue-033-bug-two-contracts-escaped-the-modal-sweep]: /knowledge/issues/open/issue-033-bug-two-contracts-escaped-the-modal-sweep.md
