@@ -55,7 +55,7 @@ pub fn items_from<'a>(files: impl IntoIterator<Item = (&'a str, &'a str)>) -> Ve
 /// The item one pack-relative path belongs to, or `None` when the path is not
 /// content.
 ///
-/// The six positions are spelled out rather than derived from a general
+/// The positions are spelled out rather than derived from a general
 /// `<owner>/<kind>/<name>` rule: only two capabilities carry content, and the
 /// repo-level kinds have no owner directory at all. An unlisted position is
 /// not an item, which is what keeps the capability instruction files out.
@@ -84,17 +84,11 @@ fn classify(path: &str) -> Option<Position> {
         ["knowledge", "schemas", file] if let Some(name) = file.strip_suffix(".md") => {
             Some(position(knowledge, ItemKind::DocSchema, name, &[]))
         }
-        // A fragment ships with the schema set (ADR-027); the slashed name
-        // keeps it one item, materialized under `schemas/fragments/`.
+        // A fragment ships with the schema set (ADR-027).
         ["knowledge", "schemas", "fragments", file]
             if let Some(name) = file.strip_suffix(".md") =>
         {
-            Some(position(
-                knowledge,
-                ItemKind::DocSchema,
-                &format!("fragments/{name}"),
-                &[],
-            ))
+            Some(position(knowledge, ItemKind::Fragment, name, &[]))
         }
         ["skills", name, rest @ ..] if !rest.is_empty() => Some(position(
             Owner::Capability(Capability::Skills),
@@ -156,6 +150,22 @@ mod tests {
         assert_eq!(
             names(&items, Owner::Repo, ItemKind::ProjectTemplate),
             ["rust-npm"]
+        );
+    }
+
+    /// ADR-027: a fragment is its own kind, shipped with the schema set,
+    /// with a plain single-segment name.
+    #[test]
+    fn a_fragment_is_its_own_kind_beside_the_schemas() {
+        let items = items_from([
+            ("knowledge/schemas/adr.md", "schema"),
+            ("knowledge/schemas/fragments/contract-style.md", "fragment"),
+        ]);
+        let knowledge = Owner::Knowledge;
+        assert_eq!(names(&items, knowledge, ItemKind::DocSchema), ["adr"]);
+        assert_eq!(
+            names(&items, knowledge, ItemKind::Fragment),
+            ["contract-style"]
         );
     }
 

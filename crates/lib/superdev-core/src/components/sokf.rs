@@ -180,6 +180,13 @@ fn items(ctx: &Ctx<'_>) -> Vec<ManagedItem> {
             reason: "document schema".to_string(),
         });
     }
+    for item in ctx.content.items_of(OWNER, ItemKind::Fragment) {
+        items.push(ManagedItem::OwnedFile {
+            path: format!("knowledge/schemas/fragments/{}.md", item.name),
+            content: item.files[0].1.clone(),
+            reason: "fragment".to_string(),
+        });
+    }
     items.push(ManagedItem::EnsureLine {
         path: CLAUDE_ENTRY_PATH.into(),
         line: CLAUDE_ENTRY_LINE.into(),

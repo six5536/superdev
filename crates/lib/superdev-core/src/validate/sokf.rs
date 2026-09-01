@@ -17,7 +17,8 @@ use serde_yaml_ng::Value;
 
 use crate::sokf::bundle::Bundle;
 use crate::sokf::concept::{
-    Concept, INCLUDE_OPEN, include_blocks, included_text, links_block_offset,
+    Concept, INCLUDE_CLOSE, INCLUDE_OPEN, carries_include_markers, include_blocks, included_text,
+    links_block_offset,
 };
 
 /// Relationship types the spec defines; anything else reads as `relates-to`.
@@ -387,6 +388,12 @@ fn check_concept(concept: &Concept, context: &Context, findings: &mut Vec<Findin
 /// The content between the markers is generated, so every content finding
 /// says the one command that repairs it; a marker fault is the author's.
 fn check_include_blocks(path: &str, text: &str, context: &Context, findings: &mut Vec<Finding>) {
+    // Most documents carry no marker; the substring gate spares them the
+    // parse. A fenced false positive just runs the parser, which finds
+    // nothing.
+    if !text.contains(INCLUDE_OPEN) && !text.contains(INCLUDE_CLOSE) {
+        return;
+    }
     let (blocks, faults) = include_blocks(text);
     for fault in faults {
         findings.push(error(path, fault));
@@ -400,7 +407,7 @@ fn check_include_blocks(path: &str, text: &str, context: &Context, findings: &mu
             continue;
         };
         let expected = included_text(source);
-        if expected.contains(INCLUDE_OPEN) {
+        if carries_include_markers(&expected) {
             findings.push(error(
                 path,
                 format!(
@@ -1256,6 +1263,20 @@ mod tests {
             "{:?}",
             r.findings
         );
+    }
+
+    #[test]
+    fn a_fenced_marker_in_a_source_is_an_example_not_nesting() {
+        let doc_source = "---\ntype: T\nid: style\n---\nUse the marker:\n\n```markdown\n<!-- sokf:include x -->\n<!-- /sokf:include -->\n```\n";
+        let content = "Use the marker:\n\n```markdown\n<!-- sokf:include x -->\n<!-- /sokf:include -->\n```\n";
+        let (b, _dir) = bundle_with(&[
+            ("manifest.sokf.yaml", MANIFEST_YAML),
+            ("style.md", doc_source),
+            ("beta.md", B),
+            ("host.md", &host_with(content)),
+        ]);
+        let r = validate(&b, &b.root);
+        assert!(r.findings.is_empty(), "{:?}", r.findings);
     }
 
     #[test]

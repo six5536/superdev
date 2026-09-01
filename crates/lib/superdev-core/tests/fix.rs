@@ -393,3 +393,42 @@ fn editing_the_source_rewrites_every_includer() {
         assert!(!text.contains("Cite [alpha]"), "{name}: {text}");
     }
 }
+
+/// A marker fault elsewhere in the file does not freeze the repairs the
+/// check promises: the stale well-formed block is refilled, and only the
+/// faulty marker stays for the author.
+#[test]
+fn a_marker_fault_does_not_freeze_the_other_repairs() {
+    let dir = seed(&[
+        (
+            "knowledge/manifest.sokf.yaml",
+            "sokf: \"0.4\"\nname: fixture\n",
+        ),
+        (
+            "knowledge/style.md",
+            "---\ntype: Note\nid: style\n---\n\nThe rules.\n",
+        ),
+        (
+            "knowledge/host.md",
+            "---\ntype: Note\nid: host\n---\n\n\
+             <!-- sokf:include style -->\nAn old copy.\n<!-- /sokf:include -->\n\n\
+             A stray close below.\n\n<!-- /sokf:include -->\n",
+        ),
+    ]);
+    let knowledge = dir.path().join("knowledge");
+
+    let repair = fix_repo(dir.path(), &knowledge, &[]).unwrap();
+    assert_eq!(repair.written, vec!["knowledge/host.md".to_string()]);
+    let host = std::fs::read_to_string(knowledge.join("host.md")).unwrap();
+    assert!(host.contains("The rules."), "{host}");
+    assert!(!host.contains("An old copy."), "{host}");
+
+    // The stray marker is the author's; the check still reports it, and a
+    // second fix changes nothing.
+    let bundle = superdev_core::sokf::load_bundle(&knowledge).unwrap();
+    let report = validate::validate(&bundle, dir.path());
+    assert_eq!(report.findings.len(), 1, "{:#?}", report.findings);
+    assert!(report.findings[0].message.contains("no open marker"));
+    let second = fix_repo(dir.path(), &knowledge, &[]).unwrap();
+    assert!(second.written.is_empty(), "{:?}", second.written);
+}

@@ -45,6 +45,7 @@ lock in [contract-006][sokf:contract-006-file-format-lock].
 
 ```rust
 /// Where a pack is resolved from.
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum PackSource {
     /// A git repository at a revision.
     Git { url: String, rev: String },
@@ -101,21 +102,25 @@ projects/<name>/**                     → repo root, tokenised                 
 /// Which capability materialises an item, or none for the repo-level
 /// kinds. Part of identity: two capabilities write into
 /// `.claude/skills/`. ADR-003.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Owner {
     Capability(Capability),
     Repo,
 }
 
 /// The kinds of content a pack may carry, named by layout. ADR-003.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum ItemKind {
     /// `<owner>/skills/<name>/**` — owned files under `.claude/skills/`.
     Skill,
     /// `knowledge/concepts/<name>` — a write-once knowledge scaffold;
     /// `<name>` is a file or a directory. ADR-010.
     KnowledgeSkeleton,
-    /// `knowledge/schemas/<name>.md` — an owned document schema. A
-    /// fragment is a DocSchema item named `fragments/<name>` (ADR-027).
+    /// `knowledge/schemas/<name>.md` — an owned document schema.
     DocSchema,
+    /// `knowledge/schemas/fragments/<name>.md` — an owned fragment,
+    /// shipped with the schema set. ADR-027.
+    Fragment,
     /// `agents/<name>.md` — a write-once general-rules scaffold.
     AgentScaffold,
     /// `projects/<name>/**` — write-once repo scaffolds, tokenised.
@@ -125,6 +130,7 @@ pub enum ItemKind {
 /// One item and every file it owns, paths relative to the item's own
 /// root. `(owner, kind, name)` is the identity a later layer
 /// supersedes on.
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Item {
     pub owner: Owner,
     pub kind: ItemKind,
@@ -144,14 +150,15 @@ pub const REJECTED_BASENAME: &str = "PROJECT.md";
 ```
 
 A pack MUST NOT carry a symlink or a submodule anywhere; resolution
-fails naming the path. A fetched pack is judged by git's index modes,
-a path pack by `symlink_metadata`, and the cache is re-checked at read
-time. ADR-014.
+MUST fail naming the path. A fetched pack is judged by git's index
+modes, a path pack by `symlink_metadata`, and the cache is re-checked
+at read time. ADR-014.
 
 ### The resolved content set — what components read
 
 ```rust
 /// Which layer an item came from.
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Origin {
     /// The binary's embedded snapshot.
     Snapshot,
@@ -161,6 +168,7 @@ pub enum Origin {
 
 /// One item a later layer hid. Reported only when both layers are
 /// packs: superseding the snapshot is the layering rule at work.
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Shadowed {
     pub owner: Owner,
     pub kind: ItemKind,
@@ -191,6 +199,7 @@ impl ContentSet {
 
 ```rust
 /// How far the resolver may go. ADR-002.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ResolveMode {
     /// `status`: MUST NOT fetch or write the cache; an unsatisfiable
     /// pin returns as pending.
@@ -248,6 +257,7 @@ pub fn update_pins(
 ```rust
 /// How a command is run: everything beyond the program and its
 /// arguments.
+#[derive(Debug, Clone, Default)]
 pub struct RunOptions {
     /// Kill the child and fail after this long; `None` waits.
     pub timeout: Option<Duration>,
@@ -336,17 +346,19 @@ pub enum Error {
 
 ## Cross-cutting concerns
 
-- Security: transports are allowlisted at parse and again by git's
-  protocol policy (ADR-012); fetching spawns the user's own `git`, so
-  superdev MUST NOT store a token; every pack is digest-verified with
-  no override flag; a pack declares no executable action; `REJECTED`
-  paths and symlinks are refused before any file is read. Trust in a
-  pack's content is the user's, made by naming the source.
+- Security: a transport MUST be allowlisted, at parse and again by
+  git's protocol policy (ADR-012). Fetching spawns the user's own
+  `git`; superdev MUST NOT store a token. Every pack MUST verify
+  against the lock's digest, with no override flag. A pack MUST NOT
+  declare an executable action. `REJECTED` paths and symlinks MUST be
+  refused before any file is read. Trust in a pack's content is the
+  user's, made by naming the source.
 - Performance: one resolve per run; an unchanged pin costs no fetch;
   the whole content set is held in memory.
 - Migration/rollout: an absent `[[packs]]` array resolves from the
-  snapshot, so every pre-pack manifest works untouched; rollback is
-  deleting the entries, and the orphan pass prunes.
+  snapshot, so every pre-pack manifest works untouched. `sync` MUST
+  NOT add the `[[packs]]` entry; `update` does. Rollback is deleting
+  the entries, and the orphan pass prunes.
 - Observability: `status` prints one content line per layer, the base
   marked; pack-over-pack shadowing prints per item; a pending pin names
   `sync` as the next step.

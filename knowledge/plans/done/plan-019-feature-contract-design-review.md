@@ -3,7 +3,7 @@ type: FeaturePlan
 id: plan-019-feature-contract-design-review
 title: Contract-design review and the binding-surface standard — feature plan
 description: Slices delivering the include-block mechanism, the contract style standard in the schemas, the skill's explicit go-ahead, and the nine-contract sweep.
-lifecycle: open
+lifecycle: done
 ---
 
 # Feature plan: contract-design review and the binding-surface standard
@@ -102,7 +102,7 @@ issue and criterion they cover ("I029 c1").
 
 ### Slice 5: Sweep the public contracts
 
-- [ ] Done — ticked by integrate at merge.
+- [x] Done — ticked by integrate at merge.
 - Depends-on: 2.
 - Change: contracts 002, 003, 004, 005, 006 and 008 rewritten to
   ADR-029 form; CHANGELOG entry for the corpus sweep.

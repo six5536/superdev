@@ -30,7 +30,7 @@ use super::sokf::{
 };
 use crate::error::{Error, Result};
 use crate::sokf::bundle::{Bundle, load_bundle};
-use crate::sokf::concept::{INCLUDE_OPEN, include_blocks, included_text};
+use crate::sokf::concept::{INCLUDE_OPEN, carries_include_markers, include_blocks, included_text};
 
 /// What one repair pass changed.
 #[derive(Debug, Default)]
@@ -94,14 +94,20 @@ pub fn fix(bundle: &Bundle, repo_root: &Path) -> Result<Repair> {
         converted.push((path, text, head, body));
     }
 
-    // Include sources: each concept's converted body, by id.
-    let sources: HashMap<&str, String> = bundle
+    // Include sources: each concept's converted body, by id — borrowed, not
+    // cloned, and looked up through a path index rather than a scan.
+    let by_path: HashMap<&str, usize> = converted
+        .iter()
+        .enumerate()
+        .map(|(i, (p, ..))| (*p, i))
+        .collect();
+    let sources: HashMap<&str, &str> = bundle
         .concepts
         .iter()
         .filter_map(|c| {
             let id = c.id.as_deref()?;
-            let body = converted.iter().find(|(p, ..)| *p == c.path)?.3.clone();
-            Some((id, body))
+            let i = *by_path.get(c.path.as_str())?;
+            Some((id, converted[i].3.as_str()))
         })
         .collect();
     let concepts: HashSet<&str> = bundle.concepts.iter().map(|c| c.path.as_str()).collect();
@@ -131,13 +137,16 @@ pub fn fix(bundle: &Bundle, repo_root: &Path) -> Result<Repair> {
 }
 
 /// Every include block refilled from its source's converted body (SPEC §9).
-/// A faulty marker pair, an id naming no source, and a source that itself
-/// carries an include block are left as written; the check reports them.
-fn materialize(body: &str, sources: &HashMap<&str, String>) -> String {
-    let (blocks, faults) = include_blocks(body);
-    if !faults.is_empty() {
+/// An id naming no source and a source that itself carries an include block
+/// are left as written, as is every marker fault — the check reports those —
+/// but a well-formed block is repaired even beside a faulty marker, so the
+/// check's "run `superdev validate --fix`" stays true whatever else is wrong
+/// in the file.
+fn materialize(body: &str, sources: &HashMap<&str, &str>) -> String {
+    if !body.contains(INCLUDE_OPEN) {
         return body.to_string();
     }
+    let (blocks, _faults) = include_blocks(body);
     let mut out = String::with_capacity(body.len());
     let mut cursor = 0;
     for block in blocks {
@@ -145,7 +154,7 @@ fn materialize(body: &str, sources: &HashMap<&str, String>) -> String {
             continue;
         };
         let content = included_text(source);
-        if content.contains(INCLUDE_OPEN) {
+        if carries_include_markers(&content) {
             continue;
         }
         // The check compares trimmed, so a block it accepts is not rewritten.

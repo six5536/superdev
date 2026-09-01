@@ -47,12 +47,12 @@ what is promised here is the key, its shape and its default.
 - The built-in defaults: the registry default per capability, and the pack
   compiled into the binary.
 
-The four sources are disjoint, which is the promise that matters: no setting
-is read from two of them, so nothing silently overrides anything. A value's
-source is decided by which of the four defines it, not by a precedence order.
-The one deliberate exception runs the other way — the embedding API key is
-read from the environment and refused from the manifest, so it cannot be
-committed.
+The four sources are disjoint, which is the promise that matters: a
+setting MUST NOT be read from two of them, so nothing silently overrides
+anything. A value's source is decided by which of the four defines it,
+not by a precedence order. The one deliberate exception runs the other
+way — the embedding API key MUST be read from the environment and MUST
+NOT be accepted from the manifest, so it cannot be committed.
 
 Both the manifest and the environment are read afresh on every run. No value
 is cached between commands.
@@ -96,18 +96,20 @@ make. Neither error rewrites the file: the manifest is the user's.
 ## Secrets
 
 `OPENAI_API_KEY` is the only credential superdev reads, and only when
-`[knowledge.embeddings]` opts the index onto an API. It is read from the
-environment and never from the manifest, so it cannot reach a commit.
+`[knowledge.embeddings]` opts the index onto an API. It MUST be read from
+the environment and MUST NOT be read from the manifest, so it cannot
+reach a commit.
 
-No git call superdev makes prompts for credentials, so a pack source needing
-them fails rather than waiting for someone to type — a credential never enters
-superdev by any path other than that one variable.
+A git call superdev makes MUST NOT prompt for credentials: a pack source
+needing them fails rather than waiting for someone to type. A credential
+MUST NOT enter superdev by any path other than that one variable.
 
 ## Stability
 
-Unreleased. Key names, defaults and the variables above may change without
-notice. What holds even so: a manifest superdev cannot understand fails at
-load with the edit to make, and never by being rewritten.
+Unreleased. Key names, defaults and the variables above MAY change
+without notice. What holds even so: a manifest superdev cannot
+understand MUST fail at load naming the edit to make, and MUST NOT be
+rewritten.
 
 <!-- sokf:links -->
 [sokf:configuration]: /knowledge/configuration.md

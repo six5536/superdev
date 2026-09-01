@@ -15,9 +15,9 @@ from it.
 
 ## Files
 
-`.superdev/lock.toml`, committed. superdev writes it and nothing else
-SHOULD: it records what the last apply actually did, so a hand edit makes
-it a record of something that never happened.
+`.superdev/lock.toml`, committed. superdev writes it, and other tools
+SHOULD NOT edit it: it records what the last apply actually did, so a
+hand edit makes it a record of something that never happened.
 
 It is read, though, and that is why it is a contract. A reviewer reads it to
 see what a sync changed, and CI reads it to tell a clean tree from a drifted

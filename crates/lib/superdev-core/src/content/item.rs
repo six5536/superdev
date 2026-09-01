@@ -31,6 +31,10 @@ pub enum ItemKind {
     KnowledgeSkeleton,
     /// `knowledge/schemas/<name>.md` — an owned document schema.
     DocSchema,
+    /// `knowledge/schemas/fragments/<name>.md` — an owned fragment, the
+    /// authored home of content other documents materialize through an
+    /// include block. Ships with the schema set. ADR-027.
+    Fragment,
     /// `agents/<name>.md` — a write-once general-rules scaffold.
     AgentScaffold,
     /// `projects/<name>/**` — write-once repo scaffolds, token-substituted.

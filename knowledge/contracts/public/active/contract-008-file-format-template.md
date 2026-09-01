@@ -116,22 +116,23 @@ before either bootstrap runs.
 
 ## Compatibility
 
-Anything that is not one of the five tokens passes through untouched —
+Anything that is not one of the five tokens MUST pass through untouched —
 including GitHub Actions' `${{ … }}`, which template CI files
-legitimately contain. Seeding never overwrites: an existing file wins and
-is reported as kept, so re-running `init` in a populated repo is safe. An
-unknown template name fails naming the shipped set. `Action::WriteFile`
-sets no mode, so nothing seeded is executable and every script is invoked
-through an interpreter; a file that needs its executable bit (`gradlew`)
-says so in the template's docs. The manifest's `[template]` table gains
-an optional `version`; manifests from before the field parse unchanged.
+legitimately contain. Seeding MUST NOT overwrite: an existing file wins
+and is reported as kept, so re-running `init` in a populated repo is
+safe. An unknown template name MUST fail naming the shipped set.
+`Action::WriteFile` sets no mode, so nothing seeded is executable and
+every script is invoked through an interpreter; a file that needs its
+executable bit (`gradlew`) says so in the template's docs. The manifest's
+`[template]` table carries an optional `version`; manifests from before
+the field parse unchanged.
 
 ## Stability
 
-The token vocabulary is promised: a token's meaning never changes, and a
-new spelling may be added but never replaces one. The write-once promise
-is permanent — template files are not hashed, not synced and never drift,
-and the only update path is the `template-update` skill, which discovers
+The token vocabulary is promised: a token's meaning MUST NOT change, and
+a new spelling MAY be added but MUST NOT replace one. The write-once
+promise is permanent — the engine MUST NOT hash, sync or revisit a
+seeded file — and the only update path is the `template-update` skill, which discovers
 the template (`[template]` in the manifest, or shape analysis confirmed
 with the user), renders the binary's current content, three-way-compares
 against the file as seeded (recovered from git history), and applies what

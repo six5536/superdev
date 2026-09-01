@@ -405,6 +405,16 @@ pub fn included_text(body: &str) -> String {
     body[..cut].trim().to_string()
 }
 
+/// Whether `body` carries any include-marker construct — a block or a marker
+/// fault — judged by the same parser that finds blocks, so a marker inside a
+/// fenced example is an example here too. This is the nesting test: content
+/// that answers true cannot itself be included.
+#[must_use]
+pub fn carries_include_markers(body: &str) -> bool {
+    let (blocks, faults) = include_blocks(body);
+    !blocks.is_empty() || !faults.is_empty()
+}
+
 /// Lines `first..=last` of `text`, trailing whitespace trimmed; empty when
 /// the range is.
 fn slice_lines<'a>(text: &'a str, starts: &[usize], first: usize, last: usize) -> &'a str {
