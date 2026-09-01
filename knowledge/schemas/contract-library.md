@@ -75,8 +75,11 @@ sections:
     content: code
     description: >
       The exported surface in the host language — types, functions, traits or
-      interfaces, as a caller sees them. One fenced block per module, tagged
-      with its language. Anything absent here is private.
+      interfaces, as a caller sees them, with their full signatures, so a
+      caller compiles against this block alone. One fenced block per module,
+      tagged with its language. Anything absent here is private. The project
+      binds these blocks to the code — by generating one from the other, or by
+      a test (ADR-036).
   - heading: "Errors"
     level: 2
     content: prose

@@ -78,12 +78,16 @@ sections:
   - heading: "Runtime"
     level: 2
     required: true
-    content: prose
-    content-pattern: '\b(MUST|SHALL|SHOULD|MAY|REQUIRED|RECOMMENDED|OPTIONAL)\b'
+    content: code
+    block-language: yaml
+    block-keys: [ports, user, writable, resources, depends-on]
     description: >
-      What the artifact needs to run: ports it listens on, the user it runs as,
-      writable paths, the resource floor below which it fails rather than
-      degrades, and the services it cannot start without.
+      The definition of what the artifact needs to run: `ports` as a map of
+      port to purpose, `user` the uid it runs as, `writable` the paths it must
+      be able to write, `resources` the floor below which it fails rather than
+      degrades, and `depends-on` the services it cannot start without. A
+      deployer writes the orchestration from this block alone; prose around it
+      describes and never defines.
   - heading: "Health and lifecycle"
     level: 2
     required: true
@@ -125,12 +129,23 @@ example: |
 
   ## Runtime
 
-  One process, listening on `8080` for HTTP and `9090` for metrics. It runs as
-  uid 65532 and needs no writable path outside `/tmp`, so the root filesystem
-  MAY be mounted read-only. It needs 256 MiB of memory and 0.25 CPU to serve;
-  below 128 MiB it MUST fail at startup rather than thrashing. It MUST NOT
-  start without a reachable Postgres — a missing one is a startup error, not a
-  degraded mode.
+  ```yaml
+  ports:
+    8080: HTTP
+    9090: metrics
+  user: 65532
+  writable: [/tmp]
+  resources:
+    memory: 256Mi
+    cpu: 0.25
+    memory-floor: 128Mi
+  depends-on: [postgres]
+  ```
+
+  The root filesystem MAY be mounted read-only, since nothing outside `/tmp`
+  is written. Below the memory floor the process MUST fail at startup rather
+  than thrashing, and it MUST NOT start without a reachable Postgres — a
+  missing one is a startup error, not a degraded mode.
 
   ## Health and lifecycle
 

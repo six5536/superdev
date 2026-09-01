@@ -149,7 +149,8 @@ const PROMISE_BODIES: [(&str, &[&str]); 15] = [
         &["Sources and precedence", "Secrets", "Stability"],
     ),
     ("data", &["Migration", "Stability"]),
-    ("deployment", &["Runtime", "Stability"]),
+    // Runtime left this set when it became a definition block (ADR-033).
+    ("deployment", &["Stability"]),
     ("events", &["Stability"]),
     ("text-format", &["Compatibility", "Stability"]),
     ("graphql", &["Errors", "Limits", "Stability"]),
@@ -332,4 +333,97 @@ fn nothing_names_the_retired_format_kind() {
         found.is_empty(),
         "the retired kind is still named: {found:#?}"
     );
+}
+
+/// Covers I035 criterion 1: every contract kind declares how its interface is
+/// defined — a fenced definition block, or the tables that are its native
+/// structured form — and says the block must carry the whole surface.
+#[test]
+fn every_contract_kind_declares_a_definition_form() {
+    // These kinds define through tables rather than a fenced block: a
+    // permission matrix, a byte layout, a metric set, a route list.
+    const BY_TABLE: [&str; 4] = ["authz", "binary-format", "telemetry", "ui"];
+    let mut seen = 0;
+    for root in ["knowledge/schemas", "pack/knowledge/schemas"] {
+        for entry in std::fs::read_dir(repo(root)).expect("the schema directory") {
+            let path = entry.unwrap().path();
+            let name = path.file_name().unwrap().to_str().unwrap().to_string();
+            if !name.starts_with("contract-") {
+                continue;
+            }
+            let kind = name
+                .trim_start_matches("contract-")
+                .trim_end_matches(".md")
+                .to_string();
+            let text = std::fs::read_to_string(&path).unwrap();
+            if root == "knowledge/schemas" {
+                seen += 1;
+            }
+            if BY_TABLE.contains(&kind.as_str()) {
+                assert!(
+                    text.contains("content: table"),
+                    "{root}/{name} defines through tables and declares none"
+                );
+                continue;
+            }
+            assert!(
+                text.contains("content: code"),
+                "{root}/{name} declares no definition block"
+            );
+            // The block must be demanded whole, not as a sample.
+            assert!(
+                text.contains("alone") || text.contains("Every ") || text.contains("every "),
+                "{root}/{name} does not demand the whole surface"
+            );
+        }
+    }
+    assert_eq!(seen, 16, "every contract kind was read");
+}
+
+/// Covers I035 criterion 3: a schema demands a form and never a toolchain, so
+/// its declarations hold whatever framework a managed repository builds on.
+#[test]
+fn no_schema_names_a_framework_or_a_toolchain() {
+    // Named implementations, not interface description languages: a schema
+    // may say "TypeSpec" or "protobuf" — those are forms a generator reads —
+    // and may never say which library produced them.
+    const TOOLCHAINS: [&str; 12] = [
+        "clap",
+        "commander",
+        "cobra",
+        "argparse",
+        "click",
+        "serde",
+        "schemars",
+        "rmcp",
+        "axum",
+        "express",
+        "fastapi",
+        "typer",
+    ];
+    let mut found = Vec::new();
+    for entry in std::fs::read_dir(repo("knowledge/schemas")).expect("the schema directory") {
+        let path = entry.unwrap().path();
+        let name = path.file_name().unwrap().to_str().unwrap().to_string();
+        if !name.starts_with("contract-") {
+            continue;
+        }
+        // Only what the schema demands: a worked example may name the
+        // fictional library's own dependencies, which bind nobody.
+        let whole = std::fs::read_to_string(&path).unwrap();
+        let text = whole
+            .split("example: |")
+            .next()
+            .unwrap_or_default()
+            .to_lowercase();
+        // Whole words only: "expressed" is not Express.
+        let words: std::collections::BTreeSet<&str> =
+            text.split(|c: char| !c.is_ascii_alphanumeric()).collect();
+        for tool in TOOLCHAINS {
+            if words.contains(tool) {
+                found.push(format!("{name}: {tool}"));
+            }
+        }
+    }
+    assert!(found.is_empty(), "a schema names a toolchain: {found:#?}");
 }

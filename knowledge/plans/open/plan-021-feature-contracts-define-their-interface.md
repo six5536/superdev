@@ -133,7 +133,7 @@ Request:
 
 ### Slice 7: The remaining kinds declare their forms
 
-- [ ] Done — ticked by integrate at merge.
+- [x] Done — ticked by integrate at merge.
 - Depends-on: 1, 4.
 - Change: the kinds with no contract on file — authz, data, deployment,
   events, graphql, library, rest, rpc, telemetry, ui and the new binary

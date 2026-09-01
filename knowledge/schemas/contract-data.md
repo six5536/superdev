@@ -83,8 +83,11 @@ sections:
     content: code
     description: >
       The definitions in the store's own language — SQL DDL, the collection
-      documents, the key layout. One fenced block, tagged. Prose describes;
-      this block defines.
+      documents, the key layout. One fenced block, tagged. Every table,
+      column, type, index and constraint a reader may meet appears, so a
+      migration is written from this block alone; prose describes and never
+      defines. The project binds this block to the store — by generating one
+      from the other, or by a test (ADR-036).
   - heading: "Constraints"
     level: 2
     required: true

@@ -74,8 +74,10 @@ sections:
     content: code
     description: >
       The service and message definitions in their IDL — protobuf, Thrift, a
-      JSON-RPC schema. One fenced block, tagged. Field numbers and reserved
-      tags are part of the contract and appear here.
+      JSON-RPC schema. One fenced block, tagged. Every service, method,
+      message and field appears, with its field numbers and reserved tags, so
+      a client is generated from this block alone. The project binds it to the
+      server — by generating one from the other, or by a test (ADR-036).
   - heading: "Transport"
     level: 2
     required: true
