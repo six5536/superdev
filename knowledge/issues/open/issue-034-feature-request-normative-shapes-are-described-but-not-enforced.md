@@ -4,6 +4,10 @@ id: issue-034-feature-request-normative-shapes-are-described-but-not-enforced
 title: The shapes of normative text are described to the writer and checked by nothing
 description: EARS criteria and the contract style standard live in schema description prose the validator never reads, so a malformed criterion or a requirement buried in narrative passes validate.
 lifecycle: open
+links:
+  - rel: references
+    to: contract-010-interface-document-schemas
+    note: Gains the item-pattern and content-pattern rows and their found-anywhere semantics (ADR-030).
 ---
 
 # Feature: the shapes of normative text are described but never enforced
@@ -38,9 +42,10 @@ records for indexes.
 A schema binds the shape of normative text, and the validator enforces
 the binding. Once this is done:
 
-- A schema may declare a per-item shape on a list section; an item that
-  does not match is a validate error naming the file, the section and
-  the item. The schema config defines where the check applies — the
+- A schema may declare a per-item shape on a list section, and a body
+  shape on any section; an item or a section body that does not match
+  is a validate error naming the file, the section and — for an item —
+  the item. The schema config defines where the checks apply — the
   engine imposes nothing a schema does not declare.
 - `schema-feature-request` declares the EARS opening tag on Acceptance
   criteria, so a criterion without its pattern tag fails validate at
@@ -59,16 +64,20 @@ the binding. Once this is done:
 1. [event] WHEN a schema declares an item shape on a list section and a
    document's item does not match THE SYSTEM SHALL report a validate
    error naming the file, the section and the item.
-2. [event] WHEN a schema declares an item shape that does not compile
-   THE SYSTEM SHALL report the finding on the schema file.
-3. [event] WHEN a feature-request acceptance criterion does not open
+2. [event] WHEN a schema declares a body shape on a section and the
+   document's section body does not match THE SYSTEM SHALL report a
+   validate error naming the file and the section.
+3. [event] WHEN a schema declares a shape that does not compile, or an
+   item shape on a section without a list content kind, THE SYSTEM
+   SHALL report the finding on the schema file.
+4. [event] WHEN a feature-request acceptance criterion does not open
    with an EARS pattern tag THE SYSTEM SHALL fail validate naming the
    criterion.
-4. [state] WHILE a schema declares no item shape on a section THE
-   SYSTEM SHALL check nothing new about that section's items.
-5. [ubiquitous] THE SYSTEM SHALL validate the shipped knowledge and the
+5. [state] WHILE a schema declares no shape on a section THE SYSTEM
+   SHALL check nothing new about that section.
+6. [ubiquitous] THE SYSTEM SHALL validate the shipped knowledge and the
    pack mirror clean with every declared shape enforced.
-6. [ubiquitous] THE SYSTEM SHALL document each new declaration in the
+7. [ubiquitous] THE SYSTEM SHALL document each new declaration in the
    document-schemas contract and in each schema that carries it.
 
 ## Alternatives considered
@@ -90,7 +99,8 @@ the binding. Once this is done:
   the EARS declaration on `schema-feature-request`, the contract-kind
   schemas' declarations as contract-design decides them, restructuring
   the contracts on file until the declared checks pass, the
-  document-schemas contract and the pack mirror.
+  [document-schemas contract][sokf:contract-010-interface-document-schemas]
+  and the pack mirror.
 - Out: the undecidable style rules, which stay in the contract-style
   fragment; checks no schema declares; index shape and index-entry
   drift (I011, I010), which the same mechanism may later serve; shapes
@@ -98,5 +108,6 @@ the binding. Once this is done:
 
 <!-- sokf:links -->
 [sokf:adr-029-a-contract-is-a-binding-surface-not-a-specification]: /knowledge/adrs/active/adr-029-a-contract-is-a-binding-surface-not-a-specification.md
+[sokf:contract-010-interface-document-schemas]: /knowledge/contracts/internal/active/contract-010-interface-document-schemas.md
 [sokf:issue-011-feature-request-index-shape-is-described-but-not-enforced]: /knowledge/issues/open/issue-011-feature-request-index-shape-is-described-but-not-enforced.md
 [sokf:issue-033-bug-two-contracts-escaped-the-modal-sweep]: /knowledge/issues/done/issue-033-bug-two-contracts-escaped-the-modal-sweep.md

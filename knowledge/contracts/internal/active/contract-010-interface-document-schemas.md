@@ -18,11 +18,14 @@ links:
   - rel: references
     to: adr-025-an-examples-links-bind-by-form-and-never-resolve
     note: Fixes the example check's reach over body links.
+  - rel: references
+    to: adr-030-a-section-rule-declares-body-patterns
+    note: Fixes the two body-pattern declarations and their found-anywhere semantics.
 ---
 
 # Interface contract: document schemas
 
-The vocabulary the 53 schemas in `knowledge/schemas/` write and the
+The vocabulary the schemas in `knowledge/schemas/` write and the
 validator's document check reads. Schema authors — agents, in this
 repository and every managed one — are one side of the interface; the
 `validate::schema` module is the other. Every declaration listed here
@@ -31,8 +34,9 @@ read is reported on the schema itself. The decisions behind the
 vocabulary's newest rows are
 [ADR-022][sokf:adr-022-a-frontmatter-key-is-required-by-a-per-key-flag],
 [ADR-023][sokf:adr-023-a-content-kind-binds-by-presence],
-[ADR-024][sokf:adr-024-a-schemas-example-is-checked-in-place-against-its-own-schema]
-and [ADR-025][sokf:adr-025-an-examples-links-bind-by-form-and-never-resolve].
+[ADR-024][sokf:adr-024-a-schemas-example-is-checked-in-place-against-its-own-schema],
+[ADR-025][sokf:adr-025-an-examples-links-bind-by-form-and-never-resolve]
+and [ADR-030][sokf:adr-030-a-section-rule-declares-body-patterns].
 
 ## Data model & API
 
@@ -48,19 +52,21 @@ frontmatter:
   <key>:
     required: true           # error when the key is absent
     const: <value>           # a present value must equal it
-    pattern: '<anchored re>' # a present value must match it
+    pattern: '<re>'          # a present value must match it
     enum: [<v1>, <v2>]       # a present value must be one of them
     description: <guidance>  # prose, unchecked
 
 sections-ordered: true       # first appearances follow declaration order
 sections-prohibited: [<heading>]
 sections:
-  - heading: '<literal>'     # or heading-pattern: '<anchored re>'
+  - heading: '<literal>'     # or heading-pattern: '<re>'
     level: <int>             # omitted: any depth
     required: true
     repeatable: true
     content: <kind>          # prose | bullet-list | numbered-list | table | code
     columns: [<c1>, <c2>]    # a declared table carries exactly these
+    item-pattern: '<re>'     # each top-level item of the list kind must match
+    content-pattern: '<re>'  # the section's body must match
     description: <guidance>  # prose, unchecked
 
 example: |                   # one conforming document; checked (ADR-024)
@@ -90,8 +96,18 @@ pub fn check_documents(docs: &[Document<'_>], set: &SchemaSet) -> Vec<Finding>;
   (ADR-023). The body runs to the next heading at the section's own
   level or shallower, so a subsection's content counts; lines inside
   fenced blocks are not content.
+- **Body patterns** — `item-pattern` binds each top-level item of the
+  section's declared list kind: the item's text is its own lines with
+  the marker stripped and continuations joined, nested items excluded.
+  `content-pattern` binds the section's body: the raw lines from below
+  the heading to the next heading at the same or shallower level.
+  Every pattern in this vocabulary is a regex matched found-anywhere;
+  authors write `^` and `$` explicitly (ADR-030). An item-pattern
+  finding names the file, the section and the item's first line; a
+  content-pattern finding names the file and the section.
 - **A mis-declared schema is its own finding** — a `content` outside
-  the five kinds, a `pattern` that does not compile: reported against
+  the five kinds, a `pattern` that does not compile, an `item-pattern`
+  on a section whose `content` is not a list kind: reported against
   the schema file, and the unreadable rule binds nothing.
 - **The example is checked in place** — the `example:` block is read as
   a document and run through this same check with the declaring schema
@@ -119,8 +135,8 @@ pub fn check_documents(docs: &[Document<'_>], set: &SchemaSet) -> Vec<Finding>;
 
 - validate: collect documents → dispatch each by `type` or glob →
   sections (presence, order, prohibition, columns, line limit) →
-  content kinds → frontmatter contract → findings grouped per file,
-  one verdict.
+  content kinds → body patterns → frontmatter contract → findings
+  grouped per file, one verdict.
 - example check: parse each schema's `example:` block as a document →
   run the document check with the declaring schema → check link form →
   findings land on the schema file, in the same run and verdict.
@@ -131,7 +147,7 @@ pub fn check_documents(docs: &[Document<'_>], set: &SchemaSet) -> Vec<Finding>;
   `re` wrapper; one that does not compile is a schema finding, never a
   panic or a silently-passing rule.
 - Performance: every check is one pass over the document's lines; the
-  53-schema set parses once per run.
+  schema set parses once per run.
 - Migration/rollout: the new declarations are additive — a schema
   without `required` marks or with its existing `content` lines keeps
   its current meaning, so old packs stay readable; the live tree's
@@ -144,3 +160,4 @@ pub fn check_documents(docs: &[Document<'_>], set: &SchemaSet) -> Vec<Finding>;
 [sokf:adr-023-a-content-kind-binds-by-presence]: /knowledge/adrs/active/adr-023-a-content-kind-binds-by-presence.md
 [sokf:adr-024-a-schemas-example-is-checked-in-place-against-its-own-schema]: /knowledge/adrs/active/adr-024-a-schemas-example-is-checked-in-place-against-its-own-schema.md
 [sokf:adr-025-an-examples-links-bind-by-form-and-never-resolve]: /knowledge/adrs/active/adr-025-an-examples-links-bind-by-form-and-never-resolve.md
+[sokf:adr-030-a-section-rule-declares-body-patterns]: /knowledge/adrs/active/adr-030-a-section-rule-declares-body-patterns.md

@@ -30,6 +30,9 @@
 * [An Include Block Materializes Shared Content in Place][sokf:adr-027-an-include-block-materializes-shared-content-in-place] - a knowledge document carries shared content between sokf:include markers — validate --fix splices the named concept's body in place and validate errors on a stale copy — so a schema stays self-contained on disk while the content has one authored home.
 * [The Contract-Design Go-Ahead Is an Explicit Interaction][sokf:adr-028-the-contract-design-go-ahead-is-an-explicit-interaction] - the contract-design skill interviews the user on every ADR decision, presents the complete change set, and commits only on explicit approval — restructured process steps rather than hook enforcement or a new gate vocabulary.
 * [A Contract Is a Binding Surface, Not a Specification][sokf:adr-029-a-contract-is-a-binding-surface-not-a-specification] - contract documents state each requirement as one RFC 2119 sentence, define enumerable surfaces in their kind's native structured form, bind only what callers rely on, and link the reasoning to ADRs without restating it — one standard for every contract kind.
+* [A Section Rule Declares Body Patterns][sokf:adr-030-a-section-rule-declares-body-patterns] - a section rule may declare item-pattern, checked against each top-level item of its declared list kind, and content-pattern, checked against the section's whole body — regexes matched found-anywhere with explicit anchors, and a mis-declaration is a finding on the schema.
+* [EARS Criteria Are Checked by an Item Pattern][sokf:adr-031-ears-criteria-are-checked-by-item-pattern] - schema-feature-request declares an item-pattern on Acceptance criteria requiring each criterion to open with an EARS tag or TBD, so a malformed criterion fails validate at frame time; the frame gate keeps forbidding TBD at close.
+* [A Contract's Promise Sections Declare That They Bind][sokf:adr-032-contract-promise-sections-declare-their-shape] - the contract-kind schemas declare a content-pattern requiring an RFC 2119 keyword on every promise-bearing section, and an item-pattern on the sections where each entry is a promise — the shape future contracts must take, with the nine on file reconciled to it.
 
 <!-- sokf:links -->
 [sokf:adr-001-packs-manifest-section]: /knowledge/adrs/active/adr-001-packs-manifest-section.md
@@ -61,3 +64,6 @@
 [sokf:adr-027-an-include-block-materializes-shared-content-in-place]: /knowledge/adrs/active/adr-027-an-include-block-materializes-shared-content-in-place.md
 [sokf:adr-028-the-contract-design-go-ahead-is-an-explicit-interaction]: /knowledge/adrs/active/adr-028-the-contract-design-go-ahead-is-an-explicit-interaction.md
 [sokf:adr-029-a-contract-is-a-binding-surface-not-a-specification]: /knowledge/adrs/active/adr-029-a-contract-is-a-binding-surface-not-a-specification.md
+[sokf:adr-030-a-section-rule-declares-body-patterns]: /knowledge/adrs/active/adr-030-a-section-rule-declares-body-patterns.md
+[sokf:adr-031-ears-criteria-are-checked-by-item-pattern]: /knowledge/adrs/active/adr-031-ears-criteria-are-checked-by-item-pattern.md
+[sokf:adr-032-contract-promise-sections-declare-their-shape]: /knowledge/adrs/active/adr-032-contract-promise-sections-declare-their-shape.md
