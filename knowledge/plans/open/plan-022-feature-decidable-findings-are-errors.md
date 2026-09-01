@@ -79,7 +79,7 @@ decided by
 
 ### Slice 3: The edit-time hook stops judging what it cannot see
 
-- [ ] Not started.
+- [x] Done — ticked by integrate at merge.
 - Depends-on: 2.
 - Change: `hook validate` no longer blocks on the two findings only the
   whole tree settles — a broken body link and an index entry naming a

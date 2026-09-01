@@ -486,6 +486,77 @@ fn hook_validate_passes_a_clean_bundle() {
         .code(0);
 }
 
+/// A knowledge whose only fault is a link the rest of the tree has not caught
+/// up with. `kind` picks which of the two: a body link, or an index entry.
+fn forward_reference_repo(kind: &str) -> tempfile::TempDir {
+    let dir = tempfile::tempdir().unwrap();
+    let k = dir.path().join("knowledge");
+    std::fs::create_dir_all(&k).unwrap();
+    std::fs::write(
+        k.join("manifest.sokf.yaml"),
+        "sokf: \"0.1\"\nname: fixture\n",
+    )
+    .unwrap();
+    std::fs::write(
+        k.join("alpha.md"),
+        "---\ntype: Note\nid: alpha\n---\n\nBody.\n",
+    )
+    .unwrap();
+    match kind {
+        "link" => std::fs::write(
+            k.join("beta.md"),
+            "---\ntype: Note\nid: beta\n---\n\nA [later](not-yet.md) file.\n",
+        )
+        .unwrap(),
+        _ => std::fs::write(k.join("index.md"), "# Index\n\n* [Later](not-yet.md)\n").unwrap(),
+    }
+    dir
+}
+
+/// Covers plan-022 slice 3 (ADR-039): the edit-time hook does not block on a
+/// finding only the whole tree settles. It is handed one file and cannot see
+/// whether the target arrives in the next edit; `hook run` holds the turn on
+/// these instead, so they are not ignored.
+#[test]
+fn hook_validate_does_not_block_a_forward_reference() {
+    for (kind, edited) in [
+        ("link", "knowledge/beta.md"),
+        ("index", "knowledge/index.md"),
+    ] {
+        let repo = forward_reference_repo(kind);
+        let out = superdev()
+            .args(["hook", "validate"])
+            .env("CLAUDE_PROJECT_DIR", repo.path())
+            .write_stdin(hook_payload(repo.path(), edited))
+            .assert()
+            .code(0);
+        let stderr = String::from_utf8_lossy(&out.get_output().stderr).into_owned();
+        assert!(
+            stderr.contains("the turn will not end while they stand"),
+            "{kind}: the finding was hidden rather than reported: {stderr}"
+        );
+    }
+}
+
+/// Covers plan-022 slice 3: the hook was scoped, not disarmed. A fault the
+/// edited file settles on its own still blocks, even beside a forward
+/// reference.
+#[test]
+fn hook_validate_still_blocks_what_one_file_settles() {
+    let repo = forward_reference_repo("link");
+    std::fs::write(
+        repo.path().join("knowledge/gamma.md"),
+        "---\nid: gamma\n---\n\nMissing type.\n",
+    )
+    .unwrap();
+    superdev()
+        .args(["hook", "validate"])
+        .env("CLAUDE_PROJECT_DIR", repo.path())
+        .write_stdin(hook_payload(repo.path(), "knowledge/gamma.md"))
+        .assert()
+        .code(2);
+}
+
 #[test]
 fn hook_run_continues_an_armed_run_naming_next() {
     let repo = tempfile::tempdir().unwrap();

@@ -194,6 +194,24 @@ fn hook_validate(root: &Path) -> Result<u8> {
     if run.report.passed() {
         return Ok(0);
     }
+    // A finding only the whole tree settles is reported and not blocked on:
+    // this hook is handed one edited file and cannot see whether the link's
+    // target arrives in the next edit. `superdev hook run` holds the turn on
+    // those instead, so nothing is ignored — the turn is where a document is
+    // claimed to be finished (ADR-039).
+    let blocks = run
+        .report
+        .findings
+        .iter()
+        .any(|f| f.fatal && !f.needs_the_whole_tree());
+    if !blocks {
+        eprintln!(
+            "superdev: {file_path} edited; these wait on the rest of the tree and do not \
+             block, but the turn will not end while they stand:"
+        );
+        eprintln!("{}", run.report.render_human().trim_end_matches('\n'));
+        return Ok(0);
+    }
     eprintln!("superdev validation failed after editing {file_path} — fix before continuing:");
     eprintln!("{}", run.report.render_human().trim_end_matches('\n'));
     Ok(2)
