@@ -223,6 +223,13 @@ publish a version it cannot find a heading for.
   verdict moves**: the same findings are found, and the same exit codes are
   returned.
 
+  `--json` reports the same information as the text output: **`errors` and
+  `warnings` counts, which it never carried**, and the findings the text run
+  listed. **A consumer that derived its counts from the `findings` array now
+  undercounts** and should read the two counts instead, or pass `--warnings`.
+  The keys `documents` and `schemas`, emitted since they were added and never
+  declared, are now in `contract-002` with them.
+
 - **A contract now defines its interface, not describes it.** Every
   contract-kind schema demands a definition block carrying the whole surface
   a caller depends on — commands and flags, tool schemas, settings, file
