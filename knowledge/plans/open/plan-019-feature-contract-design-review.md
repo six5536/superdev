@@ -84,7 +84,7 @@ issue and criterion they cover ("I029 c1").
 
 ### Slice 4: Sweep the internal contracts
 
-- [ ] Done — ticked by integrate at merge.
+- [x] Done — ticked by integrate at merge.
 - Depends-on: 2.
 - Change: contracts 007, 009 and 010 rewritten to ADR-029 form —
   narrative doc comments reduced to what the code enforces with the
