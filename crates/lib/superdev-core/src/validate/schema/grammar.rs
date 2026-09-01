@@ -602,7 +602,37 @@ pub struct KeyDef {
     pub of: Option<String>,
     /// Another key this one is only allowed beside.
     #[serde(default)]
-    pub requires: Option<Ordered<String>>,
+    pub requires: Option<Ordered<Requirement>>,
+}
+
+/// What a `requires` entry admits: one value, or any of a set.
+#[derive(Debug, Clone, Deserialize)]
+#[serde(untagged)]
+pub enum Requirement {
+    /// The required key must carry this value.
+    One(String),
+    /// The required key must carry one of these.
+    Any(Vec<String>),
+}
+
+impl Requirement {
+    /// Does `value` satisfy the requirement?
+    #[must_use]
+    pub fn admits(&self, value: Option<&str>) -> bool {
+        match self {
+            Self::One(want) => value == Some(want.as_str()),
+            Self::Any(wants) => value.is_some_and(|v| wants.iter().any(|w| w == v)),
+        }
+    }
+
+    /// The requirement as a finding names it.
+    #[must_use]
+    pub fn spell(&self) -> String {
+        match self {
+            Self::One(want) => want.clone(),
+            Self::Any(wants) => wants.join(" or "),
+        }
+    }
 }
 
 /// The core file: one per repository, and the only place blocks are defined.

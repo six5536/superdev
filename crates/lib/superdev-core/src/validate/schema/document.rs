@@ -46,7 +46,17 @@ pub struct SectionRule {
     /// A table's columns, in order.
     #[serde(default)]
     pub columns: Vec<String>,
+    /// The pattern every top-level item of the section's list must match.
+    #[serde(default, rename = "item-pattern")]
+    pub item_pattern: Option<String>,
+    /// The pattern the section's whole body must match.
+    #[serde(default, rename = "content-pattern")]
+    pub content_pattern: Option<String>,
 }
+
+/// The content kinds an `item-pattern` may sit beside: the ones whose bodies
+/// have items to bind (ADR-030).
+const LIST_KINDS: [&str; 2] = ["bullet-list", "numbered-list"];
 
 /// The content kinds a section rule may declare — the closed vocabulary of
 /// contract-010. A kind outside this set is reported on the schema and binds
@@ -289,6 +299,43 @@ pub fn check_declarations(schemas: &[(String, String)]) -> Vec<Finding> {
                         "schema: section {} declares content `{kind}` — the kinds are {}",
                         rule.label(),
                         CONTENT_KINDS.join(", ")
+                    ),
+                    fatal: true,
+                });
+            }
+            let patterns = [
+                ("item-pattern", rule.item_pattern.as_deref()),
+                ("content-pattern", rule.content_pattern.as_deref()),
+            ];
+            for (name, pattern) in patterns {
+                if let Some(pattern) = pattern
+                    && re::compile(pattern).is_none()
+                {
+                    findings.push(Finding {
+                        file: file.clone(),
+                        message: format!(
+                            "schema: section {} declares {name} `{pattern}` — it does not \
+                             compile, and binds nothing",
+                            rule.label()
+                        ),
+                        fatal: true,
+                    });
+                }
+            }
+            // An item-pattern needs items to bind: without a list kind the
+            // section's body has none, so the rule would pass in silence.
+            if rule.item_pattern.is_some()
+                && !rule
+                    .content
+                    .as_deref()
+                    .is_some_and(|k| LIST_KINDS.contains(&k))
+            {
+                findings.push(Finding {
+                    file: file.clone(),
+                    message: format!(
+                        "schema: section {} declares an item-pattern, and its content is not {}",
+                        rule.label(),
+                        LIST_KINDS.join(" or ")
                     ),
                     fatal: true,
                 });
@@ -652,8 +699,97 @@ fn check_one(doc: &Document<'_>, schema: &DocSchema, example: bool, findings: &m
         }
     }
 
+    // Every matched section against the patterns its rule declares (ADR-030):
+    // `content-pattern` over the whole body, `item-pattern` over each
+    // top-level item of the list the section's kind names. Both are matched
+    // found-anywhere, so a rule binds the ends by writing them.
+    for &(h, r) in &matched {
+        let rule = &schema.sections[r];
+        let (start, end) = body_range(h, &headings, &positions, lines.len());
+        if let Some(pattern) = rule.content_pattern.as_deref()
+            && re::compile(pattern).is_some()
+            && !re::matches(pattern, &lines[start..end].join("\n"))
+        {
+            push(format!(
+                "section {} does not match, and {} declares content-pattern `{pattern}`",
+                rule.label(),
+                schema.name
+            ));
+        }
+        if let Some(pattern) = rule.item_pattern.as_deref()
+            && re::compile(pattern).is_some()
+            && rule
+                .content
+                .as_deref()
+                .is_some_and(|k| LIST_KINDS.contains(&k))
+        {
+            for item in items_in(&lines[start..end], &fenced[start..end]) {
+                if !re::matches(pattern, &item.text) {
+                    push(format!(
+                        "section {} item `{}` does not match, and {} declares item-pattern \
+                         `{pattern}`",
+                        rule.label(),
+                        item.first,
+                        schema.name
+                    ));
+                }
+            }
+        }
+    }
+
     check_columns(schema, &headings, &positions, &lines, &fenced, &mut push);
     check_frontmatter(&lines, schema, example, &mut push);
+}
+
+/// One top-level item of a section's list, as `item-pattern` reads it.
+struct Item {
+    /// The item's first line, verbatim, for the finding to name it by.
+    first: String,
+    /// The item's own lines, marker stripped and continuations joined.
+    text: String,
+}
+
+/// Every top-level item in a section body (ADR-030). An item opens with an
+/// unindented marker and runs to the next one, a blank line, or a nested
+/// item — a nested item belongs to itself, never to the text of the item
+/// above it. Fenced lines are skipped, as they are for every content check.
+fn items_in(body: &[&str], fenced: &[bool]) -> Vec<Item> {
+    let mut items: Vec<Item> = Vec::new();
+    // Whether the item being built still takes continuation lines: a nested
+    // item closes the text without closing the item.
+    let mut open = false;
+    for (line, &in_fence) in body.iter().zip(fenced) {
+        if in_fence {
+            continue;
+        }
+        let trimmed = line.trim_start();
+        let indented = line.len() != trimmed.len();
+        let is_item = is_bullet(trimmed) || is_numbered(trimmed);
+        if is_item && !indented {
+            items.push(Item {
+                first: line.trim_end().to_string(),
+                text: strip_marker(trimmed).to_string(),
+            });
+            open = true;
+        } else if trimmed.is_empty() || is_item {
+            open = false;
+        } else if open && let Some(item) = items.last_mut() {
+            item.text.push(' ');
+            item.text.push_str(trimmed.trim_end());
+        }
+    }
+    items
+}
+
+/// An item's text without its `- `, `* `, `+ ` or `1. ` marker.
+fn strip_marker(trimmed: &str) -> &str {
+    let digits = trimmed.len()
+        - trimmed
+            .trim_start_matches(|c: char| c.is_ascii_digit())
+            .len();
+    trimmed[digits..]
+        .trim_start_matches(['-', '*', '+', '.', ')'])
+        .trim_start()
 }
 
 /// The body of the section whose heading is the `h`-th: from the line after
@@ -1372,6 +1508,193 @@ mod tests {
         let mut findings = Vec::new();
         check_one(&doc, &schema, false, &mut findings);
         assert!(findings.is_empty(), "{findings:#?}");
+    }
+
+    /// A schema declaring an item-pattern on a list section, for the
+    /// body-pattern tests (ADR-030).
+    fn items_schema(pattern: &str) -> DocSchema {
+        schema_of(&format!(
+            "frontmatter:\n  type:\n    const: T\nsections:\n  - heading: Items\n    level: 2\n\
+             \x20   content: bullet-list\n    item-pattern: '{pattern}'\n"
+        ))
+    }
+
+    /// Covers I034 criterion 1: the finding names the document, the section
+    /// and the item that failed.
+    #[test]
+    fn an_item_failing_its_pattern_is_a_finding_naming_the_item() {
+        let schema = items_schema("^\\[x\\] ");
+        let doc = Document {
+            path: "a.md",
+            text: "# T\n\n## Items\n\n- [x] tagged\n- untagged\n",
+            doc_type: Some("T"),
+        };
+        let mut findings = Vec::new();
+        check_one(&doc, &schema, false, &mut findings);
+        assert_eq!(findings.len(), 1, "{findings:#?}");
+        assert_eq!(findings[0].file, "a.md");
+        assert!(findings[0].message.contains("\"Items\""), "{findings:#?}");
+        assert!(findings[0].message.contains("- untagged"), "{findings:#?}");
+        assert!(
+            findings[0].message.contains("item-pattern"),
+            "{findings:#?}"
+        );
+    }
+
+    /// Covers I034 criterion 1: an item's continuation lines join before the
+    /// pattern reads it, and a nested item belongs to itself — so a parent
+    /// whose child carries the required text still fails.
+    #[test]
+    fn an_items_text_joins_its_continuations_and_excludes_its_children() {
+        let schema = items_schema("covers \\d");
+        let doc = Document {
+            path: "a.md",
+            text: "# T\n\n## Items\n\n- a long item that wraps\n  onto a second line, covers 1.\n",
+            doc_type: Some("T"),
+        };
+        let mut findings = Vec::new();
+        check_one(&doc, &schema, false, &mut findings);
+        assert!(findings.is_empty(), "{findings:#?}");
+
+        let doc = Document {
+            path: "a.md",
+            text: "# T\n\n## Items\n\n- a parent item\n  - a child, covers 1.\n",
+            doc_type: Some("T"),
+        };
+        let mut findings = Vec::new();
+        check_one(&doc, &schema, false, &mut findings);
+        assert_eq!(findings.len(), 1, "{findings:#?}");
+        assert!(
+            findings[0].message.contains("- a parent item"),
+            "{findings:#?}"
+        );
+    }
+
+    /// Covers I034 criterion 2: the finding names the document and the
+    /// section, and the body is read whole — a match anywhere in it passes.
+    #[test]
+    fn a_body_failing_its_content_pattern_is_a_finding() {
+        let schema = schema_of(
+            "frontmatter:\n  type:\n    const: T\nsections:\n  - heading: Promise\n    level: 2\n\
+             \x20   content: prose\n    content-pattern: '\\bMUST\\b'\n",
+        );
+        let doc = Document {
+            path: "a.md",
+            text: "# T\n\n## Promise\n\nThe server starts on demand.\n",
+            doc_type: Some("T"),
+        };
+        let mut findings = Vec::new();
+        check_one(&doc, &schema, false, &mut findings);
+        assert_eq!(findings.len(), 1, "{findings:#?}");
+        assert_eq!(findings[0].file, "a.md");
+        assert!(findings[0].message.contains("\"Promise\""), "{findings:#?}");
+        assert!(
+            findings[0].message.contains("content-pattern"),
+            "{findings:#?}"
+        );
+
+        let doc = Document {
+            path: "a.md",
+            text: "# T\n\n## Promise\n\nA lead-in.\n\nThe server MUST start on demand.\n",
+            doc_type: Some("T"),
+        };
+        let mut findings = Vec::new();
+        check_one(&doc, &schema, false, &mut findings);
+        assert!(findings.is_empty(), "{findings:#?}");
+    }
+
+    /// Covers I034 criteria 1 and 2: both patterns are matched
+    /// found-anywhere, so a rule binds the ends only by writing them
+    /// (ADR-030).
+    #[test]
+    fn a_pattern_matches_anywhere_until_it_is_anchored() {
+        let doc = Document {
+            path: "a.md",
+            text: "# T\n\n## Items\n\n- a tail marker here\n",
+            doc_type: Some("T"),
+        };
+        let mut findings = Vec::new();
+        check_one(&doc, &items_schema("marker"), false, &mut findings);
+        assert!(findings.is_empty(), "found anywhere: {findings:#?}");
+
+        let mut findings = Vec::new();
+        check_one(&doc, &items_schema("^marker"), false, &mut findings);
+        assert_eq!(findings.len(), 1, "anchored: {findings:#?}");
+    }
+
+    /// Covers I034 criterion 3: a pattern that does not compile, and an
+    /// item-pattern beside a kind with no items, are findings on the schema
+    /// file — and each binds nothing.
+    #[test]
+    fn a_mis_declared_body_pattern_is_a_finding_on_the_schema() {
+        let broken = "---\ntype: Schema\n---\n\n````yaml\nfrontmatter:\n  type:\n    const: T\n\
+                      sections:\n  - heading: Items\n    level: 2\n    content: bullet-list\n\
+                      \x20   item-pattern: '['\n````\n";
+        let findings = check_declarations(&[("s.md".into(), broken.into())]);
+        assert_eq!(findings.len(), 1, "{findings:#?}");
+        assert_eq!(findings[0].file, "s.md");
+        assert!(
+            findings[0].message.contains("does not compile"),
+            "{findings:#?}"
+        );
+
+        let doc = Document {
+            path: "a.md",
+            text: "# T\n\n## Items\n\n- anything at all\n",
+            doc_type: Some("T"),
+        };
+        let mut found = Vec::new();
+        check_one(&doc, &items_schema("["), false, &mut found);
+        assert!(
+            found.is_empty(),
+            "an unreadable rule binds nothing: {found:#?}"
+        );
+
+        let misplaced = "---\ntype: Schema\n---\n\n````yaml\nfrontmatter:\n  type:\n    const: T\n\
+                         sections:\n  - heading: Body\n    level: 2\n    content: prose\n\
+                         \x20   item-pattern: 'x'\n````\n";
+        let findings = check_declarations(&[("s.md".into(), misplaced.into())]);
+        assert_eq!(findings.len(), 1, "{findings:#?}");
+        assert!(
+            findings[0].message.contains("content is not"),
+            "{findings:#?}"
+        );
+    }
+
+    /// Covers I034 criterion 5: a section rule declaring neither pattern is
+    /// checked exactly as it was before ADR-030.
+    #[test]
+    fn a_section_declaring_no_pattern_gains_no_finding() {
+        let schema = schema_of(
+            "frontmatter:\n  type:\n    const: T\nsections:\n  - heading: Items\n    level: 2\n\
+             \x20   content: bullet-list\n",
+        );
+        let doc = Document {
+            path: "a.md",
+            text: "# T\n\n## Items\n\n- anything at all\n- in any shape\n",
+            doc_type: Some("T"),
+        };
+        let mut findings = Vec::new();
+        check_one(&doc, &schema, false, &mut findings);
+        assert!(findings.is_empty(), "{findings:#?}");
+    }
+
+    /// Covers I034 criterion 1: a schema's own example is checked against the
+    /// patterns that schema declares, on the ADR-024 path.
+    #[test]
+    fn an_example_is_checked_against_its_schemas_item_pattern() {
+        let text = "---\ntype: Schema\n---\n\n````yaml\nfrontmatter:\n  type:\n    const: T\n\
+                    sections:\n  - heading: Items\n    level: 2\n    content: bullet-list\n\
+                    \x20   item-pattern: '^\\[x\\] '\nexample: |\n  ---\n  type: T\n  ---\n\n\
+                    \x20 # T\n\n  ## Items\n\n  - untagged\n````\n";
+        let findings = check_examples(&[("s.md".into(), text.into())]);
+        assert_eq!(findings.len(), 1, "{findings:#?}");
+        assert_eq!(findings[0].file, "s.md");
+        assert!(findings[0].message.starts_with("example:"), "{findings:#?}");
+        assert!(
+            findings[0].message.contains("item-pattern"),
+            "{findings:#?}"
+        );
     }
 
     /// A table in a subsection satisfies its section's columns rule: the

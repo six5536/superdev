@@ -610,8 +610,11 @@ fn check_keys(
         }
         if let Some(requires) = &def.requires {
             for (rk, rv) in requires.iter() {
-                if obj.get(rk).and_then(serde_yaml_ng::Value::as_str) != Some(rv) {
-                    errs.push(format!("{where_}.{key}: only allowed with {rk}: {rv}"));
+                if !rv.admits(obj.get(rk).and_then(serde_yaml_ng::Value::as_str)) {
+                    errs.push(format!(
+                        "{where_}.{key}: only allowed with {rk}: {}",
+                        rv.spell()
+                    ));
                 }
             }
         }

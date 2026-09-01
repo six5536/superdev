@@ -576,6 +576,23 @@ kinds:
             requires:
               content: table
             doc: The required column headers, in order.
+          item-pattern:
+            type: string
+            format: regex
+            requires:
+              content:
+                - bullet-list
+                - numbered-list
+            doc: >
+              A regex every top-level item of the section's list must match, found anywhere in
+              the item's text — its own lines with the marker stripped and continuations joined,
+              nested items excluded. Write ^ and $ to bind the ends.
+          content-pattern:
+            type: string
+            format: regex
+            doc: >
+              A regex the section's whole body must match, found anywhere. Write ^ and $ to bind
+              the ends, and (?m) to bind a line's.
           description:
             type: string
             required: true
