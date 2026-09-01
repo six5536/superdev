@@ -92,6 +92,44 @@ fn validate_passes_the_live_repository() {
         .success();
 }
 
+/// The live repository carries warnings and no error, so it tells the two
+/// listings apart: a bare run counts them, `--warnings` lists them, and the
+/// summary line and the exit code are the same either way (ADR-040).
+#[test]
+fn a_bare_run_counts_the_warnings_and_the_flag_lists_them() {
+    let run = |args: &[&str]| {
+        let out = superdev()
+            .current_dir(REPO_ROOT)
+            .args(args)
+            .assert()
+            .success();
+        String::from_utf8_lossy(&out.get_output().stdout).into_owned()
+    };
+    let counted = run(&["validate"]);
+    let listed = run(&["validate", "--warnings"]);
+
+    assert!(
+        !counted.contains("[warning]"),
+        "a bare run lists no warning: {counted}"
+    );
+    assert!(
+        listed.contains("[warning]"),
+        "--warnings lists them: {listed}"
+    );
+    let summary = |text: &str| {
+        text.lines()
+            .next_back()
+            .expect("a report ends with its summary")
+            .to_string()
+    };
+    assert_eq!(summary(&counted), summary(&listed));
+    assert!(
+        summary(&counted).starts_with("PASS (0 error(s), ")
+            && !summary(&counted).contains("0 warning(s)"),
+        "the count of the warnings it did not list: {counted}"
+    );
+}
+
 /// The `aokf` verb group is gone, alias and all. It was kept while the hook
 /// marker and the lock key carried the old spelling; both now say `sokf`, so
 /// there is nothing left for the alias to be compatible with.

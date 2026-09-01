@@ -10,6 +10,7 @@ use std::path::{Path, PathBuf};
 
 use superdev_core::error::Result;
 use superdev_core::validate;
+use superdev_core::validate::sokf::Warnings;
 
 use crate::cli::{KNOWLEDGE_DIR, io_error, knowledge_dir, out};
 
@@ -27,6 +28,9 @@ pub struct ValidateArgs {
     /// Emit JSON instead of text
     #[arg(long)]
     pub json: bool,
+    /// List the warnings, which a run counts but does not list
+    #[arg(long)]
+    pub warnings: bool,
     /// Print the grammar as prose and exit
     #[arg(long)]
     pub doc: bool,
@@ -121,9 +125,22 @@ pub fn run_validate(args: &ValidateArgs, root: &Path) -> Result<u8> {
                 out(&format!("    {path}"))?;
             }
         }
-        out(run.report.render_human().trim_end_matches('\n'))?;
+        out(run
+            .report
+            .render_human(listing(args))
+            .trim_end_matches('\n'))?;
     }
     Ok(u8::from(!run.report.passed()))
+}
+
+/// Whether this run lists its warnings. A run counts them and lists none
+/// unless `--warnings` asks (ADR-040).
+fn listing(args: &ValidateArgs) -> Warnings {
+    if args.warnings {
+        Warnings::Listed
+    } else {
+        Warnings::Counted
+    }
 }
 
 /// What the run covered, for the line above the report: where it looked, and
@@ -209,11 +226,21 @@ fn hook_validate(root: &Path) -> Result<u8> {
             "superdev: {file_path} edited; these wait on the rest of the tree and do not \
              block, but the turn will not end while they stand:"
         );
-        eprintln!("{}", run.report.render_human().trim_end_matches('\n'));
+        eprintln!(
+            "{}",
+            run.report
+                .render_human(Warnings::Listed)
+                .trim_end_matches('\n')
+        );
         return Ok(0);
     }
     eprintln!("superdev validation failed after editing {file_path} — fix before continuing:");
-    eprintln!("{}", run.report.render_human().trim_end_matches('\n'));
+    eprintln!(
+        "{}",
+        run.report
+            .render_human(Warnings::Listed)
+            .trim_end_matches('\n')
+    );
     Ok(2)
 }
 
