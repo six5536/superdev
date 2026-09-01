@@ -22,6 +22,11 @@ const RUN_STATE_PATH: &str = ".superdev/cache/run.toml";
 /// the hook stops continuing the run.
 pub const CONTINUE_CAP: u32 = 10;
 
+/// The hold cap (ADR-039): at this many turns held for the same unresolved
+/// knowledge, the hook reports and lets the turn end, so a finding the agent
+/// cannot settle stalls nothing.
+pub const HOLD_CAP: u32 = 3;
+
 /// The run state, present exactly while a run is active. An absent file
 /// means no run.
 #[derive(Debug, Serialize, Deserialize)]
@@ -38,6 +43,23 @@ pub struct RunState {
     /// Pid of the `begin` process. Informational, for diagnosing a stale
     /// state by hand.
     pub pid: u32,
+}
+
+/// Where the hold count lives, relative to the repo root. Separate from the
+/// run state because a hold happens whether or not a run is armed, and
+/// `run.toml`'s presence means a run is active: a hook that created one to
+/// count holds would make the next `superdev run begin` refuse (ADR-039).
+const HOLD_STATE_PATH: &str = ".superdev/cache/hold.toml";
+
+/// What the Stop hook has held open for one session. An absent file means
+/// nothing is being held.
+#[derive(Debug, Serialize, Deserialize)]
+pub struct HoldState {
+    /// The session the count belongs to. A payload from another session
+    /// starts the count again.
+    pub session_id: String,
+    /// Turns held open because the knowledge carried an error. Hook-owned.
+    pub holds: u32,
 }
 
 /// Drive the state of an unattended workflow run.
@@ -218,6 +240,14 @@ fn hook_run_on(payload: &str, root: &Path) -> Result<u8> {
         // driven only after adoption (contract-009).
         return Ok(0);
     }
+    // The knowledge gate comes first: a turn that leaves a decidable finding
+    // behind does not end, whether or not a run is armed (ADR-039). The
+    // edit-time hook does not judge the findings only the whole tree settles,
+    // so this is where they are caught.
+    if let Some(held) = knowledge_hold(root, session) {
+        return Ok(held);
+    }
+
     let path = state_path(root);
     let mut state = match read_state(&path) {
         Ok(None) => return Ok(0),
@@ -250,6 +280,101 @@ fn hook_run_on(payload: &str, root: &Path) -> Result<u8> {
         state.continues, state.next
     );
     Ok(2)
+}
+
+/// Hold the turn open while the knowledge carries an error, or `None` to
+/// leave the decision to the run state below.
+///
+/// Fails open twice over: knowledge that cannot be read or checked lets the
+/// turn end, because a Stop hook that fails closed holds every session in the
+/// repository open; and after `HOLD_CAP` holds for one session it reports and
+/// lets the turn end, so a finding the agent cannot settle stalls nothing.
+fn knowledge_hold(root: &Path, session: &str) -> Option<u8> {
+    let grammar = match superdev_core::validate::schema::load_grammar(root) {
+        Ok(grammar) => grammar,
+        Err(e) => {
+            eprintln!("superdev hook: grammar unreadable, letting the turn end: {e}");
+            return Some(0);
+        }
+    };
+    let knowledge = root.join(crate::cli::KNOWLEDGE_DIR);
+    let run = match superdev_core::validate::validate_repo(root, &knowledge, &[], &grammar) {
+        Ok(run) => run,
+        Err(e) => {
+            eprintln!("superdev hook: knowledge unreadable, letting the turn end: {e}");
+            return Some(0);
+        }
+    };
+    if run.report.passed() {
+        clear_holds(root);
+        return None;
+    }
+    let held = read_holds(root, session) + 1;
+    if held > HOLD_CAP {
+        eprintln!(
+            "superdev: the knowledge still has findings after {HOLD_CAP} turns held; \
+             letting the turn end. Run `superdev validate` to see them."
+        );
+        clear_holds(root);
+        return None;
+    }
+    write_holds(root, session, held);
+    eprintln!(
+        "superdev: the knowledge has findings, so this turn does not end \
+         ({held} of {HOLD_CAP}). Fix them, or say why they stand:\n{}",
+        run.report.render_human().trim_end_matches('\n')
+    );
+    Some(2)
+}
+
+/// The hold count for `session`, or zero when nothing is held or the file
+/// belongs to another session. Unreadable is zero: a hook that fails closed
+/// holds every session in the repository open.
+fn read_holds(root: &Path, session: &str) -> u32 {
+    let Ok(text) = fs::read_to_string(root.join(HOLD_STATE_PATH)) else {
+        return 0;
+    };
+    toml_edit::de::from_str::<HoldState>(&text)
+        .ok()
+        .filter(|held| held.session_id == session)
+        .map_or(0, |held| held.holds)
+}
+
+/// Record `holds` for `session`. A failure to record is reported and not
+/// fatal: the turn is held on what the validator said, not on the bookkeeping.
+fn write_holds(root: &Path, session: &str, holds: u32) {
+    let path = root.join(HOLD_STATE_PATH);
+    let state = HoldState {
+        session_id: session.to_string(),
+        holds,
+    };
+    let rendered = match toml_edit::ser::to_string(&state) {
+        Ok(rendered) => rendered,
+        Err(e) => {
+            eprintln!("superdev hook: could not render the hold count: {e}");
+            return;
+        }
+    };
+    if let Some(parent) = path.parent()
+        && let Err(e) = fs::create_dir_all(parent)
+    {
+        eprintln!("superdev hook: could not record the hold count: {e}");
+        return;
+    }
+    if let Err(e) = fs::write(&path, rendered) {
+        eprintln!("superdev hook: could not record the hold count: {e}");
+    }
+}
+
+/// Forget what was held: the knowledge is clean, so the next finding starts
+/// its own count.
+fn clear_holds(root: &Path) {
+    let path = root.join(HOLD_STATE_PATH);
+    if let Err(e) = fs::remove_file(&path)
+        && e.kind() != io::ErrorKind::NotFound
+    {
+        eprintln!("superdev hook: could not clear the hold count: {e}");
+    }
 }
 
 /// Read and parse the state: `None` when no run is active, an error when
@@ -516,6 +641,93 @@ mod tests {
         std::fs::write(&path, "").unwrap();
         assert_eq!(begin(dir.path(), "s", "step").unwrap(), 0);
         assert_eq!(load(&path).unwrap().session_id, "s");
+    }
+
+    /// A knowledge with one error, and one without.
+    fn knowledge(root: &Path, broken: bool) {
+        let dir = root.join("knowledge");
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(dir.join("manifest.sokf.yaml"), "sokf: \"0.4\"\nname: t\n").unwrap();
+        let body = if broken {
+            "---\ntype: T\nid: a\n---\n\nSee [b][sokf:nowhere].\n"
+        } else {
+            "---\ntype: T\nid: a\n---\n\nNothing cited.\n"
+        };
+        std::fs::write(dir.join("a.md"), body).unwrap();
+    }
+
+    /// Covers plan-022 slice 1 and I012 criteria 1 and 2: a turn does not end
+    /// while the knowledge carries an error, and the hold names it.
+    #[test]
+    fn a_turn_does_not_end_while_the_knowledge_has_a_finding() {
+        let dir = tempfile::tempdir().unwrap();
+        knowledge(dir.path(), true);
+        assert_eq!(hook_run_on(&stop_payload("s"), dir.path()).unwrap(), 2);
+        assert_eq!(read_holds(dir.path(), "s"), 1, "the hold was recorded");
+    }
+
+    /// Covers plan-022 slice 1: a clean knowledge ends the turn and forgets
+    /// what was held, so the next finding starts its own count.
+    #[test]
+    fn a_clean_knowledge_ends_the_turn_and_clears_the_count() {
+        let dir = tempfile::tempdir().unwrap();
+        knowledge(dir.path(), true);
+        assert_eq!(hook_run_on(&stop_payload("s"), dir.path()).unwrap(), 2);
+        knowledge(dir.path(), false);
+        assert_eq!(hook_run_on(&stop_payload("s"), dir.path()).unwrap(), 0);
+        assert_eq!(read_holds(dir.path(), "s"), 0, "the count was cleared");
+        assert!(!dir.path().join(HOLD_STATE_PATH).exists());
+    }
+
+    /// Covers plan-022 slice 1: the cap bounds the hold, so a finding the
+    /// agent cannot settle stalls nothing.
+    #[test]
+    fn the_hold_stops_at_the_cap() {
+        let dir = tempfile::tempdir().unwrap();
+        knowledge(dir.path(), true);
+        for expected in 1..=HOLD_CAP {
+            assert_eq!(hook_run_on(&stop_payload("s"), dir.path()).unwrap(), 2);
+            assert_eq!(read_holds(dir.path(), "s"), expected);
+        }
+        assert_eq!(
+            hook_run_on(&stop_payload("s"), dir.path()).unwrap(),
+            0,
+            "the cap is spent and the turn ends"
+        );
+    }
+
+    /// Covers plan-022 slice 1: another session's count is not this one's, so
+    /// one session cannot spend another's cap.
+    #[test]
+    fn a_hold_count_belongs_to_its_session() {
+        let dir = tempfile::tempdir().unwrap();
+        knowledge(dir.path(), true);
+        assert_eq!(hook_run_on(&stop_payload("first"), dir.path()).unwrap(), 2);
+        assert_eq!(read_holds(dir.path(), "second"), 0);
+    }
+
+    /// Covers plan-022 slice 1: knowledge the hook cannot check lets the turn
+    /// end. A Stop hook that fails closed holds every session in the
+    /// repository open.
+    #[test]
+    #[cfg(unix)]
+    fn unreadable_knowledge_ends_the_turn() {
+        use std::os::unix::fs::PermissionsExt;
+        let dir = tempfile::tempdir().unwrap();
+        knowledge(dir.path(), true);
+        let concept = dir.path().join("knowledge/a.md");
+        std::fs::set_permissions(&concept, std::fs::Permissions::from_mode(0o000)).unwrap();
+        // Only meaningful when the reader is not privileged enough to ignore
+        // the mode; root reads it anyway and the case cannot be staged.
+        if std::fs::read_to_string(&concept).is_ok() {
+            return;
+        }
+        assert_eq!(
+            hook_run_on(&stop_payload("s"), dir.path()).unwrap(),
+            0,
+            "a hook that fails closed holds every session in the repository open"
+        );
+        std::fs::set_permissions(&concept, std::fs::Permissions::from_mode(0o644)).unwrap();
     }
 
     #[test]

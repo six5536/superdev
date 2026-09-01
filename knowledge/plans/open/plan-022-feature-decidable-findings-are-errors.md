@@ -19,21 +19,44 @@ decided by
 
 ## Slices
 
-### Slice 1: The run state carries the hold count
+### Slice 1: The run state holds the turn open
 
-- [ ] Not started.
+- [x] Done — ticked by integrate at merge.
 - Depends-on: none.
 - Change: `holds` and `HOLD_CAP` land on the run state, as
   [contract-009][sokf:contract-009-interface-run-state] already declares
-  them. Nothing reads them yet. First because the contract promises them
-  and the code does not, which the interface drift test reports as
-  `PENDING` until this lands (ADR-038).
-- Done-check: `every_declared_signature_exists_in_the_source` passes,
-  and a state file written before this change still reads.
+  them, together with the `hook run` behaviour that uses them: it refuses
+  to end the turn while `validate` reports an error, naming the findings
+  on stderr and incrementing `holds`; it resets `holds` once the
+  knowledge is clean; it lets the turn end when the knowledge cannot be
+  read or checked; and it stops holding at `HOLD_CAP`.
+
+  First because the contract promises the two fields and the code does
+  not, which the interface drift test reports as `PENDING` until this
+  lands (ADR-038). The state and the hook ship together because a cap
+  with nothing that holds is dead code, not a slice — the first cut
+  split them and clippy said so.
+- Done-check: `every_declared_signature_exists_in_the_source` passes; a
+  turn ending with the knowledge in error is held once and named; the
+  same turn is held no more than `HOLD_CAP` times; unreadable knowledge
+  ends the turn. The findings used here are the ones already fatal —
+  slice 2 is what adds the five, and a broken body link holds a turn
+  only from then on.
 - Cases:
   - unit: a state file with no `holds` key reads as zero, so a run armed
     by an older binary is not orphaned.
   - unit: `holds` round-trips through a write and a read.
+  - integration: a Stop payload against a tree whose knowledge is in
+    error exits 2 and names the finding — covers 1, 2.
+  - integration: a hold count belongs to its session, so one session
+    cannot spend another's cap.
+  - integration: the same payload against a clean tree exits 0, and
+    `holds` is back to zero.
+  - integration: the `HOLD_CAP`-th hold reports and exits 0, so an
+    unresolvable finding stalls nothing.
+  - integration: unreadable knowledge exits 0, so the hook fails open.
+  - integration: an armed run still continues as contract-009 says, so
+    the two jobs of the hook do not interfere.
 
 ### Slice 2: The five findings fail the run
 
@@ -71,34 +94,10 @@ decided by
   - integration: a missing `resource` in the same file still exits 2, so
     the hook was scoped and not disarmed.
 
-### Slice 4: The turn does not end on an unresolved finding
+### Slice 4: The knowledge and the records settle
 
 - [ ] Not started.
-- Depends-on: 1, 3.
-- Change: `hook run` refuses to end the turn while `validate` reports an
-  error, naming the findings on stderr and incrementing `holds`. It
-  resets `holds` once the knowledge is clean, lets the turn end when the
-  knowledge cannot be read or checked, and stops holding at `HOLD_CAP`.
-  This is what keeps the two slice 3 stopped blocking on from being
-  ignored.
-- Done-check: a turn ending with a broken body link is held once and
-  named; the same turn is held no more than `HOLD_CAP` times; a knowledge
-  that cannot be read ends the turn.
-- Cases:
-  - integration: a Stop payload against a tree carrying a broken link
-    exits 2 and names the finding — covers 1, 2.
-  - integration: the same payload against a clean tree exits 0, and
-    `holds` is back to zero.
-  - integration: the `HOLD_CAP`-th hold reports and exits 0, so an
-    unresolvable finding stalls nothing.
-  - integration: unreadable knowledge exits 0, so the hook fails open.
-  - integration: an armed run still continues as contract-009 says, so
-    the two jobs of the hook do not interfere.
-
-### Slice 5: The knowledge and the records settle
-
-- [ ] Not started.
-- Depends-on: 2, 4.
+- Depends-on: 2, 3.
 - Change: the canonical knowledge and the pack mirror pass with the five
   enforced, the changelog carries the change, and the documentation the
   hooks are configured from says what holds a turn open.
@@ -110,7 +109,8 @@ decided by
 ## Deferred decisions
 
 - None. ADR-039 settled the open question the issue carried, before this
-  plan was cut.
+  plan was cut. Slices 1 and 4 of the first cut were merged during build:
+  the hold cap and the hook that respects it are one deliverable.
 
 <!-- sokf:links -->
 [sokf:adr-039-a-decidable-finding-is-an-error-and-the-turn-is-the-gate]: /knowledge/adrs/active/adr-039-a-decidable-finding-is-an-error-and-the-turn-is-the-gate.md
