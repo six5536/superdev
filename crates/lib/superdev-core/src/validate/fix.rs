@@ -20,7 +20,7 @@
 //! the file the agent is still working in.
 
 use std::collections::{BTreeSet, HashMap, HashSet};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use super::lifecycle;
 use super::schema::document::SchemaSet;
@@ -288,12 +288,43 @@ fn schema_set(bundle: &Bundle) -> Result<SchemaSet> {
     Ok(SchemaSet::load(&files).0)
 }
 
+/// `path` resolved for a containment check, whether or not it exists yet.
+///
+/// `canonicalize` fails on a path that is not there, and every destination of
+/// a refile is exactly that — refiling is what creates it. Falling back to the
+/// raw spelling compares an unresolved path against a resolved root, which
+/// refuses a legitimate move wherever the root is reached through a symlink:
+/// macOS `/var` and `/tmp` both are (I039). So the nearest existing ancestor
+/// is resolved and the rest re-appended. A `..` component yields no
+/// `file_name`, which ends the walk on the raw spelling rather than
+/// re-appending a step out of the resolved base.
+fn resolved(path: &Path) -> PathBuf {
+    let mut tail: Vec<std::ffi::OsString> = Vec::new();
+    let mut here = path.to_path_buf();
+    let base = loop {
+        if let Some(base) = canonical(&here) {
+            break base;
+        }
+        let Some(name) = here.file_name().map(std::ffi::OsStr::to_owned) else {
+            return path.to_path_buf();
+        };
+        tail.push(name);
+        if !here.pop() {
+            return path.to_path_buf();
+        }
+    };
+    let mut out = base;
+    for name in tail.iter().rev() {
+        out.push(name);
+    }
+    out
+}
+
 /// Rename `from` to `to`, creating the state folder, refusing either side
 /// outside `root`.
 fn move_within(root: &Path, from: &Path, to: &Path) -> Result<()> {
     for path in [from, to] {
-        let resolved = canonical(path).unwrap_or_else(|| path.to_path_buf());
-        if !resolved.starts_with(root) {
+        if !resolved(path).starts_with(root) {
             return Err(Error::Io {
                 path: path.to_path_buf(),
                 source: std::io::Error::other(format!(
@@ -316,19 +347,26 @@ fn move_within(root: &Path, from: &Path, to: &Path) -> Result<()> {
 }
 
 fn read(path: &Path) -> Result<String> {
-    std::fs::read_to_string(path).map_err(|source| Error::Io {
-        path: path.to_path_buf(),
-        source,
-    })
+    crate::fsutil::read_document(path)
+}
+
+/// Whether the file at `path` carries CRLF line endings. An unreadable or
+/// absent file carries none, which is what a new file gets.
+fn was_crlf(path: &Path) -> bool {
+    std::fs::read_to_string(path).is_ok_and(|text| text.contains("\r\n"))
 }
 
 /// Write `text` to `path`, refusing anything outside `root`.
 ///
 /// The bound is checked against the resolved spelling of both sides, so a
 /// symlink out of the knowledge directory is refused rather than followed.
+///
+/// A repair changes a document's content and never its line endings. The pass
+/// reads LF whatever the file carries (I040), so a file that was CRLF is
+/// written back as CRLF: a one-line repair stays a one-line diff rather than
+/// rewriting every line of every document in a Windows checkout.
 fn write_within(root: &Path, path: &Path, text: &str) -> Result<()> {
-    let resolved = canonical(path).unwrap_or_else(|| path.to_path_buf());
-    if !resolved.starts_with(root) {
+    if !resolved(path).starts_with(root) {
         return Err(Error::Io {
             path: path.to_path_buf(),
             source: std::io::Error::other(format!(
@@ -337,7 +375,12 @@ fn write_within(root: &Path, path: &Path, text: &str) -> Result<()> {
             )),
         });
     }
-    std::fs::write(path, text).map_err(|source| Error::Io {
+    let out = if was_crlf(path) {
+        std::borrow::Cow::Owned(text.replace('\n', "\r\n"))
+    } else {
+        std::borrow::Cow::Borrowed(text)
+    };
+    std::fs::write(path, out.as_bytes()).map_err(|source| Error::Io {
         path: path.to_path_buf(),
         source,
     })
@@ -509,5 +552,114 @@ mod tests {
         let error = write_within(&root, &outside, "y\n").unwrap_err();
         assert!(error.to_string().contains("refusing to write outside"));
         assert_eq!(std::fs::read_to_string(&outside).unwrap(), "x\n");
+    }
+
+    /// Covers I039: a refile lands when the knowledge root is reached
+    /// through a symlink. The destination does not exist until the move
+    /// makes it, so a guard that falls back to the raw spelling compares it
+    /// against a resolved root and refuses its own work. Unix-only because
+    /// the repro is a symlink; the defect it pins is what reddened macOS.
+    #[test]
+    #[cfg(unix)]
+    fn a_refile_under_a_symlinked_root_is_not_refused() {
+        let dir = tempfile::tempdir().unwrap();
+        let real = dir.path().join("real");
+        let knowledge = real.join("knowledge");
+        std::fs::create_dir_all(knowledge.join("schemas")).unwrap();
+        std::fs::create_dir_all(knowledge.join("issues/done")).unwrap();
+        std::fs::write(
+            knowledge.join("manifest.sokf.yaml"),
+            "sokf: \"0.4\"\nname: t\n",
+        )
+        .unwrap();
+        std::fs::write(
+            knowledge.join("schemas/bug-report.md"),
+            "---\ntype: Schema\nid: schema-bug-report\n---\n````yaml\nfrontmatter:\n  type:\n    const: BugReport\n  lifecycle:\n    enum: [open, done, wontfix]\n````\n",
+        )
+        .unwrap();
+        std::fs::write(
+            knowledge.join("issues/done/issue-001-bug-a.md"),
+            "---\ntype: BugReport\nid: issue-001-bug-a\nlifecycle: open\n---\nx\n",
+        )
+        .unwrap();
+        let link = dir.path().join("link");
+        std::os::unix::fs::symlink(&real, &link).unwrap();
+
+        let via_link = link.join("knowledge");
+        let bundle = load_bundle(&via_link).unwrap();
+        let repair = fix(&bundle, &link).unwrap();
+
+        assert!(
+            repair.written.contains(
+                &"issues/done/issue-001-bug-a.md -> issues/open/issue-001-bug-a.md".to_string()
+            ),
+            "the refile was refused through the symlink: {:?}",
+            repair.written
+        );
+        assert!(real.join("knowledge/issues/open/issue-001-bug-a.md").is_file());
+    }
+
+    /// Covers I040: a repair to a CRLF document leaves it CRLF. The pass
+    /// reads LF whatever the file carries, so writing what it read would
+    /// turn a one-line repair into a whole-file diff on a Windows checkout.
+    #[test]
+    fn a_repair_leaves_a_crlf_document_crlf() {
+        let dir = tempfile::tempdir().unwrap();
+        let knowledge = dir.path().join("knowledge");
+        std::fs::create_dir_all(&knowledge).unwrap();
+        std::fs::write(
+            knowledge.join("manifest.sokf.yaml"),
+            "sokf: \"0.4\"\nname: t\n",
+        )
+        .unwrap();
+        std::fs::write(
+            knowledge.join("a.md"),
+            "---\ntype: T\nid: a\n---\n\n# A\n",
+        )
+        .unwrap();
+        // Cites `a` and carries no definition block, so the pass writes one.
+        let citing = knowledge.join("citing.md");
+        let lf = "---\ntype: T\nid: citing\n---\n\nSee [a][sokf:a].\n";
+        std::fs::write(&citing, lf.replace('\n', "\r\n")).unwrap();
+
+        let bundle = load_bundle(&knowledge).unwrap();
+        let repair = fix(&bundle, dir.path()).unwrap();
+        assert!(
+            repair.written.contains(&"citing.md".to_string()),
+            "the pass wrote nothing to repair: {:?}",
+            repair.written
+        );
+
+        let after = std::fs::read_to_string(&citing).unwrap();
+        assert!(
+            after.contains("[sokf:a]: /knowledge/a.md"),
+            "the definition block was not written: {after:?}"
+        );
+        assert!(
+            !after.replace("\r\n", "").contains('\n'),
+            "a line survived the repair without its CR: {after:?}"
+        );
+    }
+
+    /// Covers I039: the guard still refuses a destination outside the
+    /// knowledge, whether or not that destination exists — resolving the
+    /// nearest existing ancestor must not become a way out.
+    #[test]
+    fn a_move_to_a_path_outside_the_knowledge_is_still_refused() {
+        let dir = tempfile::tempdir().unwrap();
+        let root = dir.path().join("knowledge");
+        std::fs::create_dir_all(&root).unwrap();
+        let inside = root.join("a.md");
+        std::fs::write(&inside, "x\n").unwrap();
+
+        for outside in [dir.path().join("gone.md"), dir.path().join("no/such.md")] {
+            let error = move_within(&root, &inside, &outside).unwrap_err();
+            assert!(
+                error.to_string().contains("refusing to move outside"),
+                "{} was not refused",
+                outside.display()
+            );
+        }
+        assert!(inside.is_file(), "the refused move left the source in place");
     }
 }

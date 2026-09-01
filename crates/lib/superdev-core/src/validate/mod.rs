@@ -387,10 +387,7 @@ fn frontmatter_type(text: &str) -> Option<String> {
 }
 
 fn read(path: &Path) -> Result<String> {
-    std::fs::read_to_string(path).map_err(|source| Error::Io {
-        path: path.to_path_buf(),
-        source,
-    })
+    crate::fsutil::read_document(path)
 }
 
 /// `path` under `root`, forward-slashed, or its whole spelling when it is not
@@ -731,6 +728,54 @@ example: |
         )
         .unwrap();
         dir
+    }
+
+    /// Covers I040: a checkout carrying CRLF reports exactly what an LF one
+    /// does. Every parser downstream of the read is written against LF, so
+    /// before the read normalised them a schema registered no type, leaving
+    /// every document ungoverned — which is what the Windows job saw.
+    #[test]
+    fn a_crlf_checkout_reports_what_an_lf_one_does() {
+        let g = live();
+        let findings = |run: &RepoReport| -> Vec<(String, String, bool)> {
+            run.report
+                .findings
+                .iter()
+                .map(|f| (f.path.clone(), f.message.clone(), f.fatal))
+                .collect()
+        };
+
+        let lf_dir = parity_repo();
+        let lf = validate_repo(lf_dir.path(), &lf_dir.path().join("knowledge"), &[], &g).unwrap();
+
+        let crlf_dir = parity_repo();
+        let knowledge = crlf_dir.path().join("knowledge");
+        for name in ["schemas/thing.md", "a.md", "b.md", "manifest.sokf.yaml"] {
+            let path = knowledge.join(name);
+            let text = std::fs::read_to_string(&path).unwrap();
+            std::fs::write(&path, text.replace('\n', "\r\n")).unwrap();
+        }
+        let crlf = validate_repo(crlf_dir.path(), &knowledge, &[], &g).unwrap();
+
+        assert!(
+            lf.schemas > 0 && lf.documents > 0,
+            "the fixture is governed at all: {} schemas, {} documents",
+            lf.schemas,
+            lf.documents
+        );
+        assert_eq!(
+            crlf.schemas, lf.schemas,
+            "the CRLF run read a different schema set"
+        );
+        assert_eq!(
+            crlf.documents, lf.documents,
+            "the CRLF run checked a different number of documents"
+        );
+        assert_eq!(
+            findings(&crlf),
+            findings(&lf),
+            "the CRLF run reports different findings"
+        );
     }
 
     /// A named concept gets every finding the bare run reports for that

@@ -124,6 +124,23 @@ publish a version it cannot find a heading for.
 
 ### Fixed
 
+- **A checkout with CRLF line endings validates.** Every parser behind
+  `superdev validate` is written against LF, so a Windows checkout — where
+  git hands the knowledge tree CRLF unless `.gitattributes` says otherwise —
+  registered no schema at all, reported every document as naming no schema
+  and every generated block as ungenerated. The validator now normalises
+  line endings where it reads, so a repository is governed the same on every
+  platform, and a repair writes back the endings it found rather than
+  turning a one-line fix into a whole-file diff. The engine's own reads are
+  unchanged: they hash what they read to tell a superdev-written file from a
+  user-edited one.
+- **`validate --fix` refiles under a symlinked root.** The guard that keeps
+  a repair inside the knowledge resolved the destination of a move, which
+  does not exist until the move creates it, and fell back to comparing an
+  unresolved path against a resolved root — so refiling was refused wherever
+  the knowledge is reached through a symlink, which on macOS is any path
+  under `/tmp` or `/var`. It now resolves the nearest existing ancestor,
+  and still refuses a genuine escape.
 - **A named document is checked as what it is.** `superdev validate
   <path>` runs the bare pipeline and scopes the report to what the path
   covers, so a named document — dispatched by its frontmatter `type` or

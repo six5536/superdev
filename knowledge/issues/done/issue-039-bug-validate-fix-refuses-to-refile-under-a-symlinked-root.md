@@ -2,11 +2,20 @@
 type: BugReport
 id: issue-039-bug-validate-fix-refuses-to-refile-under-a-symlinked-root
 title: validate --fix refuses to refile a document when the knowledge root resolves through a symlink
-description: The containment guard canonicalises the destination path, which does not exist yet, so the fallback keeps the uncanonicalised form and fails the prefix check against a canonical root — refiling is refused on macOS, where /var and /tmp are symlinks, and the macOS CI job has been red since before P021.
-lifecycle: open
+description: The containment guard canonicalises the destination path, which does not exist yet, so the fallback keeps the uncanonicalised form and fails the prefix check against a canonical root — refiling is refused on macOS, where /var and /tmp are symlinks; fixed by resolving the nearest existing ancestor, which returned the macOS CI job to green.
+lifecycle: done
 ---
 
 # Bug: validate --fix refuses to refile under a symlinked root
+
+## Resolved
+
+Fixed at the root: a `resolved` helper canonicalises the nearest existing
+ancestor and re-appends the rest, so a path that does not exist yet is
+still compared in canonical form. `move_within` and `write_within` both
+use it, because a new file has the same defect a moved one does. A `..`
+component yields no `file_name`, which ends the walk on the raw spelling
+rather than re-appending a step out of the resolved base.
 
 ## Summary
 

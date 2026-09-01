@@ -19,6 +19,35 @@ pub(crate) fn read_text(path: &Path) -> Result<Option<String>> {
     }
 }
 
+/// A governed document's text, with CRLF line endings normalised to LF.
+///
+/// Every parser the validator runs — the frontmatter split, the fence scan,
+/// the generated-block comparison — is written against LF. A checkout that
+/// carries CRLF therefore registers no schema and reports every generated
+/// block as ungenerated, which is what Windows saw (I040). This is the one
+/// place that decides it, so a parser downstream never has to.
+///
+/// The engine's reads stay byte-exact through [`read_text`]: those hash what
+/// they read to tell a superdev-written file from a user-edited one, and a
+/// normalised read would report a CRLF file as drifted on every run.
+pub(crate) fn read_document(path: &Path) -> Result<String> {
+    let text = fs::read_to_string(path).map_err(|source| Error::Io {
+        path: path.into(),
+        source,
+    })?;
+    Ok(lf(text))
+}
+
+/// `text` with CRLF line endings replaced by LF. A lone CR is left alone: it
+/// ends no line in any format superdev reads, and rewriting it would edit
+/// content rather than line endings.
+pub(crate) fn lf(text: String) -> String {
+    if text.contains("\r\n") {
+        return text.replace("\r\n", "\n");
+    }
+    text
+}
+
 pub(crate) fn write_file(path: &Path, content: &str) -> Result<()> {
     if let Some(parent) = path.parent() {
         fs::create_dir_all(parent).map_err(|e| Error::Io {
