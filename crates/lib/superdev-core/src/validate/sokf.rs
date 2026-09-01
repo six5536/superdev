@@ -63,11 +63,28 @@ pub struct Finding {
     pub fatal: bool,
 }
 
+/// The opening of the two findings only the whole tree settles. Named so the
+/// emitter and [`Finding::needs_the_whole_tree`] cannot drift: rewording one
+/// without the other would silently change what the edit-time hook blocks on.
+pub(crate) const BROKEN_BODY_LINK: &str = "broken body link: ";
+pub(crate) const MISSING_INDEX_TARGET: &str = "index entry points at missing file: ";
+
 impl Finding {
     /// `"error"` when the finding fails the bundle, otherwise `"warning"`.
     #[must_use]
     pub fn severity(&self) -> &'static str {
         if self.fatal { "error" } else { "warning" }
+    }
+
+    /// Whether only the whole tree settles this finding.
+    ///
+    /// A link's target may arrive in the next edit, so a check handed one
+    /// edited file cannot judge it; `superdev hook run` holds the turn on
+    /// these instead, which is where a document is claimed to be finished
+    /// (ADR-039).
+    #[must_use]
+    pub fn needs_the_whole_tree(&self) -> bool {
+        self.message.starts_with(BROKEN_BODY_LINK) || self.message.starts_with(MISSING_INDEX_TARGET)
     }
 }
 
@@ -486,7 +503,7 @@ fn check_body_links(
                     ));
                     targets.ids.insert(id);
                 }
-                None => findings.push(error(path, format!("broken body link: {}", link.dest))),
+                None => findings.push(error(path, format!("{BROKEN_BODY_LINK}{}", link.dest))),
             },
         }
     }
@@ -802,7 +819,7 @@ fn check_indexes(bundle: &Bundle, context: &Context, findings: &mut Vec<Finding>
                     )),
                     None => findings.push(error(
                         path,
-                        format!("index entry points at missing file: {}", link.dest),
+                        format!("{MISSING_INDEX_TARGET}{}", link.dest),
                     )),
                 },
             }
@@ -1356,6 +1373,45 @@ mod tests {
     /// One bundle breaking every rule at once, so the finding list — order,
     /// wording and level — is pinned against the reference validator, which
     /// reports exactly this for the same files.
+    /// Covers plan-022 slice 3 (ADR-039): exactly the two findings only the
+    /// whole tree settles are flagged as such, checked against real findings
+    /// rather than against the constants that produce them — so rewording a
+    /// message cannot quietly change what the edit-time hook blocks on.
+    #[test]
+    fn only_the_two_whole_tree_findings_are_flagged() {
+        let (b, _dir) = bundle_with(&[
+            ("manifest.sokf.yaml", "sokf: \"0.1\"\nname: t\n"),
+            ("index.md", "* [gone](missing.md)\n"),
+            (
+                "a.md",
+                "---\ntype: T\nid: a\n---\n\nA [dangling](nope.md) link.\n",
+            ),
+            // A fault one file settles, so the two tiers are told apart on the
+            // same report rather than on separate ones.
+            ("b.md", "---\nid: b\n---\n\nNo type.\n"),
+        ]);
+        let r = validate(&b, &b.root);
+        let flagged: Vec<&str> = r
+            .findings
+            .iter()
+            .filter(|f| f.needs_the_whole_tree())
+            .map(|f| f.message.as_str())
+            .collect();
+        assert_eq!(
+            flagged,
+            vec![
+                "broken body link: nope.md",
+                "index entry points at missing file: missing.md",
+            ]
+        );
+        assert!(
+            r.findings
+                .iter()
+                .any(|f| f.fatal && !f.needs_the_whole_tree()),
+            "the fixture also carries a finding one file settles"
+        );
+    }
+
     #[test]
     fn every_check_fires_on_a_deliberately_broken_bundle() {
         let broken_a = "---\ntype: \"\"\nid: Bad_Slug\ngenerated: {by: agent}\nresource: /nowhere.rs\nverified: {by: nobody, at: yesterday}\nsources:\n  - id: ok-src\n    resource: /beta.md\n  - title: no resource\n  - \"not a mapping\"\n  - resource: /missing.rs\n    id: gone-src\nlinks:\n  - to: beta\n  - rel: Bad Rel\n    to: beta\n  - rel: made-up\n    to: beta\n  - rel: depends-on\n  - rel: depends-on\n    to: nowhere-at-all\n  - rel: depends-on\n    to: beta\n  - \"not a mapping\"\n---\nCites [^ok-src] and [^unknown].\n\nA [broken](nope.md) link, a good [beta](beta.md), and one [naming nothing][sokf:not-here].\n\n[^ok-src]: Beta\n[^unknown]: nothing\n\n<!-- sokf:links -->\n[sokf:stray]: /stray.md\n";
