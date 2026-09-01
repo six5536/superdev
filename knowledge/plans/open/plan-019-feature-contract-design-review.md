@@ -45,7 +45,7 @@ issue and criterion they cover ("I029 c1").
 
 ### Slice 2: The standard and its carriers
 
-- [ ] Done — ticked by integrate at merge.
+- [x] Done — ticked by integrate at merge.
 - Depends-on: 1.
 - Change: the contract style standard as a source concept shipped with
   the owned schema set, stating ADR-029's four rules; the include
