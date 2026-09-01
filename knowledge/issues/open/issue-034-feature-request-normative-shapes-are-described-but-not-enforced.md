@@ -118,6 +118,10 @@ the contract itself unbuildable, which is what a contract is for.
 carries the raised bar; this issue closes with it, so the mechanism and
 the standard it serves are accepted together.
 
+Acceptance walked I035 on the merged code at `19ac275` and found one
+criterion outstanding, so both issues stay open until plan-021 slice 12
+lands.
+
 <!-- sokf:links -->
 [sokf:adr-029-a-contract-is-a-binding-surface-not-a-specification]: /knowledge/adrs/deprecated/adr-029-a-contract-is-a-binding-surface-not-a-specification.md
 [sokf:contract-010-interface-document-schemas]: /knowledge/contracts/internal/active/contract-010-interface-document-schemas.md

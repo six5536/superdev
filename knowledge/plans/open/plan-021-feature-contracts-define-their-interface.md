@@ -3,7 +3,7 @@ type: FeaturePlan
 id: plan-021-feature-contracts-define-their-interface
 title: Contracts define their interfaces — feature plan
 description: Slices delivering the definition-block vocabulary, each kind's declared form, the drift tests that bind a contract to its implementation, and the split of the file-format kind.
-lifecycle: done
+lifecycle: open
 links:
   - rel: implements
     to: issue-035-feature-request-a-contract-does-not-define-its-interface
@@ -216,5 +216,30 @@ Request:
   - integration: no contract on file carries a pending marker — covers
     15.
 
+### Slice 12: The template format contract is bound to the templates
+
+- [ ] Not started.
+- Depends-on: 5.
+- Change: the token vocabulary and the shipped template set the
+  [template format contract][sokf:contract-008-text-format-template]
+  declares are compared to `crates/lib/superdev-core/src/templates.rs`
+  in both directions, closing
+  [I038][sokf:issue-038-bug-the-template-format-contract-is-bound-by-no-drift-test].
+  Slice 5 bound the file formats through their readers, and the
+  template format has no reader; its surface is Rust constants, so the
+  binding is a text comparison like slice 8's.
+- Done-check: adding a sixth `TOKEN_*` constant fails naming it, and
+  removing a `### Template:` section fails naming the template.
+- Cases:
+  - unit: a token the binary substitutes and the contract does not name
+    reports as a `DEFECT` — covers 4, 12.
+  - unit: a token the contract names and the binary does not substitute
+    reports as `PENDING` — covers 4, 12.
+  - unit: a template in `shipped()` with no `### Template:` section
+    reports as a `DEFECT`, and a section naming no shipped template
+    reports as `PENDING` — covers 4, 12.
+
 <!-- sokf:links -->
+[sokf:contract-008-text-format-template]: /knowledge/contracts/public/active/contract-008-text-format-template.md
 [sokf:issue-035-feature-request-a-contract-does-not-define-its-interface]: /knowledge/issues/open/issue-035-feature-request-a-contract-does-not-define-its-interface.md
+[sokf:issue-038-bug-the-template-format-contract-is-bound-by-no-drift-test]: /knowledge/issues/open/issue-038-bug-the-template-format-contract-is-bound-by-no-drift-test.md
