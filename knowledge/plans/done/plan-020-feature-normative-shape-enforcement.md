@@ -3,7 +3,7 @@ type: FeaturePlan
 id: plan-020-feature-normative-shape-enforcement
 title: Normative shape enforcement — feature plan
 description: Slices delivering the body-pattern vocabulary, the EARS declaration, the contract-kind declarations and the contract sweep.
-lifecycle: open
+lifecycle: done
 links:
   - rel: implements
     to: issue-034-feature-request-normative-shapes-are-described-but-not-enforced
@@ -62,7 +62,7 @@ Request:
 
 ### Slice 3: The contract kinds declare their promise shapes
 
-- [ ] Done — ticked by integrate at merge.
+- [x] Done — ticked by integrate at merge.
 - Depends-on: 1.
 - Change: the fifteen contract-kind schemas declare the ADR-032
   item-patterns and content-patterns, in `knowledge/schemas/` and the
@@ -79,12 +79,14 @@ Request:
 
 ### Slice 4: The on-file contracts pass the declared shapes
 
-- [ ] Done — ticked by integrate at merge.
+- [x] Done — ticked by integrate at merge.
 - Depends-on: 3.
 - Change: the nine active contracts are swept until the ADR-032
   declarations pass — promise items gain their keywords, promise
   sections state their promises — with no change to what any contract
-  binds.
+  binds. Landed in slice 3's commit: a declaration leaves the tree
+  failing until its reconciliation follows, so the two cannot merge
+  apart.
 - Done-check: `superdev validate` passes on the knowledge and the pack
   mirror with every declaration live; the sweep commits touch contract
   documents only.
