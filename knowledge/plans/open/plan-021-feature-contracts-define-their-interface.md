@@ -19,7 +19,7 @@ Request:
 
 ### Slice 1: The definition-block vocabulary in the engine
 
-- [ ] Done — ticked by integrate at merge.
+- [x] Done — ticked by integrate at merge.
 - Depends-on: none.
 - Change: `block-language`, `block-keys` and `block-entry-keys` land in
   `validate::schema` per ADR-035 — `SectionRule` fields, the block
