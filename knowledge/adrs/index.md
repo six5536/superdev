@@ -36,7 +36,7 @@
 * [A Contract Defines Its Interface][sokf:adr-033-a-contract-defines-its-interface] - a contract carries the whole of the interface it binds in a machine-readable definition block, so a caller reproduces the interface from the contract alone — superseding the standard that set a contract against being a specification.
 * [Each Kind Defines in the Form Its Ecosystem Reads][sokf:adr-034-each-kind-defines-in-the-form-its-ecosystem-reads] - a contract kind's definition block takes the form generators already consume for that kind — an interface description language where one exists, JSON Schema for data-shaped surfaces, a declared YAML block where neither does, and the host language for a code boundary.
 * [A Schema Declares Its Definition Block's Contract][sokf:adr-035-a-schema-declares-its-definition-blocks-contract] - a section rule declares the fence language its definition block takes and the keys the block and each of its entries must carry, so the validator checks a block's completeness generically instead of carrying one policy per contract kind.
-* [A Contract Is Bound to Its Implementation by a Test the Project Owns][sokf:adr-036-a-contract-is-bound-to-its-implementation-by-a-test] - each contract kind's schema obliges the project to carry a test proving the implemented interface equals the contract's declared surface element for element, and leaves the mechanism to the project — superdev demands a form, never a framework.
+* [A Contract Is Bound to Its Implementation][sokf:adr-036-a-contract-is-bound-to-its-implementation] - each contract kind's schema obliges the project to bind its implemented interface to the contract's declared surface, element for element — by generating the surface from the contract, or by a test where it is hand-written — and leaves the mechanism to the project.
 * [The File-Format Kind Splits into Text and Binary][sokf:adr-037-the-file-format-kind-splits-into-text-and-binary] - the file-format contract kind becomes two — a text format, whose shape is a schema or a worked example carrying every key, and a binary format, whose shape is a byte layout — and the three contracts on file are renamed to the kind they belong to.
 
 <!-- sokf:links -->
@@ -75,5 +75,5 @@
 [sokf:adr-033-a-contract-defines-its-interface]: /knowledge/adrs/active/adr-033-a-contract-defines-its-interface.md
 [sokf:adr-034-each-kind-defines-in-the-form-its-ecosystem-reads]: /knowledge/adrs/active/adr-034-each-kind-defines-in-the-form-its-ecosystem-reads.md
 [sokf:adr-035-a-schema-declares-its-definition-blocks-contract]: /knowledge/adrs/active/adr-035-a-schema-declares-its-definition-blocks-contract.md
-[sokf:adr-036-a-contract-is-bound-to-its-implementation-by-a-test]: /knowledge/adrs/active/adr-036-a-contract-is-bound-to-its-implementation-by-a-test.md
+[sokf:adr-036-a-contract-is-bound-to-its-implementation]: /knowledge/adrs/active/adr-036-a-contract-is-bound-to-its-implementation.md
 [sokf:adr-037-the-file-format-kind-splits-into-text-and-binary]: /knowledge/adrs/active/adr-037-the-file-format-kind-splits-into-text-and-binary.md

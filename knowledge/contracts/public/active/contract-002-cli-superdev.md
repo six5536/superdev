@@ -13,7 +13,7 @@ The superdev command line, defined: the manage verbs, the knowledge verbs
 and the run verbs. The block below is the surface; a caller reproduces the
 command line from it alone. The decisions behind the shape are
 [ADR-033][sokf:adr-033-a-contract-defines-its-interface] and
-[ADR-036][sokf:adr-036-a-contract-is-bound-to-its-implementation-by-a-test],
+[ADR-036][sokf:adr-036-a-contract-is-bound-to-its-implementation],
 and `crates/app/superdev/src/contract.rs` holds the test that binds this
 contract to what the binary offers.
 
@@ -225,4 +225,4 @@ without notice.
 
 <!-- sokf:links -->
 [sokf:adr-033-a-contract-defines-its-interface]: /knowledge/adrs/active/adr-033-a-contract-defines-its-interface.md
-[sokf:adr-036-a-contract-is-bound-to-its-implementation-by-a-test]: /knowledge/adrs/active/adr-036-a-contract-is-bound-to-its-implementation-by-a-test.md
+[sokf:adr-036-a-contract-is-bound-to-its-implementation]: /knowledge/adrs/active/adr-036-a-contract-is-bound-to-its-implementation.md

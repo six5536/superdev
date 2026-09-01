@@ -13,7 +13,7 @@ The SOKF knowledge served to agents: four read-only tools over stdio,
 defined. A caller reproduces every call from the block below alone. The
 decisions behind the shape are
 [ADR-033][sokf:adr-033-a-contract-defines-its-interface] and
-[ADR-036][sokf:adr-036-a-contract-is-bound-to-its-implementation-by-a-test],
+[ADR-036][sokf:adr-036-a-contract-is-bound-to-its-implementation],
 and the test that binds this contract to the served tool list sits beside
 the server.
 
@@ -99,4 +99,4 @@ change without notice.
 
 <!-- sokf:links -->
 [sokf:adr-033-a-contract-defines-its-interface]: /knowledge/adrs/active/adr-033-a-contract-defines-its-interface.md
-[sokf:adr-036-a-contract-is-bound-to-its-implementation-by-a-test]: /knowledge/adrs/active/adr-036-a-contract-is-bound-to-its-implementation-by-a-test.md
+[sokf:adr-036-a-contract-is-bound-to-its-implementation]: /knowledge/adrs/active/adr-036-a-contract-is-bound-to-its-implementation.md
