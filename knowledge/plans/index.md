@@ -17,6 +17,7 @@ workflow.
 * [Validate path dispatch — feature plan][sokf:plan-018-feature-validate-path-dispatch] - two slices making validate check a named file as what it is — the schema half reaches a named path first, then the grammar half stops misreading documents and parity is proved end to end.
 * [Contract-design review and the binding-surface standard — feature plan][sokf:plan-019-feature-contract-design-review] - five slices: the include mechanism, the standard carried into the 15 contract schemas, the skill's explicit go-ahead, and the nine-contract sweep in two passes.
 * [Normative shape enforcement — feature plan][sokf:plan-020-feature-normative-shape-enforcement] - slices delivering the body-pattern vocabulary, the EARS declaration, the contract-kind declarations and the contract sweep.
+* [Contracts define their interfaces — feature plan][sokf:plan-021-feature-contracts-define-their-interface] - slices delivering the definition-block vocabulary, each kind's declared form, the drift tests that bind a contract to its implementation, and the split of the file-format kind.
 
 ## Ad-hoc plans
 
@@ -52,3 +53,4 @@ workflow.
 [sokf:plan-018-feature-validate-path-dispatch]: /knowledge/plans/done/plan-018-feature-validate-path-dispatch.md
 [sokf:plan-019-feature-contract-design-review]: /knowledge/plans/done/plan-019-feature-contract-design-review.md
 [sokf:plan-020-feature-normative-shape-enforcement]: /knowledge/plans/done/plan-020-feature-normative-shape-enforcement.md
+[sokf:plan-021-feature-contracts-define-their-interface]: /knowledge/plans/open/plan-021-feature-contracts-define-their-interface.md
