@@ -3,7 +3,7 @@ type: BugReport
 id: issue-019-bug-validate-reads-a-named-file-as-a-skill
 title: validate reads a file named on the command line as a skill, whatever it is
 description: superdev validate knowledge/architecture.md reports nine errors about missing skill blocks, because a named path takes the grammar's fallback kind; the document is never checked against the schema its type names, so the check a path argument most obviously invites is the one it cannot run.
-lifecycle: open
+lifecycle: done
 links:
   - rel: references
     to: contract-002-cli-superdev
@@ -14,6 +14,19 @@ links:
 ---
 
 # Bug: validate reads a file named on the command line as a skill
+
+## Resolved
+
+Fixed by P018 on `feature/validate-path-dispatch` (c97b6da..38f9b83):
+the named run is the bare pipeline with its report scoped to what the
+paths cover, per ADR-026. Acceptance on 2026-09-01 walked all five
+criteria on the feature head — parity, glob dispatch, the unknown-type
+fault, the preserved fallback and the unreadable-path failure — against
+a probe tree and the live repository, with the original repro now
+printing `no findings — PASS`. The feature-wide review's ten findings
+were resolved before the merge (code-review-003). The security review
+judged the diff sound and surfaced two pre-existing low-severity faults,
+filed as I031 and I032.
 
 ## Summary
 

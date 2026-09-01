@@ -36,6 +36,8 @@
 * [A schema declares content kinds and a frontmatter contract, and the validator reads neither][sokf:issue-018-feature-request-the-schema-layer-checks-sections-and-nothing-else] - P008 made schemas govern documents, but only their sections — the content kind under each heading and the frontmatter constraints beside it are declared on every schema and read by nothing, which is the fault P008 set out to cure, one level down.
 * [validate reads a file named on the command line as a skill, whatever it is][sokf:issue-019-bug-validate-reads-a-named-file-as-a-skill] - superdev validate knowledge/architecture.md reports nine errors about missing skill blocks, because a named path takes the grammar's fallback kind; the document is never checked against the schema its type names, so the check a path argument most obviously invites is the one it cannot run.
 * [A schema's worked example is the thing agents copy, and it is the one part of the schema nothing checks][sokf:issue-022-feature-request-a-schemas-worked-example-is-checked-by-nothing] - every schema carries an `example:` block showing a conforming document, and no check reads it — five of the twenty-three example ids on file broke their own schema's id pattern, left behind by a migration that changed the pattern and not the example.
+* [validate follows symlinks out of the repo and can echo what it reads][sokf:issue-031-bug-validate-follows-symlinks-out-of-the-repo] - the walk and the file reads follow symlinks, so a hostile checkout can point a governed name at any readable file — the PostToolUse hook then reads it automatically, and finding messages that quote source lines can carry excerpts into the transcript.
+* [validate does unbounded work on adversarial input][sokf:issue-032-bug-validate-does-unbounded-work-on-adversarial-input] - a file with a 100k-key frontmatter takes 41 s and 100k findings because the frontmatter is re-parsed per check, and reads carry no size cap — a hostile file can stall the PostToolUse hook or flood the transcript.
 
 ## The engine
 
@@ -70,10 +72,12 @@
 [sokf:issue-015-feature-request-every-issue-must-be-a-bug-report]: /knowledge/issues/done/issue-015-feature-request-every-issue-must-be-a-bug-report.md
 [sokf:issue-017-feature-request-the-format-has-no-agent-facing-document]: /knowledge/issues/open/issue-017-feature-request-the-format-has-no-agent-facing-document.md
 [sokf:issue-018-feature-request-the-schema-layer-checks-sections-and-nothing-else]: /knowledge/issues/done/issue-018-feature-request-the-schema-layer-checks-sections-and-nothing-else.md
-[sokf:issue-019-bug-validate-reads-a-named-file-as-a-skill]: /knowledge/issues/open/issue-019-bug-validate-reads-a-named-file-as-a-skill.md
+[sokf:issue-019-bug-validate-reads-a-named-file-as-a-skill]: /knowledge/issues/done/issue-019-bug-validate-reads-a-named-file-as-a-skill.md
 [sokf:issue-022-feature-request-a-schemas-worked-example-is-checked-by-nothing]: /knowledge/issues/done/issue-022-feature-request-a-schemas-worked-example-is-checked-by-nothing.md
 [sokf:issue-023-feature-request-a-concept-path-written-outside-the-knowledge-is-checked-by-nothing]: /knowledge/issues/open/issue-023-feature-request-a-concept-path-written-outside-the-knowledge-is-checked-by-nothing.md
 [sokf:issue-024-feature-request-the-workflow-cannot-run-unattended]: /knowledge/issues/done/issue-024-feature-request-the-workflow-cannot-run-unattended.md
 [sokf:issue-025-bug-a-claim-never-written-gets-no-lock-hash]: /knowledge/issues/open/issue-025-bug-a-claim-never-written-gets-no-lock-hash.md
 [sokf:issue-026-chore-rehearse-the-driver-on-a-real-feature]: /knowledge/issues/open/issue-026-chore-rehearse-the-driver-on-a-real-feature.md
 [sokf:issue-027-feature-request-the-unattended-run-is-undocumented-for-users]: /knowledge/issues/open/issue-027-feature-request-the-unattended-run-is-undocumented-for-users.md
+[sokf:issue-031-bug-validate-follows-symlinks-out-of-the-repo]: /knowledge/issues/open/issue-031-bug-validate-follows-symlinks-out-of-the-repo.md
+[sokf:issue-032-bug-validate-does-unbounded-work-on-adversarial-input]: /knowledge/issues/open/issue-032-bug-validate-does-unbounded-work-on-adversarial-input.md
