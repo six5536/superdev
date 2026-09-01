@@ -186,7 +186,7 @@ fn validate_checks_a_named_document_as_the_bare_run_does() {
         .assert()
         .success();
     let stdout = String::from_utf8_lossy(&out.get_output().stdout).into_owned();
-    assert!(stdout.contains("no findings"), "{stdout}");
+    assert!(stdout.contains("PASS (0 error(s)"), "{stdout}");
     assert!(!stdout.contains("missing <"), "{stdout}");
 }
 

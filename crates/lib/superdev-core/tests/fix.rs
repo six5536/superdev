@@ -198,6 +198,34 @@ fn nothing_outside_the_knowledge_is_written() {
     }
 }
 
+/// `--fix` covers the knowledge on the same condition the check reports its
+/// findings: a path naming a file inside the knowledge repairs it — the
+/// check reports that file's link findings, so the repair the findings
+/// point at must be reachable — while a path naming something else repairs
+/// nothing.
+#[test]
+fn a_path_inside_the_knowledge_covers_the_fix() {
+    let dir = seed(BEFORE);
+    let knowledge = dir.path().join("knowledge");
+
+    let outside = [std::path::PathBuf::from("README.md")];
+    let repair = fix_repo(dir.path(), &knowledge, &outside).unwrap();
+    assert!(repair.written.is_empty(), "{:?}", repair.written);
+
+    let inside = [std::path::PathBuf::from("knowledge/alpha.md")];
+    let repair = fix_repo(dir.path(), &knowledge, &inside).unwrap();
+    assert_eq!(
+        repair.written,
+        vec![
+            "knowledge/alpha.md".to_string(),
+            "knowledge/index.md".into(),
+            "knowledge/sub/beta.md".into(),
+        ],
+        "the named run's repair is the bare run's"
+    );
+    assert_tree(dir.path(), AFTER);
+}
+
 /// A knowledge directory that is not there is not an error: `--fix` on a
 /// repository without one has nothing to repair.
 #[test]
