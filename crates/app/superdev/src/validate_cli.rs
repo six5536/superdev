@@ -229,7 +229,7 @@ fn hook_validate(root: &Path) -> Result<u8> {
         eprintln!(
             "{}",
             run.report
-                .render_human(Warnings::Listed)
+                .render_human(Warnings::Counted)
                 .trim_end_matches('\n')
         );
         return Ok(0);
@@ -238,7 +238,7 @@ fn hook_validate(root: &Path) -> Result<u8> {
     eprintln!(
         "{}",
         run.report
-            .render_human(Warnings::Listed)
+            .render_human(Warnings::Counted)
             .trim_end_matches('\n')
     );
     Ok(2)
