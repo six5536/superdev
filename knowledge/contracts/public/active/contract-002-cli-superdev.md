@@ -235,9 +235,8 @@ server use it, `validate` never opens it.
   unreadable run state MUST be reported and exit `0`, failing open
   ([contract-009][sokf:contract-009-interface-run-state]). It resolves the
   repo the same way `hook validate` does.
-- **`mcp sokf`** starts the MCP server. Its surface is
-  [contract-003-mcp-sokf][sokf:contract-003-mcp-sokf]'s to bind, and this
-  command MUST NOT add to it.
+- **`mcp sokf`** MUST serve the canonical knowledge over stdio; what it
+  serves is [contract-003-mcp-sokf][sokf:contract-003-mcp-sokf]'s to bind.
 
 A usage error (unknown flag or subcommand) MUST exit `2` — the npm launcher's
 smoke test relies on that code. `completions` and `man` render into a buffer

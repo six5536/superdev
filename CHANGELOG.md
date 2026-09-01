@@ -117,6 +117,17 @@ publish a version it cannot find a heading for.
 
 ### Changed
 
+- **A contract's promise sections now declare that they bind.** The fifteen
+  contract-kind schemas carry the RFC 2119 keyword as an `item-pattern` on
+  sections where every entry is a promise — cli Behaviour, mcp Tools, data
+  Constraints, deployment Health and lifecycle, events Ordering and
+  delivery — and as a `content-pattern` on sections whose job is promises,
+  Stability among them (ADR-032). Definitional sections declare nothing:
+  they bind by form. **After a pack update, an existing contract whose
+  promise sections state no requirement in modal terms starts failing
+  `superdev validate`.** Give each flagged promise its modal verb; a
+  section that describes rather than binds belongs in a definitional
+  section.
 - **The contracts read as binding surfaces.** Every contract-kind schema
   carries the contract style standard — one RFC 2119 sentence per
   requirement, structured forms for enumerable surfaces, reasoning in

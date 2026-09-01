@@ -768,6 +768,25 @@ mod tests {
             "the error must name the key: {err}"
         );
     }
+
+    /// A `requires` entry admits one value or any of a set, and admits
+    /// nothing when the key it names is absent — the guard `check_keys` runs
+    /// on every schema, so a mistake here would silence a whole rule.
+    #[test]
+    fn a_requirement_admits_its_value_and_nothing_else() {
+        let one: Requirement = serde_yaml_ng::from_str("table").unwrap();
+        assert!(one.admits(Some("table")));
+        assert!(!one.admits(Some("code")));
+        assert!(!one.admits(None));
+        assert_eq!(one.spell(), "table");
+
+        let any: Requirement = serde_yaml_ng::from_str("[bullet-list, numbered-list]").unwrap();
+        assert!(any.admits(Some("bullet-list")));
+        assert!(any.admits(Some("numbered-list")));
+        assert!(!any.admits(Some("prose")));
+        assert!(!any.admits(None));
+        assert_eq!(any.spell(), "bullet-list or numbered-list");
+    }
 }
 
 #[cfg(test)]

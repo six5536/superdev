@@ -53,7 +53,7 @@ every run, so there are no pinned bytes to name.
 
 ## Compatibility
 
-A reader MAY conclude two things from a hash and nothing more: superdev wrote
+A reader MUST NOT conclude more from a hash than two things: superdev wrote
 that file, and it wrote those bytes. Drift is not decided here — it is found
 by comparing a file against the content the blueprint wants — so a hash that
 no longer matches means the file was edited after superdev wrote it, which is

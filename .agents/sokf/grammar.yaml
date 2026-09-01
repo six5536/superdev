@@ -586,13 +586,13 @@ kinds:
             doc: >
               A regex every top-level item of the section's list must match, found anywhere in
               the item's text — its own lines with the marker stripped and continuations joined,
-              nested items excluded. Write ^ and $ to bind the ends.
+              nested items and fenced blocks excluded. Write ^ and $ to bind the ends.
           content-pattern:
             type: string
             format: regex
             doc: >
-              A regex the section's whole body must match, found anywhere. Write ^ and $ to bind
-              the ends, and (?m) to bind a line's.
+              A regex the section's whole body must match, found anywhere, fenced blocks
+              excluded. Write ^ and $ to bind the ends, and (?m) to bind a line's.
           description:
             type: string
             required: true

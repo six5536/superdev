@@ -678,67 +678,89 @@ fn check_one(doc: &Document<'_>, schema: &DocSchema, example: bool, findings: &m
     let positions = heading_positions(&lines, &fenced);
     for &(h, r) in &matched {
         let rule = &schema.sections[r];
-        let Some(kind) = rule.content.as_deref() else {
-            continue;
-        };
-        if !CONTENT_KINDS.contains(&kind) {
-            continue;
-        }
-        // A declared table's absence is check_columns' finding already.
-        if kind == "table" && !rule.columns.is_empty() {
-            continue;
-        }
         let (start, end) = body_range(h, &headings, &positions, lines.len());
-        if !body_has(kind, &lines[start..end], &fenced[start..end]) {
+        let mut kind_failed = false;
+        if let Some(kind) = rule.content.as_deref()
+            && CONTENT_KINDS.contains(&kind)
+            // A declared table's absence is check_columns' finding already.
+            && (kind != "table" || rule.columns.is_empty())
+            && !body_has(kind, &lines[start..end], &fenced[start..end])
+        {
             push(format!(
                 "section {} carries no {}, and {} declares {kind} content",
                 rule.label(),
                 form_of(kind),
                 schema.name
             ));
+            kind_failed = true;
         }
-    }
-
-    // Every matched section against the patterns its rule declares (ADR-030):
-    // `content-pattern` over the whole body, `item-pattern` over each
-    // top-level item of the list the section's kind names. Both are matched
-    // found-anywhere, so a rule binds the ends by writing them.
-    for &(h, r) in &matched {
-        let rule = &schema.sections[r];
-        let (start, end) = body_range(h, &headings, &positions, lines.len());
-        if let Some(pattern) = rule.content_pattern.as_deref()
-            && re::compile(pattern).is_some()
-            && !re::matches(pattern, &lines[start..end].join("\n"))
-        {
-            push(format!(
-                "section {} does not match, and {} declares content-pattern `{pattern}`",
-                rule.label(),
-                schema.name
-            ));
-        }
-        if let Some(pattern) = rule.item_pattern.as_deref()
-            && re::compile(pattern).is_some()
-            && rule
-                .content
-                .as_deref()
-                .is_some_and(|k| LIST_KINDS.contains(&k))
-        {
-            for item in items_in(&lines[start..end], &fenced[start..end]) {
-                if !re::matches(pattern, &item.text) {
-                    push(format!(
-                        "section {} item `{}` does not match, and {} declares item-pattern \
-                         `{pattern}`",
-                        rule.label(),
-                        item.first,
-                        schema.name
-                    ));
-                }
-            }
+        // A section that failed its content kind has no body worth matching:
+        // the pattern would report the same fault a second time.
+        if !kind_failed {
+            check_body_patterns(
+                rule,
+                &headings[h].1,
+                &lines[start..end],
+                &fenced[start..end],
+                schema,
+                &mut push,
+            );
         }
     }
 
     check_columns(schema, &headings, &positions, &lines, &fenced, &mut push);
     check_frontmatter(&lines, schema, example, &mut push);
+}
+
+/// One section's body against the patterns its rule declares (ADR-030):
+/// `content-pattern` over the body, `item-pattern` over each top-level item
+/// of the list the section's kind names. Both are matched found-anywhere, so
+/// a rule binds the ends by writing them. `heading` is the occurrence's own
+/// text, so a finding on a repeatable rule names the section that failed
+/// rather than the pattern that matched it.
+fn check_body_patterns(
+    rule: &SectionRule,
+    heading: &str,
+    body: &[&str],
+    fenced: &[bool],
+    schema: &DocSchema,
+    push: &mut impl FnMut(String),
+) {
+    if let Some(pattern) = rule.content_pattern.as_deref() {
+        // Fenced lines are not content, here as everywhere else: a keyword
+        // inside a worked example is an example of one (contract-010).
+        let text: Vec<&str> = body
+            .iter()
+            .zip(fenced)
+            .filter(|&(_, &in_fence)| !in_fence)
+            .map(|(line, _)| *line)
+            .collect();
+        if re::compile(pattern).is_some_and(|re| !re.is_match(&text.join("\n"))) {
+            push(format!(
+                "section \"{heading}\" does not match, and {} declares content-pattern \
+                 `{pattern}`",
+                schema.name
+            ));
+        }
+    }
+    let Some(pattern) = rule.item_pattern.as_deref() else {
+        return;
+    };
+    let Some(kind) = rule.content.as_deref().filter(|k| LIST_KINDS.contains(k)) else {
+        return; // `check_declarations` reports the mis-declaration.
+    };
+    let Some(re) = re::compile(pattern) else {
+        return; // An unreadable pattern binds nothing.
+    };
+    for item in items_in(body, fenced, kind) {
+        if !re.is_match(&item.text) {
+            push(format!(
+                "section \"{heading}\" item `{}` does not match, and {} declares item-pattern \
+                 `{pattern}`",
+                item.first, schema.name
+            ));
+        }
+    }
 }
 
 /// One top-level item of a section's list, as `item-pattern` reads it.
@@ -749,53 +771,133 @@ struct Item {
     text: String,
 }
 
-/// Every top-level item in a section body (ADR-030). An item opens with an
-/// unindented marker and takes every indented line after it, blank lines
-/// included, so a bullet carrying several paragraphs is read whole. It closes
-/// at the next unindented line — another item, or the prose the list runs
-/// into — and at a nested item, which belongs to itself and never to the
-/// text of the item above it. Fenced lines are skipped, as they are for every
-/// content check.
-fn items_in(body: &[&str], fenced: &[bool]) -> Vec<Item> {
+/// Every top-level item of `kind` in a section body (ADR-030).
+///
+/// The list's top level is the shallowest marker in the body, because a list
+/// indented one or two spaces is still a top-level list and binding only the
+/// unindented ones would let an author escape the rule by indenting it. An
+/// item takes every following line indented past that, blank lines included,
+/// so a bullet carrying several paragraphs is read whole; it takes an
+/// unindented line too while its paragraph is still open, which is markdown's
+/// lazy continuation. A nested item belongs to itself: its own lines are
+/// dropped, and the parent resumes at the first line no deeper than the
+/// nested marker. Fenced lines are skipped, as they are for every content
+/// check.
+fn items_in(body: &[&str], fenced: &[bool], kind: &str) -> Vec<Item> {
+    let unfenced = || {
+        body.iter()
+            .zip(fenced)
+            .filter(|&(_, &in_fence)| !in_fence)
+            .map(|(line, _)| *line)
+    };
+    let marks = |line: &str| {
+        let trimmed = line.trim_start();
+        !is_thematic_break(trimmed) && (is_bullet(trimmed) || is_numbered(trimmed))
+    };
+    let Some(top) = unfenced().filter(|line| marks(line)).map(indent_of).min() else {
+        return Vec::new();
+    };
+
     let mut items: Vec<Item> = Vec::new();
-    // Whether the item being built still takes continuation lines: a nested
-    // item closes the text without closing the item.
+    // The indentation of the nested marker whose lines are being dropped, and
+    // whether the open item's paragraph is still running (a blank line ends
+    // it, and only an indented line may reopen one).
+    let mut nested: Option<usize> = None;
+    let mut flowing = false;
     let mut open = false;
-    for (line, &in_fence) in body.iter().zip(fenced) {
-        if in_fence {
-            continue;
-        }
+    for line in unfenced() {
         let trimmed = line.trim_start();
         if trimmed.is_empty() {
-            continue; // A blank line separates an item's paragraphs.
+            flowing = false;
+            continue;
         }
-        let indented = line.len() != trimmed.len();
-        let is_item = is_bullet(trimmed) || is_numbered(trimmed);
-        if is_item && !indented {
-            items.push(Item {
-                first: line.trim_end().to_string(),
-                text: strip_marker(trimmed).to_string(),
-            });
-            open = true;
-        } else if is_item || !indented {
+        let indent = indent_of(line);
+        if let Some(at) = nested {
+            // The nested item keeps its own lines; anything no deeper than
+            // its marker returns to the item above it.
+            if indent > at {
+                continue;
+            }
+            nested = None;
+        }
+        if marks(line) {
+            if indent > top {
+                nested = Some(indent);
+            } else if is_kind(trimmed, kind) {
+                items.push(Item {
+                    first: line.trim_end().to_string(),
+                    text: strip_marker(trimmed).to_string(),
+                });
+                open = true;
+                flowing = true;
+            } else {
+                open = false; // A sibling of the other marker kind.
+                flowing = false;
+            }
+            continue;
+        }
+        // An indented line continues the open item; an unindented one does so
+        // only while the paragraph is still running.
+        if open && (indent > top || flowing) {
+            if let Some(item) = items.last_mut() {
+                item.text.push(' ');
+                item.text.push_str(trimmed.trim_end());
+            }
+            flowing = true;
+        } else {
             open = false;
-        } else if open && let Some(item) = items.last_mut() {
-            item.text.push(' ');
-            item.text.push_str(trimmed.trim_end());
+            flowing = false;
         }
     }
     items
 }
 
-/// An item's text without its `- `, `* `, `+ ` or `1. ` marker.
+/// A line's indentation in columns, a tab counting as four.
+fn indent_of(line: &str) -> usize {
+    line.chars()
+        .take_while(|c| c.is_whitespace())
+        .map(|c| if c == '\t' { 4 } else { 1 })
+        .sum()
+}
+
+/// Does this marker open an item of the declared list kind?
+fn is_kind(trimmed: &str, kind: &str) -> bool {
+    if kind == "numbered-list" {
+        is_numbered(trimmed)
+    } else {
+        is_bullet(trimmed)
+    }
+}
+
+/// `***`, `- - -`, `___` — a thematic break, which opens no item however much
+/// its first two characters look like a bullet.
+fn is_thematic_break(trimmed: &str) -> bool {
+    let mut chars = trimmed.chars().filter(|c| !c.is_whitespace()).peekable();
+    let Some(&first) = chars.peek() else {
+        return false;
+    };
+    if !matches!(first, '-' | '*' | '_') {
+        return false;
+    }
+    let count = chars.clone().count();
+    count >= 3 && chars.all(|c| c == first)
+}
+
+/// An item's text without its `- `, `* `, `+ ` or `1. ` marker — the marker
+/// itself and the space after it, never a character of the text.
 fn strip_marker(trimmed: &str) -> &str {
-    let digits = trimmed.len()
-        - trimmed
-            .trim_start_matches(|c: char| c.is_ascii_digit())
-            .len();
-    trimmed[digits..]
-        .trim_start_matches(['-', '*', '+', '.', ')'])
-        .trim_start()
+    let digits = trimmed
+        .find(|c: char| !c.is_ascii_digit())
+        .unwrap_or(trimmed.len());
+    let after = if digits > 0 {
+        // A numbered marker: the digits, then the `.` or `)` that closes it.
+        trimmed[digits..]
+            .strip_prefix(['.', ')'])
+            .unwrap_or(trimmed)
+    } else {
+        trimmed.strip_prefix(['-', '*', '+']).unwrap_or(trimmed)
+    };
+    after.trim_start()
 }
 
 /// The body of the section whose heading is the `h`-th: from the line after
@@ -1693,6 +1795,182 @@ mod tests {
         assert_eq!(findings.len(), 1, "{findings:#?}");
         assert!(
             findings[0].message.contains("content is not"),
+            "{findings:#?}"
+        );
+    }
+
+    /// Covers I034 criterion 1: a list indented one, two or three spaces, or
+    /// a tab, is still the section's top-level list. Binding only the
+    /// unindented markers would let an author escape every item-pattern by
+    /// indenting the list.
+    #[test]
+    fn an_indented_list_is_still_the_sections_top_level() {
+        for lead in ["  ", " ", "   ", "\t"] {
+            let doc_text =
+                format!("# T\n\n## Items\n\n{lead}- no keyword\n{lead}- none here either\n");
+            let doc = Document {
+                path: "a.md",
+                text: &doc_text,
+                doc_type: Some("T"),
+            };
+            let mut findings = Vec::new();
+            check_one(&doc, &items_schema("MUST"), false, &mut findings);
+            assert_eq!(findings.len(), 2, "lead {lead:?}: {findings:#?}");
+        }
+    }
+
+    /// Covers I034 criterion 1: a nested item's own lines are dropped, and
+    /// the item above it resumes at the first line no deeper than the nested
+    /// marker — the parent's later paragraphs are still the parent's.
+    #[test]
+    fn a_parent_item_resumes_after_its_nested_list() {
+        let doc = Document {
+            path: "a.md",
+            text: "# T\n\n## Items\n\n- a parent item\n  - a child\n    with its own line\n\n  \
+                   The parent MUST hold here.\n",
+            doc_type: Some("T"),
+        };
+        let mut findings = Vec::new();
+        check_one(&doc, &items_schema("MUST"), false, &mut findings);
+        assert!(findings.is_empty(), "{findings:#?}");
+
+        // The child's text is the child's: a keyword only it carries does not
+        // satisfy the parent.
+        let doc = Document {
+            path: "a.md",
+            text: "# T\n\n## Items\n\n- a parent item\n  - a child that MUST not count\n",
+            doc_type: Some("T"),
+        };
+        let mut findings = Vec::new();
+        check_one(&doc, &items_schema("MUST"), false, &mut findings);
+        assert_eq!(findings.len(), 1, "{findings:#?}");
+    }
+
+    /// Covers I034 criterion 1: an unindented line right under an item
+    /// continues it — markdown's lazy continuation — while a blank line first
+    /// ends the list, so the prose after it belongs to no item.
+    #[test]
+    fn a_lazy_continuation_belongs_to_the_item_and_later_prose_does_not() {
+        let doc = Document {
+            path: "a.md",
+            text: "# T\n\n## Items\n\n- a wrapped item\ncontinuing with a MUST unindented\n",
+            doc_type: Some("T"),
+        };
+        let mut findings = Vec::new();
+        check_one(&doc, &items_schema("MUST"), false, &mut findings);
+        assert!(findings.is_empty(), "lazy continuation: {findings:#?}");
+
+        let doc = Document {
+            path: "a.md",
+            text: "# T\n\n## Items\n\n- an item with no keyword\n\nProse after the list MUST \
+                   not rescue it.\n",
+            doc_type: Some("T"),
+        };
+        let mut findings = Vec::new();
+        check_one(&doc, &items_schema("MUST"), false, &mut findings);
+        assert_eq!(findings.len(), 1, "{findings:#?}");
+    }
+
+    /// Covers I034 criterion 1: an item-pattern binds the items of the kind
+    /// its rule declares, and a marker of the other kind is not one.
+    #[test]
+    fn an_item_pattern_binds_only_its_declared_marker_kind() {
+        let schema = schema_of(
+            "frontmatter:\n  type:\n    const: T\nsections:\n  - heading: Items\n    level: 2\n\
+             \x20   content: numbered-list\n    item-pattern: 'MUST'\n",
+        );
+        let doc = Document {
+            path: "a.md",
+            text: "# T\n\n## Items\n\n1. a numbered item that MUST hold\n- a bullet beside it\n",
+            doc_type: Some("T"),
+        };
+        let mut findings = Vec::new();
+        check_one(&doc, &schema, false, &mut findings);
+        assert!(findings.is_empty(), "{findings:#?}");
+    }
+
+    /// Covers I034 criteria 1 and 2: a fenced block is not content, so a
+    /// keyword inside a worked example neither satisfies a pattern nor opens
+    /// an item, and a thematic break is not a bullet.
+    #[test]
+    fn a_fence_and_a_thematic_break_are_not_content() {
+        let schema = schema_of(
+            "frontmatter:\n  type:\n    const: T\nsections:\n  - heading: Promise\n    level: 2\n\
+             \x20   content: prose\n    content-pattern: 'MUST'\n",
+        );
+        let doc = Document {
+            path: "a.md",
+            text: "# T\n\n## Promise\n\nA plain line.\n\n```text\nThe example MUST not count.\n\
+                   ```\n",
+            doc_type: Some("T"),
+        };
+        let mut findings = Vec::new();
+        check_one(&doc, &schema, false, &mut findings);
+        assert_eq!(findings.len(), 1, "a fenced keyword: {findings:#?}");
+
+        let doc = Document {
+            path: "a.md",
+            text: "# T\n\n## Items\n\n- an item that MUST hold\n\n* * *\n",
+            doc_type: Some("T"),
+        };
+        let mut findings = Vec::new();
+        check_one(&doc, &items_schema("MUST"), false, &mut findings);
+        assert!(findings.is_empty(), "a thematic break: {findings:#?}");
+
+        // A bullet inside a fenced example is an example of one, and opens no
+        // item of the section's own list.
+        let doc = Document {
+            path: "a.md",
+            text: "# T\n\n## Items\n\n- an item that MUST hold\n\n```text\n- a fenced bullet \
+                   with no keyword\n```\n",
+            doc_type: Some("T"),
+        };
+        let mut findings = Vec::new();
+        check_one(&doc, &items_schema("MUST"), false, &mut findings);
+        assert!(findings.is_empty(), "a fenced bullet: {findings:#?}");
+    }
+
+    /// Covers I034 criteria 1 and 2: a repeatable rule's finding names the
+    /// occurrence that failed, not the pattern that matched it.
+    #[test]
+    fn a_finding_on_a_repeatable_rule_names_the_failing_section() {
+        let schema = schema_of(
+            "frontmatter:\n  type:\n    const: T\nsections:\n  - heading-pattern: '^Item: '\n\
+             \x20   level: 2\n    repeatable: true\n    content: prose\n\
+             \x20   content-pattern: 'MUST'\n",
+        );
+        let doc = Document {
+            path: "a.md",
+            text: "# T\n\n## Item: one\n\nIt MUST hold.\n\n## Item: two\n\nIt does not say.\n",
+            doc_type: Some("T"),
+        };
+        let mut findings = Vec::new();
+        check_one(&doc, &schema, false, &mut findings);
+        assert_eq!(findings.len(), 1, "{findings:#?}");
+        assert!(
+            findings[0].message.contains("\"Item: two\""),
+            "{findings:#?}"
+        );
+    }
+
+    /// Covers I034 criterion 2: a section that already failed its content
+    /// kind does not fail its pattern too — one fault is said once.
+    #[test]
+    fn an_empty_section_reports_its_kind_and_not_its_pattern() {
+        let schema = schema_of(
+            "frontmatter:\n  type:\n    const: T\nsections:\n  - heading: Promise\n    level: 2\n\
+             \x20   content: prose\n    content-pattern: 'MUST'\n",
+        );
+        let doc = Document {
+            path: "a.md",
+            text: "# T\n\n## Promise\n\n- only a bullet\n",
+            doc_type: Some("T"),
+        };
+        let mut findings = Vec::new();
+        check_one(&doc, &schema, false, &mut findings);
+        assert_eq!(findings.len(), 1, "{findings:#?}");
+        assert!(
+            findings[0].message.contains("prose content"),
             "{findings:#?}"
         );
     }

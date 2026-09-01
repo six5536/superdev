@@ -97,14 +97,20 @@ pub fn check_documents(docs: &[Document<'_>], set: &SchemaSet) -> Vec<Finding>;
   level or shallower, so a subsection's content counts; lines inside
   fenced blocks are not content.
 - **Body patterns** — `item-pattern` binds each top-level item of the
-  section's declared list kind: the item's text is its own lines with
-  the marker stripped and continuations joined, nested items excluded.
-  `content-pattern` binds the section's body: the raw lines from below
-  the heading to the next heading at the same or shallower level.
-  Every pattern in this vocabulary is a regex matched found-anywhere;
-  authors write `^` and `$` explicitly (ADR-030). An item-pattern
-  finding names the file, the section and the item's first line; a
-  content-pattern finding names the file and the section.
+  section's declared list kind, `content-pattern` the section's whole
+  body. Every pattern in this vocabulary is a regex matched
+  found-anywhere; authors write `^` and `$` explicitly, and neither
+  pattern reads a fenced block (ADR-030). An item-pattern finding names
+  the file, the section and the item's first line; a content-pattern
+  finding names the file and the section. Both name the failing
+  occurrence's own heading, so a repeatable rule is locatable.
+- **What an item is** — the list's top level is the shallowest marker in
+  the body, so a list indented under its heading still binds. An item
+  takes the following lines indented past that, blank lines included, and
+  an unindented line while its paragraph is still running. A nested item
+  is its own: its lines are dropped, and the item above it resumes at the
+  first line no deeper than the nested marker. A marker of the other list
+  kind opens no item, and a thematic break is not a marker.
 - **A mis-declared schema is its own finding** — a `content` outside
   the five kinds, a `pattern` that does not compile, an `item-pattern`
   on a section whose `content` is not a list kind: reported against

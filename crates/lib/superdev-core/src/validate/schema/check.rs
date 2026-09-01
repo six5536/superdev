@@ -602,11 +602,17 @@ fn check_keys(
                 json_like(v)
             ));
         }
+        // Every declared pattern compiles through the validator's own wrapper,
+        // so the one that decides here is the one the checks later run
+        // (contract-010); the failure path re-reads it only to quote why.
         if def.format.as_deref() == Some("regex")
             && let Some(pattern) = v.as_str()
-            && let Err(e) = Regex::new(pattern)
+            && re::compile(pattern).is_none()
         {
-            errs.push(format!("{where_}.{key}: not a valid regex — {e}"));
+            let why = Regex::new(pattern)
+                .err()
+                .map_or_else(String::new, |e| format!(" — {e}"));
+            errs.push(format!("{where_}.{key}: not a valid regex{why}"));
         }
         if let Some(requires) = &def.requires {
             for (rk, rv) in requires.iter() {

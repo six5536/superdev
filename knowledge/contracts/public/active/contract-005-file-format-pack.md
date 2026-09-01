@@ -79,5 +79,5 @@ carrying the same path, and adds one by carrying a new name.
 Unreleased. `format = 1` is the only format this binary reads, and the layout
 table above is what that number means. A layout change that a format-1 pack
 could not survive MUST take `format = 2`, and both MUST stay readable for at
-least one release; anything a format-1 pack can ignore MAY be added without a
+least one release; anything a format-1 pack can ignore MUST NOT require a
 bump.

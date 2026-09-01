@@ -28,13 +28,14 @@ top-level item of the section's declared list kind: the item's text is
 its own lines with the marker stripped and continuations joined, nested
 items excluded; declaring it on a section whose `content` is not
 `bullet-list` or `numbered-list` is a finding on the schema.
-`content-pattern` binds the section's body: the raw lines from below
-the heading to the next heading at the same or shallower level. Both
-are regexes matched found-anywhere; authors write `^` and `$`
-explicitly. A pattern that does not compile is a finding on the schema
-and binds nothing. An item-pattern finding names the file, the section
-and the item's first line; a content-pattern finding names the file and
-the section.
+`content-pattern` binds the section's body, from below the heading to
+the next heading at the same or shallower level. Neither reads a fenced
+block: a keyword inside a worked example is an example of one, and
+every other body check treats a fence the same way. Both are regexes
+matched found-anywhere; authors write `^` and `$` explicitly. A pattern
+that does not compile is a finding on the schema and binds nothing. An
+item-pattern finding names the file, the section and the item's first
+line; a content-pattern finding names the file and the section.
 
 ## Options considered
 

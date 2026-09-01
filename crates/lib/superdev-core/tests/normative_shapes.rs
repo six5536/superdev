@@ -221,12 +221,46 @@ fn a_definitional_section_declares_no_shape() {
         ("telemetry", "Metrics"),
         ("authz", "Permissions"),
     ] {
-        let text = std::fs::read_to_string(repo(&format!("knowledge/schemas/contract-{kind}.md")))
-            .unwrap();
-        let rule = rule_for(&text, heading);
-        assert!(
-            !rule.contains("item-pattern") && !rule.contains("content-pattern"),
-            "contract-{kind}.md: {heading} is definitional and declares no pattern"
-        );
+        for root in ["knowledge/schemas", "pack/knowledge/schemas"] {
+            let text =
+                std::fs::read_to_string(repo(&format!("{root}/contract-{kind}.md"))).unwrap();
+            let rule = rule_for(&text, heading);
+            assert!(
+                !rule.contains("item-pattern") && !rule.contains("content-pattern"),
+                "{root}/contract-{kind}.md: {heading} is definitional and declares no pattern"
+            );
+        }
     }
+}
+
+/// Covers I034 criterion 6: every contract-kind schema's worked example
+/// satisfies the declarations that schema carries — the example is the shape
+/// a contract writer copies, so it teaches the modal form or teaches nothing.
+#[test]
+fn every_contract_schema_example_passes_its_own_declarations() {
+    let schemas = schemas("knowledge/schemas");
+    let contracts: Vec<(String, String)> = schemas
+        .into_iter()
+        .filter(|(name, _)| name.starts_with("contract-"))
+        .collect();
+    assert_eq!(contracts.len(), 15, "every contract kind was read");
+    let found = superdev_core::validate::schema::document::check_examples(&contracts);
+    assert!(found.is_empty(), "{found:#?}");
+}
+
+/// Covers I034 criterion 3: a schema declaring an `item-pattern` beside a
+/// content kind with no items is reported on the schema file, and the rule
+/// binds nothing. `validate` reports this through the grammar; this pins the
+/// document layer's own guard, which no other test reaches.
+#[test]
+fn an_item_pattern_without_a_list_kind_is_a_schema_finding() {
+    let text = "---\ntype: Schema\n---\n\n````yaml\nfrontmatter:\n  type:\n    const: Probe\n\
+                sections:\n  - heading: Body\n    level: 2\n    content: prose\n\
+                \x20   item-pattern: 'MUST'\n````\n";
+    let found = superdev_core::validate::schema::document::check_declarations(&[(
+        "probe.md".into(),
+        text.into(),
+    )]);
+    assert_eq!(found.len(), 1, "{found:#?}");
+    assert!(found[0].message.contains("content is not"), "{found:#?}");
 }
