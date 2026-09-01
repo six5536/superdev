@@ -62,6 +62,12 @@ is cached between commands.
 ```toml
 blueprint = "0.2.0"                  # the superdev version last applied
 
+[template]                           # absent = the repo was never seeded
+name         = "rust-npm"            # the shipped template it was seeded from
+project-name = "Widget"              # {{superdev:project-name}}
+project-slug = "widget"              # {{superdev:project-slug}}
+version      = "0.2.0"               # the binary whose template content it last matched
+
 [[packs]]                            # absent = the pack embedded in the binary
 source = "github:six5536/superdev"   # git: a rev is required
 rev    = "assets-v1.4.0"

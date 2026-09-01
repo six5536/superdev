@@ -103,7 +103,7 @@ Request:
 
 ### Slice 5: The config and format contracts define their files
 
-- [ ] Done — ticked by integrate at merge.
+- [x] Done — ticked by integrate at merge.
 - Depends-on: 1, 4.
 - Change: `schema-contract-config` and `schema-contract-text-format`
   declare their definition blocks; contracts 004, 005, 006 and 008 are
