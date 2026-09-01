@@ -45,7 +45,7 @@ Request:
 
 ### Slice 2: The CLI contract defines the command line
 
-- [ ] Done — ticked by integrate at merge.
+- [x] Done — ticked by integrate at merge.
 - Depends-on: 1.
 - Change: `schema-contract-cli` declares the YAML definition form of
   ADR-034 — every command with its arguments, flags, exit codes and

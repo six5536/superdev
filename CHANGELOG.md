@@ -13,6 +13,15 @@ publish a version it cannot find a heading for.
 
 ### Added
 
+- **The CLI contract defines the command line.** `contract-002` carries every
+  command, positional argument, flag and exit code superdev offers in a YAML
+  block a caller can build from, and a test walks the command tree and
+  compares it to that block element for element in both directions — so a
+  flag cannot reach the binary without reaching its contract (ADR-036). A
+  second test runs the binary and asserts each declared exit code. The
+  contract had drifted: `status --drift`, `--help` and a shipped template
+  were missing from it, and `--repo-root` printed a value name the contract
+  never named.
 - **A schema can bind the shape of a definition block.** A section rule
   declares `block-language` — `yaml` or `json` — plus `block-keys` and
   `block-entry-keys`, and `superdev validate` parses the section's fenced
