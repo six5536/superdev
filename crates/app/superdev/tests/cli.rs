@@ -92,14 +92,19 @@ fn validate_passes_the_live_repository() {
         .success();
 }
 
-/// The live repository carries warnings and no error, so it tells the two
-/// listings apart: a bare run counts them, `--warnings` lists them, and the
-/// summary line and the exit code are the same either way (ADR-040).
+/// A knowledge carrying warnings and no error tells the two listings apart:
+/// a bare run counts them, `--warnings` lists them, and the summary line and
+/// the exit code are the same either way (ADR-040).
+///
+/// The fixture is what makes it deterministic. Run against this repository,
+/// the test would rest on it still carrying a warning of its own — and the
+/// five it carries are exactly the kind someone eventually fixes.
 #[test]
 fn a_bare_run_counts_the_warnings_and_the_flag_lists_them() {
+    let repo = warning_only_repo();
     let run = |args: &[&str]| {
         let out = superdev()
-            .current_dir(REPO_ROOT)
+            .current_dir(repo.path())
             .args(args)
             .assert()
             .success();
@@ -270,9 +275,10 @@ fn validate_checks_a_named_document_as_the_bare_run_does() {
 /// the findings the bare run reports for that file (I019 criteria 1 and 2,
 /// ADR-026).
 ///
-/// Both runs ask for the warnings. The only one of the three files that
-/// carries a finding carries warnings, so a default run would compare two
-/// empty lists and prove nothing.
+/// Both runs ask for the warnings, because the only one of the three files
+/// that carries a finding today carries warnings. Neither run asserts a
+/// finding exists: this test binds bare-against-named parity, which holds
+/// whether or not the tree has anything to report.
 #[test]
 fn a_named_runs_findings_equal_the_bare_runs_for_that_file() {
     let out = superdev()
@@ -281,10 +287,6 @@ fn a_named_runs_findings_equal_the_bare_runs_for_that_file() {
         .assert()
         .success();
     let bare: serde_json::Value = serde_json::from_slice(&out.get_output().stdout).unwrap();
-    assert!(
-        !bare["findings"].as_array().unwrap().is_empty(),
-        "the live tree has findings to compare: {bare}"
-    );
     for file in [
         "knowledge/architecture.md",
         "README.md",
@@ -337,9 +339,10 @@ fn validate_json_is_machine_readable() {
 /// `findings` would now undercount, which is why the counts are there.
 #[test]
 fn validate_json_states_both_counts_and_lists_what_the_text_run_listed() {
+    let repo = warning_only_repo();
     let report = |args: &[&str]| -> serde_json::Value {
         let out = superdev()
-            .current_dir(REPO_ROOT)
+            .current_dir(repo.path())
             .args(args)
             .assert()
             .success();
@@ -350,9 +353,10 @@ fn validate_json_states_both_counts_and_lists_what_the_text_run_listed() {
 
     for r in [&counted, &listed] {
         assert_eq!(r["errors"], serde_json::json!(0), "{r}");
-        assert!(
-            r["warnings"].as_u64().unwrap() > 0,
-            "the live tree carries warnings: {r}"
+        assert_eq!(
+            r["warnings"],
+            serde_json::json!(1),
+            "the fixture's one warning is counted either way: {r}"
         );
     }
     assert_eq!(counted["warnings"], listed["warnings"]);
@@ -624,10 +628,10 @@ fn hook_validate_counts_the_warnings_it_does_not_list() {
     );
 }
 
-/// A knowledge whose only fault is a warning leaves the hook at `0`, as it
-/// always has: the default changes what is shown and never what is decided.
-#[test]
-fn hook_validate_still_passes_a_knowledge_whose_only_fault_is_a_warning() {
+/// A knowledge whose only fault is one warning: a non-core `rel`, read as
+/// `relates-to`. Deterministic, so a test about the two listings does not
+/// rest on this repository still carrying a warning of its own.
+fn warning_only_repo() -> tempfile::TempDir {
     let repo = tempfile::tempdir().unwrap();
     let k = repo.path().join("knowledge");
     std::fs::create_dir_all(&k).unwrap();
@@ -647,6 +651,14 @@ fn hook_validate_still_passes_a_knowledge_whose_only_fault_is_a_warning() {
         "---\ntype: Note\nid: gamma\n---\n\nBody.\n",
     )
     .unwrap();
+    repo
+}
+
+/// A knowledge whose only fault is a warning leaves the hook at `0`, as it
+/// always has: the default changes what is shown and never what is decided.
+#[test]
+fn hook_validate_still_passes_a_knowledge_whose_only_fault_is_a_warning() {
+    let repo = warning_only_repo();
     superdev()
         .args(["hook", "validate"])
         .env("CLAUDE_PROJECT_DIR", repo.path())
