@@ -47,7 +47,7 @@ Request:
 
 ### Slice 2: EARS criteria enforced at frame time
 
-- [ ] Done — ticked by integrate at merge.
+- [x] Done — ticked by integrate at merge.
 - Depends-on: 1.
 - Change: `schema-feature-request` declares the ADR-031 item-pattern on
   Acceptance criteria, in `knowledge/schemas/` and the pack mirror,

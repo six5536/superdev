@@ -13,6 +13,11 @@ publish a version it cannot find a heading for.
 
 ### Added
 
+- **An acceptance criterion's EARS tag is checked.** A feature-request
+  criterion that does not open with `[ubiquitous]`, `[event]`, `[state]`,
+  `[conditional]`, `[optional]`, `[complex]` or `TBD — ` fails
+  `superdev validate`, naming the criterion (ADR-031). The shape framing
+  has always asked for is now enforced where it is written.
 - **A schema can bind the shape of a section's text.** A section rule
   declares `item-pattern`, which every top-level item of the section's list
   must match, and `content-pattern`, which the section's whole body must
