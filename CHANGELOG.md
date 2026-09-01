@@ -230,6 +230,11 @@ publish a version it cannot find a heading for.
   The keys `documents` and `schemas`, emitted since they were added and never
   declared, are now in `contract-002` with them.
 
+  The **PostToolUse and Stop hooks default the same way**, so one rule holds
+  whoever ran the check. This is what the change is for: an agent editing one
+  document read the whole repository's advisory findings on every pass, and
+  now reads what it can act on and a count of what it cannot.
+
 - **A contract now defines its interface, not describes it.** Every
   contract-kind schema demands a definition block carrying the whole surface
   a caller depends on — commands and flags, tool schemas, settings, file

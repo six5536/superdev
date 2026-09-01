@@ -57,4 +57,4 @@ workflow.
 [sokf:plan-020-feature-normative-shape-enforcement]: /knowledge/plans/done/plan-020-feature-normative-shape-enforcement.md
 [sokf:plan-021-feature-contracts-define-their-interface]: /knowledge/plans/done/plan-021-feature-contracts-define-their-interface.md
 [sokf:plan-022-feature-decidable-findings-are-errors]: /knowledge/plans/done/plan-022-feature-decidable-findings-are-errors.md
-[sokf:plan-023-feature-warnings-are-counted-not-listed]: /knowledge/plans/open/plan-023-feature-warnings-are-counted-not-listed.md
+[sokf:plan-023-feature-warnings-are-counted-not-listed]: /knowledge/plans/done/plan-023-feature-warnings-are-counted-not-listed.md
