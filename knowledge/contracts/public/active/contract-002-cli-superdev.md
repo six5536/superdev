@@ -97,6 +97,9 @@ superdev validate:
     --json:
       type: bool
       about: Emit the report as JSON instead of text.
+    --warnings:
+      type: bool
+      about: List the warnings, which a run counts but does not list.
     --doc:
       type: bool
       about: Print the grammar as prose and exit.
@@ -108,9 +111,14 @@ superdev validate:
       about: Repository root for `/`-rooted paths; this repo by default.
   json:
     passed: whether the run found no errors
+    errors: how many errors the run found
+    warnings: how many warnings the run found, listed or not
     concepts: how many concepts were read
+    documents: how many documents were checked against a schema
+    schemas: how many schemas the run read
     files: how many files were checked
-    findings: one entry per finding, each with its file, severity and message
+    findings: one entry per finding, each with its file, severity and message;
+      warnings appear only with `--warnings`, as in the text output
     knowledge: the knowledge directory the run covered
     repaired: each file `--fix` rewrote
   exit:
