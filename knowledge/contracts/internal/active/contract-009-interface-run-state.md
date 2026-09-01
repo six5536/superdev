@@ -96,10 +96,10 @@ pub const CONTINUE_CAP: u32 = 10;
 ## Cross-cutting concerns
 
 - Security: the state lives under the gitignored `.superdev/cache/`;
-  the hook executes nothing and parses only its own TOML and the
-  payload JSON. An unreadable payload is a loud exit `2`, matching
-  `hook validate`; an unreadable `run.toml` is reported to stderr and
-  exits `0`, failing open
+  the hook MUST execute nothing and parse only its own TOML and the
+  payload JSON. An unreadable payload MUST be a loud exit `2`, matching
+  `hook validate`; an unreadable `run.toml` MUST be reported to stderr and
+  exit `0`, failing open
   ([ADR-019][sokf:adr-019-run-state-is-a-session-owned-file-behind-cli-verbs]).
 - Performance: one small file read per Stop event; no network, no plan
   parse, no index.

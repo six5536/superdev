@@ -206,9 +206,9 @@ server use it, `validate` never opens it.
   nothing — and is idempotent: a second run MUST write nothing. The report then
   describes the repository as `--fix` left it, and names each file rewritten,
   under a `repaired` key in JSON. `hook validate` never passes it.
-- **`sokf index`** forces a full rebuild. Nothing else needs it: the server
-  syncs lazily on every tool call. It says so when no embedding model loaded
-  and the index is lexical-only.
+- **`sokf index`** MUST rebuild the index in full. Nothing else needs it: the
+  server syncs lazily on every tool call. It MUST say so when no embedding
+  model loaded and the index is lexical-only.
 - **`run`** owns the state of an unattended workflow run,
   `.superdev/cache/run.toml` — the shared seam between the driver skill and
   the Stop hook, fixed in
@@ -219,23 +219,25 @@ server use it, `validate` never opens it.
   owning session. `end` removes the state, and says so harmlessly when none
   exists. A `run` verb MUST NOT touch git, the network, or any file outside
   the cache.
-- **`hook validate`** reads the PostToolUse payload from stdin and exits
-  `0` unless the edited path is under the canonical knowledge or under a tree the grammar
-  governs. Then it validates the whole set in-process and, on errors, prints
-  them to stderr and exits `2` — which Claude Code hands back to the agent as a
-  blocking error. It resolves the repo from `CLAUDE_PROJECT_DIR` when Claude
-  Code sets it, else the working directory.
+- **`hook validate`** reads the PostToolUse payload from stdin and MUST exit
+  `0` unless the edited path is under the canonical knowledge or under a tree
+  the grammar governs. Then it validates the whole set in-process and, on
+  errors, MUST print them to stderr and exit `2` — which Claude Code hands
+  back to the agent as a blocking error. It resolves the repo from
+  `CLAUDE_PROJECT_DIR` when Claude Code sets it, else the working
+  directory.
 - **`hook run`** reads the Stop payload from stdin and the run state from the
-  cache, and exits `0` when the state is absent, the payload's session is not
-  the owner, the next step is empty, or the watchdog counter has reached its
-  cap — otherwise it increments the counter and exits `2` naming the next
-  step, which Claude Code feeds back as the instruction to keep going. An
-  unreadable payload is a loud exit `2`, like `hook validate`; an unreadable
-  run state is reported and exits `0`, failing open
+  cache, and MUST exit `0` when the state is absent, the payload's session is
+  not the owner, the next step is empty, or the watchdog counter has reached
+  its cap — otherwise it increments the counter and MUST exit `2` naming the
+  next step, which Claude Code feeds back as the instruction to keep going. An
+  unreadable payload MUST be a loud exit `2`, like `hook validate`; an
+  unreadable run state MUST be reported and exit `0`, failing open
   ([contract-009][sokf:contract-009-interface-run-state]). It resolves the
   repo the same way `hook validate` does.
-- **`mcp sokf`** starts the MCP server; its contract is
-  [contract-003-mcp-sokf][sokf:contract-003-mcp-sokf].
+- **`mcp sokf`** starts the MCP server. Its surface is
+  [contract-003-mcp-sokf][sokf:contract-003-mcp-sokf]'s to bind, and this
+  command MUST NOT add to it.
 
 A usage error (unknown flag or subcommand) MUST exit `2` — the npm launcher's
 smoke test relies on that code. `completions` and `man` render into a buffer

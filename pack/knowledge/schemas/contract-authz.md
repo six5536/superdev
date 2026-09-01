@@ -103,6 +103,7 @@ sections:
     level: 2
     required: true
     content: prose
+    content-pattern: '\b(MUST|SHALL|SHOULD|MAY|REQUIRED|RECOMMENDED|OPTIONAL)\b'
     description: >
       The tenancy or ownership rule that cuts across every permission, where it
       is enforced, and what a refused caller is told — a refusal that confirms
@@ -112,6 +113,7 @@ sections:
     level: 2
     required: true
     content: prose
+    content-pattern: '\b(MUST|SHALL|SHOULD|MAY|REQUIRED|RECOMMENDED|OPTIONAL)\b'
     description: >
       Which names are promised, what happens to a token carrying a scope that
       no longer exists, and how a permission is tightened without locking out
@@ -166,24 +168,24 @@ example: |
 
   ## Boundaries
 
-  Every widget belongs to one tenant, and a principal reaches only its own —
-  the rule holds above every row in the table. It is enforced twice: the API
-  narrows every query by the caller's tenant, and the store carries a
-  row-level policy on `tenant_id` so a query that forgets returns nothing
-  rather than everything.
+  Every widget belongs to one tenant, and a principal MUST reach only its
+  own — the rule holds above every row in the table. Two layers enforce it:
+  the API MUST narrow every query by the caller's tenant, and the store MUST
+  carry a row-level policy on `tenant_id`, so a query that forgets returns
+  nothing rather than everything.
 
-  A caller reaching another tenant's widget is told `404`, never `403`, so the
-  refusal does not confirm the widget exists. A caller inside its own tenant
-  attempting an action above its role is told `403`, because there the
-  existence is not a secret and the message can name the role required.
+  A caller reaching another tenant's widget MUST be told `404`, never `403`,
+  so the refusal does not confirm the widget exists. A caller inside its own
+  tenant attempting an action above its role MUST be told `403`: there the
+  existence is not a secret, and the message names the role required.
 
   ## Stability
 
-  Role and scope names are stable within a major version. A token carrying a
-  scope that no longer exists is rejected outright rather than downgraded,
-  because a silently narrowed token fails later and further away. A permission
-  is tightened in two steps: one release logs what the new rule would refuse,
-  the next enforces it.
+  Role and scope names MUST stay stable within a major version. A token
+  carrying a scope that no longer exists MUST be rejected outright rather than
+  downgraded, because a silently narrowed token fails later and further away.
+  A permission MUST be tightened in two steps: one release logs what the new
+  rule would refuse, the next enforces it.
 ````
 
 <!-- sokf:links -->

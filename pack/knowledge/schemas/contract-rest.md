@@ -74,6 +74,7 @@ sections:
     level: 2
     required: true
     content: prose
+    content-pattern: '\b(MUST|SHALL|SHOULD|MAY|REQUIRED|RECOMMENDED|OPTIONAL)\b'
     description: >
       What a caller presents, where it goes, how it is obtained and how it
       expires. The response to a missing or rejected credential.
@@ -89,6 +90,7 @@ sections:
     level: 2
     required: true
     content: prose
+    content-pattern: '\b(MUST|SHALL|SHOULD|MAY|REQUIRED|RECOMMENDED|OPTIONAL)\b'
     description: >
       How the API is versioned, what may be added within a version, what
       forces a new one, and the deprecation window callers get.
@@ -132,10 +134,10 @@ example: |
 
   ## Authentication
 
-  A bearer token in the `Authorization` header, issued by the tenant's identity
-  provider and valid for one hour. A missing or expired token is `401`; a token
-  valid but scoped to another tenant is `404`, never `403`, so the API never
-  confirms that an unreachable widget exists.
+  A bearer token in the `Authorization` header, issued by the tenant's
+  identity provider and valid for one hour. A missing or expired token MUST be
+  `401`; a token valid but scoped to another tenant MUST be `404`, never
+  `403`, so the API never confirms that an unreachable widget exists.
 
   ## Errors
 
@@ -148,8 +150,9 @@ example: |
 
   ## Stability
 
-  The version sits in the path. Within `/v1` fields are added to responses and
-  optional fields to requests, never removed or retyped; a caller must ignore
-  fields it does not know. Anything else opens `/v2`, and `/v1` then runs for
-  six further months with a `Deprecation` header on every response.
+  The version sits in the path. Within `/v1` fields MAY be added to responses
+  and optional fields to requests, and MUST NOT be removed or retyped; a
+  caller MUST ignore fields it does not know. Anything else opens `/v2`, and
+  `/v1` then runs for six further months with a `Deprecation` header on every
+  response.
 ````

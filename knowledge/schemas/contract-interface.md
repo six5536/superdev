@@ -81,6 +81,7 @@ sections:
     level: 2
     required: true
     content: bullet-list
+    content-pattern: '\b(MUST|SHALL|SHOULD|MAY|REQUIRED|RECOMMENDED|OPTIONAL)\b'
     description: >
       Which module owns what, and the direction of dependency. One line
       per boundary.
@@ -95,6 +96,7 @@ sections:
     level: 2
     required: true
     content: bullet-list
+    content-pattern: '\b(MUST|SHALL|SHOULD|MAY|REQUIRED|RECOMMENDED|OPTIONAL)\b'
     description: >
       Bullets for Security (authn/authz, data exposure, input
       validation), Performance (expected load, hot paths, limits),
@@ -125,8 +127,8 @@ example: |
 
   ## Module boundaries
 
-  - pack::resolve owns transport validation; the CLI depends on pack,
-    never the reverse.
+  - pack::resolve owns transport validation; the CLI depends on pack, and
+    pack MUST NOT depend on the CLI.
 
   ## Key flows
 
@@ -134,7 +136,7 @@ example: |
 
   ## Cross-cutting concerns
 
-  - Security: refuse transports outside the allowlist at parse time.
+  - Security: the parser MUST refuse a transport outside the allowlist.
   - Performance: validation is per-source and constant-time.
   - Migration/rollout: existing https/ssh/file manifests unchanged.
   - Observability: the refusal error names the offending source.

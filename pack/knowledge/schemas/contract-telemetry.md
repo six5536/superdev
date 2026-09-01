@@ -96,6 +96,7 @@ sections:
     level: 2
     required: true
     content: prose
+    content-pattern: '\b(MUST|SHALL|SHOULD|MAY|REQUIRED|RECOMMENDED|OPTIONAL)\b'
     description: >
       Which names, labels and fields are promised, how a rename is carried
       through so dashboards keep working, and how a removal is announced.
@@ -144,10 +145,11 @@ example: |
 
   ## Stability
 
-  The metric names, their label sets and the log fields above are stable within
-  a major version. A renamed metric is emitted under both names for one minor
-  release so a dashboard can be moved without a gap. A removed metric or log
-  field is announced in the release notes one release ahead.
+  The metric names, their label sets and the log fields above MUST stay stable
+  within a major version. A renamed metric MUST be emitted under both names for
+  one minor release, so a dashboard can be moved without a gap. A removed
+  metric or log field MUST be announced in the release notes one release
+  ahead.
 ````
 
 <!-- sokf:links -->

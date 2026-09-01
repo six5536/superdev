@@ -80,6 +80,7 @@ sections:
   - heading: "Errors"
     level: 2
     content: prose
+    content-pattern: '\b(MUST|SHALL|SHOULD|MAY|REQUIRED|RECOMMENDED|OPTIONAL)\b'
     description: >
       The error type callers match on, what each variant means, and what the
       library panics or throws on rather than returning. Omit where the API
@@ -88,6 +89,7 @@ sections:
     level: 2
     required: true
     content: prose
+    content-pattern: '\b(MUST|SHALL|SHOULD|MAY|REQUIRED|RECOMMENDED|OPTIONAL)\b'
     description: >
       The versioning scheme, what counts as a breaking change to this surface,
       and how long a deprecated item stays before removal.
@@ -130,14 +132,14 @@ example: |
 
   ## Errors
 
-  `parse` returns `ParseError` and never panics on caller input. `Empty` means
-  the input held no widget; `BadField` names the first field that failed. A
-  panic from this crate is a bug in the crate, not a caller error.
+  `parse` returns `ParseError` and MUST NOT panic on caller input. `Empty`
+  means the input held no widget; `BadField` names the first field that
+  failed. A panic from this crate is a bug in the crate, not a caller error.
 
   ## Stability
 
-  Semver from 1.0. Adding a variant to `ParseError` is breaking, so the enum is
-  `#[non_exhaustive]`; adding a field to `Widget` is not. A deprecated item
-  carries `#[deprecated]` for one minor release before removal in the next
-  major.
+  Semver from 1.0. Adding a variant to `ParseError` is breaking, so the enum
+  MUST be `#[non_exhaustive]`; adding a field to `Widget` is not. A deprecated
+  item MUST carry `#[deprecated]` for one minor release before removal in the
+  next major.
 ````

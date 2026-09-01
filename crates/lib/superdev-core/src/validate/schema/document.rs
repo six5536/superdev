@@ -750,9 +750,12 @@ struct Item {
 }
 
 /// Every top-level item in a section body (ADR-030). An item opens with an
-/// unindented marker and runs to the next one, a blank line, or a nested
-/// item — a nested item belongs to itself, never to the text of the item
-/// above it. Fenced lines are skipped, as they are for every content check.
+/// unindented marker and takes every indented line after it, blank lines
+/// included, so a bullet carrying several paragraphs is read whole. It closes
+/// at the next unindented line — another item, or the prose the list runs
+/// into — and at a nested item, which belongs to itself and never to the
+/// text of the item above it. Fenced lines are skipped, as they are for every
+/// content check.
 fn items_in(body: &[&str], fenced: &[bool]) -> Vec<Item> {
     let mut items: Vec<Item> = Vec::new();
     // Whether the item being built still takes continuation lines: a nested
@@ -763,6 +766,9 @@ fn items_in(body: &[&str], fenced: &[bool]) -> Vec<Item> {
             continue;
         }
         let trimmed = line.trim_start();
+        if trimmed.is_empty() {
+            continue; // A blank line separates an item's paragraphs.
+        }
         let indented = line.len() != trimmed.len();
         let is_item = is_bullet(trimmed) || is_numbered(trimmed);
         if is_item && !indented {
@@ -771,7 +777,7 @@ fn items_in(body: &[&str], fenced: &[bool]) -> Vec<Item> {
                 text: strip_marker(trimmed).to_string(),
             });
             open = true;
-        } else if trimmed.is_empty() || is_item {
+        } else if is_item || !indented {
             open = false;
         } else if open && let Some(item) = items.last_mut() {
             item.text.push(' ');
@@ -1568,6 +1574,36 @@ mod tests {
             findings[0].message.contains("- a parent item"),
             "{findings:#?}"
         );
+    }
+
+    /// Covers I034 criterion 1: an item's later paragraphs are its own — a
+    /// blank line separates them, and only an unindented line ends the item.
+    /// The prose a list runs into belongs to no item.
+    #[test]
+    fn an_item_carries_every_paragraph_indented_under_it() {
+        let schema = items_schema("covers \\d");
+        let doc = Document {
+            path: "a.md",
+            text: "# T\n\n## Items\n\n- an item opening a paragraph\n\n  and closing on a \
+                   second, covers 1.\n\nProse after the list, covers 9.\n",
+            doc_type: Some("T"),
+        };
+        let mut findings = Vec::new();
+        check_one(&doc, &schema, false, &mut findings);
+        assert!(findings.is_empty(), "{findings:#?}");
+
+        // The trailing prose is nobody's item: an item that never matches
+        // stays the only finding, and the prose adds none of its own.
+        let doc = Document {
+            path: "a.md",
+            text: "# T\n\n## Items\n\n- an item\n\n  and its second paragraph.\n\nProse after \
+                   the list, covers 9.\n",
+            doc_type: Some("T"),
+        };
+        let mut findings = Vec::new();
+        check_one(&doc, &schema, false, &mut findings);
+        assert_eq!(findings.len(), 1, "{findings:#?}");
+        assert!(findings[0].message.contains("- an item"), "{findings:#?}");
     }
 
     /// Covers I034 criterion 2: the finding names the document and the

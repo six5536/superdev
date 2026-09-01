@@ -72,6 +72,7 @@ sections:
     level: 2
     required: true
     content: bullet-list
+    item-pattern: '\b(MUST|SHALL|SHOULD|MAY|REQUIRED|RECOMMENDED|OPTIONAL)\b'
     description: >
       One entry per command — what it reads, what it writes, what it refuses,
       and the behaviour callers rely on. Anything a script would break on
@@ -87,6 +88,7 @@ sections:
     level: 2
     required: true
     content: prose
+    content-pattern: '\b(MUST|SHALL|SHOULD|MAY|REQUIRED|RECOMMENDED|OPTIONAL)\b'
     description: >
       Which commands, flags and codes are promised, over what version range,
       and how a breaking change is signalled.
@@ -114,11 +116,12 @@ example: |
 
   ## Behaviour
 
-  - **`build`** writes only under `./out` and refuses a dirty working tree.
-  - **`check`** never writes. It reads every source under PATH, or the whole
-    project when PATH is absent.
-  - **`publish`** requires a prior `build`, and refuses a URL outside the
-    configured registry allowlist.
+  - **`build`** MUST write only under `./out`, and MUST refuse a dirty
+    working tree.
+  - **`check`** MUST NOT write. It reads every source under PATH, or the
+    whole project when PATH is absent.
+  - **`publish`** MUST refuse without a prior `build`, and MUST refuse a URL
+    outside the configured registry allowlist.
 
   ## Exit codes
 
@@ -130,7 +133,7 @@ example: |
 
   ## Stability
 
-  The commands, their flags and the exit codes are stable from 1.0: they are
-  added, never removed or repurposed, within a major version. A command due for
-  removal warns on stderr for one minor release first.
+  The commands, their flags and the exit codes are stable from 1.0: within a
+  major version they MAY be added, and MUST NOT be removed or repurposed. A
+  command due for removal MUST warn on stderr for one minor release first.
 ````

@@ -66,6 +66,7 @@ sections:
     level: 2
     required: true
     content: prose
+    content-pattern: '\b(MUST|SHALL|SHOULD|MAY|REQUIRED|RECOMMENDED|OPTIONAL)\b'
     description: >
       How the server is launched and spoken to — stdio or HTTP, one client or
       many — what it serves, when it exits, and what it refuses at startup
@@ -74,6 +75,7 @@ sections:
     level: 2
     required: true
     content: bullet-list
+    item-pattern: '\b(MUST|SHALL|SHOULD|MAY|REQUIRED|RECOMMENDED|OPTIONAL)\b'
     description: >
       One entry per tool: its name, its arguments with defaults and limits,
       what comes back, and the ranking or filtering a caller can rely on.
@@ -87,6 +89,7 @@ sections:
     level: 2
     required: true
     content: prose
+    content-pattern: '\b(MUST|SHALL|SHOULD|MAY|REQUIRED|RECOMMENDED|OPTIONAL)\b'
     description: >
       How a failed call reaches the agent — an error payload against a process
       exit — and what the server does with input it cannot resolve.
@@ -94,6 +97,7 @@ sections:
     level: 2
     required: true
     content: prose
+    content-pattern: '\b(MUST|SHALL|SHOULD|MAY|REQUIRED|RECOMMENDED|OPTIONAL)\b'
     description: >
       Which tool names, arguments and result shapes are promised, and how a
       change to any of them is signalled.
@@ -113,16 +117,16 @@ example: |
 
   ## Server
 
-  `widget mcp` serves one stdio client and exits 0 when that client closes
-  stdin. A missing widget store fails at startup rather than at every tool
+  `widget mcp` serves one stdio client and MUST exit 0 when that client closes
+  stdin. A missing widget store MUST fail at startup rather than at every tool
   call, because a client cannot act on the latter.
 
   ## Tools
 
   - **`widget_search`** — `query`, optional `limit` (8 by default, clamped to
-    1..50). Results are grouped by widget, strongest first.
-  - **`widget_read`** — `id`: the whole widget, or the near-miss candidates
-    when no widget carries that id.
+    1..50). Results MUST be grouped by widget, strongest first.
+  - **`widget_read`** — `id`: the whole widget. An id no widget carries MUST
+    come back with near-miss candidates.
 
   ## Resources and prompts
 
@@ -131,13 +135,13 @@ example: |
 
   ## Errors
 
-  A tool failure is an MCP error payload, never a process exit: the client
-  stays connected and can call again. An unknown id comes back with near-miss
-  candidates rather than an empty result.
+  A tool failure MUST be an MCP error payload, never a process exit: the
+  client stays connected and can call again. An unknown id MUST come back with
+  near-miss candidates rather than an empty result.
 
   ## Stability
 
-  Unreleased. Tool names, their arguments and their result shapes may change
-  without notice until 1.0, after which a removed argument gets one minor
+  Unreleased. Tool names, their arguments and their result shapes MAY change
+  without notice until 1.0, after which a removed argument MUST get one minor
   release of deprecation first.
 ````

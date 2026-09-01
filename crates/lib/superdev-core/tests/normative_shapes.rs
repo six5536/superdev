@@ -128,3 +128,105 @@ fn the_ears_declaration_ships_to_managed_repositories() {
         assert!(text.contains(pattern), "{root} declares the EARS pattern");
     }
 }
+
+/// The ADR-032 assignment: which contract-kind sections declare that their
+/// entries bind, and which are definitional and declare nothing. Kept here
+/// rather than derived, so a section quietly losing its declaration fails.
+const PROMISE_ITEMS: [(&str, &[&str]); 5] = [
+    ("cli", &["Behaviour"]),
+    ("mcp", &["Tools"]),
+    ("data", &["Constraints"]),
+    ("deployment", &["Health and lifecycle"]),
+    ("events", &["Ordering and delivery"]),
+];
+
+const PROMISE_BODIES: [(&str, &[&str]); 15] = [
+    ("authz", &["Boundaries", "Stability"]),
+    ("cli", &["Stability"]),
+    (
+        "config",
+        &["Sources and precedence", "Secrets", "Stability"],
+    ),
+    ("data", &["Migration", "Stability"]),
+    ("deployment", &["Runtime", "Stability"]),
+    ("events", &["Stability"]),
+    ("file-format", &["Compatibility", "Stability"]),
+    ("graphql", &["Errors", "Limits", "Stability"]),
+    (
+        "interface",
+        &["Module boundaries", "Cross-cutting concerns"],
+    ),
+    ("library", &["Errors", "Stability"]),
+    ("mcp", &["Server", "Errors", "Stability"]),
+    ("rest", &["Authentication", "Stability"]),
+    ("rpc", &["Authentication", "Stability"]),
+    ("telemetry", &["Stability"]),
+    ("ui", &["Stability"]),
+];
+
+/// The RFC 2119 keyword pattern ADR-032 declares: the uppercase forms alone
+/// bind, so descriptive prose keeps its ordinary words.
+const KEYWORDS: &str = r"\b(MUST|SHALL|SHOULD|MAY|REQUIRED|RECOMMENDED|OPTIONAL)\b";
+
+/// The section rule for `heading` in a contract-kind schema, as written.
+fn rule_for<'a>(schema: &'a str, heading: &str) -> &'a str {
+    let anchor = format!("  - heading: \"{heading}\"\n");
+    let start = schema
+        .find(&anchor)
+        .unwrap_or_else(|| panic!("no rule for {heading}"))
+        + anchor.len();
+    let rest = &schema[start..];
+    rest.find("\n  - heading").map_or(rest, |end| &rest[..end])
+}
+
+/// Covers I034 criterion 7: every promise-bearing section declares that its
+/// entries bind, in the live tree and in the pack mirror (ADR-032).
+#[test]
+fn every_promise_section_declares_its_shape() {
+    for root in ["knowledge/schemas", "pack/knowledge/schemas"] {
+        for (kind, headings) in PROMISE_ITEMS {
+            let text =
+                std::fs::read_to_string(repo(&format!("{root}/contract-{kind}.md"))).unwrap();
+            for heading in headings {
+                let rule = rule_for(&text, heading);
+                assert!(
+                    rule.contains(&format!("item-pattern: '{KEYWORDS}'")),
+                    "{root}/contract-{kind}.md: {heading} declares the keyword per item"
+                );
+            }
+        }
+        for (kind, headings) in PROMISE_BODIES {
+            let text =
+                std::fs::read_to_string(repo(&format!("{root}/contract-{kind}.md"))).unwrap();
+            for heading in headings {
+                let rule = rule_for(&text, heading);
+                assert!(
+                    rule.contains(&format!("content-pattern: '{KEYWORDS}'")),
+                    "{root}/contract-{kind}.md: {heading} declares the keyword for its body"
+                );
+            }
+        }
+    }
+}
+
+/// Covers I034 criterion 7: a definitional section declares no shape — it
+/// binds by form, and a keyword rule there would misfire (ADR-032).
+#[test]
+fn a_definitional_section_declares_no_shape() {
+    for (kind, heading) in [
+        ("cli", "Commands"),
+        ("rest", "Endpoints"),
+        ("interface", "Key flows"),
+        ("ui", "Screens and states"),
+        ("telemetry", "Metrics"),
+        ("authz", "Permissions"),
+    ] {
+        let text = std::fs::read_to_string(repo(&format!("knowledge/schemas/contract-{kind}.md")))
+            .unwrap();
+        let rule = rule_for(&text, heading);
+        assert!(
+            !rule.contains("item-pattern") && !rule.contains("content-pattern"),
+            "contract-{kind}.md: {heading} is definitional and declares no pattern"
+        );
+    }
+}

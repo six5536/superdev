@@ -81,6 +81,7 @@ sections:
     level: 2
     required: true
     content: bullet-list
+    item-pattern: '\b(MUST|SHALL|SHOULD|MAY|REQUIRED|RECOMMENDED|OPTIONAL)\b'
     description: >
       What the consumer may assume: ordering guarantees, at-least-once against
       exactly-once, the retry and dead-letter behaviour, and which field makes
@@ -89,6 +90,7 @@ sections:
     level: 2
     required: true
     content: prose
+    content-pattern: '\b(MUST|SHALL|SHOULD|MAY|REQUIRED|RECOMMENDED|OPTIONAL)\b'
     description: >
       How payloads are versioned, what may be added without a new version, and
       how a consumer is told a message type is going away.
@@ -131,17 +133,17 @@ example: |
 
   ## Ordering and delivery
 
-  - Ordered per widget id, because the partition key is the widget id. There is
-    no ordering across widgets.
-  - At-least-once. A consumer must deduplicate on `eventId`.
-  - A handler that fails is retried five times with backoff, then the message
-    goes to `widgets.lifecycle.dlq` and the stream moves on.
+  - Delivery MUST be ordered per widget id, because the partition key is the
+    widget id. There is no ordering across widgets.
+  - Delivery is at-least-once: a consumer MUST deduplicate on `eventId`.
+  - A handler that fails MUST be retried five times with backoff, then the
+    message goes to `widgets.lifecycle.dlq` and the stream moves on.
 
   ## Stability
 
-  Fields are added to a payload, never removed or retyped, so a consumer must
-  ignore fields it does not know. A new `type` value may appear at any time and
-  a consumer must skip the ones it does not handle. Removing a `type` is
-  announced one release ahead and the value keeps being published, unused, for
-  a further release.
+  Fields MAY be added to a payload and MUST NOT be removed or retyped, so a
+  consumer MUST ignore fields it does not know. A new `type` value MAY appear
+  at any time, and a consumer MUST skip the ones it does not handle. Removing
+  a `type` MUST be announced one release ahead, and the value keeps being
+  published, unused, for a further release.
 ````

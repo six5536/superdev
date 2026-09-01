@@ -97,6 +97,7 @@ sections:
     level: 2
     required: true
     content: prose
+    content-pattern: '\b(MUST|SHALL|SHOULD|MAY|REQUIRED|RECOMMENDED|OPTIONAL)\b'
     description: >
       Which routes are promised, what happens to a link when one moves, and how
       a removed screen is announced. Redirects are the contract; a 404 on a
@@ -147,10 +148,11 @@ example: |
 
   ## Stability
 
-  The four routes above are promised for a year from any release that
-  announces a change. A route that moves leaves a permanent redirect at the old
-  path for that year — a working link that starts 404ing is a break, not a
-  cleanup. A removed screen is announced in the release notes one release ahead.
+  The four routes above MUST be served for a year from any release that
+  announces a change. A route that moves MUST leave a permanent redirect at the
+  old path for that year — a working link that starts 404ing is a break, not a
+  cleanup. A removed screen MUST be announced in the release notes one release
+  ahead.
 ````
 
 <!-- sokf:links -->

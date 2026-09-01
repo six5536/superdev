@@ -34,15 +34,16 @@ can read exactly what matched.
   down-ranked after fusion, so finished plans and issues sort below live
   knowledge without leaving the results. Results group by concept,
   strongest concept first.
-- **`sokf_read`** — `id` (or knowledge-relative path), optional `heading`: the
-  whole concept, or one section named by heading or `a > b` heading path.
-  `(root)` names the frontmatter-and-preamble section.
+- **`sokf_read`** — `id` (or knowledge-relative path), optional `heading`:
+  the whole concept, or one section named by heading or `a > b` heading path.
+  `(root)` MUST name the frontmatter-and-preamble section.
 - **`sokf_graph`** — no argument: the knowledge-wide map of *declared* edges,
   grouped by source. With `id`: that concept's single-hop neighbours in both
-  directions. Each group caps at 30 lines and then says how many it dropped.
-- **`sokf_overview`** — the canonical knowledge name, its concept count, the directory tree
-  with each concept's id and description, and every validation finding,
-  warnings included, whenever there is one.
+  directions. Each group MUST cap at 30 lines and then say how many it
+  dropped.
+- **`sokf_overview`** — the canonical knowledge name, its concept count, the
+  directory tree with each concept's id and description. It MUST carry every
+  validation finding, warnings included, whenever there is one.
 
 ## Errors
 

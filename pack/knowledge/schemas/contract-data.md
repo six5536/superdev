@@ -89,6 +89,7 @@ sections:
     level: 2
     required: true
     content: bullet-list
+    item-pattern: '\b(MUST|SHALL|SHOULD|MAY|REQUIRED|RECOMMENDED|OPTIONAL)\b'
     description: >
       What always holds: primary and unique keys, referential rules, what is
       nullable and what is not, retention and deletion, and any ordering or
@@ -97,6 +98,7 @@ sections:
     level: 2
     required: true
     content: prose
+    content-pattern: '\b(MUST|SHALL|SHOULD|MAY|REQUIRED|RECOMMENDED|OPTIONAL)\b'
     description: >
       How the schema changes under a running system — expand-then-contract or
       downtime, whether old and new code read the same rows during a rollout,
@@ -105,6 +107,7 @@ sections:
     level: 2
     required: true
     content: prose
+    content-pattern: '\b(MUST|SHALL|SHOULD|MAY|REQUIRED|RECOMMENDED|OPTIONAL)\b'
     description: >
       Which tables, columns and semantics are promised to readers outside the
       owning component, and how a breaking change reaches them.
@@ -146,27 +149,29 @@ example: |
 
   ## Constraints
 
-  - `id` is a v7 uuid, so insertion order and creation order agree.
-  - A name is unique per tenant, case-insensitively, among live rows only.
-  - Deletion is soft: `deleted_at` is set and the row stays. Nothing outside a
+  - `id` MUST be a v7 uuid, so insertion order and creation order agree.
+  - A name MUST be unique per tenant, case-insensitively, among live rows
+    only.
+  - Deletion MUST be soft: `deleted_at` is set and the row stays, and only a
     retention job issues `DELETE`.
-  - The retention job removes soft-deleted rows ninety days after
-    `deleted_at`, which is the point after which a restore is impossible.
+  - The retention job MUST remove soft-deleted rows ninety days after
+    `deleted_at`, the point after which a restore is impossible.
 
   ## Migration
 
-  Expand then contract, always. A release adds a nullable column and
-  backfills; the next reads it; a third makes it `NOT NULL` and drops what it
-  replaced. Old and new code therefore read the same rows throughout a rolling
-  deploy. A migration that cannot be split this way takes a maintenance window,
-  and its rollback is a restore from the pre-migration snapshot.
+  Expand then contract, always: a migration MUST be split so old and new code
+  read the same rows throughout a rolling deploy. A release adds a nullable
+  column and backfills; the next reads it; a third makes it `NOT NULL` and
+  drops what it replaced. A migration that cannot be split this way takes a
+  maintenance window, and its rollback is a restore from the pre-migration
+  snapshot.
 
   ## Stability
 
-  `widget` is read by reporting, so its columns are added, never removed or
-  retyped, within a major version. `widget_audit` is private to the API and may
-  change in any release. A column reporting depends on is deprecated in the
-  release notes one release before it goes.
+  `widget` is read by reporting, so within a major version its columns MAY be
+  added and MUST NOT be removed or retyped. `widget_audit` is private to the
+  API and MAY change in any release. A column reporting depends on MUST be
+  deprecated in the release notes one release before it goes.
 ````
 
 <!-- sokf:links -->

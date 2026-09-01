@@ -88,6 +88,7 @@ sections:
     level: 2
     required: true
     content: prose
+    content-pattern: '\b(MUST|SHALL|SHOULD|MAY|REQUIRED|RECOMMENDED|OPTIONAL)\b'
     description: >
       What a reader does with an unknown key, a missing optional, a version
       field it does not recognise, and a file a newer release wrote. The rule
@@ -96,6 +97,7 @@ sections:
     level: 2
     required: true
     content: prose
+    content-pattern: '\b(MUST|SHALL|SHOULD|MAY|REQUIRED|RECOMMENDED|OPTIONAL)\b'
     description: >
       Which keys are promised, how the format is versioned, and how a caller
       is migrated when it changes.
@@ -135,17 +137,17 @@ example: |
 
   ## Compatibility
 
-  An unknown key is kept and ignored, so a file written by a newer release
-  still loads. A missing optional takes the default above. A `version` the
-  reader does not understand is a hard error naming the release that added it,
-  because guessing at a format is worse than refusing it.
+  An unknown key MUST be kept and ignored, so a file written by a newer
+  release still loads. A missing optional takes the default above. A `version`
+  the reader does not understand MUST be a hard error naming the release that
+  added it, because guessing at a format is worse than refusing it.
 
   ## Stability
 
-  Keys are added, never removed or retyped, within a major version. A key due
-  for removal warns for one minor release and is ignored in the next major. A
-  format change that old readers cannot ignore comes with a `widget migrate`
-  step and a note in the migration guide.
+  Within a major version keys MAY be added and MUST NOT be removed or
+  retyped. A key due for removal MUST warn for one minor release and is
+  ignored in the next major. A format change that old readers cannot ignore
+  MUST come with a `widget migrate` step and a note in the migration guide.
 ````
 
 <!-- sokf:links -->

@@ -88,6 +88,7 @@ sections:
     level: 2
     required: true
     content: prose
+    content-pattern: '\b(MUST|SHALL|SHOULD|MAY|REQUIRED|RECOMMENDED|OPTIONAL)\b'
     description: >
       What the client presents and on which metadata key, how it is obtained
       and how it expires, and the status returned for a missing or rejected
@@ -105,6 +106,7 @@ sections:
     level: 2
     required: true
     content: prose
+    content-pattern: '\b(MUST|SHALL|SHOULD|MAY|REQUIRED|RECOMMENDED|OPTIONAL)\b'
     description: >
       The wire compatibility rules — field numbers never reused, what may be
       added to a message, what forces a new service version — and the
@@ -154,9 +156,9 @@ example: |
   ## Authentication
 
   A bearer token on the `authorization` metadata key, issued by the tenant's
-  identity provider and valid for one hour. A missing or expired token is
-  `UNAUTHENTICATED`; a token scoped to another tenant is `NOT_FOUND`, so the
-  service never confirms that an unreachable widget exists.
+  identity provider and valid for one hour. A missing or expired token MUST be
+  `UNAUTHENTICATED`; a token scoped to another tenant MUST be `NOT_FOUND`, so
+  the service never confirms that an unreachable widget exists.
 
   ## Errors
 
@@ -170,10 +172,10 @@ example: |
 
   ## Stability
 
-  Field numbers are never reused: a removed field is `reserved`, as `3` is
-  above. Fields are added to a message, never retyped, and a client must ignore
-  fields it does not know. A change that breaks either rule opens
-  `widgets.v2`, and `widgets.v1` then serves for six further months.
+  Field numbers MUST NOT be reused: a removed field is `reserved`, as `3` is
+  above. Fields MAY be added to a message and MUST NOT be retyped, and a
+  client MUST ignore fields it does not know. A change that breaks either rule
+  opens `widgets.v2`, and `widgets.v1` then serves for six further months.
 ````
 
 <!-- sokf:links -->

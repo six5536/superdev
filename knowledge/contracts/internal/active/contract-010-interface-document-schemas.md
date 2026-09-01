@@ -143,8 +143,8 @@ pub fn check_documents(docs: &[Document<'_>], set: &SchemaSet) -> Vec<Finding>;
 
 ## Cross-cutting concerns
 
-- Security: schema `pattern` values compile through the validator's own
-  `re` wrapper; one that does not compile is a schema finding, never a
+- Security: every schema pattern MUST compile through the validator's own
+  `re` wrapper; one that does not compile MUST be a schema finding, never a
   panic or a silently-passing rule.
 - Performance: every check is one pass over the document's lines; the
   schema set parses once per run.

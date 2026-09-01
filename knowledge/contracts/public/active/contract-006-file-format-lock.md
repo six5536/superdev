@@ -53,25 +53,25 @@ every run, so there are no pinned bytes to name.
 
 ## Compatibility
 
-A reader may conclude two things from a hash and nothing more: superdev wrote
+A reader MAY conclude two things from a hash and nothing more: superdev wrote
 that file, and it wrote those bytes. Drift is not decided here — it is found
 by comparing a file against the content the blueprint wants — so a hash that
 no longer matches means the file was edited after superdev wrote it, which is
 what lets an apply say so before overwriting, and back the file up first.
 
 An entry no component claims any more is an orphan. Content still hashing to
-the locked value is superdev's own residue and is removed; content the user
-changed is left where it is and dropped from the lock with a line saying so. A
-legacy `owners` table from an older binary is cleared whole on the first sync
-and never written again.
+the locked value is superdev's own residue and MUST be removed; content the
+user changed MUST be left where it is and dropped from the lock with a line
+saying so. A legacy `owners` table from an older binary MUST be cleared whole
+on the first sync and never written again.
 
-A lock from an older binary loads. Sections it lacks are treated as absent
-rather than as an error, which is what lets an upgrade sync rather than
+A lock from an older binary MUST load. A section it lacks MUST be treated as
+absent rather than as an error, which is what lets an upgrade sync rather than
 demanding a re-init.
 
 ## Stability
 
-Unreleased. The table names and the hash algorithm may change without notice.
-What holds even so: the file is superdev's to write, a hand edit is not
+Unreleased. The table names and the hash algorithm MAY change without notice.
+What holds even so: the file is superdev's to write, a hand edit MUST NOT be
 respected, and no command asks the user to repair one — a lock superdev cannot
-read is rebuilt by the next apply.
+read MUST be rebuilt by the next apply.

@@ -79,6 +79,7 @@ sections:
     level: 2
     required: true
     content: prose
+    content-pattern: '\b(MUST|SHALL|SHOULD|MAY|REQUIRED|RECOMMENDED|OPTIONAL)\b'
     description: >
       What the artifact needs to run: ports it listens on, the user it runs as,
       writable paths, the resource floor below which it fails rather than
@@ -87,6 +88,7 @@ sections:
     level: 2
     required: true
     content: bullet-list
+    item-pattern: '\b(MUST|SHALL|SHOULD|MAY|REQUIRED|RECOMMENDED|OPTIONAL)\b'
     description: >
       How an orchestrator drives it — the readiness and liveness checks and
       what each actually tests, startup ordering, the shutdown signal and the
@@ -95,6 +97,7 @@ sections:
     level: 2
     required: true
     content: prose
+    content-pattern: '\b(MUST|SHALL|SHOULD|MAY|REQUIRED|RECOMMENDED|OPTIONAL)\b'
     description: >
       Which of the above an operator may build automation on, and how a change
       to a port, a path or a health endpoint is announced.
@@ -124,29 +127,31 @@ example: |
 
   One process, listening on `8080` for HTTP and `9090` for metrics. It runs as
   uid 65532 and needs no writable path outside `/tmp`, so the root filesystem
-  can be mounted read-only. It needs 256 MiB of memory and 0.25 CPU to serve;
-  below 128 MiB it fails at startup rather than thrashing. It cannot start
-  without a reachable Postgres — a missing one is a startup error, not a
+  MAY be mounted read-only. It needs 256 MiB of memory and 0.25 CPU to serve;
+  below 128 MiB it MUST fail at startup rather than thrashing. It MUST NOT
+  start without a reachable Postgres — a missing one is a startup error, not a
   degraded mode.
 
   ## Health and lifecycle
 
-  - `GET /healthz` is liveness: the process answers. It touches nothing else,
-    so a slow database never restarts a healthy process.
+  - `GET /healthz` is liveness: the process answers, and the probe MUST touch
+    nothing else, so a slow database never restarts a healthy process.
   - `GET /readyz` is readiness: the database answers a ping and migrations are
-    applied. It fails during a migration, which is what keeps traffic away.
-  - Startup runs migrations before listening, so an orchestrator must allow
+    applied. It MUST fail during a migration, which is what keeps traffic
+    away.
+  - Startup runs migrations before listening, so an orchestrator MUST allow
     sixty seconds before the first readiness probe.
-  - `SIGTERM` stops new connections and drains for thirty seconds; requests in
-    flight finish, and anything still running at the deadline is cut.
+  - `SIGTERM` MUST stop new connections and drain for thirty seconds;
+    requests in flight finish, and anything still running at the deadline is
+    cut.
 
   ## Stability
 
   The ports, the two endpoint paths and the shutdown behaviour are stable
-  within a major version — automation may depend on them. The base image and
-  the internal filesystem layout are not, and may change in any release. A
-  changed port or path is announced one minor release ahead in the release
-  notes.
+  within a major version — automation MAY depend on them. The base image and
+  the internal filesystem layout are not, and MAY change in any release. A
+  changed port or path MUST be announced one minor release ahead in the
+  release notes.
 ````
 
 <!-- sokf:links -->

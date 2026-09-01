@@ -84,6 +84,7 @@ sections:
     level: 2
     required: true
     content: bullet-list
+    content-pattern: '\b(MUST|SHALL|SHOULD|MAY|REQUIRED|RECOMMENDED|OPTIONAL)\b'
     description: >
       Where a value may come from — flag, environment, file, built-in default —
       strongest first, and what happens when two sources disagree. Say whether
@@ -98,6 +99,7 @@ sections:
   - heading: "Secrets"
     level: 2
     content: prose
+    content-pattern: '\b(MUST|SHALL|SHOULD|MAY|REQUIRED|RECOMMENDED|OPTIONAL)\b'
     description: >
       Which settings carry credentials, how they are supplied, and what the
       software promises never to log or echo. Omit where none of the settings
@@ -106,6 +108,7 @@ sections:
     level: 2
     required: true
     content: prose
+    content-pattern: '\b(MUST|SHALL|SHOULD|MAY|REQUIRED|RECOMMENDED|OPTIONAL)\b'
     description: >
       Which names and defaults are promised, how a renamed setting is carried
       through a deprecation, and what a deployer must do at a major version.
@@ -138,10 +141,10 @@ example: |
   - A command-line flag, where the command defines one.
   - The environment.
   - `widget.toml` in the working directory.
-  - The default above. A setting with no default and no value is a startup
-    error naming the setting, never a silent fallback.
+  - The default above. A setting with no default and no value MUST be a
+    startup error naming the setting, never a silent fallback.
 
-  Every value is read once at startup. Changing one takes a restart.
+  Every value MUST be read once at startup; changing one takes a restart.
 
   ## File
 
@@ -157,15 +160,16 @@ example: |
 
   ## Secrets
 
-  `WIDGET_TOKEN` is a credential. It is read from the environment only — never
-  from the file, so it cannot be committed — and it is redacted wherever the
-  configuration is printed, including the startup banner and the error text.
+  `WIDGET_TOKEN` is a credential. The reader MUST take it from the environment
+  only — never from the file, so it cannot be committed — and MUST redact it
+  wherever the configuration is printed, including the startup banner and the
+  error text.
 
   ## Stability
 
-  Names and defaults are stable within a major version. A renamed setting is
-  read under both names for one minor release, with a warning naming the new
-  one, and only the new name survives the next major.
+  Names and defaults MUST stay stable within a major version. A renamed
+  setting MUST be read under both names for one minor release, with a warning
+  naming the new one, and only the new name survives the next major.
 ````
 
 <!-- sokf:links -->

@@ -87,6 +87,7 @@ sections:
     level: 2
     required: true
     content: prose
+    content-pattern: '\b(MUST|SHALL|SHOULD|MAY|REQUIRED|RECOMMENDED|OPTIONAL)\b'
     description: >
       How failures reach the caller — the `errors` array beside partial `data`,
       the extension fields carrying a machine-readable code, and which
@@ -94,6 +95,7 @@ sections:
   - heading: "Limits"
     level: 2
     content: prose
+    content-pattern: '\b(MUST|SHALL|SHOULD|MAY|REQUIRED|RECOMMENDED|OPTIONAL)\b'
     description: >
       Query depth, complexity budget, pagination caps and rate limits, and what
       a caller sees on exceeding one. Omit where the graph imposes none.
@@ -101,6 +103,7 @@ sections:
     level: 2
     required: true
     content: prose
+    content-pattern: '\b(MUST|SHALL|SHOULD|MAY|REQUIRED|RECOMMENDED|OPTIONAL)\b'
     description: >
       What may be added without notice, how a field is deprecated and how long
       it then survives, and the rare change that forces a second endpoint.
@@ -156,21 +159,22 @@ example: |
   entry per failure in `errors`, each carrying `extensions.code` — one of
   `BAD_USER_INPUT`, `UNAUTHENTICATED`, `FORBIDDEN`, `INTERNAL`. Only a
   malformed request body or a rejected token fails at the transport, as 400 or
-  401. A caller must therefore read `errors` even on a 200.
+  401. A caller MUST therefore read `errors` even on a 200.
 
   ## Limits
 
-  Query depth is capped at 10 and complexity at 1000 points, one point per
-  field and 20 per list. `widgets` returns at most 100 per page. Exceeding any
-  of these is `BAD_USER_INPUT` with the budget in the extension, before
-  execution starts.
+  Query depth MUST be capped at 10 and complexity at 1000 points, one point
+  per field and 20 per list. `widgets` MUST return at most 100 per page.
+  Exceeding any of these MUST be `BAD_USER_INPUT` with the budget in the
+  extension, before execution starts.
 
   ## Stability
 
-  Types and fields are added without notice, and a caller must tolerate fields
-  it did not ask for appearing in the schema. A field going away is marked
-  `@deprecated` with a date, stays for at least six months, and is announced in
-  the release notes. Nothing else removes a field, and there is no `/graphql/v2`.
+  Types and fields MAY be added without notice, and a caller MUST tolerate
+  fields it did not ask for appearing in the schema. A field going away MUST be
+  marked `@deprecated` with a date, stays for at least six months, and is
+  announced in the release notes. Nothing else removes a field, and there is no
+  `/graphql/v2`.
 ````
 
 <!-- sokf:links -->
