@@ -42,7 +42,7 @@ fn head(line: &str) -> Option<String> {
         return None;
     }
     let cut = trimmed
-        .find(|c| c == '{' || c == '=' || c == ';')
+        .find(['{', '=', ';'])
         .unwrap_or(trimmed.len());
     let head = flat(&trimmed[..cut]);
     (!head.is_empty()).then_some(head)
