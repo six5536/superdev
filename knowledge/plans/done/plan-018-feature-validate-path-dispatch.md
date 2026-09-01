@@ -3,7 +3,7 @@ type: FeaturePlan
 id: plan-018-feature-validate-path-dispatch
 title: Validate path dispatch — feature plan
 description: Two slices making validate check a named file as what it is — the schema half reaches a named path first, then the grammar half stops misreading documents and parity is proved end to end.
-lifecycle: open
+lifecycle: done
 ---
 
 # Feature plan: Validate path dispatch
@@ -41,7 +41,7 @@ bare-run parity, with the fallback kind only for files nothing claims.
 
 ### Slice 2: The grammar half stops misreading a document
 
-- [ ] Done — ticked by integrate at merge.
+- [x] Done — ticked by integrate at merge.
 - Depends-on: 1.
 - Change: the named-path branch classifies before the grammar sees the
   file — a file dispatched as a document by `type` or glob never takes
