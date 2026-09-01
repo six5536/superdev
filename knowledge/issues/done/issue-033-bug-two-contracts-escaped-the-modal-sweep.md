@@ -3,7 +3,7 @@ type: BugReport
 id: issue-033-bug-two-contracts-escaped-the-modal-sweep
 title: Contracts 002 and 003 carry no RFC 2119 keyword after the sweep
 description: The binding-surface sweep trimmed the CLI and MCP contracts but never gave their promises modal verbs, so I029's criterion 1 fails on both and criterion 5 fails with them — or the standard needs to learn the difference between describing behaviour and stating a requirement.
-lifecycle: open
+lifecycle: done
 links:
   - rel: references
     to: issue-029-bug-contract-design-writes-verbose-prose
@@ -11,6 +11,12 @@ links:
 ---
 
 # Bug: contracts 002 and 003 carry no RFC 2119 keyword after the sweep
+
+## Resolved
+
+Resolved by P019 slice 6: the strict remedy — modal verbs on every
+promise in 002 and 003, criterion 1 kept as written; the standard
+refinement was rejected.
 
 ## Summary
 
@@ -80,4 +86,4 @@ rejected. Delivered as plan-019 slice 6.
 <!-- sokf:links -->
 [sokf:contract-002-cli-superdev]: /knowledge/contracts/public/active/contract-002-cli-superdev.md
 [sokf:contract-003-mcp-sokf]: /knowledge/contracts/public/active/contract-003-mcp-sokf.md
-[sokf:issue-029-bug-contract-design-writes-verbose-prose]: /knowledge/issues/open/issue-029-bug-contract-design-writes-verbose-prose.md
+[sokf:issue-029-bug-contract-design-writes-verbose-prose]: /knowledge/issues/done/issue-029-bug-contract-design-writes-verbose-prose.md

@@ -3,7 +3,7 @@ type: BugReport
 id: issue-029-bug-contract-design-writes-verbose-prose
 title: contract-design writes contracts as verbose prose
 description: Contract documents come out as long prose where a contract needs precision — clear normative statements and constructs that aid them, such as tables, lists and typed shapes.
-lifecycle: open
+lifecycle: done
 links:
   - rel: references
     to: issue-028-bug-contract-design-commits-before-the-go-ahead
@@ -14,6 +14,14 @@ links:
 ---
 
 # Bug: contract-design writes contracts as verbose prose
+
+## Resolved
+
+Fixed by P019: the binding-surface standard (ADR-029) ships inside
+every contract-kind schema through the include block (ADR-027), the
+skill binds writers to it, and all nine active contracts conform —
+the acceptance gap on 002 and 003 (I033) closed by slice 6. Verified
+at acceptance by keyword census and reading.
 
 ## Summary
 
@@ -110,4 +118,4 @@ restructured interaction is ADR-028.
 
 <!-- sokf:links -->
 [sokf:contract-002-cli-superdev]: /knowledge/contracts/public/active/contract-002-cli-superdev.md
-[sokf:issue-028-bug-contract-design-commits-before-the-go-ahead]: /knowledge/issues/open/issue-028-bug-contract-design-commits-before-the-go-ahead.md
+[sokf:issue-028-bug-contract-design-commits-before-the-go-ahead]: /knowledge/issues/done/issue-028-bug-contract-design-commits-before-the-go-ahead.md

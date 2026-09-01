@@ -3,10 +3,18 @@ type: BugReport
 id: issue-028-bug-contract-design-commits-before-the-go-ahead
 title: contract-design commits contract edits before the user has seen them
 description: A /contract-design session writes the contracts and ADRs, commits them, and only then asks whether to continue with /feature-plan, so the review its go-ahead gate promises never happens.
-lifecycle: open
+lifecycle: done
 ---
 
 # Bug: contract-design commits contract edits before the user has seen them
+
+## Resolved
+
+Fixed by P019 slice 3 per ADR-028: the skill orders interview →
+present → approve → commit, rework is re-presented, and withheld
+approval leaves the edits uncommitted. Verified at acceptance on the
+merged head, and the delivering session exercised the full loop live,
+rework cycle included.
 
 ## Summary
 

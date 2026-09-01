@@ -3,7 +3,7 @@ type: FeaturePlan
 id: plan-019-feature-contract-design-review
 title: Contract-design review and the binding-surface standard — feature plan
 description: Slices delivering the include-block mechanism, the contract style standard in the schemas, the skill's explicit go-ahead, and the nine-contract sweep.
-lifecycle: open
+lifecycle: done
 ---
 
 # Feature plan: contract-design review and the binding-surface standard
@@ -119,7 +119,7 @@ issue and criterion they cover ("I029 c1").
 
 ### Slice 6: Modal verbs for the CLI and MCP contracts
 
-- [ ] Done — ticked by integrate at merge.
+- [x] Done — ticked by integrate at merge.
 - Depends-on: 5.
 - Change: contracts 002 and 003 gain RFC 2119 modal verbs on every
   promise, per the strict remedy chosen for I033 at acceptance; meaning
@@ -133,5 +133,5 @@ issue and criterion they cover ("I029 c1").
     covers I029 c3.
 
 <!-- sokf:links -->
-[sokf:issue-028-bug-contract-design-commits-before-the-go-ahead]: /knowledge/issues/open/issue-028-bug-contract-design-commits-before-the-go-ahead.md
-[sokf:issue-029-bug-contract-design-writes-verbose-prose]: /knowledge/issues/open/issue-029-bug-contract-design-writes-verbose-prose.md
+[sokf:issue-028-bug-contract-design-commits-before-the-go-ahead]: /knowledge/issues/done/issue-028-bug-contract-design-commits-before-the-go-ahead.md
+[sokf:issue-029-bug-contract-design-writes-verbose-prose]: /knowledge/issues/done/issue-029-bug-contract-design-writes-verbose-prose.md

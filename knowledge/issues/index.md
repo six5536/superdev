@@ -83,9 +83,9 @@
 [sokf:issue-025-bug-a-claim-never-written-gets-no-lock-hash]: /knowledge/issues/open/issue-025-bug-a-claim-never-written-gets-no-lock-hash.md
 [sokf:issue-026-chore-rehearse-the-driver-on-a-real-feature]: /knowledge/issues/open/issue-026-chore-rehearse-the-driver-on-a-real-feature.md
 [sokf:issue-027-feature-request-the-unattended-run-is-undocumented-for-users]: /knowledge/issues/open/issue-027-feature-request-the-unattended-run-is-undocumented-for-users.md
-[sokf:issue-028-bug-contract-design-commits-before-the-go-ahead]: /knowledge/issues/open/issue-028-bug-contract-design-commits-before-the-go-ahead.md
-[sokf:issue-029-bug-contract-design-writes-verbose-prose]: /knowledge/issues/open/issue-029-bug-contract-design-writes-verbose-prose.md
+[sokf:issue-028-bug-contract-design-commits-before-the-go-ahead]: /knowledge/issues/done/issue-028-bug-contract-design-commits-before-the-go-ahead.md
+[sokf:issue-029-bug-contract-design-writes-verbose-prose]: /knowledge/issues/done/issue-029-bug-contract-design-writes-verbose-prose.md
 [sokf:issue-030-feature-request-filing-an-issue-requires-framing-it]: /knowledge/issues/open/issue-030-feature-request-filing-an-issue-requires-framing-it.md
 [sokf:issue-031-bug-validate-follows-symlinks-out-of-the-repo]: /knowledge/issues/open/issue-031-bug-validate-follows-symlinks-out-of-the-repo.md
 [sokf:issue-032-bug-validate-does-unbounded-work-on-adversarial-input]: /knowledge/issues/open/issue-032-bug-validate-does-unbounded-work-on-adversarial-input.md
-[sokf:issue-033-bug-two-contracts-escaped-the-modal-sweep]: /knowledge/issues/open/issue-033-bug-two-contracts-escaped-the-modal-sweep.md
+[sokf:issue-033-bug-two-contracts-escaped-the-modal-sweep]: /knowledge/issues/done/issue-033-bug-two-contracts-escaped-the-modal-sweep.md
