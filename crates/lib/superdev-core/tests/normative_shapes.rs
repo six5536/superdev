@@ -476,3 +476,38 @@ fn no_schema_names_a_framework_or_a_toolchain() {
     }
     assert!(found.is_empty(), "a schema names a toolchain: {found:#?}");
 }
+
+/// Covers I035 criterion 12: a drift test says which kind of red it is. An
+/// element the implementation carries undeclared is a DEFECT; one the
+/// contract promises and the implementation has yet to keep is PENDING
+/// (ADR-038). The wording is the mechanism, so it is pinned here.
+#[test]
+fn every_drift_test_names_the_direction_it_failed_in() {
+    const BINDINGS: [(&str, &[&str]); 4] = [
+        (
+            "crates/app/superdev/src/contract.rs",
+            &["DEFECT —", "PENDING —", "DRIFT —"],
+        ),
+        (
+            "crates/lib/superdev-core/src/sokf/mcp.rs",
+            &["DEFECT —", "PENDING —", "DRIFT —"],
+        ),
+        (
+            "crates/lib/superdev-core/tests/contract_files.rs",
+            &["DEFECT —"],
+        ),
+        (
+            "crates/lib/superdev-core/tests/contract_interfaces.rs",
+            &["PENDING —"],
+        ),
+    ];
+    for (path, wordings) in BINDINGS {
+        let text = std::fs::read_to_string(repo(path)).expect("the drift test is on file");
+        for wording in wordings {
+            assert!(
+                text.contains(wording),
+                "{path} reports a drift without saying it is `{wording}`"
+            );
+        }
+    }
+}

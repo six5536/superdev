@@ -373,7 +373,7 @@ mod tests {
         for (path, want) in &declared {
             assert_eq!(
                 &built[path], want,
-                "`{path}` differs between the binary and its contract"
+                "DRIFT — `{path}` differs between the binary and its contract"
             );
         }
     }

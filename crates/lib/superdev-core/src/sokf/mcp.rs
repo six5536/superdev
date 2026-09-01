@@ -994,7 +994,7 @@ mod tests {
             .collect();
         assert!(
             missing.is_empty(),
-            "the server offers tools the contract does not declare: {missing:?}"
+            "DEFECT — the server offers tools its contract does not declare: {missing:?}"
         );
         let extra: Vec<&String> = declared
             .keys()
@@ -1002,12 +1002,12 @@ mod tests {
             .collect();
         assert!(
             extra.is_empty(),
-            "the contract declares tools the server does not offer: {extra:?}"
+            "PENDING — the contract promises tools the server does not offer yet: {extra:?}"
         );
         for (name, want) in &declared {
             assert_eq!(
                 &served[name], want,
-                "`{name}`'s arguments differ between the server and its contract"
+                "DRIFT — `{name}`'s arguments differ between the server and its contract"
             );
         }
     }

@@ -167,7 +167,7 @@ Request:
 
 ### Slice 9: A drift test says which kind of red it is
 
-- [ ] Done — ticked by integrate at merge.
+- [x] Done — ticked by integrate at merge.
 - Depends-on: 2, 3, 5, 6.
 - Change: every drift test reports its two directions apart per ADR-038 —
   an element the contract declares and the implementation lacks is named
