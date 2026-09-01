@@ -35,7 +35,7 @@
   },
   "devDependencies": {
     "@ncoderz/awa": "^1.10.3",
-    "@types/node": "^26.1.2"
+    "@types/node": "^26.4.0"
   },
   "dependencies": {}
 }
