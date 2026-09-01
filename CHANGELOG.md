@@ -22,6 +22,16 @@ publish a version it cannot find a heading for.
   and its id token from `file-format` to `text-format`, which
   `superdev validate --fix` then refiles. superdev's own contracts 005, 006
   and 008 moved with it.
+- **A drift failure says which way the difference runs.** An element the
+  implementation carries and its contract does not declare reports as a
+  `DEFECT`; one the contract promises and the implementation has yet to keep
+  reports as `PENDING` (ADR-038). A contract element may carry a `pending`
+  marker naming the slice that will build it: its binding reverses, failing
+  once the implementation has it, so the marker cannot outlive the work it
+  names, and `accept` refuses a contract still carrying one. The feature plan
+  now orders a slice that closes a contract-implementation gap before slices
+  that do not, so a contract's promise does not fail the slices that do not
+  own it.
 - **The MCP contract defines its tools.** `contract-003` carries every tool's
   arguments — name, type, requiredness and meaning — and its result shape in
   a JSON block, where before it named four tools in prose and carried no
