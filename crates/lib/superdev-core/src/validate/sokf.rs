@@ -88,6 +88,19 @@ impl Finding {
     }
 }
 
+/// Whether a report lists its warnings or only counts them.
+///
+/// A run states both counts either way (ADR-040): what is listed changes,
+/// what was found does not. Warnings are what the repository alone cannot
+/// settle, so none of them is actionable for the edit in hand.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Warnings {
+    /// List every warning beside the errors.
+    Listed,
+    /// Count the warnings and list none.
+    Counted,
+}
+
 /// The outcome of one validation run.
 #[derive(Debug, Clone)]
 pub struct Report {
@@ -102,7 +115,21 @@ impl Report {
     /// conformance: one fatal finding is the whole verdict.
     #[must_use]
     pub fn passed(&self) -> bool {
-        !self.findings.iter().any(|f| f.fatal)
+        self.errors() == 0
+    }
+
+    /// How many findings fail the run.
+    #[must_use]
+    pub fn errors(&self) -> usize {
+        self.findings.iter().filter(|f| f.fatal).count()
+    }
+
+    /// How many findings do not fail the run, listed or not. Counted from
+    /// the findings rather than from what was rendered, so suppressing a
+    /// warning cannot lose it.
+    #[must_use]
+    pub fn warnings(&self) -> usize {
+        self.findings.len() - self.errors()
     }
 
     /// The report as JSON.
@@ -129,33 +156,32 @@ impl Report {
         })
     }
 
-    /// The report as CLI text, one finding per line. The caller prints the
-    /// bundle path above it.
+    /// The report as CLI text, one listed finding per line. The caller prints
+    /// the bundle path above it, and decides whether the warnings are listed
+    /// or only counted; the summary line states both counts either way.
     #[must_use]
-    pub fn render_human(&self) -> String {
+    pub fn render_human(&self, warnings: Warnings) -> String {
         let mut lines = vec![format!("  concepts: {}", self.concept_count)];
         if self.findings.is_empty() {
             lines.push("  ✓ no findings".to_string());
         }
-        let mut errors = 0;
         for finding in &self.findings {
+            if !finding.fatal && warnings == Warnings::Counted {
+                continue;
+            }
             let severity = finding.severity();
-            let mark = if severity == "error" {
-                errors += 1;
-                "✗"
-            } else {
-                "!"
-            };
+            let mark = if finding.fatal { "✗" } else { "!" };
             lines.push(format!(
                 "  {mark} [{severity}] {}: {}",
                 finding.path, finding.message
             ));
         }
-        let verdict = if errors == 0 { "PASS" } else { "FAIL" };
-        let warnings = self.findings.len() - errors;
+        let verdict = if self.passed() { "PASS" } else { "FAIL" };
         lines.push(String::new());
         lines.push(format!(
-            "{verdict} ({errors} error(s), {warnings} warning(s))"
+            "{verdict} ({} error(s), {} warning(s))",
+            self.errors(),
+            self.warnings()
         ));
         lines.join("\n") + "\n"
     }
@@ -1196,6 +1222,86 @@ mod tests {
         (load_bundle(dir.path()).unwrap(), dir)
     }
 
+    /// A report of the given findings, built by hand: the rendering rules are
+    /// about severities and counts, which no fixture has to be contorted to
+    /// produce.
+    fn report_of(findings: &[(&str, bool)]) -> Report {
+        Report {
+            findings: findings
+                .iter()
+                .map(|(message, fatal)| Finding {
+                    path: "a.md".to_string(),
+                    message: (*message).to_string(),
+                    fatal: *fatal,
+                })
+                .collect(),
+            concept_count: 1,
+        }
+    }
+
+    /// One error and two warnings, the shape every listing case needs.
+    fn mixed() -> Report {
+        report_of(&[
+            ("broke", true),
+            ("advisory", false),
+            ("also advisory", false),
+        ])
+    }
+
+    #[test]
+    fn a_run_lists_its_errors_counts_its_warnings_and_states_both() {
+        let text = mixed().render_human(Warnings::Counted);
+        assert!(text.contains("[error] a.md: broke"), "{text}");
+        assert!(!text.contains("advisory"), "no warning is listed: {text}");
+        assert!(
+            text.ends_with("FAIL (1 error(s), 2 warning(s))\n"),
+            "both counts stand: {text}"
+        );
+    }
+
+    #[test]
+    fn asking_for_the_warnings_lists_every_finding() {
+        let text = mixed().render_human(Warnings::Listed);
+        assert!(text.contains("[error] a.md: broke"), "{text}");
+        assert!(text.contains("[warning] a.md: advisory"), "{text}");
+        assert!(text.contains("[warning] a.md: also advisory"), "{text}");
+        assert!(
+            text.ends_with("FAIL (1 error(s), 2 warning(s))\n"),
+            "{text}"
+        );
+    }
+
+    /// The count comes from the findings, not from what was rendered: a
+    /// warning nobody listed is the one case where losing it would be silent.
+    #[test]
+    fn a_warning_that_is_not_listed_is_still_counted() {
+        let r = report_of(&[("advisory", false), ("also advisory", false)]);
+        let text = r.render_human(Warnings::Counted);
+        assert!(!text.contains("advisory"), "{text}");
+        assert!(
+            text.ends_with("PASS (0 error(s), 2 warning(s))\n"),
+            "{text}"
+        );
+        assert_eq!((r.errors(), r.warnings()), (0, 2));
+    }
+
+    /// The listing changes what is shown and never what was decided.
+    #[test]
+    fn the_verdict_does_not_move_with_the_listing() {
+        let summary = |text: String| {
+            text.lines()
+                .next_back()
+                .expect("a report ends with its summary")
+                .to_string()
+        };
+        for r in [mixed(), report_of(&[("advisory", false)]), report_of(&[])] {
+            let listed = summary(r.render_human(Warnings::Listed));
+            assert_eq!(listed, summary(r.render_human(Warnings::Counted)));
+            let verdict = if r.passed() { "PASS" } else { "FAIL" };
+            assert!(listed.starts_with(verdict), "{listed}");
+        }
+    }
+
     const MANIFEST_YAML: &str = "sokf: \"0.1\"\nname: t\n";
     const A_MIRRORED: &str = "---\ntype: T\nid: alpha\nlinks:\n  - rel: depends-on\n    to: beta\n---\nSee [beta][sokf:beta].\n\n<!-- sokf:links -->\n[sokf:beta]: /beta.md\n";
     const B: &str = "---\ntype: T\nid: beta\n---\nx\n";
@@ -1321,7 +1427,7 @@ mod tests {
         assert!(r.passed(), "{:?}", r.findings);
         assert!(r.passed());
         assert_eq!(r.concept_count, 2);
-        assert!(r.render_human().contains("no findings"));
+        assert!(r.render_human(Warnings::Listed).contains("no findings"));
         assert_eq!(r.to_json()["passed"], serde_json::json!(true));
     }
 
@@ -1482,7 +1588,7 @@ mod tests {
         );
         assert!(!r.passed());
         assert!(
-            r.render_human()
+            r.render_human(Warnings::Listed)
                 .ends_with("FAIL (32 error(s), 1 warning(s))\n")
         );
         assert_eq!(
