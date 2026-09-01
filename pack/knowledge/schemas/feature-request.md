@@ -89,16 +89,19 @@ sections:
     level: 2
     required: true
     content: numbered-list
+    item-pattern: '^\[(ubiquitous|event|state|conditional|optional|complex)\] |^TBD — '
     description: >
       Numbered EARS sentences, one criterion each, every one opening
       with its pattern tag — [ubiquitous], [event], [state],
       [conditional], [optional] or [complex] — then the sentence in that
-      pattern: "[event] WHEN x THE SYSTEM SHALL y". Each is checkable as
+      pattern: "[event] WHEN x THE SYSTEM SHALL y". The item-pattern
+      binds the opening tag (ADR-031). Each is checkable as
       pass/fail without interpretation; the feature-plan's cases name
       the numbers they cover, and accept walks them on the merged code.
       A criterion not yet settled reads "TBD — <the open question>",
       permitted only while the request's lifecycle is open; framing ends
-      when none remains.
+      when none remains — the pattern admits TBD, and the frame phase
+      is what retires it.
   - heading: "Alternatives considered"
     level: 2
     required: true
