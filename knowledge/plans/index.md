@@ -19,6 +19,7 @@ workflow.
 * [Normative shape enforcement — feature plan][sokf:plan-020-feature-normative-shape-enforcement] - slices delivering the body-pattern vocabulary, the EARS declaration, the contract-kind declarations and the contract sweep.
 * [Contracts define their interfaces — feature plan][sokf:plan-021-feature-contracts-define-their-interface] - slices delivering the definition-block vocabulary, each kind's declared form, the drift tests that bind a contract to its implementation, and the split of the file-format kind.
 * [A decidable finding is an error — feature plan][sokf:plan-022-feature-decidable-findings-are-errors] - slices closing the promised run-state fields, promoting the five findings the repository alone settles, scoping the edit-time hook off the two that span files, and holding the turn open while the knowledge carries an error.
+* [A warning is counted by default and listed on request — feature plan][sokf:plan-023-feature-warnings-are-counted-not-listed] - slices adding the `--warnings` flag the contract promises, carrying both counts into `--json` alongside the findings it lists, and giving the two hooks the same default as the command line.
 
 ## Ad-hoc plans
 
@@ -56,3 +57,4 @@ workflow.
 [sokf:plan-020-feature-normative-shape-enforcement]: /knowledge/plans/done/plan-020-feature-normative-shape-enforcement.md
 [sokf:plan-021-feature-contracts-define-their-interface]: /knowledge/plans/done/plan-021-feature-contracts-define-their-interface.md
 [sokf:plan-022-feature-decidable-findings-are-errors]: /knowledge/plans/done/plan-022-feature-decidable-findings-are-errors.md
+[sokf:plan-023-feature-warnings-are-counted-not-listed]: /knowledge/plans/open/plan-023-feature-warnings-are-counted-not-listed.md
