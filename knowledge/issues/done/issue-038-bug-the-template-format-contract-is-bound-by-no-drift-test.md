@@ -2,8 +2,8 @@
 type: BugReport
 id: issue-038-bug-the-template-format-contract-is-bound-by-no-drift-test
 title: The template format contract binds two enumerable surfaces and no test compares either to the code
-description: I035 criterion 4 demands a drift test for every contract whose interface this repository implements; contract-008 enumerates the five substitution tokens and the shipped template set, and nothing compares either to `templates.rs`.
-lifecycle: open
+description: I035 criterion 4 demands a drift test for every contract whose interface this repository implements; contract-008 enumerates the five substitution tokens and the shipped template set, and nothing compared either to `templates.rs`; bound in both directions by plan-021 slice 12.
+lifecycle: done
 links:
   - rel: references
     to: issue-035-feature-request-a-contract-does-not-define-its-interface
@@ -14,6 +14,17 @@ links:
 ---
 
 # Bug: the template format contract is bound by no drift test
+
+## Resolved
+
+Bound by plan-021 slice 12, in `contract_files.rs`, in both directions on
+both surfaces. The token vocabulary is read out of `templates.rs` as
+source text rather than listed in the test, so a sixth `TOKEN_` constant
+is caught — a list written in the test would only ever agree with itself.
+The shipped set is read from `shipped()` at runtime. Each of the four
+directions was driven by mutation: an undeclared token and an
+undocumented template report `DEFECT`, an unimplemented token and an
+unshipped template report `PENDING`.
 
 ## Summary
 

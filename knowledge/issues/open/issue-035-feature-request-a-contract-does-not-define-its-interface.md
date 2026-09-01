@@ -185,6 +185,6 @@ predate this feature
 [sokf:contract-008-text-format-template]: /knowledge/contracts/public/active/contract-008-text-format-template.md
 [sokf:contract-010-interface-document-schemas]: /knowledge/contracts/internal/active/contract-010-interface-document-schemas.md
 [sokf:issue-034-feature-request-normative-shapes-are-described-but-not-enforced]: /knowledge/issues/open/issue-034-feature-request-normative-shapes-are-described-but-not-enforced.md
-[sokf:issue-038-bug-the-template-format-contract-is-bound-by-no-drift-test]: /knowledge/issues/open/issue-038-bug-the-template-format-contract-is-bound-by-no-drift-test.md
+[sokf:issue-038-bug-the-template-format-contract-is-bound-by-no-drift-test]: /knowledge/issues/done/issue-038-bug-the-template-format-contract-is-bound-by-no-drift-test.md
 [sokf:issue-039-bug-validate-fix-refuses-to-refile-under-a-symlinked-root]: /knowledge/issues/done/issue-039-bug-validate-fix-refuses-to-refile-under-a-symlinked-root.md
 [sokf:issue-040-bug-validate-reports-findings-on-a-windows-checkout-that-linux-does-not]: /knowledge/issues/done/issue-040-bug-validate-reports-findings-on-a-windows-checkout-that-linux-does-not.md

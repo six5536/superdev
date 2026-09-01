@@ -529,7 +529,7 @@ fn every_drift_test_names_the_direction_it_failed_in() {
         ),
         (
             "crates/lib/superdev-core/tests/contract_files.rs",
-            &["DEFECT —"],
+            &["DEFECT —", "PENDING —"],
         ),
         (
             "crates/lib/superdev-core/tests/contract_interfaces.rs",

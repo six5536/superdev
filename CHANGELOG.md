@@ -138,6 +138,13 @@ publish a version it cannot find a heading for.
   the platform's separator, so one report carried two spellings of a path
   and a Windows caller was handed back one they never typed. The error now
   uses the repository-relative, forward-slashed spelling every finding uses.
+- **The template contract is bound to the templates.** `contract-008` names
+  the five substitution tokens and carries one section per shipped template,
+  and both are now compared to the binary in each direction: a token the
+  binary substitutes without declaring it, or a template it ships without
+  describing, reports as a `DEFECT`; one the contract names and the binary
+  does not have reports as `PENDING`. Eight of the nine active contracts were
+  bound already; this was the ninth.
 - **A `..` cannot walk a repair out of the knowledge.** The guard that bounds
   `validate --fix` compared an unresolvable path lexically, and
   `<knowledge>/gone/../../elsewhere` begins with the knowledge root as text

@@ -3,7 +3,7 @@ type: FeaturePlan
 id: plan-021-feature-contracts-define-their-interface
 title: Contracts define their interfaces — feature plan
 description: Slices delivering the definition-block vocabulary, each kind's declared form, the drift tests that bind a contract to its implementation, and the split of the file-format kind.
-lifecycle: open
+lifecycle: done
 links:
   - rel: implements
     to: issue-035-feature-request-a-contract-does-not-define-its-interface
@@ -218,7 +218,7 @@ Request:
 
 ### Slice 12: The template format contract is bound to the templates
 
-- [ ] Not started.
+- [x] Done — ticked by integrate at merge.
 - Depends-on: 5.
 - Change: the token vocabulary and the shipped template set the
   [template format contract][sokf:contract-008-text-format-template]
@@ -242,4 +242,4 @@ Request:
 <!-- sokf:links -->
 [sokf:contract-008-text-format-template]: /knowledge/contracts/public/active/contract-008-text-format-template.md
 [sokf:issue-035-feature-request-a-contract-does-not-define-its-interface]: /knowledge/issues/open/issue-035-feature-request-a-contract-does-not-define-its-interface.md
-[sokf:issue-038-bug-the-template-format-contract-is-bound-by-no-drift-test]: /knowledge/issues/open/issue-038-bug-the-template-format-contract-is-bound-by-no-drift-test.md
+[sokf:issue-038-bug-the-template-format-contract-is-bound-by-no-drift-test]: /knowledge/issues/done/issue-038-bug-the-template-format-contract-is-bound-by-no-drift-test.md

@@ -53,4 +53,4 @@ workflow.
 [sokf:plan-018-feature-validate-path-dispatch]: /knowledge/plans/done/plan-018-feature-validate-path-dispatch.md
 [sokf:plan-019-feature-contract-design-review]: /knowledge/plans/done/plan-019-feature-contract-design-review.md
 [sokf:plan-020-feature-normative-shape-enforcement]: /knowledge/plans/done/plan-020-feature-normative-shape-enforcement.md
-[sokf:plan-021-feature-contracts-define-their-interface]: /knowledge/plans/open/plan-021-feature-contracts-define-their-interface.md
+[sokf:plan-021-feature-contracts-define-their-interface]: /knowledge/plans/done/plan-021-feature-contracts-define-their-interface.md
