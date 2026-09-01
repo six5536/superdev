@@ -19,7 +19,7 @@ Request:
 
 ### Slice 1: The body-pattern vocabulary in the engine
 
-- [ ] Done — ticked by integrate at merge.
+- [x] Done — ticked by integrate at merge.
 - Depends-on: none.
 - Change: `item-pattern` and `content-pattern` land in
   `validate::schema` per ADR-030 — `SectionRule` fields, the item and

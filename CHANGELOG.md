@@ -13,6 +13,13 @@ publish a version it cannot find a heading for.
 
 ### Added
 
+- **A schema can bind the shape of a section's text.** A section rule
+  declares `item-pattern`, which every top-level item of the section's list
+  must match, and `content-pattern`, which the section's whole body must
+  match; both are regexes matched found-anywhere, so a rule binds the ends
+  by writing `^` and `$` (ADR-030). A pattern that does not compile, or an
+  `item-pattern` beside a content kind with no items, is reported on the
+  schema and binds nothing.
 - **A knowledge document can include another's body.** A concept carries a
   `<!-- sokf:include <id> -->` … `<!-- /sokf:include -->` marker pair, and
   `superdev validate --fix` materializes the named concept's body between
