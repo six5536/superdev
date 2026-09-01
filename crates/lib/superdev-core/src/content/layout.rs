@@ -84,6 +84,18 @@ fn classify(path: &str) -> Option<Position> {
         ["knowledge", "schemas", file] if let Some(name) = file.strip_suffix(".md") => {
             Some(position(knowledge, ItemKind::DocSchema, name, &[]))
         }
+        // A fragment ships with the schema set (ADR-027); the slashed name
+        // keeps it one item, materialized under `schemas/fragments/`.
+        ["knowledge", "schemas", "fragments", file]
+            if let Some(name) = file.strip_suffix(".md") =>
+        {
+            Some(position(
+                knowledge,
+                ItemKind::DocSchema,
+                &format!("fragments/{name}"),
+                &[],
+            ))
+        }
         ["skills", name, rest @ ..] if !rest.is_empty() => Some(position(
             Owner::Capability(Capability::Skills),
             ItemKind::Skill,

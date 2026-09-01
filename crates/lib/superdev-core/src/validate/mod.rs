@@ -115,14 +115,16 @@ pub fn validate_repo(
         if let Some(knowledge) = knowledge {
             // The candidates for schema checking: every concept the knowledge
             // holds. Schemas are excluded — they answer to the grammar, not
-            // to each other — and so are indexes, which SPEC §9 governs. The
-            // test is bundle-relative, so it holds wherever the bundle sits.
+            // to each other — and so are indexes, which SPEC §9 governs. A
+            // fragment under `schemas/fragments/` is a document like any
+            // other: the grammar's parent-directory match never claims it.
+            // The test is bundle-relative, so it holds wherever the bundle
+            // sits.
             for concept in &knowledge.concepts {
-                if concept.path.starts_with("schemas/")
-                    || concept.path.contains("/schemas/")
-                    || concept.path.ends_with("/index.md")
-                    || concept.path == "index.md"
-                {
+                let in_schemas = (concept.path.starts_with("schemas/")
+                    || concept.path.contains("/schemas/"))
+                    && !concept.path.contains("schemas/fragments/");
+                if in_schemas || concept.path.ends_with("/index.md") || concept.path == "index.md" {
                     continue;
                 }
                 let text = match read(&bundle.join(&concept.path)) {

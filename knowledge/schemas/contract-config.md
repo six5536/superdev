@@ -20,6 +20,22 @@ takes the files nobody configures anything with, a lock file or an export.
 caller reads them; how a flag, a variable and a file setting resolve against
 each other is defined here, because no one of the three owns the precedence.
 
+<!-- sokf:include contract-style -->
+**Contract style — a contract is a binding surface, not a
+specification** (superdev ADR-029):
+
+- Each normative statement MUST use an RFC 2119 modal verb, one
+  requirement per sentence.
+- An enumerable surface — commands, flags, keys, types, error cases,
+  limits — MUST be defined in the kind's native structured form: a code
+  block, table or list. Prose, doc comments included, describes and
+  MUST NOT define.
+- A contract MUST bind only what callers rely on; behaviour a contract
+  does not list is the code's to decide.
+- A contract MUST link the ADR behind each decision and MUST NOT
+  restate the ADR's reasoning.
+<!-- /sokf:include -->
+
 ````yaml
 description: >
   What a deployer supplies to run the software — every setting with its type
