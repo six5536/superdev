@@ -52,11 +52,22 @@ pub struct RunState {
     /// Pid of the `begin` process. Informational, for diagnosing a
     /// stale state by hand.
     pub pid: u32,
+    /// Turns held open because the knowledge carried an error (ADR-039).
+    /// Hook-owned: `superdev hook run` increments it while it holds and
+    /// resets it once the knowledge is clean. Counted per session and
+    /// independent of `continues`, which bounds a run rather than a
+    /// finding.
+    pub holds: u32,
 }
 
 /// The watchdog cap (ADR-019): at this many continues without an
 /// `advance`, the hook stops continuing the run.
 pub const CONTINUE_CAP: u32 = 10;
+
+/// The hold cap (ADR-039): at this many turns held for the same
+/// unresolved knowledge, the hook reports and lets the turn end, so a
+/// finding the agent cannot settle stalls nothing.
+pub const HOLD_CAP: u32 = 3;
 ```
 
 ## Module boundaries

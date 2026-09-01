@@ -289,11 +289,20 @@ them, so the block above states them once here rather than in each entry.
   `.superdev/cache/`. `begin` MUST name the owning session and `run end`
   when it refuses.
 - **`hook run`** MUST fail open: an unreadable run state is reported and
-  exits `0`, while an unreadable payload is a loud `2`.
+  exits `0`, while an unreadable payload is a loud `2`. It MUST refuse to
+  end the turn while `validate` reports an error, naming the findings on
+  stderr, so a document cannot be left with a link to a file that never
+  arrived (ADR-039). Knowledge it cannot read or check MUST let the turn
+  end, and after `HOLD_CAP` holds in one session it MUST report and let
+  the turn end, so a finding the agent cannot resolve stalls nothing.
 - **`sokf index`** MUST rebuild the index in full, and MUST say so when no
   embedding model loaded and the index is lexical-only.
 - **`hook validate`** MUST exit `0` unless the edited path is under the
-  canonical knowledge or under a tree the grammar governs. It MUST resolve
+  canonical knowledge or under a tree the grammar governs. It MUST NOT
+  block on a finding only the whole tree settles — a broken body link or
+  an `index.md` entry naming a missing file — because it is handed one
+  edited file and cannot see whether the target arrives in the next edit;
+  `hook run` is where those are judged (ADR-039). It MUST resolve
   the repository from `CLAUDE_PROJECT_DIR` when Claude Code sets it, else
   from the working directory, and `hook run` MUST resolve it the same way.
 - **`mcp sokf`** MUST serve the canonical knowledge over stdio; what it

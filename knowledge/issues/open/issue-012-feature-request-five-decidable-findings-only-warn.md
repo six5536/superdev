@@ -7,6 +7,9 @@ lifecycle: open
 links:
   - rel: relates-to
     to: adr-017-aokf-conformance-is-pass-or-fail
+  - rel: references
+    to: adr-039-a-decidable-finding-is-an-error-and-the-turn-is-the-gate
+    note: Settles the open question — one severity, gated at the turn rather than the edit.
 ---
 
 # Feature: five findings the repository alone can decide are only warnings, and go unread
@@ -90,6 +93,12 @@ the repository stays a warning. That keeps the three that earn the tier — the
 portability warning, the non-core `rel`, the soft length limit — and moves the
 five.
 
+- Settled by
+[ADR-039][sokf:adr-039-a-decidable-finding-is-an-error-and-the-turn-is-the-gate]:
+all five are errors and none stays a warning. The two that only the whole
+tree settles are not judged by the edit-time hook; the Stop hook refuses
+to end a turn while any of them stands. The original open question follows.
+
 - Open question: two of the five want thought before they move, and they are the reason this is
 an issue rather than a patch. A broken body link and a missing index target
 are exactly what ordinary work-in-progress produces: the link is written
@@ -110,3 +119,4 @@ of the design.
 
 <!-- sokf:links -->
 [sokf:adr-017-aokf-conformance-is-pass-or-fail]: /knowledge/adrs/active/adr-017-aokf-conformance-is-pass-or-fail.md
+[sokf:adr-039-a-decidable-finding-is-an-error-and-the-turn-is-the-gate]: /knowledge/adrs/active/adr-039-a-decidable-finding-is-an-error-and-the-turn-is-the-gate.md

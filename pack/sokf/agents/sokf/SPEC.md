@@ -319,7 +319,7 @@ lives in the surrounding prose.
 - Relative paths resolve from the containing file, as standard markdown.
 - Absolute URLs work as anywhere else.
 
-Consumers tolerate broken links; the validator warns on them (§10).
+Consumers tolerate broken links; the validator fails on them (§10).
 
 **The generated definition block.** A document that carries an
 id-addressed body link (§8) MUST carry, at its foot, one HTML comment
@@ -393,11 +393,15 @@ Two deterministic layers.
    The generated definition block (§9) defines each cited id, and only
    the cited ids, at their current paths. An include block (§9) names a
    concept, carries its current body, and does not nest.
-6. Warn on: broken `/`-paths and relative links, a `links` `to` that
-   resolves to nothing, a `links` entry with no mirroring body link,
-   `sources` entries the body cites but that lack an `id`, footnote
-   labels with no matching source, `index.md` entries pointing at
-   missing files.
+6. Fail on what the repository alone settles: a body link, a
+   `resource`, a `sources[].resource` or an `index.md` entry naming a
+   file that is not there; a footnote label matching no `sources[].id`;
+   a `links` `to` that resolves to nothing; a `links` entry with no
+   mirroring body link; and `sources` entries the body cites that lack
+   an `id`. The tree is the whole input, so there is nothing else the
+   answer could depend on.
+7. Warn on what it cannot settle alone: a `rel` outside the core set,
+   whose meaning is the consumer's to decide.
 
 **Diff check** — per commit, in CI or a hook:
 
@@ -427,6 +431,10 @@ check (§10). This is independent of whether the SOKF knowledge conforms.
 Consumers must be permissive: never reject knowledge for missing
 optional fields, unknown `type` values, unknown frontmatter keys,
 unknown `rel` values, broken links, or a missing `index.md` or manifest.
+
+This binds a consumer displaying knowledge. It does not bind a validator
+checking a repository, which fails on everything §10 lists as a failure:
+a validator that never fails is not permissive, it is ignored.
 
 ## 12. Versioning
 
