@@ -9,8 +9,8 @@ description: Review of plan-023's three slices on `feature/decidable-findings-ar
 
 ## Verdict
 
-Correct and well covered; three minor findings, none of which changes
-behaviour — one duplicated rule to fold, one assertion that can fail for
+Correct and well covered; four minor findings, none of which changes
+behaviour — one duplicated rule to fold, two assertions that can fail for
 the wrong reason, and one import.
 
 ## Findings
@@ -62,6 +62,25 @@ the wrong reason, and one import.
 - Failure scenario: none — style only.
 - Suggested fix: `use superdev_core::validate::sokf::Warnings;` at the top
   of `run.rs`.
+
+### 4. Three tests rest on this repository still carrying a warning — crates/app/superdev/tests/cli.rs:98
+
+- Severity: minor
+- Category: test-coverage
+- Problem: `a_bare_run_counts_the_warnings_and_the_flag_lists_them` and
+  `validate_json_states_both_counts_and_lists_what_the_text_run_listed` run
+  against `REPO_ROOT` and assert a warning exists, and the parity test
+  asserts the live findings list is not empty. The five warnings this
+  repository carries are skill-frontmatter keys — exactly the kind someone
+  eventually fixes.
+- Failure scenario: the four skills drop the keys outside the Agent Skills
+  spec. The repository now reports zero warnings, and three tests fail
+  while the behaviour they check is still correct.
+- Suggested fix: run the two listing tests against a fixture knowledge that
+  deterministically carries one warning, and drop the non-empty assertion
+  from the parity test, which binds bare-against-named equality and holds
+  on two empty lists.
+- Raised by the Copilot review on PR #11.
 
 ## Not findings (checked and fine)
 
