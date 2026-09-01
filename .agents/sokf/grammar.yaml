@@ -593,6 +593,27 @@ kinds:
             doc: >
               A regex the section's whole body must match, found anywhere, fenced blocks
               excluded. Write ^ and $ to bind the ends, and (?m) to bind a line's.
+          block-language:
+            type: string
+            enum:
+              - yaml
+              - json
+            requires:
+              content: code
+            doc: >
+              The fence tag the section's definition block carries. The validator parses the
+              block in this language and checks the keys declared below; a block in any other
+              language declares none of these keys, and a drift test binds it instead.
+          block-keys:
+            type: list
+            requires:
+              content: code
+            doc: The keys the definition block carries at its top level.
+          block-entry-keys:
+            type: list
+            requires:
+              content: code
+            doc: The keys every top-level entry of the definition block carries.
           description:
             type: string
             required: true
