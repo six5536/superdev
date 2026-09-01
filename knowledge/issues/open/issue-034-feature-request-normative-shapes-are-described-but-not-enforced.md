@@ -119,7 +119,7 @@ carries the raised bar; this issue closes with it, so the mechanism and
 the standard it serves are accepted together.
 
 <!-- sokf:links -->
-[sokf:adr-029-a-contract-is-a-binding-surface-not-a-specification]: /knowledge/adrs/active/adr-029-a-contract-is-a-binding-surface-not-a-specification.md
+[sokf:adr-029-a-contract-is-a-binding-surface-not-a-specification]: /knowledge/adrs/deprecated/adr-029-a-contract-is-a-binding-surface-not-a-specification.md
 [sokf:contract-010-interface-document-schemas]: /knowledge/contracts/internal/active/contract-010-interface-document-schemas.md
 [sokf:issue-011-feature-request-index-shape-is-described-but-not-enforced]: /knowledge/issues/open/issue-011-feature-request-index-shape-is-described-but-not-enforced.md
 [sokf:issue-033-bug-two-contracts-escaped-the-modal-sweep]: /knowledge/issues/done/issue-033-bug-two-contracts-escaped-the-modal-sweep.md

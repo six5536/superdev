@@ -21,6 +21,9 @@ links:
   - rel: references
     to: adr-030-a-section-rule-declares-body-patterns
     note: Fixes the two body-pattern declarations and their found-anywhere semantics.
+  - rel: references
+    to: adr-035-a-schema-declares-its-definition-blocks-contract
+    note: Fixes the three definition-block declarations and what a missing key reports.
 ---
 
 # Interface contract: document schemas
@@ -35,8 +38,9 @@ vocabulary's newest rows are
 [ADR-022][sokf:adr-022-a-frontmatter-key-is-required-by-a-per-key-flag],
 [ADR-023][sokf:adr-023-a-content-kind-binds-by-presence],
 [ADR-024][sokf:adr-024-a-schemas-example-is-checked-in-place-against-its-own-schema],
-[ADR-025][sokf:adr-025-an-examples-links-bind-by-form-and-never-resolve]
-and [ADR-030][sokf:adr-030-a-section-rule-declares-body-patterns].
+[ADR-025][sokf:adr-025-an-examples-links-bind-by-form-and-never-resolve],
+[ADR-030][sokf:adr-030-a-section-rule-declares-body-patterns] and
+[ADR-035][sokf:adr-035-a-schema-declares-its-definition-blocks-contract].
 
 ## Data model & API
 
@@ -67,6 +71,9 @@ sections:
     columns: [<c1>, <c2>]    # a declared table carries exactly these
     item-pattern: '<re>'     # each top-level item of the list kind must match
     content-pattern: '<re>'  # the section's body must match
+    block-language: <tag>    # the fence tag the section's block carries
+    block-keys: [<k1>]       # keys the block carries at its top level
+    block-entry-keys: [<k1>] # keys every top-level entry of the block carries
     description: <guidance>  # prose, unchecked
 
 example: |                   # one conforming document; checked (ADR-024)
@@ -111,10 +118,22 @@ pub fn check_documents(docs: &[Document<'_>], set: &SchemaSet) -> Vec<Finding>;
   is its own: its lines are dropped, and the item above it resumes at the
   first line no deeper than the nested marker. A marker of the other list
   kind opens no item, and a thematic break is not a marker.
+- **The definition block** — `block-language` names the fence tag the
+  section's block must carry; `block-keys` the keys it must carry at
+  its top level; `block-entry-keys` the keys every top-level entry must
+  carry (ADR-035). The validator parses the block in the declared
+  language — YAML and JSON, the two the binary reads — and a missing
+  key is an error naming the file, the section, the entry and the key.
+  A block that does not parse is an error naming the parse failure. A
+  block in a language the binary does not read declares no
+  `block-language`; a drift test binds its completeness instead
+  (ADR-036).
 - **A mis-declared schema is its own finding** — a `content` outside
   the five kinds, a `pattern` that does not compile, an `item-pattern`
-  on a section whose `content` is not a list kind: reported against
-  the schema file, and the unreadable rule binds nothing.
+  on a section whose `content` is not a list kind, a `block-language`
+  the validator cannot parse, or a block declaration on a section whose
+  `content` is not `code`: reported against the schema file, and the
+  unreadable rule binds nothing.
 - **The example is checked in place** — the `example:` block is read as
   a document and run through this same check with the declaring schema
   handed to it, no dispatch; every failure, including an example that
@@ -141,8 +160,8 @@ pub fn check_documents(docs: &[Document<'_>], set: &SchemaSet) -> Vec<Finding>;
 
 - validate: collect documents → dispatch each by `type` or glob →
   sections (presence, order, prohibition, columns, line limit) →
-  content kinds → body patterns → frontmatter contract → findings
-  grouped per file, one verdict.
+  content kinds → body patterns → definition blocks → frontmatter
+  contract → findings grouped per file, one verdict.
 - example check: parse each schema's `example:` block as a document →
   run the document check with the declaring schema → check link form →
   findings land on the schema file, in the same run and verdict.
@@ -167,3 +186,4 @@ pub fn check_documents(docs: &[Document<'_>], set: &SchemaSet) -> Vec<Finding>;
 [sokf:adr-024-a-schemas-example-is-checked-in-place-against-its-own-schema]: /knowledge/adrs/active/adr-024-a-schemas-example-is-checked-in-place-against-its-own-schema.md
 [sokf:adr-025-an-examples-links-bind-by-form-and-never-resolve]: /knowledge/adrs/active/adr-025-an-examples-links-bind-by-form-and-never-resolve.md
 [sokf:adr-030-a-section-rule-declares-body-patterns]: /knowledge/adrs/active/adr-030-a-section-rule-declares-body-patterns.md
+[sokf:adr-035-a-schema-declares-its-definition-blocks-contract]: /knowledge/adrs/active/adr-035-a-schema-declares-its-definition-blocks-contract.md

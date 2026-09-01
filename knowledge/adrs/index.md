@@ -33,6 +33,11 @@
 * [A Section Rule Declares Body Patterns][sokf:adr-030-a-section-rule-declares-body-patterns] - a section rule may declare item-pattern, checked against each top-level item of its declared list kind, and content-pattern, checked against the section's whole body — regexes matched found-anywhere with explicit anchors, and a mis-declaration is a finding on the schema.
 * [EARS Criteria Are Checked by an Item Pattern][sokf:adr-031-ears-criteria-are-checked-by-item-pattern] - schema-feature-request declares an item-pattern on Acceptance criteria requiring each criterion to open with an EARS tag or TBD, so a malformed criterion fails validate at frame time; the frame gate keeps forbidding TBD at close.
 * [A Contract's Promise Sections Declare That They Bind][sokf:adr-032-contract-promise-sections-declare-their-shape] - the contract-kind schemas declare a content-pattern requiring an RFC 2119 keyword on every promise-bearing section, and an item-pattern on the sections where each entry is a promise — the shape future contracts must take, with the nine on file reconciled to it.
+* [A Contract Defines Its Interface][sokf:adr-033-a-contract-defines-its-interface] - a contract carries the whole of the interface it binds in a machine-readable definition block, so a caller reproduces the interface from the contract alone — superseding the standard that set a contract against being a specification.
+* [Each Kind Defines in the Form Its Ecosystem Reads][sokf:adr-034-each-kind-defines-in-the-form-its-ecosystem-reads] - a contract kind's definition block takes the form generators already consume for that kind — an interface description language where one exists, JSON Schema for data-shaped surfaces, a declared YAML block where neither does, and the host language for a code boundary.
+* [A Schema Declares Its Definition Block's Contract][sokf:adr-035-a-schema-declares-its-definition-blocks-contract] - a section rule declares the fence language its definition block takes and the keys the block and each of its entries must carry, so the validator checks a block's completeness generically instead of carrying one policy per contract kind.
+* [A Contract Is Bound to Its Implementation by a Test the Project Owns][sokf:adr-036-a-contract-is-bound-to-its-implementation-by-a-test] - each contract kind's schema obliges the project to carry a test proving the implemented interface equals the contract's declared surface element for element, and leaves the mechanism to the project — superdev demands a form, never a framework.
+* [The File-Format Kind Splits into Text and Binary][sokf:adr-037-the-file-format-kind-splits-into-text-and-binary] - the file-format contract kind becomes two — a text format, whose shape is a schema or a worked example carrying every key, and a binary format, whose shape is a byte layout — and the three contracts on file are renamed to the kind they belong to.
 
 <!-- sokf:links -->
 [sokf:adr-001-packs-manifest-section]: /knowledge/adrs/active/adr-001-packs-manifest-section.md
@@ -63,7 +68,12 @@
 [sokf:adr-026-a-named-document-is-checked-with-bare-run-parity]: /knowledge/adrs/active/adr-026-a-named-document-is-checked-with-bare-run-parity.md
 [sokf:adr-027-an-include-block-materializes-shared-content-in-place]: /knowledge/adrs/active/adr-027-an-include-block-materializes-shared-content-in-place.md
 [sokf:adr-028-the-contract-design-go-ahead-is-an-explicit-interaction]: /knowledge/adrs/active/adr-028-the-contract-design-go-ahead-is-an-explicit-interaction.md
-[sokf:adr-029-a-contract-is-a-binding-surface-not-a-specification]: /knowledge/adrs/active/adr-029-a-contract-is-a-binding-surface-not-a-specification.md
+[sokf:adr-029-a-contract-is-a-binding-surface-not-a-specification]: /knowledge/adrs/deprecated/adr-029-a-contract-is-a-binding-surface-not-a-specification.md
 [sokf:adr-030-a-section-rule-declares-body-patterns]: /knowledge/adrs/active/adr-030-a-section-rule-declares-body-patterns.md
 [sokf:adr-031-ears-criteria-are-checked-by-item-pattern]: /knowledge/adrs/active/adr-031-ears-criteria-are-checked-by-item-pattern.md
 [sokf:adr-032-contract-promise-sections-declare-their-shape]: /knowledge/adrs/active/adr-032-contract-promise-sections-declare-their-shape.md
+[sokf:adr-033-a-contract-defines-its-interface]: /knowledge/adrs/active/adr-033-a-contract-defines-its-interface.md
+[sokf:adr-034-each-kind-defines-in-the-form-its-ecosystem-reads]: /knowledge/adrs/active/adr-034-each-kind-defines-in-the-form-its-ecosystem-reads.md
+[sokf:adr-035-a-schema-declares-its-definition-blocks-contract]: /knowledge/adrs/active/adr-035-a-schema-declares-its-definition-blocks-contract.md
+[sokf:adr-036-a-contract-is-bound-to-its-implementation-by-a-test]: /knowledge/adrs/active/adr-036-a-contract-is-bound-to-its-implementation-by-a-test.md
+[sokf:adr-037-the-file-format-kind-splits-into-text-and-binary]: /knowledge/adrs/active/adr-037-the-file-format-kind-splits-into-text-and-binary.md

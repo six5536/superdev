@@ -3,7 +3,7 @@ type: Decision
 id: adr-029-a-contract-is-a-binding-surface-not-a-specification
 title: A contract is a binding surface, not a specification
 description: Contract documents state each requirement as one RFC 2119 sentence, define enumerable surfaces in their kind's native structured form, bind only what callers rely on, and link the reasoning to ADRs without restating it — one standard for every contract kind.
-lifecycle: active
+lifecycle: deprecated
 ---
 
 # ADR-029: A contract is a binding surface, not a specification
@@ -52,3 +52,9 @@ contracts are swept to conform.
 - Follow-ups: the standard's text lives in a concept the contract
   schemas include (ADR-027); the contract-design skill enforces it at
   writing time (ADR-028's restructured steps present it for review).
+- Superseded by ADR-033. Judging by reading is what this decision
+  accepted as its cost, and the corpus it produced cannot be built
+  from: the MCP contract carried no tool schema and the CLI contract's
+  usage block drifted from the binary unnoticed. A contract now defines
+  its interface. The four style rules survive in the contract-style
+  fragment as the rules a validator cannot settle.

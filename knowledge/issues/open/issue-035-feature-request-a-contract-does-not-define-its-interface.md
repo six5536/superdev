@@ -8,6 +8,9 @@ links:
   - rel: references
     to: issue-034-feature-request-normative-shapes-are-described-but-not-enforced
     note: Acceptance withheld — the shapes it enforces do not make a contract buildable.
+  - rel: references
+    to: contract-010-interface-document-schemas
+    note: Gains the block-language, block-keys and block-entry-keys rows (ADR-035).
 ---
 
 # Feature: a contract describes its interface instead of defining it
@@ -57,12 +60,22 @@ about how it works inside. Once this is done:
   implemented stays out. No pattern decides this, so it stays a rule the
   contract-style fragment carries and review applies, beside the other
   rules a validator cannot settle.
-- The contract leads. When the code's interface and its contract
-  disagree, a test fails naming the difference, so changing an
-  interface means editing its contract first.
-- The nine contracts on file define their interfaces, the fifteen
-  contract-kind schemas demand it, and the drift between the CLI
-  contract and the binary is gone.
+- Every demand is language-agnostic. superdev governs other people's
+  repositories, whose command line may be built on any framework and
+  whose modules may be in any language, so a schema demands a form and
+  never a toolchain.
+- The contract leads. When the implemented interface and its contract
+  disagree, a test fails naming the difference, so changing an interface
+  means editing its contract first. Each schema states that obligation;
+  this repository carries such a test for every contract whose interface
+  it implements, including one that runs the binary and asserts each
+  declared exit code.
+- The nine contracts on file define their interfaces, the contract-kind
+  schemas demand it, and the drift between the CLI contract and the
+  binary is gone.
+- A file-format contract names which kind of file it binds: the kind
+  splits into a text format, whose shape is a schema or a worked
+  example, and a binary format, whose shape is a byte layout.
 
 ## Acceptance criteria
 
@@ -72,19 +85,28 @@ about how it works inside. Once this is done:
 2. [event] WHEN a contract's structured block omits an element of the
    surface it binds THE SYSTEM SHALL fail validate naming the contract
    and the missing element.
-3. [event] WHEN the implemented interface and its contract disagree THE
-   SYSTEM SHALL fail a test naming the difference.
-4. [ubiquitous] THE SYSTEM SHALL define every command, flag, positional
+3. [ubiquitous] THE SYSTEM SHALL demand a form and never a toolchain, so
+   every declaration holds for a command line, a module or a served
+   interface built on any framework.
+4. [event] WHEN the implemented interface and its contract disagree THE
+   SYSTEM SHALL fail a test naming the difference, for every contract
+   whose interface this repository implements.
+5. [event] WHEN a command's exit code differs from the code its contract
+   declares THE SYSTEM SHALL fail a test that runs the binary.
+6. [ubiquitous] THE SYSTEM SHALL define every command, flag, positional
    argument, exit code and stream of the superdev command line in the
    CLI contract.
-5. [ubiquitous] THE SYSTEM SHALL define every MCP tool's input schema and
+7. [ubiquitous] THE SYSTEM SHALL define every MCP tool's input schema and
    result shape in the MCP contract.
-6. [ubiquitous] THE SYSTEM SHALL define every exported signature and type
+8. [ubiquitous] THE SYSTEM SHALL define every exported signature and type
    an internal interface contract binds.
-7. [ubiquitous] THE SYSTEM SHALL validate the shipped knowledge and the
-   pack mirror clean with every new demand enforced.
-8. [ubiquitous] THE SYSTEM SHALL record the superseding of ADR-029 and
-   document each new demand in the changelog.
+9. [ubiquitous] THE SYSTEM SHALL govern a text format and a binary format
+   by a schema of its own, each demanding the shape its kind of file
+   has, and refile every contract the split renames.
+10. [ubiquitous] THE SYSTEM SHALL validate the shipped knowledge and the
+    pack mirror clean with every new demand enforced.
+11. [ubiquitous] THE SYSTEM SHALL record the superseding of ADR-029 and
+    document each new demand in the changelog.
 
 ## Alternatives considered
 
@@ -96,20 +118,29 @@ about how it works inside. Once this is done:
   applied twice has now failed twice.
 - Raise the bar for public contracts only — an internal boundary is
   built against by the next module, so the same gap costs the same.
-- Adopt an interface description language per kind (TypeSpec, protobuf,
-  JSON Schema) as the only legal form — right for some kinds, and a
-  file format or a Rust boundary has no such language to adopt.
+- Adopt one interface description language for every kind — TypeSpec
+  reaches the served and data-shaped kinds and has no CLI concept, so a
+  command line would need custom decorators shipped as a JavaScript
+  library, and checking a contract would need that toolchain on the
+  validator's path.
+- Bind the contract to one framework's introspection — the fastest drift
+  test to write here, and superdev governs repositories whose command
+  line is built on anything at all.
 
 ## Scope
 
-- In: the fifteen contract-kind schemas' demands, the validator checks
-  behind them, the drift tests binding each on-file contract to its
-  implementation, the nine contracts rewritten to define their
-  interfaces, the ADR-029 supersession, and the pack mirror.
-- Out: the ten contract kinds' own drift tests, which need a contract on
-  file to bind; generating any block from the code; a contract for an
-  interface superdev does not have.
+- In: every contract-kind schema's demands, the
+  [document-schemas contract][sokf:contract-010-interface-document-schemas],
+  the validator checks behind them, the split of the file-format kind into text and binary, the
+  drift tests binding each on-file contract to its implementation, the
+  nine contracts rewritten to define their interfaces, the ADR-029
+  supersession, and the pack mirror.
+- Out: a drift test for a kind with no contract on file to bind;
+  generating any block from the code; a contract for an interface
+  superdev does not have; teaching superdev to read any interface
+  description language, which stays the project's own business.
 
 <!-- sokf:links -->
-[sokf:adr-029-a-contract-is-a-binding-surface-not-a-specification]: /knowledge/adrs/active/adr-029-a-contract-is-a-binding-surface-not-a-specification.md
+[sokf:adr-029-a-contract-is-a-binding-surface-not-a-specification]: /knowledge/adrs/deprecated/adr-029-a-contract-is-a-binding-surface-not-a-specification.md
+[sokf:contract-010-interface-document-schemas]: /knowledge/contracts/internal/active/contract-010-interface-document-schemas.md
 [sokf:issue-034-feature-request-normative-shapes-are-described-but-not-enforced]: /knowledge/issues/open/issue-034-feature-request-normative-shapes-are-described-but-not-enforced.md
