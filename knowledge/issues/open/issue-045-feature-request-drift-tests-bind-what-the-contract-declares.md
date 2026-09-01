@@ -88,20 +88,19 @@ report.
 
 1. [event] WHEN `superdev validate --json` emits a top-level key that
    `contract-002`'s `json` block does not declare THE SYSTEM SHALL fail a
-   test naming that key and reporting it as a defect.
+   test naming that key and stating that the binary emits it undeclared.
 2. [event] WHEN `contract-002`'s `json` block declares a top-level key
    that `superdev validate --json` does not emit THE SYSTEM SHALL fail a
-   test naming that key and reporting it as an outstanding promise.
+   test naming that key and stating that the contract declares it
+   unemitted.
 3. [ubiquitous] THE SYSTEM SHALL cover the `repaired` key by criteria 1
    and 2, which requires exercising `--fix`.
 4. [event] WHEN a command's flags, arguments or exit map differ between
    the binary and `contract-002` THE SYSTEM SHALL fail naming the
-   differing element and stating whether it is a defect or an
-   outstanding promise.
+   differing element and stating which of the two carries it.
 5. [event] WHEN a tool's arguments differ between the served MCP surface
    and `contract-003` THE SYSTEM SHALL fail naming the differing
-   argument and stating whether it is a defect or an outstanding
-   promise.
+   argument and stating which of the two carries it.
 6. [event] WHEN a drift test reports a difference without stating the
    direction the difference runs in THE SYSTEM SHALL fail the check that
    binds drift-test reporting.
@@ -150,6 +149,20 @@ Framed 2026-09-01 from
 and
 [I044][sokf:issue-044-bug-a-drift-test-names-the-direction-for-a-command-and-not-for-a-flag],
 which record the two defects and the evidence for them.
+
+One question is left open for CONTRACT-DESIGN. The two directions are
+not symmetric today: a contract ahead of its code has the `pending`
+marker ([ADR-038][sokf:adr-038-a-contract-may-promise-what-is-not-built-yet]),
+which declares the gap deliberate and forces its own removal, while code
+ahead of its contract has no marker and is reported as a `DEFECT`. Code
+first is a legitimate order to work in — build the thing, then write
+down what it promises — and the label is a verdict on intent the test
+cannot know. The asymmetry may be right, because a contract merges ahead
+of its code for days while code merges with its contract or not at all;
+what is harder to defend is the wording. The criteria above therefore
+require a failure to state **which side carries the element** and leave
+the vocabulary to the ADR, rather than writing `DEFECT` into the
+acceptance the way I035 criterion 12 did.
 
 Four scope decisions were taken at framing. The JSON binding stops at
 the top-level keys, because reaching inside `findings` needs a contract
