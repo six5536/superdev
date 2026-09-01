@@ -27,7 +27,8 @@ One document per contract, all durable. An interface contract is internal — ke
 * [Event Contract Schema][sokf:schema-contract-events] - one published message or event stream — its transport, payloads, delivery guarantees and stability promise, a public contract.
 * [Data Contract Schema][sokf:schema-contract-data] - the persisted store — its schema, the constraints it holds, how it migrates, and the stability promise, a public contract.
 * [Configuration Contract Schema][sokf:schema-contract-config] - what a deployer must supply to run the software — the settings, where they come from, which source wins, and the stability promise, a public contract.
-* [File Format Contract Schema][sokf:schema-contract-file-format] - one file others read or write — where it lives, its shape, how a reader treats the unexpected, and the stability promise, a public contract.
+* [Binary Format Contract Schema][sokf:schema-contract-binary-format] - one binary file others read or write — its magic number and version, the byte layout of every field, how a reader treats the unexpected, and the stability promise, a public contract.
+* [Text Format Contract Schema][sokf:schema-contract-text-format] - one text file others read or write — where it lives, its shape as a schema or a worked example, how a reader treats the unexpected, and the stability promise, a public contract.
 * [Deployment Contract Schema][sokf:schema-contract-deployment] - what a deployer must provide to run the software — the artifact, the runtime it needs, its health and lifecycle, and the stability promise, a public contract.
 * [Authorisation Contract Schema][sokf:schema-contract-authz] - what a caller may do — the principals, the role and scope vocabulary, the permissions and the boundaries every surface enforces, a public contract.
 * [Telemetry Contract Schema][sokf:schema-contract-telemetry] - the signal operators build on — the metrics, the log shape, the traces, and the stability promise, a public contract.
@@ -99,12 +100,12 @@ One document per contract, all durable. An interface contract is internal — ke
 [sokf:schema-configuration]: /knowledge/schemas/configuration.md
 [sokf:schema-constraints-non-goals]: /knowledge/schemas/constraints-non-goals.md
 [sokf:schema-contract-authz]: /knowledge/schemas/contract-authz.md
+[sokf:schema-contract-binary-format]: /knowledge/schemas/contract-binary-format.md
 [sokf:schema-contract-cli]: /knowledge/schemas/contract-cli.md
 [sokf:schema-contract-config]: /knowledge/schemas/contract-config.md
 [sokf:schema-contract-data]: /knowledge/schemas/contract-data.md
 [sokf:schema-contract-deployment]: /knowledge/schemas/contract-deployment.md
 [sokf:schema-contract-events]: /knowledge/schemas/contract-events.md
-[sokf:schema-contract-file-format]: /knowledge/schemas/contract-file-format.md
 [sokf:schema-contract-graphql]: /knowledge/schemas/contract-graphql.md
 [sokf:schema-contract-interface]: /knowledge/schemas/contract-interface.md
 [sokf:schema-contract-library]: /knowledge/schemas/contract-library.md
@@ -112,6 +113,7 @@ One document per contract, all durable. An interface contract is internal — ke
 [sokf:schema-contract-rest]: /knowledge/schemas/contract-rest.md
 [sokf:schema-contract-rpc]: /knowledge/schemas/contract-rpc.md
 [sokf:schema-contract-telemetry]: /knowledge/schemas/contract-telemetry.md
+[sokf:schema-contract-text-format]: /knowledge/schemas/contract-text-format.md
 [sokf:schema-contract-ui]: /knowledge/schemas/contract-ui.md
 [sokf:schema-definition-of-done]: /knowledge/schemas/definition-of-done.md
 [sokf:schema-dependency-policy]: /knowledge/schemas/dependency-policy.md

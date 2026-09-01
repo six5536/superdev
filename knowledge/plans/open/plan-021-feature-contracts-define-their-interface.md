@@ -85,10 +85,10 @@ Request:
 
 ### Slice 4: The file-format kind splits into text and binary
 
-- [ ] Done — ticked by integrate at merge.
+- [x] Done — ticked by integrate at merge.
 - Depends-on: none.
 - Change: `schema-contract-text-format` and
-  `schema-contract-binary-format` replace `schema-contract-file-format`
+  `schema-contract-binary-format` replace `schema-contract-text-format`
   per ADR-037, each with its own worked example, in both trees;
   contracts 005, 006 and 008 take the new kind token in their ids and
   are refiled, and every link to them is rewritten by id.

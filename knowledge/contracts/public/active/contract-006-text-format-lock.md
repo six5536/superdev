@@ -1,13 +1,13 @@
 ---
-type: FileFormatContract
-id: contract-006-file-format-lock
+type: TextFormatContract
+id: contract-006-text-format-lock
 title: Lock Format Contract
 description: What superdev records of the last apply — the per-capability components, the file hashes, the resolved packs — and what a reader may conclude from it.
 lifecycle: active
 resource: /crates/lib/superdev-core/src/lock.rs
 ---
 
-# File format contract: lock
+# Text format contract: lock
 
 What superdev records of the last apply: the per-capability components,
 the file hashes and the resolved packs, and what a reader may conclude

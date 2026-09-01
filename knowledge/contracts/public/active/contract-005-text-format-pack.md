@@ -1,13 +1,13 @@
 ---
-type: FileFormatContract
-id: contract-005-file-format-pack
+type: TextFormatContract
+id: contract-005-text-format-pack
 title: Pack Format Contract
 description: What a content pack must look like for superdev to read it — pack.toml, the tree that names each item, and what is refused.
 lifecycle: active
 resource: /crates/lib/superdev-core/src/pack
 ---
 
-# File format contract: pack
+# Text format contract: pack
 
 What a content pack must look like for superdev to read it: pack.toml,
 the tree that names each item, and what is refused.

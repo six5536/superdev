@@ -151,7 +151,7 @@ const PROMISE_BODIES: [(&str, &[&str]); 15] = [
     ("data", &["Migration", "Stability"]),
     ("deployment", &["Runtime", "Stability"]),
     ("events", &["Stability"]),
-    ("file-format", &["Compatibility", "Stability"]),
+    ("text-format", &["Compatibility", "Stability"]),
     ("graphql", &["Errors", "Limits", "Stability"]),
     (
         "interface",
@@ -247,7 +247,7 @@ fn every_contract_schema_example_passes_its_own_declarations() {
         .into_iter()
         .filter(|(name, _)| name.starts_with("contract-"))
         .collect();
-    assert_eq!(contracts.len(), 15, "every contract kind was read");
+    assert_eq!(contracts.len(), 16, "every contract kind was read");
     let found = superdev_core::validate::schema::document::check_examples(&contracts);
     assert!(found.is_empty(), "{found:#?}");
 }
@@ -267,4 +267,69 @@ fn an_item_pattern_without_a_list_kind_is_a_schema_finding() {
     )]);
     assert_eq!(found.len(), 1, "{found:#?}");
     assert!(found[0].message.contains("content is not"), "{found:#?}");
+}
+
+/// Covers I035 criterion 9: the file-format kind is retired, and the two
+/// kinds that replace it each govern their own type (ADR-037).
+#[test]
+fn the_format_kind_is_split_and_the_old_one_is_gone() {
+    for root in ["knowledge/schemas", "pack/knowledge/schemas"] {
+        assert!(
+            !repo(&format!("{root}/contract-file-format.md")).exists(),
+            "{root} still ships the retired file-format schema"
+        );
+        for (kind, konst) in [
+            ("text-format", "TextFormatContract"),
+            ("binary-format", "BinaryFormatContract"),
+        ] {
+            let text =
+                std::fs::read_to_string(repo(&format!("{root}/contract-{kind}.md"))).unwrap();
+            assert!(
+                text.contains(&format!("const: {konst}")),
+                "{root}/contract-{kind}.md governs {konst}"
+            );
+        }
+    }
+}
+
+/// Covers I035 criterion 9: no document, index or link names the retired
+/// kind, so the split left nothing dangling.
+#[test]
+fn nothing_names_the_retired_format_kind() {
+    fn walk(dir: &std::path::Path, found: &mut Vec<String>) {
+        let Ok(entries) = std::fs::read_dir(dir) else {
+            return;
+        };
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if path.is_dir() {
+                walk(&path, found);
+            } else if path.extension().is_some_and(|e| e == "md") {
+                let text = std::fs::read_to_string(&path).unwrap_or_default();
+                // The ADR that retired the kind names it, as the record of
+                // what changed; nothing else may.
+                let name = path.file_name().unwrap().to_str().unwrap();
+                if name.starts_with("adr-037") || name.starts_with("code-review-") {
+                    continue;
+                }
+                for needle in [
+                    "schema-contract-file-format",
+                    "-file-format-pack",
+                    "-file-format-lock",
+                    "-file-format-template",
+                ] {
+                    if text.contains(needle) {
+                        found.push(format!("{}: {needle}", path.display()));
+                    }
+                }
+            }
+        }
+    }
+    let mut found = Vec::new();
+    walk(&repo("knowledge"), &mut found);
+    walk(&repo("pack"), &mut found);
+    assert!(
+        found.is_empty(),
+        "the retired kind is still named: {found:#?}"
+    );
 }

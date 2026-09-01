@@ -41,7 +41,7 @@ status: stable
   template version as provenance; the engine never revisits the files —
   updates happen only through the `template-update` skill, as user edits.
   `rust-npm` is the first — see the
-  [template contract][sokf:contract-008-file-format-template].
+  [template contract][sokf:contract-008-text-format-template].
 - **Template adoption** — taking a project template into a repo that was
   never seeded from one: the `template-update` skill's first run there,
   merging the rendered template into the existing shape with the user
@@ -148,4 +148,4 @@ layering is in [architecture][sokf:architecture].
 [sokf:architectural-rules]: /knowledge/architectural-rules.md
 [sokf:architecture]: /knowledge/architecture.md
 [sokf:configuration]: /knowledge/configuration.md
-[sokf:contract-008-file-format-template]: /knowledge/contracts/public/active/contract-008-file-format-template.md
+[sokf:contract-008-text-format-template]: /knowledge/contracts/public/active/contract-008-text-format-template.md

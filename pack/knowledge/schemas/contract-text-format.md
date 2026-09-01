@@ -1,14 +1,14 @@
 ---
 type: Schema
-id: schema-contract-file-format
-title: File Format Contract Schema
-description: One file others read or write — where it lives, its shape, how a reader treats the unexpected, and the stability promise, a public contract.
+id: schema-contract-text-format
+title: Text Format Contract Schema
+description: One text file others read or write — where it lives, its shape as a schema or a worked example, how a reader treats the unexpected, and the stability promise, a public contract.
 ---
 
-# File Format Contract Schema
+# Text Format Contract Schema
 
 Structural rules for one public file-format contract, filed at
-`contract-{nnn}-file-format-{slug}`, a public contract placed in its lifecycle folder by `superdev validate --fix`. A format is a public contract when someone
+`contract-{nnn}-text-format-{slug}`, a public contract placed in its lifecycle folder by `superdev validate --fix`. A format is a public contract when someone
 outside this repository writes the file by hand or reads it with their own
 tools — a manifest, a lock file, an export.
 
@@ -44,12 +44,12 @@ line-limit: 400
 frontmatter:
   type:
     required: true
-    const: FileFormatContract
+    const: TextFormatContract
   id:
     required: true
-    pattern: '^contract-\d{3}-file-format-[a-z0-9-]+$'
+    pattern: '^contract-\d{3}-text-format-[a-z0-9-]+$'
     description: >
-      contract-{nnn}-file-format-{slug}, the slug naming which file format. The
+      contract-{nnn}-text-format-{slug}, the slug naming which file format. The
       number is the next free one across every contract, public and
       internal together and every lifecycle folder — a duplicate is
       an error.
@@ -62,7 +62,7 @@ frontmatter:
 
 sections-ordered: true
 sections:
-  - heading-pattern: '^File format contract: .+$'
+  - heading-pattern: '^Text format contract: .+$'
     level: 1
     required: true
     content: prose
@@ -81,9 +81,13 @@ sections:
     required: true
     content: code
     description: >
-      The format in its own schema language — JSON Schema, a TOML example with
-      every key, a DTD, a grammar. One fenced block, tagged. Prose around it
-      describes; this block defines.
+      The file's shape in its own schema language — JSON Schema, a TOML or
+      YAML example carrying every key, a DTD, a grammar. One fenced block,
+      tagged with that language. Every key a reader may meet appears, with its
+      type and its default, so a writer produces a valid file from this block
+      alone; prose around it describes and never defines. A block the
+      validator reads declares `block-language` here and is checked for
+      completeness; any other block is bound by the contract's drift test.
   - heading: "Compatibility"
     level: 2
     required: true
@@ -104,14 +108,14 @@ sections:
 
 example: |
   ---
-  type: FileFormatContract
-  id: contract-001-file-format-manifest
+  type: TextFormatContract
+  id: contract-001-text-format-manifest
   title: File Format Contract
   description: widget.toml — the hand-edited project manifest.
   lifecycle: active
   ---
 
-  # File format contract: widget.toml
+  # Text format contract: widget.toml
 
   The hand-edited project manifest: where it lives, its keys, and how a
   reader treats the unexpected.

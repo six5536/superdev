@@ -24,7 +24,7 @@ You turn a real project into template assets under `pack/projects/<name>/` — r
 <step name="ENCODE ON-DISK PATHS" task="On disk, strip a leading dot from the first path segment (`gitattributes`, `devcontainer/`) and write a tokenised path segment as `\_slug*`; the FILES table restores both in the target paths" />
 <gate check="A per-file summary — add, change, remove, plus any substitution judgement calls — is presented and confirmed" on-fail="wait for the user's confirmation" />
 <step name="WRITE THE ASSETS">Write the assets. Keep the FILES table in `src/templates/<name>.rs`in asset-path sort order, with the array length in its type. New template? Add the module, its`shipped()`entry in`templates.rs`, and its name to `TEMPLATE_HELP`in`template_select.rs`(a test fails if the help line misses a template).</step>
-<step name="DOCUMENT" task="Document: update the template's section in the `contract-008-file-format-template` contract, read with `sokf_read` (or add one), and `CHANGELOG.md`" />
+<step name="DOCUMENT" task="Document: update the template's section in the `contract-008-text-format-template` contract, read with `sokf_read` (or add one), and `CHANGELOG.md`" />
 <step name="VERIFY TESTS" task="Verify: `cargo nextest run --workspace`— template content, disjointness, and help-line tests all run here" />
 <step name="VERIFY SCRATCH RENDER">Verify with a scratch render:`cargo run --quiet -- template render <name> --name "Widget Forge" --dir <scratch>`— grep it for exemplar leaks,`bash -n` any shell scripts, parse any JSON.</step>
 </process_actions>

@@ -57,6 +57,6 @@ fn every_contract_schema_materializes_the_standard() {
                 "{root}/{name} does not carry the materialized standard"
             );
         }
-        assert_eq!(seen, 15, "{root}: every contract kind carries it");
+        assert_eq!(seen, 16, "{root}: every contract kind carries it");
     }
 }

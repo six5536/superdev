@@ -13,6 +13,15 @@ publish a version it cannot find a heading for.
 
 ### Added
 
+- **The file-format contract kind splits into text and binary.**
+  `schema-contract-text-format` governs a file whose shape is keys and values
+  and `schema-contract-binary-format` one whose shape is a byte layout —
+  offsets, widths, endianness, a magic number and a version a reader checks
+  first (ADR-037). **`schema-contract-file-format` is retired**: a contract
+  of that type must change its frontmatter `type` to `TextFormatContract`
+  and its id token from `file-format` to `text-format`, which
+  `superdev validate --fix` then refiles. superdev's own contracts 005, 006
+  and 008 moved with it.
 - **The MCP contract defines its tools.** `contract-003` carries every tool's
   arguments — name, type, requiredness and meaning — and its result shape in
   a JSON block, where before it named four tools in prose and carried no

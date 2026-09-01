@@ -80,7 +80,7 @@ feature ships — all ten findings applied before merge.
   teach by example.
 - Suggested fix: One requirement per sentence, each modal. Applied.
 
-### 6. "nothing else SHOULD" misused the keyword — `knowledge/contracts/public/active/contract-006-file-format-lock.md:18`
+### 6. "nothing else SHOULD" misused the keyword — `knowledge/contracts/public/active/contract-006-text-format-lock.md:18`
 
 - Severity: minor
 - Category: correctness
