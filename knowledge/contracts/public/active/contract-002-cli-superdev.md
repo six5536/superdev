@@ -140,9 +140,8 @@ defaults `PATH` to `knowledge/`; the hook always reads the same whole set. The
 search index lives in `.superdev/cache/sokf-index/`; `sokf index` and the
 server use it, `validate` never opens it.
 
-- **`validate`** runs both halves and reports once, with findings grouped by
-  file, so a file both have something to say about is reported once and the
-  two cannot reach different verdicts
+- **`validate`** runs both halves and reports once, findings grouped by
+  file, one verdict
   ([P006 D-17][sokf:plan-006-adhoc-rust-format-validator]). The SOKF half
   checks the knowledge against the specification; the schema half checks each
   document against the schema its frontmatter `type` names — sections present,
@@ -158,10 +157,9 @@ server use it, `validate` never opens it.
   refused, with no id or target resolved — and every failure, including an
   example that does not parse as a document, is a finding on the schema
   file. A document whose `type`
-  names no schema is reported, because a type that resolves to nothing reads
-  as governed and is not; a schema declaring a rule the validator cannot read
-  — an unknown content kind, a pattern that does not compile — is reported
-  itself.
+  names no schema is reported; a schema declaring a rule the validator
+  cannot read — an unknown content kind, a pattern that does not compile —
+  is reported itself.
 
   Documents with no frontmatter to dispatch on — `README.md`, `CHANGELOG.md` —
   are named by a schema's `target-files` glob instead. The glob is matched
@@ -229,17 +227,17 @@ server use it, `validate` never opens it.
   cap — otherwise it increments the counter and exits `2` naming the next
   step, which Claude Code feeds back as the instruction to keep going. An
   unreadable payload is a loud exit `2`, like `hook validate`; an unreadable
-  run state is reported and exits `0`, because a Stop hook that fails closed
-  holds every session in the repo open. It resolves the repo the same way
-  `hook validate` does.
+  run state is reported and exits `0`, failing open
+  ([contract-009][sokf:contract-009-interface-run-state]). It resolves the
+  repo the same way `hook validate` does.
 - **`mcp sokf`** starts the MCP server; its contract is
   [contract-003-mcp-sokf][sokf:contract-003-mcp-sokf].
 
 A usage error (unknown flag or subcommand) exits `2` — the npm launcher's
 smoke test relies on that code. `completions` and `man` render into a buffer
-before writing, because `clap_complete` panics rather than returning an error
-when a write fails. Exit codes are in [error-handling][sokf:error-handling]; the
-manifest the verbs read is in [configuration][sokf:configuration].
+before writing, so a failed write is an error and never partial output. Exit
+codes are in [error-handling][sokf:error-handling]; the manifest the verbs
+read is in [configuration][sokf:configuration].
 
 ## Stability
 

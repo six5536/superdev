@@ -16,10 +16,10 @@ and what each one promises.
 
 `superdev mcp sokf` serves one stdio client and exits `0` when that client
 closes stdin. A missing knowledge or an unusable index directory fails at
-startup rather than at every tool call, because a client cannot act on the
-latter. The server exposes tools only — no resources, no prompts. It reads the
-index at `.superdev/cache/sokf-index/` and syncs it lazily on every tool call,
-so there is no watcher and no daemon state to go stale.
+startup rather than at every tool call. The server exposes tools only — no
+resources, no prompts. It reads the index at `.superdev/cache/sokf-index/`
+and syncs it lazily on every tool call; there is no watcher and no daemon
+state.
 
 ## Tools
 
@@ -47,10 +47,9 @@ can read exactly what matched.
 ## Errors
 
 A tool failure is an MCP error payload, never a process exit: an unknown id
-comes back with near-miss candidates, and knowledge that fails validation still
-indexes and serves — agents need search most while fixing one. Reading a file
-the parser choked on quotes the parse error instead of guessing at near
-misses.
+comes back with near-miss candidates, and knowledge that fails validation
+still indexes and serves. Reading a file the parser choked on quotes the
+parse error instead of guessing at near misses.
 
 ## Stability
 

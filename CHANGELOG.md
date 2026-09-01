@@ -105,6 +105,12 @@ publish a version it cannot find a heading for.
 
 ### Changed
 
+- **The contracts read as binding surfaces.** Every contract-kind schema
+  carries the contract style standard — one RFC 2119 sentence per
+  requirement, structured forms for enumerable surfaces, reasoning in
+  the linked ADRs — and the nine active contracts are swept to it, with
+  the pack-layout tables brought current (schemas and fragments ship;
+  the dropped templates kind is gone).
 - **The schemas keep their own rules.** Every schema's worked example now
   satisfies its own frontmatter constraints (26 were stale). The seven
   report schemas — code review, security review, investigation,

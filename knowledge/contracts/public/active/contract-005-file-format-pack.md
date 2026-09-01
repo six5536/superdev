@@ -40,12 +40,13 @@ item is its whole subtree:
 
 ```
 pack.toml
-knowledge/skills/<name>/**       → .claude/skills/<name>/**        owned
-knowledge/concepts/<name>        → knowledge/<name>                scaffold
-knowledge/templates/<name>.md    → knowledge/templates/<name>.md   owned
-skills/<name>/**                 → .claude/skills/<name>/**        owned
-agents/<name>.md                 → .agents/<name>.md               scaffold
-projects/<name>/**               → repo root, tokenised            scaffold
+knowledge/skills/<name>/**             → .claude/skills/<name>/**              owned
+knowledge/concepts/<name>              → knowledge/<name>                      scaffold
+knowledge/schemas/<name>.md            → knowledge/schemas/<name>.md           owned
+knowledge/schemas/fragments/<name>.md  → knowledge/schemas/fragments/<name>.md owned
+skills/<name>/**                       → .claude/skills/<name>/**              owned
+agents/<name>.md                       → .agents/<name>.md                     scaffold
+projects/<name>/**                     → repo root, tokenised                  scaffold
 ```
 
 Owned files are rewritten every sync; scaffolds are write-once and the repo's
@@ -62,13 +63,12 @@ unknown `format` is refused before a single file is read, naming what this
 binary supports: `pack `<name>` declares format <n>; this superdev supports
 <set>`.
 
-A pack resolves whole or not at all. A refused path, an unparseable
-`pack.toml`, an unknown format or a symlink anywhere in the tree fails the
-resolve and leaves the repository untouched — an item silently missing would
-be a failure that surfaces much later, as content that quietly stopped
-existing. Symlinks are decided by git's index for a fetched pack and by the
-filesystem for a path pack, so the same rev resolves alike on Windows without
-`core.symlinks`.
+A pack resolves whole or not at all, and MUST NOT carry a symlink
+anywhere in its tree. A refused path, an unparseable `pack.toml`, an
+unknown format or a symlink fails the resolve and leaves the repository
+untouched. Symlinks are decided by git's index for a fetched pack and by
+the filesystem for a path pack, so the same rev resolves alike on
+Windows without `core.symlinks`.
 
 Packs layer in the order the manifest writes them, and a later item of the
 same `(owner, kind, name)` wins. An author therefore replaces a stock item by
