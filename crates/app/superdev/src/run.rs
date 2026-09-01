@@ -666,6 +666,29 @@ mod tests {
         assert_eq!(read_holds(dir.path(), "s"), 1, "the hold was recorded");
     }
 
+    /// Covers plan-022 slice 4 and I012 criterion 1: a forward reference is
+    /// what holds a turn once the five are errors. This is the case the
+    /// edit-time hook deliberately lets through, so it is the one the turn
+    /// gate has to catch.
+    #[test]
+    fn a_forward_reference_holds_the_turn() {
+        let dir = tempfile::tempdir().unwrap();
+        let k = dir.path().join("knowledge");
+        std::fs::create_dir_all(&k).unwrap();
+        std::fs::write(k.join("manifest.sokf.yaml"), "sokf: \"0.4\"\nname: t\n").unwrap();
+        std::fs::write(
+            k.join("a.md"),
+            "---\ntype: T\nid: a\n---\n\nA [later](notes.txt) file.\n",
+        )
+        .unwrap();
+        assert_eq!(hook_run_on(&stop_payload("s"), dir.path()).unwrap(), 2);
+
+        // The file arrives; the turn may end. It is not a concept, so the
+        // path link stays a path link (SPEC §10 item 5).
+        std::fs::write(k.join("notes.txt"), "here\n").unwrap();
+        assert_eq!(hook_run_on(&stop_payload("s"), dir.path()).unwrap(), 0);
+    }
+
     /// Covers plan-022 slice 1: a clean knowledge ends the turn and forgets
     /// what was held, so the next finding starts its own count.
     #[test]

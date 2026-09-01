@@ -3,7 +3,7 @@ type: FeaturePlan
 id: plan-022-feature-decidable-findings-are-errors
 title: A decidable finding is an error — feature plan
 description: Slices closing the promised run-state fields, promoting the five findings the repository alone settles, scoping the edit-time hook off the two that span files, and holding the turn open while the knowledge carries an error.
-lifecycle: open
+lifecycle: done
 links:
   - rel: implements
     to: issue-012-feature-request-five-decidable-findings-only-warn
@@ -96,7 +96,7 @@ decided by
 
 ### Slice 4: The knowledge and the records settle
 
-- [ ] Not started.
+- [x] Done — ticked by integrate at merge.
 - Depends-on: 2, 3.
 - Change: the canonical knowledge and the pack mirror pass with the five
   enforced, the changelog carries the change, and the documentation the
@@ -115,4 +115,4 @@ decided by
 <!-- sokf:links -->
 [sokf:adr-039-a-decidable-finding-is-an-error-and-the-turn-is-the-gate]: /knowledge/adrs/active/adr-039-a-decidable-finding-is-an-error-and-the-turn-is-the-gate.md
 [sokf:contract-009-interface-run-state]: /knowledge/contracts/internal/active/contract-009-interface-run-state.md
-[sokf:issue-012-feature-request-five-decidable-findings-only-warn]: /knowledge/issues/open/issue-012-feature-request-five-decidable-findings-only-warn.md
+[sokf:issue-012-feature-request-five-decidable-findings-only-warn]: /knowledge/issues/done/issue-012-feature-request-five-decidable-findings-only-warn.md

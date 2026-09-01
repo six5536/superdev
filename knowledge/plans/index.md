@@ -55,4 +55,4 @@ workflow.
 [sokf:plan-019-feature-contract-design-review]: /knowledge/plans/done/plan-019-feature-contract-design-review.md
 [sokf:plan-020-feature-normative-shape-enforcement]: /knowledge/plans/done/plan-020-feature-normative-shape-enforcement.md
 [sokf:plan-021-feature-contracts-define-their-interface]: /knowledge/plans/done/plan-021-feature-contracts-define-their-interface.md
-[sokf:plan-022-feature-decidable-findings-are-errors]: /knowledge/plans/open/plan-022-feature-decidable-findings-are-errors.md
+[sokf:plan-022-feature-decidable-findings-are-errors]: /knowledge/plans/done/plan-022-feature-decidable-findings-are-errors.md

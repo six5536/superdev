@@ -2,8 +2,8 @@
 type: FeatureRequest
 id: issue-012-feature-request-five-decidable-findings-only-warn
 title: Five findings the repository alone can decide are only warnings, and go unread
-description: Broken links, missing resources, missing sources, missing index targets and unjoined footnotes are all decidable from the tree, but SPEC §11 makes them warnings; the canonical knowledge carried 39 of them unactioned until someone happened to look.
-lifecycle: open
+description: Broken links, missing resources, missing sources, missing index targets and unjoined footnotes are all decidable from the tree, but SPEC §11 made them warnings; the canonical knowledge carried 39 of them unactioned until someone happened to look; all five now fail the run, gated at the turn rather than the edit (ADR-039).
+lifecycle: done
 links:
   - rel: relates-to
     to: adr-017-aokf-conformance-is-pass-or-fail
@@ -13,6 +13,18 @@ links:
 ---
 
 # Feature: five findings the repository alone can decide are only warnings, and go unread
+
+## Resolved
+
+Delivered by plan-022 under
+[ADR-039][sokf:adr-039-a-decidable-finding-is-an-error-and-the-turn-is-the-gate].
+All five are errors and none stays a warning. The open question below —
+that two of them are what work in progress looks like — was settled by
+moving the gate rather than the severity: the edit-time hook does not
+judge a broken body link or a missing index target, because it is handed
+one file and cannot see whether the target arrives in the next edit, and
+the Stop hook refuses to end a turn while any error stands. A non-core
+`rel` is now the only warning the document check emits.
 
 ## Summary
 
