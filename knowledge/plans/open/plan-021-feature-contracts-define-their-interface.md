@@ -119,7 +119,7 @@ Request:
 
 ### Slice 6: The interface contracts define their boundaries
 
-- [ ] Done — ticked by integrate at merge.
+- [x] Done — ticked by integrate at merge.
 - Depends-on: 1.
 - Change: `schema-contract-interface` declares its definition block in
   the host language; contracts 007, 009 and 010 are rewritten to carry

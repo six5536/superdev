@@ -76,7 +76,12 @@ sections:
       for endpoints. A contract with no native form — a language-neutral
       HTTP API — is written in TypeSpec. Prose describes; it never
       defines. One fenced code block per contract, tagged with its
-      language (sql, rust, ts, typespec, …).
+      language (sql, rust, ts, typespec, …). Every exported item the
+      boundary binds appears with its full signature, so the next module
+      is written against this block alone; what the block does not name,
+      the contract does not bind. The project binds these blocks to the
+      code — by generating one from the other, or by a test that fails
+      when a declared item is absent (ADR-036).
   - heading: "Module boundaries"
     level: 2
     required: true
