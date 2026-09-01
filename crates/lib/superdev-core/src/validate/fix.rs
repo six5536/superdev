@@ -291,43 +291,49 @@ fn schema_set(bundle: &Bundle) -> Result<SchemaSet> {
     Ok(SchemaSet::load(&files).0)
 }
 
-/// `path` resolved for a containment check, whether or not it exists yet.
+/// `path` resolved for a containment check, whether or not it exists yet, or
+/// `None` when it cannot be resolved — which the callers treat as a refusal.
 ///
-/// `canonicalize` fails on a path that is not there, and every destination of
-/// a refile is exactly that — refiling is what creates it. Falling back to the
-/// raw spelling compares an unresolved path against a resolved root, which
-/// refuses a legitimate move wherever the root is reached through a symlink:
-/// macOS `/var` and `/tmp` both are (I039). So the nearest existing ancestor
-/// is resolved and the rest re-appended. A `..` component yields no
-/// `file_name`, which ends the walk on the raw spelling rather than
-/// re-appending a step out of the resolved base.
-fn resolved(path: &Path) -> PathBuf {
+/// A path that exists resolves outright. Every destination of a refile does
+/// not, because refiling is what creates it, so the nearest existing ancestor
+/// is resolved — settling every symlink in the part that is there, which is
+/// what a bare `starts_with` against a canonical root gets wrong wherever the
+/// root is reached through one: macOS `/var` and `/tmp` both are (I039).
+///
+/// A `..` in the part that does not exist is refused rather than appended.
+/// `canonicalize` cannot resolve it, and a lexical `starts_with` cannot see
+/// through it, so `root/gone/../../elsewhere` would pass a prefix check and
+/// land outside the root once the filesystem resolved it. `file_name` returns
+/// `None` for such a component, which is what ends the walk here — nothing
+/// superdev writes needs one.
+fn resolved(path: &Path) -> Option<PathBuf> {
+    if let Some(exact) = canonical(path) {
+        return Some(exact);
+    }
     let mut tail: Vec<std::ffi::OsString> = Vec::new();
     let mut here = path.to_path_buf();
     let base = loop {
         if let Some(base) = canonical(&here) {
             break base;
         }
-        let Some(name) = here.file_name().map(std::ffi::OsStr::to_owned) else {
-            return path.to_path_buf();
-        };
-        tail.push(name);
+        // `None` for `..`, `.` and a filesystem root: nothing to append safely.
+        tail.push(here.file_name()?.to_owned());
         if !here.pop() {
-            return path.to_path_buf();
+            return None;
         }
     };
     let mut out = base;
     for name in tail.iter().rev() {
         out.push(name);
     }
-    out
+    Some(out)
 }
 
 /// Rename `from` to `to`, creating the state folder, refusing either side
 /// outside `root`.
 fn move_within(root: &Path, from: &Path, to: &Path) -> Result<()> {
     for path in [from, to] {
-        if !resolved(path).starts_with(root) {
+        if !resolved(path).is_some_and(|r| r.starts_with(root)) {
             return Err(Error::Io {
                 path: path.to_path_buf(),
                 source: std::io::Error::other(format!(
@@ -361,7 +367,7 @@ fn read(path: &Path) -> Result<String> {
 /// The bound is checked against the resolved spelling of both sides, so a
 /// symlink out of the knowledge directory is refused rather than followed.
 fn write_within(root: &Path, path: &Path, text: &str) -> Result<()> {
-    if !resolved(path).starts_with(root) {
+    if !resolved(path).is_some_and(|r| r.starts_with(root)) {
         return Err(Error::Io {
             path: path.to_path_buf(),
             source: std::io::Error::other(format!(
@@ -590,6 +596,49 @@ mod tests {
             real.join("knowledge/issues/open/issue-001-bug-a.md")
                 .is_file()
         );
+    }
+
+    /// A `..` after a component that does not exist escapes a lexical prefix
+    /// check: `canonicalize` cannot resolve any of it, and `root/gone/../../x`
+    /// literally begins with `root` while the filesystem lands it outside.
+    /// Both guards refuse it rather than resolving it.
+    #[test]
+    fn a_dotdot_past_a_missing_component_cannot_escape_the_knowledge() {
+        let dir = tempfile::tempdir().unwrap();
+        let root = canonical(&dir.path().join("knowledge")).unwrap_or_else(|| {
+            std::fs::create_dir_all(dir.path().join("knowledge")).unwrap();
+            canonical(&dir.path().join("knowledge")).unwrap()
+        });
+        let inside = root.join("a.md");
+        std::fs::write(&inside, "x\n").unwrap();
+
+        for escape in [
+            "gone/../../escaped.md",
+            "sub/../../escaped.md",
+            "../escaped.md",
+            "gone/../../../escaped.md",
+        ] {
+            let target = root.join(escape);
+            assert!(
+                !resolved(&target).is_some_and(|r| r.starts_with(&root)),
+                "{escape} resolved to something inside the knowledge"
+            );
+            assert!(
+                move_within(&root, &inside, &target)
+                    .is_err_and(|e| e.to_string().contains("refusing to move outside")),
+                "{escape} was not refused by move_within"
+            );
+            assert!(
+                write_within(&root, &target, "y\n")
+                    .is_err_and(|e| e.to_string().contains("refusing to write outside")),
+                "{escape} was not refused by write_within"
+            );
+            assert!(
+                !dir.path().join("escaped.md").exists(),
+                "{escape} wrote outside the knowledge"
+            );
+        }
+        assert!(inside.is_file(), "the source survived every refusal");
     }
 
     /// Covers I039: the guard still refuses a destination outside the

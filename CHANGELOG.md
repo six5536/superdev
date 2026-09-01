@@ -138,6 +138,12 @@ publish a version it cannot find a heading for.
   the platform's separator, so one report carried two spellings of a path
   and a Windows caller was handed back one they never typed. The error now
   uses the repository-relative, forward-slashed spelling every finding uses.
+- **A `..` cannot walk a repair out of the knowledge.** The guard that bounds
+  `validate --fix` compared an unresolvable path lexically, and
+  `<knowledge>/gone/../../elsewhere` begins with the knowledge root as text
+  while the filesystem lands it outside. `canonicalize` resolves none of it,
+  because the components do not exist. Such a path is now refused rather than
+  resolved, in both the move and the write guard.
 - **`validate --fix` refiles under a symlinked root.** The guard that keeps
   a repair inside the knowledge resolved the destination of a move, which
   does not exist until the move creates it, and fell back to comparing an

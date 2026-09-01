@@ -13,9 +13,18 @@ lifecycle: done
 Fixed at the root: a `resolved` helper canonicalises the nearest existing
 ancestor and re-appends the rest, so a path that does not exist yet is
 still compared in canonical form. `move_within` and `write_within` both
-use it, because a new file has the same defect a moved one does. A `..`
-component yields no `file_name`, which ends the walk on the raw spelling
-rather than re-appending a step out of the resolved base.
+use it, because a new file has the same defect a moved one does.
+
+A `..` in the part that does not exist is refused rather than resolved,
+and `resolved` returns `Option` so both callers treat "cannot resolve" as
+"refuse". The first fix ended the walk on the raw spelling instead and
+its comment claimed that was safe; it is not. `canonicalize` resolves
+none of `root/gone/../../elsewhere`, the raw spelling literally begins
+with `root`, so a lexical `starts_with` passes it and the filesystem
+lands the write outside the knowledge. The same hole was in the guard
+this issue replaced, so it is as old as the guard. A review of the pull
+request found it, and a test now drives four escape spellings through
+both guards.
 
 ## Summary
 
