@@ -52,11 +52,22 @@ pub struct RunState {
     /// Pid of the `begin` process. Informational, for diagnosing a
     /// stale state by hand.
     pub pid: u32,
-    /// Turns held open because the knowledge carried an error (ADR-039).
+}
+
+/// What the Stop hook has held open for one session (ADR-039), at
+/// `.superdev/cache/hold.toml`.
+///
+/// Kept apart from the run state because a hold happens whether or not a
+/// run is armed, and the run state's presence means a run is active: a
+/// hook that created one to count holds would make the next
+/// `superdev run begin` refuse.
+pub struct HoldState {
+    /// The session the count belongs to. A payload from another session
+    /// starts the count again.
+    pub session_id: String,
+    /// Turns held open because the knowledge carried an error.
     /// Hook-owned: `superdev hook run` increments it while it holds and
-    /// resets it once the knowledge is clean. Counted per session and
-    /// independent of `continues`, which bounds a run rather than a
-    /// finding.
+    /// clears the file once the knowledge is clean.
     pub holds: u32,
 }
 
@@ -78,6 +89,11 @@ pub const HOLD_CAP: u32 = 3;
 - `superdev hook run` is the one reader that also writes: it increments
   `continues` (and may adopt an empty owner); it MUST NOT change
   anything else or open a plan.
+- The binary owns `hold.toml` the same way. `superdev hook run` is its
+  only writer: it increments `holds` while it holds the turn and removes
+  the file once the knowledge is clean. A hold MUST NOT create, alter or
+  remove `run.toml`, because that file's presence means a run is active
+  (ADR-039).
 - `components/sokf.rs` declares the `hooks.Stop` entry in
   `.claude/settings.json` as a `ManagedItem::JsonEntry` with marker
   `superdev hook run`, beside the PostToolUse entry; it ships with the
