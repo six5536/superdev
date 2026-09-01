@@ -79,7 +79,7 @@ const LIST_KINDS: [&str; 2] = ["bullet-list", "numbered-list"];
 /// The fence languages the validator reads a definition block in — the two
 /// the binary already parses (ADR-035). A block in any other language
 /// declares no `block-language`, and a drift test binds it instead.
-const BLOCK_LANGUAGES: [&str; 2] = ["yaml", "json"];
+pub(crate) const BLOCK_LANGUAGES: [&str; 2] = ["yaml", "json"];
 
 /// The content kinds a section rule may declare — the closed vocabulary of
 /// contract-010. A kind outside this set is reported on the schema and binds
@@ -854,26 +854,33 @@ fn check_definition_block(
     if !BLOCK_LANGUAGES.contains(&language) {
         return; // Likewise: a language the validator cannot parse.
     }
-    let Some((tag, text)) = first_fence(body, fenced) else {
-        push(format!(
-            "section \"{heading}\" carries no fenced block, and {} declares a \
-             {language} definition block",
-            schema.name
-        ));
+    let blocks = fences(body, fenced);
+    let Some(text) = blocks
+        .iter()
+        .find(|(tag, _)| tag == language)
+        .map(|(_, text)| text.clone())
+    else {
+        let seen: Vec<&str> = blocks.iter().map(|(tag, _)| tag.as_str()).collect();
+        push(if blocks.is_empty() {
+            format!(
+                "section \"{heading}\" carries no fenced block, and {} declares a \
+                 {language} definition block",
+                schema.name
+            )
+        } else {
+            format!(
+                "section \"{heading}\" carries no {language} block, and {} declares one \
+                 — its blocks are tagged {seen:?}",
+                schema.name
+            )
+        });
         return;
     };
-    if tag != language {
-        push(format!(
-            "section \"{heading}\" opens its block with `{tag}`, and {} declares {language}",
-            schema.name
-        ));
-        return;
-    }
     let parsed: std::result::Result<serde_yaml_ng::Value, String> = if language == "json" {
         serde_json::from_str(&text).map_err(|e| e.to_string())
     } else {
-        // Every JSON document is YAML, so one parser reads both; the tag is
-        // what the author declared and what a reader sees.
+        // Each language is read by its own parser, so a block is accepted
+        // exactly where the tag it carries says it should be.
         serde_yaml_ng::from_str(&text).map_err(|e| e.to_string())
     };
     let value = match parsed {
@@ -885,6 +892,9 @@ fn check_definition_block(
             return;
         }
     };
+    if rule.block_keys.is_empty() && rule.block_entry_keys.is_empty() {
+        return; // The language was the whole of the declaration.
+    }
     let Some(map) = value.as_mapping() else {
         push(format!(
             "section \"{heading}\" is not a mapping, and {} declares keys for it",
@@ -923,29 +933,48 @@ fn check_definition_block(
     }
 }
 
-/// The first fenced block in a section body, as (tag, contents). The fence
-/// markers are themselves marked fenced, so the opener is the first such line
-/// and the block runs to the next one that closes it.
-fn first_fence(body: &[&str], fenced: &[bool]) -> Option<(String, String)> {
-    let open = body
-        .iter()
-        .zip(fenced)
-        .position(|(_, &in_fence)| in_fence)?;
-    let marker: String = body[open]
-        .trim_start()
-        .chars()
-        .take_while(|&c| c == '`' || c == '~')
-        .collect();
-    let tag = body[open].trim_start()[marker.len()..].trim().to_string();
-    let mut text = Vec::new();
-    for line in &body[open + 1..] {
-        let trimmed = line.trim();
-        if trimmed.starts_with(&marker) && trimmed.chars().all(|c| c == '`' || c == '~') {
-            return Some((tag, text.join("\n")));
+/// Every fenced block in a section body, as (tag, contents). The fence
+/// markers are themselves marked fenced, so an opener is a fenced line whose
+/// predecessor is not, and the block runs to the line that closes it. A
+/// section may carry an illustration beside its definition, so the caller
+/// picks the block whose tag it declared rather than the first one.
+fn fences(body: &[&str], fenced: &[bool]) -> Vec<(String, String)> {
+    let mut out = Vec::new();
+    let mut i = 0;
+    while i < body.len() {
+        if !fenced[i] {
+            i += 1;
+            continue;
         }
-        text.push(*line);
+        let marker: String = body[i]
+            .trim_start()
+            .chars()
+            .take_while(|&c| c == '`' || c == '~')
+            .collect();
+        if marker.is_empty() {
+            i += 1;
+            continue;
+        }
+        let tag = body[i].trim_start()[marker.len()..].trim().to_string();
+        let mut text = Vec::new();
+        let mut j = i + 1;
+        while j < body.len() {
+            let trimmed = body[j].trim();
+            // A closing marker is the opener's character, at least as long,
+            // and nothing else — the reading `fence_map` uses.
+            if trimmed.starts_with(&marker[..1])
+                && trimmed.len() >= marker.len()
+                && trimmed.chars().all(|c| c == marker.as_bytes()[0] as char)
+            {
+                break;
+            }
+            text.push(body[j]);
+            j += 1;
+        }
+        out.push((tag, text.join("\n")));
+        i = j + 1;
     }
-    Some((tag, text.join("\n")))
+    out
 }
 
 /// One top-level item of a section's list, as `item-pattern` reads it.
@@ -2222,7 +2251,7 @@ mod tests {
         let schema = block_schema("    block-language: yaml\n    block-keys: [a]\n");
         for (block, expect) in [
             ("```yaml\na: [unclosed\n```\n", "does not parse as yaml"),
-            ("```text\na: 1\n```\n", "opens its block with `text`"),
+            ("```text\na: 1\n```\n", "carries no yaml block"),
             ("Only prose here.\n", "carries no fenced block"),
         ] {
             let text = block_doc(block);
@@ -2238,6 +2267,42 @@ mod tests {
                 "{expect}: {findings:#?}"
             );
         }
+    }
+
+    /// Covers I035 criterion 2: a section may carry an illustration beside
+    /// its definition, so the block that binds is the one whose tag the rule
+    /// declares — never simply the first.
+    #[test]
+    fn the_declared_block_is_read_and_not_the_first_one() {
+        let schema = block_schema("    block-language: yaml\n    block-keys: [commands]\n");
+        let text = block_doc(
+            "```text\nan illustration, not the definition\n```\n\n\
+             ```yaml\ncommands: {}\n```\n",
+        );
+        let doc = Document {
+            path: "a.md",
+            text: &text,
+            doc_type: Some("T"),
+        };
+        let mut findings = Vec::new();
+        check_one(&doc, &schema, false, &mut findings);
+        assert!(findings.is_empty(), "{findings:#?}");
+    }
+
+    /// Covers I035 criterion 2: `block-language` alone says which language
+    /// the block is written in and demands nothing of its shape.
+    #[test]
+    fn a_language_alone_demands_nothing_of_the_blocks_shape() {
+        let schema = block_schema("    block-language: yaml\n");
+        let text = block_doc("```yaml\n- a sequence, not a mapping\n```\n");
+        let doc = Document {
+            path: "a.md",
+            text: &text,
+            doc_type: Some("T"),
+        };
+        let mut findings = Vec::new();
+        check_one(&doc, &schema, false, &mut findings);
+        assert!(findings.is_empty(), "{findings:#?}");
     }
 
     /// Covers I035 criteria 2 and 3: JSON and YAML are both read, so a kind

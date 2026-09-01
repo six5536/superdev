@@ -15,7 +15,7 @@ fn repo(path: &str) -> PathBuf {
 /// The standard's source states the definition rules and the binding
 /// obligation (ADR-033, ADR-036).
 #[test]
-fn the_fragment_states_the_binding_surface_rules() {
+fn the_fragment_states_the_definition_rules() {
     let text = std::fs::read_to_string(repo("knowledge/schemas/fragments/contract-style.md"))
         .expect("the fragment ships with the schema set");
     for rule in [

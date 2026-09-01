@@ -787,6 +787,37 @@ mod tests {
         assert!(!any.admits(None));
         assert_eq!(any.spell(), "bullet-list or numbered-list");
     }
+
+    /// The languages the grammar admits for a definition block are the ones
+    /// the document check can parse. They live in two files, so a third
+    /// added to one and not the other would accept a block nothing reads.
+    #[test]
+    fn the_grammars_block_languages_are_the_ones_the_validator_reads() {
+        let g: Grammar = serde_yaml_ng::from_str(&live()).expect("the grammar parses");
+        let declared = g
+            .kinds
+            .schema
+            .document
+            .section
+            .keys
+            .get("block-language")
+            .expect("the grammar declares block-language");
+        let mut from_grammar: Vec<String> = declared
+            .r#enum
+            .iter()
+            .filter_map(|v| v.as_str().map(ToString::to_string))
+            .collect();
+        from_grammar.sort();
+        let mut from_code: Vec<String> = crate::validate::schema::document::BLOCK_LANGUAGES
+            .iter()
+            .map(ToString::to_string)
+            .collect();
+        from_code.sort();
+        assert_eq!(
+            from_grammar, from_code,
+            "the grammar admits languages the document check does not read"
+        );
+    }
 }
 
 #[cfg(test)]
