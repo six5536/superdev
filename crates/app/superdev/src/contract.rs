@@ -21,10 +21,33 @@ use clap::CommandFactory;
 /// One command's surface, as the contract declares it and as clap builds it.
 #[derive(Debug, Default, PartialEq, Eq)]
 struct Surface {
-    /// Positional arguments, in order, each as it is written in usage.
-    args: Vec<String>,
-    /// Long flag to its value type: `bool` for a switch, else the value name.
-    flags: BTreeMap<String, String>,
+    /// What the command says it does, as the binary prints it.
+    about: String,
+    /// Every name the command answers to beyond its own.
+    aliases: Vec<String>,
+    /// Positional arguments, in order.
+    args: Vec<Positional>,
+    /// Long flag to what it takes.
+    flags: BTreeMap<String, Flag>,
+}
+
+/// One positional argument: its usage name, whether it must be given, and
+/// whether it takes more than one value.
+#[derive(Debug, Default, PartialEq, Eq)]
+struct Positional {
+    name: String,
+    required: bool,
+    multiple: bool,
+    /// The closed set of values it accepts, when it has one.
+    values: Vec<String>,
+}
+
+/// One flag: its value type — `bool` for a switch, else the value name — and
+/// its short form where it has one.
+#[derive(Debug, Default, Clone, PartialEq, Eq)]
+struct Flag {
+    r#type: String,
+    short: Option<String>,
 }
 
 /// `-h` and `--help` sit on every command and `-V` on the root: the framework
@@ -35,39 +58,89 @@ const FRAMEWORK_FLAGS: [&str; 2] = ["help", "version"];
 /// Every command this binary offers, keyed by the path a user types.
 fn implemented() -> BTreeMap<String, Surface> {
     let mut out = BTreeMap::new();
-    walk(&crate::Cli::command(), "superdev", &mut out);
+    walk(
+        &crate::Cli::command(),
+        "superdev",
+        &BTreeMap::new(),
+        &mut out,
+    );
     out
 }
 
 /// One command and its subcommands, in the shape the contract declares.
-fn walk(command: &clap::Command, path: &str, out: &mut BTreeMap<String, Surface>) {
-    let mut surface = Surface::default();
+///
+/// A global flag is declared on the command that carries it and on every
+/// command it reaches, because a caller may pass it to either.
+fn walk(
+    command: &clap::Command,
+    path: &str,
+    inherited: &BTreeMap<String, Flag>,
+    out: &mut BTreeMap<String, Surface>,
+) {
+    let mut surface = Surface {
+        about: command
+            .get_about()
+            .map(ToString::to_string)
+            .unwrap_or_default(),
+        aliases: command.get_all_aliases().map(ToString::to_string).collect(),
+        ..Surface::default()
+    };
+    surface.flags.clone_from(inherited);
+    let mut globals = inherited.clone();
     for arg in command.get_arguments() {
         if FRAMEWORK_FLAGS.contains(&arg.get_id().as_str()) {
             continue;
         }
+        let values: Vec<String> = arg
+            .get_possible_values()
+            .iter()
+            .map(|v| v.get_name().to_string())
+            .collect();
         if arg.is_positional() {
-            surface.args.push(
-                arg.get_value_names()
+            surface.args.push(Positional {
+                name: arg
+                    .get_value_names()
                     .and_then(|names| names.first().map(ToString::to_string))
                     .unwrap_or_else(|| arg.get_id().to_string()),
-            );
+                required: arg.is_required_set(),
+                multiple: matches!(arg.get_action(), clap::ArgAction::Append)
+                    || arg.get_num_args().is_some_and(|n| n.max_values() > 1),
+                values,
+            });
             continue;
         }
-        let Some(long) = arg.get_long() else { continue };
+        let Some(long) = arg.get_long() else {
+            // A short-only flag is surface too, named by its short form.
+            if let Some(short) = arg.get_short() {
+                surface.flags.insert(
+                    format!("-{short}"),
+                    Flag {
+                        r#type: "bool".to_string(),
+                        short: Some(short.to_string()),
+                    },
+                );
+            }
+            continue;
+        };
         // A switch takes no value, whatever name the framework gives its id.
         let switch = matches!(
             arg.get_action(),
             clap::ArgAction::SetTrue | clap::ArgAction::SetFalse
         );
-        let value = if switch {
-            "bool".to_string()
-        } else {
-            arg.get_value_names()
-                .and_then(|names| names.first().map(ToString::to_string))
-                .unwrap_or_else(|| arg.get_id().to_string())
+        let flag = Flag {
+            r#type: if switch {
+                "bool".to_string()
+            } else {
+                arg.get_value_names()
+                    .and_then(|names| names.first().map(ToString::to_string))
+                    .unwrap_or_else(|| arg.get_id().to_string())
+            },
+            short: arg.get_short().map(|s| s.to_string()),
         };
-        surface.flags.insert(format!("--{long}"), value);
+        if arg.is_global_set() {
+            globals.insert(format!("--{long}"), flag.clone());
+        }
+        surface.flags.insert(format!("--{long}"), flag);
     }
     out.insert(path.to_string(), surface);
     for sub in command.get_subcommands() {
@@ -75,7 +148,7 @@ fn walk(command: &clap::Command, path: &str, out: &mut BTreeMap<String, Surface>
         if sub.get_name() == "help" {
             continue;
         }
-        walk(sub, &format!("{path} {}", sub.get_name()), out);
+        walk(sub, &format!("{path} {}", sub.get_name()), &globals, out);
     }
 }
 
@@ -87,13 +160,43 @@ fn declared() -> BTreeMap<String, Surface> {
         serde_yaml_ng::from_str(&block).expect("the definition block parses as yaml");
     raw.into_iter()
         .map(|(path, entry)| {
+            let values_for = |arg: &str| -> Vec<String> {
+                entry
+                    .get("arg-values")
+                    .and_then(|v| v.get(arg))
+                    .and_then(|v| v.as_sequence())
+                    .map(|items| {
+                        items
+                            .iter()
+                            .filter_map(|v| v.as_str().map(ToString::to_string))
+                            .collect()
+                    })
+                    .unwrap_or_default()
+            };
             let args = entry
                 .get("args")
                 .and_then(|v| v.as_sequence())
                 .map(|items| {
                     items
                         .iter()
-                        .filter_map(|v| v.as_str().map(ToString::to_string))
+                        .filter_map(|v| {
+                            let name = v.as_str()?.to_string();
+                            let values = values_for(&name);
+                            Some(Positional {
+                                required: entry
+                                    .get("arg-required")
+                                    .and_then(|r| r.get(name.as_str()))
+                                    .and_then(serde_yaml_ng::Value::as_bool)
+                                    .unwrap_or(false),
+                                multiple: entry
+                                    .get("arg-multiple")
+                                    .and_then(|r| r.get(name.as_str()))
+                                    .and_then(serde_yaml_ng::Value::as_bool)
+                                    .unwrap_or(false),
+                                name,
+                                values,
+                            })
+                        })
                         .collect()
                 })
                 .unwrap_or_default();
@@ -104,15 +207,92 @@ fn declared() -> BTreeMap<String, Surface> {
                     map.iter()
                         .filter_map(|(k, v)| {
                             let name = k.as_str()?.to_string();
-                            let value = v.get("type").and_then(|t| t.as_str()).unwrap_or("bool");
-                            Some((name, value.to_string()))
+                            Some((
+                                name,
+                                Flag {
+                                    r#type: v
+                                        .get("type")
+                                        .and_then(|t| t.as_str())
+                                        .unwrap_or("bool")
+                                        .to_string(),
+                                    short: v
+                                        .get("short")
+                                        .and_then(|s| s.as_str())
+                                        .map(ToString::to_string),
+                                },
+                            ))
                         })
                         .collect()
                 })
                 .unwrap_or_default();
-            (path, Surface { args, flags })
+            let surface = Surface {
+                about: entry
+                    .get("about")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or_default()
+                    .to_string(),
+                aliases: entry
+                    .get("aliases")
+                    .and_then(|v| v.as_sequence())
+                    .map(|items| {
+                        items
+                            .iter()
+                            .filter_map(|v| v.as_str().map(ToString::to_string))
+                            .collect()
+                    })
+                    .unwrap_or_default(),
+                args,
+                flags,
+            };
+            (path, surface)
         })
         .collect()
+}
+
+/// Every `exit` key an entry declares, so a code can be read as a code.
+fn declared_exit_keys() -> BTreeMap<String, Vec<serde_yaml_ng::Value>> {
+    let text = std::fs::read_to_string(contract_path()).expect("the CLI contract is on file");
+    let block = fenced_block(&text, "yaml").expect("the Commands section carries a yaml block");
+    let raw: BTreeMap<String, serde_yaml_ng::Value> =
+        serde_yaml_ng::from_str(&block).expect("the definition block parses as yaml");
+    raw.into_iter()
+        .map(|(path, entry)| {
+            let keys = entry
+                .get("exit")
+                .and_then(|v| v.as_mapping())
+                .map(|m| m.keys().cloned().collect())
+                .unwrap_or_default();
+            (path, keys)
+        })
+        .collect()
+}
+
+/// Every key each entry's `flags` map gives one flag, so a sentence broken
+/// into keys by a stray comma is caught where it happens.
+fn declared_flag_keys() -> Vec<(String, String, Vec<String>)> {
+    let text = std::fs::read_to_string(contract_path()).expect("the CLI contract is on file");
+    let block = fenced_block(&text, "yaml").expect("the Commands section carries a yaml block");
+    let raw: BTreeMap<String, serde_yaml_ng::Value> =
+        serde_yaml_ng::from_str(&block).expect("the definition block parses as yaml");
+    let mut out = Vec::new();
+    for (path, entry) in raw {
+        let Some(flags) = entry.get("flags").and_then(|v| v.as_mapping()) else {
+            continue;
+        };
+        for (name, spec) in flags {
+            let keys = spec.as_mapping().map_or_else(Vec::new, |m| {
+                m.keys()
+                    .filter_map(|k| k.as_str().map(ToString::to_string))
+                    .collect()
+            });
+            out.push((
+                path.clone(),
+                name.as_str().unwrap_or("(unnamed)").to_string(),
+                keys,
+            ));
+        }
+    }
+    out
 }
 
 /// Where the contract lives, relative to this crate.
@@ -160,30 +340,35 @@ mod tests {
         let built = implemented();
         if std::env::var_os("SUPERDEV_PRINT_CLI").is_some() {
             for (path, surface) in &built {
-                println!("\"{path}\":");
+                println!("{path}:");
+                println!("  about: {}", surface.about);
                 println!("  args: {:?}", surface.args);
-                for (flag, value) in &surface.flags {
-                    println!("    {flag}: {{ type: {value} }}");
+                println!("  aliases: {:?}", surface.aliases);
+                for (flag, spec) in &surface.flags {
+                    println!("    {flag}: {spec:?}");
                 }
             }
         }
         let declared = declared();
 
-        let missing: Vec<&String> = built
+        // The two directions are different things (ADR-038): what the
+        // contract has yet to promise is a defect, what the binary has yet
+        // to build is a promise still outstanding.
+        let undeclared: Vec<&String> = built
             .keys()
             .filter(|k| !declared.contains_key(*k))
             .collect();
         assert!(
-            missing.is_empty(),
-            "the binary offers commands the contract does not declare: {missing:?}"
+            undeclared.is_empty(),
+            "DEFECT — the binary offers commands its contract does not declare: {undeclared:?}"
         );
-        let extra: Vec<&String> = declared
+        let unbuilt: Vec<&String> = declared
             .keys()
             .filter(|k| !built.contains_key(*k))
             .collect();
         assert!(
-            extra.is_empty(),
-            "the contract declares commands the binary does not offer: {extra:?}"
+            unbuilt.is_empty(),
+            "PENDING — the contract promises commands the binary does not offer yet: {unbuilt:?}"
         );
         for (path, want) in &declared {
             assert_eq!(
@@ -191,6 +376,49 @@ mod tests {
                 "`{path}` differs between the binary and its contract"
             );
         }
+    }
+
+    /// Covers I035 criterion 2: every `exit` key is an integer, so a code
+    /// reads as a code. A flow mapping makes every comma a new entry, which
+    /// silently turns half a sentence into an exit code.
+    #[test]
+    fn every_declared_exit_key_is_a_code() {
+        let mut wrong = Vec::new();
+        for (path, keys) in declared_exit_keys() {
+            assert!(!keys.is_empty(), "`{path}` declares no exit codes");
+            for key in keys {
+                if key.as_i64().is_none() {
+                    wrong.push(format!("{path}: {key:?}"));
+                }
+            }
+        }
+        assert!(
+            wrong.is_empty(),
+            "an exit key is not a code — a flow mapping cut a sentence in two:\n{}",
+            wrong.join("\n")
+        );
+    }
+
+    /// Covers I035 criterion 2: a flag is described by `type`, `about` and
+    /// `short` and nothing else, so a comma inside an `about` cannot become
+    /// a key of its own.
+    #[test]
+    fn every_declared_flag_carries_only_its_own_keys() {
+        let allowed = ["type", "about", "short"];
+        let mut wrong = Vec::new();
+        for (path, flag, keys) in declared_flag_keys() {
+            for key in keys {
+                if !allowed.contains(&key.as_str()) {
+                    wrong.push(format!("{path} {flag}: `{key}`"));
+                }
+            }
+        }
+        assert!(
+            wrong.is_empty(),
+            "a flag carries a key that is not one of {allowed:?} — a flow mapping cut a \
+             sentence in two:\n{}",
+            wrong.join("\n")
+        );
     }
 
     /// Covers I035 criterion 6: every command carries the framework's help

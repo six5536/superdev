@@ -21,134 +21,232 @@ contract to what the binary offers.
 
 ```yaml
 superdev:
-  about: Set a repository up for agent-driven development and keep it current.
+  about: superdev — project scaffold
   args: []
   flags: {}
-  exit: { 0: help printed }
+  exit:
+    0: help printed
 superdev init:
-  about: Set this repo up for agent-driven development.
+  about: Set this repo up for agent-driven development
   args: []
   flags:
-    --no-frontend: { type: bool, about: Skip the frontend design workflows. }
-    --no-skills: { type: bool, about: Skip the superdev skill pack. }
-    --no-code-index: { type: bool, about: Skip the code index. }
-    --template: { type: NAME, about: "Project template to seed from, or `none`." }
-    --name: { type: NAME, about: "Project name for substitution; default the directory name." }
-  exit: { 0: the repo is set up, 2: not a git repo, a re-run, an unknown template, or a failed apply }
+    --no-frontend:
+      type: bool
+      about: Skip the frontend design workflows.
+    --no-skills:
+      type: bool
+      about: Skip the superdev skill pack.
+    --no-code-index:
+      type: bool
+      about: Skip the code index.
+    --template:
+      type: NAME
+      about: A shipped project template to seed from, or `none` to decline.
+    --name:
+      type: NAME
+      about: Project name for substitution; the directory name by default.
+  exit:
+    0: the repo is set up
+    2: not a git repo, a re-run, an unknown template, or a failed apply
 superdev status:
-  about: Report drift between the repo and its blueprint.
+  about: Report drift between the repo and its blueprint
   args: []
   flags:
-    --drift: { type: bool, about: Exit on drift alone, ignoring state a checkout never carries. }
-  exit: { 0: nothing to do, 1: drift, a missing component, a planned removal, or a stale pin, 2: an orphaned lock entry it cannot read }
+    --drift:
+      type: bool
+      about: Exit on drift alone, ignoring state a checkout never carries.
+  exit:
+    0: nothing to do
+    1: drift, a missing component, a planned removal, or a stale pin
+    2: an orphaned lock entry it cannot read
 superdev sync:
-  about: Re-apply the blueprint so the repo matches the manifest.
+  about: Re-apply the blueprint so the repo matches the manifest
   args: []
   flags:
-    --dry-run: { type: bool, about: Print the plan without applying it. }
-  exit: { 0: the repo matches the manifest, 2: a registry-locked pin off its default, or a failed apply }
+    --dry-run:
+      type: bool
+      about: Print the plan without applying it.
+  exit:
+    0: the repo matches the manifest
+    2: a registry-locked pin off its default, or a failed apply
 superdev update:
-  about: Bring pins current, then sync.
+  about: Bring pins current, then sync
   args: [TARGET]
+  arg-required:
+    TARGET: false
+  arg-grammar:
+    TARGET: <capability>[@<version>]
   flags:
-    --provider: { type: ID, about: Provider to switch the target capability to. }
-  exit: { 0: the pins are current, 2: an explicit version for a registry-locked capability, an unknown capability or provider, or a pin it could not prove }
+    --provider:
+      type: ID
+      about: Provider to switch the target capability to.
+  exit:
+    0: the pins are current
+    2: an explicit version for a registry-locked capability, an unknown capability or provider, or a pin it could not prove
 superdev validate:
-  about: Check the SOKF knowledge and the files the grammar governs.
+  about: Check the SOKF knowledge and the files the grammar governs
   args: [PATHS]
+  arg-required:
+    PATHS: false
+  arg-multiple:
+    PATHS: true
   flags:
-    --fix: { type: bool, about: Repair links, include blocks and definition blocks before checking. }
-    --json: { type: bool, about: Emit JSON instead of text. }
-    --doc: { type: bool, about: Print the grammar as prose and exit. }
-    --knowledge: { type: DIR, about: "SOKF knowledge directory; default `knowledge`." }
-    --repo-root: { type: DIR, about: "Repository root for `/`-rooted paths; default this repo." }
-  exit: { 0: no errors, 1: errors found, 2: a path it could not read }
+    --fix:
+      type: bool
+      about: Repair links, include blocks and definition blocks before checking.
+    --json:
+      type: bool
+      about: Emit the report as JSON instead of text.
+    --doc:
+      type: bool
+      about: Print the grammar as prose and exit.
+    --knowledge:
+      type: DIR
+      about: SOKF knowledge directory; `knowledge` by default.
+    --repo-root:
+      type: DIR
+      about: Repository root for `/`-rooted paths; this repo by default.
+  json:
+    passed: whether the run found no errors
+    concepts: how many concepts were read
+    files: how many files were checked
+    findings: one entry per finding, each with its file, severity and message
+    knowledge: the knowledge directory the run covered
+    repaired: each file `--fix` rewrote
+  exit:
+    0: no errors
+    1: errors found
+    2: a path it could not read
 superdev template:
-  about: Inspect and render the shipped project templates.
+  about: Inspect and render the shipped project templates
   args: []
   flags: {}
-  exit: { 0: help printed, 2: no subcommand named }
+  exit:
+    0: help printed
 superdev template list:
-  about: List the shipped project templates.
+  about: List the shipped project templates
   args: []
   flags: {}
-  exit: { 0: the templates are listed }
+  exit:
+    0: the templates are listed
 superdev template render:
-  about: Write a template's token-substituted tree into a directory.
+  about: Write a template's token-substituted tree into an empty directory
   args: [TEMPLATE]
+  arg-required:
+    TEMPLATE: true
   flags:
-    --name: { type: NAME, about: Project name for substitution. }
-    --dir: { type: DIR, about: "Directory to write into; created when absent." }
-  exit: { 0: the tree is written, 2: an unknown template, or a directory that is not empty }
+    --name:
+      type: NAME
+      about: Project name for substitution.
+    --dir:
+      type: DIR
+      about: Directory to write into; created when absent.
+  exit:
+    0: the tree is written
+    2: an unknown template, or a directory that is not empty
 superdev sokf:
-  about: SOKF knowledge commands.
+  about: SOKF knowledge commands
   args: []
   flags: {}
-  exit: { 0: help printed, 2: no subcommand named }
+  exit:
+    0: help printed
 superdev sokf index:
-  about: Rebuild the search index from scratch.
+  about: Rebuild the search index from scratch
   args: [PATH]
+  arg-required:
+    PATH: false
   flags: {}
-  exit: { 0: the index is rebuilt, 2: knowledge it could not read }
+  exit:
+    0: the index is rebuilt
+    2: knowledge it could not read
 superdev run:
-  about: Drive the state of an unattended workflow run.
+  about: Drive the state of an unattended workflow run
   args: []
   flags: {}
-  exit: { 0: help printed, 2: no subcommand named }
+  exit:
+    0: help printed
 superdev run begin:
-  about: Arm an unattended run by creating the run state exclusively.
+  about: "Arm an unattended run: create the run state exclusively"
   args: []
   flags:
-    --session: { type: ID, about: The session that owns the run. }
-    --next: { type: TEXT, about: The first step. }
-  exit: { 0: the run is armed, 2: a run already exists }
+    --session:
+      type: ID
+      about: The session that owns the run.
+    --next:
+      type: TEXT
+      about: The first step.
+  exit:
+    0: the run is armed
+    2: a run already exists
 superdev run advance:
-  about: Record a step forward, resetting the watchdog.
+  about: "Record a step forward: rewrite next, reset the watchdog, refresh the owner"
   args: []
   flags:
-    --session: { type: ID, about: The session recording the step. }
-    --next: { type: TEXT, about: The next step. }
-  exit: { 0: the step is recorded, 2: no run, or a session that does not own it }
+    --session:
+      type: ID
+      about: The session recording the step.
+    --next:
+      type: TEXT
+      about: The next step.
+  exit:
+    0: the step is recorded
+    2: no run, or a session that does not own it
 superdev run end:
-  about: End the run by removing its state.
+  about: "End the run: remove the state; harmless when none exists"
   args: []
   flags: {}
-  exit: { 0: no run state remains }
+  exit:
+    0: no run state remains
 superdev hook:
-  about: Agent hook plumbing, reading the hook payload from stdin.
+  about: Agent hook plumbing (reads the hook payload from stdin)
   args: []
   flags: {}
-  exit: { 0: help printed, 2: no subcommand named }
+  exit:
+    0: help printed
 superdev hook validate:
-  about: The Claude Code PostToolUse hook.
+  about: "PostToolUse: validate after an Edit/Write under the SOKF knowledge or a tree the grammar governs"
   args: []
   flags: {}
-  exit: { 0: the edit is let through, 2: findings on stderr, or a payload it cannot read }
+  exit:
+    0: the edited path is outside the governed trees, or the repo still validates
+    2: findings on stderr, or a payload it cannot read
 superdev hook run:
-  about: The Claude Code Stop hook.
+  about: "Stop: continue an active unattended run, or let the turn end"
   args: []
   flags: {}
-  exit: { 0: the turn may end, 2: the next step on stderr, or a payload it cannot read }
+  exit:
+    0: no run, another session's run, no next step, or the watchdog cap reached
+    2: the next step on stderr, or a payload it cannot read
 superdev mcp:
-  about: Serve project subsystems over MCP.
+  about: Serve project subsystems over MCP
   args: []
   flags: {}
-  exit: { 0: help printed, 2: no subcommand named }
+  exit:
+    0: help printed
 superdev mcp sokf:
-  about: Serve the canonical knowledge to agents over MCP on stdio.
+  about: Serve the SOKF knowledge over stdio
   args: []
   flags: {}
-  exit: { 0: the client closed stdin, 2: the server could not start }
+  exit:
+    0: the client closed stdin
+    2: the server could not start
 superdev completions:
-  about: Write a completion script for the given shell to stdout.
+  about: Write a completion script for the given shell to stdout
   args: [SHELL]
+  arg-required:
+    SHELL: true
+  arg-values:
+    SHELL: [bash, elvish, fish, powershell, zsh]
   flags: {}
-  exit: { 0: the script is written, 2: a shell it does not know }
+  exit:
+    0: the script is written
+    2: a shell it does not know
 superdev man:
-  about: Write the man page as roff to stdout. Hidden, for packaging.
+  about: Write the man page (roff) to stdout
   args: []
   flags: {}
-  exit: { 0: the page is written }
+  exit:
+    0: the page is written
 ```
 
 ## Behaviour
@@ -192,6 +290,14 @@ them, so the block above states them once here rather than in each entry.
   when it refuses.
 - **`hook run`** MUST fail open: an unreadable run state is reported and
   exits `0`, while an unreadable payload is a loud `2`.
+- **`sokf index`** MUST rebuild the index in full, and MUST say so when no
+  embedding model loaded and the index is lexical-only.
+- **`hook validate`** MUST exit `0` unless the edited path is under the
+  canonical knowledge or under a tree the grammar governs. It MUST resolve
+  the repository from `CLAUDE_PROJECT_DIR` when Claude Code sets it, else
+  from the working directory, and `hook run` MUST resolve it the same way.
+- **`mcp sokf`** MUST serve the canonical knowledge over stdio; what it
+  serves is [contract-003-mcp-sokf][sokf:contract-003-mcp-sokf]'s to bind.
 - **`completions`** and **`man`** MUST render into a buffer before writing,
   so a failed write is an error and never partial output.
 
@@ -226,3 +332,4 @@ without notice.
 <!-- sokf:links -->
 [sokf:adr-033-a-contract-defines-its-interface]: /knowledge/adrs/active/adr-033-a-contract-defines-its-interface.md
 [sokf:adr-036-a-contract-is-bound-to-its-implementation]: /knowledge/adrs/active/adr-036-a-contract-is-bound-to-its-implementation.md
+[sokf:contract-003-mcp-sokf]: /knowledge/contracts/public/active/contract-003-mcp-sokf.md

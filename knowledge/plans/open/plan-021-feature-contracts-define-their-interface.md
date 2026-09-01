@@ -3,7 +3,7 @@ type: FeaturePlan
 id: plan-021-feature-contracts-define-their-interface
 title: Contracts define their interfaces — feature plan
 description: Slices delivering the definition-block vocabulary, each kind's declared form, the drift tests that bind a contract to its implementation, and the split of the file-format kind.
-lifecycle: done
+lifecycle: open
 links:
   - rel: implements
     to: issue-035-feature-request-a-contract-does-not-define-its-interface

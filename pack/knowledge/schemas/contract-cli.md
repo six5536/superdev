@@ -74,13 +74,20 @@ sections:
     description: >
       The definition of the command line, keyed by the path a user types
       ("widget", "widget build"). One entry per command the binary offers,
-      each carrying `about`, its positional `args` in order, its `flags` as a
-      map of long form to `{type, about}` — `type: bool` for a switch, else
-      the value name — and `exit`, a map of code to what it means for that
-      command. A caller reproduces the command line from this block alone;
-      prose around it describes and never defines. The framework's own help
-      and version flags are stated once under Behaviour rather than repeated
-      in every entry.
+      each carrying `about` as the binary prints it, its positional `args` in
+      order, its `flags` as a map of long form to `{type, about}` — with
+      `short` where one exists, and `type: bool` for a switch, else the value
+      name — and `exit`, a map of code to what it means for that command.
+      Every `exit` key is an integer, so a command's codes are readable as
+      codes. An argument with a closed set of values carries `arg-values`,
+      one entry per argument; an argument with a grammar carries
+      `arg-grammar`; a command emitting structured output carries a key
+      naming that shape. Write the block in block style: a flow mapping makes
+      every comma an entry, so a sentence carrying one is silently cut in
+      two. A caller reproduces the command line from this block alone; prose
+      around it describes and never defines. The framework's own help and
+      version flags are stated once under Behaviour rather than repeated in
+      every entry.
   - heading: "Behaviour"
     level: 2
     required: true
