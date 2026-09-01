@@ -42,5 +42,34 @@ the deferred decisions put in sequence) stand unexecuted.
 - Findings are folded into the skill and this issue is refiled done with
   the outcome.
 
+## Comments
+
+2026-08-31, first rehearsal (I022, plan-017): the driver ran the loop
+end to end. Two slices were built and integrated by subagents on the
+feature branch, the feature-wide review returned five findings, every
+finding was fixed, `run end` released the state, and `main` showed
+nothing from the run. One seam: the slice-2 build subagent ended its
+turn while its background review ran, and nothing wakes a stopped
+subagent — the driver collected the review with a blocking wait and
+resumed the builder with a message. The integrate skill was amended to
+say: wait for a background review with a blocking call; do not end the
+turn while it runs.
+
+2026-09-01, second rehearsal (I019, plan-018): the amendment improved
+the behaviour without closing the seam. The builders held their waits
+with background sleeps rather than blocking calls, background
+completions did wake them, and no permanent deadlock recurred. The
+driver still intervened twice: the review orchestrator stopped three
+finder reports short of done and needed a resume, and the verdict
+needed a relay when the reviewer and the builder each waited on the
+other. Separately, an environmental stall — the forwarded SSH signing
+agent's socket died mid-integrate — blocked the final commits until the
+user returned; the driver backed up the tree, ended the run, and put
+the choice to the user, who finished the commits signed.
+
+Still unexecuted from the definition of done: the deferral path. Both
+runs completed with no question deferred, so the end-of-run queue has
+not been observed carrying content.
+
 <!-- sokf:links -->
 [sokf:issue-024-feature-request-the-workflow-cannot-run-unattended]: /knowledge/issues/done/issue-024-feature-request-the-workflow-cannot-run-unattended.md
