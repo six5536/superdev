@@ -85,9 +85,12 @@ pub fn load_bundle(dir: &Path) -> Result<Bundle> {
     })
 }
 
-/// Read a concept, naming it in the error.
+/// Read a file, naming it in the error.
 fn read(path: &Path) -> Result<String> {
-    crate::fsutil::read_document(path)
+    fs::read_to_string(path).map_err(|e| Error::Io {
+        path: path.to_path_buf(),
+        source: e,
+    })
 }
 
 /// Every `.md` file under `root`, as (concepts, `index.md` files), in

@@ -16,14 +16,34 @@ fn repo(path: &str) -> PathBuf {
         .collect()
 }
 
+/// The first fenced block carrying `tag`, without its markers.
+///
+/// Scanned a line at a time, so a CRLF checkout reads as its LF twin: a
+/// fence is a fence whatever ends the line (I040). The closing marker is the
+/// one that opened the block, so a ```` ```` ```` block may contain ``` ``` ````.
+fn fenced_block(text: &str, tag: &str) -> Option<String> {
+    let mut lines = text.lines();
+    let marker = loop {
+        let trimmed = lines.next()?.trim_start();
+        let ticks = trimmed.len() - trimmed.trim_start_matches('`').len();
+        if ticks >= 3 && trimmed[ticks..].trim() == tag {
+            break trimmed[..ticks].to_string();
+        }
+    };
+    let mut body = Vec::new();
+    for line in lines {
+        if line.trim_start().starts_with(&marker) {
+            return Some(body.join("\n"));
+        }
+        body.push(line);
+    }
+    None
+}
+
 /// The first fenced block tagged `tag` in the contract at `path`.
 fn block(path: &str, tag: &str) -> String {
     let text = std::fs::read_to_string(repo(path)).expect("the contract is on file");
-    text.split(&format!("```{tag}\n"))
-        .nth(1)
-        .and_then(|rest| rest.split("\n```").next())
-        .unwrap_or_else(|| panic!("{path} carries no {tag} block"))
-        .to_string()
+    fenced_block(&text, tag).unwrap_or_else(|| panic!("{path} carries no {tag} block"))
 }
 
 /// Covers I035 criteria 1 and 4: the manifest the config contract declares

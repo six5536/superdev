@@ -12,6 +12,17 @@ fn repo(path: &str) -> PathBuf {
         .collect()
 }
 
+/// `text` with its line endings made uniform, for comparison against a
+/// literal written with LF.
+///
+/// The comparison is where CRLF and LF are made the same — nothing normalises
+/// on the way in, so what these tests read is what is on disk (I040). The
+/// product needs none of this: its checks read a line at a time through
+/// `validate::lines`, and a line is the same line whatever ends it.
+fn same(text: &str) -> String {
+    text.replace("\r\n", "\n")
+}
+
 /// The standard's source states the definition rules and the binding
 /// obligation (ADR-033, ADR-036).
 #[test]
@@ -27,7 +38,7 @@ fn the_fragment_states_the_definition_rules() {
         "MUST be proved\n  current",
         "MUST NOT\n  restate the ADR's reasoning",
     ] {
-        assert!(text.contains(rule), "missing: {rule}");
+        assert!(same(&text).contains(rule), "missing: {rule}");
     }
 }
 
@@ -35,8 +46,9 @@ fn the_fragment_states_the_definition_rules() {
 /// its include markers, in the live tree and in the pack mirror.
 #[test]
 fn every_contract_schema_materializes_the_standard() {
-    let source =
-        std::fs::read_to_string(repo("knowledge/schemas/fragments/contract-style.md")).unwrap();
+    let source = same(
+        &std::fs::read_to_string(repo("knowledge/schemas/fragments/contract-style.md")).unwrap(),
+    );
     let body = source
         .splitn(3, "---\n")
         .nth(2)
@@ -56,7 +68,7 @@ fn every_contract_schema_materializes_the_standard() {
             seen += 1;
             let text = std::fs::read_to_string(&path).unwrap();
             assert!(
-                text.contains(&content),
+                same(&text).contains(&content),
                 "{root}/{name} does not carry the materialized standard"
             );
         }

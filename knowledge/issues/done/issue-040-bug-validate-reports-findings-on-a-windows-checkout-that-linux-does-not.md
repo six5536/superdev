@@ -11,15 +11,36 @@ lifecycle: done
 ## Resolved
 
 The hypothesis held: line endings, confirmed by converting the knowledge
-tree to CRLF on Linux and reproducing all seven findings exactly, plus
-`documents: 0`. Fixed at the read boundary rather than in `.gitattributes`,
-because the validator governs other repositories and cannot demand their
-checkout settings: `fsutil::read_document` normalises CRLF to LF and is
-now the one read behind the validator, the fix pass and the concept
-loader, which had three copies of the same helper between them. The
-engine's reads stay byte-exact, because they hash what they read. A
-repair writes back the endings it found, so a one-line fix stays a
-one-line diff.
+tree to CRLF on Linux, which reproduces the failure exactly —
+`documents: 0 checked against 56 schemas` and 318 errors.
+
+Fixed by making CRLF and LF the same to every comparison, rather than by
+normalising anywhere. Nothing rewrites what it reads, and no reader has
+to remember a normalising step: a line is the same line whatever ends it.
+
+- `validate::lines` splits text into lines with the terminator already
+  gone, and every line-based check in both halves of the validator goes
+  through it. It keeps the empty final element `split('\n')` produces,
+  which `str::lines` drops, because the checks index by line number.
+- The generated-block check and the repair pass compare line by line
+  rather than byte by byte, so a document whose only difference from the
+  repair is what ends its lines needs no repair — `validate --fix` leaves
+  a CRLF file untouched instead of rewriting it to LF.
+- The drift tests scan for a fence a line at a time. Four of them split
+  on the literal ```` ```tag\n ````, which finds nothing in a CRLF file;
+  the CLI drift test already scanned line-wise and is the shape the other
+  four now take.
+- Where a test compares a file against a literal written with LF, the
+  comparison makes the two the same. That is the only normalising left,
+  and it is at the comparison, not on the way in.
+
+`.gitattributes` was rejected as the fix: it would settle superdev's own
+checkout and travels to none of the repositories superdev governs.
+
+An earlier attempt normalised at the read instead. It was replaced: it
+put the obligation on every reader, and the drift tests — which read the
+same files outside the validator — did not have it, so a Windows
+checkout still failed on the contract they parse.
 
 ## Summary
 
@@ -94,12 +115,15 @@ ungoverned, every generated block reported ungenerated.
 
 ## Proposed fix / workaround
 
-- Fix: normalise line endings where the validator reads, rather than
-  extending `.gitattributes` — the first travels to every repository
-  superdev governs and the second cannot, since superdev does not own
-  their checkout settings.
-- Fix: write back the endings a document was found with, so a repair
-  does not convert a whole file it only had one line to change in.
+- Fix: make CRLF and LF the same to every comparison — read a line at a
+  time and compare lines, rather than normalising on the way in. Nothing
+  rewrites what it reads, and no reader can forget a step it does not
+  have to take.
+- Rejected: extending `.gitattributes`, which would settle superdev's own
+  checkout and travels to none of the repositories superdev governs.
+- Rejected: normalising at the read, which puts the obligation on every
+  reader — the drift tests read the same files outside the validator and
+  would still fail.
 - Workaround: check the repository out with `core.autocrlf=false`.
 
 ## Regression risk

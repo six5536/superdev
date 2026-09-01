@@ -397,8 +397,31 @@ fn frontmatter_type(text: &str) -> Option<String> {
     schema::read::fm_value(&split.fm, "type")
 }
 
+/// `text` split into lines, each without its terminator, so a CRLF document
+/// reads as its LF twin: the same frontmatter, the same fences, the same
+/// headings, the same generated block.
+///
+/// superdev governs repositories whose checkout settings it does not own, and
+/// git hands a Windows checkout CRLF for every path `.gitattributes` does not
+/// pin. A line is the same line either way, so the checks compare lines with
+/// the terminator already gone rather than every reader remembering to
+/// normalise first — which is the trap that left the validator reporting a
+/// Windows checkout as ungoverned (I040).
+///
+/// Unlike [`str::lines`] the empty final element a trailing newline produces
+/// is kept, because the checks index by line number and report on it.
+#[must_use]
+pub(crate) fn lines(text: &str) -> Vec<&str> {
+    text.split('\n')
+        .map(|line| line.strip_suffix('\r').unwrap_or(line))
+        .collect()
+}
+
 fn read(path: &Path) -> Result<String> {
-    crate::fsutil::read_document(path)
+    std::fs::read_to_string(path).map_err(|source| Error::Io {
+        path: path.to_path_buf(),
+        source,
+    })
 }
 
 /// `path` under `root`, forward-slashed, or its whole spelling when it is not
@@ -742,9 +765,10 @@ example: |
     }
 
     /// Covers I040: a checkout carrying CRLF reports exactly what an LF one
-    /// does. Every parser downstream of the read is written against LF, so
-    /// before the read normalised them a schema registered no type, leaving
-    /// every document ungoverned — which is what the Windows job saw.
+    /// does — the same schemas registered, the same documents governed, the
+    /// same findings. A schema whose contract block was read by a byte
+    /// comparison registered no type, and a generated block compared by
+    /// bytes differed on every line, which is what the Windows job saw.
     #[test]
     fn a_crlf_checkout_reports_what_an_lf_one_does() {
         let g = live();
@@ -755,18 +779,40 @@ example: |
                 .map(|f| (f.path.clone(), f.message.clone(), f.fatal))
                 .collect()
         };
+        // Cites `a` and carries the generated block for it, so the block
+        // comparison is exercised and not only the schema parse.
+        let citing = "---\ntype: Thing\nid: citing\n---\n\n# Citing\n\n## First\n\n\
+                      See [a][sokf:a].\n\n## Second\n\nx\n\n\
+                      <!-- sokf:links -->\n[sokf:a]: /knowledge/a.md\n";
+        let names = [
+            "schemas/thing.md",
+            "a.md",
+            "b.md",
+            "citing.md",
+            "manifest.sokf.yaml",
+        ];
 
         let lf_dir = parity_repo();
+        std::fs::write(lf_dir.path().join("knowledge/citing.md"), citing).unwrap();
         let lf = validate_repo(lf_dir.path(), &lf_dir.path().join("knowledge"), &[], &g).unwrap();
 
         let crlf_dir = parity_repo();
         let knowledge = crlf_dir.path().join("knowledge");
-        for name in ["schemas/thing.md", "a.md", "b.md", "manifest.sokf.yaml"] {
+        std::fs::write(knowledge.join("citing.md"), citing).unwrap();
+        for name in names {
             let path = knowledge.join(name);
             let text = std::fs::read_to_string(&path).unwrap();
             std::fs::write(&path, text.replace('\n', "\r\n")).unwrap();
         }
         let crlf = validate_repo(crlf_dir.path(), &knowledge, &[], &g).unwrap();
+
+        assert!(
+            !findings(&lf)
+                .iter()
+                .any(|(p, m, _)| p == "citing.md" && m.contains("generated form")),
+            "the fixture's block is in generated form to begin with: {:#?}",
+            findings(&lf)
+        );
 
         assert!(
             lf.schemas > 0 && lf.documents > 0,

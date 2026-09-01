@@ -209,7 +209,7 @@ pub struct YamlFence {
 pub fn extract_yaml(text: &str) -> Vec<YamlFence> {
     static MARK: LazyLock<Regex> =
         LazyLock::new(|| Regex::new(r"^(`{3,}|~{3,})\s*(\S*)\s*$").unwrap());
-    let lines: Vec<&str> = text.split('\n').collect();
+    let lines: Vec<&str> = crate::validate::lines(text);
     let Some(split) = split_frontmatter(&lines) else {
         return Vec::new();
     };

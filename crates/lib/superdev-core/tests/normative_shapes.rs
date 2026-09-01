@@ -6,6 +6,17 @@ use std::path::PathBuf;
 
 use superdev_core::validate::schema::document::{Document, SchemaSet, check_documents};
 
+/// `text` with its line endings made uniform, for comparison against a
+/// literal written with LF.
+///
+/// The comparison is where CRLF and LF are made the same — nothing normalises
+/// on the way in, so what these tests read is what is on disk (I040). The
+/// product needs none of this: its checks read a line at a time through
+/// `validate::lines`, and a line is the same line whatever ends it.
+fn same(text: &str) -> String {
+    text.replace("\r\n", "\n")
+}
+
 fn repo(path: &str) -> PathBuf {
     [env!("CARGO_MANIFEST_DIR"), "../../..", path]
         .iter()
@@ -171,14 +182,17 @@ const PROMISE_BODIES: [(&str, &[&str]); 15] = [
 const KEYWORDS: &str = r"\b(MUST|SHALL|SHOULD|MAY|REQUIRED|RECOMMENDED|OPTIONAL)\b";
 
 /// The section rule for `heading` in a contract-kind schema, as written.
-fn rule_for<'a>(schema: &'a str, heading: &str) -> &'a str {
+fn rule_for(schema: &str, heading: &str) -> String {
+    let schema = same(schema);
     let anchor = format!("  - heading: \"{heading}\"\n");
     let start = schema
         .find(&anchor)
         .unwrap_or_else(|| panic!("no rule for {heading}"))
         + anchor.len();
     let rest = &schema[start..];
-    rest.find("\n  - heading").map_or(rest, |end| &rest[..end])
+    rest.find("\n  - heading")
+        .map_or(rest, |end| &rest[..end])
+        .to_string()
 }
 
 /// Covers I034 criterion 7: every promise-bearing section declares that its
@@ -342,14 +356,35 @@ fn nothing_names_the_retired_format_kind() {
     );
 }
 
+/// The first fenced block carrying `tag`, without its markers.
+///
+/// Scanned a line at a time, so a CRLF checkout reads as its LF twin: a
+/// fence is a fence whatever ends the line (I040). The closing marker is the
+/// one that opened the block, so a ```` ```` ```` block may contain ``` ``` ````.
+fn fenced_block(text: &str, tag: &str) -> Option<String> {
+    let mut lines = text.lines();
+    let marker = loop {
+        let trimmed = lines.next()?.trim_start();
+        let ticks = trimmed.len() - trimmed.trim_start_matches('`').len();
+        if ticks >= 3 && trimmed[ticks..].trim() == tag {
+            break trimmed[..ticks].to_string();
+        }
+    };
+    let mut body = Vec::new();
+    for line in lines {
+        if line.trim_start().starts_with(&marker) {
+            return Some(body.join("\n"));
+        }
+        body.push(line);
+    }
+    None
+}
+
 /// The section rules a schema declares, parsed from its yaml contract.
 fn section_rules(text: &str) -> Vec<serde_yaml_ng::Value> {
-    let block = text
-        .split("````yaml\n")
-        .nth(1)
-        .and_then(|rest| rest.split("\n````").next())
-        .expect("a schema carries a yaml contract");
-    let y: serde_yaml_ng::Value = serde_yaml_ng::from_str(block).expect("the yaml contract parses");
+    let block = fenced_block(text, "yaml").expect("a schema carries a yaml contract");
+    let y: serde_yaml_ng::Value =
+        serde_yaml_ng::from_str(&block).expect("the yaml contract parses");
     y.get("sections")
         .and_then(|s| s.as_sequence())
         .cloned()
@@ -542,7 +577,7 @@ fn a_pending_promise_is_declared_bounded_and_absent() {
     ] {
         let text = std::fs::read_to_string(repo(p)).unwrap();
         assert!(
-            text.contains("carries\n      `pending`"),
+            same(&text).contains("carries\n      `pending`"),
             "{p} does not declare the pending marker"
         );
     }

@@ -527,7 +527,9 @@ fn check_definition_block(
     let block = definition_block(text);
     let expected = render_block(&cited, &context.ids.repo_paths);
     let actual = block.as_ref().map_or("", |b| &text[b.start..]);
-    if actual == expected {
+    // A line at a time, so a CRLF document and its LF twin carry the same
+    // block: what a line ends with is not part of what it says (I040).
+    if super::lines(actual) == super::lines(&expected) {
         return;
     }
 

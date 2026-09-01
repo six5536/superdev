@@ -127,7 +127,10 @@ pub fn fix(bundle: &Bundle, repo_root: &Path) -> Result<Repair> {
             &text[..*head],
             with_block(&body, &render_block(&cited, &ids.repo_paths))
         );
-        if fixed == *text {
+        // A line at a time, matching the check: a document whose only
+        // difference from the repair is what ends its lines needs no repair,
+        // so the pass does not rewrite a CRLF file into an LF one (I040).
+        if super::lines(&fixed) == super::lines(text) {
             continue;
         }
         write_within(&root, &bundle.root.join(path), &fixed)?;
@@ -347,24 +350,16 @@ fn move_within(root: &Path, from: &Path, to: &Path) -> Result<()> {
 }
 
 fn read(path: &Path) -> Result<String> {
-    crate::fsutil::read_document(path)
-}
-
-/// Whether the file at `path` carries CRLF line endings. An unreadable or
-/// absent file carries none, which is what a new file gets.
-fn was_crlf(path: &Path) -> bool {
-    std::fs::read_to_string(path).is_ok_and(|text| text.contains("\r\n"))
+    std::fs::read_to_string(path).map_err(|source| Error::Io {
+        path: path.to_path_buf(),
+        source,
+    })
 }
 
 /// Write `text` to `path`, refusing anything outside `root`.
 ///
 /// The bound is checked against the resolved spelling of both sides, so a
 /// symlink out of the knowledge directory is refused rather than followed.
-///
-/// A repair changes a document's content and never its line endings. The pass
-/// reads LF whatever the file carries (I040), so a file that was CRLF is
-/// written back as CRLF: a one-line repair stays a one-line diff rather than
-/// rewriting every line of every document in a Windows checkout.
 fn write_within(root: &Path, path: &Path, text: &str) -> Result<()> {
     if !resolved(path).starts_with(root) {
         return Err(Error::Io {
@@ -375,12 +370,7 @@ fn write_within(root: &Path, path: &Path, text: &str) -> Result<()> {
             )),
         });
     }
-    let out = if was_crlf(path) {
-        std::borrow::Cow::Owned(text.replace('\n', "\r\n"))
-    } else {
-        std::borrow::Cow::Borrowed(text)
-    };
-    std::fs::write(path, out.as_bytes()).map_err(|source| Error::Io {
+    std::fs::write(path, text).map_err(|source| Error::Io {
         path: path.to_path_buf(),
         source,
     })
@@ -599,44 +589,6 @@ mod tests {
         assert!(
             real.join("knowledge/issues/open/issue-001-bug-a.md")
                 .is_file()
-        );
-    }
-
-    /// Covers I040: a repair to a CRLF document leaves it CRLF. The pass
-    /// reads LF whatever the file carries, so writing what it read would
-    /// turn a one-line repair into a whole-file diff on a Windows checkout.
-    #[test]
-    fn a_repair_leaves_a_crlf_document_crlf() {
-        let dir = tempfile::tempdir().unwrap();
-        let knowledge = dir.path().join("knowledge");
-        std::fs::create_dir_all(&knowledge).unwrap();
-        std::fs::write(
-            knowledge.join("manifest.sokf.yaml"),
-            "sokf: \"0.4\"\nname: t\n",
-        )
-        .unwrap();
-        std::fs::write(knowledge.join("a.md"), "---\ntype: T\nid: a\n---\n\n# A\n").unwrap();
-        // Cites `a` and carries no definition block, so the pass writes one.
-        let citing = knowledge.join("citing.md");
-        let lf = "---\ntype: T\nid: citing\n---\n\nSee [a][sokf:a].\n";
-        std::fs::write(&citing, lf.replace('\n', "\r\n")).unwrap();
-
-        let bundle = load_bundle(&knowledge).unwrap();
-        let repair = fix(&bundle, dir.path()).unwrap();
-        assert!(
-            repair.written.contains(&"citing.md".to_string()),
-            "the pass wrote nothing to repair: {:?}",
-            repair.written
-        );
-
-        let after = std::fs::read_to_string(&citing).unwrap();
-        assert!(
-            after.contains("[sokf:a]: /knowledge/a.md"),
-            "the definition block was not written: {after:?}"
-        );
-        assert!(
-            !after.replace("\r\n", "").contains('\n'),
-            "a line survived the repair without its CR: {after:?}"
         );
     }
 

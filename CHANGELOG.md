@@ -124,16 +124,15 @@ publish a version it cannot find a heading for.
 
 ### Fixed
 
-- **A checkout with CRLF line endings validates.** Every parser behind
-  `superdev validate` is written against LF, so a Windows checkout — where
-  git hands the knowledge tree CRLF unless `.gitattributes` says otherwise —
-  registered no schema at all, reported every document as naming no schema
-  and every generated block as ungenerated. The validator now normalises
-  line endings where it reads, so a repository is governed the same on every
-  platform, and a repair writes back the endings it found rather than
-  turning a one-line fix into a whole-file diff. The engine's own reads are
-  unchanged: they hash what they read to tell a superdev-written file from a
-  user-edited one.
+- **A checkout with CRLF line endings validates.** Every check behind
+  `superdev validate` compared bytes, so a Windows checkout — where git hands
+  the knowledge tree CRLF unless `.gitattributes` says otherwise — registered
+  no schema at all, reported every document as naming no schema and every
+  generated block as ungenerated. A line is now the same line whatever ends
+  it: the checks read lines with the terminator gone and compare them a line
+  at a time, in both halves of the validator and in the drift tests. Nothing
+  normalises what it reads, so a document keeps its own line endings and
+  `validate --fix` leaves a CRLF file alone instead of rewriting it to LF.
 - **An unreadable named path is reported as it was typed.** `superdev
   validate <path>` reported a path it could not read absolutised and with
   the platform's separator, so one report carried two spellings of a path

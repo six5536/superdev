@@ -444,10 +444,7 @@ pub fn check_examples(schemas: &[(String, String)]) -> Vec<Finding> {
                 fatal: true,
             });
         };
-        let lines: Vec<&str> = example
-            .split('\n')
-            .map(|l| l.strip_suffix('\r').unwrap_or(l))
-            .collect();
+        let lines: Vec<&str> = crate::validate::lines(example);
         let body_start = match super::read::split_frontmatter(&lines) {
             Some(split) => {
                 let fm = split.fm.join("\n");
@@ -631,13 +628,7 @@ fn check_one(doc: &Document<'_>, schema: &DocSchema, example: bool, findings: &m
         });
     };
 
-    // `\r` is stripped so a CRLF document reads as its LF twin: the same
-    // frontmatter, the same headings, the same content.
-    let lines: Vec<&str> = doc
-        .text
-        .split('\n')
-        .map(|l| l.strip_suffix('\r').unwrap_or(l))
-        .collect();
+    let lines: Vec<&str> = crate::validate::lines(doc.text);
     // Counted as an editor counts them, so a document at exactly its limit
     // passes: `split` yields a trailing empty element for the final newline,
     // and reporting that as one line over is an off-by-one nobody can act on.

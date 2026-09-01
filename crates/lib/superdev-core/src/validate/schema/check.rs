@@ -229,7 +229,7 @@ pub fn check_unit(
     g: &Grammar,
 ) -> Option<Vec<Node>> {
     let k = &g.kinds.unit;
-    let lines: Vec<&str> = text.split('\n').collect();
+    let lines: Vec<&str> = crate::validate::lines(text);
     let fenced = fence_map(&lines);
     let Some(split) = split_frontmatter(&lines) else {
         errs.push("missing YAML frontmatter".to_string());
@@ -655,7 +655,7 @@ pub fn check_schema(file: &Path, text: &str, errs: &mut Vec<String>, g: &Grammar
     let _ = file;
     let k = &g.kinds.schema;
     let d = &k.document;
-    let lines: Vec<&str> = text.split('\n').collect();
+    let lines: Vec<&str> = crate::validate::lines(text);
     let Some(split) = split_frontmatter(&lines) else {
         errs.push("missing SOKF frontmatter".to_string());
         return;
@@ -923,7 +923,7 @@ pub fn unit_comparables(file: &str, nodes: &[Node], g: &Grammar) -> Vec<Comparab
 #[must_use]
 pub fn core_comparables(file: &str, text: &str, g: &Grammar) -> Vec<Comparable> {
     static TAGS: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"<[^>]*>").unwrap());
-    let lines: Vec<&str> = text.split('\n').collect();
+    let lines: Vec<&str> = crate::validate::lines(text);
     let fenced = fence_map(&lines);
     let mut items = Vec::new();
     for (i, line) in lines.iter().enumerate() {
@@ -955,7 +955,7 @@ pub fn schema_comparables(file: &str, text: &str, g: &Grammar) -> Vec<Comparable
         return Vec::new();
     }
     let c = &g.kinds.schema.compare;
-    let all: Vec<&str> = fences[0].text.split('\n').collect();
+    let all: Vec<&str> = crate::validate::lines(&fences[0].text);
     let stop_at = re::compile(&format!("^{}:", c.stop_at_key)).expect("a key name compiles");
     let lines = match all.iter().position(|l| stop_at.is_match(l)) {
         Some(at) => &all[..at],
@@ -1125,7 +1125,7 @@ pub fn check_core(text: &str, errs: &mut Vec<String>, g: &Grammar) -> BTreeSet<S
         }
     }
 
-    let lines: Vec<&str> = text.split('\n').collect();
+    let lines: Vec<&str> = crate::validate::lines(text);
     let fenced = fence_map(&lines);
     if k.require_h1
         && !lines

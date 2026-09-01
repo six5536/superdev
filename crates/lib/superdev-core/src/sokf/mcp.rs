@@ -892,6 +892,30 @@ mod tests {
     }
 
     /// The MCP contract's declared tools: name to (argument, required, type).
+    /// The first fenced block carrying `tag`, without its markers.
+    ///
+    /// Scanned a line at a time, so a CRLF checkout reads as its LF twin: a
+    /// fence is a fence whatever ends the line (I040). The closing marker is the
+    /// one that opened the block, so a ```` ```` ```` block may contain ``` ``` ````.
+    fn fenced_block(text: &str, tag: &str) -> Option<String> {
+        let mut lines = text.lines();
+        let marker = loop {
+            let trimmed = lines.next()?.trim_start();
+            let ticks = trimmed.len() - trimmed.trim_start_matches('`').len();
+            if ticks >= 3 && trimmed[ticks..].trim() == tag {
+                break trimmed[..ticks].to_string();
+            }
+        };
+        let mut body = Vec::new();
+        for line in lines {
+            if line.trim_start().starts_with(&marker) {
+                return Some(body.join("\n"));
+            }
+            body.push(line);
+        }
+        None
+    }
+
     fn declared_tools() -> std::collections::BTreeMap<String, BTreeMap<String, (bool, String)>> {
         let path: std::path::PathBuf = [
             env!("CARGO_MANIFEST_DIR"),
@@ -901,13 +925,9 @@ mod tests {
         .iter()
         .collect();
         let text = std::fs::read_to_string(path).expect("the MCP contract is on file");
-        let block = text
-            .split("```json\n")
-            .nth(1)
-            .and_then(|rest| rest.split("\n```").next())
-            .expect("the Tools section carries a json block");
+        let block = fenced_block(&text, "json").expect("the Tools section carries a json block");
         let raw: BTreeMap<String, serde_json::Value> =
-            serde_json::from_str(block).expect("the definition block parses as json");
+            serde_json::from_str(&block).expect("the definition block parses as json");
         raw.into_iter()
             .map(|(name, entry)| {
                 let args = entry

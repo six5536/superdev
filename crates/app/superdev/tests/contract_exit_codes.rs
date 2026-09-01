@@ -15,6 +15,30 @@ use assert_cmd::Command;
 /// The repository root, where `validate` finds the live knowledge.
 const REPO_ROOT: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../../..");
 
+/// The first fenced block carrying `tag`, without its markers.
+///
+/// Scanned a line at a time, so a CRLF checkout reads as its LF twin: a
+/// fence is a fence whatever ends the line (I040). The closing marker is the
+/// one that opened the block, so a ```` ```` ```` block may contain ``` ``` ````.
+fn fenced_block(text: &str, tag: &str) -> Option<String> {
+    let mut lines = text.lines();
+    let marker = loop {
+        let trimmed = lines.next()?.trim_start();
+        let ticks = trimmed.len() - trimmed.trim_start_matches('`').len();
+        if ticks >= 3 && trimmed[ticks..].trim() == tag {
+            break trimmed[..ticks].to_string();
+        }
+    };
+    let mut body = Vec::new();
+    for line in lines {
+        if line.trim_start().starts_with(&marker) {
+            return Some(body.join("\n"));
+        }
+        body.push(line);
+    }
+    None
+}
+
 /// The contract's declared exit codes, keyed by command path.
 fn declared() -> BTreeMap<String, Vec<i64>> {
     let path: std::path::PathBuf = [
@@ -24,13 +48,9 @@ fn declared() -> BTreeMap<String, Vec<i64>> {
     .iter()
     .collect();
     let text = std::fs::read_to_string(path).expect("the CLI contract is on file");
-    let block = text
-        .split("```yaml\n")
-        .nth(1)
-        .and_then(|rest| rest.split("\n```").next())
-        .expect("the Commands section carries a yaml block");
+    let block = fenced_block(&text, "yaml").expect("the Commands section carries a yaml block");
     let raw: BTreeMap<String, serde_yaml_ng::Value> =
-        serde_yaml_ng::from_str(block).expect("the definition block parses as yaml");
+        serde_yaml_ng::from_str(&block).expect("the definition block parses as yaml");
     raw.into_iter()
         .map(|(path, entry)| {
             let codes = entry
