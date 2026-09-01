@@ -129,3 +129,76 @@ fn the_declared_pack_manifest_parses_with_the_real_reader() {
         .expect("the contract's declared pack.toml is one superdev reads");
     assert_eq!(parsed.format, 1, "the declared format is the one read");
 }
+
+/// Covers I035 criteria 1 and 4: the lock the format contract declares is
+/// read by the type that reads `.superdev/lock.toml`, and every key that
+/// type writes appears in the contract.
+#[test]
+fn the_declared_lock_round_trips_through_the_real_type() {
+    let declared = block(
+        "knowledge/contracts/public/active/contract-006-text-format-lock.md",
+        "toml",
+    );
+    // The contract's block is an illustration with elided hashes, so it is
+    // read as the shape it declares rather than as a file to load.
+    let readable = declared.replace("sha256:…", "sha256:0000");
+    let dir = tempfile::tempdir().expect("a temporary directory");
+    let superdev = dir.path().join(".superdev");
+    std::fs::create_dir_all(&superdev).expect("the cache directory is made");
+    std::fs::write(superdev.join("lock.toml"), &readable).expect("the lock is written");
+    let lock = superdev_core::lock::Lock::load(dir.path())
+        .expect("the contract's declared lock is one superdev reads");
+    assert_eq!(lock.packs.len(), 1, "the declared pack entry is read");
+    assert!(
+        !lock.files.is_empty(),
+        "the declared file hashes are read: {lock:?}"
+    );
+
+    // And nothing superdev writes is missing from the contract. The value
+    // is built here rather than from the contract, so a key the contract
+    // drops is still demanded.
+    let full: superdev_core::lock::Lock = toml_edit::de::from_str(
+        "[[packs]]\n\
+         source = \"github:six5536/superdev\"\n\
+         identity = \"github.com/six5536/superdev\"\n\
+         rev = \"assets-v1.4.0\"\n\
+         digest = \"sha256:0000\"\n\
+         format = 1\n\
+         [components.code-index]\n\
+         provider = \"codegraph\"\n\
+         version = \"1.5.0\"\n\
+         [files]\n\
+         \".agents/superdev.md\" = \"a99e4f86\"\n",
+    )
+    .expect("the fully-populated lock parses");
+    let written = toml_edit::ser::to_string_pretty(&full).expect("the lock serialises");
+    let mut missing = Vec::new();
+    for line in written.lines() {
+        let trimmed = line
+            .split_once(" #")
+            .map_or(line, |(before, _)| before)
+            .trim();
+        if trimmed.is_empty() || trimmed.starts_with('#') {
+            continue;
+        }
+        if let Some(table) = trimmed
+            .strip_prefix('[')
+            .map(|r| r.trim_end_matches(']').trim_start_matches('['))
+        {
+            let head = table.split('.').next().unwrap_or(table);
+            if !declared.contains(head) {
+                missing.push(head.to_string());
+            }
+        } else if let Some((name, _)) = trimmed.split_once('=') {
+            let name = name.trim().trim_matches('"');
+            if !declared.contains(name) {
+                missing.push(name.to_string());
+            }
+        }
+    }
+    assert!(
+        missing.is_empty(),
+        "DEFECT — superdev writes keys the lock contract does not declare: {missing:?}\n\
+         written:\n{written}"
+    );
+}
