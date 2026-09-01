@@ -3,7 +3,7 @@ type: FeaturePlan
 id: plan-021-feature-contracts-define-their-interface
 title: Contracts define their interfaces — feature plan
 description: Slices delivering the definition-block vocabulary, each kind's declared form, the drift tests that bind a contract to its implementation, and the split of the file-format kind.
-lifecycle: open
+lifecycle: done
 links:
   - rel: implements
     to: issue-035-feature-request-a-contract-does-not-define-its-interface
@@ -150,7 +150,7 @@ Request:
 
 ### Slice 8: The standard, the obligation and the records
 
-- [ ] Done — ticked by integrate at merge.
+- [x] Done — ticked by integrate at merge.
 - Depends-on: 2, 3, 5, 6, 7.
 - Change: the contract-style fragment carries ADR-033's rule and the
   drift obligation of ADR-036, materialized into every contract-kind

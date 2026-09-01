@@ -12,16 +12,19 @@ fn repo(path: &str) -> PathBuf {
         .collect()
 }
 
-/// The standard's source states the binding-surface rules.
+/// The standard's source states the definition rules and the binding
+/// obligation (ADR-033, ADR-036).
 #[test]
 fn the_fragment_states_the_binding_surface_rules() {
     let text = std::fs::read_to_string(repo("knowledge/schemas/fragments/contract-style.md"))
         .expect("the fragment ships with the schema set");
     for rule in [
-        "binding surface",
-        "RFC 2119 modal verb, one\n  requirement per sentence",
-        "MUST NOT define",
-        "bind only what callers rely on",
+        "a contract defines its interface",
+        "from the contract alone",
+        "MUST describe and MUST NOT define",
+        "MUST NOT state how the",
+        "generating the surface from it or by a test",
+        "MUST be proved\n  current",
         "MUST NOT\n  restate the ADR's reasoning",
     ] {
         assert!(text.contains(rule), "missing: {rule}");

@@ -19,17 +19,21 @@ which failures exist and what each means — belongs to the error-handling
 concept, and is referenced here rather than restated.
 
 <!-- sokf:include contract-style -->
-**Contract style — a contract is a binding surface, not a
-specification** (superdev ADR-029):
+**Contract style — a contract defines its interface** (superdev
+ADR-033, ADR-036):
 
-- Each normative statement MUST use an RFC 2119 modal verb, one
+- A contract MUST define every element a caller depends on in the
+  structured form this schema declares, so a caller reproduces the
+  interface from the contract alone.
+- Prose MUST describe and MUST NOT define. Each normative statement
+  outside the definition form MUST use an RFC 2119 modal verb, one
   requirement per sentence.
-- An enumerable surface — commands, flags, keys, types, error cases,
-  limits — MUST be defined in the kind's native structured form: a code
-  block, table or list. Prose, doc comments included, describes and
-  MUST NOT define.
-- A contract MUST bind only what callers rely on; behaviour a contract
-  does not list is the code's to decide.
+- A contract MUST bind what it names and MUST NOT state how the
+  interface is built inside.
+- The project MUST bind this contract to its implementation, by
+  generating the surface from it or by a test where the implementation
+  is hand-written; a committed generated artifact MUST be proved
+  current.
 - A contract MUST link the ADR behind each decision and MUST NOT
   restate the ADR's reasoning.
 <!-- /sokf:include -->

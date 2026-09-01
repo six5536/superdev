@@ -41,9 +41,7 @@ fn head(line: &str) -> Option<String> {
     if !opens.iter().any(|o| trimmed.starts_with(o)) {
         return None;
     }
-    let cut = trimmed
-        .find(['{', '=', ';'])
-        .unwrap_or(trimmed.len());
+    let cut = trimmed.find(['{', '=', ';']).unwrap_or(trimmed.len());
     let head = flat(&trimmed[..cut]);
     (!head.is_empty()).then_some(head)
 }

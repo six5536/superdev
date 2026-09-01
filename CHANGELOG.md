@@ -149,6 +149,20 @@ publish a version it cannot find a heading for.
 
 ### Changed
 
+- **A contract now defines its interface, not describes it.** Every
+  contract-kind schema demands a definition block carrying the whole surface
+  a caller depends on — commands and flags, tool schemas, settings, file
+  shapes, exported signatures — in the form that kind's ecosystem already
+  reads, and demands the project bind that block to its implementation
+  (ADR-033, ADR-034, ADR-036). **`ADR-029` is superseded**, and its
+  judgement-based standard with it. **After a pack update, a contract whose
+  definition block is incomplete starts failing `superdev validate`**, and a
+  contract with no binding — no generation from it, no test against it — is
+  non-compliant even while it validates. superdev's own contracts were
+  rewritten to the bar: the CLI contract had drifted from the binary, the MCP
+  contract carried no tool schema at all, and the config contract never
+  declared its `[template]` table.
+
 - **A contract's promise sections now declare that they bind.** The fifteen
   contract-kind schemas carry the RFC 2119 keyword as an `item-pattern` on
   sections where every entry is a promise — cli Behaviour, mcp Tools, data
