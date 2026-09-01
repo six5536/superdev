@@ -110,8 +110,8 @@ pub fn check_documents(docs: &[Document<'_>], set: &SchemaSet) -> Vec<Finding>;
 
 - `validate::schema` owns parsing (`DocSchema::parse`) and checking
   (`check_documents`); schemas are data it reads, never code.
-- Schema files own the declarations; nothing outside `knowledge/schemas/`
-  (and its pack mirror) declares document structure.
+- Schema files own the declarations; a document-structure declaration
+  MUST NOT live outside `knowledge/schemas/` and its pack mirror.
 - The grammar (`.agents/sokf/grammar.yaml`) governs the schema files'
   own markdown shape; this contract governs what their YAML declares.
 

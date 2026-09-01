@@ -18,30 +18,26 @@ links:
 
 # Interface contract: pack resolution
 
-How externally sourced content reaches components: source identity that
-decides replace-versus-layer
+How externally sourced content reaches components. The decisions:
+identity and layering
 ([ADR-004][sokf:adr-004-base-pack-identity],
-[ADR-011][sokf:adr-011-path-pack-identity-is-root-relative]), a content
-set keyed by items the pack layout names
-([ADR-003][sokf:adr-003-items-by-layout]), a resolver that runs before
-planning and hands components their content through `Ctx`
-([ADR-002][sokf:adr-002-resolve-before-plan]), a machine-local cache with
-on-demand fetching ([ADR-005][sokf:adr-005-pack-cache-and-fetch]), the
-transport allowlist
-([ADR-012][sokf:adr-012-pack-source-schemes-are-allowlisted]), the pin
-`update` proves before it writes
+[ADR-011][sokf:adr-011-path-pack-identity-is-root-relative]), the item
+model ([ADR-003][sokf:adr-003-items-by-layout],
+[ADR-010][sokf:adr-010-concepts-entry-is-the-item]), resolve before
+planning ([ADR-002][sokf:adr-002-resolve-before-plan]), the cache
+([ADR-005][sokf:adr-005-pack-cache-and-fetch]), the transport allowlist
+([ADR-012][sokf:adr-012-pack-source-schemes-are-allowlisted]), the
+proven pin
 ([ADR-013][sokf:adr-013-update-proves-a-pin-before-it-writes-it]), the
-symlink refusal ([ADR-014][sokf:adr-014-a-symlink-in-a-pack-is-refused]),
-and the deadline on the process seam
-([ADR-015][sokf:adr-015-the-spawn-seam-carries-a-deadline]).
-
-A durable internal contract: build codes against it, CONTRACT-DESIGN
-updates it as features change these interfaces, and the code stays
-canonical for every signature. What outside callers rely on lives in the
-public contracts: the manifest keys in
-[contract-004][sokf:contract-004-config-superdev], the pack format in
-[contract-005][sokf:contract-005-file-format-pack], and the lock in
-[contract-006][sokf:contract-006-file-format-lock].
+symlink refusal
+([ADR-014][sokf:adr-014-a-symlink-in-a-pack-is-refused]), the
+fetch-by-spawn ([ADR-007][sokf:adr-007-git-fetch-by-spawn]), and the
+deadline on the process seam
+([ADR-015][sokf:adr-015-the-spawn-seam-carries-a-deadline]). What
+outside callers rely on lives in the public contracts: the manifest
+keys in [contract-004][sokf:contract-004-config-superdev], the pack
+format in [contract-005][sokf:contract-005-file-format-pack], and the
+lock in [contract-006][sokf:contract-006-file-format-lock].
 
 ## Data model & API
 
@@ -49,48 +45,24 @@ public contracts: the manifest keys in
 
 ```rust
 /// Where a pack is resolved from.
-#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum PackSource {
     /// A git repository at a revision.
     Git { url: String, rev: String },
-    /// A directory on this machine; relative paths resolve against the repo
-    /// root.
+    /// A directory; a relative path resolves against the repo root.
     Path { path: PathBuf },
 }
 
 impl PackSource {
-    /// Parse one manifest entry. Rejects a git source carrying no `rev`, a
-    /// path source that names one, and a source or rev beginning with `-`,
-    /// which git reads as an option wherever it meets it. ADR-004, I007.
-    ///
-    /// Rejects a transport outside [`SUPPORTED_SCHEMES`], naming the source
-    /// and the transport, before anything is spawned — and a
-    /// `<name>::<address>` remote helper as one, whatever its address, since
-    /// a helper names a program rather than a protocol. The `github:` and
-    /// `gitlab:` shorthands are https and the scp form is ssh, so neither
-    /// spelling changes. ADR-012.
+    /// Parse one manifest entry. MUST reject: a git source with no
+    /// `rev`; a path source with one; a source or rev starting `-`;
+    /// a transport outside [`SUPPORTED_SCHEMES`], a `<name>::<address>`
+    /// remote helper included, before anything spawns. ADR-004, ADR-012.
     pub fn parse(entry: &PackEntry) -> Result<PackSource>;
 
-    /// The comparison key: scheme, userinfo, a `.git` suffix and any trailing
-    /// slash removed, host and path lowercased. Every spelling of one
-    /// repository shares a key, so `github:six5536/superdev`,
-    /// `https://github.com/six5536/superdev.git` and the ssh form are one
-    /// source.
-    ///
-    /// A path source's key is its canonicalised path taken relative to
-    /// `root`, with forward slashes — `./pack` and `pack/` are both `pack` —
-    /// so the lock that records it reads the same in every checkout and on
-    /// every platform. A pack outside the root keeps its `..` prefix, and
-    /// where no relative form exists (a different Windows drive) the
-    /// canonical absolute path stands. `root` is what makes that possible and
-    /// is why it is a parameter: a path identity means nothing without the
-    /// repository it was taken from. A git source ignores it.
-    ///
-    /// Keys never compare across source kinds: a directory and a repository
-    /// are different sources however alike their keys read, so every
-    /// comparison is within a kind. Without that a directory named
-    /// `github.com/six5536/superdev` would key as the base pack and silently
-    /// replace the embedded content. ADR-004, ADR-011.
+    /// The comparison key. A git source: scheme, userinfo, `.git` and
+    /// trailing slash removed, host and path lowercased. A path source:
+    /// the canonicalised path relative to `root`, forward slashes.
+    /// Keys MUST NOT compare across source kinds. ADR-004, ADR-011.
     pub fn identity(&self, root: &Path) -> String;
 }
 
@@ -102,70 +74,57 @@ pub struct DefaultPack {
 }
 pub const DEFAULT_PACK: DefaultPack = DefaultPack { /* … */ };
 
-/// The transports a pack may be fetched over. `parse` refuses anything else,
-/// naming the source, and no config on the machine can lift that.
-///
-/// The git overrides carry the same set as `protocol.<name>.allow=always`
-/// over a `protocol.allow=never` default, plus `never` naming `git`, `http`
-/// and `ext`. Both halves are needed and neither is sufficient: `parse`
-/// cannot see a `url.<base>.insteadOf` rewrite, which turns an approved
-/// `https://` source into whatever the machine's config says; and among the
-/// overrides only the named `never` lines outrank a user config, since git
-/// resolves `protocol.<name>.allow` ahead of `protocol.allow` whatever their
-/// sources. ADR-012.
+/// The transports a pack may be fetched over; `parse` refuses the
+/// rest, and the git overrides enforce the same set on the spawned
+/// side. ADR-012.
 pub const SUPPORTED_SCHEMES: &[&str] = &["https", "ssh", "file"];
 ```
 
 ### Items — what a pack provides
 
 A pack's tree names all three parts of an item's identity — the owning
-capability, the kind, and the name. `<name>` is the entry directly under the
-kind directory; where the table shows `/**` that entry is a directory and the
-item is its whole subtree:
+capability, the kind, and the name. `<name>` is the entry directly under
+the kind directory; `/**` marks a directory item, superseded whole:
 
 ```
 pack.toml
-knowledge/skills/<name>/**       → .claude/skills/<name>/**        owned
-knowledge/concepts/<name>        → knowledge/<name>                scaffold
-knowledge/templates/<name>.md    → knowledge/templates/<name>.md   owned
-skills/<name>/**                 → .claude/skills/<name>/**        owned
-agents/<name>.md                 → .agents/<name>.md               scaffold
-projects/<name>/**               → repo root, tokenised            scaffold
+knowledge/skills/<name>/**             → .claude/skills/<name>/**              owned
+knowledge/concepts/<name>              → knowledge/<name>                      scaffold
+knowledge/schemas/<name>.md            → knowledge/schemas/<name>.md           owned
+knowledge/schemas/fragments/<name>.md  → knowledge/schemas/fragments/<name>.md owned
+skills/<name>/**                       → .claude/skills/<name>/**              owned
+agents/<name>.md                       → .agents/<name>.md                     scaffold
+projects/<name>/**                     → repo root, tokenised                  scaffold
 ```
 
 ```rust
-/// Which capability materialises an item, or none for the repo-level kinds.
-/// Part of an item's identity because two capabilities both write into
-/// `.claude/skills/` and their `custom` lists are name-guarded. ADR-003.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+/// Which capability materialises an item, or none for the repo-level
+/// kinds. Part of identity: two capabilities write into
+/// `.claude/skills/`. ADR-003.
 pub enum Owner {
     Capability(Capability),
     Repo,
 }
 
-/// The kinds of content a pack may carry, each named by where it sits under
-/// its owner directory. ADR-003.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+/// The kinds of content a pack may carry, named by layout. ADR-003.
 pub enum ItemKind {
     /// `<owner>/skills/<name>/**` — owned files under `.claude/skills/`.
     Skill,
-    /// `knowledge/concepts/<name>` — a write-once knowledge scaffold. `<name>`
-    /// is any entry directly under `concepts/`, file or directory, and the
-    /// subtree mirrors the repo's `knowledge/`: the canonical knowledge ships skeletons
-    /// that are not one `.md` each — `manifest.sokf.yaml`, and the
-    /// `plans/` and `specs/` index directories. ADR-010.
+    /// `knowledge/concepts/<name>` — a write-once knowledge scaffold;
+    /// `<name>` is a file or a directory. ADR-010.
     KnowledgeSkeleton,
-    /// `knowledge/templates/<name>.md` — an owned document template.
-    DocTemplate,
+    /// `knowledge/schemas/<name>.md` — an owned document schema. A
+    /// fragment is a DocSchema item named `fragments/<name>` (ADR-027).
+    DocSchema,
     /// `agents/<name>.md` — a write-once general-rules scaffold.
     AgentScaffold,
-    /// `projects/<name>/**` — write-once repo scaffolds, token-substituted.
+    /// `projects/<name>/**` — write-once repo scaffolds, tokenised.
     ProjectTemplate,
 }
 
-/// One item and every file it owns, paths relative to the item's own root.
-/// `(owner, kind, name)` is the identity a later layer supersedes on.
-#[derive(Debug, Clone, PartialEq, Eq)]
+/// One item and every file it owns, paths relative to the item's own
+/// root. `(owner, kind, name)` is the identity a later layer
+/// supersedes on.
 pub struct Item {
     pub owner: Owner,
     pub kind: ItemKind,
@@ -173,37 +132,26 @@ pub struct Item {
     pub files: Vec<(String, String)>,
 }
 
-/// Paths a pack may not carry, refused at resolve with the reason. The
-/// instruction files and the SOKF spec move with the binary that pins or
-/// validates them; `PROJECT.md` is the project's own extension layer, which
-/// superdev never writes or tracks.
+/// Paths a pack MUST NOT carry, refused at resolve naming the reason:
+/// these move with the binary that pins or validates them.
 pub const REJECTED: &[&str] = &[
     "agents/sokf.md",
     "agents/codegraph.md",
 ];
 
-/// Refused wherever it appears: the project's own extension layer, which
-/// superdev never writes or tracks.
+/// Refused wherever it appears: the project's own extension layer.
 pub const REJECTED_BASENAME: &str = "PROJECT.md";
 ```
 
-A symlink anywhere in a pack is refused the same way, naming the path: a pack
-resolves whole or not at all, and an item silently missing is the failure
-`read_pack` says it does not have. What counts as one is decided by whoever
-knows. For a fetched pack it is git's index — mode `120000`, asked for after
-the checkout and before anything is read, because on Windows without
-`core.symlinks` git materialises a link as a plain file the filesystem cannot
-tell from content, and the same rev would otherwise digest differently there.
-Mode `160000`, a submodule, is refused with it: a shallow sparse clone leaves
-it empty. For a path pack there is no index and no second platform, so
-`symlink_metadata` decides. The filesystem check also stays at read time,
-which is where the cache is read and has no index of its own. ADR-014.
+A pack MUST NOT carry a symlink or a submodule anywhere; resolution
+fails naming the path. A fetched pack is judged by git's index modes,
+a path pack by `symlink_metadata`, and the cache is re-checked at read
+time. ADR-014.
 
 ### The resolved content set — what components read
 
 ```rust
 /// Which layer an item came from.
-#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Origin {
     /// The binary's embedded snapshot.
     Snapshot,
@@ -211,9 +159,8 @@ pub enum Origin {
     Pack { index: usize, name: String },
 }
 
-/// One item a later layer hid. Reported only when both layers are packs:
-/// superseding the snapshot is the ordinary case (the layering rule).
-#[derive(Debug, Clone, PartialEq, Eq)]
+/// One item a later layer hid. Reported only when both layers are
+/// packs: superseding the snapshot is the layering rule at work.
 pub struct Shadowed {
     pub owner: Owner,
     pub kind: ItemKind,
@@ -222,7 +169,8 @@ pub struct Shadowed {
     pub loser: Origin,
 }
 
-/// Every item the layers resolved to. Built once per run, borrowed by `Ctx`.
+/// Every item the layers resolved to. Built once per run, borrowed by
+/// `Ctx`.
 pub struct ContentSet { /* private */ }
 
 impl ContentSet {
@@ -243,13 +191,12 @@ impl ContentSet {
 
 ```rust
 /// How far the resolver may go. ADR-002.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ResolveMode {
-    /// `status`: never fetch, never write the cache. A pin it cannot satisfy
-    /// from the cache is returned as pending, not as an error.
+    /// `status`: MUST NOT fetch or write the cache; an unsatisfiable
+    /// pin returns as pending.
     Offline,
-    /// `init`, `sync`, `update`: fetch what is missing and populate the
-    /// cache. An unsatisfiable pin is an error.
+    /// `init`, `sync`, `update`: fetch what is missing and populate
+    /// the cache; an unsatisfiable pin is an error.
     Fetching,
 }
 
@@ -257,24 +204,19 @@ pub enum ResolveMode {
 pub struct Resolution {
     /// Content from every layer that resolved.
     pub content: ContentSet,
-    /// Pins `Offline` could not satisfy. Always empty under `Fetching`,
-    /// which errors instead.
+    /// Pins `Offline` could not satisfy; always empty under `Fetching`.
     pub pending: Vec<PackEntry>,
-    /// One record per pack that resolved, in manifest order, for the lock.
-    /// Apply writes these; nothing else knows the digest it verified.
+    /// One record per resolved pack, in manifest order, for the lock.
     pub packs: Vec<PackLock>,
 }
 
 /// Resolve the manifest's packs over the embedded snapshot.
 ///
-/// Takes the runner because a git source is fetched by spawning the user's
-/// own `git` (ADR-007), and every spawn in the codebase goes through that
-/// one seam so no test reaches a real network.
-///
-/// Reads the cache, the network (under `Fetching`) and the local paths; the
-/// only phase in a run that does. Verifies each pack against the digest the
-/// lock recorded for its rev and fails on a mismatch rather than applying
-/// bytes nobody pinned (content is never substituted).
+/// The only phase in a run that reads the cache, the network (under
+/// `Fetching`) or the local pack paths. Every resolved pack MUST match
+/// the digest the lock recorded for its rev; a mismatch fails the run
+/// and writes nothing. A git source is fetched by spawning the user's
+/// own `git` through `runner`. ADR-005, ADR-007.
 pub fn resolve(
     root: &Path,
     runner: &dyn CommandRunner,
@@ -287,19 +229,12 @@ pub fn resolve(
 ### Where the pin moves
 
 ```rust
-/// Bring the manifest's pack pins current, and say what happened. ADR-009.
+/// Bring the manifest's pack pins current, and say what happened.
 ///
-/// A moved pin is resolved before it is written, and stays where it is when
-/// resolution refuses — the reason is reported in the line that would have
-/// announced the move. The manifest is what every later run reads and a pin
-/// never moves backwards, so a pin written to content this binary cannot
-/// read would leave no superdev command able to repair it. A moving pin
-/// therefore fetches twice — the cache is found by the digest the lock
-/// records, and apply does not write that until after the sync — so the
-/// price is one extra clone on the rare run that advances a pin. The lock is
-/// here because resolution reads it. ADR-013, I001.
-///
-/// Nothing here fails the run.
+/// A moved pin MUST resolve before it is written, and stays put when
+/// resolution refuses — the refusal is reported in the line that would
+/// have announced the move. Nothing here fails the run. ADR-009,
+/// ADR-013, I001.
 pub fn update_pins(
     runner: &dyn CommandRunner,
     root: &Path,
@@ -310,16 +245,11 @@ pub fn update_pins(
 
 ### The process seam
 
-Not `pack`'s own, but changed for it: the query `update` makes unprompted is
-the first spawn in the codebase that needs a deadline, and the first that
-needs an environment.
-
 ```rust
-/// How a command is run: everything beyond the program and its arguments.
-#[derive(Debug, Clone, Default)]
+/// How a command is run: everything beyond the program and its
+/// arguments.
 pub struct RunOptions {
-    /// Kill the child and fail after this long. `None` waits as long as it
-    /// takes, which is what a toolchain install needs.
+    /// Kill the child and fail after this long; `None` waits.
     pub timeout: Option<Duration>,
     /// Extra environment for the child, over the inherited one.
     pub env: Vec<(String, String)>,
@@ -331,9 +261,8 @@ pub trait CommandRunner {
         self.run_with(program, args, cwd, &RunOptions::default())
     }
 
-    /// The same, with a deadline and an environment. The one required
-    /// method: `run` defaults onto it, so every existing call site is
-    /// unchanged and there is a single implementation to get right.
+    /// The same, with a deadline and an environment: the one required
+    /// method, so there is a single implementation to get right.
     fn run_with(
         &self,
         program: &str,
@@ -344,13 +273,10 @@ pub trait CommandRunner {
 }
 ```
 
-An expired deadline is an `Error::Command` like any other failed spawn, which
-is what lets the pin query report it as "could not reach it" without knowing
-why. Only what superdev does on its own initiative is bounded: the
-`ls-remote` query takes a deadline of a few seconds and
-`GIT_TERMINAL_PROMPT=0`; the clone takes the environment and no deadline,
-because the user asked for it and a slow link is not superdev's to give up
-on. ADR-015.
+An expired deadline is an `Error::Command` like any failed spawn. Only
+unprompted work takes a deadline: the pin query runs with one and
+`GIT_TERMINAL_PROMPT=0`; a user-requested clone takes the environment
+and no deadline. ADR-015.
 
 ### Planning context — the one component-facing change
 
@@ -360,110 +286,70 @@ pub struct Ctx<'a> {
     pub runner: &'a dyn CommandRunner,
     pub manifest: &'a Manifest,
     pub lock: &'a Lock,
-    /// Resolved content. The resolver ran before planning, so `plan` stays
-    /// side-effect free and `status` provably never fetches. ADR-002.
+    /// Resolved content; the resolver ran before planning. ADR-002.
     pub content: &'a ContentSet,
 }
 ```
-
-`Component` is unchanged — `capability`, `provider`, `plan`, `owned` keep
-their signatures. Components stop reading `include_str!` constants and read
-`ctx.content` instead.
 
 ### Errors
 
 ```rust
 pub enum Error {
     // … existing variants unchanged …
-    /// A pack could not be resolved, or resolved to bytes that do not match
-    /// what the lock recorded. Carries the pack as the user named it.
+    /// A pack could not be resolved, or resolved to bytes that do not
+    /// match the lock. Carries the pack as the user named it.
     Pack { pack: String, message: String },
 }
 ```
 
 ## Module boundaries
 
-- `superdev-core::pack` — new. Owns `PackSource`, identity, `PackManifest`,
-  the cache under `.superdev/cache/packs/<digest>/`, fetching, and digest
-  verification. Knows nothing about components or capabilities. A git source
-  is fetched by spawning the user's `git` through the injected
-  `CommandRunner` — shallow, blobless and sparse
-  ([ADR-007][sokf:adr-007-git-fetch-by-spawn]).
-- `superdev-core::content` — new. Owns `ItemKind`, `Item`, `Origin`,
-  `Shadowed`, `ContentSet`, and the layout rules that turn a directory tree
-  into items. Depends on nothing but `std`.
-- `/pack/` — the stock content at the repo root, in pack layout, with its own
-  `pack.toml` ([ADR-006][sokf:adr-006-pack-at-repo-root]). It is the
-  first-party pack and the reference a third-party author copies, so it
-  carries nothing that exists only to serve superdev's build.
-  `crates/lib/superdev-core/assets` is a relative symlink to it, which is what
-  keeps the files inside the published crate; `include_str!` paths are
-  unchanged.
-- The embedded snapshot is built through `content`'s same layout rules over
-  those files, so snapshot and fetched pack take one code path rather than
-  two. Moving and reorganising `crates/lib/superdev-core/assets` into `/pack/`
-  is a slice of its own, and the first one.
-- `pack` depends on `content`; `content` never depends on `pack`.
-- Components depend on `content` only, through `Ctx`. No component may call
+- `superdev-core::pack` owns sources, identity, the cache, fetching and
+  digest verification; it MUST NOT know components or capabilities.
+- `superdev-core::content` owns the item model and the layout rules; it
+  depends on `std` alone.
+- `/pack/` at the repo root is the first-party pack and the third-party
+  reference ([ADR-006][sokf:adr-006-pack-at-repo-root]); the embedded
+  snapshot is built from it through the same layout rules as a fetched
+  pack.
+- `pack` depends on `content`; `content` MUST NOT depend on `pack`.
+- A component MUST read content only through `Ctx`; it MUST NOT call
   `pack`.
-- `pipeline` calls `pack::resolve` before `plan_repo` and threads the
-  `ContentSet` into `Ctx`.
-- `engine` is untouched: it still receives `Action`s and remains the only
-  side-effect site for repo writes. Fetching is the resolver's, and happens
-  before any plan exists.
+- `pipeline` calls `pack::resolve` before `plan_repo`; `engine` stays
+  the only side-effect site for repo writes.
 
 ## Key flows
 
-- **Default `init`, offline.** The manifest `init` builds carries the default
-`[[packs]]` entry naming `DEFAULT_PACK`, so `resolve` sees a pin at exactly
-the rev this binary embeds → returns the snapshot's `ContentSet` with no cache
-read and no network → `plan_repo` → apply. An empty `manifest.packs` takes the
-same path, and is what every manifest written before packs existed carries.
-
-- **Pinning a newer rev.** `sync` → `resolve(Fetching)` finds the pin absent
-from the lock → fetches into `.superdev/cache/packs/<digest>/` → parses
-`pack.toml`, refuses an unknown `format`, refuses a `REJECTED` path → the
-entry's identity matches `DEFAULT_PACK`, so its items replace the snapshot's
-rather than layering → `plan_repo` writes the changed items and the orphan
-pass removes what the new rev dropped → apply records `PackLock` and the
-per-file hashes.
-
-- **CI drift check.** `status` → `resolve(Offline)` → every pack's digest is in
-the lock and its cache entry present, or its files are committed and hash to
-the locked values → no fetch → `plan_repo` finds nothing → exit 0.
-
-- **Repairing drift offline.** A pack-provided skill was hand-edited. `sync` →
-`resolve(Fetching)` finds the pack cached → no fetch → `plan_repo` emits the
-`WriteFile` → apply backs the file up and rewrites it.
+- Default `init`, offline: the manifest pins `DEFAULT_PACK` at the
+  embedded rev → `resolve` returns the snapshot with no cache read and
+  no network → plan → apply.
+- Pinning a newer rev: `sync` → `resolve(Fetching)` fetches into the
+  cache, parses `pack.toml`, refuses unknown formats and `REJECTED`
+  paths → items replace or layer by identity → plan writes the changes
+  and the orphan pass removes what the rev dropped → apply records
+  `PackLock`.
+- CI drift check: `status` → `resolve(Offline)` → cache and lock agree
+  → no fetch, no findings, exit 0.
+- Repairing drift offline: an edited pack file → `resolve(Fetching)`
+  finds the pack cached → plan emits the `WriteFile` → apply backs up
+  and rewrites.
 
 ## Cross-cutting concerns
 
-- **Security.** A source may only name https, ssh or `file`, refused at
-  parse and refused again by `protocol.allow=never` with the same set
-  admitted explicitly, so a transport anyone on-path can answer cannot be
-  the one the base pack arrives over (ADR-012). A git source is fetched by
-  the user's own `git`, so
-  credentials, ssh agents and forge access are the user's and superdev holds
-  no token. Every resolved pack is verified against the digest the lock
-  recorded for that rev; a mismatch fails the run and writes nothing, with no
-  flag to override. A pack declares no executable action — there is no
-  variant it could reach `Action::Run` through. `REJECTED` paths, and every symlink,
-  are refused before any file is read. Git credentials are the user's own; superdev
-  stores no token and adds no auth surface. Trust in a pack's *content* is the
-  user's, made by naming the source, and stated as such in the docs.
-- **Performance.** One resolve per run; the cache makes a second run over an
-  unchanged pin free. Packs are order-1MB, so the whole set is held in memory
-  during a run.
-- **Migration/rollout.** An absent `[[packs]]` array parses as empty and
-  resolves from the snapshot, so every existing manifest works untouched.
-  `sync` never adds the entry; `update` does. Rollback is deleting the
-  `[[packs]]` entries: the orphan pass then prunes the pack's unmodified files
-  and releases the edited ones, by the existing rule.
-- **Observability.** `status` prints one content line per layer — the base
-  first, marked as replacing the snapshot, then each layer with its item count
-  — so a wrong identity match is visible on the next command. Pack-over-pack
-  shadowing prints per item. A pending pin under `Offline` prints as pending
-  with `sync` named as the next step.
+- Security: transports are allowlisted at parse and again by git's
+  protocol policy (ADR-012); fetching spawns the user's own `git`, so
+  superdev MUST NOT store a token; every pack is digest-verified with
+  no override flag; a pack declares no executable action; `REJECTED`
+  paths and symlinks are refused before any file is read. Trust in a
+  pack's content is the user's, made by naming the source.
+- Performance: one resolve per run; an unchanged pin costs no fetch;
+  the whole content set is held in memory.
+- Migration/rollout: an absent `[[packs]]` array resolves from the
+  snapshot, so every pre-pack manifest works untouched; rollback is
+  deleting the entries, and the orphan pass prunes.
+- Observability: `status` prints one content line per layer, the base
+  marked; pack-over-pack shadowing prints per item; a pending pin names
+  `sync` as the next step.
 
 <!-- sokf:links -->
 [sokf:adr-002-resolve-before-plan]: /knowledge/adrs/active/adr-002-resolve-before-plan.md
@@ -472,6 +358,7 @@ the locked values → no fetch → `plan_repo` finds nothing → exit 0.
 [sokf:adr-005-pack-cache-and-fetch]: /knowledge/adrs/active/adr-005-pack-cache-and-fetch.md
 [sokf:adr-006-pack-at-repo-root]: /knowledge/adrs/active/adr-006-pack-at-repo-root.md
 [sokf:adr-007-git-fetch-by-spawn]: /knowledge/adrs/active/adr-007-git-fetch-by-spawn.md
+[sokf:adr-010-concepts-entry-is-the-item]: /knowledge/adrs/active/adr-010-concepts-entry-is-the-item.md
 [sokf:adr-011-path-pack-identity-is-root-relative]: /knowledge/adrs/active/adr-011-path-pack-identity-is-root-relative.md
 [sokf:adr-012-pack-source-schemes-are-allowlisted]: /knowledge/adrs/active/adr-012-pack-source-schemes-are-allowlisted.md
 [sokf:adr-013-update-proves-a-pin-before-it-writes-it]: /knowledge/adrs/active/adr-013-update-proves-a-pin-before-it-writes-it.md

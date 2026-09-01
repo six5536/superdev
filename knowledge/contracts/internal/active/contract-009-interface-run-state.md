@@ -62,18 +62,17 @@ pub const CONTINUE_CAP: u32 = 10;
 ## Module boundaries
 
 - The `superdev` binary owns every read and write of `run.toml` — a
-  `run` module beside the other verb modules; `superdev-core` never
-  touches run state.
+  `run` module beside the other verb modules; `superdev-core` MUST NOT
+  touch run state.
 - `superdev hook run` is the one reader that also writes: it increments
-  `continues` (and may adopt an empty owner); it changes nothing else
-  and never opens a plan.
+  `continues` (and may adopt an empty owner); it MUST NOT change
+  anything else or open a plan.
 - `components/sokf.rs` declares the `hooks.Stop` entry in
   `.claude/settings.json` as a `ManagedItem::JsonEntry` with marker
   `superdev hook run`, beside the PostToolUse entry; it ships with the
   knowledge capability and is claimed in the lock the same way.
-- The driver skill calls the verbs and never writes the file itself:
-  exclusive creation is what makes a second run a refusal instead of a
-  race.
+- The driver skill calls the verbs; it MUST NOT write the file itself
+  ([ADR-019][sokf:adr-019-run-state-is-a-session-owned-file-behind-cli-verbs]).
 
 ## Key flows
 
@@ -100,8 +99,8 @@ pub const CONTINUE_CAP: u32 = 10;
   the hook executes nothing and parses only its own TOML and the
   payload JSON. An unreadable payload is a loud exit `2`, matching
   `hook validate`; an unreadable `run.toml` is reported to stderr and
-  exits `0` — failing open, because a hook that fails closed holds
-  every session in the repo open.
+  exits `0`, failing open
+  ([ADR-019][sokf:adr-019-run-state-is-a-session-owned-file-behind-cli-verbs]).
 - Performance: one small file read per Stop event; no network, no plan
   parse, no index.
 - Migration/rollout: additive. Without a `run.toml` every path exits
