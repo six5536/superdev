@@ -45,7 +45,7 @@ Request:
 
 ### Slice 2: `--json` carries both counts and the same findings
 
-- [ ] Done — ticked by integrate at merge.
+- [x] Done — ticked by integrate at merge.
 - Depends-on: 1.
 - Change: `Report::to_json` gains `errors` and `warnings` counts and the
   same listing switch `render_human` took, so the two renderers report one
