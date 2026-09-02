@@ -232,7 +232,11 @@ edited beside it.
 
 ### Slice 6: The records close
 
-- [ ] Done — ticked by integrate at merge.
+- [x] Done — ticked by integrate at merge. The two cases were checked
+  by reading the three records: no test reads them, and the slice
+  changed no code. The glossary's Lifecycle entry carries the framed and
+  unframed definitions in place of a separate entry, and the changelog
+  stands at its 800-line limit.
 - Depends-on: 3, 5.
 - Change: the issue-tracker concept says the four states, the folders,
   `/file` and `/frame`'s roles; the glossary's Lifecycle entry names

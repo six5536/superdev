@@ -239,10 +239,31 @@ whole in
 an expected-behaviour item takes the EARS tag as a criterion does, and
 the unframed rule checks the list kind alone.
 
+2026-09-02, delivered by plan-026 in six slices. The sweep at `90adee1`
+filed 12 open issues `framed` and one `unframed` — I042, the only one
+still carrying a `TBD` item; I030 itself went `framed`, no `TBD`
+remaining. The 24 bug reports' Expected behaviour is keyed: 21 were
+converted from prose, one `EX_c<n>` item per paragraph, words checked
+against `6bee067`; the three already lists took keys and tags. An
+`EX_` item carries the EARS tag, as a criterion does, because an
+expected behaviour is a requirement (ADR-048's options table). The
+backlog's entries became
+[idea-007][sokf:idea-007-a-knowledge-capture-skill],
+[idea-008][sokf:idea-008-templates-pre-fill-knowledge-skeletons] and
+[idea-009][sokf:idea-009-comment-preserving-manifest-stamping] (idea-006
+was taken between the cut and the build) and the wontfix chore
+[I051][sokf:issue-051-chore-pin-node-in-the-managed-repo]. `/file` ships
+as the eighteenth knowledge-carried skill; `/frame` frames in place, and
+contract-design, feature-plan and execute-feature-plan gate on `framed`.
+
 <!-- sokf:links -->
 [sokf:adr-045-a-schema-declares-variants]: /knowledge/adrs/active/adr-045-a-schema-declares-variants.md
 [sokf:adr-046-a-promise-and-a-criterion-are-keyed-ears-items]: /knowledge/adrs/active/adr-046-a-promise-and-a-criterion-are-keyed-ears-items.md
 [sokf:adr-048-an-issues-lifecycle-distinguishes-framed-from-unframed]: /knowledge/adrs/active/adr-048-an-issues-lifecycle-distinguishes-framed-from-unframed.md
 [sokf:adr-049-a-heading-is-declared-per-variant]: /knowledge/adrs/active/adr-049-a-heading-is-declared-per-variant.md
 [sokf:contract-010-interface-document-schemas]: /knowledge/contracts/internal/active/contract-010-interface-document-schemas.md
+[sokf:idea-007-a-knowledge-capture-skill]: /knowledge/ideas/idea-007-a-knowledge-capture-skill.md
+[sokf:idea-008-templates-pre-fill-knowledge-skeletons]: /knowledge/ideas/idea-008-templates-pre-fill-knowledge-skeletons.md
+[sokf:idea-009-comment-preserving-manifest-stamping]: /knowledge/ideas/idea-009-comment-preserving-manifest-stamping.md
 [sokf:issue-037-feature-request-a-contracts-behaviour-is-not-written-as-ears]: /knowledge/issues/done/issue-037-feature-request-a-contracts-behaviour-is-not-written-as-ears.md
+[sokf:issue-051-chore-pin-node-in-the-managed-repo]: /knowledge/issues/wontfix/issue-051-chore-pin-node-in-the-managed-repo.md
