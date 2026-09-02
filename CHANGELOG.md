@@ -13,6 +13,17 @@ publish a version it cannot find a heading for.
 
 ### Added
 
+- **An include block names a source region.** Beside a concept id, an
+  include block's argument may be a `/`-rooted repository path with an
+  optional `#region`: `<!-- sokf:include /src/main.rs#cli -->`. The region
+  is bounded by lines containing `sokf:begin cli` and `sokf:end cli`, in
+  whatever comment syntax the file uses; regions sharing a name concatenate,
+  and a path with no `#` includes the whole file. `superdev validate --fix`
+  writes the region as a fenced block tagged by the file's extension,
+  carrying a `sokf:generated-by` line from the file's head, and
+  `superdev validate` reports a stale, empty or absent block, a path that is
+  missing or resolves outside the repository, and a region the file does not
+  carry, each as an error naming the path and the region (ADR-041).
 - **The file-format contract kind splits into text and binary.**
   `schema-contract-text-format` governs a file whose shape is keys and values
   and `schema-contract-binary-format` one whose shape is a byte layout —
