@@ -156,7 +156,7 @@ rebuild per edit.
 
 ### Slice 4: The cli, api and config contracts are swept
 
-- [ ] Done — ticked by integrate at merge.
+- [x] Done — ticked by integrate at merge.
 - Depends-on: 2.
 - Change: contract-002, contract-003 and contract-004, as slice 3 —
   the sixty verbs of contract-002 included; the exit-code table stays
@@ -167,6 +167,18 @@ rebuild per edit.
     contracts — covers 13.
   - manual: the reviewer confirms the promise count equals the verb
     count before the sweep — covers 13.
+  - Note, at merge: contract-002 60 verbs before, 58 promises after —
+    the closed-stdout-pipe and the `status`-writes-nothing sentences
+    each stood twice and merge into one keyed item, cited from the
+    prose where the second stood; contract-003 17 and 17; contract-004
+    17 and 13 — the API-key pair stood in Sources and in Secrets, and
+    the load-failure pair in Validation and in Stability, each merged
+    into one item cited from the other place. Every other verb is one
+    item. The four config sources became a numbered list and the
+    defaults a table, since a bullet under Behaviour is a promise. The
+    scratch schema of slice 3 reported nothing for the three, and
+    reported a keyless item, a tagless item and a `MUST` in prose when
+    each was injected.
 
 ### Slice 5: The format contracts are swept
 
