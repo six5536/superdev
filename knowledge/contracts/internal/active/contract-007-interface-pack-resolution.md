@@ -9,10 +9,10 @@ links:
     to: contract-004-config-superdev
     note: The manifest keys a repo supplies, the [[packs]] section included.
   - rel: references
-    to: contract-005-text-format-pack
+    to: contract-005-format-pack
     note: What a pack must look like on disk for the resolver to read it.
   - rel: references
-    to: contract-006-text-format-lock
+    to: contract-006-format-lock
     note: What the resolver records of the last apply.
 ---
 
@@ -36,8 +36,8 @@ deadline on the process seam
 ([ADR-015][sokf:adr-015-the-spawn-seam-carries-a-deadline]). What
 outside callers rely on lives in the public contracts: the manifest
 keys in [contract-004][sokf:contract-004-config-superdev], the pack
-format in [contract-005][sokf:contract-005-text-format-pack], and the
-lock in [contract-006][sokf:contract-006-text-format-lock].
+format in [contract-005][sokf:contract-005-format-pack], and the
+lock in [contract-006][sokf:contract-006-format-lock].
 
 ## Data model & API
 
@@ -377,5 +377,5 @@ pub enum Error {
 [sokf:adr-014-a-symlink-in-a-pack-is-refused]: /knowledge/adrs/active/adr-014-a-symlink-in-a-pack-is-refused.md
 [sokf:adr-015-the-spawn-seam-carries-a-deadline]: /knowledge/adrs/active/adr-015-the-spawn-seam-carries-a-deadline.md
 [sokf:contract-004-config-superdev]: /knowledge/contracts/public/active/contract-004-config-superdev.md
-[sokf:contract-005-text-format-pack]: /knowledge/contracts/public/active/contract-005-text-format-pack.md
-[sokf:contract-006-text-format-lock]: /knowledge/contracts/public/active/contract-006-text-format-lock.md
+[sokf:contract-005-format-pack]: /knowledge/contracts/public/active/contract-005-format-pack.md
+[sokf:contract-006-format-lock]: /knowledge/contracts/public/active/contract-006-format-lock.md

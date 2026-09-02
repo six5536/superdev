@@ -9,6 +9,10 @@ use sha2::{Digest, Sha256};
 
 use crate::error::{Error, Result};
 
+// The lock's on-disk shape is the lock format contract's Definition
+// (contract-006): the path and every table `load` reads and `save` writes sit
+// in the two `lock` regions below, and the contract includes them as one.
+// sokf:begin lock
 /// Repo-relative path of the lock file.
 pub const LOCK_PATH: &str = ".superdev/lock.toml";
 
@@ -34,6 +38,7 @@ enum WrittenRecords {
     Many(Vec<LockedComponent>),
 }
 
+// sokf:end lock
 /// (De)serialise the components map through [`WrittenRecords`].
 mod records_serde {
     use super::{BTreeMap, LockedComponent, WrittenRecords};
@@ -73,6 +78,7 @@ mod records_serde {
     }
 }
 
+// sokf:begin lock
 /// One resolved pack, recorded so a later run can prove it got the same bytes,
 /// and so a dropped entry's files become orphans by the existing rule.
 /// Per-file hashes stay in the lock's existing `files` map.
@@ -118,6 +124,7 @@ pub struct Lock {
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     pub owners: BTreeMap<String, String>,
 }
+// sokf:end lock
 
 /// Lowercase-hex sha256.
 pub fn sha256_hex(bytes: &[u8]) -> String {

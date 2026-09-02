@@ -2664,6 +2664,91 @@ fn a_flag_added_to_validate_args_fails_validate_and_fix_writes_it_into_the_contr
     );
 }
 
+/// Covers I049 criteria 4 and 23 (ADR-042): the lock format contract's
+/// definition is the `lock` regions of `lock.rs`, so a field renamed in the
+/// lock struct fails `validate` naming the contract's include, and `--fix`
+/// writes the new name into the contract. Runs against a copy of the live
+/// contract and its source in a scratch repository, so this tree is never
+/// edited.
+#[test]
+fn a_field_renamed_in_the_lock_struct_fails_validate_naming_the_contracts_include() {
+    const CONTRACT: &str = "knowledge/contracts/public/active/contract-006-format-lock.md";
+    const SOURCE: &str = "crates/lib/superdev-core/src/lock.rs";
+    let repo = tempfile::tempdir().unwrap();
+    for rel in [SOURCE, CONTRACT] {
+        let to = repo.path().join(rel);
+        std::fs::create_dir_all(to.parent().unwrap()).unwrap();
+        std::fs::copy(Path::new(REPO_ROOT).join(rel), &to).unwrap();
+    }
+    std::fs::write(
+        repo.path().join("knowledge/manifest.sokf.yaml"),
+        "sokf: \"0.4\"\nname: fixture\n",
+    )
+    .unwrap();
+    // The fixture carries the live contract's Definition — its include —
+    // and nothing else: the prose links concepts the fixture lacks.
+    let contract = repo.path().join(CONTRACT);
+    let live = std::fs::read_to_string(&contract).unwrap();
+    let definition = &live[live.find("## Definition").unwrap()..live.find("## Behaviour").unwrap()];
+    assert_eq!(
+        definition.matches("<!-- sokf:include /crates/").count(),
+        1,
+        "the live contract includes the lock regions as one"
+    );
+    assert!(
+        definition.contains("pub struct PackLock") && definition.contains("pub struct Lock "),
+        "the include carries both lock regions"
+    );
+    std::fs::write(
+        &contract,
+        format!("---\ntype: Note\nid: contract-006-format-lock\n---\n\n# Lock\n\n{definition}"),
+    )
+    .unwrap();
+    superdev()
+        .current_dir(repo.path())
+        .args(["validate", "--fix"])
+        .assert()
+        .success();
+
+    let source = repo.path().join(SOURCE);
+    let edited = std::fs::read_to_string(&source).unwrap().replace(
+        "    pub digest: Option<String>,\n",
+        "    pub checksum: Option<String>,\n",
+    );
+    assert!(edited.contains("pub checksum"), "the field was renamed");
+    std::fs::write(&source, edited).unwrap();
+
+    let out = superdev()
+        .current_dir(repo.path())
+        .args(["validate"])
+        .assert()
+        .code(1);
+    let stdout = String::from_utf8_lossy(&out.get_output().stdout).into_owned();
+    assert!(
+        stdout.contains(
+            "contract-006-format-lock.md: the include block for `/crates/lib/superdev-core/src/lock.rs#lock` is stale"
+        ),
+        "{stdout}"
+    );
+    assert!(
+        !std::fs::read_to_string(&contract)
+            .unwrap()
+            .contains("pub checksum"),
+        "validate without --fix wrote the contract"
+    );
+
+    superdev()
+        .current_dir(repo.path())
+        .args(["validate", "--fix"])
+        .assert()
+        .success();
+    let text = std::fs::read_to_string(&contract).unwrap();
+    assert!(
+        text.contains("    pub checksum: Option<String>,\n") && !text.contains("pub digest"),
+        "{text}"
+    );
+}
+
 /// Without the flag, `validate` reports and writes nothing.
 #[test]
 fn validate_without_fix_writes_nothing() {

@@ -11,6 +11,12 @@ use crate::error::{Error, Result};
 use crate::registry;
 use crate::sokf::embed::EmbeddingsConfig;
 
+// The manifest's on-disk shape is the config contract's Definition
+// (contract-004): the path, every table `parse` reads and `to_toml` writes,
+// and the doc comment on each field, sit in the `config` region below and the
+// contract includes them. `EmbeddingsConfig` sits in its own `config` region
+// in `sokf/embed.rs`.
+// sokf:begin config
 /// Repo-relative path of the manifest.
 pub const CONFIG_PATH: &str = ".superdev/config.toml";
 
@@ -101,9 +107,14 @@ pub struct PackEntry {
 /// `to_toml` renders. Field order is the serialised order.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct WrittenManifest {
+    /// The superdev version last applied; `init` writes it.
     blueprint: String,
+    /// `[template]` — the project template `init` seeded the repo from.
+    /// Absent when the repo was never seeded.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     template: Option<TemplateRecord>,
+    /// `[[packs]]` — the content packs to layer, in layer order. Absent means
+    /// the pack embedded in the binary.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     packs: Vec<PackEntry>,
     /// Named ahead of the flatten so `[knowledge]` lands here rather than in
@@ -111,9 +122,13 @@ struct WrittenManifest {
     /// the table it may put `custom` and `embeddings` in.
     #[serde(default)]
     knowledge: KnowledgeConfig,
+    /// `[<capability>]` — one table per enabled capability, keyed by its
+    /// kebab-case name; `[[<capability>]]` for a slot that takes several
+    /// providers. An absent table means the capability is disabled.
     #[serde(flatten)]
     capabilities: BTreeMap<String, WrittenEntries>,
 }
+// sokf:end config
 
 /// The manifest: blueprint version plus, per enabled capability, its
 /// provider entries — one for a single slot, a set for a many slot.

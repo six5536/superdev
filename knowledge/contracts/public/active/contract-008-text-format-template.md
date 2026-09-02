@@ -6,7 +6,7 @@ description: What a project template is — where its tree lives in the pack, th
 lifecycle: active
 links:
   - rel: references
-    to: contract-005-text-format-pack
+    to: contract-005-format-pack
     note: A template is a pack item; the pack format names it by its tree.
 sources:
   - id: rust-npm-src
@@ -25,7 +25,7 @@ substitution tokens, and the write-once promise to a seeded repo.
 ## Files
 
 A template is a directory tree under `pack/projects/<name>/` — a pack item
-per the [pack format][sokf:contract-005-text-format-pack], written by
+per the [pack format][sokf:contract-005-format-pack], written by
 maintainers through the `template-backport` skill and read by the binary.
 Seeding (`init --template`, or the prompt the
 [CLI contract][sokf:contract-002-cli-superdev] describes) writes the tree
@@ -148,4 +148,4 @@ repo keeps working regardless.
 
 <!-- sokf:links -->
 [sokf:contract-002-cli-superdev]: /knowledge/contracts/public/active/contract-002-cli-superdev.md
-[sokf:contract-005-text-format-pack]: /knowledge/contracts/public/active/contract-005-text-format-pack.md
+[sokf:contract-005-format-pack]: /knowledge/contracts/public/active/contract-005-format-pack.md
