@@ -171,7 +171,9 @@ Terms from the contract side:
   and one requirement. A feature-request's acceptance criteria take the
   form, numbered, with "THE SYSTEM" as the subject
   ([ADR-031][sokf:adr-031-ears-criteria-are-checked-by-item-pattern]);
-  a contract's Behaviour and Stability promises do not yet
+  a contract's Behaviour and Stability promises do not yet: I037 gives
+  them the form, with the interface element as the subject and a stable
+  key per promise a test cites
   ([I037][sokf:issue-037-feature-request-a-contracts-behaviour-is-not-written-as-ears]).
 
 The files these terms describe are in [configuration][sokf:configuration]; the

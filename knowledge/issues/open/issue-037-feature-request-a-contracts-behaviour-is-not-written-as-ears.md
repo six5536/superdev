@@ -2,7 +2,7 @@
 type: FeatureRequest
 id: issue-037-feature-request-a-contracts-behaviour-is-not-written-as-ears
 title: A contract's behaviour is free prose with a modal verb, while a criterion about it must be EARS
-description: Acceptance criteria are held to EARS and the contract statements they are about are not, so one kind of statement has two forms — and the contract's form buries the trigger, admits two requirements in one sentence, and gives a promise no identity a test can name.
+description: Acceptance criteria are held to EARS and the contract statements they are about are not, so one kind of statement has two forms — and the contract's form buries the trigger, admits two requirements in one sentence, and gives a promise no stable identity a test can name.
 lifecycle: open
 links:
   - rel: references
@@ -24,7 +24,7 @@ links:
 ## Summary
 
 A feature-request's acceptance criteria are EARS sentences, one
-requirement each, numbered, and the validator holds them to the tag.
+requirement each, and the validator holds them to the tag.
 The contract statements those criteria become are prose or bullets
 carrying an RFC 2119 keyword, checked only for the keyword's presence
 somewhere in the section. One kind of statement — a requirement — has
@@ -41,13 +41,13 @@ the trigger and admits more than one requirement per sentence:
 > refuse a re-run once `.superdev/config.toml` exists.
 
 is two requirements, each with its trigger in a subordinate clause. As
-EARS items they separate, each names what sets it off, and each has a
-number a test can cite:
+EARS items they separate, each names what sets it off, and each carries
+a key a test can cite that survives the next insertion above it:
 
-> 1. [event] WHEN `init` runs outside a git repository, `init` SHALL
->    refuse.
-> 2. [state] WHILE `.superdev/config.toml` exists, `init` SHALL refuse
->    a re-run.
+> - `init-outside-git` [event] WHEN `init` runs outside a git
+>   repository, `init` SHALL refuse.
+> - `init-rerun` [state] WHILE `.superdev/config.toml` exists, `init`
+>   SHALL refuse a re-run.
 
 The contract schema's `content-pattern` on Behaviour and Stability asks
 only that a keyword appear once in the section, so a bullet carrying
@@ -64,14 +64,16 @@ gave the Definition a form the validator binds. Behaviour and Stability
 are bound by the project's tests
 ([ADR-042][sokf:adr-042-a-contracts-definition-is-materialized-from-source]),
 and a test can name a promise only when the promise has a form and an
-identity: "Exit codes 3", as a plan's case names "criterion 7" today.
+identity. A number is positional and a contract is edited whenever a
+feature touches its interface, so a numbered reference rots at the rate
+the contract changes; a key does not.
 
 ## Proposed behaviour
 
 A contract's Behaviour and Stability sections state every promise as a
-numbered EARS item: the pattern tag, the trigger or condition in that
-pattern's words, the interface element as the subject, one modal verb,
-one requirement. The verb is `SHALL` or `SHALL NOT` for a requirement,
+bulleted EARS item: a key, the pattern tag, the trigger or condition in
+that pattern's words, the interface element as the subject, one modal
+verb, one requirement. The verb is `SHALL` or `SHALL NOT` for a requirement,
 `SHOULD` or `SHOULD NOT` for a recommendation, and `MAY` for an option;
 `MUST` and its RFC 2119 siblings are retired from contracts, so a
 criterion and the contract item it becomes read the same. A subject is
@@ -84,15 +86,22 @@ current directory" — and carries no modal verb. A table stays where the
 kind's checklist wants one; its rows are not sentences. A `PENDING`
 marker sits beside an item's verb as
 [ADR-044][sokf:adr-044-a-pending-marker-applies-to-prose-and-a-declaration-goes-first-in-source]
-places it beside a sentence's. Numbering restarts under each heading,
-so an item's identity is its heading and its number.
+places it beside a sentence's.
 
-`superdev validate` reports each departure: a numbered item in either
-section with no EARS tag, a modal verb outside a numbered item, a
-retired verb, an item with more than one verb, an item with a tag and
-no verb, and a `TBD` item — a contract promises or says `PENDING`, and
-never defers. The finding names the section and the item, as the
-criterion check's does.
+The key is the promise's stable identity: lowercase words joined by
+hyphens, unique within the contract, so a test, a plan case or a
+comment cites `contract-002-cli-superdev#init-outside-git` and the
+citation holds while promises are inserted around it. A rewording keeps
+the key; a promise that no longer holds is removed with its key, which
+is not reused; a new promise takes a new key. Where the key sits in the
+item, and how the citation is spelled, are the schema's to fix.
+
+`superdev validate` reports each departure: an item in either section
+with no key or no EARS tag, a malformed key, a key used twice in one
+contract, a modal verb outside an item, a retired verb, an item with
+more than one verb, an item with a tag and no verb, and a `TBD` item —
+a contract promises or says `PENDING`, and never defers. The finding
+names the section and the item, as the criterion check's does.
 
 The contract schema is the only file that carries the form; the
 contract-design skill reads it there. The nine active contracts and the
@@ -102,47 +111,55 @@ validates with nothing left to convert by hand.
 ## Acceptance criteria
 
 1. [ubiquitous] The contract schema SHALL declare Behaviour and
-   Stability as numbered lists whose items open with one of the six
-   EARS tags — `[ubiquitous]`, `[event]`, `[state]`, `[conditional]`,
-   `[optional]`, `[complex]` — and prose and tables beside the list
-   SHALL remain permitted in both sections.
-2. [event] WHEN a numbered item under Behaviour or Stability, at any
-   heading depth within the section, opens with no EARS tag, THE
-   SYSTEM SHALL report an error naming the section and the item.
-3. [event] WHEN a modal verb — `SHALL`, `SHOULD`, `MAY`, `MUST`,
+   Stability as bullet lists whose every item carries a key and one of
+   the six EARS tags — `[ubiquitous]`, `[event]`, `[state]`,
+   `[conditional]`, `[optional]`, `[complex]` — and prose and tables
+   beside the list SHALL remain permitted in both sections.
+2. [event] WHEN an item under Behaviour or Stability, at any heading
+   depth within the section, carries no EARS tag or no key, THE SYSTEM
+   SHALL report an error naming the section and the item.
+3. [event] WHEN an item's key is not lowercase words joined by hyphens,
+   THE SYSTEM SHALL report an error naming the item and the key.
+4. [event] WHEN two items in one contract carry the same key, THE
+   SYSTEM SHALL report an error naming the key and both items.
+5. [event] WHEN a modal verb — `SHALL`, `SHOULD`, `MAY`, `MUST`,
    `REQUIRED`, `RECOMMENDED` or `OPTIONAL`, with or without `NOT` —
-   appears in Behaviour or Stability outside a numbered item, THE
-   SYSTEM SHALL report an error naming the section and the line.
-4. [event] WHEN a numbered item under Behaviour or Stability carries
-   `MUST`, `MUST NOT`, `REQUIRED`, `RECOMMENDED` or `OPTIONAL`, THE
-   SYSTEM SHALL report an error naming the item and the verb the
-   contract form admits in its place.
-5. [event] WHEN a numbered item under Behaviour or Stability carries
-   more than one modal verb — `NOT` belongs to its verb — or a tag and
-   no modal verb, THE SYSTEM SHALL report an error naming the item.
-6. [event] WHEN a numbered item under Behaviour or Stability opens with
-   `TBD`, THE SYSTEM SHALL report an error naming the item; the
-   criterion form's `TBD` is not admitted in a contract.
-7. [ubiquitous] An item carrying `PENDING` beside its modal verb, as
+   appears in Behaviour or Stability outside an item, THE SYSTEM SHALL
+   report an error naming the section and the line.
+6. [event] WHEN an item under Behaviour or Stability carries `MUST`,
+   `MUST NOT`, `REQUIRED`, `RECOMMENDED` or `OPTIONAL`, THE SYSTEM
+   SHALL report an error naming the item and the verb the contract
+   form admits in its place.
+7. [event] WHEN an item under Behaviour or Stability carries more than
+   one modal verb — `NOT` belongs to its verb — or a tag and no modal
+   verb, THE SYSTEM SHALL report an error naming the item.
+8. [event] WHEN an item under Behaviour or Stability opens with `TBD`,
+   THE SYSTEM SHALL report an error naming the item; the criterion
+   form's `TBD` is not admitted in a contract.
+9. [ubiquitous] An item carrying `PENDING` beside its modal verb, as
    ADR-044 places it, SHALL pass the checks above.
-8. [ubiquitous] A finding from criteria 2 to 6 SHALL be an error that
-   fails `superdev validate`, and `superdev validate --fix` SHALL NOT
-   rewrite a statement.
-9. [ubiquitous] The contract schema's twelve examples SHALL each carry
-   Behaviour and Stability in the form, and SHALL pass the schema's
-   own check.
-10. [ubiquitous] Every active contract's Behaviour and Stability SHALL
-    conform, with each former sentence's requirements as one item
-    each and no promise dropped, and `superdev validate` SHALL pass on
-    the live tree.
-11. [ubiquitous] The grammar that governs schema files SHALL accept the
+10. [ubiquitous] A finding from criteria 2 to 8 SHALL be an error that
+    fails `superdev validate`, and `superdev validate --fix` SHALL NOT
+    rewrite a statement or supply a key.
+11. [ubiquitous] The contract schema SHALL state the citation form a
+    test, a case or a comment uses to name a promise by its contract
+    and key, and the form SHALL be one a reader can search the tree
+    for.
+12. [ubiquitous] The contract schema's twelve examples SHALL each carry
+    Behaviour and Stability in the form, and SHALL pass the schema's
+    own check.
+13. [ubiquitous] Every active contract's Behaviour and Stability SHALL
+    conform, with each former sentence's requirements as one keyed
+    item each and no promise dropped, and `superdev validate` SHALL
+    pass on the live tree.
+14. [ubiquitous] The grammar that governs schema files SHALL accept the
     contract schema as changed, and contract-010 SHALL carry any row
     the change adds.
-12. [ubiquitous] No skill SHALL change for the form; the contract
+15. [ubiquitous] No skill SHALL change for the form; the contract
     schema alone carries it.
-13. [ubiquitous] The glossary SHALL define the form of a contract
-    promise, and the changelog SHALL carry the change under
-    Unreleased.
+16. [ubiquitous] The glossary SHALL define the form of a contract
+    promise and its key, and the changelog SHALL carry the change
+    under Unreleased.
 
 ## Alternatives considered
 
@@ -155,23 +172,31 @@ validates with nothing left to convert by hand.
 - `THE SYSTEM SHALL` in contracts, as the criteria say — the subject of
   a contract about one verb is the verb, and "the system refuses `init`"
   names the actor less well than "`init` refuses".
-- Bulleted items — no identity a test or a case can name.
+- Numbered items, the identity being the heading and the number — a
+  number is positional, so every insertion renumbers the promises below
+  it and rots every reference to them.
+- Bulleted items with no key, cited by heading and trigger clause — no
+  identity survives a reworded trigger, and nothing a machine could
+  ever match a test to.
 - Convert the statements by `--fix` — a rewrite of a promise's words is
   an authoring decision, and a wrong trigger in a promise is worse than
   a missing tag.
 
 ## Scope
 
-- In: the contract schema's Behaviour and Stability rules and its
-  twelve examples; the validator checks behind criteria 2 to 6; the
-  grammar and contract-010 where a key is added; the sweep of the nine
-  active contracts; the glossary and the changelog.
+- In: the contract schema's Behaviour and Stability rules, the key
+  and the citation form, and its twelve examples; the validator checks
+  behind criteria 2 to 8; the grammar and contract-010 where a schema
+  key is added; the sweep of the nine active contracts; the glossary
+  and the changelog.
 - Out: acceptance criteria, which are EARS already and keep "THE SYSTEM";
   the Definition, which binds by materialisation and whose doc comments
   are the source's; the sentence beyond its tag and verb, whose grammar
-  is the author's; converting statements automatically; the grammar
-  rules of `.agents/superdev.md`, whose RFC 2119 reference already
-  treats `SHALL` as `MUST`.
+  is the author's; converting statements automatically; checking that
+  a test cites every key — testing a project's behaviour is a stated
+  non-goal, and the key is what such a check would need if the
+  non-goal were ever lifted; the grammar rules of `.agents/superdev.md`,
+  whose RFC 2119 reference already treats `SHALL` as `MUST`.
 
 ## Comments
 
@@ -182,7 +207,10 @@ asks for. Framed 2026-09-02 against the one contract schema
 ([ADR-043][sokf:adr-043-one-contract-schema-and-twelve-kinds]), which
 replaced the sixteen kind schemas and the keyword rule the filing
 cited; the four questions the filing left open are settled in the
-proposed behaviour.
+proposed behaviour. The key was added the same day: the owner asked
+what would happen to a number cited from a test once a promise was
+inserted above it, and chose a stable key over a number or a bare
+bullet.
 
 <!-- sokf:links -->
 [sokf:adr-031-ears-criteria-are-checked-by-item-pattern]: /knowledge/adrs/active/adr-031-ears-criteria-are-checked-by-item-pattern.md
