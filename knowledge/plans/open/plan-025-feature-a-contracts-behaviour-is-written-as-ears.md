@@ -128,7 +128,7 @@ rebuild per edit.
 
 ### Slice 3: The internal contracts are swept
 
-- [ ] Done — ticked by integrate at merge.
+- [x] Done — ticked by integrate at merge.
 - Depends-on: 2.
 - Change: contract-007, contract-009 and contract-010 — Behaviour and
   Stability rewritten to keyed EARS bullets per ADR-046: one promise
@@ -148,6 +148,11 @@ rebuild per edit.
     13.
   - manual: the reviewer confirms the promise count per contract
     equals the modal-verb count before the sweep — covers 13.
+  - Note, at merge: contract-007 14 verbs before, 14 promises after;
+    contract-009 8 and 8; contract-010 16 and 16. The scratch schema
+    carrying the four ADR-047 declarations reported nothing for the
+    three, and reported a keyless item, a `MUST` in prose and a
+    tagless item when each was injected.
 
 ### Slice 4: The cli, api and config contracts are swept
 
