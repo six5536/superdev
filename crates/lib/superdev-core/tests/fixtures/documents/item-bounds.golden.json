@@ -1,0 +1,55 @@
+{
+  "findings": [
+    {
+      "file": "unbounded.md",
+      "message": "schema: section \"Body\" declares an item-prohibited-pattern, and its content is not bullet-list or numbered-list",
+      "severity": "error"
+    },
+    {
+      "file": "unbounded.md",
+      "message": "schema: section \"Items\" declares item-only-pattern `(unclosed` — it does not compile, and binds nothing",
+      "severity": "error"
+    },
+    {
+      "file": "faulty.md",
+      "message": "section \"Behaviour\" item `- `P_stops` [event] WHEN told, the thing MUST stop — a retired verb.` does not match, and thing.md declares item-pattern `(?s)^`P_[a-z0-9-]+` \\[(ubiquitous|event|state|conditional|optional|complex)\\] .*\\b(SHALL|SHOULD|MAY)\\b`",
+      "severity": "error"
+    },
+    {
+      "file": "faulty.md",
+      "message": "section \"Behaviour\" line `The thing SHALL be described here — a verb in prose.` matches outside an item, and thing.md declares item-only-pattern `\\b(SHALL|SHOULD|MAY|MUST|REQUIRED|RECOMMENDED|OPTIONAL)\\b`",
+      "severity": "error"
+    },
+    {
+      "file": "faulty.md",
+      "message": "section \"Behaviour\" line `| MAY | an option, in a table row |` matches outside an item, and thing.md declares item-only-pattern `\\b(SHALL|SHOULD|MAY|MUST|REQUIRED|RECOMMENDED|OPTIONAL)\\b`",
+      "severity": "error"
+    },
+    {
+      "file": "faulty.md",
+      "message": "section \"Behaviour\" line `1. The thing SHOULD step — a verb in a numbered item.` matches outside an item, and thing.md declares item-only-pattern `\\b(SHALL|SHOULD|MAY|MUST|REQUIRED|RECOMMENDED|OPTIONAL)\\b`",
+      "severity": "error"
+    },
+    {
+      "file": "faulty.md",
+      "message": "section \"Behaviour\" line `### What it MUST NOT do` matches outside an item, and thing.md declares item-only-pattern `\\b(SHALL|SHOULD|MAY|MUST|REQUIRED|RECOMMENDED|OPTIONAL)\\b`",
+      "severity": "error"
+    },
+    {
+      "file": "faulty.md",
+      "message": "section \"Behaviour\" item `- `P_stops` [event] WHEN told, the thing MUST stop — a retired verb.` matches `MUST`, and thing.md declares item-prohibited-pattern `\\b(MUST|REQUIRED|RECOMMENDED|OPTIONAL)\\b|(?s)\\b(SHALL|SHOULD|MAY)\\b.*\\b(SHALL|SHOULD|MAY)\\b`",
+      "severity": "error"
+    },
+    {
+      "file": "faulty.md",
+      "message": "section \"Behaviour\" item `- `P_answers` [state] WHILE running, the thing SHALL answer, and` matches `SHALL answer, and SHOULD`, and thing.md declares item-prohibited-pattern `\\b(MUST|REQUIRED|RECOMMENDED|OPTIONAL)\\b|(?s)\\b(SHALL|SHOULD|MAY)\\b.*\\b(SHALL|SHOULD|MAY)\\b`",
+      "severity": "error"
+    },
+    {
+      "file": "faulty.md",
+      "message": "section \"Notes\" line `- The thing SHALL not promise here — a verb under a prose rule.` matches outside an item, and thing.md declares item-only-pattern `\\b(SHALL|SHOULD|MAY|MUST|REQUIRED|RECOMMENDED|OPTIONAL)\\b`",
+      "severity": "error"
+    }
+  ],
+  "passed": false
+}

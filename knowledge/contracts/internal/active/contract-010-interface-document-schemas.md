@@ -302,11 +302,12 @@ prose the validator MUST NOT check.
   and both items, and an item with no match MUST be an error naming the
   section and the item. `item-only-pattern` is a regex that may match only
   inside a top-level item: a match on a body line outside every item —
-  prose, a table row, an item of the other list kind — MUST PENDING
-  (I037) be an error naming the section and the line. `item-prohibited-pattern`
-  is a regex no top-level item may match; a match MUST PENDING (I037)
-  be an error naming the item and the matched text. All three read an
-  item as `item-pattern` does and skip fenced blocks (ADR-047).
+  prose, a table row, an item of the other list kind — MUST be an error
+  naming the section and the line, and on a section whose `content` is
+  not a list kind every body line is outside. `item-prohibited-pattern`
+  is a regex no top-level item may match; a match MUST be an error naming
+  the item and the matched text. All three read an item as
+  `item-pattern` does and skip fenced blocks (ADR-047).
 - **What an item is** — the list's top level is the shallowest marker in
   the body, so a list indented under its heading still binds. An item
   takes the following lines indented past that, blank lines included, and
@@ -342,8 +343,8 @@ prose the validator MUST NOT check.
   nothing. An `item-key` on a section whose `content` is not a list
   kind, and an `item-key` whose capture count is not one, MUST be
   reported the same way; an `item-prohibited-pattern` on a section
-  whose `content` is not a list kind MUST PENDING (I037) be reported
-  the same way (ADR-047).
+  whose `content` is not a list kind MUST be reported the same way
+  (ADR-047).
 - **The example is checked in place** — the `example:` block is read as
   a document and run through this same check with the declaring schema
   handed to it, no dispatch; every failure, including an example that
