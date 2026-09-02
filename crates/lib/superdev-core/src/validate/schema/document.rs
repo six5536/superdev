@@ -438,6 +438,11 @@ pub fn check_declarations(schemas: &[(String, String)]) -> Vec<Finding> {
                 ("item-pattern", rule.item_pattern.as_deref()),
                 ("content-pattern", rule.content_pattern.as_deref()),
                 ("item-key", rule.item_key.as_deref()),
+                ("item-only-pattern", rule.item_only_pattern.as_deref()),
+                (
+                    "item-prohibited-pattern",
+                    rule.item_prohibited_pattern.as_deref(),
+                ),
             ];
             for (name, pattern) in patterns {
                 if let Some(pattern) = pattern
@@ -456,9 +461,15 @@ pub fn check_declarations(schemas: &[(String, String)]) -> Vec<Finding> {
             }
             // An item declaration needs items to bind: without a list kind
             // the section's body has none, so the rule would pass in silence.
+            // `item-only-pattern` is the exception — with no items, it binds
+            // every line (ADR-047).
             let per_item = [
                 ("item-pattern", rule.item_pattern.is_some()),
                 ("item-key", rule.item_key.is_some()),
+                (
+                    "item-prohibited-pattern",
+                    rule.item_prohibited_pattern.is_some(),
+                ),
             ];
             let unlisted = !rule
                 .content
@@ -1070,6 +1081,14 @@ fn check_one(
                 schema,
                 &mut push,
             ));
+            check_item_bounds(
+                rule,
+                &headings[h].1,
+                &lines[start..end],
+                &fenced[start..end],
+                schema,
+                &mut push,
+            );
         }
         if rule.content.as_deref() == Some("include") {
             check_authored_fences(
@@ -1203,6 +1222,64 @@ fn check_item_keys_in(
     keys
 }
 
+/// One section's body against the item bounds its rule declares (ADR-047):
+/// `item-only-pattern` may match only inside a top-level item of the list
+/// the section's kind names, so a match on any other unfenced body line —
+/// prose, a table row, a heading, an item of the other list kind, a nested
+/// item — is a finding naming the section and the line; a rule with no list
+/// kind has no items, so the pattern is forbidden on every line.
+/// `item-prohibited-pattern` may match no top-level item, and a match is a
+/// finding naming the item and the matched text; on a rule with no list
+/// kind it binds nothing, as `check_declarations` reports. A pattern that
+/// does not compile binds nothing either.
+fn check_item_bounds(
+    rule: &SectionRule,
+    heading: &str,
+    body: &[&str],
+    fenced: &[bool],
+    schema: &DocSchema,
+    push: &mut impl FnMut(String),
+) {
+    if rule.item_only_pattern.is_none() && rule.item_prohibited_pattern.is_none() {
+        return;
+    }
+    let kind = rule.content.as_deref().filter(|k| LIST_KINDS.contains(k));
+    let items = kind.map_or_else(Vec::new, |kind| items_in(body, fenced, kind));
+
+    if let Some(pattern) = rule.item_only_pattern.as_deref()
+        && let Some(re) = re::compile(pattern)
+    {
+        let inside: BTreeSet<usize> = items.iter().flat_map(|item| &item.lines).copied().collect();
+        for (i, line) in body.iter().enumerate() {
+            if !fenced[i] && !inside.contains(&i) && re.is_match(line) {
+                push(format!(
+                    "section \"{heading}\" line `{}` matches outside an item, and {} declares \
+                     item-only-pattern `{pattern}`",
+                    line.trim(),
+                    schema.name
+                ));
+            }
+        }
+    }
+
+    if let Some(pattern) = rule.item_prohibited_pattern.as_deref()
+        && kind.is_some()
+        && let Some(re) = re::compile(pattern)
+    {
+        for item in &items {
+            if let Some(matched) = re.find(&item.text) {
+                push(format!(
+                    "section \"{heading}\" item `{}` matches `{}`, and {} declares \
+                     item-prohibited-pattern `{pattern}`",
+                    item.first,
+                    matched.as_str(),
+                    schema.name
+                ));
+            }
+        }
+    }
+}
+
 /// An `include` section's fenced blocks against ADR-042: every fence in the
 /// body must sit inside an include block, because the section's content is
 /// materialised and never authored — a fence outside one is the hand-written
@@ -1248,6 +1325,9 @@ struct Item {
     first: String,
     /// The item's own lines, marker stripped and continuations joined.
     text: String,
+    /// The body indices of the item's own lines — the ones `text` joins —
+    /// so a bound can tell a line inside an item from one outside (ADR-047).
+    lines: Vec<usize>,
 }
 
 /// Every top-level item of `kind` in a section body (ADR-030).
@@ -1266,14 +1346,19 @@ fn items_in(body: &[&str], fenced: &[bool], kind: &str) -> Vec<Item> {
     let unfenced = || {
         body.iter()
             .zip(fenced)
-            .filter(|&(_, &in_fence)| !in_fence)
-            .map(|(line, _)| *line)
+            .enumerate()
+            .filter(|&(_, (_, &in_fence))| !in_fence)
+            .map(|(i, (line, _))| (i, *line))
     };
     let marks = |line: &str| {
         let trimmed = line.trim_start();
         !is_thematic_break(trimmed) && (is_bullet(trimmed) || is_numbered(trimmed))
     };
-    let Some(top) = unfenced().filter(|line| marks(line)).map(indent_of).min() else {
+    let Some(top) = unfenced()
+        .filter(|(_, line)| marks(line))
+        .map(|(_, line)| indent_of(line))
+        .min()
+    else {
         return Vec::new();
     };
 
@@ -1284,7 +1369,7 @@ fn items_in(body: &[&str], fenced: &[bool], kind: &str) -> Vec<Item> {
     let mut nested: Option<usize> = None;
     let mut flowing = false;
     let mut open = false;
-    for line in unfenced() {
+    for (i, line) in unfenced() {
         let trimmed = line.trim_start();
         if trimmed.is_empty() {
             flowing = false;
@@ -1306,6 +1391,7 @@ fn items_in(body: &[&str], fenced: &[bool], kind: &str) -> Vec<Item> {
                 items.push(Item {
                     first: line.trim_end().to_string(),
                     text: strip_marker(trimmed).to_string(),
+                    lines: vec![i],
                 });
                 open = true;
                 flowing = true;
@@ -1321,6 +1407,7 @@ fn items_in(body: &[&str], fenced: &[bool], kind: &str) -> Vec<Item> {
             if let Some(item) = items.last_mut() {
                 item.text.push(' ');
                 item.text.push_str(trimmed.trim_end());
+                item.lines.push(i);
             }
             flowing = true;
         } else {
@@ -2650,6 +2737,225 @@ mod tests {
             found.is_empty(),
             "a misplaced key binds nothing: {found:#?}"
         );
+    }
+
+    /// The ADR-047 example rule's four patterns, for the item-bound tests.
+    const KEY: &str = "^`(P_[a-z][a-z0-9]*(?:-[a-z0-9]+)*)`";
+    const TAGGED: &str = "(?s)^`P_[a-z0-9-]+` \\[(ubiquitous|event|state|conditional|optional|\
+                          complex)\\] .*\\b(SHALL|SHOULD|MAY)\\b";
+    const VERB: &str = "\\b(SHALL|SHOULD|MAY|MUST|REQUIRED|RECOMMENDED|OPTIONAL)\\b";
+    const RETIRED_OR_TWICE: &str = "\\b(MUST|REQUIRED|RECOMMENDED|OPTIONAL)\\b|(?s)\\b(SHALL|\
+                                    SHOULD|MAY)\\b.*\\b(SHALL|SHOULD|MAY)\\b";
+
+    /// A schema declaring the ADR-047 example rule — `item-key`,
+    /// `item-pattern`, `item-only-pattern` and `item-prohibited-pattern` —
+    /// on a bullet-list Behaviour section.
+    fn bounded_schema() -> DocSchema {
+        schema_of(&format!(
+            "frontmatter:\n  type:\n    const: T\nsections:\n  - heading: Behaviour\n    level: 2\n\
+             \x20   content: bullet-list\n    item-key: '{KEY}'\n    item-pattern: '{TAGGED}'\n\
+             \x20   item-only-pattern: '{VERB}'\n    item-prohibited-pattern: '{RETIRED_OR_TWICE}'\n"
+        ))
+    }
+
+    /// Covers I037 criterion 5: a modal verb on a paragraph line, a table
+    /// row, a subsection heading and a numbered item under a bullet-list
+    /// rule is each a fatal finding naming the section and the line; one
+    /// inside a bullet item, its continuation included, is not.
+    #[test]
+    fn a_match_outside_an_item_is_a_finding_naming_the_line() {
+        let schema = bounded_schema();
+        let doc = Document {
+            path: "a.md",
+            text: "# T\n\n## Behaviour\n\nThe thing SHALL be described here.\n\n\
+                   - `P_one` [event] WHEN asked, the thing\n  SHALL answer.\n\n\
+                   | Verb | Use |\n|---|---|\n| MAY | an option |\n\n\
+                   1. The thing SHOULD step.\n\n### What it MUST NOT do\n\n\
+                   ```\nA fenced SHALL is an example of one.\n```\n",
+            doc_type: Some("T"),
+        };
+        let mut findings = Vec::new();
+        check_one(&doc, &schema, Subject::Filed, &mut findings);
+        assert_eq!(findings.len(), 4, "{findings:#?}");
+        for (finding, line) in findings.iter().zip([
+            "The thing SHALL be described here.",
+            "| MAY | an option |",
+            "1. The thing SHOULD step.",
+            "### What it MUST NOT do",
+        ]) {
+            assert_eq!(finding.file, "a.md");
+            assert!(finding.fatal, "{finding:#?}");
+            assert!(finding.message.contains("\"Behaviour\""), "{finding:#?}");
+            assert!(
+                finding.message.contains("item-only-pattern"),
+                "{finding:#?}"
+            );
+            assert!(finding.message.contains(line), "{finding:#?}");
+        }
+    }
+
+    /// Covers I037 criterion 5: a rule with no list `content` binds the
+    /// pattern everywhere in its body — a bullet item is outside too.
+    #[test]
+    fn a_rule_without_a_list_kind_forbids_the_pattern_everywhere() {
+        let schema = schema_of(&format!(
+            "frontmatter:\n  type:\n    const: T\nsections:\n  - heading: Notes\n    level: 2\n\
+             \x20   content: prose\n    item-only-pattern: '{VERB}'\n"
+        ));
+        let doc = Document {
+            path: "a.md",
+            text: "# T\n\n## Notes\n\nA note.\n\n- the thing SHALL not promise here\n",
+            doc_type: Some("T"),
+        };
+        let mut findings = Vec::new();
+        check_one(&doc, &schema, Subject::Filed, &mut findings);
+        assert_eq!(findings.len(), 1, "{findings:#?}");
+        assert!(findings[0].fatal, "{findings:#?}");
+        assert!(
+            findings[0]
+                .message
+                .contains("- the thing SHALL not promise here")
+                && findings[0].message.contains("item-only-pattern"),
+            "{findings:#?}"
+        );
+    }
+
+    /// Covers I037 criteria 6 and 7: an item carrying a retired verb, and
+    /// one carrying two verbs, are each a fatal finding naming the item and
+    /// the matched text; `SHALL NOT` is one verb, and passes. The retired
+    /// verb sits beside an admitted one, so `item-pattern` is satisfied and
+    /// the finding is the bound's alone.
+    #[test]
+    fn an_item_matching_the_prohibited_pattern_is_a_finding_naming_the_text() {
+        let schema = bounded_schema();
+        let doc = Document {
+            path: "a.md",
+            text: "# T\n\n## Behaviour\n\n\
+                   - `P_one` [event] WHEN asked, the thing SHALL answer, as it MUST.\n\
+                   - `P_two` [event] WHEN told, the thing SHALL stop, and\n  SHALL stay stopped.\n\
+                   - `P_three` [state] WHILE stopped, the thing SHALL NOT answer.\n",
+            doc_type: Some("T"),
+        };
+        let mut findings = Vec::new();
+        check_one(&doc, &schema, Subject::Filed, &mut findings);
+        assert_eq!(findings.len(), 2, "{findings:#?}");
+        for finding in &findings {
+            assert!(finding.fatal, "{finding:#?}");
+            assert!(
+                finding.message.contains("item-prohibited-pattern"),
+                "{finding:#?}"
+            );
+        }
+        assert!(
+            findings[0]
+                .message
+                .contains("- `P_one` [event] WHEN asked, the thing SHALL answer, as it MUST.")
+                && findings[0].message.contains("matches `MUST`"),
+            "{findings:#?}"
+        );
+        assert!(
+            findings[1]
+                .message
+                .contains("- `P_two` [event] WHEN told, the thing SHALL stop, and")
+                && findings[1]
+                    .message
+                    .contains("matches `SHALL stop, and SHALL`"),
+            "{findings:#?}"
+        );
+    }
+
+    /// Covers I037 criterion 7: an item with a tag and no verb fails the
+    /// ADR-047 `item-pattern`, and only that.
+    #[test]
+    fn an_item_with_a_tag_and_no_verb_fails_the_item_pattern() {
+        let schema = bounded_schema();
+        let doc = Document {
+            path: "a.md",
+            text: "# T\n\n## Behaviour\n\n- `P_one` [event] WHEN asked, the thing answers.\n",
+            doc_type: Some("T"),
+        };
+        let mut findings = Vec::new();
+        check_one(&doc, &schema, Subject::Filed, &mut findings);
+        assert_eq!(findings.len(), 1, "{findings:#?}");
+        assert!(
+            findings[0].message.contains("item-pattern")
+                && findings[0]
+                    .message
+                    .contains("- `P_one` [event] WHEN asked, the thing answers."),
+            "{findings:#?}"
+        );
+    }
+
+    /// Covers I037 criterion 9: an item carrying `PENDING` beside its verb,
+    /// as ADR-044 places it, passes all four patterns.
+    #[test]
+    fn a_pending_item_passes_every_pattern() {
+        let schema = bounded_schema();
+        let doc = Document {
+            path: "a.md",
+            text: "# T\n\n## Behaviour\n\nEvery promise acts on the thing.\n\n\
+                   - `P_one` [event] WHEN asked, the thing SHALL PENDING (I037) answer.\n",
+            doc_type: Some("T"),
+        };
+        let mut findings = Vec::new();
+        check_one(&doc, &schema, Subject::Filed, &mut findings);
+        assert!(findings.is_empty(), "{findings:#?}");
+    }
+
+    /// Covers I037 criterion 14: an `item-prohibited-pattern` on a `prose`
+    /// rule, and an `item-only-pattern` or `item-prohibited-pattern` that
+    /// does not compile, are each a finding on the schema file — and each
+    /// binds nothing.
+    #[test]
+    fn a_mis_declared_item_bound_is_a_finding_on_the_schema() {
+        let head = "---\ntype: Schema\n---\n\n````yaml\nfrontmatter:\n  type:\n    const: T\n\
+                    sections:\n  - heading: Items\n    level: 2\n";
+        let doc = Document {
+            path: "a.md",
+            text: "# T\n\n## Items\n\nProse with MUST.\n\n- an item with MUST\n",
+            doc_type: Some("T"),
+        };
+
+        let misplaced =
+            format!("{head}    content: prose\n    item-prohibited-pattern: 'MUST'\n````\n");
+        let findings = check_declarations(&[("s.md".into(), misplaced)]);
+        assert_eq!(findings.len(), 1, "{findings:#?}");
+        assert_eq!(findings[0].file, "s.md");
+        assert!(
+            findings[0].message.contains("item-prohibited-pattern")
+                && findings[0].message.contains("content is not"),
+            "{findings:#?}"
+        );
+        let schema = schema_of(
+            "frontmatter:\n  type:\n    const: T\nsections:\n  - heading: Items\n    level: 2\n\
+             \x20   content: prose\n    item-prohibited-pattern: 'MUST'\n",
+        );
+        let mut found = Vec::new();
+        check_one(&doc, &schema, Subject::Filed, &mut found);
+        assert!(
+            found.is_empty(),
+            "a misplaced bound binds nothing: {found:#?}"
+        );
+
+        for name in ["item-only-pattern", "item-prohibited-pattern"] {
+            let text = format!("{head}    content: bullet-list\n    {name}: '(unclosed'\n````\n");
+            let findings = check_declarations(&[("s.md".into(), text)]);
+            assert_eq!(findings.len(), 1, "{name}: {findings:#?}");
+            assert!(
+                findings[0].message.contains(name) && findings[0].message.contains("compile"),
+                "{findings:#?}"
+            );
+            let schema = schema_of(&format!(
+                "frontmatter:\n  type:\n    const: T\nsections:\n  - heading: Items\n    level: 2\n\
+                 \x20   content: bullet-list\n    {name}: '(unclosed'\n"
+            ));
+            let mut found = Vec::new();
+            check_one(&doc, &schema, Subject::Filed, &mut found);
+            assert!(
+                found.is_empty(),
+                "an unreadable bound binds nothing: {found:#?}"
+            );
+        }
     }
 
     /// A schema declaring `include` content on one Definition section, for

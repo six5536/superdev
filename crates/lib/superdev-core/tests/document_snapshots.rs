@@ -200,3 +200,15 @@ fn variant_rules() {
 fn item_key() {
     snapshot("item-key");
 }
+
+/// A schema declaring `item-only-pattern` and `item-prohibited-pattern`
+/// (ADR-047): a modal verb in prose, a table row, a numbered item and a
+/// subsection heading under a bullet-list rule, and in a bullet under a
+/// prose rule, each report the section and the line; a retired verb and a
+/// two-verb item each report the item and the matched text; a `PENDING`
+/// item and a `SHALL NOT` item report nothing; a prohibited pattern on a
+/// prose section and an uncompilable bound report on the schema.
+#[test]
+fn item_bounds() {
+    snapshot("item-bounds");
+}
