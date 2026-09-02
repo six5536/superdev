@@ -140,48 +140,40 @@ fn the_ears_declaration_ships_to_managed_repositories() {
     }
 }
 
-/// The ADR-032 assignment: which contract-kind sections declare that their
-/// entries bind, and which are definitional and declare nothing. Kept here
-/// rather than derived, so a section quietly losing its declaration fails.
-/// `mcp` Tools left this set when it became a definition block (ADR-033): a
-/// block defines the surface, and the keyword rule is for a list of promises.
-const PROMISE_ITEMS: [(&str, &[&str]); 4] = [
-    ("cli", &["Behaviour"]),
-    ("data", &["Constraints"]),
-    ("deployment", &["Health and lifecycle"]),
-    ("events", &["Ordering and delivery"]),
-];
-
-const PROMISE_BODIES: [(&str, &[&str]); 15] = [
-    ("authz", &["Boundaries", "Stability"]),
-    ("cli", &["Stability"]),
-    (
-        "config",
-        &["Sources and precedence", "Secrets", "Stability"],
-    ),
-    ("data", &["Migration", "Stability"]),
-    // Runtime left this set when it became a definition block (ADR-033).
-    ("deployment", &["Stability"]),
-    ("events", &["Stability"]),
-    ("text-format", &["Compatibility", "Stability"]),
-    ("graphql", &["Errors", "Limits", "Stability"]),
-    (
-        "interface",
-        &["Module boundaries", "Cross-cutting concerns"],
-    ),
-    ("library", &["Errors", "Stability"]),
-    ("mcp", &["Server", "Errors", "Stability"]),
-    ("rest", &["Authentication", "Stability"]),
-    ("rpc", &["Authentication", "Stability"]),
-    ("telemetry", &["Stability"]),
-    ("ui", &["Stability"]),
-];
-
-/// The RFC 2119 keyword pattern ADR-032 declares: the uppercase forms alone
-/// bind, so descriptive prose keeps its ordinary words.
+/// The RFC 2119 keyword pattern ADR-032 declared and ADR-043 keeps: the
+/// uppercase forms alone bind, so descriptive prose keeps its ordinary words.
 const KEYWORDS: &str = r"\b(MUST|SHALL|SHOULD|MAY|REQUIRED|RECOMMENDED|OPTIONAL)\b";
 
-/// The section rule for `heading` in a contract-kind schema, as written.
+/// The twelve kinds the one contract schema admits (ADR-043).
+const KINDS: [&str; 12] = [
+    "api",
+    "events",
+    "cli",
+    "library",
+    "interface",
+    "ui",
+    "data",
+    "format",
+    "config",
+    "telemetry",
+    "authz",
+    "deployment",
+];
+
+/// The contract schema as shipped: its live copy and its pack source, which
+/// `sync` keeps byte-equal.
+fn contract_schema_copies() -> [(String, String); 2] {
+    [
+        "knowledge/schemas/contract.md",
+        "pack/knowledge/schemas/contract.md",
+    ]
+    .map(|p| {
+        let text = std::fs::read_to_string(repo(p)).expect("the contract schema is on file");
+        (p.to_string(), text)
+    })
+}
+
+/// The section rule for `heading` in the contract schema, as written.
 fn rule_for(schema: &str, heading: &str) -> String {
     let schema = same(schema);
     let anchor = format!("  - heading: \"{heading}\"\n");
@@ -195,74 +187,74 @@ fn rule_for(schema: &str, heading: &str) -> String {
         .to_string()
 }
 
-/// Covers I034 criterion 7: every promise-bearing section declares that its
-/// entries bind, in the live tree and in the pack mirror (ADR-032).
+/// Covers I034 criterion 7 and I049 criterion 8: the two promise sections
+/// the one schema has, Behaviour and Stability, declare that their bodies
+/// bind, in the live tree and in the pack mirror (ADR-043).
 #[test]
 fn every_promise_section_declares_its_shape() {
-    for root in ["knowledge/schemas", "pack/knowledge/schemas"] {
-        for (kind, headings) in PROMISE_ITEMS {
-            let text =
-                std::fs::read_to_string(repo(&format!("{root}/contract-{kind}.md"))).unwrap();
-            for heading in headings {
-                let rule = rule_for(&text, heading);
-                assert!(
-                    rule.contains(&format!("item-pattern: '{KEYWORDS}'")),
-                    "{root}/contract-{kind}.md: {heading} declares the keyword per item"
-                );
-            }
-        }
-        for (kind, headings) in PROMISE_BODIES {
-            let text =
-                std::fs::read_to_string(repo(&format!("{root}/contract-{kind}.md"))).unwrap();
-            for heading in headings {
-                let rule = rule_for(&text, heading);
-                assert!(
-                    rule.contains(&format!("content-pattern: '{KEYWORDS}'")),
-                    "{root}/contract-{kind}.md: {heading} declares the keyword for its body"
-                );
-            }
-        }
-    }
-}
-
-/// Covers I034 criterion 7: a definitional section declares no shape — it
-/// binds by form, and a keyword rule there would misfire (ADR-032).
-#[test]
-fn a_definitional_section_declares_no_shape() {
-    for (kind, heading) in [
-        ("cli", "Commands"),
-        ("rest", "Endpoints"),
-        ("interface", "Key flows"),
-        ("ui", "Screens and states"),
-        ("telemetry", "Metrics"),
-        ("authz", "Permissions"),
-        // Definition blocks: their shape is the block contract's to bind.
-        ("cli", "Commands"),
-        ("mcp", "Tools"),
-    ] {
-        for root in ["knowledge/schemas", "pack/knowledge/schemas"] {
-            let text =
-                std::fs::read_to_string(repo(&format!("{root}/contract-{kind}.md"))).unwrap();
+    for (p, text) in contract_schema_copies() {
+        for heading in ["Behaviour", "Stability"] {
             let rule = rule_for(&text, heading);
             assert!(
-                !rule.contains("item-pattern") && !rule.contains("content-pattern"),
-                "{root}/contract-{kind}.md: {heading} is definitional and declares no pattern"
+                rule.contains(&format!("content-pattern: '{KEYWORDS}'")),
+                "{p}: {heading} declares the keyword for its body"
             );
         }
     }
 }
 
-/// Covers I034 criterion 6: every contract-kind schema's worked example
-/// satisfies the declarations that schema carries — the example is the shape
-/// a contract writer copies, so it teaches the modal form or teaches nothing.
+/// Covers I034 criterion 7 and I049 criterion 9: the Definition is
+/// materialised, never authored — its rule declares `content: include`, no
+/// pattern and none of the withdrawn `block-*` keys, so nothing inside it is
+/// read (ADR-042).
 #[test]
-fn every_contract_schema_example_passes_its_own_declarations() {
+fn the_definition_declares_an_include_and_no_shape() {
+    for (p, text) in contract_schema_copies() {
+        let rule = rule_for(&text, "Definition");
+        assert!(
+            rule.contains("content: include"),
+            "{p}: Definition is materialised from source"
+        );
+        for key in ["item-pattern", "content-pattern", "block-"] {
+            assert!(
+                !rule.contains(key),
+                "{p}: Definition is definitional and declares no `{key}`"
+            );
+        }
+    }
+}
+
+/// Covers I034 criterion 6 and I049 criterion 14: the one contract schema
+/// carries a worked example per kind, and every example satisfies the base
+/// rules and its own variant's — the example is the shape a contract writer
+/// copies, so it teaches the modal form or teaches nothing.
+#[test]
+fn every_contract_example_passes_its_own_declarations() {
     let schemas = schemas("knowledge/schemas");
     let contracts: Vec<(String, String)> = schemas
         .into_iter()
-        .filter(|(name, _)| name.starts_with("contract-"))
+        .filter(|(name, _)| name.starts_with("contract"))
         .collect();
-    assert_eq!(contracts.len(), 16, "every contract kind was read");
+    assert_eq!(
+        contracts
+            .iter()
+            .map(|(n, _)| n.as_str())
+            .collect::<Vec<_>>(),
+        ["contract.md"],
+        "one contract schema, and no per-kind one"
+    );
+    let block = fenced_block(&contracts[0].1, "yaml").expect("the schema carries a yaml contract");
+    let y: serde_yaml_ng::Value = serde_yaml_ng::from_str(&block).unwrap();
+    let mut keys: Vec<&str> = y["example"]
+        .as_mapping()
+        .expect("example is keyed by kind")
+        .keys()
+        .map(|k| k.as_str().unwrap())
+        .collect();
+    keys.sort_unstable();
+    let mut kinds = KINDS.to_vec();
+    kinds.sort_unstable();
+    assert_eq!(keys, kinds, "one example per kind");
     let found = superdev_core::validate::schema::document::check_examples(&contracts);
     assert!(found.is_empty(), "{found:#?}");
 }
@@ -284,36 +276,39 @@ fn an_item_pattern_without_a_list_kind_is_a_schema_finding() {
     assert!(found[0].message.contains("content is not"), "{found:#?}");
 }
 
-/// Covers I035 criterion 9: the file-format kind is retired, and the two
-/// kinds that replace it each govern their own type (ADR-037).
+/// Covers I049 criterion 8: one schema governs every contract, and neither
+/// tree ships a per-kind one — the sixteen ADR-043 retired, `contract-cli`
+/// through `contract-ui`, and the `file-format` one ADR-037 retired before
+/// them.
 #[test]
-fn the_format_kind_is_split_and_the_old_one_is_gone() {
+fn no_kind_schema_is_on_file() {
     for root in ["knowledge/schemas", "pack/knowledge/schemas"] {
-        assert!(
-            !repo(&format!("{root}/contract-file-format.md")).exists(),
-            "{root} still ships the retired file-format schema"
+        let mut names: Vec<String> = std::fs::read_dir(repo(root))
+            .expect("the schema directory")
+            .map(|e| e.unwrap().file_name().to_str().unwrap().to_string())
+            .filter(|n| n.starts_with("contract"))
+            .collect();
+        names.sort_unstable();
+        assert_eq!(
+            names,
+            ["contract.md"],
+            "{root} ships a per-kind contract schema"
         );
-        for (kind, konst) in [
-            ("text-format", "TextFormatContract"),
-            ("binary-format", "BinaryFormatContract"),
-        ] {
-            let text =
-                std::fs::read_to_string(repo(&format!("{root}/contract-{kind}.md"))).unwrap();
-            assert!(
-                text.contains(&format!("const: {konst}")),
-                "{root}/contract-{kind}.md governs {konst}"
-            );
-        }
+        assert!(
+            !repo(&format!("{root}/fragments/contract-style.md")).exists(),
+            "{root} still ships the contract-style fragment"
+        );
     }
 }
 
-/// Covers I035 criterion 9: nothing a writer builds against names the
-/// retired kind. The records that say what changed — the ADR, the framed
-/// issue, the review reports and the indexes that summarise them —
-/// legitimately name it, so the hunt is scoped to the schemas and contracts
-/// a writer reads to build.
+/// Covers I049 criterion 8: nothing a writer builds against names a retired
+/// kind schema or a retired contract type. The records that say what
+/// changed — the ADRs, the framed issue, the plans, the review reports and
+/// the indexes that summarise them — legitimately name them, so the hunt is
+/// scoped to the schemas, the contracts and the skills a writer reads to
+/// build.
 #[test]
-fn nothing_names_the_retired_format_kind() {
+fn nothing_names_a_retired_kind_schema() {
     fn walk(dir: &std::path::Path, found: &mut Vec<String>) {
         let Ok(entries) = std::fs::read_dir(dir) else {
             return;
@@ -325,14 +320,13 @@ fn nothing_names_the_retired_format_kind() {
             } else if path.extension().is_some_and(|e| e == "md") {
                 let text = std::fs::read_to_string(&path).unwrap_or_default();
                 for needle in [
-                    "schema-contract-file-format",
-                    "-file-format-pack",
-                    "-file-format-lock",
-                    "-file-format-template",
-                    // The kind's own name, not only its id token: prose
-                    // naming a retired kind misleads as much as a link does.
+                    "schema-contract-",
+                    "-file-format-",
                     "file-format contract",
                     "FileFormatContract",
+                    "TextFormatContract",
+                    "BinaryFormatContract",
+                    "sokf:include contract-style",
                 ] {
                     if text.contains(needle) {
                         found.push(format!("{}: {needle}", path.display()));
@@ -347,12 +341,16 @@ fn nothing_names_the_retired_format_kind() {
         "knowledge/contracts",
         "pack/knowledge/schemas",
         "pack/knowledge/concepts",
+        "pack/knowledge/skills",
+        ".claude/skills",
     ] {
         walk(&repo(root), &mut found);
     }
+    // contract-008's link note records what its `format` kind replaced.
+    found.retain(|f| !f.contains("contract-008-format-template.md: TextFormatContract"));
     assert!(
         found.is_empty(),
-        "the retired kind is still named where a writer builds: {found:#?}"
+        "a retired kind schema is still named where a writer builds: {found:#?}"
     );
 }
 
@@ -380,90 +378,6 @@ fn fenced_block(text: &str, tag: &str) -> Option<String> {
     None
 }
 
-/// The section rules a schema declares, parsed from its yaml contract.
-fn section_rules(text: &str) -> Vec<serde_yaml_ng::Value> {
-    let block = fenced_block(text, "yaml").expect("a schema carries a yaml contract");
-    let y: serde_yaml_ng::Value =
-        serde_yaml_ng::from_str(&block).expect("the yaml contract parses");
-    y.get("sections")
-        .and_then(|s| s.as_sequence())
-        .cloned()
-        .unwrap_or_default()
-}
-
-/// Covers I035 criterion 1: every contract kind declares how its interface is
-/// defined — a section whose content is a code block, or the tables that are
-/// its native structured form — and that section demands the whole surface.
-#[test]
-fn every_contract_kind_declares_a_definition_form() {
-    // These kinds define through tables rather than a fenced block: a
-    // permission matrix, a byte layout, a metric set, a route list.
-    const BY_TABLE: [&str; 4] = ["authz", "binary-format", "telemetry", "ui"];
-    let mut seen = 0;
-    for root in ["knowledge/schemas", "pack/knowledge/schemas"] {
-        for entry in std::fs::read_dir(repo(root)).expect("the schema directory") {
-            let path = entry.unwrap().path();
-            let name = path.file_name().unwrap().to_str().unwrap().to_string();
-            if !name.starts_with("contract-") {
-                continue;
-            }
-            let kind = name
-                .trim_start_matches("contract-")
-                .trim_end_matches(".md")
-                .to_string();
-            let text = std::fs::read_to_string(&path).unwrap();
-            if root == "knowledge/schemas" {
-                seen += 1;
-            }
-            let rules = section_rules(&text);
-            let wanted = if BY_TABLE.contains(&kind.as_str()) {
-                "table"
-            } else {
-                "code"
-            };
-            let definitions: Vec<&serde_yaml_ng::Value> = rules
-                .iter()
-                .filter(|r| r.get("content").and_then(|c| c.as_str()) == Some(wanted))
-                .collect();
-            assert!(
-                !definitions.is_empty(),
-                "{root}/{name} declares no section whose content is {wanted}"
-            );
-            // Where the validator can read the block's language, the
-            // section must declare what the block carries — otherwise the
-            // block is a fence the validator opens and does not check.
-            // Completeness against reality is the drift test's to bind; no
-            // wording in a description can decide it.
-            for rule in &definitions {
-                let Some(language) = rule.get("block-language").and_then(|l| l.as_str()) else {
-                    continue;
-                };
-                assert!(
-                    ["yaml", "json"].contains(&language),
-                    "{root}/{name}: block-language `{language}` is one the validator cannot read"
-                );
-                let keys = rule.get("block-keys").is_some();
-                let entry_keys = rule.get("block-entry-keys").is_some();
-                assert!(
-                    keys || entry_keys,
-                    "{root}/{name}: the block is parsed and nothing about it is checked"
-                );
-            }
-            // A table definition binds by its columns, which the schema
-            // engine checks.
-            if wanted == "table" {
-                assert!(
-                    definitions.iter().any(|r| r
-                        .get("columns")
-                        .is_some_and(|c| c.as_sequence().is_some_and(|s| s.len() >= 2))),
-                    "{root}/{name}: no table section declares the columns it binds"
-                );
-            }
-        }
-    }
-    assert_eq!(seen, 16, "every contract kind was read");
-}
-
 /// Covers I035 criterion 3: a schema demands a form and never a toolchain, so
 /// its declarations hold whatever framework a managed repository builds on.
 #[test]
@@ -489,14 +403,14 @@ fn no_schema_names_a_framework_or_a_toolchain() {
     for entry in std::fs::read_dir(repo("knowledge/schemas")).expect("the schema directory") {
         let path = entry.unwrap().path();
         let name = path.file_name().unwrap().to_str().unwrap().to_string();
-        if !name.starts_with("contract-") {
+        if name != "contract.md" {
             continue;
         }
         // Only what the schema demands: a worked example may name the
         // fictional library's own dependencies, which bind nobody.
         let whole = std::fs::read_to_string(&path).unwrap();
         let text = whole
-            .split("example: |")
+            .split("\nexample:")
             .next()
             .unwrap_or_default()
             .to_lowercase();
@@ -527,16 +441,20 @@ fn rust_files(dir: &std::path::Path, found: &mut Vec<PathBuf>) {
     }
 }
 
-/// Covers I049 criteria 21 and 23: no test under `crates/` reads a fenced
-/// block out of the CLI, the MCP, the config, any of the three format or any
-/// of the three interface contracts to compare it to the binary — the
-/// interface ones by matching signatures out of the contract against the
-/// source, the template one by reading tokens and section headings out of
-/// it. The Definition is an include the validator binds; a test that opened
-/// a fence in any of them would be comparing a copy that no longer exists
-/// (ADR-042). The readers are the helpers the deleted tests opened a fence
-/// with: the `fenced_block` of the config and format tests, the `rust_lines`
-/// of the interface test, the `tokens_in` of the template test. This file
+/// Covers I049 criteria 21 and 23: no test under `crates/` opens the CLI,
+/// the MCP, the config, any of the three format or any of the three
+/// interface contracts and reads a fenced block out of it. The Definition
+/// is an include the validator binds; a test that opened a fence in any of
+/// them would be comparing a copy that no longer exists (ADR-042).
+///
+/// What this binds is structural, not a helper's name: a source file is
+/// split into its top-level items, and it fails when an item names one of
+/// the contracts and an item that could serve it — the same one, or any
+/// item that is not itself a test — carries a fence reader, which is a
+/// literal fence opener (` ``` `) or an identifier carrying `fenced`. A test
+/// that names a contract beside another test that writes a fence into its
+/// own fixture is fine; a test that names a contract and calls a helper
+/// which splits on a fence is not, whatever the helper is called. This file
 /// names the contracts and the readers here and is skipped for it.
 #[test]
 fn no_test_compares_a_fenced_block_of_an_included_contract_to_the_binary() {
@@ -552,7 +470,7 @@ fn no_test_compares_a_fenced_block_of_an_included_contract_to_the_binary() {
         "contract-010-interface-document-schemas.md",
         "knowledge/contracts/internal",
     ];
-    const READERS: [&str; 3] = ["fenced_block", "rust_lines", "tokens_in"];
+    const READERS: [&str; 2] = ["```", "fenced"];
     let mut files = Vec::new();
     rust_files(&repo("crates"), &mut files);
     assert!(!files.is_empty(), "the crates were read");
@@ -562,19 +480,37 @@ fn no_test_compares_a_fenced_block_of_an_included_contract_to_the_binary() {
             continue;
         }
         let text = std::fs::read_to_string(&path).unwrap_or_default();
-        if CONTRACTS.iter().any(|c| text.contains(c)) && READERS.iter().any(|r| text.contains(r)) {
-            found.push(path.display().to_string());
+        // One chunk per top-level item: each ends at a `}` in column 0, and
+        // carries the doc comment, attributes and constants written before
+        // the item.
+        let items: Vec<&str> = text.split("\n}\n").collect();
+        let names_a_contract = |item: &str| CONTRACTS.iter().any(|c| item.contains(c));
+        let reads_a_fence = |item: &str| READERS.iter().any(|r| item.contains(r));
+        let is_test = |item: &str| item.contains("#[test]");
+        let helper_reads_a_fence = items
+            .iter()
+            .any(|item| !is_test(item) && reads_a_fence(item));
+        for item in items.iter().filter(|item| names_a_contract(item)) {
+            if reads_a_fence(item) || helper_reads_a_fence {
+                let name = item
+                    .lines()
+                    .filter_map(|l| l.strip_prefix("fn "))
+                    .filter_map(|l| l.split('(').next())
+                    .next_back()
+                    .unwrap_or("<no fn>");
+                found.push(format!("{}: {name}", path.display()));
+            }
         }
     }
     assert!(
         found.is_empty(),
-        "a test reads a fenced block out of a contract whose definition is an include: {found:#?}"
+        "an item names a contract whose definition is an include, and reads a fence out of it or can call a helper that does: {found:#?}"
     );
 }
 
 /// Covers I035 criterion 13: the plan schema and the feature-plan skill both
 /// state that a slice closing a contract-implementation gap sorts first
-/// (ADR-038), in the live tree and in the pack mirror.
+/// (ADR-044), in the live tree and in the pack mirror.
 #[test]
 fn the_plan_orders_a_contract_gap_first() {
     for p in [
@@ -681,14 +617,11 @@ fn the_contract_design_skill_declares_in_source() {
 /// whose three PENDING promises P024 slices 2 and 3 kept.
 #[test]
 fn a_pending_promise_is_declared_bounded_and_absent() {
-    for p in [
-        "knowledge/schemas/contract-cli.md",
-        "pack/knowledge/schemas/contract-cli.md",
-    ] {
-        let text = std::fs::read_to_string(repo(p)).unwrap();
+    for (p, text) in contract_schema_copies() {
+        let rule = rule_for(&text, "Behaviour");
         assert!(
-            same(&text).contains("carries\n      `pending`"),
-            "{p} does not declare the pending marker"
+            same(&rule).contains("carries PENDING beside its verb"),
+            "{p} does not declare the pending marker where Behaviour is declared"
         );
     }
     for (p, text) in skill_copies("accept") {

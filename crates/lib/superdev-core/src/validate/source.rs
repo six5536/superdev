@@ -1,7 +1,7 @@
-//! validate::source — what an include block naming a repository file must
-//! carry (SPEC §9): the named region of the file, rendered as a fenced
-//! block. The check and the repair both read it here, so the two cannot
-//! disagree about the content.
+//! validate::source — what an include block must carry (SPEC §9): a
+//! concept's body, or the named region of a repository file rendered as a
+//! fenced block. The check and the repair both read it here, so the two
+//! cannot disagree about the content, nor about when a block carries it.
 //!
 //! Nothing inside the file is parsed. The markers are found by substring in
 //! whatever comment syntax the file uses, and the region's bytes move into
@@ -10,6 +10,45 @@
 use std::path::Path;
 
 use super::sokf::canonical;
+use crate::sokf::concept::{IncludeTarget, carries_include_markers, included_text};
+
+/// What the block for `target` must carry: the body of the concept `lookup`
+/// answers for, or the file's region rendered by [`render`].
+///
+/// # Errors
+///
+/// The finding's text, which is the repair's reason to leave the block as
+/// written: the id names no concept, the concept itself carries an include
+/// block (includes do not nest), or the source does not render.
+pub(crate) fn expected<'a>(
+    target: &IncludeTarget,
+    lookup: impl Fn(&str) -> Option<&'a str>,
+    repo_root: &Path,
+) -> Result<String, String> {
+    match target {
+        IncludeTarget::Concept(id) => {
+            let Some(body) = lookup(id) else {
+                return Err(format!("include block names no concept: `{id}`"));
+            };
+            let content = included_text(body);
+            if carries_include_markers(&content) {
+                return Err(format!(
+                    "include block names `{id}`, which itself carries an include block; includes do not nest"
+                ));
+            }
+            Ok(content)
+        }
+        IncludeTarget::Source { path, region } => render(repo_root, path, region.as_deref()),
+    }
+}
+
+/// Whether a block's content is `expected`: the same lines, whatever ends
+/// them, so a CRLF checkout of the host or of the source reads as its LF
+/// twin (I040); surrounding blank lines do not count.
+#[must_use]
+pub(crate) fn carries(content: &str, expected: &str) -> bool {
+    crate::fsutil::lines(content.trim()) == crate::fsutil::lines(expected)
+}
 
 /// The marker opening a region; the region's name follows.
 const BEGIN: &str = "sokf:begin ";

@@ -69,7 +69,9 @@ mod tests {
         for (owner, kind, least) in [
             (knowledge(), ItemKind::Skill, 15),
             (knowledge(), ItemKind::KnowledgeSkeleton, 20),
-            (knowledge(), ItemKind::DocSchema, 50),
+            // Forty-one schemas and their index, since ADR-043 folded the
+            // sixteen contract-kind schemas into one.
+            (knowledge(), ItemKind::DocSchema, 40),
             (Owner::Capability(Capability::Skills), ItemKind::Skill, 2),
             (Owner::Repo, ItemKind::ProjectTemplate, 2),
         ] {

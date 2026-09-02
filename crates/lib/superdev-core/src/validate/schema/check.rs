@@ -1376,9 +1376,9 @@ mod schema_parity {
     }
 
     /// The schemas that ship all pass, which is the check the live tree
-    /// depends on and the widest input the port has. Fragments live one
-    /// directory down and are documents, not schemas; the flat read skips
-    /// them.
+    /// depends on and the widest input the port has. A fragment would live
+    /// one directory down and be a document, not a schema; the flat read
+    /// skips the directory.
     #[test]
     fn every_shipped_schema_passes() {
         let dir: PathBuf = [env!("CARGO_MANIFEST_DIR"), "../../..", "knowledge/schemas"]
@@ -1403,6 +1403,6 @@ mod schema_parity {
             assert!(errs.is_empty(), "{}: {errs:?}", path.display());
             checked += 1;
         }
-        assert_eq!(checked, 57, "every schema is checked");
+        assert_eq!(checked, 41, "every schema is checked");
     }
 }

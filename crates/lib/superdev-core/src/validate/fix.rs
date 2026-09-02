@@ -31,9 +31,7 @@ use super::sokf::{
 use super::{lifecycle, source};
 use crate::error::{Error, Result};
 use crate::sokf::bundle::{Bundle, load_bundle};
-use crate::sokf::concept::{
-    INCLUDE_OPEN, IncludeTarget, carries_include_markers, include_blocks, included_text,
-};
+use crate::sokf::concept::{INCLUDE_OPEN, include_blocks};
 
 /// What one repair pass changed.
 #[derive(Debug, Default)]
@@ -143,13 +141,13 @@ pub fn fix(bundle: &Bundle, repo_root: &Path) -> Result<Repair> {
 }
 
 /// Every include block refilled from its source: a concept's converted body,
-/// or a repository file's region rendered by [`source::render`], which the
-/// check reads too (SPEC §9). An id naming no source, a source that itself
-/// carries an include block and a path or region that resolves to nothing
-/// are left as written, as is every marker fault — the check reports those —
-/// but a well-formed block is repaired even beside a faulty marker, so the
-/// check's "run `superdev validate --fix`" stays true whatever else is wrong
-/// in the file.
+/// or a repository file's region, read through [`source::expected`] as the
+/// check reads it (SPEC §9). A block the source cannot fill — an id naming
+/// no concept, a concept that itself carries an include block, a path or
+/// region that resolves to nothing — is left as written, as is every marker
+/// fault; the check reports those. A well-formed block is repaired even
+/// beside a faulty marker, so the check's "run `superdev validate --fix`"
+/// stays true whatever else is wrong in the file.
 fn materialize(body: &str, sources: &HashMap<&str, &str>, repo_root: &Path) -> String {
     if !body.contains(INCLUDE_OPEN) {
         return body.to_string();
@@ -158,26 +156,12 @@ fn materialize(body: &str, sources: &HashMap<&str, &str>, repo_root: &Path) -> S
     let mut out = String::with_capacity(body.len());
     let mut cursor = 0;
     for block in blocks {
-        let content = match &block.target {
-            IncludeTarget::Concept(id) => {
-                let Some(source) = sources.get(id.as_str()) else {
-                    continue;
-                };
-                let content = included_text(source);
-                if carries_include_markers(&content) {
-                    continue;
-                }
-                content
-            }
-            IncludeTarget::Source { path, region } => {
-                match source::render(repo_root, path, region.as_deref()) {
-                    Ok(content) => content,
-                    Err(_) => continue,
-                }
-            }
+        let lookup = |id: &str| sources.get(id).copied();
+        let Ok(content) = source::expected(&block.target, lookup, repo_root) else {
+            continue;
         };
-        // The check compares trimmed, so a block it accepts is not rewritten.
-        if body[block.content_start..block.content_end].trim() == content {
+        // A block the check accepts is not rewritten.
+        if source::carries(&body[block.content_start..block.content_end], &content) {
             continue;
         }
         out.push_str(&body[cursor..block.content_start]);
@@ -465,6 +449,47 @@ mod tests {
             materialize(&out, &sources, dir.path()),
             out,
             "a filled block is not rewritten"
+        );
+    }
+
+    /// A CRLF document (I040): a stale concept include and a stale source
+    /// include are refilled with the open marker's line still ending where
+    /// it did, so the block is still an include afterwards; a block that is
+    /// current apart from its line ends is left alone.
+    #[test]
+    fn materialize_keeps_the_marker_line_whole_on_a_crlf_document() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::create_dir_all(dir.path().join("src")).unwrap();
+        std::fs::write(
+            dir.path().join("src/main.rs"),
+            "// sokf:begin cli\r\nstruct Cli {}\r\n// sokf:end cli\r\n",
+        )
+        .unwrap();
+        let sources: HashMap<&str, &str> = HashMap::from([("style", "The rules.\r\n")]);
+        let body = "<!-- sokf:include /src/main.rs#cli -->\r\n```rust\r\nold\r\n```\r\n<!-- /sokf:include -->\r\n\r\n\
+                    <!-- sokf:include style -->\r\nOld.\r\n<!-- /sokf:include -->\r\n";
+        let out = materialize(body, &sources, dir.path());
+        let (blocks, faults) = include_blocks(&out);
+        assert!(faults.is_empty(), "{out:?}: {faults:?}");
+        assert_eq!(blocks.len(), 2, "{out:?}");
+        assert!(
+            out.starts_with("<!-- sokf:include /src/main.rs#cli -->\r\n```rust\n"),
+            "{out:?}"
+        );
+        assert!(
+            out.contains("<!-- sokf:include style -->\r\nThe rules.\n<!-- /sokf:include -->\r\n"),
+            "{out:?}"
+        );
+        assert_eq!(
+            crate::fsutil::lines(&out[blocks[0].content_start..blocks[0].content_end]),
+            ["```rust", "struct Cli {}", "```", ""]
+        );
+
+        let current = "<!-- sokf:include /src/main.rs#cli -->\r\n```rust\r\nstruct Cli {}\r\n```\r\n<!-- /sokf:include -->\r\n";
+        assert_eq!(
+            materialize(current, &sources, dir.path()),
+            current,
+            "a block current apart from its line ends is not rewritten"
         );
     }
 

@@ -2578,23 +2578,107 @@ fn validate_fix_materializes_a_source_include_and_validate_catches_its_drift() {
     );
 }
 
-/// Covers I049 criteria 2, 4 and 23 (ADR-042): the CLI contract's
-/// definition is the `cli` regions, so a flag added to `ValidateArgs` fails
-/// `validate` naming the contract's include, and `--fix` writes the flag
-/// into the contract. Runs against a copy of the live contract and its
-/// sources in a scratch repository, so this tree is never edited.
+/// Covers I049 criterion 4 on a CRLF checkout (I040): `--fix` fills the
+/// include of a CRLF document from a CRLF source with the open marker's line
+/// still whole, `validate` then passes, and an edit inside the region still
+/// fails naming the include — the block is checked, not silently gone.
 #[test]
-fn a_flag_added_to_validate_args_fails_validate_and_fix_writes_it_into_the_contract() {
-    const CONTRACT: &str = "knowledge/contracts/public/active/contract-002-cli-superdev.md";
-    const SOURCES: [&str; 5] = [
-        "crates/app/superdev/src/main.rs",
-        "crates/app/superdev/src/manage.rs",
-        "crates/app/superdev/src/validate_cli.rs",
-        "crates/app/superdev/src/sokf_cli.rs",
-        "crates/app/superdev/src/run.rs",
-    ];
+fn validate_fix_on_a_crlf_checkout_keeps_the_include_checked() {
     let repo = tempfile::tempdir().unwrap();
-    for rel in SOURCES.iter().chain([CONTRACT].iter()) {
+    let k = repo.path().join("knowledge");
+    std::fs::create_dir_all(&k).unwrap();
+    std::fs::create_dir_all(repo.path().join("src")).unwrap();
+    std::fs::write(
+        k.join("manifest.sokf.yaml"),
+        "sokf: \"0.4\"\r\nname: fixture\r\n",
+    )
+    .unwrap();
+    let main_rs = repo.path().join("src/main.rs");
+    std::fs::write(
+        &main_rs,
+        "// sokf:begin cli\r\nstruct Cli {}\r\n// sokf:end cli\r\n",
+    )
+    .unwrap();
+    let contract = k.join("contract.md");
+    std::fs::write(
+        &contract,
+        "---\r\ntype: Note\r\nid: contract\r\n---\r\n\r\n<!-- sokf:include /src/main.rs#cli -->\r\n<!-- /sokf:include -->\r\n",
+    )
+    .unwrap();
+
+    superdev()
+        .current_dir(repo.path())
+        .args(["validate", "--fix"])
+        .assert()
+        .success();
+    let text = std::fs::read_to_string(&contract).unwrap();
+    assert!(
+        text.contains("<!-- sokf:include /src/main.rs#cli -->\r\n```rust"),
+        "{text:?}"
+    );
+    assert!(text.contains("struct Cli {}"), "{text:?}");
+    superdev()
+        .current_dir(repo.path())
+        .args(["validate"])
+        .assert()
+        .success();
+
+    std::fs::write(
+        &main_rs,
+        "// sokf:begin cli\r\nstruct Cli { fix: bool }\r\n// sokf:end cli\r\n",
+    )
+    .unwrap();
+    let out = superdev()
+        .current_dir(repo.path())
+        .args(["validate"])
+        .assert()
+        .code(1);
+    let stdout = String::from_utf8_lossy(&out.get_output().stdout).into_owned();
+    assert!(
+        stdout.contains("the include block for `/src/main.rs#cli` is stale"),
+        "{stdout}"
+    );
+}
+
+/// What one live contract's Definition carries, and what its scratch copy
+/// reads after an edit to a source: see [`contract_drift_in_scratch`].
+struct ScratchRun {
+    /// The include arguments of the live Definition, in order.
+    includes: Vec<String>,
+    /// The live Definition, as copied.
+    definition: String,
+    /// The scratch contract after `--fix` wrote the edit into it.
+    text: String,
+}
+
+/// Prove, on a copy, that a contract's Definition binds its sources: copy
+/// the live contract at `contract` and every file its Definition includes
+/// into a scratch repository with a `knowledge/` beside them, cut the
+/// contract down to its Definition, and let `--fix` write the includes.
+/// Then replace `from` with `to` in the file `include` names, and assert
+/// that `validate` fails naming `include` as stale, that it wrote nothing,
+/// and that `--fix` then writes `to` into the contract. The live tree is
+/// never edited.
+fn contract_drift_in_scratch(contract: &str, include: &str, from: &str, to: &str) -> ScratchRun {
+    let repo = tempfile::tempdir().unwrap();
+    let live = std::fs::read_to_string(Path::new(REPO_ROOT).join(contract)).unwrap();
+    let definition =
+        live[live.find("## Definition").unwrap()..live.find("## Behaviour").unwrap()].to_string();
+    // The fixture carries the live contract's Definition — its includes —
+    // and nothing else: the prose links concepts the fixture lacks.
+    let includes: Vec<String> = definition
+        .lines()
+        .filter_map(|line| line.strip_prefix("<!-- sokf:include "))
+        .map(|rest| rest.trim_end_matches(" -->").to_string())
+        .collect();
+    assert!(
+        includes.contains(&include.to_string()),
+        "the live contract includes `{include}`: {includes:?}"
+    );
+    let sources = includes
+        .iter()
+        .map(|argument| argument.split('#').next().unwrap().trim_start_matches('/'));
+    for rel in sources.chain([contract]) {
         let to = repo.path().join(rel);
         std::fs::create_dir_all(to.parent().unwrap()).unwrap();
         std::fs::copy(Path::new(REPO_ROOT).join(rel), &to).unwrap();
@@ -2604,19 +2688,11 @@ fn a_flag_added_to_validate_args_fails_validate_and_fix_writes_it_into_the_contr
         "sokf: \"0.4\"\nname: fixture\n",
     )
     .unwrap();
-    // The fixture carries the live contract's Definition — its includes —
-    // and nothing else: the prose links concepts the fixture lacks.
-    let contract = repo.path().join(CONTRACT);
-    let live = std::fs::read_to_string(&contract).unwrap();
-    let definition = &live[live.find("## Definition").unwrap()..live.find("## Behaviour").unwrap()];
-    assert_eq!(
-        definition.matches("<!-- sokf:include /crates/").count(),
-        SOURCES.len(),
-        "the live contract includes one region per source file"
-    );
+    let id = Path::new(contract).file_stem().unwrap().to_str().unwrap();
+    let contract = repo.path().join(contract);
     std::fs::write(
         &contract,
-        format!("---\ntype: Note\nid: contract-002-cli-superdev\n---\n\n# CLI\n\n{definition}"),
+        format!("---\ntype: Note\nid: {id}\n---\n\n# Contract\n\n{definition}"),
     )
     .unwrap();
     superdev()
@@ -2625,12 +2701,11 @@ fn a_flag_added_to_validate_args_fails_validate_and_fix_writes_it_into_the_contr
         .assert()
         .success();
 
-    let source = repo.path().join("crates/app/superdev/src/validate_cli.rs");
-    let edited = std::fs::read_to_string(&source).unwrap().replace(
-        "    /// Emit JSON instead of text\n",
-        "    /// Do nothing new\n    #[arg(long)]\n    pub nothing: bool,\n    /// Emit JSON instead of text\n",
-    );
-    assert!(edited.contains("pub nothing: bool"), "the flag was added");
+    let source = repo
+        .path()
+        .join(include.split('#').next().unwrap().trim_start_matches('/'));
+    let edited = std::fs::read_to_string(&source).unwrap().replace(from, to);
+    assert!(edited.contains(to), "the source was edited");
     std::fs::write(&source, edited).unwrap();
 
     let out = superdev()
@@ -2639,16 +2714,13 @@ fn a_flag_added_to_validate_args_fails_validate_and_fix_writes_it_into_the_contr
         .assert()
         .code(1);
     let stdout = String::from_utf8_lossy(&out.get_output().stdout).into_owned();
-    assert!(
-        stdout.contains(
-            "contract-002-cli-superdev.md: the include block for `/crates/app/superdev/src/validate_cli.rs#cli` is stale"
-        ),
-        "{stdout}"
+    let stale = format!(
+        "{}: the include block for `{include}` is stale",
+        contract.file_name().unwrap().to_str().unwrap()
     );
+    assert!(stdout.contains(&stale), "{stdout}");
     assert!(
-        !std::fs::read_to_string(&contract)
-            .unwrap()
-            .contains("pub nothing: bool"),
+        !std::fs::read_to_string(&contract).unwrap().contains(to),
         "validate without --fix wrote the contract"
     );
 
@@ -2658,288 +2730,110 @@ fn a_flag_added_to_validate_args_fails_validate_and_fix_writes_it_into_the_contr
         .assert()
         .success();
     let text = std::fs::read_to_string(&contract).unwrap();
-    assert!(
-        text.contains("    /// Do nothing new\n    #[arg(long)]\n    pub nothing: bool,\n"),
-        "{text}"
+    assert!(text.contains(to), "{text}");
+    ScratchRun {
+        includes,
+        definition,
+        text,
+    }
+}
+
+/// Covers I049 criteria 2, 4 and 23 (ADR-042): the CLI contract's
+/// definition is the `cli` regions, so a flag added to `ValidateArgs` fails
+/// `validate` naming the contract's include, and `--fix` writes the flag
+/// into the contract.
+#[test]
+fn a_flag_added_to_validate_args_fails_validate_and_fix_writes_it_into_the_contract() {
+    let run = contract_drift_in_scratch(
+        "knowledge/contracts/public/active/contract-002-cli-superdev.md",
+        "/crates/app/superdev/src/validate_cli.rs#cli",
+        "    /// Emit JSON instead of text\n",
+        "    /// Do nothing new\n    #[arg(long)]\n    pub nothing: bool,\n    /// Emit JSON instead of text\n",
     );
+    assert_eq!(
+        run.includes.len(),
+        5,
+        "the live contract includes one region per source file: {:?}",
+        run.includes
+    );
+    assert!(run.text.contains("pub nothing: bool"), "{}", run.text);
 }
 
 /// Covers I049 criteria 4 and 23 (ADR-042): the lock format contract's
 /// definition is the `lock` regions of `lock.rs`, so a field renamed in the
 /// lock struct fails `validate` naming the contract's include, and `--fix`
-/// writes the new name into the contract. Runs against a copy of the live
-/// contract and its source in a scratch repository, so this tree is never
-/// edited.
+/// writes the new name into the contract.
 #[test]
 fn a_field_renamed_in_the_lock_struct_fails_validate_naming_the_contracts_include() {
-    const CONTRACT: &str = "knowledge/contracts/public/active/contract-006-format-lock.md";
-    const SOURCE: &str = "crates/lib/superdev-core/src/lock.rs";
-    let repo = tempfile::tempdir().unwrap();
-    for rel in [SOURCE, CONTRACT] {
-        let to = repo.path().join(rel);
-        std::fs::create_dir_all(to.parent().unwrap()).unwrap();
-        std::fs::copy(Path::new(REPO_ROOT).join(rel), &to).unwrap();
-    }
-    std::fs::write(
-        repo.path().join("knowledge/manifest.sokf.yaml"),
-        "sokf: \"0.4\"\nname: fixture\n",
-    )
-    .unwrap();
-    // The fixture carries the live contract's Definition — its include —
-    // and nothing else: the prose links concepts the fixture lacks.
-    let contract = repo.path().join(CONTRACT);
-    let live = std::fs::read_to_string(&contract).unwrap();
-    let definition = &live[live.find("## Definition").unwrap()..live.find("## Behaviour").unwrap()];
+    let run = contract_drift_in_scratch(
+        "knowledge/contracts/public/active/contract-006-format-lock.md",
+        "/crates/lib/superdev-core/src/lock.rs#lock",
+        "    pub digest: Option<String>,\n",
+        "    pub checksum: Option<String>,\n",
+    );
     assert_eq!(
-        definition.matches("<!-- sokf:include /crates/").count(),
+        run.includes.len(),
         1,
         "the live contract includes the lock regions as one"
     );
     assert!(
-        definition.contains("pub struct PackLock") && definition.contains("pub struct Lock "),
+        run.definition.contains("pub struct PackLock")
+            && run.definition.contains("pub struct Lock "),
         "the include carries both lock regions"
     );
-    std::fs::write(
-        &contract,
-        format!("---\ntype: Note\nid: contract-006-format-lock\n---\n\n# Lock\n\n{definition}"),
-    )
-    .unwrap();
-    superdev()
-        .current_dir(repo.path())
-        .args(["validate", "--fix"])
-        .assert()
-        .success();
-
-    let source = repo.path().join(SOURCE);
-    let edited = std::fs::read_to_string(&source).unwrap().replace(
-        "    pub digest: Option<String>,\n",
-        "    pub checksum: Option<String>,\n",
-    );
-    assert!(edited.contains("pub checksum"), "the field was renamed");
-    std::fs::write(&source, edited).unwrap();
-
-    let out = superdev()
-        .current_dir(repo.path())
-        .args(["validate"])
-        .assert()
-        .code(1);
-    let stdout = String::from_utf8_lossy(&out.get_output().stdout).into_owned();
-    assert!(
-        stdout.contains(
-            "contract-006-format-lock.md: the include block for `/crates/lib/superdev-core/src/lock.rs#lock` is stale"
-        ),
-        "{stdout}"
-    );
-    assert!(
-        !std::fs::read_to_string(&contract)
-            .unwrap()
-            .contains("pub checksum"),
-        "validate without --fix wrote the contract"
-    );
-
-    superdev()
-        .current_dir(repo.path())
-        .args(["validate", "--fix"])
-        .assert()
-        .success();
-    let text = std::fs::read_to_string(&contract).unwrap();
-    assert!(
-        text.contains("    pub checksum: Option<String>,\n") && !text.contains("pub digest"),
-        "{text}"
-    );
+    assert!(!run.text.contains("pub digest"), "{}", run.text);
 }
 
 /// Covers I049 criteria 4 and 23 (ADR-042): the pack resolution contract's
 /// definition is the `pack-resolution` regions of the modules it describes,
 /// so a `pub fn` renamed in the resolver fails `validate` naming the
 /// contract's include of that file, and `--fix` writes the new name into the
-/// contract. Runs against a copy of the live contract and its eight sources
-/// in a scratch repository, so this tree is never edited.
+/// contract.
 #[test]
 fn a_pub_fn_renamed_in_the_resolver_fails_validate_naming_the_contracts_include() {
-    const CONTRACT: &str =
-        "knowledge/contracts/internal/active/contract-007-interface-pack-resolution.md";
-    const SOURCE: &str = "crates/lib/superdev-core/src/pack/resolve.rs";
-    let repo = tempfile::tempdir().unwrap();
-    let live = std::fs::read_to_string(Path::new(REPO_ROOT).join(CONTRACT)).unwrap();
-    let definition = &live[live.find("## Definition").unwrap()..live.find("## Behaviour").unwrap()];
-    // Every file the Definition includes, so each include resolves in the
-    // fixture; the resolver's is the one the test edits.
-    let sources: Vec<&str> = definition
-        .lines()
-        .filter_map(|line| line.strip_prefix("<!-- sokf:include /"))
-        .map(|rest| rest.split('#').next().unwrap())
-        .collect();
-    assert!(
-        sources.len() >= 8 && sources.contains(&SOURCE),
-        "the live contract includes the resolver among its sources: {sources:?}"
+    let run = contract_drift_in_scratch(
+        "knowledge/contracts/internal/active/contract-007-interface-pack-resolution.md",
+        "/crates/lib/superdev-core/src/pack/resolve.rs#pack-resolution",
+        "pub fn resolve(\n",
+        "pub fn resolve_packs(\n",
     );
-    for rel in sources.iter().copied().chain([CONTRACT]) {
-        let to = repo.path().join(rel);
-        std::fs::create_dir_all(to.parent().unwrap()).unwrap();
-        std::fs::copy(Path::new(REPO_ROOT).join(rel), &to).unwrap();
-    }
-    std::fs::write(
-        repo.path().join("knowledge/manifest.sokf.yaml"),
-        "sokf: \"0.4\"\nname: fixture\n",
-    )
-    .unwrap();
-    // The fixture carries the live contract's Definition — its includes —
-    // and nothing else: the prose links concepts the fixture lacks.
-    let contract = repo.path().join(CONTRACT);
     assert!(
-        definition.contains("pub fn resolve(") && definition.contains("pub fn update_pins("),
+        run.includes.len() >= 8,
+        "the live contract includes the resolver among its sources: {:?}",
+        run.includes
+    );
+    assert!(
+        run.definition.contains("pub fn resolve(")
+            && run.definition.contains("pub fn update_pins("),
         "the includes carry the resolver's and the pin update's signatures"
     );
-    std::fs::write(
-        &contract,
-        format!(
-            "---\ntype: Note\nid: contract-007-interface-pack-resolution\n---\n\n# Resolution\n\n{definition}"
-        ),
-    )
-    .unwrap();
-    superdev()
-        .current_dir(repo.path())
-        .args(["validate", "--fix"])
-        .assert()
-        .success();
-
-    let source = repo.path().join(SOURCE);
-    let edited = std::fs::read_to_string(&source)
-        .unwrap()
-        .replace("pub fn resolve(\n", "pub fn resolve_packs(\n");
-    assert!(
-        edited.contains("pub fn resolve_packs("),
-        "the fn was renamed"
-    );
-    std::fs::write(&source, edited).unwrap();
-
-    let out = superdev()
-        .current_dir(repo.path())
-        .args(["validate"])
-        .assert()
-        .code(1);
-    let stdout = String::from_utf8_lossy(&out.get_output().stdout).into_owned();
-    assert!(
-        stdout.contains(
-            "contract-007-interface-pack-resolution.md: the include block for `/crates/lib/superdev-core/src/pack/resolve.rs#pack-resolution` is stale"
-        ),
-        "{stdout}"
-    );
-    assert!(
-        !std::fs::read_to_string(&contract)
-            .unwrap()
-            .contains("pub fn resolve_packs("),
-        "validate without --fix wrote the contract"
-    );
-
-    superdev()
-        .current_dir(repo.path())
-        .args(["validate", "--fix"])
-        .assert()
-        .success();
-    let text = std::fs::read_to_string(&contract).unwrap();
-    assert!(
-        text.contains("pub fn resolve_packs(\n") && !text.contains("pub fn resolve(\n"),
-        "{text}"
-    );
+    assert!(!run.text.contains("pub fn resolve(\n"), "{}", run.text);
 }
 
 /// Covers I049 criteria 4 and 23 (ADR-042): the template format contract's
 /// definition is the `template` regions of the engine and its two template
 /// modules, so a token added to `templates.rs` fails `validate` naming the
 /// contract's include of that file, and `--fix` writes the token into the
-/// contract. Runs against a copy of the live contract and its three sources
-/// in a scratch repository, so this tree is never edited.
+/// contract.
 #[test]
 fn a_token_added_to_the_template_engine_fails_validate_naming_the_contracts_include() {
-    const CONTRACT: &str = "knowledge/contracts/public/active/contract-008-format-template.md";
-    const SOURCE: &str = "crates/lib/superdev-core/src/templates.rs";
-    let repo = tempfile::tempdir().unwrap();
-    let live = std::fs::read_to_string(Path::new(REPO_ROOT).join(CONTRACT)).unwrap();
-    let definition = &live[live.find("## Definition").unwrap()..live.find("## Behaviour").unwrap()];
-    // Every file the Definition includes, so each include resolves in the
-    // fixture; the engine's is the one the test edits.
-    let sources: Vec<&str> = definition
-        .lines()
-        .filter_map(|line| line.strip_prefix("<!-- sokf:include /"))
-        .map(|rest| rest.split('#').next().unwrap())
-        .collect();
-    assert!(
-        sources.len() == 3 && sources[0] == SOURCE,
-        "the live contract includes the engine and one module per shipped template: {sources:?}"
-    );
-    assert!(
-        definition.contains("pub const TOKEN_PASCAL")
-            && definition.contains("static SHIPPED")
-            && definition.contains("name: \"rust-npm\""),
-        "the includes carry the tokens, the registry and each template's declaration"
-    );
-    for rel in sources.iter().copied().chain([CONTRACT]) {
-        let to = repo.path().join(rel);
-        std::fs::create_dir_all(to.parent().unwrap()).unwrap();
-        std::fs::copy(Path::new(REPO_ROOT).join(rel), &to).unwrap();
-    }
-    std::fs::write(
-        repo.path().join("knowledge/manifest.sokf.yaml"),
-        "sokf: \"0.4\"\nname: fixture\n",
-    )
-    .unwrap();
-    // The fixture carries the live contract's Definition — its includes —
-    // and nothing else: the prose links concepts the fixture lacks.
-    let contract = repo.path().join(CONTRACT);
-    std::fs::write(
-        &contract,
-        format!(
-            "---\ntype: Note\nid: contract-008-format-template\n---\n\n# Template\n\n{definition}"
-        ),
-    )
-    .unwrap();
-    superdev()
-        .current_dir(repo.path())
-        .args(["validate", "--fix"])
-        .assert()
-        .success();
-
-    let source = repo.path().join(SOURCE);
-    let edited = std::fs::read_to_string(&source).unwrap().replace(
+    let run = contract_drift_in_scratch(
+        "knowledge/contracts/public/active/contract-008-format-template.md",
+        "/crates/lib/superdev-core/src/templates.rs#template",
         "pub const TOKEN_PASCAL: &str = \"{{superdev:project-pascal}}\";\n",
         "pub const TOKEN_PASCAL: &str = \"{{superdev:project-pascal}}\";\n/// The slug in SCREAMING_SNAKE_CASE (e.g. \"MY_TOOL\").\npub const TOKEN_SCREAMING: &str = \"{{superdev:project-screaming}}\";\n",
     );
     assert!(
-        edited.contains("pub const TOKEN_SCREAMING"),
-        "the token was added"
-    );
-    std::fs::write(&source, edited).unwrap();
-
-    let out = superdev()
-        .current_dir(repo.path())
-        .args(["validate"])
-        .assert()
-        .code(1);
-    let stdout = String::from_utf8_lossy(&out.get_output().stdout).into_owned();
-    assert!(
-        stdout.contains(
-            "contract-008-format-template.md: the include block for `/crates/lib/superdev-core/src/templates.rs#template` is stale"
-        ),
-        "{stdout}"
+        run.includes.len() == 3
+            && run.includes[0] == "/crates/lib/superdev-core/src/templates.rs#template",
+        "the live contract includes the engine and one module per shipped template: {:?}",
+        run.includes
     );
     assert!(
-        !std::fs::read_to_string(&contract)
-            .unwrap()
-            .contains("TOKEN_SCREAMING"),
-        "validate without --fix wrote the contract"
-    );
-
-    superdev()
-        .current_dir(repo.path())
-        .args(["validate", "--fix"])
-        .assert()
-        .success();
-    let text = std::fs::read_to_string(&contract).unwrap();
-    assert!(
-        text.contains("pub const TOKEN_SCREAMING: &str = \"{{superdev:project-screaming}}\";\n"),
-        "{text}"
+        run.definition.contains("pub const TOKEN_PASCAL")
+            && run.definition.contains("static SHIPPED")
+            && run.definition.contains("name: \"rust-npm\""),
+        "the includes carry the tokens, the registry and each template's declaration"
     );
 }
 
