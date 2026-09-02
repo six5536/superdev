@@ -23,7 +23,7 @@ status: stable
 - **Binding a project's contracts to its code.** Every contract-kind
   schema obliges the project to bind its implemented interface to the
   contract's declared surface, and superdev supplies none of it: no
-  harness, no generator, no drift test, and no check that one exists.
+  harness, no generator, no drift test, and no gate that one exists.
   The mechanism depends on the project's language, framework and test
   runner, which superdev cannot know
   ([ADR-036][sokf:adr-036-a-contract-is-bound-to-its-implementation]
@@ -43,13 +43,20 @@ Inherited machinery, and what it fixes.
   input.
 - **No auto-download or build-from-source fallback** in the npm launcher on
   unsupported platforms; the message points at `cargo install superdev`.
-- **An unbound contract is undetectable.** Following from the non-goal
-  above: a project that never writes the binding has contracts that
-  document rather than bind, and no superdev check will say so. Only a
-  reader notices.
+- **An unbound contract passes every gate.** Whether a contract is bound
+  is not decidable from the knowledge tree — the binding lives in the
+  project's test suite, in a language superdev does not read — so it
+  falls on the far side of the line
+  [ADR-039][sokf:adr-039-a-decidable-finding-is-an-error-and-the-turn-is-the-gate]
+  drew, and no validator check will ever catch it. An agent reading the
+  contract beside the tests can detect it, at the reliability an LLM
+  judgement carries rather than a check's; no skill asks it to today.
+  Until one does, a project that never writes the binding has contracts
+  that document rather than bind, and only a reader notices.
 
 <!-- sokf:links -->
 [sokf:adr-036-a-contract-is-bound-to-its-implementation]: /knowledge/adrs/active/adr-036-a-contract-is-bound-to-its-implementation.md
+[sokf:adr-039-a-decidable-finding-is-an-error-and-the-turn-is-the-gate]: /knowledge/adrs/active/adr-039-a-decidable-finding-is-an-error-and-the-turn-is-the-gate.md
 [sokf:architecture]: /knowledge/architecture.md
 [sokf:backlog]: /knowledge/backlog.md
 [sokf:release-procedure]: /knowledge/release-procedure.md
