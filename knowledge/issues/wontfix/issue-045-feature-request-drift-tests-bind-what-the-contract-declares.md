@@ -3,8 +3,11 @@ type: FeatureRequest
 id: issue-045-feature-request-drift-tests-bind-what-the-contract-declares
 title: A drift test binds only what its framework can report, and a failure inside a bound element does not name its direction
 description: The parts of a contract no introspection reaches — the CLI's `json` block — are compared to nothing, and where a drift test does compare a bound element's contents it prints two structs instead of saying whether the difference is a defect or an outstanding promise.
-lifecycle: open
+lifecycle: wontfix
 links:
+  - rel: references
+    to: issue-049-feature-request-a-contract-is-not-written-to-be-compared
+    note: Supersedes this issue; the seven criteria below are carried there.
   - rel: references
     to: issue-035-feature-request-a-contract-does-not-define-its-interface
     note: Criteria 4 and 12 were accepted on a binding thinner than the acceptance implied; this closes the two gaps.
@@ -23,6 +26,16 @@ links:
 ---
 
 # Feature: a drift test binds only what its framework can report
+
+## Won't fix
+
+Superseded 2026-09-02 by
+[I049][sokf:issue-049-feature-request-a-contract-is-not-written-to-be-compared],
+which states the property this issue was one instance of: a contract is
+written so that it and the code can be compared. All seven criteria
+below are carried into I049 as this repository's application of that
+standard, and the open question about the direction vocabulary goes with
+them. Nothing here is dropped; it is specified one level up.
 
 ## Summary
 
@@ -180,4 +193,5 @@ surface.
 [sokf:issue-036-feature-request-validate-prints-warnings-by-default]: /knowledge/issues/done/issue-036-feature-request-validate-prints-warnings-by-default.md
 [sokf:issue-043-bug-the-cli-contracts-json-keys-are-bound-by-no-test]: /knowledge/issues/open/issue-043-bug-the-cli-contracts-json-keys-are-bound-by-no-test.md
 [sokf:issue-044-bug-a-drift-test-names-the-direction-for-a-command-and-not-for-a-flag]: /knowledge/issues/open/issue-044-bug-a-drift-test-names-the-direction-for-a-command-and-not-for-a-flag.md
-[sokf:issue-046-chore-audit-the-one-directional-drift-bindings]: /knowledge/issues/open/issue-046-chore-audit-the-one-directional-drift-bindings.md
+[sokf:issue-046-chore-audit-the-one-directional-drift-bindings]: /knowledge/issues/wontfix/issue-046-chore-audit-the-one-directional-drift-bindings.md
+[sokf:issue-049-feature-request-a-contract-is-not-written-to-be-compared]: /knowledge/issues/open/issue-049-feature-request-a-contract-is-not-written-to-be-compared.md

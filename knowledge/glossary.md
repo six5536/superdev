@@ -2,7 +2,7 @@
 type: Glossary
 id: glossary
 title: Domain Glossary
-description: The terms the blueprint engine uses — blueprint, capability, provider, provenance, component, owned file, scaffold, project template, template adoption, skill pack, knowledge-carried skill, content pack, pack source, embedded snapshot, pack item, pack layer, pack format, PROJECT.md layer, custom skill, harvest, claim, orphan — plus the search terms section, locator, hybrid search and RRF.
+description: The terms the blueprint engine uses — blueprint, capability, provider, provenance, component, owned file, scaffold, project template, template adoption, skill pack, knowledge-carried skill, content pack, pack source, embedded snapshot, pack item, pack layer, pack format, PROJECT.md layer, custom skill, harvest, claim, orphan — plus the search terms section, locator, hybrid search and RRF, and the contract terms binding and drift test.
 status: stable
 ---
 
@@ -139,12 +139,26 @@ Terms from the knowledge-serving side:
   answered the same question in a second vocabulary, and an absent `status`
   reads as `stable` by the SOKF spec, so dropping it changed nothing.
 
+Terms from the contract side:
+
+- **Binding** — what satisfies
+  [ADR-036][sokf:adr-036-a-contract-is-bound-to-its-implementation]'s
+  obligation for one contract: either generation the build performs, or a
+  drift test where the implementation is hand-written. A committed
+  generated artifact binds only while it is proved current.
+- **Drift test** — a test that compares a contract's declared surface to
+  its implementation, element for element in both directions, and fails
+  naming the element and the side that carries it. The project writes it,
+  because only the project knows its framework; superdev states the
+  obligation and supplies no implementation.
+
 The files these terms describe are in [configuration][sokf:configuration]; the
 layering is in [architecture][sokf:architecture].
 
 <!-- sokf:links -->
 [sokf:adr-003-items-by-layout]: /knowledge/adrs/active/adr-003-items-by-layout.md
 [sokf:adr-004-base-pack-identity]: /knowledge/adrs/active/adr-004-base-pack-identity.md
+[sokf:adr-036-a-contract-is-bound-to-its-implementation]: /knowledge/adrs/active/adr-036-a-contract-is-bound-to-its-implementation.md
 [sokf:architectural-rules]: /knowledge/architectural-rules.md
 [sokf:architecture]: /knowledge/architecture.md
 [sokf:configuration]: /knowledge/configuration.md

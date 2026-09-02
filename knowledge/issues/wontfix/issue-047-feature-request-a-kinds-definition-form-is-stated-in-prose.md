@@ -3,8 +3,11 @@ type: FeatureRequest
 id: issue-047-feature-request-a-kinds-definition-form-is-stated-in-prose
 title: A contract kind states its definition form in prose, so nothing checks the block a contract carries
 description: Nine of the sixteen kinds name their definition form in a section description that nothing reads, and a code section is satisfied by any fence whatever its tag, so a contract may carry a block in the wrong form and pass.
-lifecycle: open
+lifecycle: wontfix
 links:
+  - rel: references
+    to: issue-049-feature-request-a-contract-is-not-written-to-be-compared
+    note: Supersedes this issue; criteria 4, 5 and 12 there carry the declaration work.
   - rel: references
     to: adr-034-each-kind-defines-in-the-form-its-ecosystem-reads
     note: Stands unchanged — this declares the form each kind already chose, rather than changing the choice.
@@ -20,6 +23,17 @@ links:
 ---
 
 # Feature: a kind's definition form is stated in prose
+
+## Won't fix
+
+Superseded 2026-09-02 by
+[I049][sokf:issue-049-feature-request-a-contract-is-not-written-to-be-compared].
+A form nothing reads is the enumerability property failing — the first
+of the four a comparison needs — and stating the property once is what
+keeps the same fault from being specified again in a fifth vocabulary.
+Criteria 4, 5 and 12 of I049 carry this issue's declaration work, and
+the open question about a set of forms against a single string goes with
+them.
 
 ## Summary
 
@@ -216,5 +230,6 @@ CONTRACT-DESIGN's, not framing's.
 [sokf:adr-034-each-kind-defines-in-the-form-its-ecosystem-reads]: /knowledge/adrs/active/adr-034-each-kind-defines-in-the-form-its-ecosystem-reads.md
 [sokf:adr-035-a-schema-declares-its-definition-blocks-contract]: /knowledge/adrs/active/adr-035-a-schema-declares-its-definition-blocks-contract.md
 [sokf:adr-036-a-contract-is-bound-to-its-implementation]: /knowledge/adrs/active/adr-036-a-contract-is-bound-to-its-implementation.md
-[sokf:issue-045-feature-request-drift-tests-bind-what-the-contract-declares]: /knowledge/issues/open/issue-045-feature-request-drift-tests-bind-what-the-contract-declares.md
+[sokf:issue-045-feature-request-drift-tests-bind-what-the-contract-declares]: /knowledge/issues/wontfix/issue-045-feature-request-drift-tests-bind-what-the-contract-declares.md
 [sokf:issue-048-feature-request-no-step-asks-whether-a-contract-is-bound]: /knowledge/issues/open/issue-048-feature-request-no-step-asks-whether-a-contract-is-bound.md
+[sokf:issue-049-feature-request-a-contract-is-not-written-to-be-compared]: /knowledge/issues/open/issue-049-feature-request-a-contract-is-not-written-to-be-compared.md
