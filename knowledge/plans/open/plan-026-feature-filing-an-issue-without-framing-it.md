@@ -143,7 +143,7 @@ edited beside it.
 
 ### Slice 3: `/file` and the workflow entry
 
-- [ ] Done — ticked by integrate at merge.
+- [x] Done — ticked by integrate at merge.
 - Depends-on: 2.
 - Change: `pack/knowledge/skills/file/SKILL.md`, synced into
   `.claude/skills/file/` and claimed in the lock — the skill per
@@ -176,6 +176,13 @@ edited beside it.
     claims the copy — covers AC_skill-ships.
   - manual: `/file` invoked on a probe bug in a scratch repository
     files an unframed issue that validates — covers AC_file-issue.
+    Run at `dcc8878`: the record the skill writes for a probe report
+    (`TBD — …` under Environment, Root cause, Proposed fix and
+    Regression risk, one plain repro step and one plain expected
+    item), written into a scratch `knowledge/issues/`, was moved by
+    `validate --fix` to `issues/unframed/` and the tree passed. A
+    record written at the knowledge root goes to `knowledge/unframed/`
+    instead, so the skill says where to write it.
 
 ### Slice 4: `/frame` frames in place, and the later phases refuse an unframed issue
 

@@ -52,7 +52,7 @@ status: stable
   with it. Claude Code loads them from there natively, so there is nothing to
   install. The knowledge-carried skills are not pack skills: the SOKF
   component carries them.
-- **Knowledge-carried skill** — one of the 17 SOKF-carried skills the
+- **Knowledge-carried skill** — one of the 18 SOKF-carried skills the
   `knowledge` capability materialises into `.claude/skills/<name>/` as owned
   files, each skill its whole directory: SKILL.md, companions, harness
   configs. The set exists exactly where knowledge exists.
