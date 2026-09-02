@@ -328,6 +328,10 @@ is a regex no top-level item matches. All three read an item as
 - `P_item-prohibited-matched` [event] WHEN a top-level item matches
   `item-prohibited-pattern`, the validator SHALL report an error naming
   the item and the matched text.
+- `P_item-one-finding` [ubiquitous] The validator SHALL check each
+  top-level item by `item-key`, then `item-prohibited-pattern`, then
+  `item-pattern`, and an item one of them reports is not checked by the
+  next — one fault, said once.
 
 **What an item is** — the list's top level is the shallowest marker in
 the body, so a list indented under its heading still binds. An item

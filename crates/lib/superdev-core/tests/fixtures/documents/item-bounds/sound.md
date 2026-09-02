@@ -10,6 +10,7 @@ Every promise acts on the thing.
 
 - `P_starts` [event] WHEN asked, the thing SHALL PENDING (I037) start —
   the marker sits beside the verb.
+<!-- TODO: the thing MUST reject an empty path — a comment is not content -->
 - `P_stays` [state] WHILE stopped, the thing SHALL NOT answer.
 
 ## Notes

@@ -103,7 +103,7 @@ fn every_ears_tag_and_a_tbd_criterion_pass() {
     assert!(found.is_empty(), "{found:#?}");
 }
 
-/// Covers I037 criterion 17: under the live feature-request schema a
+/// Covers I037 AC_c17: under the live feature-request schema a
 /// keyless criterion, a criterion keyed with another kind's prefix and a
 /// key used twice each fail `validate` with a finding naming the item —
 /// the same schema set the tracker is checked with.
@@ -134,9 +134,10 @@ fn a_criterion_departing_from_the_key_form_fails_naming_each_departure() {
         })
         .count();
     assert_eq!(repeated, 1, "{found:#?}");
-    // Items 2 and 3 each fail the key and the pattern, which requires the
-    // `AC_` key before the tag; item 4 fails the repeat; item 1 is sound.
-    assert_eq!(found.len(), 5, "{found:#?}");
+    // Items 2 and 3 each fail the key, and the pattern — which requires the
+    // `AC_` key before the tag — is not run on an item the key reported:
+    // one fault, said once. Item 4 fails the repeat; item 1 is sound.
+    assert_eq!(found.len(), 3, "{found:#?}");
 }
 
 /// One bug-report body, with `steps` as its steps to reproduce.
@@ -151,9 +152,19 @@ fn bug(steps: &str) -> String {
     )
 }
 
-/// Covers I037 criterion 18: a repro step carries its `RS_` key and no
-/// EARS tag — a step is not a requirement (ADR-046) — and a step with no
-/// key fails naming it.
+/// One chore body, with `done` as its definition of done.
+fn chore(done: &str) -> String {
+    format!(
+        "---\ntype: Chore\nid: issue-999-chore-probe\ntitle: t\ndescription: d\n\
+         lifecycle: open\n---\n\n# Chore: probe\n\n## Summary\n\nA line.\n\n\
+         ## Surfaces\n\n- One.\n\n## Definition of done\n\n{done}\n"
+    )
+}
+
+/// Covers I037 AC_c18: a repro step and a done item each carry their key
+/// and no EARS tag — a step is not a requirement (ADR-046) — so one with
+/// no key fails naming it, and one carrying a tag after its key fails
+/// naming the tag.
 #[test]
 fn a_repro_step_carries_a_key_and_no_tag() {
     let found = findings_of(
@@ -162,11 +173,41 @@ fn a_repro_step_carries_a_key_and_no_tag() {
         &bug("1. `RS_c1` Run the probe.\n2. `RS_wait` Wait 30 seconds.\n"),
     );
     assert!(found.is_empty(), "{found:#?}");
+    let found = findings_of("Chore", "probe.md", &chore("- `DD_c1` The probe runs.\n"));
+    assert!(found.is_empty(), "{found:#?}");
+
     let found = findings_of("BugReport", "probe.md", &bug("1. Run the probe.\n"));
     assert_eq!(found.len(), 1, "{found:#?}");
     assert!(
         found[0].contains("\"Steps to reproduce\"")
             && found[0].contains("item `1. Run the probe.` carries no key"),
+        "{found:#?}"
+    );
+
+    let found = findings_of(
+        "BugReport",
+        "probe.md",
+        &bug("1. `RS_c1` [event] WHEN run, the probe runs.\n"),
+    );
+    assert_eq!(found.len(), 1, "{found:#?}");
+    assert!(
+        found[0].contains("\"Steps to reproduce\"")
+            && found[0].contains(
+                "item `1. `RS_c1` [event] WHEN run, the probe runs.` matches ``RS_c1` [event]`"
+            )
+            && found[0].contains("item-prohibited-pattern"),
+        "{found:#?}"
+    );
+    let found = findings_of(
+        "Chore",
+        "probe.md",
+        &chore("- `DD_c1` [ubiquitous] The probe SHALL run.\n"),
+    );
+    assert_eq!(found.len(), 1, "{found:#?}");
+    assert!(
+        found[0].contains("\"Definition of done\"")
+            && found[0].contains("matches ``DD_c1` [ubiquitous]`")
+            && found[0].contains("item-prohibited-pattern"),
         "{found:#?}"
     );
 }
@@ -185,7 +226,7 @@ const CITED_LISTS: [(&str, &str, &str, &str); 3] = [
     ("Definition of done", "chore.md", "bullet", "DD_"),
 ];
 
-/// Covers I037 criteria 17, 18 and 19: the three tracker schemas declare
+/// Covers I037 AC_c17, AC_c18 and AC_c19: the three tracker schemas declare
 /// `item-key` with their prefix on the list a plan case cites — the
 /// criterion's `item-pattern` admitting the key before the tag or `TBD`,
 /// the step's and the done item's rule binding the key alone — and each
@@ -215,20 +256,23 @@ fn every_cited_list_declares_its_key_and_the_plan_cites_keys() {
         let criteria = rule_for(&request, "Acceptance criteria");
         assert!(
             criteria.contains(
-                "item-pattern: '^`AC_[a-z0-9-]+` (\\[(ubiquitous|event|state|conditional|optional|complex)\\] |TBD — )'"
+                "item-pattern: '^`AC_[a-z][a-z0-9]*(?:-[a-z0-9]+)*` (\\[(ubiquitous|event|state|conditional|optional|complex)\\] |TBD — )'"
             ),
             "{root}: the criterion's key precedes its tag or its TBD: {criteria}"
         );
         for schema in ["bug-report.md", "chore.md"] {
             let text = std::fs::read_to_string(repo(&format!("{root}/{schema}"))).unwrap();
-            let (heading, _, _, _) = CITED_LISTS
+            let (heading, _, _, prefix) = CITED_LISTS
                 .iter()
                 .find(|(_, s, _, _)| *s == schema)
                 .unwrap();
             let rule = rule_for(&text, heading);
+            let tagged = format!(
+                "item-prohibited-pattern: '^`{prefix}[a-z0-9-]+` \\[(ubiquitous|event|state|conditional|optional|complex)\\]'"
+            );
             assert!(
-                !rule.contains("item-pattern"),
-                "{root}/{schema}: {heading} binds the key alone, with no tag"
+                !rule.contains("item-pattern") && rule.contains(&tagged),
+                "{root}/{schema}: {heading} binds the key alone and forbids a tag after it: {rule}"
             );
         }
         let bug_schema = std::fs::read_to_string(repo(&format!("{root}/bug-report.md"))).unwrap();
@@ -261,7 +305,7 @@ fn every_cited_list_declares_its_key_and_the_plan_cites_keys() {
     }
 }
 
-/// Covers I037 criterion 20: every issue on file carries a key on each
+/// Covers I037 AC_c20: every issue on file carries a key on each
 /// top-level item of the lists a plan case cites — `AC_` on a
 /// feature-request's criteria, `RS_` on a bug's repro steps, `DD_` on a
 /// chore's definition of done — the sweep's proof, read straight from the
@@ -364,7 +408,7 @@ fn every_feature_request_on_file_conforms() {
 /// which replaced the tag-first pattern of ADR-031 in plan-025 slice 7.
 #[test]
 fn the_ears_declaration_ships_to_managed_repositories() {
-    let pattern = "item-pattern: '^`AC_[a-z0-9-]+` \
+    let pattern = "item-pattern: '^`AC_[a-z][a-z0-9]*(?:-[a-z0-9]+)*` \
                    (\\[(ubiquitous|event|state|conditional|optional|complex)\\] |TBD — )'";
     for root in ["knowledge/schemas", "pack/knowledge/schemas"] {
         let text = std::fs::read_to_string(repo(&format!("{root}/feature-request.md"))).unwrap();
@@ -377,7 +421,7 @@ fn the_ears_declaration_ships_to_managed_repositories() {
 /// bound to items, and the retired or repeated verb no item may carry.
 const PROMISE_DECLARATIONS: [&str; 4] = [
     "item-key: '^`(P_[a-z][a-z0-9]*(?:-[a-z0-9]+)*)`'",
-    r"item-pattern: '(?s)^`P_[a-z0-9-]+` \[(ubiquitous|event|state|conditional|optional|complex)\] .*\b(SHALL|SHOULD|MAY)\b'",
+    r"item-pattern: '(?s)^`P_[a-z][a-z0-9]*(?:-[a-z0-9]+)*` \[(ubiquitous|event|state|conditional|optional|complex)\] .*\b(SHALL|SHOULD|MAY)\b'",
     r"item-only-pattern: '\b(SHALL|SHOULD|MAY|MUST|REQUIRED|RECOMMENDED|OPTIONAL)\b'",
     r"item-prohibited-pattern: '\b(MUST|REQUIRED|RECOMMENDED|OPTIONAL)\b|(?s)\b(SHALL|SHOULD|MAY)\b.*\b(SHALL|SHOULD|MAY)\b'",
 ];
@@ -493,7 +537,7 @@ fn contract(behaviour: &str, stability: &str) -> String {
     )
 }
 
-/// Covers I037 criteria 2, 5, 6, 7 and 8: under the final contract schema a
+/// Covers I037 AC_c2, AC_c5, AC_c6, AC_c7 and AC_c8: under the final contract schema a
 /// keyless bullet, a `MUST` item, a two-verb item, a `SHALL` in a paragraph
 /// and a `TBD` item each fail `validate` with a finding naming the item or
 /// the line — the same schema set the live tree is checked with, so what
@@ -514,7 +558,7 @@ fn a_contract_departing_from_the_promise_form_fails_naming_each_departure() {
     let found = findings_of("Contract", "probe.md", &contract(behaviour, stability));
     let named = |text: &str| found.iter().filter(|f| f.contains(text)).count();
     assert!(
-        named("line `The probe SHALL be described here.` matches outside an item") == 1,
+        named("line `The probe SHALL be described here.` matches outside a top-level item") == 1,
         "{found:#?}"
     );
     assert!(
@@ -550,7 +594,7 @@ fn a_contract_departing_from_the_promise_form_fails_naming_each_departure() {
     );
 }
 
-/// Covers I037 criterion 1: a numbered flow under Behaviour is a sequence
+/// Covers I037 AC_c1: a numbered flow under Behaviour is a sequence
 /// and never a promise (ADR-046), so a contract carrying one beside its
 /// keyed bullets, with prose and a table beside them, passes the final
 /// schema.
@@ -646,7 +690,7 @@ fn an_item_pattern_without_a_list_kind_is_a_schema_finding() {
     assert!(found[0].message.contains("content is not"), "{found:#?}");
 }
 
-/// Covers I037 criterion 14: the validator reads `item-key`,
+/// Covers I037 AC_c14: the validator reads `item-key`,
 /// `item-only-pattern` and `item-prohibited-pattern`, so contract-010's
 /// Behaviour still declares each and no clause of it is `PENDING` any more.
 #[test]

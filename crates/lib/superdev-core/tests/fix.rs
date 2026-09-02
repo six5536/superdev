@@ -433,8 +433,8 @@ fn a_marker_fault_does_not_freeze_the_other_repairs() {
     assert!(second.written.is_empty(), "{:?}", second.written);
 }
 
-/// An `item-key` finding is fatal and is nobody's repair (I037 criteria 8
-/// and 10): the pass rewrites links and include blocks, never a statement,
+/// An `item-key` finding is fatal and is nobody's repair (I037 AC_c8
+/// and AC_c10): the pass rewrites links and include blocks, never a statement,
 /// so a keyless item stays as the author wrote it and the check reports it.
 #[test]
 fn a_keyless_item_is_reported_and_never_rewritten() {

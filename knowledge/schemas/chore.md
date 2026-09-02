@@ -80,11 +80,13 @@ sections:
     required: true
     content: bullet-list
     item-key: '^`(DD_[a-z][a-z0-9]*(?:-[a-z0-9]+)*)`'
+    item-prohibited-pattern: '^`DD_[a-z0-9-]+` \[(ubiquitous|event|state|conditional|optional|complex)\]'
     description: >
       Each bullet checkable by someone who did not do the work, and at
       least one of them a command with the result that counts as a pass.
       Every bullet opens with its key in a code span, `DD_` then a slug
-      of lowercase words joined by hyphens, and no EARS tag (ADR-046).
+      of lowercase words joined by hyphens, and no EARS tag (ADR-046):
+      a done item carrying a tag after its key is an error.
       The key is the item's identity, stable and unique within the
       issue; an item keyed by the sweep carries the slug `c<n>`, `n` its
       position counted from 1 (`DD_c1`). A citation is the bare key

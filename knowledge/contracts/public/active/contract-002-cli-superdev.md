@@ -329,9 +329,10 @@ usage errors and the side effects.
   `--fix`.
 - `P_run-begin-refusal-names-owner` [event] WHEN `run begin` refuses,
   `run begin` SHALL name the owning session and `run end`.
-- `P_hook-run-fails-open` [ubiquitous] `hook run` SHALL fail open: an
-  unreadable run state is reported and exits `0`, while an unreadable
-  payload is a loud `2`.
+- `P_hook-run-fails-open` [event] WHEN the run state cannot be read,
+  `hook run` SHALL report it on stderr and exit `0`.
+- `P_hook-run-unreadable-payload` [event] WHEN the payload cannot be
+  read from stdin or parsed, `hook run` SHALL exit `2`.
 - `P_hook-run-holds-on-error` [state] WHILE `validate` reports an
   error, `hook run` SHALL refuse to end the turn, naming the findings
   on stderr, so a document cannot be left with a link to a file that
@@ -461,8 +462,10 @@ for themselves.
 
 - `P_hooks-resolve-project-dir` [event] WHEN Claude Code sets
   `CLAUDE_PROJECT_DIR`, `hook validate` and `hook run` SHALL resolve
-  the repository from `CLAUDE_PROJECT_DIR`, else from the working
-  directory.
+  the repository from `CLAUDE_PROJECT_DIR`.
+- `P_hooks-resolve-working-dir` [conditional] IF `CLAUDE_PROJECT_DIR`
+  is unset, `hook validate` and `hook run` SHALL resolve the repository
+  from the working directory.
 - `P_run-session-from-env` [event] WHEN `--session` is absent, `run
   begin` and `run advance` SHALL take the session from
   `CLAUDE_SESSION_ID`.

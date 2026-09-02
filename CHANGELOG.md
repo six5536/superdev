@@ -51,15 +51,19 @@ publish a version it cannot find a heading for.
   group that every top-level item of the section's list must match; the
   capture is the item's key, unique across the document's items under
   every rule declaring `item-key`. An item with no match is an error
-  naming the section and the item, and a repeated key one naming the key
-  and both items. `item-only-pattern` is a regex that may match only
+  naming the section, the item and the form a key takes, and a repeated
+  key one naming the key and both items. `item-only-pattern` is a regex
+  that may match only
   inside a top-level item of the section's list: a match on any other
   body line — prose, a table row, a heading, an item of the other list
   kind, a nested item — is an error naming the section and the line, and
   on a section with no list content every line is outside.
   `item-prohibited-pattern` is a regex no top-level item may match: a
   match is an error naming the item and the matched text. All three skip
-  fenced blocks and read an item as `item-pattern` does. A key pattern
+  fenced blocks and read an item as `item-pattern` does, and an item
+  draws one finding: `item-key` is checked first, then
+  `item-prohibited-pattern`, then `item-pattern`, and an item reported
+  by one is not checked by the next. A key pattern
   whose capture count is not one, an `item-key` or
   `item-prohibited-pattern` on a section with no list content, and a
   pattern that does not compile are each an error on the schema file and
@@ -187,6 +191,20 @@ publish a version it cannot find a heading for.
 
 ### Fixed
 
+- **A list kind needs a top-level item, and an item ends at a heading.**
+  `content: bullet-list` or `numbered-list` is satisfied only by a
+  top-level item as the item declarations read one — a bullet nested
+  under a numbered step or a `- - -` break is not one — so a keyed rule
+  never passes over a list it cannot bind. A heading, a table row or an
+  HTML comment directly under an item ends the item rather than joining
+  it as a continuation, so a heading's verb is reported outside the item
+  and not as the item's; an HTML comment line is not bound by
+  `item-only-pattern`, as it is not prose; and an item two keyed rules
+  capture — a level-2 rule over its level-3 subsections — counts once,
+  so it does not repeat its own key. The `item-only-pattern` finding
+  says "outside a top-level item", and the contract schema says a nested
+  bullet is not a promise. The `item-pattern` of a criterion and of a
+  promise opens with the same key grammar `item-key` declares.
 - **A checkout with CRLF line endings validates.** Every check behind
   `superdev validate` compared bytes, so a Windows checkout — where git hands
   the knowledge tree CRLF unless `.gitattributes` says otherwise — registered
@@ -300,8 +318,10 @@ publish a version it cannot find a heading for.
 - **The tracker's cited lists carry keys.** A feature-request's
   acceptance criteria open with an `AC_` key in a code span before the
   EARS tag or the `TBD`; a bug-report's repro steps with an `RS_` key
-  and a chore's definition of done with a `DD_` key, each with no tag.
-  The key is the item's identity, unique within the issue, and the
+  and a chore's definition of done with a `DD_` key, each with no tag —
+  **a step or a done item carrying an EARS tag after its key is an
+  error** naming the item and the tag. The key is the item's identity,
+  unique within the issue, and the
   number the reading order; a plan case cites the keys it covers, bare
   ("covers AC_c1, AC_stale-include"), and elsewhere the issue's id
   precedes the key. **After a pack update, an issue whose cited list

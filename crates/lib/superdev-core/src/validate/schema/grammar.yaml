@@ -626,8 +626,9 @@ kinds:
             format: regex
             doc: >
               A regex that may match only inside a top-level item of the section's list: a
-              match on a body line outside every item — prose, a table row, a numbered step
-              under a bullet-list rule — is an error naming the line. Fenced blocks excluded.
+              match on a body line outside every top-level item — prose, a table row, a
+              heading, a nested item, an item of the other list kind — is an error naming the
+              line. Fenced blocks and HTML comment lines excluded.
           item-prohibited-pattern:
             type: string
             format: regex
