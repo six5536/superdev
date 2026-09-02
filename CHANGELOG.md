@@ -13,19 +13,17 @@ publish a version it cannot find a heading for.
 
 ### Added
 
-- **An issue's lifecycle is one of four states, `/file` files one, and the
-  backlog retires.** The tracker schemas declare `lifecycle` as `unframed`,
-  `framed`, `done` or `wontfix`, the folder being the value, and vary by it:
-  an unframed issue's cited lists are checked for their list kind alone; a
-  framed, done or wontfix issue is held to the keyed EARS form and a `TBD`
-  is an error. The issues on file are swept into the two folders, every
-  bug's Expected behaviour a keyed list, its words unchanged. `/file`
-  files a bug, a feature request, a chore or an idea in the user's words
-  with no interview or branch; `/frame` frames it in place; the later
-  phases refuse an unframed issue. The backlog's entries become three
-  ideas and a wontfix chore; its concept, schema and every reference in
-  the skills, schemas and indexes go, and a managed `Backlog` document
-  migrates the same way (ADR-048).
+- **`/file` files an issue or an idea without framing it.** A
+  knowledge-carried skill writes a bug, a feature request or a chore as
+  an unframed issue in the user's words — the kind's headings, `TBD —
+  <the open question>` where the user said nothing, no interview, no
+  branch, no criterion the user did not state — numbered after the
+  highest issue and filed by `superdev validate --fix`. An idea goes to
+  `knowledge/ideas/` per `schema-idea`; an existing idea named with a
+  kind is promoted to an unframed issue that links it. With no kind, or
+  one it does not know, `/file` asks and files nothing. The workflow in
+  `.agents/superdev.md` lists `/file` outside the phases and how-do-i
+  describes it (ADR-048).
 - **A heading is declared per variant.** A schema may declare one heading
   in more than one section rule when every such rule carries `variants`
   and the sets are disjoint; a document is checked against the rule its
@@ -128,21 +126,17 @@ publish a version it cannot find a heading for.
   now orders a slice that closes a contract-implementation gap before slices
   that do not, so a contract's promise does not fail the slices that do not
   own it.
-- **The MCP contract defines its tools.** `contract-003` carries every tool's
-  arguments — name, type, requiredness and meaning — and its result shape in
-  a JSON block, where before it named four tools in prose and carried no
-  schema at all. A test compares the block to the tools the server actually
-  serves, in both directions, so an argument cannot be added, removed or
-  retyped without its contract moving with it.
-- **The CLI contract defines the command line.** `contract-002` carries every
-  command, positional argument, flag and exit code superdev offers in a YAML
-  block a caller can build from, and a test walks the command tree and
-  compares it to that block element for element in both directions — so a
-  flag cannot reach the binary without reaching its contract (ADR-036). A
-  second test runs the binary and asserts each declared exit code. The
-  contract had drifted: `status --drift`, `--help` and a shipped template
-  were missing from it, and `--repo-root` printed a value name the contract
-  never named.
+- **The CLI and MCP contracts define their surfaces.** `contract-002`
+  carried every command, positional argument, flag and exit code in a
+  YAML block and `contract-003` every tool's arguments — name, type,
+  requiredness, meaning — and result shape in a JSON block, where before
+  it named four tools in prose; a test per contract compared the block
+  to the binary in both directions (ADR-036), and a second runs the
+  binary and asserts each declared exit code. The CLI contract had
+  drifted: `status --drift`, `--help` and a shipped template were
+  missing from it, and `--repo-root` printed a value name the contract
+  never named. The blocks and their drift tests were later replaced by
+  source includes (ADR-042, below).
 - **An acceptance criterion's EARS tag is checked.** A feature-request
   criterion that does not open with `[ubiquitous]`, `[event]`, `[state]`,
   `[conditional]`, `[optional]`, `[complex]` or `TBD — ` fails
@@ -189,7 +183,6 @@ publish a version it cannot find a heading for.
   `description` on every frontmatter-carrying kind, `sources` on
   research — so a filed document that loses its identity or its listing
   line fails validation instead of passing unexamined.
-
 - **A section's declared content kind binds.** `superdev validate` reads
   each section rule's `content` kind — prose, bullet-list, numbered-list,
   table or code — and reports, as an error naming the document, the
@@ -314,6 +307,37 @@ publish a version it cannot find a heading for.
 
 ### Changed
 
+- **An issue's lifecycle is `unframed`, `framed`, `done` or `wontfix`,
+  and the tracker schemas vary by it.** `open` is retired; the folder
+  is the value — `issues/unframed/`, `issues/framed/`, `issues/done/`,
+  `issues/wontfix/`. `/frame` frames an unframed issue in place and
+  sets `framed`, or files and frames in one pass; `/contract-design`,
+  `/feature-plan` and `/execute-feature-plan` gate on `framed` and
+  return an unframed issue to `/frame`. The feature-request, bug-report
+  and chore schemas take `variant-key: lifecycle`: an unframed issue is
+  held to its headings and list kinds alone, so a criterion, a repro
+  step, an expected-behaviour item or a done item is a plain sentence
+  or a `TBD`; a framed, done or wontfix issue is held to the keyed EARS
+  form — `AC_` key and tag on a criterion, `RS_` key on a repro step,
+  `EX_` key and tag on an expected-behaviour item, `DD_` key on a done
+  item — and a `TBD` is an error naming the item. A bug's Expected
+  behaviour is a numbered list in every state. **After a pack update,
+  an issue under `issues/open/` fails `superdev validate`**: `open` is
+  outside the enum, and `issues/open/` is no longer a lifecycle folder.
+  Move the open issues up into `issues/`, set each one's `lifecycle` to
+  `framed` or `unframed`, and run `superdev validate --fix`, which
+  files them; run on files still under `open/`, `--fix` refiles them
+  into `issues/open/framed/`. superdev's own tracker was swept: 12 open
+  issues `framed`, one `unframed` (I042, a `TBD` remaining), and the 24
+  bug reports' Expected behaviour keyed — 21 converted from prose, one
+  `EX_c<n>` `[ubiquitous]` item per paragraph, words unchanged. **The
+  backlog retires**: its three under-consideration entries are ideas
+  007 to 009, its decided-against entry the wontfix chore I051, and
+  `schema-backlog`, the concept and every reference in the skills,
+  schemas and indexes go. **A managed repository's `Backlog` document
+  loses its schema** and fails `superdev validate` as a document naming
+  no schema: file each entry as an idea per `schema-idea` or as a
+  `wontfix` issue, then delete the document (ADR-048).
 - **A contract's Behaviour and Stability are keyed EARS promises.** The
   contract schema declares both sections as bullet lists whose every
   item, at any heading depth, opens with a `P_` key in a code span and
@@ -357,12 +381,9 @@ publish a version it cannot find a heading for.
   lock — is killed by Claude Code after 30 s instead of holding the
   session open.
 - **A contract includes its definition, under one schema.** Every
-  contract's Definition is one or more source includes —
-  `<!-- sokf:include /path#region -->` — that `superdev validate --fix`
-  materialises from the marked regions of the code and `superdev
-  validate` keeps current; a fenced block authored in a Definition is an
-  error, and nothing inside an include is parsed (ADR-041, ADR-042). One
-  schema, `Contract`, governs every kind: a `kind` from twelve — `api`,
+  contract's Definition is one or more source includes, as the
+  `content: include` and source-region entries above say (ADR-041,
+  ADR-042). One schema, `Contract`, governs every kind: a `kind` from twelve — `api`,
   `events`, `cli`, `library`, `interface`, `ui`, `data`, `format`,
   `config`, `telemetry`, `authz`, `deployment` — in the frontmatter and
   the id, a title opening with the kind's display name, a Definition, a
@@ -384,28 +405,24 @@ publish a version it cannot find a heading for.
   repository's nine contracts moved, the four tests that compared a
   hand-written copy to the code are gone, and the block-shape check of
   ADR-035 — never released — is withdrawn with the copies it checked.
-- **The CLI and MCP contracts include their source.** `contract-002`'s
-  Definition is the clap tree materialised from the `cli` regions of
-  `crates/app/superdev/src/`, one include per file, and its exit codes are
-  a per-command table under `### Exit codes` in Behaviour; the hand-written
-  YAML block and the test that compared it to the binary are gone
-  (ADR-042). The MCP contract is now `contract-003-api-sokf`, kind `api`,
-  its Definition the server's argument structs and tool methods from the
-  `tools` regions of `mcp.rs`; its drift test is gone with the JSON block.
-  `contract_exit_codes.rs` still exercises every code the contract states.
-- **The config and format contracts include their structs.** `contract-004`
-  is kind `config`: its Definition is the manifest's on-disk shape
-  materialised from the `config` regions of `manifest.rs` and
-  `sokf/embed.rs`, doc comments included, in place of the Settings table
-  and the hand-written `config.toml` block; Behaviour carries Sources and
-  precedence — now naming `CLAUDE_SESSION_ID`, which `run begin` and `run
+- **The CLI, MCP, config and format contracts include their source.**
+  `contract-002`'s Definition is the clap tree from the `cli` regions of
+  `crates/app/superdev/src/`, its exit codes a per-command table under
+  `### Exit codes`, and `contract_exit_codes.rs` still exercises every
+  code. The MCP contract is `contract-003-api-sokf`, kind `api`, its
+  Definition the argument structs and tool methods from the `tools`
+  regions of `mcp.rs`. `contract-004`, kind `config`, includes the
+  manifest's on-disk shape from the `config` regions of `manifest.rs`
+  and `sokf/embed.rs`, doc comments included, in place of the Settings
+  table and the `config.toml` block; its Behaviour carries Sources and
+  precedence — naming `CLAUDE_SESSION_ID`, which `run begin` and `run
   advance` read — Defaults, Secrets and Validation. The pack and lock
   contracts are `contract-005-format-pack` and `contract-006-format-lock`,
-  kind `format`, their Definitions the `pack` region of `pack/manifest.rs`
-  and the `lock` regions of `lock.rs`; the pack contract now names
+  kind `format`, including the `pack` region of `pack/manifest.rs` and
+  the `lock` regions of `lock.rs`; the pack contract names
   `agents/superdev.md` as the refused path, which is what the source
-  refuses. The four tests that parsed the contracts' TOML blocks are gone
-  (ADR-042).
+  refuses. The hand-written blocks and the tests that compared them to
+  the code are gone (ADR-042).
 - **`superdev validate` counts its warnings and lists them on request.** A run
   lists every error and closes with both counts, as before; the warnings
   themselves now appear only under **`--warnings`** (ADR-040). Warnings are
@@ -415,51 +432,33 @@ publish a version it cannot find a heading for.
   on every hook-triggered run. The counts are read from the findings and not
   from what was printed, so a warning nobody listed is still counted. **No
   verdict moves**: the same findings are found, and the same exit codes are
-  returned.
-
-  `--json` reports the same information as the text output: **`errors` and
-  `warnings` counts, which it never carried**, and the findings the text run
-  listed. **A consumer that derived its counts from the `findings` array now
-  undercounts** and should read the two counts instead, or pass `--warnings`.
-  The keys `documents` and `schemas`, emitted since they were added and never
-  declared, are now in `contract-002` with them.
-
-  The **PostToolUse and Stop hooks default the same way**, so one rule holds
-  whoever ran the check. This is what the change is for: an agent editing one
-  document read the whole repository's advisory findings on every pass, and
-  now reads what it can act on and a count of what it cannot.
-
-- **A contract now defines its interface, not describes it.** Every
-  contract-kind schema demands a definition block carrying the whole surface
-  a caller depends on — commands and flags, tool schemas, settings, file
-  shapes, exported signatures — in the form that kind's ecosystem already
-  reads, and demands the project bind that block to its implementation
-  (ADR-033, ADR-034, ADR-036). **`ADR-029` is superseded**, and its
-  judgement-based standard with it. **After a pack update, a contract whose
-  definition block is incomplete starts failing `superdev validate`**, and a
-  contract with no binding — no generation from it, no test against it — is
-  non-compliant even while it validates. superdev's own contracts were
-  rewritten to the bar: the CLI contract had drifted from the binary, the MCP
-  contract carried no tool schema at all, and the config contract never
-  declared its `[template]` table.
-
-- **A contract's promise sections now declare that they bind.** The fifteen
-  contract-kind schemas carry the RFC 2119 keyword as an `item-pattern` on
-  sections where every entry is a promise — cli Behaviour, data
-  Constraints, deployment Health and lifecycle, events Ordering and
-  delivery — and as a `content-pattern` on sections whose job is promises,
-  Stability among them (ADR-032). Definitional sections declare nothing:
-  they bind by form. **After a pack update, an existing contract whose
-  promise sections state no requirement in modal terms starts failing
-  `superdev validate`.** Give each flagged promise its modal verb; a
-  section that describes rather than binds belongs in a definitional
-  section.
-- **The contracts read as binding surfaces.** Every contract-kind schema
-  carries the contract style standard — one RFC 2119 sentence per
-  requirement, structured forms for enumerable surfaces, reasoning in
-  the linked ADRs — and the nine active contracts are swept to it, with
-  the pack-layout tables brought current (schemas and fragments ship;
-  the dropped templates kind is gone).
+  returned. `--json` gains **`errors` and `warnings` counts, which it never
+  carried**, beside the findings the text run listed — **a consumer that
+  derived its counts from the `findings` array now undercounts** and should
+  read the two counts instead, or pass `--warnings`; the keys `documents` and
+  `schemas`, emitted since they were added and never declared, are now in
+  `contract-002` with them. The **PostToolUse and Stop hooks default the same
+  way**, so an agent editing one document reads what it can act on and a
+  count of what it cannot, in place of the whole repository's advisory
+  findings on every pass.
+- **A contract defines its interface and its promises bind.** The
+  contract-kind schemas, before the one `Contract` schema replaced them,
+  demanded a definition block carrying the whole surface a caller
+  depends on — commands and flags, tool schemas, settings, file shapes,
+  exported signatures — in the form that kind's ecosystem reads, bound
+  by the project to its implementation (ADR-033, ADR-034, ADR-036), and
+  carried the RFC 2119 keyword as an `item-pattern` on sections where
+  every entry is a promise and as a `content-pattern` on Stability and
+  its like (ADR-032), with the contract style standard — one RFC 2119
+  sentence per requirement, structured forms for enumerable surfaces,
+  reasoning in the linked ADRs. **`ADR-029` is superseded**, and its
+  judgement-based standard with it. A contract with no binding — no
+  generation from it, no test against it — is non-compliant even while
+  it validates. superdev's nine active contracts were rewritten to the
+  bar: the CLI contract had drifted from the binary, the MCP contract
+  carried no tool schema, the config contract never declared its
+  `[template]` table, and the pack-layout tables were brought current
+  (schemas and fragments ship; the dropped templates kind is gone).
 - **The schemas keep their own rules.** Every schema's worked example now
   satisfies its own frontmatter constraints (26 were stale). The seven
   report schemas — code review, security review, investigation,
@@ -479,10 +478,11 @@ publish a version it cannot find a heading for.
   contracts, build and tests.
 - **Documents are filed by lifecycle.** Breaking change to the knowledge
   layout. Issues, plans, specs, decisions and contracts each carry one
-  `lifecycle` frontmatter key — `open`/`done`/`wontfix` for issues,
+  `lifecycle` frontmatter key — `open`/`done`/`wontfix` for issues
+  (`open` since split into `unframed`/`framed`, above),
   `open`/`done`/`abandoned` for plans, `active`/`deprecated` for specs,
   decisions and contracts — and every document sits in a folder named
-  exactly its value (`knowledge/issues/open/`, `knowledge/plans/done/`),
+  exactly its value (`knowledge/issues/done/`, `knowledge/plans/done/`),
   with each kind's base directory holding only `index.md`. The `status`
   key and the `done`/`wontfix`/`needs-triage` tags that answered the same
   question are gone from these kinds. Three new findings, all errors: a

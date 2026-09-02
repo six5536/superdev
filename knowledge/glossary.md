@@ -132,12 +132,20 @@ Terms from the knowledge-serving side:
   contributes `1/(60 + rank)` per section and the sums are sorted. It needs no
   score calibration between BM25 and cosine, which is the whole reason for it.
 - **Lifecycle** — the one field that says whether a document is live or
-  settled, on every issue, plan, decision and contract. Its value names
-  the folder the document sits in — `knowledge/issues/open/`,
-  `knowledge/plans/done/` — and `superdev validate --fix` moves a document
-  whose folder disagrees. SOKF `status` no longer appears on these kinds: it
-  answered the same question in a second vocabulary, and an absent `status`
-  reads as `stable` by the SOKF spec, so dropping it changed nothing.
+  settled, on every issue, plan, decision and contract. An issue's is
+  `unframed`, `framed`, `done` or `wontfix`; a plan's `open`, `done` or
+  `abandoned`; a decision's and a contract's `active` or `deprecated`.
+  Its value names the folder the document sits in —
+  `knowledge/issues/framed/`, `knowledge/plans/done/` — and `superdev
+  validate --fix` moves a document whose folder disagrees. SOKF `status`
+  no longer appears on these kinds: it answered the same question in a
+  second vocabulary, and an absent `status` reads as `stable` by the SOKF
+  spec, so dropping it changed nothing. An **unframed** issue is one
+  `/file` wrote in the user's words, held to its headings and list kinds
+  alone; a **framed** issue is one `/frame` has interviewed, keyed and
+  branched, held to the keyed EARS form, and the phases after `/frame`
+  refuse an unframed one
+  ([ADR-048][sokf:adr-048-an-issues-lifecycle-distinguishes-framed-from-unframed]).
 - **Variant** — one of the values a schema's `variant-key` frontmatter key
   admits, selecting which of the schema's rules a document is checked
   against: a rule tagged `variants` binds the values it names, an untagged
@@ -168,9 +176,11 @@ Terms from the contract side:
   opens with one of six pattern tags — `[ubiquitous]`, `[event]`,
   `[state]`, `[conditional]`, `[optional]`, `[complex]` — and states its
   trigger or condition in that pattern's words before one modal verb
-  and one requirement. A feature-request's acceptance criteria take the
-  form, numbered, with "THE SYSTEM" as the subject
-  ([ADR-031][sokf:adr-031-ears-criteria-are-checked-by-item-pattern]).
+  and one requirement. A framed feature-request's acceptance criteria
+  and a framed bug's expected behaviour take the form, numbered, with
+  "THE SYSTEM" as the subject; an unframed issue's are plain sentences
+  ([ADR-031][sokf:adr-031-ears-criteria-are-checked-by-item-pattern],
+  ADR-048).
   A contract's Behaviour and Stability promises take the form as
   bullets, with the interface element as the subject — `init`, the
   validator, a caller — one verb from `SHALL`, `SHOULD` and `MAY`, and
@@ -182,12 +192,13 @@ Terms from the contract side:
   opening its item in a code span: `<PREFIX>_<slug>`, the prefix naming
   the kind of item and the slug `[a-z][a-z0-9]*(-[a-z0-9]+)*`. The
   prefixes are `P_` for a contract promise under Behaviour or
-  Stability, `AC_` for an acceptance criterion, `RS_` for a repro step
-  and `DD_` for a definition-of-done item; `EX_` is reserved for an
-  expected behaviour and is not yet declared by a schema. A key is
+  Stability, `AC_` for an acceptance criterion, `RS_` for a repro step,
+  `EX_` for an expected-behaviour item and `DD_` for a definition-of-done
+  item; a framed issue carries the key on every such item, an unframed
+  one on none. A key is
   unique within its document; a rewording keeps it, a removed key is
   not reused. An item on file at the sweep carries the slug `c<n>`, `n`
-  its number — `AC_c11` — so an older citation of the number stands. A
+  its number — `AC_c11`, `EX_c2` — so an older citation of the number stands. A
   citation is the bare key where the document is the subject — a plan
   case covering its issue's criteria, a test on the feature it tests —
   and the document's id followed by the key elsewhere:
@@ -204,6 +215,7 @@ layering is in [architecture][sokf:architecture].
 [sokf:adr-042-a-contracts-definition-is-materialized-from-source]: /knowledge/adrs/active/adr-042-a-contracts-definition-is-materialized-from-source.md
 [sokf:adr-045-a-schema-declares-variants]: /knowledge/adrs/active/adr-045-a-schema-declares-variants.md
 [sokf:adr-046-a-promise-and-a-criterion-are-keyed-ears-items]: /knowledge/adrs/active/adr-046-a-promise-and-a-criterion-are-keyed-ears-items.md
+[sokf:adr-048-an-issues-lifecycle-distinguishes-framed-from-unframed]: /knowledge/adrs/active/adr-048-an-issues-lifecycle-distinguishes-framed-from-unframed.md
 [sokf:architectural-rules]: /knowledge/architectural-rules.md
 [sokf:architecture]: /knowledge/architecture.md
 [sokf:configuration]: /knowledge/configuration.md

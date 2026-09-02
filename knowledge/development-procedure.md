@@ -19,8 +19,9 @@ no Node.
 1. Significant changes travel the knowledge-carried workflow skills in
    `.claude/skills/` (`/frame` → `/contract-design` → `/feature-plan` →
    `/build` → `/integrate`; see `.agents/process.md`): the feature is
-   framed as a tracker issue whose acceptance criteria are EARS
-   sentences, the contracts it touches are updated in place and linked
+   filed as a tracker issue — unframed by `/file`, or framed by
+   `/frame` — and is framed when taken up, its acceptance criteria EARS
+   sentences; the contracts it touches are updated in place and linked
    from the issue, and the plan is filed as `plan-<nnn>-feature-<slug>`
    (`lifecycle: done` in the commit that completes the work). One-off
    work takes `/adhoc-plan`, and its plan is filed beside it as
