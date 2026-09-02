@@ -95,8 +95,10 @@ const HOOK_POINTER: &str = "hooks.PostToolUse";
 /// What identifies superdev's element among the user's.
 const HOOK_MARKER: &str = "superdev hook validate";
 /// The registration itself: validate the repository after an Edit/Write.
-const HOOK_ELEMENT: &str =
-    r#"{"matcher":"Edit|Write","hooks":[{"type":"command","command":"superdev hook validate"}]}"#;
+/// The timeout bounds a hook that wedges — a `cargo run` waiting on a build
+/// lock, an sccache server that never answers — so it cannot hold a Claude
+/// Code session open indefinitely; Claude Code kills it and moves on.
+const HOOK_ELEMENT: &str = r#"{"matcher":"Edit|Write","hooks":[{"type":"command","command":"superdev hook validate","timeout":30}]}"#;
 
 /// The array the Stop entry lives in.
 const STOP_POINTER: &str = "hooks.Stop";
@@ -104,7 +106,8 @@ const STOP_POINTER: &str = "hooks.Stop";
 const STOP_MARKER: &str = "superdev hook run";
 /// The registration itself: continue an active unattended run, or let the
 /// turn end. Without a run state the hook is invisible (contract-009).
-const STOP_ELEMENT: &str = r#"{"hooks":[{"type":"command","command":"superdev hook run"}]}"#;
+const STOP_ELEMENT: &str =
+    r#"{"hooks":[{"type":"command","command":"superdev hook run","timeout":30}]}"#;
 
 /// Release, at adoption time, every SOKF skill the repo already has under
 /// its own name and with its own content. Returns the lines to print.

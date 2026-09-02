@@ -14,4 +14,24 @@ while [ -L "$src" ]; do
 done
 root="$(cd -P "$(dirname "$src")/.." && pwd)"
 
+# `cargo run` rebuilds the binary whenever a Rust file changed, and the edit
+# hook fires on every Edit/Write of any file — so without this gate every
+# Rust edit paid a rebuild to learn the path was not one the hook watches.
+# The binary makes the same decision (validate_cli.rs, `hook_validate`); this
+# only spares cargo for the paths it would refuse. The payload is read here
+# and handed on unchanged.
+if [ "${1:-}" = "hook" ] && [ "${2:-}" = "validate" ]; then
+  payload="$(cat)"
+  file="$(printf '%s' "$payload" | sed -n 's/.*"file_path":"\([^"]*\)".*/\1/p' | head -n1)"
+  project="${CLAUDE_PROJECT_DIR:-$root}"
+  case "$file" in
+    "$project"/knowledge/*|"$project"/.agents/*|"$project"/.claude/skills/*) ;;
+    *) exit 0 ;;
+  esac
+  # A here-string, not a pipe: `exec` in a pipeline replaces only the
+  # pipeline's subshell, and the script would fall through to the exec below
+  # with an emptied stdin.
+  exec cargo run --quiet --manifest-path "$root/Cargo.toml" -- "$@" <<< "$payload"
+fi
+
 exec cargo run --quiet --manifest-path "$root/Cargo.toml" -- "$@"

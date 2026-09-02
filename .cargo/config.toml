@@ -1,5 +1,10 @@
+# No rustc wrapper. sccache was here, and cached nothing: the dev profile
+# compiles incrementally, which sccache refuses (`sccache --show-stats`
+# showed every request non-cacheable), so each rustc call paid a server
+# round-trip — and the server's ten-minute idle exit made the first build
+# after a pause a race to restart it. CI already bypassed it
+# (`CARGO_BUILD_RUSTC_WRAPPER: ""` in the workflows). Set the wrapper in
+# your own `~/.cargo/config.toml` if you want it back.
 [build]
-# Use sccache as a Rust compiler wrapper to speed up builds by caching compiled artifacts.
-rustc-wrapper = "sccache"
 
 [env]

@@ -5,6 +5,7 @@
         "hooks": [
           {
             "command": "superdev hook validate",
+            "timeout": 30,
             "type": "command"
           }
         ],
@@ -16,6 +17,7 @@
         "hooks": [
           {
             "command": "superdev hook run",
+            "timeout": 30,
             "type": "command"
           }
         ]
