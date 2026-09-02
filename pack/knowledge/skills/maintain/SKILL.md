@@ -33,7 +33,7 @@ The MUST NOT rules below are from SPEC §4, §5, §7 — never break these.
   <step name="CHECK THE WORKFLOW RECORDS">Check the workflow's records for lapsed record-keeping. Fix the record where the evidence is clear; report it where it is not:
 - A feature plan with every slice ticked but `lifecycle` still `open`; an issue settled in prose but still `open`, or a document whose folder disagrees with its `lifecycle` (`superdev validate` names these).
 - Gap issues still `open` against a `done` plan, or issues no plan or slice ever picked up.
-- Backlog entries taken up but never moved out.
+- Ideas taken up but never promoted into the tracker.
 - The changelog's Unreleased section missing merged user-visible changes.</step>
   <step name="CHECK STRUCTURE">Check structure:
 - No knowledge duplicated between concepts, or between the canonical knowledge and README/CONTRIBUTING: the concept summarises and cites via `sources`; detail lives in one home, cross-referenced.

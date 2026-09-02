@@ -3,7 +3,6 @@
 * [Project Overview][sokf:project-overview] - TBD — what the project is, who it serves, and its current status.
 * [Domain Glossary][sokf:glossary] - TBD — the project's domain terms, each with one precise definition.
 * [Known Constraints & Non-Goals][sokf:constraints-non-goals] - TBD — accepted limitations and the things this project deliberately does not do.
-* [Backlog & Decided Ideas][sokf:backlog] - TBD — ideas under consideration and ideas decided against, with the reasoning.
 * [Ideas](ideas/index.md) - thoughts captured for considering later, one document each; not candidate work.
 
 # Design
@@ -36,7 +35,6 @@
 <!-- sokf:links -->
 [sokf:architectural-rules]: /knowledge/architectural-rules.md
 [sokf:architecture]: /knowledge/architecture.md
-[sokf:backlog]: /knowledge/backlog.md
 [sokf:coding-standards]: /knowledge/coding-standards.md
 [sokf:configuration]: /knowledge/configuration.md
 [sokf:constraints-non-goals]: /knowledge/constraints-non-goals.md

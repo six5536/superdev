@@ -12,10 +12,10 @@ Structural rules for one idea, filed at
 
 This is a capture bin, and nothing here is official. An idea is a thought
 worth writing down before it is lost, kept for considering later. It is not
-candidate work, so it belongs in neither the [backlog][sokf:backlog] nor the
+candidate work, so it does not belong in the
 [issue tracker][sokf:issue-tracker], and it carries no obligation to appear
-in either. An idea that is taken up leaves for whichever of them fits — or
-straight for a feature request — and stops being an idea.
+there. An idea that is taken up leaves for the tracker — `/file` promotes it
+into an unframed issue — and stops being an idea.
 
 One section is required, because the cost of capture decides how much gets
 captured, and a thought is lost while its author is filling in headings. Most
@@ -139,5 +139,4 @@ example: |
 ````
 
 <!-- sokf:links -->
-[sokf:backlog]: /knowledge/backlog.md
 [sokf:issue-tracker]: /knowledge/issue-tracker.md

@@ -21,7 +21,6 @@ You define the problem, not the solution, and you describe done from outside, as
 <tool_call name="sokf_read" id="issue-{nnn}-{kind}-{slug}" when="if an issue is given" />
 <tool_call name="sokf_read" id="project-overview" when="if framing a feature" />
 <tool_call name="sokf_read" id="constraints-non-goals" when="if framing a feature" />
-<tool_call name="sokf_read" id="backlog" when="if framing a feature" />
 <tool_call name="sokf_read" id="technology-stack" when="if framing a feature" />
 <tool_call name="sokf_read" id="visual-system" when="if framing a feature" />
 <tool_call name="sokf_read" id="schema-readme" when="if new project" />
@@ -47,7 +46,7 @@ You define the problem, not the solution, and you describe done from outside, as
 <step name="CHOOSE VISUAL SYSTEM" when="if new project" task="set the visual system with `/frontend-design`" />
 <step name="CREATE README AND KNOWLEDGE" when="if new project" task="create the README and the canonical knowledge, each document from its schema's contract and worked example" />
 <step name="INTERVIEW THE USER" task="/grill-me: resolve the open decisions, the gaps, every competing reading of the intent, and every criterion readable two ways until one reading remains" />
-<step name="RECORD THE DECISIONS" task="Record the decisions: move a feature taken up out of the backlog; record a rejected idea under decided-against with the reasoning; add a term the project will keep to the glossary." />
+<step name="RECORD THE DECISIONS" task="Record the decisions: promote an idea taken up (`/file`); record a rejected idea as a `wontfix` issue with the reasoning; add a term the project will keep to the glossary." />
 <loop until="the check finds nothing left to fix" max="3">
 <step name="DOUBLE-CHECK" task="/double-check the framed issue; fix what it finds" />
 </loop>

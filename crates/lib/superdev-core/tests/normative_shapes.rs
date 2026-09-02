@@ -1211,48 +1211,158 @@ fn no_kind_schema_is_on_file() {
 /// build.
 #[test]
 fn nothing_names_a_retired_kind_schema() {
-    fn walk(dir: &std::path::Path, found: &mut Vec<String>) {
-        let Ok(entries) = std::fs::read_dir(dir) else {
-            return;
-        };
-        for entry in entries.flatten() {
-            let path = entry.path();
-            if path.is_dir() {
-                walk(&path, found);
-            } else if path.extension().is_some_and(|e| e == "md") {
-                let text = std::fs::read_to_string(&path).unwrap_or_default();
-                for needle in [
-                    "schema-contract-",
-                    "-file-format-",
-                    "file-format contract",
-                    "FileFormatContract",
-                    "TextFormatContract",
-                    "BinaryFormatContract",
-                    "sokf:include contract-style",
-                ] {
-                    if text.contains(needle) {
-                        found.push(format!("{}: {needle}", path.display()));
-                    }
-                }
-            }
-        }
-    }
-    let mut found = Vec::new();
-    for root in [
-        "knowledge/schemas",
-        "knowledge/contracts",
-        "pack/knowledge/schemas",
-        "pack/knowledge/concepts",
-        "pack/knowledge/skills",
-        ".claude/skills",
-    ] {
-        walk(&repo(root), &mut found);
-    }
+    let mut found = markdown_naming(
+        &[
+            "knowledge/schemas",
+            "knowledge/contracts",
+            "pack/knowledge/schemas",
+            "pack/knowledge/concepts",
+            "pack/knowledge/skills",
+            ".claude/skills",
+        ],
+        &[
+            "schema-contract-",
+            "-file-format-",
+            "file-format contract",
+            "FileFormatContract",
+            "TextFormatContract",
+            "BinaryFormatContract",
+            "sokf:include contract-style",
+        ],
+    );
     // contract-008's link note records what its `format` kind replaced.
     found.retain(|f| !f.contains("contract-008-format-template.md: TextFormatContract"));
     assert!(
         found.is_empty(),
         "a retired kind schema is still named where a writer builds: {found:#?}"
+    );
+}
+
+/// Every `path: needle` pair where a markdown file under one of `roots` —
+/// a file named directly, or any `.md` under a directory, recursively —
+/// contains one of `needles`.
+fn markdown_naming(roots: &[&str], needles: &[&str]) -> Vec<String> {
+    fn walk(path: &std::path::Path, needles: &[&str], found: &mut Vec<String>) {
+        if path.is_dir() {
+            let Ok(entries) = std::fs::read_dir(path) else {
+                return;
+            };
+            for entry in entries.flatten() {
+                walk(&entry.path(), needles, found);
+            }
+        } else if path.extension().is_some_and(|e| e == "md") {
+            let text = std::fs::read_to_string(path).unwrap_or_default();
+            for needle in needles {
+                if text.contains(needle) {
+                    found.push(format!("{}: {needle}", path.display()));
+                }
+            }
+        }
+    }
+    let mut found = Vec::new();
+    for root in roots {
+        walk(&repo(root), needles, &mut found);
+    }
+    found.sort_unstable();
+    found
+}
+
+/// Covers I030 `AC_backlog-retired`: no schema, skill, index or live
+/// concept names the backlog (ADR-048). The records that say it retired —
+/// the ADRs, the framed issue, the plans, the changelog, the four entries
+/// that note where they came from — legitimately name it, so the hunt is
+/// scoped to what a writer builds against: the schemas in both trees, the
+/// skills in both trees, the pack's concept skeletons, the ideas index, and
+/// the live knowledge root — its index and the concepts filed directly in
+/// it.
+#[test]
+fn nothing_names_the_backlog() {
+    let mut roots: Vec<String> = [
+        "knowledge/schemas",
+        "knowledge/ideas/index.md",
+        "pack/knowledge/schemas",
+        "pack/knowledge/concepts",
+        "pack/knowledge/skills",
+        ".claude/skills",
+    ]
+    .map(String::from)
+    .to_vec();
+    for entry in std::fs::read_dir(repo("knowledge")).expect("the knowledge root") {
+        let path = entry.unwrap().path();
+        if path.extension().is_some_and(|e| e == "md") {
+            roots.push(format!(
+                "knowledge/{}",
+                path.file_name().unwrap().to_str().unwrap()
+            ));
+        }
+    }
+    let roots: Vec<&str> = roots.iter().map(String::as_str).collect();
+    let found = markdown_naming(&roots, &["backlog", "Backlog"]);
+    assert!(
+        found.is_empty(),
+        "the backlog is still named where a writer builds: {found:#?}"
+    );
+    for root in ["knowledge/schemas", "pack/knowledge/schemas"] {
+        assert!(
+            !repo(&format!("{root}/backlog.md")).exists(),
+            "{root} still ships the backlog schema"
+        );
+    }
+    assert!(!repo("knowledge/backlog.md").exists());
+    assert!(!repo("pack/knowledge/concepts/backlog.md").exists());
+}
+
+/// Covers I030 `AC_backlog-retired`: the backlog's four entries are on
+/// file — its three under-consideration entries as ideas, listed in the
+/// ideas index, and its decided-against entry as a `wontfix` chore under
+/// `issues/wontfix/`, listed in the tracker's index — and each validates,
+/// which `the_live_tree_passes` and the validator's own run over the tree
+/// already hold; here each is read and its form checked.
+#[test]
+fn the_backlog_entries_are_ideas_and_a_wontfix_chore() {
+    let ideas_index = std::fs::read_to_string(repo("knowledge/ideas/index.md")).unwrap();
+    for id in [
+        "idea-007-a-knowledge-capture-skill",
+        "idea-008-templates-pre-fill-knowledge-skeletons",
+        "idea-009-comment-preserving-manifest-stamping",
+    ] {
+        let path = format!("knowledge/ideas/{id}.md");
+        let text = std::fs::read_to_string(repo(&path)).expect(&path);
+        assert!(text.contains("type: Idea"), "{path} is not an idea");
+        assert!(
+            text.contains(&format!("id: {id}")),
+            "{path} carries another id"
+        );
+        assert!(
+            text.contains("\n# Idea: "),
+            "{path} lacks its `# Idea:` heading"
+        );
+        assert!(
+            text.contains("\n## Motivation"),
+            "{path} carries no Motivation"
+        );
+        assert!(
+            ideas_index.contains(&format!("[sokf:{id}]")),
+            "the ideas index does not list {id}"
+        );
+    }
+    let id = "issue-051-chore-pin-node-in-the-managed-repo";
+    let path = format!("knowledge/issues/wontfix/{id}.md");
+    let text = std::fs::read_to_string(repo(&path)).expect(&path);
+    assert!(text.contains("type: Chore"));
+    assert!(text.contains("lifecycle: wontfix"));
+    assert!(
+        text.contains("\n## Won't fix\n"),
+        "{path} carries no verdict"
+    );
+    assert!(
+        text.contains("\n- `DD_"),
+        "{path}'s definition of done is not keyed"
+    );
+    let tracker_index = std::fs::read_to_string(repo("knowledge/issues/index.md")).unwrap();
+    assert!(
+        tracker_index.contains(&format!("[sokf:{id}]")),
+        "the tracker index does not list {id}"
     );
 }
 

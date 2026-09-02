@@ -3,7 +3,6 @@
 * [Project Overview][sokf:project-overview] - what superdev is and its current status.
 * [Domain Glossary][sokf:glossary] - the terms the blueprint engine uses — blueprint, capability, provider, provenance, component, owned file, scaffold, project template, template adoption, skill pack, knowledge-carried skill, content pack, pack source, embedded snapshot, pack item, pack layer, pack format, PROJECT.md layer, custom skill, harvest, claim, orphan — plus the search terms section, locator, hybrid search and RRF.
 * [Known Constraints & Non-Goals][sokf:constraints-non-goals] - what superdev deliberately does not do, and the accepted limitations of the inherited machinery.
-* [Backlog & Decided Ideas][sokf:backlog] - ideas under consideration and ideas decided against, with the reasoning.
 * [Ideas](ideas/index.md) - thoughts captured for considering later, one document each; not candidate work.
 
 # Design
@@ -40,7 +39,6 @@
 <!-- sokf:links -->
 [sokf:architectural-rules]: /knowledge/architectural-rules.md
 [sokf:architecture]: /knowledge/architecture.md
-[sokf:backlog]: /knowledge/backlog.md
 [sokf:coding-standards]: /knowledge/coding-standards.md
 [sokf:configuration]: /knowledge/configuration.md
 [sokf:constraints-non-goals]: /knowledge/constraints-non-goals.md
