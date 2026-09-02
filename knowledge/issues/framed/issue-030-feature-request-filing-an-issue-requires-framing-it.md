@@ -64,8 +64,9 @@ An issue has four lifecycle states: `unframed`, `framed`, `done`,
 
 `/file` is the light path in. Given a bug, a feature request or a
 chore, it writes the minimum record — kind, title, description,
-Summary, Motivation, every other section of the kind present with the
-user's words or `TBD — <the open question>` — numbered after the
+Summary and, where the kind carries it, Motivation, every other
+section of the kind present with the user's words or `TBD — <the open
+question>` — numbered after the
 highest issue, filed `unframed` by `superdev validate --fix`, with no
 interview, no branch, and no criteria the user did not state. Given an
 idea — a thought with no kind yet, or one the user cannot yet say is
@@ -100,8 +101,9 @@ ADRs keep rejected design alternatives, as they do today.
    `framed`, `done` and `wontfix`, and `superdev validate --fix` SHALL
    file an issue in the folder named by its value.
 2. `AC_unframed-form` [state] WHILE an issue is `unframed`, THE SYSTEM
-   SHALL require its title, description, Summary and Motivation and
-   every section heading of its kind, and SHALL accept a criterion,
+   SHALL require its title, description, Summary and, where the kind
+   carries it, Motivation, and every section heading of its kind, and
+   SHALL accept a criterion,
    repro step, expected-behaviour item or done item that is a plain
    sentence or opens with `TBD — `, with or without a key or an EARS
    tag.

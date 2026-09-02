@@ -369,6 +369,11 @@ criteria unkeyed while unframed and keyed once framed (ADR-049).
   heading and their `variants` sets share a value, or one of them is
   untagged, the validator SHALL report an error on the schema naming
   the heading and the overlap, and the rules bind nothing.
+- `P_heading-same-by-form` [ubiquitous] The validator SHALL treat two
+  rules as naming one heading only when they carry the same `heading`
+  literal or the same `heading-pattern` at one level; a literal beside
+  a pattern that matches it is two headings, the literal binding its
+  own and the pattern the rest.
 
 **The definition is not parsed** — the `include` kind asks only that
 an include block naming a source path is present; what the block

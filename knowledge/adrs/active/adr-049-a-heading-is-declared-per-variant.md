@@ -57,8 +57,13 @@ content kind and every pattern are the selected rule's own.
 
 Two rules naming one heading whose sets share a value, or of which
 one is untagged, are a finding on the schema naming the heading and
-the overlap, and both bind nothing. A heading declared once keeps
-ADR-045's reading. Contract-010 carries the rule.
+the overlap, and both bind nothing. Two rules name one heading by
+declaration form — the same `heading` literal, or the same
+`heading-pattern`, at one level; a literal beside a pattern that
+matches it is two headings, the literal binding its own and the
+pattern the rest, which is how a schema declares fixed headings beside
+a catch-all. A heading declared once keeps ADR-045's reading.
+Contract-010 carries the rule.
 
 ## Options considered
 

@@ -47,8 +47,9 @@ An issue's `lifecycle` is one of `unframed`, `framed`, `done` and
 
 `/file` is a knowledge-carried skill and the light path in. Given a
 bug, a feature request or a chore it writes the minimum record — kind,
-title, description, Summary, Motivation, every other heading of the
-kind with the user's words or `TBD — <the open question>` — numbered
+title, description, Summary and, where the kind carries it, Motivation,
+every other heading of the kind with the user's words or `TBD — <the
+open question>` — numbered
 after the highest issue, filed `unframed`, with no interview, no
 branch and no criterion the user did not state. Given an idea, it
 writes one per `schema-idea` into `knowledge/ideas/`; an idea is a

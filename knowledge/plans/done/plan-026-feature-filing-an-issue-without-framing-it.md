@@ -261,6 +261,9 @@ edited beside it.
   criterion and ADR-048 to "Summary, and Motivation where the kind
   carries it", or add a Motivation heading to those kinds? Blocks
   nothing; returns to frame (code-review-010 finding 5).
+  - Answer (2026-09-02, the owner): amend the wording — "Summary and,
+    where the kind carries it, Motivation" in the criterion, ADR-048
+    and the skill.
 - A literal `heading` and a `heading-pattern` it matches are two
   headings to the disjointness check: the literal wins the heading it
   names and the pattern names the rest, which is how 18 schemas declare
@@ -269,6 +272,8 @@ edited beside it.
   saying the check is by declaration form. Say so in the contract and
   the ADR, or find a check that tells `^Notes$` from `^.+$`? Blocks
   nothing; returns to contract-design (code-review-010 finding 3).
+  - Answer (2026-09-02, the owner): say so — contract-010 gains
+    `P_heading-same-by-form` and ADR-049 the sentence.
 
 <!-- sokf:links -->
 [sokf:adr-048-an-issues-lifecycle-distinguishes-framed-from-unframed]: /knowledge/adrs/active/adr-048-an-issues-lifecycle-distinguishes-framed-from-unframed.md
