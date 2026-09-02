@@ -3,8 +3,11 @@ type: FeatureRequest
 id: issue-048-feature-request-no-step-asks-whether-a-contract-is-bound
 title: Every contract-kind schema requires a binding to the implementation, and no step ever asks whether one exists
 description: The obligation ships in all sixteen kind schemas and nothing checks it; the two unbound contracts found so far were both found by a human reading, and an agent step could ask the question at the reliability a judgement carries.
-lifecycle: open
+lifecycle: wontfix
 links:
+  - rel: references
+    to: issue-049-feature-request-a-contract-cannot-point-at-its-definition
+    note: Folds this in — the binding question is the judgement layer's half, criteria 11 to 17 there.
   - rel: references
     to: adr-036-a-contract-is-bound-to-its-implementation
     note: States the obligation this would ask about; the mechanism stays the project's.
@@ -17,6 +20,18 @@ links:
 ---
 
 # Feature: no step asks whether a contract is bound
+
+## Won't fix
+
+Folded 2026-09-02 into
+[I049][sokf:issue-049-feature-request-a-contract-cannot-point-at-its-definition].
+Once every contract states what binds it, this issue's question changes
+shape — not "search for a binding" but "does the declared binding
+hold" — and it lands in the same agent-run step as two other judgements
+a contract needs: whether a consumer can read the definition from it,
+and whether a block duplicates a file the contract also points at. One
+step, one report. The seven criteria below are carried as I049's
+criteria 11 to 17, the failure paths included.
 
 ## Summary
 
@@ -125,3 +140,4 @@ question is unavailable to a gate and entirely available to a judgement.
 [sokf:adr-039-a-decidable-finding-is-an-error-and-the-turn-is-the-gate]: /knowledge/adrs/active/adr-039-a-decidable-finding-is-an-error-and-the-turn-is-the-gate.md
 [sokf:issue-038-bug-the-template-format-contract-is-bound-by-no-drift-test]: /knowledge/issues/done/issue-038-bug-the-template-format-contract-is-bound-by-no-drift-test.md
 [sokf:issue-043-bug-the-cli-contracts-json-keys-are-bound-by-no-test]: /knowledge/issues/open/issue-043-bug-the-cli-contracts-json-keys-are-bound-by-no-test.md
+[sokf:issue-049-feature-request-a-contract-cannot-point-at-its-definition]: /knowledge/issues/open/issue-049-feature-request-a-contract-cannot-point-at-its-definition.md

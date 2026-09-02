@@ -18,6 +18,15 @@ links:
     to: adr-036-a-contract-is-bound-to-its-implementation
     note: Stands; construction, a currency check and a test are the three ways to meet it, and the contract now says which.
   - rel: references
+    to: adr-038-a-contract-may-promise-what-is-not-built-yet
+    note: A pending element is bound by the reverse assertion the marker requires, so the judgement step does not report it.
+  - rel: references
+    to: issue-038-bug-the-template-format-contract-is-bound-by-no-drift-test
+    note: The first unbound contract found by a person reading; no step existed to find it.
+  - rel: references
+    to: issue-043-bug-the-cli-contracts-json-keys-are-bound-by-no-test
+    note: The second, found the same way; stays open and is fixed as the defect it is.
+  - rel: references
     to: adr-039-a-decidable-finding-is-an-error-and-the-turn-is-the-gate
     note: Draws the line between what the validator checks and what the agent judges.
   - rel: references
@@ -25,7 +34,7 @@ links:
     note: Dissolved — declaring a block's form was only needed while the validator read blocks.
   - rel: references
     to: issue-048-feature-request-no-step-asks-whether-a-contract-is-bound
-    note: The judgement layer's binding question; this feature's judgement step and that one land together.
+    note: Folded in — its seven criteria are the judgement layer's binding half, carried as criteria 11 to 17.
 ---
 
 # Feature: a contract cannot point at its definition
@@ -69,10 +78,14 @@ were checked; there was `serde_yaml_ng` in the tree. Everything the
 check caught — a command without its `exit` map — the drift test
 catches anyway.
 
-Three renderings of the command line exist today: the contract, the
-man page `superdev man` generates from clap, and the README. Nothing
-checks that the README points at the contract, because the README sits
-outside the tree the link checker reads.
+Nothing asks whether any of this holds. Two contracts have been found
+unbound — `contract-008`'s tokens and template set
+([I038][sokf:issue-038-bug-the-template-format-contract-is-bound-by-no-drift-test]),
+`contract-002`'s `json` block
+([I043][sokf:issue-043-bug-the-cli-contracts-json-keys-are-bound-by-no-test])
+— and both were found by a person reading the contract beside the
+tests. No check found them, because whether a binding holds is not
+decidable from the tree; no step asked, because none exists.
 
 ## Proposed behaviour
 
@@ -113,15 +126,24 @@ The **project** supplies truth — that the definition matches the code —
 by whichever of the three bindings it declared. superdev states the
 obligation and names the strategies a project may use; it supplies none.
 
-An **agent** supplies judgement, at integration, reading each contract
-the feature touched as its consumer would: whether the definition can
-be read from it, whether a block duplicates a file the same section
-points at, and whether the declared binding plausibly binds. The report
-is a judgement that blocks nothing, because a reviewer is right most of
-the time and a gate must be right every time.
+An **agent** supplies judgement, when a slice that touched a contract
+is integrated, reading each such contract as its consumer would: whether
+the definition can be read from it, whether a block duplicates a file
+the same section points at, and whether the declared binding holds —
+the named test compares what the contract declares, the referenced file
+is what the code is built from, the currency check proves the rendering
+current. For each contract it reports, it names what it checked and
+what it did not find, so a reader confirms or dismisses the report
+without repeating the search. A contract element marked pending
+([ADR-038][sokf:adr-038-a-contract-may-promise-what-is-not-built-yet])
+is bound by the reverse assertion that marker requires, and is not
+reported. The report is a judgement that blocks nothing, because a
+reviewer is right most of the time and a gate must be right every
+time. The step ships in the pack, so a project adopting superdev
+inherits the question with the obligation.
 
-User documentation links to the contract, the contract points at the
-declaration, and nothing is copied along the chain.
+The contract points at the declaration, and nothing is copied along the
+chain.
 
 ## Acceptance criteria
 
@@ -156,17 +178,29 @@ declaration, and nothing is copied along the chain.
     introspecting the framework, running the interface, parsing the
     artifact the code writes, matching declared elements against source
     — and SHALL supply an implementation of none.
-11. [event] WHEN a slice is integrated THE SYSTEM SHALL have the
-    integrating agent read each contract the feature touched as its
+11. [event] WHEN a slice that touched a contract is integrated THE
+    SYSTEM SHALL have the integrating agent read that contract as its
     consumer would, and report where the definition cannot be read from
     the contract, where a block duplicates a referenced file, and where
-    the declared binding does not plausibly bind.
-12. [ubiquitous] THE SYSTEM SHALL present that report as a judgement
+    the declared binding does not hold.
+12. [ubiquitous] THE SYSTEM SHALL name, for each contract the agent
+    reports, what it checked and what it did not find, so a reader
+    confirms or dismisses the report without repeating the search.
+13. [ubiquitous] THE SYSTEM SHALL present that report as a judgement
     that blocks nothing, and SHALL NOT record it as a validator finding.
-13. [event] WHEN user documentation outside the knowledge tree names a
-    contract that does not exist THE SYSTEM SHALL report an error naming
-    the file and the contract.
-14. [ubiquitous] THE SYSTEM SHALL leave every contract on file passing
+14. [state] WHILE a contract element is marked pending THE SYSTEM SHALL
+    count the reverse assertion ADR-038 requires as that element's
+    binding, and SHALL NOT report it as unbound.
+15. [conditional] IF the slice touched no contract THE SYSTEM SHALL say
+    so and report nothing further, so an empty report is distinguishable
+    from a step that did not run.
+16. [conditional] IF the agent cannot read the project's tests THE
+    SYSTEM SHALL report what it could not read and SHALL NOT report the
+    contracts it could not judge as unbound.
+17. [ubiquitous] THE SYSTEM SHALL ship the judgement step in the pack,
+    so a project adopting superdev inherits it with the schemas that
+    state the obligation.
+18. [ubiquitous] THE SYSTEM SHALL leave every contract on file passing
     validation, each part of each definition stating its binding.
 
 ## Alternatives considered
@@ -192,9 +226,14 @@ declaration, and nothing is copied along the chain.
   they follow a definition language, which is `rest`/`graphql`/`rpc`
   and `binary-format`/`text-format`. This feature removes the reason
   for those splits; merging them is a separate, smaller decision.
-- Leave the README outside the link check. Rejected: the chain from
-  documentation to contract to declaration is what keeps one source of
-  truth, and its first link was the one nothing checked.
+- Make the binding question a validator check. Rejected: whether a
+  named test compares what the contract declares lives in the project's
+  test suite, in a language superdev does not read, so the question
+  falls on the far side of ADR-039's line. What the validator can
+  decide — that the named file exists — it does; the rest is judgement.
+- A line in `definition-of-done` and nothing else. Rejected: that is
+  what exists today, one level of indirection away, and it caught
+  neither I038 nor I043.
 
 ## Scope
 
@@ -210,16 +249,14 @@ declaration, and nothing is copied along the chain.
 - In: the contract standard's statements on what a reference targets,
   what counts as duplication, and the binding strategies.
 - In: the agent's judgement step at integration.
-- In: the link check reaching user documentation outside the knowledge
-  tree.
 - Out: supplying a harness, a generator, a drift test or a gate for a
   managed project — the non-goal stands, sharpened: superdev checks
   that a binding is named, never that it holds.
-- Out: whether a step asks whether the declared binding exists and
-  holds, which is
-  [I048][sokf:issue-048-feature-request-no-step-asks-whether-a-contract-is-bound]'s
-  — the two judgement steps land in one place and CONTRACT-DESIGN
-  designs them together.
+- In: the judgement step asking whether each declared binding holds,
+  folded from
+  [I048][sokf:issue-048-feature-request-no-step-asks-whether-a-contract-is-bound]
+  — one step, one report, the readability and duplication questions
+  beside the binding one.
 - Out: merging the kinds that were split by definition language.
 - Out: generating `contract-002`'s block from clap. A proof of the
   model this repository could give; not required by it.
@@ -254,6 +291,14 @@ in a keyed form. And it moved
 from superseded to dissolved: declaring a block's form was needed only
 so the validator could parse the block, and it no longer does.
 
+I048 was folded in on 2026-09-02 once the three layers were clear: its
+question — does the declared binding hold — is the judgement layer's
+binding half, and it lands in the same step as the readability and
+duplication questions. A criterion requiring the link check to reach
+the README was dropped the same day; "correctly referenced from the
+docs" meant the contract knowledge referencing its declarations, which
+criterion 3 already binds.
+
 Left to CONTRACT-DESIGN: the shape of a definition reference and a
 binding statement in a section rule and a contract; whether the
 `resource` frontmatter key, which points at the implementation, stays
@@ -267,6 +312,9 @@ named test file does.
 [sokf:adr-034-each-kind-defines-in-the-form-its-ecosystem-reads]: /knowledge/adrs/active/adr-034-each-kind-defines-in-the-form-its-ecosystem-reads.md
 [sokf:adr-035-a-schema-declares-its-definition-blocks-contract]: /knowledge/adrs/active/adr-035-a-schema-declares-its-definition-blocks-contract.md
 [sokf:adr-036-a-contract-is-bound-to-its-implementation]: /knowledge/adrs/active/adr-036-a-contract-is-bound-to-its-implementation.md
+[sokf:adr-038-a-contract-may-promise-what-is-not-built-yet]: /knowledge/adrs/active/adr-038-a-contract-may-promise-what-is-not-built-yet.md
 [sokf:adr-039-a-decidable-finding-is-an-error-and-the-turn-is-the-gate]: /knowledge/adrs/active/adr-039-a-decidable-finding-is-an-error-and-the-turn-is-the-gate.md
+[sokf:issue-038-bug-the-template-format-contract-is-bound-by-no-drift-test]: /knowledge/issues/done/issue-038-bug-the-template-format-contract-is-bound-by-no-drift-test.md
+[sokf:issue-043-bug-the-cli-contracts-json-keys-are-bound-by-no-test]: /knowledge/issues/open/issue-043-bug-the-cli-contracts-json-keys-are-bound-by-no-test.md
 [sokf:issue-047-feature-request-a-kinds-definition-form-is-stated-in-prose]: /knowledge/issues/wontfix/issue-047-feature-request-a-kinds-definition-form-is-stated-in-prose.md
-[sokf:issue-048-feature-request-no-step-asks-whether-a-contract-is-bound]: /knowledge/issues/open/issue-048-feature-request-no-step-asks-whether-a-contract-is-bound.md
+[sokf:issue-048-feature-request-no-step-asks-whether-a-contract-is-bound]: /knowledge/issues/wontfix/issue-048-feature-request-no-step-asks-whether-a-contract-is-bound.md
