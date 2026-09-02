@@ -3,7 +3,7 @@ type: FeaturePlan
 id: plan-025-feature-a-contracts-behaviour-is-written-as-ears
 title: A contract's behaviour is written as EARS — feature plan
 description: Slices delivering I037 — the three item declarations in the validator, the sweep of nine contracts to keyed EARS promises, the contract schema in its final form with twelve examples, the tracker schemas' keyed criteria with the c<n> sweep of fifty issues, and the records.
-lifecycle: open
+lifecycle: done
 links:
   - rel: implements
     to: issue-037-feature-request-a-contracts-behaviour-is-not-written-as-ears
@@ -286,7 +286,7 @@ rebuild per edit.
 
 ### Slice 8: The records close
 
-- [ ] Done — ticked by integrate at merge.
+- [x] Done — ticked by integrate at merge.
 - Depends-on: 6, 7.
 - Change: the glossary defines the promise form and the key (both
   prefixes tables, the `c<n>` slugs, the citation); the changelog's
@@ -299,6 +299,16 @@ rebuild per edit.
   - unit: the glossary defines the key, its prefixes and the citation
     — covers AC_c16.
   - unit: the changelog's Unreleased names the form — covers AC_c16.
+  - Note, at merge: no test reads the glossary or the changelog, so
+    integrate checked both cases by grep — the glossary's EARS entry
+    carries no "do not yet", a Promise key entry names the five
+    prefixes, the slug, the `c<n>` slug and the citation form, and the
+    changelog's Unreleased carries the three declarations under Added
+    and the promise form, the contract sweep and the tracker sweep
+    under Changed. The whole-feature review is
+    [code-review-009][sokf:code-review-009-a-contracts-behaviour-is-written-as-ears]:
+    three major findings and seven minor, recorded and not fixed on
+    the branch.
 
 ## Deferred decisions
 
@@ -320,6 +330,7 @@ rebuild per edit.
 <!-- sokf:links -->
 [sokf:adr-046-a-promise-and-a-criterion-are-keyed-ears-items]: /knowledge/adrs/active/adr-046-a-promise-and-a-criterion-are-keyed-ears-items.md
 [sokf:adr-047-a-section-rule-declares-item-keys-and-item-bounds]: /knowledge/adrs/active/adr-047-a-section-rule-declares-item-keys-and-item-bounds.md
+[sokf:code-review-009-a-contracts-behaviour-is-written-as-ears]: /knowledge/reports/code-review-009-a-contracts-behaviour-is-written-as-ears.md
 [sokf:contract-010-interface-document-schemas]: /knowledge/contracts/internal/active/contract-010-interface-document-schemas.md
 [sokf:issue-037-feature-request-a-contracts-behaviour-is-not-written-as-ears]: /knowledge/issues/open/issue-037-feature-request-a-contracts-behaviour-is-not-written-as-ears.md
 [sokf:plan-024-feature-a-contract-includes-its-definition]: /knowledge/plans/done/plan-024-feature-a-contract-includes-its-definition.md
