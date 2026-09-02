@@ -86,7 +86,7 @@ All domain logic; no argument parsing. One module per concern:
 
 The MCP server exposes four read-only tools over stdio — `sokf_search`,
 `sokf_read`, `sokf_graph`, `sokf_overview` (see
-[contract-003-mcp-sokf][sokf:contract-003-mcp-sokf]). It holds one index directory and
+[contract-003-api-sokf][sokf:contract-003-api-sokf]). It holds one index directory and
 serialises its own tool calls with a mutex: a call keeps the index open across
 its whole body while another call's sync could delete and rebuild that
 directory underneath it. Search is hybrid — tantivy BM25 and cosine over
@@ -181,4 +181,4 @@ dry-run-gated and recoverable* rather than truly atomic.
 [sokf:adr-015-the-spawn-seam-carries-a-deadline]: /knowledge/adrs/active/adr-015-the-spawn-seam-carries-a-deadline.md
 [sokf:architecture]: /knowledge/architecture.md
 [sokf:contract-002-cli-superdev]: /knowledge/contracts/public/active/contract-002-cli-superdev.md
-[sokf:contract-003-mcp-sokf]: /knowledge/contracts/public/active/contract-003-mcp-sokf.md
+[sokf:contract-003-api-sokf]: /knowledge/contracts/public/active/contract-003-api-sokf.md

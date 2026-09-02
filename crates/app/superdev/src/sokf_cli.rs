@@ -15,6 +15,7 @@ use superdev_core::sokf::{
 
 use crate::cli::{INDEX_DIR, io_error, knowledge_dir, out};
 
+// sokf:begin cli
 /// Serve a project subsystem over MCP.
 #[derive(clap::Subcommand)]
 pub enum McpCommand {
@@ -31,6 +32,7 @@ pub enum SokfCommand {
         path: Option<PathBuf>,
     },
 }
+// sokf:end cli
 
 /// Serve the SOKF knowledge over stdio until the client disconnects.
 pub fn run_mcp(cmd: &McpCommand, root: &Path) -> Result<u8> {

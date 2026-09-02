@@ -1,0 +1,189 @@
+---
+type: Contract
+id: contract-003-api-sokf
+kind: api
+title: API contract for sokf over MCP
+description: The SOKF knowledge served to agents — four read-only tools over stdio as the server declares them, and what each call promises beyond its signature.
+lifecycle: active
+resource: /crates/lib/superdev-core/src/sokf/mcp.rs
+---
+
+# API contract: sokf over MCP
+
+The SOKF knowledge served to agents: four read-only tools over stdio.
+The Definition is the server's argument structs and tool methods as the
+source declares them; a doc comment on a struct field or a tool method is
+the description the client sees and the promise the server keeps.
+Behaviour carries what the source cannot say: the transport, the errors,
+the limits, and how the tools rank what they return. The decisions behind
+the shape are
+[ADR-033][sokf:adr-033-a-contract-defines-its-interface] and
+[ADR-042][sokf:adr-042-a-contracts-definition-is-materialized-from-source].
+
+## Definition
+
+<!-- sokf:include /crates/lib/superdev-core/src/sokf/mcp.rs#tools -->
+```rust
+/// Arguments of `sokf_search`.
+#[derive(Debug, Deserialize, JsonSchema)]
+#[schemars(crate = "rmcp::schemars")]
+struct SearchArgs {
+    /// What to look for, in the caller's own words.
+    query: String,
+    /// Most hits to return; 8 by default.
+    limit: Option<u32>,
+    /// Keep only concepts of these frontmatter `type`s.
+    types: Option<Vec<String>>,
+    /// Keep only concepts carrying one of these tags.
+    tags: Option<Vec<String>>,
+    /// Keep only concepts whose `lifecycle` is one of these values, e.g.
+    /// `["open"]` for live issues and plans.
+    lifecycle: Option<Vec<String>>,
+}
+
+/// Arguments of `sokf_read`.
+#[derive(Debug, Deserialize, JsonSchema)]
+#[schemars(crate = "rmcp::schemars")]
+struct ReadArgs {
+    /// Concept `id`, or its bundle-relative path.
+    id: String,
+    /// One section's heading, or the `a > b` heading path; omit for the whole
+    /// concept.
+    heading: Option<String>,
+}
+
+/// Arguments of `sokf_graph`.
+#[derive(Debug, Deserialize, JsonSchema)]
+#[schemars(crate = "rmcp::schemars")]
+struct GraphArgs {
+    /// One concept's neighbours; omit for the whole edge map.
+    id: Option<String>,
+}
+
+    /// Search the bundle. Returns the best sections, grouped by concept, each
+    /// with a `path:start-end` locator to read next.
+    #[tool]
+    async fn sokf_search(&self, Parameters(args): Parameters<SearchArgs>) -> ToolResult {
+        let _guard = self.exclusive();
+        let (bundle, index, stats) = self.sync().map_err(|e| e.to_string())?;
+        let opts = SearchOpts {
+            limit: hit_limit(args.limit),
+            kinds: args.types.unwrap_or_default(),
+            tags: args.tags.unwrap_or_default(),
+            lifecycle: args.lifecycle.unwrap_or_default(),
+        };
+        // The embedder that built the vectors is the only one that can search
+        // them; anything else silently degrades to lexical.
+        let hits = index
+            .search(&args.query, self.embedder.as_deref(), &opts)
+            .map_err(|e| e.to_string())?;
+        Ok(text(render_hits(
+            &bundle,
+            &args.query,
+            &hits,
+            stats.lexical_only,
+        )))
+    }
+
+    /// Read one concept whole, or one of its sections.
+    #[tool]
+    async fn sokf_read(&self, Parameters(args): Parameters<ReadArgs>) -> ToolResult {
+        let _guard = self.exclusive();
+        let (bundle, _, _) = self.sync().map_err(|e| e.to_string())?;
+        let graph = Graph::build(&bundle);
+        let identity = resolve(&graph, &args.id)
+            .map_err(|e| broken_file_error(&bundle, &args.id).unwrap_or(e))?;
+        let concept =
+            concept_of(&bundle, &identity).ok_or_else(|| format!("no concept for `{identity}`"))?;
+        Ok(text(render_concept(
+            concept,
+            &identity,
+            args.heading.as_deref(),
+        )?))
+    }
+
+    /// Show the link graph: the whole edge map, or one concept's neighbours
+    /// in both directions.
+    #[tool]
+    async fn sokf_graph(&self, Parameters(args): Parameters<GraphArgs>) -> ToolResult {
+        let _guard = self.exclusive();
+        let (bundle, _, _) = self.sync().map_err(|e| e.to_string())?;
+        let graph = Graph::build(&bundle);
+        let Some(id) = args.id else {
+            return Ok(text(render_edges(&graph.edge_map())));
+        };
+        let identity = resolve(&graph, &id)?;
+        let hops = graph
+            .neighbours(&identity)
+            .map_err(|unknown| format!("unknown id `{}`", unknown.asked))?;
+        Ok(text(render_neighbours(&bundle, &identity, &hops)))
+    }
+
+    /// Orient in the bundle: its name, size, directory tree, and anything
+    /// validation found wrong.
+    #[tool]
+    async fn sokf_overview(&self) -> ToolResult {
+        let _guard = self.exclusive();
+        let (bundle, _, stats) = self.sync().map_err(|e| e.to_string())?;
+        Ok(text(render_overview(&bundle, &stats, &self.repo_root)))
+    }
+```
+<!-- /sokf:include -->
+
+## Behaviour
+
+### Transport
+
+`superdev mcp sokf` MUST speak the MCP protocol over stdin and stdout,
+serving one client, and MUST exit `0` when that client closes stdin. A
+missing knowledge or an unusable index directory MUST fail at startup
+rather than at every tool call. The server reads the index at
+`.superdev/cache/sokf-index/` and syncs it lazily on every tool call;
+there is no watcher and no daemon state.
+
+### Authentication
+
+None. The harness that spawns the server is the caller, and the server
+MUST trust whatever reaches its stdin; there is no credential to present
+and no role to distinguish, since every tool is read-only.
+
+### Errors
+
+A tool failure MUST be an MCP error payload, never a process exit: an
+unknown id MUST come back with near-miss candidates, and knowledge that
+fails validation MUST still index and serve. Reading a file the parser
+choked on MUST quote the parse error instead of guessing at near misses.
+
+### Limits
+
+`limit` MUST be clamped to 1..50 rather than refused, and MUST default to
+8. Every hit carries the locator set — knowledge-relative path, concept
+id, heading path, line range, snippet and score — so the next call reads
+exactly what matched. `sokf_search` MUST apply `types`, `tags` and
+`lifecycle` before fusion, so a filtered concept cannot re-enter through
+the other ranking. Settled work — a `deprecated` concept, or one tagged
+`done`, `resolved` or `wontfix` — MUST be down-ranked after fusion, so
+finished plans and issues sort below live knowledge without leaving the
+results. `sokf_graph` MUST cap each group at 30 lines and then say how
+many it dropped. `sokf_overview` MUST list at most 10 warnings and then
+say how many more there are.
+
+### Versioning
+
+Unreleased. A tool, an argument or a result shape MAY change in any
+release without a deprecation path; a client learns of the change from
+the tool list the server serves.
+
+### Resources and prompts
+
+None. The server MUST expose tools only, so a client that lists resources
+or prompts gets an empty set rather than an error.
+
+## Stability
+
+Unreleased. The tool names, their arguments and their result shapes MAY
+change without notice.
+
+<!-- sokf:links -->
+[sokf:adr-033-a-contract-defines-its-interface]: /knowledge/adrs/active/adr-033-a-contract-defines-its-interface.md
+[sokf:adr-042-a-contracts-definition-is-materialized-from-source]: /knowledge/adrs/active/adr-042-a-contracts-definition-is-materialized-from-source.md

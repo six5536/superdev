@@ -69,6 +69,10 @@ impl std::fmt::Debug for SokfServer {
     }
 }
 
+// The tools are the MCP contract's definition (contract-003): the argument
+// structs and the `#[tool]` methods sit in `tools` regions, and the contract
+// includes them.
+// sokf:begin tools
 /// Arguments of `sokf_search`.
 #[derive(Debug, Deserialize, JsonSchema)]
 #[schemars(crate = "rmcp::schemars")]
@@ -104,6 +108,7 @@ struct GraphArgs {
     /// One concept's neighbours; omit for the whole edge map.
     id: Option<String>,
 }
+// sokf:end tools
 
 #[tool_router(router = tool_router)]
 impl SokfServer {
@@ -128,6 +133,7 @@ impl SokfServer {
             tool_router: SokfServer::tool_router(),
         }
     }
+    // sokf:begin tools
 
     /// Search the bundle. Returns the best sections, grouped by concept, each
     /// with a `path:start-end` locator to read next.
@@ -196,6 +202,7 @@ impl SokfServer {
         let (bundle, _, stats) = self.sync().map_err(|e| e.to_string())?;
         Ok(text(render_overview(&bundle, &stats, &self.repo_root)))
     }
+    // sokf:end tools
 
     /// Serve MCP over stdio until the client disconnects.
     ///
@@ -889,146 +896,5 @@ mod tests {
         let shown = format!("{server:?}");
         assert!(shown.contains("/repo/knowledge"));
         assert!(shown.contains("embedder: None"));
-    }
-
-    /// The MCP contract's declared tools: name to (argument, required, type).
-    /// The first fenced block carrying `tag`, without its markers.
-    ///
-    /// Scanned a line at a time, so a CRLF checkout reads as its LF twin: a
-    /// fence is a fence whatever ends the line (I040). The closing marker is the
-    /// one that opened the block, so a ```` ```` ```` block may contain ``` ``` ````.
-    fn fenced_block(text: &str, tag: &str) -> Option<String> {
-        let mut lines = text.lines();
-        let marker = loop {
-            let trimmed = lines.next()?.trim_start();
-            let ticks = trimmed.len() - trimmed.trim_start_matches('`').len();
-            if ticks >= 3 && trimmed[ticks..].trim() == tag {
-                break trimmed[..ticks].to_string();
-            }
-        };
-        let mut body = Vec::new();
-        for line in lines {
-            if line.trim_start().starts_with(&marker) {
-                return Some(body.join("\n"));
-            }
-            body.push(line);
-        }
-        None
-    }
-
-    fn declared_tools() -> std::collections::BTreeMap<String, BTreeMap<String, (bool, String)>> {
-        let path: std::path::PathBuf = [
-            env!("CARGO_MANIFEST_DIR"),
-            "../../..",
-            "knowledge/contracts/public/active/contract-003-mcp-sokf.md",
-        ]
-        .iter()
-        .collect();
-        let text = std::fs::read_to_string(path).expect("the MCP contract is on file");
-        let block = fenced_block(&text, "json").expect("the Tools section carries a json block");
-        let raw: BTreeMap<String, serde_json::Value> =
-            serde_json::from_str(&block).expect("the definition block parses as json");
-        raw.into_iter()
-            .map(|(name, entry)| {
-                let args = entry
-                    .get("arguments")
-                    .and_then(|v| v.as_object())
-                    .map(|map| {
-                        map.iter()
-                            .map(|(arg, spec)| {
-                                let required = spec
-                                    .get("required")
-                                    .and_then(serde_json::Value::as_bool)
-                                    .unwrap_or(false);
-                                let ty = spec
-                                    .get("type")
-                                    .and_then(|t| t.as_str())
-                                    .unwrap_or("")
-                                    .to_string();
-                                (arg.clone(), (required, ty))
-                            })
-                            .collect()
-                    })
-                    .unwrap_or_default();
-                (name, args)
-            })
-            .collect()
-    }
-
-    /// The served tools, in the same shape. An optional argument's type
-    /// arrives as a union with `null`; the type it declares is the other one.
-    fn served_tools() -> std::collections::BTreeMap<String, BTreeMap<String, (bool, String)>> {
-        SokfServer::tool_router()
-            .list_all()
-            .into_iter()
-            .map(|tool| {
-                let required: Vec<String> = tool
-                    .input_schema
-                    .get("required")
-                    .and_then(|v| v.as_array())
-                    .map(|items| {
-                        items
-                            .iter()
-                            .filter_map(|v| v.as_str().map(ToString::to_string))
-                            .collect()
-                    })
-                    .unwrap_or_default();
-                let args = tool
-                    .input_schema
-                    .get("properties")
-                    .and_then(|v| v.as_object())
-                    .map(|props| {
-                        props
-                            .iter()
-                            .map(|(arg, spec)| {
-                                let ty = match spec.get("type") {
-                                    Some(serde_json::Value::String(s)) => s.clone(),
-                                    Some(serde_json::Value::Array(items)) => items
-                                        .iter()
-                                        .filter_map(serde_json::Value::as_str)
-                                        .find(|s| *s != "null")
-                                        .unwrap_or("")
-                                        .to_string(),
-                                    _ => String::new(),
-                                };
-                                (arg.clone(), (required.contains(arg), ty))
-                            })
-                            .collect()
-                    })
-                    .unwrap_or_default();
-                (tool.name.to_string(), args)
-            })
-            .collect()
-    }
-
-    /// Covers I035 criteria 4 and 7: every tool the server offers is declared
-    /// in the contract with the same arguments, types and requiredness, and
-    /// the contract declares no tool the server does not offer (ADR-036).
-    #[test]
-    fn the_served_tools_match_the_contract() {
-        let served = served_tools();
-        let declared = declared_tools();
-        let missing: Vec<&String> = served
-            .keys()
-            .filter(|k| !declared.contains_key(*k))
-            .collect();
-        assert!(
-            missing.is_empty(),
-            "DEFECT — the server offers tools its contract does not declare: {missing:?}"
-        );
-        let extra: Vec<&String> = declared
-            .keys()
-            .filter(|k| !served.contains_key(*k))
-            .collect();
-        assert!(
-            extra.is_empty(),
-            "PENDING — the contract promises tools the server does not offer yet: {extra:?}"
-        );
-        for (name, want) in &declared {
-            assert_eq!(
-                &served[name], want,
-                "DRIFT — `{name}`'s arguments differ between the server and its contract"
-            );
-        }
     }
 }

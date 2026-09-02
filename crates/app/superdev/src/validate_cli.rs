@@ -14,6 +14,7 @@ use superdev_core::validate::sokf::Warnings;
 
 use crate::cli::{KNOWLEDGE_DIR, io_error, knowledge_dir, out};
 
+// sokf:begin cli
 /// What one `superdev validate` run covers, and how it reports.
 #[derive(clap::Args)]
 pub struct ValidateArgs {
@@ -51,6 +52,7 @@ pub enum HookCommand {
     /// Stop: continue an active unattended run, or let the turn end
     Run,
 }
+// sokf:end cli
 
 /// Run one hook.
 pub fn run_hook(cmd: &HookCommand, root: &Path) -> Result<u8> {

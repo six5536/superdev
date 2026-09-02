@@ -22,7 +22,9 @@ use crate::template_select;
 /// work the agent does after the mechanical scaffolding.
 const BOOTSTRAP_HINT: &str = "knowledge: run /bootstrap in Claude Code to fill the knowledge from existing docs and an owner interview";
 
-/// The four capability-disable flags (kebab-case comes free from clap).
+// sokf:begin cli
+/// The `init` flags: the capability-disable switches and the template
+/// selection (kebab-case comes free from clap).
 #[derive(clap::Args)]
 pub struct InitArgs {
     /// Skip the frontend design workflows
@@ -40,6 +42,7 @@ pub struct InitArgs {
     #[arg(long, value_name = "NAME")]
     pub name: Option<String>,
 }
+// sokf:end cli
 
 impl InitArgs {
     fn disabled(&self) -> Vec<Capability> {
@@ -125,6 +128,7 @@ pub fn init(root: &Path, args: &InitArgs) -> Result<u8> {
         }
     }
 }
+// sokf:begin cli
 
 /// The `template` subcommands: read-only views of the shipped templates.
 /// Grown for the template-update skill — `render` gives it the current
@@ -146,6 +150,7 @@ pub enum TemplateCommand {
         dir: PathBuf,
     },
 }
+// sokf:end cli
 
 pub fn template(cmd: &TemplateCommand) -> Result<u8> {
     match cmd {
