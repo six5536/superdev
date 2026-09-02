@@ -2,7 +2,7 @@
 type: FeatureRequest
 id: issue-047-feature-request-a-contract-kind-names-its-own-definition-language
 title: Each contract kind names its own definition language, so a project writes in as many languages as it has surfaces
-description: ADR-034 has every kind define in the form its ecosystem reads, which across the seventeen kinds names ten forms; the validator reads two of them, so most definitions are machine-readable only through a hand-written drift test.
+description: ADR-034 has every kind define in the form its ecosystem reads, which across the sixteen kinds names ten forms; the validator reads two of them, so most definitions are machine-readable only through a hand-written drift test.
 lifecycle: open
 links:
   - rel: references
@@ -10,7 +10,7 @@ links:
     note: The decision this questions — whether the per-ecosystem form is worth the language count it produces.
   - rel: references
     to: adr-035-a-schema-declares-its-definition-blocks-contract
-    note: Supplies the block-language declaration, which fourteen of the seventeen kinds do not use.
+    note: Supplies the block-language declaration, which thirteen of the sixteen kinds do not use.
   - rel: references
     to: adr-036-a-contract-is-bound-to-its-implementation
     note: The obligation that decides the question — a definition nothing can parse is bound only by a bespoke test.
@@ -22,7 +22,7 @@ links:
 
 [ADR-034][sokf:adr-034-each-kind-defines-in-the-form-its-ecosystem-reads]
 has each contract kind define its interface in the form its ecosystem
-already reads. Across the seventeen kinds that names ten forms, and a
+already reads. Across the sixteen kinds that names ten forms, and a
 project adopting superdev writes in every one its surfaces touch. No
 kind offers the alternative — one language expressive enough to carry
 most of them — and nothing on file weighs the pluralism against its
@@ -32,7 +32,7 @@ cost.
 
 The count is measurable three ways.
 
-The seventeen contract-kind schemas name, between them, TypeSpec, JSON
+The sixteen contract-kind schemas name, between them, TypeSpec, JSON
 Schema, Protobuf, GraphQL SDL, a JSON-RPC schema, the host language,
 TOML, a DTD, a grammar and a byte layout. A project with a REST API, a
 CLI, a config file and an internal module boundary writes four of them.
@@ -47,9 +47,9 @@ The decisive number is the third.
 lets a schema declare the fence language its definition block takes, so
 the validator can check the block generically. `BLOCK_LANGUAGES` in
 `crates/lib/superdev-core/src/validate/schema/document.rs:82` is
-`["yaml", "json"]` — two. Three of the seventeen kinds declare a
+`["yaml", "json"]` — two. Three of the sixteen kinds declare a
 `block-language` at all (`contract-cli` and `contract-deployment` as
-yaml, `contract-mcp` as json); the other fourteen name their form in
+yaml, `contract-mcp` as json); the other thirteen name their form in
 prose, which nothing reads. So a definition in TypeSpec, Rust, TOML or
 SDL is checked by no generic machinery, and
 [ADR-036][sokf:adr-036-a-contract-is-bound-to-its-implementation]'s
@@ -99,10 +99,15 @@ says plainly that a drift test is the only thing binding it.
 - Keep ADR-034 unchanged — a definition in the form its ecosystem reads
   needs no translation for the tools that already consume it, which is
   the whole reason the decision was taken; the cost is the count.
-- Make JSON Schema the common form rather than an expressive IDL — the
-  validator already reads it, so binding comes free, but it describes
-  data and not operations, so the CLI, RPC, MCP and interface kinds
-  would each need it bent out of shape.
+- Take each kind's own YAML or JSON vocabulary rather than one IDL — not
+  JSON Schema everywhere, but the standard each ecosystem already
+  publishes in those two syntaxes: OpenAPI for REST, AsyncAPI for
+  events, JSON Schema for config and data, Kaitai Struct for a binary
+  layout, the OpenTelemetry semantic conventions for telemetry, the W3C
+  design-token format for UI tokens. Eleven of the sixteen kinds have
+  one that a human can author. The syntax stays inside what the
+  validator reads and what `serde_yaml_ng` parses, so a drift test needs
+  no new machinery. This is the leading candidate; see the survey below.
 - Adopt an expressive IDL and emit JSON Schema beside it for the tests —
   one authored source, two artifacts. Not a reduction in languages; a
   pipeline, and one that puts a generator in the path the proposal set
@@ -114,7 +119,7 @@ says plainly that a drift test is the only thing binding it.
 
 - In: the language a contract kind's definition block takes, kind by
   kind, and the reason for it.
-- In: closing the gap where fourteen of seventeen kinds declare no
+- In: closing the gap where thirteen of sixteen kinds declare no
   `block-language`.
 - Out: the definition blocks of the nine contracts already on file,
   which follow whatever their kinds settle on.
@@ -136,6 +141,37 @@ precision for its readers and loses the generic check, so "fewer
 languages" and "more of the definition checked automatically" are not
 the same goal and may not have the same answer. Criterion 2 is where
 that has to be settled.
+
+A survey taken 2026-09-02 asked whether the two syntaxes the validator
+already reads could carry every kind. They can carry eleven of the
+sixteen through a standard the kind's own ecosystem publishes, listed in
+the alternative above; `contract-binary-format` is the unexpected one,
+because Kaitai Struct — bit widths, endianness, conditional presence —
+is itself YAML.
+
+Four kinds resist for one reason: a complete JSON description exists but
+only as a generated artifact. GraphQL has introspection JSON, RPC has
+the protobuf descriptor set, and `contract-interface` and
+`contract-library` have rustdoc JSON, which is nightly-only and
+unstable. None is authorable by hand, and for the two interface kinds a
+YAML restatement would be a second source of truth beside the host
+language that already is the definition — `contract_interfaces.rs`
+would still have to bind it.
+
+The genuine exception is a text format that is a real grammar. Its
+production rules are encodable as JSON — tree-sitter's `grammar.json`
+is exactly that — and unreadable written by hand. A text format that is
+a document shape, which is what the three on file are, takes JSON Schema
+without difficulty.
+
+What decides this against a more expressive IDL is not the generic
+check, which is thinner than it sounds: `document.rs:889-922` verifies
+the block parses, is a mapping, and carries its declared keys and entry
+keys. That is completeness, not meaning, and it cannot tell OpenAPI from
+any other mapping. What decides it is that a YAML or JSON block is
+readable by a drift test using a parser already in the tree, with no
+compiler in the test path — which is what criterion 2 asks for and what
+an IDL cannot supply unaided.
 
 Filed, not framed: three criteria are open questions rather than checks.
 
