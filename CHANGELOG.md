@@ -257,6 +257,10 @@ publish a version it cannot find a heading for.
 
 ### Changed
 
+- The two hook entries `sync` writes into `.claude/settings.json` carry
+  `timeout: 30`, so a hook that wedges — a `cargo run` waiting on a build
+  lock — is killed by Claude Code after 30 s instead of holding the
+  session open.
 - **A contract includes its definition, under one schema.** Every
   contract's Definition is one or more source includes —
   `<!-- sokf:include /path#region -->` — that `superdev validate --fix`

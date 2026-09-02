@@ -48,6 +48,14 @@ alignment. A description that needs detail carries a hand-wrapped
 long description at all, so detail a reader needs from `man` belongs in the
 top-level one.
 
+Two things about the dev shim (`scripts/superdev`): it runs `cargo run`, so
+a hook after a Rust edit rebuilds the binary first — the shim therefore
+answers `hook validate` itself, without cargo, for any path outside the
+trees the hook watches, since the rebuild was the whole cost of a Rust
+edit; and there is no `rustc-wrapper` — sccache cached nothing for the
+incremental dev profile and its idle-exit made concurrent builds race to
+restart it, so `.cargo/config.toml` no longer names it.
+
 Two traps:
 
 - `npm run lint` is only `cargo clippy --workspace`; CI runs clippy with
