@@ -136,6 +136,10 @@ pub fn validate_repo(
                     path: path.clone(),
                     doc_type: concept.kind.clone(),
                     lifecycle: concept.lifecycle.clone(),
+                    id: concept.id.clone(),
+                    // An extension key the typed fields drop; read from the
+                    // raw frontmatter, absent unless a string.
+                    kind: concept.raw["kind"].as_str().map(str::to_string),
                 });
                 documents.push((path, text, Some(concept.kind.clone())));
             }

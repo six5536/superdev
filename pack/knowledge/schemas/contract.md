@@ -11,15 +11,24 @@ Structural rules for contract documents, filed as
 `contract-{nnn}-{kind}-{slug}`, numbered after the highest across every
 contract folder — a duplicate number is an error — and placed in their
 lifecycle folder by `superdev validate --fix`. One schema governs every
-kind (ADR-043);
-the kind is in the frontmatter and the id, and the checklist below says
-what each kind's Behaviour must cover.
+kind (ADR-043); the kind is in the frontmatter and the id, and the
+section rules tagged with a kind say what its Behaviour must cover
+(ADR-045).
 
 A contract is the outside of the black box: the one place a person or
 an agent reads what an interface promises without reading the code.
 Its Definition is materialised from the source that declares the
 interface (ADR-042), so it is readable in one place and cannot drift. Its Behaviour says
 what the definition cannot. Its Stability says what may change.
+
+The Definition says what the interface *is*. Behaviour says what the
+definition cannot: the promises across elements, the failures, the
+limits, what may change. The level-3 rules below are the checklist,
+one per kind's item: a required section is one every contract of the
+kind carries; an optional one is carried where it applies and omitted
+otherwise, never written as "not applicable". A promise a contract
+needs that no rule names is added here, tagged with its kinds, so the
+next writer of the kind sees it.
 
 <!-- sokf:include contract-style -->
 **Contract style — a contract defines its interface** (superdev
@@ -56,137 +65,6 @@ ADR-033, ADR-042, ADR-043, ADR-044):
   restate the ADR's reasoning.
 <!-- /sokf:include -->
 
-## What Behaviour must cover, by kind
-
-The Definition says what the interface *is*. Behaviour says what the
-definition cannot: the promises across elements, the failures, the
-limits, what may change. One `###` subsection per bullet below. A
-bullet marked **required** is a section every contract of the kind
-carries; the rest are carried where they apply and omitted otherwise,
-never written as "not applicable". A promise a contract needs that no
-bullet names is added here, so the next writer of the kind sees it.
-
-PENDING (I049): these bullets become section rules tagged with their
-kinds (ADR-045), the
-required ones enforced, each bullet's text as its rule's
-`description`, and this prose goes.
-
-### api
-
-- **required** Where it is served, and how a caller reaches it — host, path, port,
-  or the stdio transport an MCP server speaks.
-- **required** Authentication and authorization: what a caller presents, and what
-  each role may call.
-- **required** Errors: the shape of a failure, and every code or error type a caller
-  may meet, with what each means.
-- **required** Limits: rate, request and response size, pagination, timeouts.
-- **required** Versioning and deprecation: how a breaking change reaches a caller,
-  and how long the old surface stays.
-- For MCP: the resources and prompts served beside the tools.
-
-### events
-
-- **required** Transport, and how a topic or channel is named.
-- **required** Ordering: what is guaranteed within a key, across keys, and after a
-  retry.
-- **required** Delivery: at-most-once, at-least-once or exactly-once, and what a
-  consumer must do to be idempotent.
-- Replay and retention: how far back a consumer may read, and for how
-  long a message is kept.
-- **required** Schema evolution: what a producer may add or remove without breaking
-  a consumer.
-- Dead letters: what happens to a message no consumer accepts.
-
-### cli
-
-- **required** Every exit code and its meaning, per command where they differ.
-- **required** Streams: what goes to stdout and what to stderr, and what a closed
-  pipe does.
-- Prompting: when a command prompts, and what it does without a TTY.
-- The environment it reads, by reference to the `config` contract.
-- Usage errors: what an unknown flag, subcommand or missing value does.
-- Side effects: what a command writes, and what it never touches.
-
-### library
-
-- **required** Errors: every error type a caller may match on, and when each is
-  returned.
-- Invariants and preconditions the signatures cannot say — ordering of
-  calls, what must be initialised first.
-- Concurrency: what is safe to share across threads or tasks.
-- Feature flags: what each enables, and the default set.
-- **required** Versioning: the semver policy, and what counts as breaking.
-
-### interface
-
-- **required** Module boundaries: what may call what across the boundary, and what
-  must not.
-- **required** Key flows: the sequences that cross the boundary, in order.
-- **required** Cross-cutting concerns: security, performance, migration,
-  observability, each as a promise the module keeps.
-
-### ui
-
-- **required** Routes: what an unknown path does, and which routes require a
-  session.
-- **required** Screens and states: loading, empty, error and success for each
-  screen.
-- **required** Platforms and accessibility: what is supported, and the standard met.
-- The visual system followed, by reference.
-
-### data
-
-- **required** The store, and how the software reaches it.
-- **required** Constraints the schema cannot express: cross-table rules, allowed
-  transitions.
-- **required** Migration: forward and backward compatibility, and whether a
-  migration runs with downtime.
-- Retention and personal data: what is kept, for how long, and what is
-  never stored.
-
-### format
-
-- **required** Files: where the format is written, where it is read, and how a file
-  is identified — magic number, version field, extension.
-- **required** Unknown content: what a reader does with a key, field or section it
-  does not know.
-- **required** Compatibility: what a newer writer promises an older reader, and the
-  reverse.
-- For binary: endianness, alignment, and how a version is read before
-  anything else.
-
-### config
-
-- **required** Sources and precedence: environment, file, flags, defaults, and which
-  wins.
-- **required** Defaults, and which settings are required with none.
-- Secrets: which settings carry credentials, how they are supplied, and
-  what is never logged or echoed.
-- Validation: what an invalid or unknown setting does.
-
-### telemetry
-
-- **required** Metrics: which labels are bounded, and the cardinality budget.
-- **required** Logs: levels, structure, and what is never logged.
-- Traces: which spans exist and how context propagates.
-- Retention: how long each signal is kept.
-
-### authz
-
-- **required** Principals: who acts, and how identity is established.
-- **required** Roles and scopes: the vocabulary, one meaning each.
-- **required** Permissions: which action on which resource needs what.
-- **required** Boundaries: what no role may reach, regardless of grant.
-- Audit: how a decision is recorded.
-
-### deployment
-
-- **required** Artifact: what is shipped, and how a build is identified.
-- **required** Runtime: ports, user, writable paths, resource limits.
-- **required** Health and lifecycle: readiness, liveness, and how a shutdown
-  proceeds.
-- Dependencies: what must be up first, and what happens when it is not.
-
 ## The contract
 
 ````yaml
@@ -195,6 +73,7 @@ description: >
   that declares it; what it promises that the definition cannot say;
   and what may change.
 line-limit: 800
+variant-key: kind
 
 frontmatter:
   type:
@@ -228,14 +107,81 @@ frontmatter:
 
 sections-ordered: true
 sections:
-  - heading-pattern: '^(API|Events|CLI|Library|Interface|UI|Data|Format|Config|Telemetry|Authz|Deployment) contract: .+$'
+  - heading-pattern: '^API contract: .+$'
     level: 1
     required: true
+    variants: [api]
     description: >
       The kind's display name, "contract:", and the interface's name —
-      "CLI contract: superdev", "API contract: sokf over MCP". The
-      display name is the kind capitalised, with API, CLI and UI as
-      initialisms.
+      "API contract: sokf over MCP". Each kind's title rule is tagged
+      with the kind, so the display name agrees with `kind` by
+      construction.
+  - heading-pattern: '^Events contract: .+$'
+    level: 1
+    required: true
+    variants: [events]
+    description: >
+      The title of an `events` contract — "Events contract: order stream".
+  - heading-pattern: '^CLI contract: .+$'
+    level: 1
+    required: true
+    variants: [cli]
+    description: >
+      The title of a `cli` contract — "CLI contract: superdev".
+  - heading-pattern: '^Library contract: .+$'
+    level: 1
+    required: true
+    variants: [library]
+    description: >
+      The title of a `library` contract — "Library contract: widget-core".
+  - heading-pattern: '^Interface contract: .+$'
+    level: 1
+    required: true
+    variants: [interface]
+    description: >
+      The title of an `interface` contract — "Interface contract: the planner".
+  - heading-pattern: '^UI contract: .+$'
+    level: 1
+    required: true
+    variants: [ui]
+    description: >
+      The title of a `ui` contract — "UI contract: the console".
+  - heading-pattern: '^Data contract: .+$'
+    level: 1
+    required: true
+    variants: [data]
+    description: >
+      The title of a `data` contract — "Data contract: the orders store".
+  - heading-pattern: '^Format contract: .+$'
+    level: 1
+    required: true
+    variants: [format]
+    description: >
+      The title of a `format` contract — "Format contract: lock.toml".
+  - heading-pattern: '^Config contract: .+$'
+    level: 1
+    required: true
+    variants: [config]
+    description: >
+      The title of a `config` contract — "Config contract: config.toml".
+  - heading-pattern: '^Telemetry contract: .+$'
+    level: 1
+    required: true
+    variants: [telemetry]
+    description: >
+      The title of a `telemetry` contract — "Telemetry contract: the service".
+  - heading-pattern: '^Authz contract: .+$'
+    level: 1
+    required: true
+    variants: [authz]
+    description: >
+      The title of an `authz` contract — "Authz contract: the console".
+  - heading-pattern: '^Deployment contract: .+$'
+    level: 1
+    required: true
+    variants: [deployment]
+    description: >
+      The title of a `deployment` contract — "Deployment contract: the service".
   - heading: "Definition"
     level: 2
     required: true
@@ -254,10 +200,286 @@ sections:
     content-pattern: '\b(MUST|SHALL|SHOULD|MAY|REQUIRED|RECOMMENDED|OPTIONAL)\b'
     description: >
       What the definition cannot say, one requirement per sentence with
-      an RFC 2119 modal verb, under one `###` per item of the kind's
-      checklist above that applies. A promise whose behaviour is not
-      built yet carries PENDING beside its verb, naming the issue or
-      slice.
+      an RFC 2119 modal verb, under one `###` per level-3 rule tagged
+      with the kind that applies — the required ones always. A promise
+      whose behaviour is not built yet carries PENDING beside its verb,
+      naming the issue or slice.
+  - heading: "Transport"
+    level: 3
+    required: true
+    variants: [api, events]
+    description: >
+      Where the interface is served and how a caller reaches it — host,
+      path, port, or the stdio transport an MCP server speaks; for
+      events, the broker and how a topic or channel is named.
+  - heading: "Authentication"
+    level: 3
+    required: true
+    variants: [api]
+    description: >
+      Authentication and authorization: what a caller presents, and
+      what each role may call.
+  - heading: "Errors"
+    level: 3
+    required: true
+    variants: [api, library]
+    description: >
+      The shape of a failure, and every code or error type a caller may
+      meet or match on, with what each means and when it is returned.
+  - heading: "Limits"
+    level: 3
+    required: true
+    variants: [api]
+    description: Rate, request and response size, pagination, timeouts.
+  - heading: "Versioning"
+    level: 3
+    required: true
+    variants: [api, library]
+    description: >
+      How a breaking change reaches a caller and how long the old
+      surface stays; for a library, the semver policy and what counts
+      as breaking.
+  - heading: "Resources and prompts"
+    level: 3
+    variants: [api]
+    description: For MCP, the resources and prompts served beside the tools.
+  - heading: "Ordering"
+    level: 3
+    required: true
+    variants: [events]
+    description: >
+      What is guaranteed within a key, across keys, and after a retry.
+  - heading: "Delivery"
+    level: 3
+    required: true
+    variants: [events]
+    description: >
+      At-most-once, at-least-once or exactly-once, and what a consumer
+      must do to be idempotent.
+  - heading: "Replay and retention"
+    level: 3
+    variants: [events]
+    description: >
+      How far back a consumer may read, and for how long a message is
+      kept.
+  - heading: "Schema evolution"
+    level: 3
+    required: true
+    variants: [events]
+    description: >
+      What a producer may add or remove without breaking a consumer.
+  - heading: "Dead letters"
+    level: 3
+    variants: [events]
+    description: What happens to a message no consumer accepts.
+  - heading: "Exit codes"
+    level: 3
+    required: true
+    variants: [cli]
+    description: Every exit code and its meaning, per command where they differ.
+  - heading: "Streams"
+    level: 3
+    required: true
+    variants: [cli]
+    description: >
+      What goes to stdout and what to stderr, and what a closed pipe
+      does.
+  - heading: "Prompting"
+    level: 3
+    variants: [cli]
+    description: When a command prompts, and what it does without a TTY.
+  - heading: "Environment"
+    level: 3
+    variants: [cli]
+    description: The environment it reads, by reference to the `config` contract.
+  - heading: "Usage errors"
+    level: 3
+    variants: [cli]
+    description: What an unknown flag, subcommand or missing value does.
+  - heading: "Side effects"
+    level: 3
+    variants: [cli]
+    description: What a command writes, and what it never touches.
+  - heading: "Invariants"
+    level: 3
+    variants: [library]
+    description: >
+      Invariants and preconditions the signatures cannot say — ordering
+      of calls, what must be initialised first.
+  - heading: "Concurrency"
+    level: 3
+    variants: [library]
+    description: What is safe to share across threads or tasks.
+  - heading: "Feature flags"
+    level: 3
+    variants: [library]
+    description: What each flag enables, and the default set.
+  - heading: "Module boundaries"
+    level: 3
+    required: true
+    variants: [interface]
+    description: >
+      What may call what across the boundary, and what must not.
+  - heading: "Key flows"
+    level: 3
+    required: true
+    variants: [interface]
+    description: The sequences that cross the boundary, in order.
+  - heading: "Cross-cutting concerns"
+    level: 3
+    required: true
+    variants: [interface]
+    description: >
+      Security, performance, migration, observability, each as a
+      promise the module keeps.
+  - heading: "Routes"
+    level: 3
+    required: true
+    variants: [ui]
+    description: What an unknown path does, and which routes require a session.
+  - heading: "Screens and states"
+    level: 3
+    required: true
+    variants: [ui]
+    description: Loading, empty, error and success for each screen.
+  - heading: "Platforms and accessibility"
+    level: 3
+    required: true
+    variants: [ui]
+    description: What is supported, and the standard met.
+  - heading: "Visual system"
+    level: 3
+    variants: [ui]
+    description: The visual system followed, by reference.
+  - heading: "Store"
+    level: 3
+    required: true
+    variants: [data]
+    description: The store, and how the software reaches it.
+  - heading: "Constraints"
+    level: 3
+    required: true
+    variants: [data]
+    description: >
+      Constraints the schema cannot express: cross-table rules, allowed
+      transitions.
+  - heading: "Migration"
+    level: 3
+    required: true
+    variants: [data]
+    description: >
+      Forward and backward compatibility, and whether a migration runs
+      with downtime.
+  - heading: "Retention and personal data"
+    level: 3
+    variants: [data]
+    description: What is kept, for how long, and what is never stored.
+  - heading: "Files"
+    level: 3
+    required: true
+    variants: [format]
+    description: >
+      Where the format is written, where it is read, and how a file is
+      identified — magic number, version field, extension.
+  - heading: "Unknown content"
+    level: 3
+    required: true
+    variants: [format]
+    description: >
+      What a reader does with a key, field or section it does not know.
+  - heading: "Compatibility"
+    level: 3
+    required: true
+    variants: [format]
+    description: >
+      What a newer writer promises an older reader, and the reverse.
+  - heading: "Encoding"
+    level: 3
+    variants: [format]
+    description: >
+      For binary: endianness, alignment, and how a version is read
+      before anything else.
+  - heading: "Sources and precedence"
+    level: 3
+    required: true
+    variants: [config]
+    description: Environment, file, flags, defaults, and which wins.
+  - heading: "Defaults"
+    level: 3
+    required: true
+    variants: [config]
+    description: The defaults, and which settings are required with none.
+  - heading: "Secrets"
+    level: 3
+    variants: [config]
+    description: >
+      Which settings carry credentials, how they are supplied, and what
+      is never logged or echoed.
+  - heading: "Validation"
+    level: 3
+    variants: [config]
+    description: What an invalid or unknown setting does.
+  - heading: "Metrics"
+    level: 3
+    required: true
+    variants: [telemetry]
+    description: Which labels are bounded, and the cardinality budget.
+  - heading: "Logs"
+    level: 3
+    required: true
+    variants: [telemetry]
+    description: Levels, structure, and what is never logged.
+  - heading: "Traces"
+    level: 3
+    variants: [telemetry]
+    description: Which spans exist and how context propagates.
+  - heading: "Retention"
+    level: 3
+    variants: [telemetry]
+    description: How long each signal is kept.
+  - heading: "Principals"
+    level: 3
+    required: true
+    variants: [authz]
+    description: Who acts, and how identity is established.
+  - heading: "Roles and scopes"
+    level: 3
+    required: true
+    variants: [authz]
+    description: The vocabulary, one meaning each.
+  - heading: "Permissions"
+    level: 3
+    required: true
+    variants: [authz]
+    description: Which action on which resource needs what.
+  - heading: "Boundaries"
+    level: 3
+    required: true
+    variants: [authz]
+    description: What no role may reach, regardless of grant.
+  - heading: "Audit"
+    level: 3
+    variants: [authz]
+    description: How a decision is recorded.
+  - heading: "Artifact"
+    level: 3
+    required: true
+    variants: [deployment]
+    description: What is shipped, and how a build is identified.
+  - heading: "Runtime"
+    level: 3
+    required: true
+    variants: [deployment]
+    description: Ports, user, writable paths, resource limits.
+  - heading: "Health and lifecycle"
+    level: 3
+    required: true
+    variants: [deployment]
+    description: Readiness, liveness, and how a shutdown proceeds.
+  - heading: "Dependencies"
+    level: 3
+    variants: [deployment]
+    description: What must be up first, and what happens when it is not.
   - heading: "Stability"
     level: 2
     required: true
@@ -266,53 +488,470 @@ sections:
     description: >
       What may change and how a caller learns of it: the versioning
       policy, the deprecation path, what is promised across a release.
-      An internal interface says so here — "Internal. Changes with the
-      crate." — rather than omitting the section.
+      An internal interface says so here — "Internal. Every item above
+      MAY change with the crate." — rather than omitting the section.
 
-example: |
-  ---
-  type: Contract
-  id: contract-002-cli-widget
-  kind: cli
-  title: CLI contract for widget
-  description: The widget command line — every command, flag and exit code it offers.
-  lifecycle: active
-  resource: /crates/widget/src/main.rs
-  ---
+example:
+  api: |
+    ---
+    type: Contract
+    id: contract-001-api-widget
+    kind: api
+    title: API contract for widget
+    description: The widget API — every route, its inputs and its failures.
+    lifecycle: active
+    ---
 
-  # CLI contract: widget
+    # API contract: widget
 
-  ## Definition
+    ## Definition
 
-  <!-- sokf:include /crates/widget/src/main.rs#cli -->
-  ```rust
-  /// Build the widget.
-  #[derive(Parser)]
-  pub struct Build {
-      /// Skip the tests.
-      #[arg(long)]
-      pub no_test: bool,
-  }
-  ```
-  <!-- /sokf:include -->
+    <!-- sokf:include /crates/widget/src/routes.rs#api -->
+    ```rust
+    /// List the widgets.
+    pub async fn list() -> Json<Vec<Widget>> {}
+    ```
+    <!-- /sokf:include -->
 
-  ## Behaviour
+    ## Behaviour
 
-  ### Exit codes
+    ### Transport
 
-  `build` MUST exit 0 on success, 1 when a check fails, and 2 on a usage
-  error.
+    The API MUST be served over HTTPS under `/v1`.
 
-  ### Streams
+    ### Authentication
 
-  `build` MUST write its report to stdout and diagnostics to stderr.
+    A caller MUST present a bearer token; only `admin` MAY delete.
 
-  ### Side effects
+    ### Errors
 
-  `build` MUST NOT write outside `target/`.
+    A failure MUST be a JSON body carrying `code` and `message`.
 
-  ## Stability
+    ### Limits
 
-  Unreleased. Every command and flag above MAY change without notice.
+    A caller MUST NOT exceed 100 requests per minute.
+
+    ### Versioning
+
+    A breaking change MUST ship under `/v2`, and `/v1` MUST stay 12 months.
+
+    ## Stability
+
+    Stable. A route MAY be added; none MAY be removed before `/v1` retires.
+  events: |
+    ---
+    type: Contract
+    id: contract-001-events-orders
+    kind: events
+    title: Events contract for the order stream
+    description: The order events — every message a consumer may read.
+    lifecycle: active
+    ---
+
+    # Events contract: orders
+
+    ## Definition
+
+    <!-- sokf:include /schemas/orders.proto#events -->
+    ```proto
+    // An order was placed.
+    message OrderPlaced { string order_id = 1; }
+    ```
+    <!-- /sokf:include -->
+
+    ## Behaviour
+
+    ### Transport
+
+    Events MUST be published to the Kafka topic `orders.v1`.
+
+    ### Ordering
+
+    Events sharing an `order_id` MUST arrive in the order they were published.
+
+    ### Delivery
+
+    Delivery is at-least-once; a consumer MUST treat a repeated `order_id` as one.
+
+    ### Schema evolution
+
+    A producer MAY add a field and MUST NOT renumber one.
+
+    ## Stability
+
+    Stable. A message type MAY be added; none MAY be removed within a major version.
+  cli: |
+    ---
+    type: Contract
+    id: contract-001-cli-widget
+    kind: cli
+    title: CLI contract for widget
+    description: The widget command line — every command, flag and exit code it offers.
+    lifecycle: active
+    ---
+
+    # CLI contract: widget
+
+    ## Definition
+
+    <!-- sokf:include /crates/widget/src/main.rs#cli -->
+    ```rust
+    /// Build the widget.
+    #[derive(Parser)]
+    pub struct Build {
+        /// Skip the tests.
+        #[arg(long)]
+        pub no_test: bool,
+    }
+    ```
+    <!-- /sokf:include -->
+
+    ## Behaviour
+
+    ### Exit codes
+
+    `build` MUST exit 0 on success, 1 when a check fails, and 2 on a usage error.
+
+    ### Streams
+
+    `build` MUST write its report to stdout and diagnostics to stderr.
+
+    ## Stability
+
+    Unreleased. Every command and flag above MAY change without notice.
+  library: |
+    ---
+    type: Contract
+    id: contract-001-library-widget-core
+    kind: library
+    title: Library contract for widget-core
+    description: The published surface of the widget-core crate.
+    lifecycle: active
+    ---
+
+    # Library contract: widget-core
+
+    ## Definition
+
+    <!-- sokf:include /crates/widget-core/src/lib.rs#api -->
+    ```rust
+    /// Build a widget from its spec.
+    pub fn build(spec: &Spec) -> Result<Widget, Error> {}
+    ```
+    <!-- /sokf:include -->
+
+    ## Behaviour
+
+    ### Errors
+
+    `build` MUST return `Error::InvalidSpec` when `spec` names no parts.
+
+    ### Versioning
+
+    The crate MUST follow semver; a signature change is breaking.
+
+    ## Stability
+
+    Stable. A public item MAY be added in a minor release.
+  interface: |
+    ---
+    type: Contract
+    id: contract-001-interface-planner
+    kind: interface
+    title: Interface contract for the planner
+    description: The boundary between the planner and the executor.
+    lifecycle: active
+    ---
+
+    # Interface contract: the planner
+
+    ## Definition
+
+    <!-- sokf:include /crates/widget/src/planner.rs#boundary -->
+    ```rust
+    /// The actions a plan owes the executor.
+    pub fn plan(manifest: &Manifest) -> Vec<Action> {}
+    ```
+    <!-- /sokf:include -->
+
+    ## Behaviour
+
+    ### Module boundaries
+
+    The executor MUST call `plan` and MUST NOT read the manifest itself.
+
+    ### Key flows
+
+    A sync MUST plan, then apply, then record.
+
+    ### Cross-cutting concerns
+
+    `plan` MUST NOT touch the filesystem.
+
+    ## Stability
+
+    Internal. Every item above MAY change with the crate.
+  ui: |
+    ---
+    type: Contract
+    id: contract-001-ui-console
+    kind: ui
+    title: UI contract for the console
+    description: The console's routes, screens and the platforms it supports.
+    lifecycle: active
+    ---
+
+    # UI contract: the console
+
+    ## Definition
+
+    <!-- sokf:include /apps/console/src/routes.ts#routes -->
+    ```typescript
+    /** Every route the console serves. */
+    export const routes = ["/", "/widgets/:id"];
+    ```
+    <!-- /sokf:include -->
+
+    ## Behaviour
+
+    ### Routes
+
+    An unknown path MUST render the not-found screen; `/widgets/:id` MUST require a session.
+
+    ### Screens and states
+
+    Every screen MUST render a loading, an empty and an error state.
+
+    ### Platforms and accessibility
+
+    The console MUST meet WCAG 2.2 AA on the last two releases of each major browser.
+
+    ## Stability
+
+    Stable. A route MAY be added; none MAY be removed without a redirect.
+  data: |
+    ---
+    type: Contract
+    id: contract-001-data-orders
+    kind: data
+    title: Data contract for the orders store
+    description: The orders tables, their constraints and their migrations.
+    lifecycle: active
+    ---
+
+    # Data contract: the orders store
+
+    ## Definition
+
+    <!-- sokf:include /db/schema.sql#orders -->
+    ```sql
+    -- One order per row.
+    CREATE TABLE orders (id TEXT PRIMARY KEY, state TEXT NOT NULL);
+    ```
+    <!-- /sokf:include -->
+
+    ## Behaviour
+
+    ### Store
+
+    The software MUST reach the store through the `DATABASE_URL` connection.
+
+    ### Constraints
+
+    An order MUST move from `placed` to `shipped` and never back.
+
+    ### Migration
+
+    A migration MUST run without downtime and MUST be reversible.
+
+    ## Stability
+
+    Stable. A column MAY be added; none MAY be dropped within a major version.
+  format: |
+    ---
+    type: Contract
+    id: contract-001-format-lock
+    kind: format
+    title: Format contract for lock.toml
+    description: The lock file — what it records, and what a reader does with the rest.
+    lifecycle: active
+    ---
+
+    # Format contract: lock.toml
+
+    ## Definition
+
+    <!-- sokf:include /crates/widget/src/lock.rs#format -->
+    ```rust
+    /// The lock file as written and read.
+    pub struct Lock { pub version: u32 }
+    ```
+    <!-- /sokf:include -->
+
+    ## Behaviour
+
+    ### Files
+
+    The lock MUST be written to `.widget/lock.toml`, identified by its `version` field.
+
+    ### Unknown content
+
+    A reader MUST keep a key it does not know and MUST NOT rewrite it.
+
+    ### Compatibility
+
+    A newer writer MUST NOT change the meaning of an existing key.
+
+    ## Stability
+
+    Stable. A key MAY be added; none MAY be removed within a major version.
+  config: |
+    ---
+    type: Contract
+    id: contract-001-config-widget
+    kind: config
+    title: Config contract for widget
+    description: Every setting widget reads, where it comes from, and what wins.
+    lifecycle: active
+    ---
+
+    # Config contract: config.toml
+
+    ## Definition
+
+    <!-- sokf:include /crates/widget/src/config.rs#settings -->
+    ```rust
+    /// The settings widget reads.
+    pub struct Config { pub verbose: bool }
+    ```
+    <!-- /sokf:include -->
+
+    ## Behaviour
+
+    ### Sources and precedence
+
+    A flag MUST win over the environment, and the environment over the file.
+
+    ### Defaults
+
+    `verbose` MUST default to false; no setting is required.
+
+    ## Stability
+
+    Stable. A setting MAY be added; none MAY be removed within a major version.
+  telemetry: |
+    ---
+    type: Contract
+    id: contract-001-telemetry-service
+    kind: telemetry
+    title: Telemetry contract for the service
+    description: The metrics and logs the service emits.
+    lifecycle: active
+    ---
+
+    # Telemetry contract: the service
+
+    ## Definition
+
+    <!-- sokf:include /crates/widget/src/telemetry.rs#metrics -->
+    ```rust
+    /// Requests served, by route and status.
+    pub static REQUESTS: Counter = counter!("requests", "route", "status");
+    ```
+    <!-- /sokf:include -->
+
+    ## Behaviour
+
+    ### Metrics
+
+    `route` and `status` MUST be bounded; the cardinality budget is 1,000 series.
+
+    ### Logs
+
+    Logs MUST be JSON lines at `info` and above, and MUST NOT carry a token.
+
+    ## Stability
+
+    Stable. A metric MAY be added; a label MUST NOT be removed within a major version.
+  authz: |
+    ---
+    type: Contract
+    id: contract-001-authz-console
+    kind: authz
+    title: Authz contract for the console
+    description: Who may do what in the console, and what no role reaches.
+    lifecycle: active
+    ---
+
+    # Authz contract: the console
+
+    ## Definition
+
+    <!-- sokf:include /policy/console.rego#roles -->
+    ```rego
+    # The viewer role reads widgets.
+    allow { input.role == "viewer"; input.action == "read" }
+    ```
+    <!-- /sokf:include -->
+
+    ## Behaviour
+
+    ### Principals
+
+    A principal MUST be identified by a signed session token.
+
+    ### Roles and scopes
+
+    `viewer` reads; `admin` reads and writes; no other role exists.
+
+    ### Permissions
+
+    A write MUST require `admin`.
+
+    ### Boundaries
+
+    No role MAY read another tenant's widgets.
+
+    ## Stability
+
+    Stable. A role MAY be added; a permission MUST NOT widen without a major version.
+  deployment: |
+    ---
+    type: Contract
+    id: contract-001-deployment-service
+    kind: deployment
+    title: Deployment contract for the service
+    description: What is shipped, where it runs, and how it reports health.
+    lifecycle: active
+    ---
+
+    # Deployment contract: the service
+
+    ## Definition
+
+    <!-- sokf:include /deploy/service.yaml#runtime -->
+    ```yaml
+    # The container as deployed.
+    image: widget/service:1.4.0
+    ports: [8080]
+    ```
+    <!-- /sokf:include -->
+
+    ## Behaviour
+
+    ### Artifact
+
+    A release MUST be one image tagged with its semver.
+
+    ### Runtime
+
+    The service MUST listen on 8080 as a non-root user and MUST write only to `/tmp`.
+
+    ### Health and lifecycle
+
+    `/healthz` MUST answer 200 once ready; a shutdown MUST drain within 30 s.
+
+    ## Stability
+
+    Stable. A port MAY be added; 8080 MUST stay within a major version.
 ````
-

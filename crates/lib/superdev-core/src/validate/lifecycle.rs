@@ -9,6 +9,11 @@
 //! folder named for another state is misfiled. Both are repaired by the fix
 //! pass, which rewrites only that one segment — which is what lets contracts
 //! keep their audience partition above it.
+//!
+//! A contract's id carries its `kind` as well, as the third segment of
+//! `contract-{nnn}-{kind}-{slug}` (ADR-043); the two must agree, and a
+//! disagreement is reported naming both. Nothing repairs it: which of the
+//! two is wrong is the author's call.
 
 use super::schema::document::SchemaSet;
 use super::sokf::Finding;
@@ -18,9 +23,11 @@ use crate::sokf::bundle::Bundle;
 /// misfiled document, and `--fix` repairs both, so nothing softer is needed.
 const FATAL: bool = true;
 
+/// The type whose id names its `kind`: `contract-{nnn}-{kind}-{slug}`.
+const KINDED_TYPE: &str = "Contract";
+
 /// One document in scope: its repo-relative path as the report spells it,
-/// its bundle-relative path as the fix pass moves it, its type, and the
-/// `lifecycle` its frontmatter carries.
+/// its type, and the `lifecycle`, `id` and `kind` its frontmatter carries.
 pub struct Subject {
     /// Path as findings should name it (repo-relative).
     pub path: String,
@@ -28,17 +35,18 @@ pub struct Subject {
     pub doc_type: String,
     /// The frontmatter `lifecycle`, when present.
     pub lifecycle: Option<String>,
+    /// The frontmatter `id`, when present.
+    pub id: Option<String>,
+    /// The frontmatter `kind`, when present.
+    pub kind: Option<String>,
 }
 
-/// Check every subject whose schema declares a `lifecycle` enum.
+/// Check every subject: the `kind` rule on a contract, and the `lifecycle`
+/// rules on every document whose schema declares the enum.
 #[must_use]
 pub fn check(subjects: &[Subject], set: &SchemaSet) -> Vec<Finding> {
     let mut findings = Vec::new();
     for subject in subjects {
-        let Some(allowed) = set.lifecycle_enum(&subject.doc_type) else {
-            continue;
-        };
-        let list = allowed.join(", ");
         let mut push = |message: String| {
             findings.push(Finding {
                 path: subject.path.clone(),
@@ -46,6 +54,22 @@ pub fn check(subjects: &[Subject], set: &SchemaSet) -> Vec<Finding> {
                 fatal: FATAL,
             });
         };
+        // An absent `id` or `kind`, and an id with no third segment, are the
+        // schema's frontmatter findings; only a disagreement is this check's.
+        if subject.doc_type == KINDED_TYPE
+            && let (Some(id), Some(kind)) = (subject.id.as_deref(), subject.kind.as_deref())
+            && let Some(segment) = id_kind(id)
+            && segment != kind
+        {
+            push(format!(
+                "`kind` is `{kind}`, and the id `{id}` names `{segment}` in its third \
+                 segment — the two must agree"
+            ));
+        }
+        let Some(allowed) = set.lifecycle_enum(&subject.doc_type) else {
+            continue;
+        };
+        let list = allowed.join(", ");
         let Some(value) = subject.lifecycle.as_deref() else {
             push(format!("missing `lifecycle` — one of: {list}"));
             continue;
@@ -137,6 +161,12 @@ fn target(path: &str, value: &str, allowed: &[String]) -> Option<String> {
     })
 }
 
+/// The `kind` a contract id names: its third `-`-separated segment, `None`
+/// when the id is too short to have one.
+fn id_kind(id: &str) -> Option<&str> {
+    id.split('-').nth(2)
+}
+
 /// A path's last directory segment before the filename, and the filename.
 /// Empty when the file sits at the root.
 fn split(path: &str) -> (&str, &str) {
@@ -168,7 +198,56 @@ mod tests {
             path: path.to_string(),
             doc_type: "BugReport".to_string(),
             lifecycle: lifecycle.map(str::to_string),
+            id: None,
+            kind: None,
         }
+    }
+
+    /// A contract filed as active, with the id and `kind` given.
+    fn contract(id: &str, kind: Option<&str>) -> Subject {
+        Subject {
+            path: format!("contracts/public/active/{id}.md"),
+            doc_type: "Contract".to_string(),
+            lifecycle: Some("active".to_string()),
+            id: Some(id.to_string()),
+            kind: kind.map(str::to_string),
+        }
+    }
+
+    /// Covers I049 criterion 11: the id's third segment must equal `kind`,
+    /// and a disagreement names both.
+    #[test]
+    fn a_contract_whose_kind_and_id_segment_disagree_is_reported_naming_both() {
+        let findings = check(&[contract("contract-001-cli-widget", Some("api"))], &set());
+        assert_eq!(findings.len(), 1);
+        assert!(findings[0].message.contains("`kind` is `api`"));
+        assert!(
+            findings[0]
+                .message
+                .contains("`contract-001-cli-widget` names `cli`")
+        );
+        assert!(findings[0].fatal, "a filing finding fails the run");
+    }
+
+    #[test]
+    fn a_contract_whose_kind_and_id_segment_agree_passes() {
+        let findings = check(&[contract("contract-001-cli-widget", Some("cli"))], &set());
+        assert!(findings.is_empty());
+    }
+
+    /// An absent `kind` and a too-short id are the schema's findings, not
+    /// this check's; a `kind` on a type that carries none in its id is not
+    /// read.
+    #[test]
+    fn the_kind_rule_reports_only_a_disagreement_on_a_contract() {
+        assert!(check(&[contract("contract-001-cli-widget", None)], &set()).is_empty());
+        assert!(check(&[contract("contract-001", Some("cli"))], &set()).is_empty());
+        let other = Subject {
+            kind: Some("api".to_string()),
+            id: Some("issue-001-bug-x".to_string()),
+            ..subject("issues/open/issue-001-bug-x.md", Some("open"))
+        };
+        assert!(check(&[other], &set()).is_empty());
     }
 
     #[test]
@@ -226,6 +305,8 @@ mod tests {
             path: "architecture.md".to_string(),
             doc_type: "Reference".to_string(),
             lifecycle: None,
+            id: None,
+            kind: None,
         };
         assert!(check(&[out], &set()).is_empty());
     }
