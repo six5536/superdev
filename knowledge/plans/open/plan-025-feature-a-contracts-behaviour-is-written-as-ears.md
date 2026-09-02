@@ -54,7 +54,7 @@ rebuild per edit.
 
 ### Slice 1: The validator reads item-key
 
-- [ ] Done — ticked by integrate at merge.
+- [x] Done — ticked by integrate at merge.
 - Depends-on: none.
 - Change: `validate::schema::document` reads `SectionRule.item_key`:
   compiles it, requires exactly one capture group, and on a rule whose
