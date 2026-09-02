@@ -171,7 +171,7 @@ named the pack as the grammar's source.
 
 ### Slice 4: The contract schema in its final form
 
-- [ ] Done — ticked by integrate at merge.
+- [x] Done — ticked by integrate at merge.
 - Depends-on: 2, 3.
 - Change: `knowledge/schemas/contract.md` declares `variant-key: kind`;
   each checklist bullet becomes a level-3 section rule tagged with its

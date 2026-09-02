@@ -13,6 +13,16 @@ publish a version it cannot find a heading for.
 
 ### Added
 
+- **The contract schema declares its twelve kinds.** `variant-key: kind`
+  selects a contract's rules: twelve title rules, one per kind's display
+  name, so `# CLI contract: …` is required by `kind: cli`; and each kind's
+  Behaviour sections as level-3 rules tagged with the kinds they bind —
+  `### Exit codes` and `### Streams` required for `cli`, `### Errors` and
+  `### Versioning` for `api` and `library`, `### Authentication` for `api`
+  — the optional ones declared beside them with what each says. The
+  schema carries one example per kind. The filing check reports a
+  contract whose id's third segment and `kind` disagree, naming both
+  (ADR-043, ADR-045).
 - **A schema declares variants.** `variant-key` names the frontmatter key
   whose value selects a variant; a section rule, frontmatter constraint or
   `sections-prohibited` entry tagged `variants: [v1]` binds those values
