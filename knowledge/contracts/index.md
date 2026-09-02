@@ -18,11 +18,11 @@ to the contracts it touched, and git holds the history.
 
 ## Internal
 
-* [Pack Resolution Interface Contract][sokf:contract-007-interface-pack-resolution] - the internal interfaces that carry external content to components — pack source identity, the item model, the resolved content set, the resolution phase, the pin update proves, the process seam, and the Ctx that keeps planning pure.
+* [Interface contract for pack resolution][sokf:contract-007-interface-pack-resolution] - the internal interfaces that carry external content to components — pack source identity, the item model, the resolved content set, the resolution phase, the pin update proves, the process seam, and the Ctx that keeps planning pure.
 
-* [Run State Interface Contract][sokf:contract-009-interface-run-state] - the interface between the unattended loop's skill and its Stop hook — the run-state file, the verbs that write it, the hook's decision table, and the managed hook entry that arms it.
+* [Interface contract for run state][sokf:contract-009-interface-run-state] - the interface between the unattended loop's skill and its Stop hook — the run-state file, the verbs that write it, the hook's decision table, and the managed hook entry that arms it.
 
-* [Document Schemas Interface Contract][sokf:contract-010-interface-document-schemas] - the declaration vocabulary a document schema may carry — frontmatter constraints, section rules and content kinds — and what each declaration obliges the validator to check.
+* [Interface contract for document schemas][sokf:contract-010-interface-document-schemas] - the declaration vocabulary a document schema may carry — frontmatter constraints, section rules and content kinds — and what each declaration obliges the validator to check.
 
 <!-- sokf:links -->
 [sokf:contract-002-cli-superdev]: /knowledge/contracts/public/active/contract-002-cli-superdev.md

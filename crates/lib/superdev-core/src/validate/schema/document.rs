@@ -24,6 +24,11 @@ use super::re;
 use crate::sokf::{IncludeBlock, IncludeTarget, include_blocks};
 use crate::validate::sokf;
 
+// The declaration vocabulary is the document schemas contract's Definition
+// (contract-010): the `document-schemas` regions below are every key a
+// schema's YAML block may carry, as the structs that read it declare them,
+// and the entry point that checks a document against them.
+// sokf:begin document-schemas
 /// One section rule from a schema's contract.
 #[derive(Debug, Clone, Deserialize)]
 pub struct SectionRule {
@@ -42,7 +47,7 @@ pub struct SectionRule {
     /// Whether it may appear more than once.
     #[serde(default)]
     pub repeatable: bool,
-    /// The shape of what sits under the heading.
+    /// The shape of what sits under the heading, one of [`CONTENT_KINDS`].
     #[serde(default)]
     pub content: Option<String>,
     /// A table's columns, in order.
@@ -84,6 +89,8 @@ enum ProhibitedEntry {
     },
 }
 
+// sokf:end document-schemas
+
 impl From<ProhibitedEntry> for Prohibited {
     fn from(entry: ProhibitedEntry) -> Self {
         match entry {
@@ -96,19 +103,26 @@ impl From<ProhibitedEntry> for Prohibited {
     }
 }
 
+// sokf:begin document-schemas
 /// A schema's `example`: one document, or — with `variant-key` set — one
-/// per variant value, keyed by it (ADR-045).
+/// per variant value, keyed by it (ADR-045). Checked in place against the
+/// declaring schema (ADR-024).
 #[derive(Debug, Clone, Deserialize)]
 #[serde(untagged)]
 enum Example {
+    /// One conforming document, for a schema without variants.
     One(String),
+    /// One document per variant value, keyed by it, every enum value present.
     Keyed(Ordered<String>),
 }
+
+// sokf:end document-schemas
 
 /// The content kinds an `item-pattern` may sit beside: the ones whose bodies
 /// have items to bind (ADR-030).
 const LIST_KINDS: [&str; 2] = ["bullet-list", "numbered-list"];
 
+// sokf:begin document-schemas
 /// The content kinds a section rule may declare — the closed vocabulary of
 /// contract-010, which the grammar's `content` enum repeats. A kind outside
 /// this set is reported on the schema and binds nothing.
@@ -120,6 +134,8 @@ pub(crate) const CONTENT_KINDS: [&str; 6] = [
     "code",
     "include",
 ];
+
+// sokf:end document-schemas
 
 impl SectionRule {
     /// How the rule names its section, for a finding.
@@ -145,6 +161,7 @@ impl SectionRule {
     }
 }
 
+// sokf:begin document-schemas
 /// One frontmatter key's constraints, as a schema's `frontmatter:` block
 /// declares them. A key declared with only a `description` deserialises to
 /// an empty constraint and binds nothing — guidance, per ADR-022. Fields
@@ -175,17 +192,24 @@ pub struct DocSchema {
     /// The schema file's own name, filled in after parsing.
     #[serde(skip)]
     pub name: String,
+    /// The glob that names this schema's documents when they carry no
+    /// frontmatter; a `type` const names them otherwise.
     #[serde(default, rename = "target-files")]
     target_files: Option<String>,
+    /// The line count a document must not exceed.
     #[serde(default, rename = "line-limit")]
     line_limit: Option<usize>,
     /// The frontmatter key whose value selects a variant (ADR-045).
     #[serde(default, rename = "variant-key")]
     variant_key: Option<String>,
+    /// Whether the sections' first appearances must follow declaration
+    /// order.
     #[serde(default, rename = "sections-ordered")]
     sections_ordered: bool,
+    /// The section rules, in declaration order.
     #[serde(default)]
     sections: Vec<SectionRule>,
+    /// The headings a document must not carry.
     #[serde(default, rename = "sections-prohibited")]
     sections_prohibited: Vec<Prohibited>,
     /// Every key's constraint block, in declaration order. `Option` because
@@ -199,6 +223,8 @@ pub struct DocSchema {
     #[serde(default)]
     example: Option<Example>,
 }
+
+// sokf:end document-schemas
 
 impl DocSchema {
     /// The constraints declared for `key`, when there are any.
@@ -743,6 +769,7 @@ fn into_knowledge(path: &str) -> bool {
     }
 }
 
+// sokf:begin document-schemas
 /// One document to check: its repo-relative path, its text, and the `type`
 /// its frontmatter declares.
 pub struct Document<'a> {
@@ -777,6 +804,7 @@ pub fn check_documents(docs: &[Document<'_>], set: &SchemaSet) -> Vec<Finding> {
     }
     findings
 }
+// sokf:end document-schemas
 
 /// What `check_one` is handed: a filed document, whose variant its own
 /// discriminator value selects, or a schema's example — which the filing

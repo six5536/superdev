@@ -15,6 +15,10 @@ use superdev_core::validate::sokf::Warnings;
 
 use crate::cli::out;
 
+// The state files are the run state contract's Definition (contract-009):
+// the `run-state` region below is where each lives, the two caps, and the two
+// structs the verbs write and the Stop hook reads.
+// sokf:begin run-state
 /// Where the state lives, relative to the repo root. It is machine state:
 /// `.superdev/cache/` is gitignored by `init`.
 const RUN_STATE_PATH: &str = ".superdev/cache/run.toml";
@@ -29,12 +33,18 @@ pub const CONTINUE_CAP: u32 = 10;
 pub const HOLD_CAP: u32 = 3;
 
 /// The run state, present exactly while a run is active. An absent file
-/// means no run.
+/// means no run: the hook lets every turn end.
 #[derive(Debug, Serialize, Deserialize)]
 pub struct RunState {
-    /// The session that owns the run; empty until a session claims it.
+    /// The session that owns the run; the hook ignores Stop payloads from
+    /// any other session. Recorded by `begin` from `--session` or the
+    /// `CLAUDE_SESSION_ID` environment variable; when neither exists, empty,
+    /// and the hook adopts the first Stop payload's `session_id` as owner,
+    /// after which ownership binds. `advance` refreshes the owner the same
+    /// way, so a resumed session does not orphan its own run.
     pub session_id: String,
-    /// What the driver does next; the Stop hook's exit-2 message names it.
+    /// What the driver does next, in prose; the Stop hook's exit-2 message
+    /// names it. Empty means nothing to continue: the turn ends.
     pub next: String,
     /// Turn boundaries crossed since the last `advance`. Hook-owned: only
     /// `superdev hook run` increments it; only `advance` resets it.
@@ -59,9 +69,12 @@ pub struct HoldState {
     /// The session the count belongs to. A payload from another session
     /// starts the count again.
     pub session_id: String,
-    /// Turns held open because the knowledge carried an error. Hook-owned.
+    /// Turns held open because the knowledge carried an error. Hook-owned:
+    /// `superdev hook run` increments it while it holds and removes the file
+    /// once the knowledge is clean.
     pub holds: u32,
 }
+// sokf:end run-state
 
 // sokf:begin cli
 /// Drive the state of an unattended workflow run.

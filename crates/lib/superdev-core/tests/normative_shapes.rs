@@ -516,21 +516,15 @@ fn no_schema_names_a_framework_or_a_toolchain() {
 /// element the implementation carries undeclared is a DEFECT; one the
 /// contract promises and the implementation has yet to keep is PENDING
 /// (ADR-038). The wording is the mechanism, so it is pinned here. The CLI,
-/// MCP, config and format drift tests are gone with the copies they
-/// compared (ADR-042, P024 S6 and S7); the two below go with theirs in
-/// slices 8 and 9.
+/// MCP, config, format and interface drift tests are gone with the copies
+/// they compared (ADR-042, P024 S6 to S8); the one below goes with its in
+/// slice 9.
 #[test]
 fn every_drift_test_names_the_direction_it_failed_in() {
-    const BINDINGS: [(&str, &[&str]); 2] = [
-        (
-            "crates/lib/superdev-core/tests/contract_interfaces.rs",
-            &["PENDING —"],
-        ),
-        (
-            "crates/lib/superdev-core/tests/contract_template.rs",
-            &["DEFECT —", "PENDING —"],
-        ),
-    ];
+    const BINDINGS: [(&str, &[&str]); 1] = [(
+        "crates/lib/superdev-core/tests/contract_template.rs",
+        &["DEFECT —", "PENDING —"],
+    )];
     for (path, wordings) in BINDINGS {
         let text = std::fs::read_to_string(repo(path)).expect("the drift test is on file");
         for wording in wordings {
@@ -558,20 +552,29 @@ fn rust_files(dir: &std::path::Path, found: &mut Vec<PathBuf>) {
 }
 
 /// Covers I049 criteria 21 and 23: no test under `crates/` reads a fenced
-/// block out of the CLI, the MCP, the config or either format contract to
-/// compare it to the binary. The Definition is an include the validator
-/// binds; a test that opened a fence in any of them would be comparing a
-/// copy that no longer exists (ADR-042). This file names the contracts here
-/// and is skipped for it.
+/// block out of the CLI, the MCP, the config, either format or any of the
+/// three interface contracts to compare it to the binary — the last by
+/// matching signatures out of the contract against the source. The
+/// Definition is an include the validator binds; a test that opened a fence
+/// in any of them would be comparing a copy that no longer exists (ADR-042).
+/// The readers are the helpers the deleted tests opened a fence with: the
+/// `fenced_block` of the config and format tests, the `rust_lines` of the
+/// interface test. This file names the contracts and the readers here and is
+/// skipped for it.
 #[test]
 fn no_test_compares_a_fenced_block_of_an_included_contract_to_the_binary() {
-    const CONTRACTS: [&str; 5] = [
+    const CONTRACTS: [&str; 9] = [
         "contract-002-cli-superdev.md",
         "contract-003-api-sokf.md",
         "contract-004-config-superdev.md",
         "contract-005-format-pack.md",
         "contract-006-format-lock.md",
+        "contract-007-interface-pack-resolution.md",
+        "contract-009-interface-run-state.md",
+        "contract-010-interface-document-schemas.md",
+        "knowledge/contracts/internal",
     ];
+    const READERS: [&str; 2] = ["fenced_block", "rust_lines"];
     let mut files = Vec::new();
     rust_files(&repo("crates"), &mut files);
     assert!(!files.is_empty(), "the crates were read");
@@ -581,7 +584,7 @@ fn no_test_compares_a_fenced_block_of_an_included_contract_to_the_binary() {
             continue;
         }
         let text = std::fs::read_to_string(&path).unwrap_or_default();
-        if CONTRACTS.iter().any(|c| text.contains(c)) && text.contains("fenced_block") {
+        if CONTRACTS.iter().any(|c| text.contains(c)) && READERS.iter().any(|r| text.contains(r)) {
             found.push(path.display().to_string());
         }
     }
@@ -693,10 +696,11 @@ fn the_contract_design_skill_declares_in_source() {
     }
 }
 
-/// Covers I035 criteria 14 and 15 and I049 criterion 17: the pending marker
-/// is declared where a contract writer meets it, acceptance refuses a
+/// Covers I035 criteria 14 and 15 and I049 criteria 17 and 23: the pending
+/// marker is declared where a contract writer meets it, acceptance refuses a
 /// contract whose Behaviour or Stability still carries `PENDING`
-/// (ADR-044), and no contract on file carries one.
+/// (ADR-044), and no contract on file carries one — contract-010 included,
+/// whose three PENDING promises P024 slices 2 and 3 kept.
 #[test]
 fn a_pending_promise_is_declared_bounded_and_absent() {
     for p in [
@@ -728,6 +732,7 @@ fn a_pending_promise_is_declared_bounded_and_absent() {
     // A promise may outrun its code while a feature runs, never once it
     // settles — and this feature has settled. The marker is `PENDING` in
     // prose (ADR-044); the YAML `pending:` key went with the authored blocks.
+    let mut checked = Vec::new();
     for dir in [
         "knowledge/contracts/public/active",
         "knowledge/contracts/internal/active",
@@ -740,6 +745,13 @@ fn a_pending_promise_is_declared_bounded_and_absent() {
                 "{} still promises something unbuilt",
                 path.display()
             );
+            checked.push(path.file_name().unwrap().to_str().unwrap().to_string());
         }
     }
+    assert!(
+        checked
+            .iter()
+            .any(|name| name == "contract-010-interface-document-schemas.md"),
+        "contract-010 was not among the contracts read: {checked:?}"
+    );
 }

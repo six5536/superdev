@@ -2749,6 +2749,102 @@ fn a_field_renamed_in_the_lock_struct_fails_validate_naming_the_contracts_includ
     );
 }
 
+/// Covers I049 criteria 4 and 23 (ADR-042): the pack resolution contract's
+/// definition is the `pack-resolution` regions of the modules it describes,
+/// so a `pub fn` renamed in the resolver fails `validate` naming the
+/// contract's include of that file, and `--fix` writes the new name into the
+/// contract. Runs against a copy of the live contract and its eight sources
+/// in a scratch repository, so this tree is never edited.
+#[test]
+fn a_pub_fn_renamed_in_the_resolver_fails_validate_naming_the_contracts_include() {
+    const CONTRACT: &str =
+        "knowledge/contracts/internal/active/contract-007-interface-pack-resolution.md";
+    const SOURCE: &str = "crates/lib/superdev-core/src/pack/resolve.rs";
+    let repo = tempfile::tempdir().unwrap();
+    let live = std::fs::read_to_string(Path::new(REPO_ROOT).join(CONTRACT)).unwrap();
+    let definition = &live[live.find("## Definition").unwrap()..live.find("## Behaviour").unwrap()];
+    // Every file the Definition includes, so each include resolves in the
+    // fixture; the resolver's is the one the test edits.
+    let sources: Vec<&str> = definition
+        .lines()
+        .filter_map(|line| line.strip_prefix("<!-- sokf:include /"))
+        .map(|rest| rest.split('#').next().unwrap())
+        .collect();
+    assert!(
+        sources.len() >= 8 && sources.contains(&SOURCE),
+        "the live contract includes the resolver among its sources: {sources:?}"
+    );
+    for rel in sources.iter().copied().chain([CONTRACT]) {
+        let to = repo.path().join(rel);
+        std::fs::create_dir_all(to.parent().unwrap()).unwrap();
+        std::fs::copy(Path::new(REPO_ROOT).join(rel), &to).unwrap();
+    }
+    std::fs::write(
+        repo.path().join("knowledge/manifest.sokf.yaml"),
+        "sokf: \"0.4\"\nname: fixture\n",
+    )
+    .unwrap();
+    // The fixture carries the live contract's Definition — its includes —
+    // and nothing else: the prose links concepts the fixture lacks.
+    let contract = repo.path().join(CONTRACT);
+    assert!(
+        definition.contains("pub fn resolve(") && definition.contains("pub fn update_pins("),
+        "the includes carry the resolver's and the pin update's signatures"
+    );
+    std::fs::write(
+        &contract,
+        format!(
+            "---\ntype: Note\nid: contract-007-interface-pack-resolution\n---\n\n# Resolution\n\n{definition}"
+        ),
+    )
+    .unwrap();
+    superdev()
+        .current_dir(repo.path())
+        .args(["validate", "--fix"])
+        .assert()
+        .success();
+
+    let source = repo.path().join(SOURCE);
+    let edited = std::fs::read_to_string(&source)
+        .unwrap()
+        .replace("pub fn resolve(\n", "pub fn resolve_packs(\n");
+    assert!(
+        edited.contains("pub fn resolve_packs("),
+        "the fn was renamed"
+    );
+    std::fs::write(&source, edited).unwrap();
+
+    let out = superdev()
+        .current_dir(repo.path())
+        .args(["validate"])
+        .assert()
+        .code(1);
+    let stdout = String::from_utf8_lossy(&out.get_output().stdout).into_owned();
+    assert!(
+        stdout.contains(
+            "contract-007-interface-pack-resolution.md: the include block for `/crates/lib/superdev-core/src/pack/resolve.rs#pack-resolution` is stale"
+        ),
+        "{stdout}"
+    );
+    assert!(
+        !std::fs::read_to_string(&contract)
+            .unwrap()
+            .contains("pub fn resolve_packs("),
+        "validate without --fix wrote the contract"
+    );
+
+    superdev()
+        .current_dir(repo.path())
+        .args(["validate", "--fix"])
+        .assert()
+        .success();
+    let text = std::fs::read_to_string(&contract).unwrap();
+    assert!(
+        text.contains("pub fn resolve_packs(\n") && !text.contains("pub fn resolve(\n"),
+        "{text}"
+    );
+}
+
 /// Without the flag, `validate` reports and writes nothing.
 #[test]
 fn validate_without_fix_writes_nothing() {

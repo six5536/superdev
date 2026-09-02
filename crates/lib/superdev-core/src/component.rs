@@ -10,6 +10,10 @@ use crate::lock::Lock;
 use crate::manifest::{CapabilityConfig, Manifest};
 use crate::runner::CommandRunner;
 
+// The planning context is the pack resolution contract's Definition
+// (contract-007): the `pack-resolution` region below is the one thing a
+// component reads content through.
+// sokf:begin pack-resolution
 /// Everything a component may look at while planning. Read-only.
 pub struct Ctx<'a> {
     /// Target repo root.
@@ -25,6 +29,7 @@ pub struct Ctx<'a> {
     /// side-effect free (ADR-002).
     pub content: &'a ContentSet,
 }
+// sokf:end pack-resolution
 
 impl Ctx<'_> {
     /// The manifest entry `provider` fills in `capability`, when enabled —

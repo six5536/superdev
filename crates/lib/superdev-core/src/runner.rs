@@ -15,6 +15,10 @@ use crate::error::{Error, Result};
 /// long enough that waiting costs nothing measurable.
 const POLL: Duration = Duration::from_millis(10);
 
+// The process seam is the pack resolution contract's Definition
+// (contract-007): the `pack-resolution` region below is the output, the
+// options and the one trait everything that spawns goes through.
+// sokf:begin pack-resolution
 /// Captured result of a finished process.
 #[derive(Debug, Clone)]
 pub struct Output {
@@ -65,6 +69,7 @@ pub trait CommandRunner {
         opts: &RunOptions,
     ) -> Result<Output>;
 }
+// sokf:end pack-resolution
 
 /// Real implementation via `std::process::Command`.
 pub struct SystemRunner;

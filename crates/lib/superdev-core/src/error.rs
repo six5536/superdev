@@ -51,6 +51,10 @@ pub enum Error {
         /// What failed.
         message: String,
     },
+    // The pack variant is the pack resolution contract's Definition
+    // (contract-007): the `pack-resolution` region below is the one error
+    // resolution adds.
+    // sokf:begin pack-resolution
     /// A pack could not be resolved, or resolved to bytes that do not match
     /// what the lock recorded.
     Pack {
@@ -60,6 +64,7 @@ pub enum Error {
         /// What is wrong.
         message: String,
     },
+    // sokf:end pack-resolution
 }
 
 /// Alias used across the crate.

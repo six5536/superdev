@@ -6,6 +6,10 @@ use std::path::{Path, PathBuf};
 use crate::error::{Error, Result};
 use crate::manifest::PackEntry;
 
+// A pack's source and identity are the pack resolution contract's Definition
+// (contract-007): the `pack-resolution` regions below hold the default pack,
+// the transports, the source and the two methods the resolver keys on.
+// sokf:begin pack-resolution
 /// The pack this binary embeds and defaults to.
 ///
 /// A manifest entry whose identity matches replaces the pack compiled in
@@ -74,7 +78,10 @@ impl PackSource {
     ///
     /// Rejects a git source carrying no `rev` and a path source that names
     /// one: a pin is what makes a git source reproducible, and a directory
-    /// has no revision to pin.
+    /// has no revision to pin. Also refused, before anything spawns: a
+    /// source or rev beginning with `-`, and a transport outside
+    /// [`SUPPORTED_SCHEMES`], a `<name>::<address>` remote helper included.
+    /// ADR-004, ADR-012.
     pub fn parse(entry: &PackEntry) -> Result<PackSource> {
         let source = entry.source.trim();
         // A value beginning with `-` is an option wherever git meets it, and
@@ -133,6 +140,8 @@ impl PackSource {
         })
     }
 
+    // sokf:end pack-resolution
+
     /// The same source with a relative path settled against the repo root.
     ///
     /// A path source's identity is a location on this machine, so where it
@@ -157,6 +166,7 @@ impl PackSource {
         }
     }
 
+    // sokf:begin pack-resolution
     /// The comparison key every spelling of one source shares.
     ///
     /// Scheme, userinfo, port, a `.git` suffix and any trailing slash are
@@ -181,6 +191,7 @@ impl PackSource {
             PackSource::Path { path } => path_identity(path, root),
         }
     }
+    // sokf:end pack-resolution
 
     /// Whether this names the repository the embedded pack is a copy of.
     ///
