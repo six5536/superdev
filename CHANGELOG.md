@@ -54,6 +54,18 @@ publish a version it cannot find a heading for.
   both items; a key pattern whose capture count is not one, or on a
   section with no list content, is an error on the schema file and binds
   nothing. `--fix` never supplies a key (ADR-047).
+- **A section rule declares `item-only-pattern` and
+  `item-prohibited-pattern`.** `item-only-pattern` is a regex that may
+  match only inside a top-level item of the section's list: a match on
+  any other body line — prose, a table row, a heading, an item of the
+  other list kind, a nested item — is an error naming the section and the
+  line, and on a section with no list content every line is outside.
+  `item-prohibited-pattern` is a regex no top-level item may match: a
+  match is an error naming the item and the matched text, and the
+  declaration on a section with no list content is an error on the
+  schema file. Both skip fenced blocks and read an item as `item-pattern`
+  does; a pattern that does not compile is an error on the schema file
+  and binds nothing (ADR-047).
 - **A schema section may declare `content: include`.** The sixth content
   kind is satisfied by an include block naming a source path, and a fenced
   block in such a section outside an include is an error naming the

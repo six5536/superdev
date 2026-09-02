@@ -90,7 +90,7 @@ rebuild per edit.
 
 ### Slice 2: The validator reads item-only-pattern and item-prohibited-pattern
 
-- [ ] Done — ticked by integrate at merge.
+- [x] Done — ticked by integrate at merge.
 - Depends-on: 1.
 - Change: `item-only-pattern` — compiled; every body line outside a
   top-level item of the rule's list kind (prose, a table row, a
