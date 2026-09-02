@@ -169,82 +169,102 @@ pub struct EmbeddingsConfig {
 
 A setting comes from exactly one of four sources:
 
-- A command-line flag, where the command defines one. `validate` takes
-  `--knowledge <DIR>` and `--repo-root <DIR>`, and `run begin` and `run
-  advance` take `--session <ID>`; the flags themselves are defined by
-  [contract-002-cli-superdev][sokf:contract-002-cli-superdev].
-- The environment, for four variables and nothing else. `OPENAI_API_KEY`
-  is the key for the embedding API. `CLAUDE_PROJECT_DIR` is the
-  repository `hook validate` and `hook run` resolve against; Claude Code
-  sets it. `CLAUDE_SESSION_ID` is the session `run begin` and `run
-  advance` take when `--session` is absent; Claude Code sets it.
-  `XDG_CACHE_HOME` is the parent of the user-level model cache.
-- `.superdev/config.toml`, the manifest, hand-edited and committed, for
-  everything the Definition declares.
-- The built-in defaults: the registry default per capability, and the
-  pack compiled into the binary.
+1. A command-line flag, where the command defines one. `validate` takes
+   `--knowledge <DIR>` and `--repo-root <DIR>`, and `run begin` and
+   `run advance` take `--session <ID>`; the flags themselves are
+   defined by
+   [contract-002-cli-superdev][sokf:contract-002-cli-superdev].
+2. The environment, for four variables and nothing else.
+   `OPENAI_API_KEY` is the key for the embedding API.
+   `CLAUDE_PROJECT_DIR` is the repository `hook validate` and `hook
+   run` resolve against; Claude Code sets it. `CLAUDE_SESSION_ID` is
+   the session `run begin` and `run advance` take when `--session` is
+   absent; Claude Code sets it. `XDG_CACHE_HOME` is the parent of the
+   user-level model cache.
+3. `.superdev/config.toml`, the manifest, hand-edited and committed,
+   for everything the Definition declares.
+4. The built-in defaults: the registry default per capability, and the
+   pack compiled into the binary.
 
 The four sources are disjoint, which is the promise that matters: a
-setting MUST NOT be read from two of them, so nothing silently overrides
-anything. A value's source is decided by which of the four defines it,
-not by a precedence order. The one deliberate exception runs the other
-way — the embedding API key MUST be read from the environment and MUST
-NOT be accepted from the manifest, so it cannot be committed.
+value's source is decided by which of the four defines it, not by a
+precedence order. The one deliberate exception runs the other way — the
+embedding API key comes from the environment alone, as Secrets says
+(`P_key-from-environment`, `P_key-not-from-manifest`). No value is
+cached between commands.
 
-Both the manifest and the environment MUST be read afresh on every run.
-No value is cached between commands.
+- `P_one-source-per-setting` [ubiquitous] superdev SHALL NOT read a
+  setting from two sources, so nothing silently overrides anything.
+- `P_read-afresh-per-run` [ubiquitous] superdev SHALL read both the
+  manifest and the environment afresh on every run.
 
 ### Defaults
 
 `blueprint` is required and has no default; `init` writes it. A
-capability table's `provider` is required within the table. Every other
-setting has a default:
+capability table's `provider` is required within the table.
+`OPENAI_API_KEY` has no default and is required only with
+`[knowledge.embeddings]`; `CLAUDE_SESSION_ID` has no default and is
+required only by `run begin` and `run advance` without `--session`.
+Every other setting has a default; `init` writes the default
+`[[packs]]` entry rather than leaving it out, since both resolve alike
+and the written pin is the one a reader can see and edit.
 
-- `[[packs]]` absent means the pack embedded in the binary, which is why
-  `init` writes the default entry rather than leaving it out: both
-  resolve alike, but the written pin is the one a reader can see and
-  edit.
-- A capability table absent means the capability is disabled; a
-  `version` absent means the registry default, for a capability that
-  takes one.
-- `custom` absent means no skill is released from management.
-- `[knowledge.embeddings]` absent means embedding is local and offline.
-- `[template]` absent means the repo was never seeded.
-- `CLAUDE_PROJECT_DIR` absent means the working directory.
-- `XDG_CACHE_HOME` absent means `%LOCALAPPDATA%`, else `~/.cache`.
-- `OPENAI_API_KEY` has no default and is required only with
-  `[knowledge.embeddings]`; `CLAUDE_SESSION_ID` has no default and is
-  required only by `run begin` and `run advance` without `--session`.
+| Setting | Absent means |
+|---------|--------------|
+| `[[packs]]` | the pack embedded in the binary |
+| a capability table | the capability is disabled |
+| `version` in a capability table | the registry default, for a capability that takes one |
+| `custom` | no skill is released from management |
+| `[knowledge.embeddings]` | embedding is local and offline |
+| `[template]` | the repo was never seeded |
+| `CLAUDE_PROJECT_DIR` | the working directory |
+| `XDG_CACHE_HOME` | `%LOCALAPPDATA%`, else `~/.cache` |
 
 ### Secrets
 
 `OPENAI_API_KEY` is the only credential superdev reads, and only when
-`[knowledge.embeddings]` opts the index onto an API. It MUST be read from
-the environment and MUST NOT be read from the manifest, so it cannot
-reach a commit.
+`[knowledge.embeddings]` opts the index onto an API. A pack source
+needing credentials fails rather than waiting for someone to type.
 
-A git call superdev makes MUST NOT prompt for credentials: a pack source
-needing them fails rather than waiting for someone to type. A credential
-MUST NOT enter superdev by any path other than that one variable.
+- `P_key-from-environment` [ubiquitous] superdev SHALL read
+  `OPENAI_API_KEY` from the environment.
+- `P_key-not-from-manifest` [ubiquitous] superdev SHALL NOT read
+  `OPENAI_API_KEY` from the manifest, so it cannot reach a commit.
+- `P_git-never-prompts` [ubiquitous] A git call superdev makes SHALL
+  NOT prompt for credentials.
+- `P_no-other-credential-path` [ubiquitous] A credential SHALL NOT
+  enter superdev by any path other than `OPENAI_API_KEY`.
 
 ### Validation
 
-A manifest superdev cannot understand MUST fail at load naming the edit
-to make, and MUST NOT be rewritten: the manifest is the user's. A
-top-level table the registry does not carry MUST fail as an unknown
-capability; a `provider` the registry does not carry MUST fail with
-`<capability> provider must be one of: …`; a manifest still naming the
-removed `workflows` or `bash-output-filter` capability MUST fail naming
-the table to delete. A key superdev does not know inside `[knowledge]`
-MUST fail; an unknown key inside any other known table is ignored, so a
-manifest written for a later superdev still loads.
+The manifest is the user's. An unknown key inside a known table other
+than `[knowledge]` is ignored, so a manifest written for a later
+superdev still loads.
+
+- `P_unknown-manifest-fails-at-load` [event] WHEN superdev cannot
+  understand a manifest, `parse` SHALL fail at load naming the edit to
+  make.
+- `P_manifest-never-rewritten` [ubiquitous] `parse` SHALL NOT rewrite
+  the manifest.
+- `P_unknown-table-fails` [event] WHEN a top-level table names a
+  capability the registry does not carry, `parse` SHALL fail as an
+  unknown capability.
+- `P_unknown-provider-fails` [event] WHEN a `provider` names one the
+  registry does not carry, `parse` SHALL fail with `<capability>
+  provider must be one of: …`.
+- `P_removed-capability-fails` [event] WHEN a manifest still names the
+  removed `workflows` or `bash-output-filter` capability, `parse` SHALL
+  fail naming the table to delete.
+- `P_unknown-knowledge-key-fails` [event] WHEN `[knowledge]` carries a
+  key superdev does not know, `parse` SHALL fail.
 
 ## Stability
 
-Unreleased. Key names, defaults and the variables above MAY change
-without notice. What holds even so: a manifest superdev cannot
-understand MUST fail at load naming the edit to make, and MUST NOT be
-rewritten.
+Unreleased. What holds even so: `P_unknown-manifest-fails-at-load` and
+`P_manifest-never-rewritten`.
+
+- `P_unreleased` [ubiquitous] Key names, defaults and the variables
+  above MAY change without notice.
 
 <!-- sokf:links -->
 [sokf:adr-033-a-contract-defines-its-interface]: /knowledge/adrs/active/adr-033-a-contract-defines-its-interface.md

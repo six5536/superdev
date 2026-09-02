@@ -134,55 +134,83 @@ struct GraphArgs {
 
 ### Transport
 
-`superdev mcp sokf` MUST speak the MCP protocol over stdin and stdout,
-serving one client, and MUST exit `0` when that client closes stdin. A
-missing knowledge or an unusable index directory MUST fail at startup
-rather than at every tool call. The server reads the index at
-`.superdev/cache/sokf-index/` and syncs it lazily on every tool call;
-there is no watcher and no daemon state.
+The server reads the index at `.superdev/cache/sokf-index/` and syncs
+it lazily on every tool call; there is no watcher and no daemon state.
+
+- `P_speaks-mcp-over-stdio` [ubiquitous] `superdev mcp sokf` SHALL
+  speak the MCP protocol over stdin and stdout, serving one client.
+- `P_exits-on-closed-stdin` [event] WHEN the client closes stdin,
+  `superdev mcp sokf` SHALL exit `0`.
+- `P_fails-at-startup` [event] WHEN the knowledge is missing or the
+  index directory is unusable, `superdev mcp sokf` SHALL fail at
+  startup rather than at every tool call.
 
 ### Authentication
 
-None. The harness that spawns the server is the caller, and the server
-MUST trust whatever reaches its stdin; there is no credential to present
-and no role to distinguish, since every tool is read-only.
+None. The harness that spawns the server is the caller; there is no
+credential to present and no role to distinguish, since every tool is
+read-only.
+
+- `P_trusts-stdin` [ubiquitous] The server SHALL trust whatever
+  reaches its stdin.
 
 ### Errors
 
-A tool failure MUST be an MCP error payload, never a process exit: an
-unknown id MUST come back with near-miss candidates, and knowledge that
-fails validation MUST still index and serve. Reading a file the parser
-choked on MUST quote the parse error instead of guessing at near misses.
+A tool failure is an MCP error payload, never a process exit.
+
+- `P_failure-is-error-payload` [event] WHEN a tool call fails, the
+  server SHALL return an MCP error payload and keep running.
+- `P_unknown-id-near-misses` [event] WHEN a caller names an unknown
+  id, the server SHALL answer with near-miss candidates.
+- `P_invalid-knowledge-served` [state] WHILE the knowledge fails
+  validation, the server SHALL index and serve it.
+- `P_parse-error-quoted` [event] WHEN a caller reads a file the parser
+  choked on, `sokf_read` SHALL quote the parse error instead of
+  guessing at near misses.
 
 ### Limits
 
-`limit` MUST be clamped to 1..50 rather than refused, and MUST default to
-8. Every hit carries the locator set — knowledge-relative path, concept
-id, heading path, line range, snippet and score — so the next call reads
-exactly what matched. `sokf_search` MUST apply `types`, `tags` and
-`lifecycle` before fusion, so a filtered concept cannot re-enter through
-the other ranking. Settled work — a `deprecated` concept, or one tagged
-`done`, `resolved` or `wontfix` — MUST be down-ranked after fusion, so
-finished plans and issues sort below live knowledge without leaving the
-results. `sokf_graph` MUST cap each group at 30 lines and then say how
-many it dropped. `sokf_overview` MUST list at most 10 warnings and then
-say how many more there are.
+Every hit carries the locator set — knowledge-relative path, concept
+id, heading path, line range, snippet and score — so the next call
+reads exactly what matched.
+
+- `P_limit-clamped` [event] WHEN `limit` is outside 1..50,
+  `sokf_search` SHALL clamp it into 1..50 rather than refuse.
+- `P_limit-default` [event] WHEN `limit` is absent, `sokf_search`
+  SHALL default it to 8.
+- `P_filters-before-fusion` [ubiquitous] `sokf_search` SHALL apply
+  `types`, `tags` and `lifecycle` before fusion, so a filtered concept
+  cannot re-enter through the other ranking.
+- `P_settled-down-ranked` [ubiquitous] `sokf_search` SHALL down-rank
+  settled work — a `deprecated` concept, or one tagged `done`,
+  `resolved` or `wontfix` — after fusion, so finished plans and issues
+  sort below live knowledge without leaving the results.
+- `P_graph-group-cap` [ubiquitous] `sokf_graph` SHALL cap each group at
+  30 lines and then say how many it dropped.
+- `P_overview-warning-cap` [ubiquitous] `sokf_overview` SHALL list at
+  most 10 warnings and then say how many more there are.
 
 ### Versioning
 
-Unreleased. A tool, an argument or a result shape MAY change in any
-release without a deprecation path; a client learns of the change from
-the tool list the server serves.
+Unreleased. A client learns of a change from the tool list the server
+serves.
+
+- `P_shape-changes-unannounced` [ubiquitous] A tool, an argument or a
+  result shape MAY change in any release without a deprecation path.
 
 ### Resources and prompts
 
-None. The server MUST expose tools only, so a client that lists resources
-or prompts gets an empty set rather than an error.
+None. A client that lists resources or prompts gets an empty set rather
+than an error.
+
+- `P_tools-only` [ubiquitous] The server SHALL expose tools only.
 
 ## Stability
 
-Unreleased. The tool names, their arguments and their result shapes MAY
-change without notice.
+Unreleased.
+
+- `P_unreleased` [ubiquitous] The tool names, their arguments and their
+  result shapes MAY change without notice.
 
 <!-- sokf:links -->
 [sokf:adr-033-a-contract-defines-its-interface]: /knowledge/adrs/active/adr-033-a-contract-defines-its-interface.md
