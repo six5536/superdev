@@ -3,7 +3,7 @@ type: FeatureRequest
 id: issue-037-feature-request-a-contracts-behaviour-is-not-written-as-ears
 title: A contract's behaviour is free prose with a modal verb, while a criterion about it must be EARS
 description: Acceptance criteria are held to EARS and the contract statements they are about are not, so one kind of statement has two forms — and the contract's form buries the trigger, admits two requirements in one sentence, and gives a promise no stable identity a test can name; a criterion's number is no stable identity either.
-lifecycle: open
+lifecycle: done
 links:
   - rel: references
     to: adr-031-ears-criteria-are-checked-by-item-pattern
@@ -29,6 +29,16 @@ links:
 ---
 
 # Feature: a contract's behaviour is not written as EARS
+
+## Resolved
+
+Accepted 2026-09-02 on `main` at `9834972` (PR #13, plan-025). All
+twenty-one criteria pass: a probe contract carrying every departure
+the criteria name drew a named error each through the built binary,
+`PENDING` beside a verb passed, `--fix` rewrote no statement, and the
+live tree — nine swept contracts, twelve examples, fifty keyed issues
+— validates. The one skill change is the frame step's key, decided by
+the owner. `EX_` moved to I030's framed lifecycle.
 
 ## Summary
 
