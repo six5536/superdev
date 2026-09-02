@@ -257,67 +257,122 @@ pub enum RunCommand {
 
 Every verb acts on the current directory. Every command carries `-h` and
 `--help`, and the root carries `-V` and `--version`; the framework adds
-them, so the Definition does not repeat them per command.
+them, so the Definition does not repeat them per command. The promises
+below stand in verb order; the subsections carry what every verb
+shares — the exit codes, the streams, the prompt, the environment, the
+usage errors and the side effects.
 
-- **`init`** MUST refuse a directory that is not a git repo, and MUST refuse
-  a re-run once `.superdev/config.toml` exists. It MUST write the manifest
-  before applying, so a failed run leaves the file the retry resumes from.
-  It MUST ensure `CLAUDE.md` carries `@AGENTS.md` and `AGENTS.md` carries
-  `@.agents/superdev.md`, appending to an existing file. A skill the repo
-  already has under a managed name MUST be released into `custom` before
-  anything is written. A template file MUST NOT overwrite an existing file;
-  the existing one is kept and reported.
-- **`status`** MUST NOT write. Released skills, released orphans, the
-  blueprint-version line and the `content:` lines are reports and MUST NOT
-  affect the exit code, because layering is what the manifest asked for.
-- **`sync`** MUST refuse to run while a registry-locked capability is pinned
-  off the registry default. On a fresh clone it MUST run `mise trust` then
-  `mise install` before any provider command. Orphan removals MUST run after
-  every write, so a failed write rolls back before anything is deleted; an
-  orphan the user has edited MUST be released rather than removed. A
-  successful run MUST stamp this binary's version as the manifest's
-  `blueprint`.
-- **`update`** MUST reject an explicit version for a registry-locked
-  capability. `--provider` MUST require a capability target, and MUST set
-  that capability's version to the new provider's registry default. Bare
-  `update` MUST move the pack pin to the newest release the default source
-  carries; a targeted `update <capability>` MUST NOT make that request.
-- **`validate`** MUST report both halves once, findings grouped by file. It
-  MUST list every error, MUST NOT list a warning unless `--warnings` asks
-  for one, and MUST state both counts either way; `hook validate` and
-  `hook run` MUST report on the same default, so one rule holds whoever ran
-  the check (ADR-040). A `PATH` MUST replace both defaults for what is
-  reported, and a `PATH` naming a document MUST be reported with bare-run
-  parity. `hook validate` MUST NOT pass `--fix`.
-- **`run`** `begin` MUST name the owning session and `run end` when it
-  refuses.
-- **`hook run`** MUST fail open: an unreadable run state is reported and
-  exits `0`, while an unreadable payload is a loud `2`. It MUST refuse to
-  end the turn while `validate` reports an error, naming the findings on
-  stderr, so a document cannot be left with a link to a file that never
-  arrived (ADR-039). Knowledge it cannot read or check MUST let the turn
-  end, and after `HOLD_CAP` holds in one session it MUST report and let
-  the turn end, so a finding the agent cannot resolve stalls nothing.
-- **`sokf index`** MUST rebuild the index in full, and MUST say so when no
-  embedding model loaded and the index is lexical-only.
-- **`hook validate`** MUST exit `0` unless the edited path is under the
-  canonical knowledge or under a tree the grammar governs. It MUST NOT
-  block on a finding only the whole tree settles — a broken body link or
-  an `index.md` entry naming a missing file — because it is handed one
-  edited file and cannot see whether the target arrives in the next edit;
-  `hook run` is where those are judged (ADR-039).
-- **`mcp sokf`** MUST serve the canonical knowledge over stdio; what it
-  serves is [contract-003-api-sokf][sokf:contract-003-api-sokf]'s to bind.
-- **`completions`** and **`man`** MUST render into a buffer before writing,
-  so a failed write is an error and never partial output.
+- `P_init-outside-git` [event] WHEN `init` runs outside a git
+  repository, `init` SHALL refuse.
+- `P_init-rerun` [state] WHILE `.superdev/config.toml` exists, `init`
+  SHALL refuse a re-run.
+- `P_init-manifest-first` [ubiquitous] `init` SHALL write the manifest
+  before applying, so a failed run leaves the file the retry resumes
+  from.
+- `P_init-agents-chain` [ubiquitous] `init` SHALL ensure `CLAUDE.md`
+  carries `@AGENTS.md` and `AGENTS.md` carries `@.agents/superdev.md`,
+  appending to an existing file.
+- `P_init-releases-managed-name` [event] WHEN the repo already has a
+  skill under a managed name, `init` SHALL release that skill into
+  `custom` before anything is written.
+- `P_init-keeps-existing-file` [event] WHEN a template file names a
+  file that exists, `init` SHALL NOT overwrite the existing file; the
+  existing file is kept and reported.
+- `P_status-writes-nothing` [ubiquitous] `status` SHALL NOT write.
+- `P_status-reports-leave-exit-code` [ubiquitous] `status` SHALL NOT
+  let a released skill, a released orphan, the blueprint-version line
+  or a `content:` line affect the exit code; each is a report of the
+  layering the manifest asked for.
+- `P_sync-locked-pin` [state] WHILE a registry-locked capability is
+  pinned off the registry default, `sync` SHALL refuse to run.
+- `P_sync-fresh-clone-mise` [event] WHEN `sync` runs on a fresh clone,
+  `sync` SHALL run `mise trust` then `mise install` before any provider
+  command.
+- `P_sync-removes-after-writes` [ubiquitous] `sync` SHALL run the
+  orphan removals after every write, so a failed write rolls back
+  before anything is deleted.
+- `P_sync-releases-edited-orphan` [event] WHEN an orphan carries the
+  user's edits, `sync` SHALL release the orphan rather than remove it.
+- `P_sync-stamps-blueprint` [event] WHEN `sync` succeeds, `sync` SHALL
+  stamp this binary's version as the manifest's `blueprint`.
+- `P_update-locked-version` [event] WHEN `update` is given an explicit
+  version for a registry-locked capability, `update` SHALL reject the
+  version.
+- `P_update-provider-needs-target` [ubiquitous] `update --provider`
+  SHALL require a capability target.
+- `P_update-provider-default-version` [event] WHEN `--provider`
+  switches a capability, `update` SHALL set that capability's version
+  to the new provider's registry default.
+- `P_update-bare-moves-pack-pin` [event] WHEN `update` runs bare,
+  `update` SHALL move the pack pin to the newest release the default
+  source carries.
+- `P_update-targeted-asks-nothing` [event] WHEN `update` names a
+  capability, `update` SHALL NOT ask the default source for its newest
+  release.
+- `P_validate-reports-both-halves-once` [ubiquitous] `validate` SHALL
+  report both halves once, findings grouped by file.
+- `P_validate-lists-every-error` [ubiquitous] `validate` SHALL list
+  every error.
+- `P_validate-warnings-on-request` [conditional] IF `--warnings` is
+  absent, `validate` SHALL NOT list a warning.
+- `P_validate-states-both-counts` [ubiquitous] `validate` SHALL state
+  both counts, with or without `--warnings`.
+- `P_hooks-share-validate-default` [ubiquitous] `hook validate` and
+  `hook run` SHALL report on the default `validate` reports on, so one
+  rule holds whoever ran the check (ADR-040).
+- `P_validate-path-replaces-defaults` [event] WHEN a `PATH` is given,
+  `validate` SHALL replace both defaults with the `PATH` for what is
+  reported.
+- `P_validate-document-path-parity` [event] WHEN a `PATH` names a
+  document, `validate` SHALL report the document with bare-run parity.
+- `P_hook-validate-no-fix` [ubiquitous] `hook validate` SHALL NOT pass
+  `--fix`.
+- `P_run-begin-refusal-names-owner` [event] WHEN `run begin` refuses,
+  `run begin` SHALL name the owning session and `run end`.
+- `P_hook-run-fails-open` [ubiquitous] `hook run` SHALL fail open: an
+  unreadable run state is reported and exits `0`, while an unreadable
+  payload is a loud `2`.
+- `P_hook-run-holds-on-error` [state] WHILE `validate` reports an
+  error, `hook run` SHALL refuse to end the turn, naming the findings
+  on stderr, so a document cannot be left with a link to a file that
+  never arrived (ADR-039).
+- `P_hook-run-unreadable-knowledge` [event] WHEN the knowledge cannot
+  be read or checked, `hook run` SHALL let the turn end.
+- `P_hook-run-hold-cap` [event] WHEN `HOLD_CAP` holds have been held in
+  one session, `hook run` SHALL report and let the turn end, so a
+  finding the agent cannot resolve stalls nothing.
+- `P_sokf-index-rebuilds-in-full` [ubiquitous] `sokf index` SHALL
+  rebuild the index in full.
+- `P_sokf-index-says-lexical-only` [event] WHEN no embedding model
+  loaded, `sokf index` SHALL say the index is lexical-only.
+- `P_hook-validate-ungoverned-path` [event] WHEN the edited path is
+  outside the canonical knowledge and outside every tree the grammar
+  governs, `hook validate` SHALL exit `0`.
+- `P_hook-validate-leaves-tree-findings` [ubiquitous] `hook validate`
+  SHALL NOT block on a finding only the whole tree settles — a broken
+  body link or an `index.md` entry naming a missing file: the hook is
+  handed one edited file and cannot see whether the target arrives in
+  the next edit, and `hook run` judges those findings (ADR-039).
+- `P_mcp-sokf-serves-knowledge` [ubiquitous] `mcp sokf` SHALL serve
+  the canonical knowledge over stdio; what it serves is
+  [contract-003-api-sokf][sokf:contract-003-api-sokf]'s to bind.
+- `P_completions-man-buffer-first` [ubiquitous] `completions` and
+  `man` SHALL render into a buffer before writing, so a failed write is
+  an error and never partial output.
 
 ### Exit codes
 
-Every command MUST exit `2` on a usage error, so the table lists `2` only
-where the code carries a meaning beyond that. A closed stdout pipe MUST
-end any command at `0`, silently. A hard failure or an I/O failure MUST
-exit `2` with `error: <message>` on stderr; for `hook validate` and
-`hook run`, `2` is the blocking code Claude Code hands back to the agent.
+The table lists `2` only where the code carries a meaning beyond a
+usage error. For `hook validate` and `hook run`, `2` is the blocking
+code Claude Code hands back to the agent.
+
+- `P_usage-error-exits-2` [event] WHEN a usage error occurs, every
+  command SHALL exit `2`.
+- `P_closed-stdout-exits-0` [event] WHEN the stdout pipe closes, every
+  command SHALL end at `0`, silently.
+- `P_hard-failure-exits-2` [event] WHEN a hard failure or an I/O
+  failure occurs, every command SHALL exit `2` with `error: <message>`
+  on stderr.
 
 | Command | Code | Meaning |
 |---------|------|---------|
@@ -361,55 +416,85 @@ exit `2` with `error: <message>` on stderr; for `hook validate` and
 
 ### Streams
 
-Every command MUST write its report to stdout and its diagnostics to stderr.
-`completions` and `man` MUST write their generated file to stdout and
-nothing else, so the output redirects cleanly. `hook validate` and
-`hook run` MUST read their payload from stdin and MUST write their findings
-and their next step to stderr, which is where Claude Code reads them.
-`mcp sokf` MUST speak the MCP protocol over stdin and stdout, so nothing
-else MAY be written to stdout for the life of the process. A closed stdout
-pipe MUST end the run at `0`, silently.
+Claude Code reads a hook's stderr. A closed stdout pipe ends the run as
+`P_closed-stdout-exits-0` says.
 
-`validate --json` MUST write one JSON object to stdout carrying `passed`,
-`errors`, `warnings`, `concepts`, `documents`, `schemas`, `files`,
-`findings` (one entry per finding, each with its file, severity and
-message; warnings appear only with `--warnings`, as in the text output),
-`knowledge` (the directory the run covered) and, with `--fix`, `repaired`
-(each file the run rewrote).
+- `P_report-stdout-diagnostics-stderr` [ubiquitous] Every command SHALL
+  write its report to stdout and its diagnostics to stderr.
+- `P_completions-man-stdout-only` [ubiquitous] `completions` and `man`
+  SHALL write their generated file to stdout and nothing else, so the
+  output redirects cleanly.
+- `P_hooks-read-stdin` [ubiquitous] `hook validate` and `hook run`
+  SHALL read their payload from stdin.
+- `P_hooks-write-stderr` [ubiquitous] `hook validate` and `hook run`
+  SHALL write their findings and their next step to stderr.
+- `P_mcp-sokf-speaks-mcp` [ubiquitous] `mcp sokf` SHALL speak the MCP
+  protocol over stdin and stdout.
+- `P_mcp-sokf-stdout-reserved` [state] WHILE `mcp sokf` runs, `mcp
+  sokf` SHALL NOT write anything beyond the protocol to stdout.
+- `P_validate-json-shape` [event] WHEN `--json` is given, `validate`
+  SHALL write one JSON object to stdout carrying `passed`, `errors`,
+  `warnings`, `concepts`, `documents`, `schemas`, `files`, `findings`
+  (one entry per finding, each with its file, severity and message;
+  warnings appear only with `--warnings`, as in the text output),
+  `knowledge` (the directory the run covered) and, with `--fix`,
+  `repaired` (each file the run rewrote).
 
 ### Prompting
 
-On a TTY with neither `--template` nor `--name`, `init` MUST prompt for
-the template and the project name; without a TTY it MUST NOT prompt and
-MUST take the defaults. No other command prompts.
+`init` is the one command that prompts; no other command prompts.
+
+- `P_init-prompts-on-tty` [event] WHEN `init` runs on a TTY with
+  neither `--template` nor `--name`, `init` SHALL prompt for the
+  template and the project name.
+- `P_init-no-prompt-without-tty` [event] WHEN `init` runs without a
+  TTY, `init` SHALL NOT prompt.
+- `P_init-defaults-without-tty` [event] WHEN `init` runs without a TTY,
+  `init` SHALL take the defaults.
 
 ### Environment
 
-`hook validate` and `hook run` MUST resolve the repository from
-`CLAUDE_PROJECT_DIR` when Claude Code sets it, else from the working
-directory; the variable is described by
-[contract-004-config-superdev][sokf:contract-004-config-superdev]. `run
-begin` and `run advance` MUST take the session from `CLAUDE_SESSION_ID`
-when `--session` is absent. No other command reads the environment
-beyond what `mise` and `git` read for themselves.
+`CLAUDE_PROJECT_DIR` is described by
+[contract-004-config-superdev][sokf:contract-004-config-superdev]. No
+other command reads the environment beyond what `mise` and `git` read
+for themselves.
+
+- `P_hooks-resolve-project-dir` [event] WHEN Claude Code sets
+  `CLAUDE_PROJECT_DIR`, `hook validate` and `hook run` SHALL resolve
+  the repository from `CLAUDE_PROJECT_DIR`, else from the working
+  directory.
+- `P_run-session-from-env` [event] WHEN `--session` is absent, `run
+  begin` and `run advance` SHALL take the session from
+  `CLAUDE_SESSION_ID`.
 
 ### Usage errors
 
-An unknown flag, an unknown subcommand and a missing required value MUST
-exit `2` with clap's usage message on stderr, from every command alike.
+Clap reports a usage error from every command alike.
+
+- `P_usage-message-on-stderr` [event] WHEN an unknown flag, an unknown
+  subcommand or a missing required value is given, every command SHALL
+  exit `2` with clap's usage message on stderr.
 
 ### Side effects
 
-`--fix` is the one way `validate` writes: without it `validate` MUST NOT
-write. `--fix` MUST write only inside the resolved knowledge directory and
-MUST be idempotent. `status` MUST NOT write. `run` MUST NOT touch git,
-the network, or any file outside `.superdev/cache/`. `update` is the one
-verb that reaches the network unasked, to find the newest pack release.
+`--fix` is the one way `validate` writes; `status` writes nothing
+(`P_status-writes-nothing`). `update` is the one verb that reaches the
+network unasked, to find the newest pack release.
+
+- `P_validate-writes-only-with-fix` [event] WHEN `validate` runs
+  without `--fix`, `validate` SHALL NOT write.
+- `P_fix-writes-inside-knowledge` [ubiquitous] `validate --fix` SHALL
+  write only inside the resolved knowledge directory.
+- `P_fix-idempotent` [ubiquitous] `validate --fix` SHALL be idempotent.
+- `P_run-touches-cache-only` [ubiquitous] `run` SHALL NOT touch git,
+  the network, or any file outside `.superdev/cache/`.
 
 ## Stability
 
-Unreleased. Every command, argument, flag and exit code above MAY change
-without notice.
+Unreleased.
+
+- `P_unreleased` [ubiquitous] Every command, argument, flag and exit
+  code above MAY change without notice.
 
 <!-- sokf:links -->
 [sokf:adr-033-a-contract-defines-its-interface]: /knowledge/adrs/active/adr-033-a-contract-defines-its-interface.md
