@@ -36,7 +36,7 @@ and `superdev status` reporting no drift is part of its done-check.
 
 ### Slice 1: An include block names a source region
 
-- [ ] Done — ticked by integrate at merge.
+- [x] Done — ticked by integrate at merge.
 - Depends-on: none.
 - Change: `include_blocks` in
   `crates/lib/superdev-core/src/sokf/concept.rs` reads a `/`-rooted
