@@ -14,6 +14,15 @@ links:
   - rel: references
     to: issue-037-feature-request-a-contracts-behaviour-is-not-written-as-ears
     note: Deferred the `EX_` key on a bug's Expected behaviour to this feature's framed state.
+  - rel: references
+    to: contract-010-interface-document-schemas
+    note: Gains the per-variant heading — one heading in several rules with disjoint variants — PENDING (ADR-049).
+  - rel: references
+    to: adr-048-an-issues-lifecycle-distinguishes-framed-from-unframed
+    note: The four states, /file, the gates, the forms per state, the sweep and the backlog's retirement.
+  - rel: references
+    to: adr-049-a-heading-is-declared-per-variant
+    note: The schema mechanism behind criteria 2 to 5.
 ---
 
 # Feature: filing an issue requires framing it
@@ -99,8 +108,8 @@ ADRs keep rejected design alternatives, as they do today.
 3. `AC_framed-form` [state] WHILE an issue is `framed`, THE SYSTEM SHALL
    hold every criterion to the `AC_` key and EARS tag, every repro
    step to the `RS_` key, every expected-behaviour item to the `EX_`
-   key, every done item to the `DD_` key, and SHALL report an item
-   opening with `TBD` as an error naming the item.
+   key and EARS tag, every done item to the `DD_` key, and SHALL
+   report an item opening with `TBD` as an error naming the item.
 4. `AC_settled-form` [state] WHILE an issue is `done` or `wontfix`, THE
    SYSTEM SHALL hold it to the framed form of criterion 3, a bug's
    Expected behaviour included.
@@ -141,7 +150,8 @@ ADRs keep rejected design alternatives, as they do today.
 15. `AC_sweep` [ubiquitous] Every open issue on file SHALL be refiled by
     the sweep: `unframed` where a `TBD` remains, `framed` otherwise;
     every bug report whose Expected behaviour is prose SHALL carry it as
-    a keyed list, one `EX_c<n>` item per paragraph, no words changed;
+    a numbered list, one `EX_c<n>` item tagged `[ubiquitous]` per
+    paragraph, its words unchanged;
     and `superdev validate` SHALL pass on the live tree.
 16. `AC_backlog-retired` [ubiquitous] The backlog concept, `schema-backlog`
     and every reference to the backlog in the skills, the schemas and
@@ -220,9 +230,19 @@ the backlog retired, an idea kept as a record with no kind. The
 criteria that were `AC_c1` to `AC_c3` are replaced by the seventeen
 above. The owner then struck the prose exception for a settled bug's
 Expected behaviour: it is a keyed list in every state, and the settled
-reports are converted.
+reports are converted. Contract-design settled the mechanism in
+[ADR-049][sokf:adr-049-a-heading-is-declared-per-variant] — one heading,
+a rule per disjoint variant set, declared PENDING in
+[contract-010][sokf:contract-010-interface-document-schemas] — and the
+whole in
+[ADR-048][sokf:adr-048-an-issues-lifecycle-distinguishes-framed-from-unframed];
+an expected-behaviour item takes the EARS tag as a criterion does, and
+the unframed rule checks the list kind alone.
 
 <!-- sokf:links -->
 [sokf:adr-045-a-schema-declares-variants]: /knowledge/adrs/active/adr-045-a-schema-declares-variants.md
 [sokf:adr-046-a-promise-and-a-criterion-are-keyed-ears-items]: /knowledge/adrs/active/adr-046-a-promise-and-a-criterion-are-keyed-ears-items.md
+[sokf:adr-048-an-issues-lifecycle-distinguishes-framed-from-unframed]: /knowledge/adrs/active/adr-048-an-issues-lifecycle-distinguishes-framed-from-unframed.md
+[sokf:adr-049-a-heading-is-declared-per-variant]: /knowledge/adrs/active/adr-049-a-heading-is-declared-per-variant.md
+[sokf:contract-010-interface-document-schemas]: /knowledge/contracts/internal/active/contract-010-interface-document-schemas.md
 [sokf:issue-037-feature-request-a-contracts-behaviour-is-not-written-as-ears]: /knowledge/issues/done/issue-037-feature-request-a-contracts-behaviour-is-not-written-as-ears.md
