@@ -46,26 +46,24 @@ publish a version it cannot find a heading for.
   its value equal to its key. A tag outside the enum, a tag or keyed
   example with no `variant-key`, a `variant-key` with no enum, and a
   missing example are each an error on the schema file (ADR-045).
-- **A section rule declares `item-key`.** A regex with one capture group
-  that every top-level item of the section's list must match; the capture
-  is the item's key, unique across the document's items under every rule
-  declaring `item-key`. An item with no match is an error naming the
-  section and the item; a repeated key is an error naming the key and
-  both items; a key pattern whose capture count is not one, or on a
-  section with no list content, is an error on the schema file and binds
-  nothing. `--fix` never supplies a key (ADR-047).
-- **A section rule declares `item-only-pattern` and
-  `item-prohibited-pattern`.** `item-only-pattern` is a regex that may
-  match only inside a top-level item of the section's list: a match on
-  any other body line — prose, a table row, a heading, an item of the
-  other list kind, a nested item — is an error naming the section and the
-  line, and on a section with no list content every line is outside.
+- **A section rule declares `item-key`, `item-only-pattern` and
+  `item-prohibited-pattern`.** `item-key` is a regex with one capture
+  group that every top-level item of the section's list must match; the
+  capture is the item's key, unique across the document's items under
+  every rule declaring `item-key`. An item with no match is an error
+  naming the section and the item, and a repeated key one naming the key
+  and both items. `item-only-pattern` is a regex that may match only
+  inside a top-level item of the section's list: a match on any other
+  body line — prose, a table row, a heading, an item of the other list
+  kind, a nested item — is an error naming the section and the line, and
+  on a section with no list content every line is outside.
   `item-prohibited-pattern` is a regex no top-level item may match: a
-  match is an error naming the item and the matched text, and the
-  declaration on a section with no list content is an error on the
-  schema file. Both skip fenced blocks and read an item as `item-pattern`
-  does; a pattern that does not compile is an error on the schema file
-  and binds nothing (ADR-047).
+  match is an error naming the item and the matched text. All three skip
+  fenced blocks and read an item as `item-pattern` does. A key pattern
+  whose capture count is not one, an `item-key` or
+  `item-prohibited-pattern` on a section with no list content, and a
+  pattern that does not compile are each an error on the schema file and
+  bind nothing. `--fix` never supplies a key (ADR-047).
 - **A schema section may declare `content: include`.** The sixth content
   kind is satisfied by an include block naming a source path, and a fenced
   block in such a section outside an include is an error naming the
@@ -295,8 +293,10 @@ publish a version it cannot find a heading for.
   Behaviour or Stability is prose with a modal verb fails `superdev
   validate`**, naming each keyless, tagless, retired-verb, two-verb or
   `TBD` item and each modal verb outside an item; `--fix` rewrites
-  nothing. The schema's twelve examples carry the form (ADR-046,
-  ADR-047).
+  nothing. The schema's twelve examples carry the form, and superdev's
+  nine active contracts were swept to it: 182 modal verbs became 174
+  keyed promises, a sentence that stood in two places becoming one
+  promise cited from the other (ADR-046, ADR-047).
 - **The tracker's cited lists carry keys.** A feature-request's
   acceptance criteria open with an `AC_` key in a code span before the
   EARS tag or the `TBD`; a bug-report's repro steps with an `RS_` key
@@ -308,7 +308,9 @@ publish a version it cannot find a heading for.
   carries a keyless, mis-prefixed or repeated item fails `superdev
   validate`**, naming the item; `--fix` supplies no key. The fifty
   issues on file were swept once to the slug `c<n>`, `n` the item's
-  number, so every citation of a number stands (ADR-046).
+  number — 141 criteria, 72 repro steps, 22 done items — so every
+  citation of a number stands, and every open plan's cases cite keys
+  (ADR-046).
 - The two hook entries `sync` writes into `.claude/settings.json` carry
   `timeout: 30`, so a hook that wedges — a `cargo run` waiting on a build
   lock — is killed by Claude Code after 30 s instead of holding the

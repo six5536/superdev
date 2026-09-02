@@ -27,7 +27,10 @@ status: stable
   language and test runner, which superdev cannot know
   ([ADR-042][sokf:adr-042-a-contracts-definition-is-materialized-from-source]
   draws the line). superdev supplies no harness, runs no project
-  command and parses no source: it moves bytes between markers.
+  command and parses no source: it moves bytes between markers. Each
+  promise now carries a key a test cites
+  ([ADR-046][sokf:adr-046-a-promise-and-a-criterion-are-keyed-ears-items]);
+  checking that a test cites every key is still the project's.
 
 # Constraints
 
@@ -55,6 +58,7 @@ Inherited machinery, and what it fixes.
 <!-- sokf:links -->
 [sokf:adr-039-a-decidable-finding-is-an-error-and-the-turn-is-the-gate]: /knowledge/adrs/active/adr-039-a-decidable-finding-is-an-error-and-the-turn-is-the-gate.md
 [sokf:adr-042-a-contracts-definition-is-materialized-from-source]: /knowledge/adrs/active/adr-042-a-contracts-definition-is-materialized-from-source.md
+[sokf:adr-046-a-promise-and-a-criterion-are-keyed-ears-items]: /knowledge/adrs/active/adr-046-a-promise-and-a-criterion-are-keyed-ears-items.md
 [sokf:architecture]: /knowledge/architecture.md
 [sokf:backlog]: /knowledge/backlog.md
 [sokf:release-procedure]: /knowledge/release-procedure.md

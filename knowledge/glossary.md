@@ -2,7 +2,7 @@
 type: Glossary
 id: glossary
 title: Domain Glossary
-description: The terms the blueprint engine uses — blueprint, capability, provider, provenance, component, owned file, scaffold, project template, template adoption, skill pack, knowledge-carried skill, content pack, pack source, embedded snapshot, pack item, pack layer, pack format, PROJECT.md layer, custom skill, harvest, claim, orphan — plus the knowledge terms section, locator, hybrid search, RRF, lifecycle and variant, and the contract terms binding, drift test and EARS.
+description: The terms the blueprint engine uses — blueprint, capability, provider, provenance, component, owned file, scaffold, project template, template adoption, skill pack, knowledge-carried skill, content pack, pack source, embedded snapshot, pack item, pack layer, pack format, PROJECT.md layer, custom skill, harvest, claim, orphan — plus the knowledge terms section, locator, hybrid search, RRF, lifecycle and variant, and the contract terms binding, drift test, EARS and promise key.
 status: stable
 ---
 
@@ -170,11 +170,29 @@ Terms from the contract side:
   trigger or condition in that pattern's words before one modal verb
   and one requirement. A feature-request's acceptance criteria take the
   form, numbered, with "THE SYSTEM" as the subject
-  ([ADR-031][sokf:adr-031-ears-criteria-are-checked-by-item-pattern]);
-  a contract's Behaviour and Stability promises do not yet: I037 gives
-  them the form, with the interface element as the subject and a stable
-  key per promise a test cites
-  ([I037][sokf:issue-037-feature-request-a-contracts-behaviour-is-not-written-as-ears]).
+  ([ADR-031][sokf:adr-031-ears-criteria-are-checked-by-item-pattern]).
+  A contract's Behaviour and Stability promises take the form as
+  bullets, with the interface element as the subject — `init`, the
+  validator, a caller — one verb from `SHALL`, `SHOULD` and `MAY`, and
+  a promise key in front of the tag; `MUST` and its RFC 2119 siblings
+  are retired from contracts, prose in either section carries no modal
+  verb, and a numbered list is a sequence, never a promise
+  ([ADR-046][sokf:adr-046-a-promise-and-a-criterion-are-keyed-ears-items]).
+- **Promise key** — the stable identity of a promise or a criterion,
+  opening its item in a code span: `<PREFIX>_<slug>`, the prefix naming
+  the kind of item and the slug `[a-z][a-z0-9]*(-[a-z0-9]+)*`. The
+  prefixes are `P_` for a contract promise under Behaviour or
+  Stability, `AC_` for an acceptance criterion, `RS_` for a repro step
+  and `DD_` for a definition-of-done item; `EX_` is reserved for an
+  expected behaviour and is not yet declared by a schema. A key is
+  unique within its document; a rewording keeps it, a removed key is
+  not reused. An item on file at the sweep carries the slug `c<n>`, `n`
+  its number — `AC_c11` — so an older citation of the number stands. A
+  citation is the bare key where the document is the subject — a plan
+  case covering its issue's criteria, a test on the feature it tests —
+  and the document's id followed by the key elsewhere:
+  `contract-002-cli-superdev P_init-outside-git`
+  ([ADR-046][sokf:adr-046-a-promise-and-a-criterion-are-keyed-ears-items]).
 
 The files these terms describe are in [configuration][sokf:configuration]; the
 layering is in [architecture][sokf:architecture].
@@ -185,9 +203,9 @@ layering is in [architecture][sokf:architecture].
 [sokf:adr-031-ears-criteria-are-checked-by-item-pattern]: /knowledge/adrs/active/adr-031-ears-criteria-are-checked-by-item-pattern.md
 [sokf:adr-042-a-contracts-definition-is-materialized-from-source]: /knowledge/adrs/active/adr-042-a-contracts-definition-is-materialized-from-source.md
 [sokf:adr-045-a-schema-declares-variants]: /knowledge/adrs/active/adr-045-a-schema-declares-variants.md
+[sokf:adr-046-a-promise-and-a-criterion-are-keyed-ears-items]: /knowledge/adrs/active/adr-046-a-promise-and-a-criterion-are-keyed-ears-items.md
 [sokf:architectural-rules]: /knowledge/architectural-rules.md
 [sokf:architecture]: /knowledge/architecture.md
 [sokf:configuration]: /knowledge/configuration.md
 [sokf:contract-008-format-template]: /knowledge/contracts/public/active/contract-008-format-template.md
-[sokf:issue-037-feature-request-a-contracts-behaviour-is-not-written-as-ears]: /knowledge/issues/open/issue-037-feature-request-a-contracts-behaviour-is-not-written-as-ears.md
 [sokf:issue-049-feature-request-a-contract-cannot-point-at-its-definition]: /knowledge/issues/open/issue-049-feature-request-a-contract-cannot-point-at-its-definition.md
