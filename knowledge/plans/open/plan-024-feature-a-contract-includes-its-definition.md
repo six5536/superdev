@@ -232,7 +232,7 @@ named the pack as the grammar's source.
 
 ### Slice 6: The CLI and MCP contracts include their source
 
-- [ ] Done — ticked by integrate at merge.
+- [x] Done — ticked by integrate at merge.
 - Depends-on: 1, 4.
 - Change: `sokf:begin cli` / `sokf:end cli` around every clap struct
   and enum in `crates/app/superdev/src/` — `main.rs`, `validate_cli.rs`,
@@ -247,7 +247,8 @@ named the pack as the grammar's source.
   `pending_commands` — is deleted; the tests that read the contract for
   usage-shape rules (integer exit keys, sorted commands) go with the
   YAML block they read. `mcp.rs`'s drift test is deleted.
-  `contract_exit_codes.rs` stays untouched.
+  `contract_exit_codes.rs` stays; its reader moves from the YAML block's
+  `exit:` maps to the `### Exit codes` table under Behaviour.
 - Done-check: both contracts validate under the contract schema; the
   Definition of `contract-002` shows every clap struct with its doc
   comments; `cargo nextest run` passes with `contract.rs`'s drift tests

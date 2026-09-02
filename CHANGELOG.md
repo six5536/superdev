@@ -265,6 +265,15 @@ publish a version it cannot find a heading for.
 
 ### Changed
 
+- **The CLI and MCP contracts include their source.** `contract-002`'s
+  Definition is the clap tree materialised from the `cli` regions of
+  `crates/app/superdev/src/`, one include per file, and its exit codes are
+  a per-command table under `### Exit codes` in Behaviour; the hand-written
+  YAML block and the test that compared it to the binary are gone
+  (ADR-042). The MCP contract is now `contract-003-api-sokf`, kind `api`,
+  its Definition the server's argument structs and tool methods from the
+  `tools` regions of `mcp.rs`; its drift test is gone with the JSON block.
+  `contract_exit_codes.rs` still exercises every code the contract states.
 - **`superdev validate` counts its warnings and lists them on request.** A run
   lists every error and closes with both counts, as before; the warnings
   themselves now appear only under **`--warnings`** (ADR-040). Warnings are
