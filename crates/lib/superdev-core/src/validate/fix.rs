@@ -559,13 +559,13 @@ mod tests {
         .unwrap();
         std::fs::write(
             knowledge.join("schemas/bug-report.md"),
-            "---\ntype: Schema\nid: schema-bug-report\n---\n````yaml\nfrontmatter:\n  type:\n    const: BugReport\n  lifecycle:\n    enum: [open, done, wontfix]\n````\n",
+            "---\ntype: Schema\nid: schema-bug-report\n---\n````yaml\nfrontmatter:\n  type:\n    const: BugReport\n  lifecycle:\n    enum: [unframed, framed, done, wontfix]\n````\n",
         )
         .unwrap();
-        // Misfiled: sits in done/ while open.
+        // Misfiled: sits in done/ while framed.
         std::fs::write(
             knowledge.join("issues/done/issue-001-bug-a.md"),
-            "---\ntype: BugReport\nid: issue-001-bug-a\nlifecycle: open\n---\nx\n",
+            "---\ntype: BugReport\nid: issue-001-bug-a\nlifecycle: framed\n---\nx\n",
         )
         .unwrap();
         // Unfiled: sits in the base directory.
@@ -584,19 +584,19 @@ mod tests {
         let bundle = load_bundle(&knowledge).unwrap();
         let repair = fix(&bundle, dir.path()).unwrap();
         assert!(repair.written.contains(
-            &"issues/done/issue-001-bug-a.md -> issues/open/issue-001-bug-a.md".to_string()
+            &"issues/done/issue-001-bug-a.md -> issues/framed/issue-001-bug-a.md".to_string()
         ));
         assert!(
             repair.written.contains(
                 &"issues/issue-002-bug-b.md -> issues/done/issue-002-bug-b.md".to_string()
             )
         );
-        assert!(knowledge.join("issues/open/issue-001-bug-a.md").is_file());
+        assert!(knowledge.join("issues/framed/issue-001-bug-a.md").is_file());
         assert!(knowledge.join("issues/done/issue-002-bug-b.md").is_file());
 
         let citing = std::fs::read_to_string(knowledge.join("citing.md")).unwrap();
         assert!(
-            citing.contains("[sokf:issue-001-bug-a]: /knowledge/issues/open/issue-001-bug-a.md")
+            citing.contains("[sokf:issue-001-bug-a]: /knowledge/issues/framed/issue-001-bug-a.md")
         );
         assert!(
             citing.contains("[sokf:issue-002-bug-b]: /knowledge/issues/done/issue-002-bug-b.md")
@@ -641,12 +641,12 @@ mod tests {
         .unwrap();
         std::fs::write(
             knowledge.join("schemas/bug-report.md"),
-            "---\ntype: Schema\nid: schema-bug-report\n---\n````yaml\nfrontmatter:\n  type:\n    const: BugReport\n  lifecycle:\n    enum: [open, done, wontfix]\n````\n",
+            "---\ntype: Schema\nid: schema-bug-report\n---\n````yaml\nfrontmatter:\n  type:\n    const: BugReport\n  lifecycle:\n    enum: [unframed, framed, done, wontfix]\n````\n",
         )
         .unwrap();
         std::fs::write(
             knowledge.join("issues/done/issue-001-bug-a.md"),
-            "---\ntype: BugReport\nid: issue-001-bug-a\nlifecycle: open\n---\nx\n",
+            "---\ntype: BugReport\nid: issue-001-bug-a\nlifecycle: framed\n---\nx\n",
         )
         .unwrap();
         let link = dir.path().join("link");
@@ -658,13 +658,13 @@ mod tests {
 
         assert!(
             repair.written.contains(
-                &"issues/done/issue-001-bug-a.md -> issues/open/issue-001-bug-a.md".to_string()
+                &"issues/done/issue-001-bug-a.md -> issues/framed/issue-001-bug-a.md".to_string()
             ),
             "the refile was refused through the symlink: {:?}",
             repair.written
         );
         assert!(
-            real.join("knowledge/issues/open/issue-001-bug-a.md")
+            real.join("knowledge/issues/framed/issue-001-bug-a.md")
                 .is_file()
         );
     }

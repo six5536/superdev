@@ -50,18 +50,18 @@ file format, MCP and the rest — because it constrains how a surface is
 written while each kind's schema names the surface's native form. As
 criteria:
 
-1. [event] WHEN contract-design writes or updates a contract, every
+1. `EX_c1` [event] WHEN contract-design writes or updates a contract, every
    normative statement SHALL use an RFC 2119 modal verb, one
    requirement per sentence.
-2. [event] WHEN a contract's surface is enumerable — commands, flags,
+2. `EX_c2` [event] WHEN a contract's surface is enumerable — commands, flags,
    keys, types, error cases, limits — THE SYSTEM SHALL express it in
    the kind's native structured form: a code block, table or list.
    Prose, doc comments included, describes and SHALL NOT define.
-3. [ubiquitous] A contract SHALL bind only what callers rely on;
+3. `EX_c3` [ubiquitous] A contract SHALL bind only what callers rely on;
    behaviour a contract does not list is the code's to decide.
-4. [ubiquitous] A contract SHALL link the ADR behind each decision and
+4. `EX_c4` [ubiquitous] A contract SHALL link the ADR behind each decision and
    SHALL NOT restate the ADR's reasoning.
-5. [event] WHEN the fix ships, every active contract — the nine on
+5. `EX_c5` [event] WHEN the fix ships, every active contract — the nine on
    file — SHALL conform to criteria 1–4.
 
 ## Actual behaviour

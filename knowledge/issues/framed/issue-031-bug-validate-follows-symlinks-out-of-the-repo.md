@@ -3,7 +3,7 @@ type: BugReport
 id: issue-031-bug-validate-follows-symlinks-out-of-the-repo
 title: validate follows symlinks out of the repo and can echo what it reads
 description: The walk and the file reads follow symlinks, so a hostile checkout can point a governed name at any readable file — the PostToolUse hook then reads it automatically, and finding messages that quote source lines can carry excerpts into the transcript.
-lifecycle: open
+lifecycle: framed
 links:
   - rel: references
     to: issue-019-bug-validate-reads-a-named-file-as-a-skill
@@ -41,9 +41,9 @@ walk predates that feature.
 
 ## Expected behaviour
 
-The validator refuses or skips a symlink that resolves outside the
-repository root, naming the path, as the pack walk already does
-(ADR-014).
+1. `EX_c1` [ubiquitous] The validator refuses or skips a symlink that resolves outside the
+   repository root, naming the path, as the pack walk already does
+   (ADR-014).
 
 ## Actual behaviour
 

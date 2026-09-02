@@ -36,8 +36,8 @@ spellings, and on Windows neither matches what the caller typed.
 
 ## Expected behaviour
 
-The error names the path the caller gave: `no/such/file.md`, the same
-spelling a finding about that file would carry.
+1. `EX_c1` [ubiquitous] The error names the path the caller gave: `no/such/file.md`, the same
+   spelling a finding about that file would carry.
 
 ## Actual behaviour
 

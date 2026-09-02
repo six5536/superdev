@@ -58,9 +58,9 @@ Not reproducible against a real release yet; the mechanism is:
 
 ## Expected behaviour
 
-`update` moves the pin no further than the newest release this binary can
-actually read, and says so — the same degradation it already performs when
-the source cannot be reached.
+1. `EX_c1` [ubiquitous] `update` moves the pin no further than the newest release this binary can
+   actually read, and says so — the same degradation it already performs when
+   the source cannot be reached.
 
 ## Actual behaviour
 

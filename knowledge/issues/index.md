@@ -1,5 +1,9 @@
 # Issues
 
+Every issue on file, grouped by feature. An issue sits in the folder
+its `lifecycle` names — `unframed/`, `framed/`, `done/` or `wontfix/` —
+and `superdev validate --fix` places it.
+
 ## Externally sourced content packs
 
 * [update can move a pin to a pack format this binary cannot read, and cannot move it back][sokf:issue-001-bug-update-can-pin-an-unreadable-pack-format] - update persisted a moved pin before sync validated it, and a pin never moves backwards, so a content release in a newer format left every later sync and update failing until the manifest was hand-edited; fixed in P005 slice 6, which proves a pin before writing it.
@@ -85,26 +89,26 @@
 [sokf:issue-007-bug-a-pack-source-reaches-git-with-no-scheme-check]: /knowledge/issues/done/issue-007-bug-a-pack-source-reaches-git-with-no-scheme-check.md
 [sokf:issue-008-bug-a-symlinked-file-in-a-pack-is-followed]: /knowledge/issues/done/issue-008-bug-a-symlinked-file-in-a-pack-is-followed.md
 [sokf:issue-009-bug-a-skipped-symlink-says-nothing]: /knowledge/issues/done/issue-009-bug-a-skipped-symlink-says-nothing.md
-[sokf:issue-010-feature-request-index-entries-are-never-checked-against-their-concept]: /knowledge/issues/open/issue-010-feature-request-index-entries-are-never-checked-against-their-concept.md
-[sokf:issue-011-feature-request-index-shape-is-described-but-not-enforced]: /knowledge/issues/open/issue-011-feature-request-index-shape-is-described-but-not-enforced.md
+[sokf:issue-010-feature-request-index-entries-are-never-checked-against-their-concept]: /knowledge/issues/framed/issue-010-feature-request-index-entries-are-never-checked-against-their-concept.md
+[sokf:issue-011-feature-request-index-shape-is-described-but-not-enforced]: /knowledge/issues/framed/issue-011-feature-request-index-shape-is-described-but-not-enforced.md
 [sokf:issue-012-feature-request-five-decidable-findings-only-warn]: /knowledge/issues/done/issue-012-feature-request-five-decidable-findings-only-warn.md
-[sokf:issue-013-chore-the-knowledge-is-called-the-bundle]: /knowledge/issues/open/issue-013-chore-the-knowledge-is-called-the-bundle.md
+[sokf:issue-013-chore-the-knowledge-is-called-the-bundle]: /knowledge/issues/framed/issue-013-chore-the-knowledge-is-called-the-bundle.md
 [sokf:issue-014-chore-the-schema-validator-is-called-format]: /knowledge/issues/done/issue-014-chore-the-schema-validator-is-called-format.md
 [sokf:issue-015-feature-request-every-issue-must-be-a-bug-report]: /knowledge/issues/done/issue-015-feature-request-every-issue-must-be-a-bug-report.md
-[sokf:issue-017-feature-request-the-format-has-no-agent-facing-document]: /knowledge/issues/open/issue-017-feature-request-the-format-has-no-agent-facing-document.md
+[sokf:issue-017-feature-request-the-format-has-no-agent-facing-document]: /knowledge/issues/framed/issue-017-feature-request-the-format-has-no-agent-facing-document.md
 [sokf:issue-018-feature-request-the-schema-layer-checks-sections-and-nothing-else]: /knowledge/issues/done/issue-018-feature-request-the-schema-layer-checks-sections-and-nothing-else.md
 [sokf:issue-019-bug-validate-reads-a-named-file-as-a-skill]: /knowledge/issues/done/issue-019-bug-validate-reads-a-named-file-as-a-skill.md
 [sokf:issue-022-feature-request-a-schemas-worked-example-is-checked-by-nothing]: /knowledge/issues/done/issue-022-feature-request-a-schemas-worked-example-is-checked-by-nothing.md
-[sokf:issue-023-feature-request-a-concept-path-written-outside-the-knowledge-is-checked-by-nothing]: /knowledge/issues/open/issue-023-feature-request-a-concept-path-written-outside-the-knowledge-is-checked-by-nothing.md
+[sokf:issue-023-feature-request-a-concept-path-written-outside-the-knowledge-is-checked-by-nothing]: /knowledge/issues/framed/issue-023-feature-request-a-concept-path-written-outside-the-knowledge-is-checked-by-nothing.md
 [sokf:issue-024-feature-request-the-workflow-cannot-run-unattended]: /knowledge/issues/done/issue-024-feature-request-the-workflow-cannot-run-unattended.md
-[sokf:issue-025-bug-a-claim-never-written-gets-no-lock-hash]: /knowledge/issues/open/issue-025-bug-a-claim-never-written-gets-no-lock-hash.md
-[sokf:issue-026-chore-rehearse-the-driver-on-a-real-feature]: /knowledge/issues/open/issue-026-chore-rehearse-the-driver-on-a-real-feature.md
-[sokf:issue-027-feature-request-the-unattended-run-is-undocumented-for-users]: /knowledge/issues/open/issue-027-feature-request-the-unattended-run-is-undocumented-for-users.md
+[sokf:issue-025-bug-a-claim-never-written-gets-no-lock-hash]: /knowledge/issues/framed/issue-025-bug-a-claim-never-written-gets-no-lock-hash.md
+[sokf:issue-026-chore-rehearse-the-driver-on-a-real-feature]: /knowledge/issues/framed/issue-026-chore-rehearse-the-driver-on-a-real-feature.md
+[sokf:issue-027-feature-request-the-unattended-run-is-undocumented-for-users]: /knowledge/issues/framed/issue-027-feature-request-the-unattended-run-is-undocumented-for-users.md
 [sokf:issue-028-bug-contract-design-commits-before-the-go-ahead]: /knowledge/issues/done/issue-028-bug-contract-design-commits-before-the-go-ahead.md
 [sokf:issue-029-bug-contract-design-writes-verbose-prose]: /knowledge/issues/done/issue-029-bug-contract-design-writes-verbose-prose.md
-[sokf:issue-030-feature-request-filing-an-issue-requires-framing-it]: /knowledge/issues/open/issue-030-feature-request-filing-an-issue-requires-framing-it.md
-[sokf:issue-031-bug-validate-follows-symlinks-out-of-the-repo]: /knowledge/issues/open/issue-031-bug-validate-follows-symlinks-out-of-the-repo.md
-[sokf:issue-032-bug-validate-does-unbounded-work-on-adversarial-input]: /knowledge/issues/open/issue-032-bug-validate-does-unbounded-work-on-adversarial-input.md
+[sokf:issue-030-feature-request-filing-an-issue-requires-framing-it]: /knowledge/issues/framed/issue-030-feature-request-filing-an-issue-requires-framing-it.md
+[sokf:issue-031-bug-validate-follows-symlinks-out-of-the-repo]: /knowledge/issues/framed/issue-031-bug-validate-follows-symlinks-out-of-the-repo.md
+[sokf:issue-032-bug-validate-does-unbounded-work-on-adversarial-input]: /knowledge/issues/framed/issue-032-bug-validate-does-unbounded-work-on-adversarial-input.md
 [sokf:issue-033-bug-two-contracts-escaped-the-modal-sweep]: /knowledge/issues/done/issue-033-bug-two-contracts-escaped-the-modal-sweep.md
 [sokf:issue-034-feature-request-normative-shapes-are-described-but-not-enforced]: /knowledge/issues/done/issue-034-feature-request-normative-shapes-are-described-but-not-enforced.md
 [sokf:issue-035-feature-request-a-contract-does-not-define-its-interface]: /knowledge/issues/done/issue-035-feature-request-a-contract-does-not-define-its-interface.md
@@ -114,12 +118,12 @@
 [sokf:issue-039-bug-validate-fix-refuses-to-refile-under-a-symlinked-root]: /knowledge/issues/done/issue-039-bug-validate-fix-refuses-to-refile-under-a-symlinked-root.md
 [sokf:issue-040-bug-validate-reports-findings-on-a-windows-checkout-that-linux-does-not]: /knowledge/issues/done/issue-040-bug-validate-reports-findings-on-a-windows-checkout-that-linux-does-not.md
 [sokf:issue-041-bug-an-unreadable-named-path-is-reported-in-a-spelling-the-caller-never-typed]: /knowledge/issues/done/issue-041-bug-an-unreadable-named-path-is-reported-in-a-spelling-the-caller-never-typed.md
-[sokf:issue-042-chore-audit-the-path-assertions-that-can-pass-by-accident]: /knowledge/issues/open/issue-042-chore-audit-the-path-assertions-that-can-pass-by-accident.md
+[sokf:issue-042-chore-audit-the-path-assertions-that-can-pass-by-accident]: /knowledge/issues/unframed/issue-042-chore-audit-the-path-assertions-that-can-pass-by-accident.md
 [sokf:issue-043-bug-the-cli-contracts-json-keys-are-bound-by-no-test]: /knowledge/issues/wontfix/issue-043-bug-the-cli-contracts-json-keys-are-bound-by-no-test.md
 [sokf:issue-044-bug-a-drift-test-names-the-direction-for-a-command-and-not-for-a-flag]: /knowledge/issues/wontfix/issue-044-bug-a-drift-test-names-the-direction-for-a-command-and-not-for-a-flag.md
 [sokf:issue-045-feature-request-drift-tests-bind-what-the-contract-declares]: /knowledge/issues/wontfix/issue-045-feature-request-drift-tests-bind-what-the-contract-declares.md
 [sokf:issue-046-chore-audit-the-one-directional-drift-bindings]: /knowledge/issues/wontfix/issue-046-chore-audit-the-one-directional-drift-bindings.md
 [sokf:issue-047-feature-request-a-kinds-definition-form-is-stated-in-prose]: /knowledge/issues/wontfix/issue-047-feature-request-a-kinds-definition-form-is-stated-in-prose.md
 [sokf:issue-048-feature-request-no-step-asks-whether-a-contract-is-bound]: /knowledge/issues/wontfix/issue-048-feature-request-no-step-asks-whether-a-contract-is-bound.md
-[sokf:issue-049-feature-request-a-contract-cannot-point-at-its-definition]: /knowledge/issues/open/issue-049-feature-request-a-contract-cannot-point-at-its-definition.md
+[sokf:issue-049-feature-request-a-contract-cannot-point-at-its-definition]: /knowledge/issues/framed/issue-049-feature-request-a-contract-cannot-point-at-its-definition.md
 [sokf:issue-050-bug-the-exit-code-probe-ends-a-live-unattended-run]: /knowledge/issues/done/issue-050-bug-the-exit-code-probe-ends-a-live-unattended-run.md

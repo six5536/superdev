@@ -44,10 +44,10 @@ contributor meets all 65 with the reflex to tidy them.
 
 ## Expected behaviour
 
-A pre-PR check that exits 1 names work to do. Either the pack carries what the
-live tree carries, so the check is green and `sync` is safe to run; or the
-tree says plainly that these 65 are a known, deliberate divergence with an
-owner and a date, so nobody spends a morning discovering it again.
+1. `EX_c1` [ubiquitous] A pre-PR check that exits 1 names work to do. Either the pack carries what the
+   live tree carries, so the check is green and `sync` is safe to run; or the
+   tree says plainly that these 65 are a known, deliberate divergence with an
+   owner and a date, so nobody spends a morning discovering it again.
 
 ## Actual behaviour
 

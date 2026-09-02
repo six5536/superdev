@@ -77,8 +77,9 @@ sections:
       against this slice; Cases: the slice's test cases, written inline,
       one per line, each naming the keys of the acceptance criteria it
       covers, bare ("covers AC_c1, AC_stale-include") — when the framed
-      issue is a bug, its keyed repro steps (`RS_`) stand in for the
-      criteria, and a chore's done items (`DD_`) likewise.
+      issue is a bug, its keyed repro steps (`RS_`) and expected
+      behaviour (`EX_`) stand in for the criteria, and a chore's done
+      items (`DD_`) likewise.
       A case belongs to exactly one slice — an
       integration or e2e case to the slice that completes its boundary,
       which usually puts the heaviest cases last — and every acceptance

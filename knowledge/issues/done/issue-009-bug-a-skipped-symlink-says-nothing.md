@@ -59,8 +59,8 @@ itself". A skipped link is exactly a pack contributing most of itself.
 
 ## Expected behaviour
 
-Either the link is refused, naming it — the pack root and `pack.toml` already
-are — or the run says which items were dropped and why.
+1. `EX_c1` [ubiquitous] Either the link is refused, naming it — the pack root and `pack.toml` already
+   are — or the run says which items were dropped and why.
 
 ## Actual behaviour
 

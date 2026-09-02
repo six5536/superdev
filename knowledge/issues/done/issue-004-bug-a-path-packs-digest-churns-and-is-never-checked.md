@@ -49,8 +49,8 @@ nothing reports.
 
 ## Expected behaviour
 
-Either the digest is not recorded for a source that is read fresh every run, or
-a digest that does not match the tree is reported.
+1. `EX_c1` [ubiquitous] Either the digest is not recorded for a source that is read fresh every run, or
+   a digest that does not match the tree is reported.
 
 ## Actual behaviour
 

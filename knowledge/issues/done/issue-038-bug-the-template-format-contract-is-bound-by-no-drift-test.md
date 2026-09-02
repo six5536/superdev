@@ -54,10 +54,10 @@ repository implements.
 
 ## Expected behaviour
 
-A test fails naming the difference and its direction, as it does for
-the other eight contracts: a token or a template the binary carries and
-the contract does not declare reports as a `DEFECT`, and one the
-contract declares and the binary lacks reports as `PENDING`.
+1. `EX_c1` [ubiquitous] A test fails naming the difference and its direction, as it does for
+   the other eight contracts: a token or a template the binary carries and
+   the contract does not declare reports as a `DEFECT`, and one the
+   contract declares and the binary lacks reports as `PENDING`.
 
 ## Actual behaviour
 

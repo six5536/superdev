@@ -3,7 +3,7 @@ type: FeatureRequest
 id: issue-049-feature-request-a-contract-cannot-point-at-its-definition
 title: A contract cannot include its definition from source, so every definition is a hand copy kept true by a test
 description: The include block materialises a concept's body and cannot name a source region, so a contract's definition is a hand-written copy of what the code declares, bound by a drift test that exists only because the copy does, and two such copies were found unbound anyway.
-lifecycle: open
+lifecycle: framed
 links:
   - rel: references
     to: contract-010-interface-document-schemas

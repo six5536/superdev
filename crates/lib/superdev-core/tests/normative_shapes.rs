@@ -59,15 +59,34 @@ fn findings_for(path: &str, text: &str) -> Vec<String> {
     findings_of("FeatureRequest", path, text)
 }
 
-/// One feature-request body, with `criteria` as its acceptance criteria.
-fn request(criteria: &str) -> String {
+/// One feature-request body in `lifecycle`, with `criteria` as its
+/// acceptance criteria; a settled one carries its verdict section, as the
+/// tracker's convention puts it.
+fn request_in(lifecycle: &str, criteria: &str) -> String {
     format!(
         "---\ntype: FeatureRequest\nid: issue-999-feature-request-probe\ntitle: t\n\
-         description: d\nlifecycle: open\n---\n\n# Feature: probe\n\n## Summary\n\nA line.\n\n\
+         description: d\nlifecycle: {lifecycle}\n---\n\n# Feature: probe\n\n{}\
+         ## Summary\n\nA line.\n\n\
          ## Motivation\n\nA line.\n\n## Proposed behaviour\n\nA line.\n\n\
          ## Acceptance criteria\n\n{criteria}\n## Alternatives considered\n\n- One.\n\n\
-         ## Scope\n\n- In: one.\n"
+         ## Scope\n\n- In: one.\n",
+        verdict(lifecycle)
     )
+}
+
+/// The verdict section a settled issue opens with, and nothing otherwise.
+fn verdict(lifecycle: &str) -> &'static str {
+    match lifecycle {
+        "done" => "## Resolved\n\nShipped.\n\n",
+        "wontfix" => "## Won't fix\n\nDeclined.\n\n",
+        _ => "",
+    }
+}
+
+/// One framed feature-request body, with `criteria` as its acceptance
+/// criteria.
+fn request(criteria: &str) -> String {
+    request_in("framed", criteria)
 }
 
 /// Covers I034 criterion 4: a criterion that does not open with an EARS
@@ -87,18 +106,18 @@ fn a_criterion_without_its_ears_tag_fails_validate() {
 }
 
 /// Covers I034 criterion 4 and I037 criterion 18: each of the six EARS tags
-/// opens a criterion after its key, and an unsettled criterion reads TBD
-/// after its key — the pattern admits both, and the frame phase is what
-/// retires TBD.
+/// opens a criterion after its key. The `TBD` branch the pattern once
+/// admitted here is gone: an unsettled criterion belongs to an unframed
+/// issue, and `a_framed_request_departing_from_the_form_fails_naming_each`
+/// shows a framed one refusing it (ADR-048).
 #[test]
-fn every_ears_tag_and_a_tbd_criterion_pass() {
+fn every_ears_tag_passes_on_a_framed_criterion() {
     let criteria = "1. `AC_c1` [ubiquitous] THE SYSTEM SHALL do it.\n\
                     2. `AC_c2` [event] WHEN x THE SYSTEM SHALL do it.\n\
                     3. `AC_c3` [state] WHILE x THE SYSTEM SHALL do it.\n\
                     4. `AC_c4` [conditional] IF x THE SYSTEM SHALL do it.\n\
                     5. `AC_c5` [optional] WHERE x THE SYSTEM SHALL do it.\n\
-                    6. `AC_c6` [complex] WHILE x WHEN y THE SYSTEM SHALL do it.\n\
-                    7. `AC_x` TBD — whether it should.\n";
+                    6. `AC_c6` [complex] WHILE x WHEN y THE SYSTEM SHALL do it.\n";
     let found = findings_for("probe.md", &request(criteria));
     assert!(found.is_empty(), "{found:#?}");
 }
@@ -140,25 +159,43 @@ fn a_criterion_departing_from_the_key_form_fails_naming_each_departure() {
     assert_eq!(found.len(), 3, "{found:#?}");
 }
 
-/// One bug-report body, with `steps` as its steps to reproduce.
-fn bug(steps: &str) -> String {
+/// One bug-report body in `lifecycle`, with `steps` as its steps to
+/// reproduce and `expected` as its expected behaviour.
+fn bug_in(lifecycle: &str, steps: &str, expected: &str) -> String {
     format!(
         "---\ntype: BugReport\nid: issue-999-bug-probe\ntitle: t\ndescription: d\n\
-         lifecycle: open\n---\n\n# Bug: probe\n\n## Summary\n\nA line.\n\n\
+         lifecycle: {lifecycle}\n---\n\n# Bug: probe\n\n{}## Summary\n\nA line.\n\n\
          ## Environment\n\n- One.\n\n## Steps to reproduce\n\n{steps}\n\
-         ## Expected behaviour\n\nA line.\n\n## Actual behaviour\n\nA line.\n\n\
+         ## Expected behaviour\n\n{expected}\n## Actual behaviour\n\nA line.\n\n\
          ## Root cause (if known)\n\nA line.\n\n## Proposed fix / workaround\n\n- One.\n\n\
-         ## Regression risk\n\nA line.\n"
+         ## Regression risk\n\nA line.\n",
+        verdict(lifecycle)
     )
 }
 
-/// One chore body, with `done` as its definition of done.
-fn chore(done: &str) -> String {
+/// One framed bug-report body, with `steps` as its steps to reproduce and
+/// one sound expected-behaviour item.
+fn bug(steps: &str) -> String {
+    bug_in(
+        "framed",
+        steps,
+        "1. `EX_c1` [ubiquitous] THE SYSTEM SHALL do it.\n",
+    )
+}
+
+/// One chore body in `lifecycle`, with `done` as its definition of done.
+fn chore_in(lifecycle: &str, done: &str) -> String {
     format!(
         "---\ntype: Chore\nid: issue-999-chore-probe\ntitle: t\ndescription: d\n\
-         lifecycle: open\n---\n\n# Chore: probe\n\n## Summary\n\nA line.\n\n\
-         ## Surfaces\n\n- One.\n\n## Definition of done\n\n{done}\n"
+         lifecycle: {lifecycle}\n---\n\n# Chore: probe\n\n{}## Summary\n\nA line.\n\n\
+         ## Surfaces\n\n- One.\n\n## Definition of done\n\n{done}\n",
+        verdict(lifecycle)
     )
+}
+
+/// One framed chore body, with `done` as its definition of done.
+fn chore(done: &str) -> String {
+    chore_in("framed", done)
 }
 
 /// Covers I037 AC_c18: a repro step and a done item each carry their key
@@ -212,36 +249,339 @@ fn a_repro_step_carries_a_key_and_no_tag() {
     );
 }
 
-/// The three tracker lists a plan case cites and the key prefix each
-/// declares (ADR-046): the heading, the schema that carries it, the list's
-/// marker kind and the prefix.
-const CITED_LISTS: [(&str, &str, &str, &str); 3] = [
+/// Covers I030 AC_unframed-form: under the live schema set an unframed
+/// feature request whose criteria are a plain sentence, a `TBD` and one
+/// keyed item passes; so do an unframed bug whose steps and expected
+/// behaviour are plain sentences and `TBD`s, and an unframed chore whose
+/// done items are — the list kind is all the unframed rule checks (ADR-048).
+#[test]
+fn an_unframed_issue_with_plain_tbd_and_keyed_items_passes() {
+    let criteria = "1. The report is one JSON object.\n\
+                    2. TBD — whether the counts are in it.\n\
+                    3. `AC_error-exit` [event] WHEN a finding is an error THE SYSTEM SHALL exit non-zero.\n";
+    let found = findings_for("probe.md", &request_in("unframed", criteria));
+    assert!(found.is_empty(), "{found:#?}");
+
+    let found = findings_of(
+        "BugReport",
+        "probe.md",
+        &bug_in(
+            "unframed",
+            "1. Run the probe.\n2. TBD — how long to wait.\n",
+            "1. The probe runs.\n2. TBD — whether it reports the wait.\n",
+        ),
+    );
+    assert!(found.is_empty(), "{found:#?}");
+
+    let found = findings_of(
+        "Chore",
+        "probe.md",
+        &chore_in(
+            "unframed",
+            "- The probe runs.\n- TBD — the command that says it is finished.\n",
+        ),
+    );
+    assert!(found.is_empty(), "{found:#?}");
+}
+
+/// Covers I030 AC_framed-form: under the live schema set a framed feature
+/// request with a keyless criterion, a `TBD` criterion and a tagless
+/// criterion fails naming each, and a sound criterion beside them is not
+/// reported.
+#[test]
+fn a_framed_request_departing_from_the_form_fails_naming_each() {
+    let criteria = "1. `AC_c1` [ubiquitous] THE SYSTEM SHALL do it.\n\
+                    2. [event] WHEN the key is missing THE SYSTEM SHALL say so.\n\
+                    3. `AC_open` TBD — whether it should.\n\
+                    4. `AC_tagless` WHEN the tag is missing THE SYSTEM SHALL say so.\n";
+    let found = findings_for("probe.md", &request(criteria));
+    let named = |text: &str| found.iter().filter(|f| f.contains(text)).count();
+    assert_eq!(
+        named("item `2. [event] WHEN the key is missing THE SYSTEM SHALL say so.` carries no key"),
+        1,
+        "{found:#?}"
+    );
+    assert_eq!(
+        named("item `3. `AC_open` TBD — whether it should.` does not match"),
+        1,
+        "{found:#?}"
+    );
+    assert_eq!(
+        named(
+            "item `4. `AC_tagless` WHEN the tag is missing THE SYSTEM SHALL say so.` does not match"
+        ),
+        1,
+        "{found:#?}"
+    );
+    assert!(
+        !found.iter().any(|f| f.contains("AC_c1")),
+        "a sound criterion is not reported: {found:#?}"
+    );
+    assert_eq!(found.len(), 3, "{found:#?}");
+}
+
+/// Covers I030 AC_framed-form: under the live schema set a framed bug whose
+/// Expected behaviour is prose, whose steps include a keyless one and whose
+/// expected behaviour, once a list, includes an untagged `EX_` item fails
+/// naming each; and a framed chore with a keyless done item fails naming
+/// it.
+#[test]
+fn a_framed_bug_or_chore_departing_from_the_form_fails_naming_each() {
+    let found = findings_of(
+        "BugReport",
+        "probe.md",
+        &bug_in(
+            "framed",
+            "1. `RS_c1` Run the probe.\n2. Wait 30 seconds.\n",
+            "The probe runs to completion.\n",
+        ),
+    );
+    let named = |text: &str| found.iter().filter(|f| f.contains(text)).count();
+    assert_eq!(
+        named("section \"Expected behaviour\" carries no numbered item"),
+        1,
+        "{found:#?}"
+    );
+    assert_eq!(
+        named("section \"Steps to reproduce\" item `2. Wait 30 seconds.` carries no key"),
+        1,
+        "{found:#?}"
+    );
+    assert_eq!(found.len(), 2, "{found:#?}");
+
+    let found = findings_of(
+        "BugReport",
+        "probe.md",
+        &bug_in(
+            "framed",
+            "1. `RS_c1` Run the probe.\n",
+            "1. `EX_c1` [ubiquitous] THE SYSTEM SHALL run.\n\
+             2. `EX_c2` THE SYSTEM SHALL report the wait.\n\
+             3. `EX_c3` TBD — whether it reports the wait.\n",
+        ),
+    );
+    let named = |text: &str| found.iter().filter(|f| f.contains(text)).count();
+    assert_eq!(
+        named("item `2. `EX_c2` THE SYSTEM SHALL report the wait.` does not match"),
+        1,
+        "{found:#?}"
+    );
+    assert_eq!(
+        named("item `3. `EX_c3` TBD — whether it reports the wait.` does not match"),
+        1,
+        "{found:#?}"
+    );
+    assert_eq!(found.len(), 2, "{found:#?}");
+
+    let found = findings_of(
+        "Chore",
+        "probe.md",
+        &chore("- `DD_c1` The probe runs.\n- The command that says it is finished.\n"),
+    );
+    assert_eq!(found.len(), 1, "{found:#?}");
+    assert!(
+        found[0].contains("\"Definition of done\"")
+            && found[0].contains("item `- The command that says it is finished.` carries no key"),
+        "{found:#?}"
+    );
+}
+
+/// Covers I030 AC_settled-form: under the live schema set a done and a
+/// wontfix issue of each kind are held to the framed rules — a keyless
+/// criterion, a prose Expected behaviour and a keyless done item each fail
+/// naming the fault — and the sound framed body of each kind passes in
+/// both states.
+#[test]
+fn a_done_and_a_wontfix_issue_are_held_to_the_framed_rules() {
+    for state in ["done", "wontfix"] {
+        let found = findings_for(
+            "probe.md",
+            &request_in(state, "1. `AC_c1` [ubiquitous] THE SYSTEM SHALL do it.\n"),
+        );
+        assert!(found.is_empty(), "{state}: {found:#?}");
+        let found = findings_for(
+            "probe.md",
+            &request_in(state, "1. THE SYSTEM SHALL do it.\n"),
+        );
+        assert_eq!(found.len(), 1, "{state}: {found:#?}");
+        assert!(
+            found[0].contains("item `1. THE SYSTEM SHALL do it.` carries no key"),
+            "{state}: {found:#?}"
+        );
+
+        let steps = "1. `RS_c1` Run the probe.\n";
+        let found = findings_of(
+            "BugReport",
+            "probe.md",
+            &bug_in(
+                state,
+                steps,
+                "1. `EX_c1` [ubiquitous] THE SYSTEM SHALL run.\n",
+            ),
+        );
+        assert!(found.is_empty(), "{state}: {found:#?}");
+        let found = findings_of("BugReport", "probe.md", &bug_in(state, steps, "It runs.\n"));
+        assert_eq!(found.len(), 1, "{state}: {found:#?}");
+        assert!(
+            found[0].contains("section \"Expected behaviour\" carries no numbered item"),
+            "{state}: {found:#?}"
+        );
+
+        let found = findings_of(
+            "Chore",
+            "probe.md",
+            &chore_in(state, "- `DD_c1` It runs.\n"),
+        );
+        assert!(found.is_empty(), "{state}: {found:#?}");
+        let found = findings_of("Chore", "probe.md", &chore_in(state, "- It runs.\n"));
+        assert_eq!(found.len(), 1, "{state}: {found:#?}");
+        assert!(
+            found[0].contains("item `- It runs.` carries no key"),
+            "{state}: {found:#?}"
+        );
+    }
+}
+
+/// The four tracker lists a plan case cites and the key prefix each
+/// declares (ADR-046, ADR-048): the heading, the schema that carries it,
+/// the list's marker kind, the prefix, and whether the item is a
+/// requirement — an EARS tag follows the key of one that is, and is
+/// forbidden after the key of one that is not.
+const CITED_LISTS: [(&str, &str, &str, &str, bool); 4] = [
     (
         "Acceptance criteria",
         "feature-request.md",
         "numbered",
         "AC_",
+        true,
     ),
-    ("Steps to reproduce", "bug-report.md", "numbered", "RS_"),
-    ("Definition of done", "chore.md", "bullet", "DD_"),
+    (
+        "Steps to reproduce",
+        "bug-report.md",
+        "numbered",
+        "RS_",
+        false,
+    ),
+    (
+        "Expected behaviour",
+        "bug-report.md",
+        "numbered",
+        "EX_",
+        true,
+    ),
+    ("Definition of done", "chore.md", "bullet", "DD_", false),
 ];
 
-/// Covers I037 AC_c17, AC_c18 and AC_c19: the three tracker schemas declare
-/// `item-key` with their prefix on the list a plan case cites — the
-/// criterion's `item-pattern` admitting the key before the tag or `TBD`,
-/// the step's and the done item's rule binding the key alone — and each
-/// rule and the plan schema's case rule state the citation in keys, in the
-/// live tree and in the pack mirror.
+/// The tracker's four lifecycle values, in the order the schemas declare
+/// them (ADR-048).
+const LIFECYCLES: [&str; 4] = ["unframed", "framed", "done", "wontfix"];
+
+/// The three tracker schemas.
+const TRACKER_SCHEMAS: [&str; 3] = ["feature-request.md", "bug-report.md", "chore.md"];
+
+/// The `variants` line the framed rule carries.
+const FRAMED_VARIANTS: &str = "variants: [framed, done, wontfix]";
+
+/// The `variants` line the unframed rule carries.
+const UNFRAMED_VARIANTS: &str = "variants: [unframed]";
+
+/// Covers I030 AC_lifecycle-values and AC_one-schema-per-kind: each tracker
+/// schema declares the four values, `variant-key: lifecycle`, and one
+/// example per value, in the live tree and in the pack mirror; every
+/// example passes its own schema's check. `--fix` filing by the value is
+/// `validate::fix`'s refile test, and the live tree's filing is
+/// `every_issue_on_file_sits_in_its_lifecycles_folder`.
+#[test]
+fn every_tracker_schema_varies_by_the_four_lifecycle_values() {
+    for root in ["knowledge/schemas", "pack/knowledge/schemas"] {
+        for schema in TRACKER_SCHEMAS {
+            let path = format!("{root}/{schema}");
+            let text = std::fs::read_to_string(repo(&path)).unwrap();
+            assert!(
+                text.contains("\nvariant-key: lifecycle\n"),
+                "{path}: lifecycle is the variant key"
+            );
+            assert!(
+                text.contains("    enum: [unframed, framed, done, wontfix]\n"),
+                "{path}: lifecycle admits the four values"
+            );
+            let block = fenced_block(&text, "yaml").expect("the schema carries a yaml contract");
+            let y: serde_yaml_ng::Value = serde_yaml_ng::from_str(&block).unwrap();
+            let keys: Vec<&str> = y["example"]
+                .as_mapping()
+                .unwrap_or_else(|| panic!("{path}: example is keyed by lifecycle"))
+                .keys()
+                .map(|k| k.as_str().unwrap())
+                .collect();
+            assert_eq!(keys, LIFECYCLES, "{path}: one example per value");
+        }
+    }
+    let tracker: Vec<(String, String)> = schemas("knowledge/schemas")
+        .into_iter()
+        .filter(|(name, _)| TRACKER_SCHEMAS.contains(&name.as_str()))
+        .collect();
+    assert_eq!(tracker.len(), 3);
+    let found = superdev_core::validate::schema::document::check_examples(&tracker);
+    assert!(found.is_empty(), "{found:#?}");
+}
+
+/// Covers I037 AC_c17, AC_c18 and AC_c19 and I030 AC_unframed-form and
+/// AC_framed-form as declared: each cited list is declared twice — the
+/// unframed rule with its list kind and no key or pattern, the framed rule
+/// (framed, done, wontfix) with `item-key` for its prefix, the tag required
+/// after the key of a requirement and forbidden after the key of a step or
+/// a done item, and no `TBD` branch — and each framed rule and the plan
+/// schema's case rule state the citation in keys, in the live tree and in
+/// the pack mirror.
 #[test]
 fn every_cited_list_declares_its_key_and_the_plan_cites_keys() {
     for root in ["knowledge/schemas", "pack/knowledge/schemas"] {
-        for (heading, schema, _, prefix) in CITED_LISTS {
+        for (heading, schema, kind, prefix, requirement) in CITED_LISTS {
             let path = format!("{root}/{schema}");
             let text = std::fs::read_to_string(repo(&path)).unwrap();
-            let rule = rule_for(&text, heading);
+            let rules = rules_for(&text, heading);
+            assert_eq!(
+                rules.len(),
+                2,
+                "{path}: {heading} is declared once per state"
+            );
+            let content = format!("content: {kind}-list");
+            let unframed = rules
+                .iter()
+                .find(|rule| rule.contains(UNFRAMED_VARIANTS))
+                .unwrap_or_else(|| panic!("{path}: {heading} has no unframed rule"));
+            assert!(
+                unframed.contains(&content)
+                    && !unframed.contains("item-key")
+                    && !unframed.contains("item-pattern")
+                    && !unframed.contains("item-prohibited-pattern"),
+                "{path}: the unframed {heading} binds its list kind alone: {unframed}"
+            );
+            let framed = rules
+                .iter()
+                .find(|rule| rule.contains(FRAMED_VARIANTS))
+                .unwrap_or_else(|| panic!("{path}: {heading} has no framed rule"));
+            assert!(
+                framed.contains(&content),
+                "{path}: {heading} keeps its kind"
+            );
             let key = format!("item-key: '^`({prefix}[a-z][a-z0-9]*(?:-[a-z0-9]+)*)`'");
-            assert!(rule.contains(&key), "{path}: {heading} lacks `{key}`");
-            let description = folded(&rule);
+            assert!(framed.contains(&key), "{path}: {heading} lacks `{key}`");
+            let tag = "\\[(ubiquitous|event|state|conditional|optional|complex)\\]";
+            if requirement {
+                let tagged = format!("item-pattern: '^`{prefix}[a-z0-9-]+` {tag} '");
+                assert!(
+                    framed.contains(&tagged) && !framed.contains("TBD — )"),
+                    "{path}: {heading} requires the tag after the key and admits no TBD: {framed}"
+                );
+            } else {
+                let tagged = format!("item-prohibited-pattern: '^`{prefix}[a-z0-9-]+` {tag}'");
+                assert!(
+                    !framed.contains("item-pattern") && framed.contains(&tagged),
+                    "{path}: {heading} binds the key alone and forbids a tag after it: {framed}"
+                );
+            }
+            let description = folded(framed);
             assert!(
                 description.contains("bare key where the issue is the subject")
                     && description.contains("the issue's id followed by the key elsewhere"),
@@ -252,35 +592,6 @@ fn every_cited_list_declares_its_key_and_the_plan_cites_keys() {
                 "{path}: {heading} does not name the sweep's slug: {description}"
             );
         }
-        let request = std::fs::read_to_string(repo(&format!("{root}/feature-request.md"))).unwrap();
-        let criteria = rule_for(&request, "Acceptance criteria");
-        assert!(
-            criteria.contains(
-                "item-pattern: '^`AC_[a-z][a-z0-9]*(?:-[a-z0-9]+)*` (\\[(ubiquitous|event|state|conditional|optional|complex)\\] |TBD — )'"
-            ),
-            "{root}: the criterion's key precedes its tag or its TBD: {criteria}"
-        );
-        for schema in ["bug-report.md", "chore.md"] {
-            let text = std::fs::read_to_string(repo(&format!("{root}/{schema}"))).unwrap();
-            let (heading, _, _, prefix) = CITED_LISTS
-                .iter()
-                .find(|(_, s, _, _)| *s == schema)
-                .unwrap();
-            let rule = rule_for(&text, heading);
-            let tagged = format!(
-                "item-prohibited-pattern: '^`{prefix}[a-z0-9-]+` \\[(ubiquitous|event|state|conditional|optional|complex)\\]'"
-            );
-            assert!(
-                !rule.contains("item-pattern") && rule.contains(&tagged),
-                "{root}/{schema}: {heading} binds the key alone and forbids a tag after it: {rule}"
-            );
-        }
-        let bug_schema = std::fs::read_to_string(repo(&format!("{root}/bug-report.md"))).unwrap();
-        let expected = rule_for(&bug_schema, "Expected behaviour");
-        assert!(
-            expected.contains("content: prose") && !expected.contains("item-key"),
-            "{root}: Expected behaviour stays prose with no key (plan-025, deferred)"
-        );
         let plan = std::fs::read_to_string(repo(&format!("{root}/feature-plan.md"))).unwrap();
         let slice = plan
             .split("  - heading-pattern: '^Slice \\d+: .+$'\n")
@@ -291,7 +602,7 @@ fn every_cited_list_declares_its_key_and_the_plan_cites_keys() {
         for phrase in [
             "naming the keys of the acceptance criteria it covers",
             "\"covers AC_c1, AC_stale-include\"",
-            "keyed repro steps (`RS_`)",
+            "keyed repro steps (`RS_`) and expected behaviour (`EX_`)",
         ] {
             assert!(
                 slice.contains(phrase),
@@ -305,69 +616,170 @@ fn every_cited_list_declares_its_key_and_the_plan_cites_keys() {
     }
 }
 
-/// Covers I037 AC_c20: every issue on file carries a key on each
-/// top-level item of the lists a plan case cites — `AC_` on a
-/// feature-request's criteria, `RS_` on a bug's repro steps, `DD_` on a
-/// chore's definition of done — the sweep's proof, read straight from the
-/// tracker rather than through the schema.
-#[test]
-fn every_issue_on_file_carries_a_key_on_each_cited_item() {
-    let mut keyed = 0;
-    let mut issues = 0;
-    for state in ["open", "done", "wontfix"] {
+/// Every issue on file: its folder, its file name and its text, read
+/// straight from the tracker's four lifecycle folders.
+fn issues_on_file() -> Vec<(&'static str, String, String)> {
+    let mut out = Vec::new();
+    for state in LIFECYCLES {
         let dir = repo(&format!("knowledge/issues/{state}"));
         let Ok(entries) = std::fs::read_dir(&dir) else {
             continue;
         };
         for entry in entries {
             let path = entry.unwrap().path();
-            let name = path.file_name().unwrap().to_str().unwrap().to_string();
             if path.extension().is_none_or(|e| e != "md") {
                 continue;
             }
-            issues += 1;
+            let name = path.file_name().unwrap().to_str().unwrap().to_string();
             let text = same(&std::fs::read_to_string(&path).unwrap());
-            let mut section: Option<(&str, &str)> = None;
-            let mut fenced = false;
-            for line in text.lines() {
-                if line.trim_start().starts_with("```") {
-                    fenced = !fenced;
-                    continue;
-                }
-                if fenced {
-                    continue;
-                }
-                if line.starts_with("# ") || line.starts_with("## ") {
-                    section = CITED_LISTS
-                        .iter()
-                        .find(|(heading, ..)| line == format!("## {heading}"))
-                        .map(|(_, _, kind, prefix)| (*kind, *prefix));
-                    continue;
-                }
-                let Some((kind, prefix)) = section else {
-                    continue;
-                };
-                let item = match kind {
-                    "numbered" => {
-                        let digits = line.len()
-                            - line.trim_start_matches(|c: char| c.is_ascii_digit()).len();
-                        (digits > 0 && line[digits..].starts_with(". "))
-                            .then(|| &line[digits + 2..])
-                    }
-                    _ => line.strip_prefix("- "),
-                };
-                if let Some(item) = item {
-                    assert!(
-                        item.starts_with(&format!("`{prefix}")),
-                        "{name}: item `{line}` carries no {prefix} key"
-                    );
-                    keyed += 1;
-                }
-            }
+            out.push((state, name, text));
         }
     }
-    assert!(issues >= 50, "the tracker was read: {issues}");
+    out.sort_by(|a, b| a.1.cmp(&b.1));
+    out
+}
+
+/// The `lifecycle` an issue's frontmatter declares.
+fn lifecycle_of(text: &str) -> Option<&str> {
+    text.strip_prefix("---\n")?
+        .split("\n---\n")
+        .next()?
+        .lines()
+        .find_map(|line| line.strip_prefix("lifecycle: "))
+        .map(str::trim)
+}
+
+/// Every top-level item of every cited list in an issue's body, with the
+/// list's prefix and whether the item is a requirement; a fenced block is
+/// skipped.
+fn cited_items(text: &str) -> Vec<(String, &'static str, bool)> {
+    let mut items = Vec::new();
+    let mut section: Option<(&str, &str, bool)> = None;
+    let mut fenced = false;
+    for line in text.lines() {
+        if line.trim_start().starts_with("```") {
+            fenced = !fenced;
+            continue;
+        }
+        if fenced {
+            continue;
+        }
+        if line.starts_with("# ") || line.starts_with("## ") {
+            section = CITED_LISTS
+                .iter()
+                .find(|(heading, ..)| line == format!("## {heading}"))
+                .map(|(_, _, kind, prefix, requirement)| (*kind, *prefix, *requirement));
+            continue;
+        }
+        let Some((kind, prefix, requirement)) = section else {
+            continue;
+        };
+        let item = match kind {
+            "numbered" => {
+                let digits =
+                    line.len() - line.trim_start_matches(|c: char| c.is_ascii_digit()).len();
+                (digits > 0 && line[digits..].starts_with(". ")).then(|| &line[digits + 2..])
+            }
+            _ => line.strip_prefix("- "),
+        };
+        if let Some(item) = item {
+            items.push((item.to_string(), prefix, requirement));
+        }
+    }
+    items
+}
+
+/// Whether `item` opens with a key of `prefix` and, where `requirement`,
+/// an EARS tag after it.
+fn keyed_and_tagged(item: &str, prefix: &str, requirement: bool) -> bool {
+    if !item.starts_with(&format!("`{prefix}")) {
+        return false;
+    }
+    let after_key = item.split_once("` ").map_or("", |(_, rest)| rest);
+    !requirement || (after_key.starts_with('[') && after_key.contains("] "))
+}
+
+/// Covers I037 AC_c20 and I030 AC_sweep: every framed, done or wontfix
+/// issue on file carries a key on each top-level item of the lists a plan
+/// case cites — `AC_` on a feature-request's criteria, `RS_` on a bug's
+/// repro steps, `EX_` on its expected behaviour, `DD_` on a chore's
+/// definition of done — and an EARS tag after the key of each `AC_` and
+/// `EX_` item; the sweep's proof, read straight from the tracker rather
+/// than through the schema. An unframed issue's items are read and not
+/// held to the form (ADR-048).
+#[test]
+fn every_issue_on_file_carries_a_key_on_each_cited_item() {
+    let mut keyed = 0;
+    let mut unframed = 0;
+    let issues = issues_on_file();
+    for (state, name, text) in &issues {
+        for (item, prefix, requirement) in cited_items(text) {
+            if *state == "unframed" {
+                unframed += 1;
+                continue;
+            }
+            assert!(
+                keyed_and_tagged(&item, prefix, requirement),
+                "{name}: item `{item}` carries no {prefix} key{}",
+                if requirement { " and EARS tag" } else { "" }
+            );
+            keyed += 1;
+        }
+    }
+    assert!(issues.len() >= 50, "the tracker was read: {}", issues.len());
     assert!(keyed >= 200, "the tracker's cited items were read: {keyed}");
+    assert!(
+        unframed >= 1,
+        "an unframed issue's items were read: {unframed}"
+    );
+}
+
+/// Covers I030 AC_sweep: every issue on file sits in the folder its
+/// `lifecycle` names; I042, the one open issue that kept a `TBD` item, is
+/// `unframed`, and I030 — framed before the sweep, with no `TBD` left — is
+/// `framed`; and every bug report's Expected behaviour is a numbered list
+/// whose items open with `EX_c1`, `EX_c2`, … and an EARS tag.
+#[test]
+fn every_issue_on_file_sits_in_its_lifecycles_folder() {
+    let issues = issues_on_file();
+    let mut bugs = 0;
+    for (state, name, text) in &issues {
+        assert_eq!(
+            lifecycle_of(text),
+            Some(*state),
+            "{name}: filed under {state}/"
+        );
+        if name.starts_with("issue-042-") {
+            assert_eq!(*state, "unframed", "{name}");
+        }
+        if name.starts_with("issue-030-") {
+            assert_eq!(*state, "framed", "{name}");
+        }
+        // The kind is the id's segment after the number: I015 names "a bug
+        // report" in its slug and is a feature request.
+        if !name.starts_with("issue-") || &name[10..14] != "bug-" {
+            continue;
+        }
+        bugs += 1;
+        let expected: Vec<String> = cited_items(text)
+            .into_iter()
+            .filter(|(_, prefix, _)| *prefix == "EX_")
+            .map(|(item, ..)| item)
+            .collect();
+        assert!(
+            !expected.is_empty(),
+            "{name}: Expected behaviour carries no numbered item"
+        );
+        for (n, item) in expected.iter().enumerate() {
+            let key = format!("EX_c{}", n + 1);
+            assert!(
+                item.starts_with(&format!("`{key}` ")) && keyed_and_tagged(item, "EX_", true),
+                "{name}: expected-behaviour item `{item}` is not keyed `{key}` and tagged"
+            );
+        }
+    }
+    assert!(issues.len() >= 50, "the tracker was read: {}", issues.len());
+    assert!(bugs >= 24, "the tracker's bug reports were read: {bugs}");
 }
 
 /// Covers I034 criteria 4 and 6: every feature-request on file conforms, in
@@ -377,42 +789,41 @@ fn every_feature_request_on_file_conforms() {
     let (set, load) = SchemaSet::load(&schemas("knowledge/schemas"));
     assert!(load.is_empty(), "{load:#?}");
     let mut checked = 0;
-    for state in ["open", "done", "wontfix"] {
-        let dir = repo(&format!("knowledge/issues/{state}"));
-        let Ok(entries) = std::fs::read_dir(&dir) else {
+    for (_, name, text) in issues_on_file() {
+        if !name.contains("-feature-request-") {
             continue;
-        };
-        for entry in entries {
-            let path = entry.unwrap().path();
-            let name = path.file_name().unwrap().to_str().unwrap().to_string();
-            if !name.contains("-feature-request-") {
-                continue;
-            }
-            let text = std::fs::read_to_string(&path).unwrap();
-            let doc = Document {
-                path: &name,
-                text: &text,
-                doc_type: Some("FeatureRequest"),
-            };
-            let found = check_documents(&[doc], &set);
-            assert!(found.is_empty(), "{name}: {found:#?}");
-            checked += 1;
         }
+        let doc = Document {
+            path: &name,
+            text: &text,
+            doc_type: Some("FeatureRequest"),
+        };
+        let found = check_documents(&[doc], &set);
+        assert!(found.is_empty(), "{name}: {found:#?}");
+        checked += 1;
     }
     assert!(checked >= 10, "the tracker's requests were read: {checked}");
 }
 
 /// The declaration ships: the live schema and the pack mirror carry the same
-/// EARS pattern, so a managed repository is held to it too. The pattern is
-/// the keyed one of ADR-046 — the `AC_` key before the tag or the `TBD` —
-/// which replaced the tag-first pattern of ADR-031 in plan-025 slice 7.
+/// EARS patterns, so a managed repository is held to them too. The criterion's
+/// pattern is the keyed one of ADR-046 — the `AC_` key before the tag — on
+/// the framed rule, with the `TBD` branch of plan-025 slice 7 retired by
+/// ADR-048; the expected-behaviour pattern is its `EX_` twin.
 #[test]
 fn the_ears_declaration_ships_to_managed_repositories() {
-    let pattern = "item-pattern: '^`AC_[a-z][a-z0-9]*(?:-[a-z0-9]+)*` \
-                   (\\[(ubiquitous|event|state|conditional|optional|complex)\\] |TBD — )'";
-    for root in ["knowledge/schemas", "pack/knowledge/schemas"] {
-        let text = std::fs::read_to_string(repo(&format!("{root}/feature-request.md"))).unwrap();
-        assert!(text.contains(pattern), "{root} declares the EARS pattern");
+    let tag = "\\[(ubiquitous|event|state|conditional|optional|complex)\\]";
+    for (schema, prefix) in [("feature-request.md", "AC_"), ("bug-report.md", "EX_")] {
+        let pattern =
+            format!("item-pattern: '^`{prefix}[a-z0-9-]+` {tag} '\n    {FRAMED_VARIANTS}\n");
+        for root in ["knowledge/schemas", "pack/knowledge/schemas"] {
+            let text = same(&std::fs::read_to_string(repo(&format!("{root}/{schema}"))).unwrap());
+            assert!(
+                text.contains(&pattern),
+                "{root}/{schema} declares the {prefix} EARS pattern on the framed rule"
+            );
+            assert!(!text.contains("TBD — )"), "{root}/{schema} admits no TBD");
+        }
     }
 }
 
@@ -455,18 +866,28 @@ fn contract_schema_copies() -> [(String, String); 2] {
     })
 }
 
-/// The section rule for `heading` in the contract schema, as written.
+/// The section rule for `heading` in a schema, as written — the first,
+/// where a heading is declared once per variant (ADR-049).
 fn rule_for(schema: &str, heading: &str) -> String {
+    rules_for(schema, heading)
+        .into_iter()
+        .next()
+        .unwrap_or_else(|| panic!("no rule for {heading}"))
+}
+
+/// Every section rule for `heading` in a schema, in declared order.
+fn rules_for(schema: &str, heading: &str) -> Vec<String> {
     let schema = same(schema);
     let anchor = format!("  - heading: \"{heading}\"\n");
-    let start = schema
-        .find(&anchor)
-        .unwrap_or_else(|| panic!("no rule for {heading}"))
-        + anchor.len();
-    let rest = &schema[start..];
-    rest.find("\n  - heading")
-        .map_or(rest, |end| &rest[..end])
-        .to_string()
+    schema
+        .match_indices(&anchor)
+        .map(|(at, _)| {
+            let rest = &schema[at + anchor.len()..];
+            rest.find("\n  - heading")
+                .map_or(rest, |end| &rest[..end])
+                .to_string()
+        })
+        .collect()
 }
 
 /// Covers I034 criterion 7, I049 criterion 8 and I037 criteria 1 and 11:

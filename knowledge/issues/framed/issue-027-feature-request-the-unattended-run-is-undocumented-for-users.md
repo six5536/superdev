@@ -3,7 +3,7 @@ type: FeatureRequest
 id: issue-027-feature-request-the-unattended-run-is-undocumented-for-users
 title: The README says nothing about the unattended run
 description: The run verbs, the Stop hook and /execute-feature-plan exist on the CLI, in the man page and in the workflow skills, but the README never mentions them, so a user cannot discover unattended delivery.
-lifecycle: open
+lifecycle: framed
 links:
   - rel: references
     to: issue-024-feature-request-the-workflow-cannot-run-unattended

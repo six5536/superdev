@@ -3,7 +3,7 @@ type: FeatureRequest
 id: issue-023-feature-request-a-concept-path-written-outside-the-knowledge-is-checked-by-nothing
 title: A skill naming a concept by path breaks silently when that concept moves, because link checking stops at the knowledge directory
 description: P010 made a link inside the SOKF knowledge survive a rename, but the eleven concept paths written in skills and agent files are checked by nothing, so the failure P010 removed from the knowledge still stands one directory away.
-lifecycle: open
+lifecycle: framed
 links:
   - rel: relates-to
     to: plan-010-adhoc-links-address-ids

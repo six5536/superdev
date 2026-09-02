@@ -42,16 +42,16 @@ The phase interviews the user on each decision as it is made and
 commits only after the user has approved the complete change set. As
 criteria:
 
-1. [event] WHEN a decision is to be recorded as an ADR, THE SYSTEM
+1. `EX_c1` [event] WHEN a decision is to be recorded as an ADR, THE SYSTEM
    SHALL put the decision and its alternatives to the user before
    filing it, whether or not the session sees the decision contested.
-2. [event] WHEN the contract and ADR edits are written, THE SYSTEM
+2. `EX_c2` [event] WHEN the contract and ADR edits are written, THE SYSTEM
    SHALL present the complete change set to the user and request
    approval before committing.
-3. [unwanted] IF the user names rework, THEN THE SYSTEM SHALL apply
+3. `EX_c3` [conditional] IF the user names rework, THEN THE SYSTEM SHALL apply
    the rework and present the revised change set again before
    committing.
-4. [unwanted] IF the user withholds approval, THEN THE SYSTEM SHALL
+4. `EX_c4` [conditional] IF the user withholds approval, THEN THE SYSTEM SHALL
    leave the edits uncommitted on the feature branch.
 
 ## Actual behaviour

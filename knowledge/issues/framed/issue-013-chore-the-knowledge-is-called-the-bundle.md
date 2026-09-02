@@ -3,7 +3,7 @@ type: Chore
 id: issue-013-chore-the-knowledge-is-called-the-bundle
 title: The SOKF knowledge is called "the bundle" on every surface, and the word describes nothing
 description: The specification, the documents and the CLI are clear of the word, but "bundle" remains in 365 places inside crates/ — load_bundle, bundle_dir, BundleManifest, bundle_root — where it tells a reader nothing about a directory of markdown the repository owns.
-lifecycle: open
+lifecycle: framed
 ---
 
 # Chore: the SOKF knowledge is called "the bundle"
