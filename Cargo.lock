@@ -350,9 +350,9 @@ checksum = "c8d4a3bb8b1e0c1050499d1815f5ab16d04f0959b233085fb31653fbfc9d98f9"
 
 [[package]]
 name = "clap_mangen"
-version = "0.3.2"
+version = "0.3.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c630ddc90572b3d9abd3f887f0007b4e048faf5c5a59ae607f8ac1c5e3790873"
+checksum = "211d617eaa4b735c96c9e0228fcbdb5120ef623f2b8cb67ffb84c3e02dbc28a4"
 dependencies = [
  "clap",
  "roff",
@@ -729,7 +729,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "39cab71617ae0d63f51a36d69f866391735b51691dbda63cf6f96d042b63efeb"
 dependencies = [
  "libc",
- "windows-sys 0.61.2",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]
@@ -1123,6 +1123,8 @@ checksum = "d466e9454f08e4a911e14806c24e16fba1b4c121d1ea474396f396069cf949d9"
 dependencies = [
  "equivalent",
  "hashbrown 0.17.1",
+ "serde",
+ "serde_core",
 ]
 
 [[package]]
@@ -1711,13 +1713,14 @@ dependencies = [
 
 [[package]]
 name = "rmcp"
-version = "3.1.2"
+version = "3.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c8dddc5b1924b9a59fba420166160ca2c4663a4e01803e52eda33070f56d63c8"
+checksum = "42b6914fac0be956fe704a38239c3f44a9f841d1b06a5713d2f638065593f5b5"
 dependencies = [
  "base64 0.23.1",
  "chrono",
  "futures",
+ "indexmap",
  "pastey",
  "pin-project-lite",
  "rmcp-macros",
@@ -1734,9 +1737,9 @@ dependencies = [
 
 [[package]]
 name = "rmcp-macros"
-version = "3.1.2"
+version = "3.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6898e24cd16342b59bfa8a53c2c04b9cf62fc8a2cfea57b9c038b09984bfc521"
+checksum = "cdf1c49bd4d52014b94db0877410db273c2008f01628b0252a2e9460ad9b7fda"
 dependencies = [
  "darling 0.24.0",
  "proc-macro2",
@@ -1777,7 +1780,7 @@ dependencies = [
  "errno",
  "libc",
  "linux-raw-sys",
- "windows-sys 0.61.2",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]
@@ -2249,10 +2252,10 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "32497e9a4c7b38532efcdebeef879707aa9f794296a4f0244f6f69e9bc8574bd"
 dependencies = [
  "fastrand",
- "getrandom 0.4.3",
+ "getrandom 0.3.4",
  "once_cell",
  "rustix",
- "windows-sys 0.61.2",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]
