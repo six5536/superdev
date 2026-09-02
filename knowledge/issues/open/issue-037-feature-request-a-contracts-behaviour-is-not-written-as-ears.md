@@ -116,9 +116,9 @@ names the section and the item, as the criterion check's does.
 
 A criterion carries a key the same way, before its tag or its `TBD`,
 in every list a plan case cites — `AC_` on a feature-request's
-Acceptance criteria, `RS_` and `EX_` on a bug-report's Steps to
-reproduce and Expected behaviour, `DD_` on a chore's Definition of
-done — and a plan case names the keys it covers, bare. A repro step or
+Acceptance criteria, `RS_` on a bug-report's Steps to reproduce,
+`DD_` on a chore's Definition of done — and a plan case names the keys
+it covers, bare. A repro step or
 an expected behaviour carries the key and no tag. The list stays
 numbered for reading order; the key is the identity, cited bare where
 the issue is the subject and after the issue's id elsewhere. Every
@@ -186,8 +186,8 @@ nothing left to convert by hand.
     under Unreleased.
 17. `AC_c17` [ubiquitous] The feature-request, bug-report and chore schemas
     SHALL declare a key on every item of the lists a plan case cites
-    — `AC_` on Acceptance criteria; `RS_` on Steps to reproduce and
-    `EX_` on Expected behaviour; `DD_` on Definition of done — of the
+    — `AC_` on Acceptance criteria; `RS_` on Steps to reproduce;
+    `DD_` on Definition of done — of the
     form criterion 3 names with that prefix, unique within the issue,
     and a missing, malformed or duplicate key SHALL be an error as
     criteria 2 to 4 report one.
@@ -288,8 +288,13 @@ contract one promise per verb. The tracker sweep keyed the fifty issues
 on file: 141 criteria `AC_c<n>`, 72 repro steps `RS_c<n>`, 22 done
 items `DD_c<n>`, no settled record reworded beyond the key; plan-025's
 33 case citations were rewritten to keys. `EX_` on Expected behaviour
-is deferred to contract-design, since the section is prose in the
-bug-report schema and in 21 of the 24 bug reports on file.
+was deferred, since the section is prose in the bug-report schema and
+in 21 of the 24 bug reports on file; the owner settled it the same
+day: an issue's lifecycle will distinguish framed from unframed, and a
+framed issue's behaviour and criteria are keyed EARS items — `EX_`
+lands there, under
+[I030][sokf:issue-030-feature-request-filing-an-issue-requires-framing-it].
+`AC_c17` was narrowed to the three lists this feature keyed.
 
 <!-- sokf:links -->
 [sokf:adr-031-ears-criteria-are-checked-by-item-pattern]: /knowledge/adrs/active/adr-031-ears-criteria-are-checked-by-item-pattern.md

@@ -327,16 +327,26 @@ rebuild per edit.
   list for new reports, which needs a lifecycle variant or a sweep —
   or is `EX_` withdrawn from ADR-046? Blocks nothing; returns to
   contract-design.
+  - Answer (2026-09-02, the owner): an issue's lifecycle distinguishes
+    framed from unframed; once framed, its behaviour and acceptance
+    criteria are keyed items, written as EARS where the item is a
+    requirement. `EX_` lands there, on the framed variant, and settled
+    records stay as they are. Recorded on
+    [I030][sokf:issue-030-feature-request-filing-an-issue-requires-framing-it],
+    which owns the lifecycle; `AC_c17` narrows to the lists this
+    feature keyed.
 - Criterion 15 says no skill changes for the form. The frame skill's
   "Write acceptance criteria" step says each criterion opens with its
   pattern tag, which the key now precedes; the schema governs, so the
   step is stale but not wrong. Amend the skill text in the pack and
   the synced copy, or leave it? Blocks nothing; returns to frame.
+  - Answer (2026-09-02, the owner): amend the sentence.
 
 <!-- sokf:links -->
 [sokf:adr-046-a-promise-and-a-criterion-are-keyed-ears-items]: /knowledge/adrs/active/adr-046-a-promise-and-a-criterion-are-keyed-ears-items.md
 [sokf:adr-047-a-section-rule-declares-item-keys-and-item-bounds]: /knowledge/adrs/active/adr-047-a-section-rule-declares-item-keys-and-item-bounds.md
 [sokf:code-review-009-a-contracts-behaviour-is-written-as-ears]: /knowledge/reports/code-review-009-a-contracts-behaviour-is-written-as-ears.md
 [sokf:contract-010-interface-document-schemas]: /knowledge/contracts/internal/active/contract-010-interface-document-schemas.md
+[sokf:issue-030-feature-request-filing-an-issue-requires-framing-it]: /knowledge/issues/open/issue-030-feature-request-filing-an-issue-requires-framing-it.md
 [sokf:issue-037-feature-request-a-contracts-behaviour-is-not-written-as-ears]: /knowledge/issues/open/issue-037-feature-request-a-contracts-behaviour-is-not-written-as-ears.md
 [sokf:plan-024-feature-a-contract-includes-its-definition]: /knowledge/plans/done/plan-024-feature-a-contract-includes-its-definition.md

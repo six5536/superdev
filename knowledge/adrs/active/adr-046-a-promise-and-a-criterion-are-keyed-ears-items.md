@@ -88,7 +88,7 @@ one prefix and never a key.
 | `P_` | A contract promise, under Behaviour or Stability |
 | `AC_` | An acceptance criterion, in a feature-request |
 | `RS_` | A repro step, in a bug-report |
-| `EX_` | An expected outcome, in a bug-report |
+| `EX_` | An expected outcome, in a bug-report — reserved; declared once a framed issue is a lifecycle state (I030) |
 | `DD_` | A definition-of-done item, in a chore |
 
 The key is the item's identity. A rewording keeps it; a promise that
