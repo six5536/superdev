@@ -267,7 +267,7 @@ named the pack as the grammar's source.
 
 ### Slice 7: The config and format contracts include their structs
 
-- [ ] Done — ticked by integrate at merge.
+- [x] Done — ticked by integrate at merge.
 - Depends-on: 1, 4.
 - Change: markers around the `serde` structs that read `config.toml`,
   `pack.toml` and `lock.toml`; `contract-004` becomes `kind: config`,
@@ -321,8 +321,11 @@ named the pack as the grammar's source.
   Definition names.
 - Done-check: `contract-008` validates; its Definition shows the token
   and template registries from `templates.rs`; the test plan-021 slice
-  12 wrote to compare the block to `templates.rs` is deleted, and the
-  behaviour tests of substitution stay.
+  12 wrote to compare the block to `templates.rs` — in
+  `crates/lib/superdev-core/tests/contract_template.rs` since slice 7
+  moved it out of `contract_files.rs` — is deleted with its file, the
+  `every_drift_test_names_the_direction_it_failed_in` entry naming it
+  goes, and the behaviour tests of substitution stay.
 - Cases:
   - integration: adding a token to `templates.rs` fails `validate`
     naming `contract-008`'s include — covers 4, 23.
