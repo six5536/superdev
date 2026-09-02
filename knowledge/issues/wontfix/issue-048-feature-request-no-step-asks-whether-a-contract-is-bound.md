@@ -7,7 +7,7 @@ lifecycle: wontfix
 links:
   - rel: references
     to: issue-049-feature-request-a-contract-cannot-point-at-its-definition
-    note: Folds this in — the binding question is the judgement layer's half, criteria 11 to 17 there.
+    note: Folds this in — a materialised definition is bound by construction, and the agent's question narrows to whether the region is the whole surface.
   - rel: references
     to: adr-036-a-contract-is-bound-to-its-implementation
     note: States the obligation this would ask about; the mechanism stays the project's.
@@ -25,13 +25,12 @@ links:
 
 Folded 2026-09-02 into
 [I049][sokf:issue-049-feature-request-a-contract-cannot-point-at-its-definition].
-Once every contract states what binds it, this issue's question changes
-shape — not "search for a binding" but "does the declared binding
-hold" — and it lands in the same agent-run step as two other judgements
-a contract needs: whether a consumer can read the definition from it,
-and whether a block duplicates a file the contract also points at. One
-step, one report. The seven criteria below are carried as I049's
-criteria 11 to 17, the failure paths included.
+Once a contract's definition is materialised from source, whether it is
+bound is decidable: the include is current or the run fails. This
+issue's question narrows to the one thing that is not decidable — is
+the marked region the whole promised surface, and is the prose complete
+for what the shape cannot express — and that lands in I049's
+judgement step at integration, failure paths included.
 
 ## Summary
 
@@ -139,5 +138,5 @@ question is unavailable to a gate and entirely available to a judgement.
 [sokf:adr-036-a-contract-is-bound-to-its-implementation]: /knowledge/adrs/active/adr-036-a-contract-is-bound-to-its-implementation.md
 [sokf:adr-039-a-decidable-finding-is-an-error-and-the-turn-is-the-gate]: /knowledge/adrs/active/adr-039-a-decidable-finding-is-an-error-and-the-turn-is-the-gate.md
 [sokf:issue-038-bug-the-template-format-contract-is-bound-by-no-drift-test]: /knowledge/issues/done/issue-038-bug-the-template-format-contract-is-bound-by-no-drift-test.md
-[sokf:issue-043-bug-the-cli-contracts-json-keys-are-bound-by-no-test]: /knowledge/issues/open/issue-043-bug-the-cli-contracts-json-keys-are-bound-by-no-test.md
+[sokf:issue-043-bug-the-cli-contracts-json-keys-are-bound-by-no-test]: /knowledge/issues/wontfix/issue-043-bug-the-cli-contracts-json-keys-are-bound-by-no-test.md
 [sokf:issue-049-feature-request-a-contract-cannot-point-at-its-definition]: /knowledge/issues/open/issue-049-feature-request-a-contract-cannot-point-at-its-definition.md

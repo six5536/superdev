@@ -3,8 +3,11 @@ type: Chore
 id: issue-046-chore-audit-the-one-directional-drift-bindings
 title: Three drift bindings compare in one direction only, and nothing records whether that is deliberate
 description: The config, lock and internal-interface bindings each assert one difference and not its reverse; one of the three is plainly deliberate, one is plainly not, and no comment in the tests says which is which.
-lifecycle: open
+lifecycle: wontfix
 links:
+  - rel: references
+    to: issue-049-feature-request-a-contract-cannot-point-at-its-definition
+    note: Dissolves this — the copy the test compared no longer exists.
   - rel: references
     to: adr-036-a-contract-is-bound-to-its-implementation
     note: The obligation is element for element; a one-directional binding meets half of it.
@@ -14,6 +17,16 @@ links:
 ---
 
 # Chore: audit the one-directional drift bindings
+
+## Won't fix
+
+Dissolved 2026-09-02 by
+[I049][sokf:issue-049-feature-request-a-contract-cannot-point-at-its-definition].
+The three bindings compared hand-written copies to the code in one
+direction. Under I049 the copies are materialised from source and the
+three tests are deleted; what a contract does not mark it does not
+include, which is now the agent's judgement rather than a test's
+silence.
 
 ## Summary
 
@@ -69,3 +82,4 @@ filed rather than absorbed.
 <!-- sokf:links -->
 [sokf:adr-036-a-contract-is-bound-to-its-implementation]: /knowledge/adrs/active/adr-036-a-contract-is-bound-to-its-implementation.md
 [sokf:issue-045-feature-request-drift-tests-bind-what-the-contract-declares]: /knowledge/issues/wontfix/issue-045-feature-request-drift-tests-bind-what-the-contract-declares.md
+[sokf:issue-049-feature-request-a-contract-cannot-point-at-its-definition]: /knowledge/issues/open/issue-049-feature-request-a-contract-cannot-point-at-its-definition.md

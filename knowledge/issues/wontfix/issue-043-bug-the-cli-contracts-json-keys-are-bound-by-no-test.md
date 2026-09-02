@@ -3,14 +3,27 @@ type: BugReport
 id: issue-043-bug-the-cli-contracts-json-keys-are-bound-by-no-test
 title: The CLI contract's declared JSON keys are compared to nothing, and two keys the binary emits went undeclared
 description: The CLI drift test binds commands, flags, arguments and exit codes, and not the `json` block; `documents` and `schemas` have been emitted without being declared, which nothing noticed.
-lifecycle: open
+lifecycle: wontfix
 links:
+  - rel: references
+    to: issue-049-feature-request-a-contract-cannot-point-at-its-definition
+    note: Dissolves this — the copy the test compared no longer exists.
   - rel: references
     to: issue-035-feature-request-a-contract-does-not-define-its-interface
     note: Criterion 4's drift test covers the command tree and not the JSON the same contract declares.
 ---
 
 # Bug: the CLI contract's JSON keys are bound by no test
+
+## Won't fix
+
+Dissolved 2026-09-02 by
+[I049][sokf:issue-049-feature-request-a-contract-cannot-point-at-its-definition].
+The `json` block was a hand-written copy of what `validate --json`
+emits. Under I049 the contract includes the emitting code's marked
+region from source, so there is no copy to leave unbound. What the
+block could not reach — that the keys are emitted — is behaviour, and a
+behaviour test covers it.
 
 ## Summary
 
@@ -97,3 +110,4 @@ restructured first.
 [sokf:issue-035-feature-request-a-contract-does-not-define-its-interface]: /knowledge/issues/done/issue-035-feature-request-a-contract-does-not-define-its-interface.md
 [sokf:issue-036-feature-request-validate-prints-warnings-by-default]: /knowledge/issues/done/issue-036-feature-request-validate-prints-warnings-by-default.md
 [sokf:issue-045-feature-request-drift-tests-bind-what-the-contract-declares]: /knowledge/issues/wontfix/issue-045-feature-request-drift-tests-bind-what-the-contract-declares.md
+[sokf:issue-049-feature-request-a-contract-cannot-point-at-its-definition]: /knowledge/issues/open/issue-049-feature-request-a-contract-cannot-point-at-its-definition.md

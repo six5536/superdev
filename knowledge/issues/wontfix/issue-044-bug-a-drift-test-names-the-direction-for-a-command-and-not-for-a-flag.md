@@ -3,14 +3,26 @@ type: BugReport
 id: issue-044-bug-a-drift-test-names-the-direction-for-a-command-and-not-for-a-flag
 title: A drift failure names its direction for a whole command and not for a flag inside one
 description: I035 criterion 12 requires a drift failure to say whether the element is a defect or an outstanding promise; the CLI test does that for a command and falls back to a bare equality assertion for a flag, argument or exit map, and the test that checks the wordings only checks they appear in the file.
-lifecycle: open
+lifecycle: wontfix
 links:
+  - rel: references
+    to: issue-049-feature-request-a-contract-cannot-point-at-its-definition
+    note: Dissolves this — the copy the test compared no longer exists.
   - rel: references
     to: issue-035-feature-request-a-contract-does-not-define-its-interface
     note: Criterion 12 is satisfied for a command and not for what a command contains.
 ---
 
 # Bug: a drift failure names its direction for a command and not for a flag
+
+## Won't fix
+
+Dissolved 2026-09-02 by
+[I049][sokf:issue-049-feature-request-a-contract-cannot-point-at-its-definition].
+The failure compared a hand-written copy of the clap tree to the tree
+itself. Under I049 the copy is materialised from source and cannot
+differ from it, so `contract.rs`'s comparison is deleted and there is
+no failure left to name a direction.
 
 ## Summary
 
@@ -107,3 +119,4 @@ two files, not one, and I045 covers both.
 [sokf:issue-035-feature-request-a-contract-does-not-define-its-interface]: /knowledge/issues/done/issue-035-feature-request-a-contract-does-not-define-its-interface.md
 [sokf:issue-036-feature-request-validate-prints-warnings-by-default]: /knowledge/issues/done/issue-036-feature-request-validate-prints-warnings-by-default.md
 [sokf:issue-045-feature-request-drift-tests-bind-what-the-contract-declares]: /knowledge/issues/wontfix/issue-045-feature-request-drift-tests-bind-what-the-contract-declares.md
+[sokf:issue-049-feature-request-a-contract-cannot-point-at-its-definition]: /knowledge/issues/open/issue-049-feature-request-a-contract-cannot-point-at-its-definition.md

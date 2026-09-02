@@ -1,313 +1,349 @@
 ---
 type: FeatureRequest
 id: issue-049-feature-request-a-contract-cannot-point-at-its-definition
-title: A contract must paste its definition in, and nothing says what keeps the paste true
-description: Every contract kind requires its definition inline in a fenced block, so a declaration the code is built from must be copied to be contracted, and no contract states whether construction, a currency check or a test keeps its definition honest.
+title: A contract cannot include its definition from source, so every definition is a hand copy kept true by a test
+description: The include block materialises a concept's body and cannot name a source region, so a contract's definition is a hand-written copy of what the code declares, bound by a drift test that exists only because the copy does, and two such copies were found unbound anyway.
 lifecycle: open
 links:
   - rel: references
+    to: adr-027-an-include-block-materializes-shared-content-in-place
+    note: The mechanism this extends — an include names a source region as well as a concept.
+  - rel: references
     to: adr-033-a-contract-defines-its-interface
-    note: Requires a machine-readable definition block; amended so the definition may be a reference.
+    note: Amended — the definition block is materialised from source rather than authored.
   - rel: references
     to: adr-034-each-kind-defines-in-the-form-its-ecosystem-reads
-    note: Strengthened — the form the ecosystem reads is usually a file, so the contract points at it.
+    note: Taken at its word — the form the ecosystem reads is the source, and the contract carries the source.
   - rel: references
     to: adr-035-a-schema-declares-its-definition-blocks-contract
-    note: Retired — the validator looks inside no definition block, for any kind.
+    note: Retired — the validator parses nothing inside a definition, for any kind.
   - rel: references
     to: adr-036-a-contract-is-bound-to-its-implementation
-    note: Stands; construction, a currency check and a test are the three ways to meet it, and the contract now says which.
+    note: Rewritten — a definition is bound by materialisation, behaviour by test; superdev supplies the first.
   - rel: references
     to: adr-038-a-contract-may-promise-what-is-not-built-yet
-    note: A pending element is bound by the reverse assertion the marker requires, so the judgement step does not report it.
-  - rel: references
-    to: issue-038-bug-the-template-format-contract-is-bound-by-no-drift-test
-    note: The first unbound contract found by a person reading; no step existed to find it.
-  - rel: references
-    to: issue-043-bug-the-cli-contracts-json-keys-are-bound-by-no-test
-    note: The second, found the same way; stays open and is fixed as the defect it is.
+    note: Narrowed — a definition element cannot be ahead of its source, so pending applies to prose alone.
   - rel: references
     to: adr-039-a-decidable-finding-is-an-error-and-the-turn-is-the-gate
-    note: Draws the line between what the validator checks and what the agent judges.
+    note: A stale include is decidable, so it is an error and the turn cannot end on it.
+  - rel: references
+    to: issue-038-bug-the-template-format-contract-is-bound-by-no-drift-test
+    note: The first hand copy found unbound by a person reading.
+  - rel: references
+    to: issue-043-bug-the-cli-contracts-json-keys-are-bound-by-no-test
+    note: Dissolved — no hand-written JSON block remains to leave unbound.
+  - rel: references
+    to: issue-044-bug-a-drift-test-names-the-direction-for-a-command-and-not-for-a-flag
+    note: Dissolved — no copy remains to compare, so no comparison to report undirected.
+  - rel: references
+    to: issue-046-chore-audit-the-one-directional-drift-bindings
+    note: Dissolved — the three one-directional tests compared copies, and are deleted with them.
   - rel: references
     to: issue-047-feature-request-a-kinds-definition-form-is-stated-in-prose
-    note: Dissolved — declaring a block's form was only needed while the validator read blocks.
+    note: Dissolved — the materialised block's tag comes from the file's extension, and nothing parses it.
   - rel: references
     to: issue-048-feature-request-no-step-asks-whether-a-contract-is-bound
-    note: Folded in — its seven criteria are the judgement layer's binding half, carried as criteria 11 to 17.
+    note: Folded in — whether a definition is bound is decidable now; the agent's question narrows to whether the region is the whole surface.
 ---
 
-# Feature: a contract cannot point at its definition
+# Feature: a contract cannot include its definition from source
 
 ## Summary
 
-Every contract kind requires its definition inline, in a fenced block.
-A project whose API is served from `openapi.yaml`, whose stubs compile
-from `.proto` files, or whose database is built from its migrations
-must copy that declaration into a markdown file to have a contract at
-all — a second source of truth, stale on the next change, which is the
-condition
-[ADR-036][sokf:adr-036-a-contract-is-bound-to-its-implementation]
-exists to prevent. And no contract says what keeps its definition true,
-so a reader cannot tell a hand copy from a file the code cannot
-disagree with.
+[ADR-027][sokf:adr-027-an-include-block-materializes-shared-content-in-place]'s
+include block splices a concept's body into a document and errors when
+the copy goes stale. It cannot name a source file. So every contract's
+definition is a copy written by hand — `contract-002`'s YAML copies
+what clap knows, `contract-007`'s Rust copies signatures out of
+`planner.rs` — and four drift tests exist to keep four copies honest.
+Two copies were found unbound anyway, by a person reading.
 
 ## Motivation
 
 A contract is the outside of the AI-written black box: the one place a
 person or an agent looks to see what an interface promises without
-reading the code. What makes it *outside* is not where the file sits
-but what the code depends on. `contract-002`'s YAML block sits in
-`knowledge/` and nothing is built from it; it is a claim about the
-binary, kept honest by a test. An `openapi.yaml` the server is
-generated from sits in `src/` and the server cannot disagree with it.
-The second is more outside than the first.
+reading the code. It has to be readable in one place, and it has to be
+true. Today it is one or the other.
 
-Every inline block is a copy of something. `contract-002`'s YAML copies
-what clap knows; `contract-003`'s JSON copies the tool registrations.
-That is why they need drift tests. The database case makes the same
-fact visible: `contract-data`'s Schema section is `content: code`, so
-a real project's contract would carry a paste of its migrations.
-
-The validator's block check made this worse rather than better. Three
-of sixteen kinds — `contract-cli`, `contract-deployment`,
-`contract-mcp` — had their block parsed and its keys checked, because
-their form happened to be YAML or JSON. Thirteen did not, because the
-binary parses nothing else. There was no principle behind which kinds
-were checked; there was `serde_yaml_ng` in the tree. Everything the
-check caught — a command without its `exit` map — the drift test
-catches anyway.
-
-Nothing asks whether any of this holds. Two contracts have been found
-unbound — `contract-008`'s tokens and template set
+Every hand-written definition block is a copy of something the code
+already declares. The CLI contract copies the clap tree; the MCP
+contract copies the tool registrations; the three interface contracts
+copy signatures; the two format contracts copy the shape a `serde`
+struct parses. Each copy needs a drift test, and each test compares a
+copy to its original in whatever way the framework permits: `contract.rs`
+introspects clap, `contract_interfaces.rs` matches signatures against
+source text, `contract_files.rs` parses the shipped file. Three of the
+four bind in one direction only
+([I046][sokf:issue-046-chore-audit-the-one-directional-drift-bindings]);
+two report a difference as two struct dumps
+([I044][sokf:issue-044-bug-a-drift-test-names-the-direction-for-a-command-and-not-for-a-flag]);
+and two copies were unbound by any of them —
+`contract-008`'s tokens and template set
 ([I038][sokf:issue-038-bug-the-template-format-contract-is-bound-by-no-drift-test]),
 `contract-002`'s `json` block
-([I043][sokf:issue-043-bug-the-cli-contracts-json-keys-are-bound-by-no-test])
-— and both were found by a person reading the contract beside the
-tests. No check found them, because whether a binding holds is not
-decidable from the tree; no step asked, because none exists.
+([I043][sokf:issue-043-bug-the-cli-contracts-json-keys-are-bound-by-no-test]).
+Every defect on this tracker about a drift test exists because a copy
+exists.
+
+The validator's block check made this worse. Three of sixteen kinds had
+their block parsed and its keys checked, because their form happened to
+be YAML or JSON; thirteen did not, because the binary parses nothing
+else. There was no principle behind which kinds were checked, and
+everything the check caught the drift test catches.
+
+A project adopting superdev inherits all of this. Its API is served from
+`openapi.yaml`; its stubs compile from `.proto` files; its database is
+built from migrations. To have a contract at all it must paste a copy
+of one of those into a markdown file, then write a test to keep the
+paste honest, in a language superdev does not read.
+
+The mechanism that fixes it is already in the binary. An include block
+materialises content in place, regenerates it under `--fix`, and fails
+the run when the copy is stale — for a concept. Let it name a source
+region and the contract carries the declaration itself: readable in one
+place, generated rather than authored, and unable to drift because the
+validator will not let it.
 
 ## Proposed behaviour
 
-A contract's definition section holds one or more references to files
-in the repository, one or more fenced blocks, or both — whichever the
-consumer can read the interface from. A reference targets a
-**declaration** the code is built from or checked against — an OpenAPI
-document, a `.proto` file, a GraphQL schema, a migrations directory —
-and never the implementation, so a reader following it stays outside
-the code. This is
-[ADR-034][sokf:adr-034-each-kind-defines-in-the-form-its-ecosystem-reads]
-taken at its word: the form the ecosystem reads is usually a file it
-already has. Where a built-from file is unreadable as an interface, a
-directory of forty migrations, the contract carries a rendering
-generated from it rather than a copy written by hand. Where no
-declaration exists — a command line, whose definition is code — the
-contract carries the block, and that block is the sole declaration.
+An include block names a concept, as today, or a `/`-rooted source
+path: `<!-- sokf:include /crates/app/superdev/src/main.rs#cli -->`.
+`validate --fix` materialises the named region of the file as a fenced
+block tagged by the file's extension; `validate` reports an error when
+the block is absent, empty or differs from the region, when the path
+does not exist or resolves outside the repository, or when the file
+carries no region of that name. The turn cannot end on any of these
+([ADR-039][sokf:adr-039-a-decidable-finding-is-an-error-and-the-turn-is-the-gate]).
 
-Each part of a definition states what keeps it true: **construction**,
-where the code is built from the file; a **currency check**, where the
-block is generated and a test proves it current; or a named **test**,
-where the block is hand-written. A reader learns from the contract
-alone whether they are looking at the boundary or at a claim about it.
+A region is bounded by `sokf:begin <name>` and `sokf:end <name>` on any
+line, in whatever comment syntax the file uses, found by substring — so
+the mechanism is the same in Rust, SQL, YAML and TypeSpec, and superdev
+parses none of them. Regions sharing a name concatenate in file order,
+so a surface scattered through one file is one include. A path with no
+`#` includes the whole file. The source declares its own contract
+boundary, which is the point: whoever writes the code marks what is
+promised.
 
-Quality is enforced in three layers, each by the enforcer that can
-reach it. The line between the first and the third is the one
-[ADR-039][sokf:adr-039-a-decidable-finding-is-an-error-and-the-turn-is-the-gate]
-drew: what the repository alone can decide is the validator's, and the
-rest is a judgement.
+Every contract kind's definition section is one or more source
+includes. A fenced block outside an include in a definition section is
+an error: there is no hand-written definition any more, so there is
+nothing for a drift test to compare. What the validator checked inside
+a block it no longer checks; what it can decide — that the copy is
+current — it decides at every edit.
 
-The **validator** checks shape, at every edit, from the tree alone: the
-kind's sections are present and normative, a definition exists, every
-reference resolves, every part states its binding, and a named test
-file exists. It looks inside no block, for any kind, beyond that the
-fence carries a language tag.
+Where the built-from source is unreadable as a surface — forty
+migrations, twenty Terraform files — the project generates a rendering
+and the contract includes that. The generator writes
+`sokf:generated-by <what>` in the file's leading lines, the include
+carries it through, and a reader sees what they are looking at. Keeping
+the rendering current is the project's, by the same regenerate-and-diff
+pattern this repository's goldens use; superdev checks only that the
+include matches the file.
 
-The **project** supplies truth — that the definition matches the code —
-by whichever of the three bindings it declared. superdev states the
-obligation and names the strategies a project may use; it supplies none.
+A doc comment inside an included region is contract text: it arrives in
+the document with the element it annotates, so a `MUST` on a field's
+doc comment binds as a `MUST` in the Behaviour section does, and cannot
+drift from the contract because it is the contract. The contract's own
+prose carries what no single element can say — stability, consumers,
+behaviour across elements — and what no include can reach: exit codes
+spread through the code, error semantics, ordering. Prose promises are
+bound by tests of behaviour, which is what a drift test becomes.
 
-An **agent** supplies judgement, when a slice that touched a contract
-is integrated, reading each such contract as its consumer would: whether
-the definition can be read from it, whether a block duplicates a file
-the same section points at, and whether the declared binding holds —
-the named test compares what the contract declares, the referenced file
-is what the code is built from, the currency check proves the rendering
-current. For each contract it reports, it names what it checked and
-what it did not find, so a reader confirms or dismisses the report
-without repeating the search. A contract element marked pending
+A definition element cannot be ahead of its source. Contract-first for
+a definition is declaration-first in source: CONTRACT-DESIGN adds the
+field or the path to the marked region with its behaviour unbuilt, the
+include shows it, and BUILD implements behind it. The `pending` marker
 ([ADR-038][sokf:adr-038-a-contract-may-promise-what-is-not-built-yet])
-is bound by the reverse assertion that marker requires, and is not
-reported. The report is a judgement that blocks nothing, because a
-reviewer is right most of the time and a gate must be right every
-time. The step ships in the pack, so a project adopting superdev
-inherits the question with the obligation.
+narrows to prose, where a promise can still run ahead of its code, and
+accept still refuses a contract carrying one.
 
-The contract points at the declaration, and nothing is copied along the
-chain.
+An agent asks, when a slice that touched a contract is integrated, the
+one question that is not decidable: is the marked region the whole
+promised surface, is the prose complete for what the shape cannot
+express, and could a consumer learn the interface from the document. It
+reports as a judgement that blocks nothing, and names what it checked.
+
+This repository's nine contracts move to source includes, and the four
+drift tests that compared copies are deleted. `contract_exit_codes.rs`
+stays: it tests behaviour.
 
 ## Acceptance criteria
 
-1. [ubiquitous] THE SYSTEM SHALL accept, as a contract's definition,
-   one or more references to files in the repository, one or more
-   fenced blocks, or both.
-2. [event] WHEN a contract's definition section carries neither a
-   reference nor a fenced block THE SYSTEM SHALL report an error naming
-   the section.
-3. [event] WHEN a definition reference names a path that does not exist
-   in the repository THE SYSTEM SHALL report an error naming the path.
-4. [ubiquitous] THE SYSTEM SHALL require each part of a contract's
-   definition to state which of construction, a currency check or a
-   named test keeps it true.
-5. [event] WHEN a binding names a test file that does not exist THE
-   SYSTEM SHALL report an error naming the path.
-6. [ubiquitous] THE SYSTEM SHALL report no finding about the contents
-   of a definition block, for any contract kind, beyond the absence of
-   a language tag on its fence.
-7. [ubiquitous] THE SYSTEM SHALL keep every section a contract kind
-   requires today, so the checklist for each area of concern is
-   unchanged by this feature.
-8. [ubiquitous] THE SYSTEM SHALL state in the contract standard that a
-   definition reference targets a declaration the code is built from or
-   checked against, and never the implementation.
-9. [ubiquitous] THE SYSTEM SHALL state in the contract standard that a
-   block copying a file the same definition references is a defect, and
-   that a built-from file unreadable as an interface is rendered from
-   rather than copied.
-10. [ubiquitous] THE SYSTEM SHALL name, in the contract standard, the
-    strategies by which a project may bind a hand-written block —
-    introspecting the framework, running the interface, parsing the
-    artifact the code writes, matching declared elements against source
-    — and SHALL supply an implementation of none.
-11. [event] WHEN a slice that touched a contract is integrated THE
-    SYSTEM SHALL have the integrating agent read that contract as its
-    consumer would, and report where the definition cannot be read from
-    the contract, where a block duplicates a referenced file, and where
-    the declared binding does not hold.
-12. [ubiquitous] THE SYSTEM SHALL name, for each contract the agent
-    reports, what it checked and what it did not find, so a reader
-    confirms or dismisses the report without repeating the search.
-13. [ubiquitous] THE SYSTEM SHALL present that report as a judgement
-    that blocks nothing, and SHALL NOT record it as a validator finding.
-14. [state] WHILE a contract element is marked pending THE SYSTEM SHALL
-    count the reverse assertion ADR-038 requires as that element's
-    binding, and SHALL NOT report it as unbound.
-15. [conditional] IF the slice touched no contract THE SYSTEM SHALL say
-    so and report nothing further, so an empty report is distinguishable
-    from a step that did not run.
-16. [conditional] IF the agent cannot read the project's tests THE
-    SYSTEM SHALL report what it could not read and SHALL NOT report the
-    contracts it could not judge as unbound.
+1. [ubiquitous] THE SYSTEM SHALL accept, as an include block's argument,
+   a `/`-rooted repository path, optionally followed by `#` and a
+   region name, beside the concept id it accepts today.
+2. [event] WHEN `validate --fix` runs THE SYSTEM SHALL materialise a
+   source include as a fenced block tagged by the file's extension,
+   holding the named region, or the whole file when no region is named.
+3. [ubiquitous] THE SYSTEM SHALL bound a region by a line containing
+   `sokf:begin <name>` and a later line containing `sokf:end <name>`,
+   matched by substring, and SHALL concatenate regions sharing a name
+   in file order.
+4. [event] WHEN a source include is absent, empty or differs from its
+   region THE SYSTEM SHALL report an error naming the path and the
+   region.
+5. [event] WHEN a source include names a path that does not exist,
+   resolves outside the repository, or names a region its file does not
+   carry THE SYSTEM SHALL report an error stating which.
+6. [ubiquitous] THE SYSTEM SHALL carry a `sokf:generated-by` line from
+   an included file's leading lines into the materialised block
+   unchanged.
+7. [ubiquitous] THE SYSTEM SHALL parse nothing inside an included
+   region, and SHALL report no finding about the contents of any
+   contract's definition.
+8. [ubiquitous] THE SYSTEM SHALL require, in every contract kind's
+   definition section, at least one source include.
+9. [event] WHEN a contract's definition section carries a fenced block
+   outside an include THE SYSTEM SHALL report an error naming the
+   section.
+10. [ubiquitous] THE SYSTEM SHALL keep every section a contract kind
+    requires today, so the checklist for each area of concern is
+    unchanged.
+11. [ubiquitous] THE SYSTEM SHALL state in the contract standard that a
+    doc comment inside an included region is contract text, and that
+    the contract's prose carries what no single element can.
+12. [ubiquitous] THE SYSTEM SHALL state in the contract standard that
+    behaviour an include cannot reach is stated in prose and bound by a
+    test, and that a `pending` marker applies to prose alone.
+13. [ubiquitous] THE SYSTEM SHALL have CONTRACT-DESIGN write a new
+    definition element into its source region, behaviour unbuilt, under
+    the approval it already requires.
+14. [event] WHEN a slice that touched a contract is integrated THE
+    SYSTEM SHALL have the integrating agent read the contract as its
+    consumer would, and report where an included region omits part of
+    the promised surface, where the prose omits a promise the shape
+    cannot express, and where a reader could not learn the interface
+    from the document.
+15. [ubiquitous] THE SYSTEM SHALL name, for each contract the agent
+    reports, what it checked, and SHALL present the report as a
+    judgement that blocks nothing and is not a validator finding.
+16. [conditional] IF the slice touched no contract THE SYSTEM SHALL say
+    so and report nothing further.
 17. [ubiquitous] THE SYSTEM SHALL ship the judgement step in the pack,
-    so a project adopting superdev inherits it with the schemas that
-    state the obligation.
-18. [ubiquitous] THE SYSTEM SHALL leave every contract on file passing
-    validation, each part of each definition stating its binding.
+    so a project adopting superdev inherits it with the schemas.
+18. [ubiquitous] THE SYSTEM SHALL define every contract this repository
+    owns by source includes, and SHALL carry no test that compares a
+    hand-written copy of a definition to the code.
+19. [ubiquitous] THE SYSTEM SHALL keep a test that exercises every exit
+    code the CLI contract states.
 
 ## Alternatives considered
 
-- Keep the definition inline and validate more of it. Rejected: the
-  validator can parse two of the forms the sixteen kinds take, so any
-  check it applies is applied by accident of parser rather than by
-  principle, and the drift test catches everything it would.
-- Validate the referenced declaration files. Rejected for the same
-  reason one level out — superdev cannot parse an OpenAPI document, a
-  `.proto` file or a migration, and the project's own toolchain already
-  does.
-- Require a drift test for every contract, reference or not. Rejected:
-  a file the code is built from cannot disagree with the code, and
-  [ADR-036][sokf:adr-036-a-contract-is-bound-to-its-implementation]
-  already says construction binds more strongly than a test.
-- Gate integration on the agent's judgement. Rejected: a reviewer is
-  right most of the time, a gate must be right every time, and a gate
-  that accuses falsely is a gate people learn to bypass.
-- Reduce the sixteen kinds to one contract type with a `kind` field.
-  Deferred: the kinds are right where they follow an area of concern —
-  a reader asks for the database, the REST API — and wrong only where
-  they follow a definition language, which is `rest`/`graphql`/`rpc`
-  and `binary-format`/`text-format`. This feature removes the reason
-  for those splits; merging them is a separate, smaller decision.
-- Make the binding question a validator check. Rejected: whether a
-  named test compares what the contract declares lives in the project's
-  test suite, in a language superdev does not read, so the question
-  falls on the far side of ADR-039's line. What the validator can
-  decide — that the named file exists — it does; the rest is judgement.
-- A line in `definition-of-done` and nothing else. Rejected: that is
-  what exists today, one level of indirection away, and it caught
-  neither I038 nor I043.
+- Keep hand-written blocks and fix the four drift tests. Rejected: the
+  copies are the defect, and every test that compares a copy is a test
+  that exists because the copy does.
+- A reference the reader follows, with no materialisation. Rejected:
+  it moves the definition into the code tree, so the contract stops
+  being readable in one place — the property that makes it the outside
+  of the box.
+- Resolve a symbol name through the code index instead of markers.
+  Rejected: it binds every contract to the optional `code-index`
+  capability, and the mechanism stops being language-agnostic the
+  moment codegraph does not know the language.
+- Line ranges instead of markers. Rejected: every edit above the range
+  shifts it, and `--fix` would regenerate the wrong lines without
+  noticing — the one scoping form whose check cannot catch its own
+  failure.
+- Have `validate --fix` run the project's generator instead of
+  including its output. Rejected: it puts arbitrary project commands on
+  the PostToolUse hook's path, at every edit, which the non-goal rules
+  out.
+- Regenerate a source include only under a separate flag, so the agent
+  consciously accepts an interface change. Rejected: the include diff
+  lands in the same commit as the code change and the human
+  fast-forwarding `main` sees both; a flag nobody remembers buys less
+  than that review does.
+- Keep `pending` for definition elements as a source marker. Rejected:
+  a failing behaviour test and a `todo!()` already say "not built yet"
+  in the language's own terms.
+- Reserve promises for the contract's prose and treat doc comments as
+  usage notes. Rejected: the developer would write the rule away from
+  the element it rules, and a `MUST` that landed in a doc comment would
+  be quietly non-binding.
+- Ship the mechanism and migrate this repository's contracts later.
+  Rejected: a mechanism the repository does not use on itself is not
+  finished, and the migration is what makes three open defects dissolve
+  rather than linger against tests about to be deleted.
 
 ## Scope
 
-- In: the definition section taking references, blocks or both, and the
-  validator checks that keep them resolvable.
-- In: each definition part stating its binding, and the check that a
-  named test file exists.
-- In: retiring the block-content check for every kind
-  ([ADR-035][sokf:adr-035-a-schema-declares-its-definition-blocks-contract]),
-  and amending
-  [ADR-033][sokf:adr-033-a-contract-defines-its-interface] so the
-  definition may be a reference.
-- In: the contract standard's statements on what a reference targets,
-  what counts as duplication, and the binding strategies.
-- In: the agent's judgement step at integration.
-- Out: supplying a harness, a generator, a drift test or a gate for a
-  managed project — the non-goal stands, sharpened: superdev checks
-  that a binding is named, never that it holds.
-- In: the judgement step asking whether each declared binding holds,
-  folded from
-  [I048][sokf:issue-048-feature-request-no-step-asks-whether-a-contract-is-bound]
-  — one step, one report, the readability and duplication questions
-  beside the binding one.
-- Out: merging the kinds that were split by definition language.
-- Out: generating `contract-002`'s block from clap. A proof of the
-  model this repository could give; not required by it.
-- Out: this repository's own drift tests being wrong in their reporting
-  and their direction — I043, I044 and I046 are defects in tests and
-  are fixed as defects.
+- In: the include block naming a source path and region; region
+  markers; the `generated-by` line; the errors that keep an include
+  current and inside the repository.
+- In: every contract kind's definition section becoming source
+  includes, and a hand-written block there becoming an error.
+- In: retiring the block-content check for every kind.
+- In: the contract standard's statements on doc comments, prose,
+  behaviour tests and `pending`.
+- In: CONTRACT-DESIGN writing declarations into source.
+- In: the agent's judgement step at integration, shipped in the pack.
+- In: migrating this repository's nine contracts; deleting
+  `contract.rs`'s drift half, `mcp.rs`'s drift test,
+  `contract_files.rs` and `contract_interfaces.rs`; keeping
+  `contract_exit_codes.rs`.
+- In: the ADR changes named in the links, the non-goal in
+  `constraints-non-goals`, and the glossary.
+- Out: parsing any included content, in any language.
+- Out: running any project command from the validator.
+- Out: resolving symbols through the code index.
+- Out: merging the kinds that were split by definition language —
+  `rest`/`graphql`/`rpc`, `binary-format`/`text-format`. This removes
+  the reason for the split; the merge is a smaller, later decision.
+- Out: a link check reaching documentation outside the knowledge tree.
 
 ## Comments
 
-Framed 2026-09-02 from a conversation that stepped back three times.
-The first frame was five mechanism issues, each about a different
-symptom. The second unified them as a property a contract must have to
-be comparable, and put four requirements on the contract's form. The
-third, this one, came from asking what superdev's machinery actually is
-— a schema validator — and what a contract is actually for — the
-outside of the AI-written black box, read by a person and an agent who
-will not read the code.
+Framed 2026-09-02 across four reframes. The first was five mechanism
+issues, one per symptom. The second unified them as properties a
+contract needs to be comparable. The third asked what superdev's
+machinery is — a schema validator — and what a contract is for, and
+concluded the definition should be a pointer at a declaration file. The
+fourth, this one, came from the user's observation that the include
+block already pulls content into a document without letting it drift,
+and that pointing at source *and* materialising it gives readability in
+one place and truth at once.
 
-Three things fell out. superdev should look inside no definition
-block, because it can parse two forms of sixteen and a check applied by
-accident of parser is not a check. A definition should be a pointer
-wherever a declaration the code is built from exists, because an
-inline copy is a second source of truth. And the enforcer that reaches
-a project superdev will never know is not the validator but the agent,
-reading the contract as its consumer would.
+Decisions taken in the interview, each with its rejected alternatives
+above: regions are bounded by markers in the source, not by symbol
+resolution or line ranges; `--fix` regenerates a stale source include
+and the commit diff is the review; a generated file names its generator
+in a marker the include carries through; a doc comment in a region is
+contract text; `pending` narrows to prose and CONTRACT-DESIGN writes
+declarations into source; this repository's contracts migrate inside
+the feature.
 
-Two things the reframe changed about the earlier one. It dropped the
-requirement that each element carry a matchable name — that is the
-drift test's concern, and contracts already do it wherever they define
-in a keyed form. And it moved
-[I047][sokf:issue-047-feature-request-a-kinds-definition-form-is-stated-in-prose]
-from superseded to dissolved: declaring a block's form was needed only
-so the validator could parse the block, and it no longer does.
+What dissolves: I043, I044 and I046, each a defect in a test that
+compared a copy, and
+[I047][sokf:issue-047-feature-request-a-kinds-definition-form-is-stated-in-prose],
+which asked how a kind names a form the validator cannot parse when the
+validator now parses none.
+[I048][sokf:issue-048-feature-request-no-step-asks-whether-a-contract-is-bound]
+is folded: whether a definition is bound is decidable once it is an
+include, and the agent's question narrows to whether the region is the
+whole surface.
 
-I048 was folded in on 2026-09-02 once the three layers were clear: its
-question — does the declared binding hold — is the judgement layer's
-binding half, and it lands in the same step as the readability and
-duplication questions. A criterion requiring the link check to reach
-the README was dropped the same day; "correctly referenced from the
-docs" meant the contract knowledge referencing its declarations, which
-criterion 3 already binds.
+What changes in the decisions on file.
+[ADR-033][sokf:adr-033-a-contract-defines-its-interface] still requires
+a machine-readable definition block; the block is now materialised
+rather than authored.
+[ADR-034][sokf:adr-034-each-kind-defines-in-the-form-its-ecosystem-reads]
+is taken at its word: the form the ecosystem reads is the source, and
+the contract carries the source.
+[ADR-035][sokf:adr-035-a-schema-declares-its-definition-blocks-contract]
+is retired, since nothing parses a definition.
+[ADR-036][sokf:adr-036-a-contract-is-bound-to-its-implementation] is
+rewritten: a definition is bound by materialisation, which superdev
+supplies, and behaviour by test, which the project does.
 
-Left to CONTRACT-DESIGN: the shape of a definition reference and a
-binding statement in a section rule and a contract; whether the
-`resource` frontmatter key, which points at the implementation, stays
-distinct from a definition reference, which must not; and the wording
-of the non-goal in `constraints-non-goals`, which says superdev
-supplies "no gate that one exists" while criterion 5 checks that a
-named test file does.
+Left to CONTRACT-DESIGN: the fence tag for a file with no extension or
+an unknown one; whether `resource`, which points at the implementation,
+stays distinct from an include; the wording of the non-goal, which must
+now say that superdev binds a definition by materialising it and the
+project binds behaviour by test; and how CONTRACT-DESIGN's
+declaration-only source edit sits under the approval ADR-028 requires.
 
 <!-- sokf:links -->
+[sokf:adr-027-an-include-block-materializes-shared-content-in-place]: /knowledge/adrs/active/adr-027-an-include-block-materializes-shared-content-in-place.md
 [sokf:adr-033-a-contract-defines-its-interface]: /knowledge/adrs/active/adr-033-a-contract-defines-its-interface.md
 [sokf:adr-034-each-kind-defines-in-the-form-its-ecosystem-reads]: /knowledge/adrs/active/adr-034-each-kind-defines-in-the-form-its-ecosystem-reads.md
 [sokf:adr-035-a-schema-declares-its-definition-blocks-contract]: /knowledge/adrs/active/adr-035-a-schema-declares-its-definition-blocks-contract.md
@@ -315,6 +351,8 @@ named test file does.
 [sokf:adr-038-a-contract-may-promise-what-is-not-built-yet]: /knowledge/adrs/active/adr-038-a-contract-may-promise-what-is-not-built-yet.md
 [sokf:adr-039-a-decidable-finding-is-an-error-and-the-turn-is-the-gate]: /knowledge/adrs/active/adr-039-a-decidable-finding-is-an-error-and-the-turn-is-the-gate.md
 [sokf:issue-038-bug-the-template-format-contract-is-bound-by-no-drift-test]: /knowledge/issues/done/issue-038-bug-the-template-format-contract-is-bound-by-no-drift-test.md
-[sokf:issue-043-bug-the-cli-contracts-json-keys-are-bound-by-no-test]: /knowledge/issues/open/issue-043-bug-the-cli-contracts-json-keys-are-bound-by-no-test.md
+[sokf:issue-043-bug-the-cli-contracts-json-keys-are-bound-by-no-test]: /knowledge/issues/wontfix/issue-043-bug-the-cli-contracts-json-keys-are-bound-by-no-test.md
+[sokf:issue-044-bug-a-drift-test-names-the-direction-for-a-command-and-not-for-a-flag]: /knowledge/issues/wontfix/issue-044-bug-a-drift-test-names-the-direction-for-a-command-and-not-for-a-flag.md
+[sokf:issue-046-chore-audit-the-one-directional-drift-bindings]: /knowledge/issues/wontfix/issue-046-chore-audit-the-one-directional-drift-bindings.md
 [sokf:issue-047-feature-request-a-kinds-definition-form-is-stated-in-prose]: /knowledge/issues/wontfix/issue-047-feature-request-a-kinds-definition-form-is-stated-in-prose.md
 [sokf:issue-048-feature-request-no-step-asks-whether-a-contract-is-bound]: /knowledge/issues/wontfix/issue-048-feature-request-no-step-asks-whether-a-contract-is-bound.md

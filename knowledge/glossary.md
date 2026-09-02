@@ -143,11 +143,9 @@ Terms from the contract side:
 
 - **Binding** — what satisfies
   [ADR-036][sokf:adr-036-a-contract-is-bound-to-its-implementation]'s
-  obligation for one part of a contract's definition, one of three:
-  **construction**, where the code is built from the referenced file and
-  cannot disagree with it; a **currency check**, where a block is
-  generated from the code and a test proves it current; or a **drift
-  test**, where the block is written by hand.
+  obligation for one contract: either generation the build performs, or a
+  drift test where the implementation is hand-written. A committed
+  generated artifact binds only while it is proved current.
 - **Drift test** — a test that compares a contract's declared surface to
   its implementation, element for element in both directions, and fails
   naming the element and the side that carries it. The project writes it,

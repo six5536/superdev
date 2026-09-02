@@ -7,7 +7,7 @@ lifecycle: wontfix
 links:
   - rel: references
     to: issue-049-feature-request-a-contract-cannot-point-at-its-definition
-    note: The reframe that settled this — drift-test defects are fixed as defects, not as a feature.
+    note: The reframe that settled this — the copies the drift tests compared no longer exist.
   - rel: references
     to: issue-035-feature-request-a-contract-does-not-define-its-interface
     note: Criteria 4 and 12 were accepted on a binding thinner than the acceptance implied; this closes the two gaps.
@@ -31,12 +31,13 @@ links:
 
 Closed 2026-09-02. The conversation that produced
 [I049][sokf:issue-049-feature-request-a-contract-cannot-point-at-its-definition]
-found that this repository's drift tests being wrong is not a feature
-about contracts; it is two defects in tests. I043 and I044 stay open
-and carry the fix: the `json` block bound by running the binary, and a
-difference inside a bound element reported with its element and its
-direction. The direction-vocabulary question goes to I044. Nothing here
-is dropped; it is fixed where the defect is.
+first found this repository's drift tests to be defects rather than a
+feature, then found the copies they compared to be the defect. Under
+I049 a contract's definition is materialised from source and cannot
+drift, the four copy-comparing tests are deleted, and the seven
+criteria below have nothing left to bind. What survives of them is
+behaviour — the exit codes — which `contract_exit_codes.rs` already
+tests.
 
 ## Summary
 
@@ -192,7 +193,7 @@ surface.
 [sokf:adr-038-a-contract-may-promise-what-is-not-built-yet]: /knowledge/adrs/active/adr-038-a-contract-may-promise-what-is-not-built-yet.md
 [sokf:issue-035-feature-request-a-contract-does-not-define-its-interface]: /knowledge/issues/done/issue-035-feature-request-a-contract-does-not-define-its-interface.md
 [sokf:issue-036-feature-request-validate-prints-warnings-by-default]: /knowledge/issues/done/issue-036-feature-request-validate-prints-warnings-by-default.md
-[sokf:issue-043-bug-the-cli-contracts-json-keys-are-bound-by-no-test]: /knowledge/issues/open/issue-043-bug-the-cli-contracts-json-keys-are-bound-by-no-test.md
-[sokf:issue-044-bug-a-drift-test-names-the-direction-for-a-command-and-not-for-a-flag]: /knowledge/issues/open/issue-044-bug-a-drift-test-names-the-direction-for-a-command-and-not-for-a-flag.md
-[sokf:issue-046-chore-audit-the-one-directional-drift-bindings]: /knowledge/issues/open/issue-046-chore-audit-the-one-directional-drift-bindings.md
+[sokf:issue-043-bug-the-cli-contracts-json-keys-are-bound-by-no-test]: /knowledge/issues/wontfix/issue-043-bug-the-cli-contracts-json-keys-are-bound-by-no-test.md
+[sokf:issue-044-bug-a-drift-test-names-the-direction-for-a-command-and-not-for-a-flag]: /knowledge/issues/wontfix/issue-044-bug-a-drift-test-names-the-direction-for-a-command-and-not-for-a-flag.md
+[sokf:issue-046-chore-audit-the-one-directional-drift-bindings]: /knowledge/issues/wontfix/issue-046-chore-audit-the-one-directional-drift-bindings.md
 [sokf:issue-049-feature-request-a-contract-cannot-point-at-its-definition]: /knowledge/issues/open/issue-049-feature-request-a-contract-cannot-point-at-its-definition.md
