@@ -13,6 +13,16 @@ publish a version it cannot find a heading for.
 
 ### Added
 
+- **A schema declares variants.** `variant-key` names the frontmatter key
+  whose value selects a variant; a section rule, frontmatter constraint or
+  `sections-prohibited` entry tagged `variants: [v1]` binds those values
+  alone, and an untagged rule binds every value. A document is checked
+  against the rules its value selects, in declared order. With
+  `variant-key` set, `example` is a map keyed by value, one document per
+  enum value, each checked against the base rules and its own variant's,
+  its value equal to its key. A tag outside the enum, a tag or keyed
+  example with no `variant-key`, a `variant-key` with no enum, and a
+  missing example are each an error on the schema file (ADR-045).
 - **A schema section may declare `content: include`.** The sixth content
   kind is satisfied by an include block naming a source path, and a fenced
   block in such a section outside an include is an error naming the

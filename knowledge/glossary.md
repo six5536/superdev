@@ -2,7 +2,7 @@
 type: Glossary
 id: glossary
 title: Domain Glossary
-description: The terms the blueprint engine uses — blueprint, capability, provider, provenance, component, owned file, scaffold, project template, template adoption, skill pack, knowledge-carried skill, content pack, pack source, embedded snapshot, pack item, pack layer, pack format, PROJECT.md layer, custom skill, harvest, claim, orphan — plus the search terms section, locator, hybrid search and RRF, and the contract terms binding and drift test.
+description: The terms the blueprint engine uses — blueprint, capability, provider, provenance, component, owned file, scaffold, project template, template adoption, skill pack, knowledge-carried skill, content pack, pack source, embedded snapshot, pack item, pack layer, pack format, PROJECT.md layer, custom skill, harvest, claim, orphan — plus the knowledge terms section, locator, hybrid search, RRF, lifecycle and variant, and the contract terms binding and drift test.
 status: stable
 ---
 
@@ -138,6 +138,11 @@ Terms from the knowledge-serving side:
   whose folder disagrees. SOKF `status` no longer appears on these kinds: it
   answered the same question in a second vocabulary, and an absent `status`
   reads as `stable` by the SOKF spec, so dropping it changed nothing.
+- **Variant** — one of the values a schema's `variant-key` frontmatter key
+  admits, selecting which of the schema's rules a document is checked
+  against: a rule tagged `variants` binds the values it names, an untagged
+  rule binds every value, and the schema carries one example per value
+  ([ADR-045][sokf:adr-045-a-schema-declares-variants]).
 
 Terms from the contract side:
 
@@ -159,6 +164,7 @@ layering is in [architecture][sokf:architecture].
 [sokf:adr-003-items-by-layout]: /knowledge/adrs/active/adr-003-items-by-layout.md
 [sokf:adr-004-base-pack-identity]: /knowledge/adrs/active/adr-004-base-pack-identity.md
 [sokf:adr-036-a-contract-is-bound-to-its-implementation]: /knowledge/adrs/deprecated/adr-036-a-contract-is-bound-to-its-implementation.md
+[sokf:adr-045-a-schema-declares-variants]: /knowledge/adrs/active/adr-045-a-schema-declares-variants.md
 [sokf:architectural-rules]: /knowledge/architectural-rules.md
 [sokf:architecture]: /knowledge/architecture.md
 [sokf:configuration]: /knowledge/configuration.md
