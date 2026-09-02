@@ -13,6 +13,19 @@ publish a version it cannot find a heading for.
 
 ### Added
 
+- **The workflow skills judge and declare a contract.** `/integrate` gains
+  JUDGE THE CONTRACTS: a contract the slice touched is read as its
+  consumer would read it, and the report names what was checked and
+  where an included region omits part of the promised surface, where an
+  optional section the kind's checklist names is absent with no reason,
+  and where a reader could not learn the interface — a judgement that
+  blocks nothing, and a slice touching no contract says so.
+  `/contract-design` reads `schema-contract` in place of the per-kind
+  schemas, writes a new definition element into its marked source region
+  with its behaviour unbuilt, and presents and commits that declaration
+  under the approval it already requires. `/accept` refuses a settling
+  contract whose Behaviour or Stability still carries `PENDING`
+  (ADR-044). The pack ships all three.
 - **The contract schema declares its twelve kinds.** `variant-key: kind`
   selects a contract's rules: twelve title rules, one per kind's display
   name, so `# CLI contract: …` is required by `kind: cli`; and each kind's
