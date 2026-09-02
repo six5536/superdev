@@ -20,6 +20,7 @@ workflow.
 * [Contracts define their interfaces — feature plan][sokf:plan-021-feature-contracts-define-their-interface] - slices delivering the definition-block vocabulary, each kind's declared form, the drift tests that bind a contract to its implementation, and the split of the file-format kind.
 * [A decidable finding is an error — feature plan][sokf:plan-022-feature-decidable-findings-are-errors] - slices closing the promised run-state fields, promoting the five findings the repository alone settles, scoping the edit-time hook off the two that span files, and holding the turn open while the knowledge carries an error.
 * [A warning is counted by default and listed on request — feature plan][sokf:plan-023-feature-warnings-are-counted-not-listed] - slices adding the `--warnings` flag the contract promises, carrying both counts into `--json` alongside the findings it lists, and giving the two hooks the same default as the command line.
+* [A contract includes its definition — feature plan][sokf:plan-024-feature-a-contract-includes-its-definition] - slices delivering I049 — the source include, the sixth content kind, schema variants, the one contract schema, the skills' judgement and declaration steps, the migration of nine contracts, and the deletion of fifteen schemas and four copy-comparing tests.
 
 ## Ad-hoc plans
 
@@ -58,3 +59,4 @@ workflow.
 [sokf:plan-021-feature-contracts-define-their-interface]: /knowledge/plans/done/plan-021-feature-contracts-define-their-interface.md
 [sokf:plan-022-feature-decidable-findings-are-errors]: /knowledge/plans/done/plan-022-feature-decidable-findings-are-errors.md
 [sokf:plan-023-feature-warnings-are-counted-not-listed]: /knowledge/plans/done/plan-023-feature-warnings-are-counted-not-listed.md
+[sokf:plan-024-feature-a-contract-includes-its-definition]: /knowledge/plans/open/plan-024-feature-a-contract-includes-its-definition.md
