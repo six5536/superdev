@@ -264,138 +264,186 @@ What each declaration in the Definition obliges the validator to check.
 A schema writes the vocabulary in YAML — `heading-pattern` for
 `heading_pattern`, `variant-key` for `variant_key` — under the
 `serde` renames the Definition shows; `description` beside any key is
-prose the validator MUST NOT check.
+prose.
 
-- **Dispatch** — a document's frontmatter `type` names the schema whose
-  `frontmatter.type.const` equals it; `target-files` globs catch the
-  frontmatter-less. A `type` naming no schema MUST be an error.
-- **Frontmatter** — `const`, `pattern` and `enum` bind a key's present
-  value; `required` makes absence an error; a key declared with only a
-  `description` is guidance (ADR-022). A constraint compares against the
-  value's scalar string form, so a value with no scalar form — a list, a
-  map, a folded block — cannot satisfy one. `lifecycle` belongs to the
-  filing check (P011), which reports its value against the enum and its
-  folder, so one fault is said once.
-- **Content kinds** — the closed set `CONTENT_KINDS` names. A section
-  satisfies its kind when the form appears in its body: one bullet, one
-  numbered item, one table, one fenced block, one include block naming
-  a source path, or — for prose — one plain paragraph line; other
-  content beside the form is tolerated (ADR-023), with one exception:
-  an `include` section carrying a fenced block outside an include MUST
-  be an error naming the section, because a hand-written block beside a
-  materialised one is the copy the kind exists to forbid (ADR-042). The
-  body runs to the next heading at the section's own level or
-  shallower, so a subsection's content counts; lines inside fenced
-  blocks are not content.
-- **Body patterns** — `item-pattern` binds each top-level item of the
-  section's declared list kind, `content-pattern` the section's whole
-  body. Every pattern in this vocabulary is a regex matched
-  found-anywhere; authors write `^` and `$` explicitly, and neither
-  pattern reads a fenced block (ADR-030). An item-pattern finding names
-  the file, the section and the item's first line; a content-pattern
-  finding names the file and the section. Both name the failing
-  occurrence's own heading, so a repeatable rule is locatable.
-- **Item keys and bounds** — `item-key` is a regex with one capture
-  group that every top-level item of the declared list kind MUST match,
-  the capture being the item's key; a key repeated across the document's
-  items under rules declaring `item-key` MUST be an error naming the key
-  and both items, and an item with no match MUST be an error naming the
-  section and the item. `item-only-pattern` is a regex that may match only
-  inside a top-level item: a match on a body line outside every item —
-  prose, a table row, an item of the other list kind — MUST be an error
-  naming the section and the line, and on a section whose `content` is
-  not a list kind every body line is outside. `item-prohibited-pattern`
-  is a regex no top-level item may match; a match MUST be an error naming
-  the item and the matched text. All three read an item as
-  `item-pattern` does and skip fenced blocks (ADR-047).
-- **What an item is** — the list's top level is the shallowest marker in
-  the body, so a list indented under its heading still binds. An item
-  takes the following lines indented past that, blank lines included, and
-  an unindented line while its paragraph is still running. A nested item
-  is its own: its lines are dropped, and the item above it resumes at the
-  first line no deeper than the nested marker. A marker of the other list
-  kind opens no item, and a thematic break is not a marker.
-- **Variants** — `variant-key` names the frontmatter key whose value
-  selects a variant; any rule carrying `variants` applies only to the
-  values it lists, and a rule without it to all; a document MUST be
-  checked against the rules its value selects, in declared order
-  (ADR-045). A document whose value is absent, or outside the key's
-  enum, sees the untagged rules alone, and the frontmatter check reports
-  the value. With `variant-key` set, `example` is a map keyed by value,
-  every enum value present, each checked against the base and its own
-  variant's rules, its value equal to its key; its findings carry the
-  key, `example `<value>`:`.
-- **The definition is not parsed** — the `include` kind asks only that
-  an include block naming a source path is present; what the block
-  carries is the SOKF validator's to keep current (ADR-041) and no
-  concern of this check. The former `block-language`, `block-keys` and
-  `block-entry-keys` declarations are withdrawn (ADR-042); a schema
-  still carrying one is mis-declared.
-- **A mis-declared schema is its own finding** — a `content` outside
-  `CONTENT_KINDS`, a `pattern` that does not compile, an `item-pattern`
-  on a section whose `content` is not a list kind, a withdrawn
-  `block-*` declaration, a `variants` tag naming a value outside the
-  discriminator's enum, a tag with no `variant-key`, a `variant-key`
-  naming a frontmatter key with no enum, or an `example` of the wrong
-  shape — one document under a `variant-key`, a map without one, a
-  variant with no example, a key the enum does not carry: MUST be
-  reported against the schema file, and the unreadable rule binds
-  nothing. An `item-key` on a section whose `content` is not a list
-  kind, and an `item-key` whose capture count is not one, MUST be
-  reported the same way; an `item-prohibited-pattern` on a section
-  whose `content` is not a list kind MUST be reported the same way
+- `P_description-unchecked` [ubiquitous] The validator SHALL NOT check
+  the `description` beside a key.
+
+**Dispatch** — a document's frontmatter `type` names the schema whose
+`frontmatter.type.const` equals it; `target-files` globs catch the
+frontmatter-less.
+
+- `P_unknown-type` [event] WHEN a document's `type` names no schema,
+  the validator SHALL report an error.
+
+**Frontmatter** — `const`, `pattern` and `enum` bind a key's present
+value; `required` makes absence an error; a key declared with only a
+`description` is guidance (ADR-022). A constraint compares against the
+value's scalar string form, so a value with no scalar form — a list, a
+map, a folded block — cannot satisfy one. `lifecycle` belongs to the
+filing check (P011), which reports its value against the enum and its
+folder, so one fault is said once.
+
+**Content kinds** — the closed set `CONTENT_KINDS` names. A section
+satisfies its kind when the form appears in its body: one bullet, one
+numbered item, one table, one fenced block, one include block naming a
+source path, or — for prose — one plain paragraph line; other content
+beside the form is tolerated (ADR-023), with one exception for the
+`include` kind. The body runs to the next heading at the section's own
+level or shallower, so a subsection's content counts; lines inside
+fenced blocks are not content.
+
+- `P_include-carries-no-authored-block` [event] WHEN an `include`
+  section carries a fenced block outside an include, the validator
+  SHALL report an error naming the section (ADR-042).
+
+**Body patterns** — `item-pattern` binds each top-level item of the
+section's declared list kind, `content-pattern` the section's whole
+body. Every pattern in this vocabulary is a regex matched
+found-anywhere; authors write `^` and `$` explicitly, and neither
+pattern reads a fenced block (ADR-030). An item-pattern finding names
+the file, the section and the item's first line; a content-pattern
+finding names the file and the section. Both name the failing
+occurrence's own heading, so a repeatable rule is locatable.
+
+**Item keys and bounds** — `item-key` is a regex with one capture
+group whose capture is the item's key. `item-only-pattern` is a regex
+that matches only inside a top-level item; on a section whose `content`
+is not a list kind every body line is outside. `item-prohibited-pattern`
+is a regex no top-level item matches. All three read an item as
+`item-pattern` does and skip fenced blocks (ADR-047).
+
+- `P_item-key-binds` [ubiquitous] `item-key` SHALL bind every top-level
+  item of the section's declared list kind, the capture being the
+  item's key.
+- `P_item-key-unmatched` [event] WHEN an item has no `item-key` match,
+  the validator SHALL report an error naming the section and the item.
+- `P_item-key-repeated` [event] WHEN a key repeats across the document's
+  items under rules declaring `item-key`, the validator SHALL report an
+  error naming the key and both items.
+- `P_item-only-outside` [event] WHEN `item-only-pattern` matches a body
+  line outside every item — prose, a table row, an item of the other
+  list kind — the validator SHALL report an error naming the section
+  and the line.
+- `P_item-prohibited-matched` [event] WHEN a top-level item matches
+  `item-prohibited-pattern`, the validator SHALL report an error naming
+  the item and the matched text.
+
+**What an item is** — the list's top level is the shallowest marker in
+the body, so a list indented under its heading still binds. An item
+takes the following lines indented past that, blank lines included, and
+an unindented line while its paragraph is still running. A nested item
+is its own: its lines are dropped, and the item above it resumes at the
+first line no deeper than the nested marker. A marker of the other list
+kind opens no item, and a thematic break is not a marker.
+
+**Variants** — `variant-key` names the frontmatter key whose value
+selects a variant; any rule carrying `variants` applies only to the
+values it lists, and a rule without it to all (ADR-045). A document
+whose value is absent, or outside the key's enum, sees the untagged
+rules alone, and the frontmatter check reports the value. With
+`variant-key` set, `example` is a map keyed by value, every enum value
+present, each checked against the base and its own variant's rules, its
+value equal to its key; its findings carry the key, `example
+`<value>`:`.
+
+- `P_variant-selects-rules` [ubiquitous] The validator SHALL check a
+  document against the rules its variant value selects, in declared
+  order (ADR-045).
+
+**The definition is not parsed** — the `include` kind asks only that
+an include block naming a source path is present; what the block
+carries is the SOKF validator's to keep current (ADR-041) and no
+concern of this check. The former `block-language`, `block-keys` and
+`block-entry-keys` declarations are withdrawn (ADR-042); a schema
+still carrying one is mis-declared.
+
+**A mis-declared schema is its own finding** — the unreadable rule
+binds nothing.
+
+- `P_misdeclared-schema` [event] WHEN a schema carries a `content`
+  outside `CONTENT_KINDS`, a `pattern` that does not compile, an
+  `item-pattern` on a section whose `content` is not a list kind, a
+  withdrawn `block-*` declaration, a `variants` tag naming a value
+  outside the discriminator's enum, a tag with no `variant-key`, a
+  `variant-key` naming a frontmatter key with no enum, or an `example`
+  of the wrong shape — one document under a `variant-key`, a map
+  without one, a variant with no example, a key the enum does not
+  carry — the validator SHALL report it against the schema file.
+- `P_misdeclared-item-key` [event] WHEN an `item-key` sits on a section
+  whose `content` is not a list kind, or carries a capture count other
+  than one, the validator SHALL report it against the schema file
   (ADR-047).
-- **The example is checked in place** — the `example:` block is read as
-  a document and run through this same check with the declaring schema
-  handed to it, no dispatch; every failure, including an example that
-  does not parse as a document, is a finding on the schema file
-  (ADR-024).
-- **An example's links bind by form, never by destination** — a concept
-  link in an example takes the `[text][sokf:<id>]` form and a path link
-  into the knowledge is an error, but no id or target is resolved: a
-  fictional `sokf:` label passes, and a link outside the knowledge — a
-  URL, a repository path — keeps its ordinary markdown form (ADR-025).
-  This is the one place the link rules differ from a real document's,
-  where ids must resolve.
+- `P_misdeclared-item-prohibited` [event] WHEN an
+  `item-prohibited-pattern` sits on a section whose `content` is not a
+  list kind, the validator SHALL report it against the schema file
+  (ADR-047).
+
+**The example is checked in place** — the `example:` block is read as
+a document and run through this same check with the declaring schema
+handed to it, no dispatch; every failure, including an example that
+does not parse as a document, is a finding on the schema file
+(ADR-024).
+
+**An example's links bind by form, never by destination** — a concept
+link in an example takes the `[text][sokf:<id>]` form and a path link
+into the knowledge is an error, but no id or target is resolved: a
+fictional `sokf:` label passes, and a link outside the knowledge — a
+URL, a repository path — keeps its ordinary markdown form (ADR-025).
+This is the one place the link rules differ from a real document's,
+where ids resolve.
 
 ### Module boundaries
 
-- `validate::schema` owns parsing (`DocSchema::parse`) and checking
-  (`check_documents`); schemas are data it reads, never code.
-- Schema files own the declarations; a document-structure declaration
-  MUST NOT live outside `knowledge/schemas/` and its pack mirror.
-- The grammar (`.agents/sokf/grammar.yaml`) governs the schema files'
-  own markdown shape; this contract governs what their YAML declares.
+`validate::schema` owns parsing (`DocSchema::parse`) and checking
+(`check_documents`); schemas are data it reads, never code. Schema
+files own the declarations. The grammar (`.agents/sokf/grammar.yaml`)
+governs the schema files' own markdown shape; this contract governs
+what their YAML declares.
+
+- `P_declarations-live-in-schemas` [ubiquitous] A document-structure
+  declaration SHALL NOT live outside `knowledge/schemas/` and its pack
+  mirror.
 
 ### Key flows
 
-- validate: collect documents → dispatch each by `type` or glob →
-  sections (presence, order, prohibition, columns, line limit) →
-  content kinds → body patterns → frontmatter contract → findings
-  grouped per file, one verdict.
-- example check: parse each schema's `example:` block as a document, one
-  per variant where the schema declares them → run the document check
-  with the declaring schema → check link form → findings land on the
-  schema file, in the same run and verdict.
+1. validate: collect documents → dispatch each by `type` or glob →
+   sections (presence, order, prohibition, columns, line limit) →
+   content kinds → body patterns → frontmatter contract → findings
+   grouped per file, one verdict.
+2. example check: parse each schema's `example:` block as a document,
+   one per variant where the schema declares them → run the document
+   check with the declaring schema → check link form → findings land
+   on the schema file, in the same run and verdict.
 
 ### Cross-cutting concerns
 
-- Security: every schema pattern MUST compile through the validator's own
-  `re` wrapper; one that does not compile MUST be a schema finding, never a
-  panic or a silently-passing rule.
-- Performance: every check is one pass over the document's lines; the
-  schema set parses once per run.
-- Migration/rollout: a schema without `required` marks or with its
-  existing `content` lines keeps its current meaning, so old packs stay
-  readable; the three `block-*` declarations are the one withdrawal,
-  and a pack still carrying them reports on its schemas rather than
-  failing to load (I049).
-- Observability: every finding names the document, the rule and the
-  schema, in the shape the section findings already use.
+Security: a pattern is data a schema author wrote, compiled by the
+validator alone.
+
+- `P_pattern-compiles-through-wrapper` [ubiquitous] The validator SHALL
+  compile every schema pattern through its own `re` wrapper.
+- `P_uncompilable-pattern-is-finding` [event] WHEN a pattern does not
+  compile, the validator SHALL report a schema finding, never a panic
+  or a silently-passing rule.
+
+Performance: every check is one pass over the document's lines; the
+schema set parses once per run.
+
+Migration/rollout: a schema without `required` marks or with its
+existing `content` lines keeps its current meaning, so old packs stay
+readable; the three `block-*` declarations are the one withdrawal, and
+a pack still carrying them reports on its schemas rather than failing
+to load (I049).
+
+Observability: every finding names the document, the rule and the
+schema, in the shape the section findings already use.
 
 ## Stability
 
-Internal. Every item above MAY change with the crate.
+Internal.
+
+- `P_internal` [ubiquitous] Every item above MAY change with the crate.
 
 <!-- sokf:links -->
 [sokf:adr-022-a-frontmatter-key-is-required-by-a-per-key-flag]: /knowledge/adrs/active/adr-022-a-frontmatter-key-is-required-by-a-per-key-flag.md

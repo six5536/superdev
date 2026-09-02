@@ -102,69 +102,83 @@ pub struct HoldState {
 
 ### Module boundaries
 
-- The `superdev` binary owns every read and write of `run.toml` — a
-  `run` module beside the other verb modules; `superdev-core` MUST NOT
+The `superdev` binary owns every read and write of `run.toml` — a `run`
+module beside the other verb modules. `superdev hook run` is the one
+reader that also writes: it increments `continues` and adopts an empty
+owner. The binary owns `hold.toml` the same way, and `superdev hook
+run` is its only writer: it increments `holds` while it holds the turn
+and removes the file once the knowledge is clean. `components/sokf.rs`
+declares the `hooks.Stop` entry in `.claude/settings.json` as a
+`ManagedItem::JsonEntry` with marker `superdev hook run`, beside the
+PostToolUse entry; it ships with the knowledge capability and is
+claimed in the lock the same way. The driver skill calls the verbs
+([ADR-019][sokf:adr-019-run-state-is-a-session-owned-file-behind-cli-verbs]).
+
+- `P_core-touches-no-run-state` [ubiquitous] `superdev-core` SHALL NOT
   touch run state.
-- `superdev hook run` is the one reader that also writes: it increments
-  `continues` (and may adopt an empty owner); it MUST NOT change
-  anything else or open a plan.
-- The binary owns `hold.toml` the same way. `superdev hook run` is its
-  only writer: it increments `holds` while it holds the turn and removes
-  the file once the knowledge is clean. A hold MUST NOT create, alter or
-  remove `run.toml`, because that file's presence means a run is active
-  (ADR-039).
-- `components/sokf.rs` declares the `hooks.Stop` entry in
-  `.claude/settings.json` as a `ManagedItem::JsonEntry` with marker
-  `superdev hook run`, beside the PostToolUse entry; it ships with the
-  knowledge capability and is claimed in the lock the same way.
-- The driver skill calls the verbs; it MUST NOT write the file itself
-  ([ADR-019][sokf:adr-019-run-state-is-a-session-owned-file-behind-cli-verbs]).
+- `P_hook-writes-continues-only` [ubiquitous] `superdev hook run` SHALL
+  NOT change anything beyond `continues` and an empty owner, or open a
+  plan.
+- `P_hold-leaves-run-toml` [ubiquitous] A hold SHALL NOT create, alter
+  or remove `run.toml` (ADR-039).
+- `P_skill-writes-no-state` [ubiquitous] The driver skill SHALL NOT
+  write `run.toml` itself (ADR-019).
 
 ### Key flows
 
-- A run: `superdev run begin` → per slice, build → integrate, with
-  `superdev run advance --next <TEXT>` at every real step forward →
-  `superdev run end` when no slice is ready.
-- A turn ends: Claude Code fires Stop; `superdev hook run` reads the
-  payload and the state, and exits `0` when the state is absent, the
-  payload's session is not the owner, `next` is empty, or `continues`
-  has reached `CONTINUE_CAP` — otherwise it increments `continues` and
-  exits `2` naming `next`, which Claude Code feeds back as the
-  instruction to keep going. A payload without a session id matches
-  nothing — it neither adopts nor drives a run — so an unclaimed run is
-  driven only after adoption. The payload's `stop_hook_active` never
-  gates the decision: exit `2` stays effective while it is true, and
-  the counter is the guard
-  ([research-001][sokf:research-001-claude-code-stop-hook-behaviour]).
-- A second `begin` while state exists: refused, naming the owning
-  session and `superdev run end` as the way to clear a stale run.
+1. A run: `superdev run begin` → per slice, build → integrate, with
+   `superdev run advance --next <TEXT>` at every real step forward →
+   `superdev run end` when no slice is ready.
+2. A turn ends: Claude Code fires Stop; `superdev hook run` reads the
+   payload and the state, and exits `0` when the state is absent, the
+   payload's session is not the owner, `next` is empty, or `continues`
+   has reached `CONTINUE_CAP` — otherwise it increments `continues` and
+   exits `2` naming `next`, which Claude Code feeds back as the
+   instruction to keep going. A payload without a session id matches
+   nothing — it neither adopts nor drives a run — so an unclaimed run is
+   driven only after adoption. The payload's `stop_hook_active` never
+   gates the decision: exit `2` stays effective while it is true, and
+   the counter is the guard
+   ([research-001][sokf:research-001-claude-code-stop-hook-behaviour]).
+3. A second `begin` while state exists: refused, naming the owning
+   session and `superdev run end` as the way to clear a stale run.
 
 ### Cross-cutting concerns
 
-- Security: the state lives under the gitignored `.superdev/cache/`;
-  the hook MUST execute nothing and parse only its own TOML and the
-  payload JSON. An unreadable payload MUST be a loud exit `2`, matching
-  `hook validate`; an unreadable `run.toml` MUST be reported to stderr and
-  exit `0`, failing open
+Security: the state lives under the gitignored `.superdev/cache/`.
+
+- `P_hook-executes-nothing` [ubiquitous] `superdev hook run` SHALL
+  execute nothing and parse only its own TOML and the payload JSON.
+- `P_unreadable-payload-exits-2` [event] WHEN the Stop payload is
+  unreadable, `superdev hook run` SHALL exit `2` loudly, matching
+  `hook validate`.
+- `P_unreadable-state-fails-open` [event] WHEN `run.toml` is
+  unreadable, `superdev hook run` SHALL report to stderr and exit `0`,
+  failing open
   ([ADR-019][sokf:adr-019-run-state-is-a-session-owned-file-behind-cli-verbs]).
-- Performance: one small file read per Stop event; no network, no plan
-  parse, no index.
-- Migration/rollout: additive. Without a `run.toml` every path exits
-  `0`, so existing repos see no behaviour change; the Stop entry
-  arrives with the knowledge capability's sync, and `--no-knowledge`
-  never gets it.
-- Observability: `begin`, `advance` and `end` print the transition;
-  the refusal names the owner; the exit-2 message names `next`; `end`
-  with no state is harmless and says so.
-- Platform interaction: any tool use in a continued turn resets Claude
-  Code's eight-consecutive-block override, so the override never ends a
-  productive run, and a text-only stall dies at eight before
-  `CONTINUE_CAP` fires; no `CLAUDE_CODE_STOP_HOOK_BLOCK_CAP` entry
-  ships ([research-001][sokf:research-001-claude-code-stop-hook-behaviour]).
+
+Performance: one small file read per Stop event; no network, no plan
+parse, no index.
+
+Migration/rollout: additive. Without a `run.toml` every path exits `0`,
+so existing repos see no behaviour change; the Stop entry arrives with
+the knowledge capability's sync, and `--no-knowledge` never gets it.
+
+Observability: `begin`, `advance` and `end` print the transition; the
+refusal names the owner; the exit-2 message names `next`; `end` with
+no state is harmless and says so.
+
+Platform interaction: any tool use in a continued turn resets Claude
+Code's eight-consecutive-block override, so the override never ends a
+productive run, and a text-only stall dies at eight before
+`CONTINUE_CAP` fires; no `CLAUDE_CODE_STOP_HOOK_BLOCK_CAP` entry ships
+([research-001][sokf:research-001-claude-code-stop-hook-behaviour]).
 
 ## Stability
 
-Internal. Every item above MAY change with the crate.
+Internal.
+
+- `P_internal` [ubiquitous] Every item above MAY change with the crate.
 
 <!-- sokf:links -->
 [sokf:adr-018-loop-in-the-skill-enforcement-in-the-hook]: /knowledge/adrs/active/adr-018-loop-in-the-skill-enforcement-in-the-hook.md
