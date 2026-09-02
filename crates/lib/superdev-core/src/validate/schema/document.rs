@@ -3619,3 +3619,146 @@ mod tests {
         assert_eq!(found, ["Real", "Also real"]);
     }
 }
+
+/// The shipped contract schema, in its final form (ADR-043, ADR-045): the
+/// per-kind sections it declares, and the title rule per kind.
+#[cfg(test)]
+mod contract_schema {
+    use super::*;
+
+    /// The twelve kinds, in the enum's order.
+    const KINDS: [&str; 12] = [
+        "api",
+        "events",
+        "cli",
+        "library",
+        "interface",
+        "ui",
+        "data",
+        "format",
+        "config",
+        "telemetry",
+        "authz",
+        "deployment",
+    ];
+
+    /// `knowledge/schemas/contract.md` as the repository ships it.
+    fn shipped() -> (String, String) {
+        let path: std::path::PathBuf = [
+            env!("CARGO_MANIFEST_DIR"),
+            "../../..",
+            "knowledge/schemas/contract.md",
+        ]
+        .iter()
+        .collect();
+        (
+            "contract.md".to_string(),
+            std::fs::read_to_string(path).expect("the contract schema is on file"),
+        )
+    }
+
+    fn schema() -> DocSchema {
+        let (name, text) = shipped();
+        DocSchema::parse(&name, &text)
+            .expect("the contract deserializes")
+            .expect("the contract is there")
+    }
+
+    /// A contract of `kind` titled `title`, carrying `sections` as `###`
+    /// under Behaviour, each with one MUST sentence, and the base sections
+    /// every kind carries.
+    fn contract(kind: &str, title: &str, sections: &[&str]) -> String {
+        let body: Vec<String> = sections
+            .iter()
+            .map(|h| format!("### {h}\n\nIt MUST hold.\n"))
+            .collect();
+        format!(
+            "---\ntype: Contract\nid: contract-001-{kind}-thing\nkind: {kind}\ntitle: T\n\
+             description: D\n---\n\n# {title}\n\n## Definition\n\n\
+             <!-- sokf:include /src/lib.rs#api -->\n```rust\npub struct Api;\n```\n\
+             <!-- /sokf:include -->\n\n## Behaviour\n\n{}\n## Stability\n\nIt MAY change.\n",
+            body.join("\n")
+        )
+    }
+
+    fn findings_for(kind: &str, title: &str, sections: &[&str]) -> Vec<Finding> {
+        let text = contract(kind, title, sections);
+        let doc = Document {
+            path: "c.md",
+            text: &text,
+            doc_type: Some("Contract"),
+        };
+        let mut findings = Vec::new();
+        check_one(&doc, &schema(), Subject::Filed, &mut findings);
+        findings
+    }
+
+    /// Covers I049 criterion 15: a `cli` contract without `### Exit codes`
+    /// fails naming the section; with it, and without the optional
+    /// `### Prompting`, it passes.
+    #[test]
+    fn a_cli_contract_carries_exit_codes_and_may_omit_prompting() {
+        let findings = findings_for("cli", "CLI contract: thing", &["Streams"]);
+        assert_eq!(findings.len(), 1, "{findings:#?}");
+        assert!(
+            findings[0]
+                .message
+                .contains("missing required section \"Exit codes\""),
+            "{findings:#?}"
+        );
+        let findings = findings_for("cli", "CLI contract: thing", &["Exit codes", "Streams"]);
+        assert!(findings.is_empty(), "{findings:#?}");
+    }
+
+    /// Covers I049 criterion 15: `### Authentication` is required for `api`
+    /// and is not a `cli` contract's rule.
+    #[test]
+    fn authentication_binds_an_api_contract_and_not_a_cli_one() {
+        let findings = findings_for(
+            "api",
+            "API contract: thing",
+            &["Transport", "Errors", "Limits", "Versioning"],
+        );
+        assert_eq!(findings.len(), 1, "{findings:#?}");
+        assert!(
+            findings[0]
+                .message
+                .contains("missing required section \"Authentication\""),
+            "{findings:#?}"
+        );
+        let findings = findings_for("cli", "CLI contract: thing", &["Exit codes", "Streams"]);
+        assert!(findings.is_empty(), "{findings:#?}");
+    }
+
+    /// Covers I049 criterion 12: the title rule a kind sees names its own
+    /// display name, so a `cli` contract titled as an API fails it.
+    #[test]
+    fn a_title_naming_another_kind_fails_the_kinds_title_rule() {
+        let findings = findings_for("cli", "API contract: thing", &["Exit codes", "Streams"]);
+        assert_eq!(findings.len(), 1, "{findings:#?}");
+        assert!(
+            findings[0]
+                .message
+                .contains("missing required section matching /^CLI contract: .+$/"),
+            "{findings:#?}"
+        );
+    }
+
+    /// Covers I049 criteria 8 and 14: the one schema carries one example
+    /// per kind, and every example passes base plus its own variant.
+    #[test]
+    fn every_kinds_example_passes() {
+        let schema = schema();
+        assert_eq!(
+            schema.variant_values().map(<[String]>::to_vec),
+            Some(KINDS.iter().map(|k| (*k).to_string()).collect())
+        );
+        let Some(Example::Keyed(examples)) = &schema.example else {
+            panic!("the example is keyed by kind");
+        };
+        let keys: Vec<&str> = examples.0.iter().map(|(k, _)| k.as_str()).collect();
+        assert_eq!(keys, KINDS, "one example per kind, in the enum's order");
+        let findings = check_examples(&[shipped()]);
+        assert!(findings.is_empty(), "{findings:#?}");
+    }
+}
