@@ -675,70 +675,93 @@ pub struct Ctx<'a> {
 
 ### Module boundaries
 
-- `superdev-core::pack` owns sources, identity, the cache, fetching and
-  digest verification; it MUST NOT know components or capabilities.
-- `superdev-core::content` owns the item model and the layout rules; it
-  depends on `std` alone.
-- `/pack/` at the repo root is the first-party pack and the third-party
-  reference ([ADR-006][sokf:adr-006-pack-at-repo-root]); the embedded
-  snapshot is built from it through the same layout rules as a fetched
-  pack.
-- `pack` depends on `content`; `content` MUST NOT depend on `pack`.
-- A component MUST read content only through `Ctx`; it MUST NOT call
+`superdev-core::pack` owns sources, identity, the cache, fetching and
+digest verification. `superdev-core::content` owns the item model and
+the layout rules, and depends on `std` alone; `pack` depends on
+`content`. `/pack/` at the repo root is the first-party pack and the
+third-party reference ([ADR-006][sokf:adr-006-pack-at-repo-root]); the
+embedded snapshot is built from it through the same layout rules as a
+fetched pack. `pipeline` calls `pack::resolve` before `plan_repo`, and
+`engine` stays the only side-effect site for repo writes. A fetched
+pack is judged by git's index modes, a path pack by `symlink_metadata`,
+and the cache is re-checked at read time (ADR-014).
+
+- `P_pack-knows-no-component` [ubiquitous] `superdev-core::pack` SHALL
+  NOT know components or capabilities.
+- `P_content-below-pack` [ubiquitous] `superdev-core::content` SHALL NOT
+  depend on `pack`.
+- `P_component-reads-ctx` [ubiquitous] A component SHALL read content
+  only through `Ctx`.
+- `P_component-calls-no-pack` [ubiquitous] A component SHALL NOT call
   `pack`.
-- `pipeline` calls `pack::resolve` before `plan_repo`; `engine` stays
-  the only side-effect site for repo writes.
-- A pack MUST NOT carry a symlink or a submodule anywhere; resolution
-  MUST fail naming the path. A fetched pack is judged by git's index
-  modes, a path pack by `symlink_metadata`, and the cache is re-checked
-  at read time. ADR-014.
+- `P_pack-carries-no-symlink` [ubiquitous] A pack SHALL NOT carry a
+  symlink or a submodule anywhere (ADR-014).
+- `P_symlink-fails-resolution` [event] WHEN a pack carries a symlink or
+  a submodule, `resolve` SHALL fail naming the path (ADR-014).
 
 ### Key flows
 
-- Default `init`, offline: the manifest pins `DEFAULT_PACK` at the
-  embedded rev → `resolve` returns the snapshot with no cache read and
-  no network → plan → apply.
-- Pinning a newer rev: `sync` → `resolve(Fetching)` fetches into the
-  cache, parses `pack.toml`, refuses unknown formats and the paths
-  [contract-005][sokf:contract-005-format-pack] names as `REJECTED` →
-  items replace or layer by identity → plan writes the changes and the
-  orphan pass removes what the rev dropped → apply records `PackLock`.
-- CI drift check: `status` → `resolve(Offline)` → cache and lock agree
-  → no fetch, no findings, exit 0.
-- Repairing drift offline: an edited pack file → `resolve(Fetching)`
-  finds the pack cached → plan emits the `WriteFile` → apply backs up
-  and rewrites.
-- Moving a pin: `update` → `update_pins` asks the default source for its
-  newest release → a moved pin MUST resolve before it is written, and
-  stays put when resolution refuses — the refusal is reported in the
-  line that would have announced the move. ADR-009, ADR-013.
-- Spawning: an expired deadline is an `Error::Command` like any failed
-  spawn. Only unprompted work takes a deadline: the pin query runs with
-  one and `GIT_TERMINAL_PROMPT=0`; a user-requested clone takes the
-  environment and no deadline. ADR-015.
+1. Default `init`, offline: the manifest pins `DEFAULT_PACK` at the
+   embedded rev → `resolve` returns the snapshot with no cache read and
+   no network → plan → apply.
+2. Pinning a newer rev: `sync` → `resolve(Fetching)` fetches into the
+   cache, parses `pack.toml`, refuses unknown formats and the paths
+   [contract-005][sokf:contract-005-format-pack] names as `REJECTED` →
+   items replace or layer by identity → plan writes the changes and the
+   orphan pass removes what the rev dropped → apply records `PackLock`.
+3. CI drift check: `status` → `resolve(Offline)` → cache and lock agree
+   → no fetch, no findings, exit 0.
+4. Repairing drift offline: an edited pack file → `resolve(Fetching)`
+   finds the pack cached → plan emits the `WriteFile` → apply backs up
+   and rewrites.
+5. Moving a pin: `update` → `update_pins` asks the default source for
+   its newest release → the moved pin is proven → the pin is written,
+   or stays put when resolution refuses, the refusal reported in the
+   line that would have announced the move. ADR-009, ADR-013.
+6. Spawning: an expired deadline is an `Error::Command` like any failed
+   spawn. Only unprompted work takes a deadline: the pin query runs
+   with one and `GIT_TERMINAL_PROMPT=0`; a user-requested clone takes
+   the environment and no deadline. ADR-015.
+
+- `P_moved-pin-proven` [event] WHEN `update_pins` moves a pin, the moved
+  pin SHALL resolve before `update_pins` writes it (ADR-013).
 
 ### Cross-cutting concerns
 
-- Security: a transport MUST be allowlisted, at parse and again by
-  git's protocol policy (ADR-012). Fetching spawns the user's own
-  `git`; superdev MUST NOT store a token. Every pack MUST verify
-  against the lock's digest, with no override flag. A pack MUST NOT
-  declare an executable action. `REJECTED` paths and symlinks MUST be
-  refused before any file is read. Trust in a pack's content is the
-  user's, made by naming the source.
-- Performance: one resolve per run; an unchanged pin costs no fetch;
-  the whole content set is held in memory.
-- Migration/rollout: an absent `[[packs]]` array resolves from the
-  snapshot, so every pre-pack manifest works untouched. `sync` MUST
-  NOT add the `[[packs]]` entry; `update` does. Rollback is deleting
-  the entries, and the orphan pass prunes.
-- Observability: `status` prints one content line per layer, the base
-  marked; pack-over-pack shadowing prints per item; a pending pin names
-  `sync` as the next step.
+Security: fetching spawns the user's own `git`; trust in a pack's
+content is the user's, made by naming the source.
+
+- `P_transport-allowlisted` [ubiquitous] `resolve` SHALL admit a
+  transport only from `SUPPORTED_SCHEMES`, checked at parse and again
+  by git's protocol policy (ADR-012).
+- `P_no-token-stored` [ubiquitous] The fetch SHALL NOT store a token.
+- `P_pack-verified-against-lock` [ubiquitous] `resolve` SHALL verify
+  every pack against the lock's digest, with no override flag.
+- `P_pack-declares-no-action` [ubiquitous] A pack SHALL NOT declare an
+  executable action.
+- `P_refused-paths-before-read` [ubiquitous] `resolve` SHALL refuse
+  `REJECTED` paths and symlinks before it reads any file.
+
+Performance: one resolve per run; an unchanged pin costs no fetch; the
+whole content set is held in memory.
+
+Migration/rollout: an absent `[[packs]]` array resolves from the
+snapshot, so every pre-pack manifest works untouched; `update` adds the
+`[[packs]]` entry. Rollback is deleting the entries, and the orphan
+pass prunes.
+
+- `P_sync-adds-no-entry` [ubiquitous] `sync` SHALL NOT add the
+  `[[packs]]` entry.
+
+Observability: `status` prints one content line per layer, the base
+marked; pack-over-pack shadowing prints per item; a pending pin names
+`sync` as the next step.
 
 ## Stability
 
-Internal. Every item above MAY change with the crate.
+Internal.
+
+- `P_internal` [ubiquitous] Every item above MAY change with the crate.
 
 <!-- sokf:links -->
 [sokf:adr-002-resolve-before-plan]: /knowledge/adrs/active/adr-002-resolve-before-plan.md
