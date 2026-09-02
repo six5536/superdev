@@ -360,6 +360,30 @@ document's definition block. The validator reports a stale, empty or
 unresolvable include block as an error (§10). Include blocks do not
 nest: a concept that carries one cannot itself be included.
 
+The open marker MAY instead name a repository file, as a `/`-rooted
+path, optionally followed by `#` and a region name:
+
+````markdown
+<!-- sokf:include /crates/app/superdev/src/main.rs#cli -->
+```rust
+…the named region of the file…
+```
+<!-- /sokf:include -->
+````
+
+A region is bounded by a line containing `sokf:begin <name>` and a
+later line containing `sokf:end <name>`, in whatever comment syntax the
+file uses; regions sharing a name concatenate in file order, and a path
+with no `#` names the whole file. `superdev validate --fix` fills the
+block with the region as a fenced block tagged by the file's extension
+— mapped where the conventional tag differs (`rs` to `rust`, `yml` to
+`yaml`, `ts` to `typescript`, `py` to `python`), bare when the file has
+none — and carries a `sokf:generated-by` line from the file's leading
+lines through unchanged. Nothing inside the region is parsed. The
+validator reports a stale, empty or absent block, a path that does not
+exist or resolves outside the repository, and a region the file does
+not carry, each as an error naming the path and region (§10).
+
 An `index.md` may appear in any directory to list its contents. It
 contains no frontmatter. The body is one or more heading-grouped link
 lists:
@@ -392,7 +416,8 @@ Two deterministic layers.
    to a concept, and a path link resolves to something that is not one.
    The generated definition block (§9) defines each cited id, and only
    the cited ids, at their current paths. An include block (§9) names a
-   concept, carries its current body, and does not nest.
+   concept or a repository file and region, carries its current body or
+   region, and does not nest.
 6. Fail on what the repository alone settles: a body link, a
    `resource`, a `sources[].resource` or an `index.md` entry naming a
    file that is not there; a footnote label matching no `sources[].id`;

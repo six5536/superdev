@@ -3,7 +3,7 @@ type: Decision
 id: adr-038-a-contract-may-promise-what-is-not-built-yet
 title: A contract may promise what is not built yet
 description: A contract element marked pending is bound in reverse — the drift test fails when the implementation has it, so the marker cannot outlive its purpose — and accept refuses a contract still carrying one, so a promise cannot ship unbuilt.
-lifecycle: active
+lifecycle: deprecated
 ---
 
 # ADR-038: A contract may promise what is not built yet
@@ -63,4 +63,4 @@ gap before slices that do not, so most features never need the marker.
 
 <!-- sokf:links -->
 [sokf:adr-028-the-contract-design-go-ahead-is-an-explicit-interaction]: /knowledge/adrs/active/adr-028-the-contract-design-go-ahead-is-an-explicit-interaction.md
-[sokf:adr-036-a-contract-is-bound-to-its-implementation]: /knowledge/adrs/active/adr-036-a-contract-is-bound-to-its-implementation.md
+[sokf:adr-036-a-contract-is-bound-to-its-implementation]: /knowledge/adrs/deprecated/adr-036-a-contract-is-bound-to-its-implementation.md

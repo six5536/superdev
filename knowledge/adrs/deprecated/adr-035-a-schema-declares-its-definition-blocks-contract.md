@@ -3,7 +3,7 @@ type: Decision
 id: adr-035-a-schema-declares-its-definition-blocks-contract
 title: A schema declares its definition block's contract
 description: A section rule declares the fence language its definition block takes and the keys the block and each of its entries must carry, so the validator checks a block's completeness generically instead of carrying one policy per contract kind.
-lifecycle: active
+lifecycle: deprecated
 ---
 
 # ADR-035: A schema declares its definition block's contract

@@ -22,8 +22,11 @@ links:
     to: adr-030-a-section-rule-declares-body-patterns
     note: Fixes the two body-pattern declarations and their found-anywhere semantics.
   - rel: references
-    to: adr-035-a-schema-declares-its-definition-blocks-contract
-    note: Fixes the three definition-block declarations and what a missing key reports.
+    to: adr-042-a-contracts-definition-is-materialized-from-source
+    note: Fixes the sixth content kind, `include`, and withdraws the three definition-block declarations.
+  - rel: references
+    to: adr-045-a-schema-declares-variants
+    note: Fixes `variant-key`, the `variants` tag on any rule, and the keyed `example`.
 ---
 
 # Interface contract: document schemas
@@ -39,8 +42,9 @@ vocabulary's newest rows are
 [ADR-023][sokf:adr-023-a-content-kind-binds-by-presence],
 [ADR-024][sokf:adr-024-a-schemas-example-is-checked-in-place-against-its-own-schema],
 [ADR-025][sokf:adr-025-an-examples-links-bind-by-form-and-never-resolve],
-[ADR-030][sokf:adr-030-a-section-rule-declares-body-patterns] and
-[ADR-035][sokf:adr-035-a-schema-declares-its-definition-blocks-contract].
+[ADR-030][sokf:adr-030-a-section-rule-declares-body-patterns],
+[ADR-042][sokf:adr-042-a-contracts-definition-is-materialized-from-source]
+and [ADR-045][sokf:adr-045-a-schema-declares-variants].
 
 ## Data model & API
 
@@ -51,6 +55,7 @@ description: <what the governed document is>   # prose, unchecked
 line-limit: <int>            # error when the document exceeds it
 
 target-files: '<glob>'       # dispatch for frontmatter-less documents
+variant-key: <key>           # the frontmatter key whose value selects a variant
 
 frontmatter:
   <key>:
@@ -58,6 +63,7 @@ frontmatter:
     const: <value>           # a present value must equal it
     pattern: '<re>'          # a present value must match it
     enum: [<v1>, <v2>]       # a present value must be one of them
+    variants: [<v1>]         # the rule applies to these variants only
     description: <guidance>  # prose, unchecked
 
 sections-ordered: true       # first appearances follow declaration order
@@ -67,17 +73,18 @@ sections:
     level: <int>             # omitted: any depth
     required: true
     repeatable: true
-    content: <kind>          # prose | bullet-list | numbered-list | table | code
+    content: <kind>          # prose | bullet-list | numbered-list | table | code | include
     columns: [<c1>, <c2>]    # a declared table carries exactly these
     item-pattern: '<re>'     # each top-level item of the list kind must match
     content-pattern: '<re>'  # the section's body must match
-    block-language: <tag>    # the fence tag the section's block carries
-    block-keys: [<k1>]       # keys the block carries at its top level
-    block-entry-keys: [<k1>] # keys every top-level entry of the block carries
+    variants: [<v1>]         # the rule applies to these variants only
     description: <guidance>  # prose, unchecked
 
 example: |                   # one conforming document; checked (ADR-024)
   <a complete document satisfying this schema>
+example:                     # with variant-key: one document per variant value
+  <v1>: |
+    <a document whose variant-key value is v1>
 ```
 
 ```rust
@@ -96,11 +103,14 @@ pub fn check_documents(docs: &[Document<'_>], set: &SchemaSet) -> Vec<Finding>;
   map, a folded block — cannot satisfy one. `lifecycle` belongs to the
   filing check (P011), which reports its value against the enum and its
   folder, so one fault is said once.
-- **Content kinds** — a closed set of five. A section satisfies its
+- **Content kinds** — a closed set of six, PENDING (I049). A section satisfies its
   kind when the form appears in its body: one bullet, one numbered
-  item, one table, one fenced block, or — for prose — one plain
-  paragraph line; other content beside the form is tolerated
-  (ADR-023). The body runs to the next heading at the section's own
+  item, one table, one fenced block, one include block naming a source
+  path, or — for prose — one plain paragraph line; other content beside
+  the form is tolerated (ADR-023), with one exception: an `include`
+  section carrying a fenced block outside an include is an error naming
+  the section, because a hand-written block beside a materialised one
+  is the copy the kind exists to forbid (ADR-042). The body runs to the next heading at the section's own
   level or shallower, so a subsection's content counts; lines inside
   fenced blocks are not content.
 - **Body patterns** — `item-pattern` binds each top-level item of the
@@ -118,22 +128,26 @@ pub fn check_documents(docs: &[Document<'_>], set: &SchemaSet) -> Vec<Finding>;
   is its own: its lines are dropped, and the item above it resumes at the
   first line no deeper than the nested marker. A marker of the other list
   kind opens no item, and a thematic break is not a marker.
-- **The definition block** — `block-language` names the fence tag the
-  section's block must carry; `block-keys` the keys it must carry at
-  its top level; `block-entry-keys` the keys every top-level entry must
-  carry (ADR-035). The validator parses the block in the declared
-  language — YAML and JSON, the two the binary reads — and a missing
-  key is an error naming the file, the section, the entry and the key.
-  A block that does not parse is an error naming the parse failure. A
-  block in a language the binary does not read declares no
-  `block-language`; a drift test binds its completeness instead
-  (ADR-036).
+- **Variants** — PENDING (I049): `variant-key` names the frontmatter key
+  whose value selects a variant; any rule carrying `variants` applies
+  only to the values it lists, and a rule without it to all; a document
+  is checked against the rules its value selects, in declared order
+  (ADR-045). With `variant-key` set, `example` is a map keyed by value,
+  every enum value present, each checked against the base and its own
+  variant's rules, its value equal to its key.
+- **The definition is not parsed** — PENDING (I049): the `include` kind asks only that
+  an include block naming a source path is present; what the block
+  carries is the SOKF validator's to keep current (ADR-041) and no
+  concern of this check. The former `block-language`, `block-keys` and
+  `block-entry-keys` declarations are withdrawn (ADR-042); a schema
+  still carrying one is mis-declared.
 - **A mis-declared schema is its own finding** — a `content` outside
-  the five kinds, a `pattern` that does not compile, an `item-pattern`
-  on a section whose `content` is not a list kind, a `block-language`
-  the validator cannot parse, or a block declaration on a section whose
-  `content` is not `code`: reported against the schema file, and the
-  unreadable rule binds nothing.
+  the six kinds (PENDING (I049) for the sixth), a `pattern` that does not compile, an `item-pattern`
+  on a section whose `content` is not a list kind, a withdrawn
+  `block-*` declaration, or — PENDING (I049) — a `variants` tag naming
+  a value outside the discriminator's enum, a tag with no
+  `variant-key`, or a variant with no example: reported against the
+  schema file, and the unreadable rule binds nothing.
 - **The example is checked in place** — the `example:` block is read as
   a document and run through this same check with the declaring schema
   handed to it, no dispatch; every failure, including an example that
@@ -160,8 +174,8 @@ pub fn check_documents(docs: &[Document<'_>], set: &SchemaSet) -> Vec<Finding>;
 
 - validate: collect documents → dispatch each by `type` or glob →
   sections (presence, order, prohibition, columns, line limit) →
-  content kinds → body patterns → definition blocks → frontmatter
-  contract → findings grouped per file, one verdict.
+  content kinds → body patterns → frontmatter contract → findings
+  grouped per file, one verdict.
 - example check: parse each schema's `example:` block as a document →
   run the document check with the declaring schema → check link form →
   findings land on the schema file, in the same run and verdict.
@@ -173,10 +187,11 @@ pub fn check_documents(docs: &[Document<'_>], set: &SchemaSet) -> Vec<Finding>;
   panic or a silently-passing rule.
 - Performance: every check is one pass over the document's lines; the
   schema set parses once per run.
-- Migration/rollout: the new declarations are additive — a schema
-  without `required` marks or with its existing `content` lines keeps
-  its current meaning, so old packs stay readable; the live tree's
-  reconciliation lands with the feature (I018).
+- Migration/rollout: a schema without `required` marks or with its
+  existing `content` lines keeps its current meaning, so old packs stay
+  readable; the three `block-*` declarations are the one withdrawal,
+  and a pack still carrying them reports on its schemas rather than
+  failing to load (I049).
 - Observability: every finding names the document, the rule and the
   schema, in the shape the section findings already use.
 
@@ -186,4 +201,5 @@ pub fn check_documents(docs: &[Document<'_>], set: &SchemaSet) -> Vec<Finding>;
 [sokf:adr-024-a-schemas-example-is-checked-in-place-against-its-own-schema]: /knowledge/adrs/active/adr-024-a-schemas-example-is-checked-in-place-against-its-own-schema.md
 [sokf:adr-025-an-examples-links-bind-by-form-and-never-resolve]: /knowledge/adrs/active/adr-025-an-examples-links-bind-by-form-and-never-resolve.md
 [sokf:adr-030-a-section-rule-declares-body-patterns]: /knowledge/adrs/active/adr-030-a-section-rule-declares-body-patterns.md
-[sokf:adr-035-a-schema-declares-its-definition-blocks-contract]: /knowledge/adrs/active/adr-035-a-schema-declares-its-definition-blocks-contract.md
+[sokf:adr-042-a-contracts-definition-is-materialized-from-source]: /knowledge/adrs/active/adr-042-a-contracts-definition-is-materialized-from-source.md
+[sokf:adr-045-a-schema-declares-variants]: /knowledge/adrs/active/adr-045-a-schema-declares-variants.md

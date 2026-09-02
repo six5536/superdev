@@ -3,7 +3,7 @@ type: Decision
 id: adr-037-the-file-format-kind-splits-into-text-and-binary
 title: The file-format kind splits into text and binary
 description: The file-format contract kind becomes two — a text format, whose shape is a schema or a worked example carrying every key, and a binary format, whose shape is a byte layout — and the three contracts on file are renamed to the kind they belong to.
-lifecycle: active
+lifecycle: deprecated
 ---
 
 # ADR-037: The file-format kind splits into text and binary
