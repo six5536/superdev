@@ -19,6 +19,7 @@ You answer from what the skills and process files actually say, not from memory.
 <step name="MAP THE QUESTION">Map the question onto the flow:
 
 - Feature work travels the workflow in the core workflow block; `/accept` runs at the user's request, once the feature has stopped changing.
+- An issue or an idea to record without framing it: `/file` — a bug, a feature request, a chore or an idea, in the user's words; `/frame` frames the issue when it is taken up.
 - One-off work outside the workflow — a refactor, a migration, a chore: `/adhoc-plan`.
 - Support skills the phases call: `/grill-me` (interview the user until one reading remains) and `/double-check` (check the last work) in every document phase; `/brainstorm` from `/frame`, to widen an idea too unshaped to state a goal; `/prototype` from `/contract-design`, for throwaway code answering a question conversation cannot settle; `/research` from `/frame` and `/contract-design`, for external facts from primary sources, filed in the canonical knowledge. All four also run standalone.
 - Unattended delivery: `/execute-feature-plan` drives feature-plan, build and integrate in a loop on the feature's branch, deferring the questions only the user can answer; frame and contract-design stay interactive.

@@ -13,6 +13,7 @@ YOU follow the set of rules defined below, reminding yourself of the rules perio
   <phase name="BUILD" skill="/build" note="tests, then code, one slice at a time" />
   <phase name="INTEGRATE" skill="/integrate" note="verify and integrate the slice" />
   <phase name="ACCEPT" skill="/accept" note="feature-level acceptance on the merged code" />
+  <outside skill="/file" when="an issue or an idea to record without framing it — /frame frames it when it is taken up" />
   <outside skill="/adhoc-plan" when="one-off work that needs no feature framing — a refactor, a migration, a chore" />
   <outside skill="/execute-feature-plan" when="unattended delivery — drives FEATURE-PLAN → BUILD → INTEGRATE in a loop on the feature's branch, deferring the user's questions" />
   <edge from="BUILD" when="contract change needed" to="CONTRACT-DESIGN" />

@@ -1574,3 +1574,114 @@ fn a_pending_promise_is_declared_and_bounded() {
         "contract-010 was not among the contracts read: {checked:?}"
     );
 }
+
+/// Covers I030 AC_file-issue, AC_file-idea and AC_promote-idea: `/file`
+/// names the four kinds, writes the minimum record `unframed`, files an
+/// idea per `schema-idea`, promotes an idea with a `references` link, and
+/// says it does not interview, branch or invent (ADR-048).
+#[test]
+fn the_file_skill_files_without_framing() {
+    for (p, text) in skill_copies("file") {
+        for phrase in [
+            "bug, feature request, chore or idea",
+            "numbered after the highest across all of the kind's folders",
+            "`lifecycle: unframed`",
+            "Summary and Motivation in the user's words",
+            "`TBD — <the open question>`",
+            "no criterion, step or done item the user did not state",
+            "per `schema-idea` into `knowledge/ideas/`, listed in its index",
+            "`references` link to the idea",
+            "the idea stays on file",
+            "superdev validate --fix",
+        ] {
+            assert!(text.contains(phrase), "{p} lacks `{phrase}`");
+        }
+        assert!(
+            text.contains(
+                "<rule level=\"MUST NOT\">interview the user, create a branch, or invent a criterion"
+            ),
+            "{p} does not refuse to interview, branch or invent"
+        );
+        assert!(
+            text.contains("<rule level=\"MUST NOT\">frame the issue"),
+            "{p} does not leave framing to /frame"
+        );
+    }
+}
+
+/// Covers I030 AC_file-asks: a missing or unknown kind is asked for, and
+/// nothing is filed.
+#[test]
+fn the_file_skill_asks_for_a_missing_kind() {
+    for (p, text) in skill_copies("file") {
+        let gate = text
+            .lines()
+            .find(|l| l.contains("The kind is given and is one of the four"))
+            .unwrap_or_else(|| panic!("{p} has no gate on the kind"));
+        for phrase in ["<gate ", "ask the user for the kind", "file nothing"] {
+            assert!(gate.contains(phrase), "{p}: the kind gate lacks `{phrase}`");
+        }
+    }
+}
+
+/// Covers I030 AC_workflow-lists-file: the aggregator's source and its
+/// rendered copy list `/file` outside the phases, and how-do-i's map names
+/// it.
+#[test]
+fn the_workflow_lists_file_outside_the_phases() {
+    let line = "<outside skill=\"/file\" when=\"an issue or an idea to record without framing it — /frame frames it when it is taken up\" />";
+    for p in [
+        "crates/lib/superdev-core/src/pipeline.rs",
+        ".agents/superdev.md",
+    ] {
+        let text = std::fs::read_to_string(repo(p)).expect("the file is on file");
+        assert!(
+            text.contains(line),
+            "{p} does not list /file outside the phases"
+        );
+        assert!(
+            !text.contains("<phase name=\"FILE\""),
+            "{p} lists /file as a phase"
+        );
+    }
+    for (p, text) in skill_copies("how-do-i") {
+        let map = step_body(&text, "MAP THE QUESTION");
+        for phrase in ["`/file`", "without framing it", "`/frame` frames the issue"] {
+            assert!(map.contains(phrase), "{p}: the map lacks `{phrase}`");
+        }
+    }
+}
+
+/// The body of the step named `name`, where the step carries its text
+/// between its tags rather than in a `task` attribute.
+fn step_body<'a>(skill: &'a str, name: &str) -> &'a str {
+    let anchor = format!("<step name=\"{name}\">");
+    let start = skill
+        .find(&anchor)
+        .unwrap_or_else(|| panic!("no step named {name}"))
+        + anchor.len();
+    let rest = &skill[start..];
+    &rest[..rest.find("</step>").expect("the step closes")]
+}
+
+/// Covers I030 AC_skill-ships: `/file` is a knowledge-carried skill — the
+/// pack source and the synced copy are byte-equal, and the lock claims the
+/// copy.
+#[test]
+fn the_file_skill_ships_in_the_pack_and_the_lock() {
+    let [(live, live_text), (pack, pack_text)] = skill_copies("file");
+    assert_eq!(
+        same(&live_text),
+        same(&pack_text),
+        "{live} differs from {pack}"
+    );
+    assert!(
+        live_text.starts_with("---\nname: file\n"),
+        "{live} does not open with the skill's name"
+    );
+    let lock = std::fs::read_to_string(repo(".superdev/lock.toml")).expect("the lock is on file");
+    assert!(
+        lock.contains("\".claude/skills/file/SKILL.md\" = \""),
+        "the lock does not claim .claude/skills/file/SKILL.md"
+    );
+}
