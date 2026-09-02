@@ -61,4 +61,4 @@ workflow.
 [sokf:plan-022-feature-decidable-findings-are-errors]: /knowledge/plans/done/plan-022-feature-decidable-findings-are-errors.md
 [sokf:plan-023-feature-warnings-are-counted-not-listed]: /knowledge/plans/done/plan-023-feature-warnings-are-counted-not-listed.md
 [sokf:plan-024-feature-a-contract-includes-its-definition]: /knowledge/plans/done/plan-024-feature-a-contract-includes-its-definition.md
-[sokf:plan-025-feature-a-contracts-behaviour-is-written-as-ears]: /knowledge/plans/open/plan-025-feature-a-contracts-behaviour-is-written-as-ears.md
+[sokf:plan-025-feature-a-contracts-behaviour-is-written-as-ears]: /knowledge/plans/done/plan-025-feature-a-contracts-behaviour-is-written-as-ears.md
