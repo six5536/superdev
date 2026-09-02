@@ -4296,18 +4296,22 @@ mod contract_schema {
     }
 
     /// A contract of `kind` titled `title`, carrying `sections` as `###`
-    /// under Behaviour, each with one MUST sentence, and the base sections
-    /// every kind carries.
+    /// under Behaviour, each with one keyed promise (ADR-046), and the base
+    /// sections every kind carries.
     fn contract(kind: &str, title: &str, sections: &[&str]) -> String {
         let body: Vec<String> = sections
             .iter()
-            .map(|h| format!("### {h}\n\nIt MUST hold.\n"))
+            .map(|h| {
+                let key = h.to_lowercase().replace(' ', "-");
+                format!("### {h}\n\n- `P_{key}` [ubiquitous] The thing SHALL hold.\n")
+            })
             .collect();
         format!(
             "---\ntype: Contract\nid: contract-001-{kind}-thing\nkind: {kind}\ntitle: T\n\
              description: D\n---\n\n# {title}\n\n## Definition\n\n\
              <!-- sokf:include /src/lib.rs#api -->\n```rust\npub struct Api;\n```\n\
-             <!-- /sokf:include -->\n\n## Behaviour\n\n{}\n## Stability\n\nIt MAY change.\n",
+             <!-- /sokf:include -->\n\n## Behaviour\n\n{}\n## Stability\n\n\
+             - `P_change` [ubiquitous] The thing MAY change.\n",
             body.join("\n")
         )
     }

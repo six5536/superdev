@@ -36,8 +36,8 @@ fn schemas(root: &str) -> Vec<(String, String)> {
     out
 }
 
-/// The findings a document draws from the live schema set.
-fn findings_for(path: &str, text: &str) -> Vec<String> {
+/// The findings a document of `doc_type` draws from the live schema set.
+fn findings_of(doc_type: &str, path: &str, text: &str) -> Vec<String> {
     let (set, load) = SchemaSet::load(&schemas("knowledge/schemas"));
     assert!(
         load.is_empty(),
@@ -46,12 +46,17 @@ fn findings_for(path: &str, text: &str) -> Vec<String> {
     let doc = Document {
         path,
         text,
-        doc_type: Some("FeatureRequest"),
+        doc_type: Some(doc_type),
     };
     check_documents(&[doc], &set)
         .into_iter()
         .map(|f| f.message)
         .collect()
+}
+
+/// The findings a feature-request draws from the live schema set.
+fn findings_for(path: &str, text: &str) -> Vec<String> {
+    findings_of("FeatureRequest", path, text)
 }
 
 /// One feature-request body, with `criteria` as its acceptance criteria.
@@ -140,9 +145,15 @@ fn the_ears_declaration_ships_to_managed_repositories() {
     }
 }
 
-/// The RFC 2119 keyword pattern ADR-032 declared and ADR-043 keeps: the
-/// uppercase forms alone bind, so descriptive prose keeps its ordinary words.
-const KEYWORDS: &str = r"\b(MUST|SHALL|SHOULD|MAY|REQUIRED|RECOMMENDED|OPTIONAL)\b";
+/// The four declarations ADR-047 puts on a promise section, as the contract
+/// schema writes them: the `P_` key, the tag-and-verb item, the modal verb
+/// bound to items, and the retired or repeated verb no item may carry.
+const PROMISE_DECLARATIONS: [&str; 4] = [
+    "item-key: '^`(P_[a-z][a-z0-9]*(?:-[a-z0-9]+)*)`'",
+    r"item-pattern: '(?s)^`P_[a-z0-9-]+` \[(ubiquitous|event|state|conditional|optional|complex)\] .*\b(SHALL|SHOULD|MAY)\b'",
+    r"item-only-pattern: '\b(SHALL|SHOULD|MAY|MUST|REQUIRED|RECOMMENDED|OPTIONAL)\b'",
+    r"item-prohibited-pattern: '\b(MUST|REQUIRED|RECOMMENDED|OPTIONAL)\b|(?s)\b(SHALL|SHOULD|MAY)\b.*\b(SHALL|SHOULD|MAY)\b'",
+];
 
 /// The twelve kinds the one contract schema admits (ADR-043).
 const KINDS: [&str; 12] = [
@@ -187,20 +198,152 @@ fn rule_for(schema: &str, heading: &str) -> String {
         .to_string()
 }
 
-/// Covers I034 criterion 7 and I049 criterion 8: the two promise sections
-/// the one schema has, Behaviour and Stability, declare that their bodies
-/// bind, in the live tree and in the pack mirror (ADR-043).
+/// Covers I034 criterion 7, I049 criterion 8 and I037 criteria 1 and 11:
+/// the two promise sections the one schema has, Behaviour and Stability,
+/// are bullet lists carrying the four ADR-047 declarations and no
+/// `content-pattern`, and each rule's description states the citation form
+/// — the bare key where the contract is the subject, the contract's id then
+/// the key elsewhere — in the live tree and in the pack mirror (ADR-046).
 #[test]
 fn every_promise_section_declares_its_shape() {
     for (p, text) in contract_schema_copies() {
         for heading in ["Behaviour", "Stability"] {
-            let rule = rule_for(&text, heading);
+            let rule = same(&rule_for(&text, heading));
             assert!(
-                rule.contains(&format!("content-pattern: '{KEYWORDS}'")),
-                "{p}: {heading} declares the keyword for its body"
+                rule.contains("content: bullet-list"),
+                "{p}: {heading} is a bullet list of promises"
+            );
+            assert!(
+                !rule.contains("content-pattern"),
+                "{p}: {heading} binds its items, not a keyword somewhere in its body"
+            );
+            for declaration in PROMISE_DECLARATIONS {
+                assert!(
+                    rule.contains(declaration),
+                    "{p}: {heading} lacks `{declaration}`"
+                );
+            }
+            let description = folded(&rule);
+            assert!(
+                description.contains("cited bare where the contract is the subject")
+                    && description.contains("after the contract's id elsewhere"),
+                "{p}: {heading} does not state the citation form: {description}"
+            );
+        }
+        let behaviour = folded(&rule_for(&text, "Behaviour"));
+        for phrase in [
+            "`contract-002-cli-superdev P_init-outside-git`",
+            "MUST, REQUIRED, RECOMMENDED and OPTIONAL are retired",
+            "numbered list is a sequence, never a promise",
+            "no item reads TBD",
+        ] {
+            assert!(
+                behaviour.contains(phrase),
+                "{p}: Behaviour's description lacks `{phrase}`"
             );
         }
     }
+}
+
+/// A section rule with its folded `description` read as the one line YAML
+/// makes of it: the line breaks and their indentation become one space.
+fn folded(rule: &str) -> String {
+    same(rule)
+        .lines()
+        .map(str::trim)
+        .collect::<Vec<_>>()
+        .join(" ")
+}
+
+/// One contract of kind `cli` whose Behaviour is `behaviour` and whose
+/// Stability is `stability`, under the base sections every kind carries.
+fn contract(behaviour: &str, stability: &str) -> String {
+    format!(
+        "---\ntype: Contract\nid: contract-999-cli-probe\nkind: cli\ntitle: t\n\
+         description: d\nlifecycle: active\n---\n\n# CLI contract: probe\n\n## Definition\n\n\
+         <!-- sokf:include /src/main.rs#cli -->\n```rust\npub struct Cli;\n```\n\
+         <!-- /sokf:include -->\n\n## Behaviour\n\n{behaviour}\n## Stability\n\n{stability}"
+    )
+}
+
+/// Covers I037 criteria 2, 5, 6, 7 and 8: under the final contract schema a
+/// keyless bullet, a `MUST` item, a two-verb item, a `SHALL` in a paragraph
+/// and a `TBD` item each fail `validate` with a finding naming the item or
+/// the line — the same schema set the live tree is checked with, so what
+/// fails here fails a filed contract.
+#[test]
+fn a_contract_departing_from_the_promise_form_fails_naming_each_departure() {
+    let behaviour = "The probe SHALL be described here.\n\n\
+                     ### Exit codes\n\n\
+                     - `P_exit-zero` [event] WHEN the probe succeeds, the probe SHALL exit 0.\n\
+                     - [event] WHEN the key is missing, the probe SHALL say so.\n\
+                     - `P_retired-verb` [ubiquitous] The probe MUST exit 2 on a usage error.\n\
+                     - `P_two-verbs` [state] WHILE running, the probe SHALL answer and\n  \
+                       SHOULD answer quickly.\n\
+                     - TBD — whether the probe exits 3.\n\n\
+                     ### Streams\n\n\
+                     - `P_stdout` [ubiquitous] The probe SHALL write its report to stdout.\n";
+    let stability = "- `P_unreleased` [ubiquitous] Every command above MAY change.\n";
+    let found = findings_of("Contract", "probe.md", &contract(behaviour, stability));
+    let named = |text: &str| found.iter().filter(|f| f.contains(text)).count();
+    assert!(
+        named("line `The probe SHALL be described here.` matches outside an item") == 1,
+        "{found:#?}"
+    );
+    assert!(
+        named("item `- [event] WHEN the key is missing, the probe SHALL say so.` carries no key")
+            == 1,
+        "{found:#?}"
+    );
+    assert!(
+        named(
+            "item `- `P_retired-verb` [ubiquitous] The probe MUST exit 2 on a usage error.` matches `MUST`"
+        ) == 1,
+        "{found:#?}"
+    );
+    assert!(
+        named(
+            "item `- `P_two-verbs` [state] WHILE running, the probe SHALL answer and` matches `SHALL answer and SHOULD`"
+        ) == 1,
+        "{found:#?}"
+    );
+    assert!(
+        named("item `- TBD — whether the probe exits 3.` carries no key") == 1,
+        "{found:#?}"
+    );
+    let sound = found
+        .iter()
+        .filter(|f| {
+            f.contains("P_exit-zero") || f.contains("P_stdout") || f.contains("P_unreleased")
+        })
+        .collect::<Vec<_>>();
+    assert!(
+        sound.is_empty(),
+        "a conforming promise is not reported: {sound:#?}"
+    );
+}
+
+/// Covers I037 criterion 1: a numbered flow under Behaviour is a sequence
+/// and never a promise (ADR-046), so a contract carrying one beside its
+/// keyed bullets, with prose and a table beside them, passes the final
+/// schema.
+#[test]
+fn a_numbered_flow_beside_keyed_promises_passes() {
+    let behaviour = "Every command acts on the current directory.\n\n\
+                     ### Exit codes\n\n\
+                     | Code | Meaning |\n|------|---------|\n| 0 | success |\n\n\
+                     - `P_exit-codes` [ubiquitous] The probe SHALL exit with the code the\n  \
+                       table names.\n\n\
+                     ### Streams\n\n\
+                     A run proceeds in this order:\n\n\
+                     1. The probe reads its input.\n\
+                     2. The probe writes its report.\n\n\
+                     - `P_stdout` [ubiquitous] The probe SHALL write its report to stdout.\n";
+    let stability = "Unreleased.\n\n\
+                     - `P_unreleased` [ubiquitous] Every command above MAY change without\n  \
+                       notice.\n";
+    let found = findings_of("Contract", "probe.md", &contract(behaviour, stability));
+    assert!(found.is_empty(), "{found:#?}");
 }
 
 /// Covers I034 criterion 7 and I049 criterion 9: the Definition is

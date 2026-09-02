@@ -31,7 +31,7 @@ needs that no rule names is added here, tagged with its kinds, so the
 next writer of the kind sees it.
 
 **Contract style — a contract defines its interface** (superdev
-ADR-033, ADR-042, ADR-043, ADR-044):
+ADR-033, ADR-042, ADR-043, ADR-044, ADR-046, ADR-047):
 
 - A contract's Definition MUST be one or more source includes of the
   regions that declare the interface, and MUST NOT carry an authored
@@ -40,13 +40,35 @@ ADR-033, ADR-042, ADR-043, ADR-044):
 - A region MUST be bounded by `sokf:begin <name>` and `sokf:end <name>`
   in the source's own comment syntax. What is not marked is not
   promised.
-- A doc comment inside an included region is contract text: a MUST
-  there binds as a MUST in Behaviour does.
+- A doc comment inside an included region is contract text: a modal
+  verb there binds as a promise under Behaviour does.
 - Prose MUST describe and MUST NOT define. Behaviour MUST carry what no
   single element can say and what no include reaches — stability,
   consumers, behaviour across elements, exit codes, error semantics —
-  each normative statement with an RFC 2119 modal verb, one requirement
-  per sentence.
+  as promises.
+- A promise MUST be one bullet under Behaviour or Stability, at any
+  heading depth, opening with its key in a code span and an EARS tag —
+  `[ubiquitous]`, `[event]`, `[state]`, `[conditional]`, `[optional]`
+  or `[complex]` — then the sentence in that pattern's words: the
+  trigger or condition, the interface element as the subject (`init`,
+  the validator, a caller, a served tool), one modal verb, one
+  requirement. The verb MUST be `SHALL` or `SHALL NOT` for a
+  requirement, `SHOULD` or `SHOULD NOT` for a recommendation, or `MAY`
+  for an option; `MUST`, `REQUIRED`, `RECOMMENDED` and `OPTIONAL` are
+  retired from contracts.
+- A key MUST be `P_` followed by a slug of lowercase letters and digits
+  joined by hyphens, unique within the contract across both sections.
+  The key is the promise's identity: a rewording keeps it, a promise
+  that no longer holds is removed with its key and the key is not
+  reused, and a new promise takes a new key.
+- Prose under Behaviour and Stability MUST describe and MUST NOT carry
+  a modal verb. A numbered list is a sequence — the steps of a flow —
+  and never a promise. A table stays where the kind's checklist wants
+  one; its rows are not sentences.
+- A promise MUST be cited by its bare key where the contract is the
+  subject — a test's doc comment, a plan case — and by the contract's
+  id followed by the key elsewhere: `contract-002-cli-superdev
+  P_init-outside-git`.
 - Behaviour MUST cover what the schema's checklist names for the
   contract's kind, one `###` per item that applies.
 - A contract MUST bind what it names and MUST NOT state how the
@@ -56,10 +78,11 @@ ADR-033, ADR-042, ADR-043, ADR-044):
 - A built-from source unreadable as a surface MUST be rendered by a
   generator that writes `sokf:generated-by <what>` in the rendering's
   leading lines, and the rendering MUST be proved current by a test.
-- A Behaviour or Stability statement whose behaviour is unbuilt MAY
+- A Behaviour or Stability promise whose behaviour is unbuilt MAY
   carry `PENDING` in uppercase beside its modal verb, naming the issue
   or plan slice in parentheses, and MUST NOT once the feature settles; a
-  definition element carries none.
+  definition element carries none. A contract MUST NOT carry a `TBD`
+  item: a contract promises or says `PENDING`, and never defers.
 - A contract MUST link the ADR behind each decision and MUST NOT
   restate the ADR's reasoning.
 
@@ -194,14 +217,27 @@ sections:
   - heading: "Behaviour"
     level: 2
     required: true
-    content: prose
-    content-pattern: '\b(MUST|SHALL|SHOULD|MAY|REQUIRED|RECOMMENDED|OPTIONAL)\b'
+    content: bullet-list
+    item-key: '^`(P_[a-z][a-z0-9]*(?:-[a-z0-9]+)*)`'
+    item-pattern: '(?s)^`P_[a-z0-9-]+` \[(ubiquitous|event|state|conditional|optional|complex)\] .*\b(SHALL|SHOULD|MAY)\b'
+    item-only-pattern: '\b(SHALL|SHOULD|MAY|MUST|REQUIRED|RECOMMENDED|OPTIONAL)\b'
+    item-prohibited-pattern: '\b(MUST|REQUIRED|RECOMMENDED|OPTIONAL)\b|(?s)\b(SHALL|SHOULD|MAY)\b.*\b(SHALL|SHOULD|MAY)\b'
     description: >
-      What the definition cannot say, one requirement per sentence with
-      an RFC 2119 modal verb, under one `###` per level-3 rule tagged
-      with the kind that applies — the required ones always. A promise
-      whose behaviour is not built yet carries PENDING beside its verb,
-      naming the issue or slice.
+      What the definition cannot say, as keyed EARS promises under one
+      `###` per level-3 rule tagged with the kind that applies — the
+      required ones always. Every bullet, at any heading depth, is one
+      promise: a `P_` key in a code span, an EARS tag, the interface
+      element as the subject, and one verb from SHALL, SHALL NOT,
+      SHOULD, SHOULD NOT and MAY — MUST, REQUIRED, RECOMMENDED and
+      OPTIONAL are retired. Prose describes and carries no modal verb; a
+      numbered list is a sequence, never a promise; a table stays where
+      the kind wants one. The key is the promise's identity, unique
+      across Behaviour and Stability — a rewording keeps it, a removed
+      key is not reused — and is cited bare where the contract is the
+      subject and after the contract's id elsewhere:
+      `contract-002-cli-superdev P_init-outside-git`. A promise whose
+      behaviour is not built yet carries PENDING beside its verb, naming
+      the issue or slice; no item reads TBD.
   - heading: "Transport"
     level: 3
     required: true
@@ -481,13 +517,21 @@ sections:
   - heading: "Stability"
     level: 2
     required: true
-    content: prose
-    content-pattern: '\b(MUST|SHALL|SHOULD|MAY|REQUIRED|RECOMMENDED|OPTIONAL)\b'
+    content: bullet-list
+    item-key: '^`(P_[a-z][a-z0-9]*(?:-[a-z0-9]+)*)`'
+    item-pattern: '(?s)^`P_[a-z0-9-]+` \[(ubiquitous|event|state|conditional|optional|complex)\] .*\b(SHALL|SHOULD|MAY)\b'
+    item-only-pattern: '\b(SHALL|SHOULD|MAY|MUST|REQUIRED|RECOMMENDED|OPTIONAL)\b'
+    item-prohibited-pattern: '\b(MUST|REQUIRED|RECOMMENDED|OPTIONAL)\b|(?s)\b(SHALL|SHOULD|MAY)\b.*\b(SHALL|SHOULD|MAY)\b'
     description: >
-      What may change and how a caller learns of it: the versioning
-      policy, the deprecation path, what is promised across a release.
-      An internal interface says so here — "Internal. Every item above
-      MAY change with the crate." — rather than omitting the section.
+      What may change and how a caller learns of it — the versioning
+      policy, the deprecation path, what is promised across a release —
+      as keyed EARS promises in the form the Behaviour rule states: a
+      `P_` key unique across both sections, an EARS tag, the interface
+      element as the subject, one verb from SHALL, SHOULD and MAY, and
+      the key cited bare where the contract is the subject and after
+      the contract's id elsewhere. An internal interface promises so
+      here — "`P_internal` [ubiquitous] Every item above MAY change with
+      the crate." — rather than omitting the section.
 
 example:
   api: |
@@ -513,29 +557,44 @@ example:
 
     ## Behaviour
 
+    Every route answers JSON.
+
     ### Transport
 
-    The API MUST be served over HTTPS under `/v1`.
+    - `P_https-under-v1` [ubiquitous] The API SHALL be served over
+      HTTPS under `/v1`.
 
     ### Authentication
 
-    A caller MUST present a bearer token; only `admin` MAY delete.
+    - `P_bearer-token` [ubiquitous] A caller SHALL present a bearer
+      token.
+    - `P_delete-needs-admin` [event] WHEN a caller deletes a widget,
+      the API SHALL require the `admin` role.
 
     ### Errors
 
-    A failure MUST be a JSON body carrying `code` and `message`.
+    - `P_failure-body` [event] WHEN a request fails, the API SHALL
+      answer a JSON body carrying `code` and `message`.
 
     ### Limits
 
-    A caller MUST NOT exceed 100 requests per minute.
+    - `P_rate-limit` [ubiquitous] A caller SHALL NOT exceed 100
+      requests per minute.
 
     ### Versioning
 
-    A breaking change MUST ship under `/v2`, and `/v1` MUST stay 12 months.
+    - `P_breaking-under-v2` [event] WHEN a change breaks a caller, the
+      change SHALL ship under `/v2`.
+    - `P_v1-stays-twelve-months` [state] WHILE `/v2` is served, `/v1`
+      SHALL stay for 12 months.
 
     ## Stability
 
-    Stable. A route MAY be added; none MAY be removed before `/v1` retires.
+    Stable.
+
+    - `P_route-may-be-added` [ubiquitous] A route MAY be added.
+    - `P_route-stays-until-v1-retires` [state] WHILE `/v1` is served,
+      a route SHALL NOT be removed.
   events: |
     ---
     type: Contract
@@ -561,23 +620,35 @@ example:
 
     ### Transport
 
-    Events MUST be published to the Kafka topic `orders.v1`.
+    - `P_topic` [ubiquitous] The producer SHALL publish every event to
+      the Kafka topic `orders.v1`.
 
     ### Ordering
 
-    Events sharing an `order_id` MUST arrive in the order they were published.
+    - `P_order-within-key` [ubiquitous] Events sharing an `order_id`
+      SHALL arrive in the order they were published.
 
     ### Delivery
 
-    Delivery is at-least-once; a consumer MUST treat a repeated `order_id` as one.
+    Delivery is at-least-once.
+
+    - `P_repeat-is-one` [event] WHEN a consumer reads a repeated
+      `order_id`, the consumer SHALL treat the repeat as one event.
 
     ### Schema evolution
 
-    A producer MAY add a field and MUST NOT renumber one.
+    - `P_field-may-be-added` [ubiquitous] A producer MAY add a field.
+    - `P_field-not-renumbered` [ubiquitous] A producer SHALL NOT
+      renumber a field.
 
     ## Stability
 
-    Stable. A message type MAY be added; none MAY be removed within a major version.
+    Stable.
+
+    - `P_message-may-be-added` [ubiquitous] A message type MAY be
+      added.
+    - `P_message-stays-in-major` [state] WHILE a major version is
+      served, a message type SHALL NOT be removed.
   cli: |
     ---
     type: Contract
@@ -606,17 +677,30 @@ example:
 
     ## Behaviour
 
+    Every command acts on the current directory.
+
     ### Exit codes
 
-    `build` MUST exit 0 on success, 1 when a check fails, and 2 on a usage error.
+    | Code | Meaning |
+    |------|---------|
+    | 0 | success |
+    | 1 | a check failed |
+    | 2 | a usage error |
+
+    - `P_exit-codes` [ubiquitous] `build` SHALL exit with the code the
+      table names.
 
     ### Streams
 
-    `build` MUST write its report to stdout and diagnostics to stderr.
+    - `P_report-to-stdout` [ubiquitous] `build` SHALL write its report
+      to stdout and its diagnostics to stderr.
 
     ## Stability
 
-    Unreleased. Every command and flag above MAY change without notice.
+    Unreleased.
+
+    - `P_unreleased` [ubiquitous] Every command and flag above MAY
+      change without notice.
   library: |
     ---
     type: Contract
@@ -642,15 +726,21 @@ example:
 
     ### Errors
 
-    `build` MUST return `Error::InvalidSpec` when `spec` names no parts.
+    - `P_invalid-spec` [event] WHEN `spec` names no parts, `build`
+      SHALL return `Error::InvalidSpec`.
 
     ### Versioning
 
-    The crate MUST follow semver; a signature change is breaking.
+    A signature change is breaking.
+
+    - `P_semver` [ubiquitous] The crate SHALL follow semver.
 
     ## Stability
 
-    Stable. A public item MAY be added in a minor release.
+    Stable.
+
+    - `P_item-in-minor` [ubiquitous] A public item MAY be added in a
+      minor release.
   interface: |
     ---
     type: Contract
@@ -676,19 +766,30 @@ example:
 
     ### Module boundaries
 
-    The executor MUST call `plan` and MUST NOT read the manifest itself.
+    - `P_executor-calls-plan` [ubiquitous] The executor SHALL call
+      `plan` for its actions.
+    - `P_executor-never-reads-manifest` [ubiquitous] The executor SHALL
+      NOT read the manifest itself.
 
     ### Key flows
 
-    A sync MUST plan, then apply, then record.
+    A sync runs in this order:
+
+    1. `plan` reads the manifest and returns the actions.
+    2. The executor applies the actions.
+    3. The executor records what it applied.
 
     ### Cross-cutting concerns
 
-    `plan` MUST NOT touch the filesystem.
+    - `P_plan-is-pure` [ubiquitous] `plan` SHALL NOT touch the
+      filesystem.
 
     ## Stability
 
-    Internal. Every item above MAY change with the crate.
+    Internal.
+
+    - `P_internal` [ubiquitous] Every item above MAY change with the
+      crate.
   ui: |
     ---
     type: Contract
@@ -714,19 +815,28 @@ example:
 
     ### Routes
 
-    An unknown path MUST render the not-found screen; `/widgets/:id` MUST require a session.
+    - `P_unknown-path` [event] WHEN a path matches no route, the
+      console SHALL render the not-found screen.
+    - `P_widget-needs-session` [event] WHEN `/widgets/:id` is opened,
+      the console SHALL require a session.
 
     ### Screens and states
 
-    Every screen MUST render a loading, an empty and an error state.
+    - `P_three-states` [ubiquitous] Every screen SHALL render a
+      loading, an empty and an error state.
 
     ### Platforms and accessibility
 
-    The console MUST meet WCAG 2.2 AA on the last two releases of each major browser.
+    - `P_wcag` [ubiquitous] The console SHALL meet WCAG 2.2 AA on the
+      last two releases of each major browser.
 
     ## Stability
 
-    Stable. A route MAY be added; none MAY be removed without a redirect.
+    Stable.
+
+    - `P_route-may-be-added` [ubiquitous] A route MAY be added.
+    - `P_removed-route-redirects` [event] WHEN a route is removed, the
+      console SHALL redirect the old path.
   data: |
     ---
     type: Contract
@@ -752,19 +862,28 @@ example:
 
     ### Store
 
-    The software MUST reach the store through the `DATABASE_URL` connection.
+    - `P_database-url` [ubiquitous] The software SHALL reach the store
+      through the `DATABASE_URL` connection.
 
     ### Constraints
 
-    An order MUST move from `placed` to `shipped` and never back.
+    - `P_state-forward-only` [event] WHEN an order changes state, the
+      store SHALL move it from `placed` to `shipped` and never back.
 
     ### Migration
 
-    A migration MUST run without downtime and MUST be reversible.
+    - `P_migration-no-downtime` [ubiquitous] A migration SHALL run
+      without downtime.
+    - `P_migration-reversible` [ubiquitous] A migration SHALL be
+      reversible.
 
     ## Stability
 
-    Stable. A column MAY be added; none MAY be dropped within a major version.
+    Stable.
+
+    - `P_column-may-be-added` [ubiquitous] A column MAY be added.
+    - `P_column-stays-in-major` [state] WHILE a major version is
+      served, a column SHALL NOT be dropped.
   format: |
     ---
     type: Contract
@@ -790,19 +909,28 @@ example:
 
     ### Files
 
-    The lock MUST be written to `.widget/lock.toml`, identified by its `version` field.
+    The file is identified by its `version` field.
+
+    - `P_lock-path` [ubiquitous] The writer SHALL write the lock to
+      `.widget/lock.toml`.
 
     ### Unknown content
 
-    A reader MUST keep a key it does not know and MUST NOT rewrite it.
+    - `P_unknown-key-kept` [event] WHEN a reader meets a key it does
+      not know, the reader SHALL keep the key unchanged.
 
     ### Compatibility
 
-    A newer writer MUST NOT change the meaning of an existing key.
+    - `P_key-meaning-stable` [ubiquitous] A newer writer SHALL NOT
+      change the meaning of an existing key.
 
     ## Stability
 
-    Stable. A key MAY be added; none MAY be removed within a major version.
+    Stable.
+
+    - `P_key-may-be-added` [ubiquitous] A key MAY be added.
+    - `P_key-stays-in-major` [state] WHILE a major version is served,
+      a key SHALL NOT be removed.
   config: |
     ---
     type: Contract
@@ -828,15 +956,30 @@ example:
 
     ### Sources and precedence
 
-    A flag MUST win over the environment, and the environment over the file.
+    A setting is read from three sources, the first that carries it
+    winning:
+
+    1. A flag.
+    2. The environment.
+    3. The file.
+
+    - `P_flag-wins` [event] WHEN a setting is given as a flag, the
+      loader SHALL take the flag over the environment and the file.
 
     ### Defaults
 
-    `verbose` MUST default to false; no setting is required.
+    No setting is required.
+
+    - `P_verbose-default` [ubiquitous] `verbose` SHALL default to
+      false.
 
     ## Stability
 
-    Stable. A setting MAY be added; none MAY be removed within a major version.
+    Stable.
+
+    - `P_setting-may-be-added` [ubiquitous] A setting MAY be added.
+    - `P_setting-stays-in-major` [state] WHILE a major version is
+      served, a setting SHALL NOT be removed.
   telemetry: |
     ---
     type: Contract
@@ -862,15 +1005,25 @@ example:
 
     ### Metrics
 
-    `route` and `status` MUST be bounded; the cardinality budget is 1,000 series.
+    The cardinality budget is 1,000 series.
+
+    - `P_labels-bounded` [ubiquitous] The `route` and `status` labels
+      SHALL be bounded.
 
     ### Logs
 
-    Logs MUST be JSON lines at `info` and above, and MUST NOT carry a token.
+    - `P_json-lines` [ubiquitous] The service SHALL write logs as JSON
+      lines at `info` and above.
+    - `P_no-token-logged` [ubiquitous] The service SHALL NOT write a
+      token to a log.
 
     ## Stability
 
-    Stable. A metric MAY be added; a label MUST NOT be removed within a major version.
+    Stable.
+
+    - `P_metric-may-be-added` [ubiquitous] A metric MAY be added.
+    - `P_label-stays-in-major` [state] WHILE a major version is
+      served, a label SHALL NOT be removed.
   authz: |
     ---
     type: Contract
@@ -896,23 +1049,36 @@ example:
 
     ### Principals
 
-    A principal MUST be identified by a signed session token.
+    - `P_signed-session` [ubiquitous] The console SHALL identify a
+      principal by a signed session token.
 
     ### Roles and scopes
 
-    `viewer` reads; `admin` reads and writes; no other role exists.
+    | Role | Scope |
+    |------|-------|
+    | `viewer` | reads |
+    | `admin` | reads and writes |
+
+    - `P_two-roles` [ubiquitous] The console SHALL admit no role
+      beyond the two in the table.
 
     ### Permissions
 
-    A write MUST require `admin`.
+    - `P_write-needs-admin` [event] WHEN a principal writes, the
+      console SHALL require the `admin` role.
 
     ### Boundaries
 
-    No role MAY read another tenant's widgets.
+    - `P_tenant-boundary` [ubiquitous] A role SHALL NOT read another
+      tenant's widgets.
 
     ## Stability
 
-    Stable. A role MAY be added; a permission MUST NOT widen without a major version.
+    Stable.
+
+    - `P_role-may-be-added` [ubiquitous] A role MAY be added.
+    - `P_permission-widens-in-major` [conditional] IF a permission
+      widens, the change SHALL ship in a major version.
   deployment: |
     ---
     type: Contract
@@ -939,17 +1105,28 @@ example:
 
     ### Artifact
 
-    A release MUST be one image tagged with its semver.
+    - `P_one-image` [ubiquitous] A release SHALL be one image tagged
+      with its semver.
 
     ### Runtime
 
-    The service MUST listen on 8080 as a non-root user and MUST write only to `/tmp`.
+    - `P_port-and-user` [ubiquitous] The service SHALL listen on 8080
+      as a non-root user.
+    - `P_writes-tmp-only` [ubiquitous] The service SHALL write only to
+      `/tmp`.
 
     ### Health and lifecycle
 
-    `/healthz` MUST answer 200 once ready; a shutdown MUST drain within 30 s.
+    - `P_healthz` [state] WHILE the service is ready, `/healthz` SHALL
+      answer 200.
+    - `P_drain` [event] WHEN a shutdown starts, the service SHALL
+      drain within 30 s.
 
     ## Stability
 
-    Stable. A port MAY be added; 8080 MUST stay within a major version.
+    Stable.
+
+    - `P_port-may-be-added` [ubiquitous] A port MAY be added.
+    - `P_port-8080-stays-in-major` [state] WHILE a major version is
+      served, the service SHALL keep listening on 8080.
 ````
