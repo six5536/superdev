@@ -310,7 +310,7 @@ named the pack as the grammar's source.
 
 ### Slice 9: The template contract includes its tree
 
-- [ ] Done — ticked by integrate at merge.
+- [x] Done — ticked by integrate at merge.
 - Depends-on: 1, 4.
 - Change: `contract-008` becomes `kind: format`. Its definition is the
   embedded template set and the substitution tokens, both declared in
