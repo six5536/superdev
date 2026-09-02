@@ -15,6 +15,7 @@ pub mod fix;
 pub mod lifecycle;
 pub mod schema;
 pub mod sokf;
+mod source;
 
 use std::collections::BTreeSet;
 use std::path::{Component, Path, PathBuf};

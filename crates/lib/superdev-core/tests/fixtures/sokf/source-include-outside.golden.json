@@ -1,0 +1,13 @@
+{
+  "concepts": 1,
+  "errors": 1,
+  "findings": [
+    {
+      "file": "host.md",
+      "message": "include `/../clean/manifest.sokf.yaml`: the path resolves outside the repository",
+      "severity": "error"
+    }
+  ],
+  "passed": false,
+  "warnings": 0
+}

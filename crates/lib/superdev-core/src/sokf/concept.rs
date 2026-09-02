@@ -8,8 +8,9 @@ use crate::lock::sha256_hex;
 /// The line opening a document's generated definition block (SPEC §9).
 pub const LINKS_BLOCK: &str = "<!-- sokf:links -->";
 
-/// What the line opening an include block starts with (SPEC §9); the concept
-/// id and the comment's closing ` -->` follow.
+/// What the line opening an include block starts with (SPEC §9); the
+/// argument — a concept id or a `/`-rooted source path — and the comment's
+/// closing ` -->` follow.
 pub const INCLUDE_OPEN: &str = "<!-- sokf:include ";
 
 /// The line closing an include block.
@@ -338,12 +339,59 @@ pub fn links_block_offset(text: &str) -> Option<usize> {
     start
 }
 
+/// What an include block's open marker names (SPEC §9).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum IncludeTarget {
+    /// A concept, by `id`; the block carries its body.
+    Concept(String),
+    /// A repository file, `/`-rooted, and optionally one region of it; the
+    /// block carries the region — the whole file when `region` is `None` —
+    /// as a fenced block.
+    Source {
+        /// The `/`-rooted path, as written.
+        path: String,
+        /// The region name after `#`, or `None` for the whole file.
+        region: Option<String>,
+    },
+}
+
+impl std::fmt::Display for IncludeTarget {
+    /// The argument as the open marker writes it.
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Concept(id) => f.write_str(id),
+            Self::Source { path, region: None } => f.write_str(path),
+            Self::Source {
+                path,
+                region: Some(region),
+            } => write!(f, "{path}#{region}"),
+        }
+    }
+}
+
+impl IncludeTarget {
+    /// Read an open marker's argument: `/`-rooted is a source path, with the
+    /// region after `#`; anything else is a concept id.
+    fn parse(argument: &str) -> Self {
+        if !argument.starts_with('/') {
+            return Self::Concept(argument.to_string());
+        }
+        let (path, region) = argument
+            .split_once('#')
+            .map_or((argument, None), |(path, region)| (path, Some(region)));
+        Self::Source {
+            path: path.to_string(),
+            region: region.filter(|r| !r.is_empty()).map(str::to_string),
+        }
+    }
+}
+
 /// One include block (SPEC §9): shared content materialized in place between
 /// a marker pair. The content between the markers is generated, not authored.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct IncludeBlock {
-    /// The concept id the open marker names.
-    pub id: String,
+    /// What the open marker names.
+    pub target: IncludeTarget,
     /// Byte offset just past the open marker's line: where content starts.
     pub content_start: usize,
     /// Byte offset of the close marker's line: where content ends.
@@ -358,8 +406,8 @@ pub struct IncludeBlock {
 pub fn include_blocks(text: &str) -> (Vec<IncludeBlock>, Vec<String>) {
     let mut blocks = Vec::new();
     let mut faults = Vec::new();
-    // The open marker of the block being read: (id, content_start).
-    let mut open: Option<(String, usize)> = None;
+    // The open marker of the block being read: (target, content_start).
+    let mut open: Option<(IncludeTarget, usize)> = None;
     for (event, span) in Parser::new_ext(text, Options::empty()).into_offset_iter() {
         let Event::Html(html) = event else { continue };
         // One HTML event can span several lines; walk them with offsets.
@@ -375,12 +423,12 @@ pub fn include_blocks(text: &str) -> (Vec<IncludeBlock>, Vec<String>) {
                         id.trim()
                     ));
                 } else {
-                    open = Some((id.trim().to_string(), at + line.len()));
+                    open = Some((IncludeTarget::parse(id.trim()), at + line.len()));
                 }
             } else if trimmed == INCLUDE_CLOSE {
                 match open.take() {
-                    Some((id, content_start)) => blocks.push(IncludeBlock {
-                        id,
+                    Some((target, content_start)) => blocks.push(IncludeBlock {
+                        target,
                         content_start,
                         content_end: at,
                     }),
@@ -390,8 +438,8 @@ pub fn include_blocks(text: &str) -> (Vec<IncludeBlock>, Vec<String>) {
             at += line.len();
         }
     }
-    if let Some((id, _)) = open {
-        faults.push(format!("include block for `{id}` is never closed"));
+    if let Some((target, _)) = open {
+        faults.push(format!("include block for `{target}` is never closed"));
     }
     (blocks, faults)
 }
@@ -472,11 +520,40 @@ mod tests {
         let (blocks, faults) = include_blocks(text);
         assert!(faults.is_empty(), "{faults:?}");
         assert_eq!(blocks.len(), 1);
-        assert_eq!(blocks[0].id, "style");
+        assert_eq!(blocks[0].target, IncludeTarget::Concept("style".into()));
         assert_eq!(
             &text[blocks[0].content_start..blocks[0].content_end],
             "The rules.\n"
         );
+    }
+
+    /// A `/`-rooted argument names a repository file, with the region after
+    /// `#`; anything else is a concept id, as it always was.
+    #[test]
+    fn a_rooted_argument_is_a_source_include_and_a_bare_one_a_concept() {
+        let text = "<!-- sokf:include /src/main.rs#cli -->\n<!-- /sokf:include -->\n\
+                    <!-- sokf:include /README.md -->\n<!-- /sokf:include -->\n\
+                    <!-- sokf:include style -->\n<!-- /sokf:include -->\n";
+        let (blocks, faults) = include_blocks(text);
+        assert!(faults.is_empty(), "{faults:?}");
+        let targets: Vec<&IncludeTarget> = blocks.iter().map(|b| &b.target).collect();
+        assert_eq!(
+            targets,
+            [
+                &IncludeTarget::Source {
+                    path: "/src/main.rs".into(),
+                    region: Some("cli".into()),
+                },
+                &IncludeTarget::Source {
+                    path: "/README.md".into(),
+                    region: None,
+                },
+                &IncludeTarget::Concept("style".into()),
+            ]
+        );
+        assert_eq!(targets[0].to_string(), "/src/main.rs#cli");
+        assert_eq!(targets[1].to_string(), "/README.md");
+        assert_eq!(targets[2].to_string(), "style");
     }
 
     #[test]

@@ -14,8 +14,8 @@ pub mod mcp;
 
 pub use bundle::{Bundle, BundleManifest, load_bundle};
 pub use concept::{
-    Concept, IncludeBlock, Link, ParseError, Section, Source, Status, include_blocks,
-    included_text, parse_concept,
+    Concept, IncludeBlock, IncludeTarget, Link, ParseError, Section, Source, Status,
+    include_blocks, included_text, parse_concept,
 };
 pub use embed::{
     ApiEmbedder, Embedder, EmbeddingsConfig, LOCAL_MODEL, LOCAL_MODEL_REVISION, Model2VecEmbedder,

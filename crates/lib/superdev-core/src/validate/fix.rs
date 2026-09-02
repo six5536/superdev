@@ -4,7 +4,8 @@
 //! check reads: a document whose folder disagrees with its `lifecycle` is
 //! moved into the folder that value names, a body link that names a concept
 //! by path is rewritten to address it by `id` (SPEC §8), every include
-//! block is refilled from the body of the concept its marker names, and
+//! block is refilled from the body of the concept or the region of the
+//! repository file its marker names, and
 //! every document's generated definition block is rewritten from the ids
 //! its body cites (SPEC §9). The moves run first, so every definition block
 //! is written against the path a document ends the pass at; links convert
@@ -22,15 +23,17 @@
 use std::collections::{BTreeSet, HashMap, HashSet};
 use std::path::{Path, PathBuf};
 
-use super::lifecycle;
 use super::schema::document::SchemaSet;
 use super::sokf::{
     ID_LABEL, Identities, canonical, definition_block, identities, link_path, render_block,
     resolve_target, scan_body, stem_id,
 };
+use super::{lifecycle, source};
 use crate::error::{Error, Result};
 use crate::sokf::bundle::{Bundle, load_bundle};
-use crate::sokf::concept::{INCLUDE_OPEN, carries_include_markers, include_blocks, included_text};
+use crate::sokf::concept::{
+    INCLUDE_OPEN, IncludeTarget, carries_include_markers, include_blocks, included_text,
+};
 
 /// What one repair pass changed.
 #[derive(Debug, Default)]
@@ -117,7 +120,7 @@ pub fn fix(bundle: &Bundle, repo_root: &Path) -> Result<Repair> {
     // write what changed.
     for (path, text, head, body) in &converted {
         let body = if concepts.contains(path) {
-            materialize(body, &sources)
+            materialize(body, &sources, repo_root)
         } else {
             body.clone()
         };
@@ -139,13 +142,15 @@ pub fn fix(bundle: &Bundle, repo_root: &Path) -> Result<Repair> {
     Ok(repair)
 }
 
-/// Every include block refilled from its source's converted body (SPEC §9).
-/// An id naming no source and a source that itself carries an include block
+/// Every include block refilled from its source: a concept's converted body,
+/// or a repository file's region rendered by [`source::render`], which the
+/// check reads too (SPEC §9). An id naming no source, a source that itself
+/// carries an include block and a path or region that resolves to nothing
 /// are left as written, as is every marker fault — the check reports those —
 /// but a well-formed block is repaired even beside a faulty marker, so the
 /// check's "run `superdev validate --fix`" stays true whatever else is wrong
 /// in the file.
-fn materialize(body: &str, sources: &HashMap<&str, &str>) -> String {
+fn materialize(body: &str, sources: &HashMap<&str, &str>, repo_root: &Path) -> String {
     if !body.contains(INCLUDE_OPEN) {
         return body.to_string();
     }
@@ -153,13 +158,24 @@ fn materialize(body: &str, sources: &HashMap<&str, &str>) -> String {
     let mut out = String::with_capacity(body.len());
     let mut cursor = 0;
     for block in blocks {
-        let Some(source) = sources.get(block.id.as_str()) else {
-            continue;
+        let content = match &block.target {
+            IncludeTarget::Concept(id) => {
+                let Some(source) = sources.get(id.as_str()) else {
+                    continue;
+                };
+                let content = included_text(source);
+                if carries_include_markers(&content) {
+                    continue;
+                }
+                content
+            }
+            IncludeTarget::Source { path, region } => {
+                match source::render(repo_root, path, region.as_deref()) {
+                    Ok(content) => content,
+                    Err(_) => continue,
+                }
+            }
         };
-        let content = included_text(source);
-        if carries_include_markers(&content) {
-            continue;
-        }
         // The check compares trimmed, so a block it accepts is not rewritten.
         if body[block.content_start..block.content_end].trim() == content {
             continue;
@@ -420,6 +436,36 @@ mod tests {
         ] {
             assert_eq!(&text[body_offset(text)..], want, "{text:?}");
         }
+    }
+
+    /// Covers I049 criterion 2: a source include is filled with the
+    /// renderer's block, a concept include with the concept's body as before,
+    /// and one that resolves to nothing is left as written for the check.
+    #[test]
+    fn materialize_fills_a_source_include_and_leaves_a_concept_include_as_it_was() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::create_dir_all(dir.path().join("src")).unwrap();
+        std::fs::write(
+            dir.path().join("src/main.rs"),
+            "// sokf:begin cli\nstruct Cli {}\n// sokf:end cli\n",
+        )
+        .unwrap();
+        let sources: HashMap<&str, &str> = HashMap::from([("style", "The rules.\n")]);
+        let body = "<!-- sokf:include /src/main.rs#cli -->\n<!-- /sokf:include -->\n\n\
+                    <!-- sokf:include style -->\nOld.\n<!-- /sokf:include -->\n\n\
+                    <!-- sokf:include /src/gone.rs -->\nkept\n<!-- /sokf:include -->\n";
+        let out = materialize(body, &sources, dir.path());
+        assert_eq!(
+            out,
+            "<!-- sokf:include /src/main.rs#cli -->\n```rust\nstruct Cli {}\n```\n<!-- /sokf:include -->\n\n\
+             <!-- sokf:include style -->\nThe rules.\n<!-- /sokf:include -->\n\n\
+             <!-- sokf:include /src/gone.rs -->\nkept\n<!-- /sokf:include -->\n"
+        );
+        assert_eq!(
+            materialize(&out, &sources, dir.path()),
+            out,
+            "a filled block is not rewritten"
+        );
     }
 
     #[test]

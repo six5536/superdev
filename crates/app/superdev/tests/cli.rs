@@ -2510,6 +2510,74 @@ fn validate_fix_converts_and_settles() {
     assert_eq!(std::fs::read_to_string(&alpha).unwrap(), text);
 }
 
+/// Covers I049 criteria 1, 2 and 4 (ADR-041): an include naming a source
+/// region is written by `--fix` as a fenced block tagged by the extension, a
+/// second run writes nothing, and an edit inside the region fails `validate`
+/// naming the path and the region.
+#[test]
+fn validate_fix_materializes_a_source_include_and_validate_catches_its_drift() {
+    let repo = tempfile::tempdir().unwrap();
+    let k = repo.path().join("knowledge");
+    std::fs::create_dir_all(&k).unwrap();
+    std::fs::create_dir_all(repo.path().join("src")).unwrap();
+    std::fs::write(
+        k.join("manifest.sokf.yaml"),
+        "sokf: \"0.4\"\nname: fixture\n",
+    )
+    .unwrap();
+    let main_rs = repo.path().join("src/main.rs");
+    std::fs::write(
+        &main_rs,
+        "use clap::Parser;\n\n// sokf:begin cli\n#[derive(Parser)]\nstruct Cli {}\n// sokf:end cli\n\nfn main() {}\n",
+    )
+    .unwrap();
+    let contract = k.join("contract.md");
+    std::fs::write(
+        &contract,
+        "---\ntype: Note\nid: contract\n---\n\n<!-- sokf:include /src/main.rs#cli -->\n<!-- /sokf:include -->\n",
+    )
+    .unwrap();
+
+    let out = superdev()
+        .current_dir(repo.path())
+        .args(["validate", "--fix"])
+        .assert()
+        .success();
+    let stdout = String::from_utf8_lossy(&out.get_output().stdout).into_owned();
+    assert!(stdout.contains("repaired: 1 file(s)"), "{stdout}");
+    let text = std::fs::read_to_string(&contract).unwrap();
+    assert!(
+        text.contains(
+            "<!-- sokf:include /src/main.rs#cli -->\n```rust\n#[derive(Parser)]\nstruct Cli {}\n```\n<!-- /sokf:include -->\n"
+        ),
+        "{text}"
+    );
+
+    let out = superdev()
+        .current_dir(repo.path())
+        .args(["validate", "--fix"])
+        .assert()
+        .success();
+    let stdout = String::from_utf8_lossy(&out.get_output().stdout).into_owned();
+    assert!(stdout.contains("repaired: 0 file(s)"), "{stdout}");
+    assert_eq!(std::fs::read_to_string(&contract).unwrap(), text);
+
+    let edited = std::fs::read_to_string(&main_rs)
+        .unwrap()
+        .replace("struct Cli {}", "struct Cli { fix: bool }");
+    std::fs::write(&main_rs, edited).unwrap();
+    let out = superdev()
+        .current_dir(repo.path())
+        .args(["validate"])
+        .assert()
+        .code(1);
+    let stdout = String::from_utf8_lossy(&out.get_output().stdout).into_owned();
+    assert!(
+        stdout.contains("the include block for `/src/main.rs#cli` is stale"),
+        "{stdout}"
+    );
+}
+
 /// Without the flag, `validate` reports and writes nothing.
 #[test]
 fn validate_without_fix_writes_nothing() {

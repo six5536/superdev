@@ -15,10 +15,11 @@ use std::path::{Path, PathBuf};
 use pulldown_cmark::{BrokenLink, CowStr, Event, LinkType, Options, Parser, Tag};
 use serde_yaml_ng::Value;
 
+use super::source;
 use crate::sokf::bundle::Bundle;
 use crate::sokf::concept::{
-    Concept, INCLUDE_CLOSE, INCLUDE_OPEN, carries_include_markers, include_blocks, included_text,
-    links_block_offset,
+    Concept, INCLUDE_CLOSE, INCLUDE_OPEN, IncludeTarget, carries_include_markers, include_blocks,
+    included_text, links_block_offset,
 };
 
 /// Relationship types the spec defines; anything else reads as `relates-to`.
@@ -438,10 +439,13 @@ fn check_concept(concept: &Concept, context: &Context, findings: &mut Vec<Findin
     check_include_blocks(path, &concept.body, context, findings);
 }
 
-/// Every include block carries its source's current content (SPEC §9).
+/// Every include block carries its source's current content (SPEC §9): a
+/// concept's body, or a repository file's region rendered by
+/// [`source::render`], which the repair reads too.
 ///
 /// The content between the markers is generated, so every content finding
-/// says the one command that repairs it; a marker fault is the author's.
+/// says the one command that repairs it; a marker fault, a path or a region
+/// that resolves to nothing is the author's.
 fn check_include_blocks(path: &str, text: &str, context: &Context, findings: &mut Vec<Finding>) {
     // Most documents carry no marker; the substring gate spares them the
     // parse. A fenced false positive just runs the parser, which finds
@@ -454,24 +458,37 @@ fn check_include_blocks(path: &str, text: &str, context: &Context, findings: &mu
         findings.push(error(path, fault));
     }
     for block in blocks {
-        let Some(source) = context.bodies.get(block.id.as_str()) else {
-            findings.push(error(
-                path,
-                format!("include block names no concept: `{}`", block.id),
-            ));
-            continue;
+        let expected = match &block.target {
+            IncludeTarget::Concept(id) => {
+                let Some(source) = context.bodies.get(id.as_str()) else {
+                    findings.push(error(
+                        path,
+                        format!("include block names no concept: `{id}`"),
+                    ));
+                    continue;
+                };
+                let expected = included_text(source);
+                if carries_include_markers(&expected) {
+                    findings.push(error(
+                        path,
+                        format!(
+                            "include block names `{id}`, which itself carries an include block; includes do not nest"
+                        ),
+                    ));
+                    continue;
+                }
+                expected
+            }
+            IncludeTarget::Source { path: file, region } => {
+                match source::render(context.repo_root, file, region.as_deref()) {
+                    Ok(expected) => expected,
+                    Err(fault) => {
+                        findings.push(error(path, fault));
+                        continue;
+                    }
+                }
+            }
         };
-        let expected = included_text(source);
-        if carries_include_markers(&expected) {
-            findings.push(error(
-                path,
-                format!(
-                    "include block names `{}`, which itself carries an include block; includes do not nest",
-                    block.id
-                ),
-            ));
-            continue;
-        }
         let actual = text[block.content_start..block.content_end].trim();
         if actual == expected {
             continue;
@@ -479,7 +496,10 @@ fn check_include_blocks(path: &str, text: &str, context: &Context, findings: &mu
         let state = if actual.is_empty() { "empty" } else { "stale" };
         findings.push(error(
             path,
-            format!("the include block for `{}` is {state} ({REPAIR})", block.id),
+            format!(
+                "the include block for `{}` is {state} ({REPAIR})",
+                block.target
+            ),
         ));
     }
 }
@@ -1472,6 +1492,90 @@ mod tests {
                 .any(|f| f.message == "include block for `style` is never closed"),
             "{findings:?}"
         );
+    }
+
+    /// A source file with one `cli` region, read from the bundle root, which
+    /// these tests hand the validator as the repository root.
+    const MAIN_RS: &str = "use x;\n\n// sokf:begin cli\nstruct Cli {}\n// sokf:end cli\n";
+
+    /// A host document whose include block names `argument` and carries
+    /// `content`.
+    fn source_host(argument: &str, content: &str) -> String {
+        format!(
+            "---\ntype: T\nid: host\n---\n<!-- sokf:include {argument} -->\n{content}<!-- /sokf:include -->\n"
+        )
+    }
+
+    fn source_findings(host: &str) -> Vec<Finding> {
+        let (b, _dir) = bundle_with(&[
+            ("manifest.sokf.yaml", MANIFEST_YAML),
+            ("src/main.rs", MAIN_RS),
+            ("host.md", host),
+        ]);
+        validate(&b, &b.root).findings
+    }
+
+    /// Covers I049 criterion 4's clean side: the rendered region passes.
+    #[test]
+    fn a_materialized_source_include_passes() {
+        let host = source_host("/src/main.rs#cli", "```rust\nstruct Cli {}\n```\n");
+        let findings = source_findings(&host);
+        assert!(findings.is_empty(), "{findings:?}");
+    }
+
+    /// Covers criterion 4: an absent, an empty and a stale block are each an
+    /// error naming the path and the region.
+    #[test]
+    fn an_absent_empty_or_stale_source_include_is_an_error_naming_path_and_region() {
+        for (content, state) in [
+            ("", "empty"),
+            ("\n\n", "empty"),
+            ("```rust\nold\n```\n", "stale"),
+        ] {
+            let findings = source_findings(&source_host("/src/main.rs#cli", content));
+            assert_eq!(findings.len(), 1, "{content:?}: {findings:?}");
+            assert_eq!(
+                findings[0].message,
+                format!(
+                    "the include block for `/src/main.rs#cli` is {state} (run `superdev validate --fix`)"
+                )
+            );
+            assert!(findings[0].fatal);
+        }
+    }
+
+    /// Covers criterion 5: a missing path, a path outside the repository and
+    /// a region the file does not carry are each an error saying which.
+    #[test]
+    fn an_unresolvable_source_include_is_an_error_saying_which() {
+        for (argument, message) in [
+            (
+                "/src/gone.rs#cli",
+                "include `/src/gone.rs#cli`: the path does not exist",
+            ),
+            (
+                "/../escaped.rs",
+                "include `/../escaped.rs`: the path resolves outside the repository",
+            ),
+            (
+                "/src/main.rs#server",
+                "include `/src/main.rs#server`: the file carries no region `server`",
+            ),
+        ] {
+            // The bundle sits one directory down, so `..` has somewhere to
+            // land.
+            let (b, dir) = bundle_with(&[
+                ("repo/manifest.sokf.yaml", MANIFEST_YAML),
+                ("repo/src/main.rs", MAIN_RS),
+                ("repo/host.md", &source_host(argument, "x\n")),
+                ("escaped.rs", "x\n"),
+            ]);
+            let b = load_bundle(&b.root.join("repo")).unwrap();
+            let findings = validate(&b, &dir.path().join("repo")).findings;
+            assert_eq!(findings.len(), 1, "{argument}: {findings:?}");
+            assert_eq!(findings[0].message, message);
+            assert!(findings[0].fatal);
+        }
     }
 
     #[test]

@@ -1,0 +1,13 @@
+{
+  "concepts": 1,
+  "errors": 1,
+  "findings": [
+    {
+      "file": "host.md",
+      "message": "include `/src/main.rs#server`: the file carries no region `server`",
+      "severity": "error"
+    }
+  ],
+  "passed": false,
+  "warnings": 0
+}
