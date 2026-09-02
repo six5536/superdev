@@ -3,7 +3,7 @@ type: Decision
 id: adr-036-a-contract-is-bound-to-its-implementation
 title: A contract is bound to its implementation
 description: Each contract kind's schema obliges the project to bind its implemented interface to the contract's declared surface, element for element — by generating the surface from the contract, or by a test where it is hand-written — and leaves the mechanism to the project.
-lifecycle: active
+lifecycle: deprecated
 ---
 
 # ADR-036: A contract is bound to its implementation

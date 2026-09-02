@@ -17,6 +17,7 @@ a template could only be copied.
 One document per contract, all durable. An interface contract is internal — keyed to a module boundary, updated as features change it; the rest are promised outward as public contracts.
 
 * [Interface Contract Schema][sokf:schema-contract-interface] - the interfaces build codes against — data model, module boundaries, key flows — an internal contract, durable and keyed to the interface.
+* [Contract Schema][sokf:schema-contract] - one interface the software offers or depends on — its definition materialised from source, the behaviour the definition cannot say, and the stability promise — for every kind of contract.
 * [CLI Contract Schema][sokf:schema-contract-cli] - one command-line surface — its commands, their behaviour, the exit codes and the stability promise, a public contract.
 * [REST Contract Schema][sokf:schema-contract-rest] - one HTTP API — its endpoints in TypeSpec, the authentication, the error responses and the stability promise, a public contract.
 * [GraphQL Contract Schema][sokf:schema-contract-graphql] - one GraphQL API — its SDL, endpoint, error and limit behaviour, and the stability promise, a public contract.
@@ -99,6 +100,7 @@ One document per contract, all durable. An interface contract is internal — ke
 [sokf:schema-coding-standards]: /knowledge/schemas/coding-standards.md
 [sokf:schema-configuration]: /knowledge/schemas/configuration.md
 [sokf:schema-constraints-non-goals]: /knowledge/schemas/constraints-non-goals.md
+[sokf:schema-contract]: /knowledge/schemas/contract.md
 [sokf:schema-contract-authz]: /knowledge/schemas/contract-authz.md
 [sokf:schema-contract-binary-format]: /knowledge/schemas/contract-binary-format.md
 [sokf:schema-contract-cli]: /knowledge/schemas/contract-cli.md

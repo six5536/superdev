@@ -6,6 +6,24 @@ description: The include block materialises a concept's body and cannot name a s
 lifecycle: open
 links:
   - rel: references
+    to: contract-010-interface-document-schemas
+    note: Changed at CONTRACT-DESIGN — a sixth content kind, `include`, and the three `block-*` declarations withdrawn.
+  - rel: references
+    to: adr-041-an-include-block-materializes-a-source-region
+    note: Decided at CONTRACT-DESIGN — the mechanism, criteria 1 to 7.
+  - rel: references
+    to: adr-042-a-contracts-definition-is-materialized-from-source
+    note: Decided at CONTRACT-DESIGN — the Definition section, the binding split, doc comments as contract text; criteria 8 to 10, 16, 17.
+  - rel: references
+    to: adr-043-one-contract-schema-and-twelve-kinds
+    note: Decided at CONTRACT-DESIGN — one schema, twelve kinds, per-kind sections as tagged rules; criteria 8, 11, 12, 15.
+  - rel: references
+    to: adr-044-a-pending-marker-applies-to-prose-and-a-declaration-goes-first-in-source
+    note: Decided at CONTRACT-DESIGN — criterion 18 and the pending half of 17.
+  - rel: references
+    to: adr-045-a-schema-declares-variants
+    note: Decided at CONTRACT-DESIGN — criteria 13 to 15.
+  - rel: references
     to: adr-027-an-include-block-materializes-shared-content-in-place
     note: The mechanism this extends — an include names a source region as well as a concept.
   - rel: references
@@ -188,13 +206,15 @@ different questions. A surface the twelve do not name is one line in
 the enum and one section in the checklist.
 
 What the sixteen schemas required section by section becomes a
-checklist: a `contract-kinds` concept with one section per kind saying
-what its Behaviour must cover — auth, errors, limits and versioning for
-an `api`; ordering, delivery and replay for `events`; exit codes,
-streams and prompting for a `cli`; precedence, defaults and secrets for
-`config`. CONTRACT-DESIGN reads it when writing a contract, and the
-judgement step below asks against it. Shape is the validator's;
-completeness is the checklist's and the agent's.
+checklist inside the one schema, one section per kind saying what its
+Behaviour must cover — auth, errors, limits and versioning for an
+`api`; ordering, delivery and replay for `events`; exit codes, streams
+and prompting for a `cli`; precedence, defaults and secrets for
+`config`. A writer reads the schema before writing and sees the
+checklist with the shape; Behaviour carries one `###` per item that
+applies, so an omission is a deletion rather than a lapse; the
+judgement step below asks against the same list. Shape is the
+validator's; completeness is the checklist's and the agent's.
 
 An agent asks, when a slice that touched a contract is integrated, the
 one question that is not decidable: is the marked region the whole
@@ -249,37 +269,46 @@ mirrors.
 12. [event] WHEN a contract's title does not open with its kind's
     display name and "contract:" THE SYSTEM SHALL report an error naming
     the kind.
-13. [ubiquitous] THE SYSTEM SHALL carry a `contract-kinds` concept with
-    one section per kind stating what that kind's Behaviour must cover,
-    shipped in the pack, and SHALL have CONTRACT-DESIGN read it before
-    writing a contract.
-14. [ubiquitous] THE SYSTEM SHALL state in the contract standard that a
+13. [ubiquitous] THE SYSTEM SHALL let a schema name a frontmatter key
+    as its variant discriminator and tag any rule with the variants it
+    applies to, an untagged rule applying to all, and SHALL check a
+    document against the rules its value selects in the schema's
+    declared order.
+14. [conditional] IF a schema declares a variant discriminator THE
+    SYSTEM SHALL require one example per enum value, each checked
+    against the base rules and its own variant's, its value equal to
+    its key.
+15. [ubiquitous] THE SYSTEM SHALL declare, in the contract schema, each
+    kind's Behaviour sections as rules tagged with that kind — the
+    required ones required — so a writer reading the schema sees them
+    with the shape and the validator enforces them.
+16. [ubiquitous] THE SYSTEM SHALL state in the contract standard that a
     doc comment inside an included region is contract text, and that
     the contract's prose carries what no single element can.
-15. [ubiquitous] THE SYSTEM SHALL state in the contract standard that
+17. [ubiquitous] THE SYSTEM SHALL state in the contract standard that
     behaviour an include cannot reach is stated in prose and bound by a
     test, and that a `pending` marker applies to prose alone.
-16. [ubiquitous] THE SYSTEM SHALL have CONTRACT-DESIGN write a new
+18. [ubiquitous] THE SYSTEM SHALL have CONTRACT-DESIGN write a new
     definition element into its source region, behaviour unbuilt, under
     the approval it already requires.
-17. [event] WHEN a slice that touched a contract is integrated THE
+19. [event] WHEN a slice that touched a contract is integrated THE
     SYSTEM SHALL have the integrating agent read the contract as its
     consumer would, and report where an included region omits part of
     the promised surface, where the prose omits what the checklist for
     its kind requires, and where a reader could not learn the interface
     from the document.
-18. [ubiquitous] THE SYSTEM SHALL name, for each contract the agent
+20. [ubiquitous] THE SYSTEM SHALL name, for each contract the agent
     reports, what it checked, and SHALL present the report as a
     judgement that blocks nothing and is not a validator finding.
-19. [conditional] IF the slice touched no contract THE SYSTEM SHALL say
+21. [conditional] IF the slice touched no contract THE SYSTEM SHALL say
     so and report nothing further.
-20. [ubiquitous] THE SYSTEM SHALL ship the judgement step in the pack,
+22. [ubiquitous] THE SYSTEM SHALL ship the judgement step in the pack,
     so a project adopting superdev inherits it with the schemas.
-21. [ubiquitous] THE SYSTEM SHALL define every contract this repository
+23. [ubiquitous] THE SYSTEM SHALL define every contract this repository
     owns by source includes under the one schema, each with its kind,
     and SHALL carry no test that compares a hand-written copy of a
     definition to the code.
-22. [ubiquitous] THE SYSTEM SHALL keep a test that exercises every exit
+24. [ubiquitous] THE SYSTEM SHALL keep a test that exercises every exit
     code the CLI contract states.
 
 ## Alternatives considered
@@ -345,7 +374,9 @@ mirrors.
 - In: one contract schema replacing sixteen — Definition, Behaviour,
   Stability — with `kind` from a closed set of twelve, and a
   hand-written block in a Definition becoming an error.
-- In: the `contract-kinds` checklist concept, one section per kind.
+- In: schema variants — a discriminator key, a `variants` tag on any
+  rule, one example per variant — and the contract schema's per-kind
+  sections declared through them.
 - In: deleting the fifteen kind schemas and their pack mirrors.
 - In: retiring the block-content check for every kind.
 - In: the contract standard's statements on doc comments, prose,
@@ -422,7 +453,23 @@ software reads, the environment one of its sources, precedence in
 Behaviour — and a `cli` contract whose command reads one references the
 `config` contract rather than restating it.
 
-Left to CONTRACT-DESIGN: the fence tag for a file with no extension or
+Settled at CONTRACT-DESIGN, 2026-09-02: `content: include` is a sixth
+content kind in
+[contract-010][sokf:contract-010-interface-document-schemas]'s
+vocabulary, and the three `block-*` declarations are withdrawn; the
+fence tag is the extension, mapped for `rs`, `yml`, `ts` and `py`, bare
+when there is none. The decisions are
+[ADR-041][sokf:adr-041-an-include-block-materializes-a-source-region],
+[ADR-042][sokf:adr-042-a-contracts-definition-is-materialized-from-source],
+[ADR-043][sokf:adr-043-one-contract-schema-and-twelve-kinds],
+[ADR-044][sokf:adr-044-a-pending-marker-applies-to-prose-and-a-declaration-goes-first-in-source]
+and [ADR-045][sokf:adr-045-a-schema-declares-variants], superseding
+ADR-032, 035, 036, 037 and 038. The last came from the user asking how
+the per-kind checklist is enforced: as prose it was a nudge, and a
+`variants` tag on any schema rule makes it a check without a second
+schema.
+
+Was left to CONTRACT-DESIGN: the fence tag for a file with no extension or
 an unknown one; whether `resource`, which points at the implementation,
 stays distinct from an include; the wording of the non-goal, which must
 now say that superdev binds a definition by materialising it and the
@@ -433,10 +480,16 @@ declaration-only source edit sits under the approval ADR-028 requires.
 [sokf:adr-027-an-include-block-materializes-shared-content-in-place]: /knowledge/adrs/active/adr-027-an-include-block-materializes-shared-content-in-place.md
 [sokf:adr-033-a-contract-defines-its-interface]: /knowledge/adrs/active/adr-033-a-contract-defines-its-interface.md
 [sokf:adr-034-each-kind-defines-in-the-form-its-ecosystem-reads]: /knowledge/adrs/active/adr-034-each-kind-defines-in-the-form-its-ecosystem-reads.md
-[sokf:adr-035-a-schema-declares-its-definition-blocks-contract]: /knowledge/adrs/active/adr-035-a-schema-declares-its-definition-blocks-contract.md
-[sokf:adr-036-a-contract-is-bound-to-its-implementation]: /knowledge/adrs/active/adr-036-a-contract-is-bound-to-its-implementation.md
-[sokf:adr-038-a-contract-may-promise-what-is-not-built-yet]: /knowledge/adrs/active/adr-038-a-contract-may-promise-what-is-not-built-yet.md
+[sokf:adr-035-a-schema-declares-its-definition-blocks-contract]: /knowledge/adrs/deprecated/adr-035-a-schema-declares-its-definition-blocks-contract.md
+[sokf:adr-036-a-contract-is-bound-to-its-implementation]: /knowledge/adrs/deprecated/adr-036-a-contract-is-bound-to-its-implementation.md
+[sokf:adr-038-a-contract-may-promise-what-is-not-built-yet]: /knowledge/adrs/deprecated/adr-038-a-contract-may-promise-what-is-not-built-yet.md
 [sokf:adr-039-a-decidable-finding-is-an-error-and-the-turn-is-the-gate]: /knowledge/adrs/active/adr-039-a-decidable-finding-is-an-error-and-the-turn-is-the-gate.md
+[sokf:adr-041-an-include-block-materializes-a-source-region]: /knowledge/adrs/active/adr-041-an-include-block-materializes-a-source-region.md
+[sokf:adr-042-a-contracts-definition-is-materialized-from-source]: /knowledge/adrs/active/adr-042-a-contracts-definition-is-materialized-from-source.md
+[sokf:adr-043-one-contract-schema-and-twelve-kinds]: /knowledge/adrs/active/adr-043-one-contract-schema-and-twelve-kinds.md
+[sokf:adr-044-a-pending-marker-applies-to-prose-and-a-declaration-goes-first-in-source]: /knowledge/adrs/active/adr-044-a-pending-marker-applies-to-prose-and-a-declaration-goes-first-in-source.md
+[sokf:adr-045-a-schema-declares-variants]: /knowledge/adrs/active/adr-045-a-schema-declares-variants.md
+[sokf:contract-010-interface-document-schemas]: /knowledge/contracts/internal/active/contract-010-interface-document-schemas.md
 [sokf:issue-038-bug-the-template-format-contract-is-bound-by-no-drift-test]: /knowledge/issues/done/issue-038-bug-the-template-format-contract-is-bound-by-no-drift-test.md
 [sokf:issue-043-bug-the-cli-contracts-json-keys-are-bound-by-no-test]: /knowledge/issues/wontfix/issue-043-bug-the-cli-contracts-json-keys-are-bound-by-no-test.md
 [sokf:issue-044-bug-a-drift-test-names-the-direction-for-a-command-and-not-for-a-flag]: /knowledge/issues/wontfix/issue-044-bug-a-drift-test-names-the-direction-for-a-command-and-not-for-a-flag.md

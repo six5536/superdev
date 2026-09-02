@@ -158,7 +158,7 @@ layering is in [architecture][sokf:architecture].
 <!-- sokf:links -->
 [sokf:adr-003-items-by-layout]: /knowledge/adrs/active/adr-003-items-by-layout.md
 [sokf:adr-004-base-pack-identity]: /knowledge/adrs/active/adr-004-base-pack-identity.md
-[sokf:adr-036-a-contract-is-bound-to-its-implementation]: /knowledge/adrs/active/adr-036-a-contract-is-bound-to-its-implementation.md
+[sokf:adr-036-a-contract-is-bound-to-its-implementation]: /knowledge/adrs/deprecated/adr-036-a-contract-is-bound-to-its-implementation.md
 [sokf:architectural-rules]: /knowledge/architectural-rules.md
 [sokf:architecture]: /knowledge/architecture.md
 [sokf:configuration]: /knowledge/configuration.md

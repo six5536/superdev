@@ -231,8 +231,8 @@ CONTRACT-DESIGN's, not framing's.
 
 <!-- sokf:links -->
 [sokf:adr-034-each-kind-defines-in-the-form-its-ecosystem-reads]: /knowledge/adrs/active/adr-034-each-kind-defines-in-the-form-its-ecosystem-reads.md
-[sokf:adr-035-a-schema-declares-its-definition-blocks-contract]: /knowledge/adrs/active/adr-035-a-schema-declares-its-definition-blocks-contract.md
-[sokf:adr-036-a-contract-is-bound-to-its-implementation]: /knowledge/adrs/active/adr-036-a-contract-is-bound-to-its-implementation.md
+[sokf:adr-035-a-schema-declares-its-definition-blocks-contract]: /knowledge/adrs/deprecated/adr-035-a-schema-declares-its-definition-blocks-contract.md
+[sokf:adr-036-a-contract-is-bound-to-its-implementation]: /knowledge/adrs/deprecated/adr-036-a-contract-is-bound-to-its-implementation.md
 [sokf:issue-045-feature-request-drift-tests-bind-what-the-contract-declares]: /knowledge/issues/wontfix/issue-045-feature-request-drift-tests-bind-what-the-contract-declares.md
 [sokf:issue-048-feature-request-no-step-asks-whether-a-contract-is-bound]: /knowledge/issues/wontfix/issue-048-feature-request-no-step-asks-whether-a-contract-is-bound.md
 [sokf:issue-049-feature-request-a-contract-cannot-point-at-its-definition]: /knowledge/issues/open/issue-049-feature-request-a-contract-cannot-point-at-its-definition.md

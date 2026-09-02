@@ -83,5 +83,5 @@ asks for, filed by hand in the meantime.
 <!-- sokf:links -->
 [sokf:adr-029-a-contract-is-a-binding-surface-not-a-specification]: /knowledge/adrs/deprecated/adr-029-a-contract-is-a-binding-surface-not-a-specification.md
 [sokf:adr-031-ears-criteria-are-checked-by-item-pattern]: /knowledge/adrs/active/adr-031-ears-criteria-are-checked-by-item-pattern.md
-[sokf:adr-032-contract-promise-sections-declare-their-shape]: /knowledge/adrs/active/adr-032-contract-promise-sections-declare-their-shape.md
+[sokf:adr-032-contract-promise-sections-declare-their-shape]: /knowledge/adrs/deprecated/adr-032-contract-promise-sections-declare-their-shape.md
 [sokf:issue-030-feature-request-filing-an-issue-requires-framing-it]: /knowledge/issues/open/issue-030-feature-request-filing-an-issue-requires-framing-it.md

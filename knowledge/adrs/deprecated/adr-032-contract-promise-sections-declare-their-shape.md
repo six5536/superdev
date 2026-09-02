@@ -3,7 +3,7 @@ type: Decision
 id: adr-032-contract-promise-sections-declare-their-shape
 title: A contract's promise sections declare that they bind
 description: The contract-kind schemas declare a content-pattern requiring an RFC 2119 keyword on every promise-bearing section, and an item-pattern on the sections where each entry is a promise — the shape future contracts must take, with the nine on file reconciled to it.
-lifecycle: active
+lifecycle: deprecated
 ---
 
 # ADR-032: A contract's promise sections declare that they bind
@@ -69,4 +69,4 @@ formats of [ADR-037][sokf:adr-037-the-file-format-kind-splits-into-text-and-bina
 
 <!-- sokf:links -->
 [sokf:adr-033-a-contract-defines-its-interface]: /knowledge/adrs/active/adr-033-a-contract-defines-its-interface.md
-[sokf:adr-037-the-file-format-kind-splits-into-text-and-binary]: /knowledge/adrs/active/adr-037-the-file-format-kind-splits-into-text-and-binary.md
+[sokf:adr-037-the-file-format-kind-splits-into-text-and-binary]: /knowledge/adrs/deprecated/adr-037-the-file-format-kind-splits-into-text-and-binary.md

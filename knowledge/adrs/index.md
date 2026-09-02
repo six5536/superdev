@@ -41,6 +41,11 @@
 * [A Contract May Promise What Is Not Built Yet][sokf:adr-038-a-contract-may-promise-what-is-not-built-yet] - a contract element marked pending is bound in reverse — the drift test fails when the implementation has it, so the marker cannot outlive its purpose — and accept refuses a contract still carrying one, so a promise cannot ship unbuilt.
 * [A repository-decidable finding is an error, and the turn is where the gate closes][sokf:adr-039-a-decidable-finding-is-an-error-and-the-turn-is-the-gate] - the five findings the repository alone can settle become errors with no warning tier; the edit-time hook stops judging the two that span files, and the Stop hook refuses to end a turn while the knowledge carries an error, under a cap and failing open.
 * [A warning is counted by default and listed on request][sokf:adr-040-a-warning-is-counted-by-default-and-listed-on-request] - validate lists errors and counts warnings; `--warnings` lists them, the CLI and the PostToolUse hook default alike, and `--json` reports the same information as the text output, which means carrying both counts it does not carry today.
+* [An include block materializes a source region][sokf:adr-041-an-include-block-materializes-a-source-region] - an include block may name a repository file and a region of it, bounded by sokf:begin and sokf:end markers in the file's own comment syntax — validate --fix splices the region in as a fenced block and validate errors on a stale copy — so a document carries source it never parses and cannot drift from.
+* [A contract's definition is materialized from source][sokf:adr-042-a-contracts-definition-is-materialized-from-source] - a contract's Definition section holds source includes and nothing authored — superdev binds the definition by materialising it and failing the run when it is stale, the project binds behaviour by test, and a doc comment inside an included region is contract text.
+* [One contract schema and twelve kinds][sokf:adr-043-one-contract-schema-and-twelve-kinds] - one schema governs every contract — a Definition of source includes, a Behaviour of normative prose, a Stability promise — and a contract's kind is one of twelve chosen by what a reader asks for, carried in the frontmatter and the id, with what each kind's Behaviour must cover stated in a checklist the agent reads rather than in sixteen section lists the validator enforced.
+* [A pending marker applies to prose, and a declaration goes first in source][sokf:adr-044-a-pending-marker-applies-to-prose-and-a-declaration-goes-first-in-source] - a definition element cannot run ahead of its source once the definition is materialised from it, so contract-first for a definition is declaration-first in source — CONTRACT-DESIGN writes the field or the path into the marked region with its behaviour unbuilt — and the pending marker narrows to prose promises, where accept still refuses one.
+* [A schema declares variants][sokf:adr-045-a-schema-declares-variants] - a schema names a frontmatter key as its variant discriminator, any rule in it may be tagged with the variants it applies to — untagged applies to all — and its example becomes one document per variant, so one schema governs one document shape with per-variant rules the validator enforces, in one ordered list, without inheritance.
 
 <!-- sokf:links -->
 [sokf:adr-001-packs-manifest-section]: /knowledge/adrs/active/adr-001-packs-manifest-section.md
@@ -74,12 +79,17 @@
 [sokf:adr-029-a-contract-is-a-binding-surface-not-a-specification]: /knowledge/adrs/deprecated/adr-029-a-contract-is-a-binding-surface-not-a-specification.md
 [sokf:adr-030-a-section-rule-declares-body-patterns]: /knowledge/adrs/active/adr-030-a-section-rule-declares-body-patterns.md
 [sokf:adr-031-ears-criteria-are-checked-by-item-pattern]: /knowledge/adrs/active/adr-031-ears-criteria-are-checked-by-item-pattern.md
-[sokf:adr-032-contract-promise-sections-declare-their-shape]: /knowledge/adrs/active/adr-032-contract-promise-sections-declare-their-shape.md
+[sokf:adr-032-contract-promise-sections-declare-their-shape]: /knowledge/adrs/deprecated/adr-032-contract-promise-sections-declare-their-shape.md
 [sokf:adr-033-a-contract-defines-its-interface]: /knowledge/adrs/active/adr-033-a-contract-defines-its-interface.md
 [sokf:adr-034-each-kind-defines-in-the-form-its-ecosystem-reads]: /knowledge/adrs/active/adr-034-each-kind-defines-in-the-form-its-ecosystem-reads.md
-[sokf:adr-035-a-schema-declares-its-definition-blocks-contract]: /knowledge/adrs/active/adr-035-a-schema-declares-its-definition-blocks-contract.md
-[sokf:adr-036-a-contract-is-bound-to-its-implementation]: /knowledge/adrs/active/adr-036-a-contract-is-bound-to-its-implementation.md
-[sokf:adr-037-the-file-format-kind-splits-into-text-and-binary]: /knowledge/adrs/active/adr-037-the-file-format-kind-splits-into-text-and-binary.md
-[sokf:adr-038-a-contract-may-promise-what-is-not-built-yet]: /knowledge/adrs/active/adr-038-a-contract-may-promise-what-is-not-built-yet.md
+[sokf:adr-035-a-schema-declares-its-definition-blocks-contract]: /knowledge/adrs/deprecated/adr-035-a-schema-declares-its-definition-blocks-contract.md
+[sokf:adr-036-a-contract-is-bound-to-its-implementation]: /knowledge/adrs/deprecated/adr-036-a-contract-is-bound-to-its-implementation.md
+[sokf:adr-037-the-file-format-kind-splits-into-text-and-binary]: /knowledge/adrs/deprecated/adr-037-the-file-format-kind-splits-into-text-and-binary.md
+[sokf:adr-038-a-contract-may-promise-what-is-not-built-yet]: /knowledge/adrs/deprecated/adr-038-a-contract-may-promise-what-is-not-built-yet.md
 [sokf:adr-039-a-decidable-finding-is-an-error-and-the-turn-is-the-gate]: /knowledge/adrs/active/adr-039-a-decidable-finding-is-an-error-and-the-turn-is-the-gate.md
 [sokf:adr-040-a-warning-is-counted-by-default-and-listed-on-request]: /knowledge/adrs/active/adr-040-a-warning-is-counted-by-default-and-listed-on-request.md
+[sokf:adr-041-an-include-block-materializes-a-source-region]: /knowledge/adrs/active/adr-041-an-include-block-materializes-a-source-region.md
+[sokf:adr-042-a-contracts-definition-is-materialized-from-source]: /knowledge/adrs/active/adr-042-a-contracts-definition-is-materialized-from-source.md
+[sokf:adr-043-one-contract-schema-and-twelve-kinds]: /knowledge/adrs/active/adr-043-one-contract-schema-and-twelve-kinds.md
+[sokf:adr-044-a-pending-marker-applies-to-prose-and-a-declaration-goes-first-in-source]: /knowledge/adrs/active/adr-044-a-pending-marker-applies-to-prose-and-a-declaration-goes-first-in-source.md
+[sokf:adr-045-a-schema-declares-variants]: /knowledge/adrs/active/adr-045-a-schema-declares-variants.md
