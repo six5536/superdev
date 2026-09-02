@@ -3,7 +3,7 @@ type: FeaturePlan
 id: plan-024-feature-a-contract-includes-its-definition
 title: A contract includes its definition — feature plan
 description: Slices delivering I049 — the source include, the sixth content kind, schema variants, the one contract schema, the skills' judgement and declaration steps, the migration of nine contracts, and the deletion of fifteen schemas and four copy-comparing tests.
-lifecycle: open
+lifecycle: done
 links:
   - rel: implements
     to: issue-049-feature-request-a-contract-cannot-point-at-its-definition
@@ -334,7 +334,8 @@ named the pack as the grammar's source.
 
 ### Slice 10: Fifteen schemas go, and the records catch up
 
-- [ ] Done — ticked by integrate at merge.
+- [x] Done — ticked by integrate at merge. Sixteen kind schemas were on
+  file, not fifteen: the count omitted `contract-interface`.
 - Depends-on: 6, 7, 8, 9.
 - Change: the fifteen `contract-*` schemas under `knowledge/schemas/`
   and `pack/knowledge/schemas/` are deleted with their `contract-style`

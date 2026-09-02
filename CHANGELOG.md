@@ -100,14 +100,6 @@ publish a version it cannot find a heading for.
   contract had drifted: `status --drift`, `--help` and a shipped template
   were missing from it, and `--repo-root` printed a value name the contract
   never named.
-- **A schema can bind the shape of a definition block.** A section rule
-  declares `block-language` — `yaml` or `json` — plus `block-keys` and
-  `block-entry-keys`, and `superdev validate` parses the section's fenced
-  block and reports a missing key naming the file, the section, the entry
-  and the key (ADR-035). A block that will not parse, one whose fence
-  carries the wrong tag, and a section with no block at all each report
-  what is wrong; a block in a language the validator does not read
-  declares no `block-language`, and its drift test binds it instead.
 - **An acceptance criterion's EARS tag is checked.** A feature-request
   criterion that does not open with `[ubiquitous]`, `[event]`, `[state]`,
   `[conditional]`, `[optional]`, `[complex]` or `TBD — ` fails
@@ -265,6 +257,34 @@ publish a version it cannot find a heading for.
 
 ### Changed
 
+- **A contract includes its definition, under one schema.** Every
+  contract's Definition is one or more source includes —
+  `<!-- sokf:include /path#region -->` — that `superdev validate --fix`
+  materialises from the marked regions of the code and `superdev
+  validate` keeps current; a fenced block authored in a Definition is an
+  error, and nothing inside an include is parsed (ADR-041, ADR-042). One
+  schema, `Contract`, governs every kind: a `kind` from twelve — `api`,
+  `events`, `cli`, `library`, `interface`, `ui`, `data`, `format`,
+  `config`, `telemetry`, `authz`, `deployment` — in the frontmatter and
+  the id, a title opening with the kind's display name, a Definition, a
+  Behaviour of RFC 2119 prose under one `###` per checklist item the
+  kind requires, and a Stability promise (ADR-043, ADR-045). **The
+  sixteen contract-kind schemas are deleted**, `schema-contract-authz`
+  through `schema-contract-ui`, and the `contract-style` fragment with
+  them: the standard is prose in the one schema. **After a pack update, a
+  contract under a per-kind type fails `superdev validate`**: set `type:
+  Contract`
+  and a `kind`, rename the id's third segment to the kind, replace the
+  hand-written definition with an include of the declaring source, and
+  regroup the promise sections as `###` under Behaviour; `--fix` refiles
+  it. A definition is bound by materialisation, which superdev supplies;
+  a Behaviour or Stability promise is bound by a test of the behaviour,
+  which the project writes; `PENDING` marks a prose promise whose
+  behaviour is unbuilt and nothing else, and CONTRACT-DESIGN writes a new
+  definition element into its source region first (ADR-044). This
+  repository's nine contracts moved, the four tests that compared a
+  hand-written copy to the code are gone, and the block-shape check of
+  ADR-035 — never released — is withdrawn with the copies it checked.
 - **The CLI and MCP contracts include their source.** `contract-002`'s
   Definition is the clap tree materialised from the `cli` regions of
   `crates/app/superdev/src/`, one include per file, and its exit codes are

@@ -146,16 +146,24 @@ Terms from the knowledge-serving side:
 
 Terms from the contract side:
 
-- **Binding** — what satisfies
-  [ADR-036][sokf:adr-036-a-contract-is-bound-to-its-implementation]'s
-  obligation for one contract: either generation the build performs, or a
-  drift test where the implementation is hand-written. A committed
-  generated artifact binds only while it is proved current.
-- **Drift test** — a test that compares a contract's declared surface to
-  its implementation, element for element in both directions, and fails
-  naming the element and the side that carries it. The project writes it,
-  because only the project knows its framework; superdev states the
-  obligation and supplies no implementation.
+- **Binding** — what holds a contract to its implementation, in two
+  halves
+  ([ADR-042][sokf:adr-042-a-contracts-definition-is-materialized-from-source]).
+  A Definition is bound by materialisation: `superdev validate --fix`
+  writes the included source region into the contract, and `superdev
+  validate` fails on a block that is stale, empty or absent — superdev
+  supplies this half. A Behaviour or Stability promise is bound by a
+  test of the behaviour it promises, which the project writes in its own
+  language and test runner. A generated rendering a contract includes
+  binds only while a test proves it current.
+- **Drift test** — a test that compares a hand-written copy of a
+  definition to the code. There is none: a Definition is a source
+  include the validator keeps current, so no copy exists to compare,
+  and a test that opens a fenced block out of a contract to compare it
+  to the binary is a finding
+  ([I049][sokf:issue-049-feature-request-a-contract-cannot-point-at-its-definition]
+  criterion 23). A test of a Behaviour promise is a behaviour test, not
+  a drift test.
 
 The files these terms describe are in [configuration][sokf:configuration]; the
 layering is in [architecture][sokf:architecture].
@@ -163,9 +171,10 @@ layering is in [architecture][sokf:architecture].
 <!-- sokf:links -->
 [sokf:adr-003-items-by-layout]: /knowledge/adrs/active/adr-003-items-by-layout.md
 [sokf:adr-004-base-pack-identity]: /knowledge/adrs/active/adr-004-base-pack-identity.md
-[sokf:adr-036-a-contract-is-bound-to-its-implementation]: /knowledge/adrs/deprecated/adr-036-a-contract-is-bound-to-its-implementation.md
+[sokf:adr-042-a-contracts-definition-is-materialized-from-source]: /knowledge/adrs/active/adr-042-a-contracts-definition-is-materialized-from-source.md
 [sokf:adr-045-a-schema-declares-variants]: /knowledge/adrs/active/adr-045-a-schema-declares-variants.md
 [sokf:architectural-rules]: /knowledge/architectural-rules.md
 [sokf:architecture]: /knowledge/architecture.md
 [sokf:configuration]: /knowledge/configuration.md
 [sokf:contract-008-format-template]: /knowledge/contracts/public/active/contract-008-format-template.md
+[sokf:issue-049-feature-request-a-contract-cannot-point-at-its-definition]: /knowledge/issues/open/issue-049-feature-request-a-contract-cannot-point-at-its-definition.md
