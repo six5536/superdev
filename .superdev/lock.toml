@@ -13,7 +13,7 @@ version = "0.2.0"
 
 [files]
 ".agents/sokf/SPEC.md" = "f0a49f468a6e5258192458bdfa63f32341f045314d48df6b9a96d8cbd1258631"
-".agents/sokf/grammar.yaml" = "2ba3f495856a977d20ac58988774e293ed54123b0c8eccecb638b5a92fc1980e"
+".agents/sokf/grammar.yaml" = "d4579c0b532474904c985712243f8cd54793f21f21179971c73c85a88c3c763b"
 ".agents/superdev.md" = "10d47bc97ce10329a014efb5b21d445db738d89d97152a7f1fe7d44b7c73515e"
 ".claude/settings.json:hooks.PostToolUse[superdev hook validate]" = "7969a82852a864e340b51cec82b69d4c740b8d33c42e7b37b3d5bff6eb11bdea"
 ".claude/settings.json:hooks.Stop[superdev hook run]" = "883bcaf2d0ef950b150d6cbe7c3fff9afa4d4d02c033827a1d6d9329c664e7a5"

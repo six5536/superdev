@@ -28,6 +28,9 @@ links:
   - rel: references
     to: adr-045-a-schema-declares-variants
     note: Fixes `variant-key`, the `variants` tag on any rule, and the keyed `example`.
+  - rel: references
+    to: adr-047-a-section-rule-declares-item-keys-and-item-bounds
+    note: Fixes `item-key`, `item-only-pattern` and `item-prohibited-pattern`, the three item declarations.
 ---
 
 # Interface contract: document schemas
@@ -47,8 +50,9 @@ behind the vocabulary's newest rows are
 [ADR-024][sokf:adr-024-a-schemas-example-is-checked-in-place-against-its-own-schema],
 [ADR-025][sokf:adr-025-an-examples-links-bind-by-form-and-never-resolve],
 [ADR-030][sokf:adr-030-a-section-rule-declares-body-patterns],
-[ADR-042][sokf:adr-042-a-contracts-definition-is-materialized-from-source]
-and [ADR-045][sokf:adr-045-a-schema-declares-variants].
+[ADR-042][sokf:adr-042-a-contracts-definition-is-materialized-from-source],
+[ADR-045][sokf:adr-045-a-schema-declares-variants] and
+[ADR-047][sokf:adr-047-a-section-rule-declares-item-keys-and-item-bounds].
 
 ## Definition
 
@@ -84,6 +88,21 @@ pub struct SectionRule {
     /// The pattern the section's whole body must match.
     #[serde(default, rename = "content-pattern")]
     pub content_pattern: Option<String>,
+    /// The pattern, with one capture group, every top-level item of the
+    /// section's list must match; the capture is the item's key, unique
+    /// across every item of the document under a rule declaring one
+    /// (ADR-047).
+    #[serde(default, rename = "item-key")]
+    pub item_key: Option<String>,
+    /// The pattern that may match only inside a top-level item: a match on
+    /// a body line outside every item is an error naming the line
+    /// (ADR-047).
+    #[serde(default, rename = "item-only-pattern")]
+    pub item_only_pattern: Option<String>,
+    /// The pattern no top-level item may match: a match is an error naming
+    /// the item and the matched text (ADR-047).
+    #[serde(default, rename = "item-prohibited-pattern")]
+    pub item_prohibited_pattern: Option<String>,
     /// The variant values this rule applies to; empty applies to every
     /// variant (ADR-045).
     #[serde(default)]
@@ -276,6 +295,19 @@ prose the validator MUST NOT check.
   the file, the section and the item's first line; a content-pattern
   finding names the file and the section. Both name the failing
   occurrence's own heading, so a repeatable rule is locatable.
+- **Item keys and bounds** — `item-key` is a regex with one capture
+  group that every top-level item of the declared list kind MUST
+  PENDING (I037) match, the capture being the item's key; a key
+  repeated across the document's items under rules declaring
+  `item-key` MUST PENDING (I037) be an error naming the key and both
+  items, and an item with no match MUST PENDING (I037) be an error
+  naming the item. `item-only-pattern` is a regex that may match only
+  inside a top-level item: a match on a body line outside every item —
+  prose, a table row, an item of the other list kind — MUST PENDING
+  (I037) be an error naming the section and the line. `item-prohibited-pattern`
+  is a regex no top-level item may match; a match MUST PENDING (I037)
+  be an error naming the item and the matched text. All three read an
+  item as `item-pattern` does and skip fenced blocks (ADR-047).
 - **What an item is** — the list's top level is the shallowest marker in
   the body, so a list indented under its heading still binds. An item
   takes the following lines indented past that, blank lines included, and
@@ -308,7 +340,9 @@ prose the validator MUST NOT check.
   shape — one document under a `variant-key`, a map without one, a
   variant with no example, a key the enum does not carry: MUST be
   reported against the schema file, and the unreadable rule binds
-  nothing.
+  nothing. An `item-key` or `item-prohibited-pattern` on a section
+  whose `content` is not a list kind, and an `item-key` with no capture
+  group, MUST PENDING (I037) be reported the same way (ADR-047).
 - **The example is checked in place** — the `example:` block is read as
   a document and run through this same check with the declaring schema
   handed to it, no dispatch; every failure, including an example that
@@ -369,3 +403,4 @@ Internal. Every item above MAY change with the crate.
 [sokf:adr-030-a-section-rule-declares-body-patterns]: /knowledge/adrs/active/adr-030-a-section-rule-declares-body-patterns.md
 [sokf:adr-042-a-contracts-definition-is-materialized-from-source]: /knowledge/adrs/active/adr-042-a-contracts-definition-is-materialized-from-source.md
 [sokf:adr-045-a-schema-declares-variants]: /knowledge/adrs/active/adr-045-a-schema-declares-variants.md
+[sokf:adr-047-a-section-rule-declares-item-keys-and-item-bounds]: /knowledge/adrs/active/adr-047-a-section-rule-declares-item-keys-and-item-bounds.md

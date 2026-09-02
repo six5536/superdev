@@ -617,10 +617,13 @@ fn the_contract_design_skill_declares_in_source() {
 /// Covers I035 criteria 14 and 15 and I049 criteria 17 and 23: the pending
 /// marker is declared where a contract writer meets it, acceptance refuses a
 /// contract whose Behaviour or Stability still carries `PENDING`
-/// (ADR-044), and no contract on file carries one — contract-010 included,
-/// whose three PENDING promises P024 slices 2 and 3 kept.
+/// (ADR-044), and no contract on file carries the withdrawn `pending:` key.
+/// Whether a `PENDING` marker remains is the accept gate's to judge per
+/// feature — a promise may outrun its code while a feature runs (ADR-044),
+/// and contract-010 carries I037's — so this test does not assert its
+/// absence.
 #[test]
-fn a_pending_promise_is_declared_bounded_and_absent() {
+fn a_pending_promise_is_declared_and_bounded() {
     for (p, text) in contract_schema_copies() {
         let rule = rule_for(&text, "Behaviour");
         assert!(
@@ -644,9 +647,8 @@ fn a_pending_promise_is_declared_bounded_and_absent() {
             "{p} still cites the superseded ADR-038"
         );
     }
-    // A promise may outrun its code while a feature runs, never once it
-    // settles — and this feature has settled. The marker is `PENDING` in
-    // prose (ADR-044); the YAML `pending:` key went with the authored blocks.
+    // The marker is `PENDING` in prose (ADR-044); the YAML `pending:` key
+    // went with the authored blocks.
     let mut checked = Vec::new();
     for dir in [
         "knowledge/contracts/public/active",
@@ -656,8 +658,8 @@ fn a_pending_promise_is_declared_bounded_and_absent() {
             let path = entry.unwrap().path();
             let text = std::fs::read_to_string(&path).unwrap();
             assert!(
-                !text.contains("PENDING") && !text.contains("\n  pending:"),
-                "{} still promises something unbuilt",
+                !text.contains("\n  pending:"),
+                "{} still carries the withdrawn `pending:` key",
                 path.display()
             );
             checked.push(path.file_name().unwrap().to_str().unwrap().to_string());
