@@ -31,6 +31,9 @@ links:
   - rel: references
     to: adr-047-a-section-rule-declares-item-keys-and-item-bounds
     note: Fixes `item-key`, `item-only-pattern` and `item-prohibited-pattern`, the three item declarations.
+  - rel: references
+    to: adr-049-a-heading-is-declared-per-variant
+    note: Fixes that one heading may carry a rule per disjoint variant set.
 ---
 
 # Interface contract: document schemas
@@ -51,8 +54,9 @@ behind the vocabulary's newest rows are
 [ADR-025][sokf:adr-025-an-examples-links-bind-by-form-and-never-resolve],
 [ADR-030][sokf:adr-030-a-section-rule-declares-body-patterns],
 [ADR-042][sokf:adr-042-a-contracts-definition-is-materialized-from-source],
-[ADR-045][sokf:adr-045-a-schema-declares-variants] and
-[ADR-047][sokf:adr-047-a-section-rule-declares-item-keys-and-item-bounds].
+[ADR-045][sokf:adr-045-a-schema-declares-variants],
+[ADR-047][sokf:adr-047-a-section-rule-declares-item-keys-and-item-bounds]
+and [ADR-049][sokf:adr-049-a-heading-is-declared-per-variant].
 
 ## Definition
 
@@ -349,11 +353,23 @@ rules alone, and the frontmatter check reports the value. With
 `variant-key` set, `example` is a map keyed by value, every enum value
 present, each checked against the base and its own variant's rules, its
 value equal to its key; its findings carry the key, `example
-`<value>`:`.
+`<value>`:`. A heading may be declared in more than one section rule
+when the rules' `variants` sets are disjoint and none is untagged, so
+one heading carries a different shape per variant — a tracker's
+criteria unkeyed while unframed and keyed once framed (ADR-049).
 
 - `P_variant-selects-rules` [ubiquitous] The validator SHALL check a
   document against the rules its variant value selects, in declared
   order (ADR-045).
+- `P_heading-per-variant` [state] WHILE two section rules name one
+  heading with disjoint `variants` sets, the validator SHALL PENDING
+  (I030) check a document against the one its value selects, at that
+  heading's one place in the order.
+- `P_heading-rules-overlap` [event] WHEN two section rules name one
+  heading and their `variants` sets share a value, or one of them is
+  untagged, the validator SHALL PENDING (I030) report an error on the
+  schema naming the heading and the overlap, and the rules bind
+  nothing.
 
 **The definition is not parsed** — the `include` kind asks only that
 an include block naming a source path is present; what the block
@@ -458,3 +474,4 @@ Internal.
 [sokf:adr-042-a-contracts-definition-is-materialized-from-source]: /knowledge/adrs/active/adr-042-a-contracts-definition-is-materialized-from-source.md
 [sokf:adr-045-a-schema-declares-variants]: /knowledge/adrs/active/adr-045-a-schema-declares-variants.md
 [sokf:adr-047-a-section-rule-declares-item-keys-and-item-bounds]: /knowledge/adrs/active/adr-047-a-section-rule-declares-item-keys-and-item-bounds.md
+[sokf:adr-049-a-heading-is-declared-per-variant]: /knowledge/adrs/active/adr-049-a-heading-is-declared-per-variant.md

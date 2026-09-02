@@ -692,7 +692,9 @@ fn an_item_pattern_without_a_list_kind_is_a_schema_finding() {
 
 /// Covers I037 AC_c14: the validator reads `item-key`,
 /// `item-only-pattern` and `item-prohibited-pattern`, so contract-010's
-/// Behaviour still declares each and no clause of it is `PENDING` any more.
+/// Behaviour still declares each and no clause about them is `PENDING`
+/// any more. A clause about a later feature's declaration may be
+/// (ADR-044); this test reads the three it covers.
 #[test]
 fn contract_010_no_longer_defers_the_item_declarations() {
     let path = "knowledge/contracts/internal/active/contract-010-interface-document-schemas.md";
@@ -709,7 +711,12 @@ fn contract_010_no_longer_defers_the_item_declarations() {
         .collect::<Vec<_>>();
     let deferred: Vec<&String> = clauses
         .iter()
-        .filter(|clause| clause.contains("PENDING"))
+        .filter(|clause| {
+            clause.contains("PENDING")
+                && ["item-key", "item-only-pattern", "item-prohibited-pattern"]
+                    .iter()
+                    .any(|declaration| clause.contains(declaration))
+        })
         .collect();
     assert!(deferred.is_empty(), "{deferred:#?}");
     for declaration in [
