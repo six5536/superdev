@@ -16,16 +16,16 @@ publish a version it cannot find a heading for.
 - **An issue's lifecycle is one of four states, and `/file` files one.**
   The tracker schemas declare `lifecycle` as `unframed`, `framed`, `done`
   or `wontfix`, the folder being the value, and vary by it: an unframed
-  issue's cited lists are checked for their list kind alone, so a plain
-  sentence or a `TBD — …` item passes; a framed, done or wontfix issue is
-  held to the keyed form — `AC_` key and EARS tag on a criterion, `RS_`
-  key on a repro step, `EX_` key and tag on an expected-behaviour item,
-  `DD_` key on a done item — and a `TBD` is an error. A bug's Expected
-  behaviour is a numbered list in every state. The issues on file are
-  swept into `issues/framed/` and `issues/unframed/`, every bug's Expected
-  behaviour a keyed list, its words unchanged. `/file`, outside the
-  workflow's phases, files a bug, a feature request, a chore or an idea in
-  the user's words, `unframed`, with no interview or branch (ADR-048).
+  issue's cited lists are checked for their list kind alone; a framed,
+  done or wontfix issue is held to the keyed form — `AC_` key and EARS
+  tag on a criterion, `RS_` key on a repro step, `EX_` key and tag on an
+  expected-behaviour item, `DD_` key on a done item — and a `TBD` is an
+  error. The issues on file are swept into the two folders, every bug's
+  Expected behaviour a keyed list, its words unchanged. `/file`, outside
+  the phases, files a bug, a feature request, a chore or an idea in the
+  user's words, `unframed`, with no interview or branch; `/frame` frames
+  an unframed issue in place and sets it `framed`; contract-design,
+  feature-plan and execute-feature-plan refuse an unframed issue (ADR-048).
 - **A heading is declared per variant.** A schema may declare one heading
   in more than one section rule when every such rule carries `variants`
   and the sets are disjoint; a document is checked against the rule its
