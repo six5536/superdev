@@ -14,8 +14,8 @@ This is a capture bin, and nothing here is official. An idea is a thought
 worth writing down before it is lost, kept for considering later. It is not
 candidate work, so it does not belong in the
 [issue tracker][sokf:issue-tracker], and it carries no obligation to appear
-there. An idea that is taken up leaves for the tracker — `/file` promotes it
-into an unframed issue — and stops being an idea.
+there. An idea that is taken up stays on file: `/file` promotes it into an
+unframed issue, and the issue links the idea with `references` (ADR-048).
 
 One section is required, because the cost of capture decides how much gets
 captured, and a thought is lost while its author is filling in headings. Most

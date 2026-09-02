@@ -22,7 +22,7 @@ You judge the whole feature on merged code, as the user will experience it. This
 <step name="CHECK CRITERIA" task="Walk every acceptance criterion in the framed issue end to end on the merged code, confirming each is covered by a passing case, in the acceptance environment the `testing-strategy` concept names (CI e2e, simulator, staging, device, deployed service). CI's e2e and regression results count; do not repeat what CI has run. Drive the app with `/run` for the manual checks" />
 <step name="CHECK DOCUMENTATION" task="Check the project's user documentation describes the feature, as the framed issue's proposed behaviour does" />
 <step name="SECURITY REVIEW" task="Run `/security-review` when the feature touches auth, input handling, or data exposure" />
-<step name="FILE GAPS" task="File each gap found per `schema-bug-report`: a BugReport concept `issue-{nnn}-bug-{slug}` (`lifecycle: open`), linked to the framed issue" />
+<step name="FILE GAPS" task="File each gap found per `schema-bug-report`: a BugReport concept `issue-{nnn}-bug-{slug}` (`lifecycle: unframed`), linked to the framed issue; `/frame` frames it before `/feature-plan` picks it up, whose gate refuses an unframed issue" />
 <gate check="The feature is documented" on-fail="file the gap" />
 <gate check="No gap is left without a slice" on-fail="make each gap a new slice" />
 <gate check="No contract the feature touched still carries `PENDING`, uppercase and whole, in its Behaviour or Stability section" on-fail="file the unbuilt promise as a gap — a prose promise may run ahead of its code while a feature runs, never once it settles (ADR-044)" />
