@@ -47,6 +47,16 @@ issue's framing may be revised over time. Details: TBD at framing.
 
 ## Comments
 
+2026-09-02, the owner, closing a decision I037 deferred: an issue's
+lifecycle distinguishes framed from unframed. Once framed, an issue's
+behaviour and acceptance criteria are keyed items
+([ADR-046][sokf:adr-046-a-promise-and-a-criterion-are-keyed-ears-items]),
+written as EARS where the item is a requirement; a bug's Expected
+behaviour becomes a keyed `EX_` list on the framed variant, and settled
+records stay as they are. Candidate answer for criterion 3, and the
+schema mechanism is the `lifecycle` value as a variant key
+(ADR-045).
+
 2026-08-31, the user: it might help to have dedicated skills for ideas
 and for issues — with how they would interact with `/frame` an open
 question. Candidate answer for criterion 1; the knowledge already holds
@@ -59,3 +69,6 @@ and ideas? Candidate answer: retire it. Once filing is lightweight, an
 against" already has homes — the `wontfix` lifecycle for rejected work,
 ADRs for rejected design alternatives. The framing decides the
 taxonomy and where the backlog's four current entries migrate.
+
+<!-- sokf:links -->
+[sokf:adr-046-a-promise-and-a-criterion-are-keyed-ears-items]: /knowledge/adrs/active/adr-046-a-promise-and-a-criterion-are-keyed-ears-items.md
