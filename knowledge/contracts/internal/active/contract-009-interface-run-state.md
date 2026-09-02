@@ -1,10 +1,11 @@
 ---
-type: InterfaceContract
+type: Contract
 id: contract-009-interface-run-state
-title: Run State Interface Contract
+kind: interface
+title: Interface contract for run state
 description: The interface between the unattended loop's skill and its Stop hook — the run-state file, the verbs that write it, the hook's decision table, and the managed hook entry that arms it.
 lifecycle: active
-resource: /crates/app/superdev/src
+resource: /crates/app/superdev/src/run.rs
 links:
   - rel: references
     to: adr-018-loop-in-the-skill-enforcement-in-the-hook
@@ -12,6 +13,9 @@ links:
   - rel: references
     to: adr-019-run-state-is-a-session-owned-file-behind-cli-verbs
     note: The state file, its verbs, and the hook-owned counter.
+  - rel: references
+    to: adr-042-a-contracts-definition-is-materialized-from-source
+    note: The definition is materialised from the `run-state` region and bound by the include; the hook's decision table is bound by `run.rs`'s tests.
 ---
 
 # Interface contract: run state
@@ -19,69 +23,84 @@ links:
 The seam between the unattended loop's driver (a knowledge-carried
 skill) and the managed Stop hook that enforces it. The skill decides
 what runs next and records it through CLI verbs; the hook reads that
-record and decides only whether a turn may end. The split is
+record and decides only whether a turn may end. The Definition is the
+two state files as `run.rs` declares them — where each lives, the two
+caps, and the structs the verbs write and the hook reads. The split is
 [ADR-018][sokf:adr-018-loop-in-the-skill-enforcement-in-the-hook], the
 state's ownership rules are
 [ADR-019][sokf:adr-019-run-state-is-a-session-owned-file-behind-cli-verbs],
-and a blocked run's lifecycle is
-[ADR-020][sokf:adr-020-a-blocked-run-ends]. The verbs' user-facing
-surface is in [contract-002][sokf:contract-002-cli-superdev].
+a blocked run's lifecycle is
+[ADR-020][sokf:adr-020-a-blocked-run-ends], and the materialised
+definition is
+[ADR-042][sokf:adr-042-a-contracts-definition-is-materialized-from-source].
+The verbs' user-facing surface is in
+[contract-002][sokf:contract-002-cli-superdev].
 
-## Data model & API
+## Definition
 
+<!-- sokf:include /crates/app/superdev/src/run.rs#run-state -->
 ```rust
-/// `.superdev/cache/run.toml` — present exactly while a run is active.
-/// An absent file means no run: the hook lets every turn end.
+/// Where the state lives, relative to the repo root. It is machine state:
+/// `.superdev/cache/` is gitignored by `init`.
+const RUN_STATE_PATH: &str = ".superdev/cache/run.toml";
+
+/// The watchdog cap (ADR-019): at this many continues without an `advance`,
+/// the hook stops continuing the run.
+pub const CONTINUE_CAP: u32 = 10;
+
+/// The hold cap (ADR-039): at this many turns held for the same unresolved
+/// knowledge, the hook reports and lets the turn end, so a finding the agent
+/// cannot settle stalls nothing.
+pub const HOLD_CAP: u32 = 3;
+
+/// The run state, present exactly while a run is active. An absent file
+/// means no run: the hook lets every turn end.
+#[derive(Debug, Serialize, Deserialize)]
 pub struct RunState {
-    /// The session that owns the run. The hook ignores Stop payloads
-    /// from any other session. Recorded by `begin` from `--session` or
-    /// the `CLAUDE_SESSION_ID` environment variable; when neither
-    /// exists, empty — and the hook adopts the first Stop payload's
-    /// `session_id` as owner, after which ownership binds. `advance`
-    /// refreshes the owner the same way, so a resumed session does not
-    /// orphan its own run.
+    /// The session that owns the run; the hook ignores Stop payloads from
+    /// any other session. Recorded by `begin` from `--session` or the
+    /// `CLAUDE_SESSION_ID` environment variable; when neither exists, empty,
+    /// and the hook adopts the first Stop payload's `session_id` as owner,
+    /// after which ownership binds. `advance` refreshes the owner the same
+    /// way, so a resumed session does not orphan its own run.
     pub session_id: String,
-    /// What the driver does next, in prose. The hook's exit-2 message
+    /// What the driver does next, in prose; the Stop hook's exit-2 message
     /// names it. Empty means nothing to continue: the turn ends.
     pub next: String,
-    /// Turn boundaries crossed since the last `advance`. Hook-owned:
-    /// only `superdev hook run` increments it; only `advance` resets it.
+    /// Turn boundaries crossed since the last `advance`. Hook-owned: only
+    /// `superdev hook run` increments it; only `advance` resets it.
     pub continues: u32,
-    /// When the run began, ISO 8601. Informational.
+    /// When the run began (ISO 8601). Informational.
     pub started: String,
-    /// Pid of the `begin` process. Informational, for diagnosing a
-    /// stale state by hand.
+    /// Pid of the `begin` process. Informational, for diagnosing a stale
+    /// state by hand.
     pub pid: u32,
 }
 
-/// What the Stop hook has held open for one session (ADR-039), at
-/// `.superdev/cache/hold.toml`.
-///
-/// Kept apart from the run state because a hold happens whether or not a
-/// run is armed, and the run state's presence means a run is active: a
-/// hook that created one to count holds would make the next
-/// `superdev run begin` refuse.
+/// Where the hold count lives, relative to the repo root. Separate from the
+/// run state because a hold happens whether or not a run is armed, and
+/// `run.toml`'s presence means a run is active: a hook that created one to
+/// count holds would make the next `superdev run begin` refuse (ADR-039).
+const HOLD_STATE_PATH: &str = ".superdev/cache/hold.toml";
+
+/// What the Stop hook has held open for one session. An absent file means
+/// nothing is being held.
+#[derive(Debug, Serialize, Deserialize)]
 pub struct HoldState {
     /// The session the count belongs to. A payload from another session
     /// starts the count again.
     pub session_id: String,
-    /// Turns held open because the knowledge carried an error.
-    /// Hook-owned: `superdev hook run` increments it while it holds and
-    /// clears the file once the knowledge is clean.
+    /// Turns held open because the knowledge carried an error. Hook-owned:
+    /// `superdev hook run` increments it while it holds and removes the file
+    /// once the knowledge is clean.
     pub holds: u32,
 }
-
-/// The watchdog cap (ADR-019): at this many continues without an
-/// `advance`, the hook stops continuing the run.
-pub const CONTINUE_CAP: u32 = 10;
-
-/// The hold cap (ADR-039): at this many turns held for the same
-/// unresolved knowledge, the hook reports and lets the turn end, so a
-/// finding the agent cannot settle stalls nothing.
-pub const HOLD_CAP: u32 = 3;
 ```
+<!-- /sokf:include -->
 
-## Module boundaries
+## Behaviour
+
+### Module boundaries
 
 - The `superdev` binary owns every read and write of `run.toml` — a
   `run` module beside the other verb modules; `superdev-core` MUST NOT
@@ -101,7 +120,7 @@ pub const HOLD_CAP: u32 = 3;
 - The driver skill calls the verbs; it MUST NOT write the file itself
   ([ADR-019][sokf:adr-019-run-state-is-a-session-owned-file-behind-cli-verbs]).
 
-## Key flows
+### Key flows
 
 - A run: `superdev run begin` → per slice, build → integrate, with
   `superdev run advance --next <TEXT>` at every real step forward →
@@ -120,7 +139,7 @@ pub const HOLD_CAP: u32 = 3;
 - A second `begin` while state exists: refused, naming the owning
   session and `superdev run end` as the way to clear a stale run.
 
-## Cross-cutting concerns
+### Cross-cutting concerns
 
 - Security: the state lives under the gitignored `.superdev/cache/`;
   the hook MUST execute nothing and parse only its own TOML and the
@@ -143,9 +162,14 @@ pub const HOLD_CAP: u32 = 3;
   `CONTINUE_CAP` fires; no `CLAUDE_CODE_STOP_HOOK_BLOCK_CAP` entry
   ships ([research-001][sokf:research-001-claude-code-stop-hook-behaviour]).
 
+## Stability
+
+Internal. Every item above MAY change with the crate.
+
 <!-- sokf:links -->
 [sokf:adr-018-loop-in-the-skill-enforcement-in-the-hook]: /knowledge/adrs/active/adr-018-loop-in-the-skill-enforcement-in-the-hook.md
 [sokf:adr-019-run-state-is-a-session-owned-file-behind-cli-verbs]: /knowledge/adrs/active/adr-019-run-state-is-a-session-owned-file-behind-cli-verbs.md
 [sokf:adr-020-a-blocked-run-ends]: /knowledge/adrs/active/adr-020-a-blocked-run-ends.md
+[sokf:adr-042-a-contracts-definition-is-materialized-from-source]: /knowledge/adrs/active/adr-042-a-contracts-definition-is-materialized-from-source.md
 [sokf:contract-002-cli-superdev]: /knowledge/contracts/public/active/contract-002-cli-superdev.md
 [sokf:research-001-claude-code-stop-hook-behaviour]: /knowledge/research/research-001-claude-code-stop-hook-behaviour.md

@@ -2,6 +2,10 @@
 
 use crate::capability::Capability;
 
+// The item model is the pack resolution contract's Definition (contract-007):
+// the `pack-resolution` region below is the identity a later layer
+// supersedes on.
+// sokf:begin pack-resolution
 /// What materialises an item: a capability's component, superdev's own SOKF
 /// component, or nothing in particular for the repo-level kinds.
 ///
@@ -64,3 +68,4 @@ pub struct Item {
     /// item has exactly one entry, with an empty path.
     pub files: Vec<(String, String)>,
 }
+// sokf:end pack-resolution

@@ -1,7 +1,8 @@
 ---
-type: InterfaceContract
+type: Contract
 id: contract-010-interface-document-schemas
-title: Document Schemas Interface
+kind: interface
+title: Interface contract for document schemas
 description: The declaration vocabulary a document schema may carry — frontmatter constraints, section rules and content kinds — and what each declaration obliges the validator to check.
 lifecycle: active
 resource: /crates/lib/superdev-core/src/validate/schema/document.rs
@@ -23,7 +24,7 @@ links:
     note: Fixes the two body-pattern declarations and their found-anywhere semantics.
   - rel: references
     to: adr-042-a-contracts-definition-is-materialized-from-source
-    note: Fixes the sixth content kind, `include`, and withdraws the three definition-block declarations.
+    note: Fixes the sixth content kind, `include`, withdraws the three definition-block declarations, and makes the structs that read a schema the declaration this contract includes.
   - rel: references
     to: adr-045-a-schema-declares-variants
     note: Fixes `variant-key`, the `variants` tag on any rule, and the keyed `example`.
@@ -34,10 +35,13 @@ links:
 The vocabulary the schemas in `knowledge/schemas/` write and the
 validator's document check reads. Schema authors — agents, in this
 repository and every managed one — are one side of the interface; the
-`validate::schema` module is the other. Every declaration listed here
-binds: the validator checks it, and a declaration the validator cannot
-read is reported on the schema itself. The decisions behind the
-vocabulary's newest rows are
+`validate::schema` module is the other. The Definition is the vocabulary
+as the structs that read a schema's YAML block declare it: a key a
+schema may write is a field with the doc comment that says what it
+obliges, and a key with no field is one the validator cannot read.
+Every declaration binds: the validator checks it, and a declaration the
+validator cannot read is reported on the schema itself. The decisions
+behind the vocabulary's newest rows are
 [ADR-022][sokf:adr-022-a-frontmatter-key-is-required-by-a-per-key-flag],
 [ADR-023][sokf:adr-023-a-content-kind-binds-by-presence],
 [ADR-024][sokf:adr-024-a-schemas-example-is-checked-in-place-against-its-own-schema],
@@ -46,58 +50,206 @@ vocabulary's newest rows are
 [ADR-042][sokf:adr-042-a-contracts-definition-is-materialized-from-source]
 and [ADR-045][sokf:adr-045-a-schema-declares-variants].
 
-## Data model & API
+## Definition
 
-The declaration vocabulary, as a schema's fenced YAML block writes it:
-
-```yaml
-description: <what the governed document is>   # prose, unchecked
-line-limit: <int>            # error when the document exceeds it
-
-target-files: '<glob>'       # dispatch for frontmatter-less documents
-variant-key: <key>           # the frontmatter key whose value selects a variant
-
-frontmatter:
-  <key>:
-    required: true           # error when the key is absent
-    const: <value>           # a present value must equal it
-    pattern: '<re>'          # a present value must match it
-    enum: [<v1>, <v2>]       # a present value must be one of them
-    variants: [<v1>]         # the rule applies to these variants only
-    description: <guidance>  # prose, unchecked
-
-sections-ordered: true       # first appearances follow declaration order
-sections-prohibited:         # a bare heading, or one banned in some variants
-  - <heading>
-  - {heading: <heading>, variants: [<v1>]}
-sections:
-  - heading: '<literal>'     # or heading-pattern: '<re>'
-    level: <int>             # omitted: any depth
-    required: true
-    repeatable: true
-    content: <kind>          # prose | bullet-list | numbered-list | table | code | include
-    columns: [<c1>, <c2>]    # a declared table carries exactly these
-    item-pattern: '<re>'     # each top-level item of the list kind must match
-    content-pattern: '<re>'  # the section's body must match
-    variants: [<v1>]         # the rule applies to these variants only
-    description: <guidance>  # prose, unchecked
-
-example: |                   # one conforming document; checked (ADR-024)
-  <a complete document satisfying this schema>
-example:                     # with variant-key: one document per variant value
-  <v1>: |
-    <a document whose variant-key value is v1>
-```
-
+<!-- sokf:include /crates/lib/superdev-core/src/validate/schema/document.rs#document-schemas -->
 ```rust
-/// One document against the schema its `type` names; every finding
-/// carries the document, the rule broken, and the schema's name.
-pub fn check_documents(docs: &[Document<'_>], set: &SchemaSet) -> Vec<Finding>;
+/// One section rule from a schema's contract.
+#[derive(Debug, Clone, Deserialize)]
+pub struct SectionRule {
+    /// The literal heading this rule names.
+    #[serde(default)]
+    pub heading: Option<String>,
+    /// The pattern a heading must match, when the name is the author's.
+    #[serde(default, rename = "heading-pattern")]
+    pub heading_pattern: Option<String>,
+    /// Heading level, `#` count.
+    #[serde(default)]
+    pub level: Option<usize>,
+    /// Whether the document must carry it.
+    #[serde(default)]
+    pub required: bool,
+    /// Whether it may appear more than once.
+    #[serde(default)]
+    pub repeatable: bool,
+    /// The shape of what sits under the heading, one of [`CONTENT_KINDS`].
+    #[serde(default)]
+    pub content: Option<String>,
+    /// A table's columns, in order.
+    #[serde(default)]
+    pub columns: Vec<String>,
+    /// The pattern every top-level item of the section's list must match.
+    #[serde(default, rename = "item-pattern")]
+    pub item_pattern: Option<String>,
+    /// The pattern the section's whole body must match.
+    #[serde(default, rename = "content-pattern")]
+    pub content_pattern: Option<String>,
+    /// The variant values this rule applies to; empty applies to every
+    /// variant (ADR-045).
+    #[serde(default)]
+    pub variants: Vec<String>,
+}
+
+/// One `sections-prohibited` entry: a bare heading, banned in every
+/// variant, or a `{heading, variants}` mapping banning it in the variants
+/// named (ADR-045).
+#[derive(Debug, Clone, Deserialize)]
+#[serde(from = "ProhibitedEntry")]
+struct Prohibited {
+    /// The heading that must not appear.
+    heading: String,
+    /// The variant values the ban applies to; empty applies to every variant.
+    variants: Vec<String>,
+}
+
+/// The two forms a prohibited entry is written in.
+#[derive(Deserialize)]
+#[serde(untagged)]
+enum ProhibitedEntry {
+    Heading(String),
+    Tagged {
+        heading: String,
+        #[serde(default)]
+        variants: Vec<String>,
+    },
+}
+
+/// A schema's `example`: one document, or — with `variant-key` set — one
+/// per variant value, keyed by it (ADR-045). Checked in place against the
+/// declaring schema (ADR-024).
+#[derive(Debug, Clone, Deserialize)]
+#[serde(untagged)]
+enum Example {
+    /// One conforming document, for a schema without variants.
+    One(String),
+    /// One document per variant value, keyed by it, every enum value present.
+    Keyed(Ordered<String>),
+}
+
+/// The content kinds a section rule may declare — the closed vocabulary of
+/// contract-010, which the grammar's `content` enum repeats. A kind outside
+/// this set is reported on the schema and binds nothing.
+pub(crate) const CONTENT_KINDS: [&str; 6] = [
+    "prose",
+    "bullet-list",
+    "numbered-list",
+    "table",
+    "code",
+    "include",
+];
+
+/// One frontmatter key's constraints, as a schema's `frontmatter:` block
+/// declares them. A key declared with only a `description` deserialises to
+/// an empty constraint and binds nothing — guidance, per ADR-022. Fields
+/// outside these five (`description`) are ignored here.
+#[derive(Debug, Clone, Default, Deserialize)]
+struct KeyConstraint {
+    /// Whether the key's absence is an error (ADR-022).
+    #[serde(default)]
+    required: bool,
+    /// The one value the key must carry, when present.
+    #[serde(default)]
+    r#const: Option<String>,
+    /// The anchored regex a present value must match.
+    #[serde(default)]
+    pattern: Option<String>,
+    /// The values a present one must be among.
+    #[serde(default)]
+    r#enum: Vec<String>,
+    /// The variant values this constraint applies to; empty applies to every
+    /// variant (ADR-045).
+    #[serde(default)]
+    variants: Vec<String>,
+}
+
+/// A schema's contract, as far as document checking needs it.
+#[derive(Debug, Clone, Deserialize)]
+pub struct DocSchema {
+    /// The schema file's own name, filled in after parsing.
+    #[serde(skip)]
+    pub name: String,
+    /// The glob that names this schema's documents when they carry no
+    /// frontmatter; a `type` const names them otherwise.
+    #[serde(default, rename = "target-files")]
+    target_files: Option<String>,
+    /// The line count a document must not exceed.
+    #[serde(default, rename = "line-limit")]
+    line_limit: Option<usize>,
+    /// The frontmatter key whose value selects a variant (ADR-045).
+    #[serde(default, rename = "variant-key")]
+    variant_key: Option<String>,
+    /// Whether the sections' first appearances must follow declaration
+    /// order.
+    #[serde(default, rename = "sections-ordered")]
+    sections_ordered: bool,
+    /// The section rules, in declaration order.
+    #[serde(default)]
+    sections: Vec<SectionRule>,
+    /// The headings a document must not carry.
+    #[serde(default, rename = "sections-prohibited")]
+    sections_prohibited: Vec<Prohibited>,
+    /// Every key's constraint block, in declaration order. `Option` because
+    /// a schema may write a key with nothing under it — an empty contract,
+    /// binding nothing, rather than a schema that fails to parse.
+    #[serde(default)]
+    frontmatter: Ordered<Option<KeyConstraint>>,
+    /// The worked example — one document satisfying this schema, or one per
+    /// variant, checked in place by `check_examples` (ADR-024). Absence is
+    /// the grammar's schema check's finding, not this module's.
+    #[serde(default)]
+    example: Option<Example>,
+}
+
+/// One document to check: its repo-relative path, its text, and the `type`
+/// its frontmatter declares.
+pub struct Document<'a> {
+    /// Repo-relative path, forward-slashed.
+    pub path: &'a str,
+    /// The whole file.
+    pub text: &'a str,
+    /// The frontmatter `type`, absent for a document that carries none.
+    pub doc_type: Option<&'a str>,
+}
+
+/// Check every document against the schema its type or path names.
+///
+/// A document whose type names no schema is reported: the type is a claim
+/// about which contract applies, and a claim that resolves to nothing is
+/// worse than none, because it reads as governed.
+#[must_use]
+pub fn check_documents(docs: &[Document<'_>], set: &SchemaSet) -> Vec<Finding> {
+    let mut findings = Vec::new();
+    for doc in docs {
+        let Some(schema) = set.governing(doc.path, doc.doc_type) else {
+            if let Some(t) = doc.doc_type {
+                findings.push(Finding {
+                    file: doc.path.to_string(),
+                    message: format!("type `{t}` names no schema"),
+                    fatal: true,
+                });
+            }
+            continue;
+        };
+        check_one(doc, schema, Subject::Filed, &mut findings);
+    }
+    findings
+}
 ```
+<!-- /sokf:include -->
+
+## Behaviour
+
+### Declarations
+
+What each declaration in the Definition obliges the validator to check.
+A schema writes the vocabulary in YAML — `heading-pattern` for
+`heading_pattern`, `variant-key` for `variant_key` — under the
+`serde` renames the Definition shows; `description` beside any key is
+prose the validator MUST NOT check.
 
 - **Dispatch** — a document's frontmatter `type` names the schema whose
   `frontmatter.type.const` equals it; `target-files` globs catch the
-  frontmatter-less. A `type` naming no schema is an error.
+  frontmatter-less. A `type` naming no schema MUST be an error.
 - **Frontmatter** — `const`, `pattern` and `enum` bind a key's present
   value; `required` makes absence an error; a key declared with only a
   `description` is guidance (ADR-022). A constraint compares against the
@@ -105,17 +257,17 @@ pub fn check_documents(docs: &[Document<'_>], set: &SchemaSet) -> Vec<Finding>;
   map, a folded block — cannot satisfy one. `lifecycle` belongs to the
   filing check (P011), which reports its value against the enum and its
   folder, so one fault is said once.
-- **Content kinds** — a closed set of six. A section satisfies its
-  kind when the form appears in its body: one bullet, one numbered
-  item, one table, one fenced block, one include block naming a source
-  path, or — for prose — one plain paragraph line; other content beside
-  the form is tolerated (ADR-023), with one exception: an `include`
-  section carrying a fenced block outside an include is an error naming
-  the section, because a hand-written block beside a materialised one
-  is the copy the kind exists to forbid (ADR-042). The body runs to the
-  next heading at the section's own level or shallower, so a
-  subsection's content counts; lines inside fenced blocks are not
-  content.
+- **Content kinds** — the closed set `CONTENT_KINDS` names. A section
+  satisfies its kind when the form appears in its body: one bullet, one
+  numbered item, one table, one fenced block, one include block naming
+  a source path, or — for prose — one plain paragraph line; other
+  content beside the form is tolerated (ADR-023), with one exception:
+  an `include` section carrying a fenced block outside an include MUST
+  be an error naming the section, because a hand-written block beside a
+  materialised one is the copy the kind exists to forbid (ADR-042). The
+  body runs to the next heading at the section's own level or
+  shallower, so a subsection's content counts; lines inside fenced
+  blocks are not content.
 - **Body patterns** — `item-pattern` binds each top-level item of the
   section's declared list kind, `content-pattern` the section's whole
   body. Every pattern in this vocabulary is a regex matched
@@ -133,14 +285,14 @@ pub fn check_documents(docs: &[Document<'_>], set: &SchemaSet) -> Vec<Finding>;
   kind opens no item, and a thematic break is not a marker.
 - **Variants** — `variant-key` names the frontmatter key whose value
   selects a variant; any rule carrying `variants` applies only to the
-  values it lists, and a rule without it to all; a document is checked
-  against the rules its value selects, in declared order (ADR-045). A
-  document whose value is absent, or outside the key's enum, sees the
-  untagged rules alone, and the frontmatter check reports the value.
-  With `variant-key` set, `example` is a map keyed by value, every enum
-  value present, each checked against the base and its own variant's
-  rules, its value equal to its key; its findings carry the key,
-  `example `<value>`:`.
+  values it lists, and a rule without it to all; a document MUST be
+  checked against the rules its value selects, in declared order
+  (ADR-045). A document whose value is absent, or outside the key's
+  enum, sees the untagged rules alone, and the frontmatter check reports
+  the value. With `variant-key` set, `example` is a map keyed by value,
+  every enum value present, each checked against the base and its own
+  variant's rules, its value equal to its key; its findings carry the
+  key, `example `<value>`:`.
 - **The definition is not parsed** — the `include` kind asks only that
   an include block naming a source path is present; what the block
   carries is the SOKF validator's to keep current (ADR-041) and no
@@ -148,14 +300,15 @@ pub fn check_documents(docs: &[Document<'_>], set: &SchemaSet) -> Vec<Finding>;
   `block-entry-keys` declarations are withdrawn (ADR-042); a schema
   still carrying one is mis-declared.
 - **A mis-declared schema is its own finding** — a `content` outside
-  the six kinds, a `pattern` that does not compile, an `item-pattern`
+  `CONTENT_KINDS`, a `pattern` that does not compile, an `item-pattern`
   on a section whose `content` is not a list kind, a withdrawn
   `block-*` declaration, a `variants` tag naming a value outside the
   discriminator's enum, a tag with no `variant-key`, a `variant-key`
   naming a frontmatter key with no enum, or an `example` of the wrong
   shape — one document under a `variant-key`, a map without one, a
-  variant with no example, a key the enum does not carry: reported
-  against the schema file, and the unreadable rule binds nothing.
+  variant with no example, a key the enum does not carry: MUST be
+  reported against the schema file, and the unreadable rule binds
+  nothing.
 - **The example is checked in place** — the `example:` block is read as
   a document and run through this same check with the declaring schema
   handed to it, no dispatch; every failure, including an example that
@@ -169,7 +322,7 @@ pub fn check_documents(docs: &[Document<'_>], set: &SchemaSet) -> Vec<Finding>;
   This is the one place the link rules differ from a real document's,
   where ids must resolve.
 
-## Module boundaries
+### Module boundaries
 
 - `validate::schema` owns parsing (`DocSchema::parse`) and checking
   (`check_documents`); schemas are data it reads, never code.
@@ -178,7 +331,7 @@ pub fn check_documents(docs: &[Document<'_>], set: &SchemaSet) -> Vec<Finding>;
 - The grammar (`.agents/sokf/grammar.yaml`) governs the schema files'
   own markdown shape; this contract governs what their YAML declares.
 
-## Key flows
+### Key flows
 
 - validate: collect documents → dispatch each by `type` or glob →
   sections (presence, order, prohibition, columns, line limit) →
@@ -189,7 +342,7 @@ pub fn check_documents(docs: &[Document<'_>], set: &SchemaSet) -> Vec<Finding>;
   with the declaring schema → check link form → findings land on the
   schema file, in the same run and verdict.
 
-## Cross-cutting concerns
+### Cross-cutting concerns
 
 - Security: every schema pattern MUST compile through the validator's own
   `re` wrapper; one that does not compile MUST be a schema finding, never a
@@ -203,6 +356,10 @@ pub fn check_documents(docs: &[Document<'_>], set: &SchemaSet) -> Vec<Finding>;
   failing to load (I049).
 - Observability: every finding names the document, the rule and the
   schema, in the shape the section findings already use.
+
+## Stability
+
+Internal. Every item above MAY change with the crate.
 
 <!-- sokf:links -->
 [sokf:adr-022-a-frontmatter-key-is-required-by-a-per-key-flag]: /knowledge/adrs/active/adr-022-a-frontmatter-key-is-required-by-a-per-key-flag.md

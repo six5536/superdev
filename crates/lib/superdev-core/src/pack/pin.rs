@@ -30,6 +30,10 @@ enum Newest {
     Unreachable,
 }
 
+// Where the pin moves is the pack resolution contract's Definition
+// (contract-007): the `pack-resolution` region below is `update_pins`, body
+// included — a region is lines, and the signature's brace opens the body.
+// sokf:begin pack-resolution
 /// Bring the manifest's pack pins current, and say what happened.
 ///
 /// A manifest carrying no entry gains the default one: an absent `[[packs]]`
@@ -149,6 +153,7 @@ pub fn update_pins(
     }
     lines
 }
+// sokf:end pack-resolution
 
 /// Read the pack a pin is about to move to, and say why not if it will not.
 ///

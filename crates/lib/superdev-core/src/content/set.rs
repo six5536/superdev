@@ -4,6 +4,10 @@ use std::collections::BTreeMap;
 
 use super::item::{Item, ItemKind, Owner};
 
+// The resolved content set is the pack resolution contract's Definition
+// (contract-007): the `pack-resolution` regions below hold the layers' origin,
+// what shadowing reports, the set and every reader of it.
+// sokf:begin pack-resolution
 /// Which layer an item came from.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Origin {
@@ -44,6 +48,8 @@ pub struct ContentSet {
     shadowed: Vec<Shadowed>,
     base: Option<Origin>,
 }
+
+// sokf:end pack-resolution
 
 impl ContentSet {
     /// The set one layer provides on its own.
@@ -89,6 +95,7 @@ impl ContentSet {
         }
     }
 
+    // sokf:begin pack-resolution
     /// One item, or `None` when no layer provides it.
     pub fn item(&self, owner: Owner, kind: ItemKind, name: &str) -> Option<&Item> {
         self.entry(owner, kind, name).map(|(item, _)| item)
@@ -116,6 +123,7 @@ impl ContentSet {
     pub fn base(&self) -> Option<&Origin> {
         self.base.as_ref()
     }
+    // sokf:end pack-resolution
 
     /// Borrowing lookup that avoids cloning the name into an owned key.
     fn entry(&self, owner: Owner, kind: ItemKind, name: &str) -> Option<&(Item, Origin)> {

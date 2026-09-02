@@ -17,6 +17,11 @@ use super::fetch;
 use super::manifest::{PACK_MANIFEST, PackManifest, SUPPORTED_FORMATS, check_path, link_refusal};
 use super::source::{DEFAULT_PACK, PackSource};
 
+// The resolution phase is the pack resolution contract's Definition
+// (contract-007): the `pack-resolution` regions below hold the mode, what a
+// resolve produces and `resolve` itself, body included — a region is lines,
+// and the signature's brace opens the body.
+// sokf:begin pack-resolution
 /// How far the resolver may go. ADR-002.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ResolveMode {
@@ -42,6 +47,8 @@ pub struct Resolution {
     pub packs: Vec<PackLock>,
 }
 
+// sokf:end pack-resolution
+
 /// What one entry resolved to.
 enum Resolved {
     /// Its own items, as a layer above the embedded pack, with the record
@@ -54,6 +61,7 @@ enum Resolved {
     Pending,
 }
 
+// sokf:begin pack-resolution
 /// Resolve the manifest's packs over the embedded pack.
 ///
 /// The only phase in a run that reads anything outside the repo: local
@@ -130,6 +138,7 @@ pub fn resolve(
         packs,
     })
 }
+// sokf:end pack-resolution
 
 /// Whether an entry names the source the embedded pack is a copy of.
 ///
