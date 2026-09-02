@@ -182,7 +182,7 @@ rebuild per edit.
 
 ### Slice 5: The format contracts are swept
 
-- [ ] Done — ticked by integrate at merge.
+- [x] Done — ticked by integrate at merge.
 - Depends-on: 2.
 - Change: contract-005, contract-006 and contract-008, as slice 3.
 - Done-check: as slice 3, for the three files.
@@ -191,6 +191,15 @@ rebuild per edit.
     contracts — covers 13.
   - manual: the reviewer confirms the promise count equals the verb
     count before the sweep — covers 13.
+  - Note, at merge: contract-005 15 verbs before, 15 promises after;
+    contract-006 16 and 16; contract-008 19 and 17 — the write-once
+    sentence ("the engine MUST NOT hash, sync or revisit a seeded
+    file") stood in Files, in Compatibility and in Stability and is
+    one item, `P_seeded-file-write-once`, cited from the other two
+    places. Every other verb is one item. The shipped set of
+    contract-008 became a numbered list. The scratch schema of slice 3
+    reported nothing for the three, and reported a keyless item, a
+    tagless item and a `MUST` in prose when each was injected.
 
 ### Slice 6: The contract schema takes its final form
 
