@@ -94,8 +94,6 @@ sections:
     level: 2
     required: true
     content: code
-    block-language: json
-    block-entry-keys: [about, arguments, result]
     description: >
       The definition of the served tools, keyed by tool name. One entry per
       tool the server offers, each carrying `about`, `arguments` as a map of

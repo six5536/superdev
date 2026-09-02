@@ -104,9 +104,8 @@ sections:
       YAML example carrying every key, a DTD, a grammar. One fenced block,
       tagged with that language. Every key a reader may meet appears, with its
       type and its default, so a writer produces a valid file from this block
-      alone; prose around it describes and never defines. A block the
-      validator reads declares `block-language` here and is checked for
-      completeness; any other block is bound by the contract's drift test.
+      alone; prose around it describes and never defines. The block is
+      bound by the contract's drift test.
   - heading: "Compatibility"
     level: 2
     required: true

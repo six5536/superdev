@@ -14,12 +14,14 @@
 //! rule.
 
 use std::collections::{BTreeMap, BTreeSet};
+use std::ops::Range;
 
 use serde::Deserialize;
 
 use super::Finding;
 use super::grammar::Ordered;
 use super::re;
+use crate::sokf::{IncludeBlock, IncludeTarget, include_blocks};
 use crate::validate::sokf;
 
 /// One section rule from a schema's contract.
@@ -52,39 +54,23 @@ pub struct SectionRule {
     /// The pattern the section's whole body must match.
     #[serde(default, rename = "content-pattern")]
     pub content_pattern: Option<String>,
-    /// The fence tag the section's definition block must carry.
-    #[serde(default, rename = "block-language")]
-    pub block_language: Option<String>,
-    /// The keys the block must carry at its top level.
-    #[serde(default, rename = "block-keys")]
-    pub block_keys: Vec<String>,
-    /// The keys every top-level entry of the block must carry.
-    #[serde(default, rename = "block-entry-keys")]
-    pub block_entry_keys: Vec<String>,
-}
-
-impl SectionRule {
-    /// Whether the rule declares anything about its section's block.
-    fn declares_block(&self) -> bool {
-        self.block_language.is_some()
-            || !self.block_keys.is_empty()
-            || !self.block_entry_keys.is_empty()
-    }
 }
 
 /// The content kinds an `item-pattern` may sit beside: the ones whose bodies
 /// have items to bind (ADR-030).
 const LIST_KINDS: [&str; 2] = ["bullet-list", "numbered-list"];
 
-/// The fence languages the validator reads a definition block in — the two
-/// the binary already parses (ADR-035). A block in any other language
-/// declares no `block-language`, and a drift test binds it instead.
-pub(crate) const BLOCK_LANGUAGES: [&str; 2] = ["yaml", "json"];
-
 /// The content kinds a section rule may declare — the closed vocabulary of
-/// contract-010. A kind outside this set is reported on the schema and binds
-/// nothing.
-const CONTENT_KINDS: [&str; 5] = ["prose", "bullet-list", "numbered-list", "table", "code"];
+/// contract-010, which the grammar's `content` enum repeats. A kind outside
+/// this set is reported on the schema and binds nothing.
+pub(crate) const CONTENT_KINDS: [&str; 6] = [
+    "prose",
+    "bullet-list",
+    "numbered-list",
+    "table",
+    "code",
+    "include",
+];
 
 impl SectionRule {
     /// How the rule names its section, for a finding.
@@ -339,44 +325,6 @@ pub fn check_declarations(schemas: &[(String, String)]) -> Vec<Finding> {
                         message: format!(
                             "schema: section {} declares {name} `{pattern}` — it does not \
                              compile, and binds nothing",
-                            rule.label()
-                        ),
-                        fatal: true,
-                    });
-                }
-            }
-            // A block declaration needs a block to read, a language the
-            // validator parses, and a section whose content is that block.
-            if rule.declares_block() {
-                match rule.block_language.as_deref() {
-                    None => findings.push(Finding {
-                        file: file.clone(),
-                        message: format!(
-                            "schema: section {} declares block keys and no block-language",
-                            rule.label()
-                        ),
-                        fatal: true,
-                    }),
-                    Some(language) if !BLOCK_LANGUAGES.contains(&language) => {
-                        findings.push(Finding {
-                            file: file.clone(),
-                            message: format!(
-                                "schema: section {} declares block-language `{language}` — the \
-                                 validator reads {}",
-                                rule.label(),
-                                BLOCK_LANGUAGES.join(", ")
-                            ),
-                            fatal: true,
-                        });
-                    }
-                    Some(_) => {}
-                }
-                if rule.content.as_deref() != Some("code") {
-                    findings.push(Finding {
-                        file: file.clone(),
-                        message: format!(
-                            "schema: section {} declares a definition block, and its content is \
-                             not code",
                             rule.label()
                         ),
                         fatal: true,
@@ -722,21 +670,36 @@ fn check_one(doc: &Document<'_>, schema: &DocSchema, example: bool, findings: &m
 
     // Each matched section must carry the form its rule's `content` kind
     // names — presence, per ADR-023: one bullet, one numbered item, one
-    // table, one fenced block, or one plain paragraph line; other content
-    // beside the form is tolerated. The body runs to the next heading at the
-    // section's own level or shallower, so a subsection's content counts. A
-    // kind outside the vocabulary is reported on the schema — by the
-    // grammar's schema check — and binds nothing.
+    // table, one fenced block, one include block naming a source path, or
+    // one plain paragraph line; other content beside the form is tolerated.
+    // The body runs to the next heading at the section's own level or
+    // shallower, so a subsection's content counts. A kind outside the
+    // vocabulary is reported on the schema — by the grammar's schema check —
+    // and binds nothing.
+    //
+    // Include blocks are found by byte offset, so the body's lines are
+    // mapped to bytes once. The marker faults are the SOKF check's to
+    // report; a block that does not close is no block here either.
+    let (includes, _) = include_blocks(doc.text);
+    let starts = line_starts(doc.text);
     let positions = heading_positions(&lines, &fenced);
     for &(h, r) in &matched {
         let rule = &schema.sections[r];
         let (start, end) = body_range(h, &headings, &positions, lines.len());
+        let at = |line: usize| starts.get(line).copied().unwrap_or(doc.text.len());
+        let bytes = at(start)..at(end);
         let mut kind_failed = false;
         if let Some(kind) = rule.content.as_deref()
             && CONTENT_KINDS.contains(&kind)
             // A declared table's absence is check_columns' finding already.
             && (kind != "table" || rule.columns.is_empty())
-            && !body_has(kind, &lines[start..end], &fenced[start..end])
+            && !body_has(
+                kind,
+                &lines[start..end],
+                &fenced[start..end],
+                &bytes,
+                &includes,
+            )
         {
             push(format!(
                 "section {} carries no {}, and {} declares {kind} content",
@@ -757,11 +720,13 @@ fn check_one(doc: &Document<'_>, schema: &DocSchema, example: bool, findings: &m
                 schema,
                 &mut push,
             );
-            check_definition_block(
-                rule,
+        }
+        if rule.content.as_deref() == Some("include") {
+            check_authored_fences(
                 &headings[h].1,
-                &lines[start..end],
                 &fenced[start..end],
+                &starts[start..end],
+                &includes,
                 schema,
                 &mut push,
             );
@@ -823,149 +788,43 @@ fn check_body_patterns(
     }
 }
 
-/// One section's definition block against the contract its rule declares
-/// (ADR-035): the fence tag it must carry, the keys the block carries at its
-/// top level, and the keys every top-level entry carries. A block the
-/// validator cannot find, cannot parse, or that is missing a key, is an error
-/// naming what is missing and where.
-fn check_definition_block(
-    rule: &SectionRule,
+/// An `include` section's fenced blocks against ADR-042: every fence in the
+/// body must sit inside an include block, because the section's content is
+/// materialised and never authored — a fence outside one is the hand-written
+/// copy the kind exists to forbid. `starts` is the byte offset of each body
+/// line; a fence opener is a fenced line whose predecessor is not, and the
+/// heading before the body is never fenced. What an include block carries is
+/// not read here: keeping it current is the SOKF check's (ADR-041).
+fn check_authored_fences(
     heading: &str,
-    body: &[&str],
     fenced: &[bool],
+    starts: &[usize],
+    includes: &[IncludeBlock],
     schema: &DocSchema,
     push: &mut impl FnMut(String),
 ) {
-    if !rule.declares_block() {
-        return;
-    }
-    let Some(language) = rule.block_language.as_deref() else {
-        return; // `check_declarations` reports the mis-declaration.
-    };
-    if !BLOCK_LANGUAGES.contains(&language) {
-        return; // Likewise: a language the validator cannot parse.
-    }
-    let blocks = fences(body, fenced);
-    let Some(text) = blocks
-        .iter()
-        .find(|(tag, _)| tag == language)
-        .map(|(_, text)| text.clone())
-    else {
-        let seen: Vec<&str> = blocks.iter().map(|(tag, _)| tag.as_str()).collect();
-        push(if blocks.is_empty() {
-            format!(
-                "section \"{heading}\" carries no fenced block, and {} declares a \
-                 {language} definition block",
-                schema.name
-            )
-        } else {
-            format!(
-                "section \"{heading}\" carries no {language} block, and {} declares one \
-                 — its blocks are tagged {seen:?}",
-                schema.name
-            )
-        });
-        return;
-    };
-    let parsed: std::result::Result<serde_yaml_ng::Value, String> = if language == "json" {
-        serde_json::from_str(&text).map_err(|e| e.to_string())
-    } else {
-        // Each language is read by its own parser, so a block is accepted
-        // exactly where the tag it carries says it should be.
-        serde_yaml_ng::from_str(&text).map_err(|e| e.to_string())
-    };
-    let value = match parsed {
-        Ok(value) => value,
-        Err(e) => {
-            push(format!(
-                "section \"{heading}\" does not parse as {language}: {e}"
-            ));
-            return;
-        }
-    };
-    if rule.block_keys.is_empty() && rule.block_entry_keys.is_empty() {
-        return; // The language was the whole of the declaration.
-    }
-    let Some(map) = value.as_mapping() else {
+    let authored = fenced.iter().enumerate().any(|(i, &in_fence)| {
+        in_fence
+            && (i == 0 || !fenced[i - 1])
+            && !includes
+                .iter()
+                .any(|block| (block.content_start..block.content_end).contains(&starts[i]))
+    });
+    if authored {
         push(format!(
-            "section \"{heading}\" is not a mapping, and {} declares keys for it",
+            "section \"{heading}\" carries a fenced block outside an include, and {} declares \
+             include content — a definition is materialised, never authored",
             schema.name
         ));
-        return;
-    };
-    for key in &rule.block_keys {
-        if !map.contains_key(serde_yaml_ng::Value::String(key.clone())) {
-            push(format!(
-                "section \"{heading}\" carries no `{key}`, and {} declares it",
-                schema.name
-            ));
-        }
-    }
-    if rule.block_entry_keys.is_empty() {
-        return;
-    }
-    for (name, entry) in map {
-        let name = name.as_str().unwrap_or("(unnamed)");
-        let Some(entry) = entry.as_mapping() else {
-            push(format!(
-                "section \"{heading}\" entry `{name}` is not a mapping, and {} declares its keys",
-                schema.name
-            ));
-            continue;
-        };
-        for key in &rule.block_entry_keys {
-            if !entry.contains_key(serde_yaml_ng::Value::String(key.clone())) {
-                push(format!(
-                    "section \"{heading}\" entry `{name}` carries no `{key}`, and {} declares it",
-                    schema.name
-                ));
-            }
-        }
     }
 }
 
-/// Every fenced block in a section body, as (tag, contents). The fence
-/// markers are themselves marked fenced, so an opener is a fenced line whose
-/// predecessor is not, and the block runs to the line that closes it. A
-/// section may carry an illustration beside its definition, so the caller
-/// picks the block whose tag it declared rather than the first one.
-fn fences(body: &[&str], fenced: &[bool]) -> Vec<(String, String)> {
-    let mut out = Vec::new();
-    let mut i = 0;
-    while i < body.len() {
-        if !fenced[i] {
-            i += 1;
-            continue;
-        }
-        let marker: String = body[i]
-            .trim_start()
-            .chars()
-            .take_while(|&c| c == '`' || c == '~')
-            .collect();
-        if marker.is_empty() {
-            i += 1;
-            continue;
-        }
-        let tag = body[i].trim_start()[marker.len()..].trim().to_string();
-        let mut text = Vec::new();
-        let mut j = i + 1;
-        while j < body.len() {
-            let trimmed = body[j].trim();
-            // A closing marker is the opener's character, at least as long,
-            // and nothing else — the reading `fence_map` uses.
-            if trimmed.starts_with(&marker[..1])
-                && trimmed.len() >= marker.len()
-                && trimmed.chars().all(|c| c == marker.as_bytes()[0] as char)
-            {
-                break;
-            }
-            text.push(body[j]);
-            j += 1;
-        }
-        out.push((tag, text.join("\n")));
-        i = j + 1;
-    }
-    out
+/// The byte offset at which each line of `text` starts, one per line as
+/// [`crate::fsutil::lines`] splits them.
+fn line_starts(text: &str) -> Vec<usize> {
+    std::iter::once(0)
+        .chain(text.match_indices('\n').map(|(i, _)| i + 1))
+        .collect()
 }
 
 /// One top-level item of a section's list, as `item-pattern` reads it.
@@ -1243,6 +1102,7 @@ fn form_of(kind: &str) -> &'static str {
         "numbered-list" => "numbered item",
         "table" => "table",
         "code" => "fenced block",
+        "include" => "include block naming a source path",
         _ => "paragraph line",
     }
 }
@@ -1250,8 +1110,23 @@ fn form_of(kind: &str) -> &'static str {
 /// Whether the kind's form appears in a section body. `fenced` is the
 /// body's slice of the document's fence map: lines inside fenced blocks are
 /// not content — they neither satisfy a kind nor break one — and the fence
-/// itself is what satisfies `code`.
-fn body_has(kind: &str, body: &[&str], fenced: &[bool]) -> bool {
+/// itself is what satisfies `code`. `include` is satisfied by an include
+/// block naming a source path whose content starts inside `bytes`, the
+/// body's byte range; a concept include is shared prose, not a definition,
+/// and satisfies nothing (ADR-042).
+fn body_has(
+    kind: &str,
+    body: &[&str],
+    fenced: &[bool],
+    bytes: &Range<usize>,
+    includes: &[IncludeBlock],
+) -> bool {
+    if kind == "include" {
+        return includes.iter().any(|block| {
+            matches!(block.target, IncludeTarget::Source { .. })
+                && bytes.contains(&block.content_start)
+        });
+    }
     for (line, &in_fence) in body.iter().zip(fenced) {
         if in_fence {
             // A section heading is never inside a fence, so a fenced line
@@ -2180,27 +2055,32 @@ mod tests {
         );
     }
 
-    /// A schema declaring a definition block on one `code` section, for the
-    /// ADR-035 tests.
-    fn block_schema(declarations: &str) -> DocSchema {
-        schema_of(&format!(
-            "frontmatter:\n  type:\n    const: T\nsections:\n  - heading: Commands\n\
-             \x20   level: 2\n    content: code\n{declarations}"
-        ))
+    /// A schema declaring `include` content on one Definition section, for
+    /// the ADR-042 tests.
+    fn include_schema() -> DocSchema {
+        schema_of(
+            "frontmatter:\n  type:\n    const: T\nsections:\n  - heading: Definition\n\
+             \x20   level: 2\n    content: include\n",
+        )
     }
 
-    /// One document carrying `block` as its Commands section.
-    fn block_doc(block: &str) -> String {
-        format!("# T\n\n## Commands\n\n{block}")
+    /// One document carrying `body` as its Definition section.
+    fn include_doc(body: &str) -> String {
+        format!("# T\n\n## Definition\n\n{body}")
     }
 
-    /// Covers I035 criterion 2: an entry missing a declared key is an error
-    /// naming the file, the section, the entry and the key (ADR-035).
+    /// A source include over `content`, as `validate --fix` writes one.
+    fn source_include(content: &str) -> String {
+        format!("<!-- sokf:include /src/main.rs#cli -->\n{content}<!-- /sokf:include -->\n")
+    }
+
+    /// Covers I049 criterion 9: `content: include` is satisfied by an include
+    /// block naming a source path, and not by one naming a concept — a
+    /// concept include is shared prose, not a definition — nor by prose.
     #[test]
-    fn a_block_entry_missing_a_declared_key_is_a_finding() {
-        let schema =
-            block_schema("    block-language: yaml\n    block-entry-keys: [about, exit]\n");
-        let text = block_doc("```yaml\nstatus:\n  about: reports drift\n```\n");
+    fn an_include_section_is_satisfied_by_a_source_include_and_not_a_concept_include() {
+        let schema = include_schema();
+        let text = include_doc(&source_include("```rust\npub struct Cli;\n```\n"));
         let doc = Document {
             path: "a.md",
             text: &text,
@@ -2208,44 +2088,12 @@ mod tests {
         };
         let mut findings = Vec::new();
         check_one(&doc, &schema, false, &mut findings);
-        assert_eq!(findings.len(), 1, "{findings:#?}");
-        assert_eq!(findings[0].file, "a.md");
-        assert!(
-            findings[0].message.contains("\"Commands\""),
-            "{findings:#?}"
+        assert!(findings.is_empty(), "{findings:#?}");
+
+        let concept = include_doc(
+            "<!-- sokf:include contract-style -->\nShared prose.\n<!-- /sokf:include -->\n",
         );
-        assert!(findings[0].message.contains("`status`"), "{findings:#?}");
-        assert!(findings[0].message.contains("`exit`"), "{findings:#?}");
-    }
-
-    /// Covers I035 criterion 2: a block missing a declared top-level key is
-    /// an error naming the file, the section and the key.
-    #[test]
-    fn a_block_missing_a_declared_top_level_key_is_a_finding() {
-        let schema = block_schema("    block-language: yaml\n    block-keys: [commands]\n");
-        let text = block_doc("```yaml\nflags: {}\n```\n");
-        let doc = Document {
-            path: "a.md",
-            text: &text,
-            doc_type: Some("T"),
-        };
-        let mut findings = Vec::new();
-        check_one(&doc, &schema, false, &mut findings);
-        assert_eq!(findings.len(), 1, "{findings:#?}");
-        assert!(findings[0].message.contains("`commands`"), "{findings:#?}");
-    }
-
-    /// Covers I035 criterion 2: a block that does not parse, one whose fence
-    /// carries the wrong tag, and a section with no block at all.
-    #[test]
-    fn a_block_that_cannot_be_read_is_a_finding_naming_why() {
-        let schema = block_schema("    block-language: yaml\n    block-keys: [a]\n");
-        for (block, expect) in [
-            ("```yaml\na: [unclosed\n```\n", "does not parse as yaml"),
-            ("```text\na: 1\n```\n", "carries no yaml block"),
-            ("Only prose here.\n", "carries no fenced block"),
-        ] {
-            let text = block_doc(block);
+        for text in [concept, include_doc("Only prose here.\n")] {
             let doc = Document {
                 path: "a.md",
                 text: &text,
@@ -2253,23 +2101,53 @@ mod tests {
             };
             let mut findings = Vec::new();
             check_one(&doc, &schema, false, &mut findings);
+            assert_eq!(findings.len(), 1, "{findings:#?}");
             assert!(
-                findings.iter().any(|f| f.message.contains(expect)),
-                "{expect}: {findings:#?}"
+                findings[0]
+                    .message
+                    .contains("carries no include block naming a source path"),
+                "{findings:#?}"
+            );
+            assert!(
+                findings[0].message.contains("\"Definition\""),
+                "{findings:#?}"
             );
         }
     }
 
-    /// Covers I035 criterion 2: a section may carry an illustration beside
-    /// its definition, so the block that binds is the one whose tag the rule
-    /// declares — never simply the first.
+    /// Covers I049 criterion 10: a fenced block outside an include in an
+    /// `include` section is an error naming the section, wherever in the
+    /// body it sits; the fence inside the include is the materialised
+    /// content, and is fine.
     #[test]
-    fn the_declared_block_is_read_and_not_the_first_one() {
-        let schema = block_schema("    block-language: yaml\n    block-keys: [commands]\n");
-        let text = block_doc(
-            "```text\nan illustration, not the definition\n```\n\n\
-             ```yaml\ncommands: {}\n```\n",
-        );
+    fn a_fenced_block_outside_an_include_is_a_finding_naming_the_section() {
+        let schema = include_schema();
+        let materialised = source_include("```rust\npub struct Cli;\n```\n");
+        let authored = "```yaml\nhand: written\n```\n";
+        for body in [
+            format!("{materialised}\n{authored}"),
+            format!("{authored}\n{materialised}"),
+            format!("{materialised}\n### Detail\n\n{authored}"),
+        ] {
+            let text = include_doc(&body);
+            let doc = Document {
+                path: "a.md",
+                text: &text,
+                doc_type: Some("T"),
+            };
+            let mut findings = Vec::new();
+            check_one(&doc, &schema, false, &mut findings);
+            assert_eq!(findings.len(), 1, "{body}: {findings:#?}");
+            assert!(
+                findings[0]
+                    .message
+                    .contains("section \"Definition\" carries a fenced block outside an include"),
+                "{findings:#?}"
+            );
+        }
+
+        // A fence in the next section is that section's, not this one's.
+        let text = format!("{}\n## Notes\n\n{authored}", include_doc(&materialised));
         let doc = Document {
             path: "a.md",
             text: &text,
@@ -2280,122 +2158,87 @@ mod tests {
         assert!(findings.is_empty(), "{findings:#?}");
     }
 
-    /// Covers I035 criterion 2: `block-language` alone says which language
-    /// the block is written in and demands nothing of its shape.
+    /// Covers I049 criterion 7: nothing inside an include is read. A block
+    /// that parses in no language, and a `yaml` block lacking a key a schema
+    /// once declared through `block-keys`, produce no finding; keeping the
+    /// content current is the SOKF check's.
     #[test]
-    fn a_language_alone_demands_nothing_of_the_blocks_shape() {
-        let schema = block_schema("    block-language: yaml\n");
-        let text = block_doc("```yaml\n- a sequence, not a mapping\n```\n");
-        let doc = Document {
-            path: "a.md",
-            text: &text,
-            doc_type: Some("T"),
-        };
-        let mut findings = Vec::new();
-        check_one(&doc, &schema, false, &mut findings);
-        assert!(findings.is_empty(), "{findings:#?}");
+    fn nothing_inside_an_include_is_read() {
+        let schema = include_schema();
+        for content in [
+            "```yaml\nflags: {}\n```\n",
+            "```rust\n{{{ not: [valid, in any language\n```\n",
+            "```\n- not a bullet\n# not a heading\n```\n",
+        ] {
+            let text = include_doc(&source_include(content));
+            let doc = Document {
+                path: "a.md",
+                text: &text,
+                doc_type: Some("T"),
+            };
+            let mut findings = Vec::new();
+            check_one(&doc, &schema, false, &mut findings);
+            assert!(findings.is_empty(), "{content}: {findings:#?}");
+        }
     }
 
-    /// Covers I035 criteria 2 and 3: JSON and YAML are both read, so a kind
-    /// whose ecosystem writes JSON Schema is checked like any other.
+    /// Covers I049 criterion 7: the withdrawn `block-language`, `block-keys`
+    /// and `block-entry-keys` are the grammar's unknown keys (`check.rs`);
+    /// here they are not read, so no schema finding and no document finding
+    /// follows from one — a `yaml` block missing a formerly declared key
+    /// passes.
     #[test]
-    fn a_json_block_and_a_yaml_block_are_both_read() {
-        let json = block_schema("    block-language: json\n    block-entry-keys: [type]\n");
-        let text = block_doc("```json\n{\"sokf_read\": {\"type\": \"object\"}}\n```\n");
-        let doc = Document {
-            path: "a.md",
-            text: &text,
-            doc_type: Some("T"),
-        };
-        let mut findings = Vec::new();
-        check_one(&doc, &json, false, &mut findings);
-        assert!(findings.is_empty(), "{findings:#?}");
-
-        let text = block_doc("```json\n{\"sokf_read\": {\"about\": \"x\"}}\n```\n");
-        let doc = Document {
-            path: "a.md",
-            text: &text,
-            doc_type: Some("T"),
-        };
-        let mut findings = Vec::new();
-        check_one(&doc, &json, false, &mut findings);
-        assert_eq!(findings.len(), 1, "{findings:#?}");
-        assert!(findings[0].message.contains("`type`"), "{findings:#?}");
-    }
-
-    /// Covers I035 criterion 2: a block-language the validator cannot parse,
-    /// block keys with no language, and a block declared on a section whose
-    /// content is not code, are findings on the schema and bind nothing.
-    #[test]
-    fn a_mis_declared_definition_block_is_a_finding_on_the_schema() {
-        let cases = [
-            (
-                "    content: code\n    block-language: graphql\n    block-keys: [a]\n",
-                "the validator reads",
-            ),
-            (
-                "    content: code\n    block-keys: [a]\n",
-                "no block-language",
-            ),
-            (
-                "    content: prose\n    block-language: yaml\n    block-keys: [a]\n",
-                "content is not code",
-            ),
-        ];
-        for (declarations, expect) in cases {
+    fn a_withdrawn_block_declaration_binds_nothing() {
+        for declaration in [
+            "block-language: yaml",
+            "block-keys: [commands]",
+            "block-entry-keys: [about]",
+        ] {
             let text = format!(
                 "---\ntype: Schema\n---\n\n````yaml\nfrontmatter:\n  type:\n    const: T\n\
-                 sections:\n  - heading: Commands\n    level: 2\n{declarations}````\n"
+                 sections:\n  - heading: Commands\n    level: 2\n    content: code\n\
+                 \x20   {declaration}\n````\n"
             );
-            let findings = check_declarations(&[("s.md".into(), text)]);
-            assert!(
-                findings.iter().any(|f| f.message.contains(expect)),
-                "{expect}: {findings:#?}"
+            let schemas = [("s.md".to_string(), text)];
+            let (set, findings) = SchemaSet::load(&schemas);
+            assert!(findings.is_empty(), "{declaration}: {findings:#?}");
+            let findings = check_declarations(&schemas);
+            assert!(findings.is_empty(), "{declaration}: {findings:#?}");
+            let found = check_documents(
+                &[Document {
+                    path: "a.md",
+                    text: "# T\n\n## Commands\n\n```yaml\nflags: {}\n```\n",
+                    doc_type: Some("T"),
+                }],
+                &set,
             );
+            assert!(found.is_empty(), "{declaration}: {found:#?}");
         }
-
-        // An unreadable language binds nothing on the document side.
-        let schema = block_schema("    block-language: graphql\n    block-keys: [a]\n");
-        let text = block_doc("```graphql\ntype Query { x: Int }\n```\n");
-        let doc = Document {
-            path: "a.md",
-            text: &text,
-            doc_type: Some("T"),
-        };
-        let mut findings = Vec::new();
-        check_one(&doc, &schema, false, &mut findings);
-        assert!(findings.is_empty(), "{findings:#?}");
     }
 
-    /// Covers I035 criterion 2: a section declaring no block rule is checked
-    /// exactly as it was before ADR-035.
+    /// Covers I049 criterion 9: a schema's own example is checked against
+    /// `include` content on the ADR-024 path, where the include markers sit
+    /// inside the schema's fenced example and are still read as markers once
+    /// the example is a document of its own.
     #[test]
-    fn a_section_declaring_no_block_rule_gains_no_finding() {
-        let schema = block_schema("");
-        let text = block_doc("```yaml\nanything: at all\n```\n");
-        let doc = Document {
-            path: "a.md",
-            text: &text,
-            doc_type: Some("T"),
-        };
-        let mut findings = Vec::new();
-        check_one(&doc, &schema, false, &mut findings);
+    fn an_example_is_checked_against_its_schemas_include_content() {
+        let contract = "frontmatter:\n  type:\n    const: T\nsections:\n  - heading: Definition\n\
+                        \x20   level: 2\n    content: include\n";
+        let passing = "---\ntype: T\n---\n\n# T\n\n## Definition\n\n\
+                       <!-- sokf:include /src/main.rs#cli -->\n```rust\npub struct Cli;\n```\n\
+                       <!-- /sokf:include -->\n";
+        let findings = check_examples(&with_example(contract, passing));
         assert!(findings.is_empty(), "{findings:#?}");
-    }
 
-    /// Covers I035 criterion 2: a schema's own example is checked against the
-    /// block rules that schema declares, on the ADR-024 path.
-    #[test]
-    fn an_example_is_checked_against_its_schemas_block_rules() {
-        let text = "---\ntype: Schema\n---\n\n````yaml\nfrontmatter:\n  type:\n    const: T\n\
-                    sections:\n  - heading: Commands\n    level: 2\n    content: code\n\
-                    \x20   block-language: yaml\n    block-entry-keys: [exit]\n\
-                    example: |\n  ---\n  type: T\n  ---\n\n  # T\n\n  ## Commands\n\n\
-                    \x20 ```yaml\n  status:\n    about: reports drift\n  ```\n````\n";
-        let findings = check_examples(&[("s.md".into(), text.into())]);
-        assert_eq!(findings.len(), 1, "{findings:#?}");
-        assert!(findings[0].message.starts_with("example:"), "{findings:#?}");
-        assert!(findings[0].message.contains("`exit`"), "{findings:#?}");
+        let authored = "---\ntype: T\n---\n\n# T\n\n## Definition\n\n```yaml\nhand: written\n```\n";
+        let findings = check_examples(&with_example(contract, authored));
+        assert_eq!(findings.len(), 2, "{findings:#?}");
+        assert!(
+            findings
+                .iter()
+                .all(|f| f.message.starts_with("example:") && f.message.contains("\"Definition\"")),
+            "{findings:#?}"
+        );
     }
 
     /// Covers I034 criterion 5: a section rule declaring neither pattern is
@@ -2473,12 +2316,12 @@ mod tests {
         );
     }
 
-    /// Covers I018 criterion 5: a kind outside the five is reported on the
+    /// Covers I018 criterion 5: a kind outside the six is reported on the
     /// schema file — by `check_declarations`; `validate` says it through the
     /// grammar's schema check instead — and the unreadable rule binds
     /// nothing.
     #[test]
-    fn a_kind_outside_the_five_is_reported_on_the_schema_file() {
+    fn a_kind_outside_the_six_is_reported_on_the_schema_file() {
         let text = "---\ntype: Schema\n---\n\n````yaml\nfrontmatter:\n  type:\n    const: T\n\
                     sections:\n  - heading: Body\n    level: 2\n    content: essay\n````\n";
         let schemas = [("s.md".to_string(), text.to_string())];

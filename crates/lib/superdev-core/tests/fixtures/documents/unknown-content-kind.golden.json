@@ -2,7 +2,7 @@
   "findings": [
     {
       "file": "thing.md",
-      "message": "schema: section \"Body\" declares content `essay` — the kinds are prose, bullet-list, numbered-list, table, code",
+      "message": "schema: section \"Body\" declares content `essay` — the kinds are prose, bullet-list, numbered-list, table, code, include",
       "severity": "error"
     }
   ],

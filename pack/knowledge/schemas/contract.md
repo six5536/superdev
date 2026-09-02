@@ -239,16 +239,14 @@ sections:
   - heading: "Definition"
     level: 2
     required: true
-    content: code
+    content: include
     description: >
       The interface, materialised from the source that declares it: one
       or more include blocks naming a repository path and region
       (`<!-- sokf:include /path#region -->`), nothing authored. The
       source's doc comments arrive with it and are contract text. A
       source unreadable as a surface is included through a generated
-      rendering that names its generator. Until I049's build lands
-      `content: include`, this section declares `code`; a hand-written
-      block here is already against the standard above.
+      rendering that names its generator.
   - heading: "Behaviour"
     level: 2
     required: true
