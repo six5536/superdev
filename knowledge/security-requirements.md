@@ -31,7 +31,7 @@ only (pre-1.0, no backports).
   and a failed apply unwinds ([configuration][sokf:configuration]).
 - **The MCP surface is read-only.** `superdev mcp sokf` exposes four
   read-only tools over stdio; nothing writes through it
-  ([contract-003-mcp-sokf][sokf:contract-003-mcp-sokf]).
+  ([contract-003-api-sokf][sokf:contract-003-api-sokf]).
 - **A pinned pack applies the bytes it was pinned to, or none.** Every
   resolved *git* pack is verified against the digest the lock recorded for
   that rev — over paths as well as contents, so a rename is a different pack, and
@@ -110,4 +110,4 @@ only (pre-1.0, no backports).
 [sokf:architecture]: /knowledge/architecture.md
 [sokf:configuration]: /knowledge/configuration.md
 [sokf:constraints-non-goals]: /knowledge/constraints-non-goals.md
-[sokf:contract-003-mcp-sokf]: /knowledge/contracts/public/active/contract-003-mcp-sokf.md
+[sokf:contract-003-api-sokf]: /knowledge/contracts/public/active/contract-003-api-sokf.md

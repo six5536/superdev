@@ -28,7 +28,7 @@ it back. The `sokf` subsystem parses the SOKF knowledge, indexes it and
 serves it to agents over MCP (`superdev mcp sokf`) — the `validate` subsystem
 checks it — so an agent queries the
 knowledge instead of preloading every concept — the tools are in
-[contract-003-mcp-sokf][sokf:contract-003-mcp-sokf]. Freshness is lazy: every tool call
+[contract-003-api-sokf][sokf:contract-003-api-sokf]. Freshness is lazy: every tool call
 re-hashes the canonical knowledge and syncs only what changed, so there is no watcher and
 no daemon state to go stale.
 
@@ -126,6 +126,6 @@ and a disabled capability's pins all follow one rule.
 [sokf:adr-003-items-by-layout]: /knowledge/adrs/active/adr-003-items-by-layout.md
 [sokf:configuration]: /knowledge/configuration.md
 [sokf:contract-002-cli-superdev]: /knowledge/contracts/public/active/contract-002-cli-superdev.md
-[sokf:contract-003-mcp-sokf]: /knowledge/contracts/public/active/contract-003-mcp-sokf.md
+[sokf:contract-003-api-sokf]: /knowledge/contracts/public/active/contract-003-api-sokf.md
 [sokf:directory-structure]: /knowledge/directory-structure.md
 [sokf:software-components]: /knowledge/software-components.md

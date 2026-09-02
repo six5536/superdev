@@ -22,7 +22,7 @@ refinement was rejected.
 
 The plan-019 sweep trimmed reasoning from
 [contract-002][sokf:contract-002-cli-superdev] and
-[contract-003][sokf:contract-003-mcp-sokf] but left both without a
+[contract-003][sokf:contract-003-api-sokf] but left both without a
 single RFC 2119 keyword, while their bodies are full of promises
 callers rely on — "`status` never writes", "`--fix` is the one way
 `validate` writes". Under
@@ -85,5 +85,5 @@ rejected. Delivered as plan-019 slice 6.
 
 <!-- sokf:links -->
 [sokf:contract-002-cli-superdev]: /knowledge/contracts/public/active/contract-002-cli-superdev.md
-[sokf:contract-003-mcp-sokf]: /knowledge/contracts/public/active/contract-003-mcp-sokf.md
+[sokf:contract-003-api-sokf]: /knowledge/contracts/public/active/contract-003-api-sokf.md
 [sokf:issue-029-bug-contract-design-writes-verbose-prose]: /knowledge/issues/done/issue-029-bug-contract-design-writes-verbose-prose.md

@@ -27,6 +27,9 @@ use clap::{CommandFactory, Parser, Subcommand};
 use clap_complete::Shell;
 use superdev_core::error::{Error, Result};
 
+// The command tree is the CLI contract's definition (contract-002): every
+// clap item sits in a `cli` region, and the contract includes each file's.
+// sokf:begin cli
 #[derive(Parser)]
 #[command(
     name = "superdev",
@@ -109,6 +112,7 @@ enum Command {
     #[command(hide = true)]
     Man,
 }
+// sokf:end cli
 
 #[cfg_attr(coverage_nightly, coverage(off))]
 fn main() -> ExitCode {

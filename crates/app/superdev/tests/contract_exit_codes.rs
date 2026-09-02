@@ -1,12 +1,13 @@
 //! contract_exit_codes.rs — the exit codes the CLI contract declares, proved
 //! by running the binary.
 //!
-//! No command-line framework knows what a command returns, so the drift test
-//! in `src/contract.rs` cannot reach the `exit` maps. [ADR-036] says a facet
-//! no introspection reports is bound by exercising the interface: each case
-//! below runs the real binary and asserts the code, and asserts that the code
-//! it expects is one the contract declares for that command — so the probe
-//! and the contract cannot drift apart either.
+//! The contract's Definition is the clap tree, materialised from source and
+//! bound by its include; no framework knows what a command returns, so the
+//! exit codes live in prose under Behaviour and are bound here (ADR-042).
+//! Each case below runs the real binary and asserts the code, and asserts
+//! that the code it expects is one the contract's Exit codes table declares
+//! for that command — so the probe and the contract cannot drift apart
+//! either.
 
 use std::collections::BTreeMap;
 use std::path::Path;
@@ -16,31 +17,21 @@ use assert_cmd::Command;
 /// The repository root, where `validate` finds the live knowledge.
 const REPO_ROOT: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../../..");
 
-/// The first fenced block carrying `tag`, without its markers.
-///
-/// Scanned a line at a time, so a CRLF checkout reads as its LF twin: a
-/// fence is a fence whatever ends the line (I040). The closing marker is the
-/// one that opened the block, so a ```` ```` ```` block may contain ``` ``` ````.
-fn fenced_block(text: &str, tag: &str) -> Option<String> {
-    let mut lines = text.lines();
-    let marker = loop {
-        let trimmed = lines.next()?.trim_start();
-        let ticks = trimmed.len() - trimmed.trim_start_matches('`').len();
-        if ticks >= 3 && trimmed[ticks..].trim() == tag {
-            break trimmed[..ticks].to_string();
-        }
-    };
-    let mut body = Vec::new();
-    for line in lines {
-        if line.trim_start().starts_with(&marker) {
-            return Some(body.join("\n"));
-        }
-        body.push(line);
-    }
-    None
+/// The body of the `### Exit codes` subsection under Behaviour: the lines
+/// after its heading up to the next heading of level 3 or above.
+fn exit_codes_section(text: &str) -> Option<String> {
+    let mut lines = text
+        .lines()
+        .skip_while(|l| l.trim_end() != "### Exit codes");
+    lines.next()?;
+    let body: Vec<&str> = lines
+        .take_while(|l| !(l.starts_with("### ") || l.starts_with("## ")))
+        .collect();
+    Some(body.join("\n"))
 }
 
-/// The contract's declared exit codes, keyed by command path.
+/// The contract's declared exit codes, keyed by command path: one row of
+/// the Exit codes table per `(command, code)` pair.
 fn declared() -> BTreeMap<String, Vec<i64>> {
     let path: std::path::PathBuf = [
         REPO_ROOT,
@@ -49,19 +40,26 @@ fn declared() -> BTreeMap<String, Vec<i64>> {
     .iter()
     .collect();
     let text = std::fs::read_to_string(path).expect("the CLI contract is on file");
-    let block = fenced_block(&text, "yaml").expect("the Commands section carries a yaml block");
-    let raw: BTreeMap<String, serde_yaml_ng::Value> =
-        serde_yaml_ng::from_str(&block).expect("the definition block parses as yaml");
-    raw.into_iter()
-        .map(|(path, entry)| {
-            let codes = entry
-                .get("exit")
-                .and_then(|v| v.as_mapping())
-                .map(|m| m.keys().filter_map(serde_yaml_ng::Value::as_i64).collect())
-                .unwrap_or_default();
-            (path, codes)
-        })
-        .collect()
+    let section = exit_codes_section(&text).expect("Behaviour carries `### Exit codes`");
+    let mut out: BTreeMap<String, Vec<i64>> = BTreeMap::new();
+    for line in section.lines() {
+        let Some(row) = line.strip_prefix('|') else {
+            continue;
+        };
+        let cells: Vec<&str> = row.split('|').map(str::trim).collect();
+        // The header row and the rule beneath it carry no code.
+        let Some(command) = cells.first().and_then(|c| c.strip_prefix('`')) else {
+            continue;
+        };
+        let command = command.trim_end_matches('`').to_string();
+        let code: i64 = cells
+            .get(1)
+            .and_then(|c| c.parse().ok())
+            .unwrap_or_else(|| panic!("the Exit codes row for `{command}` carries no code"));
+        out.entry(command).or_default().push(code);
+    }
+    assert!(!out.is_empty(), "the Exit codes table declares no command");
+    out
 }
 
 /// Run `args` and assert the binary exits `code`, which the contract must

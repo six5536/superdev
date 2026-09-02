@@ -63,6 +63,7 @@ pub struct HoldState {
     pub holds: u32,
 }
 
+// sokf:begin cli
 /// Drive the state of an unattended workflow run.
 #[derive(clap::Subcommand)]
 pub enum RunCommand {
@@ -88,6 +89,7 @@ pub enum RunCommand {
     /// End the run: remove the state; harmless when none exists
     End,
 }
+// sokf:end cli
 
 /// Run one verb against the repo at `root`.
 pub fn run(cmd: &RunCommand, root: &Path) -> Result<u8> {

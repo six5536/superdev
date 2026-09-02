@@ -2578,6 +2578,92 @@ fn validate_fix_materializes_a_source_include_and_validate_catches_its_drift() {
     );
 }
 
+/// Covers I049 criteria 2, 4 and 23 (ADR-042): the CLI contract's
+/// definition is the `cli` regions, so a flag added to `ValidateArgs` fails
+/// `validate` naming the contract's include, and `--fix` writes the flag
+/// into the contract. Runs against a copy of the live contract and its
+/// sources in a scratch repository, so this tree is never edited.
+#[test]
+fn a_flag_added_to_validate_args_fails_validate_and_fix_writes_it_into_the_contract() {
+    const CONTRACT: &str = "knowledge/contracts/public/active/contract-002-cli-superdev.md";
+    const SOURCES: [&str; 5] = [
+        "crates/app/superdev/src/main.rs",
+        "crates/app/superdev/src/manage.rs",
+        "crates/app/superdev/src/validate_cli.rs",
+        "crates/app/superdev/src/sokf_cli.rs",
+        "crates/app/superdev/src/run.rs",
+    ];
+    let repo = tempfile::tempdir().unwrap();
+    for rel in SOURCES.iter().chain([CONTRACT].iter()) {
+        let to = repo.path().join(rel);
+        std::fs::create_dir_all(to.parent().unwrap()).unwrap();
+        std::fs::copy(Path::new(REPO_ROOT).join(rel), &to).unwrap();
+    }
+    std::fs::write(
+        repo.path().join("knowledge/manifest.sokf.yaml"),
+        "sokf: \"0.4\"\nname: fixture\n",
+    )
+    .unwrap();
+    // The fixture carries the live contract's Definition — its includes —
+    // and nothing else: the prose links concepts the fixture lacks.
+    let contract = repo.path().join(CONTRACT);
+    let live = std::fs::read_to_string(&contract).unwrap();
+    let definition = &live[live.find("## Definition").unwrap()..live.find("## Behaviour").unwrap()];
+    assert_eq!(
+        definition.matches("<!-- sokf:include /crates/").count(),
+        SOURCES.len(),
+        "the live contract includes one region per source file"
+    );
+    std::fs::write(
+        &contract,
+        format!("---\ntype: Note\nid: contract-002-cli-superdev\n---\n\n# CLI\n\n{definition}"),
+    )
+    .unwrap();
+    superdev()
+        .current_dir(repo.path())
+        .args(["validate", "--fix"])
+        .assert()
+        .success();
+
+    let source = repo.path().join("crates/app/superdev/src/validate_cli.rs");
+    let edited = std::fs::read_to_string(&source).unwrap().replace(
+        "    /// Emit JSON instead of text\n",
+        "    /// Do nothing new\n    #[arg(long)]\n    pub nothing: bool,\n    /// Emit JSON instead of text\n",
+    );
+    assert!(edited.contains("pub nothing: bool"), "the flag was added");
+    std::fs::write(&source, edited).unwrap();
+
+    let out = superdev()
+        .current_dir(repo.path())
+        .args(["validate"])
+        .assert()
+        .code(1);
+    let stdout = String::from_utf8_lossy(&out.get_output().stdout).into_owned();
+    assert!(
+        stdout.contains(
+            "contract-002-cli-superdev.md: the include block for `/crates/app/superdev/src/validate_cli.rs#cli` is stale"
+        ),
+        "{stdout}"
+    );
+    assert!(
+        !std::fs::read_to_string(&contract)
+            .unwrap()
+            .contains("pub nothing: bool"),
+        "validate without --fix wrote the contract"
+    );
+
+    superdev()
+        .current_dir(repo.path())
+        .args(["validate", "--fix"])
+        .assert()
+        .success();
+    let text = std::fs::read_to_string(&contract).unwrap();
+    assert!(
+        text.contains("    /// Do nothing new\n    #[arg(long)]\n    pub nothing: bool,\n"),
+        "{text}"
+    );
+}
+
 /// Without the flag, `validate` reports and writes nothing.
 #[test]
 fn validate_without_fix_writes_nothing() {

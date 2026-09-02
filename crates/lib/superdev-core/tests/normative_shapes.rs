@@ -515,18 +515,12 @@ fn no_schema_names_a_framework_or_a_toolchain() {
 /// Covers I035 criterion 12: a drift test says which kind of red it is. An
 /// element the implementation carries undeclared is a DEFECT; one the
 /// contract promises and the implementation has yet to keep is PENDING
-/// (ADR-038). The wording is the mechanism, so it is pinned here.
+/// (ADR-038). The wording is the mechanism, so it is pinned here. The CLI
+/// and MCP drift tests are gone with the copies they compared (ADR-042,
+/// P024 S6); the two below go with theirs in slices 7 and 8.
 #[test]
 fn every_drift_test_names_the_direction_it_failed_in() {
-    const BINDINGS: [(&str, &[&str]); 4] = [
-        (
-            "crates/app/superdev/src/contract.rs",
-            &["DEFECT —", "PENDING —", "DRIFT —"],
-        ),
-        (
-            "crates/lib/superdev-core/src/sokf/mcp.rs",
-            &["DEFECT —", "PENDING —", "DRIFT —"],
-        ),
+    const BINDINGS: [(&str, &[&str]); 2] = [
         (
             "crates/lib/superdev-core/tests/contract_files.rs",
             &["DEFECT —", "PENDING —"],
@@ -545,6 +539,48 @@ fn every_drift_test_names_the_direction_it_failed_in() {
             );
         }
     }
+}
+
+/// Every `.rs` file under `dir`, recursively.
+fn rust_files(dir: &std::path::Path, found: &mut Vec<PathBuf>) {
+    let Ok(entries) = std::fs::read_dir(dir) else {
+        return;
+    };
+    for entry in entries.flatten() {
+        let path = entry.path();
+        if path.is_dir() {
+            rust_files(&path, found);
+        } else if path.extension().is_some_and(|e| e == "rs") {
+            found.push(path);
+        }
+    }
+}
+
+/// Covers I049 criterion 23: no test under `crates/` reads a fenced block
+/// out of the CLI or the MCP contract to compare it to the binary. The
+/// Definition is an include the validator binds; a test that opened a fence
+/// in either contract would be comparing a copy that no longer exists
+/// (ADR-042). This file names both contracts here and is skipped for it.
+#[test]
+fn no_test_compares_a_fenced_block_of_the_cli_or_mcp_contract_to_the_binary() {
+    const CONTRACTS: [&str; 2] = ["contract-002-cli-superdev.md", "contract-003-api-sokf.md"];
+    let mut files = Vec::new();
+    rust_files(&repo("crates"), &mut files);
+    assert!(!files.is_empty(), "the crates were read");
+    let mut found = Vec::new();
+    for path in files {
+        if path.ends_with("normative_shapes.rs") {
+            continue;
+        }
+        let text = std::fs::read_to_string(&path).unwrap_or_default();
+        if CONTRACTS.iter().any(|c| text.contains(c)) && text.contains("fenced_block") {
+            found.push(path.display().to_string());
+        }
+    }
+    assert!(
+        found.is_empty(),
+        "a test reads a fenced block out of a contract whose definition is an include: {found:#?}"
+    );
 }
 
 /// Covers I035 criterion 13: the plan schema and the feature-plan skill both
@@ -682,7 +718,8 @@ fn a_pending_promise_is_declared_bounded_and_absent() {
         );
     }
     // A promise may outrun its code while a feature runs, never once it
-    // settles — and this feature has settled.
+    // settles — and this feature has settled. The marker is `PENDING` in
+    // prose (ADR-044); the YAML `pending:` key went with the authored blocks.
     for dir in [
         "knowledge/contracts/public/active",
         "knowledge/contracts/internal/active",
@@ -691,7 +728,7 @@ fn a_pending_promise_is_declared_bounded_and_absent() {
             let path = entry.unwrap().path();
             let text = std::fs::read_to_string(&path).unwrap();
             assert!(
-                !text.contains("\n  pending:"),
+                !text.contains("PENDING") && !text.contains("\n  pending:"),
                 "{} still promises something unbuilt",
                 path.display()
             );
