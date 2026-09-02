@@ -186,7 +186,7 @@ edited beside it.
 
 ### Slice 4: `/frame` frames in place, and the later phases refuse an unframed issue
 
-- [ ] Done — ticked by integrate at merge.
+- [x] Done — ticked by integrate at merge.
 - Depends-on: 2.
 - Change: `pack/knowledge/skills/frame/SKILL.md`, synced — the "File
   or fetch" step fetches an unframed issue and frames it in place; the
