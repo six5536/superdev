@@ -18,8 +18,7 @@ use serde_yaml_ng::Value;
 use super::source;
 use crate::sokf::bundle::Bundle;
 use crate::sokf::concept::{
-    Concept, INCLUDE_CLOSE, INCLUDE_OPEN, IncludeTarget, carries_include_markers, include_blocks,
-    included_text, links_block_offset,
+    Concept, INCLUDE_CLOSE, INCLUDE_OPEN, include_blocks, links_block_offset,
 };
 
 /// Relationship types the spec defines; anything else reads as `relates-to`.
@@ -458,39 +457,16 @@ fn check_include_blocks(path: &str, text: &str, context: &Context, findings: &mu
         findings.push(error(path, fault));
     }
     for block in blocks {
-        let expected = match &block.target {
-            IncludeTarget::Concept(id) => {
-                let Some(source) = context.bodies.get(id.as_str()) else {
-                    findings.push(error(
-                        path,
-                        format!("include block names no concept: `{id}`"),
-                    ));
-                    continue;
-                };
-                let expected = included_text(source);
-                if carries_include_markers(&expected) {
-                    findings.push(error(
-                        path,
-                        format!(
-                            "include block names `{id}`, which itself carries an include block; includes do not nest"
-                        ),
-                    ));
-                    continue;
-                }
-                expected
-            }
-            IncludeTarget::Source { path: file, region } => {
-                match source::render(context.repo_root, file, region.as_deref()) {
-                    Ok(expected) => expected,
-                    Err(fault) => {
-                        findings.push(error(path, fault));
-                        continue;
-                    }
-                }
+        let lookup = |id: &str| context.bodies.get(id).copied();
+        let expected = match source::expected(&block.target, lookup, context.repo_root) {
+            Ok(expected) => expected,
+            Err(fault) => {
+                findings.push(error(path, fault));
+                continue;
             }
         };
         let actual = text[block.content_start..block.content_end].trim();
-        if actual == expected {
+        if source::carries(actual, &expected) {
             continue;
         }
         let state = if actual.is_empty() { "empty" } else { "stale" };
@@ -1414,6 +1390,23 @@ mod tests {
         assert!(findings.is_empty(), "{findings:?}");
     }
 
+    /// A CRLF checkout carries `\r\n` inside the block; the block is current
+    /// all the same, and a stale one is still stale (I040).
+    #[test]
+    fn a_crlf_host_carrying_the_concept_passes_and_a_stale_one_fails() {
+        let current = host_with("The rules.\n").replace('\n', "\r\n");
+        let findings = include_findings(&current);
+        assert!(findings.is_empty(), "{findings:?}");
+
+        let stale = host_with("Old copy.\n").replace('\n', "\r\n");
+        let findings = include_findings(&stale);
+        assert_eq!(findings.len(), 1, "{findings:?}");
+        assert!(
+            findings[0].message.contains("`style` is stale"),
+            "{findings:?}"
+        );
+    }
+
     #[test]
     fn a_stale_include_block_is_an_error_naming_the_id() {
         let findings = include_findings(&host_with("Old copy.\n"));
@@ -1507,9 +1500,14 @@ mod tests {
     }
 
     fn source_findings(host: &str) -> Vec<Finding> {
+        source_findings_with(MAIN_RS, host)
+    }
+
+    /// The findings for `host` when `/src/main.rs` carries `main_rs`.
+    fn source_findings_with(main_rs: &str, host: &str) -> Vec<Finding> {
         let (b, _dir) = bundle_with(&[
             ("manifest.sokf.yaml", MANIFEST_YAML),
-            ("src/main.rs", MAIN_RS),
+            ("src/main.rs", main_rs),
             ("host.md", host),
         ]);
         validate(&b, &b.root).findings
@@ -1521,6 +1519,32 @@ mod tests {
         let host = source_host("/src/main.rs#cli", "```rust\nstruct Cli {}\n```\n");
         let findings = source_findings(&host);
         assert!(findings.is_empty(), "{findings:?}");
+    }
+
+    /// Covers criterion 4 on a CRLF checkout (I040): the block is current
+    /// whatever ends the host's lines and whatever ends the source's, and a
+    /// stale CRLF block is still stale.
+    #[test]
+    fn a_crlf_host_or_source_agrees_with_the_render_and_a_stale_crlf_block_fails() {
+        let crlf_main = MAIN_RS.replace('\n', "\r\n");
+        let current = source_host("/src/main.rs#cli", "```rust\nstruct Cli {}\n```\n");
+        let crlf_host = current.replace('\n', "\r\n");
+        for (source, host) in [
+            (crlf_main.as_str(), crlf_host.as_str()),
+            (MAIN_RS, crlf_host.as_str()),
+            (crlf_main.as_str(), current.as_str()),
+        ] {
+            let findings = source_findings_with(source, host);
+            assert!(findings.is_empty(), "{source:?} in {host:?}: {findings:?}");
+        }
+
+        let stale = source_host("/src/main.rs#cli", "```rust\nold\n```\n").replace('\n', "\r\n");
+        let findings = source_findings_with(&crlf_main, &stale);
+        assert_eq!(findings.len(), 1, "{findings:?}");
+        assert_eq!(
+            findings[0].message,
+            "the include block for `/src/main.rs#cli` is stale (run `superdev validate --fix`)"
+        );
     }
 
     /// Covers criterion 4: an absent, an empty and a stale block are each an

@@ -30,7 +30,6 @@ otherwise, never written as "not applicable". A promise a contract
 needs that no rule names is added here, tagged with its kinds, so the
 next writer of the kind sees it.
 
-<!-- sokf:include contract-style -->
 **Contract style — a contract defines its interface** (superdev
 ADR-033, ADR-042, ADR-043, ADR-044):
 
@@ -63,7 +62,6 @@ ADR-033, ADR-042, ADR-043, ADR-044):
   definition element carries none.
 - A contract MUST link the ADR behind each decision and MUST NOT
   restate the ADR's reasoning.
-<!-- /sokf:include -->
 
 ## The contract
 
@@ -361,7 +359,7 @@ sections:
     required: true
     variants: [data]
     description: >
-      Constraints the schema cannot express: cross-table rules, allowed
+      Constraints the schema cannot state: cross-table rules, allowed
       transitions.
   - heading: "Migration"
     level: 3

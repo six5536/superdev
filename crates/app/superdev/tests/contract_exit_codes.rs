@@ -40,26 +40,42 @@ fn declared() -> BTreeMap<String, Vec<i64>> {
     .iter()
     .collect();
     let text = std::fs::read_to_string(path).expect("the CLI contract is on file");
-    let section = exit_codes_section(&text).expect("Behaviour carries `### Exit codes`");
+    declared_in(&text).unwrap_or_else(|fault| panic!("{fault}"))
+}
+
+/// The exit codes `text`'s Exit codes table declares. Every row is read:
+/// the header and the rule beneath it are recognised and skipped, and any
+/// other row that does not open with a backticked command and carry a code
+/// is a defect in the contract, reported rather than dropped — a code the
+/// reader drops is a code the coverage test never asks for.
+fn declared_in(text: &str) -> Result<BTreeMap<String, Vec<i64>>, String> {
+    let section = exit_codes_section(text).ok_or("Behaviour carries no `### Exit codes`")?;
     let mut out: BTreeMap<String, Vec<i64>> = BTreeMap::new();
     for line in section.lines() {
         let Some(row) = line.strip_prefix('|') else {
             continue;
         };
         let cells: Vec<&str> = row.split('|').map(str::trim).collect();
-        // The header row and the rule beneath it carry no code.
-        let Some(command) = cells.first().and_then(|c| c.strip_prefix('`')) else {
+        let first = cells.first().copied().unwrap_or_default();
+        if first == "Command" || first.starts_with('-') {
             continue;
-        };
-        let command = command.trim_end_matches('`').to_string();
+        }
+        let command = first
+            .strip_prefix('`')
+            .and_then(|c| c.strip_suffix('`'))
+            .ok_or_else(|| {
+                format!("the Exit codes row `{line}` does not open with a backticked command")
+            })?;
         let code: i64 = cells
             .get(1)
             .and_then(|c| c.parse().ok())
-            .unwrap_or_else(|| panic!("the Exit codes row for `{command}` carries no code"));
-        out.entry(command).or_default().push(code);
+            .ok_or_else(|| format!("the Exit codes row for `{command}` carries no code"))?;
+        out.entry(command.to_string()).or_default().push(code);
     }
-    assert!(!out.is_empty(), "the Exit codes table declares no command");
-    out
+    if out.is_empty() {
+        return Err("the Exit codes table declares no command".to_string());
+    }
+    Ok(out)
 }
 
 /// Run `args` and assert the binary exits `code`, which the contract must
@@ -148,6 +164,45 @@ fn hook(args: &[&str], payload: &str, code: i64) {
         out.status.code(),
         String::from_utf8_lossy(&out.stderr)
     );
+}
+
+/// The reader reads every row: a well-formed table yields its pairs, and a
+/// row it cannot read — a command without backticks, a code that is not a
+/// number — is reported rather than dropped, so the coverage test cannot
+/// pass over a code the contract declares in a shape the reader skips.
+#[test]
+fn a_row_the_reader_cannot_read_is_reported_not_dropped() {
+    let table = |rows: &str| {
+        format!(
+            "## Behaviour\n\n### Exit codes\n\nProse.\n\n| Command | Code | Meaning |\n|---------|------|---------|\n{rows}\n### Next\n"
+        )
+    };
+    let well_formed = declared_in(&table(
+        "| `superdev` | 0 | help |\n| `superdev sokf index` | 2 | unreadable |\n| `superdev sokf index` | 0 | rebuilt |\n",
+    ))
+    .unwrap();
+    assert_eq!(
+        well_formed,
+        BTreeMap::from([
+            ("superdev".to_string(), vec![0]),
+            ("superdev sokf index".to_string(), vec![2, 0]),
+        ])
+    );
+
+    let bare = declared_in(&table(
+        "| `superdev` | 0 | help |\n| superdev sokf index | 3 | unbound |\n",
+    ))
+    .unwrap_err();
+    assert_eq!(
+        bare,
+        "the Exit codes row `| superdev sokf index | 3 | unbound |` does not open with a backticked command"
+    );
+
+    let no_code = declared_in(&table("| `superdev` | zero | help |\n")).unwrap_err();
+    assert_eq!(no_code, "the Exit codes row for `superdev` carries no code");
+
+    let none = declared_in(&table("")).unwrap_err();
+    assert_eq!(none, "the Exit codes table declares no command");
 }
 
 /// Covers I035 criterion 5: the hooks return the codes they declare — `0`

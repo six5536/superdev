@@ -1,0 +1,90 @@
+//! contract_standard.rs — the contract standard is prose in the one contract
+//! schema, in the live tree and in the pack mirror (ADR-043): the one read a
+//! contract writer is guaranteed to make carries it.
+
+use std::path::PathBuf;
+
+fn repo(path: &str) -> PathBuf {
+    [env!("CARGO_MANIFEST_DIR"), "../../..", path]
+        .iter()
+        .collect()
+}
+
+/// `text` with its line endings made uniform, for comparison against a
+/// literal written with LF.
+///
+/// The comparison is where CRLF and LF are made the same — nothing normalises
+/// on the way in, so what these tests read is what is on disk (I040). The
+/// product needs none of this: its checks read a line at a time through
+/// `validate::lines`, and a line is the same line whatever ends it.
+fn same(text: &str) -> String {
+    text.replace("\r\n", "\n")
+}
+
+/// The contract schema's prose before its yaml contract, where the standard
+/// is stated, in both trees.
+fn standard_copies() -> [(String, String); 2] {
+    [
+        "knowledge/schemas/contract.md",
+        "pack/knowledge/schemas/contract.md",
+    ]
+    .map(|p| {
+        let text = std::fs::read_to_string(repo(p)).expect("the contract schema is on file");
+        let prose = same(&text)
+            .split("````yaml")
+            .next()
+            .expect("the schema opens with prose")
+            .to_string();
+        (p.to_string(), prose)
+    })
+}
+
+/// The standard states the definition rules and the binding obligation
+/// (ADR-033, ADR-042).
+#[test]
+fn the_schema_states_the_definition_rules() {
+    for (p, prose) in standard_copies() {
+        for rule in [
+            "a contract defines its interface",
+            "MUST be one or more source includes",
+            "MUST describe and MUST NOT define",
+            "MUST NOT state how the",
+            "bound by its include",
+            "MUST be proved current by a test",
+            "MUST NOT\n  restate the ADR's reasoning",
+        ] {
+            assert!(prose.contains(rule), "{p} is missing: {rule}");
+        }
+    }
+}
+
+/// Covers I049 criteria 16 and 17: the standard states that a doc comment in
+/// an included region is contract text, that Behaviour carries what no
+/// element and no include reaches and the project binds it by a test, and
+/// that `PENDING` applies to prose alone (ADR-042, ADR-044). The standard is
+/// prose in the schema: no include block carries it, and no fragment remains
+/// to drift from.
+#[test]
+fn the_schema_states_the_doc_comment_and_pending_rules() {
+    for (p, prose) in standard_copies() {
+        for rule in [
+            "A doc comment inside an included region is contract text",
+            "binds as a MUST in Behaviour does",
+            "Behaviour MUST carry what no\n  single element can say and what no include reaches",
+            "The project MUST bind each\n  Behaviour promise by a test of the behaviour it promises",
+            "A Behaviour or Stability statement whose behaviour is unbuilt MAY\n  carry `PENDING`",
+            "a\n  definition element carries none",
+        ] {
+            assert!(prose.contains(rule), "{p} is missing: {rule}");
+        }
+        assert!(
+            !prose.contains("sokf:include"),
+            "{p} carries the standard through an include block"
+        );
+    }
+    assert!(
+        !repo("knowledge/schemas/fragments/contract-style.md").exists()
+            && !repo("pack/knowledge/schemas/fragments/contract-style.md").exists(),
+        "the contract-style fragment is still on file"
+    );
+}

@@ -372,9 +372,10 @@ path, optionally followed by `#` and a region name:
 ````
 
 A region is bounded by a line containing `sokf:begin <name>` and a
-later line containing `sokf:end <name>`, in whatever comment syntax the
-file uses; regions sharing a name concatenate in file order, and a path
-with no `#` names the whole file. `superdev validate --fix` fills the
+later line containing `sokf:end <name>`, matched by substring, the name
+ending at whitespace or the end of the line, in whatever comment syntax
+the file uses; regions sharing a name concatenate in file order, and a
+path with no `#` names the whole file. `superdev validate --fix` fills the
 block with the region as a fenced block tagged by the file's extension
 — mapped where the conventional tag differs (`rs` to `rust`, `yml` to
 `yaml`, `ts` to `typescript`, `py` to `python`), bare when the file has

@@ -46,9 +46,9 @@ place of a concept id, optionally followed by `#` and a region name:
 `<!-- sokf:include /crates/app/superdev/src/main.rs#cli -->`.
 
 A region is bounded by a line containing `sokf:begin <name>` and a
-later line containing `sokf:end <name>`, matched by substring, so the
-markers sit in whatever comment syntax the file uses and superdev reads
-none of it. Regions sharing a name concatenate in file order, so a
+later line containing `sokf:end <name>`, matched by substring, the name
+ending at whitespace or the end of the line, so the markers sit in
+whatever comment syntax the file uses and superdev reads none of it. Regions sharing a name concatenate in file order, so a
 surface scattered through one file is one include. A path with no `#`
 includes the whole file.
 

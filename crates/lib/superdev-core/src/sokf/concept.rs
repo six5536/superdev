@@ -409,10 +409,16 @@ pub fn include_blocks(text: &str) -> (Vec<IncludeBlock>, Vec<String>) {
     // The open marker of the block being read: (target, content_start).
     let mut open: Option<(IncludeTarget, usize)> = None;
     for (event, span) in Parser::new_ext(text, Options::empty()).into_offset_iter() {
-        let Event::Html(html) = event else { continue };
-        // One HTML event can span several lines; walk them with offsets.
+        if !matches!(event, Event::Html(_)) {
+            continue;
+        }
+        // One HTML event can span several lines; walk them with offsets. The
+        // content starts where the marker's line ends in the document's own
+        // bytes: the parser hands a CRLF line back as its text and a lone
+        // `\n`, with the `\r` between them in no event, so an offset counted
+        // from the event's text lands on the `\r` (I040).
         let mut at = span.start;
-        for line in html.split_inclusive('\n') {
+        for line in text[span].split_inclusive('\n') {
             let trimmed = line.trim_end();
             if let Some(rest) = trimmed.strip_prefix(INCLUDE_OPEN)
                 && let Some(id) = rest.strip_suffix("-->")
@@ -423,7 +429,7 @@ pub fn include_blocks(text: &str) -> (Vec<IncludeBlock>, Vec<String>) {
                         id.trim()
                     ));
                 } else {
-                    open = Some((IncludeTarget::parse(id.trim()), at + line.len()));
+                    open = Some((IncludeTarget::parse(id.trim()), line_end(text, at)));
                 }
             } else if trimmed == INCLUDE_CLOSE {
                 match open.take() {
@@ -442,6 +448,12 @@ pub fn include_blocks(text: &str) -> (Vec<IncludeBlock>, Vec<String>) {
         faults.push(format!("include block for `{target}` is never closed"));
     }
     (blocks, faults)
+}
+
+/// The byte offset just past the line of `text` that `at` sits on: after its
+/// `\n`, or the end of the text when the line has none.
+fn line_end(text: &str, at: usize) -> usize {
+    text[at..].find('\n').map_or(text.len(), |i| at + i + 1)
 }
 
 /// What an include block carries of `body`: everything above the generated
@@ -529,6 +541,49 @@ mod tests {
 
     /// A `/`-rooted argument names a repository file, with the region after
     /// `#`; anything else is a concept id, as it always was.
+    /// The offsets come from the document's own bytes, so on a CRLF document
+    /// the content starts after the marker's `\r\n` and ends at the close
+    /// marker — whether the parser hands the lines one at a time or as one
+    /// event (I040).
+    #[test]
+    fn include_blocks_span_the_content_exactly_on_a_crlf_document() {
+        for (text, want) in [
+            (
+                "Intro.\r\n\r\n<!-- sokf:include style -->\r\nThe rules.\r\n<!-- /sokf:include -->\r\n\r\nTail.\r\n",
+                vec!["The rules.\r\n"],
+            ),
+            (
+                "<!-- sokf:include style -->\r\n<!-- /sokf:include -->\r\n",
+                vec![""],
+            ),
+            (
+                "<!-- sokf:include a -->\r\nfirst\r\n<!-- /sokf:include -->\r\n<!-- sokf:include b -->\r\nsecond\r\n<!-- /sokf:include -->\r\n",
+                vec!["first\r\n", "second\r\n"],
+            ),
+        ] {
+            let (blocks, faults) = include_blocks(text);
+            assert!(faults.is_empty(), "{text:?}: {faults:?}");
+            for block in &blocks {
+                assert!(
+                    text[..block.content_start].ends_with("-->\r\n"),
+                    "{text:?}: content starts at {} in {:?}",
+                    block.content_start,
+                    &text[block.content_start..]
+                );
+                assert!(
+                    text[block.content_end..].starts_with(INCLUDE_CLOSE),
+                    "{text:?}: content ends at {}",
+                    block.content_end
+                );
+            }
+            let spans: Vec<&str> = blocks
+                .iter()
+                .map(|b| &text[b.content_start..b.content_end])
+                .collect();
+            assert_eq!(spans, want, "{text:?}");
+        }
+    }
+
     #[test]
     fn a_rooted_argument_is_a_source_include_and_a_bare_one_a_concept() {
         let text = "<!-- sokf:include /src/main.rs#cli -->\n<!-- /sokf:include -->\n\
