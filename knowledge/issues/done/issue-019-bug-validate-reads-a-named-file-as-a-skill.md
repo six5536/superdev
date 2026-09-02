@@ -51,20 +51,20 @@ names, never runs at all.
 The named document is checked as what it is, with full parity to the bare
 run. These sentences are the acceptance criteria:
 
-1. `EX_c1` [ubiquitous] WHEN validate is invoked with a path to a file whose frontmatter `type`
+1. `EX_c1` [event] WHEN validate is invoked with a path to a file whose frontmatter `type`
    names a schema, THE SYSTEM SHALL report for that file exactly the
    findings a bare run reports for it — schema, filing and link findings
    alike — and no findings about any other file.
-2. `EX_c2` [ubiquitous] WHEN validate is invoked with a path to a frontmatter-less file a
+2. `EX_c2` [event] WHEN validate is invoked with a path to a frontmatter-less file a
    schema names by `target-files` glob (README.md, CHANGELOG.md), THE
    SYSTEM SHALL check it against that schema, never the skill grammar.
-3. `EX_c3` [ubiquitous] WHEN validate is invoked with a path to a file whose `type` names no
+3. `EX_c3` [event] WHEN validate is invoked with a path to a file whose `type` names no
    schema, THE SYSTEM SHALL report that fault as the bare run does.
-4. `EX_c4` [ubiquitous] WHEN validate is invoked with a path to a file with no frontmatter
+4. `EX_c4` [event] WHEN validate is invoked with a path to a file with no frontmatter
    that no glob and no grammar kind claims positively, THE SYSTEM SHALL
    check it as the grammar's fallback kind — a skill outside the roots
    stays checkable, as today.
-5. `EX_c5` [ubiquitous] IF the named path cannot be read, THEN THE SYSTEM SHALL fail naming
+5. `EX_c5` [conditional] IF the named path cannot be read, THEN THE SYSTEM SHALL fail naming
    the path.
 
 ## Actual behaviour
