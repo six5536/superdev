@@ -2,7 +2,7 @@
 type: CodeReview
 id: code-review-009-a-contracts-behaviour-is-written-as-ears
 title: Code review — a contract's behaviour is written as EARS
-description: Review of plan-025's eight slices on `feature/a-contracts-behaviour-is-written-as-ears`; three major findings — a contract with no promise passes the schema, an item swallows the heading after it, and the tree-wide PENDING guard was dropped on a false premise — and seven minor ones, recorded for the driver and not fixed here.
+description: Review of plan-025's eight slices on `feature/a-contracts-behaviour-is-written-as-ears`; three major findings — a contract with no promise passes the schema, an item swallows the heading after it, and the tree-wide PENDING guard was dropped on a false premise — seven minor ones, and five a second reviewer added; twelve resolved on the branch, two not applied, one deferred.
 links:
   - rel: references
     to: plan-025-feature-a-contracts-behaviour-is-written-as-ears
@@ -28,8 +28,11 @@ kept every active contract free of `PENDING` was dropped on a premise
 that is false at HEAD. Seven are minor: a latent double capture, a
 finding that misnames a malformed key, three documents out of step with
 the item's scope, two duplications, and a test parser that diverges
-from the validator's. Nothing is fixed on the branch; each finding
-returns to build at the driver's decision.
+from the validator's. A second reviewer's list adds five, 11 to 15: the
+`RS_`/`DD_` tag left unenforced, a nested verb nobody pinned, three
+two-outcome promises, a miscounted note, and an `EX_` key no schema
+declares. Each finding carries its outcome: twelve are resolved on the
+branch, two are not applied, and one is deferred.
 
 ## Findings
 
@@ -50,6 +53,11 @@ returns to build at the driver's decision.
   …)`.
 - Suggested fix: the kind check requires at least one top-level item as
   `items_in` reads them, not any bullet-looking line.
+- Outcome: Resolved in dbfcccb. `body_has` satisfies a list kind only by a
+  top-level item as `items_in` reads one, so a Behaviour of nested bullets
+  or a `- - -` break reports "carries no bullet" — `listless.md` in the
+  item-bounds fixture and
+  `a_section_with_no_top_level_item_fails_its_list_kind`.
 
 ### 2. An item swallows the heading or table row after it — crates/lib/superdev-core/src/validate/schema/document.rs:1406
 
@@ -69,6 +77,11 @@ returns to build at the driver's decision.
   and `Item.lines` make it observable as wrong findings.
 - Suggested fix: `items_in` ends an item at a heading or a table row as
   it ends one at a blank line.
+- Outcome: Resolved in dbfcccb. `ends_paragraph` ends an item's lazy
+  continuation at a heading, a table row or an HTML comment, as CommonMark
+  ends a paragraph; the fixture's `faulty.md` carries a table row and a
+  heading right under a bullet, each reported outside a top-level item —
+  `a_heading_or_table_row_under_a_bullet_ends_the_item`.
 
 ### 3. The tree-wide PENDING guard was dropped on a false premise — crates/lib/superdev-core/tests/normative_shapes.rs:1027
 
@@ -88,6 +101,8 @@ returns to build at the driver's decision.
   manual gate as the only one.
 - Suggested fix: restore the assertion, or correct the comment and add a
   settled-feature gate a test can run.
+- Outcome: Not applied: ADR-044 permits a PENDING promise while a feature
+  runs; the accept gate judges the settled state.
 
 ### 4. Two keyed rules over one section capture every item twice — crates/lib/superdev-core/src/validate/schema/document.rs:1107
 
@@ -105,6 +120,10 @@ returns to build at the driver's decision.
   first candidate.
 - Suggested fix: deduplicate captures by line index, or exclude a
   subsection's lines from the parent rule's item scan.
+- Outcome: Resolved in dbfcccb. A captured key carries the document line its
+  item opens on and counts once across the rules that capture it —
+  `an_item_captured_by_two_rules_counts_once`. A keyless item under two
+  rules is still reported by each, naming its own section.
 
 ### 5. A malformed key is reported as no key — knowledge/schemas/feature-request.md:93
 
@@ -127,6 +146,14 @@ returns to build at the driver's decision.
 - Suggested fix: `item-pattern` opens with a non-committal key span
   (`` ^`[^`]+` ``) so `item-key` alone defines the key, and the key
   finding names the malformed key.
+- Outcome: Resolved in dbfcccb. `item-pattern` opens with `item-key`'s grammar
+  in the contract and feature-request schemas, and each top-level item is
+  checked by `item-key`, then `item-prohibited-pattern`, then
+  `item-pattern`, an item one reports not checked by the next
+  (contract-010 `P_item-one-finding`); the key finding reads "carries no
+  key of the form `<pattern>`". Deliberately, the tracker test now expects
+  three findings for three faults, not five, and the item-bounds golden
+  loses `P_stops`' second finding.
 
 ### 6. A nested bullet's scope is stated three ways — crates/lib/superdev-core/src/validate/schema/document.rs:1252
 
@@ -146,6 +173,11 @@ returns to build at the driver's decision.
 - Suggested fix: the finding says "outside a top-level item", and the
   grammar doc and the contract schema's prose say a nested bullet is not
   a promise and is bound as prose.
+- Outcome: Resolved in dbfcccb. The finding says "matches outside a
+  top-level item"; `grammar.yaml`'s `item-only-pattern` doc names prose, a
+  table row, a heading, a nested item and an item of the other list kind;
+  the contract schema says a nested bullet is not a promise and is bound
+  as prose, in the rule and in the standard's prose.
 
 ### 7. An HTML comment line is bound by item-only-pattern — crates/lib/superdev-core/src/validate/schema/document.rs:1254
 
@@ -160,6 +192,9 @@ returns to build at the driver's decision.
   counts as nothing for the prose check.
 - Suggested fix: skip comment lines in the bound as `is_paragraph` does,
   or state in the grammar doc that comments are bound.
+- Outcome: Resolved in dbfcccb. `item-only-pattern` skips an HTML comment
+  line, as `is_paragraph` does; the fixture's `sound.md` carries one
+  between two promises and passes.
 
 ### 8. Each section's list is parsed three times — crates/lib/superdev-core/src/validate/schema/document.rs:1076
 
@@ -179,6 +214,10 @@ returns to build at the driver's decision.
   already hoists `fenced`, the headings and the positions, and pass
   `&[Item]` to the three checks; a `vec![false; body.len()]` mask in
   place of the `BTreeSet`, matching the `fenced` idiom.
+- Outcome: Resolved in dbfcccb. `Items::read` in `check_one` reads a
+  section's items once, and the three checks take the one `Items`; the
+  dead `kind.is_some()` guard is gone. The `BTreeSet` stays: the mask is
+  a style choice with no observable effect.
 
 ### 9. check_declarations' doc comment is false and the capture count is a fourth parse — crates/lib/superdev-core/src/validate/schema/document.rs:412
 
@@ -197,6 +236,11 @@ returns to build at the driver's decision.
 - Suggested fix: correct the comment; host the capture-count check in
   `check_variants`' existing loop over the parsed `DocSchema`, or reuse
   the compiled regex in `check_declarations`.
+- Outcome: Resolved in dbfcccb. The comment names `check_variants` and
+  `check_item_keys`; `item_key_captures(file, rule)` is read by
+  `check_declarations` from the schema it has already parsed and by
+  `check_item_keys` for `validate`. The item-key golden's two schema
+  findings swap order as a consequence.
 
 ### 10. The tracker sweep test carries its own item parser — crates/lib/superdev-core/tests/normative_shapes.rs:289
 
@@ -217,6 +261,102 @@ returns to build at the driver's decision.
   already runs `check_documents` over the tracker for one type, to
   BugReport and Chore, so the live `item-key` rule is the sweep's proof,
   and drop the second parser.
+- Outcome: Not applied: the test is in the integration crate and cannot
+  call `items_in`; it checks the sweep's insertion shape only.
+
+### 11. A tagged step or done item passes the `RS_` and `DD_` rules — pack/knowledge/schemas/bug-report.md:82
+
+- Severity: minor
+- Category: correctness
+- Problem: the Steps to reproduce and Definition of done rules declare
+  `item-key` alone, so a step or a done item carrying an EARS tag after
+  its key passes, while I037 `AC_c18` says a step carries no tag.
+- Failure scenario: `` 1. `RS_c1` [event] WHEN run, the probe runs. ``
+  validates clean under the live bug-report schema, and the same for a
+  `DD_` item under the chore schema.
+- Suggested fix: an `item-prohibited-pattern` for a tag after the key on
+  both rules, in the pack and the synced copy, and a test that a tagged
+  step fails.
+- Outcome: Resolved in dbfcccb. Both rules declare
+  `` item-prohibited-pattern: '^`RS_[a-z0-9-]+` \[(ubiquitous|…)\]' `` (`DD_`
+  for the chore), synced with the lock moved, and their descriptions say a
+  tagged item is an error; `a_repro_step_carries_a_key_and_no_tag` proves
+  a tagged step and a tagged done item each fail naming the tag, and
+  `every_cited_list_declares_its_key_and_the_plan_cites_keys` asserts the
+  prohibition. The changelog carries the new error.
+
+### 12. No test pins a nested item's modal verb as outside an item — crates/lib/superdev-core/tests/fixtures/documents/item-bounds/faulty.md:16
+
+- Severity: minor
+- Category: test-coverage
+- Problem: ADR-047 reads a nested item as outside every top-level item,
+  and `check_item_bounds` reports its verb so, but no fixture or unit
+  test carries a nested bullet with a modal verb.
+- Failure scenario: a change that folds a nested item's lines into its
+  parent passes every test while a nested `SHALL NOT` silently becomes
+  the parent's second verb.
+- Suggested fix: a nested sub-bullet carrying a modal verb in the
+  item-bounds fixture, pinned by the golden.
+- Outcome: Resolved in dbfcccb. `faulty.md` carries `- WHEN silent, it SHALL
+  NOT stir` nested under `P_stays`, and the golden reports it outside a
+  top-level item.
+
+### 13. Three promises carry two outcomes or a MAY-only — knowledge/contracts/public/active/contract-002-cli-superdev.md:462
+
+- Severity: minor
+- Category: correctness
+- Problem: contract-002 `P_hooks-resolve-project-dir` is an `[event]`
+  with an else branch, `P_hook-run-fails-open` states two outcomes with
+  two exit codes, and contract-008 `P_removal-needs-notice` reads "MAY …
+  only", a permission carrying a requirement — each one item with two
+  requirements, which ADR-046 forbids.
+- Failure scenario: a reader citing `P_hook-run-fails-open` cannot say
+  which exit code the key promises, and a test covering one outcome
+  claims the whole key.
+- Suggested fix: one promise per branch and per outcome, with the notice
+  as a `SHALL`; no promise lost.
+- Outcome: Resolved in dbfcccb. `P_hooks-resolve-project-dir` keeps the WHEN
+  branch and `P_hooks-resolve-working-dir` `[conditional]` carries the
+  else; `P_hook-run-fails-open` keeps the unreadable run state at exit
+  `0` and `P_hook-run-unreadable-payload` carries the unreadable payload
+  at exit `2`; `P_removal-needs-notice` is an `[event]` whose requirement
+  is the release-notes notice. `superdev validate` passes.
+
+### 14. The slice-3 note miscounts contract-010 and the new tests cite criteria by number — knowledge/plans/done/plan-025-feature-a-contracts-behaviour-is-written-as-ears.md:152
+
+- Severity: nit
+- Category: simplification
+- Problem: plan-025's slice-3 note records contract-010 at 16 verbs
+  before the sweep, and the doc comments of the tests this feature added
+  read "Covers I037 criterion n" where the schema's citation form is the
+  key, `AC_cn`.
+- Failure scenario: a reader checking the sweep against `git show
+  cb78f13:` finds 15 verbs and doubts the count of promises; a reader
+  searching the tests for `AC_c17` finds nothing.
+- Suggested fix: verify the count against `cb78f13` and record it; the
+  new tests cite `AC_cn`, the tests that predate the feature keep their
+  wording.
+- Outcome: Resolved in dbfcccb for the tests — every test this feature added
+  cites `I037 AC_c<n>` — and in the records commit beside this outcome
+  for the note: at `cb78f13` the Behaviour and Stability of contract-010
+  carry 15 modal verbs (12 `MUST`, 2 `MUST NOT`, 1 `MAY`), and the one
+  sentence reporting a misplaced `item-key` or `item-prohibited-pattern`
+  "the same way" became two promises.
+
+### 15. `AC_c17` requires an `EX_` key that no schema declares — knowledge/issues/open/issue-037-feature-request-a-contracts-behaviour-is-not-written-as-ears.md:1
+
+- Severity: major
+- Category: correctness
+- Problem: I037 `AC_c17` names an `EX_` key on Expected behaviour, and
+  ADR-046 keys it so, but the bug-report schema keeps Expected behaviour
+  as `content: prose` with no key — plan-025 slice 7 keyed the repro
+  steps and left this to a deferred decision.
+- Failure scenario: a bug report written with an `EX_` list validates
+  no differently from one without, so the criterion is not checkable.
+- Suggested fix: settle the deferred decision — the schema keys Expected
+  behaviour for new reports, or `EX_` is withdrawn from ADR-046 and the
+  criterion.
+- Outcome: Deferred: plan-025 Deferred decisions, contract-design.
 
 ## Not findings (checked and fine)
 
@@ -237,7 +377,9 @@ returns to build at the driver's decision.
 ## Notes
 
 - Findings 1 to 3 are the ones a driver would return to build before
-  the merge; 4 to 10 can follow as a chore.
+  the merge; 4 to 10 can follow as a chore. The driver returned 1, 2 and
+  4 to 9 with 11 to 14 in one build pass; 3 and 10 stand as they are, and
+  15 waits on the deferred decision.
 - Finding 2 predates the feature; the item bounds made it visible.
 - Three grammar-rule nits in the schema prose were dropped as arguable.
 
