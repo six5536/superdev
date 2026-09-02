@@ -149,7 +149,13 @@ rebuild per edit.
   - manual: the reviewer confirms the promise count per contract
     equals the modal-verb count before the sweep — covers AC_c13.
   - Note, at merge: contract-007 14 verbs before, 14 promises after;
-    contract-009 8 and 8; contract-010 16 and 16. The scratch schema
+    contract-009 8 and 8; contract-010 15 and 16 — the count of 16
+    verbs first recorded here was wrong: at `cb78f13` the Behaviour and
+    Stability of contract-010 carry 12 `MUST`, 2 `MUST NOT` and 1
+    `MAY` outside fenced blocks, and the one sentence reporting a
+    misplaced `item-key` or `item-prohibited-pattern` "the same way"
+    became two promises, `P_misdeclared-item-key` and
+    `P_misdeclared-item-prohibited` (code-review-009). The scratch schema
     carrying the four ADR-047 declarations reported nothing for the
     three, and reported a keyless item, a `MUST` in prose and a
     tagless item when each was injected.
