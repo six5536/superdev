@@ -6,8 +6,8 @@ description: Nine of the sixteen kinds name their definition form in a section d
 lifecycle: wontfix
 links:
   - rel: references
-    to: issue-049-feature-request-a-contract-is-not-written-to-be-compared
-    note: Supersedes this issue; criteria 4, 5 and 12 there carry the declaration work.
+    to: issue-049-feature-request-a-contract-cannot-point-at-its-definition
+    note: Dissolves this issue — the validator looks inside no block, so a block's form need not be declared to it.
   - rel: references
     to: adr-034-each-kind-defines-in-the-form-its-ecosystem-reads
     note: Stands unchanged — this declares the form each kind already chose, rather than changing the choice.
@@ -26,14 +26,17 @@ links:
 
 ## Won't fix
 
-Superseded 2026-09-02 by
-[I049][sokf:issue-049-feature-request-a-contract-is-not-written-to-be-compared].
-A form nothing reads is the enumerability property failing — the first
-of the four a comparison needs — and stating the property once is what
-keeps the same fault from being specified again in a fifth vocabulary.
-Criteria 4, 5 and 12 of I049 carry this issue's declaration work, and
-the open question about a set of forms against a single string goes with
-them.
+Dissolved 2026-09-02 by
+[I049][sokf:issue-049-feature-request-a-contract-cannot-point-at-its-definition].
+Declaring a block's form to the validator mattered only while the
+validator parsed blocks, and it no longer does: it parses two forms of
+sixteen, so any check it applied was applied by accident of parser
+rather than by principle, and the drift test catches everything it
+caught. Under I049 the validator looks inside no block for any kind,
+which makes the question this issue asked — how a kind names a form
+the validator cannot read — one nothing needs answered. The fence tag
+survives as the one thing checked, because a block without one cannot
+be read by the consumer either.
 
 ## Summary
 
@@ -232,4 +235,4 @@ CONTRACT-DESIGN's, not framing's.
 [sokf:adr-036-a-contract-is-bound-to-its-implementation]: /knowledge/adrs/active/adr-036-a-contract-is-bound-to-its-implementation.md
 [sokf:issue-045-feature-request-drift-tests-bind-what-the-contract-declares]: /knowledge/issues/wontfix/issue-045-feature-request-drift-tests-bind-what-the-contract-declares.md
 [sokf:issue-048-feature-request-no-step-asks-whether-a-contract-is-bound]: /knowledge/issues/open/issue-048-feature-request-no-step-asks-whether-a-contract-is-bound.md
-[sokf:issue-049-feature-request-a-contract-is-not-written-to-be-compared]: /knowledge/issues/open/issue-049-feature-request-a-contract-is-not-written-to-be-compared.md
+[sokf:issue-049-feature-request-a-contract-cannot-point-at-its-definition]: /knowledge/issues/open/issue-049-feature-request-a-contract-cannot-point-at-its-definition.md
