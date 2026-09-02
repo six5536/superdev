@@ -11,16 +11,14 @@ Structural rules for contract documents, filed as
 `contract-{nnn}-{kind}-{slug}`, numbered after the highest across every
 contract folder — a duplicate number is an error — and placed in their
 lifecycle folder by `superdev validate --fix`. One schema governs every
-kind ([ADR-043][sokf:adr-043-one-contract-schema-and-twelve-kinds]);
+kind (ADR-043);
 the kind is in the frontmatter and the id, and the checklist below says
 what each kind's Behaviour must cover.
 
 A contract is the outside of the black box: the one place a person or
 an agent reads what an interface promises without reading the code.
 Its Definition is materialised from the source that declares the
-interface
-([ADR-042][sokf:adr-042-a-contracts-definition-is-materialized-from-source]),
-so it is readable in one place and cannot drift. Its Behaviour says
+interface (ADR-042), so it is readable in one place and cannot drift. Its Behaviour says
 what the definition cannot. Its Stability says what may change.
 
 <!-- sokf:include contract-style -->
@@ -69,7 +67,7 @@ never written as "not applicable". A promise a contract needs that no
 bullet names is added here, so the next writer of the kind sees it.
 
 PENDING (I049): these bullets become section rules tagged with their
-kinds ([ADR-045][sokf:adr-045-a-schema-declares-variants]), the
+kinds (ADR-045), the
 required ones enforced, each bullet's text as its rule's
 `description`, and this prose goes.
 
@@ -320,7 +318,3 @@ example: |
   Unreleased. Every command and flag above MAY change without notice.
 ````
 
-<!-- sokf:links -->
-[sokf:adr-042-a-contracts-definition-is-materialized-from-source]: /knowledge/adrs/active/adr-042-a-contracts-definition-is-materialized-from-source.md
-[sokf:adr-043-one-contract-schema-and-twelve-kinds]: /knowledge/adrs/active/adr-043-one-contract-schema-and-twelve-kinds.md
-[sokf:adr-045-a-schema-declares-variants]: /knowledge/adrs/active/adr-045-a-schema-declares-variants.md

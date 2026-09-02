@@ -9,6 +9,7 @@
 //! and the contract cannot drift apart either.
 
 use std::collections::BTreeMap;
+use std::path::Path;
 
 use assert_cmd::Command;
 
@@ -82,10 +83,21 @@ fn probe(command: &str, args: &[&str], code: i64) {
 /// for the universal usage error, which the Exit codes section states once
 /// rather than in each entry.
 fn run(args: &[&str], code: i64) {
+    // The `run` verbs act on the working directory's `.superdev/cache/`
+    // and need nothing from the repository, and `run end` removes the run
+    // state it finds — so probing it here would end a live unattended run
+    // (I050). Every other probe needs the repository: `validate` reads the
+    // knowledge.
+    let scratch = tempfile::tempdir().expect("a scratch directory");
+    let cwd: &Path = if args.first() == Some(&"run") {
+        scratch.path()
+    } else {
+        Path::new(REPO_ROOT)
+    };
     let out = Command::cargo_bin("superdev")
         .unwrap()
         .args(args)
-        .current_dir(REPO_ROOT)
+        .current_dir(cwd)
         .output()
         .expect("the binary runs");
     assert_eq!(

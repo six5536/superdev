@@ -1374,6 +1374,6 @@ mod schema_parity {
             assert!(errs.is_empty(), "{}: {errs:?}", path.display());
             checked += 1;
         }
-        assert_eq!(checked, 56, "every schema is checked");
+        assert_eq!(checked, 57, "every schema is checked");
     }
 }
