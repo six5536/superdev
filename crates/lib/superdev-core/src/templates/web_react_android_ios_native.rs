@@ -16,6 +16,11 @@
 
 use super::Template;
 
+// sokf:begin template
+/// One file of the `web-react-android-ios-native` tree, embedded from
+/// `assets/projects/web-react-android-ios-native/` — the crate's `assets`
+/// is the repository's `pack/`, so the tree lives at
+/// `pack/projects/web-react-android-ios-native/`.
 macro_rules! tpl {
     ($rel:literal) => {
         include_str!(concat!(
@@ -25,6 +30,7 @@ macro_rules! tpl {
         ))
     };
 }
+// sokf:end template
 
 /// (tokenised target path, embedded content), in asset-path order.
 const FILES: [(&str, &str); 109] = [
@@ -362,8 +368,12 @@ const FILES: [(&str, &str); 109] = [
     (".vscode/settings.json", tpl!("vscode/settings.json")),
 ];
 
+// sokf:begin template
+/// The shipped template `web-react-android-ios-native`: its name, its
+/// prompt line and its tree.
 pub(super) const TEMPLATE: Template = Template {
     name: "web-react-android-ios-native",
     description: "Three native codebases — React web, Compose Android, SwiftUI iOS — with agent debug tooling",
     files: &FILES,
 };
+// sokf:end template

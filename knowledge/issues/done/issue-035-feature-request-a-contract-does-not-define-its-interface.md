@@ -162,7 +162,7 @@ about how it works inside. Once this is done:
 Acceptance run on the merged code at `19ac275`: fourteen criteria pass,
 criterion 4 does not. Eight of the nine active contracts are bound to
 their implementations; the
-[template format contract][sokf:contract-008-text-format-template] is
+[template format contract][sokf:contract-008-format-template] is
 not, though this repository implements both surfaces it enumerates —
 the five substitution tokens and the shipped template set.
 [I038][sokf:issue-038-bug-the-template-format-contract-is-bound-by-no-drift-test]
@@ -203,7 +203,7 @@ predate this feature
 
 <!-- sokf:links -->
 [sokf:adr-029-a-contract-is-a-binding-surface-not-a-specification]: /knowledge/adrs/deprecated/adr-029-a-contract-is-a-binding-surface-not-a-specification.md
-[sokf:contract-008-text-format-template]: /knowledge/contracts/public/active/contract-008-text-format-template.md
+[sokf:contract-008-format-template]: /knowledge/contracts/public/active/contract-008-format-template.md
 [sokf:contract-010-interface-document-schemas]: /knowledge/contracts/internal/active/contract-010-interface-document-schemas.md
 [sokf:issue-034-feature-request-normative-shapes-are-described-but-not-enforced]: /knowledge/issues/done/issue-034-feature-request-normative-shapes-are-described-but-not-enforced.md
 [sokf:issue-038-bug-the-template-format-contract-is-bound-by-no-drift-test]: /knowledge/issues/done/issue-038-bug-the-template-format-contract-is-bound-by-no-drift-test.md

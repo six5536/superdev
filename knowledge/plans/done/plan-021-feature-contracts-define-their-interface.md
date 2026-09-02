@@ -221,7 +221,7 @@ Request:
 - [x] Done — ticked by integrate at merge.
 - Depends-on: 5.
 - Change: the token vocabulary and the shipped template set the
-  [template format contract][sokf:contract-008-text-format-template]
+  [template format contract][sokf:contract-008-format-template]
   declares are compared to `crates/lib/superdev-core/src/templates.rs`
   in both directions, closing
   [I038][sokf:issue-038-bug-the-template-format-contract-is-bound-by-no-drift-test].
@@ -240,6 +240,6 @@ Request:
     reports as `PENDING` — covers 4, 12.
 
 <!-- sokf:links -->
-[sokf:contract-008-text-format-template]: /knowledge/contracts/public/active/contract-008-text-format-template.md
+[sokf:contract-008-format-template]: /knowledge/contracts/public/active/contract-008-format-template.md
 [sokf:issue-035-feature-request-a-contract-does-not-define-its-interface]: /knowledge/issues/done/issue-035-feature-request-a-contract-does-not-define-its-interface.md
 [sokf:issue-038-bug-the-template-format-contract-is-bound-by-no-drift-test]: /knowledge/issues/done/issue-038-bug-the-template-format-contract-is-bound-by-no-drift-test.md

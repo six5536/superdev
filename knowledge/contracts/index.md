@@ -14,7 +14,7 @@ to the contracts it touched, and git holds the history.
 * [Config contract for superdev][sokf:contract-004-config-superdev] - what a managed repo supplies to superdev — the manifest as the reader declares it, the four environment variables, which source defines what, and what an unknown or invalid setting does.
 * [Format contract for pack.toml][sokf:contract-005-format-pack] - what a content pack must look like for superdev to read it — pack.toml as the reader declares it, the tree that names each item, and what is refused.
 * [Format contract for lock.toml][sokf:contract-006-format-lock] - what superdev records of the last apply — lock.toml as the writer declares it, the per-capability components, the file hashes, the resolved packs — and what a reader may conclude from it.
-* [Template Format Contract][sokf:contract-008-text-format-template] - what a project template is — where its tree lives in the pack, the five substitution tokens, the write-once promise to a seeded repo, and one section per shipped template.
+* [Format contract for a project template][sokf:contract-008-format-template] - what a project template is — the substitution tokens and the shipped set as the engine declares them, the tree each template is embedded from, the write-once promise to a seeded repo, and what seeding does with what it does not know.
 
 ## Internal
 
@@ -31,6 +31,6 @@ to the contracts it touched, and git holds the history.
 [sokf:contract-005-format-pack]: /knowledge/contracts/public/active/contract-005-format-pack.md
 [sokf:contract-006-format-lock]: /knowledge/contracts/public/active/contract-006-format-lock.md
 [sokf:contract-007-interface-pack-resolution]: /knowledge/contracts/internal/active/contract-007-interface-pack-resolution.md
-[sokf:contract-008-text-format-template]: /knowledge/contracts/public/active/contract-008-text-format-template.md
+[sokf:contract-008-format-template]: /knowledge/contracts/public/active/contract-008-format-template.md
 [sokf:contract-009-interface-run-state]: /knowledge/contracts/internal/active/contract-009-interface-run-state.md
 [sokf:contract-010-interface-document-schemas]: /knowledge/contracts/internal/active/contract-010-interface-document-schemas.md

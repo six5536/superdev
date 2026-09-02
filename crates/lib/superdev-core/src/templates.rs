@@ -19,6 +19,7 @@ use std::path::Path;
 use crate::action::{Action, Ownership};
 use crate::engine::Planned;
 
+// sokf:begin template
 /// Replaced by the project name as given (e.g. "My Tool").
 pub const TOKEN_NAME: &str = "{{superdev:project-name}}";
 /// Replaced by the kebab-case slug (e.g. "my-tool") — crate and package names.
@@ -34,6 +35,7 @@ pub const TOKEN_COMPACT: &str = "{{superdev:project-compact}}";
 /// Xcode project/scheme names and Gradle root projects, none of which admit
 /// a separator.
 pub const TOKEN_PASCAL: &str = "{{superdev:project-pascal}}";
+// sokf:end template
 
 /// The values the tokens substitute to, recorded in the manifest afterwards.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -97,6 +99,7 @@ pub fn slug_of(name: &str) -> String {
     }
 }
 
+// sokf:begin template
 /// One shipped project template.
 #[derive(Debug)]
 pub struct Template {
@@ -120,6 +123,7 @@ pub fn shipped() -> &'static [Template] {
 pub fn find(name: &str) -> Option<&'static Template> {
     shipped().iter().find(|t| t.name == name)
 }
+// sokf:end template
 
 /// The template rendered for these tokens: (target path, content) pairs,
 /// substituted in both. The pure half of `template render` — callers decide
