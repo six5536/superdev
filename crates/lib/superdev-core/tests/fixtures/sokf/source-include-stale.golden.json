@@ -1,0 +1,13 @@
+{
+  "concepts": 1,
+  "errors": 1,
+  "findings": [
+    {
+      "file": "host.md",
+      "message": "the include block for `/src/main.rs#cli` is stale (run `superdev validate --fix`)",
+      "severity": "error"
+    }
+  ],
+  "passed": false,
+  "warnings": 0
+}

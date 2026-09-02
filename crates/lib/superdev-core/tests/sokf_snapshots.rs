@@ -144,6 +144,36 @@ fn duplicate_number() {
     snapshot("duplicate-number");
 }
 
+/// The five ways a source include fails (I049 criteria 4 and 5), one tree
+/// each: the block is empty or stale; the path is missing or resolves outside
+/// the repository — here through `..` into a sibling fixture — or the file
+/// carries no region of that name. The fixture directory is the repository
+/// root, so `/src/main.rs` is the file beside the host.
+#[test]
+fn source_include_empty() {
+    snapshot("source-include-empty");
+}
+
+#[test]
+fn source_include_stale() {
+    snapshot("source-include-stale");
+}
+
+#[test]
+fn source_include_missing_path() {
+    snapshot("source-include-missing-path");
+}
+
+#[test]
+fn source_include_outside() {
+    snapshot("source-include-outside");
+}
+
+#[test]
+fn source_include_no_region() {
+    snapshot("source-include-no-region");
+}
+
 /// The repository's own knowledge, validated where it lives. It changes with
 /// every knowledge edit, so the assertion is the one thing that must hold:
 /// the check CI already gates on.
