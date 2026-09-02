@@ -515,19 +515,20 @@ fn no_schema_names_a_framework_or_a_toolchain() {
 /// Covers I035 criterion 12: a drift test says which kind of red it is. An
 /// element the implementation carries undeclared is a DEFECT; one the
 /// contract promises and the implementation has yet to keep is PENDING
-/// (ADR-038). The wording is the mechanism, so it is pinned here. The CLI
-/// and MCP drift tests are gone with the copies they compared (ADR-042,
-/// P024 S6); the two below go with theirs in slices 7 and 8.
+/// (ADR-038). The wording is the mechanism, so it is pinned here. The CLI,
+/// MCP, config and format drift tests are gone with the copies they
+/// compared (ADR-042, P024 S6 and S7); the two below go with theirs in
+/// slices 8 and 9.
 #[test]
 fn every_drift_test_names_the_direction_it_failed_in() {
     const BINDINGS: [(&str, &[&str]); 2] = [
         (
-            "crates/lib/superdev-core/tests/contract_files.rs",
-            &["DEFECT —", "PENDING —"],
-        ),
-        (
             "crates/lib/superdev-core/tests/contract_interfaces.rs",
             &["PENDING —"],
+        ),
+        (
+            "crates/lib/superdev-core/tests/contract_template.rs",
+            &["DEFECT —", "PENDING —"],
         ),
     ];
     for (path, wordings) in BINDINGS {
@@ -556,14 +557,21 @@ fn rust_files(dir: &std::path::Path, found: &mut Vec<PathBuf>) {
     }
 }
 
-/// Covers I049 criterion 23: no test under `crates/` reads a fenced block
-/// out of the CLI or the MCP contract to compare it to the binary. The
-/// Definition is an include the validator binds; a test that opened a fence
-/// in either contract would be comparing a copy that no longer exists
-/// (ADR-042). This file names both contracts here and is skipped for it.
+/// Covers I049 criteria 21 and 23: no test under `crates/` reads a fenced
+/// block out of the CLI, the MCP, the config or either format contract to
+/// compare it to the binary. The Definition is an include the validator
+/// binds; a test that opened a fence in any of them would be comparing a
+/// copy that no longer exists (ADR-042). This file names the contracts here
+/// and is skipped for it.
 #[test]
-fn no_test_compares_a_fenced_block_of_the_cli_or_mcp_contract_to_the_binary() {
-    const CONTRACTS: [&str; 2] = ["contract-002-cli-superdev.md", "contract-003-api-sokf.md"];
+fn no_test_compares_a_fenced_block_of_an_included_contract_to_the_binary() {
+    const CONTRACTS: [&str; 5] = [
+        "contract-002-cli-superdev.md",
+        "contract-003-api-sokf.md",
+        "contract-004-config-superdev.md",
+        "contract-005-format-pack.md",
+        "contract-006-format-lock.md",
+    ];
     let mut files = Vec::new();
     rust_files(&repo("crates"), &mut files);
     assert!(!files.is_empty(), "the crates were read");

@@ -34,7 +34,11 @@ pub trait Embedder: Send + Sync {
     fn embed(&self, texts: &[String]) -> Result<Vec<Vec<f32>>>;
 }
 
-/// Manifest `[<capability>.embeddings]`: which API embeds this capability's text.
+// Part of the config contract's Definition (contract-004), beside the
+// `config` region in `manifest.rs`.
+// sokf:begin config
+/// Manifest `[knowledge.embeddings]`: which API embeds the knowledge's text.
+/// Absent means the local model, offline.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct EmbeddingsConfig {
     /// Provider id; only `openai` is implemented.
@@ -42,6 +46,7 @@ pub struct EmbeddingsConfig {
     /// Provider-side model name, e.g. `text-embedding-3-small`.
     pub model: String,
 }
+// sokf:end config
 
 /// Choose the embedder for a capability: an API when the manifest names one,
 /// the local model otherwise.

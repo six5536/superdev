@@ -4,6 +4,11 @@ use serde::Deserialize;
 
 use crate::error::{Error, Result};
 
+// `pack.toml`'s shape is the pack format contract's Definition
+// (contract-005): the file name, the formats read, the paths and the key
+// refused, and the struct `parse` fills, sit in the `pack` region below and
+// the contract includes them.
+// sokf:begin pack
 /// The file a pack root must carry.
 pub const PACK_MANIFEST: &str = "pack.toml";
 
@@ -45,6 +50,7 @@ pub struct PackManifest {
     #[serde(default)]
     pub description: Option<String>,
 }
+// sokf:end pack
 
 impl PackManifest {
     /// Parse a pack's `pack.toml`.
