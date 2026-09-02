@@ -89,7 +89,7 @@ fn the_schema_states_the_doc_comment_and_pending_rules() {
     );
 }
 
-/// Covers I037 criteria 1, 8, 11 and 15: the standard states the promise
+/// Covers I037 AC_c1, AC_c8, AC_c11 and AC_c15: the standard states the promise
 /// form — one keyed bullet with an EARS tag and one verb from SHALL, SHOULD
 /// and MAY, the retired verbs, the interface element as subject, prose with
 /// no modal verb, the numbered list as a sequence, the stable key, no `TBD`
@@ -102,7 +102,7 @@ fn the_schema_states_the_promise_form() {
         let one_line = prose.lines().map(str::trim).collect::<Vec<_>>().join(" ");
         for rule in [
             "ADR-044, ADR-046, ADR-047",
-            "A promise MUST be one bullet under Behaviour or Stability, at any heading depth",
+            "A promise MUST be one top-level bullet under Behaviour or Stability, at any heading depth — a nested bullet is not a promise and is bound as prose",
             "`[ubiquitous]`, `[event]`, `[state]`, `[conditional]`, `[optional]` or `[complex]`",
             "the interface element as the subject",
             "`SHALL` or `SHALL NOT` for a requirement, `SHOULD` or `SHOULD NOT` for a recommendation, or `MAY` for an option",

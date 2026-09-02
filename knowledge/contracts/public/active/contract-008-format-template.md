@@ -270,9 +270,9 @@ entry per template as `template-backport` captures it.
   replace an existing one.
 - `P_template-verbs-read-only` [ubiquitous] `template list` and
   `template render` SHALL stay read-only views of the shipped set.
-- `P_removal-needs-notice` [ubiquitous] A template MAY be removed only
-  with a release-notes notice, since a seeded repo keeps working
-  regardless.
+- `P_removal-needs-notice` [event] WHEN a release removes a template
+  from the shipped set, the release notes SHALL carry a notice of the
+  removal; a seeded repo keeps working regardless.
 
 [^rust-npm-src]: rust-npm template tree
 [^web-src]: web-react-android-ios-native template tree

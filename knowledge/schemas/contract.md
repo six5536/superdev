@@ -46,8 +46,9 @@ ADR-033, ADR-042, ADR-043, ADR-044, ADR-046, ADR-047):
   single element can say and what no include reaches — stability,
   consumers, behaviour across elements, exit codes, error semantics —
   as promises.
-- A promise MUST be one bullet under Behaviour or Stability, at any
-  heading depth, opening with its key in a code span and an EARS tag —
+- A promise MUST be one top-level bullet under Behaviour or Stability,
+  at any heading depth — a nested bullet is not a promise and is bound
+  as prose — opening with its key in a code span and an EARS tag —
   `[ubiquitous]`, `[event]`, `[state]`, `[conditional]`, `[optional]`
   or `[complex]` — then the sentence in that pattern's words: the
   trigger or condition, the interface element as the subject (`init`,
@@ -219,19 +220,20 @@ sections:
     required: true
     content: bullet-list
     item-key: '^`(P_[a-z][a-z0-9]*(?:-[a-z0-9]+)*)`'
-    item-pattern: '(?s)^`P_[a-z0-9-]+` \[(ubiquitous|event|state|conditional|optional|complex)\] .*\b(SHALL|SHOULD|MAY)\b'
+    item-pattern: '(?s)^`P_[a-z][a-z0-9]*(?:-[a-z0-9]+)*` \[(ubiquitous|event|state|conditional|optional|complex)\] .*\b(SHALL|SHOULD|MAY)\b'
     item-only-pattern: '\b(SHALL|SHOULD|MAY|MUST|REQUIRED|RECOMMENDED|OPTIONAL)\b'
     item-prohibited-pattern: '\b(MUST|REQUIRED|RECOMMENDED|OPTIONAL)\b|(?s)\b(SHALL|SHOULD|MAY)\b.*\b(SHALL|SHOULD|MAY)\b'
     description: >
       What the definition cannot say, as keyed EARS promises under one
       `###` per level-3 rule tagged with the kind that applies — the
-      required ones always. Every bullet, at any heading depth, is one
-      promise: a `P_` key in a code span, an EARS tag, the interface
-      element as the subject, and one verb from SHALL, SHALL NOT,
-      SHOULD, SHOULD NOT and MAY — MUST, REQUIRED, RECOMMENDED and
+      required ones always. Every top-level bullet, at any heading depth,
+      is one promise: a `P_` key in a code span, an EARS tag, the
+      interface element as the subject, and one verb from SHALL, SHALL
+      NOT, SHOULD, SHOULD NOT and MAY — MUST, REQUIRED, RECOMMENDED and
       OPTIONAL are retired. Prose describes and carries no modal verb; a
-      numbered list is a sequence, never a promise; a table stays where
-      the kind wants one. The key is the promise's identity, unique
+      nested bullet is not a promise and is bound as prose; a numbered
+      list is a sequence, never a promise; a table stays where the kind
+      wants one. The key is the promise's identity, unique
       across Behaviour and Stability — a rewording keeps it, a removed
       key is not reused — and is cited bare where the contract is the
       subject and after the contract's id elsewhere:
@@ -519,7 +521,7 @@ sections:
     required: true
     content: bullet-list
     item-key: '^`(P_[a-z][a-z0-9]*(?:-[a-z0-9]+)*)`'
-    item-pattern: '(?s)^`P_[a-z0-9-]+` \[(ubiquitous|event|state|conditional|optional|complex)\] .*\b(SHALL|SHOULD|MAY)\b'
+    item-pattern: '(?s)^`P_[a-z][a-z0-9]*(?:-[a-z0-9]+)*` \[(ubiquitous|event|state|conditional|optional|complex)\] .*\b(SHALL|SHOULD|MAY)\b'
     item-only-pattern: '\b(SHALL|SHOULD|MAY|MUST|REQUIRED|RECOMMENDED|OPTIONAL)\b'
     item-prohibited-pattern: '\b(MUST|REQUIRED|RECOMMENDED|OPTIONAL)\b|(?s)\b(SHALL|SHOULD|MAY)\b.*\b(SHALL|SHOULD|MAY)\b'
     description: >

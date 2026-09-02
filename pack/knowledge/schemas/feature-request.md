@@ -90,7 +90,7 @@ sections:
     required: true
     content: numbered-list
     item-key: '^`(AC_[a-z][a-z0-9]*(?:-[a-z0-9]+)*)`'
-    item-pattern: '^`AC_[a-z0-9-]+` (\[(ubiquitous|event|state|conditional|optional|complex)\] |TBD — )'
+    item-pattern: '^`AC_[a-z][a-z0-9]*(?:-[a-z0-9]+)*` (\[(ubiquitous|event|state|conditional|optional|complex)\] |TBD — )'
     description: >
       Numbered EARS sentences, one criterion each, every one opening
       with its key in a code span — `AC_` then a slug of lowercase

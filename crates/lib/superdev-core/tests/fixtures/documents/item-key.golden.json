@@ -2,22 +2,22 @@
   "findings": [
     {
       "file": "keyless.md",
-      "message": "schema: section \"Body\" declares an item-key, and its content is not bullet-list or numbered-list",
-      "severity": "error"
-    },
-    {
-      "file": "keyless.md",
       "message": "schema: section \"Items\" declares item-key `^`P_[a-z-]+`` with no capture group — the key is the one capture, so the rule binds nothing",
       "severity": "error"
     },
     {
-      "file": "faulty.md",
-      "message": "section \"Behaviour\" item `- `P_Stops` [event] WHEN told, the thing SHALL stop — the key is malformed.` carries no key, and thing.md declares item-key `^`(P_[a-z][a-z0-9]*(?:-[a-z0-9]+)*)``",
+      "file": "keyless.md",
+      "message": "schema: section \"Body\" declares an item-key, and its content is not bullet-list or numbered-list",
       "severity": "error"
     },
     {
       "file": "faulty.md",
-      "message": "section \"Behaviour\" item `- [state] WHILE running, the thing SHALL answer — no key at all.` carries no key, and thing.md declares item-key `^`(P_[a-z][a-z0-9]*(?:-[a-z0-9]+)*)``",
+      "message": "section \"Behaviour\" item `- `P_Stops` [event] WHEN told, the thing SHALL stop — the key is malformed.` carries no key of the form `^`(P_[a-z][a-z0-9]*(?:-[a-z0-9]+)*)``, and thing.md declares item-key",
+      "severity": "error"
+    },
+    {
+      "file": "faulty.md",
+      "message": "section \"Behaviour\" item `- [state] WHILE running, the thing SHALL answer — no key at all.` carries no key of the form `^`(P_[a-z][a-z0-9]*(?:-[a-z0-9]+)*)``, and thing.md declares item-key",
       "severity": "error"
     },
     {

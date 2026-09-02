@@ -13,13 +13,14 @@ The thing SHALL be described here — a verb in prose.
 - `P_answers` [state] WHILE running, the thing SHALL answer, and
   SHOULD answer quickly — two verbs.
 - `P_stays` [state] WHILE stopped, the thing SHALL NOT answer.
-
+  - WHEN silent, it SHALL NOT stir — a verb in a nested bullet.
 | Verb | Use |
 |---|---|
-| MAY | an option, in a table row |
+| MAY | an option, in a table row right under a bullet |
 
 1. The thing SHOULD step — a verb in a numbered item.
 
+- `P_waits` [event] WHEN asked, the thing SHALL wait.
 ### What it MUST NOT do
 
 ```

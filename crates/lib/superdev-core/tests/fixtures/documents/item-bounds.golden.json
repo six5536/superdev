@@ -12,27 +12,27 @@
     },
     {
       "file": "faulty.md",
-      "message": "section \"Behaviour\" item `- `P_stops` [event] WHEN told, the thing MUST stop — a retired verb.` does not match, and thing.md declares item-pattern `(?s)^`P_[a-z0-9-]+` \\[(ubiquitous|event|state|conditional|optional|complex)\\] .*\\b(SHALL|SHOULD|MAY)\\b`",
+      "message": "section \"Behaviour\" line `The thing SHALL be described here — a verb in prose.` matches outside a top-level item, and thing.md declares item-only-pattern `\\b(SHALL|SHOULD|MAY|MUST|REQUIRED|RECOMMENDED|OPTIONAL)\\b`",
       "severity": "error"
     },
     {
       "file": "faulty.md",
-      "message": "section \"Behaviour\" line `The thing SHALL be described here — a verb in prose.` matches outside an item, and thing.md declares item-only-pattern `\\b(SHALL|SHOULD|MAY|MUST|REQUIRED|RECOMMENDED|OPTIONAL)\\b`",
+      "message": "section \"Behaviour\" line `- WHEN silent, it SHALL NOT stir — a verb in a nested bullet.` matches outside a top-level item, and thing.md declares item-only-pattern `\\b(SHALL|SHOULD|MAY|MUST|REQUIRED|RECOMMENDED|OPTIONAL)\\b`",
       "severity": "error"
     },
     {
       "file": "faulty.md",
-      "message": "section \"Behaviour\" line `| MAY | an option, in a table row |` matches outside an item, and thing.md declares item-only-pattern `\\b(SHALL|SHOULD|MAY|MUST|REQUIRED|RECOMMENDED|OPTIONAL)\\b`",
+      "message": "section \"Behaviour\" line `| MAY | an option, in a table row right under a bullet |` matches outside a top-level item, and thing.md declares item-only-pattern `\\b(SHALL|SHOULD|MAY|MUST|REQUIRED|RECOMMENDED|OPTIONAL)\\b`",
       "severity": "error"
     },
     {
       "file": "faulty.md",
-      "message": "section \"Behaviour\" line `1. The thing SHOULD step — a verb in a numbered item.` matches outside an item, and thing.md declares item-only-pattern `\\b(SHALL|SHOULD|MAY|MUST|REQUIRED|RECOMMENDED|OPTIONAL)\\b`",
+      "message": "section \"Behaviour\" line `1. The thing SHOULD step — a verb in a numbered item.` matches outside a top-level item, and thing.md declares item-only-pattern `\\b(SHALL|SHOULD|MAY|MUST|REQUIRED|RECOMMENDED|OPTIONAL)\\b`",
       "severity": "error"
     },
     {
       "file": "faulty.md",
-      "message": "section \"Behaviour\" line `### What it MUST NOT do` matches outside an item, and thing.md declares item-only-pattern `\\b(SHALL|SHOULD|MAY|MUST|REQUIRED|RECOMMENDED|OPTIONAL)\\b`",
+      "message": "section \"Behaviour\" line `### What it MUST NOT do` matches outside a top-level item, and thing.md declares item-only-pattern `\\b(SHALL|SHOULD|MAY|MUST|REQUIRED|RECOMMENDED|OPTIONAL)\\b`",
       "severity": "error"
     },
     {
@@ -47,7 +47,12 @@
     },
     {
       "file": "faulty.md",
-      "message": "section \"Notes\" line `- The thing SHALL not promise here — a verb under a prose rule.` matches outside an item, and thing.md declares item-only-pattern `\\b(SHALL|SHOULD|MAY|MUST|REQUIRED|RECOMMENDED|OPTIONAL)\\b`",
+      "message": "section \"Notes\" line `- The thing SHALL not promise here — a verb under a prose rule.` matches outside a top-level item, and thing.md declares item-only-pattern `\\b(SHALL|SHOULD|MAY|MUST|REQUIRED|RECOMMENDED|OPTIONAL)\\b`",
+      "severity": "error"
+    },
+    {
+      "file": "listless.md",
+      "message": "section \"Behaviour\" carries no bullet, and thing.md declares bullet-list content",
       "severity": "error"
     }
   ],

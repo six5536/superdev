@@ -80,11 +80,13 @@ sections:
     required: true
     content: numbered-list
     item-key: '^`(RS_[a-z][a-z0-9]*(?:-[a-z0-9]+)*)`'
+    item-prohibited-pattern: '^`RS_[a-z0-9-]+` \[(ubiquitous|event|state|conditional|optional|complex)\]'
     description: >
       Numbered exact steps — commands verbatim so anyone can rerun
       them — every one opening with its key in a code span, `RS_` then
       a slug of lowercase words joined by hyphens, and no EARS tag: a
-      step is not a requirement (ADR-046). The key is the step's
+      step is not a requirement (ADR-046), and a step carrying a tag
+      after its key is an error. The key is the step's
       identity, stable and unique within the issue, and the number is
       the reading order; a step keyed by the sweep carries the slug
       `c<n>`, `n` its number (`RS_c2`). A citation is the bare key
