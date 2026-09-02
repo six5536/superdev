@@ -75,6 +75,12 @@ question along with the obligation.
 5. [ubiquitous] THE SYSTEM SHALL ship the step in the pack, so a project
    adopting superdev inherits it with the schemas that state the
    obligation.
+6. [conditional] IF the feature touched no contract THE SYSTEM SHALL say
+   so and report nothing further, so an empty report is distinguishable
+   from a step that did not run.
+7. [conditional] IF the step cannot read the project's tests THE SYSTEM
+   SHALL report what it could not read and SHALL NOT report the
+   contracts it could not judge as unbound.
 
 ## Alternatives considered
 
@@ -98,8 +104,9 @@ question along with the obligation.
 
 ## Scope
 
-- In: the step, the shape of its report, and where in the workflow it
-  runs.
+- In: the step and the shape of its report. Criterion 1 puts it where a
+  feature is accepted; whether `/maintain` runs the same step over every
+  contract on a cadence is CONTRACT-DESIGN's to add.
 - In: shipping it in the pack, so an adopting project gets it.
 - Out: supplying the binding itself — no harness, no generator, no drift
   test, per the non-goal in `constraints-non-goals`.
