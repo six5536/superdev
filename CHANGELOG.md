@@ -13,6 +13,19 @@ publish a version it cannot find a heading for.
 
 ### Added
 
+- **An issue's lifecycle is one of four states.** The three tracker
+  schemas declare `lifecycle` as `unframed`, `framed`, `done` or
+  `wontfix`, the folder being the value, and vary by it: an unframed
+  issue's cited lists are checked for their list kind alone, so a plain
+  sentence or a `TBD — …` item passes; a framed, done or wontfix issue
+  is held to the keyed form — `AC_` key and EARS tag on a criterion,
+  `RS_` key on a repro step, `EX_` key and tag on an expected-behaviour
+  item, `DD_` key on a done item — and a `TBD` is an error. A bug's
+  Expected behaviour is a numbered list in every state; each schema
+  carries one example per state. The issues on file are swept:
+  `issues/open/` becomes `issues/framed/` and `issues/unframed/`, and
+  every bug's Expected behaviour is a keyed list, its words unchanged.
+  `sokf_search` counts an unframed or framed issue as live (ADR-048).
 - **A heading is declared per variant.** A schema may declare one heading
   in more than one section rule when every such rule carries `variants`
   and the sets are disjoint; a document is checked against the rule its
