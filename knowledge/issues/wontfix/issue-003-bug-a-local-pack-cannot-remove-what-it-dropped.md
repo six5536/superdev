@@ -54,9 +54,9 @@ rebuilds the binary.
 
 ## Steps to reproduce
 
-1. In a repo pinning `./pack`, `rm -rf pack/knowledge/skills/how-do-i`.
-2. `superdev sync`
-3. `superdev status --drift`
+1. `RS_c1` In a repo pinning `./pack`, `rm -rf pack/knowledge/skills/how-do-i`.
+2. `RS_c2` `superdev sync`
+3. `RS_c3` `superdev status --drift`
 
 ## Expected behaviour
 

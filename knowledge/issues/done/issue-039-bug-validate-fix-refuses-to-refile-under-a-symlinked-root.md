@@ -43,11 +43,11 @@ day before this acceptance ran.
 
 ## Steps to reproduce
 
-1. On macOS, create a knowledge tree under a temporary directory, so
+1. `RS_c1` On macOS, create a knowledge tree under a temporary directory, so
    its path runs through `/var/folders/...`.
-2. Write a document whose `lifecycle` disagrees with its folder — an
+2. `RS_c2` Write a document whose `lifecycle` disagrees with its folder — an
    issue reading `lifecycle: open` while it sits in `issues/done/`.
-3. Run `superdev validate --fix` against that root.
+3. `RS_c3` Run `superdev validate --fix` against that root.
 
 In CI the same path is driven by the test
 `validate::fix::tests::the_pass_files_by_lifecycle_before_repairing_links`,

@@ -75,12 +75,12 @@ pin past what the binary carries.
 
 ## Acceptance criteria
 
-1. [ubiquitous] THE SYSTEM SHALL describe content packs on every user
+1. `AC_c1` [ubiquitous] THE SYSTEM SHALL describe content packs on every user
    surface — the README, `--help` and the man page.
-2. [event] WHEN `update` is described on any surface THE SYSTEM SHALL
+2. `AC_c2` [event] WHEN `update` is described on any surface THE SYSTEM SHALL
    say it moves the default source's pin, never "this binary's
    defaults".
-3. [ubiquitous] THE SYSTEM SHALL hold each description by a test, so
+3. `AC_c3` [ubiquitous] THE SYSTEM SHALL hold each description by a test, so
    the prose cannot go stale in silence.
 
 ## Alternatives considered

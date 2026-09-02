@@ -81,9 +81,9 @@ else the answer could depend on.
 
 ## Acceptance criteria
 
-1. [event] WHEN a link or `resource` names a file that does not exist
+1. `AC_c1` [event] WHEN a link or `resource` names a file that does not exist
    THE SYSTEM SHALL fail the run, naming the file and the target.
-2. [ubiquitous] THE SYSTEM SHALL fail the run for every
+2. `AC_c2` [ubiquitous] THE SYSTEM SHALL fail the run for every
    repository-decidable finding — broken paths, missing resources,
    missing sources, missing index targets, unjoined footnotes.
 

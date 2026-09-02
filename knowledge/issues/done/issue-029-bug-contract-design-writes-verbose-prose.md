@@ -39,8 +39,8 @@ RFC 2119 sentences — go unused.
 
 ## Steps to reproduce
 
-1. Run `/contract-design` on a framed issue that touches a contract.
-2. Read the contract document it writes or updates.
+1. `RS_c1` Run `/contract-design` on a framed issue that touches a contract.
+2. `RS_c2` Read the contract document it writes or updates.
 
 ## Expected behaviour
 

@@ -58,7 +58,7 @@ it change form.
 
 ## Acceptance criteria
 
-1. [event] WHEN a file the grammar governs names a concept path that
+1. `AC_c1` [event] WHEN a file the grammar governs names a concept path that
    resolves to no concept THE SYSTEM SHALL report the file and the
    path, at the severity the same finding carries inside the knowledge.
 

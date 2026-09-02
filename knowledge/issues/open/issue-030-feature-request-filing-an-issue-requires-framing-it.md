@@ -31,10 +31,10 @@ issue's framing may be revised over time. Details: TBD at framing.
 
 ## Acceptance criteria
 
-1. TBD — whether this is a new skill, a mode of `/frame`, or a change
+1. `AC_c1` TBD — whether this is a new skill, a mode of `/frame`, or a change
    to the workflow's entry conditions.
-2. TBD — what the minimum filed issue must contain.
-3. TBD — how "taken up for work" triggers framing.
+2. `AC_c2` TBD — what the minimum filed issue must contain.
+3. `AC_c3` TBD — how "taken up for work" triggers framing.
 
 ## Alternatives considered
 

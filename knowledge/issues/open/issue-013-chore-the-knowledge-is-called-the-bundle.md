@@ -53,13 +53,13 @@ done:
 
 ## Definition of done
 
-- `git grep -Io 'bundle' -- crates` returns only the packaging sense: a
+- `DD_c1` `git grep -Io 'bundle' -- crates` returns only the packaging sense: a
   content pack, a codegraph release. Nothing naming the SOKF knowledge.
-- `superdev-core` compiles and its tests pass under the renamed API. This is
+- `DD_c2` `superdev-core` compiles and its tests pass under the renamed API. This is
   a breaking change to a published crate, so it lands in one commit with the
   changelog entry that records it — the same treatment P008's module rename
   had.
-- A reader who has never opened the specification understands the name.
+- `DD_c3` A reader who has never opened the specification understands the name.
 
 ## Comments
 

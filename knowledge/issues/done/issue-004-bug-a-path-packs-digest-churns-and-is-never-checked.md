@@ -43,9 +43,9 @@ nothing reports.
 
 ## Steps to reproduce
 
-1. In a repo pinning `./pack`, edit any file under `pack/` and do not run
+1. `RS_c1` In a repo pinning `./pack`, edit any file under `pack/` and do not run
    `sync`.
-2. `superdev status --drift`
+2. `RS_c2` `superdev status --drift`
 
 ## Expected behaviour
 

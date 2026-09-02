@@ -101,25 +101,25 @@ report.
 
 ## Acceptance criteria
 
-1. [event] WHEN `superdev validate --json` emits a top-level key that
+1. `AC_c1` [event] WHEN `superdev validate --json` emits a top-level key that
    `contract-002`'s `json` block does not declare THE SYSTEM SHALL fail a
    test naming that key and stating that the binary emits it undeclared.
-2. [event] WHEN `contract-002`'s `json` block declares a top-level key
+2. `AC_c2` [event] WHEN `contract-002`'s `json` block declares a top-level key
    that `superdev validate --json` does not emit THE SYSTEM SHALL fail a
    test naming that key and stating that the contract declares it
    unemitted.
-3. [ubiquitous] THE SYSTEM SHALL cover the `repaired` key by criteria 1
+3. `AC_c3` [ubiquitous] THE SYSTEM SHALL cover the `repaired` key by criteria 1
    and 2, which requires exercising `--fix`.
-4. [event] WHEN a command's flags, arguments or exit map differ between
+4. `AC_c4` [event] WHEN a command's flags, arguments or exit map differ between
    the binary and `contract-002` THE SYSTEM SHALL fail naming the
    differing element and stating which of the two carries it.
-5. [event] WHEN a tool's arguments differ between the served MCP surface
+5. `AC_c5` [event] WHEN a tool's arguments differ between the served MCP surface
    and `contract-003` THE SYSTEM SHALL fail naming the differing
    argument and stating which of the two carries it.
-6. [event] WHEN a drift test reports a difference without stating the
+6. `AC_c6` [event] WHEN a drift test reports a difference without stating the
    direction the difference runs in THE SYSTEM SHALL fail the check that
    binds drift-test reporting.
-7. [ubiquitous] THE SYSTEM SHALL compare every element `contract.rs` and
+7. `AC_c7` [ubiquitous] THE SYSTEM SHALL compare every element `contract.rs` and
    `mcp.rs` compare today, so replacing a whole-struct equality with
    per-element comparisons loses no coverage.
 

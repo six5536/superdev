@@ -31,8 +31,8 @@ spellings, and on Windows neither matches what the caller typed.
 
 ## Steps to reproduce
 
-1. Run `superdev validate no/such/file.md` from a repository root.
-2. Read the error.
+1. `RS_c1` Run `superdev validate no/such/file.md` from a repository root.
+2. `RS_c2` Read the error.
 
 ## Expected behaviour
 

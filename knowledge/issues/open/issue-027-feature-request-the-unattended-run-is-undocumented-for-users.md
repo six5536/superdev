@@ -40,10 +40,10 @@ change.
 
 ## Acceptance criteria
 
-1. [ubiquitous] THE SYSTEM SHALL describe the unattended run in the
+1. `AC_c1` [ubiquitous] THE SYSTEM SHALL describe the unattended run in the
    README: the driver skill, the run verbs, the Stop hook, the watchdog
    cap, and the do-nothing default without a run.
-2. [event] WHEN the README's command tour lists verbs THE SYSTEM SHALL
+2. `AC_c2` [event] WHEN the README's command tour lists verbs THE SYSTEM SHALL
    list `superdev run` and `superdev hook run` with the same brevity as
    their neighbours.
 

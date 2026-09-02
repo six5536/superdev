@@ -28,10 +28,10 @@ sweep will raise one false report per schema it edits.
 
 ## Steps to reproduce
 
-1. `git grep -c "knowledge/schemas/" .superdev/lock.toml` — one entry
+1. `RS_c1` `git grep -c "knowledge/schemas/" .superdev/lock.toml` — one entry
    (the schema written below), not 53.
-2. Edit any line of a schema under `pack/knowledge/schemas/`.
-3. `cargo run --quiet -- sync`
+2. `RS_c2` Edit any line of a schema under `pack/knowledge/schemas/`.
+3. `RS_c3` `cargo run --quiet -- sync`
 
 ## Expected behaviour
 

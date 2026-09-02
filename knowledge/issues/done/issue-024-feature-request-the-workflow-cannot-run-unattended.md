@@ -96,36 +96,36 @@ Failure behaviour:
 
 ## Acceptance criteria
 
-1. [event] WHEN `/frame` files a feature's issue THE SYSTEM SHALL have
+1. `AC_c1` [event] WHEN `/frame` files a feature's issue THE SYSTEM SHALL have
    created `feature/<slug>` off the default branch and SHALL commit the
    issue on it.
-2. [event] WHEN `/adhoc-plan` plans work that touches code THE SYSTEM
+2. `AC_c2` [event] WHEN `/adhoc-plan` plans work that touches code THE SYSTEM
    SHALL create `adhoc/<slug>` off the default branch.
-3. [event] WHEN `/contract-design` ends with the user's go-ahead THE
+3. `AC_c3` [event] WHEN `/contract-design` ends with the user's go-ahead THE
    SYSTEM SHALL commit the contract and decision-record edits before the
    unattended loop starts.
-4. [ubiquitous] THE SYSTEM SHALL record, for every slice in a feature
+4. `AC_c4` [ubiquitous] THE SYSTEM SHALL record, for every slice in a feature
    plan, the slices it depends on, and SHALL refuse a plan whose
    dependencies form a cycle.
-5. [state] WHILE a run is active and a slice's dependencies are all done
+5. `AC_c5` [state] WHILE a run is active and a slice's dependencies are all done
    THE SYSTEM SHALL carry that slice through build and integrate without a
    turn boundary stopping to ask.
-6. [event] WHEN integrate merges a slice THE SYSTEM SHALL commit the
+6. `AC_c6` [event] WHEN integrate merges a slice THE SYSTEM SHALL commit the
    changelog, knowledge and plan edits it made.
-7. [event] WHEN a gate returns to `/frame` or `/contract-design` THE
+7. `AC_c7` [event] WHEN a gate returns to `/frame` or `/contract-design` THE
    SYSTEM SHALL write the question into the plan's deferred decisions and
    continue with the next ready slice.
-8. [conditional] IF a slice fails its checks after two returns to build
+8. `AC_c8` [conditional] IF a slice fails its checks after two returns to build
    THE SYSTEM SHALL defer it and continue with the next ready slice.
-9. [event] WHEN no slice is ready THE SYSTEM SHALL end the run and put the
+9. `AC_c9` [event] WHEN no slice is ready THE SYSTEM SHALL end the run and put the
    plan's deferred decisions to the user in sequence.
-10. [ubiquitous] THE SYSTEM SHALL make no commit and no merge to the
+10. `AC_c10` [ubiquitous] THE SYSTEM SHALL make no commit and no merge to the
     default branch during a run.
-11. [event] WHEN a run is begun while another owns the working tree THE
+11. `AC_c11` [event] WHEN a run is begun while another owns the working tree THE
     SYSTEM SHALL refuse it, naming the owning session and how to clear it.
-12. [event] WHEN a run continues without a step forward THE SYSTEM SHALL
+12. `AC_c12` [event] WHEN a run continues without a step forward THE SYSTEM SHALL
     end it at a fixed cap of continues.
-13. [state] WHILE no run is active THE SYSTEM SHALL leave every session's
+13. `AC_c13` [state] WHILE no run is active THE SYSTEM SHALL leave every session's
     turn boundaries untouched.
 
 ## Alternatives considered

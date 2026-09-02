@@ -79,9 +79,17 @@ sections:
     level: 2
     required: true
     content: bullet-list
+    item-key: '^`(DD_[a-z][a-z0-9]*(?:-[a-z0-9]+)*)`'
     description: >
       Each bullet checkable by someone who did not do the work, and at
       least one of them a command with the result that counts as a pass.
+      Every bullet opens with its key in a code span, `DD_` then a slug
+      of lowercase words joined by hyphens, and no EARS tag (ADR-046).
+      The key is the item's identity, stable and unique within the
+      issue; an item keyed by the sweep carries the slug `c<n>`, `n` its
+      position counted from 1 (`DD_c1`). A citation is the bare key
+      where the issue is the subject — a plan case, a test of the work
+      — and the issue's id followed by the key elsewhere.
 
   - heading: "Comments"
     level: 2
@@ -117,7 +125,10 @@ example: |
 
   ## Definition of done
 
-  - `git grep -i legacy_cache` returns nothing outside the changelog.
-  - `cargo nextest run --workspace` passes with no test deleted.
-  - A repo synced from 0.2.0 loses the directory on its next `sync`.
+  - `DD_no-reference` `git grep -i legacy_cache` returns nothing outside
+    the changelog.
+  - `DD_tests-pass` `cargo nextest run --workspace` passes with no test
+    deleted.
+  - `DD_directory-removed` A repo synced from 0.2.0 loses the directory on
+    its next `sync`.
 ````

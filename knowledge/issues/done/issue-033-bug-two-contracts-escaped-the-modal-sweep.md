@@ -37,9 +37,9 @@ and 5 fail on the feature head.
 
 ## Steps to reproduce
 
-1. Run `grep -c -E 'MUST|SHALL|SHOULD|MAY ' ` over the nine active
+1. `RS_c1` Run `grep -c -E 'MUST|SHALL|SHOULD|MAY ' ` over the nine active
    contracts.
-2. Observe 002 and 003 at zero while the other seven carry keywords.
+2. `RS_c2` Observe 002 and 003 at zero while the other seven carry keywords.
 
 ## Expected behaviour
 

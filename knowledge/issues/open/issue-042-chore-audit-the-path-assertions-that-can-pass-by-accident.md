@@ -41,14 +41,14 @@ spelling can differ.
 
 ## Definition of done
 
-- TBD — the audit settles whether each of the 58 is exact, legitimately
+- `DD_c1` TBD — the audit settles whether each of the 58 is exact, legitimately
   a substring, or wrong; the count of each is the result.
-- TBD — whether a rule follows, such as asserting the whole message for
+- `DD_c2` TBD — whether a rule follows, such as asserting the whole message for
   a single-line diagnostic, and where it is written down.
-- TBD — whether the whole-file `#![cfg(unix)]` on `tests/manage.rs`
+- `DD_c3` TBD — whether the whole-file `#![cfg(unix)]` on `tests/manage.rs`
   hides Windows coverage worth having, which is a separate question the
   audit is well placed to answer.
-- TBD — the command that says it is finished.
+- `DD_c4` TBD — the command that says it is finished.
 
 ## Comments
 

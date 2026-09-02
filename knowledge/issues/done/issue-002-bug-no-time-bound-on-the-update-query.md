@@ -46,9 +46,9 @@ for minutes is neither.
 
 ## Steps to reproduce
 
-1. Put the machine behind a network that drops packets to `github.com`
+1. `RS_c1` Put the machine behind a network that drops packets to `github.com`
    silently rather than refusing them.
-2. Run `superdev update`.
+2. `RS_c2` Run `superdev update`.
 
 ## Expected behaviour
 

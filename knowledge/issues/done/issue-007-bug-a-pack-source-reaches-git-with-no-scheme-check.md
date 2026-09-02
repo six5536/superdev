@@ -93,14 +93,14 @@ makes merely *resolving* someone else's source execute their code.
 
 ## Steps to reproduce
 
-1. In a scratch repo, `superdev init`, then point the pack entry at the
+1. `RS_c1` In a scratch repo, `superdev init`, then point the pack entry at the
    default repository over an unauthenticated transport:
    ```toml
    [[packs]]
    source = "git://github.com/six5536/superdev"
    rev = "assets-v0.2.0"
    ```
-2. `superdev sync`
+2. `RS_c2` `superdev sync`
 
 `git_identity` discards the scheme, so this keys as the default pack — which
 means it *replaces* the embedded content rather than layering over it, and it

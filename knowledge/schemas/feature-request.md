@@ -89,19 +89,30 @@ sections:
     level: 2
     required: true
     content: numbered-list
-    item-pattern: '^\[(ubiquitous|event|state|conditional|optional|complex)\] |^TBD — '
+    item-key: '^`(AC_[a-z][a-z0-9]*(?:-[a-z0-9]+)*)`'
+    item-pattern: '^`AC_[a-z0-9-]+` (\[(ubiquitous|event|state|conditional|optional|complex)\] |TBD — )'
     description: >
       Numbered EARS sentences, one criterion each, every one opening
-      with its pattern tag — [ubiquitous], [event], [state],
-      [conditional], [optional] or [complex] — then the sentence in that
-      pattern: "[event] WHEN x THE SYSTEM SHALL y". The item-pattern
-      binds the opening tag (ADR-031). Each is checkable as
-      pass/fail without interpretation; the feature-plan's cases name
-      the numbers they cover, and accept walks them on the merged code.
-      A criterion not yet settled reads "TBD — <the open question>",
-      permitted only while the request's lifecycle is open; framing ends
-      when none remains — the pattern admits TBD, and the frame phase
-      is what retires it.
+      with its key in a code span — `AC_` then a slug of lowercase
+      words joined by hyphens — then its pattern tag — [ubiquitous],
+      [event], [state], [conditional], [optional] or [complex] — then
+      the sentence in that pattern: "`AC_json-report` [conditional] IF x
+      THE SYSTEM SHALL y". The item-key binds the key and the
+      item-pattern the key before the tag (ADR-046, ADR-047; the tag
+      alone was ADR-031). The key is the criterion's identity, stable
+      and unique within the issue: a rewording keeps it, a removed key
+      is not reused, and the number is the reading order. A criterion
+      keyed by the sweep carries the slug `c<n>`, `n` its number
+      (`AC_c11`), so a citation of the number stands; a criterion
+      written since takes a named slug. A citation is the bare key
+      where the issue is the subject — a plan case, a test of the
+      feature — and the issue's id followed by the key elsewhere. Each
+      is checkable as pass/fail without interpretation; the
+      feature-plan's cases name the keys they cover, and accept walks
+      them on the merged code. A criterion not yet settled reads
+      "`AC_<slug>` TBD — <the open question>", permitted only while the
+      request's lifecycle is open; framing ends when none remains — the
+      pattern admits TBD, and the frame phase is what retires it.
   - heading: "Alternatives considered"
     level: 2
     required: true
@@ -157,13 +168,13 @@ example: |
 
   ## Acceptance criteria
 
-  1. [conditional] IF `--json` is given THE SYSTEM SHALL emit the report
-     as one JSON object carrying the verdict, the counts, and one entry
-     per finding with its file, severity and message.
-  2. [ubiquitous] THE SYSTEM SHALL leave the text output byte-identical
-     when `--json` is absent.
-  3. [event] WHEN a finding is an error THE SYSTEM SHALL exit non-zero,
-     `--json` or not.
+  1. `AC_json-report` [conditional] IF `--json` is given THE SYSTEM SHALL
+     emit the report as one JSON object carrying the verdict, the counts,
+     and one entry per finding with its file, severity and message.
+  2. `AC_text-unchanged` [ubiquitous] THE SYSTEM SHALL leave the text
+     output byte-identical when `--json` is absent.
+  3. `AC_error-exit` [event] WHEN a finding is an error THE SYSTEM SHALL
+     exit non-zero, `--json` or not.
 
   ## Alternatives considered
 

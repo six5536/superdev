@@ -77,16 +77,16 @@ something in the tree that says the drift is known and owned.
 
 ## Definition of done
 
-- `cargo run -- status --drift` exits 0.
-- `superdev init` into an empty repository, then
+- `DD_c1` `cargo run -- status --drift` exits 0.
+- `DD_c2` `superdev init` into an empty repository, then
   `cargo run -- validate --knowledge <that repo>/knowledge`, exits 0 — the
   check that proves a managed repo starts life valid, which nothing
   performs today.
-- No file under `pack/` names AOKF, a conformance level, or a type outside
+- `DD_c3` No file under `pack/` names AOKF, a conformance level, or a type outside
   the schemas the pack ships.
-- `pack/knowledge/concepts/manifest.sokf.yaml` declares the version the
+- `DD_c4` `pack/knowledge/concepts/manifest.sokf.yaml` declares the version the
   binary enforces.
-- I016 and I020 are settled, or say what of them survives this work.
+- `DD_c5` I016 and I020 are settled, or say what of them survives this work.
 
 ## Comments
 

@@ -57,10 +57,10 @@ stale entries already in this repo's committed lock came from, under the old
 
 ## Steps to reproduce
 
-1. Append a line to `.claude/skills/verify/SKILL.md`.
-2. Copy it over `pack/knowledge/skills/verify/SKILL.md` — the backport.
-3. `superdev sync` — writes nothing, as it should.
-4. Compare the lock's hash for that path against the file's.
+1. `RS_c1` Append a line to `.claude/skills/verify/SKILL.md`.
+2. `RS_c2` Copy it over `pack/knowledge/skills/verify/SKILL.md` — the backport.
+3. `RS_c3` `superdev sync` — writes nothing, as it should.
+4. `RS_c4` Compare the lock's hash for that path against the file's.
 
 ## Expected behaviour
 

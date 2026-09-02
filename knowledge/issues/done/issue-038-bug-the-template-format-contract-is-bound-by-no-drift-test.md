@@ -44,12 +44,12 @@ repository implements.
 
 ## Steps to reproduce
 
-1. Add a sixth token to `crates/lib/superdev-core/src/templates.rs`
+1. `RS_c1` Add a sixth token to `crates/lib/superdev-core/src/templates.rs`
    beside `TOKEN_PASCAL`, and use it in `substitute`.
-2. Run `npm test`.
-3. Observe the suite passes with the contract still naming five tokens.
-4. Add a third template to `SHIPPED` in the same file.
-5. Run `npm test` again, and observe the suite passes with the contract
+2. `RS_c2` Run `npm test`.
+3. `RS_c3` Observe the suite passes with the contract still naming five tokens.
+4. `RS_c4` Add a third template to `SHIPPED` in the same file.
+5. `RS_c5` Run `npm test` again, and observe the suite passes with the contract
    still carrying two `### Template:` sections.
 
 ## Expected behaviour

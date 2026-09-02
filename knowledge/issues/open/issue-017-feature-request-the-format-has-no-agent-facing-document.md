@@ -45,10 +45,10 @@ cannot drift from the grammar it describes.
 
 ## Acceptance criteria
 
-1. [ubiquitous] THE SYSTEM SHALL ship an agent-facing description of
+1. `AC_c1` [ubiquitous] THE SYSTEM SHALL ship an agent-facing description of
    superdev-format beside its grammar, rendered from the grammar so the
    two cannot drift.
-2. [event] WHEN an agent is directed to write a skill or schema THE
+2. `AC_c2` [event] WHEN an agent is directed to write a skill or schema THE
    SYSTEM SHALL point it at that document first.
 
 ## Alternatives considered

@@ -47,10 +47,10 @@ comparison ignores a trailing full stop.
 
 ## Acceptance criteria
 
-1. [event] WHEN an index entry's text differs from the linked concept's
+1. `AC_c1` [event] WHEN an index entry's text differs from the linked concept's
    `description` THE SYSTEM SHALL warn, naming the index, the entry and
    the concept.
-2. [ubiquitous] THE SYSTEM SHALL compare case-insensitively on the first
+2. `AC_c2` [ubiquitous] THE SYSTEM SHALL compare case-insensitively on the first
    character and ignore a trailing full stop, matching the house style.
 
 ## Alternatives considered

@@ -50,11 +50,11 @@ reading; it does not cover a path the pack reaches by link.
 
 ## Steps to reproduce
 
-1. `printf 'SUPER-SECRET-KEY-abc123\n' > /tmp/secret.txt`
-2. Build a pack whose `pack/skills/leak/SKILL.md` is a symlink to
+1. `RS_c1` `printf 'SUPER-SECRET-KEY-abc123\n' > /tmp/secret.txt`
+2. `RS_c2` Build a pack whose `pack/skills/leak/SKILL.md` is a symlink to
    `/tmp/secret.txt`.
-3. Pin it in a scratch repo and `superdev sync`.
-4. `cat .claude/skills/leak/SKILL.md`
+3. `RS_c3` Pin it in a scratch repo and `superdev sync`.
+4. `RS_c4` `cat .claude/skills/leak/SKILL.md`
 
 ## Expected behaviour
 

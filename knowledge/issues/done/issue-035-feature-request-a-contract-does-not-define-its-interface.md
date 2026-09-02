@@ -85,43 +85,43 @@ about how it works inside. Once this is done:
 
 ## Acceptance criteria
 
-1. [ubiquitous] THE SYSTEM SHALL define, in each contract-kind schema, the
+1. `AC_c1` [ubiquitous] THE SYSTEM SHALL define, in each contract-kind schema, the
    structured block its kind must carry and what that block must
    enumerate.
-2. [event] WHEN a contract's structured block omits an element of the
+2. `AC_c2` [event] WHEN a contract's structured block omits an element of the
    surface it binds THE SYSTEM SHALL fail validate naming the contract
    and the missing element.
-3. [ubiquitous] THE SYSTEM SHALL demand a form and never a toolchain, so
+3. `AC_c3` [ubiquitous] THE SYSTEM SHALL demand a form and never a toolchain, so
    every declaration holds for a command line, a module or a served
    interface built on any framework.
-4. [event] WHEN the implemented interface and its contract disagree THE
+4. `AC_c4` [event] WHEN the implemented interface and its contract disagree THE
    SYSTEM SHALL fail a test naming the difference, for every contract
    whose interface this repository implements.
-5. [event] WHEN a command's exit code differs from the code its contract
+5. `AC_c5` [event] WHEN a command's exit code differs from the code its contract
    declares THE SYSTEM SHALL fail a test that runs the binary.
-6. [ubiquitous] THE SYSTEM SHALL define every command, flag, positional
+6. `AC_c6` [ubiquitous] THE SYSTEM SHALL define every command, flag, positional
    argument, exit code and stream of the superdev command line in the
    CLI contract.
-7. [ubiquitous] THE SYSTEM SHALL define every MCP tool's input schema and
+7. `AC_c7` [ubiquitous] THE SYSTEM SHALL define every MCP tool's input schema and
    result shape in the MCP contract.
-8. [ubiquitous] THE SYSTEM SHALL define every exported signature and type
+8. `AC_c8` [ubiquitous] THE SYSTEM SHALL define every exported signature and type
    an internal interface contract binds.
-9. [ubiquitous] THE SYSTEM SHALL govern a text format and a binary format
+9. `AC_c9` [ubiquitous] THE SYSTEM SHALL govern a text format and a binary format
    by a schema of its own, each demanding the shape its kind of file
    has, and refile every contract the split renames.
-10. [ubiquitous] THE SYSTEM SHALL validate the shipped knowledge and the
+10. `AC_c10` [ubiquitous] THE SYSTEM SHALL validate the shipped knowledge and the
     pack mirror clean with every new demand enforced.
-11. [ubiquitous] THE SYSTEM SHALL record the superseding of ADR-029 and
+11. `AC_c11` [ubiquitous] THE SYSTEM SHALL record the superseding of ADR-029 and
     document each new demand in the changelog.
-12. [event] WHEN a drift test fails THE SYSTEM SHALL name whether the
+12. `AC_c12` [event] WHEN a drift test fails THE SYSTEM SHALL name whether the
     element is a defect the implementation carries undeclared, or a
     promise the contract makes and the implementation has yet to keep.
-13. [ubiquitous] THE SYSTEM SHALL order a slice that closes a
+13. `AC_c13` [ubiquitous] THE SYSTEM SHALL order a slice that closes a
     contract-implementation gap before slices that do not.
-14. [event] WHEN a contract element marked pending is implemented THE
+14. `AC_c14` [event] WHEN a contract element marked pending is implemented THE
     SYSTEM SHALL fail its drift test, so the marker cannot outlive the
     work it names.
-15. [event] WHEN acceptance walks a contract still carrying a pending
+15. `AC_c15` [event] WHEN acceptance walks a contract still carrying a pending
     marker THE SYSTEM SHALL refuse it, naming the contract and the
     element.
 

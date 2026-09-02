@@ -79,9 +79,17 @@ sections:
     level: 2
     required: true
     content: numbered-list
+    item-key: '^`(RS_[a-z][a-z0-9]*(?:-[a-z0-9]+)*)`'
     description: >
       Numbered exact steps — commands verbatim so anyone can rerun
-      them.
+      them — every one opening with its key in a code span, `RS_` then
+      a slug of lowercase words joined by hyphens, and no EARS tag: a
+      step is not a requirement (ADR-046). The key is the step's
+      identity, stable and unique within the issue, and the number is
+      the reading order; a step keyed by the sweep carries the slug
+      `c<n>`, `n` its number (`RS_c2`). A citation is the bare key
+      where the issue is the subject — a plan case, a test of the fix
+      — and the issue's id followed by the key elsewhere.
   - heading: "Expected behaviour"
     level: 2
     required: true
@@ -149,9 +157,9 @@ example: |
 
   ## Steps to reproduce
 
-  1. Add a pack source larger than 50 MB to the manifest.
-  2. Run the pack sync command.
-  3. Wait about 30 seconds.
+  1. `RS_large-source` Add a pack source larger than 50 MB to the manifest.
+  2. `RS_sync` Run the pack sync command.
+  3. `RS_wait` Wait about 30 seconds.
 
   ## Expected behaviour
 

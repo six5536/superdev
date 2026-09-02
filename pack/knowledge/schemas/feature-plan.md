@@ -75,9 +75,10 @@ sections:
       Change: what this slice
       changes, and where; Done-check: the pass/fail check integrate runs
       against this slice; Cases: the slice's test cases, written inline,
-      one per line, each naming the acceptance criteria it covers
-      ("covers 1, 3") — when the framed issue is a bug, its numbered
-      repro steps and expected behaviour stand in for criteria numbers.
+      one per line, each naming the keys of the acceptance criteria it
+      covers, bare ("covers AC_c1, AC_stale-include") — when the framed
+      issue is a bug, its keyed repro steps (`RS_`) stand in for the
+      criteria, and a chore's done items (`DD_`) likewise.
       A case belongs to exactly one slice — an
       integration or e2e case to the slice that completes its boundary,
       which usually puts the heaviest cases last — and every acceptance
@@ -119,8 +120,8 @@ example: |
     https source resolves as before.
   - Cases:
     - unit: a git:// source is refused at parse, naming the source —
-      covers 1.
-    - unit: an https source resolves as before — covers 2.
+      covers AC_c1.
+    - unit: an https source resolves as before — covers AC_c2.
 
   ### Slice 2: Refusal message
 
@@ -130,5 +131,5 @@ example: |
   - Done-check: the e2e run shows the refusal naming the source.
   - Cases:
     - e2e: `superdev sync` against a git:// manifest prints the refusal
-      with the source named — covers 1, 3.
+      with the source named — covers AC_c1, AC_c3.
 ````

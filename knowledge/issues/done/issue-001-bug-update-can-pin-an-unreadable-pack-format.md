@@ -52,9 +52,9 @@ cut, which is exactly when it would hit everyone at once.
 
 Not reproducible against a real release yet; the mechanism is:
 
-1. Cut `assets-v2.0.0` whose `pack/pack.toml` declares `format = 2`.
-2. On a binary whose `SUPPORTED_FORMATS` is `&[1]`, run `superdev update`.
-3. Run `superdev sync`, then `superdev update` again.
+1. `RS_c1` Cut `assets-v2.0.0` whose `pack/pack.toml` declares `format = 2`.
+2. `RS_c2` On a binary whose `SUPPORTED_FORMATS` is `&[1]`, run `superdev update`.
+3. `RS_c3` Run `superdev sync`, then `superdev update` again.
 
 ## Expected behaviour
 

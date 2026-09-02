@@ -42,10 +42,10 @@ the reader works the direction out from the diff.
 
 ## Steps to reproduce
 
-1. Add a flag to `superdev validate`'s `flags:` block in
+1. `RS_c1` Add a flag to `superdev validate`'s `flags:` block in
    [contract-002][sokf:contract-002-cli-superdev] that the binary does
    not offer.
-2. Run `cargo nextest run -E 'test(cli_surface_matches_the_contract)'`.
+2. `RS_c2` Run `cargo nextest run -E 'test(cli_surface_matches_the_contract)'`.
 
 ## Expected behaviour
 

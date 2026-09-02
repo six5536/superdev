@@ -24,13 +24,13 @@ existing reaches no user.
 
 ## Steps to reproduce
 
-1. `superdev init` in an empty git repository.
-2. `ls knowledge/schemas/` — no such directory.
-3. `ls knowledge/templates/*.md | wc -l` — 43.
-4. Break a starter concept: change `# Overview` to `## Overview` in
+1. `RS_c1` `superdev init` in an empty git repository.
+2. `RS_c2` `ls knowledge/schemas/` — no such directory.
+3. `RS_c3` `ls knowledge/templates/*.md | wc -l` — 43.
+4. `RS_c4` Break a starter concept: change `# Overview` to `## Overview` in
    `knowledge/architecture.md`, which `schema-architecture` requires at
    level 1.
-5. `superdev validate`.
+5. `RS_c5` `superdev validate`.
 
 ## Expected behaviour
 

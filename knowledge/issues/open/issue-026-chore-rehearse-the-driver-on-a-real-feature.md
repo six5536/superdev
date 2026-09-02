@@ -33,13 +33,13 @@ the deferred decisions put in sequence) stand unexecuted.
 
 ## Definition of done
 
-- One real feature's plan runs through the driver: every ready slice
+- `DD_c1` One real feature's plan runs through the driver: every ready slice
   built and integrated with no turn boundary stopping to ask, on the
   feature's branch, with the records committed at each integrate.
-- A deferral path is observed — a genuine user gate, or a deliberately
+- `DD_c2` A deferral path is observed — a genuine user gate, or a deliberately
   planted one — and the run ends by putting the queue to the user.
-- The default branch shows nothing from the run.
-- Findings are folded into the skill and this issue is refiled done with
+- `DD_c3` The default branch shows nothing from the run.
+- `DD_c4` Findings are folded into the skill and this issue is refiled done with
   the outcome.
 
 ## Comments
