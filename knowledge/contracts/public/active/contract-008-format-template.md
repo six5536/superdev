@@ -170,8 +170,10 @@ scaffold, template or not, so no template ships one.
 Each token spelling exists because a target language forbids the slug
 itself in that position; the derivations live on `Tokens`, so
 `substitute` and `template render`'s printout share one source of
-truth. There are no user-defined variables, and a name that yields an
-empty slug MUST fall back to `project`.
+truth. The slug is the name lowercased with every run of characters
+outside `[a-z0-9]` collapsed to one `-`, never leading or trailing.
+There are no user-defined variables, and a name that yields an empty
+slug MUST fall back to `project`.
 
 The shipped set:
 
