@@ -130,7 +130,7 @@ named the pack as the grammar's source.
 
 ### Slice 3: A schema declares variants
 
-- [ ] Done — ticked by integrate at merge.
+- [x] Done — ticked by integrate at merge.
 - Depends-on: none.
 - Change: `DocSchema` gains `variant-key`; `SectionRule`, the
   frontmatter rule and a prohibited entry gain `variants`; `example`

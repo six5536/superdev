@@ -67,7 +67,9 @@ frontmatter:
     description: <guidance>  # prose, unchecked
 
 sections-ordered: true       # first appearances follow declaration order
-sections-prohibited: [<heading>]
+sections-prohibited:         # a bare heading, or one banned in some variants
+  - <heading>
+  - {heading: <heading>, variants: [<v1>]}
 sections:
   - heading: '<literal>'     # or heading-pattern: '<re>'
     level: <int>             # omitted: any depth
@@ -129,13 +131,16 @@ pub fn check_documents(docs: &[Document<'_>], set: &SchemaSet) -> Vec<Finding>;
   is its own: its lines are dropped, and the item above it resumes at the
   first line no deeper than the nested marker. A marker of the other list
   kind opens no item, and a thematic break is not a marker.
-- **Variants** — PENDING (I049): `variant-key` names the frontmatter key
-  whose value selects a variant; any rule carrying `variants` applies
-  only to the values it lists, and a rule without it to all; a document
-  is checked against the rules its value selects, in declared order
-  (ADR-045). With `variant-key` set, `example` is a map keyed by value,
-  every enum value present, each checked against the base and its own
-  variant's rules, its value equal to its key.
+- **Variants** — `variant-key` names the frontmatter key whose value
+  selects a variant; any rule carrying `variants` applies only to the
+  values it lists, and a rule without it to all; a document is checked
+  against the rules its value selects, in declared order (ADR-045). A
+  document whose value is absent, or outside the key's enum, sees the
+  untagged rules alone, and the frontmatter check reports the value.
+  With `variant-key` set, `example` is a map keyed by value, every enum
+  value present, each checked against the base and its own variant's
+  rules, its value equal to its key; its findings carry the key,
+  `example `<value>`:`.
 - **The definition is not parsed** — the `include` kind asks only that
   an include block naming a source path is present; what the block
   carries is the SOKF validator's to keep current (ADR-041) and no
@@ -145,10 +150,12 @@ pub fn check_documents(docs: &[Document<'_>], set: &SchemaSet) -> Vec<Finding>;
 - **A mis-declared schema is its own finding** — a `content` outside
   the six kinds, a `pattern` that does not compile, an `item-pattern`
   on a section whose `content` is not a list kind, a withdrawn
-  `block-*` declaration, or — PENDING (I049) — a `variants` tag naming
-  a value outside the discriminator's enum, a tag with no
-  `variant-key`, or a variant with no example: reported against the
-  schema file, and the unreadable rule binds nothing.
+  `block-*` declaration, a `variants` tag naming a value outside the
+  discriminator's enum, a tag with no `variant-key`, a `variant-key`
+  naming a frontmatter key with no enum, or an `example` of the wrong
+  shape — one document under a `variant-key`, a map without one, a
+  variant with no example, a key the enum does not carry: reported
+  against the schema file, and the unreadable rule binds nothing.
 - **The example is checked in place** — the `example:` block is read as
   a document and run through this same check with the declaring schema
   handed to it, no dispatch; every failure, including an example that
@@ -177,9 +184,10 @@ pub fn check_documents(docs: &[Document<'_>], set: &SchemaSet) -> Vec<Finding>;
   sections (presence, order, prohibition, columns, line limit) →
   content kinds → body patterns → frontmatter contract → findings
   grouped per file, one verdict.
-- example check: parse each schema's `example:` block as a document →
-  run the document check with the declaring schema → check link form →
-  findings land on the schema file, in the same run and verdict.
+- example check: parse each schema's `example:` block as a document, one
+  per variant where the schema declares them → run the document check
+  with the declaring schema → check link form → findings land on the
+  schema file, in the same run and verdict.
 
 ## Cross-cutting concerns
 
