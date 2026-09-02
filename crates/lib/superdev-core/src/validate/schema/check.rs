@@ -1346,6 +1346,34 @@ mod schema_parity {
         parity("schema-sections", "schemas/thing.md");
     }
 
+    /// Covers I049 criterion 7: the withdrawn `block-language`, `block-keys`
+    /// and `block-entry-keys` are keys the grammar no longer declares, so a
+    /// schema still carrying one is reported on the schema file, by name.
+    #[test]
+    fn a_withdrawn_block_declaration_is_an_unknown_key_on_the_schema() {
+        let clean = fixtures().join("clean/schemas/thing.md");
+        let text = std::fs::read_to_string(&clean).unwrap();
+        for key in [
+            "block-language: yaml",
+            "block-keys: [a]",
+            "block-entry-keys: [a]",
+        ] {
+            let declared = text.replace(
+                "    content: prose\n",
+                &format!("    content: prose\n    {key}\n"),
+            );
+            assert_ne!(declared, text, "the fixture carries the line to extend");
+            let mut errs = Vec::new();
+            check_schema(&clean, &declared, &mut errs, &grammar());
+            let name = key.split(':').next().unwrap();
+            assert_eq!(errs.len(), 1, "{key}: {errs:?}");
+            assert!(
+                errs[0].contains(&format!("unknown key \"{name}\"")),
+                "{key}: {errs:?}"
+            );
+        }
+    }
+
     /// The schemas that ship all pass, which is the check the live tree
     /// depends on and the widest input the port has. Fragments live one
     /// directory down and are documents, not schemas; the flat read skips

@@ -84,8 +84,6 @@ sections:
     level: 2
     required: true
     content: code
-    block-language: yaml
-    block-entry-keys: [about, args, flags, exit]
     description: >
       The definition of the command line, keyed by the path a user types
       ("widget", "widget build"). One entry per command the binary offers,

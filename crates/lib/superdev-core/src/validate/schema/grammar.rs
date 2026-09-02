@@ -788,11 +788,12 @@ mod tests {
         assert_eq!(any.spell(), "bullet-list or numbered-list");
     }
 
-    /// The languages the grammar admits for a definition block are the ones
-    /// the document check can parse. They live in two files, so a third
-    /// added to one and not the other would accept a block nothing reads.
+    /// The content kinds the grammar admits on a section are the ones the
+    /// document check reads. They live in two files, so a kind added to one
+    /// and not the other would either be refused on every schema or accepted
+    /// and bind nothing.
     #[test]
-    fn the_grammars_block_languages_are_the_ones_the_validator_reads() {
+    fn the_grammars_content_kinds_are_the_ones_the_document_check_reads() {
         let g: Grammar = serde_yaml_ng::from_str(&live()).expect("the grammar parses");
         let declared = g
             .kinds
@@ -800,22 +801,13 @@ mod tests {
             .document
             .section
             .keys
-            .get("block-language")
-            .expect("the grammar declares block-language");
-        let mut from_grammar: Vec<String> = declared
-            .r#enum
-            .iter()
-            .filter_map(|v| v.as_str().map(ToString::to_string))
-            .collect();
-        from_grammar.sort();
-        let mut from_code: Vec<String> = crate::validate::schema::document::BLOCK_LANGUAGES
-            .iter()
-            .map(ToString::to_string)
-            .collect();
-        from_code.sort();
+            .get("content")
+            .expect("the grammar declares content");
+        let from_grammar: Vec<&str> = declared.r#enum.iter().filter_map(|v| v.as_str()).collect();
         assert_eq!(
-            from_grammar, from_code,
-            "the grammar admits languages the document check does not read"
+            from_grammar,
+            crate::validate::schema::document::CONTENT_KINDS,
+            "the grammar's content enum and the document check's kinds differ"
         );
     }
 }

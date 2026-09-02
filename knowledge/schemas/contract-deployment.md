@@ -98,8 +98,6 @@ sections:
     level: 2
     required: true
     content: code
-    block-language: yaml
-    block-keys: [ports, user, writable, resources, depends-on]
     description: >
       The definition of what the artifact needs to run: `ports` as a map of
       port to purpose, `user` the uid it runs as, `writable` the paths it must
