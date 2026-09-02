@@ -88,7 +88,7 @@ edited beside it.
 
 ### Slice 2: The tracker schemas vary by lifecycle, and the issues on file are swept
 
-- [ ] Done — ticked by integrate at merge.
+- [x] Done — ticked by integrate at merge.
 - Depends-on: 1.
 - Change: `pack/knowledge/schemas/feature-request.md`, `bug-report.md`
   and `chore.md`, synced — `lifecycle` enum `[unframed, framed, done,
@@ -101,8 +101,9 @@ edited beside it.
   becomes `numbered-list` in every state; the prose of each schema
   says the two states and what framing adds; one example per state,
   four per schema. The sweep: every `knowledge/issues/open/*.md` takes
-  `lifecycle: framed`, or `unframed` where a `TBD` item remains (I030,
-  I042), and `superdev validate --fix` refiles them into
+  `lifecycle: framed`, or `unframed` where a `TBD` item remains (I042;
+  I030 was framed on 2026-09-02 and keeps no `TBD`), and `superdev
+  validate --fix` refiles them into
   `issues/framed/` and `issues/unframed/`; every bug report whose
   Expected behaviour is prose has each paragraph rewritten as one
   numbered item `` `EX_c<n>` [ubiquitous] <the paragraph> `` by a
@@ -134,9 +135,11 @@ edited beside it.
   - integration: each schema's four examples pass its own check —
     covers AC_one-schema-per-kind.
   - integration: every issue on file sits in a folder named by its
-    `lifecycle`, I030 and I042 under `unframed/`, and every bug
-    report's Expected behaviour is a keyed tagged numbered list whose
-    words equal the paragraphs at `6bee067` — covers AC_sweep.
+    `lifecycle`, I042 under `unframed/` and I030 under `framed/`, and
+    every bug report's Expected behaviour is a keyed tagged numbered
+    list whose words equal the paragraphs at `6bee067` — the test
+    checks the form, and the sweep script checked the words against
+    `6bee067` — covers AC_sweep.
 
 ### Slice 3: `/file` and the workflow entry
 
