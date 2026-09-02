@@ -479,7 +479,11 @@ fn no_test_compares_a_fenced_block_of_an_included_contract_to_the_binary() {
         if path.ends_with("normative_shapes.rs") {
             continue;
         }
-        let text = std::fs::read_to_string(&path).unwrap_or_default();
+        // A Windows checkout carries CRLF, on which the LF-only split below
+        // would read the whole file as one item.
+        let text = std::fs::read_to_string(&path)
+            .unwrap_or_default()
+            .replace("\r\n", "\n");
         // One chunk per top-level item: each ends at a `}` in column 0, and
         // carries the doc comment, attributes and constants written before
         // the item.
