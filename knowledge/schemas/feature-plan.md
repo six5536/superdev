@@ -59,7 +59,7 @@ sections:
       by risk: every slice after the slices it depends on; a slice that
       closes a contract-implementation gap before the slices that do
       not, so a contract's promise is not left failing the slices that
-      do not own it (ADR-038); and the riskiest early among what is
+      do not own it (ADR-044); and the riskiest early among what is
       left. A dependency cycle is an error the planner refuses.
   - heading-pattern: '^Slice \d+: .+$'
     level: 3

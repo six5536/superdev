@@ -59,4 +59,4 @@ workflow.
 [sokf:plan-021-feature-contracts-define-their-interface]: /knowledge/plans/done/plan-021-feature-contracts-define-their-interface.md
 [sokf:plan-022-feature-decidable-findings-are-errors]: /knowledge/plans/done/plan-022-feature-decidable-findings-are-errors.md
 [sokf:plan-023-feature-warnings-are-counted-not-listed]: /knowledge/plans/done/plan-023-feature-warnings-are-counted-not-listed.md
-[sokf:plan-024-feature-a-contract-includes-its-definition]: /knowledge/plans/open/plan-024-feature-a-contract-includes-its-definition.md
+[sokf:plan-024-feature-a-contract-includes-its-definition]: /knowledge/plans/done/plan-024-feature-a-contract-includes-its-definition.md

@@ -12,6 +12,7 @@ provider = "superdev-skills"
 version = "0.2.0"
 
 [files]
+".agents/sokf/SPEC.md" = "f0a49f468a6e5258192458bdfa63f32341f045314d48df6b9a96d8cbd1258631"
 ".agents/sokf/grammar.yaml" = "2ba3f495856a977d20ac58988774e293ed54123b0c8eccecb638b5a92fc1980e"
 ".agents/superdev.md" = "10d47bc97ce10329a014efb5b21d445db738d89d97152a7f1fe7d44b7c73515e"
 ".claude/settings.json:hooks.Stop[superdev hook run]" = "90becaf44d7c615e483c091a102ff928047271bf3b3b72bfe2d1a77ec7fb9625"
@@ -42,4 +43,4 @@ version = "0.2.0"
 ".mcp.json:mcpServers.codegraph" = "e0b059437b618fb326f87d47078490f74cd2459e45fc2b8414fe211dc023f45d"
 ".mise.toml:http:codegraph" = "e4be6ff16fe91dc165523e8762aa56b0ec9f99e244e396006499017dcf0a3377"
 "knowledge/schemas/contract.md" = "bf93a41422f55f6e30f54e7085028a875d913e4ebbc528d7f3d51e39f2b2478f"
-"knowledge/schemas/feature-plan.md" = "12f2cc109b48fd8d9ee539a5f63d2f7e9a0daafd04ad0935cda624fdf5e1a6c3"
+"knowledge/schemas/feature-plan.md" = "99352157e7df12cd6eb8277054c7bb21073e5f44675cae354a8dfab38ddd2655"

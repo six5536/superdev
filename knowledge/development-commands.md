@@ -25,9 +25,11 @@ What the annotated list does not say:
   different verdicts. `cargo run -- sokf index` forces a full index rebuild, which
   nothing routine needs: the MCP server syncs lazily on every call.
 - `cargo run -- validate --fix` is the same check with its repairs applied
-  first: a link naming a concept by path becomes the id form, and every
-  `<!-- sokf:links -->` block is regenerated. Run it before committing a
-  knowledge change. It is not what CI runs, and not what the hook runs —
+  first: a link naming a concept by path becomes the id form, every
+  `<!-- sokf:links -->` block is regenerated, and every include block is
+  materialised — a concept's body, or the source region a `/`-rooted
+  path names, so a contract's Definition follows the code it includes.
+  Run it before committing a knowledge change. It is not what CI runs, and not what the hook runs —
   a gate that repairs what it is measuring reports on a repository nobody
   wrote.
 - `npm run check:blueprint` is `cargo run --quiet -- status` — the
