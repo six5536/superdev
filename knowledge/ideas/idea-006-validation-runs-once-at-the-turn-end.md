@@ -21,22 +21,28 @@ is most visible in exactly the turns that do the most writing — framing an
 issue, cutting a plan, filing a set of ADRs and relinking the indexes that name
 them.
 
-The `Stop` hook already covers the same ground. `P_hooks-share-validate-default`
-holds both hooks to what `validate` reports by default, and
-`P_hook-run-holds-on-error` refuses to end the turn while `validate` reports an
-error. The turn is already the gate; the per-edit run mostly reports the same
-findings earlier and slower.
+The `Stop` hook already covers the same ground, on every turn.
+`P_hooks-share-validate-default` holds both hooks to what `validate` reports by
+default, and `P_hook-run-holds-on-error` refuses to end the turn while
+`validate` reports an error. That gate does not depend on an unattended run:
+`hook_run_on` calls `knowledge_hold` before it reads the run state, "whether or
+not a run is armed" (`crates/app/superdev/src/run.rs:259`). The turn is already
+the gate; the per-edit run mostly reports the same findings earlier and slower.
 
 ## Sketch
 
-`.claude/settings.json` drops its `PostToolUse` entry and keeps `Stop`. The
-`hook validate` subcommand stays in the CLI and stays contracted — it is still
-the right hook for a project that wants per-edit enforcement — so this is a
-change to what superdev writes into a managed repository's settings, not a
-removal from the binary.
+The SOKF component owns both registrations, each found by its command string
+and locked under `.claude/settings.json:hooks.<array>[<marker>]`. Dropping the
+per-edit hook means dropping `HOOK_POINTER`, `HOOK_MARKER` and `HOOK_ELEMENT`
+from `crates/lib/superdev-core/src/components/sokf.rs`, leaving the `STOP_`
+trio, and retiring the lock key so an existing repo's entry is swept rather
+than left orphaned. Editing `.claude/settings.json` by hand does nothing
+durable: the managed element is restored on the next apply, and the edit is
+reported as drift first.
 
-Whatever writes that settings block chooses the default, and the choice belongs
-beside the other merge decisions in [configuration][sokf:configuration].
+The `hook validate` subcommand stays in the CLI and stays contracted — it is
+still the right hook for a project that wants per-edit enforcement — so this
+changes what superdev installs, not what the binary can do.
 
 ## Trade-offs
 
@@ -67,6 +73,3 @@ beside the other merge decisions in [configuration][sokf:configuration].
 Measure `superdev hook validate` on this repository: wall time for one edit,
 split between startup and check. The number decides whether this is a hook
 placement question or a validator performance one.
-
-<!-- sokf:links -->
-[sokf:configuration]: /knowledge/configuration.md
