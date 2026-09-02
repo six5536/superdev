@@ -72,7 +72,7 @@ pub struct SectionRule {
     /// Whether it may appear more than once.
     #[serde(default)]
     pub repeatable: bool,
-    /// The shape of what sits under the heading, one of [`CONTENT_KINDS`].
+    /// The shape of what sits under the heading, one of `CONTENT_KINDS`.
     #[serde(default)]
     pub content: Option<String>,
     /// A table's columns, in order.

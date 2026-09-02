@@ -47,7 +47,7 @@ pub struct SectionRule {
     /// Whether it may appear more than once.
     #[serde(default)]
     pub repeatable: bool,
-    /// The shape of what sits under the heading, one of [`CONTENT_KINDS`].
+    /// The shape of what sits under the heading, one of `CONTENT_KINDS`.
     #[serde(default)]
     pub content: Option<String>,
     /// A table's columns, in order.
@@ -552,7 +552,7 @@ pub fn check_variants(schemas: &[(String, String)]) -> Vec<Finding> {
 ///
 /// With `variant-key` set the example is a map keyed by variant value, every
 /// enum value present, and each is checked against the base rules and its
-/// own variant's, prefixed `example `<value>`:`; an example whose
+/// own variant's, prefixed `example <value>:`; an example whose
 /// discriminator differs from its key, a key the enum does not carry, a
 /// value with no example, and an example of the other form — one document
 /// under a `variant-key`, a map without one — are each a finding (ADR-045).

@@ -2704,8 +2704,18 @@ fn contract_drift_in_scratch(contract: &str, include: &str, from: &str, to: &str
     let source = repo
         .path()
         .join(include.split('#').next().unwrap().trim_start_matches('/'));
-    let edited = std::fs::read_to_string(&source).unwrap().replace(from, to);
-    assert!(edited.contains(to), "the source was edited");
+    // A Windows checkout carries the source with CRLF; the edit follows
+    // the file's own line ending.
+    let text = std::fs::read_to_string(&source).unwrap();
+    let (from, to) = if text.contains("\r\n") {
+        (from.replace('\n', "\r\n"), to.replace('\n', "\r\n"))
+    } else {
+        (from.to_string(), to.to_string())
+    };
+    let edited = text.replace(&from, &to);
+    assert!(edited.contains(&to), "the source was edited");
+    let to = to.replace("\r\n", "\n");
+    let read = |path: &Path| std::fs::read_to_string(path).unwrap().replace("\r\n", "\n");
     std::fs::write(&source, edited).unwrap();
 
     let out = superdev()
@@ -2720,7 +2730,7 @@ fn contract_drift_in_scratch(contract: &str, include: &str, from: &str, to: &str
     );
     assert!(stdout.contains(&stale), "{stdout}");
     assert!(
-        !std::fs::read_to_string(&contract).unwrap().contains(to),
+        !read(&contract).contains(&to),
         "validate without --fix wrote the contract"
     );
 
@@ -2729,8 +2739,8 @@ fn contract_drift_in_scratch(contract: &str, include: &str, from: &str, to: &str
         .args(["validate", "--fix"])
         .assert()
         .success();
-    let text = std::fs::read_to_string(&contract).unwrap();
-    assert!(text.contains(to), "{text}");
+    let text = read(&contract);
+    assert!(text.contains(&to), "{text}");
     ScratchRun {
         includes,
         definition,
