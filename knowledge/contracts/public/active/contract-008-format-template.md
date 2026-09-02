@@ -149,99 +149,130 @@ reader who wants the file list opens that directory. On disk the
 assets mirror the seeded repo except for three manglings the target
 paths restore: a leading dot is stripped, a tokenised path segment is
 written `_slug_`, `_pascal_` or `_compact_`, and a `Cargo.toml` is
-stored as `Cargo.toml.tpl`. A template MUST be UTF-8 text throughout; a
-binary file cannot be seeded, so the template's docs MUST say how the
-seeded repo bootstraps it.
+stored as `Cargo.toml.tpl`. A binary file cannot be seeded.
+
+- `P_utf8-throughout` [ubiquitous] A template SHALL be UTF-8 text
+  throughout.
+- `P_docs-say-bootstrap` [conditional] IF a seeded repo needs a binary
+  file, the template's docs SHALL say how the seeded repo bootstraps
+  it.
 
 A template is identified by its `name`, which `--template` and the
 selection prompt take; a name is `<platforms>-<stack>`, so a variant
-gets its own name rather than a flag. Seeding (`init --template`, or
+gets its own name rather than a flag. Seeding is `init --template`, or
 the prompt the [CLI contract][sokf:contract-002-cli-superdev]
-describes) MUST write the tree into the target repository with the
-five tokens substituted in file contents and in target paths, so
-`crates/app/{{superdev:project-slug}}/` lands renamed. From that
-moment every seeded file is the user's, and the user is authoritative:
-the engine MUST NOT hash, sync or revisit one. A template MUST stay
-disjoint from capability files, and the canonical knowledge is a
-reserved path that belongs to the knowledge component: every
-knowledge-enabled repo gets the concept skeleton from that component's
-scaffold, template or not, so no template ships one.
+describes. From the moment of seeding every seeded file is the user's,
+and the user is authoritative. The canonical knowledge is a reserved
+path that belongs to the knowledge component: every knowledge-enabled
+repo gets the concept skeleton from that component's scaffold, template
+or not, so no template ships one.
+
+- `P_seed-writes-tree-substituted` [event] WHEN seeding runs, seeding
+  SHALL write the tree into the target repository with the five tokens
+  substituted in file contents and in target paths, so
+  `crates/app/{{superdev:project-slug}}/` lands renamed.
+- `P_seeded-file-write-once` [ubiquitous] The engine SHALL NOT hash,
+  sync or revisit a seeded file.
+- `P_disjoint-from-capabilities` [ubiquitous] A template SHALL stay
+  disjoint from capability files.
 
 Each token spelling exists because a target language forbids the slug
 itself in that position; the derivations live on `Tokens`, so
 `substitute` and `template render`'s printout share one source of
 truth. The slug is the name lowercased with every run of characters
 outside `[a-z0-9]` collapsed to one `-`, never leading or trailing.
-There are no user-defined variables, and a name that yields an empty
-slug MUST fall back to `project`.
+There are no user-defined variables.
+
+- `P_empty-slug-falls-back` [event] WHEN a name yields an empty slug,
+  the slug SHALL fall back to `project`.
 
 The shipped set:
 
-- `rust-npm` — a Rust CLI workspace deployed as prebuilt binaries
-  through npm, derived from this repo's shape.[^rust-npm-src] The
-  Cargo workspace with app and lib crate stubs, the `packages/` npm
-  launcher, a thin `ci.yml` calling a reusable `checks.yml`, audit, and
-  the tag-driven release pipeline with its scripts and smokes; crates
-  are `publish = false` and the pipeline publishes npm only. The stub
-  binary honours the exit-code contract the smokes assert: a usage
-  error exits 2. The LICENSE ships proprietary with no year, for the
-  user to replace. The dev container is built for a superdev-managed
-  repo: mise owns the tool versions in a seeded `mise.toml`, Rust is
-  pinned twice by necessity — `rust-toolchain.toml` for CI and rustup,
-  mise's `RUSTUP_TOOLCHAIN` export — and named volumes carry the slug
-  token so two seeded projects never share one `target/`.
-- `web-react-android-ios-native` — one product as three native
-  codebases, backported from a real three-platform project.[^web-src]
-  Three hello-world app stubs that pass CI as shipped (`apps/web`,
-  `apps/android-native`, `apps/ios-native`); a debug-build-only HTTP
-  debug server per platform with an MCP server wrapping its API and
-  `scripts/` for the build/install/launch/logs/screenshot loop; a
-  fastlane release pipeline keyed off `release/release.yaml`, the one
-  place a version or app id is written; the same CI shape as
-  `rust-npm`; and an Android-capable dev container. Two artefacts are
-  bootstrapped rather than seeded, as the template's `docs/BUILD.md`
-  says: the Gradle wrapper jar and the Xcode project `xcodegen`
-  generates from the committed `project.yml`. CI is green before either
-  bootstrap runs.
+1. `rust-npm` — a Rust CLI workspace deployed as prebuilt binaries
+   through npm, derived from this repo's shape.[^rust-npm-src] The
+   Cargo workspace with app and lib crate stubs, the `packages/` npm
+   launcher, a thin `ci.yml` calling a reusable `checks.yml`, audit,
+   and the tag-driven release pipeline with its scripts and smokes;
+   crates are `publish = false` and the pipeline publishes npm only.
+   The stub binary honours the exit-code contract the smokes assert: a
+   usage error exits 2. The LICENSE ships proprietary with no year, for
+   the user to replace. The dev container is built for a
+   superdev-managed repo: mise owns the tool versions in a seeded
+   `mise.toml`, Rust is pinned twice by necessity —
+   `rust-toolchain.toml` for CI and rustup, mise's `RUSTUP_TOOLCHAIN`
+   export — and named volumes carry the slug token so two seeded
+   projects never share one `target/`.
+2. `web-react-android-ios-native` — one product as three native
+   codebases, backported from a real three-platform project.[^web-src]
+   Three hello-world app stubs that pass CI as shipped (`apps/web`,
+   `apps/android-native`, `apps/ios-native`); a debug-build-only HTTP
+   debug server per platform with an MCP server wrapping its API and
+   `scripts/` for the build/install/launch/logs/screenshot loop; a
+   fastlane release pipeline keyed off `release/release.yaml`, the one
+   place a version or app id is written; the same CI shape as
+   `rust-npm`; and an Android-capable dev container. Two artefacts are
+   bootstrapped rather than seeded, as the template's `docs/BUILD.md`
+   says: the Gradle wrapper jar and the Xcode project `xcodegen`
+   generates from the committed `project.yml`. CI is green before
+   either bootstrap runs.
 
 ### Unknown content
 
-Substitution is exact-match on the five tokens: anything else MUST
-pass through untouched, including GitHub Actions' `${{ … }}`, which
-template CI files legitimately contain, and a near-miss such as
-`{{superdev:project}}`. A template name outside the shipped set MUST
-fail naming the shipped set. Seeding MUST NOT overwrite: an existing
-file wins and is reported as kept, so re-running `init` in a populated
-repo is safe, and a file the template does not name MUST be left as it
-is. `template render` MUST refuse a directory that is not empty.
+Substitution is exact-match on the five tokens.
+
+- `P_non-token-passes-through` [ubiquitous] Substitution SHALL pass
+  through untouched anything that is not one of the five tokens,
+  including GitHub Actions' `${{ … }}`, which template CI files
+  legitimately contain, and a near-miss such as
+  `{{superdev:project}}`.
+- `P_unknown-name-fails` [event] WHEN a template name is outside the
+  shipped set, the engine SHALL fail naming the shipped set.
+- `P_existing-file-kept` [event] WHEN a file the template names
+  already exists, seeding SHALL NOT overwrite it: the existing file
+  wins and is reported as kept, so re-running `init` in a populated
+  repo is safe.
+- `P_unnamed-file-untouched` [ubiquitous] Seeding SHALL leave a file
+  the template does not name as it is.
+- `P_render-needs-empty-dir` [event] WHEN `template render` is given a
+  directory that is not empty, `template render` SHALL refuse it.
 
 ### Compatibility
 
 A seeded repo keeps working whatever the binary later ships: the
-engine MUST NOT revisit a seeded file, so a template change reaches an
-existing repo only through the `template-update` skill. `Action::WriteFile`
-sets no mode, so nothing seeded is executable and every script is
-invoked through an interpreter; a file that needs its executable bit
-(`gradlew`) says so in the template's docs. The manifest's `[template]`
-table carries an optional `version`; a manifest from before the field
-MUST parse unchanged.
+engine never revisits a seeded file (`P_seeded-file-write-once`), so a
+template change reaches an existing repo only through the
+`template-update` skill. `Action::WriteFile` sets no mode, so nothing
+seeded is executable and every script is invoked through an
+interpreter; a file that needs its executable bit (`gradlew`) says so
+in the template's docs. The manifest's `[template]` table carries an
+optional `version`.
+
+- `P_pre-version-manifest-parses` [event] WHEN a manifest predates
+  the `version` field, `parse` SHALL parse it unchanged.
 
 ## Stability
 
-The token vocabulary is promised: a token's meaning MUST NOT change, and
-a new spelling MAY be added but MUST NOT replace one. The write-once
-promise is permanent — the engine MUST NOT hash, sync or revisit a
-seeded file — and the only update path is the `template-update` skill,
-which discovers the template (`[template]` in the manifest, or shape
-analysis confirmed with the user), renders the binary's current content,
-three-way-compares against the file as seeded (recovered from git
-history), and applies what the user approves as ordinary user edits —
-restamping `version` so an update can short-circuit when the repo
-already matches. `template list` and `template render` MUST stay
-read-only views of the shipped set. The set grows one entry per
-template as `template-backport` captures it; a template MAY be removed
-only with a release-notes notice, since a seeded repo keeps working
-regardless.
+The token vocabulary is promised. The write-once promise is permanent
+(`P_seeded-file-write-once`), and the only update path is the
+`template-update` skill, which discovers the template (`[template]` in
+the manifest, or shape analysis confirmed with the user), renders the
+binary's current content, three-way-compares against the file as
+seeded (recovered from git history), and applies what the user
+approves as ordinary user edits — restamping `version` so an update
+can short-circuit when the repo already matches. The set grows one
+entry per template as `template-backport` captures it.
+
+- `P_token-meaning-fixed` [ubiquitous] A token's meaning SHALL NOT
+  change.
+- `P_token-may-be-added` [ubiquitous] A new token spelling MAY be
+  added.
+- `P_token-never-replaced` [ubiquitous] A new token spelling SHALL NOT
+  replace an existing one.
+- `P_template-verbs-read-only` [ubiquitous] `template list` and
+  `template render` SHALL stay read-only views of the shipped set.
+- `P_removal-needs-notice` [ubiquitous] A template MAY be removed only
+  with a release-notes notice, since a seeded repo keeps working
+  regardless.
 
 [^rust-npm-src]: rust-npm template tree
 [^web-src]: web-react-android-ios-native template tree

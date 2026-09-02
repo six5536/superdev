@@ -84,22 +84,25 @@ pub struct PackManifest {
 
 ### Files
 
-`pack.toml` MUST sit at the root of the pack, and the tree beneath it
-names the items. A pack is authored outside this repository — in a git
-repository superdev fetches by `source` and `rev`, or in a directory on
-the machine — so this format is the one superdev promises to people who
+A pack is authored outside this repository — in a git repository
+superdev fetches by `source` and `rev`, or in a directory on the
+machine — so this format is the one superdev promises to people who
 write no Rust. A pack is identified by its `format` field, read before
-anything else in the file.
-
-superdev only reads a pack. It MUST resolve the pack on every `sync`,
-and a path source MUST be read afresh each run, so editing a local pack
-and syncing again lands the new bytes with no rebuild. Nothing superdev
+anything else in the file. superdev only reads a pack; nothing superdev
 does writes into a pack.
 
-The tree names all three parts of every item's identity — the owning
-capability, the kind, and the name. `<name>` is the entry directly under
-the kind directory; where the table shows `/**` that entry is a
-directory and the item is its whole subtree:
+- `P_manifest-at-root` [ubiquitous] `pack.toml` SHALL sit at the root
+  of the pack.
+- `P_resolve-every-sync` [event] WHEN `sync` runs, superdev SHALL
+  resolve the pack.
+- `P_path-source-read-afresh` [state] WHILE a pack comes from a path
+  source, superdev SHALL read it afresh on every run, so editing a
+  local pack and syncing again lands the new bytes with no rebuild.
+
+The tree beneath `pack.toml` names all three parts of every item's
+identity — the owning capability, the kind, and the name. `<name>` is
+the entry directly under the kind directory; where the table shows
+`/**` that entry is a directory and the item is its whole subtree:
 
 ```
 pack.toml
@@ -113,42 +116,60 @@ projects/<name>/**                     → repo root, tokenised                 
 ```
 
 Owned files are rewritten every sync; scaffolds are write-once and the
-repo's copy wins. The paths the Definition lists as `REJECTED` MUST be
-refused wherever a pack carries them, as MUST any file named
-`REJECTED_BASENAME`, which is the project's own extension layer and
-never superdev's to write. A pack MUST NOT carry a symlink anywhere in
-its tree: symlinks are decided by git's index for a fetched pack and by
-the filesystem for a path pack, so the same rev resolves alike on
-Windows without `core.symlinks`.
+repo's copy wins.
+
+- `P_rejected-path-refused` [event] WHEN a pack carries a path the
+  Definition lists as `REJECTED`, superdev SHALL refuse the pack.
+- `P_rejected-basename-refused` [event] WHEN a pack carries a file
+  named `REJECTED_BASENAME` at any depth, superdev SHALL refuse the
+  pack: that file is the project's own extension layer and never
+  superdev's to write.
+- `P_no-symlink` [ubiquitous] A pack SHALL NOT carry a symlink anywhere
+  in its tree: symlinks are decided by git's index for a fetched pack
+  and by the filesystem for a path pack, so the same rev resolves alike
+  on Windows without `core.symlinks`.
 
 ### Unknown content
 
-An unknown key inside a known `format` MUST be ignored, so a pack
-written for a later superdev still loads as long as the format number
-has not moved. The one exception is the key the Definition names as
-`REJECTED_KEY`: a pack describes files, never work, so `run` at any
-depth MUST be refused naming the key. An unknown `format` MUST be
-refused before a single file is read, naming what this binary supports:
-`pack <name> declares format <n>; this superdev supports <set>`.
+The one key superdev refuses by name is the one the Definition names as
+`REJECTED_KEY`: a pack describes files, never work.
+
+- `P_unknown-key-ignored` [event] WHEN a key inside a known `format` is
+  one superdev does not know, superdev SHALL ignore the key, so a pack
+  written for a later superdev still loads as long as the format number
+  has not moved.
+- `P_run-key-refused` [event] WHEN a pack declares `run` at any depth,
+  superdev SHALL refuse the pack naming the key.
+- `P_unknown-format-refused` [event] WHEN `pack.toml` declares a
+  `format` outside `SUPPORTED_FORMATS`, superdev SHALL refuse the pack
+  before a single file is read, naming what this binary supports:
+  `pack <name> declares format <n>; this superdev supports <set>`.
 
 ### Compatibility
 
-A pack MUST resolve whole or not at all. A refused path, an unparseable
-`pack.toml`, an unknown format or a symlink MUST fail the resolve and
-leave the repository untouched.
+An author replaces a stock item by carrying the same path, and adds one
+by carrying a new name.
 
-Packs MUST layer in the order the manifest writes them, and a later item
-of the same `(owner, kind, name)` wins. An author therefore replaces a
-stock item by carrying the same path, and adds one by carrying a new
-name.
+- `P_resolve-whole-or-not` [ubiquitous] A pack SHALL resolve whole or
+  not at all.
+- `P_failed-resolve-leaves-repo` [event] WHEN a refused path, an
+  unparseable `pack.toml`, an unknown format or a symlink is found, the
+  resolve SHALL fail and leave the repository untouched.
+- `P_layer-in-manifest-order` [ubiquitous] Packs SHALL layer in the
+  order the manifest writes them, a later item of the same `(owner,
+  kind, name)` winning.
 
 ## Stability
 
 Unreleased. `format = 1` is the only format this binary reads, and the
-layout table above is what that number means. A layout change that a
-format-1 pack could not survive MUST take `format = 2`, and both MUST
-stay readable for at least one release; anything a format-1 pack can
-ignore MUST NOT require a bump.
+layout table above is what that number means.
+
+- `P_breaking-layout-bumps-format` [event] WHEN a layout change is one
+  a format-1 pack could not survive, the change SHALL take `format = 2`.
+- `P_both-formats-readable` [event] WHEN `format = 2` is introduced,
+  superdev SHALL keep both formats readable for at least one release.
+- `P_ignorable-change-no-bump` [conditional] IF a layout change is one
+  a format-1 pack can ignore, the change SHALL NOT require a bump.
 
 <!-- sokf:links -->
 [sokf:adr-033-a-contract-defines-its-interface]: /knowledge/adrs/active/adr-033-a-contract-defines-its-interface.md
