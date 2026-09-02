@@ -1,0 +1,25 @@
+{
+  "findings": [
+    {
+      "file": "misdeclared.md",
+      "message": "schema: section \"Criteria\" is declared by two rules, tagged [unframed, framed] and tagged [framed], whose variants share `framed` — both bind nothing",
+      "severity": "error"
+    },
+    {
+      "file": "misdeclared.md",
+      "message": "schema: section \"Notes\" is declared by two rules, tagged [framed] and untagged — an untagged rule binds every variant, so both bind nothing",
+      "severity": "error"
+    },
+    {
+      "file": "framed-keyless.md",
+      "message": "section \"Criteria\" item `2. A plain sentence, keyless.` carries no key of the form `^`(AC_[a-z]+)``, and issue.md declares item-key",
+      "severity": "error"
+    },
+    {
+      "file": "framed-misordered.md",
+      "message": "section \"Criteria\" comes after \"Tail\", and issue.md orders them the other way",
+      "severity": "error"
+    }
+  ],
+  "passed": false
+}

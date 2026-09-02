@@ -731,6 +731,32 @@ fn contract_010_no_longer_defers_the_item_declarations() {
     }
 }
 
+/// Covers I030 AC_one-schema-per-kind: the validator now selects one rule
+/// per heading per variant (ADR-049), so contract-010's two promises about
+/// it, `P_heading-per-variant` and `P_heading-rules-overlap`, are declared
+/// and neither is `PENDING` any more.
+#[test]
+fn contract_010_no_longer_defers_the_per_variant_heading() {
+    let path = "knowledge/contracts/internal/active/contract-010-interface-document-schemas.md";
+    let text = same(&std::fs::read_to_string(repo(path)).unwrap());
+    let behaviour = text
+        .split("\n## Behaviour\n")
+        .nth(1)
+        .and_then(|rest| rest.split("\n## Stability\n").next())
+        .expect("contract-010 carries Behaviour before Stability");
+    let items: Vec<&str> = behaviour
+        .split("\n- ")
+        .filter(|item| item.starts_with("`P_heading-"))
+        .collect();
+    for key in ["`P_heading-per-variant`", "`P_heading-rules-overlap`"] {
+        let item = items
+            .iter()
+            .find(|item| item.starts_with(key))
+            .unwrap_or_else(|| panic!("contract-010's Behaviour declares {key}"));
+        assert!(!item.contains("PENDING"), "{key} is still deferred: {item}");
+    }
+}
+
 /// Covers I049 criterion 8: one schema governs every contract, and neither
 /// tree ships a per-kind one — the sixteen ADR-043 retired, `contract-cli`
 /// through `contract-ui`, and the `file-format` one ADR-037 retired before
