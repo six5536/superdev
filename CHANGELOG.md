@@ -274,6 +274,19 @@ publish a version it cannot find a heading for.
   its Definition the server's argument structs and tool methods from the
   `tools` regions of `mcp.rs`; its drift test is gone with the JSON block.
   `contract_exit_codes.rs` still exercises every code the contract states.
+- **The config and format contracts include their structs.** `contract-004`
+  is kind `config`: its Definition is the manifest's on-disk shape
+  materialised from the `config` regions of `manifest.rs` and
+  `sokf/embed.rs`, doc comments included, in place of the Settings table
+  and the hand-written `config.toml` block; Behaviour carries Sources and
+  precedence — now naming `CLAUDE_SESSION_ID`, which `run begin` and `run
+  advance` read — Defaults, Secrets and Validation. The pack and lock
+  contracts are `contract-005-format-pack` and `contract-006-format-lock`,
+  kind `format`, their Definitions the `pack` region of `pack/manifest.rs`
+  and the `lock` regions of `lock.rs`; the pack contract now names
+  `agents/superdev.md` as the refused path, which is what the source
+  refuses. The four tests that parsed the contracts' TOML blocks are gone
+  (ADR-042).
 - **`superdev validate` counts its warnings and lists them on request.** A run
   lists every error and closes with both counts, as before; the warnings
   themselves now appear only under **`--warnings`** (ADR-040). Warnings are
