@@ -1697,7 +1697,7 @@ fn the_file_skill_files_without_framing() {
             "bug, feature request, chore or idea",
             "numbered after the highest issue across all of the tracker's folders",
             "`lifecycle: unframed`",
-            "Summary and Motivation in the user's words",
+            "Summary and, where the kind carries it, Motivation in the user's words",
             "`TBD — <the open question>`",
             "no criterion, step or done item the user did not state",
             "per `schema-idea` into `knowledge/ideas/`, listed in its index",
