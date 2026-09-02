@@ -3,7 +3,7 @@ type: FeaturePlan
 id: plan-026-feature-filing-an-issue-without-framing-it
 title: Filing an issue without framing it — feature plan
 description: Slices delivering I030 — a heading declared per variant in the validator, the tracker schemas varying by a four-state lifecycle with the sweep of the issues on file, the /file skill and the workflow entry, /frame framing in place with the three phases' gates, the backlog's retirement, and the records.
-lifecycle: open
+lifecycle: done
 links:
   - rel: implements
     to: issue-030-feature-request-filing-an-issue-requires-framing-it
@@ -248,14 +248,27 @@ edited beside it.
 - Done-check: `superdev validate` passes; the glossary's Promise key
   entry no longer says `EX_` is reserved.
 - Cases:
-  - unit: the tracker concept and the glossary name the four states
-    and `/file` — covers AC_records.
-  - unit: the changelog's Unreleased names the states and `/file` —
-    covers AC_records.
+  - manual: the tracker concept and the glossary name the four states
+    and `/file` — covers AC_records. Read at `9372773`; no test reads
+    the records (code-review-010 finding 8).
+  - manual: the changelog's Unreleased names the states and `/file` —
+    covers AC_records. Read at `9372773`.
 
 ## Deferred decisions
 
-- None yet.
+- `AC_unframed-form` and ADR-048 require Summary and Motivation of every
+  kind; a bug-report and a chore have no Motivation heading. Amend the
+  criterion and ADR-048 to "Summary, and Motivation where the kind
+  carries it", or add a Motivation heading to those kinds? Blocks
+  nothing; returns to frame (code-review-010 finding 5).
+- A literal `heading` and a `heading-pattern` it matches are two
+  headings to the disjointness check: the literal wins the heading it
+  names and the pattern names the rest, which is how 18 schemas declare
+  fixed headings beside a catch-all `^.+$`. Contract-010
+  `P_heading-rules-overlap` and ADR-049 say "name one heading" without
+  saying the check is by declaration form. Say so in the contract and
+  the ADR, or find a check that tells `^Notes$` from `^.+$`? Blocks
+  nothing; returns to contract-design (code-review-010 finding 3).
 
 <!-- sokf:links -->
 [sokf:adr-048-an-issues-lifecycle-distinguishes-framed-from-unframed]: /knowledge/adrs/active/adr-048-an-issues-lifecycle-distinguishes-framed-from-unframed.md

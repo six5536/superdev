@@ -313,8 +313,8 @@ publish a version it cannot find a heading for.
   `issues/wontfix/`. `/frame` frames an unframed issue in place and
   sets `framed`, or files and frames in one pass; `/contract-design`,
   `/feature-plan` and `/execute-feature-plan` gate on `framed` and
-  return an unframed issue to `/frame`. The feature-request, bug-report
-  and chore schemas take `variant-key: lifecycle`: an unframed issue is
+  return an unframed issue to `/frame`; `/accept` files a gap `unframed`.
+  The tracker schemas take `variant-key: lifecycle`: an unframed issue is
   held to its headings and list kinds alone, so a criterion, a repro
   step, an expected-behaviour item or a done item is a plain sentence
   or a `TBD`; a framed, done or wontfix issue is held to the keyed EARS
