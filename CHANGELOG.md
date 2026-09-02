@@ -46,6 +46,14 @@ publish a version it cannot find a heading for.
   its value equal to its key. A tag outside the enum, a tag or keyed
   example with no `variant-key`, a `variant-key` with no enum, and a
   missing example are each an error on the schema file (ADR-045).
+- **A section rule declares `item-key`.** A regex with one capture group
+  that every top-level item of the section's list must match; the capture
+  is the item's key, unique across the document's items under every rule
+  declaring `item-key`. An item with no match is an error naming the
+  section and the item; a repeated key is an error naming the key and
+  both items; a key pattern whose capture count is not one, or on a
+  section with no list content, is an error on the schema file and binds
+  nothing. `--fix` never supplies a key (ADR-047).
 - **A schema section may declare `content: include`.** The sixth content
   kind is satisfied by an include block naming a source path, and a fenced
   block in such a section outside an include is an error naming the
