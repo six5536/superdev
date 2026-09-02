@@ -50,7 +50,7 @@ edited beside it.
 
 ### Slice 1: A heading is declared per variant
 
-- [ ] Done — ticked by integrate at merge.
+- [x] Done — ticked by integrate at merge.
 - Depends-on: none.
 - Change: `validate::schema::document` — where a heading (or heading
   pattern) is named by more than one section rule, the rules must all
