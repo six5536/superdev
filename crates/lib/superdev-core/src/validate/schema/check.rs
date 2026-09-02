@@ -1403,6 +1403,7 @@ mod schema_parity {
             assert!(errs.is_empty(), "{}: {errs:?}", path.display());
             checked += 1;
         }
-        assert_eq!(checked, 41, "every schema is checked");
+        // 40 since the backlog schema retired (I030, ADR-048).
+        assert_eq!(checked, 40, "every schema is checked");
     }
 }

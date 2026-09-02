@@ -44,7 +44,6 @@ You decide only the interfaces that will be expensive to change once other code 
 
 <rules>
 <rule level="SHALL">record a rejected alternative in the decision's ADR</rule>
-<rule level="SHALL NOT">record a rejected alternative in the backlog</rule>
 <rule level="MUST NOT">create a per-feature contract; a contract is keyed to the interface it describes</rule>
 <rule level="MUST">write every contract to the contract style its schema carries</rule>
 </rules>

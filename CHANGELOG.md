@@ -13,19 +13,19 @@ publish a version it cannot find a heading for.
 
 ### Added
 
-- **An issue's lifecycle is one of four states, and `/file` files one.**
-  The tracker schemas declare `lifecycle` as `unframed`, `framed`, `done`
-  or `wontfix`, the folder being the value, and vary by it: an unframed
-  issue's cited lists are checked for their list kind alone; a framed,
-  done or wontfix issue is held to the keyed form — `AC_` key and EARS
-  tag on a criterion, `RS_` key on a repro step, `EX_` key and tag on an
-  expected-behaviour item, `DD_` key on a done item — and a `TBD` is an
-  error. The issues on file are swept into the two folders, every bug's
-  Expected behaviour a keyed list, its words unchanged. `/file`, outside
-  the phases, files a bug, a feature request, a chore or an idea in the
-  user's words, `unframed`, with no interview or branch; `/frame` frames
-  an unframed issue in place and sets it `framed`; contract-design,
-  feature-plan and execute-feature-plan refuse an unframed issue (ADR-048).
+- **An issue's lifecycle is one of four states, `/file` files one, and the
+  backlog retires.** The tracker schemas declare `lifecycle` as `unframed`,
+  `framed`, `done` or `wontfix`, the folder being the value, and vary by it:
+  an unframed issue's cited lists are checked for their list kind alone; a
+  framed, done or wontfix issue is held to the keyed EARS form and a `TBD`
+  is an error. The issues on file are swept into the two folders, every
+  bug's Expected behaviour a keyed list, its words unchanged. `/file`
+  files a bug, a feature request, a chore or an idea in the user's words
+  with no interview or branch; `/frame` frames it in place; the later
+  phases refuse an unframed issue. The backlog's entries become three
+  ideas and a wontfix chore; its concept, schema and every reference in
+  the skills, schemas and indexes go, and a managed `Backlog` document
+  migrates the same way (ADR-048).
 - **A heading is declared per variant.** A schema may declare one heading
   in more than one section rule when every such rule carries `variants`
   and the sets are disjoint; a document is checked against the rule its

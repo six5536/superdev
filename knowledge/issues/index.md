@@ -62,6 +62,7 @@ and `superdev validate --fix` places it.
 
 ## The engine
 
+* [Pin node in the managed repo so codegraph's npm-backed pin can install and run][sokf:issue-051-chore-pin-node-in-the-managed-repo] - codegraph was pinned through mise's npm backend, which needs an npm to install and a node to run its shim; pinning node in the managed repo's .mise.toml would have supplied both.
 * [A claimed file superdev never wrote has no lock hash, so its first rewrite misreports as a user edit][sokf:issue-025-bug-a-claim-never-written-gets-no-lock-hash] - the lock reconcile refreshes existing entries and never adds one for a claim already satisfied on disk, so all 53 shipped schemas were unrecorded and each first rewrite reports "overwrote a user-edited file" and spawns a backup.
 
 ## The workflow
@@ -127,3 +128,4 @@ and `superdev validate --fix` places it.
 [sokf:issue-048-feature-request-no-step-asks-whether-a-contract-is-bound]: /knowledge/issues/wontfix/issue-048-feature-request-no-step-asks-whether-a-contract-is-bound.md
 [sokf:issue-049-feature-request-a-contract-cannot-point-at-its-definition]: /knowledge/issues/framed/issue-049-feature-request-a-contract-cannot-point-at-its-definition.md
 [sokf:issue-050-bug-the-exit-code-probe-ends-a-live-unattended-run]: /knowledge/issues/done/issue-050-bug-the-exit-code-probe-ends-a-live-unattended-run.md
+[sokf:issue-051-chore-pin-node-in-the-managed-repo]: /knowledge/issues/wontfix/issue-051-chore-pin-node-in-the-managed-repo.md

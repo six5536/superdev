@@ -16,7 +16,8 @@ status: stable
 - **Managing toolchains.** superdev pins tools in `.mise.toml` and
   delegates installation to mise; it never downloads or manages a
   toolchain itself. (Rejecting a node pin for codegraph's sake is this
-  rule applied — see [backlog][sokf:backlog].)
+  rule applied — see
+  [I051][sokf:issue-051-chore-pin-node-in-the-managed-repo].)
 - **A service component.** superdev is a local CLI: no daemon, no hosted
   service, no telemetry. The MCP servers are local stdio processes the
   agent harness spawns per session.
@@ -60,5 +61,5 @@ Inherited machinery, and what it fixes.
 [sokf:adr-042-a-contracts-definition-is-materialized-from-source]: /knowledge/adrs/active/adr-042-a-contracts-definition-is-materialized-from-source.md
 [sokf:adr-046-a-promise-and-a-criterion-are-keyed-ears-items]: /knowledge/adrs/active/adr-046-a-promise-and-a-criterion-are-keyed-ears-items.md
 [sokf:architecture]: /knowledge/architecture.md
-[sokf:backlog]: /knowledge/backlog.md
+[sokf:issue-051-chore-pin-node-in-the-managed-repo]: /knowledge/issues/wontfix/issue-051-chore-pin-node-in-the-managed-repo.md
 [sokf:release-procedure]: /knowledge/release-procedure.md
