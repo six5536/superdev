@@ -432,3 +432,52 @@ fn a_marker_fault_does_not_freeze_the_other_repairs() {
     let second = fix_repo(dir.path(), &knowledge, &[]).unwrap();
     assert!(second.written.is_empty(), "{:?}", second.written);
 }
+
+/// An `item-key` finding is fatal and is nobody's repair (I037 criteria 8
+/// and 10): the pass rewrites links and include blocks, never a statement,
+/// so a keyless item stays as the author wrote it and the check reports it.
+#[test]
+fn a_keyless_item_is_reported_and_never_rewritten() {
+    let doc = "---\ntype: Thing\nid: thing\n---\n\n# A thing\n\n## Behaviour\n\n\
+               - [event] WHEN asked, the thing SHALL start — with no key.\n";
+    let dir = seed(&[
+        (
+            "knowledge/manifest.sokf.yaml",
+            "sokf: \"0.4\"\nname: fixture\n",
+        ),
+        (
+            "knowledge/schemas/thing.md",
+            "---\ntype: Schema\nid: schema-thing\ntitle: Thing Schema\n\
+             description: A keyed thing.\n---\n\n# Thing Schema\n\nRules.\n\n````yaml\n\
+             description: A keyed thing.\n\nfrontmatter:\n  type:\n    const: Thing\n\n\
+             sections:\n  - heading: \"Behaviour\"\n    level: 2\n    required: true\n\
+             \x20   content: bullet-list\n    item-key: '^`(P_[a-z-]+)`'\n\nexample: |\n\
+             \x20 ---\n  type: Thing\n  ---\n\n  # A thing\n\n  ## Behaviour\n\n\
+             \x20 - `P_starts` [event] WHEN asked, the thing SHALL start.\n````\n",
+        ),
+        ("knowledge/thing.md", doc),
+    ]);
+    let knowledge = dir.path().join("knowledge");
+
+    let repair = fix_repo(dir.path(), &knowledge, &[]).unwrap();
+    assert!(repair.written.is_empty(), "{:?}", repair.written);
+    assert_eq!(
+        std::fs::read_to_string(knowledge.join("thing.md")).unwrap(),
+        doc
+    );
+
+    let grammar = validate::schema::parse_grammar(validate::schema::EMBEDDED_GRAMMAR).unwrap();
+    let run = validate::validate_repo(dir.path(), &knowledge, &[], &grammar).unwrap();
+    let keyless: Vec<_> = run
+        .report
+        .findings
+        .iter()
+        .filter(|f| f.path == "knowledge/thing.md")
+        .collect();
+    assert_eq!(keyless.len(), 1, "{:#?}", run.report.findings);
+    assert!(keyless[0].fatal, "{keyless:#?}");
+    assert!(
+        keyless[0].message.contains("carries no key"),
+        "{keyless:#?}"
+    );
+}

@@ -191,3 +191,12 @@ fn broken_example() {
 fn variant_rules() {
     snapshot("variant-rules");
 }
+
+/// A schema declaring `item-key` (ADR-047): a malformed key, a missing one
+/// and a repeat across sections each report on the document, the same key
+/// in another document reports nothing, and a key with no capture group or
+/// on a prose section reports on the schema.
+#[test]
+fn item_key() {
+    snapshot("item-key");
+}

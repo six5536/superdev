@@ -296,12 +296,11 @@ prose the validator MUST NOT check.
   finding names the file and the section. Both name the failing
   occurrence's own heading, so a repeatable rule is locatable.
 - **Item keys and bounds** — `item-key` is a regex with one capture
-  group that every top-level item of the declared list kind MUST
-  PENDING (I037) match, the capture being the item's key; a key
-  repeated across the document's items under rules declaring
-  `item-key` MUST PENDING (I037) be an error naming the key and both
-  items, and an item with no match MUST PENDING (I037) be an error
-  naming the item. `item-only-pattern` is a regex that may match only
+  group that every top-level item of the declared list kind MUST match,
+  the capture being the item's key; a key repeated across the document's
+  items under rules declaring `item-key` MUST be an error naming the key
+  and both items, and an item with no match MUST be an error naming the
+  section and the item. `item-only-pattern` is a regex that may match only
   inside a top-level item: a match on a body line outside every item —
   prose, a table row, an item of the other list kind — MUST PENDING
   (I037) be an error naming the section and the line. `item-prohibited-pattern`
@@ -340,9 +339,11 @@ prose the validator MUST NOT check.
   shape — one document under a `variant-key`, a map without one, a
   variant with no example, a key the enum does not carry: MUST be
   reported against the schema file, and the unreadable rule binds
-  nothing. An `item-key` or `item-prohibited-pattern` on a section
-  whose `content` is not a list kind, and an `item-key` with no capture
-  group, MUST PENDING (I037) be reported the same way (ADR-047).
+  nothing. An `item-key` on a section whose `content` is not a list
+  kind, and an `item-key` whose capture count is not one, MUST be
+  reported the same way; an `item-prohibited-pattern` on a section
+  whose `content` is not a list kind MUST PENDING (I037) be reported
+  the same way (ADR-047).
 - **The example is checked in place** — the `example:` block is read as
   a document and run through this same check with the declaring schema
   handed to it, no dispatch; every failure, including an example that
