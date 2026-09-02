@@ -297,6 +297,18 @@ publish a version it cannot find a heading for.
   `TBD` item and each modal verb outside an item; `--fix` rewrites
   nothing. The schema's twelve examples carry the form (ADR-046,
   ADR-047).
+- **The tracker's cited lists carry keys.** A feature-request's
+  acceptance criteria open with an `AC_` key in a code span before the
+  EARS tag or the `TBD`; a bug-report's repro steps with an `RS_` key
+  and a chore's definition of done with a `DD_` key, each with no tag.
+  The key is the item's identity, unique within the issue, and the
+  number the reading order; a plan case cites the keys it covers, bare
+  ("covers AC_c1, AC_stale-include"), and elsewhere the issue's id
+  precedes the key. **After a pack update, an issue whose cited list
+  carries a keyless, mis-prefixed or repeated item fails `superdev
+  validate`**, naming the item; `--fix` supplies no key. The fifty
+  issues on file were swept once to the slug `c<n>`, `n` the item's
+  number, so every citation of a number stands (ADR-046).
 - The two hook entries `sync` writes into `.claude/settings.json` carry
   `timeout: 30`, so a hook that wedges — a `cargo run` waiting on a build
   lock — is killed by Claude Code after 30 s instead of holding the

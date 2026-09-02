@@ -243,7 +243,7 @@ rebuild per edit.
 
 ### Slice 7: The tracker's criteria carry keys
 
-- [ ] Done — ticked by integrate at merge.
+- [x] Done — ticked by integrate at merge.
 - Depends-on: 1.
 - Change: `pack/knowledge/schemas/feature-request.md`,
   `bug-report.md`, `chore.md` and `feature-plan.md`, synced — the
@@ -273,6 +273,16 @@ rebuild per edit.
   - unit: the plan schema's case description cites keys — covers AC_c19.
   - unit: every settled issue's diff touches only item prefixes —
     covers AC_c20.
+  - Note, at merge: the sweep touched the fifty issues — 141 criteria
+    `AC_c<n>`, 72 repro steps `RS_c<n>`, 22 done items `DD_c<n>` — and
+    rewrote plan-025's 33 covers clauses; plan-001 has no cases. The
+    diff check is not a test — a test cannot read git history — and
+    integrate ran it as a shell loop over `git diff -U0` per issue: 235
+    insertions against 235 deletions, each changed line equal to its
+    original once the key is removed. The tracker-side proof is the
+    `normative_shapes` loop over every issue's cited lists. The
+    criterion `item-pattern` test of ADR-031 now expects the keyed
+    pattern, deliberately.
 
 ### Slice 8: The records close
 
