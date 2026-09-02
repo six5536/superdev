@@ -31,11 +31,11 @@ fn the_fragment_states_the_definition_rules() {
         .expect("the fragment ships with the schema set");
     for rule in [
         "a contract defines its interface",
-        "from the contract alone",
+        "MUST be one or more source includes",
         "MUST describe and MUST NOT define",
         "MUST NOT state how the",
-        "generating the surface from it or by a test",
-        "MUST be proved\n  current",
+        "bound by its include",
+        "MUST be proved current by a test",
         "MUST NOT\n  restate the ADR's reasoning",
     ] {
         assert!(same(&text).contains(rule), "missing: {rule}");
