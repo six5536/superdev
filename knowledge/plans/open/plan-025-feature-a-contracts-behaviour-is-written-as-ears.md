@@ -203,7 +203,7 @@ rebuild per edit.
 
 ### Slice 6: The contract schema takes its final form
 
-- [ ] Done — ticked by integrate at merge.
+- [x] Done — ticked by integrate at merge.
 - Depends-on: 3, 4, 5.
 - Change: `pack/knowledge/schemas/contract.md`, synced — Behaviour and
   Stability become `content: bullet-list` with the four ADR-047
@@ -230,6 +230,16 @@ rebuild per edit.
   - unit: the schema's Behaviour and Stability rules declare the four
     patterns and say the citation form — covers 1, 11.
   - unit: no skill file differs from the merge target — covers 15.
+  - Note, at merge: the final schema reported nothing on the nine
+    swept contracts; its one finding was on the schema's own
+    `deployment` example, a key opening with a digit, renamed before
+    the commit. The two scratch cases are tests in `normative_shapes`
+    against the live schema set, and a scratch tree under the job's
+    directory carrying the real schema set confirmed them through the
+    CLI, with a Behaviour of numbered items and no bullet failing as
+    the done-check asks. The skill check is not a test — a test cannot
+    read git history — and integrate ran `git diff --stat main --
+    .claude/skills pack/knowledge/skills`, which was empty.
 
 ### Slice 7: The tracker's criteria carry keys
 

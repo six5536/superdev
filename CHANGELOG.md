@@ -277,6 +277,26 @@ publish a version it cannot find a heading for.
 
 ### Changed
 
+- **A contract's Behaviour and Stability are keyed EARS promises.** The
+  contract schema declares both sections as bullet lists whose every
+  item, at any heading depth, opens with a `P_` key in a code span and
+  an EARS tag — `[ubiquitous]`, `[event]`, `[state]`, `[conditional]`,
+  `[optional]`, `[complex]` — and carries the interface element as its
+  subject and one verb from `SHALL`, `SHALL NOT`, `SHOULD`, `SHOULD
+  NOT` and `MAY`; `MUST`, `REQUIRED`, `RECOMMENDED` and `OPTIONAL` are
+  retired from contracts. Prose in either section describes and
+  carries no modal verb, a numbered list is a sequence and never a
+  promise, a table stays where the kind's checklist wants one, `PENDING`
+  sits beside the verb, and no item reads `TBD`. The key is the
+  promise's identity — a rewording keeps it, a removed key is not
+  reused — cited bare where the contract is the subject and after the
+  contract's id elsewhere: `contract-002-cli-superdev
+  P_init-outside-git`. **After a pack update, a contract whose
+  Behaviour or Stability is prose with a modal verb fails `superdev
+  validate`**, naming each keyless, tagless, retired-verb, two-verb or
+  `TBD` item and each modal verb outside an item; `--fix` rewrites
+  nothing. The schema's twelve examples carry the form (ADR-046,
+  ADR-047).
 - The two hook entries `sync` writes into `.claude/settings.json` carry
   `timeout: 30`, so a hook that wedges — a `cargo run` waiting on a build
   lock — is killed by Claude Code after 30 s instead of holding the
