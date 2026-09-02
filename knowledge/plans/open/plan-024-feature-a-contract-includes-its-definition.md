@@ -26,11 +26,15 @@ each deleting the test that compared the copy it replaces. The
 fifteen schemas go last, because every contract must have left them
 first.
 
-Two files are owned copies with a pack source: `.agents/sokf/SPEC.md`
-and `.agents/sokf/grammar.yaml` are written by `sync` from
-`pack/sokf/agents/sokf/`, and the schemas under `knowledge/schemas/`
-mirror to `pack/knowledge/schemas/`. A slice that edits one edits both,
-and `superdev status` reporting no drift is part of its done-check.
+Three trees are owned copies with a source elsewhere, and `sync`
+overwrites the copy: `.agents/sokf/SPEC.md` from
+`pack/sokf/agents/sokf/SPEC.md`; `.agents/sokf/grammar.yaml` from
+`crates/lib/superdev-core/src/validate/schema/grammar.yaml`, embedded
+in the binary; and every `knowledge/schemas/*.md` from
+`pack/knowledge/schemas/`. A slice edits the source, runs `cargo run --
+sync`, and commits the moved lock hashes; `superdev status` reporting
+no drift is part of its done-check. Slice 2 found this — the plan first
+named the pack as the grammar's source.
 
 ## Slices
 
