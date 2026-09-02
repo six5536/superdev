@@ -496,7 +496,7 @@ fn every_tracker_schema_varies_by_the_four_lifecycle_values() {
     for root in ["knowledge/schemas", "pack/knowledge/schemas"] {
         for schema in TRACKER_SCHEMAS {
             let path = format!("{root}/{schema}");
-            let text = std::fs::read_to_string(repo(&path)).unwrap();
+            let text = same(&std::fs::read_to_string(repo(&path)).unwrap());
             assert!(
                 text.contains("\nvariant-key: lifecycle\n"),
                 "{path}: lifecycle is the variant key"
@@ -592,7 +592,8 @@ fn every_cited_list_declares_its_key_and_the_plan_cites_keys() {
                 "{path}: {heading} does not name the sweep's slug: {description}"
             );
         }
-        let plan = std::fs::read_to_string(repo(&format!("{root}/feature-plan.md"))).unwrap();
+        let plan =
+            same(&std::fs::read_to_string(repo(&format!("{root}/feature-plan.md"))).unwrap());
         let slice = plan
             .split("  - heading-pattern: '^Slice \\d+: .+$'\n")
             .nth(1)
@@ -1327,7 +1328,7 @@ fn the_backlog_entries_are_ideas_and_a_wontfix_chore() {
         "idea-009-comment-preserving-manifest-stamping",
     ] {
         let path = format!("knowledge/ideas/{id}.md");
-        let text = std::fs::read_to_string(repo(&path)).expect(&path);
+        let text = same(&std::fs::read_to_string(repo(&path)).expect(&path));
         assert!(text.contains("type: Idea"), "{path} is not an idea");
         assert!(
             text.contains(&format!("id: {id}")),
@@ -1348,7 +1349,7 @@ fn the_backlog_entries_are_ideas_and_a_wontfix_chore() {
     }
     let id = "issue-051-chore-pin-node-in-the-managed-repo";
     let path = format!("knowledge/issues/wontfix/{id}.md");
-    let text = std::fs::read_to_string(repo(&path)).expect(&path);
+    let text = same(&std::fs::read_to_string(repo(&path)).expect(&path));
     assert!(text.contains("type: Chore"));
     assert!(text.contains("lifecycle: wontfix"));
     assert!(
@@ -1438,16 +1439,16 @@ fn no_schema_names_a_framework_or_a_toolchain() {
     assert!(found.is_empty(), "a schema names a toolchain: {found:#?}");
 }
 
-/// Every `.rs` file under `dir`, recursively.
-fn rust_files(dir: &std::path::Path, found: &mut Vec<PathBuf>) {
+/// Every file with extension `ext` under `dir`, recursively.
+fn files_with(dir: &std::path::Path, ext: &str, found: &mut Vec<PathBuf>) {
     let Ok(entries) = std::fs::read_dir(dir) else {
         return;
     };
     for entry in entries.flatten() {
         let path = entry.path();
         if path.is_dir() {
-            rust_files(&path, found);
-        } else if path.extension().is_some_and(|e| e == "rs") {
+            files_with(&path, ext, found);
+        } else if path.extension().is_some_and(|e| e == ext) {
             found.push(path);
         }
     }
@@ -1484,7 +1485,7 @@ fn no_test_compares_a_fenced_block_of_an_included_contract_to_the_binary() {
     ];
     const READERS: [&str; 2] = ["```", "fenced"];
     let mut files = Vec::new();
-    rust_files(&repo("crates"), &mut files);
+    files_with(&repo("crates"), "rs", &mut files);
     assert!(!files.is_empty(), "the crates were read");
     let mut found = Vec::new();
     for path in files {
@@ -1694,7 +1695,7 @@ fn the_file_skill_files_without_framing() {
     for (p, text) in skill_copies("file") {
         for phrase in [
             "bug, feature request, chore or idea",
-            "numbered after the highest across all of the kind's folders",
+            "numbered after the highest issue across all of the tracker's folders",
             "`lifecycle: unframed`",
             "Summary and Motivation in the user's words",
             "`TBD — <the open question>`",
@@ -1919,4 +1920,56 @@ fn the_later_phases_refuse_an_unframed_issue() {
             "{p}: the contracts gate precedes the lifecycle gate"
         );
     }
+}
+
+/// Covers I030 AC_lifecycle-values as the skills and the pack's concept
+/// skeletons write it (code-review-010 findings 1 and 2): no skill in either
+/// tree and no skeleton `superdev init` writes says `lifecycle: open` of an
+/// issue — the value the tracker schemas refuse — or filters a search by
+/// it. A plan is `open` while it runs, so a line naming a plan may say so;
+/// the accept skill files a gap `unframed` and names `/frame`.
+#[test]
+fn no_skill_or_skeleton_writes_an_issue_open() {
+    let mut found = Vec::new();
+    let mut read = 0;
+    for root in [
+        "pack/knowledge/skills",
+        ".claude/skills",
+        "pack/knowledge/concepts",
+    ] {
+        let mut files = Vec::new();
+        files_with(&repo(root), "md", &mut files);
+        for path in files {
+            read += 1;
+            let text = std::fs::read_to_string(&path).unwrap();
+            for (n, line) in text.lines().enumerate() {
+                let says_open =
+                    line.contains("lifecycle: open`") || line.contains("lifecycle: [\"open\"]");
+                if says_open && !line.contains("plan-{nnn}") {
+                    found.push(format!("{}:{}: {line}", path.display(), n + 1));
+                }
+            }
+        }
+    }
+    assert!(read >= 20, "the skills and skeletons were read: {read}");
+    assert!(found.is_empty(), "an issue is written `open`: {found:#?}");
+    for (p, text) in skill_copies("accept") {
+        let gaps = step_task(&text, "FILE GAPS");
+        for phrase in ["`lifecycle: unframed`", "`/frame` frames it"] {
+            assert!(gaps.contains(phrase), "{p}: FILE GAPS lacks `{phrase}`");
+        }
+    }
+    for (p, text) in skill_copies("maintain") {
+        assert!(
+            text.contains("still `unframed` or `framed`"),
+            "{p} does not audit an issue by the four states"
+        );
+    }
+    let skeleton =
+        same(&std::fs::read_to_string(repo("pack/knowledge/concepts/issue-tracker.md")).unwrap());
+    let live = same(&std::fs::read_to_string(repo("knowledge/issue-tracker.md")).unwrap());
+    assert_eq!(
+        skeleton, live,
+        "the pack's tracker skeleton is the live concept"
+    );
 }

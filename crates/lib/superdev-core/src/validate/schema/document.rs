@@ -177,7 +177,11 @@ impl SectionRule {
 
     /// Whether this rule and `other` name one heading: the same literal, or
     /// the same pattern, at one level. A rule with no level matches any
-    /// depth, so it names the heading at every level (ADR-049).
+    /// depth, so it names the heading at every level (ADR-049). A literal and
+    /// a pattern it matches are two headings: the literal wins the heading it
+    /// names and the pattern names the rest (`check_one`), which is how a
+    /// schema declares its fixed headings beside a catch-all for the
+    /// author's own.
     fn names_same_heading(&self, other: &SectionRule) -> bool {
         let same_level = match (self.level, other.level) {
             (Some(a), Some(b)) => a == b,
@@ -3950,6 +3954,78 @@ mod tests {
             format!("---\ntype: Schema\n---\n\n````yaml\n{two_levels}````\n"),
         )];
         assert!(check_variants(&schemas).is_empty());
+    }
+
+    /// A literal `heading` and a `heading-pattern` it matches are two
+    /// headings, not one (code-review-010 finding 3): the disjointness check
+    /// is by declaration form, the literal wins the heading it names, and the
+    /// pattern names every other heading it matches — the shape 18 live
+    /// schemas take, a fixed heading beside a catch-all `^.+$` at one level.
+    /// A pattern that can name nothing beyond the literal is therefore a
+    /// required rule no document satisfies, reported on the document.
+    #[test]
+    fn a_literal_beside_a_pattern_it_matches_is_two_headings() {
+        let contract = "frontmatter:\n  type:\n    const: T\n  lifecycle:\n    required: true\n\
+                        \x20   enum: [unframed, framed]\nvariant-key: lifecycle\nsections:\n\
+                        \x20 - heading: Notes\n    level: 2\n    required: true\n    variants: [framed]\n\
+                        \x20 - heading-pattern: '^.+$'\n    level: 2\n    required: true\n";
+        let schemas = [(
+            "s.md".to_string(),
+            format!("---\ntype: Schema\n---\n\n````yaml\n{contract}````\n"),
+        )];
+        assert!(check_variants(&schemas).is_empty());
+        let schema = schema_of(contract);
+        let check = |text: &str| {
+            let doc = Document {
+                path: "a.md",
+                text,
+                doc_type: Some("T"),
+            };
+            let mut findings = Vec::new();
+            check_one(&doc, &schema, Subject::Filed, &mut findings);
+            findings
+        };
+        // The literal takes `Notes`; the catch-all takes `Other`.
+        let findings = check(
+            "---\ntype: T\nlifecycle: framed\n---\n\n# T\n\n## Notes\n\nx\n\n## Other\n\nx\n",
+        );
+        assert!(findings.is_empty(), "{findings:#?}");
+        // With no other heading, the catch-all is the rule left unsatisfied.
+        let findings = check("---\ntype: T\nlifecycle: framed\n---\n\n# T\n\n## Notes\n\nx\n");
+        assert_eq!(findings.len(), 1, "{findings:#?}");
+        assert!(
+            findings[0]
+                .message
+                .contains("missing required section matching /^.+$/"),
+            "{findings:#?}"
+        );
+
+        // A pattern naming nothing beyond the literal is that case always:
+        // the schema check is silent, and the document reports the pattern.
+        let exact = contract.replace("'^.+$'", "'^Notes$'");
+        let schemas = [(
+            "s.md".to_string(),
+            format!("---\ntype: Schema\n---\n\n````yaml\n{exact}````\n"),
+        )];
+        assert!(check_variants(&schemas).is_empty());
+        let mut findings = Vec::new();
+        check_one(
+            &Document {
+                path: "a.md",
+                text: "---\ntype: T\nlifecycle: framed\n---\n\n# T\n\n## Notes\n\nx\n",
+                doc_type: Some("T"),
+            },
+            &schema_of(&exact),
+            Subject::Filed,
+            &mut findings,
+        );
+        assert_eq!(findings.len(), 1, "{findings:#?}");
+        assert!(
+            findings[0]
+                .message
+                .contains("missing required section matching /^Notes$/"),
+            "{findings:#?}"
+        );
     }
 
     /// Covers I030 AC_one-schema-per-kind: a keyed example map with one

@@ -3,7 +3,7 @@
 Thoughts captured before they are lost, kept for considering later. Nothing
 here is official: an idea is not candidate work, so it does not appear in
 the [issue tracker](../issues/index.md) until it is taken up, at which point
-it leaves.
+it stays on file, linked from the issue that took it up.
 
 * [Schemas carry a reading reminder][sokf:idea-001-schemas-carry-a-reading-reminder] - every schema fixes a short instruction its documents must carry, so an agent reading one is told how to treat it without opening the schema.
 * [Support other harnesses][sokf:idea-002-support-other-harnesses] - materialise superdev's skills, agent wiring and hooks for harnesses beyond Claude Code — Codex, Pi, OpenCode and the like.
