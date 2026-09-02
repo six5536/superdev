@@ -52,10 +52,10 @@ itself". A skipped link is exactly a pack contributing most of itself.
 
 ## Steps to reproduce
 
-1. In a pack, replace `knowledge/skills/foo/SKILL.md` with a symlink to
+1. `RS_c1` In a pack, replace `knowledge/skills/foo/SKILL.md` with a symlink to
    another file inside the same pack.
-2. Pin the pack and `superdev sync`.
-3. `superdev status --drift`
+2. `RS_c2` Pin the pack and `superdev sync`.
+3. `RS_c3` `superdev status --drift`
 
 ## Expected behaviour
 

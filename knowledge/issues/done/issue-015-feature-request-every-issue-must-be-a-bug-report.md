@@ -129,12 +129,12 @@ regression risk it does not have.
 
 ## Acceptance criteria
 
-1. [ubiquitous] THE SYSTEM SHALL give the tracker three issue types —
+1. `AC_c1` [ubiquitous] THE SYSTEM SHALL give the tracker three issue types —
    BugReport, FeatureRequest and Chore — each with its own schema and
    template.
-2. [event] WHEN an issue is filed THE SYSTEM SHALL carry its kind in
+2. `AC_c2` [event] WHEN an issue is filed THE SYSTEM SHALL carry its kind in
    the filename, `issue-{nnn}-{kind}-{slug}`.
-3. [ubiquitous] THE SYSTEM SHALL never ask a feature request for repro
+3. `AC_c3` [ubiquitous] THE SYSTEM SHALL never ask a feature request for repro
    steps, nor a chore for a root cause.
 
 ## Alternatives considered

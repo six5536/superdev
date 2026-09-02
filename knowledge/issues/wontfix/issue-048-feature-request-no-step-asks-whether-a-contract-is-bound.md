@@ -75,24 +75,24 @@ question along with the obligation.
 
 ## Acceptance criteria
 
-1. [event] WHEN a feature is accepted THE SYSTEM SHALL report each
+1. `AC_c1` [event] WHEN a feature is accepted THE SYSTEM SHALL report each
    contract the feature touched that no test and no generated artifact
    appears to bind.
-2. [ubiquitous] THE SYSTEM SHALL name, for each contract it reports,
+2. `AC_c2` [ubiquitous] THE SYSTEM SHALL name, for each contract it reports,
    what it searched and what it did not find, so a reader confirms or
    dismisses the report without repeating the search.
-3. [ubiquitous] THE SYSTEM SHALL present the report as a judgement that
+3. `AC_c3` [ubiquitous] THE SYSTEM SHALL present the report as a judgement that
    blocks nothing, and SHALL NOT record it as a validator finding.
-4. [state] WHILE a contract element is marked pending THE SYSTEM SHALL
+4. `AC_c4` [state] WHILE a contract element is marked pending THE SYSTEM SHALL
    count the reverse binding ADR-038 requires as that element's binding,
    rather than reporting it as unbound.
-5. [ubiquitous] THE SYSTEM SHALL ship the step in the pack, so a project
+5. `AC_c5` [ubiquitous] THE SYSTEM SHALL ship the step in the pack, so a project
    adopting superdev inherits it with the schemas that state the
    obligation.
-6. [conditional] IF the feature touched no contract THE SYSTEM SHALL say
+6. `AC_c6` [conditional] IF the feature touched no contract THE SYSTEM SHALL say
    so and report nothing further, so an empty report is distinguishable
    from a step that did not run.
-7. [conditional] IF the step cannot read the project's tests THE SYSTEM
+7. `AC_c7` [conditional] IF the step cannot read the project's tests THE SYSTEM
    SHALL report what it could not read and SHALL NOT report the
    contracts it could not judge as unbound.
 

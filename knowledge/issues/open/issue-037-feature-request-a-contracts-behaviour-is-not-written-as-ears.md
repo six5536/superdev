@@ -133,76 +133,76 @@ nothing left to convert by hand.
 
 ## Acceptance criteria
 
-1. [ubiquitous] The contract schema SHALL declare Behaviour and
+1. `AC_c1` [ubiquitous] The contract schema SHALL declare Behaviour and
    Stability as bullet lists whose every item carries a key and one of
    the six EARS tags — `[ubiquitous]`, `[event]`, `[state]`,
    `[conditional]`, `[optional]`, `[complex]` — and prose and tables
    beside the list SHALL remain permitted in both sections.
-2. [event] WHEN an item under Behaviour or Stability, at any heading
+2. `AC_c2` [event] WHEN an item under Behaviour or Stability, at any heading
    depth within the section, carries no EARS tag or no key, THE SYSTEM
    SHALL report an error naming the section and the item.
-3. [event] WHEN an item's key is not `P_` followed by lowercase words
+3. `AC_c3` [event] WHEN an item's key is not `P_` followed by lowercase words
    joined by hyphens, THE SYSTEM SHALL report an error naming the item
    and the key.
-4. [event] WHEN two items in one contract carry the same key, THE
+4. `AC_c4` [event] WHEN two items in one contract carry the same key, THE
    SYSTEM SHALL report an error naming the key and both items.
-5. [event] WHEN a modal verb — `SHALL`, `SHOULD`, `MAY`, `MUST`,
+5. `AC_c5` [event] WHEN a modal verb — `SHALL`, `SHOULD`, `MAY`, `MUST`,
    `REQUIRED`, `RECOMMENDED` or `OPTIONAL`, with or without `NOT` —
    appears in Behaviour or Stability outside an item, THE SYSTEM SHALL
    report an error naming the section and the line.
-6. [event] WHEN an item under Behaviour or Stability carries `MUST`,
+6. `AC_c6` [event] WHEN an item under Behaviour or Stability carries `MUST`,
    `MUST NOT`, `REQUIRED`, `RECOMMENDED` or `OPTIONAL`, THE SYSTEM
    SHALL report an error naming the item, the matched verb and the
    schema rule.
-7. [event] WHEN an item under Behaviour or Stability carries more than
+7. `AC_c7` [event] WHEN an item under Behaviour or Stability carries more than
    one modal verb — `NOT` belongs to its verb — or a tag and no modal
    verb, THE SYSTEM SHALL report an error naming the item.
-8. [event] WHEN an item under Behaviour or Stability opens with `TBD`,
+8. `AC_c8` [event] WHEN an item under Behaviour or Stability opens with `TBD`,
    THE SYSTEM SHALL report an error naming the item; the criterion
    form's `TBD` is not admitted in a contract.
-9. [ubiquitous] An item carrying `PENDING` beside its modal verb, as
+9. `AC_c9` [ubiquitous] An item carrying `PENDING` beside its modal verb, as
    ADR-044 places it, SHALL pass the checks above.
-10. [ubiquitous] A finding from criteria 2 to 8 SHALL be an error that
+10. `AC_c10` [ubiquitous] A finding from criteria 2 to 8 SHALL be an error that
     fails `superdev validate`, and `superdev validate --fix` SHALL NOT
     rewrite a statement or supply a key.
-11. [ubiquitous] The contract schema SHALL state the citation form —
+11. `AC_c11` [ubiquitous] The contract schema SHALL state the citation form —
     the bare key where the contract is the subject, the contract's id
     followed by the key elsewhere — and a search for the key SHALL
     find the promise and every citation.
-12. [ubiquitous] The contract schema's twelve examples SHALL each carry
+12. `AC_c12` [ubiquitous] The contract schema's twelve examples SHALL each carry
     Behaviour and Stability in the form, and SHALL pass the schema's
     own check.
-13. [ubiquitous] Every active contract's Behaviour and Stability SHALL
+13. `AC_c13` [ubiquitous] Every active contract's Behaviour and Stability SHALL
     conform, with each former sentence's requirements as one keyed
     item each and no promise dropped, and `superdev validate` SHALL
     pass on the live tree.
-14. [ubiquitous] The grammar that governs schema files SHALL accept the
+14. `AC_c14` [ubiquitous] The grammar that governs schema files SHALL accept the
     contract schema as changed, and contract-010 SHALL carry any row
     the change adds.
-15. [ubiquitous] No skill SHALL change for the form; the contract
+15. `AC_c15` [ubiquitous] No skill SHALL change for the form; the contract
     schema alone carries it.
-16. [ubiquitous] The glossary SHALL define the form of a contract
+16. `AC_c16` [ubiquitous] The glossary SHALL define the form of a contract
     promise and its key, and the changelog SHALL carry the change
     under Unreleased.
-17. [ubiquitous] The feature-request, bug-report and chore schemas
+17. `AC_c17` [ubiquitous] The feature-request, bug-report and chore schemas
     SHALL declare a key on every item of the lists a plan case cites
     — `AC_` on Acceptance criteria; `RS_` on Steps to reproduce and
     `EX_` on Expected behaviour; `DD_` on Definition of done — of the
     form criterion 3 names with that prefix, unique within the issue,
     and a missing, malformed or duplicate key SHALL be an error as
     criteria 2 to 4 report one.
-18. [ubiquitous] A criterion's key SHALL precede its EARS tag or its
+18. `AC_c18` [ubiquitous] A criterion's key SHALL precede its EARS tag or its
     `TBD`, a repro step's or an expected behaviour's key SHALL stand
     alone, the list SHALL stay numbered, and each schema SHALL state
     the citation form of criterion 11.
-19. [ubiquitous] The feature-plan schema SHALL have a case name the
+19. `AC_c19` [ubiquitous] The feature-plan schema SHALL have a case name the
     keys of the criteria it covers.
-20. [ubiquitous] Every issue on file SHALL carry a key on each cited
+20. `AC_c20` [ubiquitous] Every issue on file SHALL carry a key on each cited
     item — the slug `c<n>`, `n` the item's number, for an item on file
     at the sweep — every open plan's cases SHALL cite keys, and a
     settled plan or a test comment citing a number SHALL stand as a
     citation of the `c<n>` key.
-21. [ubiquitous] The three tracker schemas' and the feature-plan
+21. `AC_c21` [ubiquitous] The three tracker schemas' and the feature-plan
     schema's examples SHALL carry the form and pass their own check,
     and `superdev validate` SHALL pass on the live tree.
 

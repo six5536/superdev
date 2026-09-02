@@ -231,84 +231,84 @@ mirrors.
 
 ## Acceptance criteria
 
-1. [ubiquitous] THE SYSTEM SHALL accept, as an include block's argument,
+1. `AC_c1` [ubiquitous] THE SYSTEM SHALL accept, as an include block's argument,
    a `/`-rooted repository path, optionally followed by `#` and a
    region name, beside the concept id it accepts today.
-2. [event] WHEN `validate --fix` runs THE SYSTEM SHALL materialise a
+2. `AC_c2` [event] WHEN `validate --fix` runs THE SYSTEM SHALL materialise a
    source include as a fenced block tagged by the file's extension,
    holding the named region, or the whole file when no region is named.
-3. [ubiquitous] THE SYSTEM SHALL bound a region by a line containing
+3. `AC_c3` [ubiquitous] THE SYSTEM SHALL bound a region by a line containing
    `sokf:begin <name>` and a later line containing `sokf:end <name>`,
    matched by substring, and SHALL concatenate regions sharing a name
    in file order.
-4. [event] WHEN a source include is absent, empty or differs from its
+4. `AC_c4` [event] WHEN a source include is absent, empty or differs from its
    region THE SYSTEM SHALL report an error naming the path and the
    region.
-5. [event] WHEN a source include names a path that does not exist,
+5. `AC_c5` [event] WHEN a source include names a path that does not exist,
    resolves outside the repository, or names a region its file does not
    carry THE SYSTEM SHALL report an error stating which.
-6. [ubiquitous] THE SYSTEM SHALL carry a `sokf:generated-by` line from
+6. `AC_c6` [ubiquitous] THE SYSTEM SHALL carry a `sokf:generated-by` line from
    an included file's leading lines into the materialised block
    unchanged.
-7. [ubiquitous] THE SYSTEM SHALL parse nothing inside an included
+7. `AC_c7` [ubiquitous] THE SYSTEM SHALL parse nothing inside an included
    region, and SHALL report no finding about the contents of any
    contract's definition.
-8. [ubiquitous] THE SYSTEM SHALL govern every contract by one schema
+8. `AC_c8` [ubiquitous] THE SYSTEM SHALL govern every contract by one schema
    requiring a Definition section, a Behaviour section and a Stability
    section, and SHALL carry no other contract schema.
-9. [ubiquitous] THE SYSTEM SHALL require a contract's Definition section
+9. `AC_c9` [ubiquitous] THE SYSTEM SHALL require a contract's Definition section
    to hold at least one source include, and SHALL accept a `###`
    subsection under Behaviour without declaring it.
-10. [event] WHEN a contract's Definition section carries a fenced block
+10. `AC_c10` [event] WHEN a contract's Definition section carries a fenced block
     outside an include THE SYSTEM SHALL report an error naming the
     section.
-11. [ubiquitous] THE SYSTEM SHALL require a contract's `kind` to be one
+11. `AC_c11` [ubiquitous] THE SYSTEM SHALL require a contract's `kind` to be one
     of `api`, `events`, `cli`, `library`, `interface`, `ui`, `data`,
     `format`, `config`, `telemetry`, `authz` and `deployment`, and SHALL
     require the id's third segment to equal it.
-12. [event] WHEN a contract's title does not open with its kind's
+12. `AC_c12` [event] WHEN a contract's title does not open with its kind's
     display name and "contract:" THE SYSTEM SHALL report an error naming
     the kind.
-13. [ubiquitous] THE SYSTEM SHALL let a schema name a frontmatter key
+13. `AC_c13` [ubiquitous] THE SYSTEM SHALL let a schema name a frontmatter key
     as its variant discriminator and tag any rule with the variants it
     applies to, an untagged rule applying to all, and SHALL check a
     document against the rules its value selects in the schema's
     declared order.
-14. [conditional] IF a schema declares a variant discriminator THE
+14. `AC_c14` [conditional] IF a schema declares a variant discriminator THE
     SYSTEM SHALL require one example per enum value, each checked
     against the base rules and its own variant's, its value equal to
     its key.
-15. [ubiquitous] THE SYSTEM SHALL declare, in the contract schema, each
+15. `AC_c15` [ubiquitous] THE SYSTEM SHALL declare, in the contract schema, each
     kind's Behaviour sections as rules tagged with that kind — the
     required ones required — so a writer reading the schema sees them
     with the shape and the validator enforces them.
-16. [ubiquitous] THE SYSTEM SHALL state in the contract standard that a
+16. `AC_c16` [ubiquitous] THE SYSTEM SHALL state in the contract standard that a
     doc comment inside an included region is contract text, and that
     the contract's prose carries what no single element can.
-17. [ubiquitous] THE SYSTEM SHALL state in the contract standard that
+17. `AC_c17` [ubiquitous] THE SYSTEM SHALL state in the contract standard that
     behaviour an include cannot reach is stated in prose and bound by a
     test, and that a `pending` marker applies to prose alone.
-18. [ubiquitous] THE SYSTEM SHALL have CONTRACT-DESIGN write a new
+18. `AC_c18` [ubiquitous] THE SYSTEM SHALL have CONTRACT-DESIGN write a new
     definition element into its source region, behaviour unbuilt, under
     the approval it already requires.
-19. [event] WHEN a slice that touched a contract is integrated THE
+19. `AC_c19` [event] WHEN a slice that touched a contract is integrated THE
     SYSTEM SHALL have the integrating agent read the contract as its
     consumer would, and report where an included region omits part of
     the promised surface, where the prose omits what the checklist for
     its kind requires, and where a reader could not learn the interface
     from the document.
-20. [ubiquitous] THE SYSTEM SHALL name, for each contract the agent
+20. `AC_c20` [ubiquitous] THE SYSTEM SHALL name, for each contract the agent
     reports, what it checked, and SHALL present the report as a
     judgement that blocks nothing and is not a validator finding.
-21. [conditional] IF the slice touched no contract THE SYSTEM SHALL say
+21. `AC_c21` [conditional] IF the slice touched no contract THE SYSTEM SHALL say
     so and report nothing further.
-22. [ubiquitous] THE SYSTEM SHALL ship the judgement step in the pack,
+22. `AC_c22` [ubiquitous] THE SYSTEM SHALL ship the judgement step in the pack,
     so a project adopting superdev inherits it with the schemas.
-23. [ubiquitous] THE SYSTEM SHALL define every contract this repository
+23. `AC_c23` [ubiquitous] THE SYSTEM SHALL define every contract this repository
     owns by source includes under the one schema, each with its kind,
     and SHALL carry no test that compares a hand-written copy of a
     definition to the code.
-24. [ubiquitous] THE SYSTEM SHALL keep a test that exercises every exit
+24. `AC_c24` [ubiquitous] THE SYSTEM SHALL keep a test that exercises every exit
     code the CLI contract states.
 
 ## Alternatives considered

@@ -47,18 +47,18 @@ suppressing a warning would lose its count entirely.
 
 ## Acceptance criteria
 
-1. [event] WHEN `superdev validate` runs without `--warnings` THE SYSTEM
+1. `AC_c1` [event] WHEN `superdev validate` runs without `--warnings` THE SYSTEM
    SHALL list every error, list no warning, and state both counts.
-2. [event] WHEN `superdev validate --warnings` runs THE SYSTEM SHALL list
+2. `AC_c2` [event] WHEN `superdev validate --warnings` runs THE SYSTEM SHALL list
    every finding of both severities.
-3. [ubiquitous] THE SYSTEM SHALL give the PostToolUse hook the same
+3. `AC_c3` [ubiquitous] THE SYSTEM SHALL give the PostToolUse hook the same
    default as a bare `validate`, so one rule governs both.
-4. [ubiquitous] THE SYSTEM SHALL report the same information in `--json`
+4. `AC_c4` [ubiquitous] THE SYSTEM SHALL report the same information in `--json`
    as in text: both counts always, and the findings the text run listed.
-5. [ubiquitous] THE SYSTEM SHALL declare in
+5. `AC_c5` [ubiquitous] THE SYSTEM SHALL declare in
    [contract-002][sokf:contract-002-cli-superdev] every key `--json`
    emits.
-6. [ubiquitous] THE SYSTEM SHALL decide pass and fail exactly as it does
+6. `AC_c6` [ubiquitous] THE SYSTEM SHALL decide pass and fail exactly as it does
    today, because the default changes what is shown and never what is
    found.
 

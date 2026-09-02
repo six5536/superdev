@@ -107,30 +107,30 @@ declaration adds a check on the tag and none on the block.
 
 ## Acceptance criteria
 
-1. [ubiquitous] THE SYSTEM SHALL accept any fence tag as a
+1. `AC_c1` [ubiquitous] THE SYSTEM SHALL accept any fence tag as a
    contract-kind schema's declared definition form, and SHALL parse a
    block's contents only where that form is `yaml` or `json`.
-2. [event] WHEN a contract's definition section carries no fenced block
+2. `AC_c2` [event] WHEN a contract's definition section carries no fenced block
    tagged with a form its kind declares THE SYSTEM SHALL report an
    error naming the declared form and the tags the section carries.
-3. [conditional] IF a kind declares a definition form the validator does
+3. `AC_c3` [conditional] IF a kind declares a definition form the validator does
    not parse THE SYSTEM SHALL report no finding about that block's
    contents.
-4. [conditional] IF a kind declares block keys or block entry keys
+4. `AC_c4` [conditional] IF a kind declares block keys or block entry keys
    alongside a definition form the validator does not parse THE SYSTEM
    SHALL report an error on the schema, naming the keys that bind
    nothing.
-5. [ubiquitous] THE SYSTEM SHALL declare, in every contract-kind schema
+5. `AC_c5` [ubiquitous] THE SYSTEM SHALL declare, in every contract-kind schema
    whose definition section takes a fenced block, the fence tags that
    section accepts.
-6. [ubiquitous] THE SYSTEM SHALL state, in each contract-kind schema
+6. `AC_c6` [ubiquitous] THE SYSTEM SHALL state, in each contract-kind schema
    whose declared form the validator does not parse, that a drift test
    is what binds that section's block.
-7. [ubiquitous] THE SYSTEM SHALL give each kind whose form the validator
+7. `AC_c7` [ubiquitous] THE SYSTEM SHALL give each kind whose form the validator
    does not parse the reason its ecosystem needs that form.
-8. [ubiquitous] THE SYSTEM SHALL leave every contract on file passing
+8. `AC_c8` [ubiquitous] THE SYSTEM SHALL leave every contract on file passing
    validation.
-9. [conditional] IF a contract on file carries a fence tag its kind's
+9. `AC_c9` [conditional] IF a contract on file carries a fence tag its kind's
    declared forms do not admit THE SYSTEM SHALL either admit that tag or
    change the contract, and SHALL record which, so no such contract is
    made to pass by widening the declaration unexamined.

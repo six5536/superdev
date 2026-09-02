@@ -58,9 +58,9 @@ in the canonical knowledge agrees on both.
 
 ## Acceptance criteria
 
-1. [event] WHEN an `index.md` carries frontmatter THE SYSTEM SHALL
+1. `AC_c1` [event] WHEN an `index.md` carries frontmatter THE SYSTEM SHALL
    report it, since SPEC §9 says an index has none.
-2. [event] WHEN an index is not heading-grouped link lists in the house
+2. `AC_c2` [event] WHEN an index is not heading-grouped link lists in the house
    bullet style THE SYSTEM SHALL report the offending line.
 
 ## Alternatives considered

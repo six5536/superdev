@@ -93,26 +93,26 @@ not parse as a document at all is itself a schema finding.
 
 ## Acceptance criteria
 
-1. [event] WHEN a schema's example, read as a document, breaks the
+1. `AC_c1` [event] WHEN a schema's example, read as a document, breaks the
    declaring schema's frontmatter contract — a value failing its `const`,
    `pattern` or `enum`, or an absent required key — THE SYSTEM SHALL
    report an error naming the schema file and what the example broke.
-2. [event] WHEN a schema's example breaks the declaring schema's section
+2. `AC_c2` [event] WHEN a schema's example breaks the declaring schema's section
    rules — a required section absent, sections misordered, a prohibited
    section present, or a section's body lacking its declared content kind
    — THE SYSTEM SHALL report an error naming the schema file and what
    the example broke.
-3. [event] WHEN a schema's example links to a concept by a path into the
+3. `AC_c3` [event] WHEN a schema's example links to a concept by a path into the
    knowledge THE SYSTEM SHALL report an error naming the schema file;
    the `[text][sokf:<id>]` form is the accepted form for a concept link.
-4. [ubiquitous] THE SYSTEM SHALL accept, without resolution, an example
+4. `AC_c4` [ubiquitous] THE SYSTEM SHALL accept, without resolution, an example
    whose ids and `sokf:` labels name nothing in the knowledge, and an
    example link whose target is outside the knowledge — a URL or a
    repository path — in its ordinary markdown form.
-5. [event] WHEN a schema's example does not parse as a document — no
+5. `AC_c5` [event] WHEN a schema's example does not parse as a document — no
    frontmatter block, or frontmatter that is not YAML — THE SYSTEM SHALL
    report an error naming the schema file.
-6. [ubiquitous] THE SYSTEM SHALL report PASS on this repository once the
+6. `AC_c6` [ubiquitous] THE SYSTEM SHALL report PASS on this repository once the
    feature's reconciliation lands: every schema's example satisfies its
    own schema, or the schema was deliberately corrected.
 

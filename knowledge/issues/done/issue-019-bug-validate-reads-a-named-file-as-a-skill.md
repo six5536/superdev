@@ -42,9 +42,9 @@ names, never runs at all.
 
 ## Steps to reproduce
 
-1. Run `superdev validate` with no arguments — PASS, no errors.
-2. Run `superdev validate knowledge/architecture.md`.
-3. Read the report.
+1. `RS_c1` Run `superdev validate` with no arguments — PASS, no errors.
+2. `RS_c2` Run `superdev validate knowledge/architecture.md`.
+3. `RS_c3` Read the report.
 
 ## Expected behaviour
 

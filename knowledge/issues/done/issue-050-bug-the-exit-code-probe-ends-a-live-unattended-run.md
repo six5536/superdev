@@ -36,10 +36,10 @@ itself the first time a slice's checks run.
 
 ## Steps to reproduce
 
-1. `superdev run begin --session x --next y` — `.superdev/cache/run.toml`
+1. `RS_c1` `superdev run begin --session x --next y` — `.superdev/cache/run.toml`
    exists.
-2. `cargo nextest run -p superdev --test contract_exit_codes`.
-3. `.superdev/cache/run.toml` is gone; `superdev run advance` reports
+2. `RS_c2` `cargo nextest run -p superdev --test contract_exit_codes`.
+3. `RS_c3` `.superdev/cache/run.toml` is gone; `superdev run advance` reports
    `no run is active`.
 
 ## Expected behaviour

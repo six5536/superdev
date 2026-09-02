@@ -61,23 +61,23 @@ the binding. Once this is done:
 
 ## Acceptance criteria
 
-1. [event] WHEN a schema declares an item shape on a list section and a
+1. `AC_c1` [event] WHEN a schema declares an item shape on a list section and a
    document's item does not match THE SYSTEM SHALL report a validate
    error naming the file, the section and the item.
-2. [event] WHEN a schema declares a body shape on a section and the
+2. `AC_c2` [event] WHEN a schema declares a body shape on a section and the
    document's section body does not match THE SYSTEM SHALL report a
    validate error naming the file and the section.
-3. [event] WHEN a schema declares a shape that does not compile, or an
+3. `AC_c3` [event] WHEN a schema declares a shape that does not compile, or an
    item shape on a section without a list content kind, THE SYSTEM
    SHALL report the finding on the schema file.
-4. [event] WHEN a feature-request acceptance criterion does not open
+4. `AC_c4` [event] WHEN a feature-request acceptance criterion does not open
    with an EARS pattern tag THE SYSTEM SHALL fail validate naming the
    criterion.
-5. [state] WHILE a schema declares no shape on a section THE SYSTEM
+5. `AC_c5` [state] WHILE a schema declares no shape on a section THE SYSTEM
    SHALL check nothing new about that section.
-6. [ubiquitous] THE SYSTEM SHALL validate the shipped knowledge and the
+6. `AC_c6` [ubiquitous] THE SYSTEM SHALL validate the shipped knowledge and the
    pack mirror clean with every declared shape enforced.
-7. [ubiquitous] THE SYSTEM SHALL document each new declaration in the
+7. `AC_c7` [ubiquitous] THE SYSTEM SHALL document each new declaration in the
    document-schemas contract and in each schema that carries it.
 
 ## Alternatives considered

@@ -31,9 +31,9 @@ already on the branch.
 
 ## Steps to reproduce
 
-1. Run `/contract-design` on a framed issue.
-2. Let the session run without interrupting it.
-3. Read the transcript from the first contract edit to the first
+1. `RS_c1` Run `/contract-design` on a framed issue.
+2. `RS_c2` Let the session run without interrupting it.
+3. `RS_c3` Read the transcript from the first contract edit to the first
    question put to the user.
 
 ## Expected behaviour

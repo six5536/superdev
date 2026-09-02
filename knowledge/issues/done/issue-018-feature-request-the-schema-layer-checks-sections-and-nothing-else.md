@@ -84,22 +84,22 @@ rather than silently binding nothing.
 
 ## Acceptance criteria
 
-1. [event] WHEN a section's body does not match the content kind its
+1. `AC_c1` [event] WHEN a section's body does not match the content kind its
    schema declares — prose, bullet-list, numbered-list, table or code —
    THE SYSTEM SHALL report an error naming the document, the section and
    the schema.
-2. [ubiquitous] THE SYSTEM SHALL accept a lead-in sentence before the
+2. `AC_c2` [ubiquitous] THE SYSTEM SHALL accept a lead-in sentence before the
    list in a bullet-list or numbered-list section.
-3. [event] WHEN a present frontmatter value breaks the `const`, `pattern`
+3. `AC_c3` [event] WHEN a present frontmatter value breaks the `const`, `pattern`
    or `enum` its schema declares for that key THE SYSTEM SHALL report an
    error naming the document, the key and the schema.
-4. [event] WHEN a frontmatter key a schema marks required is absent THE
+4. `AC_c4` [event] WHEN a frontmatter key a schema marks required is absent THE
    SYSTEM SHALL report an error naming the document, the key and the
    schema.
-5. [conditional] IF a schema declares a content kind outside the
+5. `AC_c5` [conditional] IF a schema declares a content kind outside the
    vocabulary or a `pattern` that does not compile THE SYSTEM SHALL
    report the schema file itself.
-6. [ubiquitous] THE SYSTEM SHALL report PASS on this repository once the
+6. `AC_c6` [ubiquitous] THE SYSTEM SHALL report PASS on this repository once the
    feature's reconciliation lands: every live document satisfies its
    schema's content kinds and frontmatter contract, or the schema was
    deliberately corrected.

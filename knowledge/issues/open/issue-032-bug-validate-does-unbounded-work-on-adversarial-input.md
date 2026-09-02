@@ -30,9 +30,9 @@ severity: it needs a hostile or pathological file in the checked tree.
 
 ## Steps to reproduce
 
-1. Generate a markdown file whose frontmatter holds 100,000 keys.
-2. Place it where a run reaches it, or name it directly.
-3. Run `superdev validate <file>` and time it.
+1. `RS_c1` Generate a markdown file whose frontmatter holds 100,000 keys.
+2. `RS_c2` Place it where a run reaches it, or name it directly.
+3. `RS_c3` Run `superdev validate <file>` and time it.
 
 ## Expected behaviour
 

@@ -60,10 +60,10 @@ at least a day before this acceptance ran.
 
 ## Steps to reproduce
 
-1. Check the repository out on Windows with the default
+1. `RS_c1` Check the repository out on Windows with the default
    `core.autocrlf`.
-2. Run `superdev validate --json`.
-3. Observe exit code 1 and the findings below.
+2. `RS_c2` Run `superdev validate --json`.
+3. `RS_c3` Observe exit code 1 and the findings below.
 
 In CI the same path is driven by `validate_passes_the_live_repository`,
 `validate_json_is_machine_readable` and

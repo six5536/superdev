@@ -36,10 +36,10 @@ contributor meets all 65 with the reflex to tidy them.
 
 ## Steps to reproduce
 
-1. `cargo run --quiet -- status --drift`
-2. Count the planned changes: `… | grep -c '^  - '` reports 65.
-3. `npm run check:blueprint` exits 1.
-4. `grep -c level pack/aokf/agents/aokf/SPEC.md .agents/aokf/SPEC.md` reports
+1. `RS_c1` `cargo run --quiet -- status --drift`
+2. `RS_c2` Count the planned changes: `… | grep -c '^  - '` reports 65.
+3. `RS_c3` `npm run check:blueprint` exits 1.
+4. `RS_c4` `grep -c level pack/aokf/agents/aokf/SPEC.md .agents/aokf/SPEC.md` reports
    2 in the pack copy and 0 in the live one.
 
 ## Expected behaviour

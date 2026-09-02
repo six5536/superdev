@@ -41,10 +41,10 @@ reported it.
 
 ## Steps to reproduce
 
-1. Run `superdev validate --json` and read the top-level keys.
-2. Read the `json:` block of `superdev validate` in
+1. `RS_c1` Run `superdev validate --json` and read the top-level keys.
+2. `RS_c2` Read the `json:` block of `superdev validate` in
    [contract-002][sokf:contract-002-cli-superdev].
-3. Compare them by hand, which is the only way they have ever been
+3. `RS_c3` Compare them by hand, which is the only way they have ever been
    compared.
 
 ## Expected behaviour

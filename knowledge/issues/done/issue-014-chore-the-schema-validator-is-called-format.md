@@ -59,10 +59,10 @@ times over in this repository, and none of the three was this validator.
 
 ## Definition of done
 
-- `git grep -n 'crate::format\|superdev_core::format'` returns nothing.
-- The grammar is read from a path that does not say "format", and
+- `DD_c1` `git grep -n 'crate::format\|superdev_core::format'` returns nothing.
+- `DD_c2` The grammar is read from a path that does not say "format", and
   `the_embedded_grammar_equals_the_repository_copy` still passes — it is
   what catches a grammar path updated on one side only.
-- The word "format" in the tree means formatting, a pack version, or the
+- `DD_c3` The word "format" in the tree means formatting, a pack version, or the
   knowledge format, and never this validator.
 

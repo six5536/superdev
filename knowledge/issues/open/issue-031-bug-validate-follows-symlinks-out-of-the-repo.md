@@ -33,10 +33,10 @@ walk predates that feature.
 
 ## Steps to reproduce
 
-1. In a repository, run `ln -s /etc docs-link` where a grammar root or
+1. `RS_c1` In a repository, run `ln -s /etc docs-link` where a grammar root or
    a named directory will reach it.
-2. Run `superdev validate docs-link`.
-3. Observe the walk entering the target; some finding messages quote
+2. `RS_c2` Run `superdev validate docs-link`.
+3. `RS_c3` Observe the walk entering the target; some finding messages quote
    the lines they object to.
 
 ## Expected behaviour

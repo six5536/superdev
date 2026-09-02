@@ -61,13 +61,13 @@ a deliberate half-binding from a forgotten one.
 
 ## Definition of done
 
-- Each of the three bindings carries a comment stating the direction it
+- `DD_c1` Each of the three bindings carries a comment stating the direction it
   binds and why the other is absent, or gains the missing assertion.
-- The lock binding fails when `contract-006` declares a key the writer
+- `DD_c2` The lock binding fails when `contract-006` declares a key the writer
   never emits, proved by adding one and watching it fail
   (`cargo nextest run -E 'test(the_written_lock_declares)'` — the exact
   test name to be read off the file).
-- `cargo nextest run` passes with no test weakened: the audit adds
+- `DD_c3` `cargo nextest run` passes with no test weakened: the audit adds
   assertions or comments and removes none.
 
 ## Comments

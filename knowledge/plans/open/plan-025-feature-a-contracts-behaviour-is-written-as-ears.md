@@ -74,19 +74,19 @@ rebuild per edit.
   `superdev status` reports no drift.
 - Cases:
   - unit: an item whose text does not match `item-key` is reported
-    naming the section and the item's first line — covers 2, 3.
+    naming the section and the item's first line — covers AC_c2, AC_c3.
   - unit: a key captured twice in one document, across two sections
     declaring `item-key`, is reported naming the key and both items —
-    covers 4.
-  - unit: the same key in two documents is not a finding — covers 4.
+    covers AC_c4.
+  - unit: the same key in two documents is not a finding — covers AC_c4.
   - unit: an `item-key` with no capture group, and one on a `prose`
     rule, are each a finding on the schema file and bind nothing —
-    covers 14.
-  - unit: a matching, unique key on every item passes — covers 1.
+    covers AC_c14.
+  - unit: a matching, unique key on every item passes — covers AC_c1.
   - unit: an `item-key` finding is fatal, and `--fix` leaves the item
-    unchanged — covers 8, 10.
+    unchanged — covers AC_c8, AC_c10.
   - integration: contract-010's Behaviour carries no PENDING for
-    `item-key` and the live tree validates — covers 14.
+    `item-key` and the live tree validates — covers AC_c14.
 
 ### Slice 2: The validator reads item-only-pattern and item-prohibited-pattern
 
@@ -110,21 +110,21 @@ rebuild per edit.
 - Cases:
   - unit: a match on a paragraph line, a table row and a numbered item
     under a bullet-list rule is each reported naming the section and
-    the line — covers 5.
+    the line — covers AC_c5.
   - unit: a match inside a bullet item is not an `item-only-pattern`
-    finding — covers 5.
+    finding — covers AC_c5.
   - unit: an item matching `item-prohibited-pattern` is reported naming
-    the item and the matched text — covers 6.
+    the item and the matched text — covers AC_c6.
   - unit: the `(?s)` two-verb pattern of ADR-047 reports an item with
-    two verbs and passes an item with `SHALL NOT` — covers 7.
+    two verbs and passes an item with `SHALL NOT` — covers AC_c7.
   - unit: an item with a tag and no verb fails the ADR-047
-    `item-pattern` — covers 7.
+    `item-pattern` — covers AC_c7.
   - unit: an item carrying `PENDING` beside its verb passes all four
-    patterns — covers 9.
+    patterns — covers AC_c9.
   - unit: `item-prohibited-pattern` on a `prose` rule is a finding on
-    the schema — covers 14.
+    the schema — covers AC_c14.
   - integration: contract-010 carries no PENDING and the live tree
-    validates — covers 14.
+    validates — covers AC_c14.
 
 ### Slice 3: The internal contracts are swept
 
@@ -145,9 +145,9 @@ rebuild per edit.
 - Cases:
   - integration: a scratch schema carrying the ADR-047 patterns on
     Behaviour and Stability passes the three swept contracts — covers
-    13.
+    AC_c13.
   - manual: the reviewer confirms the promise count per contract
-    equals the modal-verb count before the sweep — covers 13.
+    equals the modal-verb count before the sweep — covers AC_c13.
   - Note, at merge: contract-007 14 verbs before, 14 promises after;
     contract-009 8 and 8; contract-010 16 and 16. The scratch schema
     carrying the four ADR-047 declarations reported nothing for the
@@ -164,9 +164,9 @@ rebuild per edit.
 - Done-check: as slice 3, for the three files.
 - Cases:
   - integration: the scratch schema of slice 3 passes the three swept
-    contracts — covers 13.
+    contracts — covers AC_c13.
   - manual: the reviewer confirms the promise count equals the verb
-    count before the sweep — covers 13.
+    count before the sweep — covers AC_c13.
   - Note, at merge: contract-002 60 verbs before, 58 promises after —
     the closed-stdout-pipe and the `status`-writes-nothing sentences
     each stood twice and merge into one keyed item, cited from the
@@ -188,9 +188,9 @@ rebuild per edit.
 - Done-check: as slice 3, for the three files.
 - Cases:
   - integration: the scratch schema of slice 3 passes the three swept
-    contracts — covers 13.
+    contracts — covers AC_c13.
   - manual: the reviewer confirms the promise count equals the verb
-    count before the sweep — covers 13.
+    count before the sweep — covers AC_c13.
   - Note, at merge: contract-005 15 verbs before, 15 promises after;
     contract-006 16 and 16; contract-008 19 and 17 — the write-once
     sentence ("the engine MUST NOT hash, sync or revisit a seeded
@@ -221,15 +221,15 @@ rebuild per edit.
   `pack/knowledge/skills/` changed; `superdev status` no drift.
 - Cases:
   - integration: the live tree validates with the final schema —
-    covers 1, 11, 12, 13.
+    covers AC_c1, AC_c11, AC_c12, AC_c13.
   - integration: a scratch contract with a keyless bullet, a `MUST`
     item, a two-verb item, a `SHALL` in a paragraph and a `TBD` item
-    fails validate naming each — covers 2, 5, 6, 7, 8.
+    fails validate naming each — covers AC_c2, AC_c5, AC_c6, AC_c7, AC_c8.
   - integration: a scratch contract whose Behaviour is a numbered flow
-    beside keyed bullets passes — covers 1.
+    beside keyed bullets passes — covers AC_c1.
   - unit: the schema's Behaviour and Stability rules declare the four
-    patterns and say the citation form — covers 1, 11.
-  - unit: no skill file differs from the merge target — covers 15.
+    patterns and say the citation form — covers AC_c1, AC_c11.
+  - unit: no skill file differs from the merge target — covers AC_c15.
   - Note, at merge: the final schema reported nothing on the nine
     swept contracts; its one finding was on the schema's own
     `deployment` example, a key opening with a digit, renamed before
@@ -263,16 +263,16 @@ rebuild per edit.
   examples pass their own check; `superdev status` no drift.
 - Cases:
   - integration: the live tree validates with the four schemas —
-    covers 17, 20, 21.
+    covers AC_c17, AC_c20, AC_c21.
   - integration: a scratch feature-request with a keyless criterion,
     a `P_` key, and a duplicate `AC_` key fails naming each — covers
-    17.
+    AC_c17.
   - integration: a scratch feature-request whose criterion reads
     `` `AC_x` TBD — … `` passes, and a bug-report step with a key and
-    no tag passes — covers 18.
-  - unit: the plan schema's case description cites keys — covers 19.
+    no tag passes — covers AC_c18.
+  - unit: the plan schema's case description cites keys — covers AC_c19.
   - unit: every settled issue's diff touches only item prefixes —
-    covers 20.
+    covers AC_c20.
 
 ### Slice 8: The records close
 
@@ -287,8 +287,8 @@ rebuild per edit.
   longer says "do not yet".
 - Cases:
   - unit: the glossary defines the key, its prefixes and the citation
-    — covers 16.
-  - unit: the changelog's Unreleased names the form — covers 16.
+    — covers AC_c16.
+  - unit: the changelog's Unreleased names the form — covers AC_c16.
 
 ## Deferred decisions
 

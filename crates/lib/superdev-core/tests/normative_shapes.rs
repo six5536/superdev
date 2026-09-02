@@ -72,12 +72,13 @@ fn request(criteria: &str) -> String {
 
 /// Covers I034 criterion 4: a criterion that does not open with an EARS
 /// pattern tag fails validate, and the finding names the file, the section
-/// and the criterion (ADR-031).
+/// and the criterion (ADR-031). The criterion carries its key, which
+/// ADR-046 puts before the tag, so the one finding is the tag's.
 #[test]
 fn a_criterion_without_its_ears_tag_fails_validate() {
     let found = findings_for(
         "probe.md",
-        &request("1. WHEN the tag is missing THE SYSTEM SHALL be told so.\n"),
+        &request("1. `AC_told` WHEN the tag is missing THE SYSTEM SHALL be told so.\n"),
     );
     assert_eq!(found.len(), 1, "{found:#?}");
     assert!(found[0].contains("\"Acceptance criteria\""), "{found:#?}");
@@ -85,20 +86,244 @@ fn a_criterion_without_its_ears_tag_fails_validate() {
     assert!(found[0].contains("item-pattern"), "{found:#?}");
 }
 
-/// Covers I034 criterion 4: each of the six EARS tags opens a criterion, and
-/// an unsettled criterion reads TBD — the pattern admits both, and the frame
-/// phase is what retires TBD.
+/// Covers I034 criterion 4 and I037 criterion 18: each of the six EARS tags
+/// opens a criterion after its key, and an unsettled criterion reads TBD
+/// after its key — the pattern admits both, and the frame phase is what
+/// retires TBD.
 #[test]
 fn every_ears_tag_and_a_tbd_criterion_pass() {
-    let criteria = "1. [ubiquitous] THE SYSTEM SHALL do it.\n\
-                    2. [event] WHEN x THE SYSTEM SHALL do it.\n\
-                    3. [state] WHILE x THE SYSTEM SHALL do it.\n\
-                    4. [conditional] IF x THE SYSTEM SHALL do it.\n\
-                    5. [optional] WHERE x THE SYSTEM SHALL do it.\n\
-                    6. [complex] WHILE x WHEN y THE SYSTEM SHALL do it.\n\
-                    7. TBD — whether it should.\n";
+    let criteria = "1. `AC_c1` [ubiquitous] THE SYSTEM SHALL do it.\n\
+                    2. `AC_c2` [event] WHEN x THE SYSTEM SHALL do it.\n\
+                    3. `AC_c3` [state] WHILE x THE SYSTEM SHALL do it.\n\
+                    4. `AC_c4` [conditional] IF x THE SYSTEM SHALL do it.\n\
+                    5. `AC_c5` [optional] WHERE x THE SYSTEM SHALL do it.\n\
+                    6. `AC_c6` [complex] WHILE x WHEN y THE SYSTEM SHALL do it.\n\
+                    7. `AC_x` TBD — whether it should.\n";
     let found = findings_for("probe.md", &request(criteria));
     assert!(found.is_empty(), "{found:#?}");
+}
+
+/// Covers I037 criterion 17: under the live feature-request schema a
+/// keyless criterion, a criterion keyed with another kind's prefix and a
+/// key used twice each fail `validate` with a finding naming the item —
+/// the same schema set the tracker is checked with.
+#[test]
+fn a_criterion_departing_from_the_key_form_fails_naming_each_departure() {
+    let criteria = "1. `AC_c1` [ubiquitous] THE SYSTEM SHALL do it.\n\
+                    2. [event] WHEN the key is missing THE SYSTEM SHALL say so.\n\
+                    3. `P_c3` [event] WHEN the prefix is a promise's THE SYSTEM SHALL say so.\n\
+                    4. `AC_c1` [event] WHEN the key repeats THE SYSTEM SHALL say so.\n";
+    let found = findings_for("probe.md", &request(criteria));
+    let named = |text: &str| found.iter().filter(|f| f.contains(text)).count();
+    assert_eq!(
+        named("item `2. [event] WHEN the key is missing THE SYSTEM SHALL say so.` carries no key"),
+        1,
+        "{found:#?}"
+    );
+    assert_eq!(
+        named(
+            "item `3. `P_c3` [event] WHEN the prefix is a promise's THE SYSTEM SHALL say so.` carries no key"
+        ),
+        1,
+        "{found:#?}"
+    );
+    let repeated = found
+        .iter()
+        .filter(|f| {
+            f.contains("key `AC_c1`") && f.contains("4. `AC_c1` [event] WHEN the key repeats")
+        })
+        .count();
+    assert_eq!(repeated, 1, "{found:#?}");
+    // Items 2 and 3 each fail the key and the pattern, which requires the
+    // `AC_` key before the tag; item 4 fails the repeat; item 1 is sound.
+    assert_eq!(found.len(), 5, "{found:#?}");
+}
+
+/// One bug-report body, with `steps` as its steps to reproduce.
+fn bug(steps: &str) -> String {
+    format!(
+        "---\ntype: BugReport\nid: issue-999-bug-probe\ntitle: t\ndescription: d\n\
+         lifecycle: open\n---\n\n# Bug: probe\n\n## Summary\n\nA line.\n\n\
+         ## Environment\n\n- One.\n\n## Steps to reproduce\n\n{steps}\n\
+         ## Expected behaviour\n\nA line.\n\n## Actual behaviour\n\nA line.\n\n\
+         ## Root cause (if known)\n\nA line.\n\n## Proposed fix / workaround\n\n- One.\n\n\
+         ## Regression risk\n\nA line.\n"
+    )
+}
+
+/// Covers I037 criterion 18: a repro step carries its `RS_` key and no
+/// EARS tag — a step is not a requirement (ADR-046) — and a step with no
+/// key fails naming it.
+#[test]
+fn a_repro_step_carries_a_key_and_no_tag() {
+    let found = findings_of(
+        "BugReport",
+        "probe.md",
+        &bug("1. `RS_c1` Run the probe.\n2. `RS_wait` Wait 30 seconds.\n"),
+    );
+    assert!(found.is_empty(), "{found:#?}");
+    let found = findings_of("BugReport", "probe.md", &bug("1. Run the probe.\n"));
+    assert_eq!(found.len(), 1, "{found:#?}");
+    assert!(
+        found[0].contains("\"Steps to reproduce\"")
+            && found[0].contains("item `1. Run the probe.` carries no key"),
+        "{found:#?}"
+    );
+}
+
+/// The three tracker lists a plan case cites and the key prefix each
+/// declares (ADR-046): the heading, the schema that carries it, the list's
+/// marker kind and the prefix.
+const CITED_LISTS: [(&str, &str, &str, &str); 3] = [
+    (
+        "Acceptance criteria",
+        "feature-request.md",
+        "numbered",
+        "AC_",
+    ),
+    ("Steps to reproduce", "bug-report.md", "numbered", "RS_"),
+    ("Definition of done", "chore.md", "bullet", "DD_"),
+];
+
+/// Covers I037 criteria 17, 18 and 19: the three tracker schemas declare
+/// `item-key` with their prefix on the list a plan case cites — the
+/// criterion's `item-pattern` admitting the key before the tag or `TBD`,
+/// the step's and the done item's rule binding the key alone — and each
+/// rule and the plan schema's case rule state the citation in keys, in the
+/// live tree and in the pack mirror.
+#[test]
+fn every_cited_list_declares_its_key_and_the_plan_cites_keys() {
+    for root in ["knowledge/schemas", "pack/knowledge/schemas"] {
+        for (heading, schema, _, prefix) in CITED_LISTS {
+            let path = format!("{root}/{schema}");
+            let text = std::fs::read_to_string(repo(&path)).unwrap();
+            let rule = rule_for(&text, heading);
+            let key = format!("item-key: '^`({prefix}[a-z][a-z0-9]*(?:-[a-z0-9]+)*)`'");
+            assert!(rule.contains(&key), "{path}: {heading} lacks `{key}`");
+            let description = folded(&rule);
+            assert!(
+                description.contains("bare key where the issue is the subject")
+                    && description.contains("the issue's id followed by the key elsewhere"),
+                "{path}: {heading} does not state the citation form: {description}"
+            );
+            assert!(
+                description.contains("`c<n>`"),
+                "{path}: {heading} does not name the sweep's slug: {description}"
+            );
+        }
+        let request = std::fs::read_to_string(repo(&format!("{root}/feature-request.md"))).unwrap();
+        let criteria = rule_for(&request, "Acceptance criteria");
+        assert!(
+            criteria.contains(
+                "item-pattern: '^`AC_[a-z0-9-]+` (\\[(ubiquitous|event|state|conditional|optional|complex)\\] |TBD — )'"
+            ),
+            "{root}: the criterion's key precedes its tag or its TBD: {criteria}"
+        );
+        for schema in ["bug-report.md", "chore.md"] {
+            let text = std::fs::read_to_string(repo(&format!("{root}/{schema}"))).unwrap();
+            let (heading, _, _, _) = CITED_LISTS
+                .iter()
+                .find(|(_, s, _, _)| *s == schema)
+                .unwrap();
+            let rule = rule_for(&text, heading);
+            assert!(
+                !rule.contains("item-pattern"),
+                "{root}/{schema}: {heading} binds the key alone, with no tag"
+            );
+        }
+        let bug_schema = std::fs::read_to_string(repo(&format!("{root}/bug-report.md"))).unwrap();
+        let expected = rule_for(&bug_schema, "Expected behaviour");
+        assert!(
+            expected.contains("content: prose") && !expected.contains("item-key"),
+            "{root}: Expected behaviour stays prose with no key (plan-025, deferred)"
+        );
+        let plan = std::fs::read_to_string(repo(&format!("{root}/feature-plan.md"))).unwrap();
+        let slice = plan
+            .split("  - heading-pattern: '^Slice \\d+: .+$'\n")
+            .nth(1)
+            .and_then(|rest| rest.split("\n  - heading").next())
+            .expect("the plan schema carries the slice rule");
+        let slice = folded(slice);
+        for phrase in [
+            "naming the keys of the acceptance criteria it covers",
+            "\"covers AC_c1, AC_stale-include\"",
+            "keyed repro steps (`RS_`)",
+        ] {
+            assert!(
+                slice.contains(phrase),
+                "{root}/feature-plan.md: the slice rule lacks `{phrase}`: {slice}"
+            );
+        }
+        assert!(
+            !plan.contains("covers 1"),
+            "{root}/feature-plan.md: the example's cases cite keys, not numbers"
+        );
+    }
+}
+
+/// Covers I037 criterion 20: every issue on file carries a key on each
+/// top-level item of the lists a plan case cites — `AC_` on a
+/// feature-request's criteria, `RS_` on a bug's repro steps, `DD_` on a
+/// chore's definition of done — the sweep's proof, read straight from the
+/// tracker rather than through the schema.
+#[test]
+fn every_issue_on_file_carries_a_key_on_each_cited_item() {
+    let mut keyed = 0;
+    let mut issues = 0;
+    for state in ["open", "done", "wontfix"] {
+        let dir = repo(&format!("knowledge/issues/{state}"));
+        let Ok(entries) = std::fs::read_dir(&dir) else {
+            continue;
+        };
+        for entry in entries {
+            let path = entry.unwrap().path();
+            let name = path.file_name().unwrap().to_str().unwrap().to_string();
+            if path.extension().is_none_or(|e| e != "md") {
+                continue;
+            }
+            issues += 1;
+            let text = same(&std::fs::read_to_string(&path).unwrap());
+            let mut section: Option<(&str, &str)> = None;
+            let mut fenced = false;
+            for line in text.lines() {
+                if line.trim_start().starts_with("```") {
+                    fenced = !fenced;
+                    continue;
+                }
+                if fenced {
+                    continue;
+                }
+                if line.starts_with("# ") || line.starts_with("## ") {
+                    section = CITED_LISTS
+                        .iter()
+                        .find(|(heading, ..)| line == format!("## {heading}"))
+                        .map(|(_, _, kind, prefix)| (*kind, *prefix));
+                    continue;
+                }
+                let Some((kind, prefix)) = section else {
+                    continue;
+                };
+                let item = match kind {
+                    "numbered" => {
+                        let digits = line.len()
+                            - line.trim_start_matches(|c: char| c.is_ascii_digit()).len();
+                        (digits > 0 && line[digits..].starts_with(". "))
+                            .then(|| &line[digits + 2..])
+                    }
+                    _ => line.strip_prefix("- "),
+                };
+                if let Some(item) = item {
+                    assert!(
+                        item.starts_with(&format!("`{prefix}")),
+                        "{name}: item `{line}` carries no {prefix} key"
+                    );
+                    keyed += 1;
+                }
+            }
+        }
+    }
+    assert!(issues >= 50, "the tracker was read: {issues}");
+    assert!(keyed >= 200, "the tracker's cited items were read: {keyed}");
 }
 
 /// Covers I034 criteria 4 and 6: every feature-request on file conforms, in
@@ -134,11 +359,13 @@ fn every_feature_request_on_file_conforms() {
 }
 
 /// The declaration ships: the live schema and the pack mirror carry the same
-/// EARS pattern, so a managed repository is held to it too.
+/// EARS pattern, so a managed repository is held to it too. The pattern is
+/// the keyed one of ADR-046 — the `AC_` key before the tag or the `TBD` —
+/// which replaced the tag-first pattern of ADR-031 in plan-025 slice 7.
 #[test]
 fn the_ears_declaration_ships_to_managed_repositories() {
-    let pattern = "item-pattern: '^\\[(ubiquitous|event|state|conditional|optional|complex)\\] \
-                   |^TBD — '";
+    let pattern = "item-pattern: '^`AC_[a-z0-9-]+` \
+                   (\\[(ubiquitous|event|state|conditional|optional|complex)\\] |TBD — )'";
     for root in ["knowledge/schemas", "pack/knowledge/schemas"] {
         let text = std::fs::read_to_string(repo(&format!("{root}/feature-request.md"))).unwrap();
         assert!(text.contains(pattern), "{root} declares the EARS pattern");
