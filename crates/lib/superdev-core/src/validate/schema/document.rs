@@ -174,6 +174,44 @@ impl SectionRule {
             _ => false,
         }
     }
+
+    /// Whether this rule and `other` name one heading: the same literal, or
+    /// the same pattern, at one level. A rule with no level matches any
+    /// depth, so it names the heading at every level (ADR-049).
+    fn names_same_heading(&self, other: &SectionRule) -> bool {
+        let same_level = match (self.level, other.level) {
+            (Some(a), Some(b)) => a == b,
+            _ => true,
+        };
+        same_level
+            && match (&self.heading, &other.heading) {
+                (Some(a), Some(b)) => a == b,
+                (None, None) => {
+                    self.heading_pattern.is_some() && self.heading_pattern == other.heading_pattern
+                }
+                _ => false,
+            }
+    }
+
+    /// The rule's `variants` tag, for a finding: `tagged [a, b]`, or
+    /// `untagged`.
+    fn tags(&self) -> String {
+        if self.variants.is_empty() {
+            "untagged".to_string()
+        } else {
+            format!("tagged [{}]", self.variants.join(", "))
+        }
+    }
+}
+
+/// Two section rules naming one heading that their `variants` sets do not
+/// separate (ADR-049): both indices into `sections`, in declared order, and
+/// the value the sets share — `None` when one rule is untagged, so it binds
+/// every variant.
+struct HeadingConflict {
+    first: usize,
+    second: usize,
+    shared: Option<String>,
 }
 
 // sokf:begin document-schemas
@@ -269,6 +307,53 @@ impl DocSchema {
         };
         variants.iter().all(|tag| values.contains(tag))
             && value.is_some_and(|v| variants.iter().any(|tag| tag == v))
+    }
+
+    /// Every pair of section rules naming one heading whose `variants` sets
+    /// do not separate them (ADR-049): two rules with disjoint tags are one
+    /// heading in two shapes, and any other pair is mis-declared.
+    fn heading_conflicts(&self) -> Vec<HeadingConflict> {
+        let mut conflicts = Vec::new();
+        for (first, a) in self.sections.iter().enumerate() {
+            for (second, b) in self.sections.iter().enumerate().skip(first + 1) {
+                if !a.names_same_heading(b) {
+                    continue;
+                }
+                let shared = if a.variants.is_empty() || b.variants.is_empty() {
+                    None
+                } else {
+                    match a.variants.iter().find(|tag| b.variants.contains(tag)) {
+                        Some(tag) => Some(tag.clone()),
+                        None => continue,
+                    }
+                };
+                conflicts.push(HeadingConflict {
+                    first,
+                    second,
+                    shared,
+                });
+            }
+        }
+        conflicts
+    }
+
+    /// The section rules a document carrying `value` is checked against, in
+    /// declared order: those its value selects, less both rules of every
+    /// conflicting pair, which bind nothing — `check_variants` reports them
+    /// (ADR-049). A heading declared once per variant is checked by the
+    /// rule the value selects, at that rule's place in the order.
+    fn sections_for(&self, value: Option<&str>) -> Vec<&SectionRule> {
+        let unreadable: Vec<usize> = self
+            .heading_conflicts()
+            .iter()
+            .flat_map(|c| [c.first, c.second])
+            .collect();
+        self.sections
+            .iter()
+            .enumerate()
+            .filter(|(i, rule)| !unreadable.contains(i) && self.selects(&rule.variants, value))
+            .map(|(_, rule)| rule)
+            .collect()
     }
 
     /// The `type` this schema governs, when it dispatches by type.
@@ -561,7 +646,9 @@ fn item_key_captures(file: &str, rule: &SectionRule) -> Option<Finding> {
 /// schema itself (ADR-045): a `variant-key` naming a frontmatter key with no
 /// `enum`, a `variants` tag in a schema with no `variant-key`, and a tag
 /// naming a value the discriminator's enum does not carry. Each binds
-/// nothing. The keyed example's faults are `check_examples`'.
+/// nothing. Two section rules naming one heading whose sets share a value,
+/// or of which one is untagged, are reported the same way, and both bind
+/// nothing (ADR-049). The keyed example's faults are `check_examples`'.
 #[must_use]
 pub fn check_variants(schemas: &[(String, String)]) -> Vec<Finding> {
     let mut findings = Vec::new();
@@ -618,6 +705,26 @@ pub fn check_variants(schemas: &[(String, String)]) -> Vec<Finding> {
                     values.join(", ")
                 ));
             }
+        }
+        for conflict in schema.heading_conflicts() {
+            let (a, b) = (
+                &schema.sections[conflict.first],
+                &schema.sections[conflict.second],
+            );
+            let declared = format!(
+                "schema: section {} is declared by two rules, {} and {}",
+                a.label(),
+                a.tags(),
+                b.tags()
+            );
+            push(match conflict.shared {
+                Some(value) => {
+                    format!("{declared}, whose variants share `{value}` — both bind nothing")
+                }
+                None => format!(
+                    "{declared} — an untagged rule binds every variant, so both bind nothing"
+                ),
+            });
         }
     }
     findings
@@ -899,9 +1006,11 @@ enum Subject<'a> {
 
 /// One document against one schema: the rules its variant selects, in the
 /// schema's declared order, so ordering, presence, prohibition, columns and
-/// the body patterns all run on that subsequence (ADR-045). A document with
-/// no discriminator value, or one the enum does not carry, sees the untagged
-/// rules alone; the frontmatter check reports the value.
+/// the body patterns all run on that subsequence (ADR-045). A heading
+/// declared once per variant is checked by the rule the value selects, its
+/// shape that rule's own (ADR-049). A document with no discriminator value,
+/// or one the enum does not carry, sees the untagged rules alone; the
+/// frontmatter check reports the value.
 fn check_one(
     doc: &Document<'_>,
     schema: &DocSchema,
@@ -927,11 +1036,7 @@ fn check_one(
         Subject::Example(key) => key.map(str::to_string),
     };
     let variant = variant.as_deref();
-    let sections: Vec<&SectionRule> = schema
-        .sections
-        .iter()
-        .filter(|rule| schema.selects(&rule.variants, variant))
-        .collect();
+    let sections = schema.sections_for(variant);
     // Counted as an editor counts them, so a document at exactly its limit
     // passes: `split` yields a trailing empty element for the final newline,
     // and reporting that as one line over is an off-by-one nobody can act on.
@@ -3684,6 +3789,212 @@ mod tests {
             findings[0]
                 .message
                 .contains("example `c`: names a value `kind` does not admit"),
+            "{findings:#?}"
+        );
+    }
+
+    /// A contract declaring one heading twice (ADR-049): `Criteria` is a plain
+    /// numbered list for `unframed`, and a keyed one for `framed` and `done`.
+    const PER_VARIANT_CONTRACT: &str = "frontmatter:\n  type:\n    const: T\n  lifecycle:\n\
+        \x20   required: true\n    enum: [unframed, framed, done]\nvariant-key: lifecycle\n\
+        sections-ordered: true\nsections:\n  - heading: Context\n    level: 2\n    required: true\n\
+        \x20 - heading: Criteria\n    level: 2\n    required: true\n    content: numbered-list\n\
+        \x20   variants: [unframed]\n  - heading: Criteria\n    level: 2\n    required: true\n\
+        \x20   content: numbered-list\n    item-key: '^`(AC_[a-z]+)`'\n\
+        \x20   item-pattern: '^`AC_[a-z]+` \\[event\\] '\n    variants: [framed, done]\n\
+        \x20 - heading: Tail\n    level: 2\n    required: true\n";
+
+    /// A document of `lifecycle` whose Criteria section carries `items`, the
+    /// other sections in the declared order unless `tail_first`.
+    fn lifecycle_doc(lifecycle: &str, items: &str, tail_first: bool) -> String {
+        let criteria = format!("## Criteria\n\n{items}\n");
+        let tail = "## Tail\n\nx\n";
+        let (second, third) = if tail_first {
+            (tail, criteria.as_str())
+        } else {
+            (criteria.as_str(), tail)
+        };
+        format!(
+            "---\ntype: T\nlifecycle: {lifecycle}\n---\n\n# T\n\n## Context\n\nx\n\n{second}\n{third}"
+        )
+    }
+
+    /// The findings a document of `lifecycle` carrying `items` under Criteria
+    /// gets from `schema`.
+    fn lifecycle_findings(
+        schema: &DocSchema,
+        lifecycle: &str,
+        items: &str,
+        tail_first: bool,
+    ) -> Vec<Finding> {
+        let text = lifecycle_doc(lifecycle, items, tail_first);
+        let doc = Document {
+            path: "a.md",
+            text: &text,
+            doc_type: Some("T"),
+        };
+        let mut findings = Vec::new();
+        check_one(&doc, schema, Subject::Filed, &mut findings);
+        findings
+    }
+
+    /// Covers I030 AC_one-schema-per-kind: two rules for one heading with
+    /// disjoint variants — an unframed document sees the plain rule and none
+    /// of the keyed rule's findings, a framed one sees the keyed rule and
+    /// none of the plain rule's leniency (ADR-049).
+    #[test]
+    fn a_heading_declared_per_variant_binds_the_rule_the_value_selects() {
+        let schema = schema_of(PER_VARIANT_CONTRACT);
+        let findings = lifecycle_findings(&schema, "unframed", "1. plain and keyless", false);
+        assert!(findings.is_empty(), "{findings:#?}");
+        let findings = lifecycle_findings(&schema, "framed", "1. plain and keyless", false);
+        assert_eq!(findings.len(), 1, "{findings:#?}");
+        assert!(
+            findings[0]
+                .message
+                .contains("section \"Criteria\" item `1. plain and keyless` carries no key"),
+            "{findings:#?}"
+        );
+        let findings = lifecycle_findings(&schema, "done", "1. `AC_one` [event] keyed", false);
+        assert!(findings.is_empty(), "{findings:#?}");
+        // The heading is required in every variant: each rule says so.
+        let text =
+            "---\ntype: T\nlifecycle: framed\n---\n\n# T\n\n## Context\n\nx\n\n## Tail\n\nx\n";
+        let doc = Document {
+            path: "a.md",
+            text,
+            doc_type: Some("T"),
+        };
+        let mut findings = Vec::new();
+        check_one(&doc, &schema, Subject::Filed, &mut findings);
+        assert_eq!(findings.len(), 1, "{findings:#?}");
+        assert!(
+            findings[0]
+                .message
+                .contains("missing required section \"Criteria\""),
+            "{findings:#?}"
+        );
+    }
+
+    /// Covers I030 AC_one-schema-per-kind: `sections-ordered` holds with the
+    /// recurring heading at one position — Criteria after Tail is out of
+    /// order in every variant, and in order in every variant otherwise.
+    #[test]
+    fn sections_ordered_holds_with_the_recurring_heading_at_one_position() {
+        let schema = schema_of(PER_VARIANT_CONTRACT);
+        for (lifecycle, items) in [
+            ("unframed", "1. plain"),
+            ("framed", "1. `AC_one` [event] keyed"),
+        ] {
+            let findings = lifecycle_findings(&schema, lifecycle, items, false);
+            assert!(findings.is_empty(), "{lifecycle}: {findings:#?}");
+            let findings = lifecycle_findings(&schema, lifecycle, items, true);
+            assert_eq!(findings.len(), 1, "{lifecycle}: {findings:#?}");
+            assert!(
+                findings[0].message.contains(
+                    "section \"Criteria\" comes after \"Tail\", and s orders them the other way"
+                ),
+                "{lifecycle}: {findings:#?}"
+            );
+        }
+    }
+
+    /// Covers I030 AC_one-schema-per-kind: two rules for one heading whose
+    /// sets share a value are a finding on the schema naming the heading and
+    /// the value; an untagged twin is a finding naming it; and in both cases
+    /// neither rule binds — a framed document with a keyless item passes.
+    #[test]
+    fn overlapping_or_untagged_rules_for_one_heading_are_a_schema_finding_and_bind_nothing() {
+        let overlapping =
+            PER_VARIANT_CONTRACT.replace("variants: [unframed]", "variants: [unframed, done]");
+        let schemas = [(
+            "s.md".to_string(),
+            format!("---\ntype: Schema\n---\n\n````yaml\n{overlapping}````\n"),
+        )];
+        let findings = check_variants(&schemas);
+        assert_eq!(findings.len(), 1, "{findings:#?}");
+        assert_eq!(findings[0].file, "s.md");
+        assert!(findings[0].fatal);
+        assert!(
+            findings[0].message.contains(
+                "section \"Criteria\" is declared by two rules, tagged [unframed, done] and \
+                 tagged [framed, done], whose variants share `done` — both bind nothing"
+            ),
+            "{findings:#?}"
+        );
+        let findings = lifecycle_findings(&schema_of(&overlapping), "framed", "1. keyless", false);
+        assert!(findings.is_empty(), "binds nothing: {findings:#?}");
+
+        let untagged = PER_VARIANT_CONTRACT.replace("    variants: [unframed]\n", "");
+        let schemas = [(
+            "s.md".to_string(),
+            format!("---\ntype: Schema\n---\n\n````yaml\n{untagged}````\n"),
+        )];
+        let findings = check_variants(&schemas);
+        assert_eq!(findings.len(), 1, "{findings:#?}");
+        assert!(
+            findings[0].message.contains(
+                "section \"Criteria\" is declared by two rules, untagged and tagged [framed, \
+                 done] — an untagged rule binds every variant, so both bind nothing"
+            ),
+            "{findings:#?}"
+        );
+        let findings = lifecycle_findings(&schema_of(&untagged), "framed", "1. keyless", false);
+        assert!(findings.is_empty(), "binds nothing: {findings:#?}");
+
+        // A heading declared once at each of two levels is two headings.
+        let two_levels = "frontmatter:\n  type:\n    const: T\nsections:\n  - heading-pattern: '^.+$'\n\
+                          \x20   level: 1\n  - heading-pattern: '^.+$'\n    level: 3\n";
+        let schemas = [(
+            "s.md".to_string(),
+            format!("---\ntype: Schema\n---\n\n````yaml\n{two_levels}````\n"),
+        )];
+        assert!(check_variants(&schemas).is_empty());
+    }
+
+    /// Covers I030 AC_one-schema-per-kind: a keyed example map with one
+    /// example per value passes when each example matches its own variant's
+    /// rule for the shared heading, and fails naming the one that does not.
+    #[test]
+    fn a_keyed_example_per_value_passes_against_its_own_rule_for_the_shared_heading() {
+        let contract = PER_VARIANT_CONTRACT
+            .replace(
+                "[unframed, framed, done]",
+                "[unframed, framed, done, wontfix]",
+            )
+            .replace(
+                "variants: [framed, done]",
+                "variants: [framed, done, wontfix]",
+            );
+        let plain = lifecycle_doc("unframed", "1. plain", false);
+        let keyed = |lifecycle: &str| lifecycle_doc(lifecycle, "1. `AC_one` [event] keyed", false);
+        let (framed, done, wontfix) = (keyed("framed"), keyed("done"), keyed("wontfix"));
+        let findings = check_examples(&with_keyed_examples(
+            &contract,
+            &[
+                ("unframed", &plain),
+                ("framed", &framed),
+                ("done", &done),
+                ("wontfix", &wontfix),
+            ],
+        ));
+        assert!(findings.is_empty(), "{findings:#?}");
+
+        let keyless = lifecycle_doc("framed", "1. plain", false);
+        let findings = check_examples(&with_keyed_examples(
+            &contract,
+            &[
+                ("unframed", &plain),
+                ("framed", &keyless),
+                ("done", &done),
+                ("wontfix", &wontfix),
+            ],
+        ));
+        assert_eq!(findings.len(), 1, "{findings:#?}");
+        assert!(
+            findings[0].message.starts_with(
+                "example `framed`: section \"Criteria\" item `1. plain` carries no key"
+            ),
             "{findings:#?}"
         );
     }

@@ -643,8 +643,8 @@ kinds:
             type: list
             doc: >
               The variant-key values this rule applies to; omitted, the rule applies to every
-              variant. A heading appears once in the list, with one requiredness across the
-              variants it names.
+              variant. A heading may recur across rules whose sets are disjoint and none
+              untagged, one shape per variant.
           description:
             type: string
             required: true

@@ -362,14 +362,13 @@ criteria unkeyed while unframed and keyed once framed (ADR-049).
   document against the rules its variant value selects, in declared
   order (ADR-045).
 - `P_heading-per-variant` [state] WHILE two section rules name one
-  heading with disjoint `variants` sets, the validator SHALL PENDING
-  (I030) check a document against the one its value selects, at that
-  heading's one place in the order.
+  heading with disjoint `variants` sets, the validator SHALL check a
+  document against the one its value selects, at that heading's one
+  place in the order.
 - `P_heading-rules-overlap` [event] WHEN two section rules name one
   heading and their `variants` sets share a value, or one of them is
-  untagged, the validator SHALL PENDING (I030) report an error on the
-  schema naming the heading and the overlap, and the rules bind
-  nothing.
+  untagged, the validator SHALL report an error on the schema naming
+  the heading and the overlap, and the rules bind nothing.
 
 **The definition is not parsed** — the `include` kind asks only that
 an include block naming a source path is present; what the block

@@ -192,6 +192,16 @@ fn variant_rules() {
     snapshot("variant-rules");
 }
 
+/// A schema declaring one heading per variant (ADR-049): an unframed
+/// document with plain criteria passes, a framed one with a keyless item
+/// fails naming it, a framed one with the heading out of order fails, and a
+/// schema whose two rules for a heading overlap, or of which one is
+/// untagged, reports each pair on the schema file and binds nothing.
+#[test]
+fn per_variant_heading() {
+    snapshot("per-variant-heading");
+}
+
 /// A schema declaring `item-key` (ADR-047): a malformed key, a missing one
 /// and a repeat across sections each report on the document, the same key
 /// in another document reports nothing, and a key with no capture group or
