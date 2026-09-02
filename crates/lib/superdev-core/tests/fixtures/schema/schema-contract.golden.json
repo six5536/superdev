@@ -8,7 +8,7 @@
     },
     {
       "file": "schemas/thing.md",
-      "message": "schema yaml: unknown key \"invented-key\" (the grammar declares target-files, description, line-limit, frontmatter, preamble, sections-ordered, sections, sections-prohibited, example)",
+      "message": "schema yaml: unknown key \"invented-key\" (the grammar declares target-files, description, line-limit, variant-key, frontmatter, preamble, sections-ordered, sections, sections-prohibited, example)",
       "severity": "error"
     },
     {

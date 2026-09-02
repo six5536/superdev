@@ -491,6 +491,13 @@ kinds:
           type: integer
           required: true
           doc: Line count above which the document must be split rather than trimmed.
+        variant-key:
+          type: string
+          required: false
+          doc: >
+            The frontmatter key whose value selects a variant. Its enum is the values a
+            variants tag may name; a key with no enum, or a tag in a schema without this, is
+            reported on the schema and binds nothing.
         frontmatter:
           type: map
           of: frontmatter-constraint
@@ -516,13 +523,18 @@ kinds:
             none; a schema that omits it must declare a preamble instead.
         sections-prohibited:
           type: list
-          doc: Headings that must not appear.
+          doc: >
+            Headings that must not appear: a bare heading, banned in every variant, or a
+            {heading, variants} mapping banning it in the variants named.
         example:
-          type: string
+          type: stringOrMap
           required: true
           doc: >
             One complete document instantiating every required section. It must satisfy this
-            schema, which is what makes a schema self-testing.
+            schema, which is what makes a schema self-testing. With variant-key set, a map
+            keyed by variant value, one document per value the key's enum admits, each
+            satisfying the untagged rules and its own variant's, its discriminator equal to
+            its key.
       section:
         doc: >
           One heading in the governed document. Where a literal heading and a heading-pattern
@@ -597,6 +609,12 @@ kinds:
             doc: >
               A regex the section's whole body must match, found anywhere, fenced blocks
               excluded. Write ^ and $ to bind the ends, and (?m) to bind a line's.
+          variants:
+            type: list
+            doc: >
+              The variant-key values this rule applies to; omitted, the rule applies to every
+              variant. A heading appears once in the list, with one requiredness across the
+              variants it names.
           description:
             type: string
             required: true
@@ -640,6 +658,11 @@ kinds:
           required:
             type: boolean
             doc: true makes the key's absence an error; a key without the flag is optional.
+          variants:
+            type: list
+            doc: >
+              The variant-key values this constraint applies to; omitted, it applies to every
+              variant.
           description:
             type: string
             doc: What the key means for this artifact.

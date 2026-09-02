@@ -580,10 +580,11 @@ fn check_keys(
         } else {
             "number"
         };
-        if !def.r#type.is_empty()
-            && got != def.r#type
-            && !(def.r#type == "string" && got == "integer")
-        {
+        let fits = def.r#type.is_empty()
+            || got == def.r#type
+            || (def.r#type == "string" && got == "integer")
+            || (def.r#type == "stringOrMap" && matches!(got, "string" | "map"));
+        if !fits {
             errs.push(format!(
                 "{where_}.{key}: expected {}, got {got}",
                 def.r#type

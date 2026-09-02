@@ -54,6 +54,55 @@ pub struct SectionRule {
     /// The pattern the section's whole body must match.
     #[serde(default, rename = "content-pattern")]
     pub content_pattern: Option<String>,
+    /// The variant values this rule applies to; empty applies to every
+    /// variant (ADR-045).
+    #[serde(default)]
+    pub variants: Vec<String>,
+}
+
+/// One `sections-prohibited` entry: a bare heading, banned in every
+/// variant, or a `{heading, variants}` mapping banning it in the variants
+/// named (ADR-045).
+#[derive(Debug, Clone, Deserialize)]
+#[serde(from = "ProhibitedEntry")]
+struct Prohibited {
+    /// The heading that must not appear.
+    heading: String,
+    /// The variant values the ban applies to; empty applies to every variant.
+    variants: Vec<String>,
+}
+
+/// The two forms a prohibited entry is written in.
+#[derive(Deserialize)]
+#[serde(untagged)]
+enum ProhibitedEntry {
+    Heading(String),
+    Tagged {
+        heading: String,
+        #[serde(default)]
+        variants: Vec<String>,
+    },
+}
+
+impl From<ProhibitedEntry> for Prohibited {
+    fn from(entry: ProhibitedEntry) -> Self {
+        match entry {
+            ProhibitedEntry::Heading(heading) => Prohibited {
+                heading,
+                variants: Vec::new(),
+            },
+            ProhibitedEntry::Tagged { heading, variants } => Prohibited { heading, variants },
+        }
+    }
+}
+
+/// A schema's `example`: one document, or — with `variant-key` set — one
+/// per variant value, keyed by it (ADR-045).
+#[derive(Debug, Clone, Deserialize)]
+#[serde(untagged)]
+enum Example {
+    One(String),
+    Keyed(Ordered<String>),
 }
 
 /// The content kinds an `item-pattern` may sit beside: the ones whose bodies
@@ -99,7 +148,7 @@ impl SectionRule {
 /// One frontmatter key's constraints, as a schema's `frontmatter:` block
 /// declares them. A key declared with only a `description` deserialises to
 /// an empty constraint and binds nothing — guidance, per ADR-022. Fields
-/// outside these four (`description`) are ignored here.
+/// outside these five (`description`) are ignored here.
 #[derive(Debug, Clone, Default, Deserialize)]
 struct KeyConstraint {
     /// Whether the key's absence is an error (ADR-022).
@@ -114,6 +163,10 @@ struct KeyConstraint {
     /// The values a present one must be among.
     #[serde(default)]
     r#enum: Vec<String>,
+    /// The variant values this constraint applies to; empty applies to every
+    /// variant (ADR-045).
+    #[serde(default)]
+    variants: Vec<String>,
 }
 
 /// A schema's contract, as far as document checking needs it.
@@ -126,28 +179,55 @@ pub struct DocSchema {
     target_files: Option<String>,
     #[serde(default, rename = "line-limit")]
     line_limit: Option<usize>,
+    /// The frontmatter key whose value selects a variant (ADR-045).
+    #[serde(default, rename = "variant-key")]
+    variant_key: Option<String>,
     #[serde(default, rename = "sections-ordered")]
     sections_ordered: bool,
     #[serde(default)]
     sections: Vec<SectionRule>,
     #[serde(default, rename = "sections-prohibited")]
-    sections_prohibited: Vec<String>,
+    sections_prohibited: Vec<Prohibited>,
     /// Every key's constraint block, in declaration order. `Option` because
     /// a schema may write a key with nothing under it — an empty contract,
     /// binding nothing, rather than a schema that fails to parse.
     #[serde(default)]
     frontmatter: Ordered<Option<KeyConstraint>>,
-    /// The worked example — one document satisfying this schema, checked in
-    /// place by `check_examples` (ADR-024). Absence is the grammar's schema
-    /// check's finding, not this module's.
+    /// The worked example — one document satisfying this schema, or one per
+    /// variant, checked in place by `check_examples` (ADR-024). Absence is
+    /// the grammar's schema check's finding, not this module's.
     #[serde(default)]
-    example: Option<String>,
+    example: Option<Example>,
 }
 
 impl DocSchema {
     /// The constraints declared for `key`, when there are any.
     fn constraint(&self, key: &str) -> Option<&KeyConstraint> {
         self.frontmatter.get(key)?.as_ref()
+    }
+
+    /// The values a `variants` tag may name: the discriminator key's `enum`.
+    /// `None` when the schema declares no `variant-key`, or names a key with
+    /// no enum — `check_variants` reports the latter.
+    fn variant_values(&self) -> Option<&[String]> {
+        let key = self.variant_key.as_deref()?;
+        Some(self.constraint(key)?.r#enum.as_slice()).filter(|values| !values.is_empty())
+    }
+
+    /// Whether a rule tagged `variants` binds a document whose discriminator
+    /// carries `value`. An untagged rule binds every document; a tagged one
+    /// binds when the value is among its tags — and never when the tag is
+    /// unreadable, with no `variant-key` to read it against or a value the
+    /// discriminator's enum does not carry (ADR-045).
+    fn selects(&self, variants: &[String], value: Option<&str>) -> bool {
+        if variants.is_empty() {
+            return true;
+        }
+        let Some(values) = self.variant_values() else {
+            return false;
+        };
+        variants.iter().all(|tag| values.contains(tag))
+            && value.is_some_and(|v| variants.iter().any(|tag| tag == v))
     }
 
     /// The `type` this schema governs, when it dispatches by type.
@@ -288,9 +368,10 @@ impl SchemaSet {
 
 /// The declarations the document checks cannot read, reported on the schema
 /// itself: a `content` kind outside the vocabulary, a `pattern` that does
-/// not compile. Each binds nothing. `validate` reports these through the
-/// grammar's own schema check, so it does not call this — one fault, said
-/// once; this is for callers checking documents without that pass.
+/// not compile, a variant tag nothing reads. Each binds nothing. `validate`
+/// reports all but the variant declarations through the grammar's own schema
+/// check, so it calls only `check_variants` — one fault, said once; this is
+/// for callers checking documents without that pass.
 #[must_use]
 pub fn check_declarations(schemas: &[(String, String)]) -> Vec<Finding> {
     let mut findings = Vec::new();
@@ -365,6 +446,73 @@ pub fn check_declarations(schemas: &[(String, String)]) -> Vec<Finding> {
             }
         }
     }
+    findings.extend(check_variants(schemas));
+    findings
+}
+
+/// The variant declarations the document check cannot read, reported on the
+/// schema itself (ADR-045): a `variant-key` naming a frontmatter key with no
+/// `enum`, a `variants` tag in a schema with no `variant-key`, and a tag
+/// naming a value the discriminator's enum does not carry. Each binds
+/// nothing. The keyed example's faults are `check_examples`'.
+#[must_use]
+pub fn check_variants(schemas: &[(String, String)]) -> Vec<Finding> {
+    let mut findings = Vec::new();
+    for (file, text) in schemas {
+        let Ok(Some(schema)) = DocSchema::parse(file, text) else {
+            continue; // `SchemaSet::load` reports a contract that fails.
+        };
+        let mut push = |message: String| {
+            findings.push(Finding {
+                file: file.clone(),
+                message,
+                fatal: true,
+            });
+        };
+        let values = schema.variant_values();
+        if let Some(key) = schema.variant_key.as_deref()
+            && values.is_none()
+        {
+            push(format!(
+                "schema: variant-key `{key}` names a frontmatter key with no enum — a \
+                 variants tag is read against that enum, so every tag binds nothing"
+            ));
+        }
+        let tagged = schema
+            .sections
+            .iter()
+            .map(|rule| (format!("section {}", rule.label()), &rule.variants))
+            .chain(schema.frontmatter.iter().filter_map(|(key, c)| {
+                Some((format!("frontmatter `{key}`"), &c.as_ref()?.variants))
+            }))
+            .chain(
+                schema
+                    .sections_prohibited
+                    .iter()
+                    .map(|p| (format!("prohibited section \"{}\"", p.heading), &p.variants)),
+            )
+            .filter(|(_, variants)| !variants.is_empty());
+        for (where_, variants) in tagged {
+            let Some(key) = schema.variant_key.as_deref() else {
+                push(format!(
+                    "schema: {where_} declares variants [{}], and the schema declares no \
+                     variant-key — the rule binds nothing",
+                    variants.join(", ")
+                ));
+                continue;
+            };
+            let Some(values) = values else {
+                continue; // Said once, on the key.
+            };
+            for tag in variants.iter().filter(|tag| !values.contains(tag)) {
+                push(format!(
+                    "schema: {where_} declares variant `{tag}`, and `{key}` admits {} — the \
+                     rule binds nothing",
+                    values.join(", ")
+                ));
+            }
+        }
+    }
     findings
 }
 
@@ -375,6 +523,13 @@ pub fn check_declarations(schemas: &[(String, String)]) -> Vec<Finding> {
 /// finding too: a type-dispatched schema's example must open with a
 /// frontmatter block whose text is YAML, while a glob-dispatched schema's
 /// documents carry no frontmatter, so its example owes none.
+///
+/// With `variant-key` set the example is a map keyed by variant value, every
+/// enum value present, and each is checked against the base rules and its
+/// own variant's, prefixed `example `<value>`:`; an example whose
+/// discriminator differs from its key, a key the enum does not carry, a
+/// value with no example, and an example of the other form — one document
+/// under a `variant-key`, a map without one — are each a finding (ADR-045).
 #[must_use]
 pub fn check_examples(schemas: &[(String, String)]) -> Vec<Finding> {
     let mut findings = Vec::new();
@@ -382,52 +537,111 @@ pub fn check_examples(schemas: &[(String, String)]) -> Vec<Finding> {
         let Ok(Some(schema)) = DocSchema::parse(file, text) else {
             continue; // `SchemaSet::load` reports a contract that fails.
         };
-        let Some(example) = schema.example.as_deref() else {
+        let Some(example) = schema.example.as_ref() else {
             continue; // The grammar's schema check reports a missing example.
         };
-        let mut push = |message: String| {
-            findings.push(Finding {
-                file: file.clone(),
-                message,
-                fatal: true,
-            });
+        let on_schema = |message: String| Finding {
+            file: file.clone(),
+            message,
+            fatal: true,
         };
-        let lines: Vec<&str> = crate::fsutil::lines(example);
-        let body_start = match super::read::split_frontmatter(&lines) {
-            Some(split) => {
-                let fm = split.fm.join("\n");
-                if let Err(e) = serde_yaml_ng::from_str::<serde_yaml_ng::Value>(&fm) {
-                    push(format!(
-                        "example: does not parse as a document — the frontmatter is not YAML: {e}"
-                    ));
-                    continue;
+        match (schema.variant_key.as_deref(), example) {
+            (None, Example::One(text)) => check_example(file, &schema, None, text, &mut findings),
+            (None, Example::Keyed(_)) => findings.push(on_schema(
+                "example: is keyed by variant value, and the schema declares no variant-key"
+                    .to_string(),
+            )),
+            (Some(key), Example::One(_)) => findings.push(on_schema(format!(
+                "example: is one document, and the schema declares variant-key `{key}` — \
+                 write one example per value, keyed by it"
+            ))),
+            (Some(key), Example::Keyed(examples)) => {
+                let values = schema.variant_values().unwrap_or_default();
+                for value in values.iter().filter(|value| !examples.has(value)) {
+                    findings.push(on_schema(format!(
+                        "example: no example for {key} `{value}` — every value the \
+                         discriminator admits has one"
+                    )));
                 }
-                split.body_start
-            }
-            None => {
-                if schema.type_const().is_some() {
-                    push(
-                        "example: does not parse as a document — no frontmatter block".to_string(),
-                    );
-                    continue;
+                for (value, text) in examples.iter() {
+                    if !values.iter().any(|v| v == value) {
+                        findings.push(on_schema(format!(
+                            "example `{value}`: names a value `{key}` does not admit"
+                        )));
+                        continue;
+                    }
+                    check_example(file, &schema, Some(value), text, &mut findings);
                 }
-                0
             }
-        };
-        let doc = Document {
-            path: file,
-            text: example,
-            doc_type: None,
-        };
-        let mut broke = Vec::new();
-        check_one(&doc, &schema, true, &mut broke);
-        check_link_form(file, &lines[body_start..], &mut broke);
-        findings.extend(broke.into_iter().map(|f| Finding {
-            message: format!("example: {}", f.message),
-            ..f
-        }));
+        }
     }
     findings
+}
+
+/// One example against its schema, as a document of the variant `key` names
+/// (`None` for a schema without variants); every finding lands on the schema
+/// file under the example's prefix.
+fn check_example(
+    file: &str,
+    schema: &DocSchema,
+    key: Option<&str>,
+    example: &str,
+    findings: &mut Vec<Finding>,
+) {
+    let prefix = key.map_or_else(|| "example".to_string(), |key| format!("example `{key}`"));
+    let mut push = |message: String| {
+        findings.push(Finding {
+            file: file.to_string(),
+            message: format!("{prefix}: {message}"),
+            fatal: true,
+        });
+    };
+    let lines: Vec<&str> = crate::fsutil::lines(example);
+    let split = super::read::split_frontmatter(&lines);
+    let body_start = match &split {
+        Some(split) => {
+            let fm = split.fm.join("\n");
+            if let Err(e) = serde_yaml_ng::from_str::<serde_yaml_ng::Value>(&fm) {
+                push(format!(
+                    "does not parse as a document — the frontmatter is not YAML: {e}"
+                ));
+                return;
+            }
+            split.body_start
+        }
+        None => {
+            if schema.type_const().is_some() {
+                push("does not parse as a document — no frontmatter block".to_string());
+                return;
+            }
+            0
+        }
+    };
+    // A keyed example is that variant's: its discriminator says so too, or
+    // the key and the document disagree about what is being shown.
+    if let (Some(key), Some(variant_key)) = (key, schema.variant_key.as_deref()) {
+        let fm = split.as_ref().map_or(&[][..], |s| s.fm.as_slice());
+        let entries = super::read::parse_frontmatter(fm);
+        let value = carried(fm, &entries, variant_key);
+        if value.as_ref().and_then(Option::as_deref) != Some(key) {
+            push(format!(
+                "frontmatter `{variant_key}` {}, and the example is keyed `{key}`",
+                spell(value.as_ref().map(Option::as_deref))
+            ));
+        }
+    }
+    let doc = Document {
+        path: file,
+        text: example,
+        doc_type: None,
+    };
+    let mut broke = Vec::new();
+    check_one(&doc, schema, Subject::Example(key), &mut broke);
+    check_link_form(file, &lines[body_start..], &mut broke);
+    findings.extend(broke.into_iter().map(|f| Finding {
+        message: format!("{prefix}: {}", f.message),
+        ..f
+    }));
 }
 
 /// The form of an example body's links, per ADR-025: a concept link takes
@@ -559,15 +773,32 @@ pub fn check_documents(docs: &[Document<'_>], set: &SchemaSet) -> Vec<Finding> {
             }
             continue;
         };
-        check_one(doc, schema, false, &mut findings);
+        check_one(doc, schema, Subject::Filed, &mut findings);
     }
     findings
 }
 
-/// One document against one schema. `example` marks a schema's example,
-/// which the filing check never reads, so `lifecycle` binds here rather
-/// than being deferred to it.
-fn check_one(doc: &Document<'_>, schema: &DocSchema, example: bool, findings: &mut Vec<Finding>) {
+/// What `check_one` is handed: a filed document, whose variant its own
+/// discriminator value selects, or a schema's example — which the filing
+/// check never reads, so `lifecycle` binds here rather than being deferred
+/// to it, and whose variant is the key it is written under (ADR-045).
+#[derive(Clone, Copy)]
+enum Subject<'a> {
+    Filed,
+    Example(Option<&'a str>),
+}
+
+/// One document against one schema: the rules its variant selects, in the
+/// schema's declared order, so ordering, presence, prohibition, columns and
+/// the body patterns all run on that subsequence (ADR-045). A document with
+/// no discriminator value, or one the enum does not carry, sees the untagged
+/// rules alone; the frontmatter check reports the value.
+fn check_one(
+    doc: &Document<'_>,
+    schema: &DocSchema,
+    subject: Subject<'_>,
+    findings: &mut Vec<Finding>,
+) {
     let mut push = |message: String| {
         findings.push(Finding {
             file: doc.path.to_string(),
@@ -577,6 +808,21 @@ fn check_one(doc: &Document<'_>, schema: &DocSchema, example: bool, findings: &m
     };
 
     let lines: Vec<&str> = crate::fsutil::lines(doc.text);
+    let fm = super::read::split_frontmatter(&lines).map_or_else(Vec::new, |s| s.fm);
+    let entries = super::read::parse_frontmatter(&fm);
+    let variant: Option<String> = match subject {
+        Subject::Filed => schema
+            .variant_key
+            .as_deref()
+            .and_then(|key| carried(&fm, &entries, key).flatten()),
+        Subject::Example(key) => key.map(str::to_string),
+    };
+    let variant = variant.as_deref();
+    let sections: Vec<&SectionRule> = schema
+        .sections
+        .iter()
+        .filter(|rule| schema.selects(&rule.variants, variant))
+        .collect();
     // Counted as an editor counts them, so a document at exactly its limit
     // passes: `split` yields a trailing empty element for the final newline,
     // and reporting that as one line over is an off-by-one nobody can act on.
@@ -603,11 +849,15 @@ fn check_one(doc: &Document<'_>, schema: &DocSchema, example: bool, findings: &m
     }
     let headings = headings(&lines, &fenced);
 
-    for banned in &schema.sections_prohibited {
-        if headings.iter().any(|(_, h)| h == banned) {
+    for banned in schema
+        .sections_prohibited
+        .iter()
+        .filter(|p| schema.selects(&p.variants, variant))
+    {
+        if headings.iter().any(|(_, h)| *h == banned.heading) {
             push(format!(
-                "prohibited section \"{banned}\" ({} forbids it)",
-                schema.name
+                "prohibited section \"{}\" ({} forbids it)",
+                banned.heading, schema.name
             ));
         }
     }
@@ -621,13 +871,11 @@ fn check_one(doc: &Document<'_>, schema: &DocSchema, example: bool, findings: &m
     // author would expect.
     let mut matched: Vec<(usize, usize)> = Vec::new();
     for (h, (level, text)) in headings.iter().enumerate() {
-        let literal = schema
-            .sections
+        let literal = sections
             .iter()
             .position(|r| r.heading.is_some() && r.matches(*level, text));
         let by_pattern = || {
-            schema
-                .sections
+            sections
                 .iter()
                 .position(|r| r.heading.is_none() && r.matches(*level, text))
         };
@@ -636,7 +884,7 @@ fn check_one(doc: &Document<'_>, schema: &DocSchema, example: bool, findings: &m
         }
     }
 
-    for (i, rule) in schema.sections.iter().enumerate() {
+    for (i, rule) in sections.iter().enumerate() {
         if rule.required && !matched.iter().any(|&(_, r)| r == i) {
             push(format!(
                 "missing required section {} ({})",
@@ -659,8 +907,8 @@ fn check_one(doc: &Document<'_>, schema: &DocSchema, example: bool, findings: &m
             if pair[0] > pair[1] {
                 push(format!(
                     "section {} comes after {}, and {} orders them the other way",
-                    schema.sections[pair[1]].label(),
-                    schema.sections[pair[0]].label(),
+                    sections[pair[1]].label(),
+                    sections[pair[0]].label(),
                     schema.name
                 ));
                 break;
@@ -684,7 +932,7 @@ fn check_one(doc: &Document<'_>, schema: &DocSchema, example: bool, findings: &m
     let starts = line_starts(doc.text);
     let positions = heading_positions(&lines, &fenced);
     for &(h, r) in &matched {
-        let rule = &schema.sections[r];
+        let rule = sections[r];
         let (start, end) = body_range(h, &headings, &positions, lines.len());
         let at = |line: usize| starts.get(line).copied().unwrap_or(doc.text.len());
         let bytes = at(start)..at(end);
@@ -733,8 +981,11 @@ fn check_one(doc: &Document<'_>, schema: &DocSchema, example: bool, findings: &m
         }
     }
 
-    check_columns(schema, &headings, &positions, &lines, &fenced, &mut push);
-    check_frontmatter(&lines, schema, example, &mut push);
+    check_columns(
+        &sections, schema, &headings, &positions, &lines, &fenced, &mut push,
+    );
+    let example = matches!(subject, Subject::Example(_));
+    check_frontmatter(&fm, &entries, schema, variant, example, &mut push);
 }
 
 /// One section's body against the patterns its rule declares (ADR-030):
@@ -993,35 +1244,25 @@ fn body_range(
 /// would say one fault twice. That deferral covers real, filed documents
 /// only: inside an `example`, which the filing check never reads, the key
 /// binds here or nowhere. Without an enum nothing else reads the key,
-/// and its constraints bind here like any other's.
+/// and its constraints bind here like any other's. A constraint tagged
+/// `variants` binds the variants it names (ADR-045).
 fn check_frontmatter(
-    lines: &[&str],
+    fm: &[&str],
+    entries: &[super::read::FmEntry],
     schema: &DocSchema,
+    variant: Option<&str>,
     example: bool,
     push: &mut impl FnMut(String),
 ) {
-    let fm = super::read::split_frontmatter(lines).map_or_else(Vec::new, |s| s.fm);
-    let entries = super::read::parse_frontmatter(&fm);
     for (key, constraint) in schema.frontmatter.iter() {
         if !example && key == "lifecycle" && schema.lifecycle_enum().is_some() {
             continue;
         }
         let Some(c) = constraint else { continue };
-        let entry = entries.iter().find(|e| e.key == key);
-        // What the key carries: the value on its own line as YAML reads it —
-        // comments stripped, quotes removed — or the block under it, whose
-        // comment-only lines are comments rather than a block. A key with
-        // nothing else after the colon is as absent as no line.
-        let folded = entry.is_some_and(|e| e.is_folded);
-        let block = entry.is_some_and(|e| {
-            e.block
-                .as_ref()
-                .is_some_and(|b| b.iter().any(|l| !l.trim_start().starts_with('#')))
-        });
-        let value = entry
-            .filter(|_| !folded)
-            .and_then(|e| line_scalar(rest_of(&fm, e)));
-        if !folded && !block && value.is_none() {
+        if !schema.selects(&c.variants, variant) {
+            continue;
+        }
+        let Some(scalar) = carried(fm, entries, key) else {
             if c.required {
                 push(format!(
                     "frontmatter `{key}` is absent, and {} requires it",
@@ -1029,16 +1270,12 @@ fn check_frontmatter(
                 ));
             }
             continue;
-        }
+        };
         if c.r#const.is_none() && c.pattern.is_none() && c.r#enum.is_empty() {
             continue;
         }
-        let scalar = if folded || block {
-            None
-        } else {
-            value.as_deref()
-        };
-        let spell = scalar.map_or("is not a scalar".to_string(), |v| format!("is `{v}`"));
+        let scalar = scalar.as_deref();
+        let spell = spell(Some(scalar));
         if let Some(want) = c.r#const.as_deref()
             && scalar != Some(want)
         {
@@ -1063,6 +1300,33 @@ fn check_frontmatter(
                 c.r#enum.join(", ")
             ));
         }
+    }
+}
+
+/// What a frontmatter key carries: the value on its own line as YAML reads
+/// it — comments stripped, quotes removed — or the block under it, whose
+/// comment-only lines are comments rather than a block. `None` when the key
+/// is absent, which a key with nothing after the colon is too; `Some(None)`
+/// when it carries a value with no scalar form — a list, a map, a folded
+/// block; `Some(Some(value))` otherwise.
+fn carried(fm: &[&str], entries: &[super::read::FmEntry], key: &str) -> Option<Option<String>> {
+    let entry = entries.iter().find(|e| e.key == key)?;
+    let block = entry
+        .block
+        .as_ref()
+        .is_some_and(|b| b.iter().any(|l| !l.trim_start().starts_with('#')));
+    if entry.is_folded || block {
+        return Some(None);
+    }
+    line_scalar(rest_of(fm, entry)).map(Some)
+}
+
+/// How a finding names what a key carries, as `carried` reads it.
+fn spell(carried: Option<Option<&str>>) -> String {
+    match carried {
+        None => "is absent".to_string(),
+        Some(None) => "is not a scalar".to_string(),
+        Some(Some(value)) => format!("is `{value}`"),
     }
 }
 
@@ -1191,8 +1455,10 @@ fn is_numbered(trimmed: &str) -> bool {
 /// Every table a rule declares columns for must carry exactly those columns,
 /// in that order: the columns are the contract a reader relies on. The table
 /// is sought in the same body range the content check reads, so one in a
-/// subsection counts (contract-010).
+/// subsection counts (contract-010). `sections` is the rules the document's
+/// variant selects.
 fn check_columns(
+    sections: &[&SectionRule],
     schema: &DocSchema,
     headings: &[(usize, String)],
     positions: &[usize],
@@ -1200,7 +1466,7 @@ fn check_columns(
     fenced: &[bool],
     push: &mut impl FnMut(String),
 ) {
-    for rule in &schema.sections {
+    for rule in sections {
         if rule.columns.is_empty() {
             continue;
         }
@@ -1371,6 +1637,7 @@ mod tests {
                 name: "release-notes".into(),
                 target_files: Some("**/*release-notes*.md".into()),
                 line_limit: None,
+                variant_key: None,
                 sections_ordered: false,
                 sections: Vec::new(),
                 sections_prohibited: Vec::new(),
@@ -1401,7 +1668,7 @@ mod tests {
             doc_type: Some("T"),
         };
         let mut findings = Vec::new();
-        check_one(&doc, &schema, false, &mut findings);
+        check_one(&doc, &schema, Subject::Filed, &mut findings);
         assert_eq!(findings.len(), 1, "{findings:#?}");
         assert!(findings[0].message.contains("missing required section"));
     }
@@ -1419,7 +1686,7 @@ mod tests {
             doc_type: Some("T"),
         };
         let mut findings = Vec::new();
-        check_one(&doc, &schema, false, &mut findings);
+        check_one(&doc, &schema, Subject::Filed, &mut findings);
         assert_eq!(findings.len(), 1, "{findings:#?}");
         assert!(findings[0].message.contains("orders them the other way"));
     }
@@ -1435,7 +1702,7 @@ mod tests {
             doc_type: Some("T"),
         };
         let mut findings = Vec::new();
-        check_one(&doc, &schema, false, &mut findings);
+        check_one(&doc, &schema, Subject::Filed, &mut findings);
         let messages: Vec<&str> = findings.iter().map(|f| f.message.as_str()).collect();
         assert!(
             messages.iter().any(|m| m.contains("prohibited section")),
@@ -1455,7 +1722,7 @@ mod tests {
             doc_type: Some("T"),
         };
         let mut findings = Vec::new();
-        check_one(&at, &schema, false, &mut findings);
+        check_one(&at, &schema, Subject::Filed, &mut findings);
         assert!(findings.is_empty(), "{findings:#?}");
 
         let over = Document {
@@ -1464,7 +1731,7 @@ mod tests {
             doc_type: Some("T"),
         };
         let mut findings = Vec::new();
-        check_one(&over, &schema, false, &mut findings);
+        check_one(&over, &schema, Subject::Filed, &mut findings);
         assert_eq!(findings.len(), 1, "{findings:#?}");
         assert!(findings[0].message.starts_with("4 lines, over"));
     }
@@ -1483,7 +1750,7 @@ mod tests {
                 doc_type: Some("T"),
             },
             &schema,
-            false,
+            Subject::Filed,
             &mut findings,
         );
         assert_eq!(findings.len(), 1, "{findings:#?}");
@@ -1498,7 +1765,7 @@ mod tests {
                 doc_type: Some("T"),
             },
             &schema,
-            false,
+            Subject::Filed,
             &mut ok,
         );
         assert!(ok.is_empty(), "{ok:#?}");
@@ -1552,7 +1819,7 @@ mod tests {
             doc_type: Some("T"),
         };
         let mut findings = Vec::new();
-        check_one(&doc, &schema, false, &mut findings);
+        check_one(&doc, &schema, Subject::Filed, &mut findings);
         assert_eq!(findings.len(), 1, "{findings:#?}");
         assert_eq!(findings[0].file, "a.md");
         assert!(findings[0].message.contains("\"Items\""), "{findings:#?}");
@@ -1573,7 +1840,7 @@ mod tests {
             doc_type: Some("T"),
         };
         let mut findings = Vec::new();
-        check_one(&doc, &schema, false, &mut findings);
+        check_one(&doc, &schema, Subject::Filed, &mut findings);
         assert!(findings.is_empty(), "{findings:#?}");
     }
 
@@ -1597,7 +1864,7 @@ mod tests {
                 doc_type: Some("T"),
             };
             let mut findings = Vec::new();
-            check_one(&ok, &schema, false, &mut findings);
+            check_one(&ok, &schema, Subject::Filed, &mut findings);
             assert!(findings.is_empty(), "{kind}: {findings:#?}");
 
             let bad = Document {
@@ -1606,7 +1873,7 @@ mod tests {
                 doc_type: Some("T"),
             };
             let mut findings = Vec::new();
-            check_one(&bad, &schema, false, &mut findings);
+            check_one(&bad, &schema, Subject::Filed, &mut findings);
             assert_eq!(findings.len(), 1, "{kind}: {findings:#?}");
             assert!(findings[0].message.contains(kind), "{kind}: {findings:#?}");
         }
@@ -1626,7 +1893,7 @@ mod tests {
             doc_type: Some("T"),
         };
         let mut findings = Vec::new();
-        check_one(&doc, &schema, false, &mut findings);
+        check_one(&doc, &schema, Subject::Filed, &mut findings);
         assert!(findings.is_empty(), "{findings:#?}");
 
         // A bullet after the section's end does not count.
@@ -1636,7 +1903,7 @@ mod tests {
             doc_type: Some("T"),
         };
         let mut findings = Vec::new();
-        check_one(&after, &schema, false, &mut findings);
+        check_one(&after, &schema, Subject::Filed, &mut findings);
         assert_eq!(findings.len(), 1, "{findings:#?}");
     }
 
@@ -1654,7 +1921,7 @@ mod tests {
             doc_type: Some("T"),
         };
         let mut findings = Vec::new();
-        check_one(&fenced_only, &schema, false, &mut findings);
+        check_one(&fenced_only, &schema, Subject::Filed, &mut findings);
         assert_eq!(findings.len(), 1, "{findings:#?}");
 
         let bullet_after_fence = Document {
@@ -1663,7 +1930,7 @@ mod tests {
             doc_type: Some("T"),
         };
         let mut findings = Vec::new();
-        check_one(&bullet_after_fence, &schema, false, &mut findings);
+        check_one(&bullet_after_fence, &schema, Subject::Filed, &mut findings);
         assert!(findings.is_empty(), "{findings:#?}");
     }
 
@@ -1681,7 +1948,7 @@ mod tests {
             doc_type: Some("T"),
         };
         let mut findings = Vec::new();
-        check_one(&doc, &schema, false, &mut findings);
+        check_one(&doc, &schema, Subject::Filed, &mut findings);
         assert_eq!(findings.len(), 1, "{findings:#?}");
         assert!(findings[0].message.contains("no bullet"), "{findings:#?}");
 
@@ -1694,7 +1961,7 @@ mod tests {
             doc_type: Some("T"),
         };
         let mut findings = Vec::new();
-        check_one(&doc, &schema, false, &mut findings);
+        check_one(&doc, &schema, Subject::Filed, &mut findings);
         assert!(findings.is_empty(), "{findings:#?}");
     }
 
@@ -1718,7 +1985,7 @@ mod tests {
             doc_type: Some("T"),
         };
         let mut findings = Vec::new();
-        check_one(&doc, &schema, false, &mut findings);
+        check_one(&doc, &schema, Subject::Filed, &mut findings);
         assert_eq!(findings.len(), 1, "{findings:#?}");
         assert_eq!(findings[0].file, "a.md");
         assert!(findings[0].message.contains("\"Items\""), "{findings:#?}");
@@ -1741,7 +2008,7 @@ mod tests {
             doc_type: Some("T"),
         };
         let mut findings = Vec::new();
-        check_one(&doc, &schema, false, &mut findings);
+        check_one(&doc, &schema, Subject::Filed, &mut findings);
         assert!(findings.is_empty(), "{findings:#?}");
 
         let doc = Document {
@@ -1750,7 +2017,7 @@ mod tests {
             doc_type: Some("T"),
         };
         let mut findings = Vec::new();
-        check_one(&doc, &schema, false, &mut findings);
+        check_one(&doc, &schema, Subject::Filed, &mut findings);
         assert_eq!(findings.len(), 1, "{findings:#?}");
         assert!(
             findings[0].message.contains("- a parent item"),
@@ -1771,7 +2038,7 @@ mod tests {
             doc_type: Some("T"),
         };
         let mut findings = Vec::new();
-        check_one(&doc, &schema, false, &mut findings);
+        check_one(&doc, &schema, Subject::Filed, &mut findings);
         assert!(findings.is_empty(), "{findings:#?}");
 
         // The trailing prose is nobody's item: an item that never matches
@@ -1783,7 +2050,7 @@ mod tests {
             doc_type: Some("T"),
         };
         let mut findings = Vec::new();
-        check_one(&doc, &schema, false, &mut findings);
+        check_one(&doc, &schema, Subject::Filed, &mut findings);
         assert_eq!(findings.len(), 1, "{findings:#?}");
         assert!(findings[0].message.contains("- an item"), "{findings:#?}");
     }
@@ -1802,7 +2069,7 @@ mod tests {
             doc_type: Some("T"),
         };
         let mut findings = Vec::new();
-        check_one(&doc, &schema, false, &mut findings);
+        check_one(&doc, &schema, Subject::Filed, &mut findings);
         assert_eq!(findings.len(), 1, "{findings:#?}");
         assert_eq!(findings[0].file, "a.md");
         assert!(findings[0].message.contains("\"Promise\""), "{findings:#?}");
@@ -1817,7 +2084,7 @@ mod tests {
             doc_type: Some("T"),
         };
         let mut findings = Vec::new();
-        check_one(&doc, &schema, false, &mut findings);
+        check_one(&doc, &schema, Subject::Filed, &mut findings);
         assert!(findings.is_empty(), "{findings:#?}");
     }
 
@@ -1832,11 +2099,16 @@ mod tests {
             doc_type: Some("T"),
         };
         let mut findings = Vec::new();
-        check_one(&doc, &items_schema("marker"), false, &mut findings);
+        check_one(&doc, &items_schema("marker"), Subject::Filed, &mut findings);
         assert!(findings.is_empty(), "found anywhere: {findings:#?}");
 
         let mut findings = Vec::new();
-        check_one(&doc, &items_schema("^marker"), false, &mut findings);
+        check_one(
+            &doc,
+            &items_schema("^marker"),
+            Subject::Filed,
+            &mut findings,
+        );
         assert_eq!(findings.len(), 1, "anchored: {findings:#?}");
     }
 
@@ -1862,7 +2134,7 @@ mod tests {
             doc_type: Some("T"),
         };
         let mut found = Vec::new();
-        check_one(&doc, &items_schema("["), false, &mut found);
+        check_one(&doc, &items_schema("["), Subject::Filed, &mut found);
         assert!(
             found.is_empty(),
             "an unreadable rule binds nothing: {found:#?}"
@@ -1894,7 +2166,7 @@ mod tests {
                 doc_type: Some("T"),
             };
             let mut findings = Vec::new();
-            check_one(&doc, &items_schema("MUST"), false, &mut findings);
+            check_one(&doc, &items_schema("MUST"), Subject::Filed, &mut findings);
             assert_eq!(findings.len(), 2, "lead {lead:?}: {findings:#?}");
         }
     }
@@ -1911,7 +2183,7 @@ mod tests {
             doc_type: Some("T"),
         };
         let mut findings = Vec::new();
-        check_one(&doc, &items_schema("MUST"), false, &mut findings);
+        check_one(&doc, &items_schema("MUST"), Subject::Filed, &mut findings);
         assert!(findings.is_empty(), "{findings:#?}");
 
         // The child's text is the child's: a keyword only it carries does not
@@ -1922,7 +2194,7 @@ mod tests {
             doc_type: Some("T"),
         };
         let mut findings = Vec::new();
-        check_one(&doc, &items_schema("MUST"), false, &mut findings);
+        check_one(&doc, &items_schema("MUST"), Subject::Filed, &mut findings);
         assert_eq!(findings.len(), 1, "{findings:#?}");
     }
 
@@ -1937,7 +2209,7 @@ mod tests {
             doc_type: Some("T"),
         };
         let mut findings = Vec::new();
-        check_one(&doc, &items_schema("MUST"), false, &mut findings);
+        check_one(&doc, &items_schema("MUST"), Subject::Filed, &mut findings);
         assert!(findings.is_empty(), "lazy continuation: {findings:#?}");
 
         let doc = Document {
@@ -1947,7 +2219,7 @@ mod tests {
             doc_type: Some("T"),
         };
         let mut findings = Vec::new();
-        check_one(&doc, &items_schema("MUST"), false, &mut findings);
+        check_one(&doc, &items_schema("MUST"), Subject::Filed, &mut findings);
         assert_eq!(findings.len(), 1, "{findings:#?}");
     }
 
@@ -1965,7 +2237,7 @@ mod tests {
             doc_type: Some("T"),
         };
         let mut findings = Vec::new();
-        check_one(&doc, &schema, false, &mut findings);
+        check_one(&doc, &schema, Subject::Filed, &mut findings);
         assert!(findings.is_empty(), "{findings:#?}");
     }
 
@@ -1985,7 +2257,7 @@ mod tests {
             doc_type: Some("T"),
         };
         let mut findings = Vec::new();
-        check_one(&doc, &schema, false, &mut findings);
+        check_one(&doc, &schema, Subject::Filed, &mut findings);
         assert_eq!(findings.len(), 1, "a fenced keyword: {findings:#?}");
 
         let doc = Document {
@@ -1994,7 +2266,7 @@ mod tests {
             doc_type: Some("T"),
         };
         let mut findings = Vec::new();
-        check_one(&doc, &items_schema("MUST"), false, &mut findings);
+        check_one(&doc, &items_schema("MUST"), Subject::Filed, &mut findings);
         assert!(findings.is_empty(), "a thematic break: {findings:#?}");
 
         // A bullet inside a fenced example is an example of one, and opens no
@@ -2006,7 +2278,7 @@ mod tests {
             doc_type: Some("T"),
         };
         let mut findings = Vec::new();
-        check_one(&doc, &items_schema("MUST"), false, &mut findings);
+        check_one(&doc, &items_schema("MUST"), Subject::Filed, &mut findings);
         assert!(findings.is_empty(), "a fenced bullet: {findings:#?}");
     }
 
@@ -2025,7 +2297,7 @@ mod tests {
             doc_type: Some("T"),
         };
         let mut findings = Vec::new();
-        check_one(&doc, &schema, false, &mut findings);
+        check_one(&doc, &schema, Subject::Filed, &mut findings);
         assert_eq!(findings.len(), 1, "{findings:#?}");
         assert!(
             findings[0].message.contains("\"Item: two\""),
@@ -2047,7 +2319,7 @@ mod tests {
             doc_type: Some("T"),
         };
         let mut findings = Vec::new();
-        check_one(&doc, &schema, false, &mut findings);
+        check_one(&doc, &schema, Subject::Filed, &mut findings);
         assert_eq!(findings.len(), 1, "{findings:#?}");
         assert!(
             findings[0].message.contains("prose content"),
@@ -2087,7 +2359,7 @@ mod tests {
             doc_type: Some("T"),
         };
         let mut findings = Vec::new();
-        check_one(&doc, &schema, false, &mut findings);
+        check_one(&doc, &schema, Subject::Filed, &mut findings);
         assert!(findings.is_empty(), "{findings:#?}");
 
         let concept = include_doc(
@@ -2100,7 +2372,7 @@ mod tests {
                 doc_type: Some("T"),
             };
             let mut findings = Vec::new();
-            check_one(&doc, &schema, false, &mut findings);
+            check_one(&doc, &schema, Subject::Filed, &mut findings);
             assert_eq!(findings.len(), 1, "{findings:#?}");
             assert!(
                 findings[0]
@@ -2136,7 +2408,7 @@ mod tests {
                 doc_type: Some("T"),
             };
             let mut findings = Vec::new();
-            check_one(&doc, &schema, false, &mut findings);
+            check_one(&doc, &schema, Subject::Filed, &mut findings);
             assert_eq!(findings.len(), 1, "{body}: {findings:#?}");
             assert!(
                 findings[0]
@@ -2154,7 +2426,7 @@ mod tests {
             doc_type: Some("T"),
         };
         let mut findings = Vec::new();
-        check_one(&doc, &schema, false, &mut findings);
+        check_one(&doc, &schema, Subject::Filed, &mut findings);
         assert!(findings.is_empty(), "{findings:#?}");
     }
 
@@ -2177,7 +2449,7 @@ mod tests {
                 doc_type: Some("T"),
             };
             let mut findings = Vec::new();
-            check_one(&doc, &schema, false, &mut findings);
+            check_one(&doc, &schema, Subject::Filed, &mut findings);
             assert!(findings.is_empty(), "{content}: {findings:#?}");
         }
     }
@@ -2241,6 +2513,357 @@ mod tests {
         );
     }
 
+    /// A schema declaring `variant-key: kind` over two kinds, with a section
+    /// only kind `a` carries between two every kind carries, for the
+    /// ADR-045 tests.
+    const VARIANT_CONTRACT: &str = "frontmatter:\n  type:\n    const: T\n  kind:\n\
+        \x20   required: true\n    enum: [a, b]\nvariant-key: kind\nsections-ordered: true\n\
+        sections:\n  - heading: Shared\n    level: 2\n    required: true\n\
+        \x20 - heading: Only A\n    level: 2\n    required: true\n    variants: [a]\n\
+        \x20 - heading: Tail\n    level: 2\n    required: true\n";
+
+    /// A document of `kind` whose body is the headings named.
+    fn kind_doc(kind: &str, headings: &[&str]) -> String {
+        let body: Vec<String> = headings.iter().map(|h| format!("## {h}\n\nx\n")).collect();
+        format!(
+            "---\ntype: T\nkind: {kind}\n---\n\n# T\n\n{}",
+            body.join("\n")
+        )
+    }
+
+    /// The findings a document of `kind` carrying `headings` gets from
+    /// `schema`.
+    fn findings_for(schema: &DocSchema, kind: &str, headings: &[&str]) -> Vec<Finding> {
+        let text = kind_doc(kind, headings);
+        let doc = Document {
+            path: "a.md",
+            text: &text,
+            doc_type: Some("T"),
+        };
+        let mut findings = Vec::new();
+        check_one(&doc, schema, Subject::Filed, &mut findings);
+        findings
+    }
+
+    /// Covers I049 criterion 13: a section tagged `[a]` is required for kind
+    /// `a` and absent from kind `b`'s rules, so a `b` document lacking it
+    /// passes; an untagged section applies to every kind.
+    #[test]
+    fn a_tagged_section_binds_its_variants_and_an_untagged_one_binds_all() {
+        let schema = schema_of(VARIANT_CONTRACT);
+        let findings = findings_for(&schema, "a", &["Shared", "Tail"]);
+        assert_eq!(findings.len(), 1, "{findings:#?}");
+        assert!(
+            findings[0]
+                .message
+                .contains("missing required section \"Only A\""),
+            "{findings:#?}"
+        );
+        let findings = findings_for(&schema, "a", &["Shared", "Only A", "Tail"]);
+        assert!(findings.is_empty(), "{findings:#?}");
+        let findings = findings_for(&schema, "b", &["Shared", "Tail"]);
+        assert!(findings.is_empty(), "{findings:#?}");
+
+        // The untagged sections bind kind `b` as they bind kind `a`.
+        let findings = findings_for(&schema, "b", &["Shared"]);
+        assert_eq!(findings.len(), 1, "{findings:#?}");
+        assert!(
+            findings[0]
+                .message
+                .contains("missing required section \"Tail\""),
+            "{findings:#?}"
+        );
+    }
+
+    /// Covers I049 criterion 13: `sections-ordered` holds on the subsequence
+    /// a kind sees, so a kind `b` document is not faulted for a kind `a`
+    /// section's position, while a kind `a` document is.
+    #[test]
+    fn sections_ordered_holds_on_the_subsequence_a_variant_sees() {
+        let schema = schema_of(VARIANT_CONTRACT);
+        let findings = findings_for(&schema, "b", &["Shared", "Tail", "Only A"]);
+        assert!(findings.is_empty(), "{findings:#?}");
+        let findings = findings_for(&schema, "a", &["Shared", "Tail", "Only A"]);
+        assert_eq!(findings.len(), 1, "{findings:#?}");
+        assert!(
+            findings[0].message.contains("orders them the other way"),
+            "{findings:#?}"
+        );
+    }
+
+    /// Covers I049 criterion 13: a frontmatter key tagged `[a]` is required
+    /// for `a` and unchecked for `b`, and a prohibited entry tagged `[a]`
+    /// bans its heading in `a` alone.
+    #[test]
+    fn a_tagged_frontmatter_key_and_a_tagged_prohibition_bind_their_variants() {
+        let with_owner = VARIANT_CONTRACT.replace(
+            "    enum: [a, b]\n",
+            "    enum: [a, b]\n  owner:\n    required: true\n    variants: [a]\n",
+        );
+        let schema = schema_of(&format!(
+            "{with_owner}sections-prohibited:\n  - heading: Notes\n    variants: [a]\n  - Draft\n"
+        ));
+        let mut findings = findings_for(&schema, "a", &["Shared", "Only A", "Tail", "Notes"]);
+        findings.extend(findings_for(
+            &schema,
+            "a",
+            &["Shared", "Only A", "Tail", "Draft"],
+        ));
+        let messages: Vec<&str> = findings.iter().map(|f| f.message.as_str()).collect();
+        assert_eq!(findings.len(), 4, "{findings:#?}");
+        assert!(
+            messages
+                .iter()
+                .filter(|m| m.contains("`owner` is absent"))
+                .count()
+                == 2,
+            "{messages:?}"
+        );
+        assert!(
+            messages
+                .iter()
+                .any(|m| m.contains("prohibited section \"Notes\"")),
+            "{messages:?}"
+        );
+        assert!(
+            messages
+                .iter()
+                .any(|m| m.contains("prohibited section \"Draft\"")),
+            "{messages:?}"
+        );
+
+        // Kind `b`: the owner is unchecked, Notes is allowed, Draft is not.
+        let findings = findings_for(&schema, "b", &["Shared", "Tail", "Notes"]);
+        assert!(findings.is_empty(), "{findings:#?}");
+        let findings = findings_for(&schema, "b", &["Shared", "Tail", "Draft"]);
+        assert_eq!(findings.len(), 1, "{findings:#?}");
+    }
+
+    /// A document whose discriminator is absent, or carries a value the enum
+    /// does not admit, sees the untagged rules alone; the frontmatter check
+    /// says what the value is.
+    #[test]
+    fn a_document_with_no_readable_variant_sees_the_untagged_rules_alone() {
+        let schema = schema_of(VARIANT_CONTRACT);
+        let findings = findings_for(&schema, "c", &["Shared", "Tail"]);
+        assert_eq!(findings.len(), 1, "{findings:#?}");
+        assert!(
+            findings[0].message.contains("`kind` is `c`"),
+            "{findings:#?}"
+        );
+
+        let text = "---\ntype: T\n---\n\n# T\n\n## Shared\n\nx\n\n## Tail\n\nx\n";
+        let doc = Document {
+            path: "a.md",
+            text,
+            doc_type: Some("T"),
+        };
+        let mut findings = Vec::new();
+        check_one(&doc, &schema, Subject::Filed, &mut findings);
+        assert_eq!(findings.len(), 1, "{findings:#?}");
+        assert!(
+            findings[0].message.contains("`kind` is absent"),
+            "{findings:#?}"
+        );
+    }
+
+    /// One schema file carrying `contract` and a keyed `example:` block, one
+    /// document per (key, text) pair.
+    fn with_keyed_examples(contract: &str, examples: &[(&str, &str)]) -> Vec<(String, String)> {
+        let mut block = String::from("example:\n");
+        for (key, text) in examples {
+            block.push_str(&format!("  {key}: |\n"));
+            for line in text.split('\n') {
+                if line.is_empty() {
+                    block.push('\n');
+                } else {
+                    block.push_str(&format!("    {line}\n"));
+                }
+            }
+        }
+        let text = format!("---\ntype: Schema\n---\n\n````yaml\n{contract}{block}````\n");
+        vec![("s.md".to_string(), text)]
+    }
+
+    /// Covers I049 criterion 14: a keyed example is checked per key against
+    /// the base rules and its own variant's — `a`'s must carry Only A, `b`'s
+    /// need not — and an example whose discriminator differs from its key is
+    /// a finding on the schema file.
+    #[test]
+    fn a_keyed_example_is_checked_per_key_against_its_own_variant() {
+        let a = kind_doc("a", &["Shared", "Only A", "Tail"]);
+        let b = kind_doc("b", &["Shared", "Tail"]);
+        let findings = check_examples(&with_keyed_examples(
+            VARIANT_CONTRACT,
+            &[("a", &a), ("b", &b)],
+        ));
+        assert!(findings.is_empty(), "{findings:#?}");
+
+        let a_lacking = kind_doc("a", &["Shared", "Tail"]);
+        let findings = check_examples(&with_keyed_examples(
+            VARIANT_CONTRACT,
+            &[("a", &a_lacking), ("b", &b)],
+        ));
+        assert_eq!(findings.len(), 1, "{findings:#?}");
+        assert_eq!(findings[0].file, "s.md");
+        assert!(
+            findings[0]
+                .message
+                .starts_with("example `a`: missing required section \"Only A\""),
+            "{findings:#?}"
+        );
+
+        // Keyed `b`, declaring itself `a`: the key and the document disagree
+        // about what is shown, and the check runs against the key's variant.
+        let findings = check_examples(&with_keyed_examples(
+            VARIANT_CONTRACT,
+            &[("a", &a), ("b", &a)],
+        ));
+        assert_eq!(findings.len(), 1, "{findings:#?}");
+        assert!(
+            findings[0]
+                .message
+                .contains("example `b`: frontmatter `kind` is `a`, and the example is keyed `b`"),
+            "{findings:#?}"
+        );
+    }
+
+    /// Covers I049 criteria 13 and 14: a tag outside the enum, a tag without
+    /// `variant-key`, a missing example key and a keyed example without
+    /// `variant-key` are each a finding on the schema file — and the
+    /// unreadable rule binds nothing.
+    #[test]
+    fn each_variant_mis_declaration_is_a_finding_on_the_schema_file() {
+        let outside = VARIANT_CONTRACT.replace("variants: [a]", "variants: [a, c]");
+        let schemas = [(
+            "s.md".to_string(),
+            format!("---\ntype: Schema\n---\n\n````yaml\n{outside}````\n"),
+        )];
+        let findings = check_variants(&schemas);
+        assert_eq!(findings.len(), 1, "{findings:#?}");
+        assert_eq!(findings[0].file, "s.md");
+        assert!(
+            findings[0]
+                .message
+                .contains("section \"Only A\" declares variant `c`, and `kind` admits a, b"),
+            "{findings:#?}"
+        );
+        let findings = findings_for(&schema_of(&outside), "a", &["Shared", "Tail"]);
+        assert!(findings.is_empty(), "binds nothing: {findings:#?}");
+
+        let untagged_schema = VARIANT_CONTRACT.replace("variant-key: kind\n", "");
+        let schemas = [(
+            "s.md".to_string(),
+            format!("---\ntype: Schema\n---\n\n````yaml\n{untagged_schema}````\n"),
+        )];
+        let findings = check_variants(&schemas);
+        assert_eq!(findings.len(), 1, "{findings:#?}");
+        assert!(
+            findings[0].message.contains(
+                "section \"Only A\" declares variants [a], and the schema declares no variant-key"
+            ),
+            "{findings:#?}"
+        );
+        let findings = findings_for(&schema_of(&untagged_schema), "a", &["Shared", "Tail"]);
+        assert!(findings.is_empty(), "binds nothing: {findings:#?}");
+
+        let a = kind_doc("a", &["Shared", "Only A", "Tail"]);
+        let findings = check_examples(&with_keyed_examples(VARIANT_CONTRACT, &[("a", &a)]));
+        assert_eq!(findings.len(), 1, "{findings:#?}");
+        assert!(
+            findings[0]
+                .message
+                .contains("example: no example for kind `b`"),
+            "{findings:#?}"
+        );
+
+        let findings = check_examples(&with_keyed_examples(&untagged_schema, &[("a", &a)]));
+        assert_eq!(findings.len(), 1, "{findings:#?}");
+        assert!(
+            findings[0].message.contains(
+                "example: is keyed by variant value, and the schema declares no variant-key"
+            ),
+            "{findings:#?}"
+        );
+    }
+
+    /// The remaining mis-declarations around the key: a `variant-key` naming
+    /// a frontmatter key with no enum — the enum is what the tags are read
+    /// against, so it is reported once and every tag binds nothing — one
+    /// example under a `variant-key`, and an example keyed by a value the
+    /// enum does not admit.
+    #[test]
+    fn a_variant_key_without_an_enum_and_a_mis_shaped_example_are_findings() {
+        let no_enum = VARIANT_CONTRACT.replace("    enum: [a, b]\n", "");
+        let schemas = [(
+            "s.md".to_string(),
+            format!("---\ntype: Schema\n---\n\n````yaml\n{no_enum}````\n"),
+        )];
+        let findings = check_variants(&schemas);
+        assert_eq!(findings.len(), 1, "{findings:#?}");
+        assert!(
+            findings[0]
+                .message
+                .contains("variant-key `kind` names a frontmatter key with no enum"),
+            "{findings:#?}"
+        );
+        let findings = findings_for(&schema_of(&no_enum), "a", &["Shared", "Tail"]);
+        assert!(findings.is_empty(), "binds nothing: {findings:#?}");
+
+        let findings = check_examples(&with_example(
+            VARIANT_CONTRACT,
+            &kind_doc("a", &["Shared", "Only A", "Tail"]),
+        ));
+        assert_eq!(findings.len(), 1, "{findings:#?}");
+        assert!(
+            findings[0]
+                .message
+                .contains("example: is one document, and the schema declares variant-key `kind`"),
+            "{findings:#?}"
+        );
+
+        let a = kind_doc("a", &["Shared", "Only A", "Tail"]);
+        let b = kind_doc("b", &["Shared", "Tail"]);
+        let findings = check_examples(&with_keyed_examples(
+            VARIANT_CONTRACT,
+            &[("a", &a), ("b", &b), ("c", &b)],
+        ));
+        assert_eq!(findings.len(), 1, "{findings:#?}");
+        assert!(
+            findings[0]
+                .message
+                .contains("example `c`: names a value `kind` does not admit"),
+            "{findings:#?}"
+        );
+    }
+
+    /// Covers I049 criterion 13: a schema with no `variant-key` and a string
+    /// `example` is checked exactly as before — no variant finding, the
+    /// example under its plain prefix, and a document against every rule.
+    #[test]
+    fn a_schema_without_variants_is_checked_as_before() {
+        let contract = "frontmatter:\n  type:\n    const: T\nsections:\n  - heading: Context\n\
+                        \x20   level: 2\n    required: true\n";
+        let schemas = with_example(contract, "---\ntype: T\n---\n\n# A\n\n## Other\n\nx\n");
+        assert!(check_variants(&schemas).is_empty());
+        let findings = check_examples(&schemas);
+        assert_eq!(findings.len(), 1, "{findings:#?}");
+        assert!(
+            findings[0]
+                .message
+                .starts_with("example: missing required section \"Context\""),
+            "{findings:#?}"
+        );
+        let findings = findings_for(&schema_of(contract), "a", &["Other"]);
+        assert_eq!(findings.len(), 1, "{findings:#?}");
+        assert!(
+            findings[0]
+                .message
+                .contains("missing required section \"Context\""),
+            "{findings:#?}"
+        );
+    }
+
     /// Covers I034 criterion 5: a section rule declaring neither pattern is
     /// checked exactly as it was before ADR-030.
     #[test]
@@ -2255,7 +2878,7 @@ mod tests {
             doc_type: Some("T"),
         };
         let mut findings = Vec::new();
-        check_one(&doc, &schema, false, &mut findings);
+        check_one(&doc, &schema, Subject::Filed, &mut findings);
         assert!(findings.is_empty(), "{findings:#?}");
     }
 
@@ -2291,7 +2914,7 @@ mod tests {
             doc_type: Some("T"),
         };
         let mut findings = Vec::new();
-        check_one(&doc, &schema, false, &mut findings);
+        check_one(&doc, &schema, Subject::Filed, &mut findings);
         assert!(findings.is_empty(), "{findings:#?}");
     }
 
@@ -2308,7 +2931,7 @@ mod tests {
             doc_type: Some("T"),
         };
         let mut findings = Vec::new();
-        check_one(&doc, &schema, false, &mut findings);
+        check_one(&doc, &schema, Subject::Filed, &mut findings);
         assert_eq!(findings.len(), 1, "{findings:#?}");
         assert!(
             findings[0].message.contains("no paragraph line"),
@@ -2356,7 +2979,7 @@ mod tests {
             doc_type: Some("T"),
         };
         let mut findings = Vec::new();
-        check_one(&doc, &schema, false, &mut findings);
+        check_one(&doc, &schema, Subject::Filed, &mut findings);
         assert_eq!(findings.len(), 1, "{findings:#?}");
         assert_eq!(findings[0].file, "a.md");
         assert!(
@@ -2374,7 +2997,7 @@ mod tests {
             doc_type: Some("T"),
         };
         let mut findings = Vec::new();
-        check_one(&ok, &schema, false, &mut findings);
+        check_one(&ok, &schema, Subject::Filed, &mut findings);
         assert!(findings.is_empty(), "{findings:#?}");
     }
 
@@ -2392,7 +3015,7 @@ mod tests {
             doc_type: Some("T"),
         };
         let mut findings = Vec::new();
-        check_one(&doc, &schema, false, &mut findings);
+        check_one(&doc, &schema, Subject::Filed, &mut findings);
         let messages: Vec<&str> = findings.iter().map(|f| f.message.as_str()).collect();
         assert_eq!(findings.len(), 2, "{findings:#?}");
         assert!(
@@ -2422,7 +3045,7 @@ mod tests {
             doc_type: Some("T"),
         };
         let mut findings = Vec::new();
-        check_one(&doc, &schema, false, &mut findings);
+        check_one(&doc, &schema, Subject::Filed, &mut findings);
         assert!(findings.is_empty(), "{findings:#?}");
     }
 
@@ -2441,7 +3064,7 @@ mod tests {
             doc_type: Some("T"),
         };
         let mut findings = Vec::new();
-        check_one(&doc, &schema, false, &mut findings);
+        check_one(&doc, &schema, Subject::Filed, &mut findings);
         assert!(findings.is_empty(), "{findings:#?}");
     }
 
@@ -2460,7 +3083,7 @@ mod tests {
             doc_type: Some("T"),
         };
         let mut findings = Vec::new();
-        check_one(&doc, &schema, false, &mut findings);
+        check_one(&doc, &schema, Subject::Filed, &mut findings);
         let messages: Vec<&str> = findings.iter().map(|f| f.message.as_str()).collect();
         assert_eq!(findings.len(), 2, "{findings:#?}");
         assert_eq!(findings[0].file, "a.md");
@@ -2491,7 +3114,7 @@ mod tests {
             doc_type: Some("T"),
         };
         let mut findings = Vec::new();
-        check_one(&broken, &schema, false, &mut findings);
+        check_one(&broken, &schema, Subject::Filed, &mut findings);
         assert_eq!(findings.len(), 1, "{findings:#?}");
         assert!(
             findings[0].message.contains("`id` is `t-1`")
@@ -2505,7 +3128,7 @@ mod tests {
             doc_type: Some("T"),
         };
         let mut findings = Vec::new();
-        check_one(&ok, &schema, false, &mut findings);
+        check_one(&ok, &schema, Subject::Filed, &mut findings);
         assert!(findings.is_empty(), "{findings:#?}");
     }
 
@@ -2523,7 +3146,7 @@ mod tests {
             doc_type: Some("T"),
         };
         let mut findings = Vec::new();
-        check_one(&doc, &schema, false, &mut findings);
+        check_one(&doc, &schema, Subject::Filed, &mut findings);
         assert!(findings.is_empty(), "{findings:#?}");
 
         // A key carrying only a comment is absent.
@@ -2534,7 +3157,7 @@ mod tests {
             doc_type: Some("T"),
         };
         let mut findings = Vec::new();
-        check_one(&doc, &schema, false, &mut findings);
+        check_one(&doc, &schema, Subject::Filed, &mut findings);
         assert_eq!(findings.len(), 1, "{findings:#?}");
         assert!(
             findings[0].message.contains("`id` is absent"),
@@ -2556,7 +3179,7 @@ mod tests {
             doc_type: Some("T"),
         };
         let mut findings = Vec::new();
-        check_one(&doc, &schema, false, &mut findings);
+        check_one(&doc, &schema, Subject::Filed, &mut findings);
         assert!(findings.is_empty(), "{findings:#?}");
     }
 
@@ -2574,7 +3197,7 @@ mod tests {
             doc_type: Some("T"),
         };
         let mut findings = Vec::new();
-        check_one(&doc, &with_enum, false, &mut findings);
+        check_one(&doc, &with_enum, Subject::Filed, &mut findings);
         assert!(
             findings.is_empty(),
             "the filing check reports it: {findings:#?}"
@@ -2583,7 +3206,7 @@ mod tests {
         let without_enum =
             schema_of("frontmatter:\n  type:\n    const: T\n  lifecycle:\n    required: true\n");
         let mut findings = Vec::new();
-        check_one(&doc, &without_enum, false, &mut findings);
+        check_one(&doc, &without_enum, Subject::Filed, &mut findings);
         assert_eq!(findings.len(), 1, "{findings:#?}");
         assert!(
             findings[0].message.contains("`lifecycle` is absent"),
@@ -2603,7 +3226,7 @@ mod tests {
             doc_type: Some("T"),
         };
         let mut findings = Vec::new();
-        check_one(&doc, &schema, false, &mut findings);
+        check_one(&doc, &schema, Subject::Filed, &mut findings);
         assert_eq!(findings.len(), 1, "{findings:#?}");
         assert!(
             findings[0].message.contains("`id` is not a scalar"),

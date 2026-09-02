@@ -250,8 +250,10 @@ pub fn validate_repo(
             }
         }
         schemas = schema_files.len();
-        // Each schema's example against the schema declaring it, in place —
-        // findings land on the schema file (ADR-024).
+        // A variant declaration nothing reads (ADR-045), and each schema's
+        // example against the schema declaring it, in place — findings land
+        // on the schema file (ADR-024).
+        schema_findings.extend(schema::document::check_variants(&schema_files));
         schema_findings.extend(schema::document::check_examples(&schema_files));
         let candidates: Vec<schema::document::Document<'_>> = documents
             .iter()
