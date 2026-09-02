@@ -287,7 +287,7 @@ named the pack as the grammar's source.
 
 ### Slice 8: The interface contracts include their modules
 
-- [ ] Done — ticked by integrate at merge.
+- [x] Done — ticked by integrate at merge.
 - Depends-on: 1, 4.
 - Change: markers around the `pub` items `contract-007`, `contract-009`
   and `contract-010` declare, in the modules they describe; each
