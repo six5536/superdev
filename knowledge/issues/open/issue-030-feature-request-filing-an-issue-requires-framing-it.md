@@ -75,8 +75,9 @@ a `TBD`, with no key and no EARS tag. While `framed`, every such item
 carries its key and, where the item is a requirement, its EARS tag —
 `AC_` criteria, `RS_` steps, `EX_` expected behaviour, `DD_` done
 items — and a `TBD` is an error. A `done` or `wontfix` issue is held
-to the framed form except that a bug's Expected behaviour may be prose,
-which is how the settled records on file stand.
+to the framed form as well; a bug's Expected behaviour is a keyed list
+in every state, and the settled reports that write it as a paragraph
+are converted once, each paragraph becoming one `EX_c<n>` item.
 
 The backlog retires: its three "under consideration" entries become
 ideas, its "decided against" entry a `wontfix` issue, and the concept,
@@ -101,8 +102,8 @@ ADRs keep rejected design alternatives, as they do today.
    key, every done item to the `DD_` key, and SHALL report an item
    opening with `TBD` as an error naming the item.
 4. `AC_settled-form` [state] WHILE an issue is `done` or `wontfix`, THE
-   SYSTEM SHALL hold it to the framed form of criterion 3 except that a
-   bug's Expected behaviour MAY be prose.
+   SYSTEM SHALL hold it to the framed form of criterion 3, a bug's
+   Expected behaviour included.
 5. `AC_one-schema-per-kind` [ubiquitous] Each kind SHALL keep one schema,
    varying by `lifecycle` as its variant key, with one example per
    state that passes the schema's own check.
@@ -138,7 +139,9 @@ ADRs keep rejected design alternatives, as they do today.
     skill in the pack and its synced copy, claimed in the lock like the
     seventeen that exist.
 15. `AC_sweep` [ubiquitous] Every open issue on file SHALL be refiled by
-    the sweep: `unframed` where a `TBD` remains, `framed` otherwise,
+    the sweep: `unframed` where a `TBD` remains, `framed` otherwise;
+    every bug report whose Expected behaviour is prose SHALL carry it as
+    a keyed list, one `EX_c<n>` item per paragraph, no words changed;
     and `superdev validate` SHALL pass on the live tree.
 16. `AC_backlog-retired` [ubiquitous] The backlog concept, `schema-backlog`
     and every reference to the backlog in the skills, the schemas and
@@ -168,6 +171,9 @@ ADRs keep rejected design alternatives, as they do today.
 - The backlog kept beside the tracker — an unframed issue is what an
   "under consideration" entry was, and the decided-against half has
   homes already.
+- A bug's Expected behaviour left as prose in settled issues — the
+  schema would need a content kind that varies by state, which ADR-045
+  has no room for, to spare a one-off conversion of 21 paragraphs.
 
 ## Scope
 
@@ -175,8 +181,8 @@ ADRs keep rejected design alternatives, as they do today.
   schemas as lifecycle-variant schemas with per-state examples; the
   `/file` skill for issues, ideas and promotion; `/frame` framing in
   place; the refusal gates on the three later phases; the workflow and
-  how-do-i entries; the sweep of the thirteen open issues; the backlog's
-  retirement and the migration of its entries; the tracker concept,
+  how-do-i entries; the sweep of the thirteen open issues and of the
+  bug reports' Expected behaviour; the backlog's retirement and the migration of its entries; the tracker concept,
   glossary and changelog.
 - Out: triage tags, which stay as they are; the plan's own lifecycle;
   `/frame`'s interview, which is unchanged; a review or reminder for
@@ -212,7 +218,9 @@ stand, settled in the interview: four lifecycle states, one `/file`
 skill for issues and ideas, unframed criteria with no key and no tag,
 the backlog retired, an idea kept as a record with no kind. The
 criteria that were `AC_c1` to `AC_c3` are replaced by the seventeen
-above.
+above. The owner then struck the prose exception for a settled bug's
+Expected behaviour: it is a keyed list in every state, and the settled
+reports are converted.
 
 <!-- sokf:links -->
 [sokf:adr-045-a-schema-declares-variants]: /knowledge/adrs/active/adr-045-a-schema-declares-variants.md
