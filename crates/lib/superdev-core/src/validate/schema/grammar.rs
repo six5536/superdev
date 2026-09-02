@@ -586,7 +586,7 @@ pub struct KeyTable {
 pub struct KeyDef {
     /// What the key means.
     pub doc: String,
-    /// `string`, `integer`, `boolean`, `list`, or `map`.
+    /// `string`, `integer`, `boolean`, `list`, `map`, or `stringOrMap`.
     pub r#type: String,
     /// Whether the contract must carry it.
     #[serde(default)]

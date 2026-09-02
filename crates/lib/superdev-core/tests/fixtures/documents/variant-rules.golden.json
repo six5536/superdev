@@ -1,0 +1,25 @@
+{
+  "findings": [
+    {
+      "file": "misdeclared.md",
+      "message": "schema: section \"Only C\" declares variant `c`, and `kind` admits a, b — the rule binds nothing",
+      "severity": "error"
+    },
+    {
+      "file": "misdeclared.md",
+      "message": "example: no example for kind `b` — every value the discriminator admits has one",
+      "severity": "error"
+    },
+    {
+      "file": "misdeclared.md",
+      "message": "example `a`: frontmatter `kind` is `b`, and the example is keyed `a`",
+      "severity": "error"
+    },
+    {
+      "file": "a-lacking.md",
+      "message": "missing required section \"Only A\" (thing.md)",
+      "severity": "error"
+    }
+  ],
+  "passed": false
+}

@@ -12,7 +12,7 @@ provider = "superdev-skills"
 version = "0.2.0"
 
 [files]
-".agents/sokf/grammar.yaml" = "93a578d86cec7ddf459e29e0d8e2b1be50274c0c1309fca365507611ae960c96"
+".agents/sokf/grammar.yaml" = "2ba3f495856a977d20ac58988774e293ed54123b0c8eccecb638b5a92fc1980e"
 ".agents/superdev.md" = "10d47bc97ce10329a014efb5b21d445db738d89d97152a7f1fe7d44b7c73515e"
 ".claude/settings.json:hooks.Stop[superdev hook run]" = "90becaf44d7c615e483c091a102ff928047271bf3b3b72bfe2d1a77ec7fb9625"
 ".claude/skills/accept/SKILL.md" = "fa86e32e44c7cab5e6b1c30435ccbd2d96da4a7ae4bd1d729b18ff1ab8634e52"

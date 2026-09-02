@@ -183,3 +183,11 @@ fn missing_required_key() {
 fn broken_example() {
     snapshot("broken-example");
 }
+
+/// A schema declaring variants (ADR-045): a kind `a` document lacking the
+/// section tagged `[a]` fails, a kind `b` one passes with it out of order,
+/// and a mis-declared schema reports each fault on the schema file.
+#[test]
+fn variant_rules() {
+    snapshot("variant-rules");
+}
