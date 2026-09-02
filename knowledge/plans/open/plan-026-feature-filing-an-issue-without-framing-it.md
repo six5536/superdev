@@ -207,11 +207,12 @@ edited beside it.
 
 ### Slice 5: The backlog retires
 
-- [ ] Done — ticked by integrate at merge.
+- [x] Done — ticked by integrate at merge.
 - Depends-on: 4.
-- Change: three ideas — `idea-006` the knowledge-capture skill,
-  `idea-007` template pre-filled skeletons, `idea-008`
-  comment-preserving manifest stamping — written from the backlog's
+- Change: three ideas — `idea-007` the knowledge-capture skill,
+  `idea-008` template pre-filled skeletons, `idea-009`
+  comment-preserving manifest stamping (`idea-006` was taken between
+  the cut and the build) — written from the backlog's
   entries per `schema-idea` and listed in the ideas index;
   `issue-051-chore-pin-node-in-the-managed-repo`, `wontfix`, carrying
   the decided-against reasoning; `knowledge/backlog.md`,
