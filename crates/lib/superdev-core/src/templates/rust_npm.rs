@@ -7,6 +7,10 @@
 
 use super::Template;
 
+// sokf:begin template
+/// One file of the `rust-npm` tree, embedded from
+/// `assets/projects/rust-npm/` — the crate's `assets` is the repository's
+/// `pack/`, so the tree lives at `pack/projects/rust-npm/`.
 macro_rules! tpl {
     ($rel:literal) => {
         include_str!(concat!(
@@ -16,6 +20,7 @@ macro_rules! tpl {
         ))
     };
 }
+// sokf:end template
 
 /// (tokenised target path, embedded content), in write order.
 const FILES: [(&str, &str); 46] = [
@@ -148,8 +153,12 @@ const FILES: [(&str, &str); 46] = [
     ),
 ];
 
+// sokf:begin template
+/// The shipped template `rust-npm`: its name, its prompt line and
+/// its tree.
 pub(super) const TEMPLATE: Template = Template {
     name: "rust-npm",
     description: "Rust CLI workspace deployed as prebuilt binaries through npm",
     files: &FILES,
 };
+// sokf:end template

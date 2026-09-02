@@ -9,7 +9,7 @@ links:
     to: issue-035-feature-request-a-contract-does-not-define-its-interface
     note: The gap acceptance found against criterion 4 — the one contract left unbound.
   - rel: references
-    to: contract-008-text-format-template
+    to: contract-008-format-template
     note: The contract with no drift test.
 ---
 
@@ -29,7 +29,7 @@ unshipped template report `PENDING`.
 ## Summary
 
 Eight of the nine active contracts gained a drift test in P021; the
-[template format contract][sokf:contract-008-text-format-template] did
+[template format contract][sokf:contract-008-format-template] did
 not. It enumerates the five substitution tokens and one section per
 shipped template, and nothing compares either list to the code that
 implements it, so both can drift silently — against criterion 4 of
@@ -109,5 +109,5 @@ which is the drift the CLI contract had already suffered once in this
 feature.
 
 <!-- sokf:links -->
-[sokf:contract-008-text-format-template]: /knowledge/contracts/public/active/contract-008-text-format-template.md
+[sokf:contract-008-format-template]: /knowledge/contracts/public/active/contract-008-format-template.md
 [sokf:issue-035-feature-request-a-contract-does-not-define-its-interface]: /knowledge/issues/done/issue-035-feature-request-a-contract-does-not-define-its-interface.md

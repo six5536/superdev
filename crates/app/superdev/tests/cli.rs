@@ -2845,6 +2845,104 @@ fn a_pub_fn_renamed_in_the_resolver_fails_validate_naming_the_contracts_include(
     );
 }
 
+/// Covers I049 criteria 4 and 23 (ADR-042): the template format contract's
+/// definition is the `template` regions of the engine and its two template
+/// modules, so a token added to `templates.rs` fails `validate` naming the
+/// contract's include of that file, and `--fix` writes the token into the
+/// contract. Runs against a copy of the live contract and its three sources
+/// in a scratch repository, so this tree is never edited.
+#[test]
+fn a_token_added_to_the_template_engine_fails_validate_naming_the_contracts_include() {
+    const CONTRACT: &str = "knowledge/contracts/public/active/contract-008-format-template.md";
+    const SOURCE: &str = "crates/lib/superdev-core/src/templates.rs";
+    let repo = tempfile::tempdir().unwrap();
+    let live = std::fs::read_to_string(Path::new(REPO_ROOT).join(CONTRACT)).unwrap();
+    let definition = &live[live.find("## Definition").unwrap()..live.find("## Behaviour").unwrap()];
+    // Every file the Definition includes, so each include resolves in the
+    // fixture; the engine's is the one the test edits.
+    let sources: Vec<&str> = definition
+        .lines()
+        .filter_map(|line| line.strip_prefix("<!-- sokf:include /"))
+        .map(|rest| rest.split('#').next().unwrap())
+        .collect();
+    assert!(
+        sources.len() == 3 && sources[0] == SOURCE,
+        "the live contract includes the engine and one module per shipped template: {sources:?}"
+    );
+    assert!(
+        definition.contains("pub const TOKEN_PASCAL")
+            && definition.contains("static SHIPPED")
+            && definition.contains("name: \"rust-npm\""),
+        "the includes carry the tokens, the registry and each template's declaration"
+    );
+    for rel in sources.iter().copied().chain([CONTRACT]) {
+        let to = repo.path().join(rel);
+        std::fs::create_dir_all(to.parent().unwrap()).unwrap();
+        std::fs::copy(Path::new(REPO_ROOT).join(rel), &to).unwrap();
+    }
+    std::fs::write(
+        repo.path().join("knowledge/manifest.sokf.yaml"),
+        "sokf: \"0.4\"\nname: fixture\n",
+    )
+    .unwrap();
+    // The fixture carries the live contract's Definition — its includes —
+    // and nothing else: the prose links concepts the fixture lacks.
+    let contract = repo.path().join(CONTRACT);
+    std::fs::write(
+        &contract,
+        format!(
+            "---\ntype: Note\nid: contract-008-format-template\n---\n\n# Template\n\n{definition}"
+        ),
+    )
+    .unwrap();
+    superdev()
+        .current_dir(repo.path())
+        .args(["validate", "--fix"])
+        .assert()
+        .success();
+
+    let source = repo.path().join(SOURCE);
+    let edited = std::fs::read_to_string(&source).unwrap().replace(
+        "pub const TOKEN_PASCAL: &str = \"{{superdev:project-pascal}}\";\n",
+        "pub const TOKEN_PASCAL: &str = \"{{superdev:project-pascal}}\";\n/// The slug in SCREAMING_SNAKE_CASE (e.g. \"MY_TOOL\").\npub const TOKEN_SCREAMING: &str = \"{{superdev:project-screaming}}\";\n",
+    );
+    assert!(
+        edited.contains("pub const TOKEN_SCREAMING"),
+        "the token was added"
+    );
+    std::fs::write(&source, edited).unwrap();
+
+    let out = superdev()
+        .current_dir(repo.path())
+        .args(["validate"])
+        .assert()
+        .code(1);
+    let stdout = String::from_utf8_lossy(&out.get_output().stdout).into_owned();
+    assert!(
+        stdout.contains(
+            "contract-008-format-template.md: the include block for `/crates/lib/superdev-core/src/templates.rs#template` is stale"
+        ),
+        "{stdout}"
+    );
+    assert!(
+        !std::fs::read_to_string(&contract)
+            .unwrap()
+            .contains("TOKEN_SCREAMING"),
+        "validate without --fix wrote the contract"
+    );
+
+    superdev()
+        .current_dir(repo.path())
+        .args(["validate", "--fix"])
+        .assert()
+        .success();
+    let text = std::fs::read_to_string(&contract).unwrap();
+    assert!(
+        text.contains("pub const TOKEN_SCREAMING: &str = \"{{superdev:project-screaming}}\";\n"),
+        "{text}"
+    );
+}
+
 /// Without the flag, `validate` reports and writes nothing.
 #[test]
 fn validate_without_fix_writes_nothing() {
