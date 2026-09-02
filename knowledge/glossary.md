@@ -2,7 +2,7 @@
 type: Glossary
 id: glossary
 title: Domain Glossary
-description: The terms the blueprint engine uses — blueprint, capability, provider, provenance, component, owned file, scaffold, project template, template adoption, skill pack, knowledge-carried skill, content pack, pack source, embedded snapshot, pack item, pack layer, pack format, PROJECT.md layer, custom skill, harvest, claim, orphan — plus the knowledge terms section, locator, hybrid search, RRF, lifecycle and variant, and the contract terms binding and drift test.
+description: The terms the blueprint engine uses — blueprint, capability, provider, provenance, component, owned file, scaffold, project template, template adoption, skill pack, knowledge-carried skill, content pack, pack source, embedded snapshot, pack item, pack layer, pack format, PROJECT.md layer, custom skill, harvest, claim, orphan — plus the knowledge terms section, locator, hybrid search, RRF, lifecycle and variant, and the contract terms binding, drift test and EARS.
 status: stable
 ---
 
@@ -164,6 +164,15 @@ Terms from the contract side:
   ([I049][sokf:issue-049-feature-request-a-contract-cannot-point-at-its-definition]
   criterion 23). A test of a Behaviour promise is a behaviour test, not
   a drift test.
+- **EARS** — the Easy Approach to Requirements Syntax: a requirement
+  opens with one of six pattern tags — `[ubiquitous]`, `[event]`,
+  `[state]`, `[conditional]`, `[optional]`, `[complex]` — and states its
+  trigger or condition in that pattern's words before one modal verb
+  and one requirement. A feature-request's acceptance criteria take the
+  form, numbered, with "THE SYSTEM" as the subject
+  ([ADR-031][sokf:adr-031-ears-criteria-are-checked-by-item-pattern]);
+  a contract's Behaviour and Stability promises do not yet
+  ([I037][sokf:issue-037-feature-request-a-contracts-behaviour-is-not-written-as-ears]).
 
 The files these terms describe are in [configuration][sokf:configuration]; the
 layering is in [architecture][sokf:architecture].
@@ -171,10 +180,12 @@ layering is in [architecture][sokf:architecture].
 <!-- sokf:links -->
 [sokf:adr-003-items-by-layout]: /knowledge/adrs/active/adr-003-items-by-layout.md
 [sokf:adr-004-base-pack-identity]: /knowledge/adrs/active/adr-004-base-pack-identity.md
+[sokf:adr-031-ears-criteria-are-checked-by-item-pattern]: /knowledge/adrs/active/adr-031-ears-criteria-are-checked-by-item-pattern.md
 [sokf:adr-042-a-contracts-definition-is-materialized-from-source]: /knowledge/adrs/active/adr-042-a-contracts-definition-is-materialized-from-source.md
 [sokf:adr-045-a-schema-declares-variants]: /knowledge/adrs/active/adr-045-a-schema-declares-variants.md
 [sokf:architectural-rules]: /knowledge/architectural-rules.md
 [sokf:architecture]: /knowledge/architecture.md
 [sokf:configuration]: /knowledge/configuration.md
 [sokf:contract-008-format-template]: /knowledge/contracts/public/active/contract-008-format-template.md
+[sokf:issue-037-feature-request-a-contracts-behaviour-is-not-written-as-ears]: /knowledge/issues/open/issue-037-feature-request-a-contracts-behaviour-is-not-written-as-ears.md
 [sokf:issue-049-feature-request-a-contract-cannot-point-at-its-definition]: /knowledge/issues/open/issue-049-feature-request-a-contract-cannot-point-at-its-definition.md
