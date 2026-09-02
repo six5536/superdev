@@ -30,6 +30,7 @@ First you try to make the slice fail; only what survives is merged. Verify the s
 <step name="RUN THE SLICE'S CASES" task="Run the slice's cases from the plan, including manual ones, and confirm each covers the criteria it names" />
 <step name="CHECK THE DONE-CHECK" task="Check the diff against the slice's done-check" />
 <step name="CHECK CONTRACTS" task="Check the diff's interfaces against the contracts the framed issue links" />
+<step name="JUDGE THE CONTRACTS" task="Slice touched a contract? Read each one as its consumer would and report, per contract, what you checked and where it falls short: where an included region omits part of the promised surface; where an optional Behaviour section that `schema-contract`'s checklist names for the kind is absent with no reason given; where a reader could not learn the interface from the document. The report is a judgement, not a validator finding, and blocks nothing. No contract touched? Say so and report nothing further" />
 <step name="REVIEW THE DIFF" when="if the last slice" task="Review the whole feature diff against the merge target for correctness and for simplifications (`/code-review`); wait for a background review with a blocking TaskOutput call and do not end the turn while it runs — the completion notification cannot wake a stopped subagent; findings return to build, they are not applied here" />
 <step name="CHECK RENDERED UI" task="UI: check the rendered result (`/run`)" />
 <step name="WRITE FINDINGS" when="if the last slice" task="Write the review's findings per `schema-code-review`" />

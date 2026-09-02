@@ -25,7 +25,7 @@ You judge the whole feature on merged code, as the user will experience it. This
 <step name="FILE GAPS" task="File each gap found per `schema-bug-report`: a BugReport concept `issue-{nnn}-bug-{slug}` (`lifecycle: open`), linked to the framed issue" />
 <gate check="The feature is documented" on-fail="file the gap" />
 <gate check="No gap is left without a slice" on-fail="make each gap a new slice" />
-<gate check="No contract the feature touched still marks an element `pending`" on-fail="file the unbuilt promise as a gap — a contract may promise ahead of its code while a feature runs, never once it settles (ADR-038)" />
+<gate check="No contract the feature touched still carries `PENDING`, uppercase and whole, in its Behaviour or Stability section" on-fail="file the unbuilt promise as a gap — a prose promise may run ahead of its code while a feature runs, never once it settles (ADR-044)" />
 <step name="CLOSE OUT" task="Clean pass? Set the framed issue's `lifecycle` to `done` and confirm the plan already reads `done` (integrate sets it at the last slice); `superdev validate --fix` refiles both" />
 <gate check="`superdev validate` passes: the SOKF knowledge, and every document against its schema" on-fail="fix every error" />
 <skill_call name="/feature-plan" when="if gaps found" input="the gap issues" />

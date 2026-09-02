@@ -257,6 +257,21 @@ fn init_sets_up_a_fresh_repo() {
     sb.superdev().arg("status").assert().success();
 }
 
+/// Covers I049 criterion 22: the pack ships the judgement step, so a repo
+/// adopting superdev gets it from `init` with the schemas, and `status`
+/// holds the written skill as converged.
+#[test]
+fn init_ships_the_contract_judgement_step() {
+    let sb = Sandbox::new();
+    sb.superdev().arg("init").assert().success();
+    let integrate = sb.read(".claude/skills/integrate/SKILL.md");
+    assert!(
+        integrate.contains("<step name=\"JUDGE THE CONTRACTS\""),
+        "{integrate}"
+    );
+    sb.superdev().arg("status").assert().success();
+}
+
 /// The `update` verb's whole surface: retarget every pin at once, switch a
 /// provider, and the two refusals — a disabled slot, and a provider switch
 /// on a slot holding several packs, where there is no single entry to move.
