@@ -13,6 +13,14 @@ publish a version it cannot find a heading for.
 
 ### Added
 
+- **A heading is declared per variant.** A schema may declare one heading
+  in more than one section rule when every such rule carries `variants`
+  and the sets are disjoint; a document is checked against the rule its
+  discriminator value selects, at that rule's place in the order, so one
+  heading carries a different shape per variant. Two rules for one
+  heading whose sets share a value, or of which one is untagged, are a
+  finding on the schema naming the heading and the overlap, and both
+  bind nothing (ADR-049).
 - **The workflow skills judge and declare a contract.** `/integrate` gains
   JUDGE THE CONTRACTS: a contract the slice touched is read as its
   consumer would read it, and the report names what was checked and
