@@ -1,0 +1,179 @@
+# Changelog — 0.1.0 and 0.2.0
+
+The released sections moved here from [CHANGELOG.md](CHANGELOG.md) on
+2026-09-02, when that file reached its 800-line limit with 616 lines of
+unreleased change. The entries are unchanged; the release workflow's
+heading for each version stays in the main file.
+
+## [0.2.0] - 2026-08-25
+
+### Changed
+
+- **Breaking:** the knowledge-carried skill set is replaced by the process
+  layer. The derived engineering skills (code-review, codebase-design,
+  diagnosing-bugs, domain-modeling, tdd, to-spec, to-plan, wayfinder and the
+  rest, with their MIT licence file) are swept on the next `sync` — backed up,
+  as any removal is — and in their place land the eight workflow phases
+  (`frame`, `spec`, `interface-design`, `feature-plan`, `build`, `verify`,
+  `integrate`, `accept`) and their support skills (`adhoc-plan`, `bootstrap`,
+  `brainstorm`, `grill-me`, `handoff`, `how-do-i`, `maintain`, `prototype`,
+  `research`). `aokf-bootstrap` and `aokf-maintain` continue as `bootstrap`
+  and `maintain`.
+- The agent-rules scaffolds grow up: `.agents/prose.md` becomes
+  `.agents/professionalism.md`, a new `.agents/process.md` describes the
+  eight-phase workflow, and the `.agents/superdev.md` aggregator imports
+  professionalism, process, then coding. Existing repos keep their own copies
+  (scaffolds are write-once); fresh repos get the new set.
+- The skill pack slims to `double-check` and `template-update`; `humanise`
+  and `self-improve` leave the pack and are swept on sync unless marked
+  custom.
+- The init hint now says `run /bootstrap in Claude Code`.
+
+### Added
+
+- The seeded knowledge bundle now carries what the workflow skills reference:
+  the document template library at `knowledge/templates/` (owned, so it
+  versions with the skills), the issue-tracker convention, and a plans index
+  beside the specs index — all listed from the bundle index.
+
+## [0.1.0] - 2026-08-19
+
+### Added
+
+- A second project template, `web-react-android-ios-native`: one product as
+  three native codebases — a React web app, a Kotlin/Jetpack Compose Android
+  app and a SwiftUI iOS app, each a hello-world stub that builds and passes
+  CI. It ships the tooling that makes that stack workable for agents: an HTTP
+  debug server compiled into debug builds only, an MCP server wrapping it so
+  an agent can drive a running app, a dev CLI for the
+  build/install/launch/logs/screenshot loop, an Android-capable dev
+  container, and a fastlane release pipeline keyed off a single
+  `release/release.yaml`. Two artefacts can't be seeded and are bootstrapped
+  instead — the Gradle wrapper jar and the Xcode project — both documented
+  in the template's own `docs/BUILD.md`
+- Two template tokens for spellings the slug can't express:
+  `{{superdev:project-compact}}` (hyphens dropped) for reverse-domain app
+  ids, which Android and iOS constrain in opposite directions, and
+  `{{superdev:project-pascal}}` for Swift and Kotlin type names, Xcode
+  schemes and Gradle root projects. `template render` prints both alongside
+  the existing values
+- Project templates: `init --template rust-npm` (or a prompt, on a TTY)
+  seeds a new repo with a Rust CLI workspace deployed as prebuilt binaries
+  through npm — crates, launcher and platform packages, CI and release
+  workflows, repo docs, policy configs, and a dev container that brings up
+  the pinned toolchain alongside superdev's own tooling, all
+  token-substituted with the project's name. Template files are
+  write-once scaffolds: existing files
+  win, and `sync` never touches them. `--template none` and `--name` script
+  the answers; `.superdev/config.toml` records the choice under `[template]`
+- Knowledge-owned skills: the aokf component carries its lifecycle skills —
+  the new `aokf-bootstrap` (harvest a repo's existing docs into the bundle,
+  then interview the owner to flesh out the seeded skeleton) and the
+  relocated `aokf-maintain` — plus the validation hook, so all three
+  exist exactly where a bundle exists and a `--no-knowledge` repo gets no
+  hook. `[knowledge]` takes a `custom` list like the other skill-writing
+  capabilities, and a knowledge-enabled `init` ends with the
+  `/aokf-bootstrap` hint
+- Search down-ranks settled work: sections of a `deprecated` concept, or
+  one tagged `done`, `resolved` or `wontfix`, score lower after fusion, so
+  finished plans and issues stop crowding live knowledge. The index schema
+  changed; the cache rebuilds itself on the next call
+- A fuller knowledge seed: `init` now scaffolds a starter concept skeleton
+  (glossary, architecture, testing strategy and the rest) instead of a
+  three-file stub, ready for agents to fill in
+- Project scaffold: CI and release machinery, npm launcher + platform
+  packages, cargo workspace, and the AOKF knowledgebase
+- `superdev init`, `status`, `sync` and `update`: set a repo up for
+  agent-driven development and keep it matching the blueprint compiled into
+  the binary. `status` exits 1 when there is work to do; a failed apply rolls
+  back and reports anything it could not undo
+- `.superdev/config.toml` (what the repo wants) and `.superdev/lock.toml`
+  (what was applied, with hashes of superdev-owned files), plus a gitignored
+  `.superdev/cache/` for backups
+- Managed capabilities: `knowledge` (a native AOKF bundle), `code-index`
+  (codegraph), `workflows` (Superpowers), `frontend` (Anthropic's
+  frontend-design plugin) and `skills` (superdev's own pack, below); each can
+  be disabled with `init --no-<capability>`
+- `workflows` and `code-index` install from checksum-verified release
+  bundles pinned in the binary, so `update <capability>@<version>` refuses
+  an explicit version for them — bare `update` moves them to the binary's
+  pins
+- `superdev mcp aokf`: an MCP server over the knowledge bundle with four
+  read-only tools — `aokf_search`, `aokf_read`, `aokf_graph` and
+  `aokf_overview`. Search is hybrid (BM25 plus a pinned local embedding
+  model, fused by reciprocal rank fusion) and degrades to lexical-only when
+  no model is available. The index sits in `.superdev/cache/aokf-index/` and
+  re-syncs lazily on every call, so edits are visible to the next question
+- `superdev aokf validate` and `superdev aokf index`: validate the bundle
+  against the AOKF spec (exit 1 on errors, `--json`, `--level`,
+  `--repo-root`) and force a full index rebuild
+- Optional `[knowledge.embeddings]` in `.superdev/config.toml` to embed
+  through an API instead of the local model; the key comes from the
+  environment, never the file
+- `init` registers the server in `.mcp.json` under
+  `mcpServers.superdev-aokf`, merging into whatever servers are already
+  there
+- The `skills` capability: five skills (aokf-maintain, double-check,
+  grill-me, humanise, self-improve) written into `.claude/skills/` as
+  superdev-owned files, plus a PostToolUse hook in `.claude/settings.json`
+  that runs `superdev aokf hook validate` and blocks edits that break the
+  bundle. Claude Code loads both natively — nothing to install
+- Per-skill customisation: a `PROJECT.md` beside a skill extends it and is
+  never touched; `custom = ["<name>"]` under `[skills]` releases a skill
+  from management entirely. The pack's version is the binary's, so
+  `update skills@<version>` is refused like the other pinned capabilities
+- `superdev aokf hook validate`: the hook as a subcommand — payload on
+  stdin, validates in-process, works on every platform superdev ships for
+- `init` adopts a repo's existing skills: one already sitting under a pack
+  name, with content of its own, is released into `[skills] custom` and
+  reported, instead of being overwritten and backed up
+- Blueprint migrations: `sync` now removes what the blueprint no longer
+  ships — dropped files, renamed paths' old copies, a disabled capability's
+  pins and registrations. Unmodified leftovers are removed with a backup;
+  user-edited ones are left in place, released from the lock, and reported
+- `sync` ensures `CLAUDE.md` imports `AGENTS.md` (`@AGENTS.md`), so Claude
+  Code actually loads the managed entry point
+- `blueprint` in `.superdev/config.toml` now records the version last
+  applied: `sync` stamps it, `status` reports a difference without failing
+- Knowledge-carried skills: the knowledge capability ships the full
+  aokf-converted skill set — 25 skills, each its whole directory, most
+  derived from mattpocock/skills (MIT) — as owned repo files under
+  `.claude/skills/`, released per skill by `[knowledge] custom`. The
+  workflows capability is gone: a manifest still naming `[workflows]` fails
+  with a guided migration error, and the next sync after the table is
+  deleted swaps same-named skills to knowledge ownership and sweeps the
+  dropped upstream files. The superpowers plugin remains installable by
+  hand: `claude plugin install superpowers`
+- `superdev template list` and `superdev template render`: read-only views
+  of the shipped project templates — render writes the token-substituted
+  tree into an empty directory and prints the derived token values.
+  `[template]` in `.superdev/config.toml` now records the seeding binary's
+  `version`; older manifests parse unchanged
+- The skill pack's `template-update`: update a repo from its project
+  template, or adopt one into a repo that never used a template — the
+  template confirmed with the user, a summary and per-area questions
+  before anything is written, and `[template]` restamped afterwards. The
+  engine still never touches template files; every update is a user edit
+
+### Fixed
+
+- `sync` no longer installs the repo's whole toolchain. `mise install` and
+  `mise exec` now name superdev's own pinned tools, so an unrelated pin that
+  cannot build on this machine no longer fails the entire apply — found
+  adopting superdev in a repo pinning `cargo:cargo-ndk`
+
+### Changed
+
+- The AOKF validator is now the binary's own `aokf validate`; the bundled
+  Python `validator.py` is deleted, and the validation hook, `check:aokf`
+  and CI all call the Rust one. Findings, JSON and exit codes are unchanged
+- AGENTS.md no longer preloads every concept in the knowledgebase. It keeps
+  `knowledge/index.md` as the map and tells agents to search the MCP server
+  for the rest
+
+### Removed
+
+- The skill pack's `grill-me` — the default workflows provider ships its
+  own; the next sync sweeps the packaged copy (a user-edited copy is left
+  in place and released). A `[skills] custom` name that is no longer in
+  the pack now reports instead of failing the plan
