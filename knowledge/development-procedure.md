@@ -25,8 +25,9 @@ no Node.
    (`lifecycle: done` in the commit that completes the work). One-off
    work takes `/adhoc-plan`, and its plan is filed beside it as
    `plan-<nnn>-adhoc-<slug>`.
-2. One branch per feature: `/frame` cuts `feature/<slug>` off `main`, and
-   an adhoc plan that touches code runs on `adhoc/<slug>`. A human
+2. One branch per feature: `/frame` cuts `feature/<nnn>-<slug>` off
+   `main`, `<nnn>` the framed issue's number, and an adhoc plan that
+   touches code runs on `adhoc/<nnn>-<slug>`, `<nnn>` the plan's. A human
    fast-forwards `main`; an unattended run commits and merges only on the
    feature's branch (ADR-021). The phases commit their own records:
    `/frame` the framed issue, `/contract-design` the contracts and ADRs,
