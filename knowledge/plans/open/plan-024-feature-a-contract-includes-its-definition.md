@@ -201,7 +201,7 @@ named the pack as the grammar's source.
 
 ### Slice 5: The skills ask and declare
 
-- [ ] Done — ticked by integrate at merge.
+- [x] Done — ticked by integrate at merge.
 - Depends-on: 4.
 - Change: `.claude/skills/integrate/SKILL.md` gains a step, when a
   slice touched a contract, that reads the contract as its consumer
