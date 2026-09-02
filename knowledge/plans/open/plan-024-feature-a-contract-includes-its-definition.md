@@ -228,7 +228,7 @@ named the pack as the grammar's source.
   - unit: the accept skill's pending gate names Behaviour, Stability and
     ADR-044 — covers 17.
   - integration: `superdev status` reports the three skills unchanged
-    after `sync`, so the pack ships them — covers 24.
+    after `sync`, so the pack ships them — covers 22.
 
 ### Slice 6: The CLI and MCP contracts include their source
 
