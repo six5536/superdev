@@ -437,6 +437,7 @@ pub fn check_declarations(schemas: &[(String, String)]) -> Vec<Finding> {
             let patterns = [
                 ("item-pattern", rule.item_pattern.as_deref()),
                 ("content-pattern", rule.content_pattern.as_deref()),
+                ("item-key", rule.item_key.as_deref()),
             ];
             for (name, pattern) in patterns {
                 if let Some(pattern) = pattern
@@ -453,18 +454,24 @@ pub fn check_declarations(schemas: &[(String, String)]) -> Vec<Finding> {
                     });
                 }
             }
-            // An item-pattern needs items to bind: without a list kind the
-            // section's body has none, so the rule would pass in silence.
-            if rule.item_pattern.is_some()
-                && !rule
-                    .content
-                    .as_deref()
-                    .is_some_and(|k| LIST_KINDS.contains(&k))
+            // An item declaration needs items to bind: without a list kind
+            // the section's body has none, so the rule would pass in silence.
+            let per_item = [
+                ("item-pattern", rule.item_pattern.is_some()),
+                ("item-key", rule.item_key.is_some()),
+            ];
+            let unlisted = !rule
+                .content
+                .as_deref()
+                .is_some_and(|k| LIST_KINDS.contains(&k));
+            for (name, _) in per_item
+                .iter()
+                .filter(|(_, declared)| *declared && unlisted)
             {
                 findings.push(Finding {
                     file: file.clone(),
                     message: format!(
-                        "schema: section {} declares an item-pattern, and its content is not {}",
+                        "schema: section {} declares an {name}, and its content is not {}",
                         rule.label(),
                         LIST_KINDS.join(" or ")
                     ),
@@ -488,6 +495,47 @@ pub fn check_declarations(schemas: &[(String, String)]) -> Vec<Finding> {
         }
     }
     findings.extend(check_variants(schemas));
+    findings.extend(check_item_keys(schemas));
+    findings
+}
+
+/// The `item-key` declarations the document check cannot read, reported on
+/// the schema itself (ADR-047): a key pattern with no capture group, or more
+/// than one, names no key and binds nothing. The grammar's schema check
+/// reports a key that does not compile or sits beside no list kind; the
+/// capture count is a fact about the compiled regex, so it is read here.
+#[must_use]
+pub fn check_item_keys(schemas: &[(String, String)]) -> Vec<Finding> {
+    let mut findings = Vec::new();
+    for (file, text) in schemas {
+        let Ok(Some(schema)) = DocSchema::parse(file, text) else {
+            continue; // `SchemaSet::load` reports a contract that fails.
+        };
+        for rule in &schema.sections {
+            let Some(pattern) = rule.item_key.as_deref() else {
+                continue;
+            };
+            let Some(re) = re::compile(pattern) else {
+                continue; // Reported where every pattern's compile failure is.
+            };
+            let groups = re.captures_len() - 1;
+            if groups != 1 {
+                let counted = match groups {
+                    0 => "no capture group".to_string(),
+                    n => format!("{n} capture groups"),
+                };
+                findings.push(Finding {
+                    file: file.clone(),
+                    message: format!(
+                        "schema: section {} declares item-key `{pattern}` with {counted} — the \
+                         key is the one capture, so the rule binds nothing",
+                        rule.label()
+                    ),
+                    fatal: true,
+                });
+            }
+        }
+    }
     findings
 }
 
@@ -974,6 +1022,9 @@ fn check_one(
     let (includes, _) = include_blocks(doc.text);
     let starts = line_starts(doc.text);
     let positions = heading_positions(&lines, &fenced);
+    // Every key an `item-key` rule captures, in document order, so a repeat
+    // anywhere in the document is found once the sections are read.
+    let mut keys: Vec<Keyed> = Vec::new();
     for &(h, r) in &matched {
         let rule = sections[r];
         let (start, end) = body_range(h, &headings, &positions, lines.len());
@@ -1011,6 +1062,14 @@ fn check_one(
                 schema,
                 &mut push,
             );
+            keys.extend(check_item_keys_in(
+                rule,
+                &headings[h].1,
+                &lines[start..end],
+                &fenced[start..end],
+                schema,
+                &mut push,
+            ));
         }
         if rule.content.as_deref() == Some("include") {
             check_authored_fences(
@@ -1021,6 +1080,18 @@ fn check_one(
                 schema,
                 &mut push,
             );
+        }
+    }
+
+    // A key is unique across the document (ADR-047): each repeat names the
+    // key, the item that carries it first, and itself.
+    for (i, later) in keys.iter().enumerate() {
+        if let Some(first) = keys[..i].iter().find(|k| k.key == later.key) {
+            push(format!(
+                "section \"{}\" item `{}` repeats key `{}`, carried by section \"{}\" item `{}`, \
+                 and {} declares item-key",
+                later.heading, later.first, later.key, first.heading, first.first, schema.name
+            ));
         }
     }
 
@@ -1080,6 +1151,56 @@ fn check_body_patterns(
             ));
         }
     }
+}
+
+/// One key an `item-key` rule captured: the key, the section that carries
+/// the item, and the item's first line, for the repeat finding to name.
+struct Keyed {
+    key: String,
+    heading: String,
+    first: String,
+}
+
+/// One section's items against the `item-key` its rule declares (ADR-047):
+/// every top-level item of the list the section's kind names must match,
+/// and the one capture is its key. An item with no match is a finding naming
+/// the section and the item; the keys are returned for the document-wide
+/// repeat check. A key on a rule with no list kind, one that does not
+/// compile, or one whose capture count is not one binds nothing — each is
+/// `check_declarations`' or `check_item_keys`' finding on the schema.
+fn check_item_keys_in(
+    rule: &SectionRule,
+    heading: &str,
+    body: &[&str],
+    fenced: &[bool],
+    schema: &DocSchema,
+    push: &mut impl FnMut(String),
+) -> Vec<Keyed> {
+    let Some(pattern) = rule.item_key.as_deref() else {
+        return Vec::new();
+    };
+    let Some(kind) = rule.content.as_deref().filter(|k| LIST_KINDS.contains(k)) else {
+        return Vec::new();
+    };
+    let Some(re) = re::compile(pattern).filter(|re| re.captures_len() == 2) else {
+        return Vec::new();
+    };
+    let mut keys = Vec::new();
+    for item in items_in(body, fenced, kind) {
+        match re.captures(&item.text).and_then(|c| c.get(1)) {
+            Some(key) => keys.push(Keyed {
+                key: key.as_str().to_string(),
+                heading: heading.to_string(),
+                first: item.first,
+            }),
+            None => push(format!(
+                "section \"{heading}\" item `{}` carries no key, and {} declares item-key \
+                 `{pattern}`",
+                item.first, schema.name
+            )),
+        }
+    }
+    keys
 }
 
 /// An `include` section's fenced blocks against ADR-042: every fence in the
@@ -2367,6 +2488,167 @@ mod tests {
         assert!(
             findings[0].message.contains("prose content"),
             "{findings:#?}"
+        );
+    }
+
+    /// A schema declaring `item-key` on two bullet-list sections, for the
+    /// item-key tests (ADR-047).
+    fn keyed_schema(key: &str) -> DocSchema {
+        schema_of(&format!(
+            "frontmatter:\n  type:\n    const: T\nsections:\n  - heading: Behaviour\n    level: 2\n\
+             \x20   content: bullet-list\n    item-key: '{key}'\n  - heading: Stability\n\
+             \x20   level: 2\n    content: bullet-list\n    item-key: '{key}'\n"
+        ))
+    }
+
+    /// Covers I037 criteria 2 and 3: an item that does not match `item-key`
+    /// is a fatal finding naming the section and the item's first line — a
+    /// key of the wrong form is an item with no match.
+    #[test]
+    fn an_item_without_a_key_is_a_finding_naming_the_item() {
+        let schema = keyed_schema("^`(P_[a-z][a-z0-9-]*)`");
+        let doc = Document {
+            path: "a.md",
+            text: "# T\n\n## Behaviour\n\n- `P_one` [event] keyed\n- `P_Two` [event] malformed\n\
+                   - untagged and unkeyed\n\n## Stability\n\n- `P_three` [event] keyed\n",
+            doc_type: Some("T"),
+        };
+        let mut findings = Vec::new();
+        check_one(&doc, &schema, Subject::Filed, &mut findings);
+        assert_eq!(findings.len(), 2, "{findings:#?}");
+        for finding in &findings {
+            assert_eq!(finding.file, "a.md");
+            assert!(finding.fatal, "{finding:#?}");
+            assert!(finding.message.contains("\"Behaviour\""), "{finding:#?}");
+            assert!(finding.message.contains("item-key"), "{finding:#?}");
+        }
+        assert!(
+            findings[0].message.contains("- `P_Two` [event] malformed"),
+            "{findings:#?}"
+        );
+        assert!(
+            findings[1].message.contains("- untagged and unkeyed"),
+            "{findings:#?}"
+        );
+    }
+
+    /// Covers I037 criterion 4: a key captured twice in one document, across
+    /// two sections declaring `item-key`, is a finding naming the key and
+    /// both items — and the same key in two documents is nobody's finding.
+    #[test]
+    fn a_key_repeated_across_a_documents_sections_is_a_finding() {
+        let schema = keyed_schema("^`(P_[a-z][a-z0-9-]*)`");
+        let doc = Document {
+            path: "a.md",
+            text: "# T\n\n## Behaviour\n\n- `P_one` [event] first\n\n## Stability\n\n\
+                   - `P_two` [event] second\n- `P_one` [event] repeated\n",
+            doc_type: Some("T"),
+        };
+        let mut findings = Vec::new();
+        check_one(&doc, &schema, Subject::Filed, &mut findings);
+        assert_eq!(findings.len(), 1, "{findings:#?}");
+        assert!(findings[0].fatal, "{findings:#?}");
+        assert!(findings[0].message.contains("`P_one`"), "{findings:#?}");
+        assert!(
+            findings[0].message.contains("- `P_one` [event] first"),
+            "{findings:#?}"
+        );
+        assert!(
+            findings[0].message.contains("- `P_one` [event] repeated"),
+            "{findings:#?}"
+        );
+        assert!(
+            findings[0].message.contains("\"Behaviour\"")
+                && findings[0].message.contains("\"Stability\""),
+            "{findings:#?}"
+        );
+
+        let other = Document {
+            path: "b.md",
+            text: "# T\n\n## Behaviour\n\n- `P_one` [event] the same key elsewhere\n",
+            doc_type: Some("T"),
+        };
+        let mut findings = Vec::new();
+        check_one(&other, &schema, Subject::Filed, &mut findings);
+        assert!(findings.is_empty(), "{findings:#?}");
+    }
+
+    /// Covers I037 criterion 1: a matching, unique key on every item passes,
+    /// and a nested item's key is its own — neither bound nor counted.
+    #[test]
+    fn unique_keys_on_every_item_pass() {
+        let schema = keyed_schema("^`(P_[a-z][a-z0-9-]*)`");
+        let doc = Document {
+            path: "a.md",
+            text: "# T\n\n## Behaviour\n\n- `P_one` [event] first\n  - a nested note\n\
+                   - `P_two` [state] second\n\n## Stability\n\n- `P_three` [ubiquitous] third\n",
+            doc_type: Some("T"),
+        };
+        let mut findings = Vec::new();
+        check_one(&doc, &schema, Subject::Filed, &mut findings);
+        assert!(findings.is_empty(), "{findings:#?}");
+    }
+
+    /// Covers I037 criterion 14: an `item-key` with no capture group, or
+    /// with two, and one on a `prose` rule, are each a finding on the schema
+    /// file — and each binds nothing.
+    #[test]
+    fn a_mis_declared_item_key_is_a_finding_on_the_schema() {
+        let head = "---\ntype: Schema\n---\n\n````yaml\nfrontmatter:\n  type:\n    const: T\n\
+                    sections:\n  - heading: Items\n    level: 2\n";
+        let doc = Document {
+            path: "a.md",
+            text: "# T\n\n## Items\n\n- `P_one` keyed\n- `P_one` keyed again\n",
+            doc_type: Some("T"),
+        };
+
+        for (key, groups) in [
+            ("^`P_[a-z-]+`", "no capture group"),
+            ("^`(P_)([a-z-]+)`", "2"),
+        ] {
+            let text = format!("{head}    content: bullet-list\n    item-key: '{key}'\n````\n");
+            let findings = check_declarations(&[("s.md".into(), text.clone())]);
+            assert_eq!(findings.len(), 1, "{key}: {findings:#?}");
+            assert_eq!(findings[0].file, "s.md");
+            assert!(findings[0].message.contains("item-key"), "{findings:#?}");
+            assert!(findings[0].message.contains(groups), "{findings:#?}");
+            let same = check_item_keys(&[("s.md".into(), text)]);
+            assert_eq!(same.len(), 1, "{key}: {same:#?}");
+
+            let schema = schema_of(&format!(
+                "frontmatter:\n  type:\n    const: T\nsections:\n  - heading: Items\n    level: 2\n\
+                 \x20   content: bullet-list\n    item-key: '{key}'\n"
+            ));
+            let mut found = Vec::new();
+            check_one(&doc, &schema, Subject::Filed, &mut found);
+            assert!(
+                found.is_empty(),
+                "an unreadable key binds nothing: {found:#?}"
+            );
+        }
+
+        let misplaced = format!("{head}    content: prose\n    item-key: '(x)'\n````\n");
+        let findings = check_declarations(&[("s.md".into(), misplaced)]);
+        assert_eq!(findings.len(), 1, "{findings:#?}");
+        assert!(
+            findings[0].message.contains("item-key")
+                && findings[0].message.contains("content is not"),
+            "{findings:#?}"
+        );
+        let schema = schema_of(
+            "frontmatter:\n  type:\n    const: T\nsections:\n  - heading: Items\n    level: 2\n\
+             \x20   content: prose\n    item-key: '(x)'\n",
+        );
+        let prose = Document {
+            path: "a.md",
+            text: "# T\n\n## Items\n\nProse, then a list.\n\n- unkeyed\n",
+            doc_type: Some("T"),
+        };
+        let mut found = Vec::new();
+        check_one(&prose, &schema, Subject::Filed, &mut found);
+        assert!(
+            found.is_empty(),
+            "a misplaced key binds nothing: {found:#?}"
         );
     }
 

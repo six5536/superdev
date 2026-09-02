@@ -276,6 +276,34 @@ fn an_item_pattern_without_a_list_kind_is_a_schema_finding() {
     assert!(found[0].message.contains("content is not"), "{found:#?}");
 }
 
+/// Covers I037 criterion 14: the validator reads `item-key`, so no clause
+/// of contract-010's Behaviour that promises it is still `PENDING` — the
+/// two bound declarations carry the marker until their slice lands.
+#[test]
+fn contract_010_no_longer_defers_item_key() {
+    let path = "knowledge/contracts/internal/active/contract-010-interface-document-schemas.md";
+    let text = same(&std::fs::read_to_string(repo(path)).unwrap());
+    let behaviour = text
+        .split("\n## Behaviour\n")
+        .nth(1)
+        .and_then(|rest| rest.split("\n## Stability\n").next())
+        .expect("contract-010 carries Behaviour before Stability");
+    let clauses = behaviour
+        .replace('\n', " ")
+        .split(['.', ';'])
+        .map(str::to_string)
+        .collect::<Vec<_>>();
+    let deferred: Vec<&String> = clauses
+        .iter()
+        .filter(|clause| clause.contains("`item-key`") && clause.contains("PENDING"))
+        .collect();
+    assert!(deferred.is_empty(), "{deferred:#?}");
+    assert!(
+        clauses.iter().any(|clause| clause.contains("`item-key`")),
+        "contract-010's Behaviour still declares item-key"
+    );
+}
+
 /// Covers I049 criterion 8: one schema governs every contract, and neither
 /// tree ships a per-kind one — the sixteen ADR-043 retired, `contract-cli`
 /// through `contract-ui`, and the `file-format` one ADR-037 retired before
