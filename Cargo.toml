@@ -44,7 +44,7 @@ tokio = "1.53.1"
 toml_edit = { version = "0.25.13", features = ["serde"] }
 # The model download and the OpenAI embeddings calls. model2vec-rs runs
 # `local-only`, so this is the only HTTP client in the tree.
-ureq = { version = "2.12.1", features = ["json"] }
+ureq = { version = "3.4.0", features = ["json"] }
 
 # Dev dependencies
 assert_cmd = "2.2"
