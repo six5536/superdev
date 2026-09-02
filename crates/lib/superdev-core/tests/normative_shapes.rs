@@ -1685,3 +1685,128 @@ fn the_file_skill_ships_in_the_pack_and_the_lock() {
         "the lock does not claim .claude/skills/file/SKILL.md"
     );
 }
+
+/// Covers I030 AC_frame-in-place: `/frame` reads a filed issue by id,
+/// fetches an unframed one and frames it in that file, replaces every `TBD`,
+/// keys and tags every criterion, and closes by setting `lifecycle: framed`
+/// for `--fix` to refile (ADR-048).
+#[test]
+fn the_frame_skill_frames_an_unframed_issue_in_place() {
+    for (p, text) in skill_copies("frame") {
+        assert!(
+            text.contains(
+                "<tool_call name=\"sokf_read\" id=\"issue-{nnn}-{kind}-{slug}\" when=\"if an issue is given\" />"
+            ),
+            "{p} does not read a given issue by id"
+        );
+        let fetch = step_task(&text, "FILE OR FETCH THE ISSUE");
+        for phrase in ["an unframed one `/file` filed", "in place"] {
+            assert!(
+                fetch.contains(phrase),
+                "{p}: the fetch step lacks `{phrase}`"
+            );
+        }
+        let criteria = step_task(&text, "WRITE ACCEPTANCE CRITERIA");
+        for phrase in ["`AC_<slug>` [event]", "every `TBD`"] {
+            assert!(
+                criteria.contains(phrase),
+                "{p}: the criteria step lacks `{phrase}`"
+            );
+        }
+        let close = step_task(&text, "SET FRAMED");
+        for phrase in [
+            "`lifecycle: framed`",
+            "superdev validate --fix",
+            "`issues/framed/`",
+        ] {
+            assert!(
+                close.contains(phrase),
+                "{p}: the close-out lacks `{phrase}`"
+            );
+        }
+        let (close_at, commit_at) = (
+            text.find("<step name=\"SET FRAMED\"").unwrap(),
+            text.find("<step name=\"COMMIT THE FRAME\"").unwrap(),
+        );
+        assert!(
+            close_at < commit_at,
+            "{p}: the close-out follows the commit"
+        );
+        assert!(
+            !text.contains("`lifecycle: open`"),
+            "{p} still files the issue `open`"
+        );
+    }
+}
+
+/// Covers I030 AC_frame-files: run with no issue, `/frame` creates it
+/// `unframed` per its kind's schema and frames it in the same pass, so the
+/// run ends `framed` (ADR-048).
+#[test]
+fn the_frame_skill_files_and_frames_in_one_pass() {
+    for (p, text) in skill_copies("frame") {
+        assert!(
+            text.contains("input=\"a filed issue's id, or the new project or feature to frame\""),
+            "{p} does not take a filed issue or a new feature"
+        );
+        let fetch = step_task(&text, "FILE OR FETCH THE ISSUE");
+        for phrase in [
+            "where none exists",
+            "create it `lifecycle: unframed`",
+            "per its kind's schema",
+            "superdev validate --fix",
+        ] {
+            assert!(
+                fetch.contains(phrase),
+                "{p}: the fetch step lacks `{phrase}`"
+            );
+        }
+        let (fetch_at, close_at) = (
+            text.find("<step name=\"FILE OR FETCH THE ISSUE\"").unwrap(),
+            text.find("<step name=\"SET FRAMED\"").unwrap(),
+        );
+        assert!(
+            fetch_at < close_at,
+            "{p}: the issue is filed after it is closed out"
+        );
+    }
+}
+
+/// Covers I030 AC_phases-refuse: contract-design, feature-plan and
+/// execute-feature-plan each open their gates with one on the framed
+/// issue's lifecycle, returning an unframed issue to `/frame` (ADR-048).
+#[test]
+fn the_later_phases_refuse_an_unframed_issue() {
+    for (name, verb) in [
+        ("contract-design", "designed"),
+        ("feature-plan", "planned"),
+        ("execute-feature-plan", "run"),
+    ] {
+        for (p, text) in skill_copies(name) {
+            let first = text
+                .lines()
+                .find(|l| l.starts_with("<gate "))
+                .unwrap_or_else(|| panic!("{p} has no gate"));
+            assert!(
+                first.contains("check=\"The framed issue's lifecycle is framed\""),
+                "{p}: the first gate is not the lifecycle gate: {first}"
+            );
+            let on_fail =
+                format!("on-fail=\"/frame — an unframed issue is framed before it is {verb}\"");
+            assert!(
+                first.contains(&on_fail),
+                "{p}: the lifecycle gate lacks `{on_fail}`"
+            );
+        }
+    }
+    for (p, text) in skill_copies("execute-feature-plan") {
+        let (lifecycle_at, contracts_at) = (
+            text.find("lifecycle is framed").unwrap(),
+            text.find("contracts are settled").unwrap(),
+        );
+        assert!(
+            lifecycle_at < contracts_at,
+            "{p}: the contracts gate precedes the lifecycle gate"
+        );
+    }
+}

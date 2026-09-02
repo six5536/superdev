@@ -22,6 +22,7 @@ You decide only the interfaces that will be expensive to change once other code 
 </bootstrap_actions>
 
 <process_actions>
+<gate check="The framed issue's lifecycle is framed" on-fail="/frame — an unframed issue is framed before it is designed" />
 <step name="DECIDE WHAT IS EXPENSIVE" task="Decide what is expensive to change: data schema, API contracts, module boundaries, auth surface, and the UI" />
 <step name="ESTABLISH EXTERNAL FACTS" task="Does a contract rest on a third-party API or another external fact? Establish it with `/research`; the findings land in the canonical knowledge for later phases" />
 <step name="UPDATE THE CONTRACTS" task="Create or update each contract the feature touches per `schema-contract` — its kind's checklist, its Definition as source includes — keyed to the interface, never to the feature. The document states current truth; git holds the history" />

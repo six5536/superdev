@@ -21,6 +21,7 @@ You decompose, you don't build. Produce the feature's plan as specified in the i
 </bootstrap_actions>
 
 <process_actions>
+<gate check="The framed issue's lifecycle is framed" on-fail="/frame — an unframed issue is framed before it is planned" />
 <step name="CUT SLICES" task="Cut the feature — its acceptance criteria and any gap issues — into slices small enough to build and verify in one pass" />
 <step name="ORDER SLICES" task="State each slice's `Depends-on`, then order the slices per `schema-feature-plan`: topologically — every slice after its dependencies — then a slice closing a contract-implementation gap before the slices that do not, and riskiest early among what is left. A forward reference is legal; adding a slice never renumbers the ones already written" />
 <step name="GIVE DONE-CHECKS" task="Give each slice its own done-check" />
