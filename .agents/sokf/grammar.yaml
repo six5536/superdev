@@ -609,6 +609,35 @@ kinds:
             doc: >
               A regex the section's whole body must match, found anywhere, fenced blocks
               excluded. Write ^ and $ to bind the ends, and (?m) to bind a line's.
+          item-key:
+            type: string
+            format: regex
+            requires:
+              content:
+                - bullet-list
+                - numbered-list
+            doc: >
+              A regex with one capture group that every top-level item of the section's list
+              must match; the capture is the item's key, and a key is unique across every item
+              of the document under a rule declaring item-key. A citation is the bare key where
+              the document is the subject, and the document's id followed by the key elsewhere.
+          item-only-pattern:
+            type: string
+            format: regex
+            doc: >
+              A regex that may match only inside a top-level item of the section's list: a
+              match on a body line outside every item — prose, a table row, a numbered step
+              under a bullet-list rule — is an error naming the line. Fenced blocks excluded.
+          item-prohibited-pattern:
+            type: string
+            format: regex
+            requires:
+              content:
+                - bullet-list
+                - numbered-list
+            doc: >
+              A regex no top-level item of the section's list may match, read as item-pattern
+              reads an item; a match is an error naming the item and the matched text.
           variants:
             type: list
             doc: >

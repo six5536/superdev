@@ -2,7 +2,7 @@
 type: FeatureRequest
 id: issue-037-feature-request-a-contracts-behaviour-is-not-written-as-ears
 title: A contract's behaviour is free prose with a modal verb, while a criterion about it must be EARS
-description: Acceptance criteria are held to EARS and the contract statements they are about are not, so one kind of statement has two forms — and the contract's form buries the trigger, admits two requirements in one sentence, and gives a promise no stable identity a test can name.
+description: Acceptance criteria are held to EARS and the contract statements they are about are not, so one kind of statement has two forms — and the contract's form buries the trigger, admits two requirements in one sentence, and gives a promise no stable identity a test can name; a criterion's number is no stable identity either.
 lifecycle: open
 links:
   - rel: references
@@ -17,6 +17,15 @@ links:
   - rel: references
     to: issue-049-feature-request-a-contract-cannot-point-at-its-definition
     note: Gave a Definition its bound form; this gives Behaviour and Stability theirs.
+  - rel: references
+    to: contract-010-interface-document-schemas
+    note: Gains `item-key`, `item-only-pattern` and `item-prohibited-pattern`, declared in `SectionRule` and the grammar with their checks PENDING (ADR-047).
+  - rel: references
+    to: adr-046-a-promise-and-a-criterion-are-keyed-ears-items
+    note: The promise form — key, tag, one verb, subject, citation — the numbered-list exemption, and the criterion keyed the same way with `c<n>` for those on file.
+  - rel: references
+    to: adr-047-a-section-rule-declares-item-keys-and-item-bounds
+    note: The three schema declarations behind criteria 2 to 8.
 ---
 
 # Feature: a contract's behaviour is not written as EARS
@@ -44,10 +53,10 @@ is two requirements, each with its trigger in a subordinate clause. As
 EARS items they separate, each names what sets it off, and each carries
 a key a test can cite that survives the next insertion above it:
 
-> - `init-outside-git` [event] WHEN `init` runs outside a git
+> - `P_init-outside-git` [event] WHEN `init` runs outside a git
 >   repository, `init` SHALL refuse.
-> - `init-rerun` [state] WHILE `.superdev/config.toml` exists, `init`
->   SHALL refuse a re-run.
+> - `P_init-rerun` [state] WHILE `.superdev/config.toml` exists,
+>   `init` SHALL refuse a re-run.
 
 The contract schema's `content-pattern` on Behaviour and Stability asks
 only that a keyword appear once in the section, so a bullet carrying
@@ -88,13 +97,15 @@ marker sits beside an item's verb as
 [ADR-044][sokf:adr-044-a-pending-marker-applies-to-prose-and-a-declaration-goes-first-in-source]
 places it beside a sentence's.
 
-The key is the promise's stable identity: lowercase words joined by
-hyphens, unique within the contract, so a test, a plan case or a
-comment cites `contract-002-cli-superdev#init-outside-git` and the
-citation holds while promises are inserted around it. A rewording keeps
-the key; a promise that no longer holds is removed with its key, which
-is not reused; a new promise takes a new key. Where the key sits in the
-item, and how the citation is spelled, are the schema's to fix.
+The key is the promise's stable identity: the prefix `P_`, then a slug
+of lowercase words joined by hyphens, unique within the contract across
+both sections, so a test, a plan case or a comment cites
+`contract-002-cli-superdev P_init-outside-git` and the citation holds
+while promises are inserted around it. The prefix makes a bare key
+recognisable in prose as a promise; a key of another kind's prefix is
+an error. A rewording keeps the key; a
+promise that no longer holds is removed with its key, which is not
+reused; a new promise takes a new key.
 
 `superdev validate` reports each departure: an item in either section
 with no key or no EARS tag, a malformed key, a key used twice in one
@@ -103,10 +114,22 @@ more than one verb, an item with a tag and no verb, and a `TBD` item —
 a contract promises or says `PENDING`, and never defers. The finding
 names the section and the item, as the criterion check's does.
 
-The contract schema is the only file that carries the form; the
-contract-design skill reads it there. The nine active contracts and the
-schema's twelve examples are swept to conform, so the live tree
-validates with nothing left to convert by hand.
+A criterion carries a key the same way, before its tag or its `TBD`,
+in every list a plan case cites — `AC_` on a feature-request's
+Acceptance criteria, `RS_` and `EX_` on a bug-report's Steps to
+reproduce and Expected behaviour, `DD_` on a chore's Definition of
+done — and a plan case names the keys it covers, bare. A repro step or
+an expected behaviour carries the key and no tag. The list stays
+numbered for reading order; the key is the identity, cited bare where
+the issue is the subject and after the issue's id elsewhere. Every
+cited item on file takes the slug `c<n>`, `n` its number — `AC_c11` —
+so the 108 test comments and 27 plans that cite a number today stay
+true; a criterion written from now on takes a named slug.
+
+The schemas are the only files that carry the form; the skills read it
+there. The nine active contracts, the fifty issues on file and the
+schemas' examples are swept to conform, so the live tree validates with
+nothing left to convert by hand.
 
 ## Acceptance criteria
 
@@ -118,8 +141,9 @@ validates with nothing left to convert by hand.
 2. [event] WHEN an item under Behaviour or Stability, at any heading
    depth within the section, carries no EARS tag or no key, THE SYSTEM
    SHALL report an error naming the section and the item.
-3. [event] WHEN an item's key is not lowercase words joined by hyphens,
-   THE SYSTEM SHALL report an error naming the item and the key.
+3. [event] WHEN an item's key is not `P_` followed by lowercase words
+   joined by hyphens, THE SYSTEM SHALL report an error naming the item
+   and the key.
 4. [event] WHEN two items in one contract carry the same key, THE
    SYSTEM SHALL report an error naming the key and both items.
 5. [event] WHEN a modal verb — `SHALL`, `SHOULD`, `MAY`, `MUST`,
@@ -128,8 +152,8 @@ validates with nothing left to convert by hand.
    report an error naming the section and the line.
 6. [event] WHEN an item under Behaviour or Stability carries `MUST`,
    `MUST NOT`, `REQUIRED`, `RECOMMENDED` or `OPTIONAL`, THE SYSTEM
-   SHALL report an error naming the item and the verb the contract
-   form admits in its place.
+   SHALL report an error naming the item, the matched verb and the
+   schema rule.
 7. [event] WHEN an item under Behaviour or Stability carries more than
    one modal verb — `NOT` belongs to its verb — or a tag and no modal
    verb, THE SYSTEM SHALL report an error naming the item.
@@ -141,10 +165,10 @@ validates with nothing left to convert by hand.
 10. [ubiquitous] A finding from criteria 2 to 8 SHALL be an error that
     fails `superdev validate`, and `superdev validate --fix` SHALL NOT
     rewrite a statement or supply a key.
-11. [ubiquitous] The contract schema SHALL state the citation form a
-    test, a case or a comment uses to name a promise by its contract
-    and key, and the form SHALL be one a reader can search the tree
-    for.
+11. [ubiquitous] The contract schema SHALL state the citation form —
+    the bare key where the contract is the subject, the contract's id
+    followed by the key elsewhere — and a search for the key SHALL
+    find the promise and every citation.
 12. [ubiquitous] The contract schema's twelve examples SHALL each carry
     Behaviour and Stability in the form, and SHALL pass the schema's
     own check.
@@ -160,6 +184,27 @@ validates with nothing left to convert by hand.
 16. [ubiquitous] The glossary SHALL define the form of a contract
     promise and its key, and the changelog SHALL carry the change
     under Unreleased.
+17. [ubiquitous] The feature-request, bug-report and chore schemas
+    SHALL declare a key on every item of the lists a plan case cites
+    — `AC_` on Acceptance criteria; `RS_` on Steps to reproduce and
+    `EX_` on Expected behaviour; `DD_` on Definition of done — of the
+    form criterion 3 names with that prefix, unique within the issue,
+    and a missing, malformed or duplicate key SHALL be an error as
+    criteria 2 to 4 report one.
+18. [ubiquitous] A criterion's key SHALL precede its EARS tag or its
+    `TBD`, a repro step's or an expected behaviour's key SHALL stand
+    alone, the list SHALL stay numbered, and each schema SHALL state
+    the citation form of criterion 11.
+19. [ubiquitous] The feature-plan schema SHALL have a case name the
+    keys of the criteria it covers.
+20. [ubiquitous] Every issue on file SHALL carry a key on each cited
+    item — the slug `c<n>`, `n` the item's number, for an item on file
+    at the sweep — every open plan's cases SHALL cite keys, and a
+    settled plan or a test comment citing a number SHALL stand as a
+    citation of the `c<n>` key.
+21. [ubiquitous] The three tracker schemas' and the feature-plan
+    schema's examples SHALL carry the form and pass their own check,
+    and `superdev validate` SHALL pass on the live tree.
 
 ## Alternatives considered
 
@@ -175,6 +220,10 @@ validates with nothing left to convert by hand.
 - Numbered items, the identity being the heading and the number — a
   number is positional, so every insertion renumbers the promises below
   it and rots every reference to them.
+- Criteria keyed in a later feature — two sweeps of one mechanism, and
+  108 test citations rot in the meantime.
+- Keys on open issues only — the schema would have to vary by
+  lifecycle, or settled issues fail validation.
 - Bulleted items with no key, cited by heading and trigger clause — no
   identity survives a reworded trigger, and nothing a machine could
   ever match a test to.
@@ -187,13 +236,15 @@ validates with nothing left to convert by hand.
 - In: the contract schema's Behaviour and Stability rules, the key
   and the citation form, and its twelve examples; the validator checks
   behind criteria 2 to 8; the grammar and contract-010 where a schema
-  key is added; the sweep of the nine active contracts; the glossary
-  and the changelog.
+  key is added; the sweep of the nine active contracts; the key on the
+  tracker schemas' cited lists and the plan's case citations, with the
+  sweep of the issues on file and the open plans; the glossary and the
+  changelog.
 - Out: acceptance criteria, which are EARS already and keep "THE SYSTEM";
   the Definition, which binds by materialisation and whose doc comments
   are the source's; the sentence beyond its tag and verb, whose grammar
   is the author's; converting statements automatically; checking that
-  a test cites every key — testing a project's behaviour is a stated
+  a plan case's keys exist in its issue, or that a test cites every key — testing a project's behaviour is a stated
   non-goal, and the key is what such a check would need if the
   non-goal were ever lifted; the grammar rules of `.agents/superdev.md`,
   whose RFC 2119 reference already treats `SHALL` as `MUST`.
@@ -210,12 +261,28 @@ cited; the four questions the filing left open are settled in the
 proposed behaviour. The key was added the same day: the owner asked
 what would happen to a number cited from a test once a promise was
 inserted above it, and chose a stable key over a number or a bare
-bullet.
+bullet. Contract-design settled the form in
+[ADR-046][sokf:adr-046-a-promise-and-a-criterion-are-keyed-ears-items] and
+the schema vocabulary in
+[ADR-047][sokf:adr-047-a-section-rule-declares-item-keys-and-item-bounds],
+declared in
+[contract-010][sokf:contract-010-interface-document-schemas]; criterion
+6 was narrowed there to what a general declaration can say — the
+matched verb and the rule, not the verb admitted in its place. The
+owner then asked for the same key on acceptance criteria; criteria 17
+to 21 fold it in, with the slug `c<n>` for the items on file so no
+citation rots, and a prefix naming the kind of item on every key —
+`P_`, `AC_`, `RS_`, `EX_`, `DD_` — so a bare key is recognisable in
+prose; a prefix per section was declined for putting `B_` beside
+`EB_`.
 
 <!-- sokf:links -->
 [sokf:adr-031-ears-criteria-are-checked-by-item-pattern]: /knowledge/adrs/active/adr-031-ears-criteria-are-checked-by-item-pattern.md
 [sokf:adr-042-a-contracts-definition-is-materialized-from-source]: /knowledge/adrs/active/adr-042-a-contracts-definition-is-materialized-from-source.md
 [sokf:adr-043-one-contract-schema-and-twelve-kinds]: /knowledge/adrs/active/adr-043-one-contract-schema-and-twelve-kinds.md
 [sokf:adr-044-a-pending-marker-applies-to-prose-and-a-declaration-goes-first-in-source]: /knowledge/adrs/active/adr-044-a-pending-marker-applies-to-prose-and-a-declaration-goes-first-in-source.md
+[sokf:adr-046-a-promise-and-a-criterion-are-keyed-ears-items]: /knowledge/adrs/active/adr-046-a-promise-and-a-criterion-are-keyed-ears-items.md
+[sokf:adr-047-a-section-rule-declares-item-keys-and-item-bounds]: /knowledge/adrs/active/adr-047-a-section-rule-declares-item-keys-and-item-bounds.md
+[sokf:contract-010-interface-document-schemas]: /knowledge/contracts/internal/active/contract-010-interface-document-schemas.md
 [sokf:issue-030-feature-request-filing-an-issue-requires-framing-it]: /knowledge/issues/open/issue-030-feature-request-filing-an-issue-requires-framing-it.md
 [sokf:issue-049-feature-request-a-contract-cannot-point-at-its-definition]: /knowledge/issues/open/issue-049-feature-request-a-contract-cannot-point-at-its-definition.md

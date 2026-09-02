@@ -59,6 +59,21 @@ pub struct SectionRule {
     /// The pattern the section's whole body must match.
     #[serde(default, rename = "content-pattern")]
     pub content_pattern: Option<String>,
+    /// The pattern, with one capture group, every top-level item of the
+    /// section's list must match; the capture is the item's key, unique
+    /// across every item of the document under a rule declaring one
+    /// (ADR-047).
+    #[serde(default, rename = "item-key")]
+    pub item_key: Option<String>,
+    /// The pattern that may match only inside a top-level item: a match on
+    /// a body line outside every item is an error naming the line
+    /// (ADR-047).
+    #[serde(default, rename = "item-only-pattern")]
+    pub item_only_pattern: Option<String>,
+    /// The pattern no top-level item may match: a match is an error naming
+    /// the item and the matched text (ADR-047).
+    #[serde(default, rename = "item-prohibited-pattern")]
+    pub item_prohibited_pattern: Option<String>,
     /// The variant values this rule applies to; empty applies to every
     /// variant (ADR-045).
     #[serde(default)]
