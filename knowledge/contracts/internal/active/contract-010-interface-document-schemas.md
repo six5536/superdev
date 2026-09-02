@@ -103,16 +103,17 @@ pub fn check_documents(docs: &[Document<'_>], set: &SchemaSet) -> Vec<Finding>;
   map, a folded block — cannot satisfy one. `lifecycle` belongs to the
   filing check (P011), which reports its value against the enum and its
   folder, so one fault is said once.
-- **Content kinds** — a closed set of six, PENDING (I049). A section satisfies its
+- **Content kinds** — a closed set of six. A section satisfies its
   kind when the form appears in its body: one bullet, one numbered
   item, one table, one fenced block, one include block naming a source
   path, or — for prose — one plain paragraph line; other content beside
   the form is tolerated (ADR-023), with one exception: an `include`
   section carrying a fenced block outside an include is an error naming
   the section, because a hand-written block beside a materialised one
-  is the copy the kind exists to forbid (ADR-042). The body runs to the next heading at the section's own
-  level or shallower, so a subsection's content counts; lines inside
-  fenced blocks are not content.
+  is the copy the kind exists to forbid (ADR-042). The body runs to the
+  next heading at the section's own level or shallower, so a
+  subsection's content counts; lines inside fenced blocks are not
+  content.
 - **Body patterns** — `item-pattern` binds each top-level item of the
   section's declared list kind, `content-pattern` the section's whole
   body. Every pattern in this vocabulary is a regex matched
@@ -135,14 +136,14 @@ pub fn check_documents(docs: &[Document<'_>], set: &SchemaSet) -> Vec<Finding>;
   (ADR-045). With `variant-key` set, `example` is a map keyed by value,
   every enum value present, each checked against the base and its own
   variant's rules, its value equal to its key.
-- **The definition is not parsed** — PENDING (I049): the `include` kind asks only that
+- **The definition is not parsed** — the `include` kind asks only that
   an include block naming a source path is present; what the block
   carries is the SOKF validator's to keep current (ADR-041) and no
   concern of this check. The former `block-language`, `block-keys` and
   `block-entry-keys` declarations are withdrawn (ADR-042); a schema
   still carrying one is mis-declared.
 - **A mis-declared schema is its own finding** — a `content` outside
-  the six kinds (PENDING (I049) for the sixth), a `pattern` that does not compile, an `item-pattern`
+  the six kinds, a `pattern` that does not compile, an `item-pattern`
   on a section whose `content` is not a list kind, a withdrawn
   `block-*` declaration, or — PENDING (I049) — a `variants` tag naming
   a value outside the discriminator's enum, a tag with no

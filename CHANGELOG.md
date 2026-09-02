@@ -13,6 +13,15 @@ publish a version it cannot find a heading for.
 
 ### Added
 
+- **A schema section may declare `content: include`.** The sixth content
+  kind is satisfied by an include block naming a source path, and a fenced
+  block in such a section outside an include is an error naming the
+  section: a definition is materialised, never authored (ADR-042). Nothing
+  inside an include is read by the schema check. The `block-language`,
+  `block-keys` and `block-entry-keys` declarations below are withdrawn with
+  the block check they drove; a schema still carrying one reports an
+  unknown key on the schema file. The contract schema's Definition section
+  now declares `include`.
 - **An include block names a source region.** Beside a concept id, an
   include block's argument may be a `/`-rooted repository path with an
   optional `#region`: `<!-- sokf:include /src/main.rs#cli -->`. The region

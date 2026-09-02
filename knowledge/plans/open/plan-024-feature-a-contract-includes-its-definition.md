@@ -88,7 +88,7 @@ and `superdev status` reporting no drift is part of its done-check.
 
 ### Slice 2: A sixth content kind, and the block declarations withdrawn
 
-- [ ] Done — ticked by integrate at merge.
+- [x] Done — ticked by integrate at merge.
 - Depends-on: 1.
 - Change: `CONTENT_KINDS` in `validate/schema/document.rs` gains
   `include`; a section of that kind is satisfied by an include block
