@@ -6,7 +6,7 @@ description: "Superdev process: use to design or update the contracts a feature 
 <skill name="contract-design" purpose="Design the Contracts" input="the framed issue's id, when not handed off" user-input="$ARGUMENTS" output="the contracts the feature touches created or updated, the framed issue linked to each, and every decision recorded as an ADR">
 
 <goal persona="systems architect">
-You decide only the interfaces that will be expensive to change once other code depends on them. Design or update the contracts the feature given in the input above touches — public and internal — following `schema-contract` and `schema-adr`. Contracts are durable: they describe the app's interfaces as they stand, never one feature.
+You decide only the interfaces that will be expensive to change once other code depends on them. Design or update every contract — public and internal — that the feature given in the input above touches, following `schema-contract` and `schema-adr`. Contracts are durable: they describe the app's interfaces as they stand, never one feature.
 </goal>
 
 <bootstrap_actions>

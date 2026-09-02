@@ -24,8 +24,12 @@ if [ "${1:-}" = "hook" ] && [ "${2:-}" = "validate" ]; then
   payload="$(cat)"
   file="$(printf '%s' "$payload" | sed -n 's/.*"file_path":"\([^"]*\)".*/\1/p' | head -n1)"
   project="${CLAUDE_PROJECT_DIR:-$root}"
+  # A path the sed could not read, or one the binary would watch — absolute
+  # or relative — goes on to the binary; only a path it would refuse
+  # exits here.
   case "$file" in
-    "$project"/knowledge/*|"$project"/.agents/*|"$project"/.claude/skills/*) ;;
+    ""|"$project"/knowledge/*|"$project"/.agents/*|"$project"/.claude/skills/*) ;;
+    knowledge/*|.agents/*|.claude/skills/*) ;;
     *) exit 0 ;;
   esac
   # A here-string, not a pipe: `exec` in a pipeline replaces only the
