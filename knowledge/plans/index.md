@@ -22,6 +22,7 @@ workflow.
 * [A warning is counted by default and listed on request — feature plan][sokf:plan-023-feature-warnings-are-counted-not-listed] - slices adding the `--warnings` flag the contract promises, carrying both counts into `--json` alongside the findings it lists, and giving the two hooks the same default as the command line.
 * [A contract includes its definition — feature plan][sokf:plan-024-feature-a-contract-includes-its-definition] - slices delivering I049 — the source include, the sixth content kind, schema variants, the one contract schema, the skills' judgement and declaration steps, the migration of nine contracts, and the deletion of fifteen schemas and four copy-comparing tests.
 * [A contract's behaviour is written as EARS — feature plan][sokf:plan-025-feature-a-contracts-behaviour-is-written-as-ears] - slices delivering I037 — the three item declarations in the validator, the sweep of nine contracts to keyed EARS promises, the contract schema in its final form with twelve examples, the tracker schemas' keyed criteria with the c<n> sweep of fifty issues, and the records.
+* [Filing an issue without framing it — feature plan][sokf:plan-026-feature-filing-an-issue-without-framing-it] - slices delivering I030 — a heading declared per variant in the validator, the tracker schemas varying by a four-state lifecycle with the sweep of the issues on file, the /file skill and the workflow entry, /frame framing in place with the three phases' gates, the backlog's retirement, and the records.
 
 ## Ad-hoc plans
 
@@ -62,3 +63,4 @@ workflow.
 [sokf:plan-023-feature-warnings-are-counted-not-listed]: /knowledge/plans/done/plan-023-feature-warnings-are-counted-not-listed.md
 [sokf:plan-024-feature-a-contract-includes-its-definition]: /knowledge/plans/done/plan-024-feature-a-contract-includes-its-definition.md
 [sokf:plan-025-feature-a-contracts-behaviour-is-written-as-ears]: /knowledge/plans/done/plan-025-feature-a-contracts-behaviour-is-written-as-ears.md
+[sokf:plan-026-feature-filing-an-issue-without-framing-it]: /knowledge/plans/open/plan-026-feature-filing-an-issue-without-framing-it.md
