@@ -276,6 +276,21 @@ citation rots, and a prefix naming the kind of item on every key —
 prose; a prefix per section was declined for putting `B_` beside
 `EB_`.
 
+Delivered by
+[plan-025][sokf:plan-025-feature-a-contracts-behaviour-is-written-as-ears]
+in eight slices. The sweep counted 182 modal verbs across the nine
+contracts' Behaviour and Stability at the sweep (175 at framing;
+contract-010 had gained the PENDING declarations since) and wrote 174
+keyed promises: contract-002 60 verbs to 58 promises, contract-004 17
+to 13, contract-008 19 to 17 — each drop a sentence that stood in two
+places and is now one promise cited from the other — and every other
+contract one promise per verb. The tracker sweep keyed the fifty issues
+on file: 141 criteria `AC_c<n>`, 72 repro steps `RS_c<n>`, 22 done
+items `DD_c<n>`, no settled record reworded beyond the key; plan-025's
+33 case citations were rewritten to keys. `EX_` on Expected behaviour
+is deferred to contract-design, since the section is prose in the
+bug-report schema and in 21 of the 24 bug reports on file.
+
 <!-- sokf:links -->
 [sokf:adr-031-ears-criteria-are-checked-by-item-pattern]: /knowledge/adrs/active/adr-031-ears-criteria-are-checked-by-item-pattern.md
 [sokf:adr-042-a-contracts-definition-is-materialized-from-source]: /knowledge/adrs/active/adr-042-a-contracts-definition-is-materialized-from-source.md
@@ -286,3 +301,4 @@ prose; a prefix per section was declined for putting `B_` beside
 [sokf:contract-010-interface-document-schemas]: /knowledge/contracts/internal/active/contract-010-interface-document-schemas.md
 [sokf:issue-030-feature-request-filing-an-issue-requires-framing-it]: /knowledge/issues/open/issue-030-feature-request-filing-an-issue-requires-framing-it.md
 [sokf:issue-049-feature-request-a-contract-cannot-point-at-its-definition]: /knowledge/issues/open/issue-049-feature-request-a-contract-cannot-point-at-its-definition.md
+[sokf:plan-025-feature-a-contracts-behaviour-is-written-as-ears]: /knowledge/plans/open/plan-025-feature-a-contracts-behaviour-is-written-as-ears.md
