@@ -1,12 +1,12 @@
 ---
 name: frame
-description: "Superdev process: use at the start of a feature or project — frame the problem and record it as a tracker issue with concrete acceptance criteria."
+description: "Superdev process: use at the start of a feature or project, or on an issue /file filed — frame the problem and record it as a tracker issue with concrete acceptance criteria."
 ---
 
-<skill name="frame" purpose="Frame a Project or Feature" input="New project or feature (existing project) to frame" user-input="$ARGUMENTS" output="the framed issue: goal, user, constraints and EARS acceptance criteria, filed in the tracker">
+<skill name="frame" purpose="Frame a Project or Feature" input="a filed issue's id, or the new project or feature to frame" user-input="$ARGUMENTS" output="the framed issue: goal, user, constraints and EARS acceptance criteria, filed in the tracker">
 
 <goal persona="product manager">
-You define the problem, not the solution, and you describe done from outside, as a user or caller sees it. Frame the project or feature given in the input above and record it as a tracker issue.
+You define the problem, not the solution, and you describe done from outside, as a user or caller sees it. Frame the issue, project or feature given in the input above and record it as a tracker issue.
 </goal>
 
 <bootstrap_actions>
@@ -18,6 +18,7 @@ You define the problem, not the solution, and you describe done from outside, as
 <tool_call name="sokf_search" query="{existing knowledge on the project or feature}" when="always" />
 <tool_call name="sokf_read" id="glossary" when="always" />
 <tool_call name="sokf_read" id="issue-tracker" when="unless a new project" />
+<tool_call name="sokf_read" id="issue-{nnn}-{kind}-{slug}" when="if an issue is given" />
 <tool_call name="sokf_read" id="project-overview" when="if framing a feature" />
 <tool_call name="sokf_read" id="constraints-non-goals" when="if framing a feature" />
 <tool_call name="sokf_read" id="backlog" when="if framing a feature" />
@@ -36,10 +37,10 @@ You define the problem, not the solution, and you describe done from outside, as
 <gate check="The feature is not already decided against or out-of-scope" on-fail="tell the user why" />
 <gate check="The idea is well shaped, so a goal can be stated" on-fail="/brainstorm, then frame its shortlist" />
 <step name="STATE THE FRAME" task="State the goal, the user, and the constraints, using the `glossary`'s terms" />
-<step name="FILE OR FETCH THE ISSUE" task="Create the tracker issue (`lifecycle: open`) per its kind's schema — a feature-request for something absent, a bug-report for a defect, a chore for known-shape work — or fetch the existing one; `superdev validate --fix` places the file" />
+<step name="FILE OR FETCH THE ISSUE" task="Fetch the issue given in the input — an unframed one `/file` filed, or a framed one being reframed — or, where none exists, create it `lifecycle: unframed` per its kind's schema — a feature-request for something absent, a bug-report for a defect, a chore for known-shape work — written into `knowledge/issues/` and listed in the tracker's index, `superdev validate --fix` placing the file. The framing proceeds in place: every step below edits that file" />
 <step name="BRANCH" task="Create the feature's branch off the default branch and switch to it — the `development-procedure` concept's convention wins; where it names none, use `feature/<nnn>-<slug>`, `<nnn>` the issue's number, and record the convention in that concept" />
 <step name="DESCRIBE BEHAVIOUR" task="Describe the proposed behaviour from outside — what a user sees or a caller gets — as the draft of the user documentation; accept uses it" />
-<step name="WRITE ACCEPTANCE CRITERIA" task="Write the Acceptance criteria as numbered EARS sentences, each opening with its key and its pattern tag: `AC_<slug>` [event] WHEN x THE SYSTEM SHALL y. Each checkable pass/fail without interpretation. A bug's repro steps and expected behaviour are its criteria; a chore's definition of done is" />
+<step name="WRITE ACCEPTANCE CRITERIA" task="Write the Acceptance criteria as numbered EARS sentences, each opening with its key and its pattern tag: `AC_<slug>` [event] WHEN x THE SYSTEM SHALL y. Each checkable pass/fail without interpretation. A bug's repro steps and expected behaviour are its criteria; a chore's definition of done is. Replace every `TBD` the record carries, in this section and every other" />
 <step name="COVER FAILURE" task="State the expected behaviour for bad input and failure, not just the happy path — as criteria or in the proposed behaviour" />
 <step name="BOUND SCOPE" task="State what is in scope and, separately, what is deliberately out" />
 <step name="CHOOSE TECH STACK" when="if new project" task="Choose the tech stack — `/research` settles an open technology question"/>
@@ -52,6 +53,7 @@ You define the problem, not the solution, and you describe done from outside, as
 </loop>
 <gate check="No criterion reads TBD, and contract-design and accept can check every one pass/fail without interpretation" on-fail="/grill-me, then rework the criterion" />
 <gate check="The issue contradicts no convention or contract" on-fail="report the conflict; never override it" />
+<step name="SET FRAMED" task="Set `lifecycle: framed`; `superdev validate --fix` refiles the issue into `issues/framed/`, and its schema's framed rules hold it from here" />
 <gate check="`superdev validate` passes: the SOKF knowledge, and every document against its schema" on-fail="fix every error" />
 <step name="COMMIT THE FRAME" task="Commit the framed issue and the knowledge edits on the feature's branch, per the `development-procedure` concept's commit convention" />
 <skill_call name="/contract-design" when="always" />
