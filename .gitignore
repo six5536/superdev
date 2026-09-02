@@ -32,3 +32,6 @@
 *.profraw
 .codegraph/
 __old/
+
+# Custom
+/cc-bench
