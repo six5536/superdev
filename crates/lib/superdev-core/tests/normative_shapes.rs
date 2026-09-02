@@ -566,9 +566,93 @@ fn the_plan_orders_a_contract_gap_first() {
     }
 }
 
-/// Covers I035 criteria 14 and 15: the pending marker is declared where a
-/// contract writer meets it, acceptance refuses a contract still carrying
-/// one, and no contract on file carries one (ADR-038).
+/// A skill as shipped: its live copy and its pack source, which `sync`
+/// keeps byte-equal.
+fn skill_copies(name: &str) -> [(String, String); 2] {
+    [
+        format!(".claude/skills/{name}/SKILL.md"),
+        format!("pack/knowledge/skills/{name}/SKILL.md"),
+    ]
+    .map(|p| {
+        let text = std::fs::read_to_string(repo(&p)).expect("the skill is on file");
+        (p, text)
+    })
+}
+
+/// The `task` of the step named `name` in a skill file.
+fn step_task<'a>(skill: &'a str, name: &str) -> &'a str {
+    let anchor = format!("<step name=\"{name}\" task=\"");
+    let start = skill
+        .find(&anchor)
+        .unwrap_or_else(|| panic!("no step named {name}"))
+        + anchor.len();
+    let rest = &skill[start..];
+    &rest[..rest.find("\" />").expect("the step closes")]
+}
+
+/// Covers I049 criteria 19, 20 and 21: integrate carries a step that reads a
+/// touched contract as its consumer would and reports the three judgements
+/// — the region against the surface, the prose against the kind's
+/// checklist, the document against a reader — as a judgement that blocks
+/// nothing, and says so when no contract was touched (ADR-042).
+#[test]
+fn the_integrate_skill_judges_a_touched_contract() {
+    for (p, text) in skill_copies("integrate") {
+        let task = step_task(&text, "JUDGE THE CONTRACTS");
+        for phrase in [
+            "as its consumer would",
+            "omits part of the promised surface",
+            "optional",
+            "checklist",
+            "could not learn the interface",
+            "what you checked",
+            "judgement",
+            "blocks nothing",
+            "not a validator finding",
+            "No contract touched?",
+            "report nothing further",
+        ] {
+            assert!(
+                task.contains(phrase),
+                "{p}: the judgement step lacks `{phrase}`"
+            );
+        }
+    }
+}
+
+/// Covers I049 criterion 18: contract-design writes a new definition element
+/// into its source region with the behaviour unbuilt, and commits that
+/// declaration under the approval the phase already requires (ADR-044).
+#[test]
+fn the_contract_design_skill_declares_in_source() {
+    for (p, text) in skill_copies("contract-design") {
+        let declare = step_task(&text, "DECLARE IN SOURCE");
+        for phrase in ["marked source region", "behaviour unbuilt", "include"] {
+            assert!(
+                declare.contains(phrase),
+                "{p}: the declaration step lacks `{phrase}`"
+            );
+        }
+        let commit = step_task(&text, "COMMIT THE CONTRACTS");
+        assert!(
+            commit.contains("source declaration"),
+            "{p}: the commit step does not name the source declaration"
+        );
+        assert!(
+            text.contains("id=\"schema-contract\""),
+            "{p} does not read the one contract schema"
+        );
+        assert!(
+            !text.contains("schema-{kind}") && !text.contains("contract-interface"),
+            "{p} still names a per-kind contract schema"
+        );
+    }
+}
+
+/// Covers I035 criteria 14 and 15 and I049 criterion 17: the pending marker
+/// is declared where a contract writer meets it, acceptance refuses a
+/// contract whose Behaviour or Stability still carries `PENDING`
+/// (ADR-044), and no contract on file carries one.
 #[test]
 fn a_pending_promise_is_declared_bounded_and_absent() {
     for p in [
@@ -581,14 +665,20 @@ fn a_pending_promise_is_declared_bounded_and_absent() {
             "{p} does not declare the pending marker"
         );
     }
-    for p in [
-        ".claude/skills/accept/SKILL.md",
-        "pack/knowledge/skills/accept/SKILL.md",
-    ] {
-        let text = std::fs::read_to_string(repo(p)).unwrap();
+    for (p, text) in skill_copies("accept") {
+        let gate = text
+            .lines()
+            .find(|l| l.contains("`PENDING`"))
+            .unwrap_or_else(|| panic!("{p} does not refuse a pending marker at acceptance"));
+        for phrase in ["<gate ", "Behaviour", "Stability", "ADR-044"] {
+            assert!(
+                gate.contains(phrase),
+                "{p}: the pending gate lacks `{phrase}`"
+            );
+        }
         assert!(
-            text.contains("still marks an element `pending`"),
-            "{p} does not refuse a pending marker at acceptance"
+            !text.contains("ADR-038"),
+            "{p} still cites the superseded ADR-038"
         );
     }
     // A promise may outrun its code while a feature runs, never once it
