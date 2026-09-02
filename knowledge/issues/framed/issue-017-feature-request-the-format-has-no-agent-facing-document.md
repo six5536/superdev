@@ -3,7 +3,7 @@ type: FeatureRequest
 id: issue-017-feature-request-the-format-has-no-agent-facing-document
 title: The format the agent must write in has no document, and the renderer that would produce one has no consumer
 description: Every skill and schema is written in superdev-format, and the only statement of it is a 700-line grammar file the agent is never pointed at; the doc renderer ported for exactly this now exists in the binary with nothing calling it but a flag nobody runs.
-lifecycle: open
+lifecycle: framed
 links:
   - rel: relates-to
     to: plan-006-adhoc-rust-format-validator

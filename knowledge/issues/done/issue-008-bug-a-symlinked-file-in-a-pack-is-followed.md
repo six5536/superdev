@@ -58,8 +58,8 @@ reading; it does not cover a path the pack reaches by link.
 
 ## Expected behaviour
 
-A symlink in a pack is skipped whatever it points at, as a linked directory
-already is.
+1. `EX_c1` [ubiquitous] A symlink in a pack is skipped whatever it points at, as a linked directory
+   already is.
 
 ## Actual behaviour
 

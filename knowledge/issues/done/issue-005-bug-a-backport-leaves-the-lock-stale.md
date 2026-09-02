@@ -64,8 +64,8 @@ stale entries already in this repo's committed lock came from, under the old
 
 ## Expected behaviour
 
-A file superdev owns and has just confirmed matches its desired content should
-carry that content's hash in the lock.
+1. `EX_c1` [ubiquitous] A file superdev owns and has just confirmed matches its desired content should
+   carry that content's hash in the lock.
 
 ## Actual behaviour
 

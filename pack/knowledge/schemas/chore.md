@@ -16,11 +16,22 @@ differs in its body: work whose shape is already known
 states where it reaches and when it is finished, and is never asked for a
 symptom, a repro or a root cause.
 
+An issue is filed `unframed` by `/file` and framed by `/frame`, which
+sets `framed`; `lifecycle` is the variant key (ADR-048). While
+`unframed`, a done item is a plain sentence, a `TBD — <the open
+question>` or a keyed item, and the schema checks the list kind alone.
+Once `framed`, every done item carries its `DD_` key and no tag, and a
+`TBD` is an error; a `done` or `wontfix` chore is held to the same
+form. The Definition of done heading is declared once per state
+(ADR-049).
+
 ````yaml
 description: >
   Scoped mechanical work: what changes, every surface it reaches with the
   count that bounds it, and the check that says it is done.
 line-limit: 800
+
+variant-key: lifecycle
 
 frontmatter:
   type:
@@ -35,10 +46,14 @@ frontmatter:
   description:
     required: true
   lifecycle:
-    enum: [open, done, wontfix]
+    enum: [unframed, framed, done, wontfix]
     description: >
-      The folder is the value: open while the work is outstanding, done
-      when it landed, wontfix when it will not be done.
+      The folder is the value: unframed while the chore is filed and
+      not yet framed, framed once /frame has settled its definition of
+      done, done when it landed, wontfix when it will not be done. The
+      value selects the variant: unframed holds the done items to their
+      list kind alone; framed, done and wontfix hold every item to its
+      key (ADR-048).
 
 sections-ordered: true
 sections:
@@ -79,8 +94,21 @@ sections:
     level: 2
     required: true
     content: bullet-list
+    variants: [unframed]
+    description: >
+      Bullets as the user stated them, one per item: a plain sentence,
+      an open question as "TBD — <the open question>", or a keyed item
+      where one is already known. While unframed the list kind alone is
+      checked — no key is required, and none is refused (ADR-048).
+      Framing rewrites every item into the framed form below and
+      retires every TBD.
+  - heading: "Definition of done"
+    level: 2
+    required: true
+    content: bullet-list
     item-key: '^`(DD_[a-z][a-z0-9]*(?:-[a-z0-9]+)*)`'
     item-prohibited-pattern: '^`DD_[a-z0-9-]+` \[(ubiquitous|event|state|conditional|optional|complex)\]'
+    variants: [framed, done, wontfix]
     description: >
       Each bullet checkable by someone who did not do the work, and at
       least one of them a command with the result that counts as a pass.
@@ -91,7 +119,9 @@ sections:
       issue; an item keyed by the sweep carries the slug `c<n>`, `n` its
       position counted from 1 (`DD_c1`). A citation is the bare key
       where the issue is the subject — a plan case, a test of the work
-      — and the issue's id followed by the key elsewhere.
+      — and the issue's id followed by the key elsewhere. A "TBD" item
+      is an error once framed, and a done or wontfix chore is held to
+      the same form (ADR-048).
 
   - heading: "Comments"
     level: 2
@@ -100,37 +130,129 @@ sections:
       Conversation history, appended as it happens — the tracker's
       convention says append, so this sits last, where the verdict does not.
 
-example: |
-  ---
-  type: Chore
-  id: issue-042-chore-drop-the-legacy-cache-directory
-  title: The pre-0.2 cache directory is still written and never read
-  description: Two cache directories exist; only one is read, and the other is written on every run.
-  lifecycle: open
-  ---
+example:
+  unframed: |
+    ---
+    type: Chore
+    id: issue-042-chore-drop-the-legacy-cache-directory
+    title: The pre-0.2 cache directory is still written and never read
+    description: Two cache directories exist; only one is read, and the other is written on every run.
+    lifecycle: unframed
+    ---
 
-  # Chore: drop the pre-0.2 cache directory
+    # Chore: drop the pre-0.2 cache directory
 
-  ## Summary
+    ## Summary
 
-  `.superdev/cache/legacy/` is written on every run and read by nothing
-  since 0.2.0. Removing it drops a write from the hot path and a
-  directory from every managed repo.
+    `.superdev/cache/legacy/` is written on every run and read by nothing
+    since 0.2.0. Removing it drops a write from the hot path and a
+    directory from every managed repo.
 
-  ## Surfaces
+    ## Surfaces
 
-  - `src/cache/legacy.rs`, 210 lines, the only writer
-    (`git grep -l legacy_cache -- crates`).
-  - Four call sites in `src/pipeline.rs` (`git grep -c legacy_cache`).
-  - One `.gitignore` line written by `init`.
-  - Nine tests naming the directory (`cargo nextest list | grep -c legacy`).
+    - `src/cache/legacy.rs`, the only writer.
+    - TBD — how many call sites in `src/pipeline.rs`.
 
-  ## Definition of done
+    ## Definition of done
 
-  - `DD_no-reference` `git grep -i legacy_cache` returns nothing outside
-    the changelog.
-  - `DD_tests-pass` `cargo nextest run --workspace` passes with no test
-    deleted.
-  - `DD_directory-removed` A repo synced from 0.2.0 loses the directory on
-    its next `sync`.
+    - Nothing outside the changelog names the legacy cache.
+    - TBD — whether a synced repo loses the directory on its next sync.
+  framed: |
+    ---
+    type: Chore
+    id: issue-042-chore-drop-the-legacy-cache-directory
+    title: The pre-0.2 cache directory is still written and never read
+    description: Two cache directories exist; only one is read, and the other is written on every run.
+    lifecycle: framed
+    ---
+
+    # Chore: drop the pre-0.2 cache directory
+
+    ## Summary
+
+    `.superdev/cache/legacy/` is written on every run and read by nothing
+    since 0.2.0. Removing it drops a write from the hot path and a
+    directory from every managed repo.
+
+    ## Surfaces
+
+    - `src/cache/legacy.rs`, 210 lines, the only writer
+      (`git grep -l legacy_cache -- crates`).
+    - Four call sites in `src/pipeline.rs` (`git grep -c legacy_cache`).
+    - One `.gitignore` line written by `init`.
+    - Nine tests naming the directory (`cargo nextest list | grep -c legacy`).
+
+    ## Definition of done
+
+    - `DD_no-reference` `git grep -i legacy_cache` returns nothing outside
+      the changelog.
+    - `DD_tests-pass` `cargo nextest run --workspace` passes with no test
+      deleted.
+    - `DD_directory-removed` A repo synced from 0.2.0 loses the directory on
+      its next `sync`.
+  done: |
+    ---
+    type: Chore
+    id: issue-042-chore-drop-the-legacy-cache-directory
+    title: The pre-0.2 cache directory is still written and never read
+    description: Two cache directories exist; only one is read, and the other is written on every run.
+    lifecycle: done
+    ---
+
+    # Chore: drop the pre-0.2 cache directory
+
+    ## Resolved
+
+    Landed in plan-011 slice 1: the writer, its four call sites and the
+    nine tests are gone, and `sync` removes the directory.
+
+    ## Summary
+
+    `.superdev/cache/legacy/` is written on every run and read by nothing
+    since 0.2.0. Removing it drops a write from the hot path and a
+    directory from every managed repo.
+
+    ## Surfaces
+
+    - `src/cache/legacy.rs`, 210 lines, the only writer
+      (`git grep -l legacy_cache -- crates`).
+    - Four call sites in `src/pipeline.rs` (`git grep -c legacy_cache`).
+
+    ## Definition of done
+
+    - `DD_no-reference` `git grep -i legacy_cache` returns nothing outside
+      the changelog.
+    - `DD_tests-pass` `cargo nextest run --workspace` passes with no test
+      deleted.
+  wontfix: |
+    ---
+    type: Chore
+    id: issue-042-chore-drop-the-legacy-cache-directory
+    title: The pre-0.2 cache directory is still written and never read
+    description: Two cache directories exist; only one is read, and the other is written on every run.
+    lifecycle: wontfix
+    ---
+
+    # Chore: drop the pre-0.2 cache directory
+
+    ## Won't fix
+
+    Decided 2026-03-04 by the maintainers: 0.3.0 replaces the cache
+    layout whole, and the legacy directory goes with it.
+
+    ## Summary
+
+    `.superdev/cache/legacy/` is written on every run and read by nothing
+    since 0.2.0. Removing it drops a write from the hot path and a
+    directory from every managed repo.
+
+    ## Surfaces
+
+    - `src/cache/legacy.rs`, 210 lines, the only writer
+      (`git grep -l legacy_cache -- crates`).
+
+    ## Definition of done
+
+    - `DD_no-reference` `git grep -i legacy_cache` returns nothing outside
+      the changelog.
 ````

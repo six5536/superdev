@@ -44,8 +44,8 @@ itself the first time a slice's checks run.
 
 ## Expected behaviour
 
-A test probes exit codes; it does not change the repository's run
-state.
+1. `EX_c1` [ubiquitous] A test probes exit codes; it does not change the repository's run
+   state.
 
 ## Actual behaviour
 
@@ -71,4 +71,4 @@ directory where `end` finds nothing and returns 0, and `advance` finds
 nothing and returns 2, which are the codes the contract declares.
 
 <!-- sokf:links -->
-[sokf:issue-026-chore-rehearse-the-driver-on-a-real-feature]: /knowledge/issues/open/issue-026-chore-rehearse-the-driver-on-a-real-feature.md
+[sokf:issue-026-chore-rehearse-the-driver-on-a-real-feature]: /knowledge/issues/framed/issue-026-chore-rehearse-the-driver-on-a-real-feature.md

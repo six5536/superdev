@@ -82,4 +82,4 @@ filed rather than absorbed.
 <!-- sokf:links -->
 [sokf:adr-036-a-contract-is-bound-to-its-implementation]: /knowledge/adrs/deprecated/adr-036-a-contract-is-bound-to-its-implementation.md
 [sokf:issue-045-feature-request-drift-tests-bind-what-the-contract-declares]: /knowledge/issues/wontfix/issue-045-feature-request-drift-tests-bind-what-the-contract-declares.md
-[sokf:issue-049-feature-request-a-contract-cannot-point-at-its-definition]: /knowledge/issues/open/issue-049-feature-request-a-contract-cannot-point-at-its-definition.md
+[sokf:issue-049-feature-request-a-contract-cannot-point-at-its-definition]: /knowledge/issues/framed/issue-049-feature-request-a-contract-cannot-point-at-its-definition.md

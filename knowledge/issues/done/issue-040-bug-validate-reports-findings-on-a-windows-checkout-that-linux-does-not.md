@@ -72,9 +72,9 @@ In CI the same path is driven by `validate_passes_the_live_repository`,
 
 ## Expected behaviour
 
-`validate` reports the same findings on every platform for the same
-tree, and passes clean against superdev's own knowledge as it does on
-Linux.
+1. `EX_c1` [ubiquitous] `validate` reports the same findings on every platform for the same
+   tree, and passes clean against superdev's own knowledge as it does on
+   Linux.
 
 ## Actual behaviour
 

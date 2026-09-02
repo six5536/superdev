@@ -3,7 +3,7 @@ type: FeatureRequest
 id: issue-030-feature-request-filing-an-issue-requires-framing-it
 title: filing an issue requires framing it, so framings go stale before the work starts
 description: The workflow has no lightweight filing — /frame does the full framing at creation, but framing belongs at the point the issue is taken up, because a framing made at filing can be out of date by the time the work starts; an issue's lifecycle does not say whether it has been framed, so the schema cannot hold a framed issue to its form and let an unframed one breathe.
-lifecycle: open
+lifecycle: framed
 links:
   - rel: references
     to: adr-046-a-promise-and-a-criterion-are-keyed-ears-items

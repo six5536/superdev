@@ -108,8 +108,8 @@ is fetched over a transport with no authentication and no integrity.
 
 ## Expected behaviour
 
-A source whose scheme superdev does not support is refused before anything is
-spawned, naming the source.
+1. `EX_c1` [ubiquitous] A source whose scheme superdev does not support is refused before anything is
+   spawned, naming the source.
 
 ## Actual behaviour
 

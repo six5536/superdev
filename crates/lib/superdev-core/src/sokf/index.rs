@@ -53,9 +53,11 @@ const CANDIDATE_FACTOR: usize = 4;
 /// outweighs either one's ordering.
 const RRF_K: f32 = 60.0;
 
-/// The `lifecycle` values that mean live work. Any other value — `done`,
-/// `wontfix`, `abandoned`, `deprecated` — marks the document settled.
-const LIVE_LIFECYCLES: [&str; 2] = ["open", "active"];
+/// The `lifecycle` values that mean live work: a plan's `open`, a contract's
+/// or an ADR's `active`, and an issue's `unframed` or `framed` (ADR-048).
+/// Any other value — `done`, `wontfix`, `abandoned`, `deprecated` — marks
+/// the document settled.
+const LIVE_LIFECYCLES: [&str; 4] = ["open", "active", "unframed", "framed"];
 
 /// Multiplier applied to a settled section's fused score, chosen so settled
 /// work sorts below live knowledge but never disappears from results.
@@ -1164,8 +1166,8 @@ mod tests {
         "---\ntype: Spec\nid: retired\nstatus: deprecated\n---\nquartz lantern meadow guide\n";
     const CLOSED: &str =
         "---\ntype: BugReport\nid: closed\nlifecycle: done\n---\nquartz lantern meadow guide\n";
-    const OPEN_ISSUE: &str =
-        "---\ntype: BugReport\nid: open-issue\nlifecycle: open\n---\nquartz lantern meadow guide\n";
+    const OPEN_ISSUE: &str = "---\ntype: BugReport\nid: open-issue\nlifecycle: framed\n---\nquartz lantern meadow guide\n";
+    const FILED_ISSUE: &str = "---\ntype: BugReport\nid: filed-issue\nlifecycle: unframed\n---\nquartz lantern meadow guide\n";
 
     #[test]
     fn settled_work_is_downranked_not_dropped() {
@@ -1176,6 +1178,7 @@ mod tests {
         fs::write(bundle_dir.join("retired.md"), RETIRED).unwrap();
         fs::write(bundle_dir.join("closed.md"), CLOSED).unwrap();
         fs::write(bundle_dir.join("open-issue.md"), OPEN_ISSUE).unwrap();
+        fs::write(bundle_dir.join("filed-issue.md"), FILED_ISSUE).unwrap();
         fs::write(bundle_dir.join("live.md"), LIVE).unwrap();
         let bundle = load_bundle(&bundle_dir).unwrap();
         let (idx, _) =
@@ -1183,19 +1186,24 @@ mod tests {
 
         let hits = idx.search("quartz", None, &SearchOpts::default()).unwrap();
         // Identical text, so ranking is decided by settledness alone: the
-        // live concepts first, the settled three down-ranked behind them —
-        // but still present.
-        assert_eq!(hits.len(), 5);
-        let leading: HashSet<_> = hits[..2]
+        // live concepts first — a framed and an unframed issue among them
+        // (ADR-048) — the settled three down-ranked behind them, but still
+        // present.
+        assert_eq!(hits.len(), 6);
+        let leading: HashSet<_> = hits[..3]
             .iter()
             .map(|hit| hit.concept_id.clone().unwrap())
             .collect();
         assert_eq!(
             leading,
-            HashSet::from(["live".to_string(), "open-issue".to_string()])
+            HashSet::from([
+                "live".to_string(),
+                "open-issue".to_string(),
+                "filed-issue".to_string()
+            ])
         );
-        assert!(hits[2].score < hits[1].score);
-        let trailing: HashSet<_> = hits[2..]
+        assert!(hits[3].score < hits[2].score);
+        let trailing: HashSet<_> = hits[3..]
             .iter()
             .map(|hit| hit.concept_id.clone().unwrap())
             .collect();
@@ -1222,12 +1230,12 @@ mod tests {
             Index::open_and_sync(&IndexDir(dir.path().join("idx")), &bundle, None).unwrap();
 
         let opts = SearchOpts {
-            lifecycle: vec!["open".to_string()],
+            lifecycle: vec!["framed".to_string()],
             ..SearchOpts::default()
         };
         let hits = idx.search("quartz", None, &opts).unwrap();
-        // The open issue alone: the done one is filtered out, and so is the
-        // concept carrying no lifecycle at all.
+        // The framed issue alone: the done one is filtered out, and so is
+        // the concept carrying no lifecycle at all.
         assert_eq!(hits.len(), 1);
         assert_eq!(hits[0].concept_id.as_deref(), Some("open-issue"));
     }

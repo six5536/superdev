@@ -55,9 +55,9 @@ which fails on every macOS run.
 
 ## Expected behaviour
 
-The document moves to the folder its `lifecycle` names, as it does on
-Linux, and the guard refuses only a genuine escape from the knowledge
-root.
+1. `EX_c1` [ubiquitous] The document moves to the folder its `lifecycle` names, as it does on
+   Linux, and the guard refuses only a genuine escape from the knowledge
+   root.
 
 ## Actual behaviour
 

@@ -401,4 +401,4 @@ read.
 
 <!-- sokf:links -->
 [sokf:issue-016-bug-sync-would-revert-the-schema-migration]: /knowledge/issues/done/issue-016-bug-sync-would-revert-the-schema-migration.md
-[sokf:issue-017-feature-request-the-format-has-no-agent-facing-document]: /knowledge/issues/open/issue-017-feature-request-the-format-has-no-agent-facing-document.md
+[sokf:issue-017-feature-request-the-format-has-no-agent-facing-document]: /knowledge/issues/framed/issue-017-feature-request-the-format-has-no-agent-facing-document.md

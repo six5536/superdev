@@ -60,8 +60,8 @@ rebuilds the binary.
 
 ## Expected behaviour
 
-Either the live copy goes with the item, or the run says plainly that a local
-pack cannot take one away and names the rebuild as the way to do it.
+1. `EX_c1` [ubiquitous] Either the live copy goes with the item, or the run says plainly that a local
+   pack cannot take one away and names the rebuild as the way to do it.
 
 ## Actual behaviour
 

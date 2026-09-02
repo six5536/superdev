@@ -3,7 +3,7 @@ type: FeatureRequest
 id: issue-010-feature-request-index-entries-are-never-checked-against-their-concept
 title: An index entry may say anything about a concept, and nothing notices
 description: SPEC §9 says an index entry should carry the linked concept's description, but check_indexes only tests that the target exists, so an index can drift from every concept it lists — or hold the only copy of something — and validate still passes.
-lifecycle: open
+lifecycle: framed
 ---
 
 # Feature: index entries are never checked against the concept they name

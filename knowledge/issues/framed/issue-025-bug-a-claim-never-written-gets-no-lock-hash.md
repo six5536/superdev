@@ -3,7 +3,7 @@ type: BugReport
 id: issue-025-bug-a-claim-never-written-gets-no-lock-hash
 title: A claimed file superdev never wrote has no lock hash, so its first rewrite misreports as a user edit
 description: The lock reconcile refreshes existing entries and never adds one for a claim already satisfied on disk, so all 53 shipped schemas were unrecorded and each first rewrite reports "overwrote a user-edited file" and spawns a backup.
-lifecycle: open
+lifecycle: framed
 links:
   - rel: references
     to: issue-005-bug-a-backport-leaves-the-lock-stale
@@ -35,9 +35,9 @@ sweep will raise one false report per schema it edits.
 
 ## Expected behaviour
 
-The live schema is an unedited owned file, so the write is a plain
-`write knowledge/schemas/<name>.md (document schema)`, and every claimed
-file carries a hash in the lock after any successful sync.
+1. `EX_c1` [ubiquitous] The live schema is an unedited owned file, so the write is a plain
+   `write knowledge/schemas/<name>.md (document schema)`, and every claimed
+   file carries a hash in the lock after any successful sync.
 
 ## Actual behaviour
 

@@ -196,4 +196,4 @@ surface.
 [sokf:issue-043-bug-the-cli-contracts-json-keys-are-bound-by-no-test]: /knowledge/issues/wontfix/issue-043-bug-the-cli-contracts-json-keys-are-bound-by-no-test.md
 [sokf:issue-044-bug-a-drift-test-names-the-direction-for-a-command-and-not-for-a-flag]: /knowledge/issues/wontfix/issue-044-bug-a-drift-test-names-the-direction-for-a-command-and-not-for-a-flag.md
 [sokf:issue-046-chore-audit-the-one-directional-drift-bindings]: /knowledge/issues/wontfix/issue-046-chore-audit-the-one-directional-drift-bindings.md
-[sokf:issue-049-feature-request-a-contract-cannot-point-at-its-definition]: /knowledge/issues/open/issue-049-feature-request-a-contract-cannot-point-at-its-definition.md
+[sokf:issue-049-feature-request-a-contract-cannot-point-at-its-definition]: /knowledge/issues/framed/issue-049-feature-request-a-contract-cannot-point-at-its-definition.md

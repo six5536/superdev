@@ -52,8 +52,8 @@ for minutes is neither.
 
 ## Expected behaviour
 
-The query gives up after a few seconds and the run reports
-`could not reach it`, as it already does when `git` is absent or fails.
+1. `EX_c1` [ubiquitous] The query gives up after a few seconds and the run reports
+   `could not reach it`, as it already does when `git` is absent or fails.
 
 ## Actual behaviour
 

@@ -3,7 +3,7 @@ type: Chore
 id: issue-026-chore-rehearse-the-driver-on-a-real-feature
 title: Run the next real feature through /execute-feature-plan and record the outcome
 description: The loop's machinery is tested and was rehearsed with shell steps, but the driver's prose — slice picking, the retry bound, deferral, the end-of-run queue — has not driven a real multi-slice plan; the next feature is the rehearsal.
-lifecycle: open
+lifecycle: framed
 links:
   - rel: references
     to: issue-024-feature-request-the-workflow-cannot-run-unattended

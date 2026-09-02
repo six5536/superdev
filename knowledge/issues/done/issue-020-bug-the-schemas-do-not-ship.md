@@ -34,8 +34,8 @@ existing reaches no user.
 
 ## Expected behaviour
 
-The run reports the broken heading, exactly as it does in this repository,
-because the schema that governs an `Architecture` document is present.
+1. `EX_c1` [ubiquitous] The run reports the broken heading, exactly as it does in this repository,
+   because the schema that governs an `Architecture` document is present.
 
 ## Actual behaviour
 

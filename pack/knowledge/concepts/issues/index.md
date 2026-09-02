@@ -1,7 +1,8 @@
 # Issues
 
-Open issues, grouped by feature. A resolved issue stays in the tracker
-with its `lifecycle` set to `done` or `wontfix`; this index lists the
-open ones.
+Issues, grouped by feature. An issue sits in the folder its
+`lifecycle` names — `unframed/` when filed, `framed/` once framed,
+`done/` or `wontfix/` once resolved — and `superdev validate --fix`
+places it.
 
 No issues yet.

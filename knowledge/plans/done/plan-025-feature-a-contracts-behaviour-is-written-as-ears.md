@@ -347,6 +347,6 @@ rebuild per edit.
 [sokf:adr-047-a-section-rule-declares-item-keys-and-item-bounds]: /knowledge/adrs/active/adr-047-a-section-rule-declares-item-keys-and-item-bounds.md
 [sokf:code-review-009-a-contracts-behaviour-is-written-as-ears]: /knowledge/reports/code-review-009-a-contracts-behaviour-is-written-as-ears.md
 [sokf:contract-010-interface-document-schemas]: /knowledge/contracts/internal/active/contract-010-interface-document-schemas.md
-[sokf:issue-030-feature-request-filing-an-issue-requires-framing-it]: /knowledge/issues/open/issue-030-feature-request-filing-an-issue-requires-framing-it.md
+[sokf:issue-030-feature-request-filing-an-issue-requires-framing-it]: /knowledge/issues/framed/issue-030-feature-request-filing-an-issue-requires-framing-it.md
 [sokf:issue-037-feature-request-a-contracts-behaviour-is-not-written-as-ears]: /knowledge/issues/done/issue-037-feature-request-a-contracts-behaviour-is-not-written-as-ears.md
 [sokf:plan-024-feature-a-contract-includes-its-definition]: /knowledge/plans/done/plan-024-feature-a-contract-includes-its-definition.md

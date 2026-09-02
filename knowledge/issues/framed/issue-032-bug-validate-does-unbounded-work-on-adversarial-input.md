@@ -3,7 +3,7 @@ type: BugReport
 id: issue-032-bug-validate-does-unbounded-work-on-adversarial-input
 title: validate does unbounded work on adversarial input
 description: A file with a 100k-key frontmatter takes 41 s and 100k findings because the frontmatter is re-parsed per check, and reads carry no size cap — a hostile file can stall the PostToolUse hook or flood the transcript.
-lifecycle: open
+lifecycle: framed
 links:
   - rel: references
     to: issue-019-bug-validate-reads-a-named-file-as-a-skill
@@ -36,8 +36,8 @@ severity: it needs a hostile or pathological file in the checked tree.
 
 ## Expected behaviour
 
-The run stays within seconds and reports a bounded number of findings;
-a file past a size bound is refused naming the path.
+1. `EX_c1` [ubiquitous] The run stays within seconds and reports a bounded number of findings;
+   a file past a size bound is refused naming the path.
 
 ## Actual behaviour
 

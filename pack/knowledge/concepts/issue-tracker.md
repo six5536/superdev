@@ -19,9 +19,10 @@ workflow skills read this concept to learn where to publish and fetch:
   listing sorts by number and reads by kind. Numbered after the highest
   existing issue across all of the tracker's folders — a duplicate
   number is an error — and never a single combined tickets file.
-- Each issue carries a `lifecycle` — `open`, `done` or `wontfix` — and
-  sits in the folder named its value; `superdev validate --fix` places
-  the file, so nothing writes a path by hand.
+- Each issue carries a `lifecycle` — `unframed`, `framed`, `done` or
+  `wontfix` (ADR-048) — and sits in the folder named its value;
+  `superdev validate --fix` places the file, so nothing writes a path
+  by hand.
 - An issue's feature is declared by its `implements` or `references`
   link to the feature-request, the plan, or the contracts the feature
   touches — never by a path; an issue without a feature has no such

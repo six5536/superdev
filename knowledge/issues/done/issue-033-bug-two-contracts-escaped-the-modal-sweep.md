@@ -43,13 +43,13 @@ and 5 fail on the feature head.
 
 ## Expected behaviour
 
-Every active contract conforms to I029's criteria 1–4. Two remedies
-compete, settled at framing: give 002 and 003 modal verbs on their
-promises, or refine the standard (an ADR-029 amendment carried into the
-contract-style fragment) to distinguish behaviour descriptions —
-present tense, the code canonical — from requirements, which alone
-take modal verbs. The second remedy revisits what criterion 1 counts
-as a normative statement.
+1. `EX_c1` [ubiquitous] Every active contract conforms to I029's criteria 1–4. Two remedies
+   compete, settled at framing: give 002 and 003 modal verbs on their
+   promises, or refine the standard (an ADR-029 amendment carried into the
+   contract-style fragment) to distinguish behaviour descriptions —
+   present tense, the code canonical — from requirements, which alone
+   take modal verbs. The second remedy revisits what criterion 1 counts
+   as a normative statement.
 
 ## Actual behaviour
 

@@ -49,10 +49,10 @@ reported it.
 
 ## Expected behaviour
 
-A key the binary emits and the contract does not declare fails a test
-naming it, as an undeclared flag or command does — the contract defines
-the interface, so a caller can build against the JSON without reading
-the code.
+1. `EX_c1` [ubiquitous] A key the binary emits and the contract does not declare fails a test
+   naming it, as an undeclared flag or command does — the contract defines
+   the interface, so a caller can build against the JSON without reading
+   the code.
 
 ## Actual behaviour
 
@@ -110,4 +110,4 @@ restructured first.
 [sokf:issue-035-feature-request-a-contract-does-not-define-its-interface]: /knowledge/issues/done/issue-035-feature-request-a-contract-does-not-define-its-interface.md
 [sokf:issue-036-feature-request-validate-prints-warnings-by-default]: /knowledge/issues/done/issue-036-feature-request-validate-prints-warnings-by-default.md
 [sokf:issue-045-feature-request-drift-tests-bind-what-the-contract-declares]: /knowledge/issues/wontfix/issue-045-feature-request-drift-tests-bind-what-the-contract-declares.md
-[sokf:issue-049-feature-request-a-contract-cannot-point-at-its-definition]: /knowledge/issues/open/issue-049-feature-request-a-contract-cannot-point-at-its-definition.md
+[sokf:issue-049-feature-request-a-contract-cannot-point-at-its-definition]: /knowledge/issues/framed/issue-049-feature-request-a-contract-cannot-point-at-its-definition.md
