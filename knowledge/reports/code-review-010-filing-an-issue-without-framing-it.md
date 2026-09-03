@@ -334,5 +334,5 @@ Two nits: a skill count and a numbering sentence.
   second instance.
 
 <!-- sokf:links -->
-[sokf:issue-030-feature-request-filing-an-issue-requires-framing-it]: /knowledge/issues/framed/issue-030-feature-request-filing-an-issue-requires-framing-it.md
+[sokf:issue-030-feature-request-filing-an-issue-requires-framing-it]: /knowledge/issues/done/issue-030-feature-request-filing-an-issue-requires-framing-it.md
 [sokf:plan-026-feature-filing-an-issue-without-framing-it]: /knowledge/plans/done/plan-026-feature-filing-an-issue-without-framing-it.md

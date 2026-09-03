@@ -107,7 +107,7 @@ and `superdev validate --fix` places it.
 [sokf:issue-027-feature-request-the-unattended-run-is-undocumented-for-users]: /knowledge/issues/framed/issue-027-feature-request-the-unattended-run-is-undocumented-for-users.md
 [sokf:issue-028-bug-contract-design-commits-before-the-go-ahead]: /knowledge/issues/done/issue-028-bug-contract-design-commits-before-the-go-ahead.md
 [sokf:issue-029-bug-contract-design-writes-verbose-prose]: /knowledge/issues/done/issue-029-bug-contract-design-writes-verbose-prose.md
-[sokf:issue-030-feature-request-filing-an-issue-requires-framing-it]: /knowledge/issues/framed/issue-030-feature-request-filing-an-issue-requires-framing-it.md
+[sokf:issue-030-feature-request-filing-an-issue-requires-framing-it]: /knowledge/issues/done/issue-030-feature-request-filing-an-issue-requires-framing-it.md
 [sokf:issue-031-bug-validate-follows-symlinks-out-of-the-repo]: /knowledge/issues/framed/issue-031-bug-validate-follows-symlinks-out-of-the-repo.md
 [sokf:issue-032-bug-validate-does-unbounded-work-on-adversarial-input]: /knowledge/issues/framed/issue-032-bug-validate-does-unbounded-work-on-adversarial-input.md
 [sokf:issue-033-bug-two-contracts-escaped-the-modal-sweep]: /knowledge/issues/done/issue-033-bug-two-contracts-escaped-the-modal-sweep.md

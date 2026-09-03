@@ -68,7 +68,7 @@ I041 turned out to be. One defect masking another is the reason this
 audit is worth doing rather than trusting the suite.
 
 <!-- sokf:links -->
-[sokf:issue-030-feature-request-filing-an-issue-requires-framing-it]: /knowledge/issues/framed/issue-030-feature-request-filing-an-issue-requires-framing-it.md
+[sokf:issue-030-feature-request-filing-an-issue-requires-framing-it]: /knowledge/issues/done/issue-030-feature-request-filing-an-issue-requires-framing-it.md
 [sokf:issue-039-bug-validate-fix-refuses-to-refile-under-a-symlinked-root]: /knowledge/issues/done/issue-039-bug-validate-fix-refuses-to-refile-under-a-symlinked-root.md
 [sokf:issue-040-bug-validate-reports-findings-on-a-windows-checkout-that-linux-does-not]: /knowledge/issues/done/issue-040-bug-validate-reports-findings-on-a-windows-checkout-that-linux-does-not.md
 [sokf:issue-041-bug-an-unreadable-named-path-is-reported-in-a-spelling-the-caller-never-typed]: /knowledge/issues/done/issue-041-bug-an-unreadable-named-path-is-reported-in-a-spelling-the-caller-never-typed.md
