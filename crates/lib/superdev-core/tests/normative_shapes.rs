@@ -737,8 +737,9 @@ fn every_issue_on_file_carries_a_key_on_each_cited_item() {
 
 /// Covers I030 AC_sweep: every issue on file sits in the folder its
 /// `lifecycle` names; I042, the one open issue that kept a `TBD` item, is
-/// `unframed`, and I030 — framed before the sweep, with no `TBD` left — is
-/// `framed`; and every bug report's Expected behaviour is a numbered list
+/// `unframed` (I030, framed before the sweep with no `TBD` left, went
+/// `framed` and then `done` at acceptance — a state this test does not
+/// pin); and every bug report's Expected behaviour is a numbered list
 /// whose items open with `EX_c1`, `EX_c2`, … and an EARS tag.
 #[test]
 fn every_issue_on_file_sits_in_its_lifecycles_folder() {
@@ -752,9 +753,6 @@ fn every_issue_on_file_sits_in_its_lifecycles_folder() {
         );
         if name.starts_with("issue-042-") {
             assert_eq!(*state, "unframed", "{name}");
-        }
-        if name.starts_with("issue-030-") {
-            assert_eq!(*state, "framed", "{name}");
         }
         // The kind is the id's segment after the number: I015 names "a bug
         // report" in its slug and is a feature request.
