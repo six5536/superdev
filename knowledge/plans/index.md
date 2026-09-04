@@ -23,6 +23,7 @@ workflow.
 * [A contract includes its definition — feature plan][sokf:plan-024-feature-a-contract-includes-its-definition] - slices delivering I049 — the source include, the sixth content kind, schema variants, the one contract schema, the skills' judgement and declaration steps, the migration of nine contracts, and the deletion of fifteen schemas and four copy-comparing tests.
 * [A contract's behaviour is written as EARS — feature plan][sokf:plan-025-feature-a-contracts-behaviour-is-written-as-ears] - slices delivering I037 — the three item declarations in the validator, the sweep of nine contracts to keyed EARS promises, the contract schema in its final form with twelve examples, the tracker schemas' keyed criteria with the c<n> sweep of fifty issues, and the records.
 * [Filing an issue without framing it — feature plan][sokf:plan-026-feature-filing-an-issue-without-framing-it] - slices delivering I030 — a heading declared per variant in the validator, the tracker schemas varying by a four-state lifecycle with the sweep of the issues on file, the /file skill and the workflow entry, /frame framing in place with the three phases' gates, the backlog's retirement, and the records.
+* [The workflow is file, scope, build, accept — feature plan][sokf:plan-027-feature-the-workflow-is-file-scope-build-accept] - slices delivering I052 — the validator's nested items and optional key closing contract-010's five PENDING promises, a contract's nested criteria, one issue schema with the sweep of the issues on file, one plan schema with the sweep of the plans, the scope and contract-design skills, the build, execute-plan and accept skills with the workflow text, and the concepts and records.
 
 ## Ad-hoc plans
 
@@ -64,3 +65,4 @@ workflow.
 [sokf:plan-024-feature-a-contract-includes-its-definition]: /knowledge/plans/done/plan-024-feature-a-contract-includes-its-definition.md
 [sokf:plan-025-feature-a-contracts-behaviour-is-written-as-ears]: /knowledge/plans/done/plan-025-feature-a-contracts-behaviour-is-written-as-ears.md
 [sokf:plan-026-feature-filing-an-issue-without-framing-it]: /knowledge/plans/done/plan-026-feature-filing-an-issue-without-framing-it.md
+[sokf:plan-027-feature-the-workflow-is-file-scope-build-accept]: /knowledge/plans/open/plan-027-feature-the-workflow-is-file-scope-build-accept.md
