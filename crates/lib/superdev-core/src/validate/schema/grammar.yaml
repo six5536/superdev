@@ -490,7 +490,10 @@ kinds:
         line-limit:
           type: integer
           required: true
-          doc: Line count above which the document must be split rather than trimmed.
+          doc: >
+            Line count above which the document must be split rather than trimmed. Zero or
+            less declares no limit, for a document whose length is inherent — a changelog,
+            an index — rather than a number nobody reaches.
         variant-key:
           type: string
           required: false

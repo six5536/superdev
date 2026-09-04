@@ -106,7 +106,7 @@ description: >
   One interface, of one kind: what it is, materialised from the source
   that declares it; what it promises that the definition cannot say;
   and what may change.
-line-limit: 800
+line-limit: 4000
 variant-key: kind
 
 frontmatter:

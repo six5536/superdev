@@ -234,9 +234,11 @@ pub struct DocSchema {
     /// frontmatter; a `type` const names them otherwise.
     #[serde(default, rename = "target-files")]
     target_files: Option<String>,
-    /// The line count a document must not exceed.
+    /// The line count a document must not exceed. Zero or less declares no
+    /// limit: a document whose length is inherent — a changelog, an index —
+    /// says so rather than naming a number nobody will ever reach.
     #[serde(default, rename = "line-limit")]
-    line_limit: Option<usize>,
+    line_limit: Option<i64>,
     /// The frontmatter key whose value selects a variant (ADR-045).
     #[serde(default, rename = "variant-key")]
     variant_key: Option<String>,

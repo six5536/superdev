@@ -1902,24 +1902,25 @@ fn the_file_skill_asks_for_a_missing_kind() {
     }
 }
 
-/// Covers I030 AC_workflow-lists-file: the aggregator's source and its
-/// rendered copy list `/file` outside the phases, and how-do-i's map names
-/// it.
+/// `/file` is a skill and not a phase: the workflow block names no FILE
+/// phase, and how-do-i's map is where a reader is sent to it.
 #[test]
-fn the_workflow_lists_file_outside_the_phases() {
-    let line = "<outside skill=\"/file\" when=\"an issue or an idea to record without scoping it — /scope takes it up\" />";
+fn file_is_a_skill_and_not_a_phase() {
     for p in [
         "crates/lib/superdev-core/src/pipeline.rs",
         ".agents/superdev.md",
     ] {
         let text = std::fs::read_to_string(repo(p)).expect("the file is on file");
         assert!(
-            text.contains(line),
-            "{p} does not list /file outside the phases"
-        );
-        assert!(
             !text.contains("<phase name=\"FILE\""),
             "{p} lists /file as a phase"
+        );
+    }
+    for skill in ["file", "scope", "build", "accept", "execute-plan"] {
+        assert!(
+            std::path::Path::new(&repo(&format!("pack/knowledge/skills/{skill}/SKILL.md")))
+                .is_file(),
+            "the pack does not carry the {skill} skill"
         );
     }
     for (p, text) in skill_copies("how-do-i") {
@@ -2327,53 +2328,57 @@ fn the_accept_skill_reviews_before_the_criteria_walk() {
 }
 
 /// Covers I052's workflow criterion: the aggregator's source and its
-/// rendered copy read FILE → SCOPE → BUILD → ACCEPT, mark accept optional,
-/// name the sub-skills scope calls, and carry no retired phase (ADR-050).
+/// rendered copy read SCOPE → BUILD → ACCEPT, name each phase, mark accept
+/// optional, carry every edge, and list no retired phase (ADR-050).
 #[test]
-fn the_workflow_reads_file_scope_build_accept() {
+fn the_workflow_reads_scope_build_accept() {
     for p in [
         "crates/lib/superdev-core/src/pipeline.rs",
         ".agents/superdev.md",
     ] {
         let text = std::fs::read_to_string(repo(p)).expect("the file is on file");
         assert!(
-            text.contains("<flow>FILE → SCOPE → BUILD → ACCEPT</flow>"),
-            "{p} does not read FILE → SCOPE → BUILD → ACCEPT"
+            text.contains("<flow>SCOPE → BUILD → ACCEPT</flow>"),
+            "{p} does not read SCOPE → BUILD → ACCEPT"
         );
+        for phase in ["SCOPE", "BUILD", "ACCEPT"] {
+            assert!(
+                text.contains(&format!("<phase name=\"{phase}\"")),
+                "{p} lists no {phase} phase"
+            );
+        }
         let accept = text
             .lines()
             .find(|l| l.contains("<phase name=\"ACCEPT\""))
             .unwrap_or_else(|| panic!("{p} lists no ACCEPT phase"));
         assert!(accept.contains("optional"), "{p}: {accept}");
-        for phase in ["FRAME", "CONTRACT-DESIGN", "FEATURE-PLAN", "INTEGRATE"] {
+        for phase in [
+            "FILE",
+            "FRAME",
+            "CONTRACT-DESIGN",
+            "FEATURE-PLAN",
+            "INTEGRATE",
+        ] {
             assert!(
                 !text.contains(&format!("<phase name=\"{phase}\"")),
                 "{p} still lists the {phase} phase"
             );
         }
-        for sub in [
-            "/contract-design",
-            "/grill-me",
-            "/research",
-            "/design",
-            "/prototype",
-            "/double-check",
-        ] {
-            assert!(
-                text.contains(sub),
-                "{p} does not name `{sub}` among the sub-skills scope calls"
-            );
-        }
-        assert!(
-            text.contains("<outside skill=\"/execute-plan\""),
-            "{p} does not list /execute-plan outside the phases"
-        );
         for edge in [
             "<edge from=\"BUILD\" when=\"contract change needed\" to=\"SCOPE\" />",
+            "<edge from=\"BUILD\" when=\"a work block is too big\" to=\"SCOPE\" />",
+            "<edge from=\"BUILD\" when=\"when the build is blocked\" to=\"SCOPE\" />",
+            "<edge from=\"BUILD\" when=\"the last block is merged\" to=\"DONE\" />",
+            "<edge from=\"ACCEPT\" when=\"a code change is required\" to=\"BUILD\" />",
+            "<edge from=\"ACCEPT\" when=\"implementation mismatch or open questions\" to=\"SCOPE\" />",
             "<edge from=\"ACCEPT\" when=\"clean pass\" to=\"DONE\" />",
         ] {
             assert!(text.contains(edge), "{p} lacks the edge `{edge}`");
         }
+        assert!(
+            text.contains("<entry to=\"ACCEPT\" when=\"the user requests acceptance\" />"),
+            "{p} lacks accept's entry"
+        );
     }
 }
 

@@ -19,7 +19,7 @@ target-files: "CHANGELOG.md"
 description: >
   The Keep a Changelog record: an Unreleased section, one section per released
   version with its date, change groups under each, and the compare links.
-line-limit: 800
+line-limit: 0
 
 sections:
   - heading: "Changelog"

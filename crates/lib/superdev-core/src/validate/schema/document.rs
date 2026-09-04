@@ -345,9 +345,11 @@ pub struct DocSchema {
     /// frontmatter; a `type` const names them otherwise.
     #[serde(default, rename = "target-files")]
     target_files: Option<String>,
-    /// The line count a document must not exceed.
+    /// The line count a document must not exceed. Zero or less declares no
+    /// limit: a document whose length is inherent — a changelog, an index —
+    /// says so rather than naming a number nobody will ever reach.
     #[serde(default, rename = "line-limit")]
-    line_limit: Option<usize>,
+    line_limit: Option<i64>,
     /// The frontmatter key whose value selects a variant (ADR-045).
     #[serde(default, rename = "variant-key")]
     variant_key: Option<String>,
@@ -1183,7 +1185,8 @@ fn check_one(
     // and reporting that as one line over is an off-by-one nobody can act on.
     let count = doc.text.lines().count();
     if let Some(limit) = schema.line_limit
-        && count > limit
+        && limit > 0
+        && count as i64 > limit
     {
         push(format!(
             "{count} lines, over {}'s limit of {limit} — split it rather than trimming it",
@@ -2436,6 +2439,24 @@ mod tests {
         check_one(&over, &schema, Subject::Filed, &mut findings);
         assert_eq!(findings.len(), 1, "{findings:#?}");
         assert!(findings[0].message.starts_with("4 lines, over"));
+    }
+
+    /// Zero or less is no limit, so a document of any length passes.
+    #[test]
+    fn a_limit_of_zero_or_less_governs_no_length() {
+        for declared in ["0", "-1"] {
+            let schema = schema_of(&format!(
+                "frontmatter:\n  type:\n    const: T\nline-limit: {declared}\n"
+            ));
+            let doc = Document {
+                path: "a.md",
+                text: &"line\n".repeat(5_000),
+                doc_type: Some("T"),
+            };
+            let mut findings = Vec::new();
+            check_one(&doc, &schema, Subject::Filed, &mut findings);
+            assert!(findings.is_empty(), "{declared}: {findings:#?}");
+        }
     }
 
     #[test]
