@@ -7,7 +7,7 @@ kind: feature
 lifecycle: done
 links:
   - rel: references
-    to: plan-004-adhoc-workflow-autonomy
+    to: plan-004-workflow-autonomy
     note: The adhoc plan that designed this work against the seven-phase workflow.
   - rel: references
     to: contract-002-cli-superdev
@@ -31,7 +31,7 @@ attention, one boundary at a time.
 ## Context
 
 Four gaps, raised together in
-[plan-004][sokf:plan-004-adhoc-workflow-autonomy]:
+[plan-004][sokf:plan-004-workflow-autonomy]:
 
 - P003 ran eighteen slices, and every slice crossed build and integrate
   with the user present — over thirty attended boundaries for one feature.
@@ -144,7 +144,7 @@ Alternatives considered:
 
 ## Resolution
 
-Delivered by [plan-013][sokf:plan-013-feature-workflow-autonomy] in eight
+Delivered by [plan-013][sokf:plan-013-workflow-autonomy] in eight
 slices on 2026-08-31: the `superdev run` verbs and the `hook run` Stop
 hook (contract-009, ADR-018/019), the managed `hooks.Stop` entry, the
 feature-plan format's `Depends-on` and deferred decisions, the branching
@@ -159,7 +159,7 @@ feature's delivery; `/accept` runs at the user's request.
 
 Framing interview, 2026-08-31: the go-ahead gate sits at the end of
 `/contract-design`, and the unattended loop owns feature-plan, build and
-integrate. [Plan-004][sokf:plan-004-adhoc-workflow-autonomy] is superseded
+integrate. [Plan-004][sokf:plan-004-workflow-autonomy] is superseded
 by this request and the records contract-design and feature-plan produce
 from it; it is refiled `done` with a note once those records exist. The
 retry bound is two returns to build. `/adhoc-plan` branches
@@ -176,5 +176,5 @@ The decisions are ADR-018 through ADR-021, and the Stop hook body is
 <!-- sokf:links -->
 [sokf:contract-002-cli-superdev]: /knowledge/contracts/public/active/contract-002-cli-superdev.md
 [sokf:contract-009-interface-run-state]: /knowledge/contracts/internal/active/contract-009-interface-run-state.md
-[sokf:plan-004-adhoc-workflow-autonomy]: /knowledge/plans/done/plan-004-adhoc-workflow-autonomy.md
-[sokf:plan-013-feature-workflow-autonomy]: /knowledge/plans/done/plan-013-feature-workflow-autonomy.md
+[sokf:plan-004-workflow-autonomy]: /knowledge/plans/done/plan-004-workflow-autonomy.md
+[sokf:plan-013-workflow-autonomy]: /knowledge/plans/done/plan-013-workflow-autonomy.md

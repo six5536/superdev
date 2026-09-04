@@ -7,7 +7,7 @@ kind: bug
 lifecycle: done
 links:
   - rel: relates-to
-    to: plan-006-adhoc-rust-format-validator
+    to: plan-006-rust-format-validator
   - rel: relates-to
     to: adr-017-aokf-conformance-is-pass-or-fail
   - rel: relates-to
@@ -70,7 +70,7 @@ back to 0.2 with the level ladder in it.
 The root cause: the rule is `pack-backport`'s and it is the right one: an
 edit to a live copy ships only when it is backported, and until then `sync`
 treats it as drift. Both the
-[format validator plan][sokf:plan-006-adhoc-rust-format-validator]
+[format validator plan][sokf:plan-006-rust-format-validator]
 and the schema migration list the backport as a non-goal and a follow-on, so
 the divergence is expected. What is missing is anything in the tree that says
 so — the check reports 65 anonymous "write" lines, and the two plans that own
@@ -123,4 +123,4 @@ this repository.
 [sokf:adr-017-aokf-conformance-is-pass-or-fail]: /knowledge/adrs/active/adr-017-aokf-conformance-is-pass-or-fail.md
 [sokf:issue-005-a-backport-leaves-the-lock-stale]: /knowledge/issues/done/issue-005-a-backport-leaves-the-lock-stale.md
 [sokf:issue-021-backport-the-knowledge-design-to-the-pack]: /knowledge/issues/done/issue-021-backport-the-knowledge-design-to-the-pack.md
-[sokf:plan-006-adhoc-rust-format-validator]: /knowledge/plans/done/plan-006-adhoc-rust-format-validator.md
+[sokf:plan-006-rust-format-validator]: /knowledge/plans/done/plan-006-rust-format-validator.md

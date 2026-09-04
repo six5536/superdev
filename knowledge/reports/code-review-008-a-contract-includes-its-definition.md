@@ -5,7 +5,7 @@ title: Code review — a contract includes its definition
 description: Review of plan-024's ten slices on `feature/a-contract-includes-its-definition`; two CRLF defects that fail Windows CI and corrupt a repaired block, one four-times test skeleton, and four smaller findings, all resolved before the merge.
 links:
   - rel: references
-    to: plan-024-feature-a-contract-includes-its-definition
+    to: plan-024-a-contract-includes-its-definition
     note: The plan whose ten slices this review reads.
   - rel: references
     to: issue-049-a-contract-cannot-point-at-its-definition
@@ -17,7 +17,7 @@ links:
 ## Verdict
 
 The ten slices of
-[plan-024][sokf:plan-024-feature-a-contract-includes-its-definition]
+[plan-024][sokf:plan-024-a-contract-includes-its-definition]
 deliver
 [I049][sokf:issue-049-a-contract-cannot-point-at-its-definition].
 The mechanism is sound on an LF checkout and the migration is complete;
@@ -246,4 +246,4 @@ Every finding was resolved on the branch.
 
 <!-- sokf:links -->
 [sokf:issue-049-a-contract-cannot-point-at-its-definition]: /knowledge/issues/open/issue-049-a-contract-cannot-point-at-its-definition.md
-[sokf:plan-024-feature-a-contract-includes-its-definition]: /knowledge/plans/done/plan-024-feature-a-contract-includes-its-definition.md
+[sokf:plan-024-a-contract-includes-its-definition]: /knowledge/plans/done/plan-024-a-contract-includes-its-definition.md

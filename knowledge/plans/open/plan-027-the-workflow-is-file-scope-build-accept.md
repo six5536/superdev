@@ -1,29 +1,40 @@
 ---
-type: FeaturePlan
-id: plan-027-feature-the-workflow-is-file-scope-build-accept
-title: The workflow is file, scope, build, accept — feature plan
-description: Slices delivering I052 — the validator's nested items and optional key closing contract-010's five PENDING promises, a contract's nested criteria, one issue schema with the sweep of the issues on file, one plan schema with the sweep of the plans, the scope and contract-design skills, the build, execute-plan and accept skills with the workflow text, and the concepts and records.
+type: Plan
+id: plan-027-the-workflow-is-file-scope-build-accept
+title: The workflow is file, scope, build, accept
+description: Blocks delivering I052 — the validator's nested items and optional key closing contract-010's five PENDING promises, a contract's nested criteria, one issue schema with the sweep of the issues on file, one plan schema with the sweep of the plans, the scope and contract-design skills, the build, execute-plan and accept skills with the workflow text, and the concepts and records.
 lifecycle: open
 links:
   - rel: implements
     to: issue-052-the-workflow-carries-more-process-than-it-needs
-    note: The framed feature whose sixteen criteria these slices deliver.
+    note: The framed feature whose sixteen criteria these blocks deliver.
   - rel: references
     to: contract-010-interface-document-schemas
-    note: Carries five PENDING promises for `nested` and `item-key-optional`; slice 1 closes them, so it runs first.
+    note: Carries five PENDING promises for `nested` and `item-key-optional`; block 1 closes them, so it runs first.
   - rel: references
     to: adr-050-keys-and-ears-live-in-the-contracts-and-the-workflow-is-file-scope-build-accept
-    note: The decision every slice reads for what it writes.
+    note: The decision every block reads for what it writes.
   - rel: references
     to: adr-051-a-section-rule-declares-nested-items-and-an-optional-key
-    note: The mechanism slice 1 builds and slice 2 uses.
+    note: The mechanism block 1 builds and block 2 uses.
 ---
 
-# Feature plan: The workflow is file, scope, build, accept
+# Plan: The workflow is file, scope, build, accept
 
 Request: [issue-052-the-workflow-carries-more-process-than-it-needs][sokf:issue-052-the-workflow-carries-more-process-than-it-needs]
 
-The validator first: the slice that closes
+## Goal
+
+Keys and EARS live in the contracts alone, an issue is one plain
+template, a plan is one document holding the contract changes and the
+work blocks, and the workflow is FILE → SCOPE → BUILD → ACCEPT with
+accept optional — as
+[ADR-050][sokf:adr-050-keys-and-ears-live-in-the-contracts-and-the-workflow-is-file-scope-build-accept]
+decides. The issues and plans on file are carried in the templates,
+five schemas and five skills retire, and the concepts and records say
+the same.
+
+The validator first: the block that closes
 [contract-010][sokf:contract-010-interface-document-schemas]'s five
 PENDING promises with
 [ADR-051][sokf:adr-051-a-section-rule-declares-nested-items-and-an-optional-key].
@@ -34,8 +45,6 @@ validates only when the schema, the retired schemas, the refiled
 documents and the lifecycle ranking change together. The skills come
 after both schemas they name; the workflow text and the concepts
 close.
-[ADR-050][sokf:adr-050-keys-and-ears-live-in-the-contracts-and-the-workflow-is-file-scope-build-accept]
-says what each writes.
 
 Owned copies and their sources: every `knowledge/schemas/*.md` from
 `pack/knowledge/schemas/`; every `.claude/skills/<name>/` that is
@@ -44,21 +53,32 @@ knowledge-carried from `pack/knowledge/skills/<name>/`;
 `crates/lib/superdev-core/src/validate/schema/grammar.yaml`;
 `.agents/superdev.md` is the aggregator `pipeline.rs` renders from its
 `AGGREGATOR_PREFIX` constant, so the workflow block is edited there.
-A slice edits the source, runs `scripts/superdev sync`, and commits
+A block edits the source, runs `scripts/superdev sync`, and commits
 the moved lock hashes; `superdev status` reporting no drift is part of
 its done-check. A retired schema or skill is deleted from the pack and
 from its owned copy, and the lock forgets it. The pack's skeleton
 concepts under `pack/knowledge/concepts/` change beside the
 repository's own copies. A normative test in
 `crates/lib/superdev-core/tests/normative_shapes.rs` that pins a
-retiring form is rewritten to pin the new one in the slice that
+retiring form is rewritten to pin the new one in the block that
 retires it, and the reason is stated in the commit. The changelog is
-at its 800-line limit, so a slice adding a line folds the Unreleased
+at its 800-line limit, so a block adding a line folds the Unreleased
 section as it goes.
 
-## Slices
+## Contract changes
 
-### Slice 1: The validator reads nested items and an optional key
+- contract-010-interface-document-schemas: `P_nested-binds`,
+  `P_nested-required`, `P_key-optional-unkeyed`,
+  `P_key-optional-keyed` and `P_misdeclared-nested` leave PENDING —
+  the `nested` and `item-key-optional` declarations the promises
+  describe are built (block 1).
+- contract-009-interface-run-state: no promise changes; the prose
+  that names the unattended loop's driver follows the skill's rename
+  to `/execute-plan` (block 6).
+
+## Work blocks
+
+### Block 1: The validator reads nested items and an optional key
 
 - [x] Done — ticked by integrate at merge.
 - Depends-on: none.
@@ -82,23 +102,24 @@ section as it goes.
   no drift.
 - Cases: a schema with a two-level `nested` accepts a conforming
   document and reports a nested item missing its key, naming the item
-  (covers AC_contract-criteria); a nested `required` reports a
-  top-level item with no nested item, naming it (covers
-  AC_contract-criteria); a key repeated between a top-level and a
-  nested item is reported naming both (covers AC_contract-criteria); a
-  third-level marker under a two-level rule is text of the nested
-  item, and a bullet under a numbered rule likewise (covers
-  AC_contract-criteria-optional); a rule with no `nested` treats a
-  nested list as text, as today (covers
-  AC_contract-criteria-optional); under `item-key-optional` an unkeyed
-  item passes and a keyed item is held to `item-pattern` and its
-  `nested` (covers AC_contract-criteria); `nested` on a prose section,
-  a nested key with two captures, and the flag with no `item-key` are
-  each a finding on the schema (covers AC_contract-criteria); the
-  grammar's schema check accepts the two keys (covers
-  AC_contract-criteria).
+  (covers contract-010 `P_nested-binds`); a nested `required` reports
+  a top-level item with no nested item, naming it (covers contract-010
+  `P_nested-required`); a key repeated between a top-level and a
+  nested item is reported naming both (checks that nested keys join
+  the document's key space); a third-level marker under a two-level
+  rule is text of the nested item, and a bullet under a numbered rule
+  likewise (checks that an undeclared depth binds nothing); a rule
+  with no `nested` treats a nested list as text, as today (checks that
+  a contract with no nested criteria passes unchanged); under
+  `item-key-optional` an unkeyed item passes and a keyed item is held
+  to `item-pattern` and its `nested` (covers contract-010
+  `P_key-optional-unkeyed`, `P_key-optional-keyed`); `nested` on a
+  prose section, a nested key with two captures, and the flag with no
+  `item-key` are each a finding on the schema (covers contract-010
+  `P_misdeclared-nested`); the grammar's schema check accepts the two
+  keys (checks that the grammar admits the declarations).
 
-### Slice 2: A contract's promise carries its criteria
+### Block 2: A contract's promise carries its criteria
 
 - [x] Done — ticked by integrate at merge.
 - Depends-on: 1.
@@ -116,15 +137,17 @@ section as it goes.
   lacking its key or tag, or a criterion key equal to a promise key,
   fails naming the item; `superdev status` reports no drift.
 - Cases: a contract whose promise nests two keyed tagged criteria
-  passes (covers AC_contract-criteria); a nested item without a key
-  fails naming it, and a criterion key repeated across the contract
-  fails naming both items (covers AC_contract-criteria); the nine contracts on
-  file, none nesting a criterion, pass (covers
-  AC_contract-criteria-optional); a normative test reads the contract
-  schema's Behaviour rule and finds the `nested` `AC_` key with
-  `required: false` (covers AC_contract-criteria-optional).
+  passes (checks that the validator accepts a promise's nested `AC_`
+  list); a nested item without a key fails naming it, and a criterion
+  key repeated across the contract fails naming both items (checks
+  that a nested item is held to its key and tag, and the key is unique
+  across the contract); the nine contracts on file, none nesting a
+  criterion, pass (checks that a contract whose promises carry no
+  nested list passes); a normative test reads the contract schema's
+  Behaviour rule and finds the `nested` `AC_` key with `required:
+  false` (checks that the criteria are optional).
 
-### Slice 3: One issue template, and the issues on file rewritten
+### Block 3: One issue template, and the issues on file rewritten
 
 - [x] Done — ticked by integrate at merge.
 - Depends-on: none.
@@ -143,32 +166,34 @@ section as it goes.
   `framed` and `unframed` becoming `open`, refiled by `validate
   --fix`; every id drops its kind segment (`issue-030-filing-…`),
   and every reference to an old id across the knowledge, the tests
-  and the changelog is rewritten with it; `issues/framed/` and `issues/unframed/` removed; the issues
-  index and the `issue-tracker` concept and its pack skeleton
-  describe the template and the three states; `/file` writes it.
-  The normative tests that pin the three kinds, the framed state and
-  `LIVE_LIFECYCLES` are rewritten to pin the template.
+  and the changelog is rewritten with it; `issues/framed/` and
+  `issues/unframed/` removed; the issues index and the
+  `issue-tracker` concept and its pack skeleton describe the template
+  and the three states; `/file` writes it. The normative tests that
+  pin the three kinds, the framed state and `LIVE_LIFECYCLES` are
+  rewritten to pin the template.
 - Done-check: `superdev validate` passes with 51 issues under `open/`,
   `done/` and `wontfix/` and no other issue folder; no `BugReport`,
   `FeatureRequest` or `Chore` type in the tree; `superdev status`
   reports no drift.
 - Cases: an issue with `kind: feature`, `lifecycle: open` and the six
   headings passes, with prose, bullets or both under Behaviour
-  (covers AC_issue-schema, AC_issue-plain); an open issue carrying
-  Resolution fails, and a done issue without it fails (covers
-  AC_issue-resolution); a document typed `BugReport` is reported as
-  naming no schema (covers AC_old-kinds-gone); the issue schema's
-  rules carry no `item-key`, `item-pattern` or `nested` (covers
-  AC_issue-schema); a normative sweep test finds every issue on file
+  (checks the template and that no key or tag holds an issue); an
+  open issue carrying Resolution fails, and a done issue without it
+  fails (checks Resolution's presence per state); a document typed
+  `BugReport` is reported as naming no schema (checks that the three
+  tracker schemas are gone); the issue schema's rules carry no
+  `item-key`, `item-pattern` or `nested` (checks that the schema
+  declares no item); a normative sweep test finds every issue on file
   typed `Issue` in its lifecycle folder and no `framed` or `unframed`
-  folder (covers AC_issue-sweep); `sokf_search` ranks an `open` issue
-  live and a `done` one settled, and no `framed` value ranks live
-  (covers AC_live-lifecycles); `/file`'s text names the template's
-  headings and `lifecycle: open` (covers AC_issue-schema).
+  folder (checks the sweep); `sokf_search` ranks an `open` issue live
+  and a `done` one settled, and no `framed` value ranks live (checks
+  `LIVE_LIFECYCLES`); `/file`'s text names the template's headings and
+  `lifecycle: open` (checks that `/file` writes the template).
 
-### Slice 4: One plan template, and the plans on file rewritten
+### Block 4: One plan template, and the plans on file rewritten
 
-- [ ] Done — ticked by integrate at merge.
+- [x] Done — ticked by integrate at merge.
 - Depends-on: none.
 - Change: `pack/knowledge/schemas/plan.md` — `type: Plan`, id
   `plan-\d{3}-[a-z0-9-]+`, `lifecycle` enum `open|done|abandoned`;
@@ -181,22 +206,25 @@ section as it goes.
   by key where one exists), Deferred decisions (bullet-list,
   optional); one example. `feature-plan.md` and `adhoc-plan.md`
   deleted from the pack, the owned copies and the schemas index. The
-  36 plans on file rewritten — Slices become Work blocks, an ad-hoc
+  27 plans on file rewritten — Slices become Work blocks, an ad-hoc
   plan's sections fold into Goal and Work blocks, a feature plan's
   Contract changes recovered from its issue's contract links — and
-  this plan with them; the plans index follows. The normative tests
-  that pin the two kinds are rewritten.
+  this plan with them; every id drops its kind segment
+  (`plan-026-filing-…`) and every reference to an old id is rewritten
+  with it; the plans index follows. The normative tests that pin the
+  two kinds are rewritten.
 - Done-check: `superdev validate` passes with every plan typed `Plan`;
   no `FeaturePlan` or `AdhocPlan` type in the tree; `superdev status`
   reports no drift.
 - Cases: a plan with Goal, Contract changes, two blocks and no
-  Deferred decisions passes (covers AC_plan-schema); a plan without
-  Contract changes fails naming the heading (covers AC_plan-schema);
-  a document typed `FeaturePlan` is reported as naming no schema
-  (covers AC_old-kinds-gone); a normative sweep test finds every plan
-  on file typed `Plan` (covers AC_plan-schema).
+  Deferred decisions passes (checks the template); a plan without
+  Contract changes fails naming the heading (checks that the section
+  is required); a document typed `FeaturePlan` is reported as naming
+  no schema (checks that the two plan schemas are gone); a normative
+  sweep test finds every plan on file typed `Plan` in its lifecycle
+  folder and conforming (checks the sweep).
 
-### Slice 5: Scope, and contract-design as its sub-skill
+### Block 5: Scope, and contract-design as its sub-skill
 
 - [ ] Done — ticked by integrate at merge.
 - Depends-on: 3, 4.
@@ -222,15 +250,16 @@ section as it goes.
   status` reports no drift; the pack's manifest test passes.
 - Cases: a normative test reads `scope/SKILL.md` and finds the branch
   step, the `/grill-me`, `/contract-design`, `/double-check` calls and
-  the hand-off to `/build` (covers AC_scope-skill); a normative test
-  finds no `frame`, `feature-plan` or `adhoc-plan` skill directory
-  in the pack or under `.claude/skills/` (covers AC_scope-skill); a
-  normative test reads `contract-design/SKILL.md` and finds its
-  input is a plan's contract changes and its hand-off is `/scope`
-  (covers AC_contract-design-sub); the pack manifest lists `scope`
-  and not `frame` (covers AC_scope-skill).
+  the hand-off to `/build` (checks the scope skill's steps); a
+  normative test finds no `frame`, `feature-plan` or `adhoc-plan`
+  skill directory in the pack or under `.claude/skills/` (checks that
+  the three skills are retired); a normative test reads
+  `contract-design/SKILL.md` and finds its input is a plan's contract
+  changes and its hand-off is `/scope` (checks the sub-skill's
+  interface); the pack manifest lists `scope` and not `frame` (checks
+  the pack's skill set).
 
-### Slice 6: Build, execute-plan, accept, and the workflow text
+### Block 6: Build, execute-plan, accept, and the workflow text
 
 - [ ] Done — ticked by integrate at merge.
 - Depends-on: 5.
@@ -256,20 +285,19 @@ section as it goes.
   carries the four-phase flow; `superdev status` reports no drift.
 - Cases: a normative test reads `build/SKILL.md` and finds the
   per-block test step, the single full-suite step after the last
-  block, and no review step (covers AC_build-verifies-once); a
-  normative test finds no `integrate` skill (covers
-  AC_build-verifies-once); a normative test reads
-  `execute-plan/SKILL.md` and finds `superdev run begin`, `advance`,
-  `end` and the `/build` loop, and finds no `execute-feature-plan`
-  skill (covers AC_execute-plan); a normative test reads
-  `accept/SKILL.md` and finds the `/code-review` step before the
-  criteria walk and the return to `/build` (covers AC_accept-reviews);
-  a normative test reads `.agents/superdev.md` and finds the flow
-  `FILE → SCOPE → BUILD → ACCEPT`, an `optional` mark on accept, and
-  no `CONTRACT-DESIGN`, `FEATURE-PLAN` or `INTEGRATE` phase (covers
-  AC_workflow-text).
+  block, and no review step (checks that build verifies once); a
+  normative test finds no `integrate` skill (checks that integrate is
+  retired); a normative test reads `execute-plan/SKILL.md` and finds
+  `superdev run begin`, `advance`, `end` and the `/build` loop, and
+  finds no `execute-feature-plan` skill (checks the driver); a
+  normative test reads `accept/SKILL.md` and finds the `/code-review`
+  step before the criteria walk and the return to `/build` (checks
+  that accept carries the review); a normative test reads
+  `.agents/superdev.md` and finds the flow `FILE → SCOPE → BUILD →
+  ACCEPT`, an `optional` mark on accept, and no `CONTRACT-DESIGN`,
+  `FEATURE-PLAN` or `INTEGRATE` phase (checks the workflow text).
 
-### Slice 7: The concepts and the records
+### Block 7: The concepts and the records
 
 - [ ] Done — ticked by integrate at merge.
 - Depends-on: 6.
@@ -291,17 +319,16 @@ section as it goes.
   as history in an ADR, an issue or the changelog; `superdev status`
   reports no drift.
 - Cases: a normative test greps the concepts, the skills and the
-  README for the retired names and finds none (covers
-  AC_workflow-text); a normative test finds ADR-050 active with
-  `supersedes` links to ADR-031 and ADR-048, both under
-  `adrs/deprecated/`, and a `references` link to ADR-046 (covers
-  AC_adrs); the glossary defines Scope, Work block and Plan and no
-  longer defines Frame, Slice, Framed or Unframed (covers
-  AC_workflow-text).
+  README for the retired names and finds none (checks the workflow
+  text); a normative test finds ADR-050 active with `supersedes`
+  links to ADR-031 and ADR-048, both under `adrs/deprecated/`, and a
+  `references` link to ADR-046 (checks the ADRs); the glossary
+  defines Scope, Work block and Plan and no longer defines Frame,
+  Slice, Framed or Unframed (checks the glossary).
 
 ## Deferred decisions
 
-- Slice 1 (built; the question is wording): contract-010's "Nested
+- Block 1 (built; the question is wording): contract-010's "Nested
   items" paragraph says a marker beyond the declared depth "is text of
   the item it sits in", and its "What an item is" paragraph says a
   nested item's lines are dropped from the item above. The validator
@@ -309,7 +336,7 @@ section as it goes.
   the item's text, so a promise's pattern never reads a deeper note.
   Should the "Nested items" paragraph say "is dropped from the item it
   sits in, as an undeclared nested item's lines are"? Blocks nothing.
-- Slice 2 (built; the question is scope): the nested rule carries
+- Block 2 (built; the question is scope): the nested rule carries
   `item-key`, `item-pattern` and `required`, as the plan lists, and no
   `item-prohibited-pattern`, so a criterion carrying `MUST` beside its
   `SHALL` passes while a promise's does not. Should the criterion be

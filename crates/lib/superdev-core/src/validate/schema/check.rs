@@ -1474,7 +1474,8 @@ mod schema_parity {
             assert!(errs.is_empty(), "{}: {errs:?}", path.display());
             checked += 1;
         }
-        // 38 since the three tracker schemas folded into one (I052, ADR-050).
-        assert_eq!(checked, 38, "every schema is checked");
+        // 37 since the three tracker schemas and the two plan schemas folded
+        // into one each (I052, ADR-050).
+        assert_eq!(checked, 37, "every schema is checked");
     }
 }

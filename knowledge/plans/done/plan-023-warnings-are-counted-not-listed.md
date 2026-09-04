@@ -1,25 +1,43 @@
 ---
-type: FeaturePlan
-id: plan-023-feature-warnings-are-counted-not-listed
-title: A warning is counted by default and listed on request — feature plan
-description: Slices delivering `--warnings`, the shared default for the CLI and the hooks, and the counts `--json` has never carried.
+type: Plan
+id: plan-023-warnings-are-counted-not-listed
+title: A warning is counted by default and listed on request
+description: Blocks delivering `--warnings`, the shared default for the CLI and the hooks, and the counts `--json` has never carried.
 lifecycle: done
 ---
 
-# Feature plan: A warning is counted by default and listed on request
+# Plan: A warning is counted by default and listed on request
 
 Request:
 [issue-036-validate-prints-warnings-by-default][sokf:issue-036-validate-prints-warnings-by-default]
 
-## Slices
+## Goal
 
-### Slice 1: The report lists a warning only when asked
+A bare `superdev validate` lists every error, lists no warning and states
+both counts; `--warnings` lists every finding of both severities. The
+PostToolUse and Stop hooks default as the command line does, so one rule
+governs whoever ran the check, and `--json` carries both counts and the
+findings the text run listed. What is shown changes and what the run
+decides does not, so no exit code moves.
+
+## Contract changes
+
+- contract-002-cli-superdev: the `--warnings` flag, declared ahead of the
+  build, is closed; `validate` lists no warning without the flag and states
+  both counts with or without it; `hook validate` and `hook run` share the
+  bare command's default; the `--json` object carries the `errors` and
+  `warnings` counts and the `documents` and `schemas` keys the binary
+  emitted undeclared.
+
+## Work blocks
+
+### Block 1: The report lists a warning only when asked
 
 - [x] Done — ticked by integrate at merge.
 - Depends-on: none.
 - Change: `ValidateArgs` gains `--warnings`, which
   [contract-002][sokf:contract-002-cli-superdev] already declares, so this
-  slice closes the pending element and the CLI drift test with it
+  block closes the pending element and the CLI drift test with it
   ([ADR-038][sokf:adr-038-a-contract-may-promise-what-is-not-built-yet]).
   `Report::render_human` in `crates/lib/superdev-core/src/validate/sokf.rs`
   takes whether to list warnings; the counts in the summary line come from
@@ -43,7 +61,7 @@ Request:
     repository exit 0 alike and differ only in the listed lines — covers
     1, 2, 6.
 
-### Slice 2: `--json` carries both counts and the same findings
+### Block 2: `--json` carries both counts and the same findings
 
 - [x] Done — ticked by integrate at merge.
 - Depends-on: 1.
@@ -70,7 +88,7 @@ Request:
     [I043][sokf:issue-043-the-cli-contracts-json-keys-are-bound-by-no-test],
     which the framed issue puts out of scope.
 
-### Slice 3: The hooks default like the command line
+### Block 3: The hooks default like the command line
 
 - [x] Done — ticked by integrate at merge.
 - Depends-on: 1.

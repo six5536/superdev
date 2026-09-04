@@ -37,7 +37,7 @@ The surfaces the backport reaches, with the counts that bound them:
   schema. `cargo run -- validate --knowledge pack/knowledge/concepts`
   reports 19 errors, of which 18 are "names no schema".
 - `pack/knowledge/concepts/manifest.sokf.yaml` declares `sokf: "0.2"`
-  against a live tree [P010][sokf:plan-010-adhoc-links-address-ids] took
+  against a live tree [P010][sokf:plan-010-links-address-ids] took
   to 0.4.
 - `pack/sokf/agents/sokf/SPEC.md` is SOKF 0.3 — it carries neither §8's
   id-addressed body link nor §9's generated definition block, so the
@@ -122,4 +122,4 @@ vocabulary.
 [sokf:issue-005-a-backport-leaves-the-lock-stale]: /knowledge/issues/done/issue-005-a-backport-leaves-the-lock-stale.md
 [sokf:issue-016-sync-would-revert-the-schema-migration]: /knowledge/issues/done/issue-016-sync-would-revert-the-schema-migration.md
 [sokf:issue-020-the-schemas-do-not-ship]: /knowledge/issues/done/issue-020-the-schemas-do-not-ship.md
-[sokf:plan-010-adhoc-links-address-ids]: /knowledge/plans/done/plan-010-adhoc-links-address-ids.md
+[sokf:plan-010-links-address-ids]: /knowledge/plans/done/plan-010-links-address-ids.md

@@ -54,7 +54,7 @@ example: |
 
   ## Planning & design
 
-  * [Feature Plan Schema][sokf:schema-feature-plan] - the feature's slice list — per slice a done-check, its test-plan cases and a done marker — filed among the plans.
+  * [Plan Schema][sokf:schema-plan] - the one design document a piece of work carries — its goal, the contract changes it makes, its work blocks with their cases, and the decisions deferred to the user — filed among the plans.
   * [ADR Schema][sokf:schema-adr] - architecture decision records — context, the decision, options considered and consequences — filed among the ADRs.
 
   ## Change delivery

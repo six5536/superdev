@@ -429,6 +429,326 @@ fn the_issues_index_lists_every_issue_on_file() {
     );
 }
 
+/// The three lifecycle values the plan schema declares, in order (ADR-050).
+const PLAN_LIFECYCLES: [&str; 3] = ["open", "done", "abandoned"];
+
+/// The four headings of the plan template, in order.
+const PLAN_HEADINGS: [&str; 4] = [
+    "Goal",
+    "Contract changes",
+    "Work blocks",
+    "Deferred decisions",
+];
+
+/// One block of a plan, as the template writes it.
+fn block(n: u8, depends_on: &str) -> String {
+    format!(
+        "### Block {n}: probe\n\n- [ ] Done — ticked by build at its commit.\n\
+         - Depends-on: {depends_on}.\n- Change: a line.\n- Done-check: a line.\n\
+         - Cases: a case (covers AC_probe).\n\n"
+    )
+}
+
+/// One plan body in `lifecycle`: Goal, `contract_changes` where the section
+/// is carried, two blocks, and `tail` after them — Deferred decisions, or
+/// nothing.
+fn plan_in(lifecycle: &str, contract_changes: Option<&str>, tail: &str) -> String {
+    let contract_changes = contract_changes
+        .map(|bullets| format!("## Contract changes\n\n{bullets}\n"))
+        .unwrap_or_default();
+    format!(
+        "---\ntype: Plan\nid: plan-999-probe\ntitle: t\ndescription: d\n\
+         lifecycle: {lifecycle}\n---\n\n# Plan: probe\n\nRequest: [issue-999-probe][sokf:issue-999-probe]\n\n\
+         ## Goal\n\nA line.\n\n{contract_changes}## Work blocks\n\n{}{}{tail}",
+        block(1, "none"),
+        block(2, "1"),
+    )
+}
+
+/// The Deferred decisions section a plan may carry.
+const DEFERRED: &str = "## Deferred decisions\n\n- Block 2: a question. Blocks nothing.\n";
+
+/// Covers I052's plan criterion: under the live schema set a plan in each
+/// lifecycle passes with Goal, Contract changes — a contract's bullet or
+/// the single bullet "none" — two blocks and no Deferred decisions, and
+/// passes with them.
+#[test]
+fn a_plan_with_the_four_sections_passes() {
+    for lifecycle in PLAN_LIFECYCLES {
+        for changes in [
+            "- none.",
+            "- contract-010: `P_nested-binds` added; `AC_nested-key` added.",
+        ] {
+            for tail in ["", DEFERRED] {
+                let found = findings_of("Plan", "probe.md", &plan_in(lifecycle, Some(changes), tail));
+                assert!(found.is_empty(), "{lifecycle}: {found:#?}");
+            }
+        }
+    }
+}
+
+/// Covers I052's plan criterion: a plan without Contract changes fails
+/// naming the heading, as does one without Goal, and a plan whose blocks
+/// are slices fails naming the block rule.
+#[test]
+fn a_plan_without_contract_changes_fails_naming_the_heading() {
+    let found = findings_of("Plan", "probe.md", &plan_in("open", None, ""));
+    assert_eq!(found.len(), 1, "{found:#?}");
+    assert!(
+        found[0].contains("missing required section \"Contract changes\""),
+        "{found:#?}"
+    );
+    let sound = plan_in("open", Some("- none."), "");
+    let found = findings_of("Plan", "probe.md", &sound.replace("### Block ", "### Slice "));
+    assert_eq!(found.len(), 1, "{found:#?}");
+    assert!(
+        found[0].contains("missing required section matching /^Block \\d+: .+$/"),
+        "{found:#?}"
+    );
+    let found = findings_of("Plan", "probe.md", &sound.replace("## Goal\n\nA line.\n", ""));
+    assert_eq!(found.len(), 1, "{found:#?}");
+    assert!(
+        found[0].contains("missing required section \"Goal\""),
+        "{found:#?}"
+    );
+}
+
+/// A plan's id keeps its number and carries no kind segment.
+#[test]
+fn a_plan_carries_a_plain_id() {
+    let sound = plan_in("open", Some("- none."), "");
+    let found = findings_of(
+        "Plan",
+        "probe.md",
+        &sound.replace("id: plan-999-probe", "id: plan-999-kind-probe"),
+    );
+    assert!(found.is_empty(), "the pattern admits any slug: {found:#?}");
+    let found = findings_of(
+        "Plan",
+        "probe.md",
+        &sound.replace("id: plan-999-probe", "id: feature-plan-999"),
+    );
+    assert_eq!(found.len(), 1, "{found:#?}");
+    assert!(found[0].contains("`id`"), "{found:#?}");
+}
+
+/// Covers I052 AC_old-kinds-gone: a document typed by a retired plan kind
+/// names no schema, and no retired schema file ships in either tree or is
+/// listed by its index.
+#[test]
+fn a_retired_plan_type_names_no_schema() {
+    for retired in ["FeaturePlan", "AdhocPlan"] {
+        let found = findings_of(retired, "probe.md", "---\ntype: x\n---\n# x\n");
+        assert_eq!(found.len(), 1, "{retired}: {found:#?}");
+        assert!(
+            found[0].contains(&format!("type `{retired}` names no schema")),
+            "{retired}: {found:#?}"
+        );
+    }
+    for root in ["knowledge/schemas", "pack/knowledge/schemas"] {
+        for retired in ["feature-plan.md", "adhoc-plan.md"] {
+            assert!(
+                !repo(&format!("{root}/{retired}")).exists(),
+                "{root} still ships {retired}"
+            );
+        }
+        let index = std::fs::read_to_string(repo(&format!("{root}/index.md"))).unwrap();
+        for retired in ["schema-feature-plan", "schema-adhoc-plan"] {
+            assert!(!index.contains(retired), "{root}/index.md lists {retired}");
+        }
+        assert!(
+            index.contains("[sokf:schema-plan]"),
+            "{root}/index.md does not list the plan schema"
+        );
+    }
+}
+
+/// Covers I052's plan criterion as declared: the plan schema declares
+/// `type: Plan`, an id with no kind segment, `lifecycle` over the three
+/// values, the four headings in order — Goal prose, Contract changes and
+/// Deferred decisions bullet lists, Work blocks carrying a repeatable
+/// `Block n:` bullet-list subsection — and one example that passes its own
+/// check; in the live tree and in the pack mirror, byte-equal.
+#[test]
+fn the_plan_schema_declares_the_template() {
+    let copies = [
+        "knowledge/schemas/plan.md",
+        "pack/knowledge/schemas/plan.md",
+    ]
+    .map(|p| (p, same(&std::fs::read_to_string(repo(p)).unwrap())));
+    assert_eq!(
+        copies[0].1, copies[1].1,
+        "the pack copy differs from the live one"
+    );
+    for (path, text) in &copies {
+        assert!(text.contains("    const: Plan\n"), "{path}: the type is Plan");
+        assert!(
+            text.contains("    pattern: '^plan-\\d{3}-[a-z0-9-]+$'\n"),
+            "{path}: the id carries no kind segment"
+        );
+        assert!(
+            text.contains("    enum: [open, done, abandoned]\n"),
+            "{path}: lifecycle admits the three values"
+        );
+        let block = fenced_block(text, "yaml").expect("the schema carries a yaml contract");
+        let y: serde_yaml_ng::Value = serde_yaml_ng::from_str(&block).unwrap();
+        let sections = y["sections"].as_sequence().expect("sections");
+        let headings: Vec<&str> = sections
+            .iter()
+            .filter_map(|s| s["heading"].as_str())
+            .collect();
+        assert_eq!(headings, PLAN_HEADINGS, "{path}: the four headings in order");
+        let content = |heading: &str| {
+            sections
+                .iter()
+                .find(|s| s["heading"].as_str() == Some(heading))
+                .and_then(|s| s["content"].as_str())
+        };
+        assert_eq!(content("Goal"), Some("prose"), "{path}");
+        assert_eq!(content("Contract changes"), Some("bullet-list"), "{path}");
+        assert_eq!(content("Deferred decisions"), Some("bullet-list"), "{path}");
+        let block = sections
+            .iter()
+            .find(|s| s["heading-pattern"].as_str() == Some(r"^Block \d+: .+$"))
+            .unwrap_or_else(|| panic!("{path}: no `Block n:` rule"));
+        assert_eq!(block["level"].as_u64(), Some(3), "{path}");
+        assert_eq!(block["required"].as_bool(), Some(true), "{path}");
+        assert_eq!(block["repeatable"].as_bool(), Some(true), "{path}");
+        assert_eq!(block["content"].as_str(), Some("bullet-list"), "{path}");
+        for heading in ["Goal", "Contract changes", "Work blocks"] {
+            let rule = sections
+                .iter()
+                .find(|s| s["heading"].as_str() == Some(heading))
+                .unwrap();
+            assert_eq!(rule["required"].as_bool(), Some(true), "{path}: {heading}");
+        }
+        assert!(
+            y["example"].as_str().is_some(),
+            "{path}: one example, not one per variant"
+        );
+    }
+    let schema: Vec<(String, String)> = schemas("knowledge/schemas")
+        .into_iter()
+        .filter(|(name, _)| name == "plan.md")
+        .collect();
+    assert_eq!(schema.len(), 1);
+    let found = superdev_core::validate::schema::document::check_examples(&schema);
+    assert!(found.is_empty(), "{found:#?}");
+}
+
+/// Every plan on file: its folder, its file name and its text, read
+/// straight from the plans' lifecycle folders.
+fn plans_on_file() -> Vec<(&'static str, String, String)> {
+    let mut out = Vec::new();
+    for state in PLAN_LIFECYCLES {
+        let dir = repo(&format!("knowledge/plans/{state}"));
+        let Ok(entries) = std::fs::read_dir(&dir) else {
+            continue;
+        };
+        for entry in entries {
+            let path = entry.unwrap().path();
+            if path.extension().is_none_or(|e| e != "md") {
+                continue;
+            }
+            let name = path.file_name().unwrap().to_str().unwrap().to_string();
+            let text = same(&std::fs::read_to_string(&path).unwrap());
+            out.push((state, name, text));
+        }
+    }
+    out.sort_by(|a, b| a.1.cmp(&b.1));
+    out
+}
+
+/// Covers I052's plan criterion: every plan on file is typed `Plan`, sits
+/// in the folder its `lifecycle` names, carries an id with no kind segment
+/// that names its file, and the plans directory has no folder outside the
+/// three; the sweep's proof, read straight from the folders rather than
+/// through the schema.
+#[test]
+fn every_plan_on_file_is_typed_plan_in_its_lifecycles_folder() {
+    let plans = plans_on_file();
+    for (state, name, text) in &plans {
+        assert_eq!(frontmatter_of(text, "type"), Some("Plan"), "{name}");
+        assert_eq!(
+            frontmatter_of(text, "lifecycle"),
+            Some(*state),
+            "{name}: filed under {state}/"
+        );
+        let id = frontmatter_of(text, "id").unwrap_or_else(|| panic!("{name}: no id"));
+        assert_eq!(
+            format!("{id}.md"),
+            *name,
+            "{name}: the file is named by its id"
+        );
+        let slug = &id["plan-000-".len()..];
+        assert!(
+            !slug.starts_with("feature-") && !slug.starts_with("adhoc-"),
+            "{name}: the id keeps its kind segment"
+        );
+        assert!(
+            !text.contains("\n### Slice ") && !text.contains("\n### W"),
+            "{name}: a slice or a workstream remains"
+        );
+    }
+    let mut folders: Vec<String> = std::fs::read_dir(repo("knowledge/plans"))
+        .unwrap()
+        .filter_map(|e| {
+            let e = e.unwrap();
+            e.path()
+                .is_dir()
+                .then(|| e.file_name().to_str().unwrap().to_string())
+        })
+        .collect();
+    folders.sort_unstable();
+    assert!(
+        folders.iter().all(|f| PLAN_LIFECYCLES.contains(&f.as_str())),
+        "a folder outside the three states: {folders:?}"
+    );
+    assert!(plans.len() >= 27, "the plans were read: {}", plans.len());
+}
+
+/// Covers I052's plan criterion: every plan on file conforms to the plan
+/// schema, in the live tree.
+#[test]
+fn every_plan_on_file_conforms() {
+    let (set, load) = SchemaSet::load(&schemas("knowledge/schemas"));
+    assert!(load.is_empty(), "{load:#?}");
+    let plans = plans_on_file();
+    for (_, name, text) in &plans {
+        let doc = Document {
+            path: name,
+            text,
+            doc_type: Some("Plan"),
+        };
+        let found = check_documents(&[doc], &set);
+        assert!(found.is_empty(), "{name}: {found:#?}");
+    }
+    assert!(plans.len() >= 27, "the plans were read: {}", plans.len());
+}
+
+/// The plans index lists every plan on file by its id and no other, and
+/// names neither retired kind.
+#[test]
+fn the_plans_index_lists_every_plan_on_file() {
+    let index = same(&std::fs::read_to_string(repo("knowledge/plans/index.md")).unwrap());
+    let plans = plans_on_file();
+    for (state, name, _) in &plans {
+        let id = name.strip_suffix(".md").unwrap();
+        assert!(
+            index.contains(&format!("[sokf:{id}]: /knowledge/plans/{state}/{name}")),
+            "the plans index does not list {id} under {state}/"
+        );
+    }
+    let listed = index
+        .lines()
+        .filter(|line| line.starts_with("[sokf:plan-"))
+        .count();
+    assert_eq!(listed, plans.len(), "the index lists a plan not on file");
+    for retired in ["Feature plans", "Ad-hoc plans", "FeaturePlan", "AdhocPlan"] {
+        assert!(!index.contains(retired), "the index names `{retired}`");
+    }
+}
+
 /// The four declarations ADR-047 puts on a promise section, as the contract
 /// schema writes them: the `P_` key, the tag-and-verb item, the modal verb
 /// bound to items, and the retired or repeated verb no item may carry.
@@ -1295,21 +1615,18 @@ fn no_test_compares_a_fenced_block_of_an_included_contract_to_the_binary() {
     );
 }
 
-/// Covers I035 criterion 13: the plan schema and the feature-plan skill both
-/// state that a slice closing a contract-implementation gap sorts first
-/// (ADR-044), in the live tree and in the pack mirror.
+/// Covers I035 criterion 13: the plan schema states that a block closing a
+/// contract-implementation gap sorts first (ADR-044), in the live tree and
+/// in the pack mirror. The skill that writes a plan reads the rule there
+/// (ADR-050).
 #[test]
 fn the_plan_orders_a_contract_gap_first() {
-    for p in [
-        "knowledge/schemas/feature-plan.md",
-        "pack/knowledge/schemas/feature-plan.md",
-        ".claude/skills/feature-plan/SKILL.md",
-        "pack/knowledge/skills/feature-plan/SKILL.md",
-    ] {
+    for p in ["knowledge/schemas/plan.md", "pack/knowledge/schemas/plan.md"] {
         let text = std::fs::read_to_string(repo(p)).expect("the file is on file");
+        let rule = rule_for(&text, "Work blocks");
         assert!(
-            text.contains("contract-implementation gap"),
-            "{p} does not state the ordering rule"
+            rule.contains("contract-implementation gap"),
+            "{p} does not state the ordering rule under Work blocks"
         );
     }
 }

@@ -5,7 +5,7 @@ title: Code review — filing an issue without framing it
 description: Review of plan-026's six slices on `feature/030-filing-an-issue-without-framing-it`; one major finding — the accept skill still files a gap issue as `open`, a value the shipped schema refuses — seven minor ones and two nits.
 links:
   - rel: references
-    to: plan-026-feature-filing-an-issue-without-framing-it
+    to: plan-026-filing-an-issue-without-framing-it
     note: The plan whose six slices this review reads.
   - rel: references
     to: issue-030-filing-an-issue-requires-framing-it
@@ -17,7 +17,7 @@ links:
 ## Verdict
 
 The six slices of
-[plan-026][sokf:plan-026-feature-filing-an-issue-without-framing-it]
+[plan-026][sokf:plan-026-filing-an-issue-without-framing-it]
 deliver
 [I030][sokf:issue-030-filing-an-issue-requires-framing-it]:
 the validator selects one rule per heading per variant, the three
@@ -206,7 +206,7 @@ Two nits: a skill count and a numbering sentence.
   `[conditional]`, words unchanged; I028 and I029 were checked and carry
   the tag their sentences take.
 
-### 8. `AC_records` has no test though its cases say `unit` — knowledge/plans/open/plan-026-feature-filing-an-issue-without-framing-it.md:251
+### 8. `AC_records` has no test though its cases say `unit` — knowledge/plans/open/plan-026-filing-an-issue-without-framing-it.md:251
 
 - Severity: minor
 - Category: test-coverage
@@ -335,4 +335,4 @@ Two nits: a skill count and a numbering sentence.
 
 <!-- sokf:links -->
 [sokf:issue-030-filing-an-issue-requires-framing-it]: /knowledge/issues/done/issue-030-filing-an-issue-requires-framing-it.md
-[sokf:plan-026-feature-filing-an-issue-without-framing-it]: /knowledge/plans/done/plan-026-feature-filing-an-issue-without-framing-it.md
+[sokf:plan-026-filing-an-issue-without-framing-it]: /knowledge/plans/done/plan-026-filing-an-issue-without-framing-it.md

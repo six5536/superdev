@@ -7,7 +7,7 @@ kind: feature
 lifecycle: open
 links:
   - rel: references
-    to: plan-006-adhoc-rust-format-validator
+    to: plan-006-rust-format-validator
 ---
 
 # Feature: the shape SPEC §9 gives an index is described but never enforced
@@ -25,7 +25,7 @@ would not.
 The natural home is a schema over `knowledge/**/index.md`, which is what
 schemas are for. That cannot run until schemas are applied to the documents
 they govern, which
-[the format-validator plan][sokf:plan-006-adhoc-rust-format-validator]
+[the format-validator plan][sokf:plan-006-rust-format-validator]
 lists as a non-goal.
 
 ## Context
@@ -89,4 +89,4 @@ Alternatives considered:
   the specification's rule rather than a schema's.
 
 <!-- sokf:links -->
-[sokf:plan-006-adhoc-rust-format-validator]: /knowledge/plans/done/plan-006-adhoc-rust-format-validator.md
+[sokf:plan-006-rust-format-validator]: /knowledge/plans/done/plan-006-rust-format-validator.md

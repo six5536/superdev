@@ -1,21 +1,23 @@
 ---
-type: FeaturePlan
-id: plan-024-feature-a-contract-includes-its-definition
-title: A contract includes its definition — feature plan
-description: Slices delivering I049 — the source include, the sixth content kind, schema variants, the one contract schema, the skills' judgement and declaration steps, the migration of nine contracts, and the deletion of fifteen schemas and four copy-comparing tests.
+type: Plan
+id: plan-024-a-contract-includes-its-definition
+title: A contract includes its definition
+description: Blocks delivering I049 — the source include, the sixth content kind, schema variants, the one contract schema, the skills' judgement and declaration steps, the migration of nine contracts, and the deletion of fifteen schemas and four copy-comparing tests.
 lifecycle: done
 links:
   - rel: implements
     to: issue-049-a-contract-cannot-point-at-its-definition
-    note: The framed feature whose twenty-four criteria these slices deliver.
+    note: The framed feature whose twenty-four criteria these blocks deliver.
   - rel: references
     to: contract-010-interface-document-schemas
-    note: Carries three PENDING promises; slices 2 and 3 close them, so they run before the slices that do not own them.
+    note: Carries three PENDING promises; blocks 2 and 3 close them, so they run before the blocks that do not own them.
 ---
 
-# Feature plan: A contract includes its definition
+# Plan: A contract includes its definition
 
 Request: [issue-049-a-contract-cannot-point-at-its-definition][sokf:issue-049-a-contract-cannot-point-at-its-definition]
+
+## Goal
 
 The mechanism first, because it is the riskiest and everything reads
 through it. Then the two schema-layer changes that close
@@ -31,14 +33,55 @@ overwrites the copy: `.agents/sokf/SPEC.md` from
 `pack/sokf/agents/sokf/SPEC.md`; `.agents/sokf/grammar.yaml` from
 `crates/lib/superdev-core/src/validate/schema/grammar.yaml`, embedded
 in the binary; and every `knowledge/schemas/*.md` from
-`pack/knowledge/schemas/`. A slice edits the source, runs `cargo run --
+`pack/knowledge/schemas/`. A block edits the source, runs `cargo run --
 sync`, and commits the moved lock hashes; `superdev status` reporting
-no drift is part of its done-check. Slice 2 found this — the plan first
+no drift is part of its done-check. Block 2 found this — the plan first
 named the pack as the grammar's source.
 
-## Slices
+## Contract changes
 
-### Slice 1: An include block names a source region
+- contract-002-cli-superdev: becomes `type: Contract`, `kind: cli`,
+  titled `# CLI contract: superdev`; its Definition is source includes
+  over every clap struct and enum, replacing the hand-written YAML
+  block; its Behaviour, Exit codes and Streams regroup as `###` under
+  Behaviour (block 6).
+- contract-003-api-sokf: becomes `kind: api`, titled `# API contract:
+  sokf over MCP`; its Definition is an include over the tool
+  registrations in `mcp.rs`; its sections regroup likewise (block 6).
+- contract-004-config-superdev: becomes `kind: config`, renamed to its
+  kind token; its Definition is an include over the `serde` struct
+  that reads `config.toml`, and the Settings table is replaced by the
+  struct's doc-commented fields (block 7).
+- contract-005-format-pack: becomes `kind: format`, renamed to its kind
+  token; its Definition is an include over the `pack.toml` struct
+  (block 7).
+- contract-006-format-lock: becomes `kind: format`, renamed to its kind
+  token; its Definition is an include over the `lock.toml` struct
+  (block 7).
+- contract-007-interface-pack-resolution: becomes `kind: interface`;
+  its Data model & API is replaced by includes over the `pub` items it
+  declares; Module boundaries, Key flows and Cross-cutting concerns
+  regroup as `###` under Behaviour; Stability reads "Internal. Changes
+  with the crate." (block 8).
+- contract-008-format-template: becomes `kind: format`; its Definition
+  is includes over the token list and the template registry in
+  `templates.rs`; the tree listing that was its `text` block is
+  withdrawn (block 9).
+- contract-009-interface-run-state: becomes `kind: interface`; its Data
+  model & API is replaced by includes, its sections regroup under
+  Behaviour, and Stability reads "Internal. Changes with the crate."
+  (block 8).
+- contract-010-interface-document-schemas: `include` added as the sixth
+  content kind and `block-language`, `block-keys` and
+  `block-entry-keys` withdrawn (block 2); `variant-key`, `variants`
+  and the keyed `example` added with their mis-declarations (block 3);
+  the three PENDING marks removed; becomes `kind: interface` with its
+  vocabulary included from `document.rs`, where `SectionRule` and
+  `DocSchema` are the declaration (block 8).
+
+## Work blocks
+
+### Block 1: An include block names a source region
 
 - [x] Done — ticked by integrate at merge.
 - Depends-on: none.
@@ -90,7 +133,7 @@ named the pack as the grammar's source.
     block, a second run writes nothing, and `superdev validate` after
     an edit inside the region exits 1 naming the path — covers 1, 2, 4.
 
-### Slice 2: A sixth content kind, and the block declarations withdrawn
+### Block 2: A sixth content kind, and the block declarations withdrawn
 
 - [x] Done — ticked by integrate at merge.
 - Depends-on: 1.
@@ -128,7 +171,7 @@ named the pack as the grammar's source.
   - e2e: `superdev validate` on this repository passes with the contract
     schema's Definition declared `include` — covers 7, 9.
 
-### Slice 3: A schema declares variants
+### Block 3: A schema declares variants
 
 - [x] Done — ticked by integrate at merge.
 - Depends-on: none.
@@ -169,7 +212,7 @@ named the pack as the grammar's source.
   - unit: a schema with no `variant-key` and a string `example` is
     checked exactly as before — covers 13.
 
-### Slice 4: The contract schema in its final form
+### Block 4: The contract schema in its final form
 
 - [x] Done — ticked by integrate at merge.
 - Depends-on: 2, 3.
@@ -199,7 +242,7 @@ named the pack as the grammar's source.
   - e2e: `superdev validate` on this repository passes with the schema
     carrying twelve examples — covers 8, 14, 15.
 
-### Slice 5: The skills ask and declare
+### Block 5: The skills ask and declare
 
 - [x] Done — ticked by integrate at merge.
 - Depends-on: 4.
@@ -230,7 +273,7 @@ named the pack as the grammar's source.
   - integration: `superdev status` reports the three skills unchanged
     after `sync`, so the pack ships them — covers 22.
 
-### Slice 6: The CLI and MCP contracts include their source
+### Block 6: The CLI and MCP contracts include their source
 
 - [x] Done — ticked by integrate at merge.
 - Depends-on: 1, 4.
@@ -265,7 +308,7 @@ named the pack as the grammar's source.
     `contract-002` or `contract-003` to compare it to the binary —
     covers 21.
 
-### Slice 7: The config and format contracts include their structs
+### Block 7: The config and format contracts include their structs
 
 - [x] Done — ticked by integrate at merge.
 - Depends-on: 1, 4.
@@ -285,7 +328,7 @@ named the pack as the grammar's source.
   - e2e: no test compares a TOML block from a contract to the parser —
     covers 21.
 
-### Slice 8: The interface contracts include their modules
+### Block 8: The interface contracts include their modules
 
 - [x] Done — ticked by integrate at merge.
 - Depends-on: 1, 4.
@@ -308,7 +351,7 @@ named the pack as the grammar's source.
   - e2e: no test matches signatures out of a contract against source —
     covers 21.
 
-### Slice 9: The template contract includes its tree
+### Block 9: The template contract includes its tree
 
 - [x] Done — ticked by integrate at merge.
 - Depends-on: 1, 4.
@@ -322,7 +365,7 @@ named the pack as the grammar's source.
 - Done-check: `contract-008` validates; its Definition shows the token
   and template registries from `templates.rs`; the test plan-021 slice
   12 wrote to compare the block to `templates.rs` — in
-  `crates/lib/superdev-core/tests/contract_template.rs` since slice 7
+  `crates/lib/superdev-core/tests/contract_template.rs` since block 7
   moved it out of `contract_files.rs` — is deleted with its file, the
   `every_drift_test_names_the_direction_it_failed_in` entry naming it
   goes, and the behaviour tests of substitution stay.
@@ -332,7 +375,7 @@ named the pack as the grammar's source.
   - e2e: no test compares a block from `contract-008` to
     `templates.rs` — covers 23.
 
-### Slice 10: Fifteen schemas go, and the records catch up
+### Block 10: Fifteen schemas go, and the records catch up
 
 - [x] Done — ticked by integrate at merge. Sixteen kind schemas were on
   file, not fifteen: the count omitted `contract-interface`.

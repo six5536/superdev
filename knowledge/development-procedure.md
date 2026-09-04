@@ -22,10 +22,10 @@ no Node.
    filed as a tracker issue — unframed by `/file`, or framed by
    `/frame` — and is framed when taken up, its acceptance criteria EARS
    sentences; the contracts it touches are updated in place and linked
-   from the issue, and the plan is filed as `plan-<nnn>-feature-<slug>`
-   (`lifecycle: done` in the commit that completes the work). One-off
-   work takes `/adhoc-plan`, and its plan is filed beside it as
-   `plan-<nnn>-adhoc-<slug>`.
+   from the issue, and the plan is filed as `plan-<nnn>-<slug>` per
+   `schema-plan` (`lifecycle: done` in the commit that completes the
+   work). One-off work takes `/adhoc-plan`, and its plan is filed in
+   the same series and template.
 2. One branch per feature: `/frame` cuts `feature/<nnn>-<slug>` off
    `main`, `<nnn>` the framed issue's number, and an adhoc plan that
    touches code runs on `adhoc/<nnn>-<slug>`, `<nnn>` the plan's. A human
@@ -96,8 +96,8 @@ One search trap: plans and issues quote the question you are asking, at
 length, in prose. A search for behaviour will happily return the plan that
 proposed it over the concept that documents it. `sokf_search`'s `types` and
 `lifecycle` filters scope the hunt — filter to the reference kinds for how
-things work now, to `["FeaturePlan", "AdhocPlan"]` or the decision kinds
-when you want the reasoning behind them.
+things work now, to `["Plan"]` or the decision kinds when you want the
+reasoning behind them.
 
 [^contributing]: Contributing guide
 

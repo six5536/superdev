@@ -122,7 +122,7 @@ Alternatives considered:
 
 ## Resolution
 
-Delivered by [plan-016][sokf:plan-016-feature-schema-layer-enforcement].
+Delivered by [plan-016][sokf:plan-016-schema-layer-enforcement].
 Acceptance on 2026-08-31 walked all six criteria end to end against the
 feature branch head, with the full test suite passing (625 tests): a
 content-kind, pattern, enum and required-key fault each report an error
@@ -154,4 +154,4 @@ fixes the declaration vocabulary, per ADR-022 and ADR-023.
 [sokf:contract-002-cli-superdev]: /knowledge/contracts/public/active/contract-002-cli-superdev.md
 [sokf:contract-010-interface-document-schemas]: /knowledge/contracts/internal/active/contract-010-interface-document-schemas.md
 [sokf:issue-022-a-schemas-worked-example-is-checked-by-nothing]: /knowledge/issues/done/issue-022-a-schemas-worked-example-is-checked-by-nothing.md
-[sokf:plan-016-feature-schema-layer-enforcement]: /knowledge/plans/done/plan-016-feature-schema-layer-enforcement.md
+[sokf:plan-016-schema-layer-enforcement]: /knowledge/plans/done/plan-016-schema-layer-enforcement.md

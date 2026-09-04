@@ -326,6 +326,29 @@ publish a version it cannot find a heading for.
   and `issues/unframed/` into `issues/open/`; delete the emptied
   folders. The id's kind segment may stay — the pattern admits any slug
   (ADR-050).
+- **A plan is one template: Goal, Contract changes, Work blocks, Deferred
+  decisions.** `schema-plan` governs every plan — `type: Plan`, id
+  `plan-<nnn>-<slug>`, `lifecycle` one of `open`, `done`, `abandoned`,
+  the folder the value — a `# Plan: …` heading with a Request line where
+  the plan delivers an issue; Goal in prose; Contract changes as one
+  bullet per contract touched naming the promises and criteria added,
+  changed or withdrawn, or the single bullet "none"; Work blocks as
+  `### Block n: …` bullet lists carrying a Done checkbox, Depends-on,
+  Change, Done-check and Cases — a case citing the contract criteria it
+  covers by key where one exists and stating what it checks otherwise;
+  Deferred decisions optional. Blocks sort by dependency, then a block
+  closing a contract-implementation gap, then risk, as slices did.
+  **`schema-feature-plan` and `schema-adhoc-plan` retire.** superdev's
+  own 27 plans were rewritten by hand — slices became blocks, an ad-hoc
+  plan's fourteen sections folded into the four, a feature plan's
+  contract changes recovered from its issue — and the ids shortened
+  (`plan-026-filing-…`) with every citation. **After a pack update, a
+  managed repository's plans fail `superdev validate`** as documents
+  naming no schema: set each one's `type` to `Plan`, retitle it
+  `# Plan: …`, fold the body into Goal, Contract changes, Work blocks
+  and Deferred decisions with `### Slice n:` or `### Wn:` headings
+  becoming `### Block n:`, and run `superdev validate --fix`. The id's
+  kind segment may stay — the pattern admits any slug (ADR-050).
 - **An issue's lifecycle was `unframed`, `framed`, `done` or `wontfix`,
   and the tracker schemas varied by it.** `/frame` set `framed` and the
   later phases gated on it; an unframed issue was held to its list kinds
@@ -727,58 +750,30 @@ publish a version it cannot find a heading for.
 ### Security
 
 - A pack source can no longer choose what superdev runs, or what it arrives
-  over. A `[[packs]]` entry arrives with a repository, and git's `ext::`
-  transport takes a command as its connection — so on a machine configured to
-  permit that transport, running `sync` or `update` in a repo you cloned ran
-  whatever its manifest named. A source may now name only `https`, `ssh` or
-  `file`, and a `<name>::<address>` remote helper is refused as one whatever
-  its address; anything else is refused when the manifest is read, naming the
-  source and the transport, before superdev spawns anything. Every git call
-  superdev makes then refuses every transport it did not admit, `git://` and
-  `http://` by name — neither authenticates, so anyone on the path could
-  answer for a pack, and because a source keys the same however it is spelled,
-  the pack they answered with would be the one that replaces superdev's own
-  content. A source or rev beginning with `-` is refused when the manifest is
-  read, and operands are passed after `--`. A stock git already refused
-  `ext::`; what changes is that superdev no longer depends on your
-  configuration to say so.
-- A pack cannot ship a file it does not contain. A symlink in a pack tree was
-  followed when it pointed at a file, so a pack could name a link to anything
-  the user running superdev could read and have those bytes written into the
-  repository as pack content. A symlink anywhere in a pack — the tree, the
-  pack's own root, its `pack.toml` — now stops the run naming the path.
-  Refused rather than stepped over, because a pack that resolves without the
-  item its author meant a link to stand for is a pack shipping less than it
-  declares, and neither `sync` nor `status --drift` would have said so. If you
-  were deduplicating a file with a link, copy it instead.
-
-  For a fetched pack, git's index decides what a link is rather than the
-  filesystem. Windows without `core.symlinks` checks a link out as a plain
-  file holding the target's path, which no filesystem check can tell from
-  content — so the same revision used to digest differently there, and a lock
-  committed from Linux failed on Windows saying only that the bytes did not
-  match. It now fails on both, naming the file. A submodule under the pack is
-  refused on the same answer: the shallow clone leaves it empty, so the pack
-  would have shipped an item with nothing in it.
+  over. A source may name only `https`, `ssh` or `file`; a `<name>::<address>`
+  remote helper, git's `ext::` transport, `git://` and `http://` are refused
+  when the manifest is read, naming the source and the transport, before
+  superdev spawns anything, and every git call superdev makes refuses every
+  transport it did not admit. A source or rev beginning with `-` is refused,
+  and operands are passed after `--` (ADR-012).
+- A pack cannot ship a file it does not contain. A symlink anywhere in a pack
+  — the tree, its root, its `pack.toml` — stops the run naming the path; for
+  a fetched pack, git's index decides what a link is, so a lock committed from
+  Linux fails on Windows the same way, naming the file, and a submodule under
+  the pack is refused on the same answer. Copy a file you were deduplicating
+  with a link (ADR-014).
 
 ### Fixed
 
-- The lock describes what is on disk, not only what the last run wrote. A file
-  edited into agreement with what superdev ships — the way a contributor tries
-  a change before shipping it — kept the hash of what it replaced, so the next
-  run that touched it announced an edit nobody had made and backed the file
-  up. The same staleness on a managed `.mcp.json` or `.claude/settings.json`
-  key was worse: superdev decides whether such an entry is its own to remove
-  by that hash, so a stale one left its registration behind for good when the
-  capability was disabled.
-
-- `superdev update` said it moved pins to this binary's defaults. It stopped
-  meaning that when it began asking the pack source for a newer release — the
-  one verb that reaches the network, describing itself as one that does not.
-  Corrected in `--help`, the man page and the completions, which all come from
-  the same line. The README now says where superdev's content comes from at
-  all: what a pack is, how entries layer, and that content releases under its
-  own tags.
+- The lock describes what is on disk, not only what the last run wrote: a
+  file edited into agreement with what superdev ships keeps the hash of what
+  is on disk, so the next run neither announces an edit nobody made nor
+  leaves a managed `.mcp.json` or `.claude/settings.json` entry behind when
+  its capability is disabled.
+- `superdev update` describes itself as the one verb that reaches the network
+  in `--help`, the man page and the completions; the README says where
+  superdev's content comes from — what a pack is, how entries layer, and that
+  content releases under its own tags.
 
 ### Changed
 
