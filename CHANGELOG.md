@@ -13,17 +13,14 @@ publish a version it cannot find a heading for.
 
 ### Added
 
-- **`/file` files an issue or an idea without framing it.** A
-  knowledge-carried skill writes a bug, a feature request or a chore as
-  an unframed issue in the user's words — the kind's headings, `TBD —
-  <the open question>` where the user said nothing, no interview, no
-  branch, no criterion the user did not state — numbered after the
-  highest issue and filed by `superdev validate --fix`. An idea goes to
-  `knowledge/ideas/` per `schema-idea`; an existing idea named with a
-  kind is promoted to an unframed issue that links it. With no kind, or
-  one it does not know, `/file` asks and files nothing. The workflow in
-  `.agents/superdev.md` lists `/file` outside the phases and how-do-i
-  describes it (ADR-048).
+- **`/file` files an issue or an idea.** A knowledge-carried skill
+  writes a bug, a feature or a chore as an `open` issue in the user's
+  words — no interview, no branch, no criterion the user did not state
+  — numbered after the highest issue and filed by `superdev validate
+  --fix`. An idea goes to `knowledge/ideas/` per `schema-idea`; an
+  existing idea named with a kind is promoted to an issue that links
+  it. With no kind, or one it does not know, `/file` asks and files
+  nothing (ADR-048, ADR-050).
 - **A heading is declared per variant.** A schema may declare one heading
   in more than one section rule when every such rule carries `variants`
   and the sets are disjoint; a document is checked against the rule its
@@ -374,11 +371,19 @@ publish a version it cannot find a heading for.
   `/integrate` and `/execute-feature-plan` are gone**: invoke
   `/build` and `/execute-plan` in their place, and rewrite every skill,
   hook or note in a managed repository that names one (ADR-050).
-- **An issue's lifecycle was `unframed`, `framed`, `done` or `wontfix`,
-  with a tracker schema per state** — since replaced by the one template
-  above. **The backlog retires**: its entries became ideas 007 to 009
-  and the wontfix chore I051, and `schema-backlog`, the concept and
-  every reference to it go. **A managed repository's `Backlog` document
+- **The concepts, the glossary and the README carry the four-phase
+  workflow.** `development-procedure`'s Workflow reads FILE → SCOPE →
+  BUILD → ACCEPT; the glossary defines Scope, Plan and Work block and
+  drops the framed and unframed states, the slice and integrate; the
+  contracts, issues and plans indexes name `/contract-design` and the
+  plan's work blocks; the schemas' prose follows; and the README's
+  Usage section carries the loop and the two templates. **A managed
+  repository's own concepts are write-once scaffolds superdev never
+  rewrites**: edit by hand any that name `/frame`, `/feature-plan`,
+  `/adhoc-plan`, `/integrate` or `/execute-feature-plan` (ADR-050).
+- **The backlog retires.** Its entries became ideas 007 to 009 and the
+  wontfix chore I051, and `schema-backlog`, the concept and every
+  reference to it go. **A managed repository's `Backlog` document
   loses its schema** and fails `superdev validate` as a document naming
   no schema: file each entry as an idea per `schema-idea` or as a
   `wontfix` issue, then delete the document (ADR-048).
@@ -499,15 +504,9 @@ publish a version it cannot find a heading for.
   spec workflow's vocabulary is gone from the schemas, the contract
   number series says "public and internal", and the constraints schema's
   type is `ConstraintsNonGoals`.
-- **Integrate reviews once per feature.** The `/code-review` in the
-  integrate skill runs at the last slice only, over the whole feature diff
-  against the merge target; findings still return to build before the
-  merge. Non-final slices keep every other check — cases, done-check,
-  contracts, build and tests.
 - **Documents are filed by lifecycle.** Breaking change to the knowledge
   layout. Issues, plans, specs, decisions and contracts each carry one
-  `lifecycle` frontmatter key — `open`/`done`/`wontfix` for issues
-  (`open` since split into `unframed`/`framed`, above),
+  `lifecycle` frontmatter key — `open`/`done`/`wontfix` for issues,
   `open`/`done`/`abandoned` for plans, `active`/`deprecated` for specs,
   decisions and contracts — and every document sits in a folder named
   exactly its value (`knowledge/issues/done/`, `knowledge/plans/done/`),
