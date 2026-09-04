@@ -131,7 +131,7 @@ Alternatives considered:
 
 ## Resolution
 
-Delivered by [plan-017][sokf:plan-017-feature-example-conformance] in an
+Delivered by [plan-017][sokf:plan-017-example-conformance] in an
 unattended run. Acceptance on 2026-08-31 walked all six criteria end to
 end against the feature branch head with the full suite passing
 (640 tests): every fault class — a frontmatter value or required key, a
@@ -174,4 +174,4 @@ the example check.
 [sokf:contract-010-interface-document-schemas]: /knowledge/contracts/internal/active/contract-010-interface-document-schemas.md
 [sokf:issue-018-the-schema-layer-checks-sections-and-nothing-else]: /knowledge/issues/done/issue-018-the-schema-layer-checks-sections-and-nothing-else.md
 [sokf:issue-020-the-schemas-do-not-ship]: /knowledge/issues/done/issue-020-the-schemas-do-not-ship.md
-[sokf:plan-017-feature-example-conformance]: /knowledge/plans/done/plan-017-feature-example-conformance.md
+[sokf:plan-017-example-conformance]: /knowledge/plans/done/plan-017-example-conformance.md

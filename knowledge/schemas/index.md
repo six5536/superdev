@@ -7,8 +7,7 @@ a template could only be copied.
 
 ## Planning & design
 
-* [Feature Plan Schema][sokf:schema-feature-plan] - the feature's slice list — per slice its dependencies, a done-check, its test-plan cases and a done marker — filed among the plans.
-* [Ad-hoc Plan Schema][sokf:schema-adhoc-plan] - implementation plans for one-off work outside the feature workflow, filed among the plans.
+* [Plan Schema][sokf:schema-plan] - the one design document a piece of work carries — its goal, the contract changes it makes, its work blocks with their cases, and the decisions deferred to the user — filed among the plans.
 * [Idea Schema][sokf:schema-idea] - a thought captured for considering later — what it is, plus whatever reasoning exists at the time — filed in knowledge/ideas/.
 * [ADR Schema][sokf:schema-adr] - architecture decision records — context, the decision, options considered and consequences — filed among the ADRs.
 
@@ -69,7 +68,6 @@ One document per contract, all durable, under one schema (ADR-043). An `interfac
 * [Schemas Index Schema][sokf:schema-schemas-index] - the grouped listing of every schema with its one-line summary, in knowledge/schemas/index.md.
 
 <!-- sokf:links -->
-[sokf:schema-adhoc-plan]: /knowledge/schemas/adhoc-plan.md
 [sokf:schema-adr]: /knowledge/schemas/adr.md
 [sokf:schema-architectural-rules]: /knowledge/schemas/architectural-rules.md
 [sokf:schema-architecture]: /knowledge/schemas/architecture.md
@@ -85,13 +83,13 @@ One document per contract, all durable, under one schema (ADR-043). An `interfac
 [sokf:schema-development-procedure]: /knowledge/schemas/development-procedure.md
 [sokf:schema-directory-structure]: /knowledge/schemas/directory-structure.md
 [sokf:schema-error-handling]: /knowledge/schemas/error-handling.md
-[sokf:schema-feature-plan]: /knowledge/schemas/feature-plan.md
 [sokf:schema-glossary]: /knowledge/schemas/glossary.md
 [sokf:schema-idea]: /knowledge/schemas/idea.md
 [sokf:schema-investigation]: /knowledge/schemas/investigation.md
 [sokf:schema-issue]: /knowledge/schemas/issue.md
 [sokf:schema-issue-tracker]: /knowledge/schemas/issue-tracker.md
 [sokf:schema-migration-guide]: /knowledge/schemas/migration-guide.md
+[sokf:schema-plan]: /knowledge/schemas/plan.md
 [sokf:schema-postmortem]: /knowledge/schemas/postmortem.md
 [sokf:schema-project-overview]: /knowledge/schemas/project-overview.md
 [sokf:schema-readme]: /knowledge/schemas/readme.md

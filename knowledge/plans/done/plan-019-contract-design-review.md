@@ -1,12 +1,12 @@
 ---
-type: FeaturePlan
-id: plan-019-feature-contract-design-review
-title: Contract-design review and the binding-surface standard — feature plan
-description: Slices delivering the include-block mechanism, the contract style standard in the schemas, the skill's explicit go-ahead, and the nine-contract sweep.
+type: Plan
+id: plan-019-contract-design-review
+title: Contract-design review and the binding-surface standard
+description: Blocks delivering the include-block mechanism, the contract style standard in the schemas, the skill's explicit go-ahead, and the nine-contract sweep.
 lifecycle: done
 ---
 
-# Feature plan: contract-design review and the binding-surface standard
+# Plan: contract-design review and the binding-surface standard
 
 Request:
 [issue-028-contract-design-commits-before-the-go-ahead][sokf:issue-028-contract-design-commits-before-the-go-ahead]
@@ -15,9 +15,40 @@ and
 the decisions are ADR-027, ADR-028 and ADR-029. Case labels name the
 issue and criterion they cover ("I029 c1").
 
-## Slices
+## Goal
 
-### Slice 1: The include mechanism
+`/contract-design` presents its change set and commits only on the
+user's explicit approval, and every contract it writes conforms to the
+binding-surface standard of ADR-029: RFC 2119 verbs, one requirement
+per sentence, enumerable surfaces in the kind's structured form, and
+the reasoning left in the linked ADRs. The standard ships inside every
+contract-kind schema through the include-block mechanism of ADR-027,
+so the schemas carry it rather than restate it, and the nine active
+contracts are swept to the form.
+
+## Contract changes
+
+- contract-002-cli-superdev: the `--fix` bullet carries the
+  include-block materialization block 1 implements (ADR-027);
+  rewritten to ADR-029 form in block 5; RFC 2119 modal verbs on every
+  promise in block 6, meaning unchanged.
+- contract-003-api-sokf: rewritten to ADR-029 form in block 5; modal
+  verbs on every promise in block 6, meaning unchanged.
+- contract-004-config-superdev: rewritten to ADR-029 form in block 5.
+- contract-005-format-pack: rewritten to ADR-029 form in block 5.
+- contract-006-format-lock: rewritten to ADR-029 form in block 5.
+- contract-007-interface-pack-resolution: rewritten to ADR-029 form in
+  block 4 — doc comments reduced to what the code enforces, each rule
+  linking its ADR.
+- contract-008-format-template: rewritten to ADR-029 form in block 5.
+- contract-009-interface-run-state: rewritten to ADR-029 form in
+  block 4.
+- contract-010-interface-document-schemas: rewritten to ADR-029 form
+  in block 4.
+
+## Work blocks
+
+### Block 1: The include mechanism
 
 - [x] Done — ticked by integrate at merge.
 - Depends-on: none.
@@ -43,7 +74,7 @@ issue and criterion they cover ("I029 c1").
     rewrites every including file — covers I029 c1–4 (the standard's
     carrier).
 
-### Slice 2: The standard and its carriers
+### Block 2: The standard and its carriers
 
 - [x] Done — ticked by integrate at merge.
 - Depends-on: 1.
@@ -63,7 +94,7 @@ issue and criterion they cover ("I029 c1").
     standard as part of the schema — covers I029 c1–4 (the standard's
     carrier).
 
-### Slice 3: The skill's explicit go-ahead
+### Block 3: The skill's explicit go-ahead
 
 - [x] Done — ticked by integrate at merge.
 - Depends-on: none.
@@ -82,7 +113,7 @@ issue and criterion they cover ("I029 c1").
   - e2e: the next attended `/contract-design` transcript shows the
     interview and the approval before its commit — covers I028 c1–4.
 
-### Slice 4: Sweep the internal contracts
+### Block 4: Sweep the internal contracts
 
 - [x] Done — ticked by integrate at merge.
 - Depends-on: 2.
@@ -100,13 +131,13 @@ issue and criterion they cover ("I029 c1").
   - review: everything 007, 009 and 010 bound before the sweep is still
     bound after — covers I029 c3.
 
-### Slice 5: Sweep the public contracts
+### Block 5: Sweep the public contracts
 
 - [x] Done — ticked by integrate at merge.
 - Depends-on: 2.
 - Change: contracts 002, 003, 004, 005, 006 and 008 rewritten to
   ADR-029 form; CHANGELOG entry for the corpus sweep.
-- Done-check: `superdev validate` passes; with slice 4 done, all nine
+- Done-check: `superdev validate` passes; with block 4 done, all nine
   active contracts conform.
 - Cases:
   - review: each public contract's normative sentences carry RFC 2119
@@ -117,7 +148,7 @@ issue and criterion they cover ("I029 c1").
   - e2e: all nine active contracts conform to the standard — covers
     I029 c5.
 
-### Slice 6: Modal verbs for the CLI and MCP contracts
+### Block 6: Modal verbs for the CLI and MCP contracts
 
 - [x] Done — ticked by integrate at merge.
 - Depends-on: 5.

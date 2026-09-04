@@ -7,7 +7,7 @@ kind: feature
 lifecycle: open
 links:
   - rel: relates-to
-    to: plan-010-adhoc-links-address-ids
+    to: plan-010-links-address-ids
 ---
 
 # Feature: a concept path written outside the knowledge is checked by nothing
@@ -17,7 +17,7 @@ links:
 Link checking reads a loaded knowledge directory, so it sees only the
 documents inside it. A file under `.claude/skills/` or `.agents/` may name
 a concept by path, and nothing resolves that path — before or after
-[P010][sokf:plan-010-adhoc-links-address-ids], which gave a link inside the
+[P010][sokf:plan-010-links-address-ids], which gave a link inside the
 knowledge an id that survives a rename.
 
 ## Context
@@ -91,4 +91,4 @@ Alternatives considered:
 
 <!-- sokf:links -->
 [sokf:issue-022-a-schemas-worked-example-is-checked-by-nothing]: /knowledge/issues/done/issue-022-a-schemas-worked-example-is-checked-by-nothing.md
-[sokf:plan-010-adhoc-links-address-ids]: /knowledge/plans/done/plan-010-adhoc-links-address-ids.md
+[sokf:plan-010-links-address-ids]: /knowledge/plans/done/plan-010-links-address-ids.md

@@ -7,7 +7,7 @@ kind: feature
 lifecycle: open
 links:
   - rel: relates-to
-    to: plan-006-adhoc-rust-format-validator
+    to: plan-006-rust-format-validator
 ---
 
 # Feature: the format the agent must write in has no document
@@ -29,7 +29,7 @@ vocabulary, the condition forms, or the one-home-per-statement rule.
 types by hand. `format/doc.rs` is 190 lines of ported code held by one golden,
 carrying a language nobody is shown.
 
-The [format validator plan][sokf:plan-006-adhoc-rust-format-validator]
+The [format validator plan][sokf:plan-006-rust-format-validator]
 ports the renderer under D-13 — deleting the reference was one-way, so the
 option had to survive the port — and lists generating `.agents/format.md` from
 it as a non-goal, because wiring it up decides what that file is and who owns
@@ -79,4 +79,4 @@ Alternatives considered:
   describe documents, not the language skills are written in.
 
 <!-- sokf:links -->
-[sokf:plan-006-adhoc-rust-format-validator]: /knowledge/plans/done/plan-006-adhoc-rust-format-validator.md
+[sokf:plan-006-rust-format-validator]: /knowledge/plans/done/plan-006-rust-format-validator.md

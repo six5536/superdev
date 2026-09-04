@@ -1,8 +1,8 @@
 ---
-type: FeaturePlan
-id: plan-021-feature-contracts-define-their-interface
-title: Contracts define their interfaces — feature plan
-description: Slices delivering the definition-block vocabulary, each kind's declared form, the drift tests that bind a contract to its implementation, and the split of the file-format kind.
+type: Plan
+id: plan-021-contracts-define-their-interface
+title: Contracts define their interfaces
+description: Blocks delivering the definition-block vocabulary, each kind's declared form, the drift tests that bind a contract to its implementation, and the split of the file-format kind.
 lifecycle: done
 links:
   - rel: implements
@@ -10,14 +10,50 @@ links:
     note: The plan delivers the framed issue's eleven criteria.
 ---
 
-# Feature plan: contracts define their interfaces
+# Plan: contracts define their interfaces
 
-Request:
-[issue-035][sokf:issue-035-a-contract-does-not-define-its-interface]
+Request: [issue-035][sokf:issue-035-a-contract-does-not-define-its-interface]
 
-## Slices
+## Goal
 
-### Slice 1: The definition-block vocabulary in the engine
+Every contract on file defines the interface it binds completely enough
+to build against: each enumerable surface is written in a structured
+block that carries the whole of it, each contract-kind schema demands
+that block, and a drift test binds each contract this repository
+implements to its implementation, naming the difference and which way
+it runs. The file-format kind splits into a text format and a binary
+format, and the contracts the split renames are refiled.
+
+## Contract changes
+
+- contract-010-interface-document-schemas: gains the `block-language`,
+  `block-keys` and `block-entry-keys` rows of ADR-035 — the
+  definition-block vocabulary block 1 builds — and the three
+  mis-declaration findings on the schema file.
+- contract-002-cli-superdev: rewritten to define the whole command line
+  in the YAML form of ADR-034 — every command with its arguments, flags,
+  exit codes and streams — and bound to the binary by a drift test and
+  an exit-code probe (block 2).
+- contract-003-mcp-sokf: gains the definition section it never had —
+  each tool's input schema and result shape in JSON Schema — and is
+  bound to the served tool list by a drift test (block 3).
+- contract-005-text-format-pack, contract-006-text-format-lock and
+  contract-008-text-format-template: take the text-format kind token in
+  their ids and are refiled, with every link to them rewritten (block
+  4); rewritten to define every key, its type, its default and what a
+  reader does with the unexpected, and bound to the types that read the
+  file (block 5).
+- contract-004-config-superdev: rewritten to define every key, its
+  type, its default and what a reader does with the unexpected, and
+  bound to the types that read the file (block 5).
+- contract-007-interface-pack-resolution, contract-009-interface-run-state
+  and contract-010-interface-document-schemas: rewritten to carry every
+  exported signature and type they bind, each block bound to the
+  exported items by a drift test (block 6).
+
+## Work blocks
+
+### Block 1: The definition-block vocabulary in the engine
 
 - [x] Done — ticked by integrate at merge.
 - Depends-on: none.
@@ -43,7 +79,7 @@ Request:
   - unit: a schema's example is checked against its own block rules
     (ADR-024 path) — covers 2.
 
-### Slice 2: The CLI contract defines the command line
+### Block 2: The CLI contract defines the command line
 
 - [x] Done — ticked by integrate at merge.
 - Depends-on: 1.
@@ -67,7 +103,7 @@ Request:
   - e2e: each exit code the contract declares is produced by running the
     binary — covers 5.
 
-### Slice 3: The MCP contract defines its tools
+### Block 3: The MCP contract defines its tools
 
 - [x] Done — ticked by integrate at merge.
 - Depends-on: 1.
@@ -83,7 +119,7 @@ Request:
   - integration: a tool argument added to the server and absent from the
     contract fails the drift test naming it — covers 4.
 
-### Slice 4: The file-format kind splits into text and binary
+### Block 4: The file-format kind splits into text and binary
 
 - [x] Done — ticked by integrate at merge.
 - Depends-on: none.
@@ -101,7 +137,7 @@ Request:
   - integration: no document, index or link names the retired kind —
     covers 9, 10.
 
-### Slice 5: The config and format contracts define their files
+### Block 5: The config and format contracts define their files
 
 - [x] Done — ticked by integrate at merge.
 - Depends-on: 1, 4.
@@ -117,7 +153,7 @@ Request:
     directions, for the manifest, the lock, the pack file and the
     template — covers 1, 4.
 
-### Slice 6: The interface contracts define their boundaries
+### Block 6: The interface contracts define their boundaries
 
 - [x] Done — ticked by integrate at merge.
 - Depends-on: 1.
@@ -131,7 +167,7 @@ Request:
   - integration: every signature a contract declares exists as declared,
     and every exported item the contract binds is declared — covers 4, 8.
 
-### Slice 7: The remaining kinds declare their forms
+### Block 7: The remaining kinds declare their forms
 
 - [x] Done — ticked by integrate at merge.
 - Depends-on: 1, 4.
@@ -148,7 +184,7 @@ Request:
   - integration: no schema names a framework or a toolchain in what it
     demands — covers 3.
 
-### Slice 8: The standard, the obligation and the records
+### Block 8: The standard, the obligation and the records
 
 - [x] Done — ticked by integrate at merge.
 - Depends-on: 2, 3, 5, 6, 7.
@@ -165,7 +201,7 @@ Request:
   - e2e: a full validate run over both trees reports zero errors with
     every declared demand enforced — covers 10.
 
-### Slice 9: A drift test says which kind of red it is
+### Block 9: A drift test says which kind of red it is
 
 - [x] Done — ticked by integrate at merge.
 - Depends-on: 2, 3, 5, 6.
@@ -183,7 +219,7 @@ Request:
   - unit: an implemented element the contract omits reports as a defect,
     naming the element — covers 12.
 
-### Slice 10: The plan orders a contract gap first
+### Block 10: The plan orders a contract gap first
 
 - [x] Done — ticked by integrate at merge.
 - Depends-on: none.
@@ -197,7 +233,7 @@ Request:
   - integration: the plan schema and the feature-plan skill both state
     the ordering rule, in both trees — covers 13.
 
-### Slice 11: A pending element is bound in reverse
+### Block 11: A pending element is bound in reverse
 
 - [x] Done — ticked by integrate at merge.
 - Depends-on: 9.
@@ -216,7 +252,7 @@ Request:
   - integration: no contract on file carries a pending marker — covers
     15.
 
-### Slice 12: The template format contract is bound to the templates
+### Block 12: The template format contract is bound to the templates
 
 - [x] Done — ticked by integrate at merge.
 - Depends-on: 5.
@@ -225,9 +261,9 @@ Request:
   declares are compared to `crates/lib/superdev-core/src/templates.rs`
   in both directions, closing
   [I038][sokf:issue-038-the-template-format-contract-is-bound-by-no-drift-test].
-  Slice 5 bound the file formats through their readers, and the
+  Block 5 bound the file formats through their readers, and the
   template format has no reader; its surface is Rust constants, so the
-  binding is a text comparison like slice 8's.
+  binding is a text comparison like block 8's.
 - Done-check: adding a sixth `TOKEN_*` constant fails naming it, and
   removing a `### Template:` section fails naming the template.
 - Cases:

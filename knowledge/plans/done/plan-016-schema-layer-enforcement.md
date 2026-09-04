@@ -1,25 +1,38 @@
 ---
-type: FeaturePlan
-id: plan-016-feature-schema-layer-enforcement
-title: Schema layer enforcement — feature plan
-description: Three slices making the validator read what the schemas declare — content kinds, the frontmatter contract, and the required-key vocabulary — each landing with the reconciliation it surfaces.
+type: Plan
+id: plan-016-schema-layer-enforcement
+title: Schema layer enforcement
+description: Three blocks making the validator read what the schemas declare — content kinds, the frontmatter contract, and the required-key vocabulary — each landing with the reconciliation it surfaces.
 lifecycle: done
 ---
 
-# Feature plan: the schema layer's declarations bind
+# Plan: the schema layer's declarations bind
 
 Request: [issue-018-the-schema-layer-checks-sections-and-nothing-else][sokf:issue-018-the-schema-layer-checks-sections-and-nothing-else]
+
+## Goal
 
 The vocabulary and its semantics are fixed in
 [contract-010-interface-document-schemas][sokf:contract-010-interface-document-schemas];
 the user-facing promise in
-[contract-002-cli-superdev][sokf:contract-002-cli-superdev]. Each slice
+[contract-002-cli-superdev][sokf:contract-002-cli-superdev]. Each block
 lands its check and the live findings that check surfaces in one pass, so
 integrate's validate gate stays green at every merge.
 
-## Slices
+## Contract changes
 
-### Slice 1: Content kinds bind by presence
+- contract-002-cli-superdev: validate's schema bullet grows the
+  content-kind check and the frontmatter checks — a present value
+  against its `const`, `pattern` or `enum`, and an absent key marked
+  required.
+- contract-010-interface-document-schemas: new — the declaration
+  vocabulary the schemas write and the validator reads: the five
+  content kinds, the frontmatter constraint block per key, and the
+  per-key `required` flag (ADR-022, ADR-023).
+
+## Work blocks
+
+### Block 1: Content kinds bind by presence
 
 - [x] Done — ticked by integrate at merge.
 - Depends-on: none.
@@ -29,7 +42,7 @@ integrate's validate gate stays green at every merge.
   numbered item, one table, one fenced block, or one plain paragraph line
   for prose (ADR-023). A schema declaring a kind outside the five is
   reported on the schema file. The live findings the check surfaces are
-  reconciled in the same slice — the document fixed or the schema's
+  reconciled in the same block — the document fixed or the schema's
   declaration corrected — in `knowledge/schemas/` and the pack mirror
   alike.
 - Done-check: `cargo test` passes; `superdev validate` on a fixture with
@@ -48,7 +61,7 @@ integrate's validate gate stays green at every merge.
   - unit: a schema declaring `content: essay` is reported on the schema
     file — covers 5.
 
-### Slice 2: The frontmatter contract binds on present values
+### Block 2: The frontmatter contract binds on present values
 
 - [x] Done — ticked by integrate at merge.
 - Depends-on: none.
@@ -58,7 +71,7 @@ integrate's validate gate stays green at every merge.
   breaks its `const`, `pattern` or `enum`. A `pattern` that does not
   compile is reported on the schema file and binds nothing. A key
   declared with only a `description` is unchecked. Live findings are
-  reconciled in the same slice, both trees.
+  reconciled in the same block, both trees.
 - Done-check: `cargo test` passes; `superdev validate` on a fixture with
   an id breaking its schema's pattern reports the error, and on this
   repository reports no frontmatter-value error.
@@ -74,7 +87,7 @@ integrate's validate gate stays green at every merge.
   - unit: a schema `pattern` that does not compile is reported on the
     schema file — covers 5.
 
-### Slice 3: Required keys, declared across the schemas
+### Block 3: Required keys, declared across the schemas
 
 - [x] Done — ticked by integrate at merge.
 - Depends-on: 2.
@@ -84,7 +97,7 @@ integrate's validate gate stays green at every merge.
   `type` and `id` on filed kinds, `title` and `description` where the
   document's listing depends on them — in `knowledge/schemas/` and the
   pack mirror, byte-identical. Any absence the declarations surface in
-  the live tree is fixed in the same slice.
+  the live tree is fixed in the same block.
 - Done-check: `cargo test` passes; every schema in both trees declares
   its required keys; `diff -rq knowledge/schemas pack/knowledge/schemas`
   prints nothing.
@@ -92,7 +105,7 @@ integrate's validate gate stays green at every merge.
   - unit: an absent key marked `required: true` is an error naming the
     document, the key and the schema — covers 4.
   - unit: a present key marked required passes its value checks as in
-    slice 2 — covers 3, 4.
+    block 2 — covers 3, 4.
   - e2e: `superdev validate` reports PASS on this repository, every
     document against its schema's content kinds and frontmatter
     contract — covers 6.

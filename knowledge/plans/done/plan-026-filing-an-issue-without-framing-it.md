@@ -1,8 +1,8 @@
 ---
-type: FeaturePlan
-id: plan-026-feature-filing-an-issue-without-framing-it
-title: Filing an issue without framing it — feature plan
-description: Slices delivering I030 — a heading declared per variant in the validator, the tracker schemas varying by a four-state lifecycle with the sweep of the issues on file, the /file skill and the workflow entry, /frame framing in place with the three phases' gates, the backlog's retirement, and the records.
+type: Plan
+id: plan-026-filing-an-issue-without-framing-it
+title: Filing an issue without framing it
+description: Blocks delivering I030 — a heading declared per variant in the validator, the tracker schemas varying by a four-state lifecycle with the sweep of the issues on file, the /file skill and the workflow entry, /frame framing in place with the three phases' gates, the backlog's retirement, and the records.
 lifecycle: done
 links:
   - rel: implements
@@ -19,18 +19,20 @@ links:
     note: The mechanism slice 1 builds and slice 2 uses.
 ---
 
-# Feature plan: Filing an issue without framing it
+# Plan: Filing an issue without framing it
 
 Request: [issue-030-filing-an-issue-requires-framing-it][sokf:issue-030-filing-an-issue-requires-framing-it]
 
-The validator first: the slice that closes
+## Goal
+
+The validator first: the block that closes
 [contract-010][sokf:contract-010-interface-document-schemas]'s two
 PENDING promises with
 [ADR-049][sokf:adr-049-a-heading-is-declared-per-variant]. Then the
-schemas and the sweep in one slice, because the tree validates only
+schemas and the sweep in one block, because the tree validates only
 when the four-state enum, the per-state rules and the refiled issues
 land together. Then the skills — `/file` with the workflow entry, and
-`/frame` with the three gates — each a slice that reads
+`/frame` with the three gates — each a block that reads
 [ADR-048][sokf:adr-048-an-issues-lifecycle-distinguishes-framed-from-unframed]
 for what it writes. The backlog's retirement follows the skill edits
 it shares files with, and the records close.
@@ -40,15 +42,24 @@ Owned copies and their sources: every `knowledge/schemas/*.md` from
 knowledge-carried from `pack/knowledge/skills/<name>/`;
 `.agents/superdev.md` is the aggregator `pipeline.rs` renders from its
 `AGGREGATOR_PREFIX` constant, so the workflow block is edited there.
-A slice edits the source, runs `scripts/superdev sync`, and commits
+A block edits the source, runs `scripts/superdev sync`, and commits
 the moved lock hashes; `superdev status` reporting no drift is part of
 its done-check. A pack skeleton under `pack/knowledge/concepts/` is
 write-once in a managed repository; the repository's own copy is
 edited beside it.
 
-## Slices
+## Contract changes
 
-### Slice 1: A heading is declared per variant
+- contract-010-interface-document-schemas: `P_heading-per-variant` and
+  `P_heading-rules-overlap`, the two per-variant heading promises,
+  lose their `PENDING` marker in block 1; `P_heading-same-by-form`
+  added when the second deferred decision was answered — the
+  disjointness check tells a literal `heading` from a
+  `heading-pattern` by declaration form.
+
+## Work blocks
+
+### Block 1: A heading is declared per variant
 
 - [x] Done — ticked by integrate at merge.
 - Depends-on: none.
@@ -86,7 +97,7 @@ edited beside it.
   - integration: contract-010 carries no PENDING for the per-variant
     heading and the live tree validates — covers AC_one-schema-per-kind.
 
-### Slice 2: The tracker schemas vary by lifecycle, and the issues on file are swept
+### Block 2: The tracker schemas vary by lifecycle, and the issues on file are swept
 
 - [x] Done — ticked by integrate at merge.
 - Depends-on: 1.
@@ -141,7 +152,7 @@ edited beside it.
     checks the form, and the sweep script checked the words against
     `6bee067` — covers AC_sweep.
 
-### Slice 3: `/file` and the workflow entry
+### Block 3: `/file` and the workflow entry
 
 - [x] Done — ticked by integrate at merge.
 - Depends-on: 2.
@@ -184,7 +195,7 @@ edited beside it.
     record written at the knowledge root goes to `knowledge/unframed/`
     instead, so the skill says where to write it.
 
-### Slice 4: `/frame` frames in place, and the later phases refuse an unframed issue
+### Block 4: `/frame` frames in place, and the later phases refuse an unframed issue
 
 - [x] Done — ticked by integrate at merge.
 - Depends-on: 2.
@@ -205,7 +216,7 @@ edited beside it.
   - unit: each of the three phase skills carries a gate on `framed`
     returning to `/frame` — covers AC_phases-refuse.
 
-### Slice 5: The backlog retires
+### Block 5: The backlog retires
 
 - [x] Done — ticked by integrate at merge.
 - Depends-on: 4.
@@ -230,10 +241,10 @@ edited beside it.
   - integration: the three ideas and the wontfix chore validate and
     are listed — covers AC_backlog-retired.
 
-### Slice 6: The records close
+### Block 6: The records close
 
 - [x] Done — ticked by integrate at merge. The two cases were checked
-  by reading the three records: no test reads them, and the slice
+  by reading the three records: no test reads them, and the block
   changed no code. The glossary's Lifecycle entry carries the framed and
   unframed definitions in place of a separate entry, and the changelog
   stands at its 800-line limit.

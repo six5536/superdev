@@ -5,7 +5,7 @@ title: Code review — a contract's behaviour is written as EARS
 description: Review of plan-025's eight slices on `feature/a-contracts-behaviour-is-written-as-ears`; three major findings — a contract with no promise passes the schema, an item swallows the heading after it, and the tree-wide PENDING guard was dropped on a false premise — seven minor ones, and five a second reviewer added; twelve resolved on the branch, two not applied, one deferred.
 links:
   - rel: references
-    to: plan-025-feature-a-contracts-behaviour-is-written-as-ears
+    to: plan-025-a-contracts-behaviour-is-written-as-ears
     note: The plan whose eight slices this review reads.
   - rel: references
     to: issue-037-a-contracts-behaviour-is-not-written-as-ears
@@ -17,7 +17,7 @@ links:
 ## Verdict
 
 The eight slices of
-[plan-025][sokf:plan-025-feature-a-contracts-behaviour-is-written-as-ears]
+[plan-025][sokf:plan-025-a-contracts-behaviour-is-written-as-ears]
 deliver
 [I037][sokf:issue-037-a-contracts-behaviour-is-not-written-as-ears]:
 the three declarations bind, the nine contracts and fifty issues are
@@ -322,7 +322,7 @@ branch, two are not applied, and one is deferred.
   at exit `2`; `P_removal-needs-notice` is an `[event]` whose requirement
   is the release-notes notice. `superdev validate` passes.
 
-### 14. The slice-3 note miscounts contract-010 and the new tests cite criteria by number — knowledge/plans/done/plan-025-feature-a-contracts-behaviour-is-written-as-ears.md:152
+### 14. The slice-3 note miscounts contract-010 and the new tests cite criteria by number — knowledge/plans/done/plan-025-a-contracts-behaviour-is-written-as-ears.md:152
 
 - Severity: nit
 - Category: simplification
@@ -385,4 +385,4 @@ branch, two are not applied, and one is deferred.
 
 <!-- sokf:links -->
 [sokf:issue-037-a-contracts-behaviour-is-not-written-as-ears]: /knowledge/issues/done/issue-037-a-contracts-behaviour-is-not-written-as-ears.md
-[sokf:plan-025-feature-a-contracts-behaviour-is-written-as-ears]: /knowledge/plans/done/plan-025-feature-a-contracts-behaviour-is-written-as-ears.md
+[sokf:plan-025-a-contracts-behaviour-is-written-as-ears]: /knowledge/plans/done/plan-025-a-contracts-behaviour-is-written-as-ears.md

@@ -1,8 +1,8 @@
 ---
-type: FeaturePlan
-id: plan-020-feature-normative-shape-enforcement
-title: Normative shape enforcement — feature plan
-description: Slices delivering the body-pattern vocabulary, the EARS declaration, the contract-kind declarations and the contract sweep.
+type: Plan
+id: plan-020-normative-shape-enforcement
+title: Normative shape enforcement
+description: Blocks delivering the body-pattern vocabulary, the EARS declaration, the contract-kind declarations and the contract sweep.
 lifecycle: done
 links:
   - rel: implements
@@ -10,14 +10,44 @@ links:
     note: The plan delivers the framed issue's seven criteria.
 ---
 
-# Feature plan: normative shape enforcement
+# Plan: Normative shape enforcement
 
 Request:
 [issue-034][sokf:issue-034-normative-shapes-are-described-but-not-enforced]
 
-## Slices
+## Goal
 
-### Slice 1: The body-pattern vocabulary in the engine
+A schema binds the shape of normative text and the validator enforces
+the binding: a schema declares a per-item shape on a list section and
+a body shape on any section, `schema-feature-request` declares the
+EARS opening tag on Acceptance criteria, and the contract-kind schemas
+declare the shapes of their promise-bearing sections. The shipped
+knowledge and the pack mirror validate clean with every declared shape
+enforced. The vocabulary lands first, in the engine, with no schema
+declaring it; each declaration then lands with the reconciliation it
+surfaces, so the tree never fails between a declaration and its sweep.
+
+## Contract changes
+
+- contract-010-interface-document-schemas: `item-pattern` and
+  `content-pattern` added to the section vocabulary, with their
+  found-anywhere semantics (ADR-030); each declaration is documented
+  in the contract and in every schema that carries it.
+- contract-002-cli-superdev: promise items gain their keywords and
+  promise sections state their promises under the ADR-032 shapes;
+  nothing it binds changes.
+- contract-003-api-sokf: swept to the declared promise shapes; nothing
+  it binds changes.
+- contract-005-format-pack: swept to the declared promise shapes;
+  nothing it binds changes.
+- contract-006-format-lock: swept to the declared promise shapes;
+  nothing it binds changes.
+- contract-009-interface-run-state: swept to the declared promise
+  shapes; nothing it binds changes.
+
+## Work blocks
+
+### Block 1: The body-pattern vocabulary in the engine
 
 - [x] Done — ticked by integrate at merge.
 - Depends-on: none.
@@ -45,7 +75,7 @@ Request:
   - unit: a schema's example is checked against the declaring schema's
     own patterns (ADR-024 path) — covers 1.
 
-### Slice 2: EARS criteria enforced at frame time
+### Block 2: EARS criteria enforced at frame time
 
 - [x] Done — ticked by integrate at merge.
 - Depends-on: 1.
@@ -60,7 +90,7 @@ Request:
   - integration: I030's TBD criteria and every on-file feature-request
     pass — covers 4, 6.
 
-### Slice 3: The contract kinds declare their promise shapes
+### Block 3: The contract kinds declare their promise shapes
 
 - [x] Done — ticked by integrate at merge.
 - Depends-on: 1.
@@ -77,14 +107,14 @@ Request:
   - integration: every contract-kind schema's example passes the
     schema's own declarations — covers 6.
 
-### Slice 4: The on-file contracts pass the declared shapes
+### Block 4: The on-file contracts pass the declared shapes
 
 - [x] Done — ticked by integrate at merge.
 - Depends-on: 3.
 - Change: the nine active contracts are swept until the ADR-032
   declarations pass — promise items gain their keywords, promise
   sections state their promises — with no change to what any contract
-  binds. Landed in slice 3's commit: a declaration leaves the tree
+  binds. Landed in block 3's commit: a declaration leaves the tree
   failing until its reconciliation follows, so the two cannot merge
   apart.
 - Done-check: `superdev validate` passes on the knowledge and the pack
