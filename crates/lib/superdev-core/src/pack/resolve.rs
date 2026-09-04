@@ -637,7 +637,7 @@ mod tests {
         assert!(
             resolved
                 .content
-                .item(knowledge(), ItemKind::Skill, "integrate")
+                .item(knowledge(), ItemKind::Skill, "build")
                 .is_some()
         );
     }

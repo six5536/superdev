@@ -1757,9 +1757,7 @@ fn a_pack_supersedes_the_embedded_item_of_the_same_name() {
         "# Scope, the acme way\n"
     );
     assert!(
-        dir.path()
-            .join(".claude/skills/integrate/SKILL.md")
-            .is_file(),
+        dir.path().join(".claude/skills/build/SKILL.md").is_file(),
         "what the pack does not carry still comes from the embedded copy"
     );
 }
