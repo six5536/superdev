@@ -38,7 +38,8 @@ below its own. A nested rule carries `item-key`, `item-pattern`,
 schema declares as many levels as the document has. A nested item is a
 marker of the section's list kind indented past the marker of the item
 above it; a marker deeper than the deepest declared level, or of the
-other list kind, is text of the item it sits in. `required` makes an
+other list kind, is dropped from the item it sits in, as an undeclared
+nested item's lines are. `required` makes an
 item of the level above with no item of this level an error naming it.
 A key captured at any level is unique with every other key of the
 document.

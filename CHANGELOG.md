@@ -64,9 +64,10 @@ publish a version it cannot find a heading for.
   Behaviour and Stability rules declare a `nested` rule, so a promise
   may carry a nested bullet list of the criteria that check it, each
   opening with an `AC_` key in a code span and an EARS tag, one modal
-  verb, in the promise's form; a nested item without them is an error
-  naming the item, and a key repeated across the contract's `P_` and
-  `AC_` keys one naming both items. A promise with no criterion is its
+  verb, in the promise's form and held to the same rules — a retired
+  RFC 2119 keyword, a second modal verb, a missing key or tag, and a key
+  repeated across the contract's `P_` and `AC_` keys are each an error
+  naming the item. A promise with no criterion is its
   own check, so a contract on file changes nothing. A criterion is cited
   as a promise is: `AC_<slug>` where the contract is the subject,
   `<contract id> AC_<slug>` elsewhere (ADR-050, ADR-051).

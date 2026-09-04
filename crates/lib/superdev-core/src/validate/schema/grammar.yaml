@@ -662,7 +662,7 @@ kinds:
               section's list kind indented past the marker of the item above it, whose lines
               the item above drops. Carries its own nested for the level below, to any depth;
               a marker deeper than the deepest declared level, or of the other list kind, is
-              text of the item it sits in.
+              dropped from the item it sits in, as an undeclared nested item's lines are.
           variants:
             type: list
             doc: >

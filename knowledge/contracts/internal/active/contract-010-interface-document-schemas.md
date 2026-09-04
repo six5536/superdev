@@ -388,12 +388,14 @@ kind opens no item, and a thematic break is not a marker.
 the rule's own, itself carrying a `nested` for the level below, to any
 depth (ADR-051). A nested item is a marker of the section's list kind
 indented past the marker of the item above it; a marker deeper than
-the deepest declared level, or of the other list kind, is text of the
-item it sits in. Each level's `item-key`, `item-prohibited-pattern` and
-`item-pattern` read as the section rule's do. `item-key-optional` on
-the section rule makes the key the test of a keyed item: an item
-matching `item-key` is held to the rest, an item not matching it is a
-plain item — a wontfix issue's either-form lists (ADR-051).
+the deepest declared level, or of the other list kind, is dropped from
+the item it sits in, as an undeclared nested item's lines are, so no
+level's pattern reads a deeper note. Each level's `item-key`,
+`item-prohibited-pattern` and `item-pattern` read as the section rule's
+do. `item-key-optional` on the section rule makes the key the test of a
+keyed item: an item matching `item-key` is held to the rest, an item
+not matching it is a plain item, which is how a schema binds a list
+some of whose items carry a key (ADR-051).
 
 - `P_nested-binds` [state] WHILE a rule carries `nested`, the validator
   SHALL check every item one level below each of the rule's items by

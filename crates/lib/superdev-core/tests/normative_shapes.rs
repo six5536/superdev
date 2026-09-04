@@ -1046,6 +1046,40 @@ fn a_nested_criterion_departing_from_the_form_fails_naming_each_departure() {
     assert_eq!(found.len(), 3, "{found:#?}");
 }
 
+/// A criterion is held to the promise's verb rules, not only to its key
+/// and its tag (I052): a retired RFC 2119 keyword, and a second modal
+/// verb in one sentence, each fail a nested criterion as they fail the
+/// promise above it.
+#[test]
+fn a_nested_criterion_is_held_to_the_promises_verb_rules() {
+    let behaviour = "### Exit codes\n\n\
+                     - `P_exit-codes` [ubiquitous] The probe SHALL exit with the code its\n  \
+                       report names.\n  \
+                       - `AC_retired` [event] WHEN the probe succeeds, the probe MUST exit 0.\n  \
+                       - `AC_two-verbs` [event] WHEN a check fails, the probe SHALL exit 1 and\n    \
+                         SHOULD name the check.\n  \
+                       - `AC_sound` [event] WHEN a usage error occurs, the probe SHALL exit 2.\n\n\
+                     ### Streams\n\n\
+                     - `P_stdout` [ubiquitous] The probe SHALL write its report to stdout.\n";
+    let stability = "- `P_unreleased` [ubiquitous] Every command above MAY change.\n";
+    let found = findings_of("Contract", "probe.md", &contract(behaviour, stability));
+    assert!(
+        found
+            .iter()
+            .any(|f| f.contains("`AC_retired`") && f.contains("MUST")),
+        "the retired keyword is reported on the criterion: {found:#?}"
+    );
+    assert!(
+        found.iter().any(|f| f.contains("`AC_two-verbs`")),
+        "the second modal verb is reported on the criterion: {found:#?}"
+    );
+    assert!(
+        !found.iter().any(|f| f.contains("`AC_sound`")),
+        "the sound criterion is not reported: {found:#?}"
+    );
+    assert_eq!(found.len(), 2, "{found:#?}");
+}
+
 /// Covers I052 AC_contract-criteria-optional: the contracts on file, none
 /// nesting a criterion, pass the live schema set unchanged.
 #[test]
