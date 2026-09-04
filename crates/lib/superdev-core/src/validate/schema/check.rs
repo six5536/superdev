@@ -633,6 +633,26 @@ fn check_keys(
     }
 }
 
+/// The `nested` rule under `rule`, when it carries one, against the nested
+/// key table, and the `nested` under that in turn, to any depth (ADR-051).
+/// A `nested` that is not a map is `check_keys`' finding on the rule that
+/// carries it.
+fn check_nested(
+    rule: &serde_yaml_ng::Mapping,
+    table: &crate::validate::schema::grammar::KeyTable,
+    where_: &str,
+    errs: &mut Vec<String>,
+) {
+    if let Some(nested) = rule
+        .get("nested")
+        .and_then(serde_yaml_ng::Value::as_mapping)
+    {
+        let where_ = format!("{where_}.nested");
+        check_keys(nested, &table.keys, &where_, errs);
+        check_nested(nested, table, &where_, errs);
+    }
+}
+
 /// A value as `JSON.stringify` renders it, which is what the reference quotes.
 fn json_like(v: &serde_yaml_ng::Value) -> String {
     serde_json::to_string(v).unwrap_or_else(|_| scalar(v))
@@ -739,6 +759,7 @@ pub fn check_schema(file: &Path, text: &str, errs: &mut Vec<String>, g: &Grammar
                 continue;
             };
             check_keys(sm, &d.section.keys, &where_, errs);
+            check_nested(sm, &d.nested, &where_, errs);
             let present: Vec<&String> = d
                 .section
                 .exactly_one_of
@@ -1373,6 +1394,56 @@ mod schema_parity {
                 "{key}: {errs:?}"
             );
         }
+    }
+
+    /// Covers I052 AC_contract-criteria: the grammar declares `nested` and
+    /// `item-key-optional` on a section, `nested` carrying the nested table's
+    /// keys and its own `nested` beneath, so a schema writing them passes;
+    /// a key the nested table does not declare is reported at its depth, and
+    /// a `nested` beside prose content is reported as `item-pattern` is.
+    #[test]
+    fn a_nested_rule_and_an_optional_key_are_declared_keys() {
+        let clean = fixtures().join("clean/schemas/thing.md");
+        let text = std::fs::read_to_string(&clean).unwrap();
+        let listed = |rule: &str| {
+            let declared = text.replace(
+                "    content: prose\n",
+                &format!("    content: bullet-list\n{rule}"),
+            );
+            assert_ne!(declared, text, "the fixture carries the line to extend");
+            let mut errs = Vec::new();
+            check_schema(&clean, &declared, &mut errs, &grammar());
+            errs
+        };
+        let errs = listed(
+            "    item-key: '^`(P_[a-z-]+)`'\n    item-key-optional: true\n    nested:\n\
+             \x20     required: true\n      item-key: '^`(AC_[a-z-]+)`'\n\
+             \x20     item-pattern: '^`AC_'\n      item-prohibited-pattern: 'MUST'\n\
+             \x20     nested:\n        item-key: '^`(N_[a-z-]+)`'\n",
+        );
+        assert!(errs.is_empty(), "{errs:?}");
+
+        let errs = listed("    nested:\n      nested:\n        item-only-pattern: 'MUST'\n");
+        assert_eq!(errs.len(), 1, "{errs:?}");
+        assert!(
+            errs[0].starts_with(
+                "schema yaml: sections[0].nested.nested: unknown key \"item-only-pattern\""
+            ),
+            "{errs:?}"
+        );
+
+        let mut errs = Vec::new();
+        let prose = text.replace(
+            "    content: prose\n",
+            "    content: prose\n    nested:\n      item-key: '(x)'\n",
+        );
+        check_schema(&clean, &prose, &mut errs, &grammar());
+        assert_eq!(
+            errs,
+            [
+                "schema yaml: sections[0].nested: only allowed with content: bullet-list or numbered-list"
+            ]
+        );
     }
 
     /// The schemas that ship all pass, which is the check the live tree

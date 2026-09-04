@@ -1,0 +1,55 @@
+{
+  "findings": [
+    {
+      "file": "misdeclared.md",
+      "message": "schema: section \"Body\" declares a nested rule, and its content is not bullet-list or numbered-list",
+      "severity": "error"
+    },
+    {
+      "file": "misdeclared.md",
+      "message": "schema: section \"Items\" declares a nested item-key `^`(N_)([a-z-]+)`` with 2 capture groups — the key is the one capture, so the rule binds nothing",
+      "severity": "error"
+    },
+    {
+      "file": "misdeclared.md",
+      "message": "schema: section \"Either\" sets item-key-optional and declares no item-key — the flag binds nothing",
+      "severity": "error"
+    },
+    {
+      "file": "faulty.md",
+      "message": "section \"Behaviour\" nested item `- [event] WHEN asked twice, the thing SHALL start once — no key.` carries no key of the form `^`(AC_[a-z][a-z0-9]*(?:-[a-z0-9]+)*)``, and thing.md declares a nested item-key",
+      "severity": "error"
+    },
+    {
+      "file": "faulty.md",
+      "message": "section \"Behaviour\" nested item `- `AC_starts-retired` [event] The thing MUST start — a retired verb.` matches `MUST`, and thing.md declares a nested item-prohibited-pattern `\\bMUST\\b`",
+      "severity": "error"
+    },
+    {
+      "file": "faulty.md",
+      "message": "section \"Behaviour\" nested item `- `AC_starts-once` WHEN asked twice, the thing SHALL start once — no tag.` does not match, and thing.md declares a nested item-pattern `^`AC_[a-z0-9-]+` \\[(ubiquitous|event|state)\\] `",
+      "severity": "error"
+    },
+    {
+      "file": "faulty.md",
+      "message": "section \"Behaviour\" item `- `P_stops` [event] WHEN told, the thing SHALL stop — no criterion beneath.` carries no nested item, and thing.md declares nested required",
+      "severity": "error"
+    },
+    {
+      "file": "faulty.md",
+      "message": "section \"Notes\" item `- A plain note that is TBD.` matches `TBD`, and thing.md declares item-prohibited-pattern `\\bTBD\\b`",
+      "severity": "error"
+    },
+    {
+      "file": "faulty.md",
+      "message": "section \"Notes\" item `- `N_late` Measured at p50 — keyed, and held to the pattern.` does not match, and thing.md declares item-pattern `^`N_[a-z0-9-]+` [a-z]`",
+      "severity": "error"
+    },
+    {
+      "file": "faulty.md",
+      "message": "section \"Behaviour\" nested item `- `AC_starts-fast` [state] WHILE running, the thing SHALL answer — a repeated key.` repeats key `AC_starts-fast`, carried by section \"Behaviour\" nested item `- `AC_starts-fast` [event] WHEN asked, the thing SHALL start in 1 s.`, and thing.md declares item-key",
+      "severity": "error"
+    }
+  ],
+  "passed": false
+}

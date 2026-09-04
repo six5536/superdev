@@ -1181,6 +1181,34 @@ fn contract_010_no_longer_defers_the_per_variant_heading() {
     }
 }
 
+/// Covers I052 AC_contract-criteria: the validator reads `nested` and
+/// `item-key-optional` (ADR-051), so contract-010's five promises about
+/// them are declared and none is `PENDING` any more.
+#[test]
+fn contract_010_no_longer_defers_the_nested_declarations() {
+    let path = "knowledge/contracts/internal/active/contract-010-interface-document-schemas.md";
+    let text = same(&std::fs::read_to_string(repo(path)).unwrap());
+    let behaviour = text
+        .split("\n## Behaviour\n")
+        .nth(1)
+        .and_then(|rest| rest.split("\n## Stability\n").next())
+        .expect("contract-010 carries Behaviour before Stability");
+    let items: Vec<&str> = behaviour.split("\n- ").collect();
+    for key in [
+        "`P_nested-binds`",
+        "`P_nested-required`",
+        "`P_key-optional-unkeyed`",
+        "`P_key-optional-keyed`",
+        "`P_misdeclared-nested`",
+    ] {
+        let item = items
+            .iter()
+            .find(|item| item.starts_with(key))
+            .unwrap_or_else(|| panic!("contract-010's Behaviour declares {key}"));
+        assert!(!item.contains("PENDING"), "{key} is still deferred: {item}");
+    }
+}
+
 /// Covers I049 criterion 8: one schema governs every contract, and neither
 /// tree ships a per-kind one — the sixteen ADR-043 retired, `contract-cli`
 /// through `contract-ui`, and the `file-format` one ADR-037 retired before

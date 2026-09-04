@@ -33,7 +33,7 @@ links:
     note: Fixes `item-key`, `item-only-pattern` and `item-prohibited-pattern`, the three item declarations.
   - rel: references
     to: adr-051-a-section-rule-declares-nested-items-and-an-optional-key
-    note: Fixes `nested` and `item-key-optional` — PENDING.
+    note: Fixes `nested` and `item-key-optional`, the nested-item declarations.
   - rel: references
     to: adr-049-a-heading-is-declared-per-variant
     note: Fixes that one heading may carry a rule per disjoint variant set.
@@ -396,22 +396,22 @@ matching `item-key` is held to the rest, an item not matching it is a
 plain item — a wontfix issue's either-form lists (ADR-051).
 
 - `P_nested-binds` [state] WHILE a rule carries `nested`, the validator
-  SHALL PENDING check every item one level below each of the rule's items
-  by the nested rule's `item-key`, then `item-prohibited-pattern`, then
+  SHALL check every item one level below each of the rule's items by
+  the nested rule's `item-key`, then `item-prohibited-pattern`, then
   `item-pattern`, one finding per item, and by the nested rule's own
   `nested` the level below, a nested key being unique with every key of
   the document at every level.
 - `P_nested-required` [event] WHEN a nested rule sets `required` and an
   item of the level above carries no item of the nested level, the
-  validator SHALL PENDING report an error naming the item above.
+  validator SHALL report an error naming the item above.
 - `P_key-optional-unkeyed` [state] WHILE a section rule sets
   `item-key-optional` and an item does not match `item-key`, the
-  validator SHALL PENDING check the item by `item-prohibited-pattern`
-  alone, skipping `item-pattern` and the `nested` rule beneath it.
+  validator SHALL check the item by `item-prohibited-pattern` alone,
+  skipping `item-pattern` and the `nested` rule beneath it.
 - `P_key-optional-keyed` [state] WHILE a section rule sets
   `item-key-optional` and an item matches `item-key`, the validator
-  SHALL PENDING check the item and the items beneath it as it would
-  without the flag.
+  SHALL check the item and the items beneath it as it would without the
+  flag.
 
 **Variants** — `variant-key` names the frontmatter key whose value
 selects a variant; any rule carrying `variants` applies only to the
@@ -473,8 +473,8 @@ binds nothing.
 - `P_misdeclared-nested` [event] WHEN a `nested` rule sits on a section
   whose `content` is not a list kind, a nested `item-key` carries a
   capture count other than one, or `item-key-optional` is set on a rule
-  with no `item-key`, the validator SHALL PENDING report it against the
-  schema file (ADR-051).
+  with no `item-key`, the validator SHALL report it against the schema
+  file (ADR-051).
 
 **The example is checked in place** — the `example:` block is read as
 a document and run through this same check with the declaring schema
