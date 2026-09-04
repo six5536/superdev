@@ -4,7 +4,7 @@ id: issue-052-the-workflow-carries-more-process-than-it-needs
 title: The workflow carries more process than it needs — keyed EARS issues, a framed state, and a verification pass per slice
 description: Keys and EARS are demanded of issues, where no test binds them, and of three tracker kinds with two states each; a feature passes through five phases with a full verification and a code review on every slice; the product is described by the user's needs, the ADRs, the contracts and the code, and every document beyond those is text that drifts — so keys and EARS retreat to the contracts, which gain keyed criteria, issues become one plain template with open, done and wontfix, frame, contract-design and the two plan kinds become one scope phase that writes the plan and makes the contract changes, build runs the full suite once at the end, and accept becomes the manual, optional last step carrying the code review.
 kind: feature
-lifecycle: open
+lifecycle: done
 links:
   - rel: references
     to: adr-046-a-promise-and-a-criterion-are-keyed-ears-items
@@ -207,10 +207,33 @@ Alternatives considered:
 - Keep three issue kinds with keys removed — three schemas for one
   record.
 
+## Resolution
+
+Shipped in plan-027's seven work blocks and merged as pull request 17;
+`main` carries it at `2fc23e2`. The validator reads nested list items
+to any declared depth and an optional key, closing contract-010's five
+PENDING promises; a contract's promise carries the `AC_` criteria that
+check it, held to the promise's own verb rules; `schema-issue` and
+`schema-plan` replace five schemas, with all 52 issues and 27 plans
+rewritten and their ids shortened; `/scope`, `/build`, `/execute-plan`
+and `/accept` replace five skills, with `/contract-design` a sub-skill
+of `/scope`; and the aggregator, concepts, glossary and README carry
+the workflow.
+
+Acceptance walked the change on the merged code: fifteen of sixteen
+behaviours hold, proved through the built binary against scratch
+trees. One does not — an issue whose Behaviour is only bullets is
+refused, where this issue says prose, bullets or both — filed as
+issue-054. The review is
+[code-review-011][sokf:code-review-011-the-workflow-is-file-scope-build-accept]:
+sound as merged, sixteen findings, all in the prose and process
+layers, five more of them filed as issues 053 and 055 to 058.
+
 <!-- sokf:links -->
 [sokf:adr-031-ears-criteria-are-checked-by-item-pattern]: /knowledge/adrs/deprecated/adr-031-ears-criteria-are-checked-by-item-pattern.md
 [sokf:adr-046-a-promise-and-a-criterion-are-keyed-ears-items]: /knowledge/adrs/active/adr-046-a-promise-and-a-criterion-are-keyed-ears-items.md
 [sokf:adr-048-an-issues-lifecycle-distinguishes-framed-from-unframed]: /knowledge/adrs/deprecated/adr-048-an-issues-lifecycle-distinguishes-framed-from-unframed.md
 [sokf:adr-050-keys-and-ears-live-in-the-contracts-and-the-workflow-is-file-scope-build-accept]: /knowledge/adrs/active/adr-050-keys-and-ears-live-in-the-contracts-and-the-workflow-is-file-scope-build-accept.md
 [sokf:adr-051-a-section-rule-declares-nested-items-and-an-optional-key]: /knowledge/adrs/active/adr-051-a-section-rule-declares-nested-items-and-an-optional-key.md
+[sokf:code-review-011-the-workflow-is-file-scope-build-accept]: /knowledge/reports/code-review-011-the-workflow-is-file-scope-build-accept.md
 [sokf:contract-010-interface-document-schemas]: /knowledge/contracts/internal/active/contract-010-interface-document-schemas.md
