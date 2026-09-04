@@ -65,6 +65,16 @@ publish a version it cannot find a heading for.
   its value equal to its key. A tag outside the enum, a tag or keyed
   example with no `variant-key`, a `variant-key` with no enum, and a
   missing example are each an error on the schema file (ADR-045).
+- **A contract's promise carries its criteria.** The contract schema's
+  Behaviour and Stability rules declare a `nested` rule, so a promise
+  may carry a nested bullet list of the criteria that check it, each
+  opening with an `AC_` key in a code span and an EARS tag, one modal
+  verb, in the promise's form; a nested item without them is an error
+  naming the item, and a key repeated across the contract's `P_` and
+  `AC_` keys one naming both items. A promise with no criterion is its
+  own check, so a contract on file changes nothing. A criterion is cited
+  as a promise is: `AC_<slug>` where the contract is the subject,
+  `<contract id> AC_<slug>` elsewhere (ADR-050, ADR-051).
 - **A section rule declares `nested` and `item-key-optional`.** `nested`
   is the rule for the items one level below the section's own — `item-key`,
   `item-pattern`, `item-prohibited-pattern`, `required` and its own
@@ -108,24 +118,21 @@ publish a version it cannot find a heading for.
   now declares `include`.
 - **An include block names a source region.** Beside a concept id, an
   include block's argument may be a `/`-rooted repository path with an
-  optional `#region`: `<!-- sokf:include /src/main.rs#cli -->`. The region
-  is bounded by lines containing `sokf:begin cli` and `sokf:end cli`, in
-  whatever comment syntax the file uses; regions sharing a name concatenate,
-  and a path with no `#` includes the whole file. `superdev validate --fix`
-  writes the region as a fenced block tagged by the file's extension,
-  carrying a `sokf:generated-by` line from the file's head, and
-  `superdev validate` reports a stale, empty or absent block, a path that is
-  missing or resolves outside the repository, and a region the file does not
-  carry, each as an error naming the path and the region (ADR-041).
+  optional `#region`: `<!-- sokf:include /src/main.rs#cli -->`, bounded
+  by lines containing `sokf:begin cli` and `sokf:end cli` in the file's
+  comment syntax; regions sharing a name concatenate, and a path with no
+  `#` includes the whole file. `superdev validate --fix` writes the region
+  as a fenced block tagged by the file's extension, and `superdev
+  validate` reports a stale, empty or absent block, a missing or
+  out-of-repository path, and an absent region, each naming the path and
+  the region (ADR-041).
 - **The file-format contract kind splits into text and binary.**
-  `schema-contract-text-format` governs a file whose shape is keys and values
-  and `schema-contract-binary-format` one whose shape is a byte layout —
-  offsets, widths, endianness, a magic number and a version a reader checks
-  first (ADR-037). **`schema-contract-file-format` is retired**: a contract
-  of that type must change its frontmatter `type` to `TextFormatContract`
-  and its id token from `file-format` to `text-format`, which
-  `superdev validate --fix` then refiles. superdev's own contracts 005, 006
-  and 008 moved with it.
+  `schema-contract-text-format` governs a file whose shape is keys and
+  values and `schema-contract-binary-format` one whose shape is a byte
+  layout (ADR-037); **`schema-contract-file-format` is retired**, its
+  contracts refiled as `TextFormatContract` by `superdev validate --fix`.
+  Both kinds were later folded into the one contract schema (ADR-043,
+  above).
 - **A drift failure says which way the difference runs.** An element the
   implementation carries and its contract does not declare reports as a
   `DEFECT`; one the contract promises and the implementation has yet to keep
@@ -160,23 +167,16 @@ publish a version it cannot find a heading for.
   stays self-contained on disk.
 - **A schema's worked example is checked.** `superdev validate` reads each
   schema's `example:` block as a document and checks it against the schema
-  that declares it — the frontmatter contract, the sections, their order
-  and their content kinds — reporting every failure as an error on the
-  schema file, prefixed `example:` so the reader sees the example broke
-  rather than the schema's own shape (ADR-024). An example that does not
-  parse as a document — no frontmatter block where the schema dispatches
-  by frontmatter `type`, or frontmatter that is not YAML — is an error on
-  the schema file too; a schema that names its documents by glob governs
-  frontmatter-less documents, so its example owes no frontmatter block.
+  that declares it, reporting every failure as an error on the schema
+  file prefixed `example:` (ADR-024). An example that does not parse as
+  a document is an error on the schema file too; a schema that names its
+  documents by glob owes no frontmatter block in its example.
 - **An example's links bind by form and never resolve.** Inside a
   schema's example, a concept link takes the `[text][sokf:<id>]`
-  reference form: a link or link definition whose target is a path into
-  the knowledge, and a `sokf:` destination written inline, are each an
-  error on the schema file (ADR-025). No id or target is resolved — a
-  fictional `sokf:` label passes, and a URL or a repository path outside
-  the knowledge keeps its ordinary markdown form, as does an image. An
-  example's `lifecycle` also binds here: the filing check, which owns
-  the key for real documents, never reads an example.
+  reference form; a link whose target is a path into the knowledge, and
+  a `sokf:` destination written inline, are each an error on the schema
+  file (ADR-025). No id or target is resolved, and the filing check
+  never reads an example.
 - **Required frontmatter keys bind.** `superdev validate` reads the
   per-key `required: true` flag a schema declares (ADR-022) and reports,
   as an error naming the document, the key and the schema, an absent key
