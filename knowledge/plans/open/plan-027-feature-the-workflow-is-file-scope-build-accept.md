@@ -309,15 +309,6 @@ section as it goes.
   the item's text, so a promise's pattern never reads a deeper note.
   Should the "Nested items" paragraph say "is dropped from the item it
   sits in, as an undeclared nested item's lines are"? Blocks nothing.
-- Slice 3 (built; the question is sequencing): the tracker holds 52
-  issues, not 51 — I052 itself is the 52nd — and from this slice the
-  `/frame` and `/accept` skills write `lifecycle: framed` and
-  `lifecycle: unframed`, values `schema-issue` refuses, until slices 5
-  and 6 rewrite them; plan-027's own cases cite I052's `AC_` keys,
-  which the issue no longer carries, until slice 4 rewrites the plans
-  to cite contract criteria. Should slices 5 and 6 land before the
-  branch merges, or should `/frame` and `/accept` take a one-line fix
-  now? Blocks nothing on the branch.
 - Slice 2 (built; the question is scope): the nested rule carries
   `item-key`, `item-pattern` and `required`, as the plan lists, and no
   `item-prohibited-pattern`, so a criterion carrying `MUST` beside its
