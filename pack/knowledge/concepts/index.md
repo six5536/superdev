@@ -7,7 +7,7 @@
 
 # Design
 
-* [Plans](plans/index.md) - the slice lists delivering features and the plans for one-off work outside the feature workflow, filed done when they land.
+* [Plans](plans/index.md) - one plan per piece of work — its goal, its contract changes and its work blocks — filed done when they land.
 * [ADRs](adrs/index.md) - architecture decision records: the choices that were expensive to make, with their alternatives.
 * [Contracts](contracts/index.md) - the durable contracts describing the app: promised outward in public/, binding modules in internal/.
 * [Issues](issues/index.md) - open tickets, grouped by feature.

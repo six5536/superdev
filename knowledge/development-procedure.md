@@ -17,15 +17,16 @@ no Node.
 # Workflow
 
 1. Significant changes travel the knowledge-carried workflow skills in
-   `.claude/skills/` (`/frame` → `/contract-design` → `/feature-plan` →
-   `/build` → `/integrate`; see `.agents/process.md`): the feature is
-   filed as a tracker issue — unframed by `/file`, or framed by
-   `/frame` — and is framed when taken up, its acceptance criteria EARS
-   sentences; the contracts it touches are updated in place and linked
-   from the issue, and the plan is filed as `plan-<nnn>-<slug>` per
-   `schema-plan` (`lifecycle: done` in the commit that completes the
-   work). One-off work takes `/adhoc-plan`, and its plan is filed in
-   the same series and template.
+   `.claude/skills/` (FILE → SCOPE → BUILD → ACCEPT; see
+   `.agents/superdev.md`): `/file` records the work as a tracker issue
+   in the user's words; `/scope` takes the issue up, updates the
+   contracts it touches in place and files the plan as
+   `plan-<nnn>-<slug>` per `schema-plan`; `/build` works the plan's
+   work blocks and sets the plan `lifecycle: done` in the commit that
+   completes the work; `/accept` is optional, runs at the user's
+   request on the merged code, and closes the issue. One-off work
+   carries no issue and starts at `/scope`, its plan filed in the same
+   series and template.
 2. One branch per piece of work: `/scope` cuts `feature/<nnn>-<slug>` off
    `main`, `<nnn>` the issue's number, and one-off work with no issue runs
    on `adhoc/<nnn>-<slug>`, `<nnn>` the plan's number. A human
@@ -33,8 +34,8 @@ no Node.
    work's branch (ADR-021). The phases commit their own records:
    `/scope` the plan with the contract, source-declaration and
    decision-record edits `/contract-design` made under the user's
-   go-ahead, `/integrate` the changelog, knowledge and plan edits at each
-   merge.
+   go-ahead; `/build` each work block with its tests, and the changelog,
+   knowledge and plan edits after the merge.
 3. Implement with focused commits, using
    [Conventional Commits](https://www.conventionalcommits.org/) (`feat:`,
    `fix:`, `docs:`, `test:`, `refactor:`, `chore:`).

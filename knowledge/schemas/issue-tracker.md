@@ -66,8 +66,8 @@ example: |
 
   Issues live in the canonical knowledge as Issue concepts in the issue
   tracker, not in GitHub, so they travel with the tree an agent reads. An issue that turns
-  out to need a behaviour decision is framed as a feature request whose
-  contracts record it; one that needs work gets a plan, linked both ways.
+  out to need a behaviour decision records it in the contracts it touches;
+  one that needs work gets a plan, linked both ways.
 
   # Conventions
 
