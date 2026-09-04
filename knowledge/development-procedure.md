@@ -70,13 +70,13 @@ only the blueprint's default git source is the base
 ([ADR-004][sokf:adr-004-base-pack-identity]), so **deleting or renaming**
 an item under `pack/` does not remove its live copy — that still needs a
 rebuild, and `status --drift` stays green until then
-([I003][sokf:issue-003-bug-a-local-pack-cannot-remove-what-it-dropped]). What it
+([I003][sokf:issue-003-a-local-pack-cannot-remove-what-it-dropped]). What it
 no longer does is record a digest for the pin: a path pack has none, so a
 commit touching `pack/` no longer rewrites a lock line
 ([ADR-016][sokf:adr-016-a-path-pack-records-no-digest]). Run `sync` with
 such a commit anyway — the per-file hashes still move when a live copy does,
 and a lock that has stopped describing what is on disk is the failure
-[I005][sokf:issue-005-bug-a-backport-leaves-the-lock-stale] closed.
+[I005][sokf:issue-005-a-backport-leaves-the-lock-stale] closed.
 
 The managed hook entry names a bare `superdev`, and this repo has no installed
 copy. `scripts/superdev` execs `cargo run` against this tree; symlink it onto
@@ -106,5 +106,5 @@ when you want the reasoning behind them.
 [sokf:adr-016-a-path-pack-records-no-digest]: /knowledge/adrs/active/adr-016-a-path-pack-records-no-digest.md
 [sokf:definition-of-done]: /knowledge/definition-of-done.md
 [sokf:development-commands]: /knowledge/development-commands.md
-[sokf:issue-003-bug-a-local-pack-cannot-remove-what-it-dropped]: /knowledge/issues/wontfix/issue-003-bug-a-local-pack-cannot-remove-what-it-dropped.md
-[sokf:issue-005-bug-a-backport-leaves-the-lock-stale]: /knowledge/issues/done/issue-005-bug-a-backport-leaves-the-lock-stale.md
+[sokf:issue-003-a-local-pack-cannot-remove-what-it-dropped]: /knowledge/issues/wontfix/issue-003-a-local-pack-cannot-remove-what-it-dropped.md
+[sokf:issue-005-a-backport-leaves-the-lock-stale]: /knowledge/issues/done/issue-005-a-backport-leaves-the-lock-stale.md

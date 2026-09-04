@@ -43,7 +43,7 @@ templates. `http://` is the same. A manifest is a committed file that arrives
 with a repository, so this is reachable by cloning a branch and running
 `sync`.
 
-[I007][sokf:issue-007-bug-a-pack-source-reaches-git-with-no-scheme-check]'s
+[I007][sokf:issue-007-a-pack-source-reaches-git-with-no-scheme-check]'s
 command-execution half is closed: every git call carries
 `-c protocol.ext.allow=never`, so an `ext::` URL — which names a command git
 runs as the connection — runs nothing whatever the machine is configured to
@@ -176,5 +176,5 @@ made git default `protocol.file.allow` to `user` has no path here.
 [sokf:adr-004-base-pack-identity]: /knowledge/adrs/active/adr-004-base-pack-identity.md
 [sokf:configuration]: /knowledge/configuration.md
 [sokf:contract-007-interface-pack-resolution]: /knowledge/contracts/internal/active/contract-007-interface-pack-resolution.md
-[sokf:issue-007-bug-a-pack-source-reaches-git-with-no-scheme-check]: /knowledge/issues/done/issue-007-bug-a-pack-source-reaches-git-with-no-scheme-check.md
+[sokf:issue-007-a-pack-source-reaches-git-with-no-scheme-check]: /knowledge/issues/done/issue-007-a-pack-source-reaches-git-with-no-scheme-check.md
 [sokf:security-requirements]: /knowledge/security-requirements.md

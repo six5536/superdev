@@ -249,7 +249,7 @@ unplanned, so nothing scheduled can stall behind one.
 ### Slice 15: Nothing superdev spawns can be talked into running a command
 
 - [x] Done — ticked by integrate at merge.
-- Gap: [I007][sokf:issue-007-bug-a-pack-source-reaches-git-with-no-scheme-check],
+- Gap: [I007][sokf:issue-007-a-pack-source-reaches-git-with-no-scheme-check],
   the half of it that needs no decision — and the half that closes the hole.
 - Change: add `-c protocol.ext.allow=never` (and the same for the other
   command-running helpers) to the `verbatim()` overrides every git invocation
@@ -272,7 +272,7 @@ unplanned, so nothing scheduled can stall behind one.
 ### Slice 16: A pack's symlinks are not followed
 
 - [x] Done — ticked by integrate at merge.
-- Gap: [I008][sokf:issue-008-bug-a-symlinked-file-in-a-pack-is-followed].
+- Gap: [I008][sokf:issue-008-a-symlinked-file-in-a-pack-is-followed].
 - Change: skip every symlink in a pack tree, not only a linked directory —
   `read_dir` already computes `linked` and acts on it for one case out of two.
 - Done-check: a pack whose item file is a symlink to a file outside the pack
@@ -285,7 +285,7 @@ unplanned, so nothing scheduled can stall behind one.
 ### Slice 17: The lock describes what is on disk, not only what was written
 
 - [x] Done — ticked by integrate at merge.
-- Gap: [I005][sokf:issue-005-bug-a-backport-leaves-the-lock-stale], filed
+- Gap: [I005][sokf:issue-005-a-backport-leaves-the-lock-stale], filed
   during delivery rather than by accept, scheduled because it is contained and
   fires on every backport, which is how this repo's owner edits skills.
 - Change: record an owned file's hash whenever the run resolves it as
@@ -302,7 +302,7 @@ unplanned, so nothing scheduled can stall behind one.
 ### Slice 18: Document packs, and what `update` actually does
 
 - [x] Done — ticked by integrate at merge.
-- Gap: [I006][sokf:issue-006-feature-request-content-packs-are-undocumented-for-users].
+- Gap: [I006][sokf:issue-006-content-packs-are-undocumented-for-users].
 - Change: correct `update`'s description at
   `crates/app/superdev/src/main.rs` — clap renders it into `--help`, the man
   page and the completions — and the matching rustdoc in `manage.rs`, so both
@@ -327,23 +327,23 @@ Cutting any of these as a slice would only have bounced it to
 decided — [ADR-012][sokf:adr-012-pack-source-schemes-are-allowlisted]
 to [ADR-016][sokf:adr-016-a-path-pack-records-no-digest] — and
 scheduled as [P005][sokf:plan-005-feature-content-pack-hardening], except
-[I003][sokf:issue-003-bug-a-local-pack-cannot-remove-what-it-dropped], closed
+[I003][sokf:issue-003-a-local-pack-cannot-remove-what-it-dropped], closed
 `wontfix`: a path pack keeps layering, and the rebuild a pack developer needs
 anyway is the answer.
 
 - **The scheme allowlist**, the other half of
-  [I007][sokf:issue-007-bug-a-pack-source-reaches-git-with-no-scheme-check]:
+  [I007][sokf:issue-007-a-pack-source-reaches-git-with-no-scheme-check]:
   refusing a source whose scheme superdev does not support, rather than
   handing it to git. Defence in depth once slice 15 lands, and a clearer
   error. Which schemes are in the set changes what a manifest may say, which
   [C007][sokf:contract-007-interface-pack-resolution] documents as `parse`'s rejections.
-- [I001][sokf:issue-001-bug-update-can-pin-an-unreadable-pack-format] — a
+- [I001][sokf:issue-001-update-can-pin-an-unreadable-pack-format] — a
   format range the tag does not carry.
-- [I002][sokf:issue-002-bug-no-time-bound-on-the-update-query] — a deadline on
+- [I002][sokf:issue-002-no-time-bound-on-the-update-query] — a deadline on
   the process boundary every component shares.
-- [I003][sokf:issue-003-bug-a-local-pack-cannot-remove-what-it-dropped] — a
+- [I003][sokf:issue-003-a-local-pack-cannot-remove-what-it-dropped] — a
   path source that may be the base, which ADR-004 and ADR-011 forbid.
-- [I004][sokf:issue-004-bug-a-path-packs-digest-churns-and-is-never-checked] —
+- [I004][sokf:issue-004-a-path-packs-digest-churns-and-is-never-checked] —
   a lock schema whose digest is optional.
 
 <!-- sokf:links -->
@@ -356,12 +356,12 @@ anyway is the answer.
 [sokf:adr-012-pack-source-schemes-are-allowlisted]: /knowledge/adrs/active/adr-012-pack-source-schemes-are-allowlisted.md
 [sokf:adr-016-a-path-pack-records-no-digest]: /knowledge/adrs/active/adr-016-a-path-pack-records-no-digest.md
 [sokf:contract-007-interface-pack-resolution]: /knowledge/contracts/internal/active/contract-007-interface-pack-resolution.md
-[sokf:issue-001-bug-update-can-pin-an-unreadable-pack-format]: /knowledge/issues/done/issue-001-bug-update-can-pin-an-unreadable-pack-format.md
-[sokf:issue-002-bug-no-time-bound-on-the-update-query]: /knowledge/issues/done/issue-002-bug-no-time-bound-on-the-update-query.md
-[sokf:issue-003-bug-a-local-pack-cannot-remove-what-it-dropped]: /knowledge/issues/wontfix/issue-003-bug-a-local-pack-cannot-remove-what-it-dropped.md
-[sokf:issue-004-bug-a-path-packs-digest-churns-and-is-never-checked]: /knowledge/issues/done/issue-004-bug-a-path-packs-digest-churns-and-is-never-checked.md
-[sokf:issue-005-bug-a-backport-leaves-the-lock-stale]: /knowledge/issues/done/issue-005-bug-a-backport-leaves-the-lock-stale.md
-[sokf:issue-006-feature-request-content-packs-are-undocumented-for-users]: /knowledge/issues/done/issue-006-feature-request-content-packs-are-undocumented-for-users.md
-[sokf:issue-007-bug-a-pack-source-reaches-git-with-no-scheme-check]: /knowledge/issues/done/issue-007-bug-a-pack-source-reaches-git-with-no-scheme-check.md
-[sokf:issue-008-bug-a-symlinked-file-in-a-pack-is-followed]: /knowledge/issues/done/issue-008-bug-a-symlinked-file-in-a-pack-is-followed.md
+[sokf:issue-001-update-can-pin-an-unreadable-pack-format]: /knowledge/issues/done/issue-001-update-can-pin-an-unreadable-pack-format.md
+[sokf:issue-002-no-time-bound-on-the-update-query]: /knowledge/issues/done/issue-002-no-time-bound-on-the-update-query.md
+[sokf:issue-003-a-local-pack-cannot-remove-what-it-dropped]: /knowledge/issues/wontfix/issue-003-a-local-pack-cannot-remove-what-it-dropped.md
+[sokf:issue-004-a-path-packs-digest-churns-and-is-never-checked]: /knowledge/issues/done/issue-004-a-path-packs-digest-churns-and-is-never-checked.md
+[sokf:issue-005-a-backport-leaves-the-lock-stale]: /knowledge/issues/done/issue-005-a-backport-leaves-the-lock-stale.md
+[sokf:issue-006-content-packs-are-undocumented-for-users]: /knowledge/issues/done/issue-006-content-packs-are-undocumented-for-users.md
+[sokf:issue-007-a-pack-source-reaches-git-with-no-scheme-check]: /knowledge/issues/done/issue-007-a-pack-source-reaches-git-with-no-scheme-check.md
+[sokf:issue-008-a-symlinked-file-in-a-pack-is-followed]: /knowledge/issues/done/issue-008-a-symlinked-file-in-a-pack-is-followed.md
 [sokf:plan-005-feature-content-pack-hardening]: /knowledge/plans/done/plan-005-feature-content-pack-hardening.md

@@ -6,14 +6,14 @@ description: Slices closing the promised run-state fields, promoting the five fi
 lifecycle: done
 links:
   - rel: implements
-    to: issue-012-feature-request-five-decidable-findings-only-warn
+    to: issue-012-five-decidable-findings-only-warn
     note: The plan delivers the framed issue's two criteria under ADR-039.
 ---
 
 # Feature plan: a decidable finding is an error
 
 Request:
-[issue-012][sokf:issue-012-feature-request-five-decidable-findings-only-warn],
+[issue-012][sokf:issue-012-five-decidable-findings-only-warn],
 decided by
 [ADR-039][sokf:adr-039-a-decidable-finding-is-an-error-and-the-turn-is-the-gate].
 
@@ -115,4 +115,4 @@ decided by
 <!-- sokf:links -->
 [sokf:adr-039-a-decidable-finding-is-an-error-and-the-turn-is-the-gate]: /knowledge/adrs/active/adr-039-a-decidable-finding-is-an-error-and-the-turn-is-the-gate.md
 [sokf:contract-009-interface-run-state]: /knowledge/contracts/internal/active/contract-009-interface-run-state.md
-[sokf:issue-012-feature-request-five-decidable-findings-only-warn]: /knowledge/issues/done/issue-012-feature-request-five-decidable-findings-only-warn.md
+[sokf:issue-012-five-decidable-findings-only-warn]: /knowledge/issues/done/issue-012-five-decidable-findings-only-warn.md

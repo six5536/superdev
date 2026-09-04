@@ -8,7 +8,7 @@ links:
     to: plan-026-feature-filing-an-issue-without-framing-it
     note: The plan whose six slices this review reads.
   - rel: references
-    to: issue-030-feature-request-filing-an-issue-requires-framing-it
+    to: issue-030-filing-an-issue-requires-framing-it
     note: The framed feature; the findings are checked against its seventeen criteria.
 ---
 
@@ -19,7 +19,7 @@ links:
 The six slices of
 [plan-026][sokf:plan-026-feature-filing-an-issue-without-framing-it]
 deliver
-[I030][sokf:issue-030-feature-request-filing-an-issue-requires-framing-it]:
+[I030][sokf:issue-030-filing-an-issue-requires-framing-it]:
 the validator selects one rule per heading per variant, the three
 tracker schemas vary by a four-state lifecycle with twelve passing
 examples, the 50 issues on file are refiled and the 21 prose Expected
@@ -187,7 +187,7 @@ Two nits: a skill count and a numbering sentence.
   `references` (ADR-048)"; both ideas indexes read "stays on file, linked
   from the issue that took it up".
 
-### 7. I019's expected behaviours carry a tag that misnames their pattern — knowledge/issues/done/issue-019-bug-validate-reads-a-named-file-as-a-skill.md:54
+### 7. I019's expected behaviours carry a tag that misnames their pattern — knowledge/issues/done/issue-019-validate-reads-a-named-file-as-a-skill.md:54
 
 - Severity: minor
 - Category: correctness
@@ -251,7 +251,7 @@ Two nits: a skill count and a numbering sentence.
   is a chore after I050, a bug. The schemas' "its kind's folders"
   predates the feature.
 - Failure scenario: an agent filing a bug numbers after the highest
-  bug on file and writes `issue-051-bug-…`; `superdev validate` reports
+  bug on file and writes `issue-051-…`; `superdev validate` reports
   "duplicate `issue` number 051", so the fault costs one round trip.
 - Suggested fix: "after the highest issue across the tracker's folders;
   an idea after the highest idea".
@@ -334,5 +334,5 @@ Two nits: a skill count and a numbering sentence.
   second instance.
 
 <!-- sokf:links -->
-[sokf:issue-030-feature-request-filing-an-issue-requires-framing-it]: /knowledge/issues/done/issue-030-feature-request-filing-an-issue-requires-framing-it.md
+[sokf:issue-030-filing-an-issue-requires-framing-it]: /knowledge/issues/done/issue-030-filing-an-issue-requires-framing-it.md
 [sokf:plan-026-feature-filing-an-issue-without-framing-it]: /knowledge/plans/done/plan-026-feature-filing-an-issue-without-framing-it.md

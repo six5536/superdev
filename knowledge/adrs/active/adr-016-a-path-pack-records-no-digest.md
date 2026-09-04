@@ -34,7 +34,7 @@ every commit touching any file under `pack/` rewrites that one line, and any
 two branches editing content conflict on it. A commit made without running
 `sync` leaves a digest that does not describe the tree, and nothing reports
 that either
-([I004][sokf:issue-004-bug-a-path-packs-digest-churns-and-is-never-checked]).
+([I004][sokf:issue-004-a-path-packs-digest-churns-and-is-never-checked]).
 This repository is the first to commit such a line, and met both immediately.
 
 [ADR-011][sokf:adr-011-path-pack-identity-is-root-relative] considered omitting
@@ -118,5 +118,5 @@ re-synced, which is the workflow a path source exists to remove.
 [sokf:adr-011-path-pack-identity-is-root-relative]: /knowledge/adrs/active/adr-011-path-pack-identity-is-root-relative.md
 [sokf:configuration]: /knowledge/configuration.md
 [sokf:contract-007-interface-pack-resolution]: /knowledge/contracts/internal/active/contract-007-interface-pack-resolution.md
-[sokf:issue-004-bug-a-path-packs-digest-churns-and-is-never-checked]: /knowledge/issues/done/issue-004-bug-a-path-packs-digest-churns-and-is-never-checked.md
+[sokf:issue-004-a-path-packs-digest-churns-and-is-never-checked]: /knowledge/issues/done/issue-004-a-path-packs-digest-churns-and-is-never-checked.md
 [sokf:security-requirements]: /knowledge/security-requirements.md

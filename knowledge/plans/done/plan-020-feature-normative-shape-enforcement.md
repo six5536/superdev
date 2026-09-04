@@ -6,14 +6,14 @@ description: Slices delivering the body-pattern vocabulary, the EARS declaration
 lifecycle: done
 links:
   - rel: implements
-    to: issue-034-feature-request-normative-shapes-are-described-but-not-enforced
+    to: issue-034-normative-shapes-are-described-but-not-enforced
     note: The plan delivers the framed issue's seven criteria.
 ---
 
 # Feature plan: normative shape enforcement
 
 Request:
-[issue-034][sokf:issue-034-feature-request-normative-shapes-are-described-but-not-enforced]
+[issue-034][sokf:issue-034-normative-shapes-are-described-but-not-enforced]
 
 ## Slices
 
@@ -96,4 +96,4 @@ Request:
     covers 6.
 
 <!-- sokf:links -->
-[sokf:issue-034-feature-request-normative-shapes-are-described-but-not-enforced]: /knowledge/issues/done/issue-034-feature-request-normative-shapes-are-described-but-not-enforced.md
+[sokf:issue-034-normative-shapes-are-described-but-not-enforced]: /knowledge/issues/done/issue-034-normative-shapes-are-described-but-not-enforced.md

@@ -308,7 +308,7 @@ Depends on: W3.
 ## Out-of-band notes
 
 - Superseded by
-  [issue-024][sokf:issue-024-feature-request-the-workflow-cannot-run-unattended],
+  [issue-024][sokf:issue-024-the-workflow-cannot-run-unattended],
   delivered by [plan-013][sokf:plan-013-feature-workflow-autonomy] against
   the five-phase workflow; the decisions are ADR-018 to ADR-021 and the
   seam is contract-009.
@@ -389,5 +389,5 @@ not reach the default branch on its own.
 
 <!-- sokf:links -->
 [sokf:development-procedure]: /knowledge/development-procedure.md
-[sokf:issue-024-feature-request-the-workflow-cannot-run-unattended]: /knowledge/issues/done/issue-024-feature-request-the-workflow-cannot-run-unattended.md
+[sokf:issue-024-the-workflow-cannot-run-unattended]: /knowledge/issues/done/issue-024-the-workflow-cannot-run-unattended.md
 [sokf:plan-013-feature-workflow-autonomy]: /knowledge/plans/done/plan-013-feature-workflow-autonomy.md

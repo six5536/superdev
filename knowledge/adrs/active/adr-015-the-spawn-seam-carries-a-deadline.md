@@ -30,7 +30,7 @@ them — a captive portal, a black-holing proxy — that call sits silent for th
 OS connect timeout, around two minutes on Linux, and then degrades correctly.
 ADR-009 asks the query to fall back to the binary's own pin rather than
 erroring; two silent minutes is neither erroring nor falling back
-([I002][sokf:issue-002-bug-no-time-bound-on-the-update-query]).
+([I002][sokf:issue-002-no-time-bound-on-the-update-query]).
 
 It is bounded — `Command::output()` gives the child a null stdin, so git's
 terminal prompt gets EOF and fails fast, and a dropped connect ends when the
@@ -138,5 +138,5 @@ standard library.
 [sokf:architecture]: /knowledge/architecture.md
 [sokf:contract-007-interface-pack-resolution]: /knowledge/contracts/internal/active/contract-007-interface-pack-resolution.md
 [sokf:dependency-policy]: /knowledge/dependency-policy.md
-[sokf:issue-002-bug-no-time-bound-on-the-update-query]: /knowledge/issues/done/issue-002-bug-no-time-bound-on-the-update-query.md
+[sokf:issue-002-no-time-bound-on-the-update-query]: /knowledge/issues/done/issue-002-no-time-bound-on-the-update-query.md
 [sokf:software-components]: /knowledge/software-components.md

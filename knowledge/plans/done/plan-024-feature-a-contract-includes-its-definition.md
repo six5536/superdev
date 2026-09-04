@@ -6,7 +6,7 @@ description: Slices delivering I049 — the source include, the sixth content ki
 lifecycle: done
 links:
   - rel: implements
-    to: issue-049-feature-request-a-contract-cannot-point-at-its-definition
+    to: issue-049-a-contract-cannot-point-at-its-definition
     note: The framed feature whose twenty-four criteria these slices deliver.
   - rel: references
     to: contract-010-interface-document-schemas
@@ -15,7 +15,7 @@ links:
 
 # Feature plan: A contract includes its definition
 
-Request: [issue-049-feature-request-a-contract-cannot-point-at-its-definition][sokf:issue-049-feature-request-a-contract-cannot-point-at-its-definition]
+Request: [issue-049-a-contract-cannot-point-at-its-definition][sokf:issue-049-a-contract-cannot-point-at-its-definition]
 
 The mechanism first, because it is the riskiest and everything reads
 through it. Then the two schema-layer changes that close
@@ -362,4 +362,4 @@ named the pack as the grammar's source.
 
 <!-- sokf:links -->
 [sokf:contract-010-interface-document-schemas]: /knowledge/contracts/internal/active/contract-010-interface-document-schemas.md
-[sokf:issue-049-feature-request-a-contract-cannot-point-at-its-definition]: /knowledge/issues/framed/issue-049-feature-request-a-contract-cannot-point-at-its-definition.md
+[sokf:issue-049-a-contract-cannot-point-at-its-definition]: /knowledge/issues/open/issue-049-a-contract-cannot-point-at-its-definition.md

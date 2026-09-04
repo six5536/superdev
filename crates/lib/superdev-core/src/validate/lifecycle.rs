@@ -180,15 +180,12 @@ mod tests {
     use super::*;
     use crate::validate::schema::document::SchemaSet;
 
-    /// A schema whose documents carry the tracker's four lifecycle values
-    /// (ADR-048): `unframed | framed | done | wontfix`.
-    const ISSUE_SCHEMA: &str = "---\ntype: Schema\n---\n````yaml\nfrontmatter:\n  type:\n    const: BugReport\n  lifecycle:\n    enum: [unframed, framed, done, wontfix]\n````\n";
+    /// A schema whose documents carry the tracker's three lifecycle values
+    /// (ADR-050): `open | done | wontfix`.
+    const ISSUE_SCHEMA: &str = "---\ntype: Schema\n---\n````yaml\nfrontmatter:\n  type:\n    const: Issue\n  lifecycle:\n    enum: [open, done, wontfix]\n````\n";
 
     fn set() -> SchemaSet {
-        let files = vec![(
-            "schemas/bug-report.md".to_string(),
-            ISSUE_SCHEMA.to_string(),
-        )];
+        let files = vec![("schemas/issue.md".to_string(), ISSUE_SCHEMA.to_string())];
         let (set, findings) = SchemaSet::load(&files);
         assert!(findings.is_empty());
         set
@@ -197,7 +194,7 @@ mod tests {
     fn subject(path: &str, lifecycle: Option<&str>) -> Subject {
         Subject {
             path: path.to_string(),
-            doc_type: "BugReport".to_string(),
+            doc_type: "Issue".to_string(),
             lifecycle: lifecycle.map(str::to_string),
             id: None,
             kind: None,
@@ -245,8 +242,8 @@ mod tests {
         assert!(check(&[contract("contract-001", Some("cli"))], &set()).is_empty());
         let other = Subject {
             kind: Some("api".to_string()),
-            id: Some("issue-001-bug-x".to_string()),
-            ..subject("issues/framed/issue-001-bug-x.md", Some("framed"))
+            id: Some("issue-001-x".to_string()),
+            ..subject("issues/open/issue-001-x.md", Some("open"))
         };
         assert!(check(&[other], &set()).is_empty());
     }
@@ -254,7 +251,7 @@ mod tests {
     #[test]
     fn a_filed_document_with_a_valid_value_passes() {
         let findings = check(
-            &[subject("issues/framed/issue-001-bug-x.md", Some("framed"))],
+            &[subject("issues/open/issue-001-x.md", Some("open"))],
             &set(),
         );
         assert!(findings.is_empty());
@@ -262,35 +259,27 @@ mod tests {
 
     #[test]
     fn a_missing_value_names_the_enum() {
-        let findings = check(&[subject("issues/framed/issue-001-bug-x.md", None)], &set());
+        let findings = check(&[subject("issues/open/issue-001-x.md", None)], &set());
         assert_eq!(findings.len(), 1);
-        assert!(
-            findings[0]
-                .message
-                .contains("unframed, framed, done, wontfix")
-        );
+        assert!(findings[0].message.contains("open, done, wontfix"));
         assert!(findings[0].fatal, "a filing finding fails the run");
     }
 
     #[test]
     fn a_value_outside_the_enum_names_value_and_enum() {
         let findings = check(
-            &[subject("issues/framed/issue-001-bug-x.md", Some("closed"))],
+            &[subject("issues/open/issue-001-x.md", Some("closed"))],
             &set(),
         );
         assert_eq!(findings.len(), 1);
         assert!(findings[0].message.contains("`closed`"));
-        assert!(
-            findings[0]
-                .message
-                .contains("unframed, framed, done, wontfix")
-        );
+        assert!(findings[0].message.contains("open, done, wontfix"));
     }
 
     #[test]
     fn a_misfiled_document_is_reported_with_its_folder() {
         let findings = check(
-            &[subject("issues/done/issue-001-bug-x.md", Some("framed"))],
+            &[subject("issues/done/issue-001-x.md", Some("open"))],
             &set(),
         );
         assert_eq!(findings.len(), 1);
@@ -299,13 +288,10 @@ mod tests {
 
     #[test]
     fn an_unfiled_document_is_reported_with_its_target() {
-        let findings = check(
-            &[subject("issues/issue-001-bug-x.md", Some("unframed"))],
-            &set(),
-        );
+        let findings = check(&[subject("issues/issue-001-x.md", Some("open"))], &set());
         assert_eq!(findings.len(), 1);
         assert!(findings[0].message.contains("unfiled"));
-        assert!(findings[0].message.contains("`unframed/`"));
+        assert!(findings[0].message.contains("`open/`"));
     }
 
     #[test]
@@ -322,26 +308,26 @@ mod tests {
 
     #[test]
     fn targets_replace_a_state_folder_and_append_for_unfiled() {
-        let allowed: Vec<String> = ["unframed", "framed", "done", "wontfix"]
+        let allowed: Vec<String> = ["open", "done", "wontfix"]
             .iter()
             .map(|s| (*s).to_string())
             .collect();
         assert_eq!(
-            target("issues/done/i.md", "framed", &allowed).as_deref(),
-            Some("issues/framed/i.md")
+            target("issues/done/i.md", "open", &allowed).as_deref(),
+            Some("issues/open/i.md")
         );
         assert_eq!(
-            target("issues/i.md", "unframed", &allowed).as_deref(),
-            Some("issues/unframed/i.md")
+            target("issues/i.md", "open", &allowed).as_deref(),
+            Some("issues/open/i.md")
         );
         assert_eq!(
-            target("contracts/public/c.md", "framed", &allowed).as_deref(),
-            Some("contracts/public/framed/c.md")
+            target("contracts/public/c.md", "open", &allowed).as_deref(),
+            Some("contracts/public/open/c.md")
         );
-        assert_eq!(target("issues/framed/i.md", "framed", &allowed), None);
+        assert_eq!(target("issues/open/i.md", "open", &allowed), None);
         assert_eq!(
-            target("i.md", "framed", &allowed).as_deref(),
-            Some("framed/i.md")
+            target("i.md", "open", &allowed).as_deref(),
+            Some("open/i.md")
         );
     }
 }

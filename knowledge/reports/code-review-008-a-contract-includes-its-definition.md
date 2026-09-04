@@ -8,7 +8,7 @@ links:
     to: plan-024-feature-a-contract-includes-its-definition
     note: The plan whose ten slices this review reads.
   - rel: references
-    to: issue-049-feature-request-a-contract-cannot-point-at-its-definition
+    to: issue-049-a-contract-cannot-point-at-its-definition
     note: The framed feature; the findings are checked against its criteria.
 ---
 
@@ -19,7 +19,7 @@ links:
 The ten slices of
 [plan-024][sokf:plan-024-feature-a-contract-includes-its-definition]
 deliver
-[I049][sokf:issue-049-feature-request-a-contract-cannot-point-at-its-definition].
+[I049][sokf:issue-049-a-contract-cannot-point-at-its-definition].
 The mechanism is sound on an LF checkout and the migration is complete;
 two correctness findings block merge, both on a CRLF checkout — every
 source include reports stale, and `--fix` then corrupts the block so
@@ -245,5 +245,5 @@ Every finding was resolved on the branch.
   changes the file the next render reads.
 
 <!-- sokf:links -->
-[sokf:issue-049-feature-request-a-contract-cannot-point-at-its-definition]: /knowledge/issues/framed/issue-049-feature-request-a-contract-cannot-point-at-its-definition.md
+[sokf:issue-049-a-contract-cannot-point-at-its-definition]: /knowledge/issues/open/issue-049-a-contract-cannot-point-at-its-definition.md
 [sokf:plan-024-feature-a-contract-includes-its-definition]: /knowledge/plans/done/plan-024-feature-a-contract-includes-its-definition.md

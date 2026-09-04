@@ -107,7 +107,7 @@ example: |
 
   # Feature plan: Pack source transport allowlist
 
-  Request: [issue-041-feature-request-pack-source-allowlist][sokf:issue-041-feature-request-pack-source-allowlist]
+  Request: [issue-041-pack-source-allowlist][sokf:issue-041-pack-source-allowlist]
 
   ## Slices
 

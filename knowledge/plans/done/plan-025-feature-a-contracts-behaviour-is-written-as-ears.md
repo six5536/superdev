@@ -6,7 +6,7 @@ description: Slices delivering I037 — the three item declarations in the valid
 lifecycle: done
 links:
   - rel: implements
-    to: issue-037-feature-request-a-contracts-behaviour-is-not-written-as-ears
+    to: issue-037-a-contracts-behaviour-is-not-written-as-ears
     note: The framed feature whose twenty-one criteria these slices deliver.
   - rel: references
     to: contract-010-interface-document-schemas
@@ -21,7 +21,7 @@ links:
 
 # Feature plan: A contract's behaviour is written as EARS
 
-Request: [issue-037-feature-request-a-contracts-behaviour-is-not-written-as-ears][sokf:issue-037-feature-request-a-contracts-behaviour-is-not-written-as-ears]
+Request: [issue-037-a-contracts-behaviour-is-not-written-as-ears][sokf:issue-037-a-contracts-behaviour-is-not-written-as-ears]
 
 The validator first: the two slices that close
 [contract-010][sokf:contract-010-interface-document-schemas]'s
@@ -332,7 +332,7 @@ rebuild per edit.
     criteria are keyed items, written as EARS where the item is a
     requirement. `EX_` lands there, on the framed variant, and settled
     records stay as they are. Recorded on
-    [I030][sokf:issue-030-feature-request-filing-an-issue-requires-framing-it],
+    [I030][sokf:issue-030-filing-an-issue-requires-framing-it],
     which owns the lifecycle; `AC_c17` narrows to the lists this
     feature keyed.
 - Criterion 15 says no skill changes for the form. The frame skill's
@@ -347,6 +347,6 @@ rebuild per edit.
 [sokf:adr-047-a-section-rule-declares-item-keys-and-item-bounds]: /knowledge/adrs/active/adr-047-a-section-rule-declares-item-keys-and-item-bounds.md
 [sokf:code-review-009-a-contracts-behaviour-is-written-as-ears]: /knowledge/reports/code-review-009-a-contracts-behaviour-is-written-as-ears.md
 [sokf:contract-010-interface-document-schemas]: /knowledge/contracts/internal/active/contract-010-interface-document-schemas.md
-[sokf:issue-030-feature-request-filing-an-issue-requires-framing-it]: /knowledge/issues/done/issue-030-feature-request-filing-an-issue-requires-framing-it.md
-[sokf:issue-037-feature-request-a-contracts-behaviour-is-not-written-as-ears]: /knowledge/issues/done/issue-037-feature-request-a-contracts-behaviour-is-not-written-as-ears.md
+[sokf:issue-030-filing-an-issue-requires-framing-it]: /knowledge/issues/done/issue-030-filing-an-issue-requires-framing-it.md
+[sokf:issue-037-a-contracts-behaviour-is-not-written-as-ears]: /knowledge/issues/done/issue-037-a-contracts-behaviour-is-not-written-as-ears.md
 [sokf:plan-024-feature-a-contract-includes-its-definition]: /knowledge/plans/done/plan-024-feature-a-contract-includes-its-definition.md

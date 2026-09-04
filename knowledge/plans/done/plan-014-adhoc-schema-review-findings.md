@@ -6,7 +6,7 @@ description: The schema review's findings land — worked examples satisfy their
 lifecycle: done
 links:
   - rel: references
-    to: issue-022-feature-request-a-schemas-worked-example-is-checked-by-nothing
+    to: issue-022-a-schemas-worked-example-is-checked-by-nothing
     note: This plan hand-fixes the examples and appends the type-mismatch evidence.
   - rel: relates-to
     to: plan-013-feature-workflow-autonomy
@@ -39,7 +39,7 @@ the rest of the code are untouched.
 - The live documents all carry the `const` types — `knowledge/architecture.md`
   reads `type: Architecture`, and likewise for every named-file concept — so
   the schemas are right and the examples are stale.
-- [issue-022][sokf:issue-022-feature-request-a-schemas-worked-example-is-checked-by-nothing]
+- [issue-022][sokf:issue-022-a-schemas-worked-example-is-checked-by-nothing]
   records the mechanism with id evidence only; the five ids it lists no
   longer break their patterns.
 - The seven report schemas constrain no `id` and say documents are "filed in
@@ -261,7 +261,7 @@ Depends on: W1, W2, W3, W4, W5.
 | `knowledge/ideas/idea-001-schemas-carry-a-reading-reminder.md` | modified — sections to level 2 | W4 |
 | `knowledge/constraints-non-goals.md` | modified — `type: ConstraintsNonGoals` | W4 |
 | `pack/knowledge/schemas/**` (53) | modified — mirror of every schema change | W6 |
-| `knowledge/issues/open/issue-022-feature-request-a-schemas-worked-example-is-checked-by-nothing.md` | modified — evidence appended to Comments | W6 |
+| `knowledge/issues/open/issue-022-a-schemas-worked-example-is-checked-by-nothing.md` | modified — evidence appended to Comments | W6 |
 | `CHANGELOG.md` | modified — Unreleased entry for the schema reshape | W6 |
 
 ## Acceptance
@@ -379,5 +379,5 @@ for title, sid, summ in re.findall(r'\* \[([^\]]+)\]\[sokf:(schema-[a-z-]+)\] - 
 
 <!-- sokf:links -->
 [sokf:adr-020-a-blocked-run-ends]: /knowledge/adrs/active/adr-020-a-blocked-run-ends.md
-[sokf:issue-022-feature-request-a-schemas-worked-example-is-checked-by-nothing]: /knowledge/issues/done/issue-022-feature-request-a-schemas-worked-example-is-checked-by-nothing.md
+[sokf:issue-022-a-schemas-worked-example-is-checked-by-nothing]: /knowledge/issues/done/issue-022-a-schemas-worked-example-is-checked-by-nothing.md
 [sokf:plan-013-feature-workflow-autonomy]: /knowledge/plans/done/plan-013-feature-workflow-autonomy.md

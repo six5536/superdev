@@ -9,7 +9,7 @@ links:
     to: plan-011-adhoc-filing-by-lifecycle
     note: Runs after the lifecycle filing lands; this plan writes in its vocabulary.
   - rel: references
-    to: issue-021-chore-backport-the-knowledge-design-to-the-pack
+    to: issue-021-backport-the-knowledge-design-to-the-pack
     note: The pack copies of the workflow skills this plan changes join that backport debt.
 ---
 
@@ -100,7 +100,7 @@ and no spec document exists.
 ## Non-goals
 
 - The pack backport. This plan's share of the drift is recorded in
-  [issue-021][sokf:issue-021-chore-backport-the-knowledge-design-to-the-pack],
+  [issue-021][sokf:issue-021-backport-the-knowledge-design-to-the-pack],
   which owns the whole debt — except the six workflow skills, whose pack
   copies are mirrored here so a rebuild cannot resurrect a deleted phase.
 - The lifecycle machinery. plan-011 delivers it first; this plan uses it.
@@ -268,7 +268,7 @@ exist.
 | `.agents/process.md` | modified — five phases | W4 |
 | `.agents/core.md` | modified — wrong-case edge to FEATURE-PLAN | W4 |
 | `knowledge/development-procedure.md` | modified — Workflow section | W4 |
-| `knowledge/issues/issue-021-chore-backport-the-knowledge-design-to-the-pack.md` | modified — this plan's pack share recorded | W4 |
+| `knowledge/issues/issue-021-backport-the-knowledge-design-to-the-pack.md` | modified — this plan's pack share recorded | W4 |
 
 ## Acceptance
 
@@ -355,5 +355,5 @@ As counted at planning (`grep -rl 'sokf:spec-' knowledge`): 48 files —
 plan-011 will have moved the files.
 
 <!-- sokf:links -->
-[sokf:issue-021-chore-backport-the-knowledge-design-to-the-pack]: /knowledge/issues/done/issue-021-chore-backport-the-knowledge-design-to-the-pack.md
+[sokf:issue-021-backport-the-knowledge-design-to-the-pack]: /knowledge/issues/done/issue-021-backport-the-knowledge-design-to-the-pack.md
 [sokf:plan-011-adhoc-filing-by-lifecycle]: /knowledge/plans/done/plan-011-adhoc-filing-by-lifecycle.md

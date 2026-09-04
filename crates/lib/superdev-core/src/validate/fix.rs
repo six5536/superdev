@@ -558,49 +558,47 @@ mod tests {
         )
         .unwrap();
         std::fs::write(
-            knowledge.join("schemas/bug-report.md"),
-            "---\ntype: Schema\nid: schema-bug-report\n---\n````yaml\nfrontmatter:\n  type:\n    const: BugReport\n  lifecycle:\n    enum: [unframed, framed, done, wontfix]\n````\n",
+            knowledge.join("schemas/issue.md"),
+            "---\ntype: Schema\nid: schema-issue\n---\n````yaml\nfrontmatter:\n  type:\n    const: Issue\n  lifecycle:\n    enum: [open, done, wontfix]\n````\n",
         )
         .unwrap();
-        // Misfiled: sits in done/ while framed.
+        // Misfiled: sits in done/ while open.
         std::fs::write(
-            knowledge.join("issues/done/issue-001-bug-a.md"),
-            "---\ntype: BugReport\nid: issue-001-bug-a\nlifecycle: framed\n---\nx\n",
+            knowledge.join("issues/done/issue-001-a.md"),
+            "---\ntype: Issue\nid: issue-001-a\nlifecycle: open\n---\nx\n",
         )
         .unwrap();
         // Unfiled: sits in the base directory.
         std::fs::write(
-            knowledge.join("issues/issue-002-bug-b.md"),
-            "---\ntype: BugReport\nid: issue-002-bug-b\nlifecycle: done\n---\nx\n",
+            knowledge.join("issues/issue-002-b.md"),
+            "---\ntype: Issue\nid: issue-002-b\nlifecycle: done\n---\nx\n",
         )
         .unwrap();
         // Cites both, so its definition block must name the moved paths.
         std::fs::write(
             knowledge.join("citing.md"),
-            "---\ntype: T\nid: citing\n---\nSee [a][sokf:issue-001-bug-a] and [b][sokf:issue-002-bug-b].\n\n<!-- sokf:links -->\n[sokf:issue-001-bug-a]: /knowledge/issues/done/issue-001-bug-a.md\n[sokf:issue-002-bug-b]: /knowledge/issues/issue-002-bug-b.md\n",
+            "---\ntype: T\nid: citing\n---\nSee [a][sokf:issue-001-a] and [b][sokf:issue-002-b].\n\n<!-- sokf:links -->\n[sokf:issue-001-a]: /knowledge/issues/done/issue-001-a.md\n[sokf:issue-002-b]: /knowledge/issues/issue-002-b.md\n",
         )
         .unwrap();
 
         let bundle = load_bundle(&knowledge).unwrap();
         let repair = fix(&bundle, dir.path()).unwrap();
-        assert!(repair.written.contains(
-            &"issues/done/issue-001-bug-a.md -> issues/framed/issue-001-bug-a.md".to_string()
-        ));
         assert!(
-            repair.written.contains(
-                &"issues/issue-002-bug-b.md -> issues/done/issue-002-bug-b.md".to_string()
-            )
+            repair
+                .written
+                .contains(&"issues/done/issue-001-a.md -> issues/open/issue-001-a.md".to_string())
         );
-        assert!(knowledge.join("issues/framed/issue-001-bug-a.md").is_file());
-        assert!(knowledge.join("issues/done/issue-002-bug-b.md").is_file());
+        assert!(
+            repair
+                .written
+                .contains(&"issues/issue-002-b.md -> issues/done/issue-002-b.md".to_string())
+        );
+        assert!(knowledge.join("issues/open/issue-001-a.md").is_file());
+        assert!(knowledge.join("issues/done/issue-002-b.md").is_file());
 
         let citing = std::fs::read_to_string(knowledge.join("citing.md")).unwrap();
-        assert!(
-            citing.contains("[sokf:issue-001-bug-a]: /knowledge/issues/framed/issue-001-bug-a.md")
-        );
-        assert!(
-            citing.contains("[sokf:issue-002-bug-b]: /knowledge/issues/done/issue-002-bug-b.md")
-        );
+        assert!(citing.contains("[sokf:issue-001-a]: /knowledge/issues/open/issue-001-a.md"));
+        assert!(citing.contains("[sokf:issue-002-b]: /knowledge/issues/done/issue-002-b.md"));
 
         let bundle = load_bundle(&knowledge).unwrap();
         assert!(
@@ -640,13 +638,13 @@ mod tests {
         )
         .unwrap();
         std::fs::write(
-            knowledge.join("schemas/bug-report.md"),
-            "---\ntype: Schema\nid: schema-bug-report\n---\n````yaml\nfrontmatter:\n  type:\n    const: BugReport\n  lifecycle:\n    enum: [unframed, framed, done, wontfix]\n````\n",
+            knowledge.join("schemas/issue.md"),
+            "---\ntype: Schema\nid: schema-issue\n---\n````yaml\nfrontmatter:\n  type:\n    const: Issue\n  lifecycle:\n    enum: [open, done, wontfix]\n````\n",
         )
         .unwrap();
         std::fs::write(
-            knowledge.join("issues/done/issue-001-bug-a.md"),
-            "---\ntype: BugReport\nid: issue-001-bug-a\nlifecycle: framed\n---\nx\n",
+            knowledge.join("issues/done/issue-001-a.md"),
+            "---\ntype: Issue\nid: issue-001-a\nlifecycle: open\n---\nx\n",
         )
         .unwrap();
         let link = dir.path().join("link");
@@ -657,16 +655,13 @@ mod tests {
         let repair = fix(&bundle, &link).unwrap();
 
         assert!(
-            repair.written.contains(
-                &"issues/done/issue-001-bug-a.md -> issues/framed/issue-001-bug-a.md".to_string()
-            ),
+            repair
+                .written
+                .contains(&"issues/done/issue-001-a.md -> issues/open/issue-001-a.md".to_string()),
             "the refile was refused through the symlink: {:?}",
             repair.written
         );
-        assert!(
-            real.join("knowledge/issues/framed/issue-001-bug-a.md")
-                .is_file()
-        );
+        assert!(real.join("knowledge/issues/open/issue-001-a.md").is_file());
     }
 
     /// A `..` after a component that does not exist escapes a lexical prefix

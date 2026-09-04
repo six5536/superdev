@@ -6,7 +6,7 @@ description: Eight slices delivering the unattended workflow — the run state a
 lifecycle: done
 links:
   - rel: implements
-    to: issue-024-feature-request-the-workflow-cannot-run-unattended
+    to: issue-024-the-workflow-cannot-run-unattended
     note: Delivers the thirteen acceptance criteria.
   - rel: supersedes
     to: plan-004-adhoc-workflow-autonomy
@@ -16,7 +16,7 @@ links:
 # Feature plan: The workflow cannot deliver a feature unattended
 
 Request:
-[issue-024-feature-request-the-workflow-cannot-run-unattended][sokf:issue-024-feature-request-the-workflow-cannot-run-unattended].
+[issue-024-the-workflow-cannot-run-unattended][sokf:issue-024-the-workflow-cannot-run-unattended].
 Supersedes [plan-004][sokf:plan-004-adhoc-workflow-autonomy]; the
 decisions are ADR-018 through ADR-021 and the seam is
 [contract-009][sokf:contract-009-interface-run-state].
@@ -175,6 +175,6 @@ decisions are ADR-018 through ADR-021 and the seam is
 
 <!-- sokf:links -->
 [sokf:contract-009-interface-run-state]: /knowledge/contracts/internal/active/contract-009-interface-run-state.md
-[sokf:issue-024-feature-request-the-workflow-cannot-run-unattended]: /knowledge/issues/done/issue-024-feature-request-the-workflow-cannot-run-unattended.md
+[sokf:issue-024-the-workflow-cannot-run-unattended]: /knowledge/issues/done/issue-024-the-workflow-cannot-run-unattended.md
 [sokf:plan-004-adhoc-workflow-autonomy]: /knowledge/plans/done/plan-004-adhoc-workflow-autonomy.md
 [sokf:research-001-claude-code-stop-hook-behaviour]: /knowledge/research/research-001-claude-code-stop-hook-behaviour.md
