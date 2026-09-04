@@ -32,6 +32,9 @@ links:
     to: adr-047-a-section-rule-declares-item-keys-and-item-bounds
     note: Fixes `item-key`, `item-only-pattern` and `item-prohibited-pattern`, the three item declarations.
   - rel: references
+    to: adr-051-a-section-rule-declares-nested-items-and-an-optional-key
+    note: Fixes `nested` and `item-key-optional` — PENDING.
+  - rel: references
     to: adr-049-a-heading-is-declared-per-variant
     note: Fixes that one heading may carry a rule per disjoint variant set.
 ---
@@ -55,7 +58,8 @@ behind the vocabulary's newest rows are
 [ADR-030][sokf:adr-030-a-section-rule-declares-body-patterns],
 [ADR-042][sokf:adr-042-a-contracts-definition-is-materialized-from-source],
 [ADR-045][sokf:adr-045-a-schema-declares-variants],
-[ADR-047][sokf:adr-047-a-section-rule-declares-item-keys-and-item-bounds]
+[ADR-047][sokf:adr-047-a-section-rule-declares-item-keys-and-item-bounds],
+[ADR-051][sokf:adr-051-a-section-rule-declares-nested-items-and-an-optional-key]
 and [ADR-049][sokf:adr-049-a-heading-is-declared-per-variant].
 
 ## Definition
@@ -107,10 +111,45 @@ pub struct SectionRule {
     /// the item and the matched text (ADR-047).
     #[serde(default, rename = "item-prohibited-pattern")]
     pub item_prohibited_pattern: Option<String>,
+    /// Whether an item that does not match `item-key` is unkeyed and
+    /// exempt from `item-pattern` and the nested rules, rather than a
+    /// finding — a wontfix issue's either-form lists (ADR-051).
+    #[serde(default, rename = "item-key-optional")]
+    pub item_key_optional: bool,
+    /// The rule for the items one level below this rule's items, itself
+    /// nesting a rule for the level below (ADR-051).
+    #[serde(default)]
+    pub nested: Option<Box<NestedRule>>,
     /// The variant values this rule applies to; empty applies to every
     /// variant (ADR-045).
     #[serde(default)]
     pub variants: Vec<String>,
+}
+
+/// The rule for one level of nested items: a marker of the section's list
+/// kind indented one level past the item above, whose lines the item
+/// above drops (ADR-051). The declarations read as the section rule's
+/// item declarations do, at this level.
+#[derive(Debug, Clone, Deserialize)]
+pub struct NestedRule {
+    /// Whether every item of the level above must carry at least one item
+    /// of this level; absence is an error naming the item above.
+    #[serde(default)]
+    pub required: bool,
+    /// The pattern every item of this level must match.
+    #[serde(default, rename = "item-pattern")]
+    pub item_pattern: Option<String>,
+    /// The pattern, with one capture group, every item of this level must
+    /// match; the capture is the item's key, unique with every other key of
+    /// the document at every level.
+    #[serde(default, rename = "item-key")]
+    pub item_key: Option<String>,
+    /// The pattern no item of this level may match.
+    #[serde(default, rename = "item-prohibited-pattern")]
+    pub item_prohibited_pattern: Option<String>,
+    /// The rule for the level below this one.
+    #[serde(default)]
+    pub nested: Option<Box<NestedRule>>,
 }
 
 /// One `sections-prohibited` entry: a bare heading, banned in every
@@ -345,6 +384,35 @@ is its own: its lines are dropped, and the item above it resumes at the
 first line no deeper than the nested marker. A marker of the other list
 kind opens no item, and a thematic break is not a marker.
 
+**Nested items** — `nested` is the rule for the items one level below
+the rule's own, itself carrying a `nested` for the level below, to any
+depth (ADR-051). A nested item is a marker of the section's list kind
+indented past the marker of the item above it; a marker deeper than
+the deepest declared level, or of the other list kind, is text of the
+item it sits in. Each level's `item-key`, `item-prohibited-pattern` and
+`item-pattern` read as the section rule's do. `item-key-optional` on
+the section rule makes the key the test of a keyed item: an item
+matching `item-key` is held to the rest, an item not matching it is a
+plain item — a wontfix issue's either-form lists (ADR-051).
+
+- `P_nested-binds` [state] WHILE a rule carries `nested`, the validator
+  SHALL PENDING check every item one level below each of the rule's items
+  by the nested rule's `item-key`, then `item-prohibited-pattern`, then
+  `item-pattern`, one finding per item, and by the nested rule's own
+  `nested` the level below, a nested key being unique with every key of
+  the document at every level.
+- `P_nested-required` [event] WHEN a nested rule sets `required` and an
+  item of the level above carries no item of the nested level, the
+  validator SHALL PENDING report an error naming the item above.
+- `P_key-optional-unkeyed` [state] WHILE a section rule sets
+  `item-key-optional` and an item does not match `item-key`, the
+  validator SHALL PENDING check the item by `item-prohibited-pattern`
+  alone, skipping `item-pattern` and the `nested` rule beneath it.
+- `P_key-optional-keyed` [state] WHILE a section rule sets
+  `item-key-optional` and an item matches `item-key`, the validator
+  SHALL PENDING check the item and the items beneath it as it would
+  without the flag.
+
 **Variants** — `variant-key` names the frontmatter key whose value
 selects a variant; any rule carrying `variants` applies only to the
 values it lists, and a rule without it to all (ADR-045). A document
@@ -402,6 +470,11 @@ binds nothing.
   `item-prohibited-pattern` sits on a section whose `content` is not a
   list kind, the validator SHALL report it against the schema file
   (ADR-047).
+- `P_misdeclared-nested` [event] WHEN a `nested` rule sits on a section
+  whose `content` is not a list kind, a nested `item-key` carries a
+  capture count other than one, or `item-key-optional` is set on a rule
+  with no `item-key`, the validator SHALL PENDING report it against the
+  schema file (ADR-051).
 
 **The example is checked in place** — the `example:` block is read as
 a document and run through this same check with the declaring schema
@@ -479,3 +552,4 @@ Internal.
 [sokf:adr-045-a-schema-declares-variants]: /knowledge/adrs/active/adr-045-a-schema-declares-variants.md
 [sokf:adr-047-a-section-rule-declares-item-keys-and-item-bounds]: /knowledge/adrs/active/adr-047-a-section-rule-declares-item-keys-and-item-bounds.md
 [sokf:adr-049-a-heading-is-declared-per-variant]: /knowledge/adrs/active/adr-049-a-heading-is-declared-per-variant.md
+[sokf:adr-051-a-section-rule-declares-nested-items-and-an-optional-key]: /knowledge/adrs/active/adr-051-a-section-rule-declares-nested-items-and-an-optional-key.md

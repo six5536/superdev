@@ -3,7 +3,7 @@ type: Decision
 id: adr-031-ears-criteria-are-checked-by-item-pattern
 title: EARS criteria are checked by an item pattern
 description: schema-feature-request declares an item-pattern on Acceptance criteria requiring each criterion to open with an EARS tag or TBD, so a malformed criterion fails validate at frame time; the frame gate keeps forbidding TBD at close.
-lifecycle: active
+lifecycle: deprecated
 ---
 
 # ADR-031: EARS criteria are checked by an item pattern
