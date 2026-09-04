@@ -117,8 +117,8 @@ section as it goes.
   fails naming the item; `superdev status` reports no drift.
 - Cases: a contract whose promise nests two keyed tagged criteria
   passes (covers AC_contract-criteria); a nested item without a key
-  fails naming it, and a nested `AC_` key equal to a `P_` key fails
-  naming both (covers AC_contract-criteria); the nine contracts on
+  fails naming it, and a criterion key repeated across the contract
+  fails naming both items (covers AC_contract-criteria); the nine contracts on
   file, none nesting a criterion, pass (covers
   AC_contract-criteria-optional); a normative test reads the contract
   schema's Behaviour rule and finds the `nested` `AC_` key with
@@ -309,13 +309,6 @@ section as it goes.
   the item's text, so a promise's pattern never reads a deeper note.
   Should the "Nested items" paragraph say "is dropped from the item it
   sits in, as an undeclared nested item's lines are"? Blocks nothing.
-- Slice 2 (built; the question is the case's wording): the case says
-  "a nested `AC_` key equal to a `P_` key fails naming both". A key is
-  its whole `<PREFIX>_<slug>` (ADR-046), so `AC_exit-codes` beside
-  `P_exit-codes` is two keys and passes; the built test repeats an
-  `AC_` key across two promises, which the document-wide key check
-  reports naming both. Should the case say "a criterion key repeated
-  across the contract"? Blocks nothing.
 - Slice 2 (built; the question is scope): the nested rule carries
   `item-key`, `item-pattern` and `required`, as the plan lists, and no
   `item-prohibited-pattern`, so a criterion carrying `MUST` beside its
