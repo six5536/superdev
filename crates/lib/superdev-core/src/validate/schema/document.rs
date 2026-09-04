@@ -74,10 +74,45 @@ pub struct SectionRule {
     /// the item and the matched text (ADR-047).
     #[serde(default, rename = "item-prohibited-pattern")]
     pub item_prohibited_pattern: Option<String>,
+    /// Whether an item that does not match `item-key` is unkeyed and
+    /// exempt from `item-pattern` and the nested rules, rather than a
+    /// finding — a wontfix issue's either-form lists (ADR-051).
+    #[serde(default, rename = "item-key-optional")]
+    pub item_key_optional: bool,
+    /// The rule for the items one level below this rule's items, itself
+    /// nesting a rule for the level below (ADR-051).
+    #[serde(default)]
+    pub nested: Option<Box<NestedRule>>,
     /// The variant values this rule applies to; empty applies to every
     /// variant (ADR-045).
     #[serde(default)]
     pub variants: Vec<String>,
+}
+
+/// The rule for one level of nested items: a marker of the section's list
+/// kind indented one level past the item above, whose lines the item
+/// above drops (ADR-051). The declarations read as the section rule's
+/// item declarations do, at this level.
+#[derive(Debug, Clone, Deserialize)]
+pub struct NestedRule {
+    /// Whether every item of the level above must carry at least one item
+    /// of this level; absence is an error naming the item above.
+    #[serde(default)]
+    pub required: bool,
+    /// The pattern every item of this level must match.
+    #[serde(default, rename = "item-pattern")]
+    pub item_pattern: Option<String>,
+    /// The pattern, with one capture group, every item of this level must
+    /// match; the capture is the item's key, unique with every other key of
+    /// the document at every level.
+    #[serde(default, rename = "item-key")]
+    pub item_key: Option<String>,
+    /// The pattern no item of this level may match.
+    #[serde(default, rename = "item-prohibited-pattern")]
+    pub item_prohibited_pattern: Option<String>,
+    /// The rule for the level below this one.
+    #[serde(default)]
+    pub nested: Option<Box<NestedRule>>,
 }
 
 /// One `sections-prohibited` entry: a bare heading, banned in every

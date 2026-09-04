@@ -50,6 +50,8 @@
 * [A section rule declares item keys and item bounds][sokf:adr-047-a-section-rule-declares-item-keys-and-item-bounds] - a section rule may declare item-key, a one-capture regex every item matches whose capture is unique across the document; item-only-pattern, a regex that may match only inside an item; and item-prohibited-pattern, a regex no item may match — three general declarations the contract and tracker schemas compose into the keyed EARS item, each reading an item as item-pattern does.
 * [An issue's lifecycle distinguishes framed from unframed][sokf:adr-048-an-issues-lifecycle-distinguishes-framed-from-unframed] - an issue's lifecycle is one of unframed, framed, done and wontfix, the folder being the value; a new /file skill writes the minimum record as an unframed issue or an idea, /frame frames in place and sets framed, the later phases refuse an unframed issue, the tracker schema holds a framed or settled issue to the keyed EARS form and an unframed one to its headings alone, a bug's expected behaviour is a keyed tagged list in every state, and the backlog retires into ideas and a wontfix issue.
 * [A heading is declared per variant][sokf:adr-049-a-heading-is-declared-per-variant] - a schema may declare one heading in more than one section rule when the rules' variants sets are disjoint and none is untagged, so one heading carries a different shape per variant at one place in the order; two rules for a heading that overlap, or one of them untagged, are a finding on the schema and bind nothing.
+* [Keys and EARS live in the contracts, and the workflow is file, scope, build, accept][sokf:adr-050-keys-and-ears-live-in-the-contracts-and-the-workflow-is-file-scope-build-accept] - keys and EARS are demanded of contracts alone, whose promises may nest keyed criteria; an issue is one plain template with kind and an open, done or wontfix lifecycle; a plan is one document holding the contract changes and the work blocks; the workflow is file, scope — which writes the plan and makes the contract changes through its sub-skills — build, which runs each block's tests and the full suite once, and an optional manual accept carrying the code review; the issues and plans on file are rewritten.
+* [A section rule declares nested items and an optional key][sokf:adr-051-a-section-rule-declares-nested-items-and-an-optional-key] - a section rule carries `nested`, the rule for the items one level below its own — `item-key`, `item-pattern`, `item-prohibited-pattern`, `required` and its own `nested`, to any depth — and `item-key-optional`, under which an item matching `item-key` is held to the keyed form and one not matching it is a plain item; keys are unique across every level of a document.
 
 <!-- sokf:links -->
 [sokf:adr-001-packs-manifest-section]: /knowledge/adrs/active/adr-001-packs-manifest-section.md
@@ -82,7 +84,7 @@
 [sokf:adr-028-the-contract-design-go-ahead-is-an-explicit-interaction]: /knowledge/adrs/active/adr-028-the-contract-design-go-ahead-is-an-explicit-interaction.md
 [sokf:adr-029-a-contract-is-a-binding-surface-not-a-specification]: /knowledge/adrs/deprecated/adr-029-a-contract-is-a-binding-surface-not-a-specification.md
 [sokf:adr-030-a-section-rule-declares-body-patterns]: /knowledge/adrs/active/adr-030-a-section-rule-declares-body-patterns.md
-[sokf:adr-031-ears-criteria-are-checked-by-item-pattern]: /knowledge/adrs/active/adr-031-ears-criteria-are-checked-by-item-pattern.md
+[sokf:adr-031-ears-criteria-are-checked-by-item-pattern]: /knowledge/adrs/deprecated/adr-031-ears-criteria-are-checked-by-item-pattern.md
 [sokf:adr-032-contract-promise-sections-declare-their-shape]: /knowledge/adrs/deprecated/adr-032-contract-promise-sections-declare-their-shape.md
 [sokf:adr-033-a-contract-defines-its-interface]: /knowledge/adrs/active/adr-033-a-contract-defines-its-interface.md
 [sokf:adr-034-each-kind-defines-in-the-form-its-ecosystem-reads]: /knowledge/adrs/active/adr-034-each-kind-defines-in-the-form-its-ecosystem-reads.md
@@ -99,5 +101,7 @@
 [sokf:adr-045-a-schema-declares-variants]: /knowledge/adrs/active/adr-045-a-schema-declares-variants.md
 [sokf:adr-046-a-promise-and-a-criterion-are-keyed-ears-items]: /knowledge/adrs/active/adr-046-a-promise-and-a-criterion-are-keyed-ears-items.md
 [sokf:adr-047-a-section-rule-declares-item-keys-and-item-bounds]: /knowledge/adrs/active/adr-047-a-section-rule-declares-item-keys-and-item-bounds.md
-[sokf:adr-048-an-issues-lifecycle-distinguishes-framed-from-unframed]: /knowledge/adrs/active/adr-048-an-issues-lifecycle-distinguishes-framed-from-unframed.md
+[sokf:adr-048-an-issues-lifecycle-distinguishes-framed-from-unframed]: /knowledge/adrs/deprecated/adr-048-an-issues-lifecycle-distinguishes-framed-from-unframed.md
 [sokf:adr-049-a-heading-is-declared-per-variant]: /knowledge/adrs/active/adr-049-a-heading-is-declared-per-variant.md
+[sokf:adr-050-keys-and-ears-live-in-the-contracts-and-the-workflow-is-file-scope-build-accept]: /knowledge/adrs/active/adr-050-keys-and-ears-live-in-the-contracts-and-the-workflow-is-file-scope-build-accept.md
+[sokf:adr-051-a-section-rule-declares-nested-items-and-an-optional-key]: /knowledge/adrs/active/adr-051-a-section-rule-declares-nested-items-and-an-optional-key.md

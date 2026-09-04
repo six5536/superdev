@@ -1136,6 +1136,10 @@ fn contract_010_no_longer_defers_the_item_declarations() {
                 && ["item-key", "item-only-pattern", "item-prohibited-pattern"]
                     .iter()
                     .any(|declaration| clause.contains(declaration))
+                // ADR-051's declarations reuse the three names one level down;
+                // a promise about them may run ahead of its code (ADR-044).
+                && !clause.contains("nested")
+                && !clause.contains("item-key-optional")
         })
         .collect();
     assert!(deferred.is_empty(), "{deferred:#?}");

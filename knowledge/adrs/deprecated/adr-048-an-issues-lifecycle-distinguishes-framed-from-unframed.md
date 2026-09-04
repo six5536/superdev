@@ -3,7 +3,7 @@ type: Decision
 id: adr-048-an-issues-lifecycle-distinguishes-framed-from-unframed
 title: An issue's lifecycle distinguishes framed from unframed
 description: An issue's lifecycle is one of unframed, framed, done and wontfix, the folder being the value; a new /file skill writes the minimum record as an unframed issue or an idea, /frame frames in place and sets framed, the later phases refuse an unframed issue, the tracker schema holds a framed or settled issue to the keyed EARS form and an unframed one to its headings alone, a bug's expected behaviour is a keyed tagged list in every state, and the backlog retires into ideas and a wontfix issue.
-lifecycle: active
+lifecycle: deprecated
 links:
   - rel: references
     to: adr-046-a-promise-and-a-criterion-are-keyed-ears-items
