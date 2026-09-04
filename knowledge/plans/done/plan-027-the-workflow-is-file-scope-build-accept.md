@@ -3,7 +3,7 @@ type: Plan
 id: plan-027-the-workflow-is-file-scope-build-accept
 title: The workflow is file, scope, build, accept
 description: Blocks delivering I052 — the validator's nested items and optional key closing contract-010's five PENDING promises, a contract's nested criteria, one issue schema with the sweep of the issues on file, one plan schema with the sweep of the plans, the scope and contract-design skills, the build, execute-plan and accept skills with the workflow text, and the concepts and records.
-lifecycle: open
+lifecycle: done
 links:
   - rel: implements
     to: issue-052-the-workflow-carries-more-process-than-it-needs
@@ -299,7 +299,7 @@ section as it goes.
 
 ### Block 7: The concepts and the records
 
-- [ ] Done — ticked by build at its commit.
+- [x] Done — ticked by build at its commit.
 - Depends-on: 6.
 - Change: `definition-of-done`, `development-procedure`,
   `issue-tracker`, `glossary` (the phases, `Scope`, `Work block`,
