@@ -32,17 +32,15 @@ publish a version it cannot find a heading for.
   heading whose sets share a value, or of which one is untagged, are a
   finding on the schema naming the heading and the overlap, and both
   bind nothing (ADR-049).
-- **The workflow skills judge and declare a contract.** `/integrate` gains
-  JUDGE THE CONTRACTS: a contract the slice touched is read as its
-  consumer would read it, and the report names what was checked and
-  where an included region omits part of the promised surface, where an
-  optional section the kind's checklist names is absent with no reason,
-  and where a reader could not learn the interface — a judgement that
-  blocks nothing, and a slice touching no contract says so.
+- **The workflow skills judge and declare a contract.** `/build` carries
+  JUDGE THE CONTRACTS: a contract the change touched is read as its
+  consumer would read it, and the report names an included region that
+  omits part of the promised surface, an optional section the kind's
+  checklist names and the contract lacks, and prose a reader could not
+  learn the interface from — a judgement that blocks nothing.
   `/contract-design` reads `schema-contract` in place of the per-kind
-  schemas, writes a new definition element into its marked source region
-  with its behaviour unbuilt, and presents and commits that declaration
-  under the approval it already requires. `/accept` refuses a settling
+  schemas and writes a new definition element into its marked source
+  region with its behaviour unbuilt; `/accept` refuses a settling
   contract whose Behaviour or Stability still carries `PENDING`
   (ADR-044). The pack ships all three.
 - **The contract schema declares its twelve kinds.** `variant-key: kind`
@@ -121,28 +119,19 @@ publish a version it cannot find a heading for.
   validate` reports a stale, empty or absent block, a missing or
   out-of-repository path, and an absent region, each naming the path and
   the region (ADR-041).
-- **The file-format contract kind splits into text and binary.**
-  `schema-contract-text-format` governs a file whose shape is keys and
-  values and `schema-contract-binary-format` one whose shape is a byte
-  layout (ADR-037); **`schema-contract-file-format` is retired**, its
-  contracts refiled as `TextFormatContract` by `superdev validate --fix`.
-  Both kinds were later folded into the one contract schema (ADR-043,
-  above).
+- **The file-format contract kind split into text and binary** (ADR-037),
+  retiring `schema-contract-file-format`; both kinds were then folded
+  into the one contract schema (ADR-043, above).
 - **A drift failure says which way the difference runs.** An element the
   implementation carries and its contract does not declare reports as a
-  `DEFECT`; one the contract promises and the implementation has yet to keep
-  reports as `PENDING` (ADR-038). A contract element may carry a `pending`
-  marker naming the slice that will build it: its binding reverses, failing
-  once the implementation has it, so the marker cannot outlive the work it
-  names, and `accept` refuses a contract still carrying one. The feature plan
-  now orders a slice that closes a contract-implementation gap before slices
-  that do not, so a contract's promise does not fail the slices that do not
-  own it.
+  `DEFECT`; one the contract promises and the implementation has yet to
+  keep reports as `PENDING` (ADR-038), and `/accept` refuses a settling
+  contract still carrying the marker. A plan orders a block that closes
+  a contract-implementation gap before the blocks that do not, so a
+  contract's promise does not fail the blocks that do not own it.
 - **The CLI and MCP contracts define their surfaces.** `contract-002`
   carried every command, flag and exit code and `contract-003` every
-  tool's arguments and result shape, each compared to the binary in both
-  directions (ADR-036), with a test asserting each declared exit code;
-  the CLI contract had drifted from the binary. The blocks and their
+  tool's arguments and result shape (ADR-036); the blocks and their
   drift tests were later replaced by source includes (ADR-042, below).
 - **A schema can bind the shape of a section's text.** A section rule
   declares `item-pattern`, which every top-level item of the section's list
@@ -362,16 +351,36 @@ publish a version it cannot find a heading for.
   `/adhoc-plan` are gone from `.claude/skills/`**: invoke `/scope` in
   their place, and rewrite every skill, hook or note in a managed
   repository that names one (ADR-050).
+- **The workflow is FILE → SCOPE → BUILD → ACCEPT, accept optional, and
+  `/build` verifies once.** `/build` works the plan's Work blocks in
+  order — tests, then code, then the block's own tests and the tests its
+  change touches, then a commit that ticks the block — and after the
+  last block runs the full build, tests, lint and `superdev validate`
+  once, checks and judges the contracts, updates the changelog and the
+  knowledge, merges on the work's branch and sets the plan `done`. A
+  block needing a contract change, or too big to commit in one pass,
+  returns to `/scope`. **`/integrate` retires** with its verification
+  per slice; its update onto the merge target, contract check and
+  judgement, migration guide and records commit close `/build` instead.
+  **`/execute-feature-plan` is renamed `/execute-plan`**, driving
+  `/build` over the blocks with the run verbs and the Stop hook
+  unchanged, returning a failing block to `/build` at most twice and
+  deferring every question a gate sends to `/scope`. `/accept` is the
+  user's optional last step: `/code-review` of the whole change, a
+  finding the user wants fixed returning to `/build`, the contract
+  criteria walked on the merged code, the documentation checked against
+  the issue's Behaviour, each gap filed as an `open` issue, and the
+  issue set `done` with its Resolution. **After a pack update,
+  `/integrate` and `/execute-feature-plan` are gone**: invoke
+  `/build` and `/execute-plan` in their place, and rewrite every skill,
+  hook or note in a managed repository that names one (ADR-050).
 - **An issue's lifecycle was `unframed`, `framed`, `done` or `wontfix`,
-  and the tracker schemas varied by it.** `/frame` set `framed` and the
-  later phases gated on it; an unframed issue was held to its list kinds
-  alone and a framed one to keyed EARS items — since replaced by the one
-  template above. **The backlog retires**: its three under-consideration
-  entries are ideas 007 to 009, its decided-against entry the wontfix
-  chore I051, and `schema-backlog`, the concept and every reference in
-  the skills, schemas and indexes go. **A managed repository's `Backlog`
-  document loses its schema** and fails `superdev validate` as a document
-  naming no schema: file each entry as an idea per `schema-idea` or as a
+  with a tracker schema per state** — since replaced by the one template
+  above. **The backlog retires**: its entries became ideas 007 to 009
+  and the wontfix chore I051, and `schema-backlog`, the concept and
+  every reference to it go. **A managed repository's `Backlog` document
+  loses its schema** and fails `superdev validate` as a document naming
+  no schema: file each entry as an idea per `schema-idea` or as a
   `wontfix` issue, then delete the document (ADR-048).
 - **A contract's Behaviour and Stability are keyed EARS promises.** The
   contract schema declares both sections as bullet lists whose every
