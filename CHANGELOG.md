@@ -91,22 +91,17 @@ publish a version it cannot find a heading for.
   with no `item-key` are each an error on the schema file (ADR-051).
 - **A section rule declares `item-key`, `item-only-pattern` and
   `item-prohibited-pattern`.** `item-key` is a regex with one capture
-  group that every top-level item of the section's list must match; the
+  group every top-level item of the section's list must match; the
   capture is the item's key, unique across the document's items under
-  every rule declaring `item-key`. An item with no match is an error
-  naming the section, the item and the form a key takes, and a repeated
-  key one naming the key and both items. `item-only-pattern` is a regex
-  that may match only inside a top-level item: a match on any other body
-  line is an error naming the section and the line, and on a section with
-  no list content every line is outside. `item-prohibited-pattern` is a
-  regex no top-level item may match: a match is an error naming the item
-  and the matched text. All three skip fenced blocks and read an item as
-  `item-pattern` does, and an item draws one finding: `item-key` first,
-  then `item-prohibited-pattern`, then `item-pattern`. A key pattern whose
-  capture count is not one, an `item-key` or `item-prohibited-pattern` on
-  a section with no list content, and a pattern that does not compile are
-  each an error on the schema file and bind nothing. `--fix` never
-  supplies a key (ADR-047).
+  every rule declaring `item-key`, and an item with no match or a
+  repeated key is an error naming the item. `item-only-pattern` may
+  match only inside a top-level item, and a match on any other body line
+  is an error naming the line. `item-prohibited-pattern` is a regex no
+  top-level item may match, a match naming the item and the text. All
+  three skip fenced blocks, and an item draws one finding: `item-key`,
+  then `item-prohibited-pattern`, then `item-pattern`. A mis-declared
+  pattern is an error on the schema file and binds nothing; `--fix`
+  never supplies a key (ADR-047).
 - **A schema section may declare `content: include`.** The sixth content
   kind is satisfied by an include block naming a source path, and a fenced
   block in such a section outside an include is an error naming the
@@ -307,36 +302,40 @@ publish a version it cannot find a heading for.
 
 ### Changed
 
-- **An issue's lifecycle is `unframed`, `framed`, `done` or `wontfix`,
-  and the tracker schemas vary by it.** `open` is retired; the folder
-  is the value — `issues/unframed/`, `issues/framed/`, `issues/done/`,
-  `issues/wontfix/`. `/frame` frames an unframed issue in place and
-  sets `framed`, or files and frames in one pass; `/contract-design`,
-  `/feature-plan` and `/execute-feature-plan` gate on `framed` and
-  return an unframed issue to `/frame`; `/accept` files a gap `unframed`.
-  The tracker schemas take `variant-key: lifecycle`: an unframed issue is
-  held to its headings and list kinds alone, so a criterion, a repro
-  step, an expected-behaviour item or a done item is a plain sentence
-  or a `TBD`; a framed, done or wontfix issue is held to the keyed EARS
-  form — `AC_` key and tag on a criterion, `RS_` key on a repro step,
-  `EX_` key and tag on an expected-behaviour item, `DD_` key on a done
-  item — and a `TBD` is an error naming the item. A bug's Expected
-  behaviour is a numbered list in every state. **After a pack update,
-  an issue under `issues/open/` fails `superdev validate`**: `open` is
-  outside the enum, and `issues/open/` is no longer a lifecycle folder.
-  Move the open issues up into `issues/`, set each one's `lifecycle` to
-  `framed` or `unframed`, and run `superdev validate --fix`, which
-  files them; run on files still under `open/`, `--fix` refiles them
-  into `issues/open/framed/`. superdev's own tracker was swept: 12 open
-  issues `framed`, one `unframed` (I042, a `TBD` remaining), and the 24
-  bug reports' Expected behaviour keyed — 21 converted from prose, one
-  `EX_c<n>` `[ubiquitous]` item per paragraph, words unchanged. **The
-  backlog retires**: its three under-consideration entries are ideas
-  007 to 009, its decided-against entry the wontfix chore I051, and
-  `schema-backlog`, the concept and every reference in the skills,
-  schemas and indexes go. **A managed repository's `Backlog` document
-  loses its schema** and fails `superdev validate` as a document naming
-  no schema: file each entry as an idea per `schema-idea` or as a
+- **An issue is one template: `kind` in the frontmatter, `open`, `done`
+  or `wontfix`, six headings in prose and bullets, no key.** `schema-issue`
+  governs every issue — `type: Issue`, id `issue-<nnn>-<slug>`, `kind`
+  one of `bug`, `feature`, `chore`, `lifecycle` one of `open`, `done`,
+  `wontfix`, the folder the value — with the headings Summary, Context,
+  Behaviour, Scope, Resolution and Comments, each prose with bullets
+  beneath it and no `item-key`, `item-pattern` or `nested` declaration;
+  Resolution is required once the issue is done or wontfix and refused
+  while it is open. Keys and EARS live in the contracts alone.
+  **`schema-bug-report`, `schema-feature-request` and `schema-chore`
+  retire**, and `framed` and `unframed` with them: `sokf_search` ranks
+  `open` and `active` as live and every other value settled. `/file`
+  writes the template. superdev's own 52 issues were rewritten by hand —
+  the verdict under Resolution, the criteria and the expected behaviour
+  as plain bullets, the ids shortened (`issue-030-filing-…`) and every
+  citation with them. **After a pack update, a managed repository's
+  issues fail `superdev validate`** as documents naming no schema: set
+  each one's `type` to `Issue`, add `kind`, set a `framed` or `unframed`
+  `lifecycle` to `open`, move the verdict under `## Resolution` and the
+  remaining sections under the six headings, drop the item keys and
+  tags, and run `superdev validate --fix`, which refiles `issues/framed/`
+  and `issues/unframed/` into `issues/open/`; delete the emptied
+  folders. The id's kind segment may stay — the pattern admits any slug
+  (ADR-050).
+- **An issue's lifecycle was `unframed`, `framed`, `done` or `wontfix`,
+  and the tracker schemas varied by it.** `/frame` set `framed` and the
+  later phases gated on it; an unframed issue was held to its list kinds
+  alone and a framed one to keyed EARS items — since replaced by the one
+  template above. **The backlog retires**: its three under-consideration
+  entries are ideas 007 to 009, its decided-against entry the wontfix
+  chore I051, and `schema-backlog`, the concept and every reference in
+  the skills, schemas and indexes go. **A managed repository's `Backlog`
+  document loses its schema** and fails `superdev validate` as a document
+  naming no schema: file each entry as an idea per `schema-idea` or as a
   `wontfix` issue, then delete the document (ADR-048).
 - **A contract's Behaviour and Stability are keyed EARS promises.** The
   contract schema declares both sections as bullet lists whose every
