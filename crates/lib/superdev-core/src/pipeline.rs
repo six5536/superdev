@@ -1407,10 +1407,10 @@ mod tests {
             lock.files.insert(key.into(), "h".into());
         }
         lock.files
-            .insert(".claude/skills/frame/SKILL.md".into(), "h".into());
+            .insert(".claude/skills/scope/SKILL.md".into(), "h".into());
         assert!(prune_custom(&manifest, content::test_snapshot(), &mut lock));
         assert!(!lock.files.keys().any(|k| k.contains("/prototype/")));
-        assert!(lock.files.contains_key(".claude/skills/frame/SKILL.md"));
+        assert!(lock.files.contains_key(".claude/skills/scope/SKILL.md"));
         assert!(
             lock.files
                 .contains_key(".claude/skills/double-check/SKILL.md")

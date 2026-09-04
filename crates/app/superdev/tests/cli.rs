@@ -1040,7 +1040,7 @@ fn a_pin_at_the_embedded_rev_costs_no_request() {
         .assert()
         .success();
     // The embedded pack still supplies the items, and the entry survives.
-    assert!(dir.path().join(".claude/skills/frame/SKILL.md").is_file());
+    assert!(dir.path().join(".claude/skills/scope/SKILL.md").is_file());
     let after = std::fs::read_to_string(dir.path().join(".superdev/config.toml")).unwrap();
     assert_eq!(after, config, "sync leaves the pin exactly as it found it");
 }
@@ -1503,7 +1503,7 @@ fn an_update_writes_the_default_entry_into_a_pre_pack_manifest() {
         "{after}"
     );
     // Still the same content: the entry names what was already compiled in.
-    assert!(dir.path().join(".claude/skills/frame/SKILL.md").is_file());
+    assert!(dir.path().join(".claude/skills/scope/SKILL.md").is_file());
 }
 
 /// A real git repository holding a pack, tagged, so the query and the fetch
@@ -1635,7 +1635,7 @@ fn an_update_moves_the_default_pin_to_the_sources_newest_release() {
         "# From the release\n"
     );
     assert!(
-        !dir.path().join(".claude/skills/frame/SKILL.md").exists(),
+        !dir.path().join(".claude/skills/scope/SKILL.md").exists(),
         "the pinned rev is the whole of layer 0"
     );
 
@@ -1737,14 +1737,14 @@ fn dropping_a_pack_entry_prunes_the_untouched_and_releases_the_edited() {
 #[test]
 fn a_pack_supersedes_the_embedded_item_of_the_same_name() {
     let dir = local_repo();
-    let skill = dir.path().join("packs/acme/knowledge/skills/frame");
+    let skill = dir.path().join("packs/acme/knowledge/skills/scope");
     std::fs::create_dir_all(&skill).unwrap();
     std::fs::write(
         dir.path().join("packs/acme/pack.toml"),
         "format = 1\nname = \"acme\"\nversion = \"1.0.0\"\n",
     )
     .unwrap();
-    std::fs::write(skill.join("SKILL.md"), "# Frame, the acme way\n").unwrap();
+    std::fs::write(skill.join("SKILL.md"), "# Scope, the acme way\n").unwrap();
     pin_packs(dir.path(), "[[packs]]\nsource = \"./packs/acme\"\n");
 
     superdev()
@@ -1753,8 +1753,8 @@ fn a_pack_supersedes_the_embedded_item_of_the_same_name() {
         .assert()
         .success();
     assert_eq!(
-        std::fs::read_to_string(dir.path().join(".claude/skills/frame/SKILL.md")).unwrap(),
-        "# Frame, the acme way\n"
+        std::fs::read_to_string(dir.path().join(".claude/skills/scope/SKILL.md")).unwrap(),
+        "# Scope, the acme way\n"
     );
     assert!(
         dir.path()
@@ -1786,8 +1786,8 @@ fn sync_leaves_a_pre_pack_manifest_without_a_pack_entry() {
     let after = std::fs::read_to_string(&config).unwrap();
     assert_eq!(after, before, "sync rewrote the manifest");
     assert!(
-        !dir.path().join(".claude/skills/frame/SKILL.md").exists()
-            || dir.path().join(".claude/skills/frame/SKILL.md").is_file(),
+        !dir.path().join(".claude/skills/scope/SKILL.md").exists()
+            || dir.path().join(".claude/skills/scope/SKILL.md").is_file(),
         "the embedded pack still supplies the files"
     );
     let lock = std::fs::read_to_string(dir.path().join(".superdev/lock.toml")).unwrap();
@@ -1822,7 +1822,7 @@ fn the_default_path_needs_nothing_outside_the_binary() {
         .success();
 
     let carried = [
-        ".claude/skills/frame/SKILL.md",
+        ".claude/skills/scope/SKILL.md",
         ".claude/skills/double-check/SKILL.md",
         "knowledge/index.md",
         "knowledge/schemas/adr.md",

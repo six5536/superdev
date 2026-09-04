@@ -26,13 +26,15 @@ no Node.
    `schema-plan` (`lifecycle: done` in the commit that completes the
    work). One-off work takes `/adhoc-plan`, and its plan is filed in
    the same series and template.
-2. One branch per feature: `/frame` cuts `feature/<nnn>-<slug>` off
-   `main`, `<nnn>` the framed issue's number, and an adhoc plan that
-   touches code runs on `adhoc/<nnn>-<slug>`, `<nnn>` the plan's. A human
+2. One branch per piece of work: `/scope` cuts `feature/<nnn>-<slug>` off
+   `main`, `<nnn>` the issue's number, and one-off work with no issue runs
+   on `adhoc/<nnn>-<slug>`, `<nnn>` the plan's number. A human
    fast-forwards `main`; an unattended run commits and merges only on the
-   feature's branch (ADR-021). The phases commit their own records:
-   `/frame` the framed issue, `/contract-design` the contracts and ADRs,
-   `/integrate` the changelog, knowledge and plan edits at each merge.
+   work's branch (ADR-021). The phases commit their own records:
+   `/scope` the plan with the contract, source-declaration and
+   decision-record edits `/contract-design` made under the user's
+   go-ahead, `/integrate` the changelog, knowledge and plan edits at each
+   merge.
 3. Implement with focused commits, using
    [Conventional Commits](https://www.conventionalcommits.org/) (`feat:`,
    `fix:`, `docs:`, `test:`, `refactor:`, `chore:`).

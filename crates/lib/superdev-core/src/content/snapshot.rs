@@ -89,7 +89,7 @@ mod tests {
     #[test]
     fn items_are_named_as_their_pattern_spells_it() {
         let set = snapshot();
-        assert!(set.item(knowledge(), ItemKind::Skill, "frame").is_some());
+        assert!(set.item(knowledge(), ItemKind::Skill, "scope").is_some());
         assert!(set.item(knowledge(), ItemKind::DocSchema, "adr").is_some());
         assert!(
             set.item(knowledge(), ItemKind::DocSchema, "adr.md")
