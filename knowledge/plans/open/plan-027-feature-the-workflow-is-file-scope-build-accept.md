@@ -60,7 +60,7 @@ section as it goes.
 
 ### Slice 1: The validator reads nested items and an optional key
 
-- [ ] Done — ticked by integrate at merge.
+- [x] Done — ticked by integrate at merge.
 - Depends-on: none.
 - Change: `validate::schema::document` — `Items::read` learns depth: a
   marker of the section's list kind indented past the item above opens

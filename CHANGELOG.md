@@ -65,6 +65,20 @@ publish a version it cannot find a heading for.
   its value equal to its key. A tag outside the enum, a tag or keyed
   example with no `variant-key`, a `variant-key` with no enum, and a
   missing example are each an error on the schema file (ADR-045).
+- **A section rule declares `nested` and `item-key-optional`.** `nested`
+  is the rule for the items one level below the section's own — `item-key`,
+  `item-pattern`, `item-prohibited-pattern`, `required` and its own
+  `nested`, to any depth. A nested item is a marker of the section's list
+  kind indented past the item above it; a deeper marker than the declared
+  depth, or one of the other kind, is text of the item it sits in. Each
+  level's items are checked as the top level's are, one finding per item,
+  the finding naming the nested item; `required` reports an item with no
+  nested item beneath it; a nested key is unique with every key of the
+  document. `item-key-optional` makes an item not matching `item-key` a
+  plain item, held to `item-prohibited-pattern` alone, while a keyed item
+  is held to `item-pattern` and `nested`. A `nested` on a section with no
+  list content, a nested key whose capture count is not one, and the flag
+  with no `item-key` are each an error on the schema file (ADR-051).
 - **A section rule declares `item-key`, `item-only-pattern` and
   `item-prohibited-pattern`.** `item-key` is a regex with one capture
   group that every top-level item of the section's list must match; the
@@ -72,21 +86,17 @@ publish a version it cannot find a heading for.
   every rule declaring `item-key`. An item with no match is an error
   naming the section, the item and the form a key takes, and a repeated
   key one naming the key and both items. `item-only-pattern` is a regex
-  that may match only
-  inside a top-level item of the section's list: a match on any other
-  body line — prose, a table row, a heading, an item of the other list
-  kind, a nested item — is an error naming the section and the line, and
-  on a section with no list content every line is outside.
-  `item-prohibited-pattern` is a regex no top-level item may match: a
-  match is an error naming the item and the matched text. All three skip
-  fenced blocks and read an item as `item-pattern` does, and an item
-  draws one finding: `item-key` is checked first, then
-  `item-prohibited-pattern`, then `item-pattern`, and an item reported
-  by one is not checked by the next. A key pattern
-  whose capture count is not one, an `item-key` or
-  `item-prohibited-pattern` on a section with no list content, and a
-  pattern that does not compile are each an error on the schema file and
-  bind nothing. `--fix` never supplies a key (ADR-047).
+  that may match only inside a top-level item: a match on any other body
+  line is an error naming the section and the line, and on a section with
+  no list content every line is outside. `item-prohibited-pattern` is a
+  regex no top-level item may match: a match is an error naming the item
+  and the matched text. All three skip fenced blocks and read an item as
+  `item-pattern` does, and an item draws one finding: `item-key` first,
+  then `item-prohibited-pattern`, then `item-pattern`. A key pattern whose
+  capture count is not one, an `item-key` or `item-prohibited-pattern` on
+  a section with no list content, and a pattern that does not compile are
+  each an error on the schema file and bind nothing. `--fix` never
+  supplies a key (ADR-047).
 - **A schema section may declare `content: include`.** The sixth content
   kind is satisfied by an include block naming a source path, and a fenced
   block in such a section outside an include is an error naming the
@@ -127,28 +137,20 @@ publish a version it cannot find a heading for.
   that do not, so a contract's promise does not fail the slices that do not
   own it.
 - **The CLI and MCP contracts define their surfaces.** `contract-002`
-  carried every command, positional argument, flag and exit code in a
-  YAML block and `contract-003` every tool's arguments — name, type,
-  requiredness, meaning — and result shape in a JSON block, where before
-  it named four tools in prose; a test per contract compared the block
-  to the binary in both directions (ADR-036), and a second runs the
-  binary and asserts each declared exit code. The CLI contract had
-  drifted: `status --drift`, `--help` and a shipped template were
-  missing from it, and `--repo-root` printed a value name the contract
-  never named. The blocks and their drift tests were later replaced by
-  source includes (ADR-042, below).
+  carried every command, flag and exit code and `contract-003` every
+  tool's arguments and result shape, each compared to the binary in both
+  directions (ADR-036), with a test asserting each declared exit code;
+  the CLI contract had drifted from the binary. The blocks and their
+  drift tests were later replaced by source includes (ADR-042, below).
 - **An acceptance criterion's EARS tag is checked.** A feature-request
-  criterion that does not open with `[ubiquitous]`, `[event]`, `[state]`,
-  `[conditional]`, `[optional]`, `[complex]` or `TBD — ` fails
-  `superdev validate`, naming the criterion (ADR-031). The shape framing
-  has always asked for is now enforced where it is written.
+  criterion that does not open with an EARS tag or `TBD — ` fails
+  `superdev validate`, naming the criterion (ADR-031).
 - **A schema can bind the shape of a section's text.** A section rule
   declares `item-pattern`, which every top-level item of the section's list
   must match, and `content-pattern`, which the section's whole body must
-  match; both are regexes matched found-anywhere, so a rule binds the ends
-  by writing `^` and `$` (ADR-030). A pattern that does not compile, or an
-  `item-pattern` beside a content kind with no items, is reported on the
-  schema and binds nothing.
+  match; both are regexes matched found-anywhere (ADR-030). A pattern that
+  does not compile, or an `item-pattern` beside a content kind with no
+  items, is reported on the schema and binds nothing.
 - **A knowledge document can include another's body.** A concept carries a
   `<!-- sokf:include <id> -->` … `<!-- /sokf:include -->` marker pair, and
   `superdev validate --fix` materializes the named concept's body between
@@ -179,10 +181,8 @@ publish a version it cannot find a heading for.
   per-key `required: true` flag a schema declares (ADR-022) and reports,
   as an error naming the document, the key and the schema, an absent key
   marked required; a present one keeps its value checks. The shipped
-  schemas each declare their required keys — `type`, `id`, `title` and
-  `description` on every frontmatter-carrying kind, `sources` on
-  research — so a filed document that loses its identity or its listing
-  line fails validation instead of passing unexamined.
+  schemas each declare their required keys, so a filed document that
+  loses its identity or its listing line fails validation.
 - **A section's declared content kind binds.** `superdev validate` reads
   each section rule's `content` kind — prose, bullet-list, numbered-list,
   table or code — and reports, as an error naming the document, the
