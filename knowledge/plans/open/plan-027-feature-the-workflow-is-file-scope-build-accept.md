@@ -100,7 +100,7 @@ section as it goes.
 
 ### Slice 2: A contract's promise carries its criteria
 
-- [ ] Done — ticked by integrate at merge.
+- [x] Done — ticked by integrate at merge.
 - Depends-on: 1.
 - Change: `pack/knowledge/schemas/contract.md` — the Behaviour and
   Stability rules gain a `nested` rule: `item-key` `AC_`, the EARS
@@ -309,6 +309,19 @@ section as it goes.
   the item's text, so a promise's pattern never reads a deeper note.
   Should the "Nested items" paragraph say "is dropped from the item it
   sits in, as an undeclared nested item's lines are"? Blocks nothing.
+- Slice 2 (built; the question is the case's wording): the case says
+  "a nested `AC_` key equal to a `P_` key fails naming both". A key is
+  its whole `<PREFIX>_<slug>` (ADR-046), so `AC_exit-codes` beside
+  `P_exit-codes` is two keys and passes; the built test repeats an
+  `AC_` key across two promises, which the document-wide key check
+  reports naming both. Should the case say "a criterion key repeated
+  across the contract"? Blocks nothing.
+- Slice 2 (built; the question is scope): the nested rule carries
+  `item-key`, `item-pattern` and `required`, as the plan lists, and no
+  `item-prohibited-pattern`, so a criterion carrying `MUST` beside its
+  `SHALL` passes while a promise's does not. Should the criterion be
+  held to the retired-verb and one-verb rule as a promise is? Blocks
+  nothing.
 
 <!-- sokf:links -->
 [sokf:adr-050-keys-and-ears-live-in-the-contracts-and-the-workflow-is-file-scope-build-accept]: /knowledge/adrs/active/adr-050-keys-and-ears-live-in-the-contracts-and-the-workflow-is-file-scope-build-accept.md
