@@ -560,6 +560,9 @@ pub struct DocumentVocab {
     pub keys: Ordered<KeyDef>,
     /// What a section may say.
     pub section: KeyTable,
+    /// What one level of nested items under a section's list may say — a
+    /// section's `nested`, and a nested level's own (ADR-051).
+    pub nested: KeyTable,
     /// What the text before the first heading may say.
     pub preamble: KeyTable,
     /// What a schema may say about one frontmatter key.

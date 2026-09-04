@@ -639,6 +639,30 @@ kinds:
             doc: >
               A regex no top-level item of the section's list may match, read as item-pattern
               reads an item; a match is an error naming the item and the matched text.
+          item-key-optional:
+            type: boolean
+            requires:
+              content:
+                - bullet-list
+                - numbered-list
+            doc: >
+              true when an item that does not match item-key is a plain item, checked by
+              item-prohibited-pattern alone, rather than an error; an item matching it is held
+              to item-pattern and nested as without the flag. Only beside item-key: the flag
+              on a rule with no item-key is reported on the schema and binds nothing.
+          nested:
+            type: map
+            of: nested
+            requires:
+              content:
+                - bullet-list
+                - numbered-list
+            doc: >
+              The rule for the items one level below this rule's own: a marker of the
+              section's list kind indented past the marker of the item above it, whose lines
+              the item above drops. Carries its own nested for the level below, to any depth;
+              a marker deeper than the deepest declared level, or of the other list kind, is
+              text of the item it sits in.
           variants:
             type: list
             doc: >
@@ -649,6 +673,35 @@ kinds:
             type: string
             required: true
             doc: The template's own guidance for this section.
+      nested:
+        doc: >
+          One level of nested items under a section's list. The three item declarations read
+          as the section's do, at this level; a key captured here is unique with every other
+          key of the document, at every level.
+        keys:
+          required:
+            type: boolean
+            doc: >
+              true when every item of the level above must carry at least one item of this
+              level; an item with none is an error naming it.
+          item-pattern:
+            type: string
+            format: regex
+            doc: A regex every item of this level must match, read as the section's item-pattern.
+          item-key:
+            type: string
+            format: regex
+            doc: >
+              A regex with one capture group that every item of this level must match; the
+              capture is the item's key.
+          item-prohibited-pattern:
+            type: string
+            format: regex
+            doc: A regex no item of this level may match; a match is an error naming the item.
+          nested:
+            type: map
+            of: nested
+            doc: The rule for the level below this one.
       preamble:
         doc: >
           The content before the governed document's first heading. It has no heading of its

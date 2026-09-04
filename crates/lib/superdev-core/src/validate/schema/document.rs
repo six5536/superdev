@@ -241,6 +241,63 @@ impl SectionRule {
             format!("tagged [{}]", self.variants.join(", "))
         }
     }
+
+    /// The item declarations per level of the section's list: the rule's
+    /// own first, then each `nested` rule's beneath it (ADR-051), so the
+    /// list's declared depth is the length less one.
+    fn levels(&self) -> Vec<LevelRule<'_>> {
+        let mut levels = vec![LevelRule {
+            item_key: self.item_key.as_deref(),
+            key_optional: self.item_key_optional,
+            item_prohibited_pattern: self.item_prohibited_pattern.as_deref(),
+            item_pattern: self.item_pattern.as_deref(),
+            nested_required: self.nested.as_ref().is_some_and(|n| n.required),
+        }];
+        let mut next = self.nested.as_deref();
+        while let Some(rule) = next {
+            levels.push(LevelRule {
+                item_key: rule.item_key.as_deref(),
+                key_optional: false,
+                item_prohibited_pattern: rule.item_prohibited_pattern.as_deref(),
+                item_pattern: rule.item_pattern.as_deref(),
+                nested_required: rule.nested.as_ref().is_some_and(|n| n.required),
+            });
+            next = rule.nested.as_deref();
+        }
+        levels
+    }
+}
+
+/// The item declarations of one level of a section's list — the section
+/// rule's own at the top, a `nested` rule's beneath — read alike at every
+/// level (ADR-051).
+#[derive(Clone, Copy)]
+struct LevelRule<'a> {
+    /// The level's `item-key`.
+    item_key: Option<&'a str>,
+    /// Whether an item not matching `item-key` is a plain item rather than
+    /// a finding: the section rule's `item-key-optional`, at the top level
+    /// alone.
+    key_optional: bool,
+    /// The level's `item-prohibited-pattern`.
+    item_prohibited_pattern: Option<&'a str>,
+    /// The level's `item-pattern`.
+    item_pattern: Option<&'a str>,
+    /// Whether every item of this level must carry an item of the level
+    /// below: the nested rule's `required`.
+    nested_required: bool,
+}
+
+impl LevelRule<'_> {
+    /// How a finding names one of this level's declarations: `item-key` at
+    /// the top, `a nested item-key` beneath.
+    fn declared(level: usize, name: &str) -> String {
+        if level == 0 {
+            name.to_string()
+        } else {
+            format!("a nested {name}")
+        }
+    }
 }
 
 /// Two section rules naming one heading that their `variants` sets do not
@@ -559,16 +616,37 @@ pub fn check_declarations(schemas: &[(String, String)]) -> Vec<Finding> {
                     fatal: true,
                 });
             }
-            let patterns = [
-                ("item-pattern", rule.item_pattern.as_deref()),
-                ("content-pattern", rule.content_pattern.as_deref()),
-                ("item-key", rule.item_key.as_deref()),
-                ("item-only-pattern", rule.item_only_pattern.as_deref()),
+            let mut patterns = vec![
+                ("item-pattern".to_string(), rule.item_pattern.as_deref()),
                 (
-                    "item-prohibited-pattern",
+                    "content-pattern".to_string(),
+                    rule.content_pattern.as_deref(),
+                ),
+                ("item-key".to_string(), rule.item_key.as_deref()),
+                (
+                    "item-only-pattern".to_string(),
+                    rule.item_only_pattern.as_deref(),
+                ),
+                (
+                    "item-prohibited-pattern".to_string(),
                     rule.item_prohibited_pattern.as_deref(),
                 ),
             ];
+            // A nested level's three patterns compile as the top level's do
+            // (ADR-051).
+            for (level, declared) in rule.levels().into_iter().enumerate().skip(1) {
+                patterns.extend([
+                    (LevelRule::declared(level, "item-key"), declared.item_key),
+                    (
+                        LevelRule::declared(level, "item-prohibited-pattern"),
+                        declared.item_prohibited_pattern,
+                    ),
+                    (
+                        LevelRule::declared(level, "item-pattern"),
+                        declared.item_pattern,
+                    ),
+                ]);
+            }
             for (name, pattern) in patterns {
                 if let Some(pattern) = pattern
                     && re::compile(pattern).is_none()
@@ -584,18 +662,19 @@ pub fn check_declarations(schemas: &[(String, String)]) -> Vec<Finding> {
                     });
                 }
             }
-            findings.extend(item_key_captures(file, rule));
+            findings.extend(item_key_faults(file, rule));
             // An item declaration needs items to bind: without a list kind
             // the section's body has none, so the rule would pass in silence.
             // `item-only-pattern` is the exception — with no items, it binds
             // every line (ADR-047).
             let per_item = [
-                ("item-pattern", rule.item_pattern.is_some()),
-                ("item-key", rule.item_key.is_some()),
+                ("an item-pattern", rule.item_pattern.is_some()),
+                ("an item-key", rule.item_key.is_some()),
                 (
-                    "item-prohibited-pattern",
+                    "an item-prohibited-pattern",
                     rule.item_prohibited_pattern.is_some(),
                 ),
+                ("a nested rule", rule.nested.is_some()),
             ];
             let unlisted = !rule
                 .content
@@ -608,7 +687,7 @@ pub fn check_declarations(schemas: &[(String, String)]) -> Vec<Finding> {
                 findings.push(Finding {
                     file: file.clone(),
                     message: format!(
-                        "schema: section {} declares an {name}, and its content is not {}",
+                        "schema: section {} declares {name}, and its content is not {}",
                         rule.label(),
                         LIST_KINDS.join(" or ")
                     ),
@@ -636,12 +715,14 @@ pub fn check_declarations(schemas: &[(String, String)]) -> Vec<Finding> {
 }
 
 /// The `item-key` declarations the document check cannot read, reported on
-/// the schema itself (ADR-047): a key pattern with no capture group, or more
-/// than one, names no key and binds nothing. The grammar's schema check
-/// reports a key that does not compile or sits beside no list kind; the
-/// capture count is a fact about the compiled regex, so it is read here.
+/// the schema itself (ADR-047, ADR-051): a key pattern at any level with no
+/// capture group, or more than one, names no key, and `item-key-optional`
+/// on a rule with no `item-key` exempts nothing; each binds nothing. The
+/// grammar's schema check reports a key that does not compile or sits
+/// beside no list kind; the capture count is a fact about the compiled
+/// regex and the flag's key a fact across two keys, so they are read here.
 /// `validate` calls this beside the grammar check; `check_declarations`
-/// reads the same fact from the schema it has already parsed.
+/// reads the same facts from the schema it has already parsed.
 #[must_use]
 pub fn check_item_keys(schemas: &[(String, String)]) -> Vec<Finding> {
     let mut findings = Vec::new();
@@ -650,35 +731,56 @@ pub fn check_item_keys(schemas: &[(String, String)]) -> Vec<Finding> {
             continue; // `SchemaSet::load` reports a contract that fails.
         };
         for rule in &schema.sections {
-            findings.extend(item_key_captures(file, rule));
+            findings.extend(item_key_faults(file, rule));
         }
     }
     findings
 }
 
-/// One rule's `item-key` capture count, as a finding on `file` when it is
-/// not one. A key that does not compile is reported where every pattern's
-/// compile failure is, and binds nothing here.
-fn item_key_captures(file: &str, rule: &SectionRule) -> Option<Finding> {
-    let pattern = rule.item_key.as_deref()?;
-    let re = re::compile(pattern)?;
-    let groups = re.captures_len() - 1;
-    if groups == 1 {
-        return None;
+/// One rule's `item-key` faults, as findings on `file`: a capture count
+/// other than one at any level, and `item-key-optional` with no `item-key`.
+/// A key that does not compile is reported where every pattern's compile
+/// failure is, and binds nothing here.
+fn item_key_faults(file: &str, rule: &SectionRule) -> Vec<Finding> {
+    let mut findings = Vec::new();
+    for (level, declared) in rule.levels().iter().enumerate() {
+        let Some(pattern) = declared.item_key else {
+            continue;
+        };
+        let Some(re) = re::compile(pattern) else {
+            continue;
+        };
+        let groups = re.captures_len() - 1;
+        if groups == 1 {
+            continue;
+        }
+        let counted = match groups {
+            0 => "no capture group".to_string(),
+            n => format!("{n} capture groups"),
+        };
+        findings.push(Finding {
+            file: file.to_string(),
+            message: format!(
+                "schema: section {} declares {} `{pattern}` with {counted} — the key is the \
+                 one capture, so the rule binds nothing",
+                rule.label(),
+                LevelRule::declared(level, "item-key")
+            ),
+            fatal: true,
+        });
     }
-    let counted = match groups {
-        0 => "no capture group".to_string(),
-        n => format!("{n} capture groups"),
-    };
-    Some(Finding {
-        file: file.to_string(),
-        message: format!(
-            "schema: section {} declares item-key `{pattern}` with {counted} — the key is the \
-             one capture, so the rule binds nothing",
-            rule.label()
-        ),
-        fatal: true,
-    })
+    if rule.item_key_optional && rule.item_key.is_none() {
+        findings.push(Finding {
+            file: file.to_string(),
+            message: format!(
+                "schema: section {} sets item-key-optional and declares no item-key — the flag \
+                 binds nothing",
+                rule.label()
+            ),
+            fatal: true,
+        });
+    }
+    findings
 }
 
 /// The variant declarations the document check cannot read, reported on the
@@ -1244,10 +1346,11 @@ fn check_one(
                 &headings[h].1,
                 body,
                 in_fence,
-                &items,
+                &mut items,
                 schema,
                 &mut push,
             );
+            check_nested_required(rule, &headings[h].1, &items, schema, &mut push);
         }
         if rule.content.as_deref() == Some("include") {
             check_authored_fences(
@@ -1261,14 +1364,22 @@ fn check_one(
         }
     }
 
-    // A key is unique across the document (ADR-047): each repeat names the
-    // key, the item that carries it first, and itself.
+    // A key is unique across the document, at every level (ADR-047,
+    // ADR-051): each repeat names the key, the item that carries it first,
+    // and itself.
     for (i, later) in keys.iter().enumerate() {
         if let Some(first) = keys[..i].iter().find(|k| k.key == later.key) {
             push(format!(
-                "section \"{}\" item `{}` repeats key `{}`, carried by section \"{}\" item `{}`, \
+                "section \"{}\" {} `{}` repeats key `{}`, carried by section \"{}\" {} `{}`, \
                  and {} declares item-key",
-                later.heading, later.first, later.key, first.heading, first.first, schema.name
+                later.heading,
+                later.noun,
+                later.first,
+                later.key,
+                first.heading,
+                first.noun,
+                first.first,
+                schema.name
             ));
         }
     }
@@ -1281,18 +1392,19 @@ fn check_one(
 }
 
 /// One section's body against the patterns its rule declares (ADR-030):
-/// `content-pattern` over the body, `item-pattern` over each top-level item
-/// of the list the section's kind names that no earlier declaration
-/// reported. Both are matched found-anywhere, so a rule binds the ends by
-/// writing them. `heading` is the occurrence's own text, so a finding on a
-/// repeatable rule names the section that failed rather than the pattern
-/// that matched it.
+/// `content-pattern` over the body, `item-pattern` over each item of the
+/// list the section's kind names that no earlier declaration reported —
+/// each level's items by its own level's pattern (ADR-051), and an unkeyed
+/// item under `item-key-optional` by none. Both are matched found-anywhere,
+/// so a rule binds the ends by writing them. `heading` is the occurrence's
+/// own text, so a finding on a repeatable rule names the section that
+/// failed rather than the pattern that matched it.
 fn check_body_patterns(
     rule: &SectionRule,
     heading: &str,
     body: &[&str],
     fenced: &[bool],
-    items: &Items,
+    items: &mut Items,
     schema: &DocSchema,
     push: &mut impl FnMut(String),
 ) {
@@ -1313,42 +1425,79 @@ fn check_body_patterns(
             ));
         }
     }
-    let Some(pattern) = rule.item_pattern.as_deref() else {
-        return;
-    };
-    let Some(re) = re::compile(pattern) else {
-        return; // An unreadable pattern binds nothing.
-    };
-    for item in items.unreported() {
+    let levels = rule.levels();
+    for i in 0..items.items.len() {
+        if items.reported[i] || items.unkeyed[i] {
+            continue;
+        }
+        let item = &items.items[i];
+        let Some(pattern) = levels[item.level].item_pattern else {
+            continue;
+        };
+        let Some(re) = re::compile(pattern) else {
+            continue; // An unreadable pattern binds nothing.
+        };
         if !re.is_match(&item.text) {
             push(format!(
-                "section \"{heading}\" item `{}` does not match, and {} declares item-pattern \
-                 `{pattern}`",
-                item.first, schema.name
+                "section \"{heading}\" {} `{}` does not match, and {} declares {} `{pattern}`",
+                item.noun(),
+                item.first,
+                schema.name,
+                LevelRule::declared(item.level, "item-pattern")
+            ));
+            items.reported[i] = true;
+        }
+    }
+}
+
+/// One section's items against the `required` its nested rules declare
+/// (ADR-051): an item held to its level's rule whose level below is
+/// required, and that no earlier declaration reported, carries at least
+/// one item of that level, or is a finding naming it.
+fn check_nested_required(
+    rule: &SectionRule,
+    heading: &str,
+    items: &Items,
+    schema: &DocSchema,
+    push: &mut impl FnMut(String),
+) {
+    let levels = rule.levels();
+    for item in items.keyed() {
+        if levels[item.level].nested_required && item.beneath == 0 {
+            push(format!(
+                "section \"{heading}\" {} `{}` carries no nested item, and {} declares nested \
+                 required",
+                item.noun(),
+                item.first,
+                schema.name
             ));
         }
     }
 }
 
 /// One key an `item-key` rule captured: the key, the section that carries
-/// the item, the item's first line, for the repeat finding to name, and the
-/// document line the item opens on, so an item two rules capture is one.
+/// the item, how the item's level names it and the item's first line, for
+/// the repeat finding to name, and the document line the item opens on, so
+/// an item two rules capture is one.
 struct Keyed {
     key: String,
     heading: String,
+    noun: &'static str,
     first: String,
     line: usize,
 }
 
 /// One section's items against the `item-key` its rule declares (ADR-047):
-/// every top-level item of the list the section's kind names must match,
-/// and the one capture is its key. An item with no match is a finding
-/// naming the section, the item and the form a key takes, so a malformed
-/// key is told apart from none, and is marked reported for the later
-/// declarations to skip; the keys are returned for the document-wide repeat
-/// check. A key on a rule with no list kind, one that does not compile, or
-/// one whose capture count is not one binds nothing — each is
-/// `check_declarations`' or `check_item_keys`' finding on the schema.
+/// every item of the list the section's kind names must match its level's
+/// key (ADR-051), and the one capture is its key. An item with no match is
+/// a finding naming the section, the item and the form a key takes, so a
+/// malformed key is told apart from none, and is marked reported for the
+/// later declarations to skip — or, under `item-key-optional`, is a plain
+/// item, checked by `item-prohibited-pattern` alone, the items beneath it
+/// unread; the keys are returned for the document-wide repeat check. A key
+/// on a rule with no list kind, one that does not compile, or one whose
+/// capture count is not one binds nothing — each is `check_declarations`'
+/// or `check_item_keys`' finding on the schema.
 fn check_item_keys_in(
     rule: &SectionRule,
     heading: &str,
@@ -1357,28 +1506,44 @@ fn check_item_keys_in(
     schema: &DocSchema,
     push: &mut impl FnMut(String),
 ) -> Vec<Keyed> {
-    let Some(pattern) = rule.item_key.as_deref() else {
-        return Vec::new();
-    };
-    let Some(re) = re::compile(pattern).filter(|re| re.captures_len() == 2) else {
-        return Vec::new();
-    };
+    let levels = rule.levels();
     let mut keys = Vec::new();
-    for (item, reported) in items.unreported_mut() {
+    for i in 0..items.items.len() {
+        if items.reported[i] {
+            continue;
+        }
+        let item = &items.items[i];
+        let declared = levels[item.level];
+        let Some(pattern) = declared.item_key else {
+            continue;
+        };
+        let Some(re) = re::compile(pattern).filter(|re| re.captures_len() == 2) else {
+            continue;
+        };
         match re.captures(&item.text).and_then(|c| c.get(1)) {
             Some(key) => keys.push(Keyed {
                 key: key.as_str().to_string(),
                 heading: heading.to_string(),
+                noun: item.noun(),
                 first: item.first.clone(),
                 line: start + item.lines[0],
             }),
+            None if declared.key_optional => {
+                items.unkeyed[i] = true;
+                for beneath in &mut items.reported[i + 1..=i + item.beneath] {
+                    *beneath = true;
+                }
+            }
             None => {
                 push(format!(
-                    "section \"{heading}\" item `{}` carries no key of the form `{pattern}`, \
-                     and {} declares item-key",
-                    item.first, schema.name
+                    "section \"{heading}\" {} `{}` carries no key of the form `{pattern}`, \
+                     and {} declares {}",
+                    item.noun(),
+                    item.first,
+                    schema.name,
+                    LevelRule::declared(item.level, "item-key")
                 ));
-                *reported = true;
+                items.reported[i] = true;
             }
         }
     }
@@ -1386,16 +1551,17 @@ fn check_item_keys_in(
 }
 
 /// One section's body against the item bounds its rule declares (ADR-047):
-/// `item-only-pattern` may match only inside a top-level item of the list
-/// the section's kind names, so a match on any other unfenced body line —
-/// prose, a table row, a heading, an item of the other list kind, a nested
-/// item — is a finding naming the section and the line; a rule with no list
-/// kind has no items, so the pattern is forbidden on every line.
-/// `item-prohibited-pattern` may match no top-level item, and a match on
-/// one no earlier declaration reported is a finding naming the item and
-/// the matched text, marked reported for the later declaration to skip; on
-/// a rule with no list kind it binds nothing, as `check_declarations`
-/// reports. A pattern that does not compile binds nothing either.
+/// `item-only-pattern` may match only inside an item of the list the
+/// section's kind names, at any declared level, so a match on any other
+/// unfenced body line — prose, a table row, a heading, an item of the other
+/// list kind, a nested item beyond the declared depth — is a finding naming
+/// the section and the line; a rule with no list kind has no items, so the
+/// pattern is forbidden on every line. `item-prohibited-pattern` may match
+/// no item of its level (ADR-051), and a match on one no earlier
+/// declaration reported is a finding naming the item and the matched text,
+/// marked reported for the later declaration to skip; on a rule with no
+/// list kind it binds nothing, as `check_declarations` reports. A pattern
+/// that does not compile binds nothing either.
 fn check_item_bounds(
     rule: &SectionRule,
     heading: &str,
@@ -1431,20 +1597,28 @@ fn check_item_bounds(
         }
     }
 
-    if let Some(pattern) = rule.item_prohibited_pattern.as_deref()
-        && let Some(re) = re::compile(pattern)
-    {
-        for (item, reported) in items.unreported_mut() {
-            if let Some(matched) = re.find(&item.text) {
-                push(format!(
-                    "section \"{heading}\" item `{}` matches `{}`, and {} declares \
-                     item-prohibited-pattern `{pattern}`",
-                    item.first,
-                    matched.as_str(),
-                    schema.name
-                ));
-                *reported = true;
-            }
+    let levels = rule.levels();
+    for i in 0..items.items.len() {
+        if items.reported[i] {
+            continue;
+        }
+        let item = &items.items[i];
+        let Some(pattern) = levels[item.level].item_prohibited_pattern else {
+            continue;
+        };
+        let Some(re) = re::compile(pattern) else {
+            continue;
+        };
+        if let Some(matched) = re.find(&item.text) {
+            push(format!(
+                "section \"{heading}\" {} `{}` matches `{}`, and {} declares {} `{pattern}`",
+                item.noun(),
+                item.first,
+                matched.as_str(),
+                schema.name,
+                LevelRule::declared(item.level, "item-prohibited-pattern")
+            ));
+            items.reported[i] = true;
         }
     }
 }
@@ -1488,74 +1662,101 @@ fn line_starts(text: &str) -> Vec<usize> {
         .collect()
 }
 
-/// A section's top-level items, read once by `check_one` for the three
-/// item declarations to share, and which of them a declaration has already
-/// reported. One fault, said once: an item is checked by `item-key`, then
-/// `item-prohibited-pattern`, then `item-pattern`, and an item that drew a
-/// finding from an earlier declaration is not checked by a later one.
+/// A section's items, read once by `check_one` for the item declarations to
+/// share, and which of them a declaration has already reported. One fault,
+/// said once: an item is checked by its level's `item-key`, then
+/// `item-prohibited-pattern`, then `item-pattern`, then the nested rule's
+/// `required`, and an item that drew a finding from an earlier declaration
+/// is not checked by a later one. Under `item-key-optional`, an item that
+/// matched no key is unkeyed — checked by `item-prohibited-pattern` alone —
+/// and the items beneath it count as reported, so nothing reads them
+/// (ADR-051).
 struct Items {
     items: Vec<Item>,
     reported: Vec<bool>,
+    unkeyed: Vec<bool>,
 }
 
 impl Items {
-    /// The top-level items of `body` under `rule`'s list kind. A rule with
-    /// no list kind has no items; `check_declarations` reports an item
-    /// declaration on one.
+    /// The items of `body` under `rule`'s list kind, to the depth its
+    /// `nested` rules declare. A rule with no list kind has no items;
+    /// `check_declarations` reports an item declaration on one.
     fn read(rule: &SectionRule, body: &[&str], fenced: &[bool]) -> Self {
+        let depth = rule.levels().len() - 1;
         let items = rule
             .content
             .as_deref()
             .filter(|k| LIST_KINDS.contains(k))
-            .map_or_else(Vec::new, |kind| items_in(body, fenced, kind));
+            .map_or_else(Vec::new, |kind| items_in(body, fenced, kind, depth));
         let reported = vec![false; items.len()];
-        Self { items, reported }
+        let unkeyed = vec![false; items.len()];
+        Self {
+            items,
+            reported,
+            unkeyed,
+        }
     }
 
-    /// The items no declaration has reported yet.
-    fn unreported(&self) -> impl Iterator<Item = &Item> {
+    /// The items no declaration has reported yet and that are held to the
+    /// keyed form: every unreported item, less the unkeyed ones under
+    /// `item-key-optional`.
+    fn keyed(&self) -> impl Iterator<Item = &Item> {
         self.items
             .iter()
-            .zip(&self.reported)
-            .filter(|&(_, &reported)| !reported)
+            .zip(self.reported.iter().zip(&self.unkeyed))
+            .filter(|&(_, (&reported, &unkeyed))| !reported && !unkeyed)
             .map(|(item, _)| item)
-    }
-
-    /// The items no declaration has reported yet, each with the flag a
-    /// declaration sets when it reports the item.
-    fn unreported_mut(&mut self) -> impl Iterator<Item = (&Item, &mut bool)> {
-        self.items
-            .iter()
-            .zip(&mut self.reported)
-            .filter(|(_, reported)| !**reported)
     }
 }
 
-/// One top-level item of a section's list, as the item declarations read
-/// it.
+/// One item of a section's list, at the top level or a declared nested
+/// level, as the item declarations read it.
 struct Item {
-    /// The item's first line, verbatim, for the finding to name it by.
+    /// The item's first line, trimmed, for the finding to name it by.
     first: String,
     /// The item's own lines, marker stripped and continuations joined.
     text: String,
     /// The body indices of the item's own lines — the ones `text` joins —
     /// so a bound can tell a line inside an item from one outside (ADR-047).
     lines: Vec<usize>,
+    /// The item's level: 0 at the list's top, one more per nested level
+    /// (ADR-051).
+    level: usize,
+    /// How many items follow this one beneath it, at every level; the items
+    /// are in document order, so they are the next `beneath` items.
+    beneath: usize,
 }
 
-/// Every top-level item of `kind` in a section body (ADR-030).
+impl Item {
+    /// How a finding names an item of this level: `item` at the top,
+    /// `nested item` beneath.
+    fn noun(&self) -> &'static str {
+        if self.level == 0 {
+            "item"
+        } else {
+            "nested item"
+        }
+    }
+}
+
+/// Every item of `kind` in a section body, to `depth` nested levels
+/// (ADR-030, ADR-051).
 ///
 /// The list's top level is the shallowest marker in the body, because a list
 /// indented one or two spaces is still a top-level list and binding only the
 /// unindented ones would let an author escape the rule by indenting it. An
-/// item takes every following line indented past that, blank lines included,
-/// so a bullet carrying several paragraphs is read whole; it takes an
-/// unindented line too while its paragraph is still open, which is markdown's
-/// lazy continuation. A nested item belongs to itself: its own lines are
-/// dropped, and the parent resumes at the first line no deeper than the
-/// nested marker. Fenced lines are skipped, as they are for every content
-/// check.
-fn items_in(body: &[&str], fenced: &[bool], kind: &str) -> Vec<Item> {
+/// item takes every following line indented past its marker, blank lines
+/// included, so a bullet carrying several paragraphs is read whole; it takes
+/// an unindented line too while its paragraph is still open, which is
+/// markdown's lazy continuation. A marker of the kind indented past the
+/// marker of the item above it opens a nested item, one level down, while
+/// the level is within `depth`; a nested item belongs to itself, its own
+/// lines dropped from the item above, which resumes at the first line no
+/// deeper than the nested marker. A marker deeper than `depth`, or of the
+/// other kind, opens no item: it is text of the item it sits in, read as a
+/// nested item's lines are — dropped, the item above resuming after them.
+/// Fenced lines are skipped, as they are for every content check.
+fn items_in(body: &[&str], fenced: &[bool], kind: &str, depth: usize) -> Vec<Item> {
     let unfenced = || {
         body.iter()
             .zip(fenced)
@@ -1576,12 +1777,24 @@ fn items_in(body: &[&str], fenced: &[bool], kind: &str) -> Vec<Item> {
     };
 
     let mut items: Vec<Item> = Vec::new();
-    // The indentation of the nested marker whose lines are being dropped, and
-    // whether the open item's paragraph is still running (a blank line ends
-    // it, and only an indented line may reopen one).
-    let mut nested: Option<usize> = None;
+    // The open items, outermost first, as the marker's indentation and the
+    // index into `items`; the open item of level `n` is `open[n]`.
+    let mut open: Vec<(usize, usize)> = Vec::new();
+    // The indentation of a marker that opened no item, whose lines are
+    // being dropped, and whether the innermost open item's paragraph is
+    // still running (a blank line ends it, and only an indented line may
+    // reopen one).
+    let mut dropping: Option<usize> = None;
     let mut flowing = false;
-    let mut open = false;
+    // Closing an item records how many items opened beneath it.
+    let close_to = |open: &mut Vec<(usize, usize)>, items: &mut Vec<Item>, indent: usize| {
+        while let Some(&(at, index)) = open.last()
+            && at >= indent
+        {
+            items[index].beneath = items.len() - index - 1;
+            open.pop();
+        }
+    };
     for (i, line) in unfenced() {
         let trimmed = line.trim_start();
         if trimmed.is_empty() {
@@ -1589,46 +1802,58 @@ fn items_in(body: &[&str], fenced: &[bool], kind: &str) -> Vec<Item> {
             continue;
         }
         let indent = indent_of(line);
-        if let Some(at) = nested {
-            // The nested item keeps its own lines; anything no deeper than
-            // its marker returns to the item above it.
+        if let Some(at) = dropping {
+            // The dropped marker keeps its own lines; anything no deeper
+            // than it returns to the item above.
             if indent > at {
                 continue;
             }
-            nested = None;
+            dropping = None;
         }
         if marks(line) {
-            if indent > top {
-                nested = Some(indent);
-            } else if is_kind(trimmed, kind) {
+            // A marker closes every open item no shallower than itself: a
+            // sibling, and whatever sat beneath one.
+            close_to(&mut open, &mut items, indent);
+            let level = open.len();
+            let opens = if level == 0 {
+                indent == top
+            } else {
+                level <= depth
+            };
+            if opens && is_kind(trimmed, kind) {
                 items.push(Item {
-                    first: line.trim_end().to_string(),
+                    first: trimmed.trim_end().to_string(),
                     text: strip_marker(trimmed).to_string(),
                     lines: vec![i],
+                    level,
+                    beneath: 0,
                 });
-                open = true;
+                open.push((indent, items.len() - 1));
                 flowing = true;
             } else {
-                open = false; // A sibling of the other marker kind.
-                flowing = false;
+                dropping = Some(indent);
             }
             continue;
         }
-        // An indented line continues the open item; an unindented one does so
-        // only while the paragraph is still running, and a heading, a table
-        // row or a comment ends the paragraph.
-        if open && (indent > top || (flowing && !ends_paragraph(trimmed))) {
-            if let Some(item) = items.last_mut() {
+        // The innermost open item takes an unindented line while its
+        // paragraph is still running, and a heading, a table row or a
+        // comment ends the paragraph; otherwise the line continues the
+        // deepest open item it is indented past, closing the rest.
+        if !flowing || ends_paragraph(trimmed) {
+            close_to(&mut open, &mut items, indent);
+        }
+        match open.last() {
+            Some(&(_, index)) => {
+                let item = &mut items[index];
                 item.text.push(' ');
                 item.text.push_str(trimmed.trim_end());
                 item.lines.push(i);
+                flowing = true;
             }
-            flowing = true;
-        } else {
-            open = false;
-            flowing = false;
+            None => flowing = false,
         }
     }
+    close_to(&mut open, &mut items, 0);
     items
 }
 
@@ -1868,7 +2093,7 @@ fn body_has(
     // declarations read one: a nested bullet or a `- - -` break is not one,
     // so a keyed rule never passes over an empty list.
     if LIST_KINDS.contains(&kind) {
-        return !items_in(body, fenced, kind).is_empty();
+        return !items_in(body, fenced, kind, 0).is_empty();
     }
     for (line, &in_fence) in body.iter().zip(fenced) {
         if in_fence {
@@ -3319,6 +3544,303 @@ mod tests {
                 found.is_empty(),
                 "an unreadable bound binds nothing: {found:#?}"
             );
+        }
+    }
+
+    /// The ADR-051 example rule's nested patterns: a criterion keyed `AC_`
+    /// under a promise keyed `P_`, and a note keyed `N_` under a criterion.
+    const AC_KEY: &str = "^`(AC_[a-z][a-z0-9]*(?:-[a-z0-9]+)*)`";
+    const AC_TAGGED: &str = "^`AC_[a-z0-9-]+` \\[(ubiquitous|event|state)\\] ";
+    const N_KEY: &str = "^`(N_[a-z][a-z0-9-]*)`";
+
+    /// A schema declaring the ADR-051 example rule on a bullet-list
+    /// Behaviour section, `{top}` the section rule's own extra lines and
+    /// `{level}` the nested rule's, plus a keyed Stability section.
+    fn nested_schema(top: &str, level: &str) -> DocSchema {
+        schema_of(&format!(
+            "frontmatter:\n  type:\n    const: T\nsections:\n  - heading: Behaviour\n    level: 2\n\
+             \x20   content: bullet-list\n    item-key: '{KEY}'\n    item-pattern: '{TAGGED}'\n\
+             \x20   item-prohibited-pattern: '{RETIRED_OR_TWICE}'\n{top}    nested:\n\
+             \x20     item-key: '{AC_KEY}'\n      item-pattern: '{AC_TAGGED}'\n\
+             \x20     item-prohibited-pattern: '{RETIRED_OR_TWICE}'\n{level}      nested:\n\
+             \x20       item-key: '{N_KEY}'\n  - heading: Stability\n    level: 2\n\
+             \x20   content: bullet-list\n    item-key: '{KEY}'\n"
+        ))
+    }
+
+    fn findings_of(schema: &DocSchema, text: &str) -> Vec<Finding> {
+        let doc = Document {
+            path: "a.md",
+            text,
+            doc_type: Some("T"),
+        };
+        let mut findings = Vec::new();
+        check_one(&doc, schema, Subject::Filed, &mut findings);
+        findings
+    }
+
+    /// Covers I052 AC_contract-criteria (`P_nested-binds`): a two-level
+    /// `nested` rule accepts a document whose criteria sit under their
+    /// promises and whose notes sit under a criterion, reads a nested item's
+    /// lines as inside an item for `item-only-pattern`, and reports a nested
+    /// item missing its key, naming the item and the level.
+    #[test]
+    fn a_nested_rule_binds_the_items_beneath_each_item() {
+        let schema = nested_schema(&format!("    item-only-pattern: '{VERB}'\n"), "");
+        let sound = "# T\n\n## Behaviour\n\n- `P_one` [event] WHEN asked, it SHALL start.\n\
+                     \x20 - `AC_one-fast` [event] WHEN asked, it SHALL start in 1 s.\n\
+                     \x20   - `N_timing` measured at p99.\n\
+                     \x20 - `AC_one-once` [event] WHEN asked twice, it SHALL start once.\n\
+                     - `P_two` [state] WHILE running, it SHALL answer.\n\n## Stability\n\n\
+                     - `P_three` [ubiquitous] It SHALL keep its name.\n";
+        let findings = findings_of(&schema, sound);
+        assert!(findings.is_empty(), "{findings:#?}");
+
+        let faulty = "# T\n\n## Behaviour\n\n- `P_one` [event] WHEN asked, it SHALL start.\n\
+                      \x20 - `AC_one-fast` [event] WHEN asked, it SHALL start in 1 s.\n\
+                      \x20   - `Note` without a key.\n\
+                      \x20 - [event] WHEN asked twice, it SHALL start once — no key.\n\
+                      \x20 - `AC_one-slow` WHEN asked, it MAY dawdle — no tag.\n\
+                      \x20 - `AC_one-verbs` [event] It MUST and SHALL — retired.\n";
+        let findings = findings_of(&schema, faulty);
+        assert_eq!(findings.len(), 4, "{findings:#?}");
+        for finding in &findings {
+            assert!(finding.fatal, "{finding:#?}");
+            assert!(
+                finding
+                    .message
+                    .contains("section \"Behaviour\" nested item `"),
+                "{finding:#?}"
+            );
+        }
+        assert!(
+            findings[0].message.contains("- `Note` without a key.")
+                && findings[0]
+                    .message
+                    .contains(&format!("no key of the form `{N_KEY}`"))
+                && findings[0].message.contains("declares a nested item-key"),
+            "{findings:#?}"
+        );
+        assert!(
+            findings[1].message.contains("- [event] WHEN asked twice")
+                && findings[1]
+                    .message
+                    .contains(&format!("no key of the form `{AC_KEY}`")),
+            "{findings:#?}"
+        );
+        assert!(
+            findings[2]
+                .message
+                .contains("- `AC_one-verbs` [event] It MUST")
+                && findings[2].message.contains("matches `MUST`")
+                && findings[2]
+                    .message
+                    .contains("declares a nested item-prohibited-pattern"),
+            "{findings:#?}"
+        );
+        assert!(
+            findings[3].message.contains("- `AC_one-slow` WHEN asked")
+                && findings[3]
+                    .message
+                    .contains("declares a nested item-pattern"),
+            "{findings:#?}"
+        );
+    }
+
+    /// Covers I052 AC_contract-criteria (`P_nested-required`): a nested
+    /// rule setting `required` reports a top-level item with no nested item,
+    /// naming it, and says nothing of one carrying a criterion.
+    #[test]
+    fn a_required_nested_level_reports_an_item_with_none_beneath_it() {
+        let schema = nested_schema("", "      required: true\n");
+        let text = "# T\n\n## Behaviour\n\n- `P_one` [event] WHEN asked, it SHALL start.\n\
+                    \x20 - `AC_one` [event] WHEN asked, it SHALL start in 1 s.\n\
+                    - `P_two` [state] WHILE running, it SHALL answer.\n\
+                    - `P_three` [state] WHILE stopped, it SHALL not.\n\
+                    \x20 - a bullet of prose is a nested item of the section's kind\n";
+        let findings = findings_of(&schema, text);
+        assert_eq!(findings.len(), 2, "{findings:#?}");
+        // The prose bullet is a nested item, so `P_three` is not reported for
+        // lacking one; the bullet itself is, for its key.
+        assert!(
+            findings[0]
+                .message
+                .contains("nested item `- a bullet of prose")
+                && findings[0].message.contains("carries no key"),
+            "{findings:#?}"
+        );
+        assert!(
+            findings[1]
+                .message
+                .contains("section \"Behaviour\" item `- `P_two` [state]")
+                && findings[1].message.contains("carries no nested item")
+                && findings[1].message.contains("declares nested required"),
+            "{findings:#?}"
+        );
+    }
+
+    /// Covers I052 AC_contract-criteria (`P_nested-binds`): a nested key
+    /// joins the document's key space, so a key repeated between a
+    /// top-level item and a nested one is reported naming both.
+    #[test]
+    fn a_key_repeated_between_levels_is_a_finding_naming_both() {
+        // The nested key takes any prefix, so a promise's key can recur
+        // beneath it.
+        let schema = schema_of(&format!(
+            "frontmatter:\n  type:\n    const: T\nsections:\n  - heading: Behaviour\n    level: 2\n\
+             \x20   content: bullet-list\n    item-key: '{KEY}'\n    nested:\n\
+             \x20     item-key: '^`([A-Z]+_[a-z][a-z0-9-]*)`'\n"
+        ));
+        let text = "# T\n\n## Behaviour\n\n- `P_one` [event] WHEN asked, it SHALL start.\n\
+                    \x20 - `AC_one` [event] WHEN asked, it SHALL start in 1 s.\n\
+                    \x20 - `P_one` [event] WHEN asked twice, it SHALL start once.\n";
+        let findings = findings_of(&schema, text);
+        assert_eq!(findings.len(), 1, "{findings:#?}");
+        assert!(
+            findings[0]
+                .message
+                .contains("section \"Behaviour\" nested item `- `P_one` [event] WHEN asked twice")
+                && findings[0].message.contains("repeats key `P_one`")
+                && findings[0].message.contains(
+                    "carried by section \"Behaviour\" item `- `P_one` [event] WHEN asked, it"
+                ),
+            "{findings:#?}"
+        );
+    }
+
+    /// Covers I052 AC_contract-criteria-optional: a marker deeper than the
+    /// deepest declared level is text of the item it sits in, as is a marker
+    /// of the other list kind — neither is bound by a nested rule, and a
+    /// rule with no `nested` reads every nested marker so, as before.
+    #[test]
+    fn a_marker_beyond_the_declared_depth_or_of_the_other_kind_is_text() {
+        // One nested level: the third level is text of the criterion.
+        let schema = schema_of(&format!(
+            "frontmatter:\n  type:\n    const: T\nsections:\n  - heading: Behaviour\n    level: 2\n\
+             \x20   content: numbered-list\n    item-key: '{KEY}'\n    nested:\n\
+             \x20     item-key: '{AC_KEY}'\n      item-pattern: '{AC_TAGGED}'\n"
+        ));
+        let text = "# T\n\n## Behaviour\n\n1. `P_one` [event] WHEN asked, it SHALL start.\n\
+                    \x20  1. `AC_one` [event] WHEN asked, it SHALL start in 1 s.\n\
+                    \x20     1. a third-level marker, keyless, tagless\n\
+                    \x20     - a bullet beneath it\n\
+                    \x20  - a bullet under a numbered rule, keyless, tagless\n\
+                    \x20  1. `AC_two` [state] WHILE up, it SHALL answer.\n";
+        let findings = findings_of(&schema, text);
+        assert!(findings.is_empty(), "{findings:#?}");
+
+        // No `nested`: the nested list is text of the promise, as before.
+        let schema = keyed_schema(KEY);
+        let text = "# T\n\n## Behaviour\n\n- `P_one` [event] WHEN asked, it SHALL start.\n\
+                    \x20 - a nested bullet with no key\n    - and one beneath it\n\n\
+                    ## Stability\n\n- `P_two` [ubiquitous] It SHALL keep its name.\n";
+        let findings = findings_of(&schema, text);
+        assert!(findings.is_empty(), "{findings:#?}");
+    }
+
+    /// Covers I052 AC_contract-criteria (`P_key-optional-unkeyed`,
+    /// `P_key-optional-keyed`): under `item-key-optional` an item not
+    /// matching `item-key` is checked by `item-prohibited-pattern` alone —
+    /// its pattern and its nested items unread — and an item matching it is
+    /// held to `item-pattern` and its nested rule.
+    #[test]
+    fn an_optional_key_exempts_an_unkeyed_item_and_binds_a_keyed_one() {
+        let schema = nested_schema("    item-key-optional: true\n", "      required: true\n");
+        let text = "# T\n\n## Behaviour\n\n- A plain item, untagged and unkeyed.\n\
+                    \x20 - a plain nested item, unkeyed, with no criterion beneath it\n\
+                    - `P_one` [event] WHEN asked, it SHALL start.\n\
+                    \x20 - `AC_one` [event] WHEN asked, it SHALL start in 1 s.\n\
+                    - A plain item that MUST — the prohibited pattern still binds.\n\
+                    - `P_two` [state] WHILE running, it SHALL answer — no criterion.\n\
+                    - `P_three` WHILE running, it SHALL answer — no tag.\n\
+                    - `P_four` [state] WHILE running, it SHALL answer.\n\
+                    \x20 - `AC_four` without a tag\n\n\
+                    ## Stability\n\n- `P_five` [ubiquitous] It SHALL keep its name.\n";
+        let findings = findings_of(&schema, text);
+        assert_eq!(findings.len(), 4, "{findings:#?}");
+        assert!(
+            findings[0]
+                .message
+                .contains("item `- A plain item that MUST")
+                && findings[0].message.contains("matches `MUST`"),
+            "{findings:#?}"
+        );
+        assert!(
+            findings[1].message.contains("item `- `P_three` WHILE")
+                && findings[1].message.contains("declares item-pattern"),
+            "{findings:#?}"
+        );
+        assert!(
+            findings[2]
+                .message
+                .contains("item `- `AC_four` without a tag`")
+                && findings[2]
+                    .message
+                    .contains("declares a nested item-pattern"),
+            "{findings:#?}"
+        );
+        assert!(
+            findings[3].message.contains("item `- `P_two` [state]")
+                && findings[3].message.contains("carries no nested item"),
+            "{findings:#?}"
+        );
+    }
+
+    /// Covers I052 AC_contract-criteria (`P_misdeclared-nested`): a
+    /// `nested` on a prose section, a nested `item-key` with two captures,
+    /// and `item-key-optional` on a rule with no `item-key` are each a
+    /// finding on the schema file, from `check_declarations` and, for the
+    /// two the grammar cannot read, `check_item_keys` — and each binds
+    /// nothing.
+    #[test]
+    fn a_mis_declared_nested_rule_is_a_finding_on_the_schema() {
+        let head = "---\ntype: Schema\n---\n\n````yaml\nfrontmatter:\n  type:\n    const: T\n\
+                    sections:\n  - heading: Items\n    level: 2\n";
+        let doc = Document {
+            path: "a.md",
+            text: "# T\n\n## Items\n\nProse.\n\n- an item\n  - a nested item\n",
+            doc_type: Some("T"),
+        };
+        let cases = [
+            (
+                "    content: prose\n    nested:\n      item-key: '(x)'\n",
+                "declares a nested rule, and its content is not",
+                false,
+            ),
+            (
+                "    content: bullet-list\n    nested:\n      nested:\n        item-key: '(a)(b)'\n",
+                "declares a nested item-key `(a)(b)` with 2 capture groups",
+                true,
+            ),
+            (
+                "    content: bullet-list\n    item-key-optional: true\n",
+                "sets item-key-optional and declares no item-key",
+                true,
+            ),
+        ];
+        for (rule, message, unread_by_grammar) in cases {
+            let text = format!("{head}{rule}````\n");
+            let findings = check_declarations(&[("s.md".into(), text.clone())]);
+            assert_eq!(findings.len(), 1, "{rule}: {findings:#?}");
+            assert_eq!(findings[0].file, "s.md");
+            assert!(findings[0].fatal, "{findings:#?}");
+            assert!(
+                findings[0].message.contains(message),
+                "{rule}: {findings:#?}"
+            );
+            let same = check_item_keys(&[("s.md".into(), text)]);
+            assert_eq!(
+                same.len(),
+                usize::from(unread_by_grammar),
+                "{rule}: {same:#?}"
+            );
+
+            let schema = schema_of(&format!(
+                "frontmatter:\n  type:\n    const: T\nsections:\n  - heading: Items\n    level: 2\n{rule}"
+            ));
+            let mut found = Vec::new();
+            check_one(&doc, &schema, Subject::Filed, &mut found);
+            assert!(found.is_empty(), "{rule} binds nothing: {found:#?}");
         }
     }
 

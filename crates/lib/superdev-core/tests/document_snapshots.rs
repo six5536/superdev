@@ -222,3 +222,17 @@ fn item_key() {
 fn item_bounds() {
     snapshot("item-bounds");
 }
+
+/// A schema declaring `nested` and `item-key-optional` (ADR-051): a nested
+/// item with no key, no tag or a retired verb each report the nested item;
+/// a promise with no criterion beneath it reports the promise; a key
+/// repeated between a promise and a criterion reports both; a plain note
+/// under the optional key reports nothing unless it matches the prohibited
+/// pattern, and a keyed one is held to the pattern; a marker beyond the
+/// declared depth or of the other kind is text; and a `nested` on a prose
+/// section, a nested key with two captures and the flag with no key report
+/// on the schema.
+#[test]
+fn nested_items() {
+    snapshot("nested-items");
+}
