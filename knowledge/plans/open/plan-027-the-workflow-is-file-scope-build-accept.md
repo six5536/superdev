@@ -261,7 +261,7 @@ section as it goes.
 
 ### Block 6: Build, execute-plan, accept, and the workflow text
 
-- [ ] Done — ticked by integrate at merge.
+- [x] Done — ticked by build at its commit.
 - Depends-on: 5.
 - Change: `build/SKILL.md` — reads the plan, works the blocks in
   order: tests, code, the block's own tests and the tests it touches,
@@ -299,7 +299,7 @@ section as it goes.
 
 ### Block 7: The concepts and the records
 
-- [ ] Done — ticked by integrate at merge.
+- [ ] Done — ticked by build at its commit.
 - Depends-on: 6.
 - Change: `definition-of-done`, `development-procedure`,
   `issue-tracker`, `glossary` (the phases, `Scope`, `Work block`,
