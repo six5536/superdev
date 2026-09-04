@@ -31,7 +31,8 @@ needs that no rule names is added here, tagged with its kinds, so the
 next writer of the kind sees it.
 
 **Contract style — a contract defines its interface** (superdev
-ADR-033, ADR-042, ADR-043, ADR-044, ADR-046, ADR-047):
+ADR-033, ADR-042, ADR-043, ADR-044, ADR-046, ADR-047, ADR-050,
+ADR-051):
 
 - A contract's Definition MUST be one or more source includes of the
   regions that declare the interface, and MUST NOT carry an authored
@@ -47,21 +48,28 @@ ADR-033, ADR-042, ADR-043, ADR-044, ADR-046, ADR-047):
   consumers, behaviour across elements, exit codes, error semantics —
   as promises.
 - A promise MUST be one top-level bullet under Behaviour or Stability,
-  at any heading depth — a nested bullet is not a promise and is bound
-  as prose — opening with its key in a code span and an EARS tag —
-  `[ubiquitous]`, `[event]`, `[state]`, `[conditional]`, `[optional]`
-  or `[complex]` — then the sentence in that pattern's words: the
+  at any heading depth, opening with its key in a code span and an
+  EARS tag — `[ubiquitous]`, `[event]`, `[state]`, `[conditional]`,
+  `[optional]` or `[complex]` — then the sentence in that pattern's words: the
   trigger or condition, the interface element as the subject (`init`,
   the validator, a caller, a served tool), one modal verb, one
   requirement. The verb MUST be `SHALL` or `SHALL NOT` for a
   requirement, `SHOULD` or `SHOULD NOT` for a recommendation, or `MAY`
   for an option; `MUST`, `REQUIRED`, `RECOMMENDED` and `OPTIONAL` are
   retired from contracts.
+- A promise MAY carry a nested bullet list of the criteria that check
+  it, one criterion per nested bullet, each in the promise's form —
+  its key in a code span, an EARS tag, then the sentence in that
+  pattern's words with one modal verb. A promise with no criterion is
+  its own check. A bullet below a criterion binds nothing.
 - A key MUST be `P_` followed by a slug of lowercase letters and digits
   joined by hyphens, unique within the contract across both sections.
+  A criterion's key MUST be `AC_` followed by the same slug form, unique
+  within the contract with every `P_` key.
   The key is the promise's identity: a rewording keeps it, a promise
   that no longer holds is removed with its key and the key is not
-  reused, and a new promise takes a new key.
+  reused, and a new promise takes a new key. A criterion's key is held
+  the same way.
 - Prose under Behaviour and Stability MUST describe and MUST NOT carry
   a modal verb. A numbered list is a sequence — the steps of a flow —
   and never a promise. A table stays where the kind's checklist wants
@@ -69,7 +77,9 @@ ADR-033, ADR-042, ADR-043, ADR-044, ADR-046, ADR-047):
 - A promise MUST be cited by its bare key where the contract is the
   subject — a test's doc comment, a plan case — and by the contract's
   id followed by the key elsewhere: `contract-002-cli-superdev
-  P_init-outside-git`.
+  P_init-outside-git`. A criterion MUST be cited the same way:
+  `AC_init-outside-git` where the contract is the subject,
+  `contract-002-cli-superdev AC_init-outside-git` elsewhere.
 - Behaviour MUST cover what the schema's checklist names for the
   contract's kind, one `###` per item that applies.
 - A contract MUST bind what it names and MUST NOT state how the
@@ -223,6 +233,10 @@ sections:
     item-pattern: '(?s)^`P_[a-z][a-z0-9]*(?:-[a-z0-9]+)*` \[(ubiquitous|event|state|conditional|optional|complex)\] .*\b(SHALL|SHOULD|MAY)\b'
     item-only-pattern: '\b(SHALL|SHOULD|MAY|MUST|REQUIRED|RECOMMENDED|OPTIONAL)\b'
     item-prohibited-pattern: '\b(MUST|REQUIRED|RECOMMENDED|OPTIONAL)\b|(?s)\b(SHALL|SHOULD|MAY)\b.*\b(SHALL|SHOULD|MAY)\b'
+    nested:
+      required: false
+      item-key: '^`(AC_[a-z][a-z0-9]*(?:-[a-z0-9]+)*)`'
+      item-pattern: '(?s)^`AC_[a-z][a-z0-9]*(?:-[a-z0-9]+)*` \[(ubiquitous|event|state|conditional|optional|complex)\] .*\b(SHALL|SHOULD|MAY)\b'
     description: >
       What the definition cannot say, as keyed EARS promises under one
       `###` per level-3 rule tagged with the kind that applies — the
@@ -230,16 +244,21 @@ sections:
       is one promise: a `P_` key in a code span, an EARS tag, the
       interface element as the subject, and one verb from SHALL, SHALL
       NOT, SHOULD, SHOULD NOT and MAY — MUST, REQUIRED, RECOMMENDED and
-      OPTIONAL are retired. Prose describes and carries no modal verb; a
-      nested bullet is not a promise and is bound as prose; a numbered
-      list is a sequence, never a promise; a table stays where the kind
-      wants one. The key is the promise's identity, unique
-      across Behaviour and Stability — a rewording keeps it, a removed
-      key is not reused — and is cited bare where the contract is the
-      subject and after the contract's id elsewhere:
-      `contract-002-cli-superdev P_init-outside-git`. A promise whose
-      behaviour is not built yet carries PENDING beside its verb, naming
-      the issue or slice; no item reads TBD.
+      OPTIONAL are retired. A promise MAY carry a nested bullet list of
+      the criteria that check it, one per bullet, in the promise's form:
+      an `AC_` key in a code span, an EARS tag and one modal verb; a
+      promise with no criterion is its own check. Prose describes and
+      carries no modal verb; a numbered list is a sequence, never a
+      promise; a table stays where the kind wants one. A key is the
+      identity of its promise or criterion, unique across Behaviour and
+      Stability and across both levels — a rewording keeps it, a
+      removed key is not reused — and is cited bare where the contract
+      is the subject, in a plan case or a test's doc comment, and after
+      the contract's id elsewhere: `contract-002-cli-superdev
+      P_init-outside-git`, `contract-002-cli-superdev
+      AC_init-outside-git`. A promise whose behaviour is not built yet
+      carries PENDING beside its verb, naming the issue or slice; no
+      item reads TBD.
   - heading: "Transport"
     level: 3
     required: true
@@ -524,6 +543,10 @@ sections:
     item-pattern: '(?s)^`P_[a-z][a-z0-9]*(?:-[a-z0-9]+)*` \[(ubiquitous|event|state|conditional|optional|complex)\] .*\b(SHALL|SHOULD|MAY)\b'
     item-only-pattern: '\b(SHALL|SHOULD|MAY|MUST|REQUIRED|RECOMMENDED|OPTIONAL)\b'
     item-prohibited-pattern: '\b(MUST|REQUIRED|RECOMMENDED|OPTIONAL)\b|(?s)\b(SHALL|SHOULD|MAY)\b.*\b(SHALL|SHOULD|MAY)\b'
+    nested:
+      required: false
+      item-key: '^`(AC_[a-z][a-z0-9]*(?:-[a-z0-9]+)*)`'
+      item-pattern: '(?s)^`AC_[a-z][a-z0-9]*(?:-[a-z0-9]+)*` \[(ubiquitous|event|state|conditional|optional|complex)\] .*\b(SHALL|SHOULD|MAY)\b'
     description: >
       What may change and how a caller learns of it — the versioning
       policy, the deprecation path, what is promised across a release —
@@ -531,7 +554,9 @@ sections:
       `P_` key unique across both sections, an EARS tag, the interface
       element as the subject, one verb from SHALL, SHOULD and MAY, and
       the key cited bare where the contract is the subject and after
-      the contract's id elsewhere. An internal interface promises so
+      the contract's id elsewhere. A promise here MAY carry its nested
+      `AC_` criteria as a Behaviour promise may, keyed uniquely with
+      every other key of the contract. An internal interface promises so
       here — "`P_internal` [ubiquitous] Every item above MAY change with
       the crate." — rather than omitting the section.
 
@@ -577,6 +602,10 @@ example:
 
     - `P_failure-body` [event] WHEN a request fails, the API SHALL
       answer a JSON body carrying `code` and `message`.
+      - `AC_not-found-body` [event] WHEN a widget is not found, the
+        API SHALL answer 404 with `code` set to `not_found`.
+      - `AC_invalid-body` [event] WHEN a request body fails to parse,
+        the API SHALL answer 400 with `code` set to `invalid`.
 
     ### Limits
 
