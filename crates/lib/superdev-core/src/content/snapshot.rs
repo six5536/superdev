@@ -67,7 +67,9 @@ mod tests {
     fn every_kind_is_populated() {
         let set = snapshot();
         for (owner, kind, least) in [
-            (knowledge(), ItemKind::Skill, 15),
+            // Fourteen skills, since ADR-050 retired integrate and folded
+            // frame, feature-plan and adhoc-plan into scope.
+            (knowledge(), ItemKind::Skill, 14),
             (knowledge(), ItemKind::KnowledgeSkeleton, 20),
             // Thirty-seven schemas and their index, since ADR-043 folded the
             // sixteen contract-kind schemas into one and ADR-050 the three

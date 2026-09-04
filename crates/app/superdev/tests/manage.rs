@@ -264,10 +264,10 @@ fn init_sets_up_a_fresh_repo() {
 fn init_ships_the_contract_judgement_step() {
     let sb = Sandbox::new();
     sb.superdev().arg("init").assert().success();
-    let integrate = sb.read(".claude/skills/integrate/SKILL.md");
+    let build = sb.read(".claude/skills/build/SKILL.md");
     assert!(
-        integrate.contains("<step name=\"JUDGE THE CONTRACTS\""),
-        "{integrate}"
+        build.contains("<step name=\"JUDGE THE CONTRACTS\""),
+        "{build}"
     );
     sb.superdev().arg("status").assert().success();
 }

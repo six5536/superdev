@@ -126,9 +126,9 @@ claimed in the lock the same way. The driver skill calls the verbs
 
 ### Key flows
 
-1. A run: `superdev run begin` → per slice, build → integrate, with
+1. A run: `superdev run begin` → `/build` per work block, with
    `superdev run advance --next <TEXT>` at every real step forward →
-   `superdev run end` when no slice is ready.
+   `superdev run end` when no block is ready.
 2. A turn ends: Claude Code fires Stop; `superdev hook run` reads the
    payload and the state, and exits `0` when the state is absent, the
    payload's session is not the owner, `next` is empty, or `continues`

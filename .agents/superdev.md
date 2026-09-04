@@ -6,27 +6,17 @@ YOU follow the set of rules defined below, reminding yourself of the rules perio
 
 <superdev>
 <workflow note="run each phase by invoking its skill; the skill carries the phase's full process">
-  <flow>FRAME → CONTRACT-DESIGN → FEATURE-PLAN → BUILD → INTEGRATE</flow>
-  <phase name="FRAME" skill="/frame" doc="feature-request" note="frame the feature and record it as an issue" />
-  <phase name="CONTRACT-DESIGN" skill="/contract-design" doc="contract" note="durable contract documents, public and internal, keyed to an interface and updated as features change it; the feature-request links each contract it touched" />
-  <phase name="FEATURE-PLAN" skill="/feature-plan" doc="feature-plan" note="cuts the feature into slices, each carrying its cases; settled by lifecycle at the last integrate" />
-  <phase name="BUILD" skill="/build" note="tests, then code, one slice at a time" />
-  <phase name="INTEGRATE" skill="/integrate" note="verify and integrate the slice" />
-  <phase name="ACCEPT" skill="/accept" note="feature-level acceptance on the merged code" />
-  <outside skill="/file" when="an issue or an idea to record without framing it — /frame frames it when it is taken up" />
-  <outside skill="/adhoc-plan" when="one-off work that needs no feature framing — a refactor, a migration, a chore" />
-  <outside skill="/execute-feature-plan" when="unattended delivery — drives FEATURE-PLAN → BUILD → INTEGRATE in a loop on the feature's branch, deferring the user's questions" />
-  <edge from="BUILD" when="contract change needed" to="CONTRACT-DESIGN" />
-  <edge from="BUILD" when="slice too big" to="FEATURE-PLAN" />
-  <edge from="INTEGRATE" when="a check fails" to="BUILD" />
-  <edge from="INTEGRATE" when="an acceptance criterion is ambiguous or wrong" to="FRAME" />
-  <edge from="INTEGRATE" when="a case is ambiguous or wrong" to="FEATURE-PLAN" />
-  <edge from="INTEGRATE" when="the contract should adopt a divergence" to="CONTRACT-DESIGN" />
-  <edge from="INTEGRATE" when="next slice" to="BUILD" />
-  <edge from="INTEGRATE" when="slice list needs re-cutting" to="FEATURE-PLAN" />
-  <edge from="INTEGRATE" when="last slice" to="DONE" />
-  <entry to="ACCEPT" when="the user requests acceptance, once the feature has stopped changing" />
-  <edge from="ACCEPT" when="gaps found" to="FEATURE-PLAN" />
+  <flow>FILE → SCOPE → BUILD → ACCEPT</flow>
+  <phase name="SCOPE" skill="/scope" doc="plan" note="cut the branch, make the contract changes, and write the plan build works; calls /contract-design for the contracts and their ADRs, /grill-me for the open decisions, /research for an external fact, /design or /prototype for UI, /double-check before the commit — none of them a phase" />
+  <phase name="BUILD" skill="/build" note="tests, then code, one work block at a time; after the last block the full verification, the changelog and the knowledge, the merge on the branch" />
+  <phase name="ACCEPT" skill="/accept" optional="true" note="acceptance on the merged code: the code review, the contract criteria, the documentation; it closes the issue" />
+  <outside skill="/file" when="an issue or an idea to record without scoping it — /scope takes it up" />
+  <outside skill="/execute-plan" when="unattended delivery — drives /build over the plan's blocks on the work's branch, deferring the user's questions" />
+  <edge from="BUILD" when="contract change needed" to="SCOPE" />
+  <edge from="BUILD" when="a work block is too big" to="SCOPE" />
+  <edge from="BUILD" when="the last block is merged" to="DONE" />
+  <entry to="ACCEPT" when="the user requests acceptance, once the work has stopped changing" />
+  <edge from="ACCEPT" when="a finding the user wants fixed" to="BUILD" />
   <edge from="ACCEPT" when="clean pass" to="DONE" />
 </workflow>
 
