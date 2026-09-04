@@ -301,7 +301,14 @@ section as it goes.
 
 ## Deferred decisions
 
-- None yet.
+- Slice 1 (built; the question is wording): contract-010's "Nested
+  items" paragraph says a marker beyond the declared depth "is text of
+  the item it sits in", and its "What an item is" paragraph says a
+  nested item's lines are dropped from the item above. The validator
+  follows the latter — the undeclared marker's lines are excluded from
+  the item's text, so a promise's pattern never reads a deeper note.
+  Should the "Nested items" paragraph say "is dropped from the item it
+  sits in, as an undeclared nested item's lines are"? Blocks nothing.
 
 <!-- sokf:links -->
 [sokf:adr-050-keys-and-ears-live-in-the-contracts-and-the-workflow-is-file-scope-build-accept]: /knowledge/adrs/active/adr-050-keys-and-ears-live-in-the-contracts-and-the-workflow-is-file-scope-build-accept.md
