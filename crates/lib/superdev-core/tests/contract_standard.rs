@@ -89,31 +89,37 @@ fn the_schema_states_the_doc_comment_and_pending_rules() {
     );
 }
 
-/// Covers I037 AC_c1, AC_c8, AC_c11 and AC_c15: the standard states the promise
-/// form — one keyed bullet with an EARS tag and one verb from SHALL, SHOULD
-/// and MAY, the retired verbs, the interface element as subject, prose with
-/// no modal verb, the numbered list as a sequence, the stable key, no `TBD`
-/// — and the citation form, citing ADR-046 and ADR-047 beside the ADRs it
-/// already cited; the schema alone carries the form, so nothing else needs
-/// to (ADR-046).
+/// Covers I037 AC_c1, AC_c8, AC_c11 and AC_c15, and I052
+/// AC_contract-criteria: the standard states the promise form — one keyed
+/// bullet with an EARS tag and one verb from SHALL, SHOULD and MAY, the
+/// retired verbs, the interface element as subject, prose with no modal
+/// verb, the numbered list as a sequence, the stable key, no `TBD` — the
+/// criteria a promise may nest in the same form under an `AC_` key, and the
+/// citation form for both, citing ADR-046, ADR-047, ADR-050 and ADR-051
+/// beside the ADRs it already cited; the schema alone carries the form, so
+/// nothing else needs to (ADR-046, ADR-050).
 #[test]
 fn the_schema_states_the_promise_form() {
     for (p, prose) in standard_copies() {
         let one_line = prose.lines().map(str::trim).collect::<Vec<_>>().join(" ");
         for rule in [
-            "ADR-044, ADR-046, ADR-047",
-            "A promise MUST be one top-level bullet under Behaviour or Stability, at any heading depth — a nested bullet is not a promise and is bound as prose",
+            "ADR-044, ADR-046, ADR-047, ADR-050, ADR-051",
+            "A promise MUST be one top-level bullet under Behaviour or Stability, at any heading depth, opening with its key",
             "`[ubiquitous]`, `[event]`, `[state]`, `[conditional]`, `[optional]` or `[complex]`",
             "the interface element as the subject",
             "`SHALL` or `SHALL NOT` for a requirement, `SHOULD` or `SHOULD NOT` for a recommendation, or `MAY` for an option",
             "`MUST`, `REQUIRED`, `RECOMMENDED` and `OPTIONAL` are retired from contracts",
+            "A promise MAY carry a nested bullet list of the criteria that check it",
+            "A promise with no criterion is its own check",
             "A key MUST be `P_` followed by a slug of lowercase letters and digits joined by hyphens, unique within the contract across both sections",
+            "A criterion's key MUST be `AC_` followed by the same slug form, unique within the contract with every `P_` key",
             "a rewording keeps it",
             "the key is not reused",
             "MUST describe and MUST NOT carry a modal verb",
             "A numbered list is a sequence — the steps of a flow — and never a promise",
             "cited by its bare key where the contract is the subject",
             "by the contract's id followed by the key elsewhere: `contract-002-cli-superdev P_init-outside-git`",
+            "A criterion MUST be cited the same way: `AC_init-outside-git` where the contract is the subject, `contract-002-cli-superdev AC_init-outside-git` elsewhere",
             "A contract MUST NOT carry a `TBD` item",
         ] {
             assert!(one_line.contains(rule), "{p} is missing: {rule}");

@@ -188,21 +188,22 @@ Terms from the contract side:
   are retired from contracts, prose in either section carries no modal
   verb, and a numbered list is a sequence, never a promise
   ([ADR-046][sokf:adr-046-a-promise-and-a-criterion-are-keyed-ears-items]).
-- **Promise key** — the stable identity of a promise or a criterion,
-  opening its item in a code span: `<PREFIX>_<slug>`, the prefix naming
-  the kind of item and the slug `[a-z][a-z0-9]*(-[a-z0-9]+)*`. The
-  prefixes are `P_` for a contract promise under Behaviour or
-  Stability, `AC_` for an acceptance criterion, `RS_` for a repro step,
-  `EX_` for an expected-behaviour item and `DD_` for a definition-of-done
-  item; a framed issue carries the key on every such item, an unframed
-  one on none. A key is
-  unique within its document; a rewording keeps it, a removed key is
-  not reused. An item on file at the sweep carries the slug `c<n>`, `n`
-  its number — `AC_c11`, `EX_c2` — so an older citation of the number stands. A
-  citation is the bare key where the document is the subject — a plan
-  case covering its issue's criteria, a test on the feature it tests —
-  and the document's id followed by the key elsewhere:
-  `contract-002-cli-superdev P_init-outside-git`
+  The criteria a promise nests take the promise's form under an `AC_`
+  key
+  ([ADR-050][sokf:adr-050-keys-and-ears-live-in-the-contracts-and-the-workflow-is-file-scope-build-accept]).
+- **Promise key** — the stable identity of a promise or a criterion in
+  a contract, opening its item in a code span: `<PREFIX>_<slug>`, the
+  prefix naming the kind of item and the slug
+  `[a-z][a-z0-9]*(-[a-z0-9]+)*`. The prefixes are `P_` for a promise
+  under Behaviour or Stability and `AC_` for a criterion nested under
+  the promise it checks; keys and EARS are demanded of contracts alone
+  ([ADR-050][sokf:adr-050-keys-and-ears-live-in-the-contracts-and-the-workflow-is-file-scope-build-accept]). A key
+  is unique within its contract across both sections and both levels;
+  a rewording keeps it, a removed key is not reused. A citation is the
+  bare key where the contract is the subject — a plan case, a test of
+  the contract's behaviour — and the contract's id followed by the key
+  elsewhere: `contract-002-cli-superdev P_init-outside-git`,
+  `contract-002-cli-superdev AC_init-outside-git`
   ([ADR-046][sokf:adr-046-a-promise-and-a-criterion-are-keyed-ears-items]).
 
 The files these terms describe are in [configuration][sokf:configuration]; the
@@ -216,6 +217,7 @@ layering is in [architecture][sokf:architecture].
 [sokf:adr-045-a-schema-declares-variants]: /knowledge/adrs/active/adr-045-a-schema-declares-variants.md
 [sokf:adr-046-a-promise-and-a-criterion-are-keyed-ears-items]: /knowledge/adrs/active/adr-046-a-promise-and-a-criterion-are-keyed-ears-items.md
 [sokf:adr-048-an-issues-lifecycle-distinguishes-framed-from-unframed]: /knowledge/adrs/deprecated/adr-048-an-issues-lifecycle-distinguishes-framed-from-unframed.md
+[sokf:adr-050-keys-and-ears-live-in-the-contracts-and-the-workflow-is-file-scope-build-accept]: /knowledge/adrs/active/adr-050-keys-and-ears-live-in-the-contracts-and-the-workflow-is-file-scope-build-accept.md
 [sokf:architectural-rules]: /knowledge/architectural-rules.md
 [sokf:architecture]: /knowledge/architecture.md
 [sokf:configuration]: /knowledge/configuration.md

@@ -1037,6 +1037,146 @@ fn a_numbered_flow_beside_keyed_promises_passes() {
     assert!(found.is_empty(), "{found:#?}");
 }
 
+/// Covers I052 AC_contract-criteria: a promise carries a nested bullet list
+/// of the criteria that check it, each opening with its `AC_` key and its
+/// EARS tag (ADR-050, ADR-051), and the contract passes the live schema set.
+#[test]
+fn a_contract_whose_promise_nests_keyed_criteria_passes() {
+    let behaviour = "### Exit codes\n\n\
+                     - `P_exit-codes` [ubiquitous] The probe SHALL exit with the code its\n  \
+                       report names.\n  \
+                       - `AC_exit-zero` [event] WHEN the probe succeeds, the probe SHALL\n    \
+                         exit 0.\n  \
+                       - `AC_exit-one` [event] WHEN a check fails, the probe SHALL exit 1.\n\n\
+                     ### Streams\n\n\
+                     - `P_stdout` [ubiquitous] The probe SHALL write its report to stdout.\n";
+    let stability = "- `P_unreleased` [ubiquitous] Every command above MAY change.\n  \
+                     - `AC_change-is-noted` [event] WHEN a command changes, the changelog\n    \
+                       SHALL carry the change.\n";
+    let found = findings_of("Contract", "probe.md", &contract(behaviour, stability));
+    assert!(found.is_empty(), "{found:#?}");
+}
+
+/// Covers I052 AC_contract-criteria: a nested item lacking its key, one
+/// lacking its tag, and a criterion key used twice across the contract each
+/// fail the live schema set with a finding naming the item — the repeat
+/// naming both items, under whichever promises they sit. A key is its whole
+/// `<PREFIX>_<slug>`, so `AC_exit-codes` beside `P_exit-codes` is two keys
+/// and no finding.
+#[test]
+fn a_nested_criterion_departing_from_the_form_fails_naming_each_departure() {
+    let behaviour = "### Exit codes\n\n\
+                     - `P_exit-codes` [ubiquitous] The probe SHALL exit with the code its\n  \
+                       report names.\n  \
+                       - [event] WHEN the probe succeeds, the probe SHALL exit 0.\n  \
+                       - `AC_exit-one` WHEN a check fails, the probe SHALL exit 1.\n  \
+                       - `AC_exit-codes` [event] WHEN a usage error occurs, the probe SHALL\n    \
+                         exit 2.\n\n\
+                     ### Streams\n\n\
+                     - `P_stdout` [ubiquitous] The probe SHALL write its report to stdout.\n  \
+                       - `AC_exit-codes` [event] WHEN the report is written, the probe SHALL\n    \
+                         flush stdout.\n";
+    let stability = "- `P_unreleased` [ubiquitous] Every command above MAY change.\n";
+    let found = findings_of("Contract", "probe.md", &contract(behaviour, stability));
+    let named = |text: &str| found.iter().filter(|f| f.contains(text)).count();
+    assert!(
+        named(
+            "nested item `- [event] WHEN the probe succeeds, the probe SHALL exit 0.` carries no key"
+        ) == 1,
+        "{found:#?}"
+    );
+    assert!(
+        named(
+            "nested item `- `AC_exit-one` WHEN a check fails, the probe SHALL exit 1.` does not match"
+        ) == 1,
+        "{found:#?}"
+    );
+    let repeat = found
+        .iter()
+        .find(|f| f.contains("repeats key `AC_exit-codes`"))
+        .unwrap_or_else(|| panic!("the repeated key is reported: {found:#?}"));
+    assert!(
+        repeat.contains(
+            "nested item `- `AC_exit-codes` [event] WHEN the report is written, the probe SHALL`"
+        ) && repeat.contains(
+            "nested item `- `AC_exit-codes` [event] WHEN a usage error occurs, the probe SHALL`"
+        ),
+        "the finding names both items: {repeat}"
+    );
+    assert_eq!(found.len(), 3, "{found:#?}");
+}
+
+/// Covers I052 AC_contract-criteria-optional: the contracts on file, none
+/// nesting a criterion, pass the live schema set unchanged.
+#[test]
+fn every_contract_on_file_passes_without_nested_criteria() {
+    let mut paths = Vec::new();
+    files_with(&repo("knowledge/contracts"), "md", &mut paths);
+    let contracts: Vec<PathBuf> = paths
+        .into_iter()
+        .filter(|p| p.file_name().is_some_and(|n| n != "index.md"))
+        .collect();
+    assert_eq!(contracts.len(), 9, "{contracts:#?}");
+    for path in contracts {
+        let text = std::fs::read_to_string(&path).unwrap();
+        let found = findings_of("Contract", path.to_str().unwrap(), &text);
+        assert!(found.is_empty(), "{}: {found:#?}", path.display());
+        assert!(
+            !same(&text).contains("\n  - `AC_"),
+            "{} nests a criterion",
+            path.display()
+        );
+    }
+}
+
+/// Covers I052 AC_contract-criteria-optional: the Behaviour and Stability
+/// rules declare the criteria a promise may nest — a `nested` rule keyed
+/// `AC_`, tagged as a promise is, and not required — in the live tree and
+/// in the pack mirror (ADR-050, ADR-051).
+#[test]
+fn the_promise_sections_declare_optional_nested_criteria() {
+    for (p, text) in contract_schema_copies() {
+        let block = fenced_block(&text, "yaml").expect("the schema carries a yaml contract");
+        let y: serde_yaml_ng::Value = serde_yaml_ng::from_str(&block).unwrap();
+        for heading in ["Behaviour", "Stability"] {
+            let rule = y["sections"]
+                .as_sequence()
+                .unwrap()
+                .iter()
+                .find(|r| r["heading"].as_str() == Some(heading))
+                .unwrap_or_else(|| panic!("{p}: no rule for {heading}"));
+            let nested = &rule["nested"];
+            assert_eq!(
+                nested["item-key"].as_str(),
+                Some("^`(AC_[a-z][a-z0-9]*(?:-[a-z0-9]+)*)`"),
+                "{p}: {heading} keys its nested criteria `AC_`"
+            );
+            assert_eq!(
+                nested["item-pattern"].as_str(),
+                Some(
+                    r"(?s)^`AC_[a-z][a-z0-9]*(?:-[a-z0-9]+)*` \[(ubiquitous|event|state|conditional|optional|complex)\] .*\b(SHALL|SHOULD|MAY)\b"
+                ),
+                "{p}: {heading} tags its nested criteria as it tags a promise"
+            );
+            assert_eq!(
+                nested["required"].as_bool(),
+                Some(false),
+                "{p}: {heading} leaves the criteria optional"
+            );
+            let description = folded(&rule_for(&text, heading));
+            assert!(
+                description.contains("MAY carry"),
+                "{p}: {heading}'s description does not say a promise MAY carry criteria: {description}"
+            );
+        }
+        let behaviour = folded(&rule_for(&text, "Behaviour"));
+        assert!(
+            behaviour.contains("`contract-002-cli-superdev AC_init-outside-git`"),
+            "{p}: Behaviour's description does not show how a criterion is cited: {behaviour}"
+        );
+    }
+}
+
 /// Covers I034 criterion 7 and I049 criterion 9: the Definition is
 /// materialised, never authored — its rule declares `content: include`, no
 /// pattern and none of the withdrawn `block-*` keys, so nothing inside it is
