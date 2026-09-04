@@ -16,7 +16,7 @@ links:
     note: EARS criteria on the issue; withdrawn — a criterion lives on the contract.
   - rel: references
     to: contract-010-interface-document-schemas
-    note: Gains `nested` and `item-key-optional`, the declarations behind a promise's nested criteria — PENDING (ADR-051).
+    note: Gains `nested` and `item-key-optional`, the declarations behind a promise's nested criteria (ADR-051); built by plan-027 slice 1.
   - rel: references
     to: adr-050-keys-and-ears-live-in-the-contracts-and-the-workflow-is-file-scope-build-accept
     note: The decision this feature delivers.
