@@ -618,7 +618,7 @@ mod tests {
     #[test]
     fn a_pack_item_wins_over_the_embedded_one() {
         let repo = tempfile::tempdir().unwrap();
-        write_pack(&repo.path().join("packs/acme"), "frame", "# Ours\n");
+        write_pack(&repo.path().join("packs/acme"), "scope", "# Ours\n");
         let resolved = resolve(
             repo.path(),
             &FakeRunner::new(),
@@ -629,8 +629,8 @@ mod tests {
         .unwrap();
         let item = resolved
             .content
-            .item(knowledge(), ItemKind::Skill, "frame")
-            .expect("frame");
+            .item(knowledge(), ItemKind::Skill, "scope")
+            .expect("scope");
         assert_eq!(item.files[0].1, "# Ours\n");
         // Everything the pack does not carry still comes from the embedded
         // copy.
@@ -659,7 +659,7 @@ mod tests {
             assert!(
                 resolved
                     .content
-                    .item(knowledge(), ItemKind::Skill, "frame")
+                    .item(knowledge(), ItemKind::Skill, "scope")
                     .is_some(),
                 "{mode:?}: the embedded pack still supplies the items"
             );
@@ -668,7 +668,7 @@ mod tests {
             assert_eq!(
                 resolved
                     .content
-                    .origin(knowledge(), ItemKind::Skill, "frame"),
+                    .origin(knowledge(), ItemKind::Skill, "scope"),
                 Some(&Origin::Snapshot),
                 "{mode:?}"
             );
@@ -733,13 +733,13 @@ mod tests {
     #[test]
     fn a_pack_superseding_the_embedded_pack_is_not_reported() {
         let repo = tempfile::tempdir().unwrap();
-        write_pack(&repo.path().join("packs/acme"), "frame", "# Ours\n");
+        write_pack(&repo.path().join("packs/acme"), "scope", "# Ours\n");
         let resolved = resolved(repo.path(), &["./packs/acme"]);
         assert_eq!(
             resolved
                 .content
-                .item(knowledge(), ItemKind::Skill, "frame")
-                .expect("frame")
+                .item(knowledge(), ItemKind::Skill, "scope")
+                .expect("scope")
                 .files[0]
                 .1,
             "# Ours\n"
@@ -1398,7 +1398,7 @@ mod tests {
         assert!(
             resolution
                 .content
-                .item(knowledge(), ItemKind::Skill, "frame")
+                .item(knowledge(), ItemKind::Skill, "scope")
                 .is_some(),
             "a layering pack adds without removing"
         );

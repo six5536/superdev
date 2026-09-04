@@ -31,8 +31,8 @@ The MUST NOT rules below are from SPEC §4, §5, §7 — never break these.
   <step name="CHECK ACCURACY AGAINST THE CODE" task="Check accuracy against the code, per the core's `core_principles` block. For each concept whose `resource` or repo-path `sources` changed after it (compare the `git log -1 --format=%cI` dates), read the changed source and correct the claims that no longer hold. For concepts without repo sources, spot-check the two or three most load-bearing claims" />
   <gate check="Where a doc and the code disagree, the code is right and the doc can be fixed" on-fail="say so and stop for direction" />
   <step name="CHECK THE WORKFLOW RECORDS">Check the workflow's records for lapsed record-keeping. Fix the record where the evidence is clear; report it where it is not:
-- A feature plan with every slice ticked but `lifecycle` still `open`; an issue settled in prose but still `unframed` or `framed`, or a document whose folder disagrees with its `lifecycle` (`superdev validate` names these).
-- Gap issues still `unframed` or `framed` against a `done` plan, or issues no plan or slice ever picked up.
+- A plan with every work block ticked but `lifecycle` still `open`; an issue settled in prose but still `open`, or a document whose folder disagrees with its `lifecycle` (`superdev validate` names these).
+- Gap issues still `open` against a `done` plan, or issues no plan or work block ever picked up — `/scope` takes one up.
 - Ideas taken up but never promoted into the tracker.
 - The changelog's Unreleased section missing merged user-visible changes.</step>
   <step name="CHECK STRUCTURE">Check structure:

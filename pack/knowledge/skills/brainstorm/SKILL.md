@@ -20,7 +20,7 @@ Brainstorm ideas, explore solutions, and evaluate options for the topic given in
 <step name="DIVERGE" task="Generate multiple distinct approaches without filtering" />
 <step name="ANALYZE" task="Evaluate options against constraints and trade-offs" />
 <step name="CONVERGE" task="Recommend top candidates with rationale" />
-<skill_call name="/adhoc-plan" when="if the user asks to formalise the outcome" input="the recommended candidates" />
+<skill_call name="/scope" when="if the user asks to formalise the outcome" input="the recommended candidates" />
 </process_actions>
 
 <rules>

@@ -276,7 +276,7 @@ mod tests {
     fn a_project_md_is_refused_wherever_it_sits() {
         for path in [
             "PROJECT.md",
-            "knowledge/skills/frame/PROJECT.md",
+            "knowledge/skills/scope/PROJECT.md",
             "skills/double-check/PROJECT.md",
         ] {
             let err = check_path("acme", path).unwrap_err();
@@ -287,7 +287,7 @@ mod tests {
     #[test]
     fn an_ordinary_path_passes() {
         for path in [
-            "knowledge/skills/frame/SKILL.md",
+            "knowledge/skills/scope/SKILL.md",
             "agents/coding.md",
             "projects/rust-npm/README.md",
             // Named like the spec but not at its reserved path.

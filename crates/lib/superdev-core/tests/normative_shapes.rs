@@ -480,7 +480,8 @@ fn a_plan_with_the_four_sections_passes() {
             "- contract-010: `P_nested-binds` added; `AC_nested-key` added.",
         ] {
             for tail in ["", DEFERRED] {
-                let found = findings_of("Plan", "probe.md", &plan_in(lifecycle, Some(changes), tail));
+                let found =
+                    findings_of("Plan", "probe.md", &plan_in(lifecycle, Some(changes), tail));
                 assert!(found.is_empty(), "{lifecycle}: {found:#?}");
             }
         }
@@ -499,13 +500,21 @@ fn a_plan_without_contract_changes_fails_naming_the_heading() {
         "{found:#?}"
     );
     let sound = plan_in("open", Some("- none."), "");
-    let found = findings_of("Plan", "probe.md", &sound.replace("### Block ", "### Slice "));
+    let found = findings_of(
+        "Plan",
+        "probe.md",
+        &sound.replace("### Block ", "### Slice "),
+    );
     assert_eq!(found.len(), 1, "{found:#?}");
     assert!(
         found[0].contains("missing required section matching /^Block \\d+: .+$/"),
         "{found:#?}"
     );
-    let found = findings_of("Plan", "probe.md", &sound.replace("## Goal\n\nA line.\n", ""));
+    let found = findings_of(
+        "Plan",
+        "probe.md",
+        &sound.replace("## Goal\n\nA line.\n", ""),
+    );
     assert_eq!(found.len(), 1, "{found:#?}");
     assert!(
         found[0].contains("missing required section \"Goal\""),
@@ -581,7 +590,10 @@ fn the_plan_schema_declares_the_template() {
         "the pack copy differs from the live one"
     );
     for (path, text) in &copies {
-        assert!(text.contains("    const: Plan\n"), "{path}: the type is Plan");
+        assert!(
+            text.contains("    const: Plan\n"),
+            "{path}: the type is Plan"
+        );
         assert!(
             text.contains("    pattern: '^plan-\\d{3}-[a-z0-9-]+$'\n"),
             "{path}: the id carries no kind segment"
@@ -597,7 +609,10 @@ fn the_plan_schema_declares_the_template() {
             .iter()
             .filter_map(|s| s["heading"].as_str())
             .collect();
-        assert_eq!(headings, PLAN_HEADINGS, "{path}: the four headings in order");
+        assert_eq!(
+            headings, PLAN_HEADINGS,
+            "{path}: the four headings in order"
+        );
         let content = |heading: &str| {
             sections
                 .iter()
@@ -701,7 +716,9 @@ fn every_plan_on_file_is_typed_plan_in_its_lifecycles_folder() {
         .collect();
     folders.sort_unstable();
     assert!(
-        folders.iter().all(|f| PLAN_LIFECYCLES.contains(&f.as_str())),
+        folders
+            .iter()
+            .all(|f| PLAN_LIFECYCLES.contains(&f.as_str())),
         "a folder outside the three states: {folders:?}"
     );
     assert!(plans.len() >= 27, "the plans were read: {}", plans.len());
@@ -1621,7 +1638,10 @@ fn no_test_compares_a_fenced_block_of_an_included_contract_to_the_binary() {
 /// (ADR-050).
 #[test]
 fn the_plan_orders_a_contract_gap_first() {
-    for p in ["knowledge/schemas/plan.md", "pack/knowledge/schemas/plan.md"] {
+    for p in [
+        "knowledge/schemas/plan.md",
+        "pack/knowledge/schemas/plan.md",
+    ] {
         let text = std::fs::read_to_string(repo(p)).expect("the file is on file");
         let rule = rule_for(&text, "Work blocks");
         assert!(
@@ -1686,8 +1706,10 @@ fn the_integrate_skill_judges_a_touched_contract() {
 }
 
 /// Covers I049 criterion 18: contract-design writes a new definition element
-/// into its source region with the behaviour unbuilt, and commits that
-/// declaration under the approval the phase already requires (ADR-044).
+/// into its source region with the behaviour unbuilt, and the declaration is
+/// committed under the approval the sub-skill requires (ADR-044) — the
+/// commit itself is `/scope`'s since ADR-050 made contract-design a
+/// sub-skill, so the commit half is asserted on the scope skill.
 #[test]
 fn the_contract_design_skill_declares_in_source() {
     for (p, text) in skill_copies("contract-design") {
@@ -1698,10 +1720,10 @@ fn the_contract_design_skill_declares_in_source() {
                 "{p}: the declaration step lacks `{phrase}`"
             );
         }
-        let commit = step_task(&text, "COMMIT THE CONTRACTS");
+        let present = step_task(&text, "PRESENT THE CHANGE SET");
         assert!(
-            commit.contains("source declaration"),
-            "{p}: the commit step does not name the source declaration"
+            present.contains("source declaration"),
+            "{p}: the change set does not name the source declaration"
         );
         assert!(
             text.contains("id=\"schema-contract\""),
@@ -1710,6 +1732,13 @@ fn the_contract_design_skill_declares_in_source() {
         assert!(
             !text.contains("schema-{kind}") && !text.contains("contract-interface"),
             "{p} still names a per-kind contract schema"
+        );
+    }
+    for (p, text) in skill_copies("scope") {
+        let commit = step_task(&text, "COMMIT THE PLAN");
+        assert!(
+            commit.contains("source-declaration"),
+            "{p}: the commit step does not name the source declaration"
         );
     }
 }
@@ -1859,7 +1888,11 @@ fn the_workflow_lists_file_outside_the_phases() {
     }
     for (p, text) in skill_copies("how-do-i") {
         let map = step_body(&text, "MAP THE QUESTION");
-        for phrase in ["`/file`", "without framing it", "`/frame` frames the issue"] {
+        for phrase in [
+            "`/file`",
+            "without framing it",
+            "`/scope` takes the issue up",
+        ] {
             assert!(map.contains(phrase), "{p}: the map lacks `{phrase}`");
         }
     }
@@ -1899,128 +1932,162 @@ fn the_file_skill_ships_in_the_pack_and_the_lock() {
     );
 }
 
-/// Covers I030 AC_frame-in-place: `/frame` reads a filed issue by id,
-/// fetches an unframed one and frames it in that file, replaces every `TBD`,
-/// keys and tags every criterion, and closes by setting `lifecycle: framed`
-/// for `--fix` to refile (ADR-048).
+/// Covers I052's scope criterion: `/scope` opens with the branch step, calls
+/// `/grill-me` where the design is open, calls `/contract-design` for the
+/// plan's contract changes, double-checks the plan and hands to `/build`
+/// (ADR-050).
 #[test]
-fn the_frame_skill_frames_an_unframed_issue_in_place() {
-    for (p, text) in skill_copies("frame") {
+fn the_scope_skill_cuts_the_branch_and_hands_to_build() {
+    for (p, text) in skill_copies("scope") {
+        let branch = step_task(&text, "BRANCH");
+        for phrase in [
+            "off the default branch",
+            "`feature/<nnn>-<slug>`",
+            "`adhoc/<nnn>-<slug>`",
+            "`development-procedure` concept's convention wins",
+        ] {
+            assert!(
+                branch.contains(phrase),
+                "{p}: the branch step lacks `{phrase}`"
+            );
+        }
+        let interview = step_task(&text, "INTERVIEW THE USER");
+        for phrase in [
+            "`/grill-me`",
+            "where the design is open",
+            "an interaction, never a self-check",
+        ] {
+            assert!(
+                interview.contains(phrase),
+                "{p}: the interview step lacks `{phrase}`"
+            );
+        }
+        for phrase in [
+            "<skill_call name=\"/contract-design\" when=\"if the contract changes name a contract\"",
+            "<skill_call name=\"/build\" when=\"always\"",
+            "`/research`",
+            "`/design`",
+            "`/prototype`",
+        ] {
+            assert!(text.contains(phrase), "{p} lacks `{phrase}`");
+        }
+        let plan = step_task(&text, "WRITE THE PLAN");
+        for phrase in ["`schema-plan`", "Goal, Contract changes, Work blocks"] {
+            assert!(plan.contains(phrase), "{p}: the plan step lacks `{phrase}`");
+        }
+        let double_check = step_task(&text, "DOUBLE-CHECK");
+        assert!(
+            double_check.contains("`/double-check`"),
+            "{p}: the double-check step does not call the skill"
+        );
+        let commit = step_task(&text, "COMMIT THE PLAN");
+        for phrase in ["the plan", "source-declaration", "work's branch"] {
+            assert!(
+                commit.contains(phrase),
+                "{p}: the commit step lacks `{phrase}`"
+            );
+        }
+        let (contracts_at, plan_at, commit_at, build_at) = (
+            text.find("<skill_call name=\"/contract-design\"").unwrap(),
+            text.find("<step name=\"WRITE THE PLAN\"").unwrap(),
+            text.find("<step name=\"COMMIT THE PLAN\"").unwrap(),
+            text.find("<skill_call name=\"/build\"").unwrap(),
+        );
+        assert!(
+            contracts_at < plan_at && plan_at < commit_at && commit_at < build_at,
+            "{p}: the contract changes, the plan, the commit and the hand-off are out of order"
+        );
+        assert!(
+            text.contains("<rule level=\"MUST\">decompose the work and decide its interfaces; write no product code</rule>"),
+            "{p} does not refuse to write product code"
+        );
+        assert!(
+            text.contains("Deferred decisions"),
+            "{p} does not record a question only the user can answer"
+        );
+    }
+}
+
+/// Covers I052's scope criterion: the three skills scope replaces ship
+/// nowhere — not in the pack, not under `.claude/skills/`, and not in the
+/// embedded pack's item set, which lists `scope` instead (ADR-050).
+#[test]
+fn no_retired_workflow_skill_ships() {
+    for name in ["frame", "feature-plan", "adhoc-plan"] {
+        for root in ["pack/knowledge/skills", ".claude/skills"] {
+            assert!(
+                !repo(&format!("{root}/{name}")).exists(),
+                "{root} still ships the {name} skill"
+            );
+        }
+    }
+    let set = superdev_core::content::snapshot();
+    let (owner, kind) = (
+        superdev_core::content::Owner::Knowledge,
+        superdev_core::content::ItemKind::Skill,
+    );
+    assert!(
+        set.item(owner, kind, "scope").is_some(),
+        "the pack's item set does not list the scope skill"
+    );
+    for name in ["frame", "feature-plan", "adhoc-plan"] {
+        assert!(
+            set.item(owner, kind, name).is_none(),
+            "the pack's item set still lists the {name} skill"
+        );
+    }
+    let lock = std::fs::read_to_string(repo(".superdev/lock.toml")).expect("the lock is on file");
+    assert!(
+        lock.contains("\".claude/skills/scope/SKILL.md\" = \""),
+        "the lock does not claim .claude/skills/scope/SKILL.md"
+    );
+    for name in ["frame", "feature-plan", "adhoc-plan"] {
+        assert!(
+            !lock.contains(&format!("\".claude/skills/{name}/SKILL.md\"")),
+            "the lock still claims the {name} skill"
+        );
+    }
+}
+
+/// Covers I052's contract-design criterion: contract-design takes one plan's
+/// Contract changes, keeps the user's go-ahead before anything commits, and
+/// hands back to `/scope`, which commits (ADR-050).
+#[test]
+fn the_contract_design_skill_is_a_sub_skill_of_scope() {
+    for (p, text) in skill_copies("contract-design") {
+        assert!(
+            text.contains("input=\"one plan's Contract changes"),
+            "{p} does not take one plan's contract changes"
+        );
         assert!(
             text.contains(
-                "<tool_call name=\"sokf_read\" id=\"issue-{nnn}-{kind}-{slug}\" when=\"if an issue is given\" />"
+                "<tool_call name=\"sokf_read\" id=\"plan-{nnn}-{slug}\" when=\"always\" />"
             ),
-            "{p} does not read a given issue by id"
+            "{p} does not read the plan"
         );
-        let fetch = step_task(&text, "FILE OR FETCH THE ISSUE");
-        for phrase in ["an unframed one `/file` filed", "in place"] {
+        let work = step_task(&text, "READ THE CONTRACT CHANGES");
+        for phrase in ["one contract per bullet", "returns to `/scope`"] {
             assert!(
-                fetch.contains(phrase),
-                "{p}: the fetch step lacks `{phrase}`"
+                work.contains(phrase),
+                "{p}: the work-list step lacks `{phrase}`"
             );
         }
-        let criteria = step_task(&text, "WRITE ACCEPTANCE CRITERIA");
-        for phrase in ["`AC_<slug>` [event]", "every `TBD`"] {
-            assert!(
-                criteria.contains(phrase),
-                "{p}: the criteria step lacks `{phrase}`"
-            );
+        let approval = text
+            .lines()
+            .find(|l| l.contains("The user has explicitly approved"))
+            .unwrap_or_else(|| panic!("{p} has no approval gate"));
+        assert!(approval.starts_with("<gate "), "{p}: {approval}");
+        assert!(
+            text.contains("<skill_call name=\"/scope\" when=\"always\""),
+            "{p} does not hand back to /scope"
+        );
+        assert!(
+            text.contains("<rule level=\"MUST NOT\">commit; `/scope` commits the approved edits with the plan</rule>"),
+            "{p} still commits for itself"
+        );
+        for retired in ["/feature-plan", "lifecycle is framed", "framed issue"] {
+            assert!(!text.contains(retired), "{p} still names `{retired}`");
         }
-        let close = step_task(&text, "SET FRAMED");
-        for phrase in [
-            "`lifecycle: framed`",
-            "superdev validate --fix",
-            "`issues/framed/`",
-        ] {
-            assert!(
-                close.contains(phrase),
-                "{p}: the close-out lacks `{phrase}`"
-            );
-        }
-        let (close_at, commit_at) = (
-            text.find("<step name=\"SET FRAMED\"").unwrap(),
-            text.find("<step name=\"COMMIT THE FRAME\"").unwrap(),
-        );
-        assert!(
-            close_at < commit_at,
-            "{p}: the close-out follows the commit"
-        );
-        assert!(
-            !text.contains("`lifecycle: open`"),
-            "{p} still files the issue `open`"
-        );
-    }
-}
-
-/// Covers I030 AC_frame-files: run with no issue, `/frame` creates it
-/// `unframed` per its kind's schema and frames it in the same pass, so the
-/// run ends `framed` (ADR-048).
-#[test]
-fn the_frame_skill_files_and_frames_in_one_pass() {
-    for (p, text) in skill_copies("frame") {
-        assert!(
-            text.contains("input=\"a filed issue's id, or the new project or feature to frame\""),
-            "{p} does not take a filed issue or a new feature"
-        );
-        let fetch = step_task(&text, "FILE OR FETCH THE ISSUE");
-        for phrase in [
-            "where none exists",
-            "create it `lifecycle: unframed`",
-            "per its kind's schema",
-            "superdev validate --fix",
-        ] {
-            assert!(
-                fetch.contains(phrase),
-                "{p}: the fetch step lacks `{phrase}`"
-            );
-        }
-        let (fetch_at, close_at) = (
-            text.find("<step name=\"FILE OR FETCH THE ISSUE\"").unwrap(),
-            text.find("<step name=\"SET FRAMED\"").unwrap(),
-        );
-        assert!(
-            fetch_at < close_at,
-            "{p}: the issue is filed after it is closed out"
-        );
-    }
-}
-
-/// Covers I030 AC_phases-refuse: contract-design, feature-plan and
-/// execute-feature-plan each open their gates with one on the framed
-/// issue's lifecycle, returning an unframed issue to `/frame` (ADR-048).
-#[test]
-fn the_later_phases_refuse_an_unframed_issue() {
-    for (name, verb) in [
-        ("contract-design", "designed"),
-        ("feature-plan", "planned"),
-        ("execute-feature-plan", "run"),
-    ] {
-        for (p, text) in skill_copies(name) {
-            let first = text
-                .lines()
-                .find(|l| l.starts_with("<gate "))
-                .unwrap_or_else(|| panic!("{p} has no gate"));
-            assert!(
-                first.contains("check=\"The framed issue's lifecycle is framed\""),
-                "{p}: the first gate is not the lifecycle gate: {first}"
-            );
-            let on_fail =
-                format!("on-fail=\"/frame — an unframed issue is framed before it is {verb}\"");
-            assert!(
-                first.contains(&on_fail),
-                "{p}: the lifecycle gate lacks `{on_fail}`"
-            );
-        }
-    }
-    for (p, text) in skill_copies("execute-feature-plan") {
-        let (lifecycle_at, contracts_at) = (
-            text.find("lifecycle is framed").unwrap(),
-            text.find("contracts are settled").unwrap(),
-        );
-        assert!(
-            lifecycle_at < contracts_at,
-            "{p}: the contracts gate precedes the lifecycle gate"
-        );
     }
 }
 

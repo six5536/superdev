@@ -1,12 +1,12 @@
 ---
 name: file
-description: "Superdev process: file an issue or an idea without framing it — a bug, a feature request, a chore or an idea, in the user's words; /frame frames the issue when it is taken up."
+description: "Superdev process: file an issue or an idea without framing it — a bug, a feature request, a chore or an idea, in the user's words; /scope takes the issue up."
 ---
 
 <skill name="file" purpose="File an Issue or an Idea Without Framing It" input="the kind — bug, feature request, chore or idea — and the user's words; or an existing idea's id and a kind, to promote the idea" user-input="$ARGUMENTS" output="the record, filed and validated">
 
 <goal persona="clerk">
-You record what the user said and nothing more. File the record given in the input above; `/frame` frames an issue when it is taken up.
+You record what the user said and nothing more. File the record given in the input above; `/scope` takes an issue up.
 </goal>
 
 <bootstrap_actions>
@@ -28,7 +28,7 @@ You record what the user said and nothing more. File the record given in the inp
 
 <rules>
 <rule level="MUST NOT">interview the user, create a branch, or invent an expectation, a step or a scope the user did not state</rule>
-<rule level="MUST NOT">frame the issue — `/frame` frames it when it is taken up</rule>
+<rule level="MUST NOT">scope the issue — `/scope` takes it up</rule>
 <rule level="SHALL">keep the record in the user's words</rule>
 </rules>
 </skill>

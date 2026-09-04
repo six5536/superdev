@@ -121,7 +121,7 @@ mod tests {
     #[test]
     fn each_position_names_its_owner_kind_and_name() {
         let items = items_from([
-            ("knowledge/skills/frame/SKILL.md", "frame"),
+            ("knowledge/skills/scope/SKILL.md", "scope"),
             ("knowledge/concepts/contracts/public/index.md", "concept"),
             ("knowledge/schemas/adr.md", "schema"),
             ("skills/double-check/SKILL.md", "pack skill"),
@@ -129,7 +129,7 @@ mod tests {
             ("projects/rust-npm/README.md", "project"),
         ]);
         let knowledge = Owner::Knowledge;
-        assert_eq!(names(&items, knowledge, ItemKind::Skill), ["frame"]);
+        assert_eq!(names(&items, knowledge, ItemKind::Skill), ["scope"]);
         assert_eq!(
             names(&items, knowledge, ItemKind::KnowledgeSkeleton),
             ["contracts"]

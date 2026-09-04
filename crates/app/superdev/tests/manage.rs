@@ -190,7 +190,7 @@ fn init_sets_up_a_fresh_repo() {
     assert!(sb.read(".gitignore").contains(".codegraph/"));
     // The knowledge capability carries the converted skill set into the repo,
     // so a collaborator gets it from git alone; nothing installs at user level.
-    assert!(repo.join(".claude/skills/frame/SKILL.md").is_file());
+    assert!(repo.join(".claude/skills/scope/SKILL.md").is_file());
     assert!(repo.join(".claude/skills/prototype/LOGIC.md").is_file());
     assert!(
         repo.join(".claude/skills/how-do-i/SESSION-BOUNDARIES.md")
@@ -198,7 +198,7 @@ fn init_sets_up_a_fresh_repo() {
     );
     let lock = sb.read(".superdev/lock.toml");
     assert!(
-        lock.contains("\".claude/skills/frame/SKILL.md\""),
+        lock.contains("\".claude/skills/scope/SKILL.md\""),
         "lock: {lock}"
     );
     assert!(!lock.contains("workflows"), "lock: {lock}");
@@ -465,7 +465,7 @@ fn a_workflows_manifest_errors_and_sync_migrates_after_the_table_goes() {
     let upstream = "upstream skill\n";
     let hash = superdev_core::lock::sha256_hex(upstream.as_bytes());
     for rel in [
-        ".claude/skills/frame/SKILL.md",
+        ".claude/skills/scope/SKILL.md",
         ".claude/skills/ask-matt/SKILL.md",
         ".agents/MATT-POCOCK-SKILLS.md",
     ] {
@@ -476,8 +476,8 @@ fn a_workflows_manifest_errors_and_sync_migrates_after_the_table_goes() {
     let lock = sb.read(".superdev/lock.toml");
     let mut edited = String::new();
     for line in lock.lines() {
-        if line.starts_with("\".claude/skills/frame/SKILL.md\"") {
-            edited.push_str(&format!("\".claude/skills/frame/SKILL.md\" = \"{hash}\"\n"));
+        if line.starts_with("\".claude/skills/scope/SKILL.md\"") {
+            edited.push_str(&format!("\".claude/skills/scope/SKILL.md\" = \"{hash}\"\n"));
             continue;
         }
         edited.push_str(line);
@@ -493,7 +493,7 @@ fn a_workflows_manifest_errors_and_sync_migrates_after_the_table_goes() {
     // file sync has no reason to touch, which only a wholesale clear retires.
     edited.push_str("\n[owners]\n");
     for key in [
-        ".claude/skills/frame/SKILL.md",
+        ".claude/skills/scope/SKILL.md",
         ".claude/skills/ask-matt/SKILL.md",
         ".agents/MATT-POCOCK-SKILLS.md",
         ".claude/skills/wizard/SKILL.md",
@@ -510,10 +510,10 @@ fn a_workflows_manifest_errors_and_sync_migrates_after_the_table_goes() {
     assert_eq!(synced.code, 0, "stderr: {}", synced.stderr);
     // The same-named skill is superdev's again — the shipped content, with
     // the legacy attribution retired from the lock.
-    assert_ne!(sb.read(".claude/skills/frame/SKILL.md"), upstream);
+    assert_ne!(sb.read(".claude/skills/scope/SKILL.md"), upstream);
     let lock = sb.read(".superdev/lock.toml");
     assert!(
-        lock.contains("\".claude/skills/frame/SKILL.md\""),
+        lock.contains("\".claude/skills/scope/SKILL.md\""),
         "lock: {lock}"
     );
     assert!(!lock.contains("workflows"), "lock: {lock}");
