@@ -22,8 +22,7 @@ crates/lib/superdev-core/ # all domain logic (no arg parsing)
 crates/app/superdev/      # the binary: CLI parsing, wiring, output
 packages/                 # npm launcher + per-platform binary packages
 knowledge/                # this repository's SOKF knowledge
-knowledge/plans/          # plan-<nnn>-feature-<slug> slice lists and
-                          # plan-<nnn>-adhoc-<slug> one-off work
+knowledge/plans/          # plan-<nnn>-<slug>, one per piece of work
 knowledge/adrs/           # ADRs; permanent
 knowledge/contracts/      # durable contracts, by audience:
                           # public/ promised to callers,

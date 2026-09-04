@@ -9,7 +9,7 @@ description: The test layers, the key choices behind them, and where they run, i
 
 Structural rules for `knowledge/testing-strategy.md`, the canonical knowledge's Reference
 concept for how the project is tested. This is the standing strategy; the
-per-feature cases live in the feature plan's slices.
+per-feature cases live in the plan's work blocks.
 
 ````yaml
 description: >

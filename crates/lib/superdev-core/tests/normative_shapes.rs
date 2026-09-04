@@ -1380,7 +1380,7 @@ fn markdown_naming(roots: &[&str], needles: &[&str]) -> Vec<String> {
 
 /// Covers I030 `AC_backlog-retired`: no schema, skill, index or live
 /// concept names the backlog (ADR-048). The records that say it retired —
-/// the ADRs, the framed issue, the plans, the changelog, the four entries
+/// the ADRs, the issue, the plans, the changelog, the four entries
 /// that note where they came from — legitimately name it, so the hunt is
 /// scoped to what a writer builds against: the schemas in both trees, the
 /// skills in both trees, the pack's concept skeletons, the ideas index, and
@@ -1811,7 +1811,7 @@ fn a_pending_promise_is_declared_and_bounded() {
 /// `references` link, and says it does not interview, branch or invent
 /// (ADR-048, ADR-050).
 #[test]
-fn the_file_skill_files_without_framing() {
+fn the_file_skill_files_in_the_users_words() {
     for (p, text) in skill_copies("file") {
         for phrase in [
             "bug, feature request, chore or idea",
@@ -2340,5 +2340,125 @@ fn the_workflow_reads_file_scope_build_accept() {
         ] {
             assert!(text.contains(edge), "{p} lacks the edge `{edge}`");
         }
+    }
+}
+
+/// The trees a writer builds against: the live concepts filed directly in
+/// the knowledge root, the ideas, the contracts and the schemas, the pack's
+/// concept skeletons and schemas, the skills in both trees, and the README.
+/// The ADRs, the issues, the plans, the review reports and the changelog
+/// carry the history and are not swept.
+fn writer_facing_roots() -> Vec<String> {
+    let mut roots: Vec<String> = [
+        "knowledge/contracts",
+        "knowledge/ideas",
+        "knowledge/schemas",
+        "pack/knowledge/concepts",
+        "pack/knowledge/schemas",
+        "pack/knowledge/skills",
+        ".claude/skills",
+        "README.md",
+    ]
+    .map(String::from)
+    .to_vec();
+    for entry in std::fs::read_dir(repo("knowledge")).expect("the knowledge root") {
+        let path = entry.unwrap().path();
+        if path.extension().is_some_and(|e| e == "md") {
+            roots.push(format!(
+                "knowledge/{}",
+                path.file_name().unwrap().to_str().unwrap()
+            ));
+        }
+    }
+    roots
+}
+
+/// Covers I052's sweep criterion: no concept, schema, skill or README
+/// section names a retired workflow skill or the framed states — the
+/// workflow is FILE → SCOPE → BUILD → ACCEPT, and what it replaced is
+/// history the ADRs, the issues, the plans and the changelog hold
+/// (ADR-050).
+#[test]
+fn nothing_a_writer_builds_against_names_a_retired_phase() {
+    let roots = writer_facing_roots();
+    let roots: Vec<&str> = roots.iter().map(String::as_str).collect();
+    let found = markdown_naming(
+        &roots,
+        &[
+            "/frame",
+            "/feature-plan",
+            "/adhoc-plan",
+            "/integrate",
+            "/execute-feature-plan",
+            "framed",
+            "unframed",
+        ],
+    );
+    assert!(
+        found.is_empty(),
+        "a retired workflow name is still where a writer builds: {found:#?}"
+    );
+}
+
+/// Covers I052's ADR criterion: ADR-050 is active, supersedes the two
+/// decisions the tracker's keyed EARS criteria and its framed state came
+/// from — both filed under `adrs/deprecated/` — and references ADR-046,
+/// whose contract half stands.
+#[test]
+fn adr_050_supersedes_the_tracker_decisions() {
+    let superseded = [
+        "adr-031-ears-criteria-are-checked-by-item-pattern",
+        "adr-048-an-issues-lifecycle-distinguishes-framed-from-unframed",
+    ];
+    let text = same(
+        &std::fs::read_to_string(repo(
+            "knowledge/adrs/active/\
+             adr-050-keys-and-ears-live-in-the-contracts-and-the-workflow-is-file-scope-build-accept.md",
+        ))
+        .expect("ADR-050 is on file"),
+    );
+    assert_eq!(
+        frontmatter_of(&text, "lifecycle"),
+        Some("active"),
+        "ADR-050 is not active"
+    );
+    for id in superseded {
+        assert!(
+            text.contains(&format!("  - rel: supersedes\n    to: {id}\n")),
+            "ADR-050 does not supersede {id}"
+        );
+        assert!(
+            repo(&format!("knowledge/adrs/deprecated/{id}.md")).exists(),
+            "{id} is not filed under adrs/deprecated/"
+        );
+    }
+    assert!(
+        text.contains(
+            "  - rel: references\n    to: adr-046-a-promise-and-a-criterion-are-keyed-ears-items\n"
+        ),
+        "ADR-050 does not reference ADR-046"
+    );
+}
+
+/// Covers I052's glossary criterion: the glossary defines the workflow's
+/// terms — Scope, Plan and Work block — and defines Frame, Slice, Framed,
+/// Unframed and Integrate no longer, a term the project has stopped using
+/// being dropped rather than marked (ADR-050).
+#[test]
+fn the_glossary_carries_the_workflow_terms() {
+    let text = same(
+        &std::fs::read_to_string(repo("knowledge/glossary.md")).expect("the glossary is on file"),
+    );
+    for term in ["Scope", "Plan", "Work block"] {
+        assert!(
+            text.contains(&format!("- **{term}** — ")),
+            "the glossary does not define {term}"
+        );
+    }
+    for term in ["Frame", "Framed", "Unframed", "Slice", "Integrate"] {
+        assert!(
+            !text.contains(&format!("- **{term}** — ")),
+            "the glossary still defines {term}"
+        );
     }
 }

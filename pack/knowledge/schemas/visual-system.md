@@ -2,7 +2,7 @@
 type: Schema
 id: schema-visual-system
 title: Visual System Schema
-description: The design tokens later slices build against, in knowledge/visual-system.md.
+description: The design tokens later work builds against, in knowledge/visual-system.md.
 ---
 
 # Visual System Schema
@@ -13,7 +13,7 @@ carry this concept; changing a token here is a decision, not a tweak.
 
 ````yaml
 description: >
-  The design tokens every UI slice builds against — palette, type roles,
+  The design tokens every UI change builds against — palette, type roles,
   layout and spacing, the signature element, and the component library.
 line-limit: 800
 
@@ -35,7 +35,7 @@ preamble:
   content: prose
   description: >
     The aesthetic direction in one or two sentences: the point of view, and
-    the one risk it takes. Every UI slice builds against these tokens;
+    the one risk it takes. Every UI change builds against these tokens;
     changing them is a decision, not a tweak.
 
 sections-ordered: true

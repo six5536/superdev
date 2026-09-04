@@ -91,7 +91,7 @@ ADR-051):
   leading lines, and the rendering MUST be proved current by a test.
 - A Behaviour or Stability promise whose behaviour is unbuilt MAY
   carry `PENDING` in uppercase beside its modal verb, naming the issue
-  or plan slice in parentheses, and MUST NOT once the feature settles; a
+  or work block in parentheses, and MUST NOT once the feature settles; a
   definition element carries none. A contract MUST NOT carry a `TBD`
   item: a contract promises or says `PENDING`, and never defers.
 - A contract MUST link the ADR behind each decision and MUST NOT
@@ -257,7 +257,7 @@ sections:
       the contract's id elsewhere: `contract-002-cli-superdev
       P_init-outside-git`, `contract-002-cli-superdev
       AC_init-outside-git`. A promise whose behaviour is not built yet
-      carries PENDING beside its verb, naming the issue or slice; no
+      carries PENDING beside its verb, naming the issue or work block; no
       item reads TBD.
   - heading: "Transport"
     level: 3

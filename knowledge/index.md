@@ -1,13 +1,13 @@
 # Overview
 
 * [Project Overview][sokf:project-overview] - what superdev is and its current status.
-* [Domain Glossary][sokf:glossary] - the terms the blueprint engine uses — blueprint, capability, provider, provenance, component, owned file, scaffold, project template, template adoption, skill pack, knowledge-carried skill, content pack, pack source, embedded snapshot, pack item, pack layer, pack format, PROJECT.md layer, custom skill, harvest, claim, orphan — plus the search terms section, locator, hybrid search and RRF.
+* [Domain Glossary][sokf:glossary] - the terms the blueprint engine uses — blueprint, capability, provider, provenance, component, owned file, scaffold, project template, template adoption, skill pack, knowledge-carried skill, content pack, pack source, embedded snapshot, pack item, pack layer, pack format, PROJECT.md layer, custom skill, harvest, claim, orphan — plus the workflow terms run, scope, plan and work block, the knowledge terms section, locator, hybrid search, RRF, lifecycle and variant, and the contract terms binding, drift test, EARS and promise key.
 * [Known Constraints & Non-Goals][sokf:constraints-non-goals] - what superdev deliberately does not do, and the accepted limitations of the inherited machinery.
 * [Ideas](ideas/index.md) - thoughts captured for considering later, one document each; not candidate work.
 
 # Design
 
-* [Plans](plans/index.md) - the slice lists delivering features and the plans for one-off work outside the feature workflow, filed done when they land.
+* [Plans](plans/index.md) - one plan per piece of work — its goal, its contract changes and its work blocks — filed done when they land.
 * [ADRs](adrs/index.md) - architecture decision records: the interfaces that were expensive to change, with their alternatives.
 * [Contracts](contracts/index.md) - the durable contracts describing the app: promised outward in public/, binding modules in internal/.
 * [Issues](issues/index.md) - open tickets, grouped by feature.

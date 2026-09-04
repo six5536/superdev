@@ -2,7 +2,7 @@
 type: Glossary
 id: glossary
 title: Domain Glossary
-description: The terms the blueprint engine uses — blueprint, capability, provider, provenance, component, owned file, scaffold, project template, template adoption, skill pack, knowledge-carried skill, content pack, pack source, embedded snapshot, pack item, pack layer, pack format, PROJECT.md layer, custom skill, harvest, claim, orphan — plus the knowledge terms section, locator, hybrid search, RRF, lifecycle and variant, and the contract terms binding, drift test, EARS and promise key.
+description: The terms the blueprint engine uses — blueprint, capability, provider, provenance, component, owned file, scaffold, project template, template adoption, skill pack, knowledge-carried skill, content pack, pack source, embedded snapshot, pack item, pack layer, pack format, PROJECT.md layer, custom skill, harvest, claim, orphan — plus the workflow terms run, scope, plan and work block, the knowledge terms section, locator, hybrid search, RRF, lifecycle and variant, and the contract terms binding, drift test, EARS and promise key.
 status: stable
 ---
 
@@ -52,7 +52,7 @@ status: stable
   with it. Claude Code loads them from there natively, so there is nothing to
   install. The knowledge-carried skills are not pack skills: the SOKF
   component carries them.
-- **Knowledge-carried skill** — one of the 17 SOKF-carried skills the
+- **Knowledge-carried skill** — one of the 14 SOKF-carried skills the
   `knowledge` capability materialises into `.claude/skills/<name>/` as owned
   files, each skill its whole directory: SKILL.md, companions, harness
   configs. The set exists exactly where knowledge exists.
@@ -111,12 +111,30 @@ status: stable
 - **Orphan** — a lock entry no live claim covers. `sync` removes it when its
   content still hashes to the locked value, and otherwise releases it: left in
   place, dropped from the lock, reported once.
-- **Run** — one unattended pass over a feature plan: armed by
+- **Run** — one unattended pass over a plan: armed by
   `.superdev/cache/run.toml`, written only by the `superdev run`
   verbs, owned by one session, and enforced by the `superdev hook run`
   Stop hook. A watchdog bounds it — ten turn boundaries without an
   `advance` and the run dies — and a blocked run ends, leaving its
   questions in the plan's deferred decisions.
+
+Terms from the workflow, which is FILE → SCOPE → BUILD → ACCEPT
+([ADR-050][sokf:adr-050-keys-and-ears-live-in-the-contracts-and-the-workflow-is-file-scope-build-accept]):
+
+- **Scope** — the phase that turns a filed issue, or a one-off request,
+  into work: `/scope` cuts the branch, makes the contract changes
+  through `/contract-design`, and writes the plan. It is the only phase
+  between the issue and the build, and it holds the whole design.
+- **Plan** — the one document a piece of work is designed in: its goal,
+  the contract changes it makes, the work blocks that deliver it, and
+  the decisions it defers. `/scope` writes it, `/build` works it, and
+  the commit that completes the work sets it `lifecycle: done`. One
+  template covers feature work and one-off work alike.
+- **Work block** — the unit a plan cuts the work into: one change small
+  enough to build and commit in one pass, carrying the blocks it
+  depends on, its cases and its done-check. `/build` takes the blocks
+  in order, tests before code, and runs the full verification once
+  after the last one.
 
 Terms from the knowledge-serving side:
 
@@ -133,19 +151,14 @@ Terms from the knowledge-serving side:
   score calibration between BM25 and cosine, which is the whole reason for it.
 - **Lifecycle** — the one field that says whether a document is live or
   settled, on every issue, plan, decision and contract. An issue's is
-  `unframed`, `framed`, `done` or `wontfix`; a plan's `open`, `done` or
+  `open`, `done` or `wontfix`; a plan's `open`, `done` or
   `abandoned`; a decision's and a contract's `active` or `deprecated`.
   Its value names the folder the document sits in —
-  `knowledge/issues/framed/`, `knowledge/plans/done/` — and `superdev
+  `knowledge/issues/open/`, `knowledge/plans/done/` — and `superdev
   validate --fix` moves a document whose folder disagrees. SOKF `status`
   no longer appears on these kinds: it answered the same question in a
   second vocabulary, and an absent `status` reads as `stable` by the SOKF
-  spec, so dropping it changed nothing. An **unframed** issue is one
-  `/file` wrote in the user's words, held to its headings and list kinds
-  alone; a **framed** issue is one `/frame` has interviewed, keyed and
-  branched, held to the keyed EARS form, and the phases after `/frame`
-  refuse an unframed one
-  ([ADR-048][sokf:adr-048-an-issues-lifecycle-distinguishes-framed-from-unframed]).
+  spec, so dropping it changed nothing.
 - **Variant** — one of the values a schema's `variant-key` frontmatter key
   admits, selecting which of the schema's rules a document is checked
   against: a rule tagged `variants` binds the values it names, an untagged
@@ -176,11 +189,9 @@ Terms from the contract side:
   opens with one of six pattern tags — `[ubiquitous]`, `[event]`,
   `[state]`, `[conditional]`, `[optional]`, `[complex]` — and states its
   trigger or condition in that pattern's words before one modal verb
-  and one requirement. A framed feature-request's acceptance criteria
-  and a framed bug's expected behaviour take the form, numbered, with
-  "THE SYSTEM" as the subject; an unframed issue's are plain sentences
-  ([ADR-031][sokf:adr-031-ears-criteria-are-checked-by-item-pattern],
-  ADR-048).
+  and one requirement. The contracts are the only documents held to it:
+  an issue states its behaviour in prose and bullets
+  ([ADR-050][sokf:adr-050-keys-and-ears-live-in-the-contracts-and-the-workflow-is-file-scope-build-accept]).
   A contract's Behaviour and Stability promises take the form as
   bullets, with the interface element as the subject — `init`, the
   validator, a caller — one verb from `SHALL`, `SHOULD` and `MAY`, and
@@ -212,11 +223,9 @@ layering is in [architecture][sokf:architecture].
 <!-- sokf:links -->
 [sokf:adr-003-items-by-layout]: /knowledge/adrs/active/adr-003-items-by-layout.md
 [sokf:adr-004-base-pack-identity]: /knowledge/adrs/active/adr-004-base-pack-identity.md
-[sokf:adr-031-ears-criteria-are-checked-by-item-pattern]: /knowledge/adrs/deprecated/adr-031-ears-criteria-are-checked-by-item-pattern.md
 [sokf:adr-042-a-contracts-definition-is-materialized-from-source]: /knowledge/adrs/active/adr-042-a-contracts-definition-is-materialized-from-source.md
 [sokf:adr-045-a-schema-declares-variants]: /knowledge/adrs/active/adr-045-a-schema-declares-variants.md
 [sokf:adr-046-a-promise-and-a-criterion-are-keyed-ears-items]: /knowledge/adrs/active/adr-046-a-promise-and-a-criterion-are-keyed-ears-items.md
-[sokf:adr-048-an-issues-lifecycle-distinguishes-framed-from-unframed]: /knowledge/adrs/deprecated/adr-048-an-issues-lifecycle-distinguishes-framed-from-unframed.md
 [sokf:adr-050-keys-and-ears-live-in-the-contracts-and-the-workflow-is-file-scope-build-accept]: /knowledge/adrs/active/adr-050-keys-and-ears-live-in-the-contracts-and-the-workflow-is-file-scope-build-accept.md
 [sokf:architectural-rules]: /knowledge/architectural-rules.md
 [sokf:architecture]: /knowledge/architecture.md

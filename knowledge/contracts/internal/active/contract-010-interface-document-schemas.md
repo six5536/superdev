@@ -423,8 +423,7 @@ present, each checked against the base and its own variant's rules, its
 value equal to its key; its findings carry the key, `example
 `<value>`:`. A heading may be declared in more than one section rule
 when the rules' `variants` sets are disjoint and none is untagged, so
-one heading carries a different shape per variant — a tracker's
-criteria unkeyed while unframed and keyed once framed (ADR-049).
+one heading carries a different shape per variant (ADR-049).
 
 - `P_variant-selects-rules` [ubiquitous] The validator SHALL check a
   document against the rules its variant value selects, in declared

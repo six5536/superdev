@@ -61,7 +61,7 @@ One document per contract, all durable, under one schema (ADR-043). An `interfac
 * [Issue Tracker Schema][sokf:schema-issue-tracker] - where issues live, the filing conventions and the triage label vocabulary, in knowledge/issue-tracker.md.
 * [Glossary Schema][sokf:schema-glossary] - the domain terms the project's code and docs assume, one definition each, in knowledge/glossary.md.
 * [Constraints & Non-Goals Schema][sokf:schema-constraints-non-goals] - what the project deliberately does not do and the limitations it accepts, in knowledge/constraints-non-goals.md.
-* [Visual System Schema][sokf:schema-visual-system] - the design tokens later slices build against, in knowledge/visual-system.md.
+* [Visual System Schema][sokf:schema-visual-system] - the design tokens later work builds against, in knowledge/visual-system.md.
 
 ## The index itself
 

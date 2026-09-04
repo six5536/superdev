@@ -53,8 +53,8 @@ Inherited machinery, and what it fixes.
   needs the language's own notion of public — so it falls on the far
   side of the line
   [ADR-039][sokf:adr-039-a-decidable-finding-is-an-error-and-the-turn-is-the-gate]
-  drew, and the judgement step at integration asks it at the
-  reliability an LLM judgement carries rather than a check's.
+  drew, and `/build`'s judgement step asks it at the reliability an
+  LLM judgement carries rather than a check's.
 
 <!-- sokf:links -->
 [sokf:adr-039-a-decidable-finding-is-an-error-and-the-turn-is-the-gate]: /knowledge/adrs/active/adr-039-a-decidable-finding-is-an-error-and-the-turn-is-the-gate.md

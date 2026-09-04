@@ -53,6 +53,28 @@ reindexes only what changed. Search is hybrid, combining a BM25 index with a
 small embedding model downloaded once per machine, and falls back to
 keyword-only if that model is unavailable.
 
+### The workflow
+
+The knowledge-carried skills run one loop, and every record it writes
+lives in the knowledge tree. In your agent:
+
+```
+/file     # record the work as an issue, in your own words
+/scope    # cut the branch, change the contracts, write the plan
+/build    # work the plan's blocks, verify once, merge on the branch
+/accept   # optional: review, check the criteria, close the issue
+```
+
+One issue template covers all three kinds — `kind` is `bug`, `feature`
+or `chore`, and `lifecycle` is `open`, `done` or `wontfix` — and one
+plan template holds the goal, the contract changes and the work blocks
+that deliver them. `/build` takes the blocks in order, tests before
+code, one commit each, and verifies the whole change once after the
+last one. `/accept` is optional and runs only when you ask for it.
+
+`/execute-plan` drives `/build` unattended over a plan's blocks and
+defers the questions only you can answer into the plan.
+
 ### Where the content comes from
 
 The skills, templates and scaffolds superdev writes are a *content pack*. One

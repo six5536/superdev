@@ -42,9 +42,9 @@ sections:
     required: true
     content: numbered-list
     description: >
-      The ordered steps a change follows: how it starts — where it is framed,
-      specified and decided before code; how it is implemented — branching,
-      commit conventions, slice size; how the canonical knowledge is kept current
+      The ordered steps a change follows: how it starts — where it is filed,
+      scoped and decided before code; how it is implemented — branching,
+      commit conventions, work-block size; how the canonical knowledge is kept current
       when behaviour or design changes; and what must pass before a PR, what CI
       adds on top, and the smoke test run at each merge, with the command and
       what it proves.
@@ -63,10 +63,10 @@ example: |
 
   # Workflow
 
-  1. A change starts as a framed feature-request in the issue tracker, and anything
+  1. A change starts as an issue in the issue tracker, and anything
      architectural is decided in an ADR before code is written.
   2. Branch from `main` as `feature/{slug}`. Commits are conventional and one
-     logical change each; a slice is small enough to review in one sitting.
+     logical change each; a work block is small enough to review in one sitting.
   3. When behaviour or design changes, the canonical knowledge concept that describes it
      changes in the same PR — a stale concept is a bug.
   4. `just check` must pass before the PR. CI adds `--all-features` and the
