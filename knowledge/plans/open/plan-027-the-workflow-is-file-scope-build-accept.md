@@ -226,7 +226,7 @@ section as it goes.
 
 ### Block 5: Scope, and contract-design as its sub-skill
 
-- [ ] Done — ticked by integrate at merge.
+- [x] Done — ticked by integrate at merge.
 - Depends-on: 3, 4.
 - Change: `pack/knowledge/skills/scope/SKILL.md` — persona, bootstrap
   reads (the issue or the request, the contracts, the plan schema),

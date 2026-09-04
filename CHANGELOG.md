@@ -144,9 +144,6 @@ publish a version it cannot find a heading for.
   directions (ADR-036), with a test asserting each declared exit code;
   the CLI contract had drifted from the binary. The blocks and their
   drift tests were later replaced by source includes (ADR-042, below).
-- **An acceptance criterion's EARS tag is checked.** A feature-request
-  criterion that does not open with an EARS tag or `TBD — ` fails
-  `superdev validate`, naming the criterion (ADR-031).
 - **A schema can bind the shape of a section's text.** A section rule
   declares `item-pattern`, which every top-level item of the section's list
   must match, and `content-pattern`, which the section's whole body must
@@ -349,6 +346,22 @@ publish a version it cannot find a heading for.
   and Deferred decisions with `### Slice n:` or `### Wn:` headings
   becoming `### Block n:`, and run `superdev validate --fix`. The id's
   kind segment may stay — the pattern admits any slug (ADR-050).
+- **`/scope` replaces `/frame`, `/feature-plan` and `/adhoc-plan`, and
+  `/contract-design` becomes its sub-skill.** `/scope` takes a filed
+  issue or a one-off request: it cuts the branch —
+  `feature/<nnn>-<slug>` after the issue, `adhoc/<nnn>-<slug>` after the
+  plan where there is no issue — calls `/grill-me` where the design is
+  open, `/research` for an external fact and `/design` or `/prototype`
+  for UI, decides the contract changes, writes the plan per
+  `schema-plan`, double-checks it, commits the plan with the contract
+  edits on the branch, and hands to `/build`. `/contract-design` is a
+  phase no longer: it takes one plan's Contract changes, makes the
+  contract and source-declaration edits, records the ADRs, presents the
+  change set for the user's go-ahead and hands back to `/scope`, which
+  commits. **After a pack update, `/frame`, `/feature-plan` and
+  `/adhoc-plan` are gone from `.claude/skills/`**: invoke `/scope` in
+  their place, and rewrite every skill, hook or note in a managed
+  repository that names one (ADR-050).
 - **An issue's lifecycle was `unframed`, `framed`, `done` or `wontfix`,
   and the tracker schemas varied by it.** `/frame` set `framed` and the
   later phases gated on it; an unframed issue was held to its list kinds
@@ -382,22 +395,6 @@ publish a version it cannot find a heading for.
   nine active contracts were swept to it: 182 modal verbs became 174
   keyed promises, a sentence that stood in two places becoming one
   promise cited from the other (ADR-046, ADR-047).
-- **The tracker's cited lists carry keys.** A feature-request's
-  acceptance criteria open with an `AC_` key in a code span before the
-  EARS tag or the `TBD`; a bug-report's repro steps with an `RS_` key
-  and a chore's definition of done with a `DD_` key, each with no tag —
-  **a step or a done item carrying an EARS tag after its key is an
-  error** naming the item and the tag. The key is the item's identity,
-  unique within the issue, and the
-  number the reading order; a plan case cites the keys it covers, bare
-  ("covers AC_c1, AC_stale-include"), and elsewhere the issue's id
-  precedes the key. **After a pack update, an issue whose cited list
-  carries a keyless, mis-prefixed or repeated item fails `superdev
-  validate`**, naming the item; `--fix` supplies no key. The fifty
-  issues on file were swept once to the slug `c<n>`, `n` the item's
-  number — 141 criteria, 72 repro steps, 22 done items — so every
-  citation of a number stands, and every open plan's cases cite keys
-  (ADR-046).
 - The two hook entries `sync` writes into `.claude/settings.json` carry
   `timeout: 30`, so a hook that wedges — a `cargo run` waiting on a build
   lock — is killed by Claude Code after 30 s instead of holding the
