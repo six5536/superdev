@@ -58,9 +58,11 @@ ADR-051):
   for an option; `MUST`, `REQUIRED`, `RECOMMENDED` and `OPTIONAL` are
   retired from contracts.
 - A promise MAY carry a nested bullet list of the criteria that check
-  it, one criterion per nested bullet, each in the promise's form —
-  its key in a code span, an EARS tag, then the sentence in that
-  pattern's words with one modal verb. A promise with no criterion is
+  it, one criterion per nested bullet, each in the promise's form and
+  held to the same rules — its key in a code span, an EARS tag, then
+  the sentence in that pattern's words with one modal verb from the
+  same five, a retired keyword and a second modal verb failing a
+  criterion as they fail a promise. A promise with no criterion is
   its own check. A bullet below a criterion binds nothing.
 - A key MUST be `P_` followed by a slug of lowercase letters and digits
   joined by hyphens, unique within the contract across both sections.
@@ -237,6 +239,7 @@ sections:
       required: false
       item-key: '^`(AC_[a-z][a-z0-9]*(?:-[a-z0-9]+)*)`'
       item-pattern: '(?s)^`AC_[a-z][a-z0-9]*(?:-[a-z0-9]+)*` \[(ubiquitous|event|state|conditional|optional|complex)\] .*\b(SHALL|SHOULD|MAY)\b'
+      item-prohibited-pattern: '\b(MUST|REQUIRED|RECOMMENDED|OPTIONAL)\b|(?s)\b(SHALL|SHOULD|MAY)\b.*\b(SHALL|SHOULD|MAY)\b'
     description: >
       What the definition cannot say, as keyed EARS promises under one
       `###` per level-3 rule tagged with the kind that applies — the
@@ -245,8 +248,10 @@ sections:
       interface element as the subject, and one verb from SHALL, SHALL
       NOT, SHOULD, SHOULD NOT and MAY — MUST, REQUIRED, RECOMMENDED and
       OPTIONAL are retired. A promise MAY carry a nested bullet list of
-      the criteria that check it, one per bullet, in the promise's form:
-      an `AC_` key in a code span, an EARS tag and one modal verb; a
+      the criteria that check it, one per bullet, in the promise's form
+      and held to the same rules: an `AC_` key in a code span, an EARS
+      tag, and one verb from the same five — a retired keyword, or a
+      second modal verb, fails a criterion as it fails a promise. A
       promise with no criterion is its own check. Prose describes and
       carries no modal verb; a numbered list is a sequence, never a
       promise; a table stays where the kind wants one. A key is the
@@ -547,6 +552,7 @@ sections:
       required: false
       item-key: '^`(AC_[a-z][a-z0-9]*(?:-[a-z0-9]+)*)`'
       item-pattern: '(?s)^`AC_[a-z][a-z0-9]*(?:-[a-z0-9]+)*` \[(ubiquitous|event|state|conditional|optional|complex)\] .*\b(SHALL|SHOULD|MAY)\b'
+      item-prohibited-pattern: '\b(MUST|REQUIRED|RECOMMENDED|OPTIONAL)\b|(?s)\b(SHALL|SHOULD|MAY)\b.*\b(SHALL|SHOULD|MAY)\b'
     description: >
       What may change and how a caller learns of it — the versioning
       policy, the deprecation path, what is promised across a release —
