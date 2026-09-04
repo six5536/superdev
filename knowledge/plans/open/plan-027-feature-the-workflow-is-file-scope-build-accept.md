@@ -6,7 +6,7 @@ description: Slices delivering I052 — the validator's nested items and optiona
 lifecycle: open
 links:
   - rel: implements
-    to: issue-052-feature-request-the-workflow-carries-more-process-than-it-needs
+    to: issue-052-the-workflow-carries-more-process-than-it-needs
     note: The framed feature whose sixteen criteria these slices deliver.
   - rel: references
     to: contract-010-interface-document-schemas
@@ -21,7 +21,7 @@ links:
 
 # Feature plan: The workflow is file, scope, build, accept
 
-Request: [issue-052-feature-request-the-workflow-carries-more-process-than-it-needs][sokf:issue-052-feature-request-the-workflow-carries-more-process-than-it-needs]
+Request: [issue-052-the-workflow-carries-more-process-than-it-needs][sokf:issue-052-the-workflow-carries-more-process-than-it-needs]
 
 The validator first: the slice that closes
 [contract-010][sokf:contract-010-interface-document-schemas]'s five
@@ -320,4 +320,4 @@ section as it goes.
 [sokf:adr-050-keys-and-ears-live-in-the-contracts-and-the-workflow-is-file-scope-build-accept]: /knowledge/adrs/active/adr-050-keys-and-ears-live-in-the-contracts-and-the-workflow-is-file-scope-build-accept.md
 [sokf:adr-051-a-section-rule-declares-nested-items-and-an-optional-key]: /knowledge/adrs/active/adr-051-a-section-rule-declares-nested-items-and-an-optional-key.md
 [sokf:contract-010-interface-document-schemas]: /knowledge/contracts/internal/active/contract-010-interface-document-schemas.md
-[sokf:issue-052-feature-request-the-workflow-carries-more-process-than-it-needs]: /knowledge/issues/framed/issue-052-feature-request-the-workflow-carries-more-process-than-it-needs.md
+[sokf:issue-052-the-workflow-carries-more-process-than-it-needs]: /knowledge/issues/open/issue-052-the-workflow-carries-more-process-than-it-needs.md

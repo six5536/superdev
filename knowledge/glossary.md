@@ -169,7 +169,7 @@ Terms from the contract side:
   include the validator keeps current, so no copy exists to compare,
   and a test that opens a fenced block out of a contract to compare it
   to the binary is a finding
-  ([I049][sokf:issue-049-feature-request-a-contract-cannot-point-at-its-definition]
+  ([I049][sokf:issue-049-a-contract-cannot-point-at-its-definition]
   criterion 23). A test of a Behaviour promise is a behaviour test, not
   a drift test.
 - **EARS** — the Easy Approach to Requirements Syntax: a requirement
@@ -222,4 +222,4 @@ layering is in [architecture][sokf:architecture].
 [sokf:architecture]: /knowledge/architecture.md
 [sokf:configuration]: /knowledge/configuration.md
 [sokf:contract-008-format-template]: /knowledge/contracts/public/active/contract-008-format-template.md
-[sokf:issue-049-feature-request-a-contract-cannot-point-at-its-definition]: /knowledge/issues/framed/issue-049-feature-request-a-contract-cannot-point-at-its-definition.md
+[sokf:issue-049-a-contract-cannot-point-at-its-definition]: /knowledge/issues/open/issue-049-a-contract-cannot-point-at-its-definition.md

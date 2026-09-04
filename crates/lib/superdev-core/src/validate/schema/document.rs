@@ -2290,11 +2290,11 @@ mod tests {
     fn a_glob_stays_inside_one_segment_unless_told_otherwise() {
         assert!(glob_match(
             "knowledge/issues/*.md",
-            "knowledge/issues/issue-001-bug-x.md"
+            "knowledge/issues/issue-001-x.md"
         ));
         assert!(!glob_match(
             "knowledge/issues/*.md",
-            "knowledge/issues/deep/issue-001-bug-x.md"
+            "knowledge/issues/deep/issue-001-x.md"
         ));
         assert!(glob_match("**/*postmortem*.md", "docs/a-postmortem-b.md"));
         assert!(glob_match("**/*postmortem*.md", "postmortem.md"));

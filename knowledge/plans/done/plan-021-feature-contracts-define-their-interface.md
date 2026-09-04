@@ -6,14 +6,14 @@ description: Slices delivering the definition-block vocabulary, each kind's decl
 lifecycle: done
 links:
   - rel: implements
-    to: issue-035-feature-request-a-contract-does-not-define-its-interface
+    to: issue-035-a-contract-does-not-define-its-interface
     note: The plan delivers the framed issue's eleven criteria.
 ---
 
 # Feature plan: contracts define their interfaces
 
 Request:
-[issue-035][sokf:issue-035-feature-request-a-contract-does-not-define-its-interface]
+[issue-035][sokf:issue-035-a-contract-does-not-define-its-interface]
 
 ## Slices
 
@@ -224,7 +224,7 @@ Request:
   [template format contract][sokf:contract-008-format-template]
   declares are compared to `crates/lib/superdev-core/src/templates.rs`
   in both directions, closing
-  [I038][sokf:issue-038-bug-the-template-format-contract-is-bound-by-no-drift-test].
+  [I038][sokf:issue-038-the-template-format-contract-is-bound-by-no-drift-test].
   Slice 5 bound the file formats through their readers, and the
   template format has no reader; its surface is Rust constants, so the
   binding is a text comparison like slice 8's.
@@ -241,5 +241,5 @@ Request:
 
 <!-- sokf:links -->
 [sokf:contract-008-format-template]: /knowledge/contracts/public/active/contract-008-format-template.md
-[sokf:issue-035-feature-request-a-contract-does-not-define-its-interface]: /knowledge/issues/done/issue-035-feature-request-a-contract-does-not-define-its-interface.md
-[sokf:issue-038-bug-the-template-format-contract-is-bound-by-no-drift-test]: /knowledge/issues/done/issue-038-bug-the-template-format-contract-is-bound-by-no-drift-test.md
+[sokf:issue-035-a-contract-does-not-define-its-interface]: /knowledge/issues/done/issue-035-a-contract-does-not-define-its-interface.md
+[sokf:issue-038-the-template-format-contract-is-bound-by-no-drift-test]: /knowledge/issues/done/issue-038-the-template-format-contract-is-bound-by-no-drift-test.md

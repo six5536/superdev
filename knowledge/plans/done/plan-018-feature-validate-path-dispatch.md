@@ -8,7 +8,7 @@ lifecycle: done
 
 # Feature plan: Validate path dispatch
 
-Request: [issue-019-bug-validate-reads-a-named-file-as-a-skill][sokf:issue-019-bug-validate-reads-a-named-file-as-a-skill].
+Request: [issue-019-validate-reads-a-named-file-as-a-skill][sokf:issue-019-validate-reads-a-named-file-as-a-skill].
 The bug's five expected-behaviour sentences are the criteria the cases
 cite. The contract is
 [ADR-026][sokf:adr-026-a-named-document-is-checked-with-bare-run-parity]:
@@ -68,4 +68,4 @@ bare-run parity, with the fallback kind only for files nothing claims.
 
 <!-- sokf:links -->
 [sokf:adr-026-a-named-document-is-checked-with-bare-run-parity]: /knowledge/adrs/active/adr-026-a-named-document-is-checked-with-bare-run-parity.md
-[sokf:issue-019-bug-validate-reads-a-named-file-as-a-skill]: /knowledge/issues/done/issue-019-bug-validate-reads-a-named-file-as-a-skill.md
+[sokf:issue-019-validate-reads-a-named-file-as-a-skill]: /knowledge/issues/done/issue-019-validate-reads-a-named-file-as-a-skill.md

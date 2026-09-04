@@ -8,7 +8,7 @@ lifecycle: done
 
 # Feature plan: the schema layer's declarations bind
 
-Request: [issue-018-feature-request-the-schema-layer-checks-sections-and-nothing-else][sokf:issue-018-feature-request-the-schema-layer-checks-sections-and-nothing-else]
+Request: [issue-018-the-schema-layer-checks-sections-and-nothing-else][sokf:issue-018-the-schema-layer-checks-sections-and-nothing-else]
 
 The vocabulary and its semantics are fixed in
 [contract-010-interface-document-schemas][sokf:contract-010-interface-document-schemas];
@@ -100,4 +100,4 @@ integrate's validate gate stays green at every merge.
 <!-- sokf:links -->
 [sokf:contract-002-cli-superdev]: /knowledge/contracts/public/active/contract-002-cli-superdev.md
 [sokf:contract-010-interface-document-schemas]: /knowledge/contracts/internal/active/contract-010-interface-document-schemas.md
-[sokf:issue-018-feature-request-the-schema-layer-checks-sections-and-nothing-else]: /knowledge/issues/done/issue-018-feature-request-the-schema-layer-checks-sections-and-nothing-else.md
+[sokf:issue-018-the-schema-layer-checks-sections-and-nothing-else]: /knowledge/issues/done/issue-018-the-schema-layer-checks-sections-and-nothing-else.md

@@ -67,7 +67,7 @@ spends it.
   are link-checked by nothing; the schemas are concepts and are.
 - A further 16 files under `pack/` say the same thing: 8 skills and 8
   templates. They are pack content and belong to
-  issue-021-chore-backport-the-knowledge-design-to-the-pack.
+  issue-021-backport-the-knowledge-design-to-the-pack.
 - Two templates say a new document is "numbered after the highest" in its
   directory (`pack/knowledge/templates/{adhoc-plan,feature-plan}.md`).
   Once documents split across folders, the highest may sit in any of
@@ -100,7 +100,7 @@ thing inside the file.
   depends on it and is the first thing to exercise it.
 - Reading the schema's `frontmatter` block in general. The new check
   reads one key; the general frontmatter contract is
-  issue-018-feature-request-the-schema-layer-checks-sections-and-nothing-else.
+  issue-018-the-schema-layer-checks-sections-and-nothing-else.
 - `knowledge/schemas/`. A schema is a standard, not a work item: the 42
   schemas gain no lifecycle and do not move.
 - Generating the seven `index.md` files. They keep the grouping they
@@ -109,7 +109,7 @@ thing inside the file.
   skills, not the 8 templates. It is four migrations behind already, and
   backporting each separately means rewriting the same files while the
   design is still moving.
-  issue-021-chore-backport-the-knowledge-design-to-the-pack owns the
+  issue-021-backport-the-knowledge-design-to-the-pack owns the
   whole debt, and W7 adds this plan's share to it.
 - A triage state of its own. `needs-triage` becomes `lifecycle: open`
   like any other live issue; whether triage deserves its own marker is
@@ -132,7 +132,7 @@ thing inside the file.
 | FR-9 | `.agents/sokf.md` tells the agent to ask for a lifecycle through that filter rather than by listing a directory | O3 |
 | FR-10 | No schema, skill or process document in the live tree names a path under the five directories | O4 |
 | FR-11 | Each schema says a document is written under its kind's directory and numbered after the highest across all of that kind's folders | O4 |
-| FR-12 | issue-021-chore-backport-the-knowledge-design-to-the-pack names the pack files this plan leaves stale | O5 |
+| FR-12 | issue-021-backport-the-knowledge-design-to-the-pack names the pack files this plan leaves stale | O5 |
 
 ### Non-functional
 
@@ -277,7 +277,7 @@ Depends on: W1.
 Depends on: W5, W6.
 
 1. Add this plan's share to
-   issue-021-chore-backport-the-knowledge-design-to-the-pack: the folder
+   issue-021-backport-the-knowledge-design-to-the-pack: the folder
    scaffold `init` does not yet write, the 8 pack skills and 8 pack
    templates left naming paths, and the frontmatter change (FR-12).
 2. Record the break — `CHANGELOG.md` carries the frontmatter change and
@@ -303,7 +303,7 @@ Depends on: W5, W6.
 | `.claude/skills/*/SKILL.md` (6 files) | modified — ids, not paths | W6 |
 | `.agents/process.md` | modified — ids, not paths | W6 |
 | `.agents/sokf.md` | modified — ask the filter for a lifecycle; do not glob the knowledge tree | W6 |
-| `knowledge/issues/issue-021-chore-backport-the-knowledge-design-to-the-pack.md` | modified — this plan's pack drift added to its surfaces | W7 |
+| `knowledge/issues/issue-021-backport-the-knowledge-design-to-the-pack.md` | modified — this plan's pack drift added to its surfaces | W7 |
 | `CHANGELOG.md` | modified — the frontmatter change and the layout | W7 |
 
 ## Acceptance
@@ -363,7 +363,7 @@ Depends on: W5, W6.
 - Risk: `superdev init` keeps writing the old flat layout until the
   backport lands, so a managed repo starts life in a shape this plan's
   gate refuses. Mitigation: none here — it is one item in
-  issue-021-chore-backport-the-knowledge-design-to-the-pack, alongside a
+  issue-021-backport-the-knowledge-design-to-the-pack, alongside a
   scaffold that already fails validation for four other reasons. Early
   signal: `superdev init` into a temporary repo, then
   `superdev validate --knowledge` at what it produced.

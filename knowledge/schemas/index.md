@@ -31,9 +31,7 @@ One document per contract, all durable, under one schema (ADR-043). An `interfac
 
 ## Reports & analysis
 
-* [Bug Report Schema][sokf:schema-bug-report] - bug reports filed in the issue tracker — symptom, repro, root cause and regression risk.
-* [Feature Request Schema][sokf:schema-feature-request] - feature requests filed in the issue tracker — motivation, proposed behaviour, EARS acceptance criteria, alternatives and scope, with no room for invented repro steps.
-* [Chore Schema][sokf:schema-chore] - scoped mechanical work filed in the issue tracker — the surfaces it touches and what done means, with no room for a root cause it does not have.
+* [Issue Schema][sokf:schema-issue] - the one shape an issue takes in the tracker — a bug, a feature or a chore, told apart by `kind` — with its summary, context, behaviour, scope, resolution and comments in prose and bullets, and no key or EARS tag on any of them.
 * [Investigation Schema][sokf:schema-investigation] - investigation write-ups — conclusion first, evidence with sources, ruled-out hypotheses and a recommendation.
 * [Postmortem Schema][sokf:schema-postmortem] - blameless incident write-ups — impact, timeline, root cause and typed action items.
 * [Status Update Schema][sokf:schema-status-update] - status updates — TL;DR, done since last update, in progress, blockers with recommended defaults, and next.
@@ -75,9 +73,7 @@ One document per contract, all durable, under one schema (ADR-043). An `interfac
 [sokf:schema-adr]: /knowledge/schemas/adr.md
 [sokf:schema-architectural-rules]: /knowledge/schemas/architectural-rules.md
 [sokf:schema-architecture]: /knowledge/schemas/architecture.md
-[sokf:schema-bug-report]: /knowledge/schemas/bug-report.md
 [sokf:schema-changelog]: /knowledge/schemas/changelog.md
-[sokf:schema-chore]: /knowledge/schemas/chore.md
 [sokf:schema-code-review]: /knowledge/schemas/code-review.md
 [sokf:schema-coding-standards]: /knowledge/schemas/coding-standards.md
 [sokf:schema-configuration]: /knowledge/schemas/configuration.md
@@ -90,10 +86,10 @@ One document per contract, all durable, under one schema (ADR-043). An `interfac
 [sokf:schema-directory-structure]: /knowledge/schemas/directory-structure.md
 [sokf:schema-error-handling]: /knowledge/schemas/error-handling.md
 [sokf:schema-feature-plan]: /knowledge/schemas/feature-plan.md
-[sokf:schema-feature-request]: /knowledge/schemas/feature-request.md
 [sokf:schema-glossary]: /knowledge/schemas/glossary.md
 [sokf:schema-idea]: /knowledge/schemas/idea.md
 [sokf:schema-investigation]: /knowledge/schemas/investigation.md
+[sokf:schema-issue]: /knowledge/schemas/issue.md
 [sokf:schema-issue-tracker]: /knowledge/schemas/issue-tracker.md
 [sokf:schema-migration-guide]: /knowledge/schemas/migration-guide.md
 [sokf:schema-postmortem]: /knowledge/schemas/postmortem.md

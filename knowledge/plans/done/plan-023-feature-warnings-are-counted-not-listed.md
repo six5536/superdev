@@ -9,7 +9,7 @@ lifecycle: done
 # Feature plan: A warning is counted by default and listed on request
 
 Request:
-[issue-036-feature-request-validate-prints-warnings-by-default][sokf:issue-036-feature-request-validate-prints-warnings-by-default]
+[issue-036-validate-prints-warnings-by-default][sokf:issue-036-validate-prints-warnings-by-default]
 
 ## Slices
 
@@ -67,7 +67,7 @@ Request:
     `--json --fix` match the `json:` block of
     [contract-002][sokf:contract-002-cli-superdev], key for key — covers
     5. Manual because binding the two by test is
-    [I043][sokf:issue-043-bug-the-cli-contracts-json-keys-are-bound-by-no-test],
+    [I043][sokf:issue-043-the-cli-contracts-json-keys-are-bound-by-no-test],
     which the framed issue puts out of scope.
 
 ### Slice 3: The hooks default like the command line
@@ -94,5 +94,5 @@ Request:
 <!-- sokf:links -->
 [sokf:adr-038-a-contract-may-promise-what-is-not-built-yet]: /knowledge/adrs/deprecated/adr-038-a-contract-may-promise-what-is-not-built-yet.md
 [sokf:contract-002-cli-superdev]: /knowledge/contracts/public/active/contract-002-cli-superdev.md
-[sokf:issue-036-feature-request-validate-prints-warnings-by-default]: /knowledge/issues/done/issue-036-feature-request-validate-prints-warnings-by-default.md
-[sokf:issue-043-bug-the-cli-contracts-json-keys-are-bound-by-no-test]: /knowledge/issues/wontfix/issue-043-bug-the-cli-contracts-json-keys-are-bound-by-no-test.md
+[sokf:issue-036-validate-prints-warnings-by-default]: /knowledge/issues/done/issue-036-validate-prints-warnings-by-default.md
+[sokf:issue-043-the-cli-contracts-json-keys-are-bound-by-no-test]: /knowledge/issues/wontfix/issue-043-the-cli-contracts-json-keys-are-bound-by-no-test.md

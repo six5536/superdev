@@ -6,12 +6,12 @@ description: Two slices making validate check each schema's example against the 
 lifecycle: done
 links:
   - rel: implements
-    to: issue-022-feature-request-a-schemas-worked-example-is-checked-by-nothing
+    to: issue-022-a-schemas-worked-example-is-checked-by-nothing
 ---
 
 # Feature plan: Example conformance
 
-Request: [issue-022-feature-request-a-schemas-worked-example-is-checked-by-nothing][sokf:issue-022-feature-request-a-schemas-worked-example-is-checked-by-nothing]
+Request: [issue-022-a-schemas-worked-example-is-checked-by-nothing][sokf:issue-022-a-schemas-worked-example-is-checked-by-nothing]
 
 The vocabulary and its semantics are fixed in
 [contract-010-interface-document-schemas][sokf:contract-010-interface-document-schemas]
@@ -81,4 +81,4 @@ integrate's validate gate stays green at every merge.
 <!-- sokf:links -->
 [sokf:contract-002-cli-superdev]: /knowledge/contracts/public/active/contract-002-cli-superdev.md
 [sokf:contract-010-interface-document-schemas]: /knowledge/contracts/internal/active/contract-010-interface-document-schemas.md
-[sokf:issue-022-feature-request-a-schemas-worked-example-is-checked-by-nothing]: /knowledge/issues/done/issue-022-feature-request-a-schemas-worked-example-is-checked-by-nothing.md
+[sokf:issue-022-a-schemas-worked-example-is-checked-by-nothing]: /knowledge/issues/done/issue-022-a-schemas-worked-example-is-checked-by-nothing.md

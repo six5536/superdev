@@ -176,8 +176,8 @@ Depends on: W3.
    from the knowledge verbs, and
    `knowledge/plans/plan-006-adhoc-rust-format-validator.md` records D-19 as moot.
 4. Fix the records that describe the old behaviour — the two open issues
-   `knowledge/issues/issue-010-feature-request-index-entries-are-never-checked-against-their-concept.md`
-   and `knowledge/issues/issue-011-feature-request-index-shape-is-described-but-not-enforced.md`
+   `knowledge/issues/issue-010-index-entries-are-never-checked-against-their-concept.md`
+   and `knowledge/issues/issue-011-index-shape-is-described-but-not-enforced.md`
    assert what validate does today, and
    `knowledge/specs/spec-008-knowledge-owned-skills.md` and
    `knowledge/plans/plan-002-feature-agent-instructions-layer.md` each name a
@@ -200,8 +200,8 @@ Depends on: W3.
 | `knowledge/api-contracts.md` | modified — `--level` leaves the documented surface | W4 |
 | `knowledge/plans/plan-006-adhoc-rust-format-validator.md` | modified — D-19 recorded moot | W4 |
 | `crates/lib/superdev-core/tests/fixtures/aokf/` | modified — 11 goldens projected: three keys dropped, one message reworded | W2 |
-| `knowledge/issues/issue-010-feature-request-index-entries-are-never-checked-against-their-concept.md` | modified — drops the level from what it observes | W4 |
-| `knowledge/issues/issue-011-feature-request-index-shape-is-described-but-not-enforced.md` | modified — drops the level from what it observes | W4 |
+| `knowledge/issues/issue-010-index-entries-are-never-checked-against-their-concept.md` | modified — drops the level from what it observes | W4 |
+| `knowledge/issues/issue-011-index-shape-is-described-but-not-enforced.md` | modified — drops the level from what it observes | W4 |
 | `knowledge/specs/spec-008-knowledge-owned-skills.md` | modified — a verification step names a level | W4 |
 | `knowledge/plans/plan-002-feature-agent-instructions-layer.md` | modified — a verification step names a level | W4 |
 

@@ -9,7 +9,7 @@ description: Where issues live, the filing conventions and the triage label voca
 
 Structural rules for `knowledge/issue-tracker.md`, the canonical knowledge's Convention
 concept for how issues are filed and triaged. This is the concept
-`schema-bug-report` defers to for the label vocabulary and the lifecycle.
+`schema-issue` defers to for the label vocabulary and the lifecycle.
 
 ````yaml
 description: >

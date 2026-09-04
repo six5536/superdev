@@ -6,7 +6,7 @@ description: Slices delivering I030 — a heading declared per variant in the va
 lifecycle: done
 links:
   - rel: implements
-    to: issue-030-feature-request-filing-an-issue-requires-framing-it
+    to: issue-030-filing-an-issue-requires-framing-it
     note: The framed feature whose seventeen criteria these slices deliver.
   - rel: references
     to: contract-010-interface-document-schemas
@@ -21,7 +21,7 @@ links:
 
 # Feature plan: Filing an issue without framing it
 
-Request: [issue-030-feature-request-filing-an-issue-requires-framing-it][sokf:issue-030-feature-request-filing-an-issue-requires-framing-it]
+Request: [issue-030-filing-an-issue-requires-framing-it][sokf:issue-030-filing-an-issue-requires-framing-it]
 
 The validator first: the slice that closes
 [contract-010][sokf:contract-010-interface-document-schemas]'s two
@@ -214,7 +214,7 @@ edited beside it.
   comment-preserving manifest stamping (`idea-006` was taken between
   the cut and the build) — written from the backlog's
   entries per `schema-idea` and listed in the ideas index;
-  `issue-051-chore-pin-node-in-the-managed-repo`, `wontfix`, carrying
+  `issue-051-pin-node-in-the-managed-repo`, `wontfix`, carrying
   the decided-against reasoning; `knowledge/backlog.md`,
   `pack/knowledge/concepts/backlog.md`, `pack/knowledge/schemas/backlog.md`
   and the synced `knowledge/schemas/backlog.md` deleted; the root
@@ -279,4 +279,4 @@ edited beside it.
 [sokf:adr-048-an-issues-lifecycle-distinguishes-framed-from-unframed]: /knowledge/adrs/deprecated/adr-048-an-issues-lifecycle-distinguishes-framed-from-unframed.md
 [sokf:adr-049-a-heading-is-declared-per-variant]: /knowledge/adrs/active/adr-049-a-heading-is-declared-per-variant.md
 [sokf:contract-010-interface-document-schemas]: /knowledge/contracts/internal/active/contract-010-interface-document-schemas.md
-[sokf:issue-030-feature-request-filing-an-issue-requires-framing-it]: /knowledge/issues/done/issue-030-feature-request-filing-an-issue-requires-framing-it.md
+[sokf:issue-030-filing-an-issue-requires-framing-it]: /knowledge/issues/done/issue-030-filing-an-issue-requires-framing-it.md

@@ -9,9 +9,9 @@ lifecycle: done
 # Feature plan: contract-design review and the binding-surface standard
 
 Request:
-[issue-028-bug-contract-design-commits-before-the-go-ahead][sokf:issue-028-bug-contract-design-commits-before-the-go-ahead]
+[issue-028-contract-design-commits-before-the-go-ahead][sokf:issue-028-contract-design-commits-before-the-go-ahead]
 and
-[issue-029-bug-contract-design-writes-verbose-prose][sokf:issue-029-bug-contract-design-writes-verbose-prose];
+[issue-029-contract-design-writes-verbose-prose][sokf:issue-029-contract-design-writes-verbose-prose];
 the decisions are ADR-027, ADR-028 and ADR-029. Case labels name the
 issue and criterion they cover ("I029 c1").
 
@@ -133,5 +133,5 @@ issue and criterion they cover ("I029 c1").
     covers I029 c3.
 
 <!-- sokf:links -->
-[sokf:issue-028-bug-contract-design-commits-before-the-go-ahead]: /knowledge/issues/done/issue-028-bug-contract-design-commits-before-the-go-ahead.md
-[sokf:issue-029-bug-contract-design-writes-verbose-prose]: /knowledge/issues/done/issue-029-bug-contract-design-writes-verbose-prose.md
+[sokf:issue-028-contract-design-commits-before-the-go-ahead]: /knowledge/issues/done/issue-028-contract-design-commits-before-the-go-ahead.md
+[sokf:issue-029-contract-design-writes-verbose-prose]: /knowledge/issues/done/issue-029-contract-design-writes-verbose-prose.md

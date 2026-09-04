@@ -155,7 +155,7 @@ run happened to write — a converged run writes nothing, and without this a
 file edited into agreement would keep the hash of what it replaced, and be
 reported as a user edit the next time anything wrote it. Only entries the lock
 already holds are refreshed: a file superdev left to the repo at adoption
-stays the repo's ([I005][sokf:issue-005-bug-a-backport-leaves-the-lock-stale]).
+stays the repo's ([I005][sokf:issue-005-a-backport-leaves-the-lock-stale]).
 
 `blueprint` is the version last applied, not the version that wrote the file.
 A successful `sync` stamps this binary's version, rewriting `config.toml` only
@@ -369,5 +369,5 @@ rules that decide what gets hashed are in [glossary][sokf:glossary].
 [sokf:adr-016-a-path-pack-records-no-digest]: /knowledge/adrs/active/adr-016-a-path-pack-records-no-digest.md
 [sokf:architecture]: /knowledge/architecture.md
 [sokf:glossary]: /knowledge/glossary.md
-[sokf:issue-005-bug-a-backport-leaves-the-lock-stale]: /knowledge/issues/done/issue-005-bug-a-backport-leaves-the-lock-stale.md
+[sokf:issue-005-a-backport-leaves-the-lock-stale]: /knowledge/issues/done/issue-005-a-backport-leaves-the-lock-stale.md
 [sokf:technology-stack]: /knowledge/technology-stack.md

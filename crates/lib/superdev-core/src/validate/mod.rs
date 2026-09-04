@@ -630,7 +630,7 @@ mod tests {
     fn this_repository_checks_its_documents_against_its_schemas() {
         let root = repo();
         let run = validate_repo(&root, &root.join("knowledge"), &[], &live()).unwrap();
-        assert!(run.schemas >= 40, "schemas read: {}", run.schemas);
+        assert!(run.schemas >= 38, "schemas read: {}", run.schemas);
         assert!(run.documents >= 80, "documents checked: {}", run.documents);
     }
 

@@ -8,7 +8,7 @@ links:
     to: plan-025-feature-a-contracts-behaviour-is-written-as-ears
     note: The plan whose eight slices this review reads.
   - rel: references
-    to: issue-037-feature-request-a-contracts-behaviour-is-not-written-as-ears
+    to: issue-037-a-contracts-behaviour-is-not-written-as-ears
     note: The framed feature; the findings are checked against its criteria.
 ---
 
@@ -19,7 +19,7 @@ links:
 The eight slices of
 [plan-025][sokf:plan-025-feature-a-contracts-behaviour-is-written-as-ears]
 deliver
-[I037][sokf:issue-037-feature-request-a-contracts-behaviour-is-not-written-as-ears]:
+[I037][sokf:issue-037-a-contracts-behaviour-is-not-written-as-ears]:
 the three declarations bind, the nine contracts and fifty issues are
 swept, and the live tree validates. Three findings are major — a
 Behaviour with no promise passes the schema, a heading or table row
@@ -343,7 +343,7 @@ branch, two are not applied, and one is deferred.
   sentence reporting a misplaced `item-key` or `item-prohibited-pattern`
   "the same way" became two promises.
 
-### 15. `AC_c17` requires an `EX_` key that no schema declares — knowledge/issues/open/issue-037-feature-request-a-contracts-behaviour-is-not-written-as-ears.md:1
+### 15. `AC_c17` requires an `EX_` key that no schema declares — knowledge/issues/open/issue-037-a-contracts-behaviour-is-not-written-as-ears.md:1
 
 - Severity: major
 - Category: correctness
@@ -384,5 +384,5 @@ branch, two are not applied, and one is deferred.
 - Three grammar-rule nits in the schema prose were dropped as arguable.
 
 <!-- sokf:links -->
-[sokf:issue-037-feature-request-a-contracts-behaviour-is-not-written-as-ears]: /knowledge/issues/done/issue-037-feature-request-a-contracts-behaviour-is-not-written-as-ears.md
+[sokf:issue-037-a-contracts-behaviour-is-not-written-as-ears]: /knowledge/issues/done/issue-037-a-contracts-behaviour-is-not-written-as-ears.md
 [sokf:plan-025-feature-a-contracts-behaviour-is-written-as-ears]: /knowledge/plans/done/plan-025-feature-a-contracts-behaviour-is-written-as-ears.md
