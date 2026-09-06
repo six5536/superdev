@@ -128,12 +128,13 @@ through Pi when Pi is installed. Its sandbox checks virtual retrieval,
 structured edit results, subdirectory physical writes, applied-invalid
 handling, and bounded validation feedback without making a model call.
 
-`pack/knowledge/skills/sokf-authoring/SKILL.md` is the canonical packaged
-authoring skill. The knowledge capability deploys it to
-`.claude/skills/sokf-authoring/SKILL.md`; `.pi/settings.json` adds the shared
-Claude skill directory to Pi's discovery paths. The standing prompt points to
-the skill and loads the full SOKF specification only when syntax or semantics
-matter.
+Authoring skills are harness-specific. The knowledge capability deploys
+`pack/knowledge/skills/sokf-authoring/SKILL.md` to
+`.claude/skills/sokf-authoring/SKILL.md` for Claude.
+`.pi/skills/sokf-authoring/SKILL.md` is independently authored around Pi's
+SOKF-aware `read`, `edit`, `write`, `sokf_search`, and `sokf_graph` tools. Pi
+does not link or scan `.claude/skills`. Both skills defer the full SOKF
+specification until syntax or semantics matter.
 
 `.pi/extensions/system-prompt.ts` registers `/system-prompt` for inspecting the
 effective Pi prompt. Its `.pi/current-system-prompt.md` output is machine-local

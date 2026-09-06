@@ -475,6 +475,9 @@ This approach gives agents familiar mechanics without presenting semantic search
 - The script test suite loads the real adapter through Pi when Pi is available.
   A model-free sandbox checks CLI/adapter result parity, subdirectory routing,
   applied-invalid behavior, and the two-turn validation-feedback bound.
+- Pi skills are independently authored under `.pi/skills`; Pi does not link the
+  `.claude/skills` directory. Harness-specific skills may share SOKF policy but
+  use each harness's native tool vocabulary and workflow conventions.
 
 ## Open decisions
 

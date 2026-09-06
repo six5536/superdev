@@ -31,7 +31,8 @@ publish a version it cannot find a heading for.
   implementations. It also adds `sokf_search` and `sokf_graph`; every knowledge
   mutation shares one root-level queue. Mutation turns receive final validation
   with at most two automatic repair follow-ups. The concise standing instruction
-  loads format details through the on-demand `sokf-authoring` skill. A companion
+  loads format details through a Pi-native `sokf-authoring` skill; Pi does not
+  link Claude's skill directory. A companion
   `/system-prompt` command writes the effective prompt to ignored local
   inspection output. Versioned behavioral fixtures now cover the 12 planned
   progressive-context scenarios.

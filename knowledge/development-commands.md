@@ -34,8 +34,9 @@ What the annotated list does not say:
   Pi auto-loads `.pi/extensions/sokf.ts`, which adapts those commands into its
   built-in file-tool shapes plus `sokf_search` and `sokf_graph`. The adapter
   performs final validation after mutation turns and limits automatic repair
-  feedback to two follow-up turns. Load `/skill:sokf-authoring` for
-  format-sensitive knowledge changes. Run `/system-prompt` in Pi to refresh
+  feedback to two follow-up turns. Load Pi's native `/skill:sokf-authoring`
+  for format-sensitive knowledge changes; Pi does not discover the Claude skill
+  directory. Run `/system-prompt` in Pi to refresh
   the ignored `.pi/current-system-prompt.md` when inspecting effective
   instructions.
 - `cargo run -- validate --fix` is the same check with its repairs applied

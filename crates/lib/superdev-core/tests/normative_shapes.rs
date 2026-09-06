@@ -1969,29 +1969,36 @@ fn the_file_skill_ships_in_the_pack_and_the_lock() {
     );
 }
 
-/// The format-sensitive SOKF instructions ship as one knowledge-carried skill,
-/// and Pi discovers the same deployed copy rather than maintaining a fork.
+/// Claude receives the knowledge-carried authoring skill, while Pi receives a
+/// separately authored skill that uses Pi's SOKF-aware tool vocabulary.
 #[test]
-fn the_sokf_authoring_skill_ships_once_and_pi_discovers_it() {
+fn each_harness_receives_its_own_sokf_authoring_skill() {
     let [(live, live_text), (pack, pack_text)] = skill_copies("sokf-authoring");
     assert_eq!(
         same(&live_text),
         same(&pack_text),
         "{live} differs from {pack}"
     );
+    let pi_path = repo(".pi/skills/sokf-authoring/SKILL.md");
+    let pi = std::fs::read_to_string(&pi_path).expect("Pi's authoring skill is on file");
     assert!(
-        live_text.contains(".agents/sokf/SPEC.md"),
-        "{live} does not defer format semantics to the specification"
+        pi.contains("sokf_search"),
+        "{} is not Pi-specific",
+        pi_path.display()
     );
-    let lock = std::fs::read_to_string(repo(".superdev/lock.toml")).expect("the lock is on file");
     assert!(
-        lock.contains("\".claude/skills/sokf-authoring/SKILL.md\" = \""),
-        "the lock does not claim the deployed authoring skill"
+        pi.contains("edit path=\"sokf:<id>\""),
+        "{} does not use Pi's SOKF edit adapter",
+        pi_path.display()
     );
-    let pi = std::fs::read_to_string(repo(".pi/settings.json")).expect("Pi settings are on file");
+    assert_ne!(
+        same(&pi),
+        same(&live_text),
+        "Pi links or copies Claude's skill"
+    );
     assert!(
-        pi.contains("../.claude/skills"),
-        "Pi does not discover the shared skill directory"
+        !repo(".pi/settings.json").exists(),
+        "Pi settings must not link the Claude skill directory"
     );
 }
 
