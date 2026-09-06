@@ -249,7 +249,7 @@ fn validate_returns_the_one_it_declares_on_an_error() {
 fn every_declared_exit_code_is_probed_or_named_undrivable() {
     // A code a probe cannot reach from a clean checkout without changing the
     // repository. Each names why, so the list cannot quietly grow.
-    const UNDRIVABLE: [(&str, i64, &str); 25] = [
+    const UNDRIVABLE: [(&str, i64, &str); 35] = [
         ("superdev init", 0, "would set this repository up"),
         ("superdev init", 2, "would write into this repository"),
         (
@@ -270,6 +270,46 @@ fn every_declared_exit_code_is_probed_or_named_undrivable() {
         ("superdev template render", 2, "writes a tree"),
         ("superdev sokf index", 0, "rebuilds the index"),
         ("superdev sokf index", 2, "rebuilds the index"),
+        (
+            "superdev workflow start",
+            0,
+            "covered by the managed-repository workflow journey",
+        ),
+        (
+            "superdev workflow start",
+            2,
+            "requires a managed Git fixture",
+        ),
+        (
+            "superdev workflow block",
+            0,
+            "requires an owned BUILD plan fixture",
+        ),
+        (
+            "superdev workflow block",
+            2,
+            "requires an owned BUILD plan fixture",
+        ),
+        (
+            "superdev workflow evidence",
+            0,
+            "requires an owned BUILD plan fixture",
+        ),
+        (
+            "superdev workflow evidence",
+            2,
+            "requires an owned BUILD plan fixture",
+        ),
+        (
+            "superdev workflow resume",
+            0,
+            "covered by the managed-repository workflow journey",
+        ),
+        (
+            "superdev workflow resume",
+            2,
+            "requires a managed Git fixture",
+        ),
         ("superdev workflow bind", 0, "writes transient ownership"),
         (
             "superdev workflow bind",
@@ -315,6 +355,16 @@ fn every_declared_exit_code_is_probed_or_named_undrivable() {
         ),
         ("superdev mcp sokf", 0, "serves until stdin closes"),
         ("superdev mcp sokf", 2, "serves until stdin closes"),
+        (
+            "superdev file",
+            0,
+            "covered by the managed-repository filing journey",
+        ),
+        (
+            "superdev file",
+            2,
+            "covered by the managed-repository filing journey",
+        ),
     ];
     // Pairs a test of its own drives, because they need stdin or a
     // temporary knowledge rather than a bare invocation.

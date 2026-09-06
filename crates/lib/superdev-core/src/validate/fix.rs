@@ -152,6 +152,28 @@ pub fn fix(bundle: &Bundle, repo_root: &Path) -> Result<Repair> {
     Ok(repair)
 }
 
+fn migrate_legacy_plan_labels(text: &str) -> String {
+    const LABELS: [(&str, &str); 7] = [
+        ("- Depends-on:", "- Dependencies:"),
+        ("- Change:", "- Outcome:"),
+        ("- Done-check:", "- Verification:"),
+        ("- Test cases:", "- Tests:"),
+        ("- Tests/cases:", "- Tests:"),
+        ("- Cases:", "- Tests:"),
+        ("- manual:", "- structural:"),
+    ];
+    text.split_inclusive('\n')
+        .map(|line| {
+            for (old, new) in LABELS {
+                if let Some(value) = line.strip_prefix(old) {
+                    return format!("{new}{value}");
+                }
+            }
+            line.to_string()
+        })
+        .collect()
+}
+
 fn migrate_plan_blocks(bundle: &Bundle) -> Result<Vec<String>> {
     let mut written = Vec::new();
     for concept in bundle
@@ -161,14 +183,7 @@ fn migrate_plan_blocks(bundle: &Bundle) -> Result<Vec<String>> {
     {
         let path = bundle.root.join(&concept.path);
         let text = read(&path)?;
-        let mut migrated = text
-            .replace("- Depends-on:", "- Dependencies:")
-            .replace("- Change:", "- Outcome:")
-            .replace("- Done-check:", "- Verification:")
-            .replace("- Test cases:", "- Tests:")
-            .replace("- Tests/cases:", "- Tests:")
-            .replace("- Cases:", "- Tests:")
-            .replace("- manual:", "- structural:");
+        let mut migrated = migrate_legacy_plan_labels(&text);
         let parts: Vec<&str> = migrated.split("\n### Block ").collect();
         if parts.len() > 1 {
             let mut rebuilt = parts[0].to_string();

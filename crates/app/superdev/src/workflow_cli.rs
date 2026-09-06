@@ -63,8 +63,8 @@ pub enum WorkflowCommand {
     Transition(TransitionArgs),
     /// Record that BUILD changed a work block
     Block(ProgressArgs),
-    /// Record that BUILD changed executable evidence
-    Evidence(ProgressArgs),
+    /// Record isolated review or final verification evidence canonically
+    Evidence(EvidenceArgs),
     /// Reconstruct and acquire ownership for a known workflow
     Resume(BindArgs),
     /// Pause by releasing transient ownership without changing plan phase
@@ -107,6 +107,32 @@ pub struct ProgressArgs {
     /// New plan content revision after the Rust-owned mutation
     #[arg(long)]
     revision: String,
+}
+
+/// Rust-owned canonical evidence attestation.
+#[derive(Args)]
+pub struct EvidenceArgs {
+    /// Owning Pi session ID
+    #[arg(long)]
+    session: String,
+    /// Expected current plan content revision
+    #[arg(long)]
+    expected_revision: String,
+    /// Evidence gate being attested
+    #[arg(long, value_enum)]
+    kind: EvidenceKindName,
+    /// Fresh isolated reviewer session ID
+    #[arg(long)]
+    review_session: String,
+    /// Immutable candidate for final BUILD evidence
+    #[arg(long)]
+    candidate: Option<String>,
+}
+
+#[derive(Clone, Copy, ValueEnum)]
+pub enum EvidenceKindName {
+    ScopeReview,
+    Final,
 }
 
 /// Session ownership argument.
@@ -152,24 +178,6 @@ pub struct TransitionArgs {
     /// Explicit human scope approval was obtained
     #[arg(long)]
     human_scope_approved: bool,
-    /// Fresh isolated requirements review is clean
-    #[arg(long)]
-    requirements_review_clean: bool,
-    /// Every work block is complete
-    #[arg(long)]
-    all_blocks_complete: bool,
-    /// Final verification is current for the candidate
-    #[arg(long)]
-    final_verification_current: bool,
-    /// Fresh isolated final review is clean
-    #[arg(long)]
-    final_review_clean: bool,
-    /// Affected contracts carry no pending promises
-    #[arg(long)]
-    no_pending_promises: bool,
-    /// Applicable documentation evidence is current
-    #[arg(long)]
-    documentation_current: bool,
     /// Interactive human acceptance was obtained
     #[arg(long)]
     human_acceptance_approved: bool,
@@ -283,7 +291,13 @@ pub fn run(command: &WorkflowCommand, root: &Path) -> Result<u8> {
             }
             bind(&root, args)
         }
-        WorkflowCommand::Status { json: _ } => emit("status", &cache::load(&root)?),
+        WorkflowCommand::Status { json: _ } => emit(
+            "status",
+            &serde_json::json!({
+                "owner": cache::load(&root)?,
+                "openWorkflows": discover_open_workflows(&root)?,
+            }),
+        ),
         WorkflowCommand::Cancel(args) => {
             cache::release(&root, &args.session)?;
             emit(
@@ -291,7 +305,7 @@ pub fn run(command: &WorkflowCommand, root: &Path) -> Result<u8> {
                 &serde_json::json!({"phaseChanged": false, "ownershipReleased": true}),
             )
         }
-        WorkflowCommand::Block(args) | WorkflowCommand::Evidence(args) => {
+        WorkflowCommand::Block(args) => {
             let owner = cache::load(&root)?.ok_or_else(|| Error::Manifest {
                 message: "workflow is unowned".into(),
             })?;
@@ -314,6 +328,7 @@ pub fn run(command: &WorkflowCommand, root: &Path) -> Result<u8> {
                 })?;
             emit("progress", &state)
         }
+        WorkflowCommand::Evidence(args) => record_evidence(&root, args),
         WorkflowCommand::Transition(args) => transition(&root, args, false, None),
         WorkflowCommand::Abandon(args) => {
             if !args.human_approved {
@@ -329,12 +344,6 @@ pub fn run(command: &WorkflowCommand, root: &Path) -> Result<u8> {
                     phase: args.phase,
                     transition: TransitionName::Accept,
                     human_scope_approved: false,
-                    requirements_review_clean: false,
-                    all_blocks_complete: false,
-                    final_verification_current: false,
-                    final_review_clean: false,
-                    no_pending_promises: false,
-                    documentation_current: false,
                     human_acceptance_approved: false,
                 },
                 true,
@@ -531,6 +540,38 @@ fn create_scope_plan(root: &Path, args: &BindArgs, issue: &IssueRecord) -> Resul
     Ok(())
 }
 
+fn discover_open_workflows(root: &Path) -> Result<Vec<WorkflowIdentity>> {
+    let directory = root.join("knowledge/plans/open");
+    let Ok(entries) = fs::read_dir(&directory) else {
+        return Ok(Vec::new());
+    };
+    let mut workflows = Vec::new();
+    for entry in entries {
+        let path = entry
+            .map_err(|source| Error::Io {
+                path: directory.clone(),
+                source,
+            })?
+            .path();
+        let Some(plan) = path.file_stem().and_then(|name| name.to_str()) else {
+            continue;
+        };
+        let record = plan_record(root, plan)?;
+        if record.lifecycle == "open"
+            && matches!(record.phase.as_str(), "scope" | "build" | "accept")
+        {
+            workflows.push(WorkflowIdentity {
+                issue: record.issue,
+                plan: plan.to_string(),
+                work_branch: record.branch,
+                default_branch: "main".into(),
+            });
+        }
+    }
+    workflows.sort_by(|left, right| left.plan.cmp(&right.plan));
+    Ok(workflows)
+}
+
 fn bind(root: &Path, args: &BindArgs) -> Result<u8> {
     let revision = plan_revision(root, &args.plan)?.1;
     bind_with_revision(root, args, revision)
@@ -705,6 +746,98 @@ fn knowledge_contains(root: &Path, needle: &str) -> Result<bool> {
     Ok(false)
 }
 
+fn record_evidence(root: &Path, args: &EvidenceArgs) -> Result<u8> {
+    let state = cache::load(root)?.ok_or_else(|| Error::Manifest {
+        message: "workflow is unowned".into(),
+    })?;
+    if state.session_id != args.session || state.last_plan_revision != args.expected_revision {
+        return Err(Error::Manifest {
+            message: "workflow ownership or plan revision changed".into(),
+        });
+    }
+    if args.review_session.trim().is_empty() || args.review_session == args.session {
+        return Err(Error::Manifest {
+            message: "evidence requires a distinct isolated reviewer session".into(),
+        });
+    }
+    validate_identity_values(root, &state.identity)?;
+    git::require_clean(root)?;
+    if git::current_branch(root)? != state.identity.work_branch {
+        return Err(Error::Manifest {
+            message: "evidence requires the checked-out work branch".into(),
+        });
+    }
+    let record = plan_record(root, &state.identity.plan)?;
+    let (path, observed) = plan_revision(root, &state.identity.plan)?;
+    if observed != args.expected_revision {
+        return Err(Error::Manifest {
+            message: "workflow plan revision changed".into(),
+        });
+    }
+    let text = fs::read_to_string(&path).map_err(|source| Error::Io {
+        path: path.clone(),
+        source,
+    })?;
+    let (lines, candidate, verified_default) = match args.kind {
+        EvidenceKindName::ScopeReview if record.phase == "scope" => (
+            vec![format!(
+                "Scope requirements review: clean by isolated session {}.",
+                args.review_session
+            )],
+            None,
+            None,
+        ),
+        EvidenceKindName::Final if record.phase == "build" => {
+            let candidate = args.candidate.as_deref().ok_or_else(|| Error::Manifest {
+                message: "final evidence requires candidate H".into(),
+            })?;
+            let head = git::revision(root, &state.identity.work_branch)?;
+            if candidate != head {
+                return Err(Error::Manifest {
+                    message: "final evidence candidate must be the clean work-branch tip".into(),
+                });
+            }
+            let default = git::revision(root, &state.identity.default_branch)?;
+            if !git::is_ancestor(root, &default, candidate)? {
+                return Err(Error::Manifest {
+                    message: "candidate H does not contain the default-branch tip".into(),
+                });
+            }
+            (
+                vec![
+                    format!("Candidate revision: {candidate}."),
+                    format!("Verified default revision: {default}."),
+                    format!("Final verification: passed for {candidate}."),
+                    format!(
+                        "Final review: clean for {candidate} by isolated session {}.",
+                        args.review_session
+                    ),
+                    format!("Documentation verification: passed for {candidate}."),
+                ],
+                Some(candidate.to_string()),
+                Some(default),
+            )
+        }
+        _ => {
+            return Err(Error::Manifest {
+                message: "evidence kind does not match the canonical phase".into(),
+            });
+        }
+    };
+    apply_plan_edits_transactionally(root, &path, vec![completion_evidence_edit(&text, &lines)?])?;
+    let revision = plan_revision(root, &state.identity.plan)?.1;
+    let state = cache::compare_and_swap(root, &args.session, &args.expected_revision, |state| {
+        state.last_plan_revision.clone_from(&revision);
+        if candidate.is_some() {
+            state.candidate_revision.clone_from(&candidate);
+            state
+                .verified_default_revision
+                .clone_from(&verified_default);
+        }
+    })?;
+    emit("evidence", &state)
+}
+
 fn transition(
     root: &Path,
     args: &TransitionArgs,
@@ -761,24 +894,77 @@ fn transition(
                 source,
             }
         })?;
-    let candidate_revision = matches!(transition, Transition::FinishBuild)
-        .then(|| git::revision(root, &state.identity.work_branch))
-        .transpose()?;
-    let verified_default_revision = matches!(transition, Transition::FinishBuild)
-        .then(|| git::revision(root, &state.identity.default_branch))
-        .transpose()?;
+    if matches!(transition, Transition::ApproveScope) {
+        let default = git::revision(root, &state.identity.default_branch)?;
+        let head = git::revision(root, &state.identity.work_branch)?;
+        if git::changed_paths(root, &default, &head)?
+            .iter()
+            .any(|path| !path.starts_with("knowledge/"))
+        {
+            return Err(Error::Manifest {
+                message:
+                    "SCOPE may change canonical knowledge only; product changes belong to BUILD"
+                        .into(),
+            });
+        }
+    }
+    let candidate_revision = evidence_revision(&plan_text, "Candidate revision");
+    let verified_default_revision = evidence_revision(&plan_text, "Verified default revision");
+    if matches!(transition, Transition::FinishBuild) {
+        let candidate = candidate_revision
+            .as_deref()
+            .ok_or_else(|| Error::Manifest {
+                message: "final evidence has no candidate H".into(),
+            })?;
+        let default = verified_default_revision
+            .as_deref()
+            .ok_or_else(|| Error::Manifest {
+                message: "final evidence has no verified default revision".into(),
+            })?;
+        let head = git::revision(root, &state.identity.work_branch)?;
+        if !git::is_ancestor(root, default, candidate)?
+            || !git::is_ancestor(root, candidate, &head)?
+            || git::changed_paths(root, candidate, &head)?
+                .iter()
+                .any(|path| !administrative_path(path, &state.identity))
+        {
+            return Err(Error::Manifest {
+                message: "final evidence is stale or followed by non-administrative changes".into(),
+            });
+        }
+    }
+    let candidate = candidate_revision.as_deref().unwrap_or_default();
     let gates = GateEvidence {
         human_scope_approved: args.human_scope_approved,
-        requirements_review_clean: args.requirements_review_clean,
-        all_blocks_complete: args.all_blocks_complete && !plan_text.contains("- [ ] Done"),
-        final_verification_current: args.final_verification_current,
-        final_review_clean: args.final_review_clean,
-        no_pending_promises: args.no_pending_promises
-            && !knowledge_contains(root, &format!("PENDING ({})", state.identity.plan))?,
-        documentation_current: args.documentation_current,
+        requirements_review_clean: plan_text
+            .lines()
+            .any(|line| line.starts_with("Scope requirements review: clean by isolated session ")),
+        all_blocks_complete: !plan_text.contains("- [ ] Done"),
+        final_verification_current: plan_text
+            .contains(&format!("Final verification: passed for {candidate}.")),
+        final_review_clean: plan_text.lines().any(|line| {
+            line.starts_with(&format!(
+                "Final review: clean for {candidate} by isolated session "
+            ))
+        }),
+        no_pending_promises: !knowledge_contains(
+            root,
+            &format!("PENDING ({}", state.identity.plan),
+        )?,
+        documentation_current: plan_text.contains(&format!(
+            "Documentation verification: passed for {candidate}."
+        )),
         human_acceptance_approved: args.human_acceptance_approved,
         human_abandonment_approved: abandon,
-        closure_integrated: false,
+        closure_integrated: if phase == Phase::Done {
+            git::is_ancestor(
+                root,
+                &git::revision(root, &state.identity.work_branch)?,
+                &git::revision(root, &state.identity.default_branch)?,
+            )?
+        } else {
+            false
+        },
     };
     let config = Manifest::load(root)?.workflow;
     let next =
@@ -791,12 +977,6 @@ fn transition(
             message: "workflow plan revision changed".into(),
         });
     }
-    let service = SokfService::new(
-        root.join("knowledge"),
-        root.to_path_buf(),
-        IndexDir(root.join(".superdev/cache/sokf")),
-        None,
-    );
     let mut edits = vec![ExactEdit {
         old_text: format!("phase: {}", phase_text(phase)),
         new_text: format!("phase: {}", phase_text(next)),
@@ -804,25 +984,7 @@ fn transition(
     if matches!(transition, Transition::ApproveScope) {
         edits.push(completion_evidence_edit(
             &plan_text,
-            &["Scope requirements review: clean; human approval: approved.".into()],
-        )?);
-    }
-    if matches!(transition, Transition::FinishBuild) {
-        let candidate = candidate_revision
-            .as_deref()
-            .expect("finish-build resolves a candidate");
-        let verified_default = verified_default_revision
-            .as_deref()
-            .expect("finish-build resolves the default tip");
-        edits.push(completion_evidence_edit(
-            &plan_text,
-            &[
-                format!("Candidate revision: {candidate}."),
-                format!("Verified default revision: {verified_default}."),
-                format!("Final verification: passed for {candidate}."),
-                format!("Final review: clean for {candidate}."),
-                format!("Documentation verification: passed for {candidate}."),
-            ],
+            &["Human scope approval: approved.".into()],
         )?);
     }
     if matches!(next, Phase::Done | Phase::Abandoned) {
@@ -852,16 +1014,12 @@ fn transition(
             });
         }
     }
-    if matches!(next, Phase::Done | Phase::Abandoned) {
+    if matches!(transition, Transition::RecoverStaleDefault) {
+        reopen_stale_closure(root, &state.identity)?;
+    } else if matches!(next, Phase::Done | Phase::Abandoned) {
         close_records(root, &state.identity, next, abandonment_reason)?;
     } else {
-        service.edit(
-            EditRequest {
-                path: path.to_string_lossy().into_owned(),
-                edits,
-            },
-            MutationPolicy::AgentSafe,
-        )?;
+        apply_plan_edits_transactionally(root, &path, edits)?;
     }
     let revision = plan_revision(root, &state.identity.plan)?.1;
     let state = cache::compare_and_swap(root, &args.session, &args.expected_revision, |state| {
@@ -869,12 +1027,152 @@ fn transition(
         if let Some(candidate) = candidate_revision {
             state.candidate_revision = Some(candidate);
             state.verified_default_revision = verified_default_revision;
+        } else if matches!(
+            transition,
+            Transition::RecoverStaleDefault | Transition::RejectAcceptance
+        ) {
+            state.candidate_revision = None;
+            state.verified_default_revision = None;
         }
     })?;
     emit(
         "transition",
         &serde_json::json!({"phase": phase_text(next), "state": state}),
     )
+}
+
+fn apply_plan_edits_transactionally(
+    root: &Path,
+    live_plan: &Path,
+    edits: Vec<ExactEdit>,
+) -> Result<()> {
+    let staging = stage_knowledge(root, "workflow-transition-")?;
+    let staged_knowledge = staging.path().join("knowledge");
+    let relative = live_plan
+        .strip_prefix(root.join("knowledge"))
+        .map_err(|_| Error::Manifest {
+            message: "workflow plan is outside canonical knowledge".into(),
+        })?;
+    let staged_plan = staged_knowledge.join(relative);
+    let service = SokfService::new(
+        staged_knowledge.clone(),
+        root.to_path_buf(),
+        IndexDir(root.join(".superdev/cache/sokf")),
+        None,
+    );
+    let mutation = service.edit(
+        EditRequest {
+            path: staged_plan.to_string_lossy().into_owned(),
+            edits,
+        },
+        MutationPolicy::AgentSafe,
+    )?;
+    if mutation.validation != superdev_core::sokf::ValidationState::Valid {
+        return Err(Error::Manifest {
+            message: "workflow transition did not leave valid canonical knowledge".into(),
+        });
+    }
+    publish_staged_knowledge(root, &staged_knowledge)
+}
+
+fn stage_knowledge(root: &Path, prefix: &str) -> Result<tempfile::TempDir> {
+    let staging_parent = root.join(".superdev/cache");
+    fs::create_dir_all(&staging_parent).map_err(|source| Error::Io {
+        path: staging_parent.clone(),
+        source,
+    })?;
+    let staging = tempfile::Builder::new()
+        .prefix(prefix)
+        .tempdir_in(&staging_parent)
+        .map_err(|source| Error::Io {
+            path: staging_parent,
+            source,
+        })?;
+    copy_tree(&root.join("knowledge"), &staging.path().join("knowledge"))?;
+    Ok(staging)
+}
+
+fn publish_staged_knowledge(root: &Path, staged_knowledge: &Path) -> Result<()> {
+    let live = root.join("knowledge");
+    let backup = root.join(".superdev/cache/workflow-knowledge-backup");
+    if backup.exists() {
+        fs::remove_dir_all(&backup).map_err(|source| Error::Io {
+            path: backup.clone(),
+            source,
+        })?;
+    }
+    fs::rename(&live, &backup).map_err(|source| Error::Io {
+        path: live.clone(),
+        source,
+    })?;
+    if let Err(source) = fs::rename(staged_knowledge, &live) {
+        let _ = fs::rename(&backup, &live);
+        return Err(Error::Io { path: live, source });
+    }
+    fs::remove_dir_all(&backup).map_err(|source| Error::Io {
+        path: backup,
+        source,
+    })?;
+    Ok(())
+}
+
+fn reopen_stale_closure(root: &Path, identity: &WorkflowIdentity) -> Result<()> {
+    let staging = stage_knowledge(root, "workflow-reopen-")?;
+    let knowledge = staging.path().join("knowledge");
+    let plan_path = knowledge
+        .join("plans/done")
+        .join(format!("{}.md", identity.plan));
+    let plan = fs::read_to_string(&plan_path).map_err(|source| Error::Io {
+        path: plan_path.clone(),
+        source,
+    })?;
+    let plan = replace_once(&plan, "lifecycle: done", "lifecycle: open")?;
+    let plan = replace_once(&plan, "phase: done", "phase: build")?;
+    fs::write(&plan_path, plan).map_err(|source| Error::Io {
+        path: plan_path,
+        source,
+    })?;
+
+    let issue_path = knowledge
+        .join("issues/done")
+        .join(format!("{}.md", identity.issue));
+    let issue = fs::read_to_string(&issue_path).map_err(|source| Error::Io {
+        path: issue_path.clone(),
+        source,
+    })?;
+    let issue = replace_once(&issue, "lifecycle: done", "lifecycle: open")?;
+    let issue = remove_resolution(&issue);
+    fs::write(&issue_path, issue).map_err(|source| Error::Io {
+        path: issue_path,
+        source,
+    })?;
+
+    superdev_core::validate::fix_repo(root, &knowledge, &[])?;
+    let grammar = superdev_core::validate::schema::load_grammar(root)?;
+    let report = superdev_core::validate::validate_repo(root, &knowledge, &[], &grammar)?;
+    if !report.report.passed() {
+        return Err(Error::Manifest {
+            message: "stale-default recovery did not produce valid canonical records".into(),
+        });
+    }
+    publish_staged_knowledge(root, &knowledge)
+}
+
+fn remove_resolution(issue: &str) -> String {
+    let Some(start) = issue.find("\n## Resolution\n") else {
+        return issue.to_string();
+    };
+    let tail = &issue[start + 1..];
+    let end = tail["## Resolution\n".len()..]
+        .find("\n## ")
+        .map(|offset| start + 1 + "## Resolution\n".len() + offset)
+        .or_else(|| {
+            issue[start..]
+                .find("\n<!-- sokf:links -->")
+                .map(|offset| start + offset)
+        })
+        .unwrap_or(issue.len());
+    format!("{}{}", issue[..start].trim_end(), &issue[end..])
 }
 
 fn close_records(
@@ -886,20 +1184,8 @@ fn close_records(
     // Build and validate the complete closure away from the live knowledge
     // tree. A failed mutation, repair, or validation therefore leaves the
     // canonical records byte-for-byte unchanged.
-    let staging_parent = root.join(".superdev/cache");
-    fs::create_dir_all(&staging_parent).map_err(|source| Error::Io {
-        path: staging_parent.clone(),
-        source,
-    })?;
-    let staging = tempfile::Builder::new()
-        .prefix("workflow-closure-")
-        .tempdir_in(&staging_parent)
-        .map_err(|source| Error::Io {
-            path: staging_parent,
-            source,
-        })?;
+    let staging = stage_knowledge(root, "workflow-closure-")?;
     let staged_knowledge = staging.path().join("knowledge");
-    copy_tree(&root.join("knowledge"), &staged_knowledge)?;
 
     let plan_path = ["open", "done", "abandoned"]
         .into_iter()
@@ -998,27 +1284,7 @@ fn close_records(
         });
     }
 
-    let live = root.join("knowledge");
-    let backup = root.join(".superdev/cache/workflow-closure-backup");
-    if backup.exists() {
-        fs::remove_dir_all(&backup).map_err(|source| Error::Io {
-            path: backup.clone(),
-            source,
-        })?;
-    }
-    fs::rename(&live, &backup).map_err(|source| Error::Io {
-        path: live.clone(),
-        source,
-    })?;
-    if let Err(source) = fs::rename(&staged_knowledge, &live) {
-        let _ = fs::rename(&backup, &live);
-        return Err(Error::Io { path: live, source });
-    }
-    fs::remove_dir_all(&backup).map_err(|source| Error::Io {
-        path: backup,
-        source,
-    })?;
-    Ok(())
+    publish_staged_knowledge(root, &staged_knowledge)
 }
 
 fn copy_tree(source: &Path, destination: &Path) -> Result<()> {

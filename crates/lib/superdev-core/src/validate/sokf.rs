@@ -292,6 +292,16 @@ fn check_workflow_records(bundle: &Bundle, findings: &mut Vec<Finding>) {
             continue;
         }
         let issue = implements[0];
+        if !bundle
+            .concepts
+            .iter()
+            .any(|concept| concept.id.as_deref() == Some(issue) && concept.kind == "Issue")
+        {
+            findings.push(error(
+                path,
+                format!("workflow: `implements` target `{issue}` must resolve to an Issue"),
+            ));
+        }
         let expected_branch = issue
             .strip_prefix("issue-")
             .map(|rest| format!("work/{rest}"));
@@ -1731,7 +1741,7 @@ mod tests {
     }
 
     #[test]
-    fn implements_is_core_and_warns_nothing() {
+    fn implements_resolves_to_an_issue_and_warns_nothing() {
         let (b, _dir) = bundle_with(&[
             ("manifest.sokf.yaml", MANIFEST_YAML),
             (
@@ -1740,7 +1750,7 @@ mod tests {
             ),
             (
                 "spec.md",
-                "---\ntype: Spec\nid: issue-001-beta\nlinks:\n  - rel: implemented-by\n    to: plan-001-beta\n---\nSee [plan][sokf:plan-001-beta].\n\n<!-- sokf:links -->\n[sokf:plan-001-beta]: /plan.md\n",
+                "---\ntype: Issue\nid: issue-001-beta\nlinks:\n  - rel: implemented-by\n    to: plan-001-beta\n---\nSee [plan][sokf:plan-001-beta].\n\n<!-- sokf:links -->\n[sokf:plan-001-beta]: /plan.md\n",
             ),
         ]);
         let r = validate(&b, &b.root);

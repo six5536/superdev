@@ -31,8 +31,8 @@ superdev sync      # re-apply the blueprint (--dry-run to preview)
 superdev update    # bring pins current, then sync
 ```
 
-`init` is safe to re-run, and everything superdev owns can be repaired by
-`sync`. A file you have edited is never overwritten in silence: `status`
+`init` refuses an already initialized repository; everything superdev owns can
+be repaired by `sync`. A file you have edited is never overwritten in silence: `status`
 reports it, and `sync` backs it up before writing.
 
 ## Usage
@@ -169,6 +169,11 @@ model    = "text-embedding-3-small"
 [code-index]                         # one table per enabled capability
 provider = "codegraph"
 version  = "1.5.0"
+
+[workflow]
+human_acceptance_required = true
+max_stalled_block_attempts = 3
+max_final_correction_cycles = 3
 ```
 
 An absent capability table means that capability is off. `lock.toml`

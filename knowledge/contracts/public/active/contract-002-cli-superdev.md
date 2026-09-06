@@ -360,8 +360,8 @@ pub enum WorkflowCommand {
     Transition(TransitionArgs),
     /// Record that BUILD changed a work block
     Block(ProgressArgs),
-    /// Record that BUILD changed executable evidence
-    Evidence(ProgressArgs),
+    /// Record isolated review or final verification evidence canonically
+    Evidence(EvidenceArgs),
     /// Reconstruct and acquire ownership for a known workflow
     Resume(BindArgs),
     /// Pause by releasing transient ownership without changing plan phase
@@ -404,6 +404,32 @@ pub struct ProgressArgs {
     /// New plan content revision after the Rust-owned mutation
     #[arg(long)]
     revision: String,
+}
+
+/// Rust-owned canonical evidence attestation.
+#[derive(Args)]
+pub struct EvidenceArgs {
+    /// Owning Pi session ID
+    #[arg(long)]
+    session: String,
+    /// Expected current plan content revision
+    #[arg(long)]
+    expected_revision: String,
+    /// Evidence gate being attested
+    #[arg(long, value_enum)]
+    kind: EvidenceKindName,
+    /// Fresh isolated reviewer session ID
+    #[arg(long)]
+    review_session: String,
+    /// Immutable candidate for final BUILD evidence
+    #[arg(long)]
+    candidate: Option<String>,
+}
+
+#[derive(Clone, Copy, ValueEnum)]
+pub enum EvidenceKindName {
+    ScopeReview,
+    Final,
 }
 
 /// Session ownership argument.
@@ -449,24 +475,6 @@ pub struct TransitionArgs {
     /// Explicit human scope approval was obtained
     #[arg(long)]
     human_scope_approved: bool,
-    /// Fresh isolated requirements review is clean
-    #[arg(long)]
-    requirements_review_clean: bool,
-    /// Every work block is complete
-    #[arg(long)]
-    all_blocks_complete: bool,
-    /// Final verification is current for the candidate
-    #[arg(long)]
-    final_verification_current: bool,
-    /// Fresh isolated final review is clean
-    #[arg(long)]
-    final_review_clean: bool,
-    /// Affected contracts carry no pending promises
-    #[arg(long)]
-    no_pending_promises: bool,
-    /// Applicable documentation evidence is current
-    #[arg(long)]
-    documentation_current: bool,
     /// Interactive human acceptance was obtained
     #[arg(long)]
     human_acceptance_approved: bool,
@@ -723,11 +731,19 @@ the invoking adapter.
 | `superdev file` | 0 | a confirmed issue or idea was committed on the default branch |
 | `superdev file` | 2 | confirmation, validation, duplicate, worktree, or compare-and-swap checks failed |
 | `superdev workflow` | 2 | no subcommand named |
+| `superdev workflow start` | 0 | ownership, a work branch, and an initial canonical SCOPE plan are created |
+| `superdev workflow start` | 2 | identity, ownership, issue, branch, tree, or plan state is invalid |
 | `superdev workflow status` | 0 | canonical and transient state is reported |
 | `superdev workflow bind` | 0 | transient ownership is acquired |
 | `superdev workflow bind` | 2 | identity, revision, branch, or ownership is invalid |
 | `superdev workflow transition` | 0 | the gated transition is persisted |
 | `superdev workflow transition` | 2 | ownership, revision, phase, or evidence is invalid |
+| `superdev workflow block` | 0 | canonical BUILD block progress is acknowledged |
+| `superdev workflow block` | 2 | ownership, revision, identity, branch, or phase is invalid |
+| `superdev workflow evidence` | 0 | canonical BUILD evidence is acknowledged |
+| `superdev workflow evidence` | 2 | ownership, revision, identity, branch, or phase is invalid |
+| `superdev workflow resume` | 0 | canonical state is reconstructed and ownership acquired |
+| `superdev workflow resume` | 2 | canonical identity, branch, phase, or ownership is invalid |
 | `superdev workflow cancel` | 0 | transient ownership is released |
 | `superdev workflow cancel` | 2 | another session owns the workflow |
 | `superdev workflow abandon` | 0 | approved abandonment is persisted |

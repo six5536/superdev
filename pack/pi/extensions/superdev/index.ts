@@ -3,23 +3,28 @@ import { readFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
+import { StringEnum } from "@earendil-works/pi-ai";
 import { Type, type Static } from "typebox";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const schema = Type.Object({
-	role: Type.Union([
-		Type.Literal("scope"),
-		Type.Literal("requirements-review"),
-		Type.Literal("build"),
-		Type.Literal("code-review"),
-		Type.Literal("accept"),
-		Type.Literal("file"),
-	]),
+	role: StringEnum(["scope", "requirements-review", "build", "code-review", "accept", "file"] as const),
 	task: Type.String({ description: "Bounded task and all input the isolated role needs" }),
 });
 type Input = Static<typeof schema>;
 
 const readOnly = new Set(["requirements-review", "code-review"]);
+
+function stopProcess(child: ChildProcess) {
+	const signal = (name: NodeJS.Signals) => {
+		try {
+			if (child.pid && process.platform !== "win32") process.kill(-child.pid, name);
+			else child.kill(name);
+		} catch { /* The child already exited. */ }
+	};
+	signal("SIGTERM");
+	setTimeout(() => { if (child.exitCode === null) signal("SIGKILL"); }, 2_000).unref();
+}
 
 async function isolated(
 	role: Input["role"],
@@ -32,19 +37,25 @@ async function isolated(
 ): Promise<string> {
 	const promptPath = resolve(here, "prompts", `${role}.md`);
 	await readFile(promptPath, "utf8");
-	const args = ["--mode", "json", "-p", "--no-session", "--append-system-prompt", promptPath];
+	const args = ["--mode", "json", "-p", "--no-session", "--approve", "--append-system-prompt", promptPath];
 	if (model) args.push("--provider", model.provider, "--model", model.id);
-	args.push("--tools", readOnly.has(role) ? "read,sokf_search,sokf_graph" : "read,bash,edit,write,sokf_search,sokf_graph");
+	args.push("--tools", readOnly.has(role) ? "read,superdev_review_diff,sokf_search,sokf_graph" : role === "file" ? "read,sokf_search,sokf_graph" : "read,bash,edit,write,sokf_search,sokf_graph");
 	args.push(`Task: ${task}`);
 	return new Promise((accept, reject) => {
-		const child = spawn("pi", args, { cwd, shell: false, detached: process.platform !== "win32", stdio: ["ignore", "pipe", "pipe"] });
+		const child = spawn("pi", args, {
+			cwd,
+			shell: false,
+			detached: process.platform !== "win32",
+			stdio: ["ignore", "pipe", "pipe"],
+			env: { ...process.env, SUPERDEV_CHILD_ROLE: role },
+		});
 		onSpawn?.(child);
 		let stdout = "";
 		let stderr = "";
 		const append = (current: string, chunk: string) => {
 			const next = current + chunk;
 			if (next.length > 1_000_000) {
-				child.kill("SIGTERM");
+				stopProcess(child);
 				throw new Error(`${role} output exceeded 1 MB`);
 			}
 			return next;
@@ -70,10 +81,13 @@ async function isolated(
 					}
 				} catch { /* ignore non-events */ }
 			}
+			if (readOnly.has(role) && answer && !/(^CLEAN\b|^## (CRITICAL|HIGH|MEDIUM|LOW)\b)/m.test(answer)) {
+				return reject(new Error(`${role} did not return a structured terminal result`));
+			}
 			accept(answer || "Isolated role completed without text output.");
 		});
 		if (signal) {
-			const stop = () => child.kill("SIGTERM");
+			const stop = () => stopProcess(child);
 			if (signal.aborted) stop(); else signal.addEventListener("abort", stop, { once: true });
 		}
 	});
@@ -82,20 +96,28 @@ async function isolated(
 export default function superdev(pi: ExtensionAPI) {
 	const children = new Set<ChildProcess>();
 	let modifyingChild: ChildProcess | undefined;
-	const stopChild = (child: ChildProcess) => {
-		try {
-			if (child.pid && process.platform !== "win32") process.kill(-child.pid, "SIGTERM");
-			else child.kill("SIGTERM");
-		} catch { /* The child already exited. */ }
-		setTimeout(() => {
-			if (child.exitCode === null) {
-				try {
-					if (child.pid && process.platform !== "win32") process.kill(-child.pid, "SIGKILL");
-					else child.kill("SIGKILL");
-				} catch { /* The child exited after the check. */ }
+	let modifyingBusy = false;
+	const stopChild = stopProcess;
+
+	pi.registerTool({
+		name: "superdev_review_diff",
+		label: "Superdev review diff",
+		description: "Read an immutable Git diff for an isolated reviewer",
+		parameters: Type.Object({
+			base: Type.String(),
+			candidate: Type.String(),
+		}),
+		execute: async (_id, input: { base: string; candidate: string }, _signal, _update, ctx) => {
+			for (const revision of [input.base, input.candidate]) {
+				if (!/^[0-9a-f]{7,64}$/.test(revision)) throw new Error("review revisions must be hexadecimal object IDs");
 			}
-		}, 2_000).unref();
-	};
+			const result = await pi.exec("git", ["diff", "--no-ext-diff", "--unified=80", input.base, input.candidate, "--"], { cwd: ctx.cwd });
+			if (result.code !== 0) throw new Error(result.stderr.trim() || "git diff failed");
+			if (result.stdout.length > 900_000) throw new Error("review diff exceeds the 900 KB review bound");
+			return { content: [{ type: "text", text: result.stdout || "No changes." }], details: { readOnly: true } };
+		},
+	});
+	if (process.env.SUPERDEV_CHILD_ROLE) return;
 
 	pi.registerTool({
 		name: "superdev_isolated_role",
@@ -104,26 +126,31 @@ export default function superdev(pi: ExtensionAPI) {
 		parameters: schema,
 		execute: async (_id, input, signal, _update, ctx) => {
 			const modifying = !readOnly.has(input.role) && input.role !== "file";
-			if (modifying && modifyingChild) throw new Error("one modifying workflow child is already active");
-			const text = await isolated(
-				input.role,
-				input.task,
-				ctx.cwd,
-				ctx.model,
-				signal,
-				(child) => {
-					children.add(child);
-					if (modifying) modifyingChild = child;
-				},
-				(child) => {
-					children.delete(child);
-					if (modifyingChild === child) modifyingChild = undefined;
-				},
-			);
-			return {
-				content: [{ type: "text", text }],
-				details: { role: input.role, isolated: true, readOnly: readOnly.has(input.role) },
-			};
+			if (modifying && (modifyingBusy || modifyingChild)) throw new Error("one modifying workflow child is already active");
+			if (modifying) modifyingBusy = true;
+			try {
+				const text = await isolated(
+					input.role,
+					input.task,
+					ctx.cwd,
+					ctx.model,
+					signal,
+					(child) => {
+						children.add(child);
+						if (modifying) modifyingChild = child;
+					},
+					(child) => {
+						children.delete(child);
+						if (modifyingChild === child) modifyingChild = undefined;
+					},
+				);
+				return {
+					content: [{ type: "text", text }],
+					details: { role: input.role, isolated: true, readOnly: readOnly.has(input.role) },
+				};
+			} finally {
+				if (modifying) modifyingBusy = false;
+			}
 		},
 	});
 

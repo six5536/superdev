@@ -176,7 +176,7 @@ fn prepare_commit(
     let report = validate::validate_repo(
         worktree,
         &worktree.join("knowledge"),
-        &[target.clone(), index],
+        &[target.clone(), index.clone()],
         &grammar,
     )?;
     if !report.report.passed() {
@@ -187,7 +187,31 @@ fn prepare_commit(
             ),
         });
     }
-    run_git(worktree, &["add", "--", "knowledge"])?;
+    let changed = run_git(
+        worktree,
+        &[
+            "status",
+            "--porcelain",
+            "--untracked-files=all",
+            "--",
+            "knowledge",
+        ],
+    )?;
+    let allowed = [
+        path.as_str(),
+        index.strip_prefix(worktree).unwrap().to_str().unwrap(),
+    ];
+    for line in String::from_utf8_lossy(&changed.stdout).lines() {
+        let changed_path = line.get(3..).unwrap_or_default();
+        if !allowed.contains(&changed_path) {
+            return Err(Error::Manifest {
+                message: format!(
+                    "filing repair touched unrelated knowledge `{changed_path}`; no commit was created"
+                ),
+            });
+        }
+    }
+    run_git(worktree, &["add", "--", &path, allowed[1]])?;
     run_git(
         worktree,
         &[
