@@ -730,8 +730,12 @@ fn validate_identity_values(root: &Path, identity: &WorkflowIdentity) -> Result<
 fn administrative_path(path: &str, identity: &WorkflowIdentity) -> bool {
     path == "knowledge/issues/index.md"
         || path == "knowledge/plans/index.md"
-        || path.ends_with(&format!("/{}.md", identity.issue))
-        || path.ends_with(&format!("/{}.md", identity.plan))
+        || ["open", "done", "wontfix"]
+            .iter()
+            .any(|state| path == format!("knowledge/issues/{state}/{}.md", identity.issue))
+        || ["open", "done", "abandoned"]
+            .iter()
+            .any(|state| path == format!("knowledge/plans/{state}/{}.md", identity.plan))
 }
 
 fn knowledge_contains(root: &Path, needle: &str) -> Result<bool> {
