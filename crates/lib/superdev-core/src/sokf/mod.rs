@@ -11,6 +11,7 @@ pub mod embed;
 pub mod graph;
 pub mod index;
 pub mod mcp;
+mod mutation;
 
 pub use bundle::{Bundle, BundleManifest, load_bundle};
 pub use concept::{
@@ -24,3 +25,7 @@ pub use embed::{
 pub use graph::{Edge, Graph, UnknownId, inverse_rel};
 pub use index::{Hit, Index, IndexDir, SCHEMA_VERSION, SearchOpts, SyncStats};
 pub use mcp::{SearchRequest, SokfServer, SokfService};
+pub use mutation::{
+    ChangeSource, EditRequest, ExactEdit, MutationChange, MutationFinding, MutationPolicy,
+    MutationResult, ValidationState, WriteRequest,
+};

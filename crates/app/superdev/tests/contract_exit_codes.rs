@@ -306,12 +306,24 @@ fn every_declared_exit_code_is_probed_or_named_undrivable() {
     ];
     // Pairs a test of its own drives, because they need stdin or a
     // temporary knowledge rather than a bare invocation.
-    const ELSEWHERE: [(&str, i64); 5] = [
+    const ELSEWHERE: [(&str, i64); 17] = [
         ("superdev hook validate", 0),
         ("superdev hook validate", 2),
         ("superdev hook run", 0),
         ("superdev hook run", 2),
         ("superdev validate", 1),
+        ("superdev sokf overview", 0),
+        ("superdev sokf overview", 2),
+        ("superdev sokf search", 0),
+        ("superdev sokf search", 2),
+        ("superdev sokf read", 0),
+        ("superdev sokf read", 2),
+        ("superdev sokf graph", 0),
+        ("superdev sokf graph", 2),
+        ("superdev sokf edit", 0),
+        ("superdev sokf edit", 2),
+        ("superdev sokf write", 0),
+        ("superdev sokf write", 2),
     ];
     let mut probes: BTreeMap<(String, i64), ()> = probed()
         .into_iter()

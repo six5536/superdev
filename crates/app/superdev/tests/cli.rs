@@ -474,6 +474,121 @@ fn sokf_read_side_commands_share_the_service() {
 }
 
 #[test]
+fn sokf_retrieval_commands_fail_cleanly_without_knowledge() {
+    let dir = tempfile::tempdir().unwrap();
+    for args in [
+        &["sokf", "overview"] as &[&str],
+        &["sokf", "search", "anything"],
+        &["sokf", "read", "anything"],
+        &["sokf", "graph", "anything"],
+    ] {
+        superdev()
+            .current_dir(dir.path())
+            .args(args)
+            .assert()
+            .code(2);
+    }
+}
+
+#[test]
+fn sokf_mutations_are_safe_repaired_and_machine_readable() {
+    let dir = tempfile::tempdir().unwrap();
+    write_fixture_bundle(dir.path());
+    let cache = blocked_model_cache(dir.path());
+
+    let out = superdev()
+        .current_dir(dir.path())
+        .env("XDG_CACHE_HOME", &cache)
+        .args([
+            "sokf",
+            "edit",
+            "sokf:module-a",
+            "--old-text",
+            "It plans.",
+            "--new-text",
+            "It plans safely.",
+            "--json",
+        ])
+        .assert()
+        .success();
+    let json: serde_json::Value = serde_json::from_slice(&out.get_output().stdout).unwrap();
+    assert_eq!(json["protocol"], "sokf-tools/v1");
+    assert_eq!(json["details"]["applied"], true);
+    assert_eq!(json["details"]["validation"], "valid");
+    assert_eq!(json["details"]["resolvedPath"], "knowledge/module.md");
+    assert_eq!(json["details"]["changes"][0]["source"], "requested");
+    assert!(
+        std::fs::read_to_string(dir.path().join("knowledge/module.md"))
+            .unwrap()
+            .contains("It plans safely.")
+    );
+
+    let before = std::fs::read(dir.path().join("knowledge/module.md")).unwrap();
+    let rejected = superdev()
+        .current_dir(dir.path())
+        .env("XDG_CACHE_HOME", &cache)
+        .args([
+            "sokf",
+            "edit",
+            "module-a",
+            "--old-text",
+            "id: module-a",
+            "--new-text",
+            "id: changed",
+        ])
+        .assert()
+        .code(2);
+    assert!(String::from_utf8_lossy(&rejected.get_output().stderr).contains("must preserve `id`"));
+    assert_eq!(
+        std::fs::read(dir.path().join("knowledge/module.md")).unwrap(),
+        before
+    );
+    superdev()
+        .current_dir(dir.path())
+        .env("XDG_CACHE_HOME", &cache)
+        .args([
+            "sokf",
+            "edit",
+            "module-a",
+            "--old-text",
+            "id: module-a",
+            "--new-text",
+            "id: changed",
+            "--allow-restricted",
+        ])
+        .assert()
+        .success();
+    assert!(
+        std::fs::read_to_string(dir.path().join("knowledge/module.md"))
+            .unwrap()
+            .contains("id: changed")
+    );
+
+    superdev()
+        .current_dir(dir.path())
+        .env("XDG_CACHE_HOME", &cache)
+        .args(["sokf", "write", "sokf:no-such-id", "--content-stdin"])
+        .write_stdin("---\ntype: Module\nid: new\n---\n")
+        .assert()
+        .code(2);
+
+    let request = serde_json::json!({
+        "path": "knowledge/new.md",
+        "content": "---\ntype: Module\nid: new-module\n---\n\nNew.\n"
+    });
+    let out = superdev()
+        .current_dir(dir.path())
+        .env("XDG_CACHE_HOME", &cache)
+        .args(["sokf", "write", "--request-json", "-", "--json"])
+        .write_stdin(request.to_string())
+        .assert()
+        .success();
+    let json: serde_json::Value = serde_json::from_slice(&out.get_output().stdout).unwrap();
+    assert_eq!(json["details"]["finalPath"], "knowledge/new.md");
+    assert!(dir.path().join("knowledge/new.md").is_file());
+}
+
+#[test]
 fn mcp_without_knowledge_fails_at_startup() {
     let dir = tempfile::tempdir().unwrap();
     let out = superdev()

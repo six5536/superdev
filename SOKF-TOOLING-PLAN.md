@@ -448,19 +448,25 @@ Adopt the hybrid interface:
 
 This approach gives agents familiar mechanics without presenting semantic search as ordinary text search or pretending a new concept's ID determines its path.
 
+## Decisions made during implementation
+
+- CLI adapter results use a `sokf-tools/v1` envelope with `content` text blocks
+  and a `details` object. Retrieval leaves `details` empty; mutations put their
+  applied state, validation state, paths, diffs, and findings there.
+- The explicit CLI human override is `--allow-restricted`.
+- Direct mutation permits reserved `index.md` navigation files but refuses
+  `manifest.sokf.yaml`; neither is treated as an ordinary concept.
+
 ## Open decisions
 
 1. Should `sokf:<id>#<heading>` be the section-address syntax?
 2. Should CLI `read` apply `offset` and `limit` before or after rendering metadata and headings?
-3. What JSON result schema should remain stable across CLI adapters?
-4. Should the Pi extension invoke one CLI process per call or maintain a long-running process? Benchmark cold-start time, index synchronization, and embedding-model loading before deciding.
-5. Should the Pi extension retain `sokf_read` and `sokf_overview` aliases during migration?
-6. Should `write path="sokf:<existing-id>"` remain enabled after evaluation, or should whole-file replacement require a physical path?
-7. How should turn-end validation deliver failures back to the model without creating an unbounded retry loop?
-8. Which checks belong in agent-safe mutation commands, and which remain authoritative only in `superdev validate` and the commit diff check?
-9. How should other harnesses express virtual SOKF addresses when they do not allow built-in tool overrides?
-10. What behavioral threshold demonstrates that the always-on instruction is sufficient?
-11. How does the extension locate the repository and configured knowledge root when Pi starts in a subdirectory?
-12. What happens when the extension and the installed `superdev` CLI expose incompatible JSON protocol versions?
-13. Should mutation commands support reserved SOKF files, and under which safety rules?
-14. What name should the CLI use for the human override: `--allow-restricted`, `--human`, or another explicit term?
+3. Should the Pi extension invoke one CLI process per call or maintain a long-running process? Benchmark cold-start time, index synchronization, and embedding-model loading before deciding.
+4. Should the Pi extension retain `sokf_read` and `sokf_overview` aliases during migration?
+5. Should `write path="sokf:<existing-id>"` remain enabled after evaluation, or should whole-file replacement require a physical path?
+6. How should turn-end validation deliver failures back to the model without creating an unbounded retry loop?
+7. Which checks belong in agent-safe mutation commands, and which remain authoritative only in `superdev validate` and the commit diff check?
+8. How should other harnesses express virtual SOKF addresses when they do not allow built-in tool overrides?
+9. What behavioral threshold demonstrates that the always-on instruction is sufficient?
+10. How does the extension locate the repository and configured knowledge root when Pi starts in a subdirectory?
+11. What happens when the extension and the installed `superdev` CLI expose incompatible JSON protocol versions?

@@ -3,15 +3,15 @@
 //! Parsing, path defaults and printed output only; the work is all
 //! `superdev-core`'s.
 
-use std::io;
+use std::io::{self, Read as _};
 use std::path::Path;
 use std::path::PathBuf;
 
 use superdev_core::error::{Error, Result};
 use superdev_core::manifest::{CONFIG_PATH, Manifest};
 use superdev_core::sokf::{
-    EmbeddingsConfig, Index, IndexDir, SearchRequest, SokfServer, SokfService, embedder_from,
-    load_bundle,
+    EditRequest, EmbeddingsConfig, ExactEdit, Index, IndexDir, MutationPolicy, MutationResult,
+    SearchRequest, SokfServer, SokfService, WriteRequest, embedder_from, load_bundle,
 };
 
 use crate::cli::{INDEX_DIR, io_error, knowledge_dir, out};
@@ -71,6 +71,46 @@ pub enum SokfCommand {
         /// Most rendered lines to return
         #[arg(long)]
         limit: Option<usize>,
+        /// Emit a tool-result JSON envelope
+        #[arg(long)]
+        json: bool,
+    },
+    /// Edit an existing concept using exact replacements
+    Edit {
+        /// Concept id, virtual address, or knowledge path
+        path: Option<String>,
+        /// Exact text that must occur once in the original file
+        #[arg(long, requires = "new_text")]
+        old_text: Option<String>,
+        /// Replacement text
+        #[arg(long, requires = "old_text")]
+        new_text: Option<String>,
+        /// Read a coding-tool-shaped request from this file, or `-` for stdin
+        #[arg(long, value_name = "FILE", conflicts_with_all = ["path", "old_text", "new_text"])]
+        request_json: Option<PathBuf>,
+        /// Deliberately permit a human to change `id` or `verified`
+        #[arg(long)]
+        allow_restricted: bool,
+        /// Emit a tool-result JSON envelope
+        #[arg(long)]
+        json: bool,
+    },
+    /// Replace a concept, or create one at a physical knowledge path
+    Write {
+        /// Existing concept identity, or a physical path for creation
+        path: Option<String>,
+        /// Read the complete document from this file
+        #[arg(long, value_name = "FILE", conflicts_with_all = ["content_stdin", "request_json"])]
+        content_file: Option<PathBuf>,
+        /// Read the complete document from stdin
+        #[arg(long, conflicts_with_all = ["content_file", "request_json"])]
+        content_stdin: bool,
+        /// Read a coding-tool-shaped request from this file, or `-` for stdin
+        #[arg(long, value_name = "FILE", conflicts_with_all = ["path", "content_file", "content_stdin"])]
+        request_json: Option<PathBuf>,
+        /// Deliberately permit a human to change `id` or `verified`
+        #[arg(long)]
+        allow_restricted: bool,
         /// Emit a tool-result JSON envelope
         #[arg(long)]
         json: bool,
@@ -180,6 +220,53 @@ pub fn run_sokf(cmd: &SokfCommand, root: &Path) -> Result<u8> {
                 .read(id, heading.as_deref())
                 .and_then(|text| line_window(&text, *offset, *limit))
         }),
+        SokfCommand::Edit {
+            path,
+            old_text,
+            new_text,
+            request_json,
+            allow_restricted,
+            json,
+        } => {
+            let request = if let Some(file) = request_json {
+                parse_request(&read_input(file)?)?
+            } else {
+                EditRequest {
+                    path: required(path.as_ref(), "edit requires PATH or --request-json")?.clone(),
+                    edits: vec![ExactEdit {
+                        old_text: required(old_text.as_ref(), "edit requires --old-text")?.clone(),
+                        new_text: required(new_text.as_ref(), "edit requires --new-text")?.clone(),
+                    }],
+                }
+            };
+            let service = service(root)?;
+            let result = service.edit(request, policy(*allow_restricted))?;
+            print_mutation(&result, *json)
+        }
+        SokfCommand::Write {
+            path,
+            content_file,
+            content_stdin,
+            request_json,
+            allow_restricted,
+            json,
+        } => {
+            let request = if let Some(file) = request_json {
+                parse_request(&read_input(file)?)?
+            } else {
+                let path =
+                    required(path.as_ref(), "write requires PATH or --request-json")?.clone();
+                let content = match (content_file, content_stdin) {
+                    (Some(file), false) => read_input(file)?,
+                    (None, true) => read_stdin()?,
+                    _ => return sokf_error("write requires --content-file or --content-stdin"),
+                };
+                WriteRequest { path, content }
+            };
+            let service = service(root)?;
+            let result = service.write(request, policy(*allow_restricted))?;
+            print_mutation(&result, *json)
+        }
         SokfCommand::Graph { id, json } => {
             print_service(root, *json, |service| service.graph(id.as_deref()))
         }
@@ -192,26 +279,108 @@ fn print_service(
     json: bool,
     operation: impl FnOnce(&SokfService) -> Result<String>,
 ) -> Result<u8> {
-    let service = SokfService::new(
+    let service = service(root)?;
+    let text = operation(&service)?;
+    print_tool_result(&text, json, serde_json::json!({}))
+}
+
+fn service(root: &Path) -> Result<SokfService> {
+    Ok(SokfService::new(
         knowledge_dir(root, None),
         root.to_path_buf(),
         IndexDir(root.join(INDEX_DIR)),
         embedder(root)?,
+    ))
+}
+
+fn print_mutation(result: &MutationResult, json: bool) -> Result<u8> {
+    let validation = match result.validation {
+        superdev_core::sokf::ValidationState::Valid => "valid",
+        superdev_core::sokf::ValidationState::Invalid => "invalid",
+        superdev_core::sokf::ValidationState::Unknown => "unknown",
+    };
+    let mut text = format!(
+        "applied: {}\nvalidation: {validation}\nresolved: {}\nfinal: {}",
+        result.applied, result.resolved_path, result.final_path
     );
-    let text = operation(&service)?;
+    for change in &result.changes {
+        text.push_str(&format!(
+            "\n\n{:?}: {}\n{}",
+            change.source, change.path, change.diff
+        ));
+    }
+    for finding in &result.findings {
+        text.push_str(&format!(
+            "\n[{}] {}{}",
+            finding.severity,
+            finding
+                .path
+                .as_deref()
+                .map_or_else(String::new, |path| format!("{path}: ")),
+            finding.message
+        ));
+    }
+    let details =
+        serde_json::to_value(result).map_err(|error| io_error(io::Error::other(error)))?;
+    print_tool_result(&text, json, details)
+}
+
+fn print_tool_result(text: &str, json: bool, details: serde_json::Value) -> Result<u8> {
     if json {
         let value = serde_json::json!({
             "protocol": "sokf-tools/v1",
             "content": [{ "type": "text", "text": text }],
-            "details": {}
+            "details": details
         });
         let rendered =
             serde_json::to_string_pretty(&value).map_err(|e| io_error(io::Error::other(e)))?;
         out(&rendered)?;
     } else {
-        out(&text)?;
+        out(text)?;
     }
     Ok(0)
+}
+
+fn policy(allow_restricted: bool) -> MutationPolicy {
+    if allow_restricted {
+        MutationPolicy::HumanOverride
+    } else {
+        MutationPolicy::AgentSafe
+    }
+}
+
+fn read_input(path: &Path) -> Result<String> {
+    if path == Path::new("-") {
+        return read_stdin();
+    }
+    std::fs::read_to_string(path).map_err(|source| Error::Io {
+        path: path.to_path_buf(),
+        source,
+    })
+}
+
+fn read_stdin() -> Result<String> {
+    let mut text = String::new();
+    io::stdin().read_to_string(&mut text).map_err(io_error)?;
+    Ok(text)
+}
+
+fn parse_request<T: serde::de::DeserializeOwned>(text: &str) -> Result<T> {
+    serde_json::from_str(text).map_err(|error| Error::Sokf {
+        message: format!("malformed request JSON: {error}"),
+    })
+}
+
+fn required<'a, T>(value: Option<&'a T>, message: &str) -> Result<&'a T> {
+    value.ok_or_else(|| Error::Sokf {
+        message: message.into(),
+    })
+}
+
+fn sokf_error<T>(message: &str) -> Result<T> {
+    Err(Error::Sokf {
+        message: message.into(),
+    })
 }
 
 /// Apply the coding-tool line window to rendered concept text.

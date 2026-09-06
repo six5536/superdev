@@ -31,6 +31,7 @@ serde_json = { workspace = true }
 serde_yaml_ng = { workspace = true }
 sha2 = { workspace = true }
 tantivy = { workspace = true }
+tempfile = { workspace = true }
 toml_edit = { workspace = true }
 ureq = { workspace = true }
 
@@ -38,5 +39,4 @@ ureq = { workspace = true }
 # `client` drives the MCP server from the in-process integration test; the
 # library itself needs only the server half.
 rmcp = { workspace = true, features = ["client"] }
-tempfile = { workspace = true }
 tokio = { workspace = true, features = ["macros", "rt", "io-util"] }

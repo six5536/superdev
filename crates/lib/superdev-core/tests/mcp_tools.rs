@@ -301,6 +301,70 @@ async fn overview_orients_and_warns() {
 }
 
 #[tokio::test]
+async fn mutations_use_agent_safe_policy_and_return_structured_results() {
+    let repo = fixture();
+    let client = serve_and_client(repo.path()).await;
+
+    let edited = call(
+        &client,
+        "sokf_edit",
+        serde_json::json!({
+            "path": "sokf:module-a",
+            "edits": [{
+                "oldText": "It never writes.",
+                "newText": "It only plans."
+            }]
+        }),
+    )
+    .await;
+    assert_ne!(edited.is_error, Some(true), "{}", text_of(&edited));
+    let details = edited.structured_content.as_ref().unwrap();
+    assert_eq!(details["applied"], true);
+    // The fixture deliberately carries a body link to a missing file. Applied
+    // invalid is a successful result, not an error that invites a retry.
+    assert_eq!(details["validation"], "invalid");
+    assert_eq!(details["resolvedPath"], "knowledge/module-a.md");
+    assert!(
+        std::fs::read_to_string(repo.path().join("knowledge/module-a.md"))
+            .unwrap()
+            .contains("It only plans.")
+    );
+
+    let before = std::fs::read(repo.path().join("knowledge/module-a.md")).unwrap();
+    let rejected = call(
+        &client,
+        "sokf_edit",
+        serde_json::json!({
+            "path": "module-a",
+            "edits": [{"oldText": "id: module-a", "newText": "id: changed"}]
+        }),
+    )
+    .await;
+    assert_eq!(rejected.is_error, Some(true));
+    assert!(text_of(&rejected).contains("must preserve `id`"));
+    assert_eq!(
+        std::fs::read(repo.path().join("knowledge/module-a.md")).unwrap(),
+        before
+    );
+
+    let written = call(
+        &client,
+        "sokf_write",
+        serde_json::json!({
+            "path": "knowledge/new.md",
+            "content": "---\ntype: Note\nid: new-note\n---\nNew.\n"
+        }),
+    )
+    .await;
+    assert_ne!(written.is_error, Some(true), "{}", text_of(&written));
+    assert_eq!(
+        written.structured_content.as_ref().unwrap()["finalPath"],
+        "knowledge/new.md"
+    );
+    client.cancel().await.unwrap();
+}
+
+#[tokio::test]
 async fn stale_index_refreshes_between_calls() {
     let repo = fixture();
     let client = serve_and_client(repo.path()).await;

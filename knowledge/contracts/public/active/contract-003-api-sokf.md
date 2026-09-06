@@ -3,14 +3,15 @@ type: Contract
 id: contract-003-api-sokf
 kind: api
 title: API contract for sokf over MCP
-description: The SOKF knowledge served to agents — four read-only tools over stdio as the server declares them, and what each call promises beyond its signature.
+description: The SOKF knowledge served to agents — four retrieval and two agent-safe mutation tools over stdio, and what each call promises beyond its signature.
 lifecycle: active
 resource: /crates/lib/superdev-core/src/sokf/mcp.rs
 ---
 
 # API contract: sokf over MCP
 
-The SOKF knowledge served to agents: four read-only tools over stdio.
+The SOKF knowledge served to agents: four retrieval and two agent-safe
+mutation tools over stdio.
 The Definition is the server's argument structs and tool methods as the
 source declares them; a doc comment on a struct field or a tool method is
 the description the client sees and the promise the server keeps.
@@ -21,6 +22,43 @@ the shape are
 [ADR-042][sokf:adr-042-a-contracts-definition-is-materialized-from-source].
 
 ## Definition
+
+<!-- sokf:include /crates/lib/superdev-core/src/sokf/mutation.rs#tools -->
+```rust
+/// One exact replacement, evaluated against the original file.
+#[derive(Debug, Clone, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+#[schemars(crate = "rmcp::schemars")]
+pub struct ExactEdit {
+    /// Text that must occur exactly once in the original file.
+    pub old_text: String,
+    /// Text that replaces the matched bytes.
+    pub new_text: String,
+}
+
+/// The machine request accepted by the edit adapters.
+#[derive(Debug, Clone, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+#[schemars(crate = "rmcp::schemars")]
+pub struct EditRequest {
+    /// Existing concept ID, virtual address, or physical knowledge path.
+    pub path: String,
+    /// Non-overlapping replacements evaluated against one original file.
+    pub edits: Vec<ExactEdit>,
+}
+
+/// The machine request accepted by the write adapters.
+#[derive(Debug, Clone, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+#[schemars(crate = "rmcp::schemars")]
+pub struct WriteRequest {
+    /// Existing concept identity, or a physical path for creation.
+    pub path: String,
+    /// Complete replacement document.
+    pub content: String,
+}
+```
+<!-- /sokf:include -->
 
 <!-- sokf:include /crates/lib/superdev-core/src/sokf/mcp.rs#tools -->
 ```rust
@@ -87,6 +125,28 @@ struct GraphArgs {
             .map_err(tool_error)
     }
 
+    /// Apply atomic exact replacements to one existing concept. Identity and
+    /// verification are protected; automatic repair and validation follow.
+    #[tool]
+    async fn sokf_edit(&self, Parameters(args): Parameters<EditRequest>) -> ToolResult {
+        let _guard = self.exclusive();
+        match self.service.edit(args, MutationPolicy::AgentSafe) {
+            Ok(result) => mutation_result(result),
+            Err(error) => Err(tool_error(error)),
+        }
+    }
+
+    /// Replace one complete concept, or create one at a physical `.md` path.
+    /// Identity and verification are protected; repair and validation follow.
+    #[tool]
+    async fn sokf_write(&self, Parameters(args): Parameters<WriteRequest>) -> ToolResult {
+        let _guard = self.exclusive();
+        match self.service.write(args, MutationPolicy::AgentSafe) {
+            Ok(result) => mutation_result(result),
+            Err(error) => Err(tool_error(error)),
+        }
+    }
+
     /// Show the link graph: the whole edge map, or one concept's neighbours
     /// in both directions.
     #[tool]
@@ -126,8 +186,8 @@ it lazily on every tool call; there is no watcher and no daemon state.
 ### Authentication
 
 None. The harness that spawns the server is the caller; there is no
-credential to present and no role to distinguish, since every tool is
-read-only.
+credential to present and no role to distinguish. Mutation authority is
+bounded by the mandatory agent-safe policy rather than caller identity.
 
 - `P_trusts-stdin` [ubiquitous] The server SHALL trust whatever
   reaches its stdin.
@@ -142,9 +202,33 @@ A tool failure is an MCP error payload, never a process exit.
   id, the server SHALL answer with near-miss candidates.
 - `P_invalid-knowledge-served` [state] WHILE the knowledge fails
   validation, the server SHALL index and serve it.
+- `P_mutation-precondition-error` [event] WHEN a mutation request has an
+  invalid target, match, overlap, path, protected field, or stamped field, the
+  server SHALL return an MCP error result without changing the target.
+- `P_applied-invalid-result` [state] WHILE an applied mutation leaves the
+  knowledge invalid or its validation unknown, the server SHALL return a
+  successful structured result with `applied: true` rather than an error.
 - `P_parse-error-quoted` [event] WHEN a caller reads a file the parser
   choked on, `sokf_read` SHALL quote the parse error instead of
   guessing at near misses.
+
+### Mutations
+
+- `P_mutation-agent-safe` [ubiquitous] `sokf_edit` and `sokf_write` SHALL use
+  `MutationPolicy::AgentSafe` with no caller override.
+- `P_edit-exact-atomic` [ubiquitous] `sokf_edit` SHALL apply non-overlapping
+  exact replacements matched once each against the same original file, or
+  change nothing.
+- `P_write-whole-path-create` [ubiquitous] `sokf_write` SHALL replace a whole
+  existing concept and create only from a physical `.md` path.
+- `P_mutation-contained` [ubiquitous] Mutation tools SHALL write only inside
+  the canonical knowledge root without traversing a symlink or `..`.
+- `P_mutation-repair-validation` [event] WHEN a mutation is applied, the tool
+  SHALL run automatic repair and validation while retaining the tool-call
+  lock.
+- `P_mutation-result-shape` [ubiquitous] A successful mutation SHALL return
+  structured content carrying `applied`, `validation`, `resolvedPath`,
+  `finalPath`, requested and repair `changes`, and remaining `findings`.
 
 ### Limits
 

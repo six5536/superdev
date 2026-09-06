@@ -14,8 +14,8 @@ superdev runs inside a target repo and keeps that repo's agent-development
 setup current. Three layers:
 
 - **`superdev-core`** — the domain: the manifest, the components, planning,
-  the engine that applies a plan, and the `sokf` subsystem that reads the
-  knowledge back out.
+  the engine that applies a plan, and the `sokf` subsystem that reads and
+  safely mutates the knowledge.
 - **`superdev` (binary)** — argument parsing, output rendering, exit codes.
 - **The blueprint** — superdev's opinion of a managed repo, compiled into the
   binary: the component set plus a registry of default versions tested
@@ -26,9 +26,13 @@ setup current. Three layers:
 Installing the `knowledge` capability is half of it; the other half is reading
 it back. The `sokf` subsystem parses and indexes the SOKF knowledge. A shared service
 serves it through MCP (`superdev mcp sokf`) and the `superdev sokf overview`,
-`search`, `read` and `graph` CLI commands — the `validate` subsystem checks it
-— so an agent queries the knowledge instead of preloading every concept. The
-MCP tools are in
+`search`, `read` and `graph` CLI commands — so an agent queries the knowledge
+instead of preloading every concept. The same service backs CLI `edit` and
+`write`: it resolves identities, applies atomic agent-safe mutations, runs the
+validator's repair pass, and reports the final validation state plus requested
+and generated diffs. MCP exposes those two mutations only under the agent-safe
+policy; the deliberate human override remains CLI-only. The `validate`
+subsystem remains the check both paths share. The MCP tools are in
 [contract-003-api-sokf][sokf:contract-003-api-sokf]. Freshness is lazy: every tool call
 re-hashes the canonical knowledge and syncs only what changed, so there is no watcher and
 no daemon state to go stale.

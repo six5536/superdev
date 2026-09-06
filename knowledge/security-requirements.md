@@ -29,8 +29,12 @@ only (pre-1.0, no backports).
 - **Destructive writes are recoverable.** Every file superdev overwrites or
   removes is backed up under `.superdev/cache/backup/<timestamp>/` first,
   and a failed apply unwinds ([configuration][sokf:configuration]).
-- **The MCP surface is read-only.** `superdev mcp sokf` exposes four
-  read-only tools over stdio; nothing writes through it
+- **MCP mutations have knowledge-only, agent-safe authority.** `superdev mcp
+  sokf` exposes four retrieval and two mutation tools over local stdio. The
+  mutation tools can write only under the canonical knowledge root, reject
+  path and symlink escapes, preserve existing identity and verification bytes,
+  reject stamped fields, write atomically, and run repair plus validation.
+  Their machine schema carries no human override
   ([contract-003-api-sokf][sokf:contract-003-api-sokf]).
 - **A pinned pack applies the bytes it was pinned to, or none.** Every
   resolved *git* pack is verified against the digest the lock recorded for

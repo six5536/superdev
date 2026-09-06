@@ -65,11 +65,12 @@ All domain logic; no argument parsing. One module per concern:
 - `templates` — the project templates: token substitution, the init-only
   scaffold plan, and `rust_npm`, the embedded table mapping
   `assets/projects/rust-npm/` onto tokenised target paths.
-- `sokf` — the read side of the SOKF knowledge, one module per stage:
-  `concept` (frontmatter and section parsing), `bundle` (loading, reserved-file
-  rules), `graph` (link resolution and inverse synthesis), `embed` (the
-  embedding providers), `index` (tantivy plus the vector store), and `mcp`
-  (the shared read service and its server adapter).
+- `sokf` — retrieval and safe mutation of the SOKF knowledge, one module per
+  stage: `concept` (frontmatter and section parsing), `bundle` (loading and
+  reserved-file rules), `graph` (link resolution and inverse synthesis),
+  `embed` (the embedding providers), `index` (tantivy plus the vector store),
+  `mutation` (exact edits, whole writes, policy, atomic persistence, repair
+  and mutation results), and `mcp` (the shared service and its server adapter).
 - `validate` — the check, both halves meeting in the parent so neither
   imports the other: `sokf` (the specification's document checks) and
   `schema` (documents against the schema their `type` names, and skills and
@@ -84,8 +85,9 @@ All domain logic; no argument parsing. One module per concern:
   reaches the binary without a Rust edit; the contents are still `include_str!`
   literals, and only the list of them is generated.
 
-The MCP server exposes four read-only tools over stdio — `sokf_search`,
-`sokf_read`, `sokf_graph`, `sokf_overview` (see
+The MCP server exposes four retrieval tools over stdio — `sokf_search`,
+`sokf_read`, `sokf_graph`, `sokf_overview` — plus mandatory-agent-safe
+`sokf_edit` and `sokf_write` (see
 [contract-003-api-sokf][sokf:contract-003-api-sokf]). It holds one index directory and
 serialises its own tool calls with a mutex: a call keeps the index open across
 its whole body while another call's sync could delete and rebuild that
@@ -101,8 +103,9 @@ verbs — each loads, calls the core pipeline, renders its lines and turns
 its facts into an exit code. `template_select.rs` decides init's project
 template: flags and TTY-ness feed logic behind a `Prompter` trait, with the
 dialoguer adapter as untested glue. `validate_cli.rs` holds `validate` and the hook. `sokf_cli.rs` holds the
-`sokf` read and index commands plus `mcp sokf`: path defaults, printed output,
-and the current-thread tokio runtime the server blocks on. Also present is the plumbing the release
+`sokf` retrieval, mutation and index commands plus `mcp sokf`: request parsing,
+path defaults, human and JSON output, and the current-thread tokio runtime the
+server blocks on. Also present is the plumbing the release
 pipeline needs:
 `--version`, `completions` (clap_complete), and a hidden `man` subcommand
 (clap_mangen). The CLI contract is in [contract-002-cli-superdev][sokf:contract-002-cli-superdev].

@@ -26,7 +26,11 @@ What the annotated list does not say:
   nothing routine needs: every MCP or CLI `sokf overview`, `search`, `read` or
   `graph` call syncs the index lazily. Those four CLI commands expose the same
   service for shell users and harness adapters; their `--json` form wraps text
-  in the versioned `sokf-tools/v1` tool-result envelope.
+  in the versioned `sokf-tools/v1` tool-result envelope. `cargo run -- sokf
+  edit` makes exact replacements in an existing concept; `sokf write` replaces
+  one or creates it at a physical path. Both repair and validate automatically,
+  default to preserving `id` and `verified`, and report applied-but-invalid
+  intermediate states without turning them into retryable command failures.
 - `cargo run -- validate --fix` is the same check with its repairs applied
   first: a link naming a concept by path becomes the id form, every
   `<!-- sokf:links -->` block is regenerated, and every include block is

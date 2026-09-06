@@ -262,6 +262,46 @@ pub enum SokfCommand {
         #[arg(long)]
         json: bool,
     },
+    /// Edit an existing concept using exact replacements
+    Edit {
+        /// Concept id, virtual address, or knowledge path
+        path: Option<String>,
+        /// Exact text that must occur once in the original file
+        #[arg(long, requires = "new_text")]
+        old_text: Option<String>,
+        /// Replacement text
+        #[arg(long, requires = "old_text")]
+        new_text: Option<String>,
+        /// Read a coding-tool-shaped request from this file, or `-` for stdin
+        #[arg(long, value_name = "FILE", conflicts_with_all = ["path", "old_text", "new_text"])]
+        request_json: Option<PathBuf>,
+        /// Deliberately permit a human to change `id` or `verified`
+        #[arg(long)]
+        allow_restricted: bool,
+        /// Emit a tool-result JSON envelope
+        #[arg(long)]
+        json: bool,
+    },
+    /// Replace a concept, or create one at a physical knowledge path
+    Write {
+        /// Existing concept identity, or a physical path for creation
+        path: Option<String>,
+        /// Read the complete document from this file
+        #[arg(long, value_name = "FILE", conflicts_with_all = ["content_stdin", "request_json"])]
+        content_file: Option<PathBuf>,
+        /// Read the complete document from stdin
+        #[arg(long, conflicts_with_all = ["content_file", "request_json"])]
+        content_stdin: bool,
+        /// Read a coding-tool-shaped request from this file, or `-` for stdin
+        #[arg(long, value_name = "FILE", conflicts_with_all = ["path", "content_file", "content_stdin"])]
+        request_json: Option<PathBuf>,
+        /// Deliberately permit a human to change `id` or `verified`
+        #[arg(long)]
+        allow_restricted: bool,
+        /// Emit a tool-result JSON envelope
+        #[arg(long)]
+        json: bool,
+    },
     /// Show the whole link graph or one concept's neighbours
     Graph {
         /// Concept id or knowledge-relative path
@@ -397,6 +437,39 @@ usage errors and the side effects.
   rebuild the index in full.
 - `P_sokf-index-says-lexical-only` [event] WHEN no embedding model
   loaded, `sokf index` SHALL say the index is lexical-only.
+- `P_sokf-retrieval-shares-service` [ubiquitous] `sokf overview`,
+  `search`, `read` and `graph` SHALL return the same rendered information as
+  the corresponding shared-service and MCP operations.
+- `P_sokf-edit-exact-atomic` [ubiquitous] `sokf edit` SHALL require every
+  `oldText` to occur exactly once in the original file, reject overlapping
+  edits, evaluate all edits against that original, and write nothing when any
+  precondition fails.
+- `P_sokf-write-whole` [ubiquitous] `sokf write` SHALL replace the complete
+  target document.
+- `P_sokf-write-creation-path` [event] WHEN `sokf write` creates a concept, it
+  SHALL require a physical `.md` path rather than infer placement from an
+  unresolved identity.
+- `P_sokf-agent-safe-default` [ubiquitous] `sokf edit` and `sokf write` SHALL
+  preserve an existing `id` and the exact `verified` bytes by default.
+- `P_sokf-stamped-refusal` [ubiquitous] `sokf edit` and `sokf write` SHALL
+  reject stamped fields under every policy.
+- `P_sokf-human-override` [event] WHEN `--allow-restricted` is given, `sokf
+  edit` and `sokf write` SHALL permit a deliberate identity or verification
+  change.
+- `P_sokf-request-policy-fixed` [ubiquitous] Mutation request JSON SHALL carry
+  no policy override field.
+- `P_sokf-mutation-contained` [ubiquitous] SOKF mutations SHALL refuse paths
+  outside the canonical knowledge root, `..` escapes, symlink traversal,
+  section-qualified virtual addresses, and direct `manifest.sokf.yaml`
+  mutation; direct `index.md` mutation is permitted.
+- `P_sokf-mutation-repairs` [event] WHEN a requested mutation is applied, the
+  command SHALL run the same repair as `validate --fix`, validate the resulting
+  repository, and return the originally resolved path, final path, requested
+  and repair-generated diffs, validation state, and remaining findings.
+- `P_sokf-applied-invalid-succeeds` [state] WHILE an applied mutation leaves
+  validation invalid or unknown, the command SHALL retain the changes and
+  return a successful applied result rather than a hard error, preventing an
+  unsafe automatic retry.
 - `P_hook-validate-ungoverned-path` [event] WHEN the edited path is
   outside the canonical knowledge and outside every tree the grammar
   governs, `hook validate` SHALL exit `0`.
@@ -448,6 +521,18 @@ code Claude Code hands back to the agent.
 | `superdev sokf` | 2 | no subcommand named |
 | `superdev sokf index` | 0 | the index is rebuilt |
 | `superdev sokf index` | 2 | knowledge it could not read |
+| `superdev sokf overview` | 0 | the knowledge overview is rendered |
+| `superdev sokf overview` | 2 | the knowledge is unreadable |
+| `superdev sokf search` | 0 | matching knowledge is rendered |
+| `superdev sokf search` | 2 | the knowledge or index is unreadable |
+| `superdev sokf read` | 0 | the requested concept is rendered |
+| `superdev sokf read` | 2 | the knowledge is unreadable or the target cannot be resolved |
+| `superdev sokf graph` | 0 | the requested graph is rendered |
+| `superdev sokf graph` | 2 | the knowledge is unreadable or the target cannot be resolved |
+| `superdev sokf edit` | 0 | the mutation was applied, including an invalid or unknown resulting state |
+| `superdev sokf edit` | 2 | malformed input or a failed precondition left the target unchanged |
+| `superdev sokf write` | 0 | the mutation was applied, including an invalid or unknown resulting state |
+| `superdev sokf write` | 2 | malformed input or a failed precondition left the target unchanged |
 | `superdev run` | 2 | no subcommand named |
 | `superdev run begin` | 0 | the run is armed |
 | `superdev run begin` | 2 | a run already exists |
@@ -494,8 +579,12 @@ Claude Code reads a hook's stderr. A closed stdout pipe ends the run as
 - `P_sokf-read-json-shape` [event] WHEN `--json` is given to `sokf
   overview`, `search`, `read` or `graph`, the command SHALL write one JSON
   object with protocol `sokf-tools/v1`, one text content item carrying the
-  ordinary command output, and a `details` object reserved for structured
-  operation results.
+  ordinary command output, and an empty `details` object.
+- `P_sokf-mutation-json-shape` [event] WHEN `--json` is given to `sokf edit`
+  or `sokf write`, the same envelope's `details` SHALL carry `applied`,
+  `validation`, `resolvedPath`, `finalPath`, `changes` (each with `path`,
+  `source`, and `diff`) and `findings` (each with `severity`, optional `path`,
+  and `message`).
 
 ### Prompting
 
@@ -536,15 +625,18 @@ Clap reports a usage error from every command alike.
 
 ### Side effects
 
-`--fix` is the one way `validate` writes; `status` writes nothing
-(`P_status-writes-nothing`). `update` is the one verb that reaches the
-network unasked, to find the newest pack release.
+`--fix` is the one way `validate` writes; SOKF `edit` and `write` are the
+knowledge mutation verbs and include that repair automatically. `status`
+writes nothing (`P_status-writes-nothing`). `update` is the one verb that
+reaches the network unasked, to find the newest pack release.
 
 - `P_validate-writes-only-with-fix` [event] WHEN `validate` runs
   without `--fix`, `validate` SHALL NOT write.
 - `P_fix-writes-inside-knowledge` [ubiquitous] `validate --fix` SHALL
   write only inside the resolved knowledge directory.
 - `P_fix-idempotent` [ubiquitous] `validate --fix` SHALL be idempotent.
+- `P_sokf-mutations-write-knowledge-only` [ubiquitous] `sokf edit` and `sokf
+  write` SHALL write only inside the resolved knowledge directory.
 - `P_run-touches-cache-only` [ubiquitous] `run` SHALL NOT touch git,
   the network, or any file outside `.superdev/cache/`.
 

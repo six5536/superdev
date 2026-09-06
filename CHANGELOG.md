@@ -18,6 +18,13 @@ publish a version it cannot find a heading for.
   knowledge service as MCP; `search` accepts type, tag and lifecycle filters,
   `read` accepts a heading or rendered line window, and every read operation
   accepts `--json` for the versioned `sokf-tools/v1` tool-result envelope.
+- **SOKF mutations are available from the CLI and shared service.** `superdev
+  sokf edit` applies atomic exact replacements and `sokf write` performs
+  whole-document replacement or path-based creation. Both enforce agent-safe
+  identity and verification rules by default, support a deliberate CLI human
+  override, run automatic repair, and return requested and repair diffs with
+  the resulting validation state. MCP exposes the same operations as
+  mandatory agent-safe `sokf_edit` and `sokf_write` tools.
 - **`/file` files an issue or an idea.** A knowledge-carried skill
   writes a bug, a feature or a chore as an `open` issue in the user's
   words — no interview, no branch, no criterion the user did not state

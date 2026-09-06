@@ -1,4 +1,4 @@
-//! mcp.rs — the SOKF MCP server: four read-only tools over one bundle.
+//! mcp.rs — the SOKF MCP server: retrieval and safe mutation over one bundle.
 //!
 //! Every call reloads the bundle from disk and syncs the index before it
 //! answers, so a concept edited between calls is visible to the next one; the
@@ -20,6 +20,7 @@ use super::concept::{Concept, Status};
 use super::embed::Embedder;
 use super::graph::{Edge, Graph, inverse_rel};
 use super::index::{Hit, Index, IndexDir, SearchOpts, SyncStats};
+use super::mutation::{self, EditRequest, MutationPolicy, MutationResult, WriteRequest};
 use crate::error::Error;
 use crate::validate::sokf::validate;
 
@@ -169,6 +170,25 @@ impl SokfService {
         render_concept(concept, &identity, heading).map_err(|message| Error::Sokf { message })
     }
 
+    /// Apply exact replacements to an existing concept, then repair and validate.
+    pub fn edit(
+        &self,
+        request: EditRequest,
+        policy: MutationPolicy,
+    ) -> crate::error::Result<MutationResult> {
+        mutation::edit(&self.bundle_dir, &self.repo_root, request, policy)
+    }
+
+    /// Replace an existing concept, or create one at a physical path, then
+    /// repair and validate.
+    pub fn write(
+        &self,
+        request: WriteRequest,
+        policy: MutationPolicy,
+    ) -> crate::error::Result<MutationResult> {
+        mutation::write(&self.bundle_dir, &self.repo_root, request, policy)
+    }
+
     /// Render the whole edge map or one concept's neighbours.
     pub fn graph(&self, id: Option<&str>) -> crate::error::Result<String> {
         let (bundle, _, _) = self.sync()?;
@@ -247,6 +267,28 @@ impl SokfServer {
             .map_err(tool_error)
     }
 
+    /// Apply atomic exact replacements to one existing concept. Identity and
+    /// verification are protected; automatic repair and validation follow.
+    #[tool]
+    async fn sokf_edit(&self, Parameters(args): Parameters<EditRequest>) -> ToolResult {
+        let _guard = self.exclusive();
+        match self.service.edit(args, MutationPolicy::AgentSafe) {
+            Ok(result) => mutation_result(result),
+            Err(error) => Err(tool_error(error)),
+        }
+    }
+
+    /// Replace one complete concept, or create one at a physical `.md` path.
+    /// Identity and verification are protected; repair and validation follow.
+    #[tool]
+    async fn sokf_write(&self, Parameters(args): Parameters<WriteRequest>) -> ToolResult {
+        let _guard = self.exclusive();
+        match self.service.write(args, MutationPolicy::AgentSafe) {
+            Ok(result) => mutation_result(result),
+            Err(error) => Err(tool_error(error)),
+        }
+    }
+
     /// Show the link graph: the whole edge map, or one concept's neighbours
     /// in both directions.
     #[tool]
@@ -303,9 +345,10 @@ impl SokfServer {
 impl ServerHandler for SokfServer {
     fn get_info(&self) -> ServerInfo {
         ServerInfo::new(ServerCapabilities::builder().enable_tools().build()).with_instructions(
-            "Read-only access to this repository's SOKF knowledge. Start with \
-             sokf_overview to see what exists, sokf_search to find sections, sokf_read to \
-             read one, and sokf_graph to follow links.",
+            "Access to this repository's canonical SOKF knowledge. Start with \
+             sokf_overview, use sokf_search and sokf_read for project knowledge, follow \
+             links with sokf_graph, and use sokf_edit or sokf_write for agent-safe \
+             mutations. Mutations repair and validate automatically.",
         )
     }
 }
@@ -321,6 +364,15 @@ fn hit_limit(requested: Option<u32>) -> usize {
 /// One text block, the only shape these tools return.
 fn text(body: String) -> CallToolResult {
     CallToolResult::success(vec![ContentBlock::text(body)])
+}
+
+/// A successful mutation is both readable text and MCP structured content.
+fn mutation_result(result: MutationResult) -> ToolResult {
+    let value = serde_json::to_value(&result).map_err(|error| error.to_string())?;
+    let rendered = serde_json::to_string_pretty(&value).map_err(|error| error.to_string())?;
+    let mut output = CallToolResult::success(vec![ContentBlock::text(rendered)]);
+    output.structured_content = Some(value);
+    Ok(output)
 }
 
 /// Preserve the MCP tool's established domain-error text while retaining
