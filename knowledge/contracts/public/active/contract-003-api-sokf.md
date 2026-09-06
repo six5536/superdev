@@ -3,14 +3,14 @@ type: Contract
 id: contract-003-api-sokf
 kind: api
 title: API contract for sokf over MCP
-description: The SOKF knowledge served to agents — four retrieval and two agent-safe mutation tools over stdio, and what each call promises beyond its signature.
+description: The SOKF knowledge served to agents — familiar read semantics, semantic search, graph traversal and two agent-safe mutation tools over stdio.
 lifecycle: active
 resource: /crates/lib/superdev-core/src/sokf/mcp.rs
 ---
 
 # API contract: sokf over MCP
 
-The SOKF knowledge served to agents: four retrieval and two agent-safe
+The SOKF knowledge served to agents: three retrieval and two agent-safe
 mutation tools over stdio.
 The Definition is the server's argument structs and tool methods as the
 source declares them; a doc comment on a struct field or a tool method is
@@ -79,15 +79,17 @@ pub struct SearchRequest {
     pub lifecycle: Option<Vec<String>>,
 }
 
-/// Arguments of `sokf_read`.
+/// Arguments of `sokf_read`, shaped like a familiar coding read tool.
 #[derive(Debug, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
 #[schemars(crate = "rmcp::schemars")]
 struct ReadArgs {
-    /// Concept `id`, or its bundle-relative path.
-    id: String,
-    /// One section's heading, or the `a > b` heading path; omit for the whole
-    /// concept.
-    heading: Option<String>,
+    /// `sokf:`, a virtual concept address, or a physical path inside knowledge.
+    path: String,
+    /// First rendered or physical line to return, starting at 1.
+    offset: Option<usize>,
+    /// Most lines to return.
+    limit: Option<usize>,
 }
 
 /// Arguments of `sokf_graph`.
@@ -115,12 +117,12 @@ struct GraphArgs {
             .map_err(tool_error)
     }
 
-    /// Read one concept whole, or one of its sections.
+    /// Read an overview, concept, section, or contained physical knowledge file.
     #[tool]
     async fn sokf_read(&self, Parameters(args): Parameters<ReadArgs>) -> ToolResult {
         let _guard = self.exclusive();
         self.service
-            .read(&args.id, args.heading.as_deref())
+            .read_path(&args.path, args.offset, args.limit)
             .map(text)
             .map_err(tool_error)
     }
@@ -158,13 +160,6 @@ struct GraphArgs {
             .map_err(tool_error)
     }
 
-    /// Orient in the bundle: its name, size, directory tree, and anything
-    /// validation found wrong.
-    #[tool]
-    async fn sokf_overview(&self) -> ToolResult {
-        let _guard = self.exclusive();
-        self.service.overview().map(text).map_err(tool_error)
-    }
 ```
 <!-- /sokf:include -->
 
@@ -172,10 +167,10 @@ struct GraphArgs {
 
 ### Transport
 
-The server reads the index at `.superdev/cache/sokf-index/`. Search and
-overview calls sync it lazily; direct reads and graph traversal parse the
-current knowledge without opening the index. There is no watcher or daemon
-state.
+The server reads the index at `.superdev/cache/sokf-index/`. Search and a
+`sokf:` overview read sync it lazily; concept reads, physical reads and graph
+traversal parse current knowledge without opening the index. There is no
+watcher or daemon state.
 
 - `P_speaks-mcp-over-stdio` [ubiquitous] `superdev mcp sokf` SHALL
   speak the MCP protocol over stdin and stdout, serving one client.
@@ -184,8 +179,25 @@ state.
 - `P_fails-at-startup` [event] WHEN the knowledge is missing or the
   index directory is unusable, `superdev mcp sokf` SHALL fail at
   startup rather than at every tool call.
-- `P_direct-retrieval-skips-index` [ubiquitous] `sokf_read` and `sokf_graph`
-  SHALL parse current knowledge without opening or rewriting the search index.
+- `P_coding-read` [ubiquitous] `sokf_read` SHALL accept a familiar `path` with
+  optional one-indexed `offset` and `limit` arguments.
+  - `AC_overview-address` [event] WHEN `path` is `sokf:`, `sokf_read` SHALL
+    return the knowledge overview.
+  - `AC_concept-address` [event] WHEN `path` is `sokf:<id>` or
+    `sokf:<id>#<heading>`, `sokf_read` SHALL return the rendered concept or
+    selected section.
+  - `AC_physical-contained` [conditional] IF `path` identifies an existing
+    physical file inside the knowledge root, `sokf_read` SHALL return its exact
+    UTF-8 text.
+  - `AC_physical-refused` [event] WHEN a physical `path` resolves outside the
+    knowledge root, `sokf_read` SHALL refuse it.
+  - `AC_line-window` [event] WHEN `offset` or `limit` is present, `sokf_read`
+    SHALL apply the line window after rendering or reading the target.
+- `P_direct-retrieval-skips-index` [event] WHEN `sokf_read` receives a concept
+  address or contained physical path, `sokf_read` SHALL answer without opening
+  or rewriting the search index.
+- `P_graph-skips-index` [ubiquitous] `sokf_graph` SHALL parse current knowledge
+  without opening or rewriting the search index.
 
 ### Authentication
 
@@ -212,8 +224,8 @@ A tool failure is an MCP error payload, never a process exit.
 - `P_applied-invalid-result` [state] WHILE an applied mutation leaves the
   knowledge invalid or its validation unknown, the server SHALL return a
   successful structured result with `applied: true` rather than an error.
-- `P_parse-error-quoted` [event] WHEN a caller reads a file the parser
-  choked on, `sokf_read` SHALL quote the parse error instead of
+- `P_parse-error-quoted` [event] WHEN a virtual concept address resolves to a
+  file the parser rejected, `sokf_read` SHALL quote the parse error instead of
   guessing at near misses.
 
 ### Mutations
@@ -253,8 +265,9 @@ reads exactly what matched.
   sort below live knowledge without leaving the results.
 - `P_graph-group-cap` [ubiquitous] `sokf_graph` SHALL cap each group at
   30 lines and then say how many it dropped.
-- `P_overview-warning-cap` [ubiquitous] `sokf_overview` SHALL list at
-  most 10 warnings and then say how many more there are.
+- `P_overview-warning-cap` [event] WHEN `sokf_read` receives `path: "sokf:"`,
+  `sokf_read` SHALL list at most 10 warnings and then say how many more there
+  are.
 
 ### Versioning
 

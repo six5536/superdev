@@ -184,11 +184,44 @@ async fn an_absurd_limit_is_answered_not_aborted() {
 }
 
 #[tokio::test]
+async fn read_schema_and_tool_roster_use_familiar_semantics() {
+    let repo = fixture();
+    let client = serve_and_client(repo.path()).await;
+    let tools = client.list_all_tools().await.unwrap();
+    let names: Vec<&str> = tools.iter().map(|tool| tool.name.as_ref()).collect();
+    assert_eq!(
+        names,
+        [
+            "sokf_edit",
+            "sokf_graph",
+            "sokf_read",
+            "sokf_search",
+            "sokf_write"
+        ]
+    );
+    let read = tools.iter().find(|tool| tool.name == "sokf_read").unwrap();
+    let properties = read.input_schema["properties"].as_object().unwrap();
+    assert!(properties.contains_key("path"));
+    assert!(properties.contains_key("offset"));
+    assert!(properties.contains_key("limit"));
+    assert!(!properties.contains_key("id"));
+    assert!(!properties.contains_key("heading"));
+    client.cancel().await.unwrap();
+}
+
+#[tokio::test]
 async fn read_whole_and_section() {
     let repo = fixture();
     let client = serve_and_client(repo.path()).await;
 
-    let whole = text_of(&call(&client, "sokf_read", serde_json::json!({"id": "module-a"})).await);
+    let whole = text_of(
+        &call(
+            &client,
+            "sokf_read",
+            serde_json::json!({"path": "sokf:module-a"}),
+        )
+        .await,
+    );
     assert!(whole.contains("type: Module"), "{whole}");
     assert!(whole.contains("depends-on -> spec-a"), "{whole}");
     assert!(whole.contains("[Role]"), "{whole}");
@@ -199,7 +232,7 @@ async fn read_whole_and_section() {
         &call(
             &client,
             "sokf_read",
-            serde_json::json!({"id": "module-a", "heading": "Role"}),
+            serde_json::json!({"path": "sokf:module-a#Role"}),
         )
         .await,
     );
@@ -211,22 +244,38 @@ async fn read_whole_and_section() {
         &call(
             &client,
             "sokf_read",
-            serde_json::json!({"id": "module-a", "heading": "(root)"}),
+            serde_json::json!({"path": "sokf:module-a#(root)"}),
         )
         .await,
     );
     assert!(root.contains("[(root)]"), "{root}");
     assert!(!root.contains("[Role]"), "{root}");
 
-    let unknown = call(&client, "sokf_read", serde_json::json!({"id": "module"})).await;
+    let unknown = call(
+        &client,
+        "sokf_read",
+        serde_json::json!({"path": "sokf:module"}),
+    )
+    .await;
     let text = text_of(&unknown);
     assert_eq!(unknown.is_error, Some(true), "{text}");
     assert!(text.contains("module-a"), "{text}");
+
+    let window = text_of(
+        &call(
+            &client,
+            "sokf_read",
+            serde_json::json!({"path": "sokf:module-a#Role", "offset": 2, "limit": 2}),
+        )
+        .await,
+    );
+    assert_eq!(window.lines().count(), 2, "{window}");
+    assert!(!window.contains("module-a —"), "{window}");
     client.cancel().await.unwrap();
 }
 
 #[tokio::test]
-async fn read_of_an_unparseable_file_reports_the_parse_error() {
+async fn physical_read_returns_even_an_unparseable_file_verbatim() {
     let repo = fixture();
     std::fs::write(
         repo.path().join("knowledge/notes/torn.md"),
@@ -235,30 +284,25 @@ async fn read_of_an_unparseable_file_reports_the_parse_error() {
     .unwrap();
     let client = serve_and_client(repo.path()).await;
 
-    let result = call(
+    let expected = "type: Reference\nid: torn\n";
+    let relative = call(
         &client,
         "sokf_read",
-        serde_json::json!({"id": "notes/torn.md"}),
+        serde_json::json!({"path": "knowledge/notes/torn.md"}),
     )
     .await;
-    let text = text_of(&result);
-    assert_eq!(result.is_error, Some(true), "{text}");
-    assert!(text.contains("notes/torn.md"), "{text}");
-    assert!(text.contains("does not parse"), "{text}");
-    assert!(text.contains("no frontmatter"), "{text}");
-    // The near-miss list is what this replaces.
-    assert!(!text.contains("did you mean"), "{text}");
+    assert_ne!(relative.is_error, Some(true));
+    assert_eq!(text_of(&relative), expected.trim_end());
 
-    // A `/`-rooted path names the same file.
-    let rooted = text_of(
-        &call(
-            &client,
-            "sokf_read",
-            serde_json::json!({"id": "/knowledge/notes/torn.md"}),
-        )
-        .await,
-    );
-    assert!(rooted.contains("does not parse"), "{rooted}");
+    let absolute = repo.path().join("knowledge/notes/torn.md");
+    let rooted = text_of(&call(&client, "sokf_read", serde_json::json!({"path": absolute})).await);
+    assert_eq!(rooted, expected.trim_end());
+
+    let outside = repo.path().join("outside.md");
+    std::fs::write(&outside, "secret\n").unwrap();
+    let refused = call(&client, "sokf_read", serde_json::json!({"path": outside})).await;
+    assert_eq!(refused.is_error, Some(true));
+    assert!(text_of(&refused).contains("outside"));
     client.cancel().await.unwrap();
 }
 
@@ -289,7 +333,7 @@ async fn overview_orients_and_warns() {
     let repo = fixture();
     let client = serve_and_client(repo.path()).await;
 
-    let text = text_of(&call(&client, "sokf_overview", serde_json::json!({})).await);
+    let text = text_of(&call(&client, "sokf_read", serde_json::json!({"path": "sokf:"})).await);
     assert!(text.contains("fixture-knowledge"), "{text}");
     assert!(text.contains("3 concepts"), "{text}");
     assert!(text.contains("notes/"), "{text}");

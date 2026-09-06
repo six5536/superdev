@@ -622,7 +622,7 @@ const MCP_REQUESTS: &str = concat!(
     "\n",
     r#"{"jsonrpc":"2.0","method":"notifications/initialized"}"#,
     "\n",
-    r#"{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"sokf_overview","arguments":{}}}"#,
+    r#"{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"sokf_read","arguments":{"path":"sokf:"}}}"#,
     "\n",
 );
 

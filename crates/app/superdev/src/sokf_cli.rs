@@ -11,7 +11,7 @@ use superdev_core::error::{Error, Result};
 use superdev_core::manifest::{CONFIG_PATH, Manifest};
 use superdev_core::sokf::{
     EditRequest, EmbeddingsConfig, ExactEdit, Index, IndexDir, MutationPolicy, MutationResult,
-    SearchRequest, SokfServer, SokfService, WriteRequest, embedder_from, load_bundle,
+    SearchRequest, SokfServer, SokfService, WriteRequest, embedder_from, line_window, load_bundle,
 };
 
 use crate::cli::{INDEX_DIR, io_error, knowledge_dir, out};
@@ -386,26 +386,6 @@ fn required<'a, T>(value: Option<&'a T>, message: &str) -> Result<&'a T> {
 fn sokf_error<T>(message: &str) -> Result<T> {
     Err(Error::Sokf {
         message: message.into(),
-    })
-}
-
-/// Apply the coding-tool line window to rendered concept text.
-fn line_window(text: &str, offset: Option<usize>, limit: Option<usize>) -> Result<String> {
-    let lines: Vec<&str> = text.lines().collect();
-    let start = offset.unwrap_or(1).saturating_sub(1);
-    if start >= lines.len() {
-        return Err(Error::Sokf {
-            message: format!(
-                "offset {} is beyond end of concept ({} rendered lines total)",
-                offset.unwrap_or(1),
-                lines.len()
-            ),
-        });
-    }
-    let selected = lines.into_iter().skip(start);
-    Ok(match limit {
-        Some(limit) => selected.take(limit).collect::<Vec<_>>().join("\n"),
-        None => selected.collect::<Vec<_>>().join("\n"),
     })
 }
 

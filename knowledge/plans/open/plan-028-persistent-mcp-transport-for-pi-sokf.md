@@ -39,7 +39,7 @@ for independent shell commands, and general MCP support for Pi.
 - contract-003-api-sokf: replace the `sokf_read { id, heading }` and
   `sokf_overview` interface with `sokf_read { path, offset?, limit? }`; add
   `P_coding-read` with `AC_overview-address`, `AC_concept-address`,
-  `AC_physical-contained`, and `AC_line-window`; change
+  `AC_physical-contained`, `AC_physical-refused`, and `AC_line-window`; change
   `P_direct-retrieval-skips-index` to exclude the overview address and change
   `P_overview-warning-cap` to bind that address; preserve `sokf_search`,
   `sokf_graph`, `sokf_edit` and `sokf_write`; revise `P_fails-at-startup` so
@@ -54,7 +54,7 @@ for independent shell commands, and general MCP support for Pi.
 
 ### Block 1: Coding-tool-shaped MCP reads
 
-- [ ] Done — ticked by build at its commit.
+- [x] Done — ticked by build at its commit.
 - Depends-on: none.
 - Change: revise contract-003 first, then change `sokf_read` to accept `path`,
   `offset` and `limit`. Share virtual-address parsing and rendered line
@@ -73,7 +73,8 @@ for independent shell commands, and general MCP support for Pi.
     (covers AC_concept-address).
   - unit: relative and absolute physical paths inside `knowledge/` return exact
     file text, including for a concept that does not parse, while either form
-    outside that root is refused (covers AC_physical-contained).
+    outside that root is refused (covers AC_physical-contained and
+    AC_physical-refused).
   - unit: offset and limit apply after metadata and headings are rendered,
     matching CLI read semantics (covers AC_line-window).
   - regression: unknown IDs retain near-miss recovery and malformed addresses

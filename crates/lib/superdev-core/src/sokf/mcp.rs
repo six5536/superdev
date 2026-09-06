@@ -5,7 +5,7 @@
 //! sync is incremental, so the cost is the files that changed.
 
 use std::collections::{BTreeMap, HashMap};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use rmcp::ServerHandler;
 use rmcp::handler::server::router::tool::ToolRouter;
@@ -27,7 +27,7 @@ use crate::validate::sokf::validate;
 /// Most lines rendered per group before the tail is summarised.
 const GROUP_CAP: usize = 30;
 
-/// Most warnings listed by `sokf_overview`.
+/// Most warnings listed by the `sokf:` overview read.
 const WARNING_CAP: usize = 10;
 
 /// Most hits one search may ask for. Retrieval widens the caller's limit
@@ -101,15 +101,17 @@ pub struct SearchRequest {
     pub lifecycle: Option<Vec<String>>,
 }
 
-/// Arguments of `sokf_read`.
+/// Arguments of `sokf_read`, shaped like a familiar coding read tool.
 #[derive(Debug, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
 #[schemars(crate = "rmcp::schemars")]
 struct ReadArgs {
-    /// Concept `id`, or its bundle-relative path.
-    id: String,
-    /// One section's heading, or the `a > b` heading path; omit for the whole
-    /// concept.
-    heading: Option<String>,
+    /// `sokf:`, a virtual concept address, or a physical path inside knowledge.
+    path: String,
+    /// First rendered or physical line to return, starting at 1.
+    offset: Option<usize>,
+    /// Most lines to return.
+    limit: Option<usize>,
 }
 
 /// Arguments of `sokf_graph`.
@@ -168,6 +170,60 @@ impl SokfService {
             message: format!("no concept for `{identity}`"),
         })?;
         render_concept(concept, &identity, heading).map_err(|message| Error::Sokf { message })
+    }
+
+    /// Read an overview, virtual concept address, or contained physical file.
+    pub fn read_path(
+        &self,
+        path: &str,
+        offset: Option<usize>,
+        limit: Option<usize>,
+    ) -> crate::error::Result<String> {
+        let text = if path == "sokf:" {
+            self.overview()?
+        } else if let Some(address) = path.strip_prefix("sokf:") {
+            let (id, heading) = match address.split_once('#') {
+                Some((id, heading)) if !id.is_empty() && !heading.is_empty() => (id, Some(heading)),
+                Some(_) => return sokf_error(format!("invalid SOKF address `{path}`")),
+                None if !address.is_empty() => (address, None),
+                None => unreachable!("the overview address was handled above"),
+            };
+            self.read(id, heading)?
+        } else {
+            std::fs::read_to_string(self.contained_read_path(path)?).map_err(|source| {
+                Error::Io {
+                    path: PathBuf::from(path),
+                    source,
+                }
+            })?
+        };
+        line_window(&text, offset, limit)
+    }
+
+    /// Resolve one existing physical read without allowing knowledge escapes.
+    fn contained_read_path(&self, requested: &str) -> crate::error::Result<PathBuf> {
+        let requested = Path::new(requested);
+        let candidate = if requested.is_absolute() {
+            requested.to_path_buf()
+        } else {
+            self.repo_root.join(requested)
+        };
+        let root = std::fs::canonicalize(&self.bundle_dir).map_err(|source| Error::Io {
+            path: self.bundle_dir.clone(),
+            source,
+        })?;
+        let resolved = std::fs::canonicalize(&candidate).map_err(|source| Error::Io {
+            path: candidate.clone(),
+            source,
+        })?;
+        if !resolved.starts_with(&root) {
+            return sokf_error(format!(
+                "read path `{}` is outside `{}`",
+                requested.display(),
+                self.bundle_dir.display()
+            ));
+        }
+        Ok(resolved)
     }
 
     /// Apply exact replacements to an existing concept, then repair and validate.
@@ -257,12 +313,12 @@ impl SokfServer {
             .map_err(tool_error)
     }
 
-    /// Read one concept whole, or one of its sections.
+    /// Read an overview, concept, section, or contained physical knowledge file.
     #[tool]
     async fn sokf_read(&self, Parameters(args): Parameters<ReadArgs>) -> ToolResult {
         let _guard = self.exclusive();
         self.service
-            .read(&args.id, args.heading.as_deref())
+            .read_path(&args.path, args.offset, args.limit)
             .map(text)
             .map_err(tool_error)
     }
@@ -300,13 +356,6 @@ impl SokfServer {
             .map_err(tool_error)
     }
 
-    /// Orient in the bundle: its name, size, directory tree, and anything
-    /// validation found wrong.
-    #[tool]
-    async fn sokf_overview(&self) -> ToolResult {
-        let _guard = self.exclusive();
-        self.service.overview().map(text).map_err(tool_error)
-    }
     // sokf:end tools
 
     /// Serve MCP over stdio until the client disconnects.
@@ -345,12 +394,40 @@ impl SokfServer {
 impl ServerHandler for SokfServer {
     fn get_info(&self) -> ServerInfo {
         ServerInfo::new(ServerCapabilities::builder().enable_tools().build()).with_instructions(
-            "Access to this repository's canonical SOKF knowledge. Start with \
-             sokf_overview, use sokf_search and sokf_read for project knowledge, follow \
-             links with sokf_graph, and use sokf_edit or sokf_write for agent-safe \
-             mutations. Mutations repair and validate automatically.",
+            "Access to this repository's canonical SOKF knowledge. Read `sokf:` for an \
+             overview, use sokf_search and sokf_read for project knowledge, follow links \
+             with sokf_graph, and use sokf_edit or sokf_write for agent-safe mutations. \
+             Mutations repair and validate automatically.",
         )
     }
+}
+
+/// Apply a coding-tool line window after SOKF content is rendered.
+pub fn line_window(
+    text: &str,
+    offset: Option<usize>,
+    limit: Option<usize>,
+) -> crate::error::Result<String> {
+    let lines: Vec<&str> = text.lines().collect();
+    let start = offset.unwrap_or(1).saturating_sub(1);
+    if start >= lines.len() {
+        return sokf_error(format!(
+            "offset {} is beyond end of concept ({} rendered lines total)",
+            offset.unwrap_or(1),
+            lines.len()
+        ));
+    }
+    let selected = lines.into_iter().skip(start);
+    Ok(match limit {
+        Some(limit) => selected.take(limit).collect::<Vec<_>>().join("\n"),
+        None => selected.collect::<Vec<_>>().join("\n"),
+    })
+}
+
+fn sokf_error<T>(message: impl Into<String>) -> crate::error::Result<T> {
+    Err(Error::Sokf {
+        message: message.into(),
+    })
 }
 
 /// The caller's `limit`, bounded to something the retrieval stage can
