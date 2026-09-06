@@ -472,6 +472,9 @@ This approach gives agents familiar mechanics without presenting semantic search
   failure is retained for the next manual turn and raises a user notification.
 - Behavioral fixtures use `sokf-behavior/v1`. A structural Node test protects
   the 12-scenario roster; model-session execution and scoring remain separate.
+- The script test suite loads the real adapter through Pi when Pi is available.
+  A model-free sandbox checks CLI/adapter result parity, subdirectory routing,
+  applied-invalid behavior, and the two-turn validation-feedback bound.
 
 ## Open decisions
 

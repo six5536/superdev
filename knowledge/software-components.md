@@ -123,7 +123,10 @@ walks to the repository root before invoking `superdev`, so it also works when
 Pi starts in a subdirectory. After a turn mutates knowledge, the extension runs
 final validation. A failure queues at most two repair turns with the validator
 report; a persistent failure stops automatic feedback and waits for manual
-continuation.
+continuation. `scripts/test/sokf-pi-adapter.test.mjs` loads the real extension
+through Pi when Pi is installed. Its sandbox checks virtual retrieval,
+structured edit results, subdirectory physical writes, applied-invalid
+handling, and bounded validation feedback without making a model call.
 
 `pack/knowledge/skills/sokf-authoring/SKILL.md` is the canonical packaged
 authoring skill. The knowledge capability deploys it to
