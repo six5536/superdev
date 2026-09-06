@@ -1,8 +1,8 @@
 //! mcp.rs — the SOKF MCP server: retrieval and safe mutation over one bundle.
 //!
-//! Every call reloads the bundle from disk and syncs the index before it
-//! answers, so a concept edited between calls is visible to the next one; the
-//! sync is incremental, so the cost is the files that changed.
+//! Every call reads current knowledge from disk. Search and overview sync the
+//! index incrementally; direct reads, graph traversal, and mutations do not
+//! initialize or open it.
 
 use std::collections::{BTreeMap, HashMap};
 use std::path::{Path, PathBuf};
@@ -245,12 +245,17 @@ impl SokfService {
             };
             self.read(id, heading)?
         } else {
-            std::fs::read_to_string(self.contained_read_path(path)?).map_err(|source| {
-                Error::Io {
-                    path: PathBuf::from(path),
-                    source,
-                }
-            })?
+            let text =
+                std::fs::read_to_string(self.contained_read_path(path)?).map_err(|source| {
+                    Error::Io {
+                        path: PathBuf::from(path),
+                        source,
+                    }
+                })?;
+            if offset.is_none() && limit.is_none() {
+                return Ok(text);
+            }
+            text
         };
         line_window(&text, offset, limit)
     }
@@ -485,6 +490,9 @@ pub fn line_window(
 ) -> crate::error::Result<String> {
     let lines: Vec<&str> = text.lines().collect();
     let start = offset.unwrap_or(1).saturating_sub(1);
+    if lines.is_empty() && start == 0 {
+        return Ok(String::new());
+    }
     if start >= lines.len() {
         return sokf_error(format!(
             "offset {} is beyond end of concept ({} rendered lines total)",

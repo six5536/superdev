@@ -175,6 +175,11 @@ export class SokfMcpClient {
 	private request(method: string, params: JsonObject, signal?: AbortSignal): Promise<JsonObject> {
 		const child = this.child;
 		if (!child) return Promise.reject(new Error("SOKF MCP server is not running"));
+		if (signal?.aborted) {
+			const error = abortError();
+			this.terminate(error);
+			return Promise.reject(error);
+		}
 		const id = this.nextId++;
 		return new Promise<JsonObject>((accept, reject) => {
 			const onAbort = () => this.terminate(abortError());

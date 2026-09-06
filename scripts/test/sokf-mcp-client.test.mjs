@@ -66,6 +66,25 @@ test("process diagnostics are bounded and the next call restarts after abort", a
   assert.equal((await readFile(restarted.log, "utf8")).trim().split("\n").length, 2);
 });
 
+test("an abort between initialization and a tool request restarts cleanly", async () => {
+  const interrupted = await setup();
+  const mcp = client(interrupted.repo, "normal", interrupted.log);
+  let checks = 0;
+  const signal = {
+    get aborted() {
+      checks += 1;
+      return checks >= 3;
+    },
+    addEventListener() {},
+    removeEventListener() {},
+  };
+  await assert.rejects(mcp.callTool("sokf_graph", {}, signal), { name: "AbortError" });
+  const recovered = await mcp.callTool("sokf_graph", {});
+  assert.equal(recovered.content?.[0]?.text, "sokf_graph:1");
+  await mcp.close();
+  assert.equal((await readFile(interrupted.log, "utf8")).trim().split("\n").length, 2);
+});
+
 test("different repositories receive different children", async () => {
   const first = await setup();
   const secondRepo = join(first.root, "other");

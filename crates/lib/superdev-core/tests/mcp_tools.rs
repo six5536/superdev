@@ -279,12 +279,13 @@ async fn physical_read_returns_even_an_unparseable_file_verbatim() {
     let repo = fixture();
     std::fs::write(
         repo.path().join("knowledge/notes/torn.md"),
-        "type: Reference\nid: torn\n",
+        "type: Reference\r\nid: torn\r\n",
     )
     .unwrap();
+    std::fs::write(repo.path().join("knowledge/notes/empty.md"), "").unwrap();
     let client = serve_and_client(repo.path()).await;
 
-    let expected = "type: Reference\nid: torn\n";
+    let expected = "type: Reference\r\nid: torn\r\n";
     let relative = call(
         &client,
         "sokf_read",
@@ -292,11 +293,20 @@ async fn physical_read_returns_even_an_unparseable_file_verbatim() {
     )
     .await;
     assert_ne!(relative.is_error, Some(true));
-    assert_eq!(text_of(&relative), expected.trim_end());
+    assert_eq!(text_of(&relative), expected);
 
     let absolute = repo.path().join("knowledge/notes/torn.md");
     let rooted = text_of(&call(&client, "sokf_read", serde_json::json!({"path": absolute})).await);
-    assert_eq!(rooted, expected.trim_end());
+    assert_eq!(rooted, expected);
+
+    let empty = call(
+        &client,
+        "sokf_read",
+        serde_json::json!({"path": "knowledge/notes/empty.md"}),
+    )
+    .await;
+    assert_ne!(empty.is_error, Some(true));
+    assert_eq!(text_of(&empty), "");
 
     let outside = repo.path().join("outside.md");
     std::fs::write(&outside, "secret\n").unwrap();
