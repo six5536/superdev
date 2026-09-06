@@ -133,15 +133,20 @@ export default function superdev(pi: ExtensionAPI) {
 	});
 	if (childRole) return;
 
-	const workflowOwner = async (cwd: string) => {
+	type WorkflowStatus = {
+		owner?: { session_id?: string; identity?: { plan?: string } };
+		phase?: "scope" | "build" | "accept";
+	};
+	const workflowStatus = async (cwd: string): Promise<WorkflowStatus> => {
 		const result = await pi.exec("superdev", ["workflow", "status", "--json"], { cwd });
-		if (result.code !== 0) return undefined;
+		if (result.code !== 0) return {};
 		try {
-			return JSON.parse(result.stdout).result?.owner as { session_id?: string; identity?: { plan?: string } } | undefined;
+			return JSON.parse(result.stdout).result as WorkflowStatus;
 		} catch {
-			return undefined;
+			return {};
 		}
 	};
+	const workflowOwner = async (cwd: string) => (await workflowStatus(cwd)).owner;
 	const protectOwnedWorkflow = async (ctx: { cwd: string; ui: { notify(message: string, level: "warning"): void } }) => {
 		const owner = await workflowOwner(ctx.cwd);
 		if (!owner) return;
@@ -151,8 +156,11 @@ export default function superdev(pi: ExtensionAPI) {
 	pi.on("session_before_switch", async (_event, ctx) => protectOwnedWorkflow(ctx));
 	pi.on("session_before_fork", async (_event, ctx) => protectOwnedWorkflow(ctx));
 	pi.on("session_start", async (_event, ctx) => {
-		const owner = await workflowOwner(ctx.cwd);
-		ctx.ui.setStatus("superdev-workflow", owner ? `workflow: ${owner.identity?.plan ?? "owned"}` : undefined);
+		const status = await workflowStatus(ctx.cwd);
+		ctx.ui.setStatus(
+			"superdev-workflow",
+			status.owner ? `${status.phase?.toUpperCase() ?? "WORKFLOW"}: ${status.owner.identity?.plan ?? "owned"}` : undefined,
+		);
 	});
 
 	pi.registerTool({

@@ -294,13 +294,21 @@ pub fn run(command: &WorkflowCommand, root: &Path) -> Result<u8> {
             }
             bind(&root, args)
         }
-        WorkflowCommand::Status { json: _ } => emit(
-            "status",
-            &serde_json::json!({
-                "owner": cache::load(&root)?,
-                "openWorkflows": discover_open_workflows(&root)?,
-            }),
-        ),
+        WorkflowCommand::Status { json: _ } => {
+            let owner = cache::load(&root)?;
+            let phase = owner
+                .as_ref()
+                .map(|state| plan_record(&root, &state.identity.plan).map(|record| record.phase))
+                .transpose()?;
+            emit(
+                "status",
+                &serde_json::json!({
+                    "owner": owner,
+                    "phase": phase,
+                    "openWorkflows": discover_open_workflows(&root)?,
+                }),
+            )
+        }
         WorkflowCommand::Cancel(args) => {
             cache::release(&root, &args.session)?;
             emit(
