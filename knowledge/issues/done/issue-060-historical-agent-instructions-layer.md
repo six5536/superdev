@@ -2,7 +2,7 @@
 type: Issue
 id: issue-060-historical-agent-instructions-layer
 title: 'Historical plan: Agent Instructions Layer'
-description: Migration-derived issue preserving the primary issue relationship for plan-002-agent-instructions-layer.
+description: Migration-derived issue preserving plan-002-agent-instructions-layer's required primary issue relationship.
 kind: chore
 lifecycle: done
 ---

@@ -47,6 +47,44 @@ fn locked<T>(root: &Path, operation: impl FnOnce() -> Result<T>) -> Result<T> {
     result
 }
 
+/// A repository-wide workflow transaction. While this value is borrowed, no
+/// other workflow cache transaction can interleave canonical publication with
+/// its ownership compare-and-swap.
+pub struct Transaction<'a> {
+    root: &'a Path,
+}
+
+impl Transaction<'_> {
+    /// Read transient ownership without reacquiring the transaction lock.
+    pub fn load(&self) -> Result<Option<WorkflowCache>> {
+        load_unlocked(self.root)
+    }
+
+    /// Compare and swap ownership state while retaining the transaction lock.
+    pub fn compare_and_swap(
+        &mut self,
+        session: &str,
+        expected_revision: &str,
+        update: impl FnOnce(&mut WorkflowCache),
+    ) -> Result<WorkflowCache> {
+        compare_and_swap_unlocked(self.root, session, expected_revision, update)
+    }
+
+    /// Release matching ownership while retaining the transaction lock.
+    pub fn release(&mut self, session: &str) -> Result<()> {
+        release_unlocked(self.root, session)
+    }
+}
+
+/// Hold the repository workflow lock across canonical validation, publication,
+/// and the cache compare-and-swap performed by `operation`.
+pub fn transaction<T>(
+    root: &Path,
+    operation: impl FnOnce(&mut Transaction<'_>) -> Result<T>,
+) -> Result<T> {
+    locked(root, || operation(&mut Transaction { root }))
+}
+
 /// Read transient ownership. Absence means unowned, never complete.
 pub fn load(root: &Path) -> Result<Option<WorkflowCache>> {
     locked(root, || load_unlocked(root))
@@ -95,40 +133,51 @@ pub fn compare_and_swap(
     update: impl FnOnce(&mut WorkflowCache),
 ) -> Result<WorkflowCache> {
     locked(root, || {
-        let mut cache = load_unlocked(root)?.ok_or_else(|| Error::Manifest {
-            message: "workflow has no owning Pi session; bind or resume it first".into(),
-        })?;
-        if cache.session_id != session {
-            return Err(Error::Manifest {
-                message: format!("workflow is owned by Pi session `{}`", cache.session_id),
-            });
-        }
-        if cache.last_plan_revision != expected_revision {
-            return Err(Error::Manifest {
-                message: "workflow plan revision changed; reload status before mutating".into(),
-            });
-        }
-        update(&mut cache);
-        save_unlocked(root, &cache)?;
-        Ok(cache)
+        compare_and_swap_unlocked(root, session, expected_revision, update)
     })
+}
+
+fn compare_and_swap_unlocked(
+    root: &Path,
+    session: &str,
+    expected_revision: &str,
+    update: impl FnOnce(&mut WorkflowCache),
+) -> Result<WorkflowCache> {
+    let mut cache = load_unlocked(root)?.ok_or_else(|| Error::Manifest {
+        message: "workflow has no owning Pi session; bind or resume it first".into(),
+    })?;
+    if cache.session_id != session {
+        return Err(Error::Manifest {
+            message: format!("workflow is owned by Pi session `{}`", cache.session_id),
+        });
+    }
+    if cache.last_plan_revision != expected_revision {
+        return Err(Error::Manifest {
+            message: "workflow plan revision changed; reload status before mutating".into(),
+        });
+    }
+    update(&mut cache);
+    save_unlocked(root, &cache)?;
+    Ok(cache)
 }
 
 /// Release ownership for the matching session without touching canonical state.
 pub fn release(root: &Path, session: &str) -> Result<()> {
-    locked(root, || {
-        let Some(cache) = load_unlocked(root)? else {
-            return Ok(());
-        };
-        if cache.session_id != session {
-            return Err(Error::Manifest {
-                message: format!("workflow is owned by Pi session `{}`", cache.session_id),
-            });
-        }
-        fs::remove_file(path(root)).map_err(|source| Error::Io {
-            path: path(root),
-            source,
-        })
+    locked(root, || release_unlocked(root, session))
+}
+
+fn release_unlocked(root: &Path, session: &str) -> Result<()> {
+    let Some(cache) = load_unlocked(root)? else {
+        return Ok(());
+    };
+    if cache.session_id != session {
+        return Err(Error::Manifest {
+            message: format!("workflow is owned by Pi session `{}`", cache.session_id),
+        });
+    }
+    fs::remove_file(path(root)).map_err(|source| Error::Io {
+        path: path(root),
+        source,
     })
 }
 
@@ -192,6 +241,47 @@ mod tests {
         assert!(release(root.path(), "b").is_err());
         release(root.path(), "a").unwrap();
         assert!(load(root.path()).unwrap().is_none());
+    }
+
+    #[test]
+    fn a_repository_transaction_serializes_publication_and_cache_cas() {
+        use std::sync::mpsc;
+        use std::time::Duration;
+
+        let root = std::sync::Arc::new(tempfile::tempdir().unwrap());
+        bind(root.path(), &state("a")).unwrap();
+        let (entered_tx, entered_rx) = mpsc::channel();
+        let (release_tx, release_rx) = mpsc::channel();
+        let held_root = std::sync::Arc::clone(&root);
+        let held = std::thread::spawn(move || {
+            transaction(held_root.path(), |transaction| {
+                assert!(transaction.load()?.is_some());
+                entered_tx.send(()).unwrap();
+                release_rx.recv().unwrap();
+                Ok(())
+            })
+            .unwrap();
+        });
+        entered_rx.recv().unwrap();
+
+        let (finished_tx, finished_rx) = mpsc::channel();
+        let waiting_root = std::sync::Arc::clone(&root);
+        let waiting = std::thread::spawn(move || {
+            compare_and_swap(waiting_root.path(), "a", "one", |cache| {
+                cache.last_plan_revision = "two".into();
+            })
+            .unwrap();
+            finished_tx.send(()).unwrap();
+        });
+        assert!(finished_rx.recv_timeout(Duration::from_millis(50)).is_err());
+        release_tx.send(()).unwrap();
+        finished_rx.recv_timeout(Duration::from_secs(2)).unwrap();
+        held.join().unwrap();
+        waiting.join().unwrap();
+        assert_eq!(
+            load(root.path()).unwrap().unwrap().last_plan_revision,
+            "two"
+        );
     }
 
     #[test]

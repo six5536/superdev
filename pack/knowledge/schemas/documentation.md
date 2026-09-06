@@ -34,22 +34,22 @@ sections:
   - heading: "Documentation map"
     level: 1
     required: true
-    description: The document title.
+    description: The required title of the documentation inventory.
   - heading: "Policy"
     level: 2
     required: true
     content: prose
-    description: How SCOPE, BUILD, and ACCEPT consume this map.
+    description: The policy governing how SCOPE, BUILD, and ACCEPT consume the map.
   - heading: "Surfaces"
     level: 2
     required: true
-    description: Container for one or more stable named surfaces.
+    description: The container for one or more stable, named documentation surfaces.
   - heading-pattern: '^Surface: [a-z0-9-]+$'
     level: 3
     required: true
     repeatable: true
     content: bullet-list
-    description: One audience-facing surface with all ten declaration fields.
+    description: One audience-facing surface declaring all required ownership, trigger, generation, and verification fields.
     item-only-pattern: '^- (Audience and purpose|Kind|Authored sources|Generated outputs|Source of truth|Triggers|Generation command|Verification command|Generated output|Publication owner): .+$'
 example: |
   ---

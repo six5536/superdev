@@ -35,7 +35,17 @@ links:
 
 ## Context
 
-The knowledge-carried workflow assigns its loop to both BUILD and execute-plan, binds continuation to Claude Code Stop hooks, leaves manual plan cases without an executor, closes plans before acceptance, and treats user documentation as a generic final reminder. Those rules come from [ADR-018][sokf:adr-018-loop-in-the-skill-enforcement-in-the-hook], [ADR-019][sokf:adr-019-run-state-is-a-session-owned-file-behind-cli-verbs], [ADR-020][sokf:adr-020-a-blocked-run-ends], [ADR-021][sokf:adr-021-nothing-unattended-reaches-the-default-branch], [ADR-028][sokf:adr-028-the-contract-design-go-ahead-is-an-explicit-interaction], [ADR-044][sokf:adr-044-a-pending-marker-applies-to-prose-and-a-declaration-goes-first-in-source], and [ADR-050][sokf:adr-050-keys-and-ears-live-in-the-contracts-and-the-workflow-is-file-scope-build-accept]. A long-lived workflow also needs to resume after a Pi session or child agent ends without making TypeScript a second authority over project state.
+The knowledge-carried workflow assigns its loop to both BUILD and execute-plan, binds continuation to Claude Code Stop hooks, leaves manual plan cases without an executor, closes plans before acceptance, and treats user documentation as a generic final reminder. The superseded decisions are:
+
+- [ADR-018][sokf:adr-018-loop-in-the-skill-enforcement-in-the-hook]
+- [ADR-019][sokf:adr-019-run-state-is-a-session-owned-file-behind-cli-verbs]
+- [ADR-020][sokf:adr-020-a-blocked-run-ends]
+- [ADR-021][sokf:adr-021-nothing-unattended-reaches-the-default-branch]
+- [ADR-028][sokf:adr-028-the-contract-design-go-ahead-is-an-explicit-interaction]
+- [ADR-044][sokf:adr-044-a-pending-marker-applies-to-prose-and-a-declaration-goes-first-in-source]
+- [ADR-050][sokf:adr-050-keys-and-ears-live-in-the-contracts-and-the-workflow-is-file-scope-build-accept]
+
+A long-lived workflow also needs to resume after a Pi session or child agent ends without making TypeScript a second authority over project state.
 
 ## Decision
 

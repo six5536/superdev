@@ -20,8 +20,9 @@ links:
 The Rust service is the sole durable workflow authority under
 [ADR-052][sokf:adr-052-the-workflow-is-scope-build-accept-under-a-durable-core].
 Pi orchestrates user interaction and isolated children through the versioned
-CLI protocol; it does not own phase state or Git policy. Source materialization
-follows [ADR-042][sokf:adr-042-a-contracts-definition-is-materialized-from-source].
+CLI protocol; it does not own phase state or Git policy. Contract Definition
+materialization follows
+[ADR-042][sokf:adr-042-a-contracts-definition-is-materialized-from-source].
 
 ## Definition
 
@@ -376,10 +377,11 @@ mod tests {
 - `P_accept-policy` [event] WHEN ACCEPT decides a candidate, the service SHALL derive human acceptance solely from project configuration before merging an accepted closure locally with `git merge --no-ff`.
 - `P_cancel-pauses` [event] WHEN cancellation occurs, the service SHALL release transient ownership without changing the canonical phase or deleting uncommitted SCOPE drafts.
 - `P_abandon-human-only` [event] WHEN abandonment is requested, the service SHALL require interactive human approval while excluding partial product work from integration.
-- `P_evidence-durable` [event] WHEN an isolated scope review or final BUILD review completes cleanly, the evidence command SHALL append its distinct reviewer session and immutable revisions to canonical Completion evidence.
-- `P_gates-derived` [ubiquitous] Phase transitions SHALL derive non-human gates from canonical evidence and repository state rather than boolean gate flags.
+- `P_evidence-durable` [event] WHEN an isolated scope review or final BUILD review completes cleanly, the evidence command SHALL record the distinct reviewer session and immutable revisions in canonical Completion evidence.
+- `P_gates-derived` [ubiquitous] Phase transitions SHALL calculate non-human gates from canonical evidence and repository state rather than caller-provided boolean flags.
 - `P_resume-recovers-evidence` [event] WHEN ownership resumes, the service SHALL reconstruct candidate and verified-default revisions from canonical Completion evidence rather than treating cache loss as evidence loss.
 - `P_closure-transactional` [event] WHEN acceptance or abandonment closes records, the service SHALL stage, repair, and validate the complete knowledge closure before publishing it.
+- `P_transition-atomic` [ubiquitous] Evidence, transition, reopening, closure, and integration operations SHALL hold the repository workflow lock through canonical publication and the ownership compare-and-swap.
 
 ### Cross-cutting concerns
 

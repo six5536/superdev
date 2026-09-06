@@ -148,7 +148,7 @@ none.
 
 ## Completion evidence
 
-Historical plan migrated mechanically. Original completion evidence remains in its work blocks and Git history.
+Historical plan migrated mechanically to the canonical plan shape. Original completion evidence remains preserved in its work blocks and Git history.
 
 <!-- sokf:links -->
 [sokf:issue-060-historical-agent-instructions-layer]: /knowledge/issues/done/issue-060-historical-agent-instructions-layer.md

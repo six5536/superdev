@@ -125,10 +125,10 @@ sections:
     item-pattern: '^- \[[ xX]\] .+$'
     description: >
       BUILD-time behavioural, scope, architectural, security, or ambiguous
-      discoveries. Each checkbox names the evidence, phase or block, and
-      disposition. Unresolved items remain unchecked; SCOPE ticks resolved
-      items with a concise requirement, contract, ADR, plan, or follow-up
-      reference. Omit when there are none.
+      discoveries represented as checkbox bullets. Each item names the evidence,
+      phase or block, and disposition. Unresolved items remain unchecked; SCOPE
+      ticks resolved items with a concise requirement, contract, ADR, plan, or
+      follow-up reference. Omit the section when there are none.
   - heading: "Resolution"
     level: 2
     required: true

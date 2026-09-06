@@ -350,8 +350,8 @@ pub fn run(command: &WorkflowCommand, root: &Path) -> Result<u8> {
                 Some(&args.reason),
             )
         }
-        WorkflowCommand::Integrate(args) => {
-            let state = cache::load(&root)?.ok_or_else(|| Error::Manifest {
+        WorkflowCommand::Integrate(args) => cache::transaction(&root, |transaction| {
+            let state = transaction.load()?.ok_or_else(|| Error::Manifest {
                 message: "workflow is unowned".into(),
             })?;
             if state.session_id != args.session {
@@ -418,12 +418,12 @@ pub fn run(command: &WorkflowCommand, root: &Path) -> Result<u8> {
                 &state.identity.work_branch,
                 &args.expected_work,
             )?;
-            cache::release(&root, &args.session)?;
+            transaction.release(&args.session)?;
             emit(
                 "integrate",
                 &serde_json::json!({"merged": true, "pushed": false, "branchDeleted": false}),
             )
-        }
+        }),
     }
 }
 
@@ -767,7 +767,17 @@ fn knowledge_contains(root: &Path, needle: &str) -> Result<bool> {
 }
 
 fn record_evidence(root: &Path, args: &EvidenceArgs) -> Result<u8> {
-    let state = cache::load(root)?.ok_or_else(|| Error::Manifest {
+    cache::transaction(root, |transaction| {
+        record_evidence_locked(root, args, transaction)
+    })
+}
+
+fn record_evidence_locked(
+    root: &Path,
+    args: &EvidenceArgs,
+    transaction: &mut cache::Transaction<'_>,
+) -> Result<u8> {
+    let state = transaction.load()?.ok_or_else(|| Error::Manifest {
         message: "workflow is unowned".into(),
     })?;
     if state.session_id != args.session || state.last_plan_revision != args.expected_revision {
@@ -846,7 +856,7 @@ fn record_evidence(root: &Path, args: &EvidenceArgs) -> Result<u8> {
     };
     apply_plan_edits_transactionally(root, &path, vec![completion_evidence_edit(&text, &lines)?])?;
     let revision = plan_revision(root, &state.identity.plan)?.1;
-    let state = cache::compare_and_swap(root, &args.session, &args.expected_revision, |state| {
+    let state = transaction.compare_and_swap(&args.session, &args.expected_revision, |state| {
         state.last_plan_revision.clone_from(&revision);
         if candidate.is_some() {
             state.candidate_revision.clone_from(&candidate);
@@ -864,7 +874,19 @@ fn transition(
     abandon: bool,
     abandonment_reason: Option<&str>,
 ) -> Result<u8> {
-    let state = cache::load(root)?.ok_or_else(|| Error::Manifest {
+    cache::transaction(root, |transaction| {
+        transition_locked(root, args, abandon, abandonment_reason, transaction)
+    })
+}
+
+fn transition_locked(
+    root: &Path,
+    args: &TransitionArgs,
+    abandon: bool,
+    abandonment_reason: Option<&str>,
+    transaction: &mut cache::Transaction<'_>,
+) -> Result<u8> {
+    let state = transaction.load()?.ok_or_else(|| Error::Manifest {
         message: "workflow is unowned".into(),
     })?;
     if state.session_id != args.session || state.last_plan_revision != args.expected_revision {
@@ -1042,7 +1064,7 @@ fn transition(
         apply_plan_edits_transactionally(root, &path, edits)?;
     }
     let revision = plan_revision(root, &state.identity.plan)?.1;
-    let state = cache::compare_and_swap(root, &args.session, &args.expected_revision, |state| {
+    let state = transaction.compare_and_swap(&args.session, &args.expected_revision, |state| {
         state.last_plan_revision.clone_from(&revision);
         if let Some(candidate) = candidate_revision {
             state.candidate_revision = Some(candidate);

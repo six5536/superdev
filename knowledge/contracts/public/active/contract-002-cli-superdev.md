@@ -612,10 +612,11 @@ usage errors and the side effects.
   command SHALL require the owning session and expected plan revision.
 - `P_workflow-cancel-pauses` [event] WHEN `workflow cancel` succeeds,
   it SHALL release transient ownership without changing canonical phase.
-- `P_workflow-local-integration` [ubiquitous] `workflow integrate` SHALL
-  use shell-free local `git merge --no-ff` after clean-tree and expected-tip
-  checks, without pushing, releasing, deleting branches, stashing, resetting,
-  discarding, absorbing unrelated changes, or resolving conflicts implicitly.
+- `P_workflow-local-integration` [ubiquitous] After clean-tree and expected-tip
+  checks, `workflow integrate` SHALL execute shell-free local
+  `git merge --no-ff` without pushing, releasing, deleting branches, stashing,
+  resetting, discarding, absorbing unrelated changes, or resolving conflicts
+  implicitly.
 - `P_workflow-integration-bound` [ubiquitous] `workflow integrate` SHALL
   require the bound issue, plan, refs, reviewed candidate, verified default
   tip, done closure, and administrative-only descendants to agree.
