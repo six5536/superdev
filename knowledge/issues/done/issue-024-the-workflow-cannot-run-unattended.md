@@ -175,6 +175,6 @@ The decisions are ADR-018 through ADR-021, and the Stop hook body is
 
 <!-- sokf:links -->
 [sokf:contract-002-cli-superdev]: /knowledge/contracts/public/active/contract-002-cli-superdev.md
-[sokf:contract-009-interface-run-state]: /knowledge/contracts/internal/active/contract-009-interface-run-state.md
+[sokf:contract-009-interface-run-state]: /knowledge/contracts/internal/deprecated/contract-009-interface-run-state.md
 [sokf:plan-004-workflow-autonomy]: /knowledge/plans/done/plan-004-workflow-autonomy.md
 [sokf:plan-013-workflow-autonomy]: /knowledge/plans/done/plan-013-workflow-autonomy.md

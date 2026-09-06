@@ -256,7 +256,7 @@ none.
 Historical plan migrated mechanically; original evidence remains in its work blocks and Git history.
 
 <!-- sokf:links -->
-[sokf:contract-009-interface-run-state]: /knowledge/contracts/internal/active/contract-009-interface-run-state.md
+[sokf:contract-009-interface-run-state]: /knowledge/contracts/internal/deprecated/contract-009-interface-run-state.md
 [sokf:issue-024-the-workflow-cannot-run-unattended]: /knowledge/issues/done/issue-024-the-workflow-cannot-run-unattended.md
 [sokf:plan-004-workflow-autonomy]: /knowledge/plans/done/plan-004-workflow-autonomy.md
 [sokf:research-001-claude-code-stop-hook-behaviour]: /knowledge/research/research-001-claude-code-stop-hook-behaviour.md

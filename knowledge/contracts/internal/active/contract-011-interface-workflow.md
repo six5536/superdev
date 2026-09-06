@@ -1,0 +1,390 @@
+---
+type: Contract
+id: contract-011-interface-workflow
+kind: interface
+title: Interface contract for the local workflow
+description: The Rust-owned phases, transitions, transient ownership, project policy, and local integration seam used by Pi.
+lifecycle: active
+resource: /crates/lib/superdev-core/src/workflow
+links:
+  - rel: references
+    to: adr-052-the-workflow-is-scope-build-accept-under-a-durable-core
+    note: The workflow authority, phase ownership, isolation, cancellation, abandonment, and integration decision.
+  - rel: references
+    to: adr-042-a-contracts-definition-is-materialized-from-source
+    note: The Definition is materialized from the Rust declarations used by every adapter.
+---
+
+# Interface contract: the local workflow
+
+The Rust service is the sole durable workflow authority under
+[ADR-052][sokf:adr-052-the-workflow-is-scope-build-accept-under-a-durable-core].
+Pi orchestrates user interaction and isolated children through the versioned
+CLI protocol; it does not own phase state or Git policy. Source materialization
+follows [ADR-042][sokf:adr-042-a-contracts-definition-is-materialized-from-source].
+
+## Definition
+
+<!-- sokf:include /crates/lib/superdev-core/src/workflow/state.rs -->
+```rust
+use serde::{Deserialize, Serialize};
+
+/// Version returned by every workflow adapter response.
+pub const WORKFLOW_PROTOCOL: &str = "superdev-workflow/v1";
+/// Transient, gitignored session ownership. Canonical progress remains in the plan.
+pub const WORKFLOW_CACHE_PATH: &str = ".superdev/cache/workflow.toml";
+
+/// The only durable workflow phases.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum Phase {
+    /// Requirements and design are being scoped for human approval.
+    Scope,
+    /// Approved work blocks, verification, and corrections are executing.
+    Build,
+    /// The immutable candidate awaits configured acceptance and integration.
+    Accept,
+    /// The accepted closure is prepared or integrated.
+    Done,
+    /// A human ended the work without integrating partial product work.
+    Abandoned,
+}
+
+/// A typed transition request. No stringly-typed arbitrary target is accepted.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Transition {
+    /// Record explicit scope approval after requirements review.
+    ApproveScope,
+    /// Return BUILD discoveries to SCOPE without replacing the plan.
+    ReturnToScope,
+    /// Persist block progress while remaining in BUILD.
+    RecordBuildProgress,
+    /// Enter ACCEPT after all BUILD gates pass.
+    FinishBuild,
+    /// Return a human rejection to SCOPE as a discovery.
+    RejectAcceptance,
+    /// Accept the immutable candidate under project policy.
+    Accept,
+    /// Reopen a prepared closure when the default branch became stale.
+    RecoverStaleDefault,
+    /// End open work through the human-only disposition path.
+    Abandon,
+}
+
+/// Acceptance policy observed for a transition.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum AcceptanceMode {
+    /// An interactive human approved the candidate.
+    Human,
+    /// Project configuration permits acceptance after automated gates.
+    Automatic,
+}
+
+/// Gate facts computed by the Rust service before a transition.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct GateEvidence {
+    /// Whether the human approved the complete SCOPE diff.
+    pub human_scope_approved: bool,
+    /// Whether the isolated requirements review has no findings.
+    pub requirements_review_clean: bool,
+    /// Whether all stable work blocks are complete.
+    pub all_blocks_complete: bool,
+    /// Whether complete local verification is current for the candidate.
+    pub final_verification_current: bool,
+    /// Whether the fresh isolated final review is clean.
+    pub final_review_clean: bool,
+    /// Whether affected contracts carry no pending promises.
+    pub no_pending_promises: bool,
+    /// Whether all applicable documentation evidence is current.
+    pub documentation_current: bool,
+    /// Whether the interactive human accepted the candidate.
+    pub human_acceptance_approved: bool,
+    /// Whether the interactive human approved abandonment and disposition.
+    pub human_abandonment_approved: bool,
+    /// Whether the closure commit is reachable from the default branch.
+    pub closure_integrated: bool,
+}
+
+/// Stable identifiers for one open workflow.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct WorkflowIdentity {
+    /// Canonical primary issue ID.
+    pub issue: String,
+    /// Canonical implementing plan ID.
+    pub plan: String,
+    /// Reserved `work/<number>-<slug>` branch.
+    pub work_branch: String,
+    /// Locally discovered integration branch.
+    pub default_branch: String,
+}
+
+/// Transient session ownership; absence means unowned, never complete.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct WorkflowCache {
+    /// Cache format version.
+    pub version: u32,
+    /// Owning Pi session ID.
+    pub session_id: String,
+    /// Stable records and refs for the workflow.
+    pub identity: WorkflowIdentity,
+    /// Plan revision last observed by the owning session.
+    pub last_plan_revision: String,
+    /// Active isolated child role, when one exists.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub child_role: Option<String>,
+    /// Active isolated child process ID, when one exists.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub child_pid: Option<u32>,
+    /// Active child start time, when one exists.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub child_started: Option<String>,
+    /// Whether cancellation has been requested before ownership is released.
+    #[serde(default)]
+    pub cancelled: bool,
+}
+```
+<!-- /sokf:include -->
+
+<!-- sokf:include /crates/lib/superdev-core/src/workflow/transition.rs -->
+```rust
+use std::fmt;
+
+use super::{GateEvidence, Phase, Transition};
+use crate::manifest::WorkflowConfig;
+
+/// A refused workflow transition, safe to render to an adapter caller.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TransitionError(pub String);
+
+impl fmt::Display for TransitionError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(&self.0)
+    }
+}
+
+impl std::error::Error for TransitionError {}
+
+fn require(ok: bool, message: &str) -> Result<(), TransitionError> {
+    if ok {
+        Ok(())
+    } else {
+        Err(TransitionError(message.into()))
+    }
+}
+
+/// Apply one explicitly enumerated transition after checking its gates.
+///
+/// Git reachability and document evidence are resolved by callers into
+/// `GateEvidence`; this pure function owns the legal transition table.
+pub fn apply_transition(
+    phase: Phase,
+    transition: Transition,
+    gates: &GateEvidence,
+    config: &WorkflowConfig,
+) -> Result<Phase, TransitionError> {
+    use Phase::{Abandoned, Accept, Build, Done, Scope};
+    use Transition::{
+        Abandon, Accept as AcceptTransition, ApproveScope, FinishBuild, RecordBuildProgress,
+        RecoverStaleDefault, RejectAcceptance, ReturnToScope,
+    };
+
+    match (phase, transition) {
+        (Scope, ApproveScope) => {
+            require(gates.human_scope_approved, "scope approval is absent")?;
+            require(
+                gates.requirements_review_clean,
+                "requirements review is not clean",
+            )?;
+            Ok(Build)
+        }
+        (Build, ReturnToScope) => Ok(Scope),
+        (Build, RecordBuildProgress) => Ok(Build),
+        (Build, FinishBuild) => {
+            require(gates.all_blocks_complete, "work blocks are incomplete")?;
+            require(
+                gates.final_verification_current,
+                "final verification is stale or absent",
+            )?;
+            require(gates.final_review_clean, "final review is not clean")?;
+            require(
+                gates.no_pending_promises,
+                "affected contract promises remain PENDING",
+            )?;
+            require(
+                gates.documentation_current,
+                "documentation evidence is stale or absent",
+            )?;
+            Ok(Accept)
+        }
+        (Accept, RejectAcceptance) => Ok(Scope),
+        (Accept, AcceptTransition) => {
+            if config.human_acceptance_required {
+                require(
+                    gates.human_acceptance_approved,
+                    "human acceptance is required",
+                )?;
+            }
+            Ok(Done)
+        }
+        (Done, RecoverStaleDefault) if !gates.closure_integrated => Ok(Build),
+        (Scope | Build | Accept, Abandon) => {
+            require(
+                gates.human_abandonment_approved,
+                "abandonment is human-only",
+            )?;
+            Ok(Abandoned)
+        }
+        _ => Err(TransitionError(format!(
+            "transition {transition:?} is not legal from {phase:?}"
+        ))),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn config(human: bool) -> WorkflowConfig {
+        WorkflowConfig {
+            human_acceptance_required: human,
+            max_stalled_block_attempts: 3,
+            max_final_correction_cycles: 3,
+        }
+    }
+
+    #[test]
+    fn scope_requires_both_human_approval_and_clean_review() {
+        let mut gates = GateEvidence::default();
+        assert!(
+            apply_transition(
+                Phase::Scope,
+                Transition::ApproveScope,
+                &gates,
+                &config(true)
+            )
+            .is_err()
+        );
+        gates.human_scope_approved = true;
+        assert!(
+            apply_transition(
+                Phase::Scope,
+                Transition::ApproveScope,
+                &gates,
+                &config(true)
+            )
+            .is_err()
+        );
+        gates.requirements_review_clean = true;
+        assert_eq!(
+            apply_transition(
+                Phase::Scope,
+                Transition::ApproveScope,
+                &gates,
+                &config(true)
+            ),
+            Ok(Phase::Build)
+        );
+    }
+
+    #[test]
+    fn finish_build_requires_all_executable_evidence() {
+        let complete = GateEvidence {
+            all_blocks_complete: true,
+            final_verification_current: true,
+            final_review_clean: true,
+            no_pending_promises: true,
+            documentation_current: true,
+            ..GateEvidence::default()
+        };
+        assert_eq!(
+            apply_transition(
+                Phase::Build,
+                Transition::FinishBuild,
+                &complete,
+                &config(true)
+            ),
+            Ok(Phase::Accept)
+        );
+        for incomplete in [
+            GateEvidence {
+                all_blocks_complete: false,
+                ..complete.clone()
+            },
+            GateEvidence {
+                final_review_clean: false,
+                ..complete.clone()
+            },
+            GateEvidence {
+                documentation_current: false,
+                ..complete.clone()
+            },
+        ] {
+            assert!(
+                apply_transition(
+                    Phase::Build,
+                    Transition::FinishBuild,
+                    &incomplete,
+                    &config(true)
+                )
+                .is_err()
+            );
+        }
+    }
+
+    #[test]
+    fn project_policy_alone_controls_human_acceptance() {
+        let gates = GateEvidence::default();
+        assert!(
+            apply_transition(Phase::Accept, Transition::Accept, &gates, &config(true)).is_err()
+        );
+        assert_eq!(
+            apply_transition(Phase::Accept, Transition::Accept, &gates, &config(false)),
+            Ok(Phase::Done)
+        );
+    }
+
+    #[test]
+    fn cancellation_is_not_a_durable_transition_and_abandonment_is_human_only() {
+        let gates = GateEvidence::default();
+        assert!(
+            apply_transition(Phase::Build, Transition::Abandon, &gates, &config(true)).is_err()
+        );
+        assert!(apply_transition(Phase::Done, Transition::Abandon, &gates, &config(true)).is_err());
+    }
+}
+```
+<!-- /sokf:include -->
+
+## Behaviour
+
+### Module boundaries
+
+- `P_rust-authority` [ubiquitous] The Rust workflow service SHALL validate every durable phase transition, plan revision comparison, ownership comparison, and automatic Git operation.
+- `P_pi-orchestrates` [ubiquitous] Pi SHALL orchestrate interaction and isolated roles through typed workflow commands without rewriting durable workflow state directly.
+
+### Key flows
+
+- `P_scope-gate` [event] WHEN SCOPE enters BUILD, the service SHALL require explicit human scope approval and a clean isolated requirements review.
+- `P_build-gate` [event] WHEN BUILD enters ACCEPT, the service SHALL require complete blocks, current executable and documentation evidence, no affected pending promise, and a clean fresh isolated final review.
+- `P_accept-policy` [event] WHEN ACCEPT decides a candidate, the service SHALL derive human acceptance solely from project configuration before merging an accepted closure locally with `git merge --no-ff`.
+- `P_cancel-pauses` [event] WHEN cancellation occurs, the service SHALL release transient ownership without changing the canonical phase or deleting uncommitted SCOPE drafts.
+- `P_abandon-human-only` [event] WHEN abandonment is requested, the service SHALL require interactive human approval while excluding partial product work from integration.
+
+### Cross-cutting concerns
+
+- `P_git-preserves-unrelated` [ubiquitous] Automatic Git operations SHALL NOT stash, reset, discard, absorb, or implicitly resolve unrelated changes.
+- `P_git-no-shell` [ubiquitous] Workflow Git operations SHALL validate refs and invoke Git with argument arrays without a shell.
+- `P_bounded-retries` [ubiquitous] Retry and correction limits SHALL be positive project configuration values that plans, prompts, adapters, and models cannot override.
+- `P_cache-transient` [ubiquitous] Absence of `.superdev/cache/workflow.toml` SHALL mean unowned rather than complete.
+
+## Stability
+
+Internal and unreleased; the protocol is versioned so adapter incompatibility
+fails explicitly.
+
+- `P_versioned` [ubiquitous] Every machine-readable workflow response SHALL name `superdev-workflow/v1`.
+
+<!-- sokf:links -->
+[sokf:adr-042-a-contracts-definition-is-materialized-from-source]: /knowledge/adrs/active/adr-042-a-contracts-definition-is-materialized-from-source.md
+[sokf:adr-052-the-workflow-is-scope-build-accept-under-a-durable-core]: /knowledge/adrs/active/adr-052-the-workflow-is-scope-build-accept-under-a-durable-core.md

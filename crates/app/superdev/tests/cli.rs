@@ -930,64 +930,14 @@ fn hook_validate_still_blocks_what_one_file_settles() {
 }
 
 #[test]
-fn hook_run_continues_an_armed_run_naming_next() {
-    let repo = tempfile::tempdir().unwrap();
-    let cache = repo.path().join(".superdev/cache");
-    std::fs::create_dir_all(&cache).unwrap();
-    std::fs::write(
-        cache.join("run.toml"),
-        "session_id = \"s1\"\nnext = \"build slice 2\"\ncontinues = 0\nstarted = \"2026-08-31T00:00:00Z\"\npid = 1\n",
-    )
-    .unwrap();
-    let out = superdev()
-        .args(["hook", "run"])
-        .env("CLAUDE_PROJECT_DIR", repo.path())
-        .write_stdin(r#"{"session_id":"s1","hook_event_name":"Stop"}"#)
-        .assert()
-        .code(2);
-    let stderr = String::from_utf8_lossy(&out.get_output().stderr).into_owned();
-    assert!(stderr.contains("build slice 2"), "stderr: {stderr}");
-    assert!(stderr.contains("superdev run advance"), "stderr: {stderr}");
-}
+fn legacy_run_and_stop_hook_interfaces_are_not_discoverable() {
+    superdev().arg("run").assert().code(2);
+    superdev().args(["hook", "run"]).assert().code(2);
 
-/// The Stop hook defaults like a bare `validate` too: it holds the turn on
-/// the error, names it, and states the warning count without naming the
-/// warning (ADR-040).
-#[test]
-fn hook_run_counts_the_warnings_it_does_not_list() {
-    let repo = mixed_severity_repo();
-    let out = superdev()
-        .args(["hook", "run"])
-        .env("CLAUDE_PROJECT_DIR", repo.path())
-        .write_stdin(r#"{"session_id":"s1","hook_event_name":"Stop"}"#)
-        .assert()
-        .code(2);
-    let stderr = String::from_utf8_lossy(&out.get_output().stderr).into_owned();
-    assert!(
-        stderr.contains("the knowledge has findings"),
-        "stderr: {stderr}"
-    );
-    assert!(stderr.contains("[error]"), "the error is named: {stderr}");
-    assert!(
-        !stderr.contains("[warning]"),
-        "no warning is listed: {stderr}"
-    );
-    assert!(
-        stderr.contains("FAIL (1 error(s), 1 warning(s))"),
-        "both counts stand: {stderr}"
-    );
-}
-
-#[test]
-fn hook_run_is_invisible_without_a_run() {
-    let repo = tempfile::tempdir().unwrap();
-    superdev()
-        .args(["hook", "run"])
-        .env("CLAUDE_PROJECT_DIR", repo.path())
-        .write_stdin(r#"{"session_id":"s1","hook_event_name":"Stop"}"#)
-        .assert()
-        .code(0)
-        .stderr("");
+    let help = superdev().arg("--help").assert().code(0);
+    let stdout = String::from_utf8_lossy(&help.get_output().stdout);
+    assert!(stdout.contains("workflow"), "workflow is absent: {stdout}");
+    assert!(!stdout.lines().any(|line| line.trim_start().starts_with("run")));
 }
 
 #[test]

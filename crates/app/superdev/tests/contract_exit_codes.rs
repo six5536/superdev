@@ -97,17 +97,7 @@ fn probe(command: &str, args: &[&str], code: i64) {
 /// for the universal usage error, which the Exit codes section states once
 /// rather than in each entry.
 fn run(args: &[&str], code: i64) {
-    // The `run` verbs act on the working directory's `.superdev/cache/`
-    // and need nothing from the repository, and `run end` removes the run
-    // state it finds — so probing it here would end a live unattended run
-    // (I050). Every other probe needs the repository: `validate` reads the
-    // knowledge.
-    let scratch = tempfile::tempdir().expect("a scratch directory");
-    let cwd: &Path = if args.first() == Some(&"run") {
-        scratch.path()
-    } else {
-        Path::new(REPO_ROOT)
-    };
+    let cwd = Path::new(REPO_ROOT);
     let out = Command::cargo_bin("superdev")
         .unwrap()
         .args(args)
@@ -135,15 +125,14 @@ fn probed() -> Vec<(&'static str, &'static [&'static str], i64)> {
         ("superdev completions", &["completions", "klingon"], 2),
         ("superdev man", &["man"], 0),
         ("superdev template list", &["template", "list"], 0),
-        ("superdev run end", &["run", "end"], 0),
+        ("superdev workflow status", &["workflow", "status", "--json"], 0),
         ("superdev validate", &["validate"], 0),
         ("superdev validate", &["validate", "no-such-path.md"], 2),
         ("superdev template", &["template"], 2),
-        ("superdev run", &["run"], 2),
+        ("superdev workflow", &["workflow"], 2),
         ("superdev sokf", &["sokf"], 2),
         ("superdev hook", &["hook"], 2),
         ("superdev mcp", &["mcp"], 2),
-        ("superdev run advance", &["run", "advance"], 2),
     ]
 }
 
@@ -205,29 +194,21 @@ fn a_row_the_reader_cannot_read_is_reported_not_dropped() {
     assert_eq!(none, "the Exit codes table declares no command");
 }
 
-/// Covers I035 criterion 5: the hooks return the codes they declare — `0`
-/// where Claude Code should let the turn or the edit through, `2` where it
-/// should not, including a payload neither can read.
+/// The remaining validation hook returns both codes its contract declares.
 #[test]
-fn the_hooks_return_the_codes_they_declare() {
+fn the_hook_returns_the_codes_it_declares() {
     let declared = declared();
-    for command in ["superdev hook validate", "superdev hook run"] {
-        assert!(
-            declared[command].contains(&0) && declared[command].contains(&2),
-            "{command} declares 0 and 2"
-        );
-    }
-    // A path outside the governed trees: the edit goes through.
+    let command = "superdev hook validate";
+    assert!(
+        declared[command].contains(&0) && declared[command].contains(&2),
+        "{command} declares 0 and 2"
+    );
     hook(
         &["hook", "validate"],
         r#"{"tool_input":{"file_path":"/tmp/not-governed.txt"}}"#,
         0,
     );
-    // No run state: the turn may end.
-    hook(&["hook", "run"], r#"{"session_id":"probe"}"#, 0);
-    // A payload neither can read is a loud refusal.
     hook(&["hook", "validate"], "not json at all", 2);
-    hook(&["hook", "run"], "not json at all", 2);
 }
 
 /// Covers I035 criterion 5: `validate` returns the `1` it declares when the
@@ -264,7 +245,7 @@ fn validate_returns_the_one_it_declares_on_an_error() {
 fn every_declared_exit_code_is_probed_or_named_undrivable() {
     // A code a probe cannot reach from a clean checkout without changing the
     // repository. Each names why, so the list cannot quietly grow.
-    const UNDRIVABLE: [(&str, i64, &str); 18] = [
+    const UNDRIVABLE: [(&str, i64, &str); 25] = [
         ("superdev init", 0, "would set this repository up"),
         ("superdev init", 2, "would write into this repository"),
         (
@@ -285,32 +266,29 @@ fn every_declared_exit_code_is_probed_or_named_undrivable() {
         ("superdev template render", 2, "writes a tree"),
         ("superdev sokf index", 0, "rebuilds the index"),
         ("superdev sokf index", 2, "rebuilds the index"),
-        ("superdev run advance", 0, "needs a run this session owns"),
+        ("superdev workflow bind", 0, "writes transient ownership"),
+        ("superdev workflow bind", 2, "requires a canonical plan fixture"),
+        ("superdev workflow transition", 0, "mutates a canonical plan"),
+        ("superdev workflow transition", 2, "requires an owned plan fixture"),
+        ("superdev workflow cancel", 0, "writes transient ownership"),
+        ("superdev workflow cancel", 2, "requires conflicting ownership"),
+        ("superdev workflow abandon", 0, "mutates a canonical plan"),
+        ("superdev workflow abandon", 2, "requires an owned plan fixture"),
+        ("superdev workflow integrate", 0, "creates a local merge commit"),
+        ("superdev workflow integrate", 2, "requires an owned git fixture"),
         (
             "superdev status",
             1,
             "driven by its own probe, which tolerates either code",
-        ),
-        (
-            "superdev run begin",
-            0,
-            "arms a run this session does not own",
-        ),
-        (
-            "superdev run begin",
-            2,
-            "arms a run this session does not own",
         ),
         ("superdev mcp sokf", 0, "serves until stdin closes"),
         ("superdev mcp sokf", 2, "serves until stdin closes"),
     ];
     // Pairs a test of its own drives, because they need stdin or a
     // temporary knowledge rather than a bare invocation.
-    const ELSEWHERE: [(&str, i64); 17] = [
+    const ELSEWHERE: [(&str, i64); 15] = [
         ("superdev hook validate", 0),
         ("superdev hook validate", 2),
-        ("superdev hook run", 0),
-        ("superdev hook run", 2),
         ("superdev validate", 1),
         ("superdev sokf overview", 0),
         ("superdev sokf overview", 2),
@@ -370,7 +348,7 @@ fn a_usage_error_is_two_from_every_command() {
     for args in [
         &["nonsense"] as &[&str],
         &["status", "--nonsense"],
-        &["run", "advance"],
+        &["workflow", "transition"],
         &["template", "render"],
     ] {
         run(args, 2);
