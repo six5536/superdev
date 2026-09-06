@@ -23,20 +23,12 @@ macro_rules! asset {
 /// The one asset carrying a `{name}` token, replaced with the repo's name.
 const NAMED_ASSET: &str = "knowledge/manifest.sokf.yaml";
 
-/// The workflow-framework override each provider gets, as
-/// (provider id, target path, embedded asset).
 /// Where agent tools find MCP servers, and superdev's key inside it. The file
 /// is shared with the user's own servers, so only this key is managed.
 const MCP_PATH: &str = ".mcp.json";
 const MCP_POINTER: &str = "mcpServers.superdev-sokf";
 /// The registration itself: the installed binary serving this repo's bundle.
 const MCP_VALUE: &str = r#"{"command":"superdev","args":["mcp","sokf"]}"#;
-
-/// Claude Code reads CLAUDE.md, not AGENTS.md: without this import, every
-/// rule superdev writes into AGENTS.md is invisible to it. Behaves like the
-/// .gitignore lines — added when missing, never rewritten, never locked.
-const CLAUDE_ENTRY_PATH: &str = "CLAUDE.md";
-const CLAUDE_ENTRY_LINE: &str = "@AGENTS.md";
 
 /// The files the binary owns rather than the pack: (target path, content,
 /// reason). Each describes a format this binary's compiled validator
@@ -86,28 +78,6 @@ const SKELETON_REASONS: &[(&str, &str)] = &[
 /// resolved content carries under this owner, so they exist wherever the
 /// SOKF knowledge does.
 pub(crate) const OWNER: Owner = Owner::Knowledge;
-
-/// Where Claude Code reads hook registrations. Shared with the user's own
-/// hooks, so only superdev's array element is managed.
-const SETTINGS_PATH: &str = ".claude/settings.json";
-/// The array the hook entry lives in.
-const HOOK_POINTER: &str = "hooks.PostToolUse";
-/// What identifies superdev's element among the user's.
-const HOOK_MARKER: &str = "superdev hook validate";
-/// The registration itself: validate the repository after an Edit/Write.
-/// The timeout bounds a hook that wedges — a `cargo run` waiting on a build
-/// lock, an sccache server that never answers — so it cannot hold a Claude
-/// Code session open indefinitely; Claude Code kills it and moves on.
-const HOOK_ELEMENT: &str = r#"{"matcher":"Edit|Write","hooks":[{"type":"command","command":"superdev hook validate","timeout":30}]}"#;
-
-/// The array the Stop entry lives in.
-const STOP_POINTER: &str = "hooks.Stop";
-/// What identifies superdev's element among the user's.
-const STOP_MARKER: &str = "superdev hook run";
-/// The registration itself: continue an active unattended run, or let the
-/// turn end. Without a run state the hook is invisible (contract-009).
-const STOP_ELEMENT: &str =
-    r#"{"hooks":[{"type":"command","command":"superdev hook run","timeout":30}]}"#;
 
 /// Release, at adoption time, every SOKF skill the repo already has under
 /// its own name and with its own content. Returns the lines to print.
@@ -190,30 +160,11 @@ fn items(ctx: &Ctx<'_>) -> Vec<ManagedItem> {
             reason: "fragment".to_string(),
         });
     }
-    items.push(ManagedItem::EnsureLine {
-        path: CLAUDE_ENTRY_PATH.into(),
-        line: CLAUDE_ENTRY_LINE.into(),
-        reason: "make Claude Code read AGENTS.md".into(),
-    });
     items.push(ManagedItem::JsonEntry {
         path: MCP_PATH.into(),
         pointer: MCP_POINTER.into(),
         marker: None,
         value_json: MCP_VALUE.into(),
-    });
-    let custom = ctx.manifest.knowledge.custom.as_slice();
-    items.extend(super::skills::skill_dir_items(ctx.content, OWNER, custom));
-    items.push(ManagedItem::JsonEntry {
-        path: SETTINGS_PATH.into(),
-        pointer: HOOK_POINTER.into(),
-        marker: Some(HOOK_MARKER.into()),
-        value_json: HOOK_ELEMENT.into(),
-    });
-    items.push(ManagedItem::JsonEntry {
-        path: SETTINGS_PATH.into(),
-        pointer: STOP_POINTER.into(),
-        marker: Some(STOP_MARKER.into()),
-        value_json: STOP_ELEMENT.into(),
     });
     items
 }
@@ -268,106 +219,6 @@ mod tests {
         };
         Sokf.plan(&ctx).unwrap()
     }
-
-    #[test]
-    fn ships_the_carried_skill_set_and_the_hook() {
-        let dir = tempfile::tempdir().unwrap();
-        let actions = plan_in(dir.path());
-        let descs: Vec<String> = actions.iter().map(Action::describe).collect();
-        // A skill is its directory: every file of every skill materialises.
-        let content = crate::content::snapshot();
-        for item in content.items_of(OWNER, ItemKind::Skill) {
-            for (rel, _) in &item.files {
-                let name = &item.name;
-                assert!(
-                    descs
-                        .iter()
-                        .any(|d| d.contains(&format!(".claude/skills/{name}/{rel}"))),
-                    ".claude/skills/{name}/{rel} missing from {descs:?}"
-                );
-            }
-        }
-        assert!(
-            descs.iter().any(|d| d.contains("superdev hook validate")),
-            "{descs:?}"
-        );
-        assert!(descs.iter().any(|d| d.contains("hooks.Stop")), "{descs:?}");
-        // The schema library ships with the skills that reference it.
-        for item in content.items_of(OWNER, ItemKind::DocSchema) {
-            let name = &item.name;
-            assert!(
-                descs
-                    .iter()
-                    .any(|d| d.contains(&format!("knowledge/schemas/{name}.md"))),
-                "knowledge/schemas/{name}.md missing from {descs:?}"
-            );
-        }
-    }
-
-    #[test]
-    fn a_custom_skill_is_released_whole_and_the_hook_stays() {
-        use crate::component::Claim;
-        let dir = tempfile::tempdir().unwrap();
-        let mut manifest = Manifest::default_for("0.1.0", &[]);
-        manifest.knowledge.custom = vec!["maintain".into(), "prototype".into()];
-        let lock = Lock::default();
-        let fake = FakeRunner::new();
-        let ctx = Ctx {
-            root: dir.path(),
-            runner: &fake,
-            manifest: &manifest,
-            lock: &lock,
-            content: crate::content::test_snapshot(),
-        };
-        let keys: Vec<String> = Sokf.owned(&ctx).iter().map(Claim::lock_key).collect();
-        assert!(!keys.iter().any(|k| k.contains("/maintain/")), "{keys:?}");
-        // Releasing a skill releases its whole directory, companions included.
-        assert!(!keys.iter().any(|k| k.contains("/prototype/")), "{keys:?}");
-        assert!(keys.contains(&".claude/skills/bootstrap/SKILL.md".to_string()));
-        assert!(keys.contains(&".claude/skills/how-do-i/SESSION-BOUNDARIES.md".to_string()));
-        assert!(keys.contains(
-            &".claude/settings.json:hooks.PostToolUse[superdev hook validate]".to_string()
-        ));
-        assert!(keys.contains(&".claude/settings.json:hooks.Stop[superdev hook run]".to_string()));
-    }
-
-    #[test]
-    fn a_stale_hook_entry_replans_the_hook() {
-        let dir = tempfile::tempdir().unwrap();
-        // Same marker, older shape: must be replaced, so it must be planned.
-        std::fs::create_dir_all(dir.path().join(".claude")).unwrap();
-        std::fs::write(
-            dir.path().join(SETTINGS_PATH),
-            r#"{"hooks":{"PostToolUse":[{"matcher":"Write","hooks":[{"type":"command","command":"superdev hook validate"}]}]}}"#,
-        )
-        .unwrap();
-        let actions = plan_in(dir.path());
-        assert!(
-            actions
-                .iter()
-                .any(|a| a.describe().contains("hooks.PostToolUse")),
-            "{actions:?}"
-        );
-    }
-
-    #[test]
-    fn adoption_keeps_the_repos_own_lifecycle_skills() {
-        let dir = tempfile::tempdir().unwrap();
-        let path = dir.path().join(".claude/skills/maintain/SKILL.md");
-        std::fs::create_dir_all(path.parent().unwrap()).unwrap();
-        std::fs::write(path, "# Ours, thanks\n").unwrap();
-        let mut manifest = Manifest::default_for("0.1.0", &[]);
-        let lines = adopt_existing(dir.path(), crate::content::test_snapshot(), &mut manifest);
-        assert_eq!(manifest.knowledge.custom, ["maintain"]);
-        assert_eq!(
-            lines,
-            vec![format!(
-                "knowledge: kept your maintain — marked custom in {}",
-                crate::manifest::CONFIG_PATH
-            )]
-        );
-    }
-
     /// The starter bundle must itself conform: write every knowledge file
     /// the component plans into an empty repo, then run the embedded
     /// validator over it. A skeleton that ships broken would fail
@@ -536,45 +387,6 @@ mod tests {
             .collect();
         assert_eq!(paths, vec![".agents/sokf/SPEC.md".to_string()]);
     }
-
-    #[test]
-    fn claude_md_gets_the_agents_import() {
-        // No CLAUDE.md at all: plan the line (the engine creates the file).
-        let dir = tempfile::tempdir().unwrap();
-        let ensure = plan_in(dir.path()).into_iter().find_map(|a| match a {
-            Action::EnsureLine { path, line, .. } => Some((path, line)),
-            _ => None,
-        });
-        assert_eq!(
-            ensure,
-            Some(("CLAUDE.md".to_string(), "@AGENTS.md".to_string()))
-        );
-
-        // A CLAUDE.md of the user's own: plan the append, touch nothing else.
-        std::fs::write(dir.path().join("CLAUDE.md"), "# My rules\n").unwrap();
-        assert!(
-            plan_in(dir.path())
-                .iter()
-                .any(|a| matches!(a, Action::EnsureLine { .. }))
-        );
-
-        // The line present (anywhere, exact whole-line): nothing to plan.
-        std::fs::write(dir.path().join("CLAUDE.md"), "# My rules\n@AGENTS.md\n").unwrap();
-        assert!(
-            !plan_in(dir.path())
-                .iter()
-                .any(|a| matches!(a, Action::EnsureLine { .. }))
-        );
-
-        // A substring is not the line: `see @AGENTS.md` does not satisfy it.
-        std::fs::write(dir.path().join("CLAUDE.md"), "see @AGENTS.md inline\n").unwrap();
-        assert!(
-            plan_in(dir.path())
-                .iter()
-                .any(|a| matches!(a, Action::EnsureLine { .. }))
-        );
-    }
-
     #[test]
     fn plans_mcp_registration_when_missing_and_not_when_present() {
         let dir = tempfile::tempdir().unwrap();

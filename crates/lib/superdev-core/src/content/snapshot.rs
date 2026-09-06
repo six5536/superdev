@@ -53,7 +53,6 @@ mod tests {
     //! still keep their own tables — match file for file.
 
     use super::*;
-    use crate::capability::Capability;
     use crate::components::sokf;
     use crate::content::item::{ItemKind, Owner};
 
@@ -67,15 +66,10 @@ mod tests {
     fn every_kind_is_populated() {
         let set = snapshot();
         for (owner, kind, least) in [
-            // Fourteen skills, since ADR-050 retired integrate and folded
-            // frame, feature-plan and adhoc-plan into scope.
-            (knowledge(), ItemKind::Skill, 14),
             (knowledge(), ItemKind::KnowledgeSkeleton, 20),
-            // Thirty-seven schemas and their index, since ADR-043 folded the
-            // sixteen contract-kind schemas into one and ADR-050 the three
-            // tracker schemas and the two plan schemas.
-            (knowledge(), ItemKind::DocSchema, 37),
-            (Owner::Capability(Capability::Skills), ItemKind::Skill, 2),
+            (knowledge(), ItemKind::DocSchema, 38),
+            (Owner::Repo, ItemKind::PiExtension, 1),
+            (Owner::Repo, ItemKind::PiSkill, 1),
             (Owner::Repo, ItemKind::ProjectTemplate, 2),
         ] {
             let found = set.items_of(owner, kind).count();
@@ -91,7 +85,10 @@ mod tests {
     #[test]
     fn items_are_named_as_their_pattern_spells_it() {
         let set = snapshot();
-        assert!(set.item(knowledge(), ItemKind::Skill, "scope").is_some());
+        assert!(
+            set.item(Owner::Repo, ItemKind::PiExtension, "superdev")
+                .is_some()
+        );
         assert!(set.item(knowledge(), ItemKind::DocSchema, "adr").is_some());
         assert!(
             set.item(knowledge(), ItemKind::DocSchema, "adr.md")

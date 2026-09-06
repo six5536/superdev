@@ -2,11 +2,8 @@
 type: Schema
 id: schema-research
 title: Research Schema
-description: Research findings filed as footnote-cited concepts in knowledge/research/, derived from the research skill and the SOKF spec.
+description: Research findings filed as footnote-cited concepts in knowledge/research/, derived from the SOKF spec.
 sources:
-  - id: skill-research
-    resource: /.claude/skills/research/SKILL.md
-    title: Research Skill
   - id: sokf-spec
     resource: /.agents/sokf/SPEC.md
     title: SOKF Specification
@@ -16,9 +13,8 @@ sources:
 
 Structural rules for research findings filed at
 `knowledge/research/research-{nnn}-{topic}.md` and listed in the canonical knowledge's
-`index.md`. Derived from the research skill's own filing
-statements[^skill-research] and the SOKF spec's frontmatter, sources, and
-footnote mechanics[^sokf-spec]. Alone among these schemas it fixes no body
+`index.md`. Derived from the SOKF spec's frontmatter, sources, and footnote
+mechanics[^sokf-spec]. Alone among these schemas it fixes no body
 sections and declares no order: SOKF mandates neither, and the shape of an
 answer follows the question.
 
@@ -77,5 +73,4 @@ example: |
   [^git-clone-urls]: git-clone URLS documentation
 ````
 
-[^skill-research]: Research Skill
 [^sokf-spec]: SOKF Specification

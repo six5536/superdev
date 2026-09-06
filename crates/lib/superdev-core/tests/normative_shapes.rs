@@ -1087,7 +1087,7 @@ fn every_contract_on_file_passes_without_nested_criteria() {
         .into_iter()
         .filter(|p| p.file_name().is_some_and(|n| n != "index.md"))
         .collect();
-    assert_eq!(contracts.len(), 9, "{contracts:#?}");
+    assert_eq!(contracts.len(), 10, "{contracts:#?}");
     for path in contracts {
         let text = std::fs::read_to_string(&path).unwrap();
         let found = findings_of("Contract", path.to_str().unwrap(), &text);
@@ -1681,311 +1681,15 @@ fn the_plan_orders_a_contract_gap_first() {
         );
     }
 }
-
-/// A skill as shipped: its live copy and its pack source, which `sync`
-/// keeps byte-equal.
-fn skill_copies(name: &str) -> [(String, String); 2] {
-    [
-        format!(".claude/skills/{name}/SKILL.md"),
-        format!("pack/knowledge/skills/{name}/SKILL.md"),
-    ]
-    .map(|p| {
-        let text = std::fs::read_to_string(repo(&p)).expect("the skill is on file");
-        (p, text)
-    })
-}
-
-/// The `task` of the step named `name` in a skill file.
-fn step_task<'a>(skill: &'a str, name: &str) -> &'a str {
-    let anchor = format!("<step name=\"{name}\" task=\"");
-    let start = skill
-        .find(&anchor)
-        .unwrap_or_else(|| panic!("no step named {name}"))
-        + anchor.len();
-    let rest = &skill[start..];
-    &rest[..rest.find("\" />").expect("the step closes")]
-}
-
-/// Covers I049 criteria 19, 20 and 21: build carries a step that reads a
-/// touched contract as its consumer would and reports the three judgements
-/// — the region against the surface, the prose against the kind's
-/// checklist, the document against a reader — as a judgement that blocks
-/// nothing, and says so when no contract was touched (ADR-042). The step was
-/// integrate's until ADR-050 retired that skill and folded its verification
-/// into build.
-#[test]
-fn the_build_skill_judges_a_touched_contract() {
-    for (p, text) in skill_copies("build") {
-        let task = step_task(&text, "JUDGE THE CONTRACTS");
-        for phrase in [
-            "as its consumer would",
-            "omits part of the promised surface",
-            "optional",
-            "checklist",
-            "could not learn the interface",
-            "what you checked",
-            "judgement",
-            "blocks nothing",
-            "not a validator finding",
-            "No contract touched?",
-            "report nothing further",
-        ] {
-            assert!(
-                task.contains(phrase),
-                "{p}: the judgement step lacks `{phrase}`"
-            );
-        }
-    }
-}
-
-/// Covers I049 criterion 18: contract-design writes a new definition element
-/// into its source region with the behaviour unbuilt, and the declaration is
-/// committed under the approval the sub-skill requires (ADR-044) — the
-/// commit itself is `/scope`'s since ADR-050 made contract-design a
-/// sub-skill, so the commit half is asserted on the scope skill.
-#[test]
-fn the_contract_design_skill_declares_in_source() {
-    for (p, text) in skill_copies("contract-design") {
-        let declare = step_task(&text, "DECLARE IN SOURCE");
-        for phrase in ["marked source region", "behaviour unbuilt", "include"] {
-            assert!(
-                declare.contains(phrase),
-                "{p}: the declaration step lacks `{phrase}`"
-            );
-        }
-        let present = step_task(&text, "PRESENT THE CHANGE SET");
-        assert!(
-            present.contains("source declaration"),
-            "{p}: the change set does not name the source declaration"
-        );
-        assert!(
-            text.contains("path=\"sokf:schema-contract\""),
-            "{p} does not read the one contract schema"
-        );
-        assert!(
-            !text.contains("schema-{kind}") && !text.contains("contract-interface"),
-            "{p} still names a per-kind contract schema"
-        );
-    }
-    for (p, text) in skill_copies("scope") {
-        let commit = step_task(&text, "COMMIT THE PLAN");
-        assert!(
-            commit.contains("source-declaration"),
-            "{p}: the commit step does not name the source declaration"
-        );
-    }
-}
-
-/// Covers I035 criteria 14 and 15 and I049 criteria 17 and 23: the pending
-/// marker is declared where a contract writer meets it, acceptance refuses a
-/// contract whose Behaviour or Stability still carries `PENDING`
-/// (ADR-044), and no contract on file carries the withdrawn `pending:` key.
-/// Whether a `PENDING` marker remains is the accept gate's to judge per
-/// feature — a promise may outrun its code while a feature runs (ADR-044),
-/// and contract-010 carries I037's — so this test does not assert its
-/// absence.
-#[test]
-fn a_pending_promise_is_declared_and_bounded() {
-    for (p, text) in contract_schema_copies() {
-        let rule = rule_for(&text, "Behaviour");
-        assert!(
-            same(&rule).contains("carries PENDING beside its verb"),
-            "{p} does not declare the pending marker where Behaviour is declared"
-        );
-    }
-    for (p, text) in skill_copies("accept") {
-        let gate = text
-            .lines()
-            .find(|l| l.contains("`PENDING`"))
-            .unwrap_or_else(|| panic!("{p} does not refuse a pending marker at acceptance"));
-        for phrase in ["<gate ", "Behaviour", "Stability", "ADR-044"] {
-            assert!(
-                gate.contains(phrase),
-                "{p}: the pending gate lacks `{phrase}`"
-            );
-        }
-        assert!(
-            !text.contains("ADR-038"),
-            "{p} still cites the superseded ADR-038"
-        );
-    }
-    // The marker is `PENDING` in prose (ADR-044); the YAML `pending:` key
-    // went with the authored blocks.
-    let mut checked = Vec::new();
-    for dir in [
-        "knowledge/contracts/public/active",
-        "knowledge/contracts/internal/active",
-    ] {
-        for entry in std::fs::read_dir(repo(dir)).expect("the contracts are on file") {
-            let path = entry.unwrap().path();
-            let text = std::fs::read_to_string(&path).unwrap();
-            assert!(
-                !text.contains("\n  pending:"),
-                "{} still carries the withdrawn `pending:` key",
-                path.display()
-            );
-            checked.push(path.file_name().unwrap().to_str().unwrap().to_string());
-        }
-    }
-    assert!(
-        checked
-            .iter()
-            .any(|name| name == "contract-010-interface-document-schemas.md"),
-        "contract-010 was not among the contracts read: {checked:?}"
-    );
-}
-
-/// Covers I030 AC_file-issue, AC_file-idea and AC_promote-idea and I052
-/// AC_issue-schema: `/file` names the four kinds, writes the issue template
-/// — `kind`, `lifecycle: open`, the six headings in prose and bullets with
-/// no key — files an idea per `schema-idea`, promotes an idea with a
-/// `references` link, and says it does not interview, branch or invent
-/// (ADR-048, ADR-050).
-#[test]
-fn the_file_skill_files_in_the_users_words() {
-    for (p, text) in skill_copies("file") {
-        for phrase in [
-            "bug, feature request, chore or idea",
-            "numbered after the highest issue across all of the tracker's folders",
-            "`type: Issue`",
-            "`kind`",
-            "`lifecycle: open`",
-            "Summary, Context, Behaviour, Scope, Resolution and Comments",
-            "no Resolution",
-            "a line of prose, and bullets beneath it",
-            "no key",
-            "no expectation the user did not state",
-            "per `schema-idea` into `knowledge/ideas/`, listed in its index",
-            "`references` link to the idea",
-            "the idea stays on file",
-            "superdev validate --fix",
-        ] {
-            assert!(text.contains(phrase), "{p} lacks `{phrase}`");
-        }
-        assert!(
-            text.contains("<tool_call name=\"sokf_read\" path=\"sokf:schema-issue\""),
-            "{p} does not read the issue schema"
-        );
-        for retired in [
-            "bug-report",
-            "feature-request.md",
-            "schemas/chore",
-            "TBD",
-            "unframed",
-        ] {
-            assert!(!text.contains(retired), "{p} still names `{retired}`");
-        }
-        assert!(
-            text.contains(
-                "<rule level=\"MUST NOT\">interview the user, create a branch, or invent an expectation"
-            ),
-            "{p} does not refuse to interview, branch or invent"
-        );
-    }
-}
-
-/// Covers I030 AC_file-asks: a missing or unknown kind is asked for, and
-/// nothing is filed.
-#[test]
-fn the_file_skill_asks_for_a_missing_kind() {
-    for (p, text) in skill_copies("file") {
-        let gate = text
-            .lines()
-            .find(|l| l.contains("The kind is given and is one of the four"))
-            .unwrap_or_else(|| panic!("{p} has no gate on the kind"));
-        for phrase in ["<gate ", "ask the user for the kind", "file nothing"] {
-            assert!(gate.contains(phrase), "{p}: the kind gate lacks `{phrase}`");
-        }
-    }
-}
-
-/// `/file` is a skill and not a phase: the workflow block names no FILE
-/// phase, and how-do-i's map is where a reader is sent to it.
-#[test]
-fn file_is_a_skill_and_not_a_phase() {
-    for p in [
-        "crates/lib/superdev-core/src/agent-instructions.md",
-        ".agents/superdev.md",
-    ] {
-        let text = std::fs::read_to_string(repo(p)).expect("the file is on file");
-        assert!(
-            !text.contains("<phase name=\"FILE\""),
-            "{p} lists /file as a phase"
-        );
-    }
-    for skill in ["file", "scope", "build", "accept", "execute-plan"] {
-        assert!(
-            std::path::Path::new(&repo(&format!("pack/knowledge/skills/{skill}/SKILL.md")))
-                .is_file(),
-            "the pack does not carry the {skill} skill"
-        );
-    }
-    for (p, text) in skill_copies("how-do-i") {
-        let map = step_body(&text, "MAP THE QUESTION");
-        for phrase in [
-            "`/file`",
-            "without scoping it",
-            "`/scope` takes the issue up",
-        ] {
-            assert!(map.contains(phrase), "{p}: the map lacks `{phrase}`");
-        }
-    }
-}
-
-/// The body of the step named `name`, where the step carries its text
-/// between its tags rather than in a `task` attribute.
-fn step_body<'a>(skill: &'a str, name: &str) -> &'a str {
-    let anchor = format!("<step name=\"{name}\">");
-    let start = skill
-        .find(&anchor)
-        .unwrap_or_else(|| panic!("no step named {name}"))
-        + anchor.len();
-    let rest = &skill[start..];
-    &rest[..rest.find("</step>").expect("the step closes")]
-}
-
-/// Covers I030 AC_skill-ships: `/file` is a knowledge-carried skill — the
-/// pack source and the synced copy are byte-equal, and the lock claims the
-/// copy.
-#[test]
-fn the_file_skill_ships_in_the_pack_and_the_lock() {
-    let [(live, live_text), (pack, pack_text)] = skill_copies("file");
-    assert_eq!(
-        same(&live_text),
-        same(&pack_text),
-        "{live} differs from {pack}"
-    );
-    assert!(
-        live_text.starts_with("---\nname: file\n"),
-        "{live} does not open with the skill's name"
-    );
-    let lock = std::fs::read_to_string(repo(".superdev/lock.toml")).expect("the lock is on file");
-    assert!(
-        lock.contains("\".claude/skills/file/SKILL.md\" = \""),
-        "the lock does not claim .claude/skills/file/SKILL.md"
-    );
-}
-
-/// Claude receives the knowledge-carried authoring skill, while Pi receives a
-/// separately authored skill that uses Pi's SOKF-aware tool vocabulary.
+/// The independently invocable SOKF authoring capability remains a genuine Pi
+/// skill and is shipped byte-for-byte by the pack.
 #[test]
 fn each_harness_receives_its_own_sokf_authoring_skill() {
-    let [(live, live_text), (pack, pack_text)] = skill_copies("sokf-authoring");
-    assert_eq!(
-        same(&live_text),
-        same(&pack_text),
-        "{live} differs from {pack}"
-    );
-    assert!(
-        live_text.contains("If schema-{type} does not exist"),
-        "{live} does not create missing type schemas"
-    );
-    assert!(
-        live_text.contains("choose the next unused number"),
-        "{live} does not allocate identity before creation"
-    );
     let pi_path = repo(".pi/skills/sokf-authoring/SKILL.md");
     let pi = std::fs::read_to_string(&pi_path).expect("Pi's authoring skill is on file");
+    let packed = std::fs::read_to_string(repo("pack/pi/skills/sokf-authoring/SKILL.md"))
+        .expect("the pack carries Pi's authoring skill");
+    assert_eq!(same(&pi), same(&packed));
     assert!(
         pi.contains("If `schema-{type}` does not exist"),
         "{} does not create missing type schemas",
@@ -2006,160 +1710,11 @@ fn each_harness_receives_its_own_sokf_authoring_skill() {
         "{} does not use Pi's SOKF edit adapter",
         pi_path.display()
     );
-    assert_ne!(
-        same(&pi),
-        same(&live_text),
-        "Pi links or copies Claude's skill"
-    );
     assert!(
         !repo(".pi/settings.json").exists(),
         "Pi settings must not link the Claude skill directory"
     );
 }
-
-/// Covers I052's scope criterion: `/scope` opens with the branch step, calls
-/// `/grill-me` where the design is open, calls `/contract-design` for the
-/// plan's contract changes, double-checks the plan and hands to `/build`
-/// (ADR-050).
-#[test]
-fn the_scope_skill_cuts_the_branch_and_hands_to_build() {
-    for (p, text) in skill_copies("scope") {
-        let branch = step_task(&text, "BRANCH");
-        for phrase in [
-            "off the default branch",
-            "`feature/<nnn>-<slug>`",
-            "`adhoc/<nnn>-<slug>`",
-            "`development-procedure` concept's convention wins",
-        ] {
-            assert!(
-                branch.contains(phrase),
-                "{p}: the branch step lacks `{phrase}`"
-            );
-        }
-        let interview = step_task(&text, "INTERVIEW THE USER");
-        for phrase in [
-            "`/grill-me`",
-            "where the design is open",
-            "an interaction, never a self-check",
-        ] {
-            assert!(
-                interview.contains(phrase),
-                "{p}: the interview step lacks `{phrase}`"
-            );
-        }
-        for phrase in [
-            "<skill_call name=\"/contract-design\" when=\"if the contract changes name a contract\"",
-            "<skill_call name=\"/build\" when=\"always\"",
-            "`/research`",
-            "`/design`",
-            "`/prototype`",
-        ] {
-            assert!(text.contains(phrase), "{p} lacks `{phrase}`");
-        }
-        let plan = step_task(&text, "WRITE THE PLAN");
-        for phrase in ["`schema-plan`", "Goal, Contract changes, Work blocks"] {
-            assert!(plan.contains(phrase), "{p}: the plan step lacks `{phrase}`");
-        }
-        let double_check = step_task(&text, "DOUBLE-CHECK");
-        assert!(
-            double_check.contains("`/double-check`"),
-            "{p}: the double-check step does not call the skill"
-        );
-        let commit = step_task(&text, "COMMIT THE PLAN");
-        for phrase in ["the plan", "source-declaration", "work's branch"] {
-            assert!(
-                commit.contains(phrase),
-                "{p}: the commit step lacks `{phrase}`"
-            );
-        }
-        let (contracts_at, plan_at, commit_at, build_at) = (
-            text.find("<skill_call name=\"/contract-design\"").unwrap(),
-            text.find("<step name=\"WRITE THE PLAN\"").unwrap(),
-            text.find("<step name=\"COMMIT THE PLAN\"").unwrap(),
-            text.find("<skill_call name=\"/build\"").unwrap(),
-        );
-        assert!(
-            contracts_at < plan_at && plan_at < commit_at && commit_at < build_at,
-            "{p}: the contract changes, the plan, the commit and the hand-off are out of order"
-        );
-        assert!(
-            text.contains("<rule level=\"MUST\">decompose the work and decide its interfaces; write no product code</rule>"),
-            "{p} does not refuse to write product code"
-        );
-        assert!(
-            text.contains("Deferred decisions"),
-            "{p} does not record a question only the user can answer"
-        );
-    }
-}
-
-/// Covers I052's scope criterion: the three skills scope replaces ship
-/// nowhere — not in the pack, not under `.claude/skills/`, and not in the
-/// embedded pack's item set, which lists `scope` instead (ADR-050).
-#[test]
-fn no_retired_workflow_skill_ships() {
-    for name in ["frame", "feature-plan", "adhoc-plan"] {
-        assert_retired_skill(name);
-    }
-    assert!(
-        superdev_core::content::snapshot()
-            .item(
-                superdev_core::content::Owner::Knowledge,
-                superdev_core::content::ItemKind::Skill,
-                "scope",
-            )
-            .is_some(),
-        "the pack's item set does not list the scope skill"
-    );
-    let lock = std::fs::read_to_string(repo(".superdev/lock.toml")).expect("the lock is on file");
-    assert!(
-        lock.contains("\".claude/skills/scope/SKILL.md\" = \""),
-        "the lock does not claim .claude/skills/scope/SKILL.md"
-    );
-}
-
-/// Covers I052's contract-design criterion: contract-design takes one plan's
-/// Contract changes, keeps the user's go-ahead before anything commits, and
-/// hands back to `/scope`, which commits (ADR-050).
-#[test]
-fn the_contract_design_skill_is_a_sub_skill_of_scope() {
-    for (p, text) in skill_copies("contract-design") {
-        assert!(
-            text.contains("input=\"one plan's Contract changes"),
-            "{p} does not take one plan's contract changes"
-        );
-        assert!(
-            text.contains(
-                "<tool_call name=\"sokf_read\" path=\"sokf:plan-{nnn}-{slug}\" when=\"always\" />"
-            ),
-            "{p} does not read the plan"
-        );
-        let work = step_task(&text, "READ THE CONTRACT CHANGES");
-        for phrase in ["one contract per bullet", "returns to `/scope`"] {
-            assert!(
-                work.contains(phrase),
-                "{p}: the work-list step lacks `{phrase}`"
-            );
-        }
-        let approval = text
-            .lines()
-            .find(|l| l.contains("The user has explicitly approved"))
-            .unwrap_or_else(|| panic!("{p} has no approval gate"));
-        assert!(approval.starts_with("<gate "), "{p}: {approval}");
-        assert!(
-            text.contains("<skill_call name=\"/scope\" when=\"always\""),
-            "{p} does not hand back to /scope"
-        );
-        assert!(
-            text.contains("<rule level=\"MUST NOT\">commit; `/scope` commits the approved edits with the plan</rule>"),
-            "{p} still commits for itself"
-        );
-        for retired in ["/feature-plan", "lifecycle is framed", "framed issue"] {
-            assert!(!text.contains(retired), "{p} still names `{retired}`");
-        }
-    }
-}
-
 /// Covers I052 AC_issue-schema as the tracker concept writes it: the live
 /// concept and the pack's skeleton are one text, and it names the three
 /// states, the three kinds, the six headings and no retired state or type.
@@ -2204,55 +1759,6 @@ fn the_tracker_concept_describes_the_template() {
         );
     }
 }
-
-/// Covers I052's build criterion: `/build` works the plan's blocks in order
-/// — tests, then code, then the block's own tests and the tests it touches,
-/// then a commit that ticks the block — and verifies the whole change once
-/// after the last block, carrying no review step of its own (ADR-050).
-#[test]
-fn the_build_skill_works_the_blocks_and_verifies_once() {
-    for (p, text) in skill_copies("build") {
-        let per_block = step_task(&text, "RUN THE BLOCK'S TESTS");
-        for phrase in [
-            "the tests its change touches",
-            "the full suite waits for the last block",
-        ] {
-            assert!(
-                per_block.contains(phrase),
-                "{p}: the per-block test step lacks `{phrase}`"
-            );
-        }
-        let verify = step_task(&text, "VERIFY THE WHOLE CHANGE");
-        for phrase in ["after the last block", "`superdev validate`", "once"] {
-            assert!(
-                verify.contains(phrase),
-                "{p}: the full-suite step lacks `{phrase}`"
-            );
-        }
-        assert!(
-            step_task(&text, "TICK AND COMMIT THE BLOCK").contains("ticked by build at its commit"),
-            "{p} does not tick the block at its commit"
-        );
-        assert!(
-            text.contains("<gate check=\"The block needs no contract change\" on-fail=\"/scope"),
-            "{p}: the contract-change gate does not return to /scope"
-        );
-        assert!(
-            text.contains("<gate check=\"The block is small enough to build and commit in one pass\" on-fail=\"/scope"),
-            "{p}: the block-too-big gate does not return to /scope"
-        );
-        for retired in [
-            "/code-review",
-            "/integrate",
-            "/feature-plan",
-            "REVIEW THE DIFF",
-            "framed issue",
-        ] {
-            assert!(!text.contains(retired), "{p} still names `{retired}`");
-        }
-    }
-}
-
 /// Covers I052's build criterion: integrate ships nowhere — not in the pack,
 /// not under `.claude/skills/`, not in the embedded pack's item set, and not
 /// in the lock (ADR-050).
@@ -2260,45 +1766,6 @@ fn the_build_skill_works_the_blocks_and_verifies_once() {
 fn no_integrate_skill_ships() {
     assert_retired_skill("integrate");
 }
-
-/// Covers I052's execute-plan criterion: `/execute-plan` drives `/build`
-/// over the plan's blocks through the run verbs, and the skill it replaces
-/// ships nowhere (ADR-050).
-#[test]
-fn the_execute_plan_skill_drives_build_over_the_blocks() {
-    for (p, text) in skill_copies("execute-plan") {
-        for verb in [
-            "`superdev run begin",
-            "`superdev run advance",
-            "`superdev run end`",
-        ] {
-            assert!(
-                text.contains(verb),
-                "{p} does not drive the run with {verb}`"
-            );
-        }
-        assert!(
-            step_task(&text, "BUILD THE BLOCK").contains("`/build`"),
-            "{p} does not run /build for the block"
-        );
-        assert!(
-            text.contains("<loop until=\"no block is ready"),
-            "{p} does not loop until no block is ready"
-        );
-        let handle = step_task(&text, "HANDLE A RETURN");
-        for phrase in ["at most twice", "the third failure defers", "`/scope`"] {
-            assert!(
-                handle.contains(phrase),
-                "{p}: the return step lacks `{phrase}`"
-            );
-        }
-        for retired in ["/frame", "/feature-plan", "/integrate", "framed issue"] {
-            assert!(!text.contains(retired), "{p} still names `{retired}`");
-        }
-    }
-    assert_retired_skill("execute-feature-plan");
-}
-
 /// A retired skill ships nowhere: neither tree carries its directory, the
 /// embedded pack's item set does not list it, and the lock claims no file of
 /// it.
@@ -2325,59 +1792,8 @@ fn assert_retired_skill(name: &str) {
         "the lock still claims the {name} skill"
     );
 }
-
-/// Covers I052's accept criterion: `/accept` reviews the whole change before
-/// it walks the contract criteria, and a finding the user wants fixed
-/// returns to `/build` (ADR-050).
-#[test]
-fn the_accept_skill_reviews_before_the_criteria_walk() {
-    for (p, text) in skill_copies("accept") {
-        let review = text
-            .find("<step name=\"REVIEW THE CHANGE\"")
-            .unwrap_or_else(|| panic!("{p} carries no review step"));
-        let criteria = text
-            .find("<step name=\"CHECK CRITERIA\"")
-            .unwrap_or_else(|| panic!("{p} carries no criteria walk"));
-        assert!(review < criteria, "{p} reviews after the criteria walk");
-        assert!(
-            step_task(&text, "REVIEW THE CHANGE").contains("`/code-review`"),
-            "{p}: the review step does not call /code-review"
-        );
-        assert!(
-            step_task(&text, "REVIEW THE CHANGE").contains("returns to `/build`"),
-            "{p}: a finding does not return to /build"
-        );
-        assert!(
-            text.contains("<skill_call name=\"/build\""),
-            "{p} does not hand a finding to /build"
-        );
-        let walk = step_task(&text, "CHECK CRITERIA");
-        for phrase in ["contract", "`AC_`"] {
-            assert!(
-                walk.contains(phrase),
-                "{p}: the criteria walk lacks `{phrase}`"
-            );
-        }
-        assert!(
-            step_task(&text, "FILE GAPS").contains("`schema-issue`"),
-            "{p} does not file a gap as an issue"
-        );
-        for retired in [
-            "/feature-plan",
-            "/frame",
-            "integrate",
-            "schema-bug-report",
-            "unframed",
-            "framed issue",
-        ] {
-            assert!(!text.contains(retired), "{p} still names `{retired}`");
-        }
-    }
-}
-
-/// Covers I052's workflow criterion: the aggregator's source and its
-/// rendered copy read SCOPE → BUILD → ACCEPT, name each phase, mark accept
-/// optional, carry every edge, and list no retired phase (ADR-050).
+/// The source instructions and rendered aggregator name the authoritative
+/// workflow, its review gates, local integration, and independent `/file`.
 #[test]
 fn the_workflow_reads_scope_build_accept() {
     for p in [
@@ -2385,48 +1801,20 @@ fn the_workflow_reads_scope_build_accept() {
         ".agents/superdev.md",
     ] {
         let text = std::fs::read_to_string(repo(p)).expect("the file is on file");
-        assert!(
-            text.contains("<flow>SCOPE → BUILD → ACCEPT</flow>"),
-            "{p} does not read SCOPE → BUILD → ACCEPT"
-        );
-        for phase in ["SCOPE", "BUILD", "ACCEPT"] {
-            assert!(
-                text.contains(&format!("<phase name=\"{phase}\"")),
-                "{p} lists no {phase} phase"
-            );
-        }
-        let accept = text
-            .lines()
-            .find(|l| l.contains("<phase name=\"ACCEPT\""))
-            .unwrap_or_else(|| panic!("{p} lists no ACCEPT phase"));
-        assert!(accept.contains("optional"), "{p}: {accept}");
-        for phase in [
-            "FILE",
-            "FRAME",
-            "CONTRACT-DESIGN",
-            "FEATURE-PLAN",
-            "INTEGRATE",
+        for required in [
+            "<flow>SCOPE → BUILD → ACCEPT</flow>",
+            "authority=\"Rust\"",
+            "fresh isolated requirements review",
+            "Final code review is fresh, isolated, read-only",
+            "git merge --no-ff",
+            "/file is independent",
+            "abandonment is human-only",
         ] {
-            assert!(
-                !text.contains(&format!("<phase name=\"{phase}\"")),
-                "{p} still lists the {phase} phase"
-            );
+            assert!(text.contains(required), "{p} lacks `{required}`");
         }
-        for edge in [
-            "<edge from=\"BUILD\" when=\"contract change needed\" to=\"SCOPE\" />",
-            "<edge from=\"BUILD\" when=\"a work block is too big\" to=\"SCOPE\" />",
-            "<edge from=\"BUILD\" when=\"when the build is blocked\" to=\"SCOPE\" />",
-            "<edge from=\"BUILD\" when=\"the last block is merged\" to=\"DONE\" />",
-            "<edge from=\"ACCEPT\" when=\"a code change is required\" to=\"BUILD\" />",
-            "<edge from=\"ACCEPT\" when=\"implementation mismatch or open questions\" to=\"SCOPE\" />",
-            "<edge from=\"ACCEPT\" when=\"clean pass\" to=\"DONE\" />",
-        ] {
-            assert!(text.contains(edge), "{p} lacks the edge `{edge}`");
+        for retired in ["FRAME", "CONTRACT-DESIGN", "FEATURE-PLAN", "INTEGRATE"] {
+            assert!(!text.contains(&format!("<phase name=\"{retired}\"")));
         }
-        assert!(
-            text.contains("<entry to=\"ACCEPT\" when=\"the user requests acceptance\" />"),
-            "{p} lacks accept's entry"
-        );
     }
 }
 
@@ -2442,8 +1830,8 @@ fn writer_facing_roots() -> Vec<String> {
         "knowledge/schemas",
         "pack/knowledge/concepts",
         "pack/knowledge/schemas",
-        "pack/knowledge/skills",
-        ".claude/skills",
+        "pack/pi/skills",
+        ".pi/skills",
         "README.md",
     ]
     .map(String::from)

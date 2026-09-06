@@ -51,9 +51,8 @@ git config core.symlinks true    # this clone; --global alone will not do it
 git checkout -- crates/lib/superdev-core/assets
 ```
 
-This repo manages its own skills with superdev, and the Claude Code validation
-hook it installs calls a bare `superdev`. Link the dev shim so that resolves to
-your working tree:
+This repo manages its own Pi extension and canonical knowledge with superdev.
+Link the dev shim so Pi and MCP calls resolve `superdev` to your working tree:
 
 ```sh
 ln -sf "$PWD/scripts/superdev" ~/.local/bin/superdev
@@ -61,7 +60,11 @@ ln -sf "$PWD/scripts/superdev" ~/.local/bin/superdev
 
 ## Everyday commands
 
-All wrapped as npm scripts (see `package.json`):
+Local product work uses Pi's `/superdev` command and the canonical
+`SCOPE → BUILD → ACCEPT` process. Acceptance integrates locally only; release
+and push remain explicit maintainer operations.
+
+All checks are wrapped as npm scripts (see `package.json`):
 
 ```sh
 npm run build           # cargo build --workspace

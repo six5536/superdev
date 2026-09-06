@@ -36,8 +36,8 @@ pub(crate) enum ManagedItem {
         reason: String,
     },
     /// A line guaranteed in a shared file, by exact whole-line match. Never
-    /// hashed, never claimed — deleting it just means the next sync puts it
-    /// back.
+    /// hashed and never claimed. Retained for older component fixtures.
+    #[allow(dead_code)]
     EnsureLine {
         /// Repo-relative target path.
         path: String,

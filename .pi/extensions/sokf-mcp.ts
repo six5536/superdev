@@ -1,4 +1,10 @@
 import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
+import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
+
+// Pi discovers every top-level extension module. This file is also imported as
+// the transport library by sokf.ts, so its factory intentionally registers
+// nothing when discovery loads it directly.
+export default function sokfMcpTransport(_pi: ExtensionAPI) {}
 
 const PROTOCOL_VERSION = "2025-06-18";
 const MAX_RESPONSE_BYTES = 16 * 1024 * 1024;

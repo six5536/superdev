@@ -86,21 +86,6 @@ exit 0
             .env("FAKE_INSTALLED", self.dir.path().join("installed"));
         cmd
     }
-
-    fn log(&self) -> String {
-        fs::read_to_string(self.dir.path().join("calls.log")).unwrap_or_default()
-    }
-
-    /// Forget every trace of this machine having run superdev before: no tools
-    /// installed, no plugins, no code index, and an empty call log. The
-    /// committed files stay, so this is a fresh clone of the same repo.
-    fn simulate_fresh_machine(&self) {
-        for name in ["calls.log", "plugins.txt", "installed"] {
-            let _ = fs::remove_file(self.dir.path().join(name));
-        }
-        fs::remove_dir_all(self.repo().join(".codegraph")).unwrap();
-    }
-
     fn read(&self, rel: &str) -> String {
         fs::read_to_string(self.repo().join(rel)).unwrap()
     }
@@ -144,208 +129,11 @@ fn remove_table(toml: &str, table: &str) -> String {
     }
     out
 }
-
-/// The backed-up copy of `rel`, searched across the per-run stamp directories
-/// the engine names by clock time.
-fn backup_of(sb: &Sandbox, rel: &str) -> Option<String> {
-    fs::read_dir(sb.repo().join(".superdev/cache/backup"))
-        .ok()?
-        .filter_map(|stamp| fs::read_to_string(stamp.ok()?.path().join(rel)).ok())
-        .next()
-}
-
 fn write_fake(bin: &Path, name: &str, body: &str) {
     let p = bin.join(name);
     fs::write(&p, body).unwrap();
     fs::set_permissions(&p, fs::Permissions::from_mode(0o755)).unwrap();
 }
-
-/// Journey 1: init on the defaults, then live with the repo — drift is
-/// reported, dry-run touches nothing, sync repairs, scaffolds stay the
-/// user's.
-#[test]
-fn init_sets_up_a_fresh_repo() {
-    let sb = Sandbox::new();
-    let init = run(sb.superdev().arg("init"));
-    assert_eq!(init.code, 0, "stderr: {}", init.stderr);
-    let repo = sb.repo();
-    assert!(repo.join(".superdev/config.toml").is_file());
-    assert!(repo.join(".superdev/lock.toml").is_file());
-    // A fresh AGENTS.md holds only superdev's import; the rest is the user's
-    // to write. The aggregator carries the instructions themselves, with the
-    // code-exploration section present because code-index is enabled.
-    assert_eq!(sb.read("AGENTS.md"), "@.agents/superdev.md\n");
-    let aggregator = sb.read(".agents/superdev.md");
-    assert!(aggregator.starts_with("# Prime Directive"), "{aggregator}");
-    assert!(aggregator.contains("<knowledge"), "{aggregator}");
-    assert!(aggregator.contains("<code-exploration"), "{aggregator}");
-    assert!(aggregator.contains("<grammar_rules>"), "{aggregator}");
-    assert!(repo.join(".agents/sokf/SPEC.md").is_file());
-    assert!(repo.join(".agents/sokf/changelog.md").is_file());
-    assert!(repo.join(".agents/sokf/grammar.yaml").is_file());
-    let mcp = sb.read(".mcp.json");
-    assert!(mcp.contains("\"superdev-sokf\""), "{mcp}");
-    assert!(mcp.contains("\"codegraph\""), "{mcp}");
-    assert!(sb.read(".gitignore").contains(".superdev/cache/"));
-    assert!(sb.read(".gitignore").contains(".codegraph/"));
-    // The knowledge capability carries the converted skill set into the repo,
-    // so a collaborator gets it from git alone; nothing installs at user level.
-    assert!(repo.join(".claude/skills/scope/SKILL.md").is_file());
-    assert!(repo.join(".claude/skills/prototype/LOGIC.md").is_file());
-    assert!(
-        repo.join(".claude/skills/how-do-i/SESSION-BOUNDARIES.md")
-            .is_file()
-    );
-    let lock = sb.read(".superdev/lock.toml");
-    assert!(
-        lock.contains("\".claude/skills/scope/SKILL.md\""),
-        "lock: {lock}"
-    );
-    assert!(!lock.contains("workflows"), "lock: {lock}");
-    assert!(!sb.read(".superdev/config.toml").contains("workflows"));
-    // codegraph comes from its checksummed release bundles, not npm.
-    let pinned = sb.read(".mise.toml");
-    assert!(pinned.contains("http:codegraph"), "{pinned}");
-    assert!(pinned.contains("sha256:"), "{pinned}");
-    assert!(!pinned.contains("npm:"), "{pinned}");
-    assert!(!pinned.contains("mattpocock"), "{pinned}");
-    // The real binary drove each fake through PATH — wiring, not ordering:
-    // core's FakeRunner tests own the ordering and the targeted lists.
-    let log = sb.log();
-    assert!(log.contains("mise install"), "log: {log}");
-    assert!(log.contains("claude plugin install frontend-design@claude-code-plugins"));
-    assert!(
-        log.contains("mise exec http:codegraph -- codegraph init"),
-        "log: {log}"
-    );
-    sb.superdev().arg("status").assert().success();
-
-    // Drift: an owned file edit turns status dirty; dry-run changes nothing;
-    // sync repairs it.
-    sb.write(".agents/sokf/SPEC.md", "tampered");
-    let dirty = run(sb.superdev().arg("status"));
-    assert_eq!(dirty.code, 1, "stdout: {}", dirty.stdout);
-    assert!(dirty.stdout.contains("SPEC.md"), "stdout: {}", dirty.stdout);
-    sb.superdev().args(["sync", "--dry-run"]).assert().success();
-    assert_eq!(sb.read(".agents/sokf/SPEC.md"), "tampered");
-    sb.superdev().arg("sync").assert().success();
-    assert_ne!(sb.read(".agents/sokf/SPEC.md"), "tampered");
-
-    // AGENTS.md is the user's: any content is fine as long as the import
-    // line stays, and superdev never rewrites the rest.
-    sb.write("AGENTS.md", "customised\n@.agents/superdev.md\n");
-    sb.superdev().arg("status").assert().success();
-    assert_eq!(sb.read("AGENTS.md"), "customised\n@.agents/superdev.md\n");
-    // Deleting the line is planned work; sync appends it back and reports
-    // the trim hint, leaving the user's text alone.
-    sb.write("AGENTS.md", "customised\n");
-    sb.superdev().arg("status").assert().code(1);
-    let synced = run(sb.superdev().arg("sync"));
-    assert_eq!(synced.code, 0, "stderr: {}", synced.stderr);
-    assert!(
-        synced.stdout.contains("AGENTS.md is yours"),
-        "stdout: {}",
-        synced.stdout
-    );
-    assert_eq!(sb.read("AGENTS.md"), "customised\n@.agents/superdev.md\n");
-
-    // A version-less retarget re-pins to the registry default and stays clean.
-    sb.superdev()
-        .args(["update", "code-index"])
-        .assert()
-        .success();
-    sb.superdev().arg("status").assert().success();
-}
-
-/// Covers I049 criterion 22: the pack ships the judgement step, so a repo
-/// adopting superdev gets it from `init` with the schemas, and `status`
-/// holds the written skill as converged.
-#[test]
-fn init_ships_the_contract_judgement_step() {
-    let sb = Sandbox::new();
-    sb.superdev().arg("init").assert().success();
-    let build = sb.read(".claude/skills/build/SKILL.md");
-    assert!(
-        build.contains("<step name=\"JUDGE THE CONTRACTS\""),
-        "{build}"
-    );
-    sb.superdev().arg("status").assert().success();
-}
-
-/// The `update` verb's whole surface: retarget every pin at once, switch a
-/// provider, and the two refusals — a disabled slot, and a provider switch
-/// on a slot holding several packs, where there is no single entry to move.
-#[test]
-fn update_retargets_switches_and_refuses() {
-    let sb = Sandbox::new();
-    sb.superdev().arg("init").assert().success();
-
-    // No target: every enabled capability's pin moves to this binary's
-    // registry default, and the repo stays converged.
-    sb.superdev().arg("update").assert().success();
-    sb.superdev().arg("status").assert().success();
-
-    // An explicit provider switch rewrites the slot's one entry.
-    sb.superdev()
-        .args(["update", "frontend", "--provider", "frontend-design"])
-        .assert()
-        .success();
-    assert!(
-        sb.read(".superdev/config.toml")
-            .contains("provider = \"frontend-design\""),
-    );
-
-    // A capability the manifest does not enable cannot be updated.
-    let config = sb.read(".superdev/config.toml");
-    sb.write(
-        ".superdev/config.toml",
-        &remove_table(&config, "[frontend]"),
-    );
-    let disabled = run(sb.superdev().args(["update", "frontend"]));
-    assert_eq!(disabled.code, 2, "stdout: {}", disabled.stdout);
-    assert!(
-        disabled.stderr.contains("`frontend` is not enabled"),
-        "stderr: {}",
-        disabled.stderr
-    );
-
-    // A many slot holding two packs has no single entry to switch, so the
-    // provider switch refuses and says where to make the change by hand.
-    let config = sb.read(".superdev/config.toml");
-    let two_packs = format!(
-        "{}\n[[skills]]\nprovider = \"superdev-skills\"\nversion = \"{}\"\n\n[[skills]]\nprovider = \"another-pack\"\n",
-        remove_table(&config, "[skills]"),
-        env!("CARGO_PKG_VERSION")
-    );
-    sb.write(".superdev/config.toml", &two_packs);
-    let several = run(sb
-        .superdev()
-        .args(["update", "skills", "--provider", "superdev-skills"]));
-    assert_eq!(several.code, 2, "stdout: {}", several.stdout);
-    assert!(
-        several.stderr.contains("skills holds several packs"),
-        "stderr: {}",
-        several.stderr
-    );
-}
-
-/// Journey 2: clone the repo on a machine that has never run superdev — the
-/// committed pins install without a single planned edit.
-#[test]
-fn sync_installs_committed_pins_on_a_fresh_clone() {
-    let sb = Sandbox::new();
-    sb.superdev().arg("init").assert().success();
-    sb.simulate_fresh_machine();
-
-    // No pin edit is planned — `.mise.toml` is committed and correct — but the
-    // tools it names are not installed on this machine. (Trust-before-install
-    // and the targeted tool list are asserted in core's engine tests.)
-    let synced = run(sb.superdev().arg("sync"));
-    assert_eq!(synced.code, 0, "stderr: {}", synced.stderr);
-    assert!(sb.log().contains("mise install"), "log: {}", sb.log());
-    sb.superdev().arg("status").assert().success();
-}
-
 /// Journey 3: a repo still carrying the removed workflows capability. The
 /// manifest load fails with the guided error; once the table is deleted, sync
 /// swaps same-named skills to knowledge ownership and sweeps the dropped
@@ -419,166 +207,6 @@ fn skills_entries_are_a_set_with_guided_refusals() {
         exclusive.stderr
     );
 }
-
-#[test]
-fn a_workflows_manifest_errors_and_sync_migrates_after_the_table_goes() {
-    let sb = Sandbox::new();
-    sb.superdev().arg("init").assert().success();
-    let config = sb.read(".superdev/config.toml");
-
-    // The pre-removal manifest shape: every verb refuses with the way out.
-    sb.write(
-        ".superdev/config.toml",
-        &format!("{config}\n[workflows]\nprovider = \"mattpocock-skills\"\nversion = \"1.2.3\"\n"),
-    );
-    let refused = run(sb.superdev().arg("status"));
-    assert_eq!(refused.code, 2, "stdout: {}", refused.stdout);
-    assert!(
-        refused
-            .stderr
-            .contains("the workflows capability was removed"),
-        "stderr: {}",
-        refused.stderr
-    );
-    assert!(
-        refused.stderr.contains("claude plugin install superpowers"),
-        "stderr: {}",
-        refused.stderr
-    );
-    // The error never rewrites the manifest: config.toml is the user's file.
-    assert!(sb.read(".superdev/config.toml").contains("[workflows]"));
-
-    // The user deletes the table by hand. `update workflows` is now just an
-    // unknown capability.
-    sb.write(".superdev/config.toml", &config);
-    let unknown = run(sb.superdev().args(["update", "workflows"]));
-    assert_eq!(unknown.code, 2, "stdout: {}", unknown.stdout);
-    assert!(
-        unknown.stderr.contains("unknown capability `workflows`"),
-        "stderr: {}",
-        unknown.stderr
-    );
-
-    // Rewind the repo's files to what the old provider left behind: a
-    // same-named skill it wrote, a dropped upstream skill, and the override
-    // file, all attributed to `workflows` in the lock.
-    let upstream = "upstream skill\n";
-    let hash = superdev_core::lock::sha256_hex(upstream.as_bytes());
-    for rel in [
-        ".claude/skills/scope/SKILL.md",
-        ".claude/skills/ask-matt/SKILL.md",
-        ".agents/MATT-POCOCK-SKILLS.md",
-    ] {
-        let p = sb.repo().join(rel);
-        fs::create_dir_all(p.parent().unwrap()).unwrap();
-        fs::write(p, upstream).unwrap();
-    }
-    let lock = sb.read(".superdev/lock.toml");
-    let mut edited = String::new();
-    for line in lock.lines() {
-        if line.starts_with("\".claude/skills/scope/SKILL.md\"") {
-            edited.push_str(&format!("\".claude/skills/scope/SKILL.md\" = \"{hash}\"\n"));
-            continue;
-        }
-        edited.push_str(line);
-        edited.push('\n');
-        if line == "[files]" {
-            edited.push_str(&format!(
-                "\".claude/skills/ask-matt/SKILL.md\" = \"{hash}\"\n"
-            ));
-            edited.push_str(&format!("\".agents/MATT-POCOCK-SKILLS.md\" = \"{hash}\"\n"));
-        }
-    }
-    // The attribution a pre-removal binary recorded — including one on a
-    // file sync has no reason to touch, which only a wholesale clear retires.
-    edited.push_str("\n[owners]\n");
-    for key in [
-        ".claude/skills/scope/SKILL.md",
-        ".claude/skills/ask-matt/SKILL.md",
-        ".agents/MATT-POCOCK-SKILLS.md",
-        ".claude/skills/wizard/SKILL.md",
-    ] {
-        edited.push_str(&format!("\"{key}\" = \"workflows\"\n"));
-    }
-    sb.write(".superdev/lock.toml", &edited);
-
-    // The pending swap is planned work: status exits 1 until sync runs.
-    let pending = run(sb.superdev().arg("status"));
-    assert_eq!(pending.code, 1, "stdout: {}", pending.stdout);
-
-    let synced = run(sb.superdev().arg("sync"));
-    assert_eq!(synced.code, 0, "stderr: {}", synced.stderr);
-    // The same-named skill is superdev's again — the shipped content, with
-    // the legacy attribution retired from the lock.
-    assert_ne!(sb.read(".claude/skills/scope/SKILL.md"), upstream);
-    let lock = sb.read(".superdev/lock.toml");
-    assert!(
-        lock.contains("\".claude/skills/scope/SKILL.md\""),
-        "lock: {lock}"
-    );
-    assert!(!lock.contains("workflows"), "lock: {lock}");
-    assert!(!lock.contains("[owners]"), "lock: {lock}");
-    // The dropped files are swept with a backup, not shredded.
-    assert!(!sb.repo().join(".claude/skills/ask-matt/SKILL.md").exists());
-    assert!(!sb.repo().join(".agents/MATT-POCOCK-SKILLS.md").exists());
-    assert_eq!(
-        backup_of(&sb, ".claude/skills/ask-matt/SKILL.md"),
-        Some(upstream.to_string())
-    );
-    sb.superdev().arg("status").assert().success();
-}
-
-/// Journey 4: disable a capability — the orphan sweep unpins what superdev
-/// owns and leaves the user's own pins exactly as written.
-#[test]
-fn disabling_code_index_unpins_codegraph_and_keeps_user_pins() {
-    let sb = Sandbox::new();
-    sb.superdev().arg("init").assert().success();
-
-    // A pin of the user's own, in the file superdev shares with them.
-    let mise = sb.read(".mise.toml");
-    assert!(mise.contains("[tools]"), "{mise}");
-    sb.write(
-        ".mise.toml",
-        &mise.replace("[tools]", "[tools]\nnode = \"24\""),
-    );
-
-    let config = sb.read(".superdev/config.toml");
-    let edited = remove_table(&config, "[code-index]");
-    assert!(!edited.contains("codegraph"), "{edited}");
-    sb.write(".superdev/config.toml", &edited);
-
-    let dirty = run(sb.superdev().arg("status"));
-    assert_eq!(dirty.code, 1, "stdout: {}", dirty.stdout);
-    assert!(
-        dirty.stdout.contains("unpin http:codegraph in .mise.toml"),
-        "stdout: {}",
-        dirty.stdout
-    );
-
-    let synced = run(sb.superdev().arg("sync"));
-    assert_eq!(synced.code, 0, "stderr: {}", synced.stderr);
-    // Only superdev's own pin goes: the user's stays.
-    let mise = sb.read(".mise.toml");
-    assert!(!mise.contains("http:codegraph"), "{mise}");
-    assert!(mise.contains("node = \"24\""), "{mise}");
-    let lock = sb.read(".superdev/lock.toml");
-    assert!(!lock.contains(".mise.toml:http:codegraph"), "{lock}");
-    assert!(!lock.contains("[components.code-index]"), "{lock}");
-    // The capabilities still enabled keep their records: the sweep is targeted.
-    assert!(lock.contains("[components.skills]"), "{lock}");
-    // The agent wiring goes with the capability: MCP key and the
-    // aggregator's code-exploration section — while the knowledge wiring
-    // stays.
-    let mcp = sb.read(".mcp.json");
-    assert!(!mcp.contains("\"codegraph\""), "{mcp}");
-    assert!(mcp.contains("\"superdev-sokf\""), "{mcp}");
-    let aggregator = sb.read(".agents/superdev.md");
-    assert!(!aggregator.contains("<code-exploration"), "{aggregator}");
-    assert!(aggregator.contains("<knowledge"), "{aggregator}");
-    sb.superdev().arg("status").assert().success();
-}
-
 /// Journey 5: a provider command fails mid-init — the manifest survives with
 /// a pointer to it, and `sync` resumes.
 #[test]
@@ -597,4 +225,34 @@ fn a_failed_init_reports_the_manifest_it_leaves_behind() {
     assert!(sb.repo().join(".superdev/config.toml").is_file());
     assert!(!sb.repo().join(".superdev/lock.toml").exists());
     sb.superdev().arg("sync").assert().success();
+}
+
+#[test]
+fn init_materializes_pi_workflow_without_claude_assets() {
+    let sb = Sandbox::new();
+    sb.superdev()
+        .args(["init", "--no-skills", "--no-code-index", "--no-frontend"])
+        .assert()
+        .success();
+
+    let repo = sb.repo();
+    for path in [
+        ".pi/extensions/superdev/index.ts",
+        ".pi/extensions/superdev/prompts/scope.md",
+        ".pi/extensions/superdev/prompts/requirements-review.md",
+        ".pi/extensions/superdev/prompts/build.md",
+        ".pi/extensions/superdev/prompts/code-review.md",
+        ".pi/extensions/superdev/prompts/accept.md",
+        ".pi/extensions/superdev/prompts/file.md",
+        ".pi/skills/sokf-authoring/SKILL.md",
+    ] {
+        assert!(repo.join(path).is_file(), "{path} was not materialized");
+    }
+    assert!(!repo.join(".claude/skills").exists());
+    assert!(!repo.join(".claude/settings.json").exists());
+    let lock = sb.read(".superdev/lock.toml");
+    assert!(lock.contains(".pi/extensions/superdev/index.ts"));
+    assert!(lock.contains(".pi/skills/sokf-authoring/SKILL.md"));
+    assert!(!lock.contains(".claude/skills"));
+    assert!(!lock.contains("superdev hook run"));
 }

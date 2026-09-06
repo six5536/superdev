@@ -162,6 +162,28 @@ pub fn validate_work_branch(branch: &str) -> Result<()> {
 mod tests {
     use super::*;
 
+    fn command(root: &Path, args: &[&str]) {
+        let status = Command::new("git")
+            .args(args)
+            .current_dir(root)
+            .status()
+            .expect("git runs");
+        assert!(status.success(), "git {args:?}");
+    }
+
+    fn repository() -> tempfile::TempDir {
+        let dir = tempfile::tempdir().unwrap();
+        command(dir.path(), &["init", "-q", "-b", "main"]);
+        command(dir.path(), &["config", "user.email", "test@example.com"]);
+        command(dir.path(), &["config", "user.name", "Test"]);
+        command(dir.path(), &["config", "commit.gpgsign", "false"]);
+        command(dir.path(), &["config", "merge.gpgsign", "false"]);
+        std::fs::write(dir.path().join("file"), "base\n").unwrap();
+        command(dir.path(), &["add", "file"]);
+        command(dir.path(), &["commit", "-q", "-m", "base"]);
+        dir
+    }
+
     #[test]
     fn work_branch_validation_is_strict() {
         assert!(validate_work_branch("work/059-scope-build-accept").is_ok());
@@ -174,5 +196,45 @@ mod tests {
         ] {
             assert!(validate_work_branch(bad).is_err(), "{bad}");
         }
+    }
+
+    #[test]
+    fn integration_creates_a_no_ff_merge_commit() {
+        let dir = repository();
+        let root = dir.path();
+        let default = revision(root, "main").unwrap();
+        create_work_branch(root, "work/059-test").unwrap();
+        std::fs::write(root.join("file"), "work\n").unwrap();
+        command(root, &["commit", "-q", "-am", "work"]);
+        let work = revision(root, "work/059-test").unwrap();
+        command(root, &["switch", "-q", "main"]);
+
+        integrate_no_ff(root, "main", &default, "work/059-test", &work).unwrap();
+
+        let parents = git(root, &["rev-list", "--parents", "-n", "1", "HEAD"]).unwrap();
+        assert_eq!(
+            String::from_utf8_lossy(&parents.stdout)
+                .split_whitespace()
+                .count(),
+            3
+        );
+    }
+
+    #[test]
+    fn integration_refuses_dirty_or_stale_tips() {
+        let dir = repository();
+        let root = dir.path();
+        let default = revision(root, "main").unwrap();
+        create_work_branch(root, "work/059-test").unwrap();
+        std::fs::write(root.join("file"), "work\n").unwrap();
+        command(root, &["commit", "-q", "-am", "work"]);
+        let work = revision(root, "work/059-test").unwrap();
+        command(root, &["switch", "-q", "main"]);
+
+        std::fs::write(root.join("unrelated"), "dirty\n").unwrap();
+        assert!(integrate_no_ff(root, "main", &default, "work/059-test", &work).is_err());
+        std::fs::remove_file(root.join("unrelated")).unwrap();
+        assert!(integrate_no_ff(root, "main", "0000000", "work/059-test", &work).is_err());
+        assert!(integrate_no_ff(root, "main", &default, "work/059-test", &default).is_err());
     }
 }

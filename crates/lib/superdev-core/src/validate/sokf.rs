@@ -1693,11 +1693,11 @@ mod tests {
             ("manifest.sokf.yaml", MANIFEST_YAML),
             (
                 "plan.md",
-                "---\ntype: Plan\nid: alpha\nlinks:\n  - rel: implements\n    to: beta\n---\nSee [beta][sokf:beta].\n\n<!-- sokf:links -->\n[sokf:beta]: /spec.md\n",
+                "---\ntype: Plan\nid: plan-001-beta\nlifecycle: done\nphase: done\nbranch: work/001-beta\nlinks:\n  - rel: implements\n    to: issue-001-beta\n---\nSee [beta][sokf:issue-001-beta].\n\n<!-- sokf:links -->\n[sokf:issue-001-beta]: /spec.md\n",
             ),
             (
                 "spec.md",
-                "---\ntype: Spec\nid: beta\nlinks:\n  - rel: implemented-by\n    to: alpha\n---\nSee [alpha][sokf:alpha].\n\n<!-- sokf:links -->\n[sokf:alpha]: /plan.md\n",
+                "---\ntype: Spec\nid: issue-001-beta\nlinks:\n  - rel: implemented-by\n    to: plan-001-beta\n---\nSee [plan][sokf:plan-001-beta].\n\n<!-- sokf:links -->\n[sokf:plan-001-beta]: /plan.md\n",
             ),
         ]);
         let r = validate(&b, &b.root);

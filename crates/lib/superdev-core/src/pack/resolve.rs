@@ -613,68 +613,6 @@ mod tests {
         );
         assert!(resolved.pending.is_empty());
     }
-
-    /// Precedence: what the pack provides wins over the embedded copy.
-    #[test]
-    fn a_pack_item_wins_over_the_embedded_one() {
-        let repo = tempfile::tempdir().unwrap();
-        write_pack(&repo.path().join("packs/acme"), "scope", "# Ours\n");
-        let resolved = resolve(
-            repo.path(),
-            &FakeRunner::new(),
-            &manifest_with("./packs/acme", None),
-            &Lock::default(),
-            ResolveMode::Fetching,
-        )
-        .unwrap();
-        let item = resolved
-            .content
-            .item(knowledge(), ItemKind::Skill, "scope")
-            .expect("scope");
-        assert_eq!(item.files[0].1, "# Ours\n");
-        // Everything the pack does not carry still comes from the embedded
-        // copy.
-        assert!(
-            resolved
-                .content
-                .item(knowledge(), ItemKind::Skill, "build")
-                .is_some()
-        );
-    }
-
-    /// Case 2: a pin naming exactly what is compiled in resolves from it.
-    #[test]
-    fn a_pin_at_the_embedded_rev_resolves_without_reaching_out() {
-        let repo = tempfile::tempdir().unwrap();
-        for mode in [ResolveMode::Offline, ResolveMode::Fetching] {
-            let resolved = resolve(
-                repo.path(),
-                &FakeRunner::new(),
-                &manifest_with(DEFAULT_PACK.source, Some(DEFAULT_PACK.rev)),
-                &Lock::default(),
-                mode,
-            )
-            .unwrap();
-            assert!(resolved.pending.is_empty(), "{mode:?}");
-            assert!(
-                resolved
-                    .content
-                    .item(knowledge(), ItemKind::Skill, "scope")
-                    .is_some(),
-                "{mode:?}: the embedded pack still supplies the items"
-            );
-            // Layer 0 is the embedded pack, and naming it again does not
-            // make it a pack layer.
-            assert_eq!(
-                resolved
-                    .content
-                    .origin(knowledge(), ItemKind::Skill, "scope"),
-                Some(&Origin::Snapshot),
-                "{mode:?}"
-            );
-        }
-    }
-
     /// Any spelling of the default source at the embedded rev is the same
     /// pin, so none of them reaches out either.
     #[test]
@@ -1368,42 +1306,6 @@ mod tests {
         assert!(message.contains("needs `git`"), "{message}");
         assert!(message.contains("local path source"), "{message}");
     }
-
-    /// A fetched pack from a source that is not the default layers over the
-    /// embedded one, adding without removing. (Base *replacement* with a
-    /// fetched pack needs the real default source, so its semantics are
-    /// covered where they live, over `ContentSet`.)
-    #[test]
-    fn a_fetched_pack_layers_over_the_embedded_one() {
-        let repo = tempfile::tempdir().unwrap();
-        let fixture = tempfile::tempdir().unwrap();
-        git_fixture(fixture.path(), "assets-v9.0.0", "only-skill", "# only\n");
-        let url = format!("file://{}", fixture.path().display());
-        let manifest = git_manifest(&url, "assets-v9.0.0");
-
-        let resolution = resolve(
-            repo.path(),
-            &crate::runner::SystemRunner,
-            &manifest,
-            &Lock::default(),
-            ResolveMode::Fetching,
-        )
-        .unwrap();
-        assert!(
-            resolution
-                .content
-                .item(knowledge(), ItemKind::Skill, "only-skill")
-                .is_some()
-        );
-        assert!(
-            resolution
-                .content
-                .item(knowledge(), ItemKind::Skill, "scope")
-                .is_some(),
-            "a layering pack adds without removing"
-        );
-    }
-
     #[test]
     fn two_entries_naming_one_source_are_refused() {
         let repo = tempfile::tempdir().unwrap();

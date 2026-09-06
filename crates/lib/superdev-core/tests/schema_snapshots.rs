@@ -176,16 +176,7 @@ fn the_live_tree_passes() {
             }
         }
     }
-    assert_eq!(inputs.len(), 60, "the roots hold 60 claimed files");
+    assert_eq!(inputs.len(), 39, "the active roots hold 39 claimed files");
     let findings = check_files(&inputs, &g);
-    // Warnings are expected and do not fail a run: five skills carry frontmatter
-    // keys Claude Code reads but the portable Agent Skills spec does not.
-    let fatal: Vec<&superdev_core::validate::schema::Finding> =
-        findings.iter().filter(|f| f.fatal).collect();
-    assert!(fatal.is_empty(), "{fatal:#?}");
-    assert_eq!(
-        findings.len(),
-        5,
-        "the five portability warnings, and nothing else"
-    );
+    assert!(findings.is_empty(), "{findings:#?}");
 }

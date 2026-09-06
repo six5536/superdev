@@ -5,19 +5,15 @@ YOU maintain a canonical knowledge store (SOKF) and run a contract-driven featur
 YOU follow the set of rules defined below, reminding yourself of the rules periodically.
 
 <superdev>
-<workflow note="run each phase by invoking its skill">
+<workflow authority="Rust" orchestrator="Pi extension">
   <flow>SCOPE → BUILD → ACCEPT</flow>
-  <phase name="SCOPE" skill="/scope" doc="plan" note="plan an issue from start to finish" />
-  <phase name="BUILD" skill="/build" note="writes the tests and the code" />
-  <phase name="ACCEPT" skill="/accept" optional="true" note="acceptance on the merged code"/>
-  <edge from="BUILD" when="contract change needed" to="SCOPE" />
-  <edge from="BUILD" when="a work block is too big" to="SCOPE" />
-  <edge from="BUILD" when="when the build is blocked" to="SCOPE" />
-  <edge from="BUILD" when="the last block is merged" to="DONE" />
-  <entry to="ACCEPT" when="the user requests acceptance" />
-  <edge from="ACCEPT" when="a code change is required" to="BUILD" />
-  <edge from="ACCEPT" when="implementation mismatch or open questions" to="SCOPE" />
-  <edge from="ACCEPT" when="clean pass" to="DONE" />
+  <rule>Every plan implements exactly one issue and uses its matching work branch.</rule>
+  <rule>SCOPE requires fresh isolated requirements review and explicit human approval.</rule>
+  <rule>BUILD owns blocks, executable evidence, documentation, verification, and corrections.</rule>
+  <rule>Final code review is fresh, isolated, read-only, and bound to immutable candidate H.</rule>
+  <rule>ACCEPT follows project configuration and integrates locally with git merge --no-ff.</rule>
+  <rule>Never push, release, delete branches, stash, reset, discard, absorb unrelated changes, or resolve conflicts implicitly.</rule>
+  <rule>/file is independent; cancellation pauses; abandonment is human-only.</rule>
 </workflow>
 
 <knowledge purpose="canonical data store">
@@ -30,7 +26,7 @@ Only outward-facing project information belongs outside SOKF. Summarize and
 cite that information in SOKF instead of duplicating it.
 Use the `sokf-authoring` skill when writing concepts. Read
 `.agents/sokf/SPEC.md` only when the task depends on format semantics.
-<validation when="if anything under `knowledge/`, `.claude/skills/`, or `.agents/` changed"
+<validation when="if anything under `knowledge/`, `.pi/`, or `.agents/` changed"
   until="the validator reports PASS">
   <tool_call name="superdev validate --fix" when="always" />
 </validation>

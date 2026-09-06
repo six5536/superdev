@@ -99,6 +99,12 @@ fn classify(path: &str) -> Option<Position> {
         ["agents", file] if let Some(name) = file.strip_suffix(".md") => {
             Some(position(Owner::Repo, ItemKind::AgentScaffold, name, &[]))
         }
+        ["pi", "extensions", name, rest @ ..] if !rest.is_empty() => {
+            Some(position(Owner::Repo, ItemKind::PiExtension, name, rest))
+        }
+        ["pi", "skills", name, rest @ ..] if !rest.is_empty() => {
+            Some(position(Owner::Repo, ItemKind::PiSkill, name, rest))
+        }
         ["projects", name, rest @ ..] if !rest.is_empty() => {
             Some(position(Owner::Repo, ItemKind::ProjectTemplate, name, rest))
         }
@@ -126,6 +132,8 @@ mod tests {
             ("knowledge/schemas/adr.md", "schema"),
             ("skills/double-check/SKILL.md", "pack skill"),
             ("agents/coding.md", "rules"),
+            ("pi/extensions/superdev/index.ts", "extension"),
+            ("pi/skills/sokf-authoring/SKILL.md", "skill"),
             ("projects/rust-npm/README.md", "project"),
         ]);
         let knowledge = Owner::Knowledge;
@@ -146,6 +154,14 @@ mod tests {
         assert_eq!(
             names(&items, Owner::Repo, ItemKind::AgentScaffold),
             ["coding"]
+        );
+        assert_eq!(
+            names(&items, Owner::Repo, ItemKind::PiExtension),
+            ["superdev"]
+        );
+        assert_eq!(
+            names(&items, Owner::Repo, ItemKind::PiSkill),
+            ["sokf-authoring"]
         );
         assert_eq!(
             names(&items, Owner::Repo, ItemKind::ProjectTemplate),
