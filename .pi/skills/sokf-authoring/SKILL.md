@@ -16,6 +16,7 @@ description: Author and revise canonical SOKF project knowledge with Pi's SOKF-a
 ## Write through the SOKF adapter
 
 - Create a concept with `write path="knowledge/<path>.md"`.
+- Before creating a numbered concept, read its destination index and choose the next unused number. Verify that path, `id`, and numbered title agree before the first write; do not create a concept and then renumber its stable identity.
 - Change an existing concept with `edit path="sokf:<id>"` when possible.
 - Keep each existing `id` stable.
 - Preserve an existing `verified` field byte-for-byte.

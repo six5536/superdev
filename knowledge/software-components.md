@@ -143,14 +143,17 @@ and ignored rather than project knowledge.
 
 # SOKF behavior evaluations
 
-`evals/sokf/behavioral.json` carries the versioned prompts and expected tool
-sequences for the 12 progressive-context scenarios. The fixtures distinguish
-knowledge-worthy tasks from code-local work and cover missing stores,
-format-sensitive work, intermediate invalid mutations, and outward-facing
-documentation. `scripts/test/sokf-behavior-fixtures.test.mjs` protects the
-fixture protocol and scenario roster. A model-session evaluator remains the
-consumer of these expectations; the structural test does not claim behavioral
-success.
+`evals/sokf/behavioral.json` carries the versioned prompts, expected tool
+sequences, forbidden operations, and acceptance threshold for the 12
+progressive-context scenarios. The fixtures distinguish knowledge-worthy tasks
+from code-local work and cover missing stores, format-sensitive work,
+intermediate invalid mutations, and outward-facing documentation.
+`scripts/sokf-eval.mjs` runs isolated Pi model sessions with or without the
+standing instruction, scores tool sequences and forbidden operations, and
+emits `sokf-evaluation-result/v1`. Manual outcome labels remain in the report
+for semantic review. `scripts/test/sokf-behavior-fixtures.test.mjs` protects
+the fixture protocol and scenario roster; the structural test alone does not
+claim behavioral success.
 
 # Publishing
 

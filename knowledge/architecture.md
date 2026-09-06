@@ -41,9 +41,10 @@ ordinary path to Pi unchanged. It queues all knowledge mutations on that root
 so identity-addressed and path-addressed calls cannot race. A turn that mutates
 knowledge ends with validation and at most two automatic repair-feedback turns.
 Format-sensitive authoring instructions remain out of the standing prompt and
-load from the `sokf-authoring` skill on demand. Freshness is lazy: every tool call
-re-hashes the canonical knowledge and syncs only what changed, so there is no watcher and
-no daemon state to go stale.
+load from the `sokf-authoring` skill on demand. Freshness is lazy: search and
+overview re-hash the canonical knowledge and sync only what changed. Direct
+reads and graph traversal parse current files without opening the index or
+loading embeddings. There is no watcher or daemon state to go stale.
 
 # Content resolves before planning
 
@@ -118,17 +119,12 @@ that makes Claude Code load the entry point at all — and
 never rewritten and never hashed, so none can drift or be orphaned; delete
 one and the next `sync` puts it back.
 
-AGENTS.md is the user's file: superdev's guidance sits behind that one
-import, in the owned `.agents/superdev.md` — a `<superdev-system>` fence
-wrapping a short prompt, the general-rules imports (`.agents/professionalism.md`,
-`.agents/process.md` and `.agents/coding.md`, write-once scaffolds every
-managed repo gets),
-and one import per enabled capability's instruction file
-(`.agents/sokf.md`, `.agents/codegraph.md`), rewritten as
-the enabled set changes. Each instruction
-file is owned by its capability, so it exists exactly where the capability
-does; codegraph's also comes with the `mcpServers.codegraph` registration
-that serves the index over MCP.
+AGENTS.md is the user's file: superdev's guidance sits behind that one import
+in the owned `.agents/superdev.md`. The source is
+`crates/lib/superdev-core/src/agent-instructions.md`; the pipeline expands its
+code-index region only when that capability is enabled. Rust owns composition,
+not the instruction prose. The enabled code-index capability also carries the
+`mcpServers.codegraph` registration that serves the index over MCP.
 
 Migrations are derived, not scripted: what the lock records minus what the
 components claim is what `sync` removes, so a dropped file, a rename's old copy

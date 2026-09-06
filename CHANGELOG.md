@@ -35,8 +35,11 @@ publish a version it cannot find a heading for.
   link Claude's skill directory. Authoring creates and indexes a schema before
   introducing a previously unknown concept type. A companion
   `/system-prompt` command writes the effective prompt to ignored local
-  inspection output. Versioned behavioral fixtures now cover the 12 planned
-  progressive-context scenarios.
+  inspection output. A sandboxed evaluator executes the 12 versioned behavior
+  scenarios with or without the standing instruction and reports mechanical
+  scores, tokens, cost, and manual-review outcomes. Direct reads and graph
+  traversal now skip embedding startup and the search index, reducing the warm
+  development-shim median from about 2 seconds to about 0.5 seconds.
 - **`/file` files an issue or an idea.** A knowledge-carried skill
   writes a bug, a feature or a chore as an `open` issue in the user's
   words — no interview, no branch, no criterion the user did not state

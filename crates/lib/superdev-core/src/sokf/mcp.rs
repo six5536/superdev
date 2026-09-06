@@ -159,7 +159,7 @@ impl SokfService {
 
     /// Read and render one concept, optionally restricted to one heading.
     pub fn read(&self, id: &str, heading: Option<&str>) -> crate::error::Result<String> {
-        let (bundle, _, _) = self.sync()?;
+        let bundle = load_bundle(&self.bundle_dir)?;
         let graph = Graph::build(&bundle);
         let identity = resolve(&graph, id)
             .map_err(|message| broken_file_error(&bundle, id).unwrap_or(message))
@@ -191,7 +191,7 @@ impl SokfService {
 
     /// Render the whole edge map or one concept's neighbours.
     pub fn graph(&self, id: Option<&str>) -> crate::error::Result<String> {
-        let (bundle, _, _) = self.sync()?;
+        let bundle = load_bundle(&self.bundle_dir)?;
         let graph = Graph::build(&bundle);
         let Some(id) = id else {
             return Ok(render_edges(&graph.edge_map()));
@@ -855,6 +855,27 @@ mod tests {
     const ALPHA: &str = "---\ntype: Module\nid: alpha\ndescription: The one.\nstatus: draft\nresource: /src/alpha.rs\ntags: [core]\nlinks:\n  - rel: depends-on\n    to: beta\n  - {}\n---\n\n# Role\n\nAlpha does the work.\n\n# Notes\n\nNothing yet.\n";
     const BETA: &str =
         "---\ntype: Module\nid: beta\nstatus: deprecated\n---\n\n# Role\n\nBeta is retired.\n";
+
+    #[test]
+    fn direct_reads_and_graph_traversal_do_not_open_the_search_index() {
+        let (bundle, dir) = bundle_with(&[("alpha.md", ALPHA), ("beta.md", BETA)]);
+        drop(bundle);
+        let unusable_index = dir.path().join("index-is-a-file");
+        std::fs::write(&unusable_index, "not a directory").unwrap();
+        let service = SokfService::new(
+            dir.path().to_path_buf(),
+            dir.path().to_path_buf(),
+            IndexDir(unusable_index),
+            None,
+        );
+        assert!(
+            service
+                .read("alpha", None)
+                .unwrap()
+                .contains("Alpha does the work")
+        );
+        assert!(service.graph(Some("alpha")).unwrap().contains("beta"));
+    }
 
     #[test]
     fn a_concept_renders_its_frontmatter_then_every_section() {

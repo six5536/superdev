@@ -36,6 +36,7 @@ Use the `sokf-authoring` skill when writing concepts. Read
 </validation>
 </knowledge>
 
+{{superdev:code-index}}
 <code-exploration purpose="codegraph code index">
 Query the codegraph index before grepping or reading files one by one.
 <retrieval>
@@ -43,6 +44,7 @@ Query the codegraph index before grepping or reading files one by one.
 </retrieval>
 </code-exploration>
 
+{{/superdev:code-index}}
 <tools>
 <rule level="SHALL">Always use internal and MCP tools before Bash. Use Bash when nothing else suffices</rule>
 </tools>

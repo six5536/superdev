@@ -23,9 +23,10 @@ What the annotated list does not say:
   too (ADR-040). The Claude Code hook runs the same whole-set check by a
   different route (`superdev hook validate`), so the two cannot reach
   different verdicts. `cargo run -- sokf index` forces a full index rebuild, which
-  nothing routine needs: every MCP or CLI `sokf overview`, `search`, `read` or
-  `graph` call syncs the index lazily. Those four CLI commands expose the same
-  service for shell users and harness adapters; their `--json` form wraps text
+  nothing routine needs: MCP or CLI `sokf search` and `overview` sync the index
+  lazily. `sokf read` and `graph` parse current knowledge without opening the
+  index or loading embeddings. Those four CLI commands expose the same service
+  for shell users and harness adapters; their `--json` form wraps text
   in the versioned `sokf-tools/v1` tool-result envelope. `cargo run -- sokf
   edit` makes exact replacements in an existing concept; `sokf write` replaces
   one or creates it at a physical path. Both repair and validate automatically,
@@ -39,6 +40,12 @@ What the annotated list does not say:
   directory. Run `/system-prompt` in Pi to refresh
   the ignored `.pi/current-system-prompt.md` when inspecting effective
   instructions.
+- `npm run eval:sokf` validates the behavioral fixture without making model
+  calls. Add `-- --run --trials=3` to execute the acceptance matrix with the
+  `PI_PROVIDER` and `PI_MODEL` environment values. Add
+  `--without-instruction` for the comparison arm or `--scenario=<id>` for one
+  case. Progress goes to stderr and a `sokf-evaluation-result/v1` report goes
+  to stdout.
 - `cargo run -- validate --fix` is the same check with its repairs applied
   first: a link naming a concept by path becomes the id form, every
   `<!-- sokf:links -->` block is regenerated, and every include block is

@@ -440,6 +440,11 @@ usage errors and the side effects.
 - `P_sokf-retrieval-shares-service` [ubiquitous] `sokf overview`,
   `search`, `read` and `graph` SHALL return the same rendered information as
   the corresponding shared-service and MCP operations.
+- `P_sokf-direct-retrieval-skips-embeddings` [ubiquitous] `sokf read` and
+  `sokf graph` SHALL parse current knowledge without loading an embedding model
+  or opening the search index.
+- `P_sokf-read-window-after-render` [ubiquitous] `sokf read` SHALL apply
+  `offset` and `limit` after rendering concept metadata and headings.
 - `P_sokf-edit-exact-atomic` [ubiquitous] `sokf edit` SHALL require every
   `oldText` to occur exactly once in the original file, reject overlapping
   edits, evaluate all edits against that original, and write nothing when any

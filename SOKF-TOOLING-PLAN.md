@@ -479,12 +479,31 @@ This approach gives agents familiar mechanics without presenting semantic search
 - Pi skills are independently authored under `.pi/skills`; Pi does not link the
   `.claude/skills` directory. Harness-specific skills may share SOKF policy but
   use each harness's native tool vocabulary and workflow conventions.
+- CLI `read` applies `offset` and `limit` to the fully rendered concept after
+  metadata and headings are present. Pi applies the same line-window semantics.
+- Pi exposes overview and concept reads only through the `read` override; it
+  does not retain `sokf_overview` or `sokf_read` aliases.
+- Whole-document replacement of an existing concept remains available through
+  `write path="sokf:<id>"`. Creation still requires a physical path.
+- Agent-safe mutation owns checks that must prevent an unsafe or ambiguous
+  write: containment and symlink safety, exact-edit preconditions, immutable
+  identity, restricted fields, stamped fields, and reserved targets. Repair and
+  full structural or referential validity remain validator responsibilities.
+- The six MCP tools and six CLI operations are the fallback interface for
+  harnesses that cannot override built-in tools. No harness-specific adapter is
+  added until a target harness requires one.
+- Behavioral acceptance requires three trials per supported model: every
+  safety-critical scenario must pass, at least 90% of mechanically scored
+  assertions must pass overall, and no forbidden write may occur. The short
+  standing-instruction arm must match or exceed the no-instruction arm on
+  knowledge-worthy scenarios without causing the code-local scenario to
+  consult SOKF.
+- Direct reads and graph traversal parse current knowledge without loading an
+  embedding model or touching the search index. The warm development-shim
+  median fell from about 2 seconds to about 0.5 seconds; semantic search still
+  takes about 2 seconds and remains the only operation that pays model startup.
 
 ## Open decisions
 
-1. Should CLI `read` apply `offset` and `limit` before or after rendering metadata and headings?
-2. Should the Pi extension retain `sokf_read` and `sokf_overview` aliases during migration?
-3. Should `write path="sokf:<existing-id>"` remain enabled after evaluation, or should whole-file replacement require a physical path?
-4. Which checks belong in agent-safe mutation commands, and which remain authoritative only in `superdev validate` and the commit diff check?
-5. How should other harnesses express virtual SOKF addresses when they do not allow built-in tool overrides?
-6. What behavioral threshold demonstrates that the always-on instruction is sufficient?
+None. Model-session trials remain execution work against the acceptance rule
+above rather than interface design.

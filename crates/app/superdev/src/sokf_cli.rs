@@ -192,7 +192,9 @@ pub fn run_sokf(cmd: &SokfCommand, root: &Path) -> Result<u8> {
             }
             Ok(0)
         }
-        SokfCommand::Overview { json } => print_service(root, *json, |service| service.overview()),
+        SokfCommand::Overview { json } => {
+            print_service(root, *json, true, |service| service.overview())
+        }
         SokfCommand::Search {
             query,
             limit,
@@ -200,7 +202,7 @@ pub fn run_sokf(cmd: &SokfCommand, root: &Path) -> Result<u8> {
             tags,
             lifecycle,
             json,
-        } => print_service(root, *json, |service| {
+        } => print_service(root, *json, true, |service| {
             service.search(SearchRequest {
                 query: query.clone(),
                 limit: *limit,
@@ -215,7 +217,7 @@ pub fn run_sokf(cmd: &SokfCommand, root: &Path) -> Result<u8> {
             offset,
             limit,
             json,
-        } => print_service(root, *json, |service| {
+        } => print_service(root, *json, false, |service| {
             service
                 .read(id, heading.as_deref())
                 .and_then(|text| line_window(&text, *offset, *limit))
@@ -239,7 +241,7 @@ pub fn run_sokf(cmd: &SokfCommand, root: &Path) -> Result<u8> {
                     }],
                 }
             };
-            let service = service(root)?;
+            let service = service(root, false)?;
             let result = service.edit(request, policy(*allow_restricted))?;
             print_mutation(&result, *json)
         }
@@ -263,12 +265,12 @@ pub fn run_sokf(cmd: &SokfCommand, root: &Path) -> Result<u8> {
                 };
                 WriteRequest { path, content }
             };
-            let service = service(root)?;
+            let service = service(root, false)?;
             let result = service.write(request, policy(*allow_restricted))?;
             print_mutation(&result, *json)
         }
         SokfCommand::Graph { id, json } => {
-            print_service(root, *json, |service| service.graph(id.as_deref()))
+            print_service(root, *json, false, |service| service.graph(id.as_deref()))
         }
     }
 }
@@ -277,19 +279,23 @@ pub fn run_sokf(cmd: &SokfCommand, root: &Path) -> Result<u8> {
 fn print_service(
     root: &Path,
     json: bool,
+    needs_embedder: bool,
     operation: impl FnOnce(&SokfService) -> Result<String>,
 ) -> Result<u8> {
-    let service = service(root)?;
+    let service = service(root, needs_embedder)?;
     let text = operation(&service)?;
     print_tool_result(&text, json, serde_json::json!({}))
 }
 
-fn service(root: &Path) -> Result<SokfService> {
+fn service(root: &Path, needs_embedder: bool) -> Result<SokfService> {
     Ok(SokfService::new(
         knowledge_dir(root, None),
         root.to_path_buf(),
         IndexDir(root.join(INDEX_DIR)),
-        embedder(root)?,
+        needs_embedder
+            .then(|| embedder(root))
+            .transpose()?
+            .flatten(),
     ))
 }
 

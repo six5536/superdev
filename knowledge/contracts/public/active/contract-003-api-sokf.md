@@ -172,8 +172,10 @@ struct GraphArgs {
 
 ### Transport
 
-The server reads the index at `.superdev/cache/sokf-index/` and syncs
-it lazily on every tool call; there is no watcher and no daemon state.
+The server reads the index at `.superdev/cache/sokf-index/`. Search and
+overview calls sync it lazily; direct reads and graph traversal parse the
+current knowledge without opening the index. There is no watcher or daemon
+state.
 
 - `P_speaks-mcp-over-stdio` [ubiquitous] `superdev mcp sokf` SHALL
   speak the MCP protocol over stdin and stdout, serving one client.
@@ -182,6 +184,8 @@ it lazily on every tool call; there is no watcher and no daemon state.
 - `P_fails-at-startup` [event] WHEN the knowledge is missing or the
   index directory is unusable, `superdev mcp sokf` SHALL fail at
   startup rather than at every tool call.
+- `P_direct-retrieval-skips-index` [ubiquitous] `sokf_read` and `sokf_graph`
+  SHALL parse current knowledge without opening or rewriting the search index.
 
 ### Authentication
 

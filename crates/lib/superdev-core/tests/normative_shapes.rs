@@ -1983,11 +1983,20 @@ fn each_harness_receives_its_own_sokf_authoring_skill() {
         live_text.contains("If schema-{type} does not exist"),
         "{live} does not create missing type schemas"
     );
+    assert!(
+        live_text.contains("choose the next unused number"),
+        "{live} does not allocate identity before creation"
+    );
     let pi_path = repo(".pi/skills/sokf-authoring/SKILL.md");
     let pi = std::fs::read_to_string(&pi_path).expect("Pi's authoring skill is on file");
     assert!(
         pi.contains("If `schema-{type}` does not exist"),
         "{} does not create missing type schemas",
+        pi_path.display()
+    );
+    assert!(
+        pi.contains("choose the next unused number"),
+        "{} does not allocate identity before creation",
         pi_path.display()
     );
     assert!(

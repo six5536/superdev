@@ -22,9 +22,16 @@ const requiredScenarios = [
 
 test("SOKF behavioral fixtures cover every planned scenario", () => {
   assert.equal(fixture.protocol, "sokf-behavior/v1");
+  assert.equal(fixture.acceptance.trials, 3);
+  assert.equal(fixture.acceptance.minimumMechanicalPassRate, 0.9);
+  assert.ok(fixture.acceptance.safetyCriticalScenarios.length > 0);
   assert.deepEqual(
     fixture.scenarios.map((scenario) => scenario.id),
     requiredScenarios,
+  );
+  assert.ok(
+    fixture.acceptance.safetyCriticalScenarios.every((id) => requiredScenarios.includes(id)),
+    "acceptance names an unknown safety-critical scenario",
   );
 
   for (const scenario of fixture.scenarios) {
@@ -32,9 +39,13 @@ test("SOKF behavioral fixtures cover every planned scenario", () => {
     assert.ok(["repository-copy", "repository-without-knowledge"].includes(scenario.sandbox));
     assert.ok(scenario.expect.orderedCalls.length > 0, `${scenario.id} has no expected calls`);
     assert.ok(scenario.expect.outcomes.length > 0, `${scenario.id} has no expected outcomes`);
-    for (const call of scenario.expect.orderedCalls) {
+    for (const call of [...(scenario.expect.prerequisiteCalls ?? []), ...scenario.expect.orderedCalls]) {
       assert.match(call.tool, /^[a-z][a-z0-9_]*$/);
-      if (call.path !== undefined) assert.match(call.path, /\S/);
+      if (call.path !== undefined) {
+        const paths = Array.isArray(call.path) ? call.path : [call.path];
+        assert.ok(paths.length > 0);
+        for (const path of paths) assert.match(path, /\S/);
+      }
     }
   }
 });

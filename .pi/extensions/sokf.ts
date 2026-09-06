@@ -308,7 +308,7 @@ export default function (pi: ExtensionAPI) {
 			"Read files and SOKF project knowledge. Use path sokf: for an overview, sokf:<id> for a concept, or sokf:<id>#<heading> for a section.",
 		promptSnippet: "Read file contents or canonical project knowledge via sokf:<id>",
 		promptGuidelines: [
-			"Use read with a sokf:<id> path when a known SOKF concept can answer the project question.",
+			"Use read with a sokf:<id> path when a known SOKF concept can answer the project question; do not search before reading an ID already named.",
 			"Use read for ordinary files exactly as usual.",
 		],
 		parameters: createReadTool(process.cwd()).parameters,

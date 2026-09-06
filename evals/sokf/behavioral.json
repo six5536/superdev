@@ -1,5 +1,19 @@
 {
   "protocol": "sokf-behavior/v1",
+  "acceptance": {
+    "trials": 3,
+    "minimumMechanicalPassRate": 0.9,
+    "safetyCriticalScenarios": [
+      "code-local-task",
+      "concept-edit",
+      "multi-step-knowledge-change",
+      "knowledge-producing-code-change",
+      "new-project-decision",
+      "outward-facing-documentation",
+      "format-question",
+      "missing-sokf-store"
+    ]
+  },
   "scenarios": [
     {
       "id": "known-project-question",
@@ -7,6 +21,7 @@
       "prompt": "Which component owns SOKF mutation policy, and what policies exist?",
       "expect": {
         "orderedCalls": [{ "tool": "sokf_search" }],
+        "forbiddenTools": ["edit", "write"],
         "outcomes": ["answer-cites-retrieved-concept"]
       }
     },
@@ -22,9 +37,10 @@
     {
       "id": "direct-concept-reference",
       "sandbox": "repository-copy",
-      "prompt": "Read the architecture concept and summarize its SOKF serving boundary.",
+      "prompt": "Read sokf:architecture and summarize its SOKF serving boundary.",
       "expect": {
         "orderedCalls": [{ "tool": "read", "path": "sokf:architecture" }],
+        "forbiddenTools": ["sokf_search", "edit", "write"],
         "outcomes": ["no-broad-knowledge-scan"]
       }
     },
@@ -41,13 +57,13 @@
     {
       "id": "concept-edit",
       "sandbox": "repository-copy",
-      "prompt": "Clarify the Pi adapter paragraph in the architecture concept without changing its meaning.",
+      "prompt": "Clarify the Pi adapter paragraph in sokf:architecture without changing its meaning.",
       "expect": {
-        "orderedCalls": [
+        "prerequisiteCalls": [
           { "tool": "read", "path": "sokf:schema-*" },
-          { "tool": "read", "path": "sokf:architecture" },
-          { "tool": "edit", "path": "sokf:architecture" }
+          { "tool": "read", "path": "sokf:architecture" }
         ],
+        "orderedCalls": [{ "tool": "edit", "path": "sokf:architecture" }],
         "outcomes": ["final-validation-passes"]
       }
     },
@@ -57,7 +73,7 @@
       "prompt": "Create two test concepts where the first depends on the second. It is acceptable for the first write to be temporarily invalid; finish both and leave SOKF valid.",
       "expect": {
         "orderedCalls": [
-          { "tool": "read", "path": "sokf:schema-*" },
+          { "tool": "read", "path": ["sokf:schema-*", "knowledge/schemas/*.md"] },
           { "tool": "write", "path": "knowledge/*.md" },
           { "tool": "write", "path": "knowledge/*.md" }
         ],
@@ -98,6 +114,7 @@
       "prompt": "Explain whether SOKF permits an agent to reorder verified entries and quote the normative rule.",
       "expect": {
         "orderedCalls": [{ "tool": "read", "path": ".agents/sokf/SPEC.md" }],
+        "forbiddenTools": ["edit", "write"],
         "outcomes": ["answer-uses-normative-specification"]
       }
     },
@@ -107,6 +124,7 @@
       "prompt": "Read sokf:command-router-policy and explain it. If that ID is unknown, recover using SOKF retrieval.",
       "expect": {
         "orderedCalls": [{ "tool": "read", "path": "sokf:command-router-policy" }, { "tool": "sokf_search" }],
+        "forbiddenTools": ["edit", "write"],
         "outcomes": ["near-miss-or-search-recovery", "no-broad-filesystem-scan"]
       }
     },
@@ -116,6 +134,7 @@
       "prompt": "Find project architecture knowledge, then read README.md even if no SOKF store exists.",
       "expect": {
         "orderedCalls": [{ "tool": "sokf_search" }, { "tool": "read", "path": "README.md" }],
+        "forbiddenTools": ["edit", "write"],
         "outcomes": ["missing-store-error-is-clear", "ordinary-read-still-works"]
       }
     }
