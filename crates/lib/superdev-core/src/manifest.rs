@@ -56,6 +56,45 @@ pub struct KnowledgeConfig {
     pub custom: Vec<String>,
 }
 
+/// `[workflow]` — project-wide policy for the local SCOPE → BUILD → ACCEPT
+/// workflow. Models, plans, and adapters may read but cannot override it.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct WorkflowConfig {
+    /// Require an interactive human decision before local integration.
+    pub human_acceptance_required: bool,
+    /// Attempts with an unchanged failure fingerprint before BUILD pauses.
+    pub max_stalled_block_attempts: u32,
+    /// Maximum final review correction cycles before BUILD pauses.
+    pub max_final_correction_cycles: u32,
+}
+
+impl Default for WorkflowConfig {
+    fn default() -> Self {
+        Self {
+            human_acceptance_required: true,
+            max_stalled_block_attempts: 3,
+            max_final_correction_cycles: 3,
+        }
+    }
+}
+
+impl WorkflowConfig {
+    fn validate(&self) -> Result<()> {
+        if self.max_stalled_block_attempts == 0 {
+            return Err(Error::Manifest {
+                message: "workflow.max_stalled_block_attempts must be a positive integer".into(),
+            });
+        }
+        if self.max_final_correction_cycles == 0 {
+            return Err(Error::Manifest {
+                message: "workflow.max_final_correction_cycles must be a positive integer".into(),
+            });
+        }
+        Ok(())
+    }
+}
+
 /// The project template `init` seeded this repo from: provenance, not
 /// management — no verb ever re-plans a template. Recording the token values
 /// beside the name answers "what seeded this repo, with what".
@@ -122,6 +161,10 @@ struct WrittenManifest {
     /// the table it may put `custom` and `embeddings` in.
     #[serde(default)]
     knowledge: KnowledgeConfig,
+    /// `[workflow]` — safe local workflow policy. Older manifests may omit
+    /// it; rewrites materialize the safe defaults.
+    #[serde(default)]
+    workflow: WorkflowConfig,
     /// `[<capability>]` — one table per enabled capability, keyed by its
     /// kebab-case name; `[[<capability>]]` for a slot that takes several
     /// providers. An absent table means the capability is disabled.
@@ -145,6 +188,8 @@ pub struct Manifest {
     /// The SOKF knowledge's settings. Always present: SOKF is core, so there
     /// is no state in which the table means "off".
     pub knowledge: KnowledgeConfig,
+    /// Project-wide workflow acceptance and retry policy.
+    pub workflow: WorkflowConfig,
     /// Enabled capabilities, keyed by kebab-case name. Absent = disabled.
     /// Every list is non-empty; single slots hold exactly one entry.
     pub capabilities: BTreeMap<String, Vec<CapabilityConfig>>,
@@ -179,6 +224,7 @@ impl Manifest {
                 rev: Some(crate::pack::DEFAULT_PACK.rev.to_string()),
             }],
             knowledge: KnowledgeConfig::default(),
+            workflow: WorkflowConfig::default(),
             capabilities,
         }
     }
@@ -240,6 +286,7 @@ impl Manifest {
                     .into(),
             });
         }
+        written.workflow.validate()?;
         let mut capabilities = BTreeMap::new();
         for (name, entries) in written.capabilities {
             if name == "workflows" {
@@ -299,6 +346,7 @@ impl Manifest {
             template: written.template,
             packs: written.packs,
             knowledge: written.knowledge,
+            workflow: written.workflow,
             capabilities,
         })
     }
@@ -324,6 +372,7 @@ impl Manifest {
             template: self.template.clone(),
             packs: self.packs.clone(),
             knowledge: self.knowledge.clone(),
+            workflow: self.workflow.clone(),
             capabilities,
         };
         toml_edit::ser::to_string_pretty(&written).expect("manifest serialises")
@@ -596,18 +645,27 @@ mod tests {
         assert!(blocked.to_string().contains(".superdev"));
     }
 
-    /// A manifest an earlier binary wrote carries no `[[packs]]`, and must
-    /// come back out exactly as it went in — the absence is the default, not
-    /// something to fill in.
+    /// An older manifest may omit workflow policy; parsing applies safe
+    /// defaults and the next rewrite materializes them.
     #[test]
-    fn a_manifest_without_packs_round_trips_byte_identically() {
+    fn an_older_manifest_gains_safe_workflow_defaults_on_rewrite() {
         let written = "blueprint = \"0.2.0\"\n\n[knowledge]\ncustom = [\"maintain\"]\n";
         let manifest = Manifest::parse(written).unwrap();
         assert!(
             manifest.packs.is_empty(),
             "absent means empty, never disabled"
         );
-        assert_eq!(manifest.to_toml(), written);
+        assert_eq!(manifest.workflow, WorkflowConfig::default());
+        assert_eq!(
+            manifest.to_toml(),
+            concat!(
+                "blueprint = \"0.2.0\"\n\n[knowledge]\ncustom = [\"maintain\"]\n\n",
+                "[workflow]\n",
+                "human_acceptance_required = true\n",
+                "max_stalled_block_attempts = 3\n",
+                "max_final_correction_cycles = 3\n",
+            )
+        );
     }
 
     #[test]
@@ -636,7 +694,26 @@ mod tests {
             ],
             "manifest order is layer order"
         );
-        assert_eq!(manifest.to_toml(), written);
+        assert_eq!(
+            manifest.to_toml(),
+            format!(
+                "{written}\n[workflow]\nhuman_acceptance_required = true\nmax_stalled_block_attempts = 3\nmax_final_correction_cycles = 3\n"
+            )
+        );
+    }
+
+    #[test]
+    fn workflow_retry_limits_must_be_positive() {
+        for (key, stalled, corrections) in [
+            ("max_stalled_block_attempts", 0, 3),
+            ("max_final_correction_cycles", 3, 0),
+        ] {
+            let written = format!(
+                "blueprint = \"0.2.0\"\n[workflow]\nhuman_acceptance_required = true\nmax_stalled_block_attempts = {stalled}\nmax_final_correction_cycles = {corrections}\n"
+            );
+            let err = Manifest::parse(&written).unwrap_err();
+            assert!(err.to_string().contains(key), "{err}");
+        }
     }
 
     /// `packs` is a top-level array, not a capability table: it must not be

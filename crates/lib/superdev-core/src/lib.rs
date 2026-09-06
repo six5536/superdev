@@ -40,6 +40,7 @@ pub mod runner;
 pub mod sokf;
 pub mod templates;
 pub mod validate;
+pub mod workflow;
 
 /// The crate version, as compiled in from the workspace `Cargo.toml`.
 ///
