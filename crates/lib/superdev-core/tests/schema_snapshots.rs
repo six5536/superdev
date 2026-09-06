@@ -176,7 +176,7 @@ fn the_live_tree_passes() {
             }
         }
     }
-    assert_eq!(inputs.len(), 59, "the roots hold 59 claimed files");
+    assert_eq!(inputs.len(), 60, "the roots hold 60 claimed files");
     let findings = check_files(&inputs, &g);
     // Warnings are expected and do not fail a run: five skills carry frontmatter
     // keys Claude Code reads but the portable Agent Skills spec does not.

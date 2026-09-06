@@ -4,24 +4,48 @@ id: plan-018-validate-path-dispatch
 title: Validate path dispatch
 description: Two blocks making validate check a named file as what it is — the schema half reaches a named path first, then the grammar half stops misreading documents and parity is proved end to end.
 lifecycle: done
+phase: done
+branch: work/019-validate-reads-a-named-file-as-a-skill
+links:
+- rel: implements
+  to: issue-019-validate-reads-a-named-file-as-a-skill
 ---
-
 # Plan: Validate path dispatch
 
-Request: [issue-019-validate-reads-a-named-file-as-a-skill][sokf:issue-019-validate-reads-a-named-file-as-a-skill].
+Primary issue: [issue-019-validate-reads-a-named-file-as-a-skill][sokf:issue-019-validate-reads-a-named-file-as-a-skill]
 
-## Goal
+## Goal and boundaries
 
 The bug's five expected-behaviour sentences are the criteria the cases
 cite. The contract is
 [ADR-026][sokf:adr-026-a-named-document-is-checked-with-bare-run-parity]:
 bare-run parity, with the fallback kind only for files nothing claims.
 
+## Requirements
+
+Preserve the historical plan intent and constraints recorded under Goal and boundaries.
+
 ## Contract changes
 
 - contract-002-cli-superdev: the `validate` bullet's `PATH` sentence
   changed to promise bare-run parity for a named document (ADR-026),
   replacing "only what it names is read".
+
+## ADR decisions
+
+- none beyond decisions already linked or described in this historical record.
+
+## Source and interface changes
+
+Historical source and interface changes remain described in the work blocks.
+
+## Knowledge changes
+
+Preserve this record under the canonical workflow schema.
+
+## Documentation changes
+
+Historical documentation impact predates the documentation map; migration itself is checked as canonical-knowledge.
 
 ## Work blocks
 
@@ -70,6 +94,22 @@ bare-run parity, with the fallback kind only for files nothing claims.
     a schema, never as a document candidate — covers 1.
   - e2e: for each of a concept, README.md and a skill, the named run's
     findings equal the bare run's findings for that file — covers 1, 2.
+
+## Build state
+
+All historical blocks are complete; blocker: none.
+
+## Implementation decisions
+
+none.
+
+## Follow-up issues
+
+none.
+
+## Completion evidence
+
+Historical plan migrated mechanically; original evidence remains in its work blocks and Git history.
 
 <!-- sokf:links -->
 [sokf:adr-026-a-named-document-is-checked-with-bare-run-parity]: /knowledge/adrs/active/adr-026-a-named-document-is-checked-with-bare-run-parity.md

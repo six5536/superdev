@@ -5,16 +5,16 @@ title: Contracts define their interfaces
 description: Blocks delivering the definition-block vocabulary, each kind's declared form, the drift tests that bind a contract to its implementation, and the split of the file-format kind.
 lifecycle: done
 links:
-  - rel: implements
-    to: issue-035-a-contract-does-not-define-its-interface
-    note: The plan delivers the framed issue's eleven criteria.
+- rel: implements
+  to: issue-035-a-contract-does-not-define-its-interface
+phase: done
+branch: work/035-a-contract-does-not-define-its-interface
 ---
-
 # Plan: contracts define their interfaces
 
-Request: [issue-035][sokf:issue-035-a-contract-does-not-define-its-interface]
+Primary issue: [issue-035-a-contract-does-not-define-its-interface][sokf:issue-035-a-contract-does-not-define-its-interface]
 
-## Goal
+## Goal and boundaries
 
 Every contract on file defines the interface it binds completely enough
 to build against: each enumerable surface is written in a structured
@@ -23,6 +23,10 @@ that block, and a drift test binds each contract this repository
 implements to its implementation, naming the difference and which way
 it runs. The file-format kind splits into a text format and a binary
 format, and the contracts the split renames are refiled.
+
+## Requirements
+
+Preserve the historical plan intent and constraints recorded under Goal and boundaries.
 
 ## Contract changes
 
@@ -50,6 +54,22 @@ format, and the contracts the split renames are refiled.
   and contract-010-interface-document-schemas: rewritten to carry every
   exported signature and type they bind, each block bound to the
   exported items by a drift test (block 6).
+
+## ADR decisions
+
+- none beyond decisions already linked or described in this historical record.
+
+## Source and interface changes
+
+Historical source and interface changes remain described in the work blocks.
+
+## Knowledge changes
+
+Preserve this record under the canonical workflow schema.
+
+## Documentation changes
+
+Historical documentation impact predates the documentation map; migration itself is checked as canonical-knowledge.
 
 ## Work blocks
 
@@ -274,6 +294,22 @@ format, and the contracts the split renames are refiled.
   - unit: a template in `shipped()` with no `### Template:` section
     reports as a `DEFECT`, and a section naming no shipped template
     reports as `PENDING` — covers 4, 12.
+
+## Build state
+
+All historical blocks are complete; blocker: none.
+
+## Implementation decisions
+
+none.
+
+## Follow-up issues
+
+none.
+
+## Completion evidence
+
+Historical plan migrated mechanically; original evidence remains in its work blocks and Git history.
 
 <!-- sokf:links -->
 [sokf:contract-008-format-template]: /knowledge/contracts/public/active/contract-008-format-template.md

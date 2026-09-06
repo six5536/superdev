@@ -16,6 +16,7 @@
     "test": "cargo nextest run --workspace && npm run check:validate",
     "check": "cargo check --workspace --tests",
     "check:validate": "cargo run --quiet -- validate",
+    "check:docs": "node scripts/check-docs.mjs",
     "check:blueprint": "cargo run --quiet -- status --drift",
     "lint": "cargo clippy --workspace",
     "fmt": "cargo fmt --all",

@@ -4,11 +4,17 @@ id: plan-011-filing-by-lifecycle
 title: Documents are filed by lifecycle
 description: One lifecycle field replaces two vocabularies, every document sits in a folder named for its state, and a document left in the base directory is unfiled — an error the fix pass repairs.
 lifecycle: done
+phase: done
+branch: work/068-historical-filing-by-lifecycle
+links:
+- rel: implements
+  to: issue-068-historical-filing-by-lifecycle
 ---
-
 # Plan: Documents are filed by lifecycle
 
-## Goal
+Primary issue: [issue-068-historical-filing-by-lifecycle][sokf:issue-068-historical-filing-by-lifecycle]
+
+## Goal and boundaries
 
 A document's directory names its lifecycle, and one field says the same
 thing inside the file. Every document in scope carries one lifecycle
@@ -151,9 +157,29 @@ lands, so a managed repository starts life in a shape this plan's gate
 refuses; that is one item in issue-021, alongside a scaffold that already
 fails validation for four other reasons.
 
+## Requirements
+
+Preserve the historical plan intent and constraints recorded under Goal and boundaries.
+
 ## Contract changes
 
 - none.
+
+## ADR decisions
+
+- none beyond decisions already linked or described in this historical record.
+
+## Source and interface changes
+
+Historical source and interface changes remain described in the work blocks.
+
+## Knowledge changes
+
+Preserve this record under the canonical workflow schema.
+
+## Documentation changes
+
+Historical documentation impact predates the documentation map; migration itself is checked as canonical-knowledge.
 
 ## Work blocks
 
@@ -342,6 +368,23 @@ fails validation for four other reasons.
     is filed and how it is addressed, and that the pack's copies of both
     are recorded as owing the same change.
 
+## Build state
+
+All historical blocks are complete; blocker: none.
+
+## Implementation decisions
+
+none.
+
+## Follow-up issues
+
+none.
+
+## Completion evidence
+
+Historical plan migrated mechanically; original evidence remains in its work blocks and Git history.
+
 <!-- sokf:links -->
 [sokf:issue-018-the-schema-layer-checks-sections-and-nothing-else]: /knowledge/issues/done/issue-018-the-schema-layer-checks-sections-and-nothing-else.md
 [sokf:issue-021-backport-the-knowledge-design-to-the-pack]: /knowledge/issues/done/issue-021-backport-the-knowledge-design-to-the-pack.md
+[sokf:issue-068-historical-filing-by-lifecycle]: /knowledge/issues/done/issue-068-historical-filing-by-lifecycle.md

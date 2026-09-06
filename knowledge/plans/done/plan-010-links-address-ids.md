@@ -4,11 +4,17 @@ id: plan-010-links-address-ids
 title: Links address ids
 description: SOKF 0.4 gives a body link an id-addressed form, superdev validate --fix converts the tree to it, and a renamed or moved concept stops breaking the documents that cite it.
 lifecycle: done
+phase: done
+branch: work/067-historical-links-address-ids
+links:
+- rel: implements
+  to: issue-067-historical-links-address-ids
 ---
-
 # Plan: Links address ids
 
-## Goal
+Primary issue: [issue-067-historical-links-address-ids][sokf:issue-067-historical-links-address-ids]
+
+## Goal and boundaries
 
 A link between concepts names an id, so renaming or moving a document
 breaks nothing. A body link addresses a concept by id, resolves wherever
@@ -107,9 +113,29 @@ the missing check is
 same promotion Block 5 performs, and Block 5 does not close it: the five
 findings it names are a different set, and all five still warn.
 
+## Requirements
+
+Preserve the historical plan intent and constraints recorded under Goal and boundaries.
+
 ## Contract changes
 
 - none.
+
+## ADR decisions
+
+- none beyond decisions already linked or described in this historical record.
+
+## Source and interface changes
+
+Historical source and interface changes remain described in the work blocks.
+
+## Knowledge changes
+
+Preserve this record under the canonical workflow schema.
+
+## Documentation changes
+
+Historical documentation impact predates the documentation map; migration itself is checked as canonical-knowledge.
 
 ## Work blocks
 
@@ -274,8 +300,25 @@ findings it names are a different set, and all five still warn.
   - checks that issue-021's Surfaces name `pack/sokf/agents/` and
     `pack/knowledge/concepts/index.md` with the counts this plan leaves.
 
+## Build state
+
+All historical blocks are complete; blocker: none.
+
+## Implementation decisions
+
+none.
+
+## Follow-up issues
+
+none.
+
+## Completion evidence
+
+Historical plan migrated mechanically; original evidence remains in its work blocks and Git history.
+
 <!-- sokf:links -->
 [sokf:issue-012-five-decidable-findings-only-warn]: /knowledge/issues/done/issue-012-five-decidable-findings-only-warn.md
 [sokf:issue-021-backport-the-knowledge-design-to-the-pack]: /knowledge/issues/done/issue-021-backport-the-knowledge-design-to-the-pack.md
 [sokf:issue-022-a-schemas-worked-example-is-checked-by-nothing]: /knowledge/issues/done/issue-022-a-schemas-worked-example-is-checked-by-nothing.md
 [sokf:issue-023-a-concept-path-written-outside-the-knowledge-is-checked-by-nothing]: /knowledge/issues/open/issue-023-a-concept-path-written-outside-the-knowledge-is-checked-by-nothing.md
+[sokf:issue-067-historical-links-address-ids]: /knowledge/issues/done/issue-067-historical-links-address-ids.md

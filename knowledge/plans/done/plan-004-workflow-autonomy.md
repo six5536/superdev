@@ -2,17 +2,23 @@
 type: Plan
 id: plan-004-workflow-autonomy
 title: Workflow autonomy — branch, slice dependencies, unattended delivery
-description: Give the workflow a branch at frame, model slice dependencies in the plan, run stages 4-7 unattended on a general superdev run facility with a Stop hook and a new execute-feature-plan skill, and commit at every successful integrate.
+description: Give the workflow a branch at frame, model slice dependencies in the plan, run stages 4-7 unattended on a general superdev run facility with a Stop hook and a new execute-feature-plan skill,
+  and commit at every successful integrate.
 lifecycle: done
 links:
-  - rel: relates-to
-    to: development-procedure
-    note: Adds the branching convention and the commit points this plan introduces.
+- rel: implements
+  to: issue-061-historical-workflow-autonomy
+- rel: relates-to
+  to: development-procedure
+  note: Adds the branching convention and the commit points this plan introduces.
+phase: done
+branch: work/061-historical-workflow-autonomy
 ---
-
 # Plan: workflow autonomy
 
-## Goal
+Primary issue: [issue-061-historical-workflow-autonomy][sokf:issue-061-historical-workflow-autonomy]
+
+## Goal and boundaries
 
 `/interface-design` ends by committing its documents on the user's go-ahead
 and handing to `/execute-feature-plan`, which cuts the spec into slices and
@@ -146,9 +152,29 @@ it, delivered by [plan-013][sokf:plan-013-workflow-autonomy] against the
 five-phase workflow; the decisions there are ADR-018 to ADR-021 and the seam
 is contract-009.
 
+## Requirements
+
+Preserve the historical plan intent and constraints recorded under Goal and boundaries.
+
 ## Contract changes
 
 - none.
+
+## ADR decisions
+
+- none beyond decisions already linked or described in this historical record.
+
+## Source and interface changes
+
+Historical source and interface changes remain described in the work blocks.
+
+## Knowledge changes
+
+Preserve this record under the canonical workflow schema.
+
+## Documentation changes
+
+Historical documentation impact predates the documentation map; migration itself is checked as canonical-knowledge.
 
 ## Work blocks
 
@@ -270,13 +296,26 @@ is contract-009.
   - e2e: `git log` on the default branch shows nothing from an unattended
     run — checks that unattended work stays on the feature branch.
 
-## Deferred decisions
+## Build state
+
+All historical blocks are complete; blocker: none.
+
+## Implementation decisions
 
 - Block 3: does `session_id` survive a `--resume`? Not established from the
   documentation; `run advance` refreshes the owner to cover it. Blocks
   nothing.
 
+## Follow-up issues
+
+none.
+
+## Completion evidence
+
+Historical plan migrated mechanically; original evidence remains in its work blocks and Git history.
+
 <!-- sokf:links -->
 [sokf:development-procedure]: /knowledge/development-procedure.md
 [sokf:issue-024-the-workflow-cannot-run-unattended]: /knowledge/issues/done/issue-024-the-workflow-cannot-run-unattended.md
+[sokf:issue-061-historical-workflow-autonomy]: /knowledge/issues/done/issue-061-historical-workflow-autonomy.md
 [sokf:plan-013-workflow-autonomy]: /knowledge/plans/done/plan-013-workflow-autonomy.md

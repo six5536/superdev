@@ -2,13 +2,20 @@
 type: Plan
 id: plan-007-drop-the-aokf-conformance-ladder
 title: Drop the AOKF conformance ladder
-description: ADR-017 in code — the three-level ladder leaves the spec, the validator, the CLI and the parity goldens, knowledge passes or fails, and no file in the tree names a level but the ADR and this plan.
+description: ADR-017 in code — the three-level ladder leaves the spec, the validator, the CLI and the parity goldens, knowledge passes or fails, and no file in the tree names a level but the ADR and this
+  plan.
 lifecycle: done
+phase: done
+branch: work/064-historical-drop-the-aokf-conformance-ladder
+links:
+- rel: implements
+  to: issue-064-historical-drop-the-aokf-conformance-ladder
 ---
-
 # Plan: Drop the AOKF conformance ladder
 
-## Goal
+Primary issue: [issue-064-historical-drop-the-aokf-conformance-ladder][sokf:issue-064-historical-drop-the-aokf-conformance-ladder]
+
+## Goal and boundaries
 
 The validator has one verdict, and nothing in the tree offers a level to
 grade against.
@@ -130,9 +137,29 @@ option rejected rather than deferred — keeping the ladder but removing
 place and the reason for it gone, and that is the shape this plan drifts
 into if block 3 is dropped from it.
 
+## Requirements
+
+Preserve the historical plan intent and constraints recorded under Goal and boundaries.
+
 ## Contract changes
 
 - none.
+
+## ADR decisions
+
+- none beyond decisions already linked or described in this historical record.
+
+## Source and interface changes
+
+Historical source and interface changes remain described in the work blocks.
+
+## Knowledge changes
+
+Preserve this record under the canonical workflow schema.
+
+## Documentation changes
+
+Historical documentation impact predates the documentation map; migration itself is checked as canonical-knowledge.
 
 ## Work blocks
 
@@ -252,7 +279,11 @@ into if block 3 is dropped from it.
   - e2e: `npm run coverage:check` passes — checks the 90% per-crate line
     gate.
 
-## Deferred decisions
+## Build state
+
+All historical blocks are complete; blocker: none.
+
+## Implementation decisions
 
 - Block 1: what version does the spec become? Recommended default: 0.3, with
   §12's rule reworded to ordinary pre-1.0 semantics, because §12 says minor
@@ -263,3 +294,14 @@ into if block 3 is dropped from it.
   yours; I have not touched it. Recommended default: `until="the validator
   passes"`, which is what the loop waits for and survives this change.
   Answer: this is yours too.
+
+## Follow-up issues
+
+none.
+
+## Completion evidence
+
+Historical plan migrated mechanically. Original completion evidence remains in its work blocks and Git history.
+
+<!-- sokf:links -->
+[sokf:issue-064-historical-drop-the-aokf-conformance-ladder]: /knowledge/issues/done/issue-064-historical-drop-the-aokf-conformance-ladder.md

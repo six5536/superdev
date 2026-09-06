@@ -5,17 +5,18 @@ title: Normative shape enforcement
 description: Blocks delivering the body-pattern vocabulary, the EARS declaration, the contract-kind declarations and the contract sweep.
 lifecycle: done
 links:
-  - rel: implements
-    to: issue-034-normative-shapes-are-described-but-not-enforced
-    note: The plan delivers the framed issue's seven criteria.
+- rel: implements
+  to: issue-034-normative-shapes-are-described-but-not-enforced
+phase: done
+branch: work/034-normative-shapes-are-described-but-not-enforced
 ---
-
 # Plan: Normative shape enforcement
 
-Request:
+Primary issue: [issue-034-normative-shapes-are-described-but-not-enforced][sokf:issue-034-normative-shapes-are-described-but-not-enforced]
+
 [issue-034][sokf:issue-034-normative-shapes-are-described-but-not-enforced]
 
-## Goal
+## Goal and boundaries
 
 A schema binds the shape of normative text and the validator enforces
 the binding: a schema declares a per-item shape on a list section and
@@ -26,6 +27,10 @@ knowledge and the pack mirror validate clean with every declared shape
 enforced. The vocabulary lands first, in the engine, with no schema
 declaring it; each declaration then lands with the reconciliation it
 surfaces, so the tree never fails between a declaration and its sweep.
+
+## Requirements
+
+Preserve the historical plan intent and constraints recorded under Goal and boundaries.
 
 ## Contract changes
 
@@ -44,6 +49,22 @@ surfaces, so the tree never fails between a declaration and its sweep.
   nothing it binds changes.
 - contract-009-interface-run-state: swept to the declared promise
   shapes; nothing it binds changes.
+
+## ADR decisions
+
+- none beyond decisions already linked or described in this historical record.
+
+## Source and interface changes
+
+Historical source and interface changes remain described in the work blocks.
+
+## Knowledge changes
+
+Preserve this record under the canonical workflow schema.
+
+## Documentation changes
+
+Historical documentation impact predates the documentation map; migration itself is checked as canonical-knowledge.
 
 ## Work blocks
 
@@ -124,6 +145,22 @@ surfaces, so the tree never fails between a declaration and its sweep.
   - e2e: a full validate run over the shipped knowledge and the pack
     mirror reports zero errors with every declared shape enforced —
     covers 6.
+
+## Build state
+
+All historical blocks are complete; blocker: none.
+
+## Implementation decisions
+
+none.
+
+## Follow-up issues
+
+none.
+
+## Completion evidence
+
+Historical plan migrated mechanically; original evidence remains in its work blocks and Git history.
 
 <!-- sokf:links -->
 [sokf:issue-034-normative-shapes-are-described-but-not-enforced]: /knowledge/issues/done/issue-034-normative-shapes-are-described-but-not-enforced.md

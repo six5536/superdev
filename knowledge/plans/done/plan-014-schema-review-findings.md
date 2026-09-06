@@ -2,23 +2,29 @@
 type: Plan
 id: plan-014-schema-review-findings
 title: Bring every schema in line with its own rules and the workflow
-description: The schema review's findings land — worked examples satisfy their own schemas, the report schemas gain identity and filing, stale vocabulary leaves, the contract, ADR and idea shapes unify, and the pack mirror stays byte-identical.
+description: The schema review's findings land — worked examples satisfy their own schemas, the report schemas gain identity and filing, stale vocabulary leaves, the contract, ADR and idea shapes unify,
+  and the pack mirror stays byte-identical.
 lifecycle: done
 links:
-  - rel: references
-    to: issue-022-a-schemas-worked-example-is-checked-by-nothing
-    note: This plan hand-fixes the examples and appends the type-mismatch evidence.
-  - rel: relates-to
-    to: plan-013-workflow-autonomy
-    note: W5 applies the feature-plan schema additions only where plan-013 has not.
-  - rel: references
-    to: adr-020-a-blocked-run-ends
-    note: Names the Deferred decisions section W5 adds when plan-013 has not.
+- rel: implements
+  to: issue-070-historical-schema-review-findings
+- rel: references
+  to: issue-022-a-schemas-worked-example-is-checked-by-nothing
+  note: This plan hand-fixes the examples and appends the type-mismatch evidence.
+- rel: relates-to
+  to: plan-013-workflow-autonomy
+  note: W5 applies the feature-plan schema additions only where plan-013 has not.
+- rel: references
+  to: adr-020-a-blocked-run-ends
+  note: Names the Deferred decisions section W5 adds when plan-013 has not.
+phase: done
+branch: work/070-historical-schema-review-findings
 ---
-
 # Plan: Bring every schema in line with its own rules and the workflow
 
-## Goal
+Primary issue: [issue-070-historical-schema-review-findings][sokf:issue-070-historical-schema-review-findings]
+
+## Goal and boundaries
 
 Every schema states rules its own worked example satisfies, in the
 workflow's current vocabulary, with one heading shape per document
@@ -157,9 +163,29 @@ for title, sid, summ in re.findall(r'\* \[([^\]]+)\]\[sokf:(schema-[a-z-]+)\] - 
         print(f'{fn}: index and description differ')
 ```
 
+## Requirements
+
+Preserve the historical plan intent and constraints recorded under Goal and boundaries.
+
 ## Contract changes
 
 - none.
+
+## ADR decisions
+
+- none beyond decisions already linked or described in this historical record.
+
+## Source and interface changes
+
+Historical source and interface changes remain described in the work blocks.
+
+## Knowledge changes
+
+Preserve this record under the canonical workflow schema.
+
+## Documentation changes
+
+Historical documentation impact predates the documentation map; migration itself is checked as canonical-knowledge.
 
 ## Work blocks
 
@@ -319,7 +345,24 @@ for title, sid, summ in re.findall(r'\* \[([^\]]+)\]\[sokf:(schema-[a-z-]+)\] - 
     `knowledge/plans/index.md` lists this plan with `lifecycle: done` —
     checks that the records close.
 
+## Build state
+
+All historical blocks are complete; blocker: none.
+
+## Implementation decisions
+
+none.
+
+## Follow-up issues
+
+none.
+
+## Completion evidence
+
+Historical plan migrated mechanically; original evidence remains in its work blocks and Git history.
+
 <!-- sokf:links -->
 [sokf:adr-020-a-blocked-run-ends]: /knowledge/adrs/deprecated/adr-020-a-blocked-run-ends.md
 [sokf:issue-022-a-schemas-worked-example-is-checked-by-nothing]: /knowledge/issues/done/issue-022-a-schemas-worked-example-is-checked-by-nothing.md
+[sokf:issue-070-historical-schema-review-findings]: /knowledge/issues/done/issue-070-historical-schema-review-findings.md
 [sokf:plan-013-workflow-autonomy]: /knowledge/plans/done/plan-013-workflow-autonomy.md

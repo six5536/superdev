@@ -4,13 +4,17 @@ id: plan-016-schema-layer-enforcement
 title: Schema layer enforcement
 description: Three blocks making the validator read what the schemas declare — content kinds, the frontmatter contract, and the required-key vocabulary — each landing with the reconciliation it surfaces.
 lifecycle: done
+phase: done
+branch: work/018-the-schema-layer-checks-sections-and-nothing-else
+links:
+- rel: implements
+  to: issue-018-the-schema-layer-checks-sections-and-nothing-else
 ---
-
 # Plan: the schema layer's declarations bind
 
-Request: [issue-018-the-schema-layer-checks-sections-and-nothing-else][sokf:issue-018-the-schema-layer-checks-sections-and-nothing-else]
+Primary issue: [issue-018-the-schema-layer-checks-sections-and-nothing-else][sokf:issue-018-the-schema-layer-checks-sections-and-nothing-else]
 
-## Goal
+## Goal and boundaries
 
 The vocabulary and its semantics are fixed in
 [contract-010-interface-document-schemas][sokf:contract-010-interface-document-schemas];
@@ -18,6 +22,10 @@ the user-facing promise in
 [contract-002-cli-superdev][sokf:contract-002-cli-superdev]. Each block
 lands its check and the live findings that check surfaces in one pass, so
 integrate's validate gate stays green at every merge.
+
+## Requirements
+
+Preserve the historical plan intent and constraints recorded under Goal and boundaries.
 
 ## Contract changes
 
@@ -29,6 +37,22 @@ integrate's validate gate stays green at every merge.
   vocabulary the schemas write and the validator reads: the five
   content kinds, the frontmatter constraint block per key, and the
   per-key `required` flag (ADR-022, ADR-023).
+
+## ADR decisions
+
+- none beyond decisions already linked or described in this historical record.
+
+## Source and interface changes
+
+Historical source and interface changes remain described in the work blocks.
+
+## Knowledge changes
+
+Preserve this record under the canonical workflow schema.
+
+## Documentation changes
+
+Historical documentation impact predates the documentation map; migration itself is checked as canonical-knowledge.
 
 ## Work blocks
 
@@ -109,6 +133,22 @@ integrate's validate gate stays green at every merge.
   - e2e: `superdev validate` reports PASS on this repository, every
     document against its schema's content kinds and frontmatter
     contract — covers 6.
+
+## Build state
+
+All historical blocks are complete; blocker: none.
+
+## Implementation decisions
+
+none.
+
+## Follow-up issues
+
+none.
+
+## Completion evidence
+
+Historical plan migrated mechanically; original evidence remains in its work blocks and Git history.
 
 <!-- sokf:links -->
 [sokf:contract-002-cli-superdev]: /knowledge/contracts/public/active/contract-002-cli-superdev.md

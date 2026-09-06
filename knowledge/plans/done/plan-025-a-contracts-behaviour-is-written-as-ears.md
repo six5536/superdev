@@ -2,28 +2,29 @@
 type: Plan
 id: plan-025-a-contracts-behaviour-is-written-as-ears
 title: A contract's behaviour is written as EARS
-description: Blocks delivering I037 — the three item declarations in the validator, the sweep of nine contracts to keyed EARS promises, the contract schema in its final form with twelve examples, the tracker schemas' keyed criteria with the c<n> sweep of fifty issues, and the records.
+description: Blocks delivering I037 — the three item declarations in the validator, the sweep of nine contracts to keyed EARS promises, the contract schema in its final form with twelve examples, the tracker
+  schemas' keyed criteria with the c<n> sweep of fifty issues, and the records.
 lifecycle: done
 links:
-  - rel: implements
-    to: issue-037-a-contracts-behaviour-is-not-written-as-ears
-    note: The framed feature whose twenty-one criteria these blocks deliver.
-  - rel: references
-    to: contract-010-interface-document-schemas
-    note: Carries the three item declarations MUST PENDING (I037); blocks 1 and 2 close them, so they run first.
-  - rel: references
-    to: adr-046-a-promise-and-a-criterion-are-keyed-ears-items
-    note: The item form every sweep writes and every example shows.
-  - rel: references
-    to: adr-047-a-section-rule-declares-item-keys-and-item-bounds
-    note: The three declarations blocks 1 and 2 build.
+- rel: implements
+  to: issue-037-a-contracts-behaviour-is-not-written-as-ears
+- rel: references
+  to: contract-010-interface-document-schemas
+  note: Carries the three item declarations MUST PENDING (I037); blocks 1 and 2 close them, so they run first.
+- rel: references
+  to: adr-046-a-promise-and-a-criterion-are-keyed-ears-items
+  note: The item form every sweep writes and every example shows.
+- rel: references
+  to: adr-047-a-section-rule-declares-item-keys-and-item-bounds
+  note: The three declarations blocks 1 and 2 build.
+phase: done
+branch: work/037-a-contracts-behaviour-is-not-written-as-ears
 ---
-
 # Plan: A contract's behaviour is written as EARS
 
-Request: [issue-037-a-contracts-behaviour-is-not-written-as-ears][sokf:issue-037-a-contracts-behaviour-is-not-written-as-ears]
+Primary issue: [issue-037-a-contracts-behaviour-is-not-written-as-ears][sokf:issue-037-a-contracts-behaviour-is-not-written-as-ears]
 
-## Goal
+## Goal and boundaries
 
 Every promise a contract makes is a keyed EARS item the validator holds
 to its form, and every criterion a plan case cites carries a key of its
@@ -56,6 +57,10 @@ the binary; every `knowledge/schemas/*.md` from
 status` reporting no drift is part of its done-check. The dev shim gates
 the edit hook by path, so a block that edits Rust pays no rebuild per
 edit.
+
+## Requirements
+
+Preserve the historical plan intent and constraints recorded under Goal and boundaries.
 
 ## Contract changes
 
@@ -90,6 +95,22 @@ edit.
   revisit a seeded file") stood in Files, in Compatibility and in
   Stability and is one item, `P_seeded-file-write-once`, cited from the
   other two places; the shipped set became a numbered list.
+
+## ADR decisions
+
+- none beyond decisions already linked or described in this historical record.
+
+## Source and interface changes
+
+Historical source and interface changes remain described in the work blocks.
+
+## Knowledge changes
+
+Preserve this record under the canonical workflow schema.
+
+## Documentation changes
+
+Historical documentation impact predates the documentation map; migration itself is checked as canonical-knowledge.
 
 ## Work blocks
 
@@ -366,7 +387,11 @@ edit.
     three major findings and seven minor, recorded and not fixed on
     the branch.
 
-## Deferred decisions
+## Build state
+
+All historical blocks are complete; blocker: none.
+
+## Implementation decisions
 
 - Expected behaviour is `content: prose` in the bug-report schema and
   a paragraph in 21 of the 24 bug reports on file; ADR-046 keys it
@@ -392,6 +417,14 @@ edit.
   text in the pack and the synced copy, or leave it? Blocks nothing;
   returns to frame.
   - Answer (2026-09-02, the owner): amend the sentence.
+
+## Follow-up issues
+
+none.
+
+## Completion evidence
+
+Historical plan migrated mechanically; original evidence remains in its work blocks and Git history.
 
 <!-- sokf:links -->
 [sokf:adr-046-a-promise-and-a-criterion-are-keyed-ears-items]: /knowledge/adrs/active/adr-046-a-promise-and-a-criterion-are-keyed-ears-items.md

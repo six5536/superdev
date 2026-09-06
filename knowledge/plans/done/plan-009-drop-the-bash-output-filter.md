@@ -4,11 +4,17 @@ id: plan-009-drop-the-bash-output-filter
 title: Drop rtk and the bash-output-filter capability
 description: The bash-output-filter slot, its rtk provider, the five things it owns and the flag that disabled it all leave, and a manifest still naming the table gets a guided error.
 lifecycle: done
+phase: done
+branch: work/066-historical-drop-the-bash-output-filter
+links:
+- rel: implements
+  to: issue-066-historical-drop-the-bash-output-filter
 ---
-
 # Plan: Drop rtk and the bash-output-filter capability
 
-## Goal
+Primary issue: [issue-066-historical-drop-the-bash-output-filter][sokf:issue-066-historical-drop-the-bash-output-filter]
+
+## Goal and boundaries
 
 superdev manages three capabilities, no repository it manages carries an
 rtk pin or a command-rewriting hook, and a manifest that still names the
@@ -114,11 +120,31 @@ All five blocks land in one pull request, Block 1 first. A binary that
 plans rtk against a repository whose manifest no longer names it, or the
 reverse, is the state the ordering prevents.
 
+## Requirements
+
+Preserve the historical plan intent and constraints recorded under Goal and boundaries.
+
 ## Contract changes
 
 - contract-001 (content packs): the quoted `pack::manifest::REJECTED`
   constant drops `agents/rtk.md`, so the contract no longer promises that
   an external pack carrying that path is refused.
+
+## ADR decisions
+
+- none beyond decisions already linked or described in this historical record.
+
+## Source and interface changes
+
+Historical source and interface changes remain described in the work blocks.
+
+## Knowledge changes
+
+Preserve this record under the canonical workflow schema.
+
+## Documentation changes
+
+Historical documentation impact predates the documentation map; migration itself is checked as canonical-knowledge.
 
 ## Work blocks
 
@@ -277,3 +303,22 @@ reverse, is the state the ordering prevents.
     check:validate` and `npm run check:blueprint` pass, clippy
     `--all-targets -- -D warnings` is clean, and line coverage stays at
     or above 90% per crate.
+
+## Build state
+
+All historical blocks are complete; blocker: none.
+
+## Implementation decisions
+
+none.
+
+## Follow-up issues
+
+none.
+
+## Completion evidence
+
+Historical plan migrated mechanically. Original completion evidence remains in its work blocks and Git history.
+
+<!-- sokf:links -->
+[sokf:issue-066-historical-drop-the-bash-output-filter]: /knowledge/issues/done/issue-066-historical-drop-the-bash-output-filter.md

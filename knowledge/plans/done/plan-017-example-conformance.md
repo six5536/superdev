@@ -2,18 +2,20 @@
 type: Plan
 id: plan-017-example-conformance
 title: Example conformance
-description: Two blocks making validate check each schema's example against the schema that declares it — the document check in place, then link form without resolution — each landing with the reconciliation it surfaces.
+description: Two blocks making validate check each schema's example against the schema that declares it — the document check in place, then link form without resolution — each landing with the reconciliation
+  it surfaces.
 lifecycle: done
 links:
-  - rel: implements
-    to: issue-022-a-schemas-worked-example-is-checked-by-nothing
+- rel: implements
+  to: issue-022-a-schemas-worked-example-is-checked-by-nothing
+phase: done
+branch: work/022-a-schemas-worked-example-is-checked-by-nothing
 ---
-
 # Plan: Example conformance
 
-Request: [issue-022-a-schemas-worked-example-is-checked-by-nothing][sokf:issue-022-a-schemas-worked-example-is-checked-by-nothing]
+Primary issue: [issue-022-a-schemas-worked-example-is-checked-by-nothing][sokf:issue-022-a-schemas-worked-example-is-checked-by-nothing]
 
-## Goal
+## Goal and boundaries
 
 The vocabulary and its semantics are fixed in
 [contract-010-interface-document-schemas][sokf:contract-010-interface-document-schemas]
@@ -21,6 +23,10 @@ per ADR-024 and ADR-025; the user-facing promise in
 [contract-002-cli-superdev][sokf:contract-002-cli-superdev]. Each block
 lands its check and the live findings that check surfaces in one pass, so
 integrate's validate gate stays green at every merge.
+
+## Requirements
+
+Preserve the historical plan intent and constraints recorded under Goal and boundaries.
 
 ## Contract changes
 
@@ -31,6 +37,22 @@ integrate's validate gate stays green at every merge.
   (ADR-025).
 - contract-002-cli-superdev: `validate`'s schema half grows the example
   check.
+
+## ADR decisions
+
+- none beyond decisions already linked or described in this historical record.
+
+## Source and interface changes
+
+Historical source and interface changes remain described in the work blocks.
+
+## Knowledge changes
+
+Preserve this record under the canonical workflow schema.
+
+## Documentation changes
+
+Historical documentation impact predates the documentation map; migration itself is checked as canonical-knowledge.
 
 ## Work blocks
 
@@ -89,6 +111,22 @@ integrate's validate gate stays green at every merge.
     each pass in ordinary markdown form — covers 4.
   - e2e: `superdev validate` reports PASS on this repository with the
     example check live — covers 6.
+
+## Build state
+
+All historical blocks are complete; blocker: none.
+
+## Implementation decisions
+
+none.
+
+## Follow-up issues
+
+none.
+
+## Completion evidence
+
+Historical plan migrated mechanically; original evidence remains in its work blocks and Git history.
 
 <!-- sokf:links -->
 [sokf:contract-002-cli-superdev]: /knowledge/contracts/public/active/contract-002-cli-superdev.md

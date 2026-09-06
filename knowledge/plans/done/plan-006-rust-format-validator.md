@@ -2,13 +2,20 @@
 type: Plan
 id: plan-006-rust-format-validator
 title: Fold the superdev-format validator into the Rust validator
-description: The grammar-driven format validator moves from a Node script into superdev-core and merges with the AOKF validator behind one command, one report and one hook, proved against goldens captured from the reference while it still ran.
+description: The grammar-driven format validator moves from a Node script into superdev-core and merges with the AOKF validator behind one command, one report and one hook, proved against goldens captured
+  from the reference while it still ran.
 lifecycle: done
+phase: done
+branch: work/063-historical-rust-format-validator
+links:
+- rel: implements
+  to: issue-063-historical-rust-format-validator
 ---
-
 # Plan: Fold the superdev-format validator into the Rust validator
 
-## Goal
+Primary issue: [issue-063-historical-rust-format-validator][sokf:issue-063-historical-rust-format-validator]
+
+## Goal and boundaries
 
 One command enforces both the AOKF spec and the superdev format, so a
 malformed skill or schema fails a check that runs without Node and cannot
@@ -252,9 +259,29 @@ run was configured with. When a positional path excludes the canonical knowledge
 is 0 and no knowledge finding appears; the key names the invocation, not what was
 read.
 
+## Requirements
+
+Preserve the historical plan intent and constraints recorded under Goal and boundaries.
+
 ## Contract changes
 
 - none.
+
+## ADR decisions
+
+- none beyond decisions already linked or described in this historical record.
+
+## Source and interface changes
+
+Historical source and interface changes remain described in the work blocks.
+
+## Knowledge changes
+
+Preserve this record under the canonical workflow schema.
+
+## Documentation changes
+
+Historical documentation impact predates the documentation map; migration itself is checked as canonical-knowledge.
 
 ## Work blocks
 
@@ -525,6 +552,23 @@ read.
   - observation: a whole-set run is timed against the 50 ms hook budget
     (NFR-1); the measured 82 ms is recorded under Goal.
 
+## Build state
+
+All historical blocks are complete; blocker: none.
+
+## Implementation decisions
+
+none.
+
+## Follow-up issues
+
+none.
+
+## Completion evidence
+
+Historical plan migrated mechanically; original evidence remains in its work blocks and Git history.
+
 <!-- sokf:links -->
 [sokf:issue-016-sync-would-revert-the-schema-migration]: /knowledge/issues/done/issue-016-sync-would-revert-the-schema-migration.md
 [sokf:issue-017-the-format-has-no-agent-facing-document]: /knowledge/issues/open/issue-017-the-format-has-no-agent-facing-document.md
+[sokf:issue-063-historical-rust-format-validator]: /knowledge/issues/done/issue-063-historical-rust-format-validator.md

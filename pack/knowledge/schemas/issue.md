@@ -24,7 +24,8 @@ case and a test cite (ADR-050). An issue says what is wanted and why;
 a contract says what the software promises.
 
 `lifecycle` is the variant key (ADR-045): `open` while the issue is
-outstanding, `done` once it shipped, `wontfix` once it was declined.
+outstanding, `done` once it was accepted and integrated into the default branch,
+`wontfix` once it was declined. Done does not mean released.
 Resolution is required under `done` and `wontfix` and prohibited under
 `open`, so a reader tells a settled issue from an open one by the
 heading alone.
@@ -63,7 +64,8 @@ frontmatter:
     enum: [open, done, wontfix]
     description: >
       The folder is the value: open while the issue is outstanding,
-      done once it shipped, wontfix once it was declined. The value
+      done once it was accepted and integrated into the default branch (not
+      merely released), wontfix once it was declined. The value
       selects the variant: done and wontfix require Resolution, open
       prohibits it.
 
@@ -117,6 +119,16 @@ sections:
       than forgotten; the alternatives considered and why each lost,
       where any were. Bullets are encouraged. Absent when the boundary
       is the issue itself.
+  - heading: "Discoveries"
+    level: 2
+    content: bullet-list
+    item-pattern: '^- \[[ xX]\] .+$'
+    description: >
+      BUILD-time behavioural, scope, architectural, security, or ambiguous
+      discoveries. Each checkbox names the evidence, phase or block, and
+      disposition. Unresolved items remain unchecked; SCOPE ticks resolved
+      items with a concise requirement, contract, ADR, plan, or follow-up
+      reference. Omit when there are none.
   - heading: "Resolution"
     level: 2
     required: true

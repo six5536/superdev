@@ -2,13 +2,20 @@
 type: Plan
 id: plan-008-sokf-becomes-core
 title: SOKF becomes a core part of superdev
-description: AOKF is renamed SOKF and stops being a swappable capability, the two validators merge into one module behind one command, a document's type names the schema that governs it, and the schema layer is enforced for the first time.
+description: AOKF is renamed SOKF and stops being a swappable capability, the two validators merge into one module behind one command, a document's type names the schema that governs it, and the schema
+  layer is enforced for the first time.
 lifecycle: done
+phase: done
+branch: work/065-historical-sokf-becomes-core
+links:
+- rel: implements
+  to: issue-065-historical-sokf-becomes-core
 ---
-
 # Plan: SOKF becomes a core part of superdev
 
-## Goal
+Primary issue: [issue-065-historical-sokf-becomes-core][sokf:issue-065-historical-sokf-becomes-core]
+
+## Goal and boundaries
 
 The knowledge format is SOKF, is part of superdev rather than a component it
 loads, and every document it governs is checked against the schema its type
@@ -158,6 +165,10 @@ untouched. `templates/processes/` is 21 tracked Claude Code process
 templates with no relation to the schema layer; the `**/*code-review*.md`
 glob matches one of them by accident today, and under FR-11 it cannot.
 
+## Requirements
+
+Preserve the historical plan intent and constraints recorded under Goal and boundaries.
+
 ## Contract changes
 
 - contract-001-content-packs: the provider id `[knowledge] provider =
@@ -166,6 +177,22 @@ glob matches one of them by accident today, and under FR-11 it cannot.
   the binary-owned asset path moves from `agents/aokf.md` to
   `.agents/sokf.md` beside `.agents/sokf/SPEC.md`. An interface change, made
   deliberately.
+
+## ADR decisions
+
+- none beyond decisions already linked or described in this historical record.
+
+## Source and interface changes
+
+Historical source and interface changes remain described in the work blocks.
+
+## Knowledge changes
+
+Preserve this record under the canonical workflow schema.
+
+## Documentation changes
+
+Historical documentation impact predates the documentation map; migration itself is checked as canonical-knowledge.
 
 ## Work blocks
 
@@ -576,3 +603,22 @@ glob matches one of them by accident today, and under FR-11 it cannot.
   - e2e: `npm run coverage:check` passes (NFR-2), `time ./target/release/superdev
     validate` over this repository is under 250 ms (NFR-1), and `superdev
     status --drift` names no path this plan touched (NFR-4).
+
+## Build state
+
+All historical blocks are complete; blocker: none.
+
+## Implementation decisions
+
+none.
+
+## Follow-up issues
+
+none.
+
+## Completion evidence
+
+Historical plan migrated mechanically. Original completion evidence remains in its work blocks and Git history.
+
+<!-- sokf:links -->
+[sokf:issue-065-historical-sokf-becomes-core]: /knowledge/issues/done/issue-065-historical-sokf-becomes-core.md

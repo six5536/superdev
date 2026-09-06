@@ -2,28 +2,29 @@
 type: Plan
 id: plan-026-filing-an-issue-without-framing-it
 title: Filing an issue without framing it
-description: Blocks delivering I030 — a heading declared per variant in the validator, the tracker schemas varying by a four-state lifecycle with the sweep of the issues on file, the /file skill and the workflow entry, /frame framing in place with the three phases' gates, the backlog's retirement, and the records.
+description: Blocks delivering I030 — a heading declared per variant in the validator, the tracker schemas varying by a four-state lifecycle with the sweep of the issues on file, the /file skill and the
+  workflow entry, /frame framing in place with the three phases' gates, the backlog's retirement, and the records.
 lifecycle: done
 links:
-  - rel: implements
-    to: issue-030-filing-an-issue-requires-framing-it
-    note: The framed feature whose seventeen criteria these slices deliver.
-  - rel: references
-    to: contract-010-interface-document-schemas
-    note: Carries the two per-variant heading promises PENDING (I030); slice 1 closes them, so it runs first.
-  - rel: references
-    to: adr-048-an-issues-lifecycle-distinguishes-framed-from-unframed
-    note: The four states, the forms per state, /file, the gates, the sweep and the migration every slice follows.
-  - rel: references
-    to: adr-049-a-heading-is-declared-per-variant
-    note: The mechanism slice 1 builds and slice 2 uses.
+- rel: implements
+  to: issue-030-filing-an-issue-requires-framing-it
+- rel: references
+  to: contract-010-interface-document-schemas
+  note: Carries the two per-variant heading promises PENDING (I030); slice 1 closes them, so it runs first.
+- rel: references
+  to: adr-048-an-issues-lifecycle-distinguishes-framed-from-unframed
+  note: The four states, the forms per state, /file, the gates, the sweep and the migration every slice follows.
+- rel: references
+  to: adr-049-a-heading-is-declared-per-variant
+  note: The mechanism slice 1 builds and slice 2 uses.
+phase: done
+branch: work/030-filing-an-issue-requires-framing-it
 ---
-
 # Plan: Filing an issue without framing it
 
-Request: [issue-030-filing-an-issue-requires-framing-it][sokf:issue-030-filing-an-issue-requires-framing-it]
+Primary issue: [issue-030-filing-an-issue-requires-framing-it][sokf:issue-030-filing-an-issue-requires-framing-it]
 
-## Goal
+## Goal and boundaries
 
 The validator first: the block that closes
 [contract-010][sokf:contract-010-interface-document-schemas]'s two
@@ -48,6 +49,10 @@ its done-check. A pack skeleton under `pack/knowledge/concepts/` is
 write-once in a managed repository; the repository's own copy is
 edited beside it.
 
+## Requirements
+
+Preserve the historical plan intent and constraints recorded under Goal and boundaries.
+
 ## Contract changes
 
 - contract-010-interface-document-schemas: `P_heading-per-variant` and
@@ -56,6 +61,22 @@ edited beside it.
   added when the second deferred decision was answered — the
   disjointness check tells a literal `heading` from a
   `heading-pattern` by declaration form.
+
+## ADR decisions
+
+- none beyond decisions already linked or described in this historical record.
+
+## Source and interface changes
+
+Historical source and interface changes remain described in the work blocks.
+
+## Knowledge changes
+
+Preserve this record under the canonical workflow schema.
+
+## Documentation changes
+
+Historical documentation impact predates the documentation map; migration itself is checked as canonical-knowledge.
 
 ## Work blocks
 
@@ -265,7 +286,11 @@ edited beside it.
   - manual: the changelog's Unreleased names the states and `/file` —
     covers AC_records. Read at `9372773`.
 
-## Deferred decisions
+## Build state
+
+All historical blocks are complete; blocker: none.
+
+## Implementation decisions
 
 - `AC_unframed-form` and ADR-048 require Summary and Motivation of every
   kind; a bug-report and a chore have no Motivation heading. Amend the
@@ -285,6 +310,14 @@ edited beside it.
   nothing; returns to contract-design (code-review-010 finding 3).
   - Answer (2026-09-02, the owner): say so — contract-010 gains
     `P_heading-same-by-form` and ADR-049 the sentence.
+
+## Follow-up issues
+
+none.
+
+## Completion evidence
+
+Historical plan migrated mechanically; original evidence remains in its work blocks and Git history.
 
 <!-- sokf:links -->
 [sokf:adr-048-an-issues-lifecycle-distinguishes-framed-from-unframed]: /knowledge/adrs/deprecated/adr-048-an-issues-lifecycle-distinguishes-framed-from-unframed.md

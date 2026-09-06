@@ -2,16 +2,22 @@
 type: Plan
 id: plan-003-content-packs
 title: Externally Sourced Content Packs
-description: Deliver S014 in eighteen blocks — move the content to /pack, reorganise it into pack layout, derive it from that layout, add the manifest and lock schemas, resolve local then git sources, wire ownership, teach init and update, make each release one command, make a committed path pin portable, dogfood it, then close the gaps acceptance found and the one deferred issue small enough to fix.
+description: Deliver S014 in eighteen blocks — move the content to /pack, reorganise it into pack layout, derive it from that layout, add the manifest and lock schemas, resolve local then git sources, wire
+  ownership, teach init and update, make each release one command, make a committed path pin portable, dogfood it, then close the gaps acceptance found and the one deferred issue small enough to fix.
 lifecycle: done
 links:
-  - rel: implements
-    to: contract-007-interface-pack-resolution
+- rel: implements
+  to: issue-076-historical-content-packs
+- rel: references
+  to: contract-007-interface-pack-resolution
+phase: done
+branch: work/076-historical-content-packs
 ---
-
 # Plan: externally sourced content packs
 
-## Goal
+Primary issue: [issue-076-historical-content-packs][sokf:issue-076-historical-content-packs]
+
+## Goal and boundaries
 
 Spec: S014 (retired). Contract:
 [C007][sokf:contract-007-interface-pack-resolution]. Decisions:
@@ -40,12 +46,32 @@ they went there on their own. All five are now decided —
 `wontfix`: a path pack keeps layering, and the rebuild a pack developer needs
 anyway is the answer.
 
+## Requirements
+
+Preserve the historical plan intent and constraints recorded under Goal and boundaries.
+
 ## Contract changes
 
 - contract-007-interface-pack-resolution: the contract the plan implements —
   pack source identity, the item model, the resolved content set, the
   resolution phase and the pin update; block 13 moves a path source's
   identity to its root-relative form (ADR-011).
+
+## ADR decisions
+
+- none beyond decisions already linked or described in this historical record.
+
+## Source and interface changes
+
+Historical source and interface changes remain described in the work blocks.
+
+## Knowledge changes
+
+Preserve this record under the canonical workflow schema.
+
+## Documentation changes
+
+Historical documentation impact predates the documentation map; migration itself is checked as canonical-knowledge.
 
 ## Work blocks
 
@@ -337,7 +363,11 @@ anyway is the answer.
 - Cases: none from the test plan. A test asserting the help text names the
   network behaviour would stop it going stale again.
 
-## Deferred decisions
+## Build state
+
+All historical blocks are complete; blocker: none.
+
+## Implementation decisions
 
 - **The scheme allowlist**, the other half of
   [I007][sokf:issue-007-a-pack-source-reaches-git-with-no-scheme-check]:
@@ -363,6 +393,14 @@ anyway is the answer.
   [ADR-016][sokf:adr-016-a-path-pack-records-no-digest] and scheduled as
   P005.
 
+## Follow-up issues
+
+none.
+
+## Completion evidence
+
+Historical plan migrated mechanically; original evidence remains in its work blocks and Git history.
+
 <!-- sokf:links -->
 [sokf:adr-001-packs-manifest-section]: /knowledge/adrs/active/adr-001-packs-manifest-section.md
 [sokf:adr-006-pack-at-repo-root]: /knowledge/adrs/active/adr-006-pack-at-repo-root.md
@@ -381,4 +419,5 @@ anyway is the answer.
 [sokf:issue-006-content-packs-are-undocumented-for-users]: /knowledge/issues/done/issue-006-content-packs-are-undocumented-for-users.md
 [sokf:issue-007-a-pack-source-reaches-git-with-no-scheme-check]: /knowledge/issues/done/issue-007-a-pack-source-reaches-git-with-no-scheme-check.md
 [sokf:issue-008-a-symlinked-file-in-a-pack-is-followed]: /knowledge/issues/done/issue-008-a-symlinked-file-in-a-pack-is-followed.md
+[sokf:issue-076-historical-content-packs]: /knowledge/issues/done/issue-076-historical-content-packs.md
 [sokf:plan-005-content-pack-hardening]: /knowledge/plans/done/plan-005-content-pack-hardening.md

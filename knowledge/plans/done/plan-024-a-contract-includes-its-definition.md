@@ -2,22 +2,23 @@
 type: Plan
 id: plan-024-a-contract-includes-its-definition
 title: A contract includes its definition
-description: Blocks delivering I049 — the source include, the sixth content kind, schema variants, the one contract schema, the skills' judgement and declaration steps, the migration of nine contracts, and the deletion of fifteen schemas and four copy-comparing tests.
+description: Blocks delivering I049 — the source include, the sixth content kind, schema variants, the one contract schema, the skills' judgement and declaration steps, the migration of nine contracts,
+  and the deletion of fifteen schemas and four copy-comparing tests.
 lifecycle: done
 links:
-  - rel: implements
-    to: issue-049-a-contract-cannot-point-at-its-definition
-    note: The framed feature whose twenty-four criteria these blocks deliver.
-  - rel: references
-    to: contract-010-interface-document-schemas
-    note: Carries three PENDING promises; blocks 2 and 3 close them, so they run before the blocks that do not own them.
+- rel: implements
+  to: issue-049-a-contract-cannot-point-at-its-definition
+- rel: references
+  to: contract-010-interface-document-schemas
+  note: Carries three PENDING promises; blocks 2 and 3 close them, so they run before the blocks that do not own them.
+phase: done
+branch: work/049-a-contract-cannot-point-at-its-definition
 ---
-
 # Plan: A contract includes its definition
 
-Request: [issue-049-a-contract-cannot-point-at-its-definition][sokf:issue-049-a-contract-cannot-point-at-its-definition]
+Primary issue: [issue-049-a-contract-cannot-point-at-its-definition][sokf:issue-049-a-contract-cannot-point-at-its-definition]
 
-## Goal
+## Goal and boundaries
 
 The mechanism first, because it is the riskiest and everything reads
 through it. Then the two schema-layer changes that close
@@ -37,6 +38,10 @@ in the binary; and every `knowledge/schemas/*.md` from
 sync`, and commits the moved lock hashes; `superdev status` reporting
 no drift is part of its done-check. Block 2 found this — the plan first
 named the pack as the grammar's source.
+
+## Requirements
+
+Preserve the historical plan intent and constraints recorded under Goal and boundaries.
 
 ## Contract changes
 
@@ -78,6 +83,22 @@ named the pack as the grammar's source.
   the three PENDING marks removed; becomes `kind: interface` with its
   vocabulary included from `document.rs`, where `SectionRule` and
   `DocSchema` are the declaration (block 8).
+
+## ADR decisions
+
+- none beyond decisions already linked or described in this historical record.
+
+## Source and interface changes
+
+Historical source and interface changes remain described in the work blocks.
+
+## Knowledge changes
+
+Preserve this record under the canonical workflow schema.
+
+## Documentation changes
+
+Historical documentation impact predates the documentation map; migration itself is checked as canonical-knowledge.
 
 ## Work blocks
 
@@ -402,6 +423,22 @@ named the pack as the grammar's source.
     states that a doc comment in a region is contract text, that
     unreachable behaviour is prose bound by test, and that `PENDING`
     applies to prose alone — covers 16, 17.
+
+## Build state
+
+All historical blocks are complete; blocker: none.
+
+## Implementation decisions
+
+none.
+
+## Follow-up issues
+
+none.
+
+## Completion evidence
+
+Historical plan migrated mechanically; original evidence remains in its work blocks and Git history.
 
 <!-- sokf:links -->
 [sokf:contract-010-interface-document-schemas]: /knowledge/contracts/internal/active/contract-010-interface-document-schemas.md

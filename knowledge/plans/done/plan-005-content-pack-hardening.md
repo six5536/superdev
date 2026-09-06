@@ -2,16 +2,22 @@
 type: Plan
 id: plan-005-content-pack-hardening
 title: Content pack hardening
-description: Deliver ADR-012 to ADR-016 in seven blocks — refuse an unsupported transport, refuse a symlink in a pack and let git decide what one is, give the spawn seam a deadline and an environment, bound the one unprompted request, prove a pin before writing it, and stop recording a digest nothing reads.
+description: Deliver ADR-012 to ADR-016 in seven blocks — refuse an unsupported transport, refuse a symlink in a pack and let git decide what one is, give the spawn seam a deadline and an environment, bound
+  the one unprompted request, prove a pin before writing it, and stop recording a digest nothing reads.
 lifecycle: done
 links:
-  - rel: references
-    to: contract-007-interface-pack-resolution
+- rel: implements
+  to: issue-062-historical-content-pack-hardening
+- rel: references
+  to: contract-007-interface-pack-resolution
+phase: done
+branch: work/062-historical-content-pack-hardening
 ---
-
 # Plan: content pack hardening
 
-## Goal
+Primary issue: [issue-062-historical-content-pack-hardening][sokf:issue-062-historical-content-pack-hardening]
+
+## Goal and boundaries
 
 Pack resolution refuses what it cannot fetch safely: a transport outside the
 allowlist, a symlink or a submodule anywhere under the pack, and a pin the
@@ -44,6 +50,10 @@ observably does nothing, which is what makes it safe to put in the middle.
 S014's test-plan cases are all assigned in P003 and none is left over; every
 case below is new and drawn from the issue it closes.
 
+## Requirements
+
+Preserve the historical plan intent and constraints recorded under Goal and boundaries.
+
 ## Contract changes
 
 - contract-007-interface-pack-resolution: pack resolution narrows.
@@ -54,6 +64,22 @@ case below is new and drawn from the issue it closes.
   fetched one. `P_moved-pin-proven` — `update` resolves a release before it
   writes the pin. A path source records no digest, and the lock's `digest`
   becomes optional.
+
+## ADR decisions
+
+- none beyond decisions already linked or described in this historical record.
+
+## Source and interface changes
+
+Historical source and interface changes remain described in the work blocks.
+
+## Knowledge changes
+
+Preserve this record under the canonical workflow schema.
+
+## Documentation changes
+
+Historical documentation impact predates the documentation map; migration itself is checked as canonical-knowledge.
 
 ## Work blocks
 
@@ -265,6 +291,22 @@ case below is new and drawn from the issue it closes.
   - integration: a git pack still verifies and still fails the run on a
     mismatch — checks that the digest still binds where it is read.
 
+## Build state
+
+All historical blocks are complete; blocker: none.
+
+## Implementation decisions
+
+none.
+
+## Follow-up issues
+
+none.
+
+## Completion evidence
+
+Historical plan migrated mechanically; original evidence remains in its work blocks and Git history.
+
 <!-- sokf:links -->
 [sokf:adr-012-pack-source-schemes-are-allowlisted]: /knowledge/adrs/active/adr-012-pack-source-schemes-are-allowlisted.md
 [sokf:adr-013-update-proves-a-pin-before-it-writes-it]: /knowledge/adrs/active/adr-013-update-proves-a-pin-before-it-writes-it.md
@@ -279,4 +321,5 @@ case below is new and drawn from the issue it closes.
 [sokf:issue-007-a-pack-source-reaches-git-with-no-scheme-check]: /knowledge/issues/done/issue-007-a-pack-source-reaches-git-with-no-scheme-check.md
 [sokf:issue-008-a-symlinked-file-in-a-pack-is-followed]: /knowledge/issues/done/issue-008-a-symlinked-file-in-a-pack-is-followed.md
 [sokf:issue-009-a-skipped-symlink-says-nothing]: /knowledge/issues/done/issue-009-a-skipped-symlink-says-nothing.md
+[sokf:issue-062-historical-content-pack-hardening]: /knowledge/issues/done/issue-062-historical-content-pack-hardening.md
 [sokf:plan-003-content-packs]: /knowledge/plans/done/plan-003-content-packs.md

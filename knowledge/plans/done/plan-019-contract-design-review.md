@@ -4,18 +4,23 @@ id: plan-019-contract-design-review
 title: Contract-design review and the binding-surface standard
 description: Blocks delivering the include-block mechanism, the contract style standard in the schemas, the skill's explicit go-ahead, and the nine-contract sweep.
 lifecycle: done
+phase: done
+branch: work/072-historical-contract-design-review
+links:
+- rel: implements
+  to: issue-072-historical-contract-design-review
 ---
-
 # Plan: contract-design review and the binding-surface standard
 
-Request:
+Primary issue: [issue-072-historical-contract-design-review][sokf:issue-072-historical-contract-design-review]
+
 [issue-028-contract-design-commits-before-the-go-ahead][sokf:issue-028-contract-design-commits-before-the-go-ahead]
 and
 [issue-029-contract-design-writes-verbose-prose][sokf:issue-029-contract-design-writes-verbose-prose];
 the decisions are ADR-027, ADR-028 and ADR-029. Case labels name the
 issue and criterion they cover ("I029 c1").
 
-## Goal
+## Goal and boundaries
 
 `/contract-design` presents its change set and commits only on the
 user's explicit approval, and every contract it writes conforms to the
@@ -25,6 +30,10 @@ the reasoning left in the linked ADRs. The standard ships inside every
 contract-kind schema through the include-block mechanism of ADR-027,
 so the schemas carry it rather than restate it, and the nine active
 contracts are swept to the form.
+
+## Requirements
+
+Preserve the historical plan intent and constraints recorded under Goal and boundaries.
 
 ## Contract changes
 
@@ -45,6 +54,22 @@ contracts are swept to the form.
   block 4.
 - contract-010-interface-document-schemas: rewritten to ADR-029 form
   in block 4.
+
+## ADR decisions
+
+- none beyond decisions already linked or described in this historical record.
+
+## Source and interface changes
+
+Historical source and interface changes remain described in the work blocks.
+
+## Knowledge changes
+
+Preserve this record under the canonical workflow schema.
+
+## Documentation changes
+
+Historical documentation impact predates the documentation map; migration itself is checked as canonical-knowledge.
 
 ## Work blocks
 
@@ -163,6 +188,23 @@ contracts are swept to the form.
   - review: both contracts' promises are unchanged by the rewrite —
     covers I029 c3.
 
+## Build state
+
+All historical blocks are complete; blocker: none.
+
+## Implementation decisions
+
+none.
+
+## Follow-up issues
+
+none.
+
+## Completion evidence
+
+Historical plan migrated mechanically; original evidence remains in its work blocks and Git history.
+
 <!-- sokf:links -->
 [sokf:issue-028-contract-design-commits-before-the-go-ahead]: /knowledge/issues/done/issue-028-contract-design-commits-before-the-go-ahead.md
 [sokf:issue-029-contract-design-writes-verbose-prose]: /knowledge/issues/done/issue-029-contract-design-writes-verbose-prose.md
+[sokf:issue-072-historical-contract-design-review]: /knowledge/issues/done/issue-072-historical-contract-design-review.md

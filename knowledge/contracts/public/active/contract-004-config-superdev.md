@@ -74,6 +74,45 @@ pub struct KnowledgeConfig {
     pub custom: Vec<String>,
 }
 
+/// `[workflow]` — project-wide policy for the local SCOPE → BUILD → ACCEPT
+/// workflow. Models, plans, and adapters may read but cannot override it.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct WorkflowConfig {
+    /// Require an interactive human decision before local integration.
+    pub human_acceptance_required: bool,
+    /// Attempts with an unchanged failure fingerprint before BUILD pauses.
+    pub max_stalled_block_attempts: u32,
+    /// Maximum final review correction cycles before BUILD pauses.
+    pub max_final_correction_cycles: u32,
+}
+
+impl Default for WorkflowConfig {
+    fn default() -> Self {
+        Self {
+            human_acceptance_required: true,
+            max_stalled_block_attempts: 3,
+            max_final_correction_cycles: 3,
+        }
+    }
+}
+
+impl WorkflowConfig {
+    fn validate(&self) -> Result<()> {
+        if self.max_stalled_block_attempts == 0 {
+            return Err(Error::Manifest {
+                message: "workflow.max_stalled_block_attempts must be a positive integer".into(),
+            });
+        }
+        if self.max_final_correction_cycles == 0 {
+            return Err(Error::Manifest {
+                message: "workflow.max_final_correction_cycles must be a positive integer".into(),
+            });
+        }
+        Ok(())
+    }
+}
+
 /// The project template `init` seeded this repo from: provenance, not
 /// management — no verb ever re-plans a template. Recording the token values
 /// beside the name answers "what seeded this repo, with what".
@@ -140,6 +179,10 @@ struct WrittenManifest {
     /// the table it may put `custom` and `embeddings` in.
     #[serde(default)]
     knowledge: KnowledgeConfig,
+    /// `[workflow]` — safe local workflow policy. Older manifests may omit
+    /// it; rewrites materialize the safe defaults.
+    #[serde(default)]
+    workflow: WorkflowConfig,
     /// `[<capability>]` — one table per enabled capability, keyed by its
     /// kebab-case name; `[[<capability>]]` for a slot that takes several
     /// providers. An absent table means the capability is disabled.

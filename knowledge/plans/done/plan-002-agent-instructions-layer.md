@@ -4,19 +4,45 @@ id: plan-002-agent-instructions-layer
 title: Agent Instructions Layer
 description: Deliver S010 — the user-owned AGENTS.md with one ensured import, the fenced superdev.md aggregator, per-capability instruction files, codegraph MCP wiring, and the code-index dogfood.
 lifecycle: done
+phase: done
+branch: work/060-historical-agent-instructions-layer
+links:
+- rel: implements
+  to: issue-060-historical-agent-instructions-layer
 ---
-
 # Plan: Agent Instructions Layer
 
-## Goal
+Primary issue: [issue-060-historical-agent-instructions-layer][sokf:issue-060-historical-agent-instructions-layer]
+
+## Goal and boundaries
 
 Implement the agent instructions layer (S010, retired):
 AGENTS.md becomes the user's file, superdev's guidance moves behind one
 ensured import, and code-index gains its agent wiring.
 
+## Requirements
+
+Preserve the historical plan intent and constraints recorded under Goal and boundaries.
+
 ## Contract changes
 
 - none.
+
+## ADR decisions
+
+- none beyond decisions already linked or described in this historical record.
+
+## Source and interface changes
+
+Historical source and interface changes remain described in the work blocks.
+
+## Knowledge changes
+
+Preserve this record under the canonical workflow schema.
+
+## Documentation changes
+
+Historical documentation impact predates the documentation map; migration itself is checked as canonical-knowledge.
 
 ## Work blocks
 
@@ -93,3 +119,22 @@ ensured import, and code-index gains its agent wiring.
   - e2e: `superdev status` exits 0 on this repository after the sync —
     no criterion.
   - e2e: `superdev aokf validate knowledge` passes — no criterion.
+
+## Build state
+
+All historical blocks are complete; blocker: none.
+
+## Implementation decisions
+
+none.
+
+## Follow-up issues
+
+none.
+
+## Completion evidence
+
+Historical plan migrated mechanically. Original completion evidence remains in its work blocks and Git history.
+
+<!-- sokf:links -->
+[sokf:issue-060-historical-agent-instructions-layer]: /knowledge/issues/done/issue-060-historical-agent-instructions-layer.md

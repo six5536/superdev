@@ -4,11 +4,17 @@ id: plan-028-persistent-mcp-transport-for-pi-sokf
 title: Persistent MCP transport for Pi SOKF
 description: SOKF MCP adopts familiar coding-tool semantics and Pi reuses one repository-scoped server so frequent semantic searches load the local embedding model once.
 lifecycle: done
+phase: done
+branch: work/074-historical-persistent-mcp-transport-for-pi-sokf
+links:
+- rel: implements
+  to: issue-074-historical-persistent-mcp-transport-for-pi-sokf
 ---
-
 # Plan: Persistent MCP transport for Pi SOKF
 
-## Goal
+Primary issue: [issue-074-historical-persistent-mcp-transport-for-pi-sokf][sokf:issue-074-historical-persistent-mcp-transport-for-pi-sokf]
+
+## Goal and boundaries
 
 SOKF MCP presents project knowledge as a guarded virtual filesystem using the
 read, search, edit and write semantics models already know. Tool names remain
@@ -34,6 +40,10 @@ or repository daemon. Out of scope: arbitrary filesystem access, shell or
 regular-expression emulation, changes to search ranking, a background service
 for independent shell commands, and general MCP support for Pi.
 
+## Requirements
+
+Preserve the historical plan intent and constraints recorded under Goal and boundaries.
+
 ## Contract changes
 
 - contract-003-api-sokf: replace the `sokf_read { id, heading }` and
@@ -49,6 +59,22 @@ for independent shell commands, and general MCP support for Pi.
   preserve
   `P_speaks-mcp-over-stdio`, `P_exits-on-closed-stdin`, mutation policy, and
   standard MCP result shapes.
+
+## ADR decisions
+
+- none beyond decisions already linked or described in this historical record.
+
+## Source and interface changes
+
+Historical source and interface changes remain described in the work blocks.
+
+## Knowledge changes
+
+Preserve this record under the canonical workflow schema.
+
+## Documentation changes
+
+Historical documentation impact predates the documentation map; migration itself is checked as canonical-knowledge.
 
 ## Work blocks
 
@@ -181,3 +207,22 @@ for independent shell commands, and general MCP support for Pi.
     embedder or index.
   - validation: `superdev validate` passes after every affected canonical
     concept is updated.
+
+## Build state
+
+All historical blocks are complete; blocker: none.
+
+## Implementation decisions
+
+none.
+
+## Follow-up issues
+
+none.
+
+## Completion evidence
+
+Historical plan migrated mechanically. Original completion evidence remains in its work blocks and Git history.
+
+<!-- sokf:links -->
+[sokf:issue-074-historical-persistent-mcp-transport-for-pi-sokf]: /knowledge/issues/done/issue-074-historical-persistent-mcp-transport-for-pi-sokf.md

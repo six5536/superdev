@@ -245,10 +245,77 @@ pub fn validate(bundle: &Bundle, repo_root: &Path) -> Report {
         check_concept(concept, &context, &mut findings);
     }
     check_indexes(bundle, &context, &mut findings);
+    check_workflow_records(bundle, &mut findings);
 
     Report {
         findings,
         concept_count: bundle.concepts.len(),
+    }
+}
+
+/// Cross-document invariants for canonical issue/plan workflow records.
+fn check_workflow_records(bundle: &Bundle, findings: &mut Vec<Finding>) {
+    let mut open_by_issue: BTreeMap<String, String> = BTreeMap::new();
+    for plan in bundle
+        .concepts
+        .iter()
+        .filter(|concept| concept.kind == "Plan")
+    {
+        let path = plan.path.as_str();
+        let lifecycle = plan.lifecycle.as_deref().unwrap_or("");
+        let phase = plan.raw["phase"].as_str().unwrap_or("");
+        let compatible = matches!(
+            (lifecycle, phase),
+            ("open", "scope" | "build" | "accept") | ("done", "done") | ("abandoned", "abandoned")
+        );
+        if !compatible {
+            findings.push(error(
+                path,
+                format!("workflow: lifecycle `{lifecycle}` is incompatible with phase `{phase}`"),
+            ));
+        }
+
+        let implements: Vec<&str> = plan
+            .links
+            .iter()
+            .filter(|link| link.rel.as_deref() == Some("implements"))
+            .filter_map(|link| link.to.as_deref())
+            .collect();
+        if implements.len() != 1 {
+            findings.push(error(
+                path,
+                format!(
+                    "workflow: a plan must carry exactly one `implements` link (found {})",
+                    implements.len()
+                ),
+            ));
+            continue;
+        }
+        let issue = implements[0];
+        let expected_branch = issue
+            .strip_prefix("issue-")
+            .map(|rest| format!("work/{rest}"));
+        if expected_branch.as_deref() != plan.raw["branch"].as_str() {
+            findings.push(error(
+                path,
+                format!(
+                    "workflow: branch must be `{}` for primary issue `{issue}`",
+                    expected_branch
+                        .as_deref()
+                        .unwrap_or("work/<issue-number>-<slug>")
+                ),
+            ));
+        }
+        if lifecycle == "open"
+            && let Some(first) = open_by_issue.insert(issue.to_string(), path.to_string())
+        {
+            findings.push(error(
+                path,
+                format!(
+                    "workflow: issue `{issue}` already has an open implementing plan in {first}"
+                ),
+            ));
+        }
     }
 }
 

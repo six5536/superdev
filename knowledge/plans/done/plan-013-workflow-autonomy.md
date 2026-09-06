@@ -2,22 +2,23 @@
 type: Plan
 id: plan-013-workflow-autonomy
 title: Workflow autonomy
-description: Eight blocks delivering the unattended workflow — the run state and its verbs, the Stop hook, the managed hook entry, the plan format's dependencies, the branching and commit conventions, the driver skill, and the records.
+description: Eight blocks delivering the unattended workflow — the run state and its verbs, the Stop hook, the managed hook entry, the plan format's dependencies, the branching and commit conventions, the
+  driver skill, and the records.
 lifecycle: done
 links:
-  - rel: implements
-    to: issue-024-the-workflow-cannot-run-unattended
-    note: Delivers the thirteen acceptance criteria.
-  - rel: supersedes
-    to: plan-004-workflow-autonomy
-    note: The adhoc plan that designed this work against the seven-phase workflow.
+- rel: implements
+  to: issue-024-the-workflow-cannot-run-unattended
+- rel: supersedes
+  to: plan-004-workflow-autonomy
+  note: The adhoc plan that designed this work against the seven-phase workflow.
+phase: done
+branch: work/024-the-workflow-cannot-run-unattended
 ---
-
 # Plan: Workflow autonomy
 
-Request: [issue-024-the-workflow-cannot-run-unattended][sokf:issue-024-the-workflow-cannot-run-unattended]
+Primary issue: [issue-024-the-workflow-cannot-run-unattended][sokf:issue-024-the-workflow-cannot-run-unattended]
 
-## Goal
+## Goal and boundaries
 
 The workflow delivers a feature plan on its own: a run holds the
 working tree, a Stop hook keeps the session going while a block is
@@ -38,6 +39,10 @@ designed the same work against the seven-phase workflow. The decisions
 are ADR-018 through ADR-021 and the seam is
 [contract-009][sokf:contract-009-interface-run-state].
 
+## Requirements
+
+Preserve the historical plan intent and constraints recorded under Goal and boundaries.
+
 ## Contract changes
 
 - contract-009-interface-run-state: new — the run-state file at
@@ -47,6 +52,22 @@ are ADR-018 through ADR-021 and the seam is
   arms it.
 - contract-002-cli-superdev: gains the `run begin`, `run advance` and
   `run end` verbs and the `hook run` subcommand beside `hook validate`.
+
+## ADR decisions
+
+- none beyond decisions already linked or described in this historical record.
+
+## Source and interface changes
+
+Historical source and interface changes remain described in the work blocks.
+
+## Knowledge changes
+
+Preserve this record under the canonical workflow schema.
+
+## Documentation changes
+
+Historical documentation impact predates the documentation map; migration itself is checked as canonical-knowledge.
 
 ## Work blocks
 
@@ -217,6 +238,22 @@ are ADR-018 through ADR-021 and the seam is
   - manual: the rehearsal walks branching, the go-ahead commit, the
     unattended loop, the commit at merge, the run's end and the
     untouched default branch in one scratch-repo run.
+
+## Build state
+
+All historical blocks are complete; blocker: none.
+
+## Implementation decisions
+
+none.
+
+## Follow-up issues
+
+none.
+
+## Completion evidence
+
+Historical plan migrated mechanically; original evidence remains in its work blocks and Git history.
 
 <!-- sokf:links -->
 [sokf:contract-009-interface-run-state]: /knowledge/contracts/internal/active/contract-009-interface-run-state.md

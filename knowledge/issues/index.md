@@ -91,6 +91,27 @@ places it.
 
 * [A skill naming a concept by path breaks silently when that concept moves, because link checking stops at the knowledge directory][sokf:issue-023-a-concept-path-written-outside-the-knowledge-is-checked-by-nothing] - P010 made a link inside the SOKF knowledge survive a rename, but the eleven concept paths written in skills and agent files are checked by nothing, so the failure P010 removed from the knowledge still stands one directory away.
 
+## Workflow migration
+
+* [Historical plan: Agent Instructions Layer][sokf:issue-060-historical-agent-instructions-layer] - Migration-derived issue preserving the primary issue relationship for plan-002-agent-instructions-layer.
+* [Historical plan: Workflow autonomy — branch, slice dependencies, unattended delivery][sokf:issue-061-historical-workflow-autonomy] - Migration-derived issue preserving the primary issue relationship for plan-004-workflow-autonomy.
+* [Historical plan: Content pack hardening][sokf:issue-062-historical-content-pack-hardening] - Migration-derived issue preserving the primary issue relationship for plan-005-content-pack-hardening.
+* [Historical plan: Fold the superdev-format validator into the Rust validator][sokf:issue-063-historical-rust-format-validator] - Migration-derived issue preserving the primary issue relationship for plan-006-rust-format-validator.
+* [Historical plan: Drop the AOKF conformance ladder][sokf:issue-064-historical-drop-the-aokf-conformance-ladder] - Migration-derived issue preserving the primary issue relationship for plan-007-drop-the-aokf-conformance-ladder.
+* [Historical plan: SOKF becomes a core part of superdev][sokf:issue-065-historical-sokf-becomes-core] - Migration-derived issue preserving the primary issue relationship for plan-008-sokf-becomes-core.
+* [Historical plan: Drop rtk and the bash-output-filter capability][sokf:issue-066-historical-drop-the-bash-output-filter] - Migration-derived issue preserving the primary issue relationship for plan-009-drop-the-bash-output-filter.
+* [Historical plan: Links address ids][sokf:issue-067-historical-links-address-ids] - Migration-derived issue preserving the primary issue relationship for plan-010-links-address-ids.
+* [Historical plan: Documents are filed by lifecycle][sokf:issue-068-historical-filing-by-lifecycle] - Migration-derived issue preserving the primary issue relationship for plan-011-filing-by-lifecycle.
+* [Historical plan: The workflow becomes contract-driven][sokf:issue-069-historical-contract-driven-workflow] - Migration-derived issue preserving the primary issue relationship for plan-012-contract-driven-workflow.
+* [Historical plan: Bring every schema in line with its own rules and the workflow][sokf:issue-070-historical-schema-review-findings] - Migration-derived issue preserving the primary issue relationship for plan-014-schema-review-findings.
+* [Historical plan: Integrate runs /code-review once, at the last slice][sokf:issue-071-historical-code-review-at-the-last-slice] - Migration-derived issue preserving the primary issue relationship for plan-015-code-review-at-the-last-slice.
+* [Historical plan: Contract-design review and the binding-surface standard][sokf:issue-072-historical-contract-design-review] - Migration-derived issue preserving the primary issue relationship for plan-019-contract-design-review.
+* [Historical plan: A warning is counted by default and listed on request][sokf:issue-073-historical-warnings-are-counted-not-listed] - Migration-derived issue preserving the primary issue relationship for plan-023-warnings-are-counted-not-listed.
+* [Historical plan: Persistent MCP transport for Pi SOKF][sokf:issue-074-historical-persistent-mcp-transport-for-pi-sokf] - Migration-derived issue preserving the primary issue relationship for plan-028-persistent-mcp-transport-for-pi-sokf.
+* [Historical plan: Content packs][sokf:issue-076-historical-content-packs] - Migration-derived issue preserving the primary issue relationship for plan-003-content-packs.
+* [The development workflow is contradictory and does not reliably deliver reviewed documentation][sokf:issue-059-scope-build-accept-workflow] - The workflow duplicates ownership across skills, leaves manual cases unexecuted, and treats user-facing documentation as an optional final reminder.
+* [Historical plan: Flatten the superdev-core API][sokf:issue-075-historical-flatten-crate-api] - Migration-derived issue preserving the primary issue relationship for plan-001-flatten-crate-api.
+
 <!-- sokf:links -->
 [sokf:issue-001-update-can-pin-an-unreadable-pack-format]: /knowledge/issues/done/issue-001-update-can-pin-an-unreadable-pack-format.md
 [sokf:issue-002-no-time-bound-on-the-update-query]: /knowledge/issues/done/issue-002-no-time-bound-on-the-update-query.md
@@ -150,3 +171,21 @@ places it.
 [sokf:issue-056-three-active-adrs-decide-in-terms-of-retired-skills]: /knowledge/issues/open/issue-056-three-active-adrs-decide-in-terms-of-retired-skills.md
 [sokf:issue-057-the-skills-disagree-on-who-loops-and-who-returns]: /knowledge/issues/open/issue-057-the-skills-disagree-on-who-loops-and-who-returns.md
 [sokf:issue-058-a-plan-case-marked-manual-is-executed-nowhere]: /knowledge/issues/open/issue-058-a-plan-case-marked-manual-is-executed-nowhere.md
+[sokf:issue-059-scope-build-accept-workflow]: /knowledge/issues/open/issue-059-scope-build-accept-workflow.md
+[sokf:issue-060-historical-agent-instructions-layer]: /knowledge/issues/done/issue-060-historical-agent-instructions-layer.md
+[sokf:issue-061-historical-workflow-autonomy]: /knowledge/issues/done/issue-061-historical-workflow-autonomy.md
+[sokf:issue-062-historical-content-pack-hardening]: /knowledge/issues/done/issue-062-historical-content-pack-hardening.md
+[sokf:issue-063-historical-rust-format-validator]: /knowledge/issues/done/issue-063-historical-rust-format-validator.md
+[sokf:issue-064-historical-drop-the-aokf-conformance-ladder]: /knowledge/issues/done/issue-064-historical-drop-the-aokf-conformance-ladder.md
+[sokf:issue-065-historical-sokf-becomes-core]: /knowledge/issues/done/issue-065-historical-sokf-becomes-core.md
+[sokf:issue-066-historical-drop-the-bash-output-filter]: /knowledge/issues/done/issue-066-historical-drop-the-bash-output-filter.md
+[sokf:issue-067-historical-links-address-ids]: /knowledge/issues/done/issue-067-historical-links-address-ids.md
+[sokf:issue-068-historical-filing-by-lifecycle]: /knowledge/issues/done/issue-068-historical-filing-by-lifecycle.md
+[sokf:issue-069-historical-contract-driven-workflow]: /knowledge/issues/done/issue-069-historical-contract-driven-workflow.md
+[sokf:issue-070-historical-schema-review-findings]: /knowledge/issues/done/issue-070-historical-schema-review-findings.md
+[sokf:issue-071-historical-code-review-at-the-last-slice]: /knowledge/issues/done/issue-071-historical-code-review-at-the-last-slice.md
+[sokf:issue-072-historical-contract-design-review]: /knowledge/issues/done/issue-072-historical-contract-design-review.md
+[sokf:issue-073-historical-warnings-are-counted-not-listed]: /knowledge/issues/done/issue-073-historical-warnings-are-counted-not-listed.md
+[sokf:issue-074-historical-persistent-mcp-transport-for-pi-sokf]: /knowledge/issues/done/issue-074-historical-persistent-mcp-transport-for-pi-sokf.md
+[sokf:issue-075-historical-flatten-crate-api]: /knowledge/issues/open/issue-075-historical-flatten-crate-api.md
+[sokf:issue-076-historical-content-packs]: /knowledge/issues/done/issue-076-historical-content-packs.md

@@ -2,22 +2,24 @@
 type: Plan
 id: plan-022-decidable-findings-are-errors
 title: A decidable finding is an error
-description: Blocks closing the promised run-state fields, promoting the five findings the repository alone settles, scoping the edit-time hook off the two that span files, and holding the turn open while the knowledge carries an error.
+description: Blocks closing the promised run-state fields, promoting the five findings the repository alone settles, scoping the edit-time hook off the two that span files, and holding the turn open while
+  the knowledge carries an error.
 lifecycle: done
 links:
-  - rel: implements
-    to: issue-012-five-decidable-findings-only-warn
-    note: The plan delivers the framed issue's two criteria under ADR-039.
+- rel: implements
+  to: issue-012-five-decidable-findings-only-warn
+phase: done
+branch: work/012-five-decidable-findings-only-warn
 ---
-
 # Plan: a decidable finding is an error
 
-Request:
+Primary issue: [issue-012-five-decidable-findings-only-warn][sokf:issue-012-five-decidable-findings-only-warn]
+
 [issue-012][sokf:issue-012-five-decidable-findings-only-warn],
 decided by
 [ADR-039][sokf:adr-039-a-decidable-finding-is-an-error-and-the-turn-is-the-gate].
 
-## Goal
+## Goal and boundaries
 
 The five findings the repository alone settles — a broken body link, a
 missing `resource`, a missing `sources[].resource`, an index entry
@@ -30,12 +32,32 @@ file. ADR-039 settled the open question the issue carried, before this
 plan was cut. Blocks 1 and 4 of the first cut were merged during
 build: the hold cap and the hook that respects it are one deliverable.
 
+## Requirements
+
+Preserve the historical plan intent and constraints recorded under Goal and boundaries.
+
 ## Contract changes
 
 - contract-009-interface-run-state: `holds` and `HOLD_CAP`, already
   declared, are landed by block 1, which closes the `PENDING` the
   interface drift test reports until the code matches the declaration
   (ADR-038).
+
+## ADR decisions
+
+- none beyond decisions already linked or described in this historical record.
+
+## Source and interface changes
+
+Historical source and interface changes remain described in the work blocks.
+
+## Knowledge changes
+
+Preserve this record under the canonical workflow schema.
+
+## Documentation changes
+
+Historical documentation impact predates the documentation map; migration itself is checked as canonical-knowledge.
 
 ## Work blocks
 
@@ -125,6 +147,22 @@ build: the hold cap and the hook that respects it are one deliverable.
   and the changelog names the new failure class.
 - Cases:
   - integration: the live tree and the pack mirror validate clean.
+
+## Build state
+
+All historical blocks are complete; blocker: none.
+
+## Implementation decisions
+
+none.
+
+## Follow-up issues
+
+none.
+
+## Completion evidence
+
+Historical plan migrated mechanically; original evidence remains in its work blocks and Git history.
 
 <!-- sokf:links -->
 [sokf:adr-039-a-decidable-finding-is-an-error-and-the-turn-is-the-gate]: /knowledge/adrs/active/adr-039-a-decidable-finding-is-an-error-and-the-turn-is-the-gate.md

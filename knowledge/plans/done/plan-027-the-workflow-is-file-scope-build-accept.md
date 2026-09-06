@@ -2,28 +2,29 @@
 type: Plan
 id: plan-027-the-workflow-is-file-scope-build-accept
 title: The workflow is file, scope, build, accept
-description: Blocks delivering I052 — the validator's nested items and optional key closing contract-010's five PENDING promises, a contract's nested criteria, one issue schema with the sweep of the issues on file, one plan schema with the sweep of the plans, the scope and contract-design skills, the build, execute-plan and accept skills with the workflow text, and the concepts and records.
+description: Blocks delivering I052 — the validator's nested items and optional key closing contract-010's five PENDING promises, a contract's nested criteria, one issue schema with the sweep of the issues
+  on file, one plan schema with the sweep of the plans, the scope and contract-design skills, the build, execute-plan and accept skills with the workflow text, and the concepts and records.
 lifecycle: done
 links:
-  - rel: implements
-    to: issue-052-the-workflow-carries-more-process-than-it-needs
-    note: The framed feature whose sixteen criteria these blocks deliver.
-  - rel: references
-    to: contract-010-interface-document-schemas
-    note: Carries five PENDING promises for `nested` and `item-key-optional`; block 1 closes them, so it runs first.
-  - rel: references
-    to: adr-050-keys-and-ears-live-in-the-contracts-and-the-workflow-is-file-scope-build-accept
-    note: The decision every block reads for what it writes.
-  - rel: references
-    to: adr-051-a-section-rule-declares-nested-items-and-an-optional-key
-    note: The mechanism block 1 builds and block 2 uses.
+- rel: implements
+  to: issue-052-the-workflow-carries-more-process-than-it-needs
+- rel: references
+  to: contract-010-interface-document-schemas
+  note: Carries five PENDING promises for `nested` and `item-key-optional`; block 1 closes them, so it runs first.
+- rel: references
+  to: adr-050-keys-and-ears-live-in-the-contracts-and-the-workflow-is-file-scope-build-accept
+  note: The decision every block reads for what it writes.
+- rel: references
+  to: adr-051-a-section-rule-declares-nested-items-and-an-optional-key
+  note: The mechanism block 1 builds and block 2 uses.
+phase: done
+branch: work/052-the-workflow-carries-more-process-than-it-needs
 ---
-
 # Plan: The workflow is file, scope, build, accept
 
-Request: [issue-052-the-workflow-carries-more-process-than-it-needs][sokf:issue-052-the-workflow-carries-more-process-than-it-needs]
+Primary issue: [issue-052-the-workflow-carries-more-process-than-it-needs][sokf:issue-052-the-workflow-carries-more-process-than-it-needs]
 
-## Goal
+## Goal and boundaries
 
 Keys and EARS live in the contracts alone, an issue is one plain
 template, a plan is one document holding the contract changes and the
@@ -65,6 +66,10 @@ retires it, and the reason is stated in the commit. The changelog is
 at its 800-line limit, so a block adding a line folds the Unreleased
 section as it goes.
 
+## Requirements
+
+Preserve the historical plan intent and constraints recorded under Goal and boundaries.
+
 ## Contract changes
 
 - contract-010-interface-document-schemas: `P_nested-binds`,
@@ -75,6 +80,22 @@ section as it goes.
 - contract-009-interface-run-state: no promise changes; the prose
   that names the unattended loop's driver follows the skill's rename
   to `/execute-plan` (block 6).
+
+## ADR decisions
+
+- none beyond decisions already linked or described in this historical record.
+
+## Source and interface changes
+
+Historical source and interface changes remain described in the work blocks.
+
+## Knowledge changes
+
+Preserve this record under the canonical workflow schema.
+
+## Documentation changes
+
+Historical documentation impact predates the documentation map; migration itself is checked as canonical-knowledge.
 
 ## Work blocks
 
@@ -326,7 +347,11 @@ section as it goes.
   defines Scope, Work block and Plan and no longer defines Frame,
   Slice, Framed or Unframed (checks the glossary).
 
-## Deferred decisions
+## Build state
+
+All historical blocks are complete; blocker: none.
+
+## Implementation decisions
 
 - Block 1 (built; the question is wording): contract-010's "Nested
   items" paragraph says a marker beyond the declared depth "is text of
@@ -342,6 +367,14 @@ section as it goes.
   `SHALL` passes while a promise's does not. Should the criterion be
   held to the retired-verb and one-verb rule as a promise is? Blocks
   nothing.
+
+## Follow-up issues
+
+none.
+
+## Completion evidence
+
+Historical plan migrated mechanically; original evidence remains in its work blocks and Git history.
 
 <!-- sokf:links -->
 [sokf:adr-050-keys-and-ears-live-in-the-contracts-and-the-workflow-is-file-scope-build-accept]: /knowledge/adrs/deprecated/adr-050-keys-and-ears-live-in-the-contracts-and-the-workflow-is-file-scope-build-accept.md

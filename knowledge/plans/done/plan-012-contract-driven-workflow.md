@@ -2,20 +2,26 @@
 type: Plan
 id: plan-012-contract-driven-workflow
 title: The workflow becomes contract-driven
-description: The seven-phase spec-driven workflow becomes five contract-driven phases — criteria move into the feature-request as EARS sentences, contracts become durable in public/ and internal/, the spec documents are migrated and deleted, and the skills merge to match.
+description: The seven-phase spec-driven workflow becomes five contract-driven phases — criteria move into the feature-request as EARS sentences, contracts become durable in public/ and internal/, the spec
+  documents are migrated and deleted, and the skills merge to match.
 lifecycle: done
 links:
-  - rel: depends-on
-    to: plan-011-filing-by-lifecycle
-    note: Runs after the lifecycle filing lands; this plan writes in its vocabulary.
-  - rel: references
-    to: issue-021-backport-the-knowledge-design-to-the-pack
-    note: The pack copies of the workflow skills this plan changes join that backport debt.
+- rel: implements
+  to: issue-069-historical-contract-driven-workflow
+- rel: depends-on
+  to: plan-011-filing-by-lifecycle
+  note: Runs after the lifecycle filing lands; this plan writes in its vocabulary.
+- rel: references
+  to: issue-021-backport-the-knowledge-design-to-the-pack
+  note: The pack copies of the workflow skills this plan changes join that backport debt.
+phase: done
+branch: work/069-historical-contract-driven-workflow
 ---
-
 # Plan: The workflow becomes contract-driven
 
-## Goal
+Primary issue: [issue-069-historical-contract-driven-workflow][sokf:issue-069-historical-contract-driven-workflow]
+
+## Goal and boundaries
 
 The workflow runs FRAME → CONTRACT-DESIGN → FEATURE-PLAN → BUILD →
 INTEGRATE against durable contracts and EARS-stated acceptance criteria,
@@ -146,6 +152,10 @@ Block 3 dispositions every spec before it deletes any. Block 4 lands as
 one change, and no feature enters FRAME between its first commit and its
 merge, so no feature follows two workflows.
 
+## Requirements
+
+Preserve the historical plan intent and constraints recorded under Goal and boundaries.
+
 ## Contract changes
 
 - contract-001-interface-content-packs: dissolved and deleted. Its
@@ -157,6 +167,22 @@ merge, so no feature follows two workflows.
   internal interfaces — pack source identity, the item model, the
   resolved content set, the resolution phase and the `Ctx` — as a durable
   contract keyed to an interface rather than to a feature.
+
+## ADR decisions
+
+- none beyond decisions already linked or described in this historical record.
+
+## Source and interface changes
+
+Historical source and interface changes remain described in the work blocks.
+
+## Knowledge changes
+
+Preserve this record under the canonical workflow schema.
+
+## Documentation changes
+
+Historical documentation impact predates the documentation map; migration itself is checked as canonical-knowledge.
 
 ## Work blocks
 
@@ -283,6 +309,23 @@ merge, so no feature follows two workflows.
   - checks that issue-021's surface list names this plan's pack drift, or
     states it left none.
 
+## Build state
+
+All historical blocks are complete; blocker: none.
+
+## Implementation decisions
+
+none.
+
+## Follow-up issues
+
+none.
+
+## Completion evidence
+
+Historical plan migrated mechanically; original evidence remains in its work blocks and Git history.
+
 <!-- sokf:links -->
 [sokf:issue-021-backport-the-knowledge-design-to-the-pack]: /knowledge/issues/done/issue-021-backport-the-knowledge-design-to-the-pack.md
+[sokf:issue-069-historical-contract-driven-workflow]: /knowledge/issues/done/issue-069-historical-contract-driven-workflow.md
 [sokf:plan-011-filing-by-lifecycle]: /knowledge/plans/done/plan-011-filing-by-lifecycle.md

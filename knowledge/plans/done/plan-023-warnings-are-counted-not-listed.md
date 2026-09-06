@@ -4,14 +4,19 @@ id: plan-023-warnings-are-counted-not-listed
 title: A warning is counted by default and listed on request
 description: Blocks delivering `--warnings`, the shared default for the CLI and the hooks, and the counts `--json` has never carried.
 lifecycle: done
+phase: done
+branch: work/073-historical-warnings-are-counted-not-listed
+links:
+- rel: implements
+  to: issue-073-historical-warnings-are-counted-not-listed
 ---
-
 # Plan: A warning is counted by default and listed on request
 
-Request:
+Primary issue: [issue-073-historical-warnings-are-counted-not-listed][sokf:issue-073-historical-warnings-are-counted-not-listed]
+
 [issue-036-validate-prints-warnings-by-default][sokf:issue-036-validate-prints-warnings-by-default]
 
-## Goal
+## Goal and boundaries
 
 A bare `superdev validate` lists every error, lists no warning and states
 both counts; `--warnings` lists every finding of both severities. The
@@ -19,6 +24,10 @@ PostToolUse and Stop hooks default as the command line does, so one rule
 governs whoever ran the check, and `--json` carries both counts and the
 findings the text run listed. What is shown changes and what the run
 decides does not, so no exit code moves.
+
+## Requirements
+
+Preserve the historical plan intent and constraints recorded under Goal and boundaries.
 
 ## Contract changes
 
@@ -28,6 +37,22 @@ decides does not, so no exit code moves.
   bare command's default; the `--json` object carries the `errors` and
   `warnings` counts and the `documents` and `schemas` keys the binary
   emitted undeclared.
+
+## ADR decisions
+
+- none beyond decisions already linked or described in this historical record.
+
+## Source and interface changes
+
+Historical source and interface changes remain described in the work blocks.
+
+## Knowledge changes
+
+Preserve this record under the canonical workflow schema.
+
+## Documentation changes
+
+Historical documentation impact predates the documentation map; migration itself is checked as canonical-knowledge.
 
 ## Work blocks
 
@@ -109,8 +134,25 @@ decides does not, so no exit code moves.
   - e2e: a tree whose only findings are warnings leaves the PostToolUse
     hook at exit 0, as today — covers 6.
 
+## Build state
+
+All historical blocks are complete; blocker: none.
+
+## Implementation decisions
+
+none.
+
+## Follow-up issues
+
+none.
+
+## Completion evidence
+
+Historical plan migrated mechanically; original evidence remains in its work blocks and Git history.
+
 <!-- sokf:links -->
 [sokf:adr-038-a-contract-may-promise-what-is-not-built-yet]: /knowledge/adrs/deprecated/adr-038-a-contract-may-promise-what-is-not-built-yet.md
 [sokf:contract-002-cli-superdev]: /knowledge/contracts/public/active/contract-002-cli-superdev.md
 [sokf:issue-036-validate-prints-warnings-by-default]: /knowledge/issues/done/issue-036-validate-prints-warnings-by-default.md
 [sokf:issue-043-the-cli-contracts-json-keys-are-bound-by-no-test]: /knowledge/issues/wontfix/issue-043-the-cli-contracts-json-keys-are-bound-by-no-test.md
+[sokf:issue-073-historical-warnings-are-counted-not-listed]: /knowledge/issues/done/issue-073-historical-warnings-are-counted-not-listed.md

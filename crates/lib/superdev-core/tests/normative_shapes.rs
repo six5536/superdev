@@ -85,16 +85,6 @@ const LIFECYCLES: [&str; 3] = ["open", "done", "wontfix"];
 /// The three kinds an issue may be.
 const ISSUE_KINDS: [&str; 3] = ["bug", "feature", "chore"];
 
-/// The six headings of the template, in order.
-const HEADINGS: [&str; 6] = [
-    "Summary",
-    "Context",
-    "Behaviour",
-    "Scope",
-    "Resolution",
-    "Comments",
-];
-
 /// Covers I052 AC_issue-schema and AC_issue-plain: under the live schema set
 /// an open issue of each kind passes with prose, bullets after prose, or
 /// both under Behaviour, carrying no key and no tag.
@@ -243,31 +233,22 @@ fn the_issue_schema_declares_the_template() {
             .iter()
             .filter_map(|s| s["heading"].as_str())
             .collect();
-        assert_eq!(headings, HEADINGS, "{path}: the six headings in order");
-        for section in sections {
-            for key in [
-                "item-key",
-                "item-pattern",
-                "item-only-pattern",
-                "item-prohibited-pattern",
-                "item-key-optional",
-                "nested",
-            ] {
-                assert!(
-                    section.get(key).is_none(),
-                    "{path}: {} declares `{key}`",
-                    section["heading"].as_str().unwrap_or("the title")
-                );
-            }
-            if section.get("heading").is_some() {
-                assert_eq!(
-                    section["content"].as_str(),
-                    Some("prose"),
-                    "{path}: {} is not prose",
-                    section["heading"].as_str().unwrap()
-                );
-            }
-        }
+        let expected = [
+            "Summary",
+            "Context",
+            "Behaviour",
+            "Scope",
+            "Discoveries",
+            "Resolution",
+            "Comments",
+        ];
+        assert_eq!(headings, expected, "{path}: the headings in order");
+        let discoveries = sections
+            .iter()
+            .find(|s| s["heading"].as_str() == Some("Discoveries"))
+            .unwrap();
+        assert_eq!(discoveries["content"].as_str(), Some("bullet-list"));
+        assert!(discoveries["item-pattern"].as_str().is_some());
         let keys: Vec<&str> = y["example"]
             .as_mapping()
             .unwrap_or_else(|| panic!("{path}: example is keyed by lifecycle"))
@@ -432,41 +413,57 @@ fn the_issues_index_lists_every_issue_on_file() {
 /// The three lifecycle values the plan schema declares, in order (ADR-050).
 const PLAN_LIFECYCLES: [&str; 3] = ["open", "done", "abandoned"];
 
-/// The four headings of the plan template, in order.
-const PLAN_HEADINGS: [&str; 4] = [
-    "Goal",
+/// The twelve ordered durable plan sections.
+const PLAN_HEADINGS: [&str; 12] = [
+    "Goal and boundaries",
+    "Requirements",
     "Contract changes",
+    "ADR decisions",
+    "Source and interface changes",
+    "Knowledge changes",
+    "Documentation changes",
     "Work blocks",
-    "Deferred decisions",
+    "Build state",
+    "Implementation decisions",
+    "Follow-up issues",
+    "Completion evidence",
 ];
 
 /// One block of a plan, as the template writes it.
 fn block(n: u8, depends_on: &str) -> String {
     format!(
-        "### Block {n}: probe\n\n- [ ] Done — ticked by build at its commit.\n\
-         - Depends-on: {depends_on}.\n- Change: a line.\n- Done-check: a line.\n\
-         - Cases: a case (covers AC_probe).\n\n"
+        "### Block {n}: probe\n\n- [ ] Done.\n- Dependencies: {depends_on}.\n\
+         - Areas: a path.\n- Outcome: a line.\n- Verification: `probe`.\n\
+         - Tests: a case covers AC_probe.\n- Structural evidence: none.\n\
+         - Documentation: none.\n\n"
     )
 }
 
-/// One plan body in `lifecycle`: Goal, `contract_changes` where the section
-/// is carried, two blocks, and `tail` after them — Deferred decisions, or
-/// nothing.
-fn plan_in(lifecycle: &str, contract_changes: Option<&str>, tail: &str) -> String {
+/// One complete canonical plan body in `lifecycle`.
+fn plan_in(lifecycle: &str, contract_changes: Option<&str>, _tail: &str) -> String {
+    let phase = match lifecycle {
+        "done" => "done",
+        "abandoned" => "abandoned",
+        _ => "scope",
+    };
     let contract_changes = contract_changes
-        .map(|bullets| format!("## Contract changes\n\n{bullets}\n"))
+        .map(|bullets| format!("## Contract changes\n\n{bullets}\n\n"))
         .unwrap_or_default();
     format!(
         "---\ntype: Plan\nid: plan-999-probe\ntitle: t\ndescription: d\n\
-         lifecycle: {lifecycle}\n---\n\n# Plan: probe\n\nRequest: [issue-999-probe][sokf:issue-999-probe]\n\n\
-         ## Goal\n\nA line.\n\n{contract_changes}## Work blocks\n\n{}{}{tail}",
+         lifecycle: {lifecycle}\nphase: {phase}\nbranch: work/999-probe\nlinks:\n  - rel: implements\n    to: issue-999-probe\n---\n\n\
+         # Plan: probe\n\nPrimary issue: [issue-999-probe][sokf:issue-999-probe]\n\n\
+         ## Goal and boundaries\n\nA line.\n\n## Requirements\n\nA line.\n\n\
+         {contract_changes}## ADR decisions\n\n- none.\n\n## Source and interface changes\n\nA line.\n\n\
+         ## Knowledge changes\n\nA line.\n\n## Documentation changes\n\nA line.\n\n\
+         ## Work blocks\n\n{}{}## Build state\n\nA line.\n\n## Implementation decisions\n\nA line.\n\n\
+         ## Follow-up issues\n\nA line.\n\n## Completion evidence\n\nA line.\n",
         block(1, "none"),
-        block(2, "1"),
+        block(2, "1")
     )
 }
 
-/// The Deferred decisions section a plan may carry.
-const DEFERRED: &str = "## Deferred decisions\n\n- Block 2: a question. Blocks nothing.\n";
+const DEFERRED: &str = "";
 
 /// Covers I052's plan criterion: under the live schema set a plan in each
 /// lifecycle passes with Goal, Contract changes — a contract's bullet or
@@ -513,11 +510,11 @@ fn a_plan_without_contract_changes_fails_naming_the_heading() {
     let found = findings_of(
         "Plan",
         "probe.md",
-        &sound.replace("## Goal\n\nA line.\n", ""),
+        &sound.replace("## Goal and boundaries\n\nA line.\n", ""),
     );
     assert_eq!(found.len(), 1, "{found:#?}");
     assert!(
-        found[0].contains("missing required section \"Goal\""),
+        found[0].contains("missing required section \"Goal and boundaries\""),
         "{found:#?}"
     );
 }
@@ -611,7 +608,7 @@ fn the_plan_schema_declares_the_template() {
             .collect();
         assert_eq!(
             headings, PLAN_HEADINGS,
-            "{path}: the four headings in order"
+            "{path}: the twelve headings in order"
         );
         let content = |heading: &str| {
             sections
@@ -619,9 +616,9 @@ fn the_plan_schema_declares_the_template() {
                 .find(|s| s["heading"].as_str() == Some(heading))
                 .and_then(|s| s["content"].as_str())
         };
-        assert_eq!(content("Goal"), Some("prose"), "{path}");
+        assert_eq!(content("Goal and boundaries"), Some("prose"), "{path}");
         assert_eq!(content("Contract changes"), Some("bullet-list"), "{path}");
-        assert_eq!(content("Deferred decisions"), Some("bullet-list"), "{path}");
+        assert_eq!(content("Completion evidence"), Some("prose"), "{path}");
         let block = sections
             .iter()
             .find(|s| s["heading-pattern"].as_str() == Some(r"^Block \d+: .+$"))
@@ -630,7 +627,7 @@ fn the_plan_schema_declares_the_template() {
         assert_eq!(block["required"].as_bool(), Some(true), "{path}");
         assert_eq!(block["repeatable"].as_bool(), Some(true), "{path}");
         assert_eq!(block["content"].as_str(), Some("bullet-list"), "{path}");
-        for heading in ["Goal", "Contract changes", "Work blocks"] {
+        for heading in PLAN_HEADINGS {
             let rule = sections
                 .iter()
                 .find(|s| s["heading"].as_str() == Some(heading))
@@ -638,8 +635,8 @@ fn the_plan_schema_declares_the_template() {
             assert_eq!(rule["required"].as_bool(), Some(true), "{path}: {heading}");
         }
         assert!(
-            y["example"].as_str().is_some(),
-            "{path}: one example, not one per variant"
+            y["example"].as_mapping().is_some(),
+            "{path}: one example per lifecycle variant"
         );
     }
     let schema: Vec<(String, String)> = schemas("knowledge/schemas")
@@ -2490,44 +2487,22 @@ fn nothing_a_writer_builds_against_names_a_retired_phase() {
     );
 }
 
-/// Covers I052's ADR criterion: ADR-050 is active, supersedes the two
-/// decisions the tracker's keyed EARS criteria and its framed state came
-/// from — both filed under `adrs/deprecated/` — and references ADR-046,
-/// whose contract half stands.
+/// ADR-052 is the active workflow decision and supersedes ADR-050, which
+/// remains immutable in the deprecated history with its earlier decisions.
 #[test]
-fn adr_050_supersedes_the_tracker_decisions() {
-    let superseded = [
-        "adr-031-ears-criteria-are-checked-by-item-pattern",
-        "adr-048-an-issues-lifecycle-distinguishes-framed-from-unframed",
-    ];
-    let text = same(
-        &std::fs::read_to_string(repo(
-            "knowledge/adrs/active/\
-             adr-050-keys-and-ears-live-in-the-contracts-and-the-workflow-is-file-scope-build-accept.md",
-        ))
-        .expect("ADR-050 is on file"),
+fn adr_052_supersedes_the_previous_workflow() {
+    let active = std::fs::read_to_string(repo(
+        "knowledge/adrs/active/adr-052-the-workflow-is-scope-build-accept-under-a-durable-core.md",
+    ))
+    .expect("ADR-052 is on file");
+    assert_eq!(frontmatter_of(&active, "lifecycle"), Some("active"));
+    assert!(active.contains(
+        "  - rel: supersedes\n    to: adr-050-keys-and-ears-live-in-the-contracts-and-the-workflow-is-file-scope-build-accept\n"
+    ));
+    let old = repo(
+        "knowledge/adrs/deprecated/adr-050-keys-and-ears-live-in-the-contracts-and-the-workflow-is-file-scope-build-accept.md",
     );
-    assert_eq!(
-        frontmatter_of(&text, "lifecycle"),
-        Some("active"),
-        "ADR-050 is not active"
-    );
-    for id in superseded {
-        assert!(
-            text.contains(&format!("  - rel: supersedes\n    to: {id}\n")),
-            "ADR-050 does not supersede {id}"
-        );
-        assert!(
-            repo(&format!("knowledge/adrs/deprecated/{id}.md")).exists(),
-            "{id} is not filed under adrs/deprecated/"
-        );
-    }
-    assert!(
-        text.contains(
-            "  - rel: references\n    to: adr-046-a-promise-and-a-criterion-are-keyed-ears-items\n"
-        ),
-        "ADR-050 does not reference ADR-046"
-    );
+    assert!(old.exists(), "ADR-050 remains in deprecated history");
 }
 
 /// Covers I052's glossary criterion: the glossary defines the workflow's

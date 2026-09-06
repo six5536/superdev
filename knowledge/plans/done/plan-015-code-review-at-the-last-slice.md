@@ -5,14 +5,19 @@ title: Integrate runs /code-review once, at the last slice
 description: The per-slice /code-review in integrate becomes one feature-wide review at the last slice, over the whole diff, with findings returning to build as today.
 lifecycle: done
 links:
-  - rel: relates-to
-    to: plan-013-workflow-autonomy
-    note: Plan-013 edits the same integrate skill; whichever lands second rebases its step list.
+- rel: implements
+  to: issue-071-historical-code-review-at-the-last-slice
+- rel: relates-to
+  to: plan-013-workflow-autonomy
+  note: Plan-013 edits the same integrate skill; whichever lands second rebases its step list.
+phase: done
+branch: work/071-historical-code-review-at-the-last-slice
 ---
-
 # Plan: Integrate runs /code-review once, at the last slice
 
-## Goal
+Primary issue: [issue-071-historical-code-review-at-the-last-slice][sokf:issue-071-historical-code-review-at-the-last-slice]
+
+## Goal and boundaries
 
 A feature's code is reviewed by `/code-review` exactly once, at the last
 slice's integrate, over the whole feature diff. Integrate on any earlier
@@ -77,9 +82,29 @@ this is skill content. The unattended driver plan-013 adds inherits the
 new behaviour with no edit of its own, because it invokes `/integrate`
 per slice and the condition lives inside the skill.
 
+## Requirements
+
+Preserve the historical plan intent and constraints recorded under Goal and boundaries.
+
 ## Contract changes
 
 - none.
+
+## ADR decisions
+
+- none beyond decisions already linked or described in this historical record.
+
+## Source and interface changes
+
+Historical source and interface changes remain described in the work blocks.
+
+## Knowledge changes
+
+Preserve this record under the canonical workflow schema.
+
+## Documentation changes
+
+Historical documentation impact predates the documentation map; migration itself is checked as canonical-knowledge.
 
 ## Work blocks
 
@@ -120,6 +145,23 @@ per slice and the condition lives inside the skill.
     `knowledge/plans/index.md` lists this plan with `lifecycle: done` —
     checks that the edit conforms and the records close.
 
+## Build state
+
+All historical blocks are complete; blocker: none.
+
+## Implementation decisions
+
+none.
+
+## Follow-up issues
+
+none.
+
+## Completion evidence
+
+Historical plan migrated mechanically; original evidence remains in its work blocks and Git history.
+
 <!-- sokf:links -->
 [sokf:adr-021-nothing-unattended-reaches-the-default-branch]: /knowledge/adrs/deprecated/adr-021-nothing-unattended-reaches-the-default-branch.md
+[sokf:issue-071-historical-code-review-at-the-last-slice]: /knowledge/issues/done/issue-071-historical-code-review-at-the-last-slice.md
 [sokf:plan-013-workflow-autonomy]: /knowledge/plans/done/plan-013-workflow-autonomy.md
