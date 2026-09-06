@@ -176,9 +176,19 @@ watcher or daemon state.
   speak the MCP protocol over stdin and stdout, serving one client.
 - `P_exits-on-closed-stdin` [event] WHEN the client closes stdin,
   `superdev mcp sokf` SHALL exit `0`.
-- `P_fails-at-startup` [event] WHEN the knowledge is missing or the
-  index directory is unusable, `superdev mcp sokf` SHALL fail at
-  startup rather than at every tool call.
+- `P_fails-at-startup` [event] WHEN the knowledge root is missing or unreadable,
+  `superdev mcp sokf` SHALL fail at startup rather than at every tool call.
+- `P_index-failure-is-tool-error` [event] WHEN the index or configured embedder
+  fails, the first index-dependent call SHALL return the failure as a tool
+  error while the MCP process remains available.
+- `P_lazy-embedding` [ubiquitous] The MCP server SHALL retain one lazily
+  initialized embedder result for its process lifetime.
+  - `AC_direct-does-not-load` [event] WHEN only concept reads, physical reads or
+    graph calls have run, the MCP server SHALL leave the embedder uninitialized.
+  - `AC_first-index-call-loads` [event] WHEN the first search or `sokf:` overview
+    read runs, the MCP server SHALL initialize the configured embedder once.
+  - `AC_later-index-call-reuses` [state] WHILE the embedder result is
+    initialized, later index-dependent calls SHALL reuse that result.
 - `P_coding-read` [ubiquitous] `sokf_read` SHALL accept a familiar `path` with
   optional one-indexed `offset` and `limit` arguments.
   - `AC_overview-address` [event] WHEN `path` is `sokf:`, `sokf_read` SHALL

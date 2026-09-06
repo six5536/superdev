@@ -142,16 +142,15 @@ pub fn run_mcp(cmd: &McpCommand, root: &Path) -> Result<u8> {
                     ),
                 });
             }
-            let embedder = embedder(root)?;
+            // Keep unreadable knowledge as a startup failure, but leave the
+            // index and embedding model untouched until a call needs them.
+            drop(load_bundle(&knowledge)?);
+            let embedding_config = embeddings(root)?;
             let index_dir = IndexDir(root.join(INDEX_DIR));
-            // Sync before serving, so unreadable knowledge or an unwritable
-            // index directory ends the process instead of failing every tool
-            // call. It also warms the index for the client's first question.
-            let (index, _) =
-                Index::open_and_sync(&index_dir, &load_bundle(&knowledge)?, embedder.as_deref())?;
-            // Never hold an index open across the rebuild a tool call may do.
-            drop(index);
-            let server = SokfServer::new(knowledge, root.to_path_buf(), index_dir, embedder);
+            let server =
+                SokfServer::new_lazy(knowledge, root.to_path_buf(), index_dir, move || {
+                    embedder_from(embedding_config.as_ref())
+                });
             // One stdio client, and the server serialises its own tool calls:
             // a current-thread runtime is all this needs. Timers are not
             // optional — rmcp's request timeouts panic without them.

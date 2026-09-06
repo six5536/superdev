@@ -84,7 +84,7 @@ for independent shell commands, and general MCP support for Pi.
 
 ### Block 2: Lazy MCP embedding lifecycle
 
-- [ ] Done — ticked by build at its commit.
+- [x] Done — ticked by build at its commit.
 - Depends-on: 1.
 - Change: make the MCP service retain embedding configuration and initialize
   its embedder on the first search or `sokf:` overview read; keep startup

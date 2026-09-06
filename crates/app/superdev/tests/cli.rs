@@ -601,18 +601,35 @@ fn mcp_without_knowledge_fails_at_startup() {
 }
 
 #[test]
-fn mcp_with_an_unusable_index_dir_fails_at_startup() {
+fn mcp_with_an_unusable_index_defers_failure_to_an_index_call() {
     let dir = tempfile::tempdir().unwrap();
     write_fixture_bundle(dir.path());
     // A file where the index directory belongs: the startup sync cannot write it.
     std::fs::create_dir_all(dir.path().join(".superdev/cache")).unwrap();
     std::fs::write(dir.path().join(".superdev/cache/sokf-index"), "").unwrap();
-    superdev()
+    let requests = concat!(
+        r#"{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"cli-test","version":"0"}}}"#,
+        "\n",
+        r#"{"jsonrpc":"2.0","method":"notifications/initialized"}"#,
+        "\n",
+        r#"{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"sokf_read","arguments":{"path":"sokf:module-a"}}}"#,
+        "\n",
+        r#"{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"sokf_search","arguments":{"query":"alpha"}}}"#,
+        "\n",
+    );
+    let output = superdev()
         .current_dir(dir.path())
         .env("XDG_CACHE_HOME", blocked_model_cache(dir.path()))
         .args(["mcp", "sokf"])
+        .write_stdin(requests)
         .assert()
-        .code(2);
+        .code(0)
+        .get_output()
+        .stdout
+        .clone();
+    let stdout = String::from_utf8(output).unwrap();
+    assert!(stdout.contains("Module A"), "{stdout}");
+    assert!(stdout.contains("isError"), "{stdout}");
 }
 
 /// One `initialize`, the `initialized` notification, and one tool call, as raw

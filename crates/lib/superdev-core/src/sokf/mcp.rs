@@ -43,10 +43,45 @@ pub struct SokfService {
     bundle_dir: PathBuf,
     repo_root: PathBuf,
     index_dir: IndexDir,
-    /// The embedder the index was built with, or `None` for lexical-only
-    /// search. The same instance must reach every search, or the index's
-    /// vectors go unused.
-    embedder: Option<Box<dyn Embedder>>,
+    /// The embedder the index was built with. MCP initializes this slot on its
+    /// first index-dependent call; one-shot CLI services carry a ready value.
+    embedder: EmbedderSlot,
+}
+
+type EmbedderInitializer =
+    dyn Fn() -> crate::error::Result<Option<Box<dyn Embedder>>> + Send + Sync;
+
+enum EmbedderSlot {
+    Ready(Option<Box<dyn Embedder>>),
+    Lazy {
+        initialize: Box<EmbedderInitializer>,
+        value: std::sync::OnceLock<std::result::Result<Option<Box<dyn Embedder>>, String>>,
+    },
+}
+
+impl EmbedderSlot {
+    fn get(&self) -> crate::error::Result<Option<&dyn Embedder>> {
+        match self {
+            Self::Ready(value) => Ok(value.as_deref()),
+            Self::Lazy { initialize, value } => value
+                .get_or_init(|| initialize().map_err(|error| error.to_string()))
+                .as_ref()
+                .map(|value| value.as_deref())
+                .map_err(|message| Error::Embedding {
+                    message: message.clone(),
+                }),
+        }
+    }
+
+    fn debug_value(&self) -> Option<String> {
+        match self {
+            Self::Ready(value) => value.as_ref().map(|embedder| embedder.model_id()),
+            Self::Lazy { value, .. } => value
+                .get()
+                .and_then(|result| result.as_ref().ok())
+                .and_then(|value| value.as_ref().map(|embedder| embedder.model_id())),
+        }
+    }
 }
 
 impl std::fmt::Debug for SokfService {
@@ -55,7 +90,7 @@ impl std::fmt::Debug for SokfService {
             .field("bundle_dir", &self.bundle_dir)
             .field("repo_root", &self.repo_root)
             .field("index_dir", &self.index_dir.0)
-            .field("embedder", &self.embedder.as_ref().map(|e| e.model_id()))
+            .field("embedder", &self.embedder.debug_value())
             .finish()
     }
 }
@@ -137,20 +172,40 @@ impl SokfService {
             bundle_dir,
             repo_root,
             index_dir,
-            embedder,
+            embedder: EmbedderSlot::Ready(embedder),
+        }
+    }
+
+    /// Construct a service whose embedder is initialized on first index use.
+    #[must_use]
+    pub fn new_lazy(
+        bundle_dir: PathBuf,
+        repo_root: PathBuf,
+        index_dir: IndexDir,
+        initialize: impl Fn() -> crate::error::Result<Option<Box<dyn Embedder>>> + Send + Sync + 'static,
+    ) -> Self {
+        Self {
+            bundle_dir,
+            repo_root,
+            index_dir,
+            embedder: EmbedderSlot::Lazy {
+                initialize: Box::new(initialize),
+                value: std::sync::OnceLock::new(),
+            },
         }
     }
 
     /// Search the knowledge and render the best matching sections.
     pub fn search(&self, request: SearchRequest) -> crate::error::Result<String> {
-        let (bundle, index, stats) = self.sync()?;
+        let embedder = self.embedder.get()?;
+        let (bundle, index, stats) = self.sync(embedder)?;
         let opts = SearchOpts {
             limit: hit_limit(request.limit),
             kinds: request.types.unwrap_or_default(),
             tags: request.tags.unwrap_or_default(),
             lifecycle: request.lifecycle.unwrap_or_default(),
         };
-        let hits = index.search(&request.query, self.embedder.as_deref(), &opts)?;
+        let hits = index.search(&request.query, embedder, &opts)?;
         Ok(render_hits(
             &bundle,
             &request.query,
@@ -261,15 +316,18 @@ impl SokfService {
 
     /// Render the knowledge name, size, tree, index state, and findings.
     pub fn overview(&self) -> crate::error::Result<String> {
-        let (bundle, _, stats) = self.sync()?;
+        let embedder = self.embedder.get()?;
+        let (bundle, _, stats) = self.sync(embedder)?;
         Ok(render_overview(&bundle, &stats, &self.repo_root))
     }
 
     /// Reload the bundle and bring the index up to date.
-    fn sync(&self) -> crate::error::Result<(Bundle, Index, SyncStats)> {
+    fn sync(
+        &self,
+        embedder: Option<&dyn Embedder>,
+    ) -> crate::error::Result<(Bundle, Index, SyncStats)> {
         let bundle = load_bundle(&self.bundle_dir)?;
-        let (index, stats) =
-            Index::open_and_sync(&self.index_dir, &bundle, self.embedder.as_deref())?;
+        let (index, stats) = Index::open_and_sync(&self.index_dir, &bundle, embedder)?;
         Ok((bundle, index, stats))
     }
 }
@@ -288,8 +346,25 @@ impl SokfServer {
         index_dir: IndexDir,
         embedder: Option<Box<dyn Embedder>>,
     ) -> SokfServer {
+        Self::with_service(SokfService::new(bundle_dir, repo_root, index_dir, embedder))
+    }
+
+    /// Construct a server that initializes its embedder on first index use.
+    #[must_use]
+    pub fn new_lazy(
+        bundle_dir: PathBuf,
+        repo_root: PathBuf,
+        index_dir: IndexDir,
+        initialize: impl Fn() -> crate::error::Result<Option<Box<dyn Embedder>>> + Send + Sync + 'static,
+    ) -> SokfServer {
+        Self::with_service(SokfService::new_lazy(
+            bundle_dir, repo_root, index_dir, initialize,
+        ))
+    }
+
+    fn with_service(service: SokfService) -> SokfServer {
         SokfServer {
-            service: SokfService::new(bundle_dir, repo_root, index_dir, embedder),
+            service,
             tool_lock: std::sync::Mutex::new(()),
             tool_router: SokfServer::tool_router(),
         }
@@ -932,6 +1007,36 @@ mod tests {
     const ALPHA: &str = "---\ntype: Module\nid: alpha\ndescription: The one.\nstatus: draft\nresource: /src/alpha.rs\ntags: [core]\nlinks:\n  - rel: depends-on\n    to: beta\n  - {}\n---\n\n# Role\n\nAlpha does the work.\n\n# Notes\n\nNothing yet.\n";
     const BETA: &str =
         "---\ntype: Module\nid: beta\nstatus: deprecated\n---\n\n# Role\n\nBeta is retired.\n";
+
+    #[test]
+    fn lazy_embedder_initializes_once_on_first_index_call() {
+        let (bundle, dir) = bundle_with(&[("alpha.md", ALPHA), ("beta.md", BETA)]);
+        drop(bundle);
+        let calls = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
+        let observed = calls.clone();
+        let service = SokfService::new_lazy(
+            dir.path().to_path_buf(),
+            dir.path().to_path_buf(),
+            IndexDir(dir.path().join("index")),
+            move || {
+                observed.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+                Ok(None)
+            },
+        );
+
+        service.read("alpha", None).unwrap();
+        service.graph(Some("alpha")).unwrap();
+        assert_eq!(calls.load(std::sync::atomic::Ordering::SeqCst), 0);
+
+        service
+            .search(SearchRequest {
+                query: "work".into(),
+                ..SearchRequest::default()
+            })
+            .unwrap();
+        service.overview().unwrap();
+        assert_eq!(calls.load(std::sync::atomic::Ordering::SeqCst), 1);
+    }
 
     #[test]
     fn direct_reads_and_graph_traversal_do_not_open_the_search_index() {
