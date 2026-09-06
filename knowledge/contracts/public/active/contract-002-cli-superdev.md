@@ -478,6 +478,9 @@ pub struct TransitionArgs {
     /// Interactive human acceptance was obtained
     #[arg(long)]
     human_acceptance_approved: bool,
+    /// Human rejection feedback preserved as an unresolved issue discovery
+    #[arg(long)]
+    feedback: Option<String>,
 }
 
 /// CLI spelling of durable phases.

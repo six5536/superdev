@@ -181,6 +181,9 @@ pub struct TransitionArgs {
     /// Interactive human acceptance was obtained
     #[arg(long)]
     human_acceptance_approved: bool,
+    /// Human rejection feedback preserved as an unresolved issue discovery
+    #[arg(long)]
+    feedback: Option<String>,
 }
 
 /// CLI spelling of durable phases.
@@ -345,6 +348,7 @@ pub fn run(command: &WorkflowCommand, root: &Path) -> Result<u8> {
                     transition: TransitionName::Accept,
                     human_scope_approved: false,
                     human_acceptance_approved: false,
+                    feedback: None,
                 },
                 true,
                 Some(&args.reason),
@@ -927,6 +931,23 @@ fn transition_locked(
             TransitionName::RecoverStaleDefault => Transition::RecoverStaleDefault,
         }
     };
+    let rejection_feedback = if matches!(transition, Transition::RejectAcceptance) {
+        Some(
+            args.feedback
+                .as_deref()
+                .filter(|feedback| !feedback.trim().is_empty())
+                .ok_or_else(|| Error::Manifest {
+                    message: "acceptance rejection requires verbatim human feedback".into(),
+                })?,
+        )
+    } else {
+        if args.feedback.is_some() {
+            return Err(Error::Manifest {
+                message: "feedback is accepted only for rejection to SCOPE".into(),
+            });
+        }
+        None
+    };
     let plan_text =
         fs::read_to_string(plan_revision(root, &state.identity.plan)?.0).map_err(|source| {
             Error::Io {
@@ -1060,6 +1081,24 @@ fn transition_locked(
         reopen_stale_closure(root, &state.identity)?;
     } else if matches!(next, Phase::Done | Phase::Abandoned) {
         close_records(root, &state.identity, next, abandonment_reason)?;
+    } else if let Some(feedback) = rejection_feedback {
+        let issue_path = root
+            .join("knowledge/issues/open")
+            .join(format!("{}.md", state.identity.issue));
+        let issue_text = fs::read_to_string(&issue_path).map_err(|source| Error::Io {
+            path: issue_path.clone(),
+            source,
+        })?;
+        apply_record_edits_transactionally(
+            root,
+            vec![
+                (&path, edits),
+                (
+                    &issue_path,
+                    vec![rejection_discovery_edit(&issue_text, feedback)?],
+                ),
+            ],
+        )?;
     } else {
         apply_plan_edits_transactionally(root, &path, edits)?;
     }
@@ -1088,33 +1127,72 @@ fn apply_plan_edits_transactionally(
     live_plan: &Path,
     edits: Vec<ExactEdit>,
 ) -> Result<()> {
+    apply_record_edits_transactionally(root, vec![(live_plan, edits)])
+}
+
+fn apply_record_edits_transactionally(
+    root: &Path,
+    records: Vec<(&Path, Vec<ExactEdit>)>,
+) -> Result<()> {
     let staging = stage_knowledge(root, "workflow-transition-")?;
     let staged_knowledge = staging.path().join("knowledge");
-    let relative = live_plan
-        .strip_prefix(root.join("knowledge"))
-        .map_err(|_| Error::Manifest {
-            message: "workflow plan is outside canonical knowledge".into(),
-        })?;
-    let staged_plan = staged_knowledge.join(relative);
     let service = SokfService::new(
         staged_knowledge.clone(),
         root.to_path_buf(),
         IndexDir(root.join(".superdev/cache/sokf")),
         None,
     );
-    let mutation = service.edit(
-        EditRequest {
-            path: staged_plan.to_string_lossy().into_owned(),
-            edits,
-        },
-        MutationPolicy::AgentSafe,
-    )?;
-    if mutation.validation != superdev_core::sokf::ValidationState::Valid {
-        return Err(Error::Manifest {
-            message: "workflow transition did not leave valid canonical knowledge".into(),
-        });
+    for (live_record, edits) in records {
+        let relative = live_record
+            .strip_prefix(root.join("knowledge"))
+            .map_err(|_| Error::Manifest {
+                message: "workflow record is outside canonical knowledge".into(),
+            })?;
+        let staged_record = staged_knowledge.join(relative);
+        let mutation = service.edit(
+            EditRequest {
+                path: staged_record.to_string_lossy().into_owned(),
+                edits,
+            },
+            MutationPolicy::AgentSafe,
+        )?;
+        if mutation.validation != superdev_core::sokf::ValidationState::Valid {
+            return Err(Error::Manifest {
+                message: "workflow transition did not leave valid canonical knowledge".into(),
+            });
+        }
     }
     publish_staged_knowledge(root, &staged_knowledge)
+}
+
+fn rejection_discovery_edit(issue: &str, feedback: &str) -> Result<ExactEdit> {
+    let preserved = feedback.split('\n').collect::<Vec<_>>().join("\n      ");
+    let item = format!("- [ ] ACCEPT rejection:\n\n      {preserved}");
+    if let Some(start) = issue.find("## Discoveries\n") {
+        let content_start = start + "## Discoveries\n".len();
+        let end = issue[content_start..]
+            .find("\n## ")
+            .map(|offset| content_start + offset)
+            .or_else(|| {
+                issue[content_start..]
+                    .find("\n<!-- sokf:links -->")
+                    .map(|offset| content_start + offset)
+            })
+            .unwrap_or(issue.len());
+        let old_text = issue[start..end].to_string();
+        let new_text = format!("{}\n{}", old_text.trim_end(), item);
+        Ok(ExactEdit { old_text, new_text })
+    } else {
+        let insertion = issue
+            .find("\n## Comments\n")
+            .or_else(|| issue.find("\n<!-- sokf:links -->"))
+            .unwrap_or(issue.len());
+        let anchor = issue[insertion..].to_string();
+        Ok(ExactEdit {
+            old_text: anchor.clone(),
+            new_text: format!("\n## Discoveries\n\n{item}\n{anchor}"),
+        })
+    }
 }
 
 fn stage_knowledge(root: &Path, prefix: &str) -> Result<tempfile::TempDir> {
@@ -1494,6 +1572,29 @@ mod tests {
         assert_eq!(
             evidence_revision(&changed, "Verified default revision").as_deref(),
             Some("1234567")
+        );
+    }
+
+    #[test]
+    fn rejection_feedback_becomes_an_unresolved_discovery() {
+        let issue = "## Behaviour\n\nExpected.\n\n## Comments\n\nPrior.\n";
+        let edit = rejection_discovery_edit(issue, "First line\nsecond line").unwrap();
+        let changed = issue.replace(&edit.old_text, &edit.new_text);
+        assert!(changed.contains(
+            "## Discoveries\n\n- [ ] ACCEPT rejection:\n\n      First line\n      second line\n"
+        ));
+        assert!(changed.find("## Discoveries").unwrap() < changed.find("## Comments").unwrap());
+    }
+
+    #[test]
+    fn rejection_appends_without_erasing_existing_discoveries() {
+        let issue = "## Discoveries\n\n- [x] Existing.\n\n## Comments\n\nnone.\n";
+        let edit = rejection_discovery_edit(issue, "Rejected because X").unwrap();
+        let changed = issue.replace(&edit.old_text, &edit.new_text);
+        assert!(
+            changed
+                .contains("- [x] Existing.\n- [ ] ACCEPT rejection:\n\n      Rejected because X"),
+            "{changed}"
         );
     }
 
