@@ -54,6 +54,18 @@ pub fn fix(bundle: &Bundle, repo_root: &Path) -> Result<Repair> {
     let root = canonical(&bundle.root).unwrap_or_else(|| bundle.root.clone());
     let mut repair = Repair::default();
 
+    // Canonicalize retired plan block labels before schema checking. The
+    // transformation is deterministic and idempotent.
+    let migrated_paths = migrate_plan_blocks(bundle)?;
+    repair.written.extend(migrated_paths);
+    let migrated;
+    let bundle = if repair.written.is_empty() {
+        bundle
+    } else {
+        migrated = load_bundle(&bundle.root)?;
+        &migrated
+    };
+
     // Filing first: move each document into the folder its `lifecycle`
     // names, then reload, so the link repairs below read and write the
     // paths the documents end the pass at.
@@ -138,6 +150,77 @@ pub fn fix(bundle: &Bundle, repo_root: &Path) -> Result<Repair> {
         repair.written.push((*path).to_string());
     }
     Ok(repair)
+}
+
+fn migrate_plan_blocks(bundle: &Bundle) -> Result<Vec<String>> {
+    let mut written = Vec::new();
+    for concept in bundle
+        .concepts
+        .iter()
+        .filter(|concept| concept.kind == "Plan")
+    {
+        let path = bundle.root.join(&concept.path);
+        let text = read(&path)?;
+        let mut migrated = text
+            .replace("- Depends-on:", "- Dependencies:")
+            .replace("- Change:", "- Outcome:")
+            .replace("- Done-check:", "- Verification:")
+            .replace("- Test cases:", "- Tests:")
+            .replace("- Tests/cases:", "- Tests:")
+            .replace("- Cases:", "- Tests:")
+            .replace("- manual:", "- structural:");
+        let parts: Vec<&str> = migrated.split("\n### Block ").collect();
+        if parts.len() > 1 {
+            let mut rebuilt = parts[0].to_string();
+            for (index, part) in parts.iter().skip(1).enumerate() {
+                let mut block = format!("\n### Block {part}");
+                let body_end = block.find("\n## Build state").unwrap_or(block.len());
+                if !block[..body_end].contains("\n- Dependencies:") {
+                    let dependency = if index == 0 {
+                        "none".into()
+                    } else {
+                        index.to_string()
+                    };
+                    if let Some(position) = block.find("\n- Outcome:") {
+                        block.insert_str(position, &format!("\n- Dependencies: {dependency}.\n- Areas: historical areas named by the recorded outcome."));
+                    }
+                }
+                let body_end = block.find("\n## Build state").unwrap_or(block.len());
+                if !block[..body_end].contains("\n- Areas:")
+                    && let Some(position) = block.find("\n- Dependencies:")
+                    && let Some(offset) = block[position + 1..].find('\n')
+                {
+                    block.insert_str(
+                        position + 1 + offset,
+                        "\n- Areas: historical areas named by the recorded outcome.",
+                    );
+                }
+                for (marker, line) in [
+                    (
+                        "\n- Structural evidence:",
+                        "\n- Structural evidence: the recorded verification and tests provide the historical evidence.",
+                    ),
+                    (
+                        "\n- Documentation:",
+                        "\n- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.",
+                    ),
+                ] {
+                    let body_end = block.find("\n## Build state").unwrap_or(block.len());
+                    if !block[..body_end].contains(marker) {
+                        block.insert_str(body_end, line);
+                    }
+                }
+                rebuilt.push_str(&block);
+            }
+            migrated = rebuilt;
+        }
+        if migrated != text {
+            let root = canonical(&bundle.root).unwrap_or_else(|| bundle.root.clone());
+            write_within(&root, &path, &migrated)?;
+            written.push(concept.path.clone());
+        }
+    }
+    Ok(written)
 }
 
 /// Every include block refilled from its source: a concept's converted body,

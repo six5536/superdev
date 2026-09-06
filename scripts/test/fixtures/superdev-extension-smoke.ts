@@ -17,6 +17,7 @@ export default function smoke() {
 		"scope",
 		"build",
 		"accept",
+		"superdev-status",
 		"superdev-resume",
 		"superdev-cancel",
 		"superdev-abandon",

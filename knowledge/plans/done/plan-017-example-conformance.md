@@ -59,8 +59,9 @@ Historical documentation impact predates the documentation map; migration itself
 ### Block 1: The example is checked in place against its own schema
 
 - [x] Done — ticked by integrate at merge.
-- Depends-on: none.
-- Change: `DocSchema` parses the `example:` key; `validate` reads each
+- Dependencies: none.
+- Areas: historical areas named by the recorded outcome.
+- Outcome: `DocSchema` parses the `example:` key; `validate` reads each
   schema's example as a document and runs the existing document check
   over it with the declaring schema handed to it — no dispatch —
   reporting every failure as an error on the schema file, prefixed so a
@@ -69,10 +70,10 @@ Historical documentation impact predates the documentation map; migration itself
   that is not YAML — is an error on the schema file. Live findings the
   check surfaces are reconciled in the same block, in
   `knowledge/schemas/` and the pack mirror alike.
-- Done-check: `cargo test` passes; `superdev validate` on a fixture
+- Verification: `cargo test` passes; `superdev validate` on a fixture
   whose schema carries a broken example reports the error on the schema
   file, and on this repository reports no example finding.
-- Cases:
+- Tests:
   - unit: an example whose `id` breaks the declaring schema's own
     pattern is an error naming the schema file — covers 1.
   - unit: an example lacking a key the declaring schema marks required
@@ -86,12 +87,15 @@ Historical documentation impact predates the documentation map; migration itself
     covers 5.
   - snapshot: a fixture tree whose schema carries a broken example
     carries a golden of the report — covers 1, 2, 5.
+- Structural evidence: the recorded verification and tests provide the historical evidence.
+- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
 
 ### Block 2: Link form binds inside the example, without resolution
 
 - [x] Done — ticked by integrate at merge.
-- Depends-on: 1.
-- Change: the example check reads the example body's markdown links and
+- Dependencies: 1.
+- Areas: historical areas named by the recorded outcome.
+- Outcome: the example check reads the example body's markdown links and
   reports, as an error on the schema file, a link whose target is a
   path into the knowledge — the `[text][sokf:<id>]` form is the
   accepted form for a concept link (ADR-025). No id or target is
@@ -99,10 +103,10 @@ Historical documentation impact predates the documentation map; migration itself
   is outside the knowledge — a URL, a repository path — passes in its
   ordinary markdown form. Live findings are reconciled in the same
   block, both trees.
-- Done-check: `cargo test` passes; `superdev validate` on a fixture
+- Verification: `cargo test` passes; `superdev validate` on a fixture
   whose example links into the knowledge by path reports the error, and
   on this repository reports PASS.
-- Cases:
+- Tests:
   - unit: an example body link whose target is a path into the
     knowledge is an error naming the schema file — covers 3.
   - unit: a `[text][sokf:<id>]` link naming no real concept passes —
@@ -111,6 +115,10 @@ Historical documentation impact predates the documentation map; migration itself
     each pass in ordinary markdown form — covers 4.
   - e2e: `superdev validate` reports PASS on this repository with the
     example check live — covers 6.
+
+- Structural evidence: the recorded verification and tests provide the historical evidence.
+
+- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
 
 ## Build state
 

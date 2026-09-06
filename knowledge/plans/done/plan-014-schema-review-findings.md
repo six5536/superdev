@@ -192,8 +192,9 @@ Historical documentation impact predates the documentation map; migration itself
 ### Block 1: The contract family
 
 - [x] Done — ticked at merge.
-- Depends-on: none.
-- Change: the 16 contract schemas — the 14 public ones gain a required
+- Dependencies: none.
+- Areas: historical areas named by the recorded outcome.
+- Outcome: the 16 contract schemas — the 14 public ones gain a required
   title heading-pattern (`^{Kind} contract: .+$`) and move every section
   to level 2, `contract-interface.md` already having the shape; "public
   and private together" becomes "public and internal together" in all
@@ -202,22 +203,25 @@ Historical documentation impact predates the documentation map; migration itself
   contract example gains or keeps conforming frontmatter
   (`contract-interface`'s lacks it entirely) and matches the unified
   shape.
-- Done-check: the conformance script prints nothing for the contract
+- Verification: the conformance script prints nothing for the contract
   schemas, and `grep -rl 'private together' knowledge/schemas` prints
   nothing.
-- Cases:
-  - manual: the conformance script reports no contract schema — checks
+- Tests:
+  - structural: the conformance script reports no contract schema — checks
     that every contract example satisfies its own frontmatter
     constraints.
-  - manual: no contract schema says "private together", and each names
+  - structural: no contract schema says "private together", and each names
     a title heading-pattern — checks the corrected vocabulary and the
     unified shape.
+- Structural evidence: the recorded verification and tests provide the historical evidence.
+- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
 
 ### Block 2: The report family
 
 - [x] Done — ticked at merge.
-- Depends-on: none.
-- Change: the seven report schemas — `code-review`, `security-review`,
+- Dependencies: none.
+- Areas: historical areas named by the recorded outcome.
+- Outcome: the seven report schemas — `code-review`, `security-review`,
   `investigation`, `postmortem`, `status-update`, `release-notes` and
   `migration-guide` — gain an `id` pattern
   (`^code-review-\d{3}-[a-z0-9-]+$` and likewise per kind) and the
@@ -225,20 +229,23 @@ Historical documentation impact predates the documentation map; migration itself
   listed in that directory's index, selected by frontmatter `type`; the
   garbled filing sentence is deleted; each example gains conforming
   frontmatter with a pattern-satisfying id.
-- Done-check: `grep -L "pattern:"` over the seven prints nothing, and
+- Verification: `grep -L "pattern:"` over the seven prints nothing, and
   each names `knowledge/reports/`.
-- Cases:
-  - manual: each of the seven declares an id pattern and names
+- Tests:
+  - structural: each of the seven declares an id pattern and names
     `knowledge/reports/`, in a sentence that parses — checks that a
     report document can conform to SOKF.
-  - manual: the conformance script reports none of the seven — checks
+  - structural: the conformance script reports none of the seven — checks
     that each example carries frontmatter with a conforming id.
+- Structural evidence: the recorded verification and tests provide the historical evidence.
+- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
 
 ### Block 3: The remaining schemas and their index
 
 - [x] Done — ticked at merge.
-- Depends-on: none.
-- Change: 23 schemas — the 18 stale example types become the schema's
+- Dependencies: none.
+- Areas: historical areas named by the recorded outcome.
+- Outcome: 23 schemas — the 18 stale example types become the schema's
   `const` (`architecture`, `architectural-rules`, `software-components`,
   `configuration`, `directory-structure`, `technology-stack`,
   `dependency-policy`, `coding-standards`, `testing-strategy`,
@@ -258,51 +265,57 @@ Historical documentation impact predates the documentation map; migration itself
   mirroring `bug-report.md`'s and a note that `/accept` records its
   verdict in the settled-issue section; `index.md`'s feature-request
   summary regains "EARS acceptance criteria".
-- Done-check: the conformance script and the index summary diff both
+- Verification: the conformance script and the index summary diff both
   print nothing; no schema names a spec as a workflow document.
-- Cases:
-  - manual: the conformance script prints nothing across all 53 schemas
+- Tests:
+  - structural: the conformance script prints nothing across all 53 schemas
     — checks that every worked example satisfies its own frontmatter
     constraints.
-  - manual: `grep -rilE '\ba spec\b|\bspecs\b' knowledge/schemas` prints
+  - structural: `grep -rilE '\ba spec\b|\bspecs\b' knowledge/schemas` prints
     nothing, references to the SOKF spec by that name aside — checks
     that no schema routes work to a removed document type.
-  - manual: the index summary diff prints nothing — checks that each
+  - structural: the index summary diff prints nothing — checks that each
     index summary matches its schema's description.
-  - manual: `feature-request.md` names the contract links and the
+  - structural: `feature-request.md` names the contract links and the
     settled-issue home of `/accept`'s verdict — checks that the schema
     states the workflow's conventions.
+- Structural evidence: the recorded verification and tests provide the historical evidence.
+- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
 
 ### Block 4: The live documents
 
 - [x] Done — ticked at merge.
-- Depends-on: 1, 3.
-- Change: the six public contracts gain their title heading and demote
+- Dependencies: 1, 3.
+- Areas: historical areas named by the recorded outcome.
+- Outcome: the six public contracts gain their title heading and demote
   their sections to level 2, `contract-007` and `contract-009` being
   checked against the schema and left alone; the `- Status:` line leaves
   all 21 ADRs, every one accepted and active; `idea-001`'s five sibling
   level-1 headings become level 2; `knowledge/constraints-non-goals.md`
   reads `type: ConstraintsNonGoals`, in the same commit as block 3's
   rename so no state has a schema-less document.
-- Done-check: every contract's first heading carries `contract: `, no
+- Verification: every contract's first heading carries `contract: `, no
   ADR carries a Status bullet, `idea-001` has one level-1 heading, and
   `superdev validate` reports no ungoverned document.
-- Cases:
-  - manual: `grep -m1 '^#' knowledge/contracts/*/active/*.md` matches
+- Tests:
+  - structural: `grep -m1 '^#' knowledge/contracts/*/active/*.md` matches
     `contract: ` on all 8 — checks one heading shape for the family.
-  - manual: `grep -rl '^- Status:' knowledge/adrs/active` prints nothing
+  - structural: `grep -rl '^- Status:' knowledge/adrs/active` prints nothing
     — checks that ADR state lives in `lifecycle` and links alone.
-  - manual: `grep -c '^# ' knowledge/ideas/idea-001-*.md` prints 1 —
+  - structural: `grep -c '^# ' knowledge/ideas/idea-001-*.md` prints 1 —
     checks that the idea's sections sit at level 2.
-  - manual: `sokf_graph` resolves all eight contracts and `superdev
+  - structural: `sokf_graph` resolves all eight contracts and `superdev
     validate` reports no link warning — checks that demoting the
     headings broke no section-addressed read.
+- Structural evidence: the recorded verification and tests provide the historical evidence.
+- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
 
 ### Block 5: The feature-plan schema
 
 - [x] Done — ticked at merge.
-- Depends-on: none.
-- Change: `knowledge/schemas/feature-plan.md` — the slice Cases
+- Dependencies: none.
+- Areas: historical areas named by the recorded outcome.
+- Outcome: `knowledge/schemas/feature-plan.md` — the slice Cases
   description says what a case covers when the framed issue is a bug:
   the numbered repro steps and the expected behaviour stand in for
   criteria numbers. If the schema still lacks them, it gains
@@ -311,39 +324,46 @@ Historical documentation impact predates the documentation map; migration itself
   questions a blocked run leaves, per ADR-018 and
   [ADR-020][sokf:adr-020-a-blocked-run-ends]); whichever plan-013
   landed is left exactly as landed.
-- Done-check: the schema defines bug coverage, and carries `Depends-on`
+- Verification: the schema defines bug coverage, and carries `Depends-on`
   and `Deferred decisions` whichever plan landed them.
-- Cases:
-  - manual: the Cases description names the repro steps and the expected
+- Tests:
+  - structural: the Cases description names the repro steps and the expected
     behaviour for a bug-framed plan — checks that coverage is defined
     for a bug.
-  - manual: `grep -l 'Depends-on'` and `grep -l 'Deferred decisions'`
+  - structural: `grep -l 'Depends-on'` and `grep -l 'Deferred decisions'`
     both hit `feature-plan.md` — checks that the two sections stand,
     whichever plan landed them.
+- Structural evidence: the recorded verification and tests provide the historical evidence.
+- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
 
 ### Block 6: Mirror, evidence, verification
 
 - [x] Done — ticked at merge.
-- Depends-on: 1, 2, 3, 4, 5.
-- Change: `knowledge/schemas/` is copied wholesale over
+- Dependencies: 1, 2, 3, 4, 5.
+- Areas: historical areas named by the recorded outcome.
+- Outcome: `knowledge/schemas/` is copied wholesale over
   `pack/knowledge/schemas/` (53 files); issue-022 gains a dated Comments
   entry recording that 26 examples broke their own frontmatter
   constraints (18 types, 8 missing blocks), found by hand review and
   fixed by this plan; `CHANGELOG.md` gains an Unreleased entry for the
   pack-visible schema reshape; `superdev validate --fix` places files
   and regenerates definition blocks.
-- Done-check: `diff -rq knowledge/schemas pack/knowledge/schemas` prints
+- Verification: `diff -rq knowledge/schemas pack/knowledge/schemas` prints
   nothing and `superdev validate` reports PASS with 0 errors.
-- Cases:
-  - manual: `diff -rq knowledge/schemas pack/knowledge/schemas` prints
+- Tests:
+  - structural: `diff -rq knowledge/schemas pack/knowledge/schemas` prints
     nothing — checks that the pack mirrors the live schemas byte for
     byte.
-  - manual: `superdev validate` reports PASS with 0 errors on a clean
+  - structural: `superdev validate` reports PASS with 0 errors on a clean
     checkout of the branch — checks that every schema edit conforms.
-  - manual: issue-022's Comments carry the appended evidence,
+  - structural: issue-022's Comments carry the appended evidence,
     `CHANGELOG.md` names the reshape under Unreleased, and
     `knowledge/plans/index.md` lists this plan with `lifecycle: done` —
     checks that the records close.
+
+- Structural evidence: the recorded verification and tests provide the historical evidence.
+
+- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
 
 ## Build state
 

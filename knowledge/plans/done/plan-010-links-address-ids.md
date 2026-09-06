@@ -142,8 +142,9 @@ Historical documentation impact predates the documentation map; migration itself
 ### Block 1: SOKF 0.4 — a link may address an id
 
 - [x] Done — ticked at merge.
-- Depends-on: none.
-- Change: amend `.agents/sokf/SPEC.md` §8 — body mirroring is satisfied
+- Dependencies: none.
+- Areas: historical areas named by the recorded outcome.
+- Outcome: amend `.agents/sokf/SPEC.md` §8 — body mirroring is satisfied
   by a reference-style link labelled `sokf:<id>`, the id form is what a
   producer should write for a concept, and a path stays legal for
   anything that is not one. An inline `[text](sokf:<id>)` URI renders as
@@ -159,18 +160,21 @@ Historical documentation impact predates the documentation map; migration itself
   bump leaves manifests naming a version no binary supports, so it lands
   in the same commit as Block 2, which is what makes 0.4 true of the
   code.
-- Done-check: `.agents/sokf/SPEC.md` reads version 0.4, and the pack copy
+- Verification: `.agents/sokf/SPEC.md` reads version 0.4, and the pack copy
   is left at 0.3 with that recorded in issue-021 rather than silently
   diverging.
-- Cases:
+- Tests:
   - checks that a markdown renderer follows `[text][sokf:<id>]` to the
     linked file.
+- Structural evidence: the recorded verification and tests provide the historical evidence.
+- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
 
 ### Block 2: Resolve and check a link by id
 
 - [x] Done — ticked at merge.
-- Depends-on: 1.
-- Change: `markdown_links_and_footnotes` in
+- Dependencies: 1.
+- Areas: historical areas named by the recorded outcome.
+- Outcome: `markdown_links_and_footnotes` in
   `crates/lib/superdev-core/src/validate/sokf.rs` recognises a reference
   link labelled `sokf:<id>` and records the id as a body target, so §8
   mirroring holds without a path. It builds the parser with a
@@ -189,8 +193,8 @@ Historical documentation impact predates the documentation map; migration itself
   Fixtures land under
   `crates/lib/superdev-core/tests/fixtures/sokf/`, exercised by
   `sokf_snapshots.rs`.
-- Done-check: `cargo nextest run --workspace` passes.
-- Cases:
+- Verification: `cargo nextest run --workspace` passes.
+- Tests:
   - unit: a body link written `[text][sokf:<id>]` resolves through the
     knowledge's id map, and a `links` entry mirrored only by that form
     passes §8 — no criterion.
@@ -203,12 +207,15 @@ Historical documentation impact predates the documentation map; migration itself
     criterion.
   - unit: two concepts claiming the same kind and number are reported,
     naming both paths — no criterion.
+- Structural evidence: the recorded verification and tests provide the historical evidence.
+- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
 
 ### Block 3: superdev validate --fix
 
 - [x] Done — ticked at merge.
-- Depends-on: 2.
-- Change: add `fix: bool` to `ValidateArgs`
+- Dependencies: 2.
+- Areas: historical areas named by the recorded outcome.
+- Outcome: add `fix: bool` to `ValidateArgs`
   (`crates/app/superdev/src/validate_cli.rs`) and a repair outcome on
   each repairable finding, so the report says what changed. The flag
   rides on `superdev validate` rather than a `superdev sokf fix` verb,
@@ -224,10 +231,10 @@ Historical documentation impact predates the documentation map; migration itself
   so it would rewrite the file the agent has just written and may still
   be working on. Tests use a fixture tree carrying each repairable fault,
   fixed and compared against the expected tree.
-- Done-check: `cargo run -- validate --fix --knowledge <tmp>` writes no
+- Verification: `cargo run -- validate --fix --knowledge <tmp>` writes no
   file outside `<tmp>`, and `cargo run -- validate --fix` twice leaves
   the second run reporting and writing nothing.
-- Cases:
+- Tests:
   - unit: a fault tree is repaired and compares equal to the expected
     tree — no criterion.
   - unit: `--fix` writes zero files outside `<knowledge>/` — no
@@ -238,12 +245,15 @@ Historical documentation impact predates the documentation map; migration itself
   - integration: a tree with every `<!-- sokf:links -->` block deleted
     resolves every link, and the findings name the blocks — checks that
     resolution is independent of the block.
+- Structural evidence: the recorded verification and tests provide the historical evidence.
+- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
 
 ### Block 4: Convert the knowledge tree
 
 - [x] Done — ticked at merge.
-- Depends-on: 3.
-- Change: run `--fix` over `knowledge/` on a clean working tree, so 493
+- Dependencies: 3.
+- Areas: historical areas named by the recorded outcome.
+- Outcome: run `--fix` over `knowledge/` on a clean working tree, so 493
   concept links convert and every document gains its definition block.
   The pass is hard to reverse, because it rewrites most of the tree at
   once: `git diff` is the whole record and `git checkout` the whole undo.
@@ -251,27 +261,30 @@ Historical documentation impact predates the documentation map; migration itself
   since its path resolves to nothing and its stem is not an id, so
   `--fix` cannot repair it. Run `--fix` again to confirm it reports and
   writes nothing.
-- Done-check: `rg -o '\]\([^)]*\.md\)' knowledge/` returns 9 hits, all
+- Verification: `rg -o '\]\([^)]*\.md\)' knowledge/` returns 9 hits, all
   naming files outside the knowledge tree, against 502 today; `cargo run
   -- validate` exits 0 on the converted tree.
-- Cases:
+- Tests:
   - checks that every concept link in `knowledge/` is in the id form and
     the 9 links to non-concept files are unchanged.
   - checks that `git diff` after the pass shows link and definition-block
     changes only, so every converted document is byte-identical but for
     its links and its block.
+- Structural evidence: the recorded verification and tests provide the historical evidence.
+- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
 
 ### Block 5: Close the gate
 
 - [x] Done — ticked at merge.
-- Depends-on: 4.
-- Change: promote the five findings from warning to error, now that the
+- Dependencies: 4.
+- Areas: historical areas named by the recorded outcome.
+- Outcome: promote the five findings from warning to error, now that the
   tree carries none of them. A warning is the state P008 found, where 39
   sat unread; the remedy here is one command, which is what makes `cargo
   fmt --check` tolerable.
-- Done-check: `cargo run -- validate` exits 0 on the converted tree, and
+- Verification: `cargo run -- validate` exits 0 on the converted tree, and
   each positive control fails.
-- Cases:
+- Tests:
   - integration: renaming a concept file without touching its `id` raises
     no link error, only stale-block findings, which `--fix` clears.
   - integration: a mistyped `sokf:` label raises one error naming the
@@ -280,12 +293,15 @@ Historical documentation impact predates the documentation map; migration itself
     error naming both paths.
   - integration: a deleted definition block and a hand-written path link
     each fail the run — checks that the promoted findings are errors.
+- Structural evidence: the recorded verification and tests provide the historical evidence.
+- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
 
 ### Block 6: Tell the agent, and ship
 
 - [x] Done — ticked at merge.
-- Depends-on: 5.
-- Change: `.agents/sokf.md` gains the link form, the one exception for
+- Dependencies: 5.
+- Areas: historical areas named by the recorded outcome.
+- Outcome: `.agents/sokf.md` gains the link form, the one exception for
   non-concept files, and the instruction to run `superdev validate --fix`
   before committing. `CHANGELOG.md` records the SOKF bump as a breaking
   change to the knowledge format, and the new flag. This plan leaves
@@ -293,12 +309,16 @@ Historical documentation impact predates the documentation map; migration itself
   carrying path links, which
   [issue-021][sokf:issue-021-backport-the-knowledge-design-to-the-pack]
   owns alongside the four migrations already waiting there.
-- Done-check: `knowledge/plans/index.md` lists this plan, the plan reads
+- Verification: `knowledge/plans/index.md` lists this plan, the plan reads
   `done`, and plan-011 is unblocked: a document moves without touching a
   link.
-- Cases:
+- Tests:
   - checks that issue-021's Surfaces name `pack/sokf/agents/` and
     `pack/knowledge/concepts/index.md` with the counts this plan leaves.
+
+- Structural evidence: the recorded verification and tests provide the historical evidence.
+
+- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
 
 ## Build state
 

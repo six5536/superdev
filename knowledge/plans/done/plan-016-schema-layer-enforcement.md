@@ -59,8 +59,9 @@ Historical documentation impact predates the documentation map; migration itself
 ### Block 1: Content kinds bind by presence
 
 - [x] Done — ticked by integrate at merge.
-- Depends-on: none.
-- Change: `validate::schema` reads each section rule's `content` kind and
+- Dependencies: none.
+- Areas: historical areas named by the recorded outcome.
+- Outcome: `validate::schema` reads each section rule's `content` kind and
   reports, as an error naming the document, the section and the schema, a
   matched section whose body lacks the kind's form — one bullet, one
   numbered item, one table, one fenced block, or one plain paragraph line
@@ -69,10 +70,10 @@ Historical documentation impact predates the documentation map; migration itself
   reconciled in the same block — the document fixed or the schema's
   declaration corrected — in `knowledge/schemas/` and the pack mirror
   alike.
-- Done-check: `cargo test` passes; `superdev validate` on a fixture with
+- Verification: `cargo test` passes; `superdev validate` on a fixture with
   a bullet-less bullet-list section reports the error, and on this
   repository reports no content-kind error.
-- Cases:
+- Tests:
   - unit: a bullet-list section with no bullet anywhere is an error
     naming the document, the section and the schema — covers 1.
   - unit: a bullet-list section opening with a lead-in sentence before
@@ -84,22 +85,25 @@ Historical documentation impact predates the documentation map; migration itself
     covers 1.
   - unit: a schema declaring `content: essay` is reported on the schema
     file — covers 5.
+- Structural evidence: the recorded verification and tests provide the historical evidence.
+- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
 
 ### Block 2: The frontmatter contract binds on present values
 
 - [x] Done — ticked by integrate at merge.
-- Depends-on: none.
-- Change: `DocSchema` parses every frontmatter key's constraint block —
+- Dependencies: none.
+- Areas: historical areas named by the recorded outcome.
+- Outcome: `DocSchema` parses every frontmatter key's constraint block —
   today it reads only `type` and `lifecycle` — and reports, as an error
   naming the document, the key and the schema, a present value that
   breaks its `const`, `pattern` or `enum`. A `pattern` that does not
   compile is reported on the schema file and binds nothing. A key
   declared with only a `description` is unchecked. Live findings are
   reconciled in the same block, both trees.
-- Done-check: `cargo test` passes; `superdev validate` on a fixture with
+- Verification: `cargo test` passes; `superdev validate` on a fixture with
   an id breaking its schema's pattern reports the error, and on this
   repository reports no frontmatter-value error.
-- Cases:
+- Tests:
   - unit: a present value breaking its `pattern` is an error naming the
     document, the key and the schema — covers 3.
   - unit: a present value outside its `enum`, and one differing from its
@@ -110,22 +114,25 @@ Historical documentation impact predates the documentation map; migration itself
     reported — covers 4.
   - unit: a schema `pattern` that does not compile is reported on the
     schema file — covers 5.
+- Structural evidence: the recorded verification and tests provide the historical evidence.
+- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
 
 ### Block 3: Required keys, declared across the schemas
 
 - [x] Done — ticked by integrate at merge.
-- Depends-on: 2.
-- Change: the per-key `required: true` flag (ADR-022) is read, and an
+- Dependencies: 2.
+- Areas: historical areas named by the recorded outcome.
+- Outcome: the per-key `required: true` flag (ADR-022) is read, and an
   absent key marked required is an error naming the document, the key
   and the schema. The 53 schemas each declare their required keys —
   `type` and `id` on filed kinds, `title` and `description` where the
   document's listing depends on them — in `knowledge/schemas/` and the
   pack mirror, byte-identical. Any absence the declarations surface in
   the live tree is fixed in the same block.
-- Done-check: `cargo test` passes; every schema in both trees declares
+- Verification: `cargo test` passes; every schema in both trees declares
   its required keys; `diff -rq knowledge/schemas pack/knowledge/schemas`
   prints nothing.
-- Cases:
+- Tests:
   - unit: an absent key marked `required: true` is an error naming the
     document, the key and the schema — covers 4.
   - unit: a present key marked required passes its value checks as in
@@ -133,6 +140,10 @@ Historical documentation impact predates the documentation map; migration itself
   - e2e: `superdev validate` reports PASS on this repository, every
     document against its schema's content kinds and frontmatter
     contract — covers 6.
+
+- Structural evidence: the recorded verification and tests provide the historical evidence.
+
+- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
 
 ## Build state
 

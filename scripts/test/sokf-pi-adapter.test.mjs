@@ -47,6 +47,9 @@ test("the Pi adapter preserves CLI and built-in tool semantics", { timeout: 180_
 });
 
 test("the Superdev Pi extension loads and registers its complete surface", { timeout: 180_000 }, async (t) => {
+  await run(process.execPath, ["--check", resolve(repository, ".pi/extensions/superdev/index.ts")], {
+    cwd: repository,
+  });
   if (!(await commandExists("pi"))) {
     t.skip("pi is not installed");
     return;

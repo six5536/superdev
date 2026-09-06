@@ -20,7 +20,7 @@ use crate::template_select;
 /// so it is the one step superdev cannot run for the user.
 /// Printed at the end of every knowledge-enabled init: bootstrap is judgement
 /// work the agent does after the mechanical scaffolding.
-const BOOTSTRAP_HINT: &str = "knowledge: run /bootstrap in Claude Code to fill the knowledge from existing docs and an owner interview";
+const BOOTSTRAP_HINT: &str = "knowledge: run /scope in Pi to capture the request and retrieve or author canonical SOKF context";
 
 // sokf:begin cli
 /// The `init` flags: the capability-disable switches and the template

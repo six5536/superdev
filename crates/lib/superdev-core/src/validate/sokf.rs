@@ -306,6 +306,7 @@ fn check_workflow_records(bundle: &Bundle, findings: &mut Vec<Finding>) {
                 ),
             ));
         }
+        check_plan_blocks(plan, findings);
         if lifecycle == "open"
             && let Some(first) = open_by_issue.insert(issue.to_string(), path.to_string())
         {
@@ -314,6 +315,48 @@ fn check_workflow_records(bundle: &Bundle, findings: &mut Vec<Finding>) {
                 format!(
                     "workflow: issue `{issue}` already has an open implementing plan in {first}"
                 ),
+            ));
+        }
+    }
+}
+
+fn check_plan_blocks(plan: &crate::sokf::concept::Concept, findings: &mut Vec<Finding>) {
+    if plan.body.contains("manual:") {
+        findings.push(error(
+            &plan.path,
+            "workflow: plans contain executable evidence only; `manual:` is prohibited".into(),
+        ));
+    }
+    for block in plan.body.split("\n### Block ").skip(1) {
+        let block = block.split("\n## Build state").next().unwrap_or(block);
+        let title = block.lines().next().unwrap_or("<untitled>");
+        for field in [
+            "Dependencies:",
+            "Areas:",
+            "Outcome:",
+            "Verification:",
+            "Tests:",
+            "Structural evidence:",
+            "Documentation:",
+        ] {
+            if !block
+                .lines()
+                .any(|line| line.starts_with(&format!("- {field}")))
+            {
+                findings.push(error(
+                    &plan.path,
+                    format!("workflow: Block {title} is missing `- {field}`"),
+                ));
+            }
+        }
+        if !block.lines().any(|line| {
+            line.starts_with("- [ ] Done")
+                || line.starts_with("- [x] Done")
+                || line.starts_with("- [X] Done")
+        }) {
+            findings.push(error(
+                &plan.path,
+                format!("workflow: Block {title} is missing its Done checkbox"),
             ));
         }
     }

@@ -2,7 +2,7 @@
 type: Glossary
 id: glossary
 title: Domain Glossary
-description: The terms the blueprint engine uses — blueprint, capability, provider, provenance, component, owned file, scaffold, project template, template adoption, skill pack, knowledge-carried skill, content pack, pack source, embedded snapshot, pack item, pack layer, pack format, PROJECT.md layer, custom skill, harvest, claim, orphan — plus the workflow terms run, scope, plan and work block, the knowledge terms section, locator, hybrid search, RRF, lifecycle and variant, and the contract terms binding, drift test, EARS and promise key.
+description: Terms for blueprint management, Pi assets, content packs, workflow ownership, SCOPE, plans, work blocks, SOKF retrieval, lifecycle, and contract bindings.
 status: stable
 ---
 
@@ -47,15 +47,12 @@ status: stable
   merging the rendered template into the existing shape with the user
   deciding each collision, then recording `[template]` after the fact. From
   then on the repo updates like a seeded one.
-- **Skill pack** — the two skills the `skills` capability ships as
-  owned files under `.claude/skills/`, embedded in the binary and versioned
-  with it. Claude Code loads them from there natively, so there is nothing to
-  install. The knowledge-carried skills are not pack skills: the SOKF
-  component carries them.
-- **Knowledge-carried skill** — one of the 14 SOKF-carried skills the
-  `knowledge` capability materialises into `.claude/skills/<name>/` as owned
-  files, each skill its whole directory: SKILL.md, companions, harness
-  configs. The set exists exactly where knowledge exists.
+- **Pi skill** — an independently invocable capability under `.pi/skills/`.
+  The first-party pack ships `sokf-authoring`; workflow roles remain private
+  extension prompts and are not skills.
+- **Pi extension** — an owned TypeScript adapter under `.pi/extensions/`.
+  The Superdev extension orchestrates roles while Rust owns durable workflow
+  transitions and Git safety.
 - **Content pack** — a versioned set of superdev's prose content: skills,
   document templates, project templates, knowledge skeletons and the
   general-rules scaffolds. A pack is resolved from a pinned source and
@@ -111,30 +108,22 @@ status: stable
 - **Orphan** — a lock entry no live claim covers. `sync` removes it when its
   content still hashes to the locked value, and otherwise releases it: left in
   place, dropped from the lock, reported once.
-- **Run** — one unattended pass over a plan: armed by
-  `.superdev/cache/run.toml`, written only by the `superdev run`
-  verbs, owned by one session, and enforced by the `superdev hook run`
-  Stop hook. A watchdog bounds it — ten turn boundaries without an
-  `advance` and the run dies — and a blocked run ends, leaving its
-  questions in the plan's deferred decisions.
+- **Workflow ownership** — transient, session-scoped Pi ownership under
+  `.superdev/cache/workflow.toml`. Absence means unowned, never complete;
+  canonical progress remains in the plan.
 
-Terms from the workflow, which is FILE → SCOPE → BUILD → ACCEPT
-([ADR-050][sokf:adr-050-keys-and-ears-live-in-the-contracts-and-the-workflow-is-file-scope-build-accept]):
+Terms from the workflow, which is SCOPE → BUILD → ACCEPT. `/file` is an
+independent capture utility ([ADR-052][sokf:adr-052-the-workflow-is-scope-build-accept-under-a-durable-core]):
 
-- **Scope** — the phase that turns a filed issue, or a one-off request,
-  into work: `/scope` cuts the branch, makes the contract changes
-  through `/contract-design`, and writes the plan. It is the only phase
-  between the issue and the build, and it holds the whole design.
-- **Plan** — the one document a piece of work is designed in: its goal,
-  the contract changes it makes, the work blocks that deliver it, and
-  the decisions it defers. `/scope` writes it, `/build` works it, and
-  the commit that completes the work sets it `lifecycle: done`. One
-  template covers feature work and one-off work alike.
-- **Work block** — the unit a plan cuts the work into: one change small
-  enough to build and commit in one pass, carrying the blocks it
-  depends on, its cases and its done-check. `/build` takes the blocks
-  in order, tests before code, and runs the full verification once
-  after the last one.
+- **Scope** — the phase that settles requirements, contract and ADR changes,
+  documentation impact, and stable work blocks. A fresh isolated requirements
+  review and explicit human approval gate entry to BUILD.
+- **Plan** — the canonical durable workflow record for exactly one issue and
+  one matching work branch. It carries scope, block state, evidence, review,
+  acceptance, and integration history.
+- **Work block** — a stable-numbered, dependency-ordered BUILD unit with
+  affected areas, outcome, executable verification and tests, structural
+  evidence, and documentation commands.
 
 Terms from the knowledge-serving side:
 
@@ -227,6 +216,7 @@ layering is in [architecture][sokf:architecture].
 [sokf:adr-045-a-schema-declares-variants]: /knowledge/adrs/active/adr-045-a-schema-declares-variants.md
 [sokf:adr-046-a-promise-and-a-criterion-are-keyed-ears-items]: /knowledge/adrs/active/adr-046-a-promise-and-a-criterion-are-keyed-ears-items.md
 [sokf:adr-050-keys-and-ears-live-in-the-contracts-and-the-workflow-is-file-scope-build-accept]: /knowledge/adrs/deprecated/adr-050-keys-and-ears-live-in-the-contracts-and-the-workflow-is-file-scope-build-accept.md
+[sokf:adr-052-the-workflow-is-scope-build-accept-under-a-durable-core]: /knowledge/adrs/active/adr-052-the-workflow-is-scope-build-accept-under-a-durable-core.md
 [sokf:architectural-rules]: /knowledge/architectural-rules.md
 [sokf:architecture]: /knowledge/architecture.md
 [sokf:configuration]: /knowledge/configuration.md

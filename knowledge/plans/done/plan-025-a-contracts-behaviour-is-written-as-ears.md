@@ -117,8 +117,9 @@ Historical documentation impact predates the documentation map; migration itself
 ### Block 1: The validator reads item-key
 
 - [x] Done — ticked at merge.
-- Depends-on: none.
-- Change: `validate::schema::document` reads `SectionRule.item_key`:
+- Dependencies: none.
+- Areas: historical areas named by the recorded outcome.
+- Outcome: `validate::schema::document` reads `SectionRule.item_key`:
   compiles it, requires exactly one capture group, and on a rule whose
   `content` is a list kind checks every top-level item of that kind
   against it — an item with no match is a finding naming the section
@@ -129,12 +130,12 @@ Historical documentation impact predates the documentation map; migration itself
   on the schema and binds nothing. Findings are errors. The two PENDING
   sentences about `item-key` in contract-010's Behaviour lose their
   marker.
-- Done-check: a probe schema declaring `item-key` on a bullet list
+- Verification: a probe schema declaring `item-key` on a bullet list
   reports a keyless item, a malformed key and a duplicate key, each
   naming what the criteria say; a schema with a capture-less pattern
   reports on itself; `superdev validate` passes the live tree;
   `superdev status` reports no drift.
-- Cases:
+- Tests:
   - unit: an item whose text does not match `item-key` is reported
     naming the section and the item's first line — checks that a
     keyless item and a malformed key are each an error naming the item.
@@ -155,12 +156,15 @@ Historical documentation impact predates the documentation map; migration itself
   - integration: contract-010's Behaviour carries no PENDING for
     `item-key` and the live tree validates — checks that contract-010
     carries the declaration the change adds.
+- Structural evidence: the recorded verification and tests provide the historical evidence.
+- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
 
 ### Block 2: The validator reads item-only-pattern and item-prohibited-pattern
 
 - [x] Done — ticked at merge.
-- Depends-on: 1.
-- Change: `item-only-pattern` — compiled; every body line outside a
+- Dependencies: 1.
+- Areas: historical areas named by the recorded outcome.
+- Outcome: `item-only-pattern` — compiled; every body line outside a
   top-level item of the rule's list kind (prose, a table row, a
   heading, an item of the other list kind; fenced lines skipped) that
   matches is a finding naming the section and the line; on a rule with
@@ -170,12 +174,12 @@ Historical documentation impact predates the documentation map; migration itself
   is not a list kind it is a finding on the schema. Both share the item
   reading `item-pattern` uses. Findings are errors. The remaining
   PENDING sentences in contract-010 lose their marker.
-- Done-check: a probe schema declaring both on a bullet list reports a
+- Verification: a probe schema declaring both on a bullet list reports a
   modal verb in a paragraph, in a table row and in a numbered step, and
   reports a `MUST` and a two-verb item, each naming what criteria 5 to
   7 say; contract-010 carries no PENDING; the live tree validates with
   no drift.
-- Cases:
+- Tests:
   - unit: a match on a paragraph line, a table row and a numbered item
     under a bullet-list rule is each reported naming the section and
     the line — checks that a modal verb outside an item is an error.
@@ -197,28 +201,31 @@ Historical documentation impact predates the documentation map; migration itself
   - integration: contract-010 carries no PENDING and the live tree
     validates — checks that contract-010 carries the declarations the
     change adds.
+- Structural evidence: the recorded verification and tests provide the historical evidence.
+- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
 
 ### Block 3: The internal contracts are swept
 
 - [x] Done — ticked at merge.
-- Depends-on: 2.
-- Change: contract-007, contract-009 and contract-010 — Behaviour and
+- Dependencies: 2.
+- Areas: historical areas named by the recorded outcome.
+- Outcome: contract-007, contract-009 and contract-010 — Behaviour and
   Stability rewritten to keyed EARS bullets per ADR-046: one promise
   per bullet, `P_` key, tag, one verb from SHALL/SHOULD/MAY, the
   interface element as subject; key flows as numbered lists; prose
   carries no modal verb; no promise dropped. Each section keeps one
   descriptive sentence so the schema as it stands still finds a
   paragraph.
-- Done-check: every former sentence's requirements are present as one
+- Verification: every former sentence's requirements are present as one
   item each (the reviewer counts the modal verbs before and after);
   `grep -c 'MUST' ` on the three files is zero outside fenced blocks;
   the ADR-047 patterns, run over the three files by a probe schema in
   a scratch tree, report nothing; the live tree validates.
-- Cases:
+- Tests:
   - integration: a scratch schema carrying the ADR-047 patterns on
     Behaviour and Stability passes the three swept contracts — checks
     that every active contract's Behaviour and Stability conform.
-  - manual: the reviewer confirms the promise count per contract
+  - structural: the reviewer confirms the promise count per contract
     equals the modal-verb count before the sweep — checks that no
     promise was dropped.
   - Note, at merge: the counts and the merged sentences are in Contract
@@ -229,49 +236,58 @@ Historical documentation impact predates the documentation map; migration itself
     declarations reported nothing for the three contracts, and reported
     a keyless item, a `MUST` in prose and a tagless item when each was
     injected.
+- Structural evidence: the recorded verification and tests provide the historical evidence.
+- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
 
 ### Block 4: The cli, api and config contracts are swept
 
 - [x] Done — ticked at merge.
-- Depends-on: 2.
-- Change: contract-002, contract-003 and contract-004, as block 3 —
+- Dependencies: 2.
+- Areas: historical areas named by the recorded outcome.
+- Outcome: contract-002, contract-003 and contract-004, as block 3 —
   the sixty verbs of contract-002 included; the exit-code table stays
   as a table beside its promises.
-- Done-check: as block 3, for the three files.
-- Cases:
+- Verification: as block 3, for the three files.
+- Tests:
   - integration: the scratch schema of block 3 passes the three swept
     contracts — checks that every active contract's Behaviour and
     Stability conform.
-  - manual: the reviewer confirms the promise count equals the verb
+  - structural: the reviewer confirms the promise count equals the verb
     count before the sweep — checks that no promise was dropped.
   - Note, at merge: the counts and the merged sentences are in Contract
     changes above; every other verb is one item. The scratch schema of
     block 3 reported nothing for the three, and reported a keyless
     item, a tagless item and a `MUST` in prose when each was injected.
+- Structural evidence: the recorded verification and tests provide the historical evidence.
+- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
 
 ### Block 5: The format contracts are swept
 
 - [x] Done — ticked at merge.
-- Depends-on: 2.
-- Change: contract-005, contract-006 and contract-008, as block 3.
-- Done-check: as block 3, for the three files.
-- Cases:
+- Dependencies: 2.
+- Areas: historical areas named by the recorded outcome.
+- Outcome: contract-005, contract-006 and contract-008, as block 3.
+- Verification: as block 3, for the three files.
+- Tests:
   - integration: the scratch schema of block 3 passes the three swept
     contracts — checks that every active contract's Behaviour and
     Stability conform.
-  - manual: the reviewer confirms the promise count equals the verb
+  - structural: the reviewer confirms the promise count equals the verb
     count before the sweep — checks that no promise was dropped.
   - Note, at merge: the counts and the merged write-once sentence are
     in Contract changes above; every other verb is one item. The
     scratch schema of block 3 reported nothing for the three, and
     reported a keyless item, a tagless item and a `MUST` in prose when
     each was injected.
+- Structural evidence: the recorded verification and tests provide the historical evidence.
+- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
 
 ### Block 6: The contract schema takes its final form
 
 - [x] Done — ticked at merge.
-- Depends-on: 3, 4, 5.
-- Change: `pack/knowledge/schemas/contract.md`, synced — Behaviour and
+- Dependencies: 3, 4, 5.
+- Areas: historical areas named by the recorded outcome.
+- Outcome: `pack/knowledge/schemas/contract.md`, synced — Behaviour and
   Stability become `content: bullet-list` with the four ADR-047
   declarations (the `P_` key, the tag-and-verb `item-pattern`, the
   modal-verb `item-only-pattern`, the retired-verb and two-verb
@@ -281,11 +297,11 @@ Historical documentation impact predates the documentation map; migration itself
   citation — bare key where the contract is the subject, id then key
   elsewhere; the twelve examples carry Behaviour and Stability in the
   form. The `normative_shapes` tests that read the schema follow it.
-- Done-check: `superdev validate` passes the live tree, every example
+- Verification: `superdev validate` passes the live tree, every example
   included; a contract with a numbered item under Behaviour and no
   keyed bullet fails; no file under `.claude/skills/` or
   `pack/knowledge/skills/` changed; `superdev status` no drift.
-- Cases:
+- Tests:
   - integration: the live tree validates with the final schema —
     checks that the schema declares both sections as keyed, tagged
     bullet lists, states the citation form, and that the nine
@@ -312,12 +328,15 @@ Historical documentation impact predates the documentation map; migration itself
     the done-check asks. The skill check is not a test — a test cannot
     read git history — and integrate ran `git diff --stat main --
     .claude/skills pack/knowledge/skills`, which was empty.
+- Structural evidence: the recorded verification and tests provide the historical evidence.
+- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
 
 ### Block 7: The tracker's criteria carry keys
 
 - [x] Done — ticked at merge.
-- Depends-on: 1.
-- Change: `pack/knowledge/schemas/feature-request.md`,
+- Dependencies: 1.
+- Areas: historical areas named by the recorded outcome.
+- Outcome: `pack/knowledge/schemas/feature-request.md`,
   `bug-report.md`, `chore.md` and `feature-plan.md`, synced — the
   Acceptance criteria, Steps to reproduce and Definition of done rules
   declare `item-key` with `AC_`, `RS_` and `DD_`, their `item-pattern`
@@ -328,11 +347,11 @@ Historical documentation impact predates the documentation map; migration itself
   of those lists in the fifty issues with `` `<PREFIX>_c<n>` ``, `n`
   the item's number, and every open plan's "covers n" becomes "covers
   AC_cn"; I037 and this plan included.
-- Done-check: `superdev validate` passes the live tree; every issue's
+- Verification: `superdev validate` passes the live tree; every issue's
   cited lists carry keys and no settled issue changed outside the key
   prefix (`git diff --stat` shows one line per item); the four
   examples pass their own check; `superdev status` no drift.
-- Cases:
+- Tests:
   - integration: the live tree validates with the four schemas —
     checks that the tracker schemas declare a key on every cited item
     and that their examples pass their own check.
@@ -358,19 +377,22 @@ Historical documentation impact predates the documentation map; migration itself
     `normative_shapes` loop over every issue's cited lists. The
     criterion `item-pattern` test of ADR-031 now expects the keyed
     pattern, deliberately.
+- Structural evidence: the recorded verification and tests provide the historical evidence.
+- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
 
 ### Block 8: The records close
 
 - [x] Done — ticked at merge.
-- Depends-on: 6, 7.
-- Change: the glossary defines the promise form and the key (both
+- Dependencies: 6, 7.
+- Areas: historical areas named by the recorded outcome.
+- Outcome: the glossary defines the promise form and the key (both
   prefixes tables, the `c<n>` slugs, the citation); the changelog's
   Unreleased carries the form, the three declarations and the sweep;
   `constraints-non-goals` notes the key beside the behaviour-testing
   non-goal; I037's Comments record the sweep counts.
-- Done-check: `superdev validate` passes; the glossary's EARS entry no
+- Verification: `superdev validate` passes; the glossary's EARS entry no
   longer says "do not yet".
-- Cases:
+- Tests:
   - unit: the glossary defines the key, its prefixes and the citation
     — checks that the glossary carries the form of a promise and its
     key.
@@ -386,6 +408,10 @@ Historical documentation impact predates the documentation map; migration itself
     [code-review-009][sokf:code-review-009-a-contracts-behaviour-is-written-as-ears]:
     three major findings and seven minor, recorded and not fixed on
     the branch.
+
+- Structural evidence: the recorded verification and tests provide the historical evidence.
+
+- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
 
 ## Build state
 

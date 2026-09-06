@@ -151,8 +151,9 @@ Historical documentation impact predates the documentation map; migration itself
 ### Block 1: Sweep this repository
 
 - [x] Done — ticked at merge.
-- Depends-on: none.
-- Change: delete the `[bash-output-filter]` table from
+- Dependencies: none.
+- Areas: historical areas named by the recorded outcome.
+- Outcome: delete the `[bash-output-filter]` table from
   `.superdev/config.toml`, so `enabled` stops resolving the component and
   its five claims lose their owner; then run `cargo run -- sync`, which
   removes `.miserc.toml`, `mise.unix.toml`, `mise.windows-x64.toml` and
@@ -170,11 +171,11 @@ Historical documentation impact predates the documentation map; migration itself
   hand to exactly what the orphan pass would have planned, after checking
   all four files against their recorded hashes. `.agents/superdev.md`
   does not exist here, so there was no aggregator to rewrite.
-- Done-check: `git show <this block's commit> --stat` lists
+- Verification: `git show <this block's commit> --stat` lists
   `.miserc.toml`, `mise.unix.toml`, `mise.windows-x64.toml` and
   `.agents/rtk.md` deleted, with `.claude/settings.json`,
   `.agents/superdev.md` and `.superdev/lock.toml` modified.
-- Cases:
+- Tests:
   - e2e: with the table deleted, sync removes the three mise files, the
     instruction file and the `PreToolUse` element, and prunes their lock
     entries — no criterion.
@@ -187,12 +188,15 @@ Historical documentation impact predates the documentation map; migration itself
     user-edited copy of an owned file is released from the lock and left
     on disk, with zero deletions where the content differs from the
     recorded hash.
+- Structural evidence: the recorded verification and tests provide the historical evidence.
+- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
 
 ### Block 2: Remove the capability from the core
 
 - [x] Done — ticked at merge.
-- Depends-on: 1.
-- Change: delete the component — `components/rtk.rs`, its `pub mod rtk;`
+- Dependencies: 1.
+- Areas: historical areas named by the recorded outcome.
+- Outcome: delete the component — `components/rtk.rs`, its `pub mod rtk;`
   (`components/mod.rs:8`), and its import and dispatch arm
   (`components/enabled.rs:7,58`). Delete the slot —
   `Capability::BashOutputFilter` with its `ALL` entry and `as_str` arm
@@ -213,12 +217,12 @@ Historical documentation impact predates the documentation map; migration itself
   `agents/rtk.md` from `pack::manifest::REJECTED`
   (`pack/manifest.rs:24`): the entry exists because the binary owns that
   file, and once nothing does, the refusal names a file with no meaning.
-- Done-check: `rg 'rtk|bash-output-filter|BashOutputFilter' crates pack
+- Verification: `rg 'rtk|bash-output-filter|BashOutputFilter' crates pack
   README.md .mise.toml` returns only `manifest.rs`'s guided error and its
   test, and the message must name the table and the five files, so the
   check cannot be literally empty; `cargo check --workspace
   --all-targets` is clean and `cargo test --workspace` passes.
-- Cases:
+- Tests:
   - unit: a config carrying `[bash-output-filter]` is refused with a
     message naming the table to delete and the files sync then removes —
     `cargo test -p superdev-core manifest::` runs it.
@@ -228,12 +232,15 @@ Historical documentation impact predates the documentation map; migration itself
     repository has no `.agents/superdev.md`: its `AGENTS.md` reads
     `@.agents/core.md`, and `status --drift` has reported the aggregator
     missing since before this plan.
+- Structural evidence: the recorded verification and tests provide the historical evidence.
+- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
 
 ### Block 3: Remove the CLI surface
 
 - [x] Done — ticked at merge.
-- Depends-on: 2.
-- Change: delete the flag — `no_bash_output_filter` and its mapping
+- Dependencies: 2.
+- Areas: historical areas named by the recorded outcome.
+- Outcome: delete the flag — `no_bash_output_filter` and its mapping
   (`manage.rs:36-39,53,450`). Update the tests — the 12
   `--no-bash-output-filter` sites in `tests/cli.rs`, the init-journey
   assertions (`tests/manage.rs:182-201`), and the disable journey
@@ -241,20 +248,23 @@ Historical documentation impact predates the documentation map; migration itself
   Correct the README — the flag list at `README.md:18` and the manifest
   table's capability row at `README.md:132`, which this step first
   missed.
-- Done-check: `superdev init --help` lists `--no-frontend`, `--no-skills`
+- Verification: `superdev init --help` lists `--no-frontend`, `--no-skills`
   and `--no-code-index`, and no fourth flag.
-- Cases:
+- Tests:
   - e2e: `superdev init --help` offers three capability-disable flags —
     no criterion.
   - e2e: `superdev update bash-output-filter` fails with ``unknown
     capability `bash-output-filter` ``, as `workflows` does today — no
     criterion.
+- Structural evidence: the recorded verification and tests provide the historical evidence.
+- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
 
 ### Block 4: Remove what sits outside the blueprint
 
 - [x] Done — ticked at merge.
-- Depends-on: 2.
-- Change: drop the dev pin — `"github:rtk-ai/rtk"` leaves
+- Dependencies: 2.
+- Areas: historical areas named by the recorded outcome.
+- Outcome: drop the dev pin — `"github:rtk-ai/rtk"` leaves
   `.mise.toml:13`, since no command in the repository reaches rtk once
   the hook is gone. Correct the project template's prose — the Dockerfile
   comment (`pack/projects/rust-npm/devcontainer/Dockerfile:4`) and
@@ -262,16 +272,19 @@ Historical documentation impact predates the documentation map; migration itself
   (`.../scripts/post-create.sh:10-12`) name codegraph alone. Removing
   `.miserc.toml` turns `auto_env` off, and codegraph, the only other
   pinned binary, is unaffected because it pins in `.mise.toml`.
-- Done-check: `rg 'rtk' .mise.toml pack/projects` returns nothing.
-- Cases:
+- Verification: `rg 'rtk' .mise.toml pack/projects` returns nothing.
+- Tests:
   - checks that no file under `.mise.toml` or `pack/projects` names rtk —
     no criterion.
+- Structural evidence: the recorded verification and tests provide the historical evidence.
+- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
 
 ### Block 5: Update the knowledge
 
 - [x] Done — ticked at merge.
-- Depends-on: 2, 3.
-- Change: the capability set — `architecture.md:71` loses its table row,
+- Dependencies: 2, 3.
+- Areas: historical areas named by the recorded outcome.
+- Outcome: the capability set — `architecture.md:71` loses its table row,
   `glossary.md:13` the name, `api-contracts.md:15,84-86` the flag and the
   update targets, and `software-components.md:45` and
   `directory-structure.md:41` their rtk references. The configuration
@@ -289,11 +302,11 @@ Historical documentation impact predates the documentation map; migration itself
   entry under `## [Unreleased]` naming the guided error and the files
   sync removes, so a user meets the manifest edit in the release notes.
   `knowledge/plans/index.md` lists this plan, and the plan reads `done`.
-- Done-check: `rg 'rtk|bash-output-filter' knowledge/` returns hits only
+- Verification: `rg 'rtk|bash-output-filter' knowledge/` returns hits only
   in `S011`, `S012`, `plan-003-content-packs`, `specs/index.md`,
   `plans/index.md` and this plan; `superdev validate` reports PASS over
   `knowledge/`.
-- Cases:
+- Tests:
   - checks that the knowledge names three capabilities and that `S012`
     reads `status: deprecated` — the `rg` sweep returns a file outside
     the historical list when a mention survives.
@@ -303,6 +316,10 @@ Historical documentation impact predates the documentation map; migration itself
     check:validate` and `npm run check:blueprint` pass, clippy
     `--all-targets -- -D warnings` is clean, and line coverage stays at
     or above 90% per crate.
+
+- Structural evidence: the recorded verification and tests provide the historical evidence.
+
+- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
 
 ## Build state
 

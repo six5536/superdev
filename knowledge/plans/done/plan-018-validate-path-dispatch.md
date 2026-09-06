@@ -52,16 +52,17 @@ Historical documentation impact predates the documentation map; migration itself
 ### Block 1: The schema half reaches a named path
 
 - [x] Done — ticked by integrate at merge.
-- Depends-on: none.
-- Change: `validate_repo` in
+- Dependencies: none.
+- Areas: historical areas named by the recorded outcome.
+- Outcome: `validate_repo` in
   `crates/lib/superdev-core/src/validate/mod.rs` builds the bare run's
   context for a named path too — the knowledge and the schema set load
   whenever a run has paths, named files join the document candidates —
   and findings are reported only for what the paths cover.
-- Done-check: `validate knowledge/architecture.md` checks the document
+- Verification: `validate knowledge/architecture.md` checks the document
   against `schema-architecture` and reports a non-zero schema count;
   findings name no file outside the named path.
-- Cases:
+- Tests:
   - integration: a named concept's schema findings equal the bare run's
     findings for that file — covers 1.
   - integration: a named README.md is checked against `schema-readme`'s
@@ -71,19 +72,22 @@ Historical documentation impact predates the documentation map; migration itself
   - unit: a named run reports no finding about a file the paths do not
     cover — covers 1.
   - e2e: an unreadable path fails naming the path — covers 5.
+- Structural evidence: the recorded verification and tests provide the historical evidence.
+- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
 
 ### Block 2: The grammar half stops misreading a document
 
 - [x] Done — ticked by integrate at merge.
-- Depends-on: 1.
-- Change: the named-path branch classifies before the grammar sees the
+- Dependencies: 1.
+- Areas: historical areas named by the recorded outcome.
+- Outcome: the named-path branch classifies before the grammar sees the
   file — a file dispatched as a document by `type` or glob never takes
   the grammar's fallback kind; the fallback applies only to a file no
   schema and no grammar kind claims.
-- Done-check: `validate knowledge/architecture.md` exits 0 with zero
+- Verification: `validate knowledge/architecture.md` exits 0 with zero
   findings, matching the bare run; `validate <a-skill-outside-the-roots>`
   still checks it as a unit.
-- Cases:
+- Tests:
   - e2e: `validate knowledge/architecture.md` reports no skill-grammar
     finding and its verdict equals the bare run's for that file —
     covers 1.
@@ -94,6 +98,10 @@ Historical documentation impact predates the documentation map; migration itself
     a schema, never as a document candidate — covers 1.
   - e2e: for each of a concept, README.md and a skill, the named run's
     findings equal the bare run's findings for that file — covers 1, 2.
+
+- Structural evidence: the recorded verification and tests provide the historical evidence.
+
+- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
 
 ## Build state
 

@@ -181,8 +181,9 @@ Historical documentation impact predates the documentation map; migration itself
 ### Block 1: Conventions and the plan format
 
 - [x] Done — ticked at merge.
-- Depends-on: none.
-- Change: add a branching line to
+- Dependencies: none.
+- Areas: historical areas named by the recorded outcome.
+- Outcome: add a branching line to
   `pack/knowledge/templates/development-procedure.md` and record this repo's
   own in `knowledge/development-procedure.md` — one branch per feature,
   `feature/<slug>` off the default branch, fast-forwarded to `main` by a
@@ -200,18 +201,21 @@ Historical documentation impact predates the documentation map; migration itself
   issues. List order is the reading and default order; dependencies bind.
   Existing plans keep their order-only form, since P003 is complete before
   this work starts.
-- Done-check: nothing yet references the convention or the field, so the
+- Verification: nothing yet references the convention or the field, so the
   block stands alone and the tree is unchanged in behaviour.
-- Cases:
+- Tests:
   - observation: every slice in a plan cut from here on carries
     `Depends-on:`, and the planner's output is topologically ordered —
     checks that the plan format models dependencies rather than list order.
+- Structural evidence: the recorded verification and tests provide the historical evidence.
+- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
 
 ### Block 2: Branching and committing inside the workflow
 
 - [x] Done — ticked at merge.
-- Depends-on: 1.
-- Change: `/frame` creates the branch per block 1's convention and commits
+- Dependencies: 1.
+- Areas: historical areas named by the recorded outcome.
+- Outcome: `/frame` creates the branch per block 1's convention and commits
   its knowledge edits; `/spec` commits the spec; `/interface-design` GATEs on
   the user's go-ahead, commits the contract and the ADRs, and hands to
   `/execute-feature-plan`. Add a final step to
@@ -219,21 +223,24 @@ Historical documentation impact predates the documentation map; migration itself
   commit the changelog, knowledge and plan edits per
   `template-commit-message`. A failed check returns to `/build` before the
   merge, so nothing is committed on failure.
-- Done-check: a scratch repo run through `/frame` sits on `feature/<slug>`
+- Verification: a scratch repo run through `/frame` sits on `feature/<slug>`
   with its knowledge edits committed, and `/integrate` leaves no
   uncommitted record edit.
-- Cases:
+- Tests:
   - e2e: `/frame` in a scratch repo leaves the working tree on
     `feature/<slug>` with the knowledge edits committed — checks that a
     feature runs on a branch of its own.
   - e2e: `/integrate` leaves no uncommitted changelog, knowledge or plan
     edit — checks that integrate commits the records it writes.
+- Structural evidence: the recorded verification and tests provide the historical evidence.
+- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
 
 ### Block 3: The run facility and the unattended loop
 
 - [x] Done — ticked at merge.
-- Depends-on: 1, 2.
-- Change: add `pack/knowledge/skills/execute-feature-plan/SKILL.md` covering
+- Dependencies: 1, 2.
+- Areas: historical areas named by the recorded outcome.
+- Outcome: add `pack/knowledge/skills/execute-feature-plan/SKILL.md` covering
   stages 4-7. It runs `/feature-plan` when no plan exists, then picks the
   next slice whose `Depends-on` are all Done and runs build to verify to
   integrate in a subagent, looping; integrate's replan return re-enters
@@ -257,10 +264,10 @@ Historical documentation impact predates the documentation map; migration itself
   `ManagedItem::JsonEntry` in `components/aokf.rs` at `hooks.Stop`, marker
   `superdev run hook`, shipping with the canonical knowledge capability, and
   document the four verbs in `knowledge/api-contracts.md`.
-- Done-check: the hook exits 0 on every disarmed path and exits 2 naming
+- Verification: the hook exits 0 on every disarmed path and exits 2 naming
   `next` otherwise; `begin` refuses a second run; a repo with no run in
   progress sees no behaviour change.
-- Cases:
+- Tests:
   - unit: `superdev run hook` exits 0 with no run-state file, with a foreign
     `session_id`, with an empty `next`, and at the continue cap — checks
     that the hook is disarmed unless a run it owns is live.
@@ -274,27 +281,34 @@ Historical documentation impact predates the documentation map; migration itself
   - unit: `superdev run advance` resets the counter and refreshes the owning
     session, and `end` removes the file and is harmless when none exists —
     checks the run state's lifecycle.
+- Structural evidence: the recorded verification and tests provide the historical evidence.
+- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
 
 ### Block 4: Documents and dogfooding
 
 - [x] Done — ticked at merge.
-- Depends-on: 3.
-- Change: update `pack/agents/process.md` — the branch at frame, the
+- Dependencies: 3.
+- Areas: historical areas named by the recorded outcome.
+- Outcome: update `pack/agents/process.md` — the branch at frame, the
   go-ahead gate after stage 3, the loop over stages 4-7, and the commit
   points, in the diagram and the phase list — and add
   `/execute-feature-plan` to `pack/knowledge/skills/how-do-i/SKILL.md`'s map.
   Run `cargo run -- sync` to materialise the pack edits into
   `.claude/skills/`, `.agents/` and `knowledge/templates/`, and add a
   changelog entry for the new skill and the new hook.
-- Done-check: `superdev sync` writes the Stop-hook claim into
+- Verification: `superdev sync` writes the Stop-hook claim into
   `.superdev/lock.toml`, `superdev status` exits 0 afterwards, and the
   process documents name the branch, the commit points and the new skill.
-- Cases:
+- Tests:
   - e2e: a thirteen-slice plan runs stages 4-7 to completion with no turn
     boundary stopping to ask — checks that the loop is unattended end to
     end.
   - e2e: `git log` on the default branch shows nothing from an unattended
     run — checks that unattended work stays on the feature branch.
+
+- Structural evidence: the recorded verification and tests provide the historical evidence.
+
+- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
 
 ## Build state
 

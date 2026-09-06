@@ -166,8 +166,9 @@ Historical documentation impact predates the documentation map; migration itself
 ### Block 1: Amend the spec
 
 - [x] Done — ticked at merge.
-- Depends-on: none.
-- Change: replace `.agents/aokf/SPEC.md` §11 — the ladder table goes, and
+- Dependencies: none.
+- Areas: historical areas named by the recorded outcome.
+- Outcome: replace `.agents/aokf/SPEC.md` §11 — the ladder table goes, and
   conformance becomes the document check passing, with the diff check still
   independent of it; the sentence "a knowledge's level is the highest it
   fully satisfies" goes with it. Reword what leans on it: §10's items that
@@ -175,18 +176,21 @@ Historical documentation impact predates the documentation map; migration itself
   phrasings the validator echoes. Bump the version at both declaration sites
   and in `knowledge/manifest.sokf.yaml`, which names the version the
   canonical knowledge targets.
-- Done-check: SPEC §11 names no level, and the version differs from `0.2` at
+- Verification: SPEC §11 names no level, and the version differs from `0.2` at
   both declaration sites and in the manifest.
-- Cases:
+- Tests:
   - observation: SPEC §11 states pass or fail and names no level, and the
     declared version is no longer `0.2` — checks that the format's statement
     of conformance drops the ladder.
+- Structural evidence: the recorded verification and tests provide the historical evidence.
+- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
 
 ### Block 2: Collapse the model and hold parity
 
 - [x] Done — ticked at merge.
-- Depends-on: 1.
-- Change: `Finding` carries a severity, `Report` drops both level fields,
+- Dependencies: 1.
+- Areas: historical areas named by the recorded outcome.
+- Outcome: `Finding` carries a severity, `Report` drops both level fields,
   and `achieved_level` is deleted along with the function that derives it;
   `passed()` stays and becomes the verdict (D-4). Drop "at Level 1" from the
   manifest and `id` findings in
@@ -201,10 +205,10 @@ Historical documentation impact predates the documentation map; migration itself
   to reverse: the reference that produced these is gone, so the diff is the
   only evidence the edit was a projection and not an invention — it lands on
   its own, reviewed on its own.
-- Done-check: `cargo test -p superdev-core --test validator_parity` passes
+- Verification: `cargo test -p superdev-core --test validator_parity` passes
   with no level-aware step in its comparison, and every fixture's verdict is
   unchanged.
-- Cases:
+- Tests:
   - integration: `cargo test -p superdev-core --test validator_parity`
     passes, and its comparison carries no level-aware step — checks that the
     goldens still pin the reference's behaviour.
@@ -220,20 +224,23 @@ Historical documentation impact predates the documentation map; migration itself
     classifications survive.
   - observation: `rg -n 'Level [0-9]' crates/lib/superdev-core/src/` returns
     nothing — checks that no finding message names a level.
+- Structural evidence: the recorded verification and tests provide the historical evidence.
+- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
 
 ### Block 3: Remove the flag and its callers
 
 - [x] Done — ticked at merge.
-- Depends-on: 2.
-- Change: `--level` and `DEFAULT_LEVEL` leave
+- Dependencies: 2.
+- Areas: historical areas named by the recorded outcome.
+- Outcome: `--level` and `DEFAULT_LEVEL` leave
   `crates/app/superdev/src/aokf_cli.rs`, from the subcommand definition and
   from both call sites; `CHECKED_LEVEL` leaves
   `crates/lib/superdev-core/src/aokf/mcp.rs` and its two uses; the
   `achieved_level` assertion leaves
   `crates/lib/superdev-core/src/components/aokf.rs`.
-- Done-check: `superdev aokf validate --level 2` fails as an unknown
+- Verification: `superdev aokf validate --level 2` fails as an unknown
   argument, and no constant in `crates/` names a level.
-- Cases:
+- Tests:
   - e2e: `superdev aokf validate --level 2` fails as an unknown argument —
     checks that the flag is gone from the CLI.
   - observation: `rg -n -e achieved_level -e checked_level -e error_at -e
@@ -243,12 +250,15 @@ Historical documentation impact predates the documentation map; migration itself
   - e2e: deleting `knowledge/manifest.sokf.yaml` makes the run fail, where
     `--level 0` would once have passed it — checks that the escape hatch is
     gone.
+- Structural evidence: the recorded verification and tests provide the historical evidence.
+- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
 
 ### Block 4: Correct the prose
 
 - [x] Done — ticked at merge.
-- Depends-on: 3.
-- Change: `.agents/aokf.md` no longer says the canonical knowledge "must
+- Dependencies: 3.
+- Areas: historical areas named by the recorded outcome.
+- Outcome: `.agents/aokf.md` no longer says the canonical knowledge "must
   PASS at level 2"; the loop in `.claude/skills/maintain/SKILL.md` ends on
   the validator passing rather than on a level; `knowledge/api-contracts.md`
   drops `--level` from the knowledge verbs, and
@@ -264,10 +274,10 @@ Historical documentation impact predates the documentation map; migration itself
   entry for the removed flag, since it is a breaking change to a documented
   surface, and leave ADR-017's follow-up list empty or each remaining item
   filed as an issue.
-- Done-check: no file in the tree names a conformance level except ADR-017
+- Verification: no file in the tree names a conformance level except ADR-017
   and this plan, `knowledge/plans/index.md` lists this plan with status
   done, and `npm run coverage:check` passes.
-- Cases:
+- Tests:
   - observation: `rg -n -e achieved_level -e checked_level -e error_at -e
     'at level' -e 'Level [0-9]' -e conformance.level .agents .claude
     knowledge crates` returns hits only where the removal is recorded —
@@ -278,6 +288,10 @@ Historical documentation impact predates the documentation map; migration itself
     "PASS at level 2".
   - e2e: `npm run coverage:check` passes — checks the 90% per-crate line
     gate.
+
+- Structural evidence: the recorded verification and tests provide the historical evidence.
+
+- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
 
 ## Build state
 

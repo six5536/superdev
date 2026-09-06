@@ -11,6 +11,7 @@ use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
 
 use assert_cmd::Command;
+use superdev_core::workflow::git;
 
 /// A temp git repo plus a bin dir of fake `mise`/`claude`/`codegraph`.
 struct Sandbox {
@@ -255,4 +256,199 @@ fn init_materializes_pi_workflow_without_claude_assets() {
     assert!(lock.contains(".pi/skills/sokf-authoring/SKILL.md"));
     assert!(!lock.contains(".claude/skills"));
     assert!(!lock.contains("superdev hook run"));
+}
+
+#[test]
+fn workflow_start_creates_a_canonical_scope_plan_and_resume_adopts_it() {
+    let dir = tempfile::tempdir().unwrap();
+    let git = |args: &[&str]| {
+        let status = std::process::Command::new("git")
+            .args(args)
+            .current_dir(dir.path())
+            .status()
+            .unwrap();
+        assert!(status.success(), "git {args:?}");
+    };
+    git(&["init", "-q", "-b", "main"]);
+    git(&["config", "user.email", "test@example.com"]);
+    git(&["config", "user.name", "Test"]);
+    git(&["config", "commit.gpgsign", "false"]);
+    Command::cargo_bin("superdev")
+        .unwrap()
+        .current_dir(dir.path())
+        .args(["init", "--no-frontend", "--no-code-index"])
+        .assert()
+        .success();
+    git(&["add", "-A"]);
+    git(&["commit", "-q", "-m", "init"]);
+    Command::cargo_bin("superdev")
+        .unwrap()
+        .current_dir(dir.path())
+        .args([
+            "file",
+            "--title",
+            "Canonical recovery",
+            "--description",
+            "Create and recover one canonical workflow.",
+            "--human-approved",
+        ])
+        .assert()
+        .success();
+
+    let identity = [
+        "--session",
+        "pi-a",
+        "--issue",
+        "issue-001-canonical-recovery",
+        "--plan",
+        "plan-001-canonical-recovery",
+        "--work-branch",
+        "work/001-canonical-recovery",
+    ];
+    let mut start = vec!["workflow", "start"];
+    start.extend(identity);
+    Command::cargo_bin("superdev")
+        .unwrap()
+        .current_dir(dir.path())
+        .args(start)
+        .assert()
+        .success();
+    assert_eq!(
+        git::current_branch(dir.path()).unwrap(),
+        "work/001-canonical-recovery"
+    );
+    let plan = dir
+        .path()
+        .join("knowledge/plans/open/plan-001-canonical-recovery.md");
+    assert!(plan.is_file());
+    assert!(fs::read_to_string(&plan).unwrap().contains("phase: scope"));
+
+    Command::cargo_bin("superdev")
+        .unwrap()
+        .current_dir(dir.path())
+        .args(["workflow", "cancel", "--session", "pi-a"])
+        .assert()
+        .success();
+    let mut resume = vec!["workflow", "resume"];
+    resume.extend([
+        "--session",
+        "pi-b",
+        "--issue",
+        "issue-001-canonical-recovery",
+        "--plan",
+        "plan-001-canonical-recovery",
+        "--work-branch",
+        "work/001-canonical-recovery",
+    ]);
+    Command::cargo_bin("superdev")
+        .unwrap()
+        .current_dir(dir.path())
+        .args(resume)
+        .assert()
+        .success();
+}
+
+#[test]
+fn file_commits_on_default_without_a_workflow_branch() {
+    let dir = tempfile::tempdir().unwrap();
+    let git = |args: &[&str]| {
+        let status = std::process::Command::new("git")
+            .args(args)
+            .current_dir(dir.path())
+            .status()
+            .unwrap();
+        assert!(status.success(), "git {args:?}");
+    };
+    git(&["init", "-q", "-b", "main"]);
+    git(&["config", "user.email", "test@example.com"]);
+    git(&["config", "user.name", "Test"]);
+    git(&["config", "commit.gpgsign", "false"]);
+    Command::cargo_bin("superdev")
+        .unwrap()
+        .current_dir(dir.path())
+        .args(["init", "--no-frontend", "--no-code-index"])
+        .assert()
+        .success();
+    git(&["add", "-A"]);
+    git(&["commit", "-q", "-m", "init"]);
+
+    Command::cargo_bin("superdev")
+        .unwrap()
+        .current_dir(dir.path())
+        .args([
+            "file",
+            "--kind",
+            "issue",
+            "--title",
+            "Safe filing works",
+            "--description",
+            "Capture this request without creating a workflow branch.",
+            "--human-approved",
+        ])
+        .assert()
+        .success();
+
+    assert!(
+        dir.path()
+            .join("knowledge/issues/open/issue-001-safe-filing-works.md")
+            .is_file()
+    );
+    let message = std::process::Command::new("git")
+        .args(["log", "-1", "--pretty=%s"])
+        .current_dir(dir.path())
+        .output()
+        .unwrap();
+    assert_eq!(
+        String::from_utf8_lossy(&message.stdout).trim(),
+        "docs: file issue-001-safe-filing-works"
+    );
+
+    git(&["switch", "-q", "-c", "work/001-active"]);
+    let work_tip = std::process::Command::new("git")
+        .args(["rev-parse", "HEAD"])
+        .current_dir(dir.path())
+        .output()
+        .unwrap()
+        .stdout;
+    Command::cargo_bin("superdev")
+        .unwrap()
+        .current_dir(dir.path())
+        .args([
+            "file",
+            "--kind",
+            "idea",
+            "--title",
+            "An independent thought",
+            "--description",
+            "Keep this idea on the default branch while BUILD is active.",
+            "--human-approved",
+        ])
+        .assert()
+        .success();
+    assert_eq!(git::current_branch(dir.path()).unwrap(), "work/001-active");
+    let after = std::process::Command::new("git")
+        .args(["rev-parse", "HEAD"])
+        .current_dir(dir.path())
+        .output()
+        .unwrap()
+        .stdout;
+    assert_eq!(after, work_tip);
+    assert!(git::revision(dir.path(), "main").is_ok());
+
+    Command::cargo_bin("superdev")
+        .unwrap()
+        .current_dir(dir.path())
+        .args([
+            "file",
+            "--kind",
+            "issue",
+            "--title",
+            "SAFE FILING WORKS",
+            "--description",
+            "A differently cased duplicate must not allocate another record.",
+            "--human-approved",
+        ])
+        .assert()
+        .failure();
+    assert_eq!(git::current_branch(dir.path()).unwrap(), "work/001-active");
 }

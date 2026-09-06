@@ -169,8 +169,8 @@ places it.
 [sokf:issue-054-an-issue-whose-behaviour-is-only-bullets-is-refused]: /knowledge/issues/open/issue-054-an-issue-whose-behaviour-is-only-bullets-is-refused.md
 [sokf:issue-055-criterion-number-citations-resolve-to-nothing]: /knowledge/issues/open/issue-055-criterion-number-citations-resolve-to-nothing.md
 [sokf:issue-056-three-active-adrs-decide-in-terms-of-retired-skills]: /knowledge/issues/open/issue-056-three-active-adrs-decide-in-terms-of-retired-skills.md
-[sokf:issue-057-the-skills-disagree-on-who-loops-and-who-returns]: /knowledge/issues/open/issue-057-the-skills-disagree-on-who-loops-and-who-returns.md
-[sokf:issue-058-a-plan-case-marked-manual-is-executed-nowhere]: /knowledge/issues/open/issue-058-a-plan-case-marked-manual-is-executed-nowhere.md
+[sokf:issue-057-the-skills-disagree-on-who-loops-and-who-returns]: /knowledge/issues/done/issue-057-the-skills-disagree-on-who-loops-and-who-returns.md
+[sokf:issue-058-a-plan-case-marked-manual-is-executed-nowhere]: /knowledge/issues/done/issue-058-a-plan-case-marked-manual-is-executed-nowhere.md
 [sokf:issue-059-scope-build-accept-workflow]: /knowledge/issues/open/issue-059-scope-build-accept-workflow.md
 [sokf:issue-060-historical-agent-instructions-layer]: /knowledge/issues/done/issue-060-historical-agent-instructions-layer.md
 [sokf:issue-061-historical-workflow-autonomy]: /knowledge/issues/done/issue-061-historical-workflow-autonomy.md

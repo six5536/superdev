@@ -74,15 +74,16 @@ Historical documentation impact predates the documentation map; migration itself
 ### Block 1: The run state and its verbs
 
 - [x] Done — ticked at merge.
-- Depends-on: none.
-- Change: a `run` module in `crates/app/superdev` owning
+- Dependencies: none.
+- Areas: historical areas named by the recorded outcome.
+- Outcome: a `run` module in `crates/app/superdev` owning
   `.superdev/cache/run.toml` per contract-009, and the `run begin`,
   `run advance` and `run end` verbs in `main.rs`.
-- Done-check: `begin` creates the state exclusively and a second `begin`
+- Verification: `begin` creates the state exclusively and a second `begin`
   is refused naming the owner and `run end`; `advance` resets the counter
   and refreshes the owner; `end` removes the state and is harmless
   without one.
-- Cases:
+- Tests:
   - unit: `begin` writes session, next, a zero counter, started and pid;
     a second `begin` fails naming the owner and `superdev run end` —
     checks that a run begun while another owns the working tree is
@@ -92,21 +93,24 @@ Historical documentation impact predates the documentation map; migration itself
     ownership the refusal reads.
   - unit: `end` removes the file; `end` with no file exits 0 and says so
     — checks that clearing the state is harmless without one.
+- Structural evidence: the recorded verification and tests provide the historical evidence.
+- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
 
 ### Block 2: The Stop hook
 
 - [x] Done — ticked at merge.
-- Depends-on: 1.
-- Change: `hook run` beside `hook validate` in the hook namespace: the
+- Dependencies: 1.
+- Areas: historical areas named by the recorded outcome.
+- Outcome: `hook run` beside `hook validate` in the hook namespace: the
   decision table of contract-009, the hook-owned counter, the cap of
   ten, no gating on `stop_hook_active`
   ([research-001][sokf:research-001-claude-code-stop-hook-behaviour]),
   fail-open on an unreadable state, loud exit 2 on an unreadable
   payload, `CLAUDE_PROJECT_DIR` preference.
-- Done-check: the hook exits 0 with no state, a foreign session, an
+- Verification: the hook exits 0 with no state, a foreign session, an
   empty next, or a spent counter, and otherwise exits 2 naming next with
   the counter one higher.
-- Cases:
+- Tests:
   - unit: absent state, foreign `session_id`, empty next, counter at
     cap — each exits 0 — checks that a run without a step forward ends
     at a fixed cap, and that no active run leaves a session's turn
@@ -118,126 +122,148 @@ Historical documentation impact predates the documentation map; migration itself
   - unit: a malformed payload exits 2 loudly; a malformed `run.toml` is
     reported and exits 0 — checks that an unreadable state leaves the
     session's turn boundaries untouched.
+- Structural evidence: the recorded verification and tests provide the historical evidence.
+- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
 
 ### Block 3: The managed Stop entry
 
 - [x] Done — ticked at merge.
-- Depends-on: 2.
-- Change: `components/sokf.rs` declares the `hooks.Stop` JsonEntry with
+- Dependencies: 2.
+- Areas: historical areas named by the recorded outcome.
+- Outcome: `components/sokf.rs` declares the `hooks.Stop` JsonEntry with
   marker `superdev hook run`, claimed in the lock beside the PostToolUse
   entry.
-- Done-check: `sync` in this repository writes the Stop entry and
+- Verification: `sync` in this repository writes the Stop entry and
   `status` exits 0 afterwards; a stale entry with the same marker is
   replanned.
-- Cases:
+- Tests:
   - unit: a fresh repo plans the Stop entry; a satisfied one plans
     nothing; a stale same-marker entry is replanned — checks that the
     hook is armed by the managed entry alone.
   - e2e: `sync` here writes `.claude/settings.json` and the lock claim;
     a repo with no run state sees every session end normally — checks
     that a repo with no run active keeps its turn boundaries untouched.
+- Structural evidence: the recorded verification and tests provide the historical evidence.
+- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
 
 ### Block 4: Dependencies in the plan format
 
 - [x] Done — ticked at merge.
-- Depends-on: none.
-- Change: `Depends-on:` per block and a `## Deferred decisions` section
+- Dependencies: none.
+- Areas: historical areas named by the recorded outcome.
+- Outcome: `Depends-on:` per block and a `## Deferred decisions` section
   in the feature-plan template and `schema-feature-plan`, in `pack/` and
   the live copies; the feature-plan skill states dependencies, orders
   topologically, and GATEs on a cycle.
-- Done-check: `superdev validate` passes a plan carrying `Depends-on`
+- Verification: `superdev validate` passes a plan carrying `Depends-on`
   and deferred decisions; the skill's text carries the ordering rule and
   the cycle gate.
-- Cases:
+- Tests:
   - unit: this plan and the schema's example validate with `Depends-on`
     lines — checks that a plan records, for every block, the blocks it
     depends on.
-  - manual: a plan with a dependency cycle is refused by the
+  - structural: a plan with a dependency cycle is refused by the
     feature-plan skill's gate — checks that a cyclic plan is refused.
+- Structural evidence: the recorded verification and tests provide the historical evidence.
+- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
 
 ### Block 5: Branching conventions
 
 - [x] Done — ticked at merge.
-- Depends-on: none.
-- Change: `/frame` creates `feature/<slug>` off the default branch and
+- Dependencies: none.
+- Areas: historical areas named by the recorded outcome.
+- Outcome: `/frame` creates `feature/<slug>` off the default branch and
   commits the framed issue; `/adhoc-plan` creates `adhoc/<slug>` when
   its work touches code; the development-procedure template gains the
   branching line and this repo's concept records its convention — in
   `pack/` and the live copies.
-- Done-check: both skills carry the branch step and the repo-convention
+- Verification: both skills carry the branch step and the repo-convention
   precedence; the development-procedure documents name the convention.
-- Cases:
-  - manual: `/frame` in a scratch repo leaves the tree on
+- Tests:
+  - structural: `/frame` in a scratch repo leaves the tree on
     `feature/<slug>` with the issue committed — checks that framing a
     feature cuts its branch off the default branch and commits the issue
     on it.
-  - manual: `/adhoc-plan` planning code work leaves the tree on
+  - structural: `/adhoc-plan` planning code work leaves the tree on
     `adhoc/<slug>`; a documentation-only plan branches nothing — checks
     that ad-hoc work touching code cuts `adhoc/<slug>`.
+- Structural evidence: the recorded verification and tests provide the historical evidence.
+- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
 
 ### Block 6: Commit points
 
 - [x] Done — ticked at merge.
-- Depends-on: 5.
-- Change: `/contract-design` ends with the go-ahead gate and commits the
+- Dependencies: 5.
+- Areas: historical areas named by the recorded outcome.
+- Outcome: `/contract-design` ends with the go-ahead gate and commits the
   contract and ADR edits; `/integrate` commits the changelog, knowledge
   and plan edits after a successful merge — in `pack/` and the live
   copies.
-- Done-check: both skills carry the commit step, and integrate's sits
+- Verification: both skills carry the commit step, and integrate's sits
   after the merge so a failed check commits nothing.
-- Cases:
-  - manual: `/contract-design` in a scratch repo ends by committing the
+- Tests:
+  - structural: `/contract-design` in a scratch repo ends by committing the
     records on the feature branch — checks that the contract and
     decision-record edits are committed before the unattended loop
     starts.
-  - manual: `/integrate` leaves no uncommitted changelog, knowledge or
+  - structural: `/integrate` leaves no uncommitted changelog, knowledge or
     plan edit — checks that merging a block commits the record edits it
     made.
+- Structural evidence: the recorded verification and tests provide the historical evidence.
+- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
 
 ### Block 7: The driver skill
 
 - [x] Done — ticked at merge.
-- Depends-on: 2, 3, 4, 5, 6.
-- Change: a new `execute-feature-plan` skill in
+- Dependencies: 2, 3, 4, 5, 6.
+- Areas: historical areas named by the recorded outcome.
+- Outcome: a new `execute-feature-plan` skill in
   `pack/knowledge/skills/` carrying the loop — cut the plan when none
   exists, pick a ready block, build and integrate it in a subagent,
   drive `run begin`/`advance`/`end`, retry a failing block at most
   twice then defer, write user-gates into deferred decisions, end when
   no block is ready and put the queue to the user; the how-do-i map and
   `pack/agents/process.md` name it.
-- Done-check: the skill's loop covers every edge the process diagram
+- Verification: the skill's loop covers every edge the process diagram
   carries, the autonomy rule names its gates, and the process documents
   name the skill.
-- Cases:
-  - manual: a multi-block plan in a scratch repo runs feature-plan,
+- Tests:
+  - structural: a multi-block plan in a scratch repo runs feature-plan,
     build and integrate to completion with no turn boundary stopping to
     ask — checks the unattended loop over ready blocks.
-  - manual: a block failing its checks twice is deferred and the loop
+  - structural: a block failing its checks twice is deferred and the loop
     continues; the run ends putting the deferred decisions in sequence
     — checks the deferral after two returns to build, the gate written
     into the plan's deferred decisions, and the run's end when no block
     is ready.
-  - manual: `git log` on the scratch repo's default branch shows
+  - structural: `git log` on the scratch repo's default branch shows
     nothing from the run — checks that a run makes no commit and no
     merge to the default branch.
+- Structural evidence: the recorded verification and tests provide the historical evidence.
+- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
 
 ### Block 8: Records and rehearsal
 
 - [x] Done — ticked at merge.
-- Depends-on: 7.
-- Change: the changelog entry for the verbs, the hook and the skill;
+- Dependencies: 7.
+- Areas: historical areas named by the recorded outcome.
+- Outcome: the changelog entry for the verbs, the hook and the skill;
   the glossary's run term; the development-procedure commit points;
   plan-004 refiled done with its supersession note.
-- Done-check: `superdev validate` passes, `npm run check:blueprint`
+- Verification: `superdev validate` passes, `npm run check:blueprint`
   is green, and a rehearsal of the full loop on a scratch feature
   confirms the acceptance criteria end to end.
-- Cases:
+- Tests:
   - e2e: the pre-PR check list passes on a clean checkout — checks the
     plan format's dependency lines, the refusal of a second run, the
     continue cap and the untouched turn boundaries.
-  - manual: the rehearsal walks branching, the go-ahead commit, the
+  - structural: the rehearsal walks branching, the go-ahead commit, the
     unattended loop, the commit at merge, the run's end and the
     untouched default branch in one scratch-repo run.
+
+- Structural evidence: the recorded verification and tests provide the historical evidence.
+
+- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
 
 ## Build state
 

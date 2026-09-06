@@ -4,6 +4,7 @@
 //! state or choose project policy themselves.
 
 pub mod cache;
+pub mod filing;
 pub mod git;
 mod state;
 mod transition;

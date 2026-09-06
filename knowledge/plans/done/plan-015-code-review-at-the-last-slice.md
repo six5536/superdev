@@ -111,8 +111,9 @@ Historical documentation impact predates the documentation map; migration itself
 ### Block 1: The integrate skill
 
 - [x] Done — ticked at merge.
-- Depends-on: none.
-- Change: in `pack/knowledge/skills/integrate/SKILL.md`, REVIEW THE DIFF
+- Dependencies: none.
+- Areas: historical areas named by the recorded outcome.
+- Outcome: in `pack/knowledge/skills/integrate/SKILL.md`, REVIEW THE DIFF
   gains `when="if the last slice"` and its task widens to the whole
   feature diff against the merge target, findings still returning to
   build unapplied; the code-review half of WRITE FINDINGS moves under
@@ -122,28 +123,32 @@ Historical documentation impact predates the documentation map; migration itself
   `.claude/skills/integrate/SKILL.md`, and `CHANGELOG.md` gains an
   Unreleased line: integrate reviews once per feature, at the last
   slice, over the whole diff.
-- Done-check: every remaining mention of the review sits under the
+- Verification: every remaining mention of the review sits under the
   last-slice condition, the two skill copies are identical, and
   `superdev validate` reports PASS with 0 errors.
-- Cases:
-  - manual: each `code-review` mention in
+- Tests:
+  - structural: each `code-review` mention in
     `.claude/skills/integrate/SKILL.md` sits on a line carrying
     `when="if the last slice"` or inside a conditioned step's text,
     confirmed by reading the three lines — checks that a non-final
     slice invokes no review and reads no code-review schema.
-  - manual: the REVIEW THE DIFF task names the whole feature diff and
+  - structural: the REVIEW THE DIFF task names the whole feature diff and
     the merge target — checks that the last slice's review covers the
     feature.
-  - manual: the step still says findings return to build unapplied —
+  - structural: the step still says findings return to build unapplied —
     checks that review findings of every kind return to build before
     the merge.
-  - manual: `diff .claude/skills/integrate/SKILL.md
+  - structural: `diff .claude/skills/integrate/SKILL.md
     pack/knowledge/skills/integrate/SKILL.md` prints nothing — checks
     that the live skill and the pack copy stay byte-identical.
-  - manual: `superdev validate` reports PASS with 0 errors on a clean
+  - structural: `superdev validate` reports PASS with 0 errors on a clean
     checkout, `CHANGELOG.md` names the change under Unreleased, and
     `knowledge/plans/index.md` lists this plan with `lifecycle: done` —
     checks that the edit conforms and the records close.
+
+- Structural evidence: the recorded verification and tests provide the historical evidence.
+
+- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
 
 ## Build state
 

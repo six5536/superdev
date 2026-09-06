@@ -270,10 +270,21 @@ impl Manifest {
 
     /// Parse and validate manifest TOML.
     pub fn parse(s: &str) -> Result<Manifest> {
+        let document = s
+            .parse::<toml_edit::DocumentMut>()
+            .map_err(|e| Error::Toml {
+                path: CONFIG_PATH.into(),
+                message: e.to_string(),
+            })?;
         let written: WrittenManifest = toml_edit::de::from_str(s).map_err(|e| Error::Toml {
             path: CONFIG_PATH.into(),
             message: e.to_string(),
         })?;
+        if !document.contains_key("workflow") && !blueprint_predates_workflow(&written.blueprint) {
+            return Err(Error::Manifest {
+                message: "[workflow] is required after the 0.2.0 blueprint migration".into(),
+            });
+        }
         // A manifest from before SOKF became core: `[knowledge]` named a
         // provider for a slot that no longer exists. Refused by name, so the
         // reader is told the edit rather than left with a provider choice
@@ -397,6 +408,14 @@ impl Manifest {
             source: e,
         })?;
         fs::write(&path, self.to_toml()).map_err(|e| Error::Io { path, source: e })
+    }
+}
+
+fn blueprint_predates_workflow(version: &str) -> bool {
+    let mut parts = version.split('.').map(|part| part.parse::<u64>());
+    match (parts.next(), parts.next(), parts.next(), parts.next()) {
+        (Some(Ok(major)), Some(Ok(minor)), Some(Ok(_)), None) => (major, minor) < (0, 2),
+        _ => false,
     }
 }
 
@@ -649,7 +668,7 @@ mod tests {
     /// defaults and the next rewrite materializes them.
     #[test]
     fn an_older_manifest_gains_safe_workflow_defaults_on_rewrite() {
-        let written = "blueprint = \"0.2.0\"\n\n[knowledge]\ncustom = [\"maintain\"]\n";
+        let written = "blueprint = \"0.1.0\"\n\n[knowledge]\ncustom = [\"maintain\"]\n";
         let manifest = Manifest::parse(written).unwrap();
         assert!(
             manifest.packs.is_empty(),
@@ -659,7 +678,7 @@ mod tests {
         assert_eq!(
             manifest.to_toml(),
             concat!(
-                "blueprint = \"0.2.0\"\n\n[knowledge]\ncustom = [\"maintain\"]\n\n",
+                "blueprint = \"0.1.0\"\n\n[knowledge]\ncustom = [\"maintain\"]\n\n",
                 "[workflow]\n",
                 "human_acceptance_required = true\n",
                 "max_stalled_block_attempts = 3\n",
@@ -669,9 +688,15 @@ mod tests {
     }
 
     #[test]
+    fn a_current_manifest_cannot_drop_workflow_policy() {
+        let error = Manifest::parse("blueprint = \"0.2.0\"\n[knowledge]\n").unwrap_err();
+        assert!(error.to_string().contains("[workflow] is required"));
+    }
+
+    #[test]
     fn a_manifest_with_packs_round_trips_and_keeps_layer_order() {
         let written = concat!(
-            "blueprint = \"0.2.0\"\n\n",
+            "blueprint = \"0.1.0\"\n\n",
             "[[packs]]\n",
             "source = \"github:six5536/superdev\"\n",
             "rev = \"assets-v1.4.0\"\n\n",
@@ -721,7 +746,7 @@ mod tests {
     #[test]
     fn packs_is_not_read_as_a_capability() {
         let manifest = Manifest::parse(
-            "blueprint = \"0.2.0\"\n\n[[packs]]\nsource = \"./p\"\n\n[skills]\nprovider = \"superdev-skills\"\n",
+            "blueprint = \"0.1.0\"\n\n[[packs]]\nsource = \"./p\"\n\n[skills]\nprovider = \"superdev-skills\"\n",
         )
         .unwrap();
         assert_eq!(manifest.capabilities.keys().collect::<Vec<_>>(), ["skills"]);

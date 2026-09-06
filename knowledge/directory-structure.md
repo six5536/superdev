@@ -12,10 +12,10 @@ sources:
 
 ```
 pack/                     # the content superdev ships, in pack layout
-pack/knowledge/skills/    # the knowledge-carried skills (one directory each)
+pack/pi/extensions/      # owned Pi extensions and private role prompts
+pack/pi/skills/          # independently invocable Pi skills
 pack/knowledge/concepts/  # the knowledge scaffolds, mirroring the repo's knowledge/
 pack/knowledge/templates/ # the document templates
-pack/skills/              # the skill pack
 pack/agents/              # the general-rules scaffolds
 pack/projects/            # the project templates
 crates/lib/superdev-core/ # all domain logic (no arg parsing)
@@ -30,7 +30,9 @@ knowledge/contracts/      # durable contracts, by audience:
 knowledge/issues/         # gaps and tickets, one concept each
 knowledge/schemas/        # the contract each document type is checked against
 .agents/                  # the entry point, capability instructions, SOKF spec, agent rules
-.claude/skills/           # committed skills: the skill pack + the knowledge-carried set
+.pi/extensions/           # materialized Pi adapters
+.pi/skills/               # materialized independently invocable Pi skills
+archive/claude-code/      # retired Claude implementation and skills; inactive
 .superdev/                # superdev's own manifest and lock (this repo is self-managed)
 .github/workflows/        # checks.yml (reusable), ci.yml, release.yml, audit.yml
 .devcontainer/            # dev container definition

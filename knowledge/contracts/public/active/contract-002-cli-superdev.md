@@ -97,6 +97,8 @@ enum Command {
     /// SOKF knowledge commands
     #[command(subcommand)]
     Sokf(sokf_cli::SokfCommand),
+    /// File a human-confirmed issue or idea on the local default branch
+    File(workflow_cli::FileArgs),
     /// Drive the local SCOPE → BUILD → ACCEPT workflow
     #[command(subcommand)]
     Workflow(workflow_cli::WorkflowCommand),
@@ -190,7 +192,7 @@ pub struct ValidateArgs {
     pub repo_root: Option<PathBuf>,
 }
 
-/// Claude Code hook plumbing (reads the hook payload from stdin).
+/// Legacy adapter hook plumbing (reads the hook payload from stdin).
 #[derive(clap::Subcommand)]
 pub enum HookCommand {
     /// PostToolUse: validate after an Edit/Write under the SOKF knowledge or
@@ -314,6 +316,33 @@ pub enum SokfCommand {
 
 <!-- sokf:include /crates/app/superdev/src/workflow_cli.rs#cli -->
 ```rust
+/// Human-confirmed out-of-band issue or idea filing.
+#[derive(Args)]
+pub struct FileArgs {
+    /// Record kind
+    #[arg(long, value_enum, default_value = "issue")]
+    kind: FilingKindName,
+    /// Short human title
+    #[arg(long)]
+    title: String,
+    /// Human description to preserve in the record
+    #[arg(long)]
+    description: String,
+    /// Local default branch to advance
+    #[arg(long, default_value = "main")]
+    default_branch: String,
+    /// Confirmation supplied only after the human approves the bounded diff
+    #[arg(long)]
+    human_approved: bool,
+}
+
+/// CLI spelling of fileable record kinds.
+#[derive(Clone, Copy, ValueEnum)]
+enum FilingKindName {
+    Issue,
+    Idea,
+}
+
 /// Versioned workflow operations used by the Pi adapter.
 #[derive(Subcommand)]
 pub enum WorkflowCommand {
@@ -468,6 +497,9 @@ pub struct AbandonArgs {
     /// Set only by the interactive Pi command after confirmation
     #[arg(long)]
     human_approved: bool,
+    /// Human-approved disposition recorded on the issue
+    #[arg(long)]
+    reason: String,
 }
 
 /// Compare-and-swap local integration arguments.
@@ -508,9 +540,8 @@ usage errors and the side effects.
 - `P_init-manifest-first` [ubiquitous] `init` SHALL write the manifest
   before applying, so a failed run leaves the file the retry resumes
   from.
-- `P_init-agents-chain` [ubiquitous] `init` SHALL ensure `CLAUDE.md`
-  carries `@AGENTS.md` and `AGENTS.md` carries `@.agents/superdev.md`,
-  appending to an existing file.
+- `P_init-agents-chain` [ubiquitous] `init` SHALL ensure `AGENTS.md`
+  carries `@.agents/superdev.md`, appending to an existing file.
 - `P_init-releases-managed-name` [event] WHEN the repo already has a
   skill under a managed name, `init` SHALL release that skill into
   `custom` before anything is written.
@@ -577,6 +608,13 @@ usage errors and the side effects.
   use shell-free local `git merge --no-ff` after clean-tree and expected-tip
   checks, without pushing, releasing, deleting branches, stashing, resetting,
   discarding, absorbing unrelated changes, or resolving conflicts implicitly.
+- `P_workflow-integration-bound` [ubiquitous] `workflow integrate` SHALL
+  require the bound issue, plan, refs, reviewed candidate, verified default
+  tip, done closure, and administrative-only descendants to agree.
+- `P_file-default-branch` [ubiquitous] `file` SHALL create and validate one
+  human-confirmed issue or idea in an isolated temporary worktree, commit only
+  knowledge, and compare-and-swap the local default branch without changing an
+  active workflow worktree.
 - `P_sokf-index-rebuilds-in-full` [ubiquitous] `sokf index` SHALL
   rebuild the index in full.
 - `P_sokf-index-says-lexical-only` [event] WHEN no embedding model
@@ -682,6 +720,8 @@ the invoking adapter.
 | `superdev sokf edit` | 2 | malformed input or a failed precondition left the target unchanged |
 | `superdev sokf write` | 0 | the mutation was applied, including an invalid or unknown resulting state |
 | `superdev sokf write` | 2 | malformed input or a failed precondition left the target unchanged |
+| `superdev file` | 0 | a confirmed issue or idea was committed on the default branch |
+| `superdev file` | 2 | confirmation, validation, duplicate, worktree, or compare-and-swap checks failed |
 | `superdev workflow` | 2 | no subcommand named |
 | `superdev workflow status` | 0 | canonical and transient state is reported |
 | `superdev workflow bind` | 0 | transient ownership is acquired |
@@ -788,8 +828,11 @@ reaches the network unasked, to find the newest pack release.
 - `P_sokf-mutations-write-knowledge-only` [ubiquitous] `sokf edit` and `sokf
   write` SHALL write only inside the resolved knowledge directory.
 - `P_workflow-side-effects-bounded` [ubiquitous] `workflow` SHALL write
-  only its transient cache, its named canonical plan, and, for integration,
-  the explicitly validated local refs and merge commit.
+  only its transient cache, bound canonical records and indexes, and, for
+  integration, the explicitly validated local refs and merge commit.
+- `P_file-side-effects-bounded` [ubiquitous] `file` SHALL write one canonical
+  record and generated index changes in a temporary worktree, then advance
+  only the validated local default ref.
 
 ## Stability
 

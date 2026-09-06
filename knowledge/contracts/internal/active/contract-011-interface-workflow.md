@@ -130,6 +130,12 @@ pub struct WorkflowCache {
     pub identity: WorkflowIdentity,
     /// Plan revision last observed by the owning session.
     pub last_plan_revision: String,
+    /// Immutable candidate reviewed at the BUILD gate.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub candidate_revision: Option<String>,
+    /// Default-branch tip incorporated before candidate verification.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub verified_default_revision: Option<String>,
     /// Active isolated child role, when one exists.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub child_role: Option<String>,
@@ -370,6 +376,9 @@ mod tests {
 - `P_accept-policy` [event] WHEN ACCEPT decides a candidate, the service SHALL derive human acceptance solely from project configuration before merging an accepted closure locally with `git merge --no-ff`.
 - `P_cancel-pauses` [event] WHEN cancellation occurs, the service SHALL release transient ownership without changing the canonical phase or deleting uncommitted SCOPE drafts.
 - `P_abandon-human-only` [event] WHEN abandonment is requested, the service SHALL require interactive human approval while excluding partial product work from integration.
+- `P_evidence-durable` [event] WHEN scope or final BUILD gates pass, the service SHALL append their attestations to canonical Completion evidence, including candidate and verified-default revisions for final BUILD.
+- `P_resume-recovers-evidence` [event] WHEN ownership resumes, the service SHALL reconstruct candidate and verified-default revisions from canonical Completion evidence rather than treating cache loss as evidence loss.
+- `P_closure-transactional` [event] WHEN acceptance or abandonment closes records, the service SHALL stage, repair, and validate the complete knowledge closure before publishing it.
 
 ### Cross-cutting concerns
 

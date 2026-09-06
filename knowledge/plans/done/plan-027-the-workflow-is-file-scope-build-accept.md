@@ -102,8 +102,9 @@ Historical documentation impact predates the documentation map; migration itself
 ### Block 1: The validator reads nested items and an optional key
 
 - [x] Done — ticked by integrate at merge.
-- Depends-on: none.
-- Change: `validate::schema::document` — `Items::read` learns depth: a
+- Dependencies: none.
+- Areas: historical areas named by the recorded outcome.
+- Outcome: `validate::schema::document` — `Items::read` learns depth: a
   marker of the section's list kind indented past the item above opens
   a nested item, to the depth the rule declares, and a deeper marker
   or one of the other kind is text of the item it sits in; each level
@@ -116,12 +117,12 @@ Historical documentation impact predates the documentation map; migration itself
   findings. `grammar.yaml` documents `nested` and `item-key-optional`;
   `.agents/sokf/grammar.yaml` synced. Contract-010's five `PENDING`
   markers removed.
-- Done-check: `P_nested-binds`, `P_nested-required`,
+- Verification: `P_nested-binds`, `P_nested-required`,
   `P_key-optional-unkeyed`, `P_key-optional-keyed` and
   `P_misdeclared-nested` hold on the built binary through a scratch
   schema; contract-010 carries no `PENDING`; `superdev status` reports
   no drift.
-- Cases: a schema with a two-level `nested` accepts a conforming
+- Tests: a schema with a two-level `nested` accepts a conforming
   document and reports a nested item missing its key, naming the item
   (covers contract-010 `P_nested-binds`); a nested `required` reports
   a top-level item with no nested item, naming it (covers contract-010
@@ -139,12 +140,15 @@ Historical documentation impact predates the documentation map; migration itself
   `item-key` are each a finding on the schema (covers contract-010
   `P_misdeclared-nested`); the grammar's schema check accepts the two
   keys (checks that the grammar admits the declarations).
+- Structural evidence: the recorded verification and tests provide the historical evidence.
+- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
 
 ### Block 2: A contract's promise carries its criteria
 
 - [x] Done — ticked by integrate at merge.
-- Depends-on: 1.
-- Change: `pack/knowledge/schemas/contract.md` — the Behaviour and
+- Dependencies: 1.
+- Areas: historical areas named by the recorded outcome.
+- Outcome: `pack/knowledge/schemas/contract.md` — the Behaviour and
   Stability rules gain a `nested` rule: `item-key` `AC_`, the EARS
   tag pattern, `required: false`; the section descriptions say a
   promise MAY carry the criteria that check it and how a plan case
@@ -153,11 +157,11 @@ Historical documentation impact predates the documentation map; migration itself
   Promise key entry names `AC_` as the contract's criterion prefix
   and drops the tracker prefixes it lists. Synced to
   `knowledge/schemas/contract.md`.
-- Done-check: every contract on file passes unchanged; a scratch
+- Verification: every contract on file passes unchanged; a scratch
   contract with nested criteria passes, and one with a nested item
   lacking its key or tag, or a criterion key equal to a promise key,
   fails naming the item; `superdev status` reports no drift.
-- Cases: a contract whose promise nests two keyed tagged criteria
+- Tests: a contract whose promise nests two keyed tagged criteria
   passes (checks that the validator accepts a promise's nested `AC_`
   list); a nested item without a key fails naming it, and a criterion
   key repeated across the contract fails naming both items (checks
@@ -167,12 +171,15 @@ Historical documentation impact predates the documentation map; migration itself
   nested list passes); a normative test reads the contract schema's
   Behaviour rule and finds the `nested` `AC_` key with `required:
   false` (checks that the criteria are optional).
+- Structural evidence: the recorded verification and tests provide the historical evidence.
+- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
 
 ### Block 3: One issue template, and the issues on file rewritten
 
 - [x] Done — ticked by integrate at merge.
-- Depends-on: none.
-- Change: `pack/knowledge/schemas/issue.md` — `type: Issue`, id
+- Dependencies: none.
+- Areas: historical areas named by the recorded outcome.
+- Outcome: `pack/knowledge/schemas/issue.md` — `type: Issue`, id
   `issue-\d{3}-[a-z0-9-]+`, `kind` enum `bug|feature|chore`
   required, `lifecycle` enum `open|done|wontfix` as `variant-key`;
   headings Summary, Context, Behaviour, Scope, Resolution, Comments,
@@ -193,11 +200,11 @@ Historical documentation impact predates the documentation map; migration itself
   and the three states; `/file` writes it. The normative tests that
   pin the three kinds, the framed state and `LIVE_LIFECYCLES` are
   rewritten to pin the template.
-- Done-check: `superdev validate` passes with 51 issues under `open/`,
+- Verification: `superdev validate` passes with 51 issues under `open/`,
   `done/` and `wontfix/` and no other issue folder; no `BugReport`,
   `FeatureRequest` or `Chore` type in the tree; `superdev status`
   reports no drift.
-- Cases: an issue with `kind: feature`, `lifecycle: open` and the six
+- Tests: an issue with `kind: feature`, `lifecycle: open` and the six
   headings passes, with prose, bullets or both under Behaviour
   (checks the template and that no key or tag holds an issue); an
   open issue carrying Resolution fails, and a done issue without it
@@ -211,12 +218,15 @@ Historical documentation impact predates the documentation map; migration itself
   and a `done` one settled, and no `framed` value ranks live (checks
   `LIVE_LIFECYCLES`); `/file`'s text names the template's headings and
   `lifecycle: open` (checks that `/file` writes the template).
+- Structural evidence: the recorded verification and tests provide the historical evidence.
+- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
 
 ### Block 4: One plan template, and the plans on file rewritten
 
 - [x] Done — ticked by integrate at merge.
-- Depends-on: none.
-- Change: `pack/knowledge/schemas/plan.md` — `type: Plan`, id
+- Dependencies: none.
+- Areas: historical areas named by the recorded outcome.
+- Outcome: `pack/knowledge/schemas/plan.md` — `type: Plan`, id
   `plan-\d{3}-[a-z0-9-]+`, `lifecycle` enum `open|done|abandoned`;
   title heading `Plan: …` with an optional Request line; headings
   Goal (prose), Contract changes (bullet-list — one bullet per
@@ -234,22 +244,25 @@ Historical documentation impact predates the documentation map; migration itself
   (`plan-026-filing-…`) and every reference to an old id is rewritten
   with it; the plans index follows. The normative tests that pin the
   two kinds are rewritten.
-- Done-check: `superdev validate` passes with every plan typed `Plan`;
+- Verification: `superdev validate` passes with every plan typed `Plan`;
   no `FeaturePlan` or `AdhocPlan` type in the tree; `superdev status`
   reports no drift.
-- Cases: a plan with Goal, Contract changes, two blocks and no
+- Tests: a plan with Goal, Contract changes, two blocks and no
   Deferred decisions passes (checks the template); a plan without
   Contract changes fails naming the heading (checks that the section
   is required); a document typed `FeaturePlan` is reported as naming
   no schema (checks that the two plan schemas are gone); a normative
   sweep test finds every plan on file typed `Plan` in its lifecycle
   folder and conforming (checks the sweep).
+- Structural evidence: the recorded verification and tests provide the historical evidence.
+- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
 
 ### Block 5: Scope, and contract-design as its sub-skill
 
 - [x] Done — ticked by integrate at merge.
-- Depends-on: 3, 4.
-- Change: `pack/knowledge/skills/scope/SKILL.md` — persona, bootstrap
+- Dependencies: 3, 4.
+- Areas: historical areas named by the recorded outcome.
+- Outcome: `pack/knowledge/skills/scope/SKILL.md` — persona, bootstrap
   reads (the issue or the request, the contracts, the plan schema),
   steps: branch (`feature/<nnn>-<slug>` after the issue,
   `adhoc/<nnn>-<slug>` after the plan), `/grill-me` where the design
@@ -265,11 +278,11 @@ Historical documentation impact predates the documentation map; migration itself
   and `maintain` point at `/scope`; `/file` says `/scope` takes an
   issue up. The `development-procedure` concept's branch convention
   names the plan for ad-hoc work.
-- Done-check: `.claude/skills/scope/` and
+- Verification: `.claude/skills/scope/` and
   `.claude/skills/contract-design/` exist, `frame`, `feature-plan`
   and `adhoc-plan` do not, in the pack and the owned copies; `superdev
   status` reports no drift; the pack's manifest test passes.
-- Cases: a normative test reads `scope/SKILL.md` and finds the branch
+- Tests: a normative test reads `scope/SKILL.md` and finds the branch
   step, the `/grill-me`, `/contract-design`, `/double-check` calls and
   the hand-off to `/build` (checks the scope skill's steps); a
   normative test finds no `frame`, `feature-plan` or `adhoc-plan`
@@ -279,12 +292,15 @@ Historical documentation impact predates the documentation map; migration itself
   changes and its hand-off is `/scope` (checks the sub-skill's
   interface); the pack manifest lists `scope` and not `frame` (checks
   the pack's skill set).
+- Structural evidence: the recorded verification and tests provide the historical evidence.
+- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
 
 ### Block 6: Build, execute-plan, accept, and the workflow text
 
 - [x] Done — ticked by build at its commit.
-- Depends-on: 5.
-- Change: `build/SKILL.md` — reads the plan, works the blocks in
+- Dependencies: 5.
+- Areas: historical areas named by the recorded outcome.
+- Outcome: `build/SKILL.md` — reads the plan, works the blocks in
   order: tests, code, the block's own tests and the tests it touches,
   commit; after the last block the full build, tests, lint and
   `superdev validate` once, the changelog and the knowledge, the merge
@@ -301,10 +317,10 @@ Historical documentation impact predates the documentation map; migration itself
   optional, the sub-skills listed under scope, the edges rewritten;
   `.agents/superdev.md` synced. Contract-009's run-state prose, where
   it names the driver, follows.
-- Done-check: `.claude/skills/execute-plan/` exists,
+- Verification: `.claude/skills/execute-plan/` exists,
   `execute-feature-plan` and `integrate` do not; `.agents/superdev.md`
   carries the four-phase flow; `superdev status` reports no drift.
-- Cases: a normative test reads `build/SKILL.md` and finds the
+- Tests: a normative test reads `build/SKILL.md` and finds the
   per-block test step, the single full-suite step after the last
   block, and no review step (checks that build verifies once); a
   normative test finds no `integrate` skill (checks that integrate is
@@ -317,12 +333,15 @@ Historical documentation impact predates the documentation map; migration itself
   `.agents/superdev.md` and finds the flow `FILE → SCOPE → BUILD →
   ACCEPT`, an `optional` mark on accept, and no `CONTRACT-DESIGN`,
   `FEATURE-PLAN` or `INTEGRATE` phase (checks the workflow text).
+- Structural evidence: the recorded verification and tests provide the historical evidence.
+- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
 
 ### Block 7: The concepts and the records
 
 - [x] Done — ticked by build at its commit.
-- Depends-on: 6.
-- Change: `definition-of-done`, `development-procedure`,
+- Dependencies: 6.
+- Areas: historical areas named by the recorded outcome.
+- Outcome: `definition-of-done`, `development-procedure`,
   `issue-tracker`, `glossary` (the phases, `Scope`, `Work block`,
   `Plan`, the retired terms `Frame`, `Slice`, `Framed`, `Unframed`,
   `Integrate`), `constraints-non-goals` where it names a phase,
@@ -334,18 +353,22 @@ Historical documentation impact predates the documentation map; migration itself
   moved; ADR-046's index entry unchanged, ADR-050 and ADR-051
   listed; a `migration-guide` if the managed-repository migration
   needs steps beyond `validate --fix`.
-- Done-check: `superdev validate` passes; no concept, skill or README
+- Verification: `superdev validate` passes; no concept, skill or README
   section names `/frame`, `/feature-plan`, `/adhoc-plan`,
   `/integrate`, `/execute-feature-plan`, `framed` or `unframed` except
   as history in an ADR, an issue or the changelog; `superdev status`
   reports no drift.
-- Cases: a normative test greps the concepts, the skills and the
+- Tests: a normative test greps the concepts, the skills and the
   README for the retired names and finds none (checks the workflow
   text); a normative test finds ADR-050 active with `supersedes`
   links to ADR-031 and ADR-048, both under `adrs/deprecated/`, and a
   `references` link to ADR-046 (checks the ADRs); the glossary
   defines Scope, Work block and Plan and no longer defines Frame,
   Slice, Framed or Unframed (checks the glossary).
+
+- Structural evidence: the recorded verification and tests provide the historical evidence.
+
+- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
 
 ## Build state
 

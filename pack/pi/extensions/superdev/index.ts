@@ -1,4 +1,4 @@
-import { spawn } from "node:child_process";
+import { spawn, type ChildProcess } from "node:child_process";
 import { readFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -27,6 +27,8 @@ async function isolated(
 	cwd: string,
 	model?: { provider: string; id: string },
 	signal?: AbortSignal,
+	onSpawn?: (child: ChildProcess) => void,
+	onClose?: (child: ChildProcess) => void,
 ): Promise<string> {
 	const promptPath = resolve(here, "prompts", `${role}.md`);
 	await readFile(promptPath, "utf8");
@@ -35,15 +37,29 @@ async function isolated(
 	args.push("--tools", readOnly.has(role) ? "read,sokf_search,sokf_graph" : "read,bash,edit,write,sokf_search,sokf_graph");
 	args.push(`Task: ${task}`);
 	return new Promise((accept, reject) => {
-		const child = spawn("pi", args, { cwd, shell: false, stdio: ["ignore", "pipe", "pipe"] });
+		const child = spawn("pi", args, { cwd, shell: false, detached: process.platform !== "win32", stdio: ["ignore", "pipe", "pipe"] });
+		onSpawn?.(child);
 		let stdout = "";
 		let stderr = "";
+		const append = (current: string, chunk: string) => {
+			const next = current + chunk;
+			if (next.length > 1_000_000) {
+				child.kill("SIGTERM");
+				throw new Error(`${role} output exceeded 1 MB`);
+			}
+			return next;
+		};
 		child.stdout.setEncoding("utf8");
 		child.stderr.setEncoding("utf8");
-		child.stdout.on("data", (chunk: string) => (stdout += chunk));
-		child.stderr.on("data", (chunk: string) => (stderr += chunk));
+		child.stdout.on("data", (chunk: string) => {
+			try { stdout = append(stdout, chunk); } catch (error) { reject(error); }
+		});
+		child.stderr.on("data", (chunk: string) => {
+			try { stderr = append(stderr, chunk); } catch (error) { reject(error); }
+		});
 		child.on("error", reject);
 		child.on("close", (code) => {
+			onClose?.(child);
 			if (code !== 0) return reject(new Error(stderr.trim() || `${role} exited ${code}`));
 			let answer = "";
 			for (const line of stdout.split("\n")) {
@@ -64,15 +80,51 @@ async function isolated(
 }
 
 export default function superdev(pi: ExtensionAPI) {
+	const children = new Set<ChildProcess>();
+	let modifyingChild: ChildProcess | undefined;
+	const stopChild = (child: ChildProcess) => {
+		try {
+			if (child.pid && process.platform !== "win32") process.kill(-child.pid, "SIGTERM");
+			else child.kill("SIGTERM");
+		} catch { /* The child already exited. */ }
+		setTimeout(() => {
+			if (child.exitCode === null) {
+				try {
+					if (child.pid && process.platform !== "win32") process.kill(-child.pid, "SIGKILL");
+					else child.kill("SIGKILL");
+				} catch { /* The child exited after the check. */ }
+			}
+		}, 2_000).unref();
+	};
+
 	pi.registerTool({
 		name: "superdev_isolated_role",
 		label: "Superdev isolated role",
 		description: "Run one extension-private workflow role in a fresh isolated Pi process",
 		parameters: schema,
-		execute: async (_id, input, signal, _update, ctx) => ({
-			content: [{ type: "text", text: await isolated(input.role, input.task, ctx.cwd, ctx.model, signal) }],
-			details: { role: input.role, isolated: true, readOnly: readOnly.has(input.role) },
-		}),
+		execute: async (_id, input, signal, _update, ctx) => {
+			const modifying = !readOnly.has(input.role) && input.role !== "file";
+			if (modifying && modifyingChild) throw new Error("one modifying workflow child is already active");
+			const text = await isolated(
+				input.role,
+				input.task,
+				ctx.cwd,
+				ctx.model,
+				signal,
+				(child) => {
+					children.add(child);
+					if (modifying) modifyingChild = child;
+				},
+				(child) => {
+					children.delete(child);
+					if (modifyingChild === child) modifyingChild = undefined;
+				},
+			);
+			return {
+				content: [{ type: "text", text }],
+				details: { role: input.role, isolated: true, readOnly: readOnly.has(input.role) },
+			};
+		},
 	});
 
 	const send = (text: string, ctx: { isIdle(): boolean; ui: { notify(message: string, level: "warning"): void } }) => {
@@ -82,6 +134,13 @@ export default function superdev(pi: ExtensionAPI) {
 	pi.registerCommand("superdev", {
 		description: "Start or continue SCOPE → BUILD → ACCEPT",
 		handler: async (args, ctx) => send(`${await readFile(resolve(here, "prompts/orchestrator.md"), "utf8")}\n\nUser request: ${args || "inspect status and resume the canonical workflow"}`, ctx),
+	});
+	pi.registerCommand("superdev-status", {
+		description: "Show canonical workflow phase and transient ownership",
+		handler: async (_args, ctx) => {
+			const result = await pi.exec("superdev", ["workflow", "status", "--json"], { cwd: ctx.cwd });
+			ctx.ui.notify(result.code === 0 ? result.stdout.trim() : result.stderr.trim(), result.code === 0 ? "info" : "error");
+		},
 	});
 	pi.registerCommand("superdev-resume", {
 		description: "Resume the canonical workflow after reconstructing Rust-owned state",
@@ -100,6 +159,12 @@ export default function superdev(pi: ExtensionAPI) {
 	pi.registerCommand("superdev-cancel", {
 		description: "Pause the workflow and release transient ownership",
 		handler: async (_args, ctx) => {
+			const stopping = [...children];
+			for (const child of stopping) stopChild(child);
+			await Promise.race([
+				Promise.all(stopping.map((child) => new Promise<void>((done) => child.once("close", () => done())))),
+				new Promise<void>((done) => setTimeout(done, 2_500)),
+			]);
 			const session = ctx.sessionManager.getSessionId();
 			const result = await pi.exec("superdev", ["workflow", "cancel", "--session", session], { cwd: ctx.cwd });
 			ctx.ui.notify(result.code === 0 ? "Workflow paused; canonical phase unchanged" : result.stderr, result.code === 0 ? "info" : "error");
@@ -114,6 +179,9 @@ export default function superdev(pi: ExtensionAPI) {
 	});
 	pi.registerCommand("file", {
 		description: "Capture an issue or idea outside the workflow",
-		handler: async (args, ctx) => send(`Use superdev_isolated_role with role=file to capture, without scoping or implementation: ${args}`, ctx),
+		handler: async (args, ctx) => send(
+			`Use superdev_isolated_role with role=file to search for duplicates and prepare one bounded issue/idea filing. Present the title, description, kind, and target default branch. Ask the human to confirm. Only after confirmation invoke \`superdev file --human-approved\` with separate argument-array values; never interpolate text into a shell command. Request: ${args}`,
+			ctx,
+		),
 	});
 }

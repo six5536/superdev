@@ -318,7 +318,9 @@ fn every_declared_exit_code_is_probed_or_named_undrivable() {
     ];
     // Pairs a test of its own drives, because they need stdin or a
     // temporary knowledge rather than a bare invocation.
-    const ELSEWHERE: [(&str, i64); 15] = [
+    const ELSEWHERE: [(&str, i64); 17] = [
+        ("superdev file", 0),
+        ("superdev file", 2),
         ("superdev hook validate", 0),
         ("superdev hook validate", 2),
         ("superdev validate", 1),

@@ -64,8 +64,9 @@ Historical documentation impact predates the documentation map; migration itself
 ### Block 1: The run state holds the turn open
 
 - [x] Done — ticked by integrate at merge.
-- Depends-on: none.
-- Change: `holds` and `HOLD_CAP` land on the run state, as
+- Dependencies: none.
+- Areas: historical areas named by the recorded outcome.
+- Outcome: `holds` and `HOLD_CAP` land on the run state, as
   [contract-009][sokf:contract-009-interface-run-state] already declares
   them, together with the `hook run` behaviour that uses them: it refuses
   to end the turn while `validate` reports an error, naming the findings
@@ -78,13 +79,13 @@ Historical documentation impact predates the documentation map; migration itself
   lands (ADR-038). The state and the hook ship together because a cap
   with nothing that holds is dead code, not a block — the first cut
   split them and clippy said so.
-- Done-check: `every_declared_signature_exists_in_the_source` passes; a
+- Verification: `every_declared_signature_exists_in_the_source` passes; a
   turn ending with the knowledge in error is held once and named; the
   same turn is held no more than `HOLD_CAP` times; unreadable knowledge
   ends the turn. The findings used here are the ones already fatal —
   block 2 is what adds the five, and a broken body link holds a turn
   only from then on.
-- Cases:
+- Tests:
   - unit: a state file with no `holds` key reads as zero, so a run armed
     by an older binary is not orphaned.
   - unit: `holds` round-trips through a write and a read.
@@ -99,54 +100,67 @@ Historical documentation impact predates the documentation map; migration itself
   - integration: unreadable knowledge exits 0, so the hook fails open.
   - integration: an armed run still continues as contract-009 says, so
     the two jobs of the hook do not interfere.
+- Structural evidence: the recorded verification and tests provide the historical evidence.
+- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
 
 ### Block 2: The five findings fail the run
 
 - [x] Done — ticked by integrate at merge.
-- Depends-on: none.
-- Change: the five findings the repository alone settles become errors
+- Dependencies: none.
+- Areas: historical areas named by the recorded outcome.
+- Outcome: the five findings the repository alone settles become errors
   in `validate::sokf` — a broken body link, a missing `resource`, a
   missing `sources[].resource`, an index entry naming a missing file,
   and a footnote label matching no `sources[].id`. The non-core `rel`
   stays a warning, being the one the repository cannot settle. The
   golden snapshots move with them.
-- Done-check: a tree carrying one of each exits 1 rather than 0, and
+- Verification: a tree carrying one of each exits 1 rather than 0, and
   the only warning the document check can still emit is the `rel` one.
-- Cases:
+- Tests:
   - unit: each of the five is reported as an error, naming the file and
     the target — covers 1, 2.
   - unit: a non-core `rel` is still a warning, so the tier is split by
     decidability and not emptied — covers 2.
   - golden: the document-check snapshots carry the new severities.
+- Structural evidence: the recorded verification and tests provide the historical evidence.
+- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
 
 ### Block 3: The edit-time hook stops judging what it cannot see
 
 - [x] Done — ticked by integrate at merge.
-- Depends-on: 2.
-- Change: `hook validate` no longer blocks on the two findings only the
+- Dependencies: 2.
+- Areas: historical areas named by the recorded outcome.
+- Outcome: `hook validate` no longer blocks on the two findings only the
   whole tree settles — a broken body link and an index entry naming a
   missing file — because it is handed one edited file and cannot see
   whether the target arrives in the next edit. It still reports them.
   Every other error blocks as it does today.
-- Done-check: editing a governed file to add a link to a file that does
+- Verification: editing a governed file to add a link to a file that does
   not exist exits 0, and the same file with a malformed `type` exits 2.
-- Cases:
+- Tests:
   - integration: a new broken body link in an edited concept exits 0.
   - integration: a new index entry naming a missing file exits 0.
   - integration: a missing `resource` in the same file still exits 2, so
     the hook was scoped and not disarmed.
+- Structural evidence: the recorded verification and tests provide the historical evidence.
+- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
 
 ### Block 4: The knowledge and the records settle
 
 - [x] Done — ticked by integrate at merge.
-- Depends-on: 2, 3.
-- Change: the canonical knowledge and the pack mirror pass with the five
+- Dependencies: 2, 3.
+- Areas: historical areas named by the recorded outcome.
+- Outcome: the canonical knowledge and the pack mirror pass with the five
   enforced, the changelog carries the change, and the documentation the
   hooks are configured from says what holds a turn open.
-- Done-check: `superdev validate` and `superdev validate pack` both pass,
+- Verification: `superdev validate` and `superdev validate pack` both pass,
   and the changelog names the new failure class.
-- Cases:
+- Tests:
   - integration: the live tree and the pack mirror validate clean.
+
+- Structural evidence: the recorded verification and tests provide the historical evidence.
+
+- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
 
 ## Build state
 

@@ -71,45 +71,56 @@ Historical documentation impact predates the documentation map; migration itself
 ### Block 1: inventory the surface
 
 - [ ] Done — ticked by build at its commit.
-- Depends-on: none.
-- Change: inventory the current cross-crate surface (`grep
+- Dependencies: none.
+- Areas: historical areas named by the recorded outcome.
+- Outcome: inventory the current cross-crate surface (`grep
   superdev_core::` in the binary and tests) to get the exact re-export
   list.
-- Done-check: the re-export list names every `superdev_core::` path the
+- Verification: the re-export list names every `superdev_core::` path the
   binary and the tests use.
-- Cases:
+- Tests:
   - observation: `grep superdev_core::` over the binary and the tests
     finds no path the list omits — no criterion.
+- Structural evidence: the recorded verification and tests provide the historical evidence.
+- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
 
 ### Block 2: flatten module by module
 
 - [ ] Done — ticked by build at its commit.
-- Depends-on: 1.
-- Change: flatten one module at a time, keeping the suite green per step:
+- Dependencies: 1.
+- Areas: historical areas named by the recorded outcome.
+- Outcome: flatten one module at a time, keeping the suite green per step:
   `manifest`, `lock`, `capability`, `registry`, `component`, `action`,
   `pipeline`, `engine`, `orphan`, `report`, `runner`, `error`,
   `templates`, then decide `aokf` and `components`.
-- Done-check: `lib.rs` carries the whole public surface as re-exports,
+- Verification: `lib.rs` carries the whole public surface as re-exports,
   and no caller writes a two-segment `superdev_core::x::Y` path except
   into deliberately-kept namespaces.
-- Cases:
+- Tests:
   - unit: the test suite passes after each module's flatten — no
     criterion.
   - observation: `grep superdev_core::` over the binary and the tests
     finds no two-segment path outside the kept namespaces — no
     criterion.
+- Structural evidence: the recorded verification and tests provide the historical evidence.
+- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
 
 ### Block 3: doc pass
 
 - [ ] Done — ticked by build at its commit.
-- Depends-on: 2.
-- Change: `#![warn(missing_docs)]` stays satisfied; rustdoc links
+- Dependencies: 2.
+- Areas: historical areas named by the recorded outcome.
+- Outcome: `#![warn(missing_docs)]` stays satisfied; rustdoc links
   updated.
-- Done-check: every gate (tests, clippy, rustdoc, check:aokf,
+- Verification: every gate (tests, clippy, rustdoc, check:aokf,
   check:blueprint) passes.
-- Cases:
+- Tests:
   - e2e: rustdoc builds with no missing-docs warning and no broken
     link — no criterion.
+
+- Structural evidence: the recorded verification and tests provide the historical evidence.
+
+- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
 
 ## Build state
 

@@ -11,6 +11,7 @@ use superdev_core::sokf::{
     EditRequest, ExactEdit, IndexDir, MutationPolicy, SokfService, parse_concept,
 };
 use superdev_core::workflow::cache;
+use superdev_core::workflow::filing::{self, FilingKind, FilingRequest};
 use superdev_core::workflow::git;
 use superdev_core::workflow::{
     GateEvidence, Phase, Transition, WORKFLOW_PROTOCOL, WorkflowCache, WorkflowIdentity,
@@ -18,6 +19,33 @@ use superdev_core::workflow::{
 };
 
 // sokf:begin cli
+/// Human-confirmed out-of-band issue or idea filing.
+#[derive(Args)]
+pub struct FileArgs {
+    /// Record kind
+    #[arg(long, value_enum, default_value = "issue")]
+    kind: FilingKindName,
+    /// Short human title
+    #[arg(long)]
+    title: String,
+    /// Human description to preserve in the record
+    #[arg(long)]
+    description: String,
+    /// Local default branch to advance
+    #[arg(long, default_value = "main")]
+    default_branch: String,
+    /// Confirmation supplied only after the human approves the bounded diff
+    #[arg(long)]
+    human_approved: bool,
+}
+
+/// CLI spelling of fileable record kinds.
+#[derive(Clone, Copy, ValueEnum)]
+enum FilingKindName {
+    Issue,
+    Idea,
+}
+
 /// Versioned workflow operations used by the Pi adapter.
 #[derive(Subcommand)]
 pub enum WorkflowCommand {
@@ -172,6 +200,9 @@ pub struct AbandonArgs {
     /// Set only by the interactive Pi command after confirmation
     #[arg(long)]
     human_approved: bool,
+    /// Human-approved disposition recorded on the issue
+    #[arg(long)]
+    reason: String,
 }
 
 /// Compare-and-swap local integration arguments.
@@ -203,31 +234,54 @@ struct Response<T: Serialize> {
     result: T,
 }
 
+pub fn run_file(args: &FileArgs, root: &Path) -> Result<u8> {
+    if !args.human_approved {
+        return Err(Error::Manifest {
+            message: "filing requires explicit human confirmation".into(),
+        });
+    }
+    let root = git::repository_root(root)?;
+    let result = filing::file(
+        &root,
+        &FilingRequest {
+            kind: match args.kind {
+                FilingKindName::Issue => FilingKind::Issue,
+                FilingKindName::Idea => FilingKind::Idea,
+            },
+            title: args.title.clone(),
+            description: args.description.clone(),
+            default_branch: args.default_branch.clone(),
+        },
+    )?;
+    emit("file", &result)
+}
+
 pub fn run(command: &WorkflowCommand, root: &Path) -> Result<u8> {
     let root = git::repository_root(root)?;
     match command {
-        WorkflowCommand::Start(args)
-        | WorkflowCommand::Bind(args)
-        | WorkflowCommand::Resume(args) => {
-            git::validate_work_branch(&args.work_branch)?;
-            let revision = plan_revision(&root, &args.plan)?.1;
-            let state = WorkflowCache {
-                version: 1,
-                session_id: args.session.clone(),
-                identity: WorkflowIdentity {
-                    issue: args.issue.clone(),
-                    plan: args.plan.clone(),
-                    work_branch: args.work_branch.clone(),
-                    default_branch: args.default_branch.clone(),
-                },
-                last_plan_revision: revision,
-                child_role: None,
-                child_pid: None,
-                child_started: None,
-                cancelled: false,
-            };
-            cache::bind(&root, &state)?;
-            emit("bind", &state)
+        WorkflowCommand::Start(args) => start(&root, args),
+        WorkflowCommand::Bind(args) => {
+            // Bind is retained for protocol compatibility, but it never creates
+            // or infers canonical records. New recovery uses `resume`.
+            validate_identity(&root, args)?;
+            bind(&root, args)
+        }
+        WorkflowCommand::Resume(args) => {
+            validate_identity(&root, args)?;
+            let record = plan_record(&root, &args.plan)?;
+            if record.lifecycle != "open"
+                || !matches!(record.phase.as_str(), "scope" | "build" | "accept")
+            {
+                return Err(Error::Manifest {
+                    message: "resume requires one open canonical workflow".into(),
+                });
+            }
+            if git::current_branch(&root)? != args.work_branch {
+                return Err(Error::Manifest {
+                    message: format!("resume requires checked-out branch `{}`", args.work_branch),
+                });
+            }
+            bind(&root, args)
         }
         WorkflowCommand::Status { json: _ } => emit("status", &cache::load(&root)?),
         WorkflowCommand::Cancel(args) => {
@@ -238,13 +292,29 @@ pub fn run(command: &WorkflowCommand, root: &Path) -> Result<u8> {
             )
         }
         WorkflowCommand::Block(args) | WorkflowCommand::Evidence(args) => {
+            let owner = cache::load(&root)?.ok_or_else(|| Error::Manifest {
+                message: "workflow is unowned".into(),
+            })?;
+            validate_identity_values(&root, &owner.identity)?;
+            let record = plan_record(&root, &owner.identity.plan)?;
+            if record.phase != "build" {
+                return Err(Error::Manifest {
+                    message: "block evidence may be recorded only during BUILD".into(),
+                });
+            }
+            let observed = plan_revision(&root, &owner.identity.plan)?.1;
+            if observed != args.revision {
+                return Err(Error::Manifest {
+                    message: "supplied revision does not match the canonical plan".into(),
+                });
+            }
             let state =
                 cache::compare_and_swap(&root, &args.session, &args.expected_revision, |state| {
-                    state.last_plan_revision.clone_from(&args.revision)
+                    state.last_plan_revision.clone_from(&observed)
                 })?;
             emit("progress", &state)
         }
-        WorkflowCommand::Transition(args) => transition(&root, args, false),
+        WorkflowCommand::Transition(args) => transition(&root, args, false, None),
         WorkflowCommand::Abandon(args) => {
             if !args.human_approved {
                 return Err(Error::Manifest {
@@ -268,6 +338,7 @@ pub fn run(command: &WorkflowCommand, root: &Path) -> Result<u8> {
                     human_acceptance_approved: false,
                 },
                 true,
+                Some(&args.reason),
             )
         }
         WorkflowCommand::Integrate(args) => {
@@ -279,11 +350,57 @@ pub fn run(command: &WorkflowCommand, root: &Path) -> Result<u8> {
                     message: "workflow is owned by another Pi session".into(),
                 });
             }
+            if args.default_branch != state.identity.default_branch
+                || args.work_branch != state.identity.work_branch
+            {
+                return Err(Error::Manifest {
+                    message: "integration refs do not match the bound workflow identity".into(),
+                });
+            }
+            validate_identity_values(&root, &state.identity)?;
+            let record = plan_record(&root, &state.identity.plan)?;
+            if record.phase != "done" || record.lifecycle != "done" {
+                return Err(Error::Manifest {
+                    message: "integration requires a prepared done plan".into(),
+                });
+            }
+            let candidate = state
+                .candidate_revision
+                .as_deref()
+                .ok_or_else(|| Error::Manifest {
+                    message: "integration requires the reviewed candidate revision".into(),
+                })?;
+            let verified_default =
+                state
+                    .verified_default_revision
+                    .as_deref()
+                    .ok_or_else(|| Error::Manifest {
+                        message: "integration requires the verified default-branch revision".into(),
+                    })?;
+            if args.expected_default != verified_default {
+                return Err(Error::Manifest {
+                    message: "expected default does not match BUILD verification".into(),
+                });
+            }
+            if !git::is_ancestor(&root, candidate, &args.expected_work)? {
+                return Err(Error::Manifest {
+                    message: "closure commit does not descend from reviewed candidate H".into(),
+                });
+            }
+            let changed = git::changed_paths(&root, candidate, &args.expected_work)?;
+            if changed
+                .iter()
+                .any(|path| !administrative_path(path, &state.identity))
+            {
+                return Err(Error::Manifest {
+                    message: "non-administrative changes follow reviewed candidate H".into(),
+                });
+            }
             git::integrate_no_ff(
                 &root,
-                &args.default_branch,
-                &args.expected_default,
-                &args.work_branch,
+                &state.identity.default_branch,
+                verified_default,
+                &state.identity.work_branch,
                 &args.expected_work,
             )?;
             cache::release(&root, &args.session)?;
@@ -295,7 +412,305 @@ pub fn run(command: &WorkflowCommand, root: &Path) -> Result<u8> {
     }
 }
 
-fn transition(root: &Path, args: &TransitionArgs, abandon: bool) -> Result<u8> {
+fn start(root: &Path, args: &BindArgs) -> Result<u8> {
+    validate_reserved_identity(args)?;
+    git::require_clean(root)?;
+    if git::current_branch(root)? != args.default_branch {
+        return Err(Error::Manifest {
+            message: format!(
+                "SCOPE must start on default branch `{}`",
+                args.default_branch
+            ),
+        });
+    }
+    if git::reference_exists(root, &args.work_branch)? {
+        return Err(Error::Manifest {
+            message: format!(
+                "workflow branch `{}` already exists; use resume",
+                args.work_branch
+            ),
+        });
+    }
+    if plan_revision(root, &args.plan).is_ok() {
+        return Err(Error::Manifest {
+            message: format!("workflow plan `{}` already exists; use resume", args.plan),
+        });
+    }
+    let issue = open_issue_record(root, &args.issue)?;
+
+    // Reserve ownership before mutating Git or records. This makes concurrent
+    // starts serialize through the same repository lock rather than racing on
+    // a prior load followed by an independent write.
+    let reservation = workflow_cache(args, String::new(), None, None);
+    cache::bind(root, &reservation)?;
+    let started = (|| {
+        git::create_work_branch(root, &args.work_branch)?;
+        create_scope_plan(root, args, &issue)?;
+        let revision = plan_revision(root, &args.plan)?.1;
+        let state = cache::compare_and_swap(root, &args.session, "", |state| {
+            state.last_plan_revision.clone_from(&revision)
+        })?;
+        emit("start", &state)
+    })();
+    if started.is_err() {
+        let _ = cache::release(root, &args.session);
+    }
+    started
+}
+
+#[derive(Debug)]
+struct IssueRecord {
+    title: String,
+    description: String,
+}
+
+fn open_issue_record(root: &Path, id: &str) -> Result<IssueRecord> {
+    let path = root.join("knowledge/issues/open").join(format!("{id}.md"));
+    let text = fs::read_to_string(&path).map_err(|source| Error::Io {
+        path: path.clone(),
+        source,
+    })?;
+    let concept = parse_concept(&path.to_string_lossy(), &text).map_err(|error| Error::Sokf {
+        message: error.message,
+    })?;
+    if concept.id.as_deref() != Some(id) || concept.lifecycle.as_deref() != Some("open") {
+        return Err(Error::Manifest {
+            message: format!("`{id}` is not the matching open canonical issue"),
+        });
+    }
+    Ok(IssueRecord {
+        title: concept.raw["title"].as_str().unwrap_or(id).to_string(),
+        description: concept.raw["description"]
+            .as_str()
+            .unwrap_or("Implement the scoped issue.")
+            .to_string(),
+    })
+}
+
+fn create_scope_plan(root: &Path, args: &BindArgs, issue: &IssueRecord) -> Result<()> {
+    let quote = |value: &str| serde_json::to_string(value).expect("string serializes");
+    let content = format!(
+        "---\ntype: Plan\nid: {}\ntitle: {}\ndescription: {}\nlifecycle: open\nphase: scope\nbranch: {}\nlinks:\n  - rel: implements\n    to: {}\n---\n\n# Plan: {}\n\n## Goal and boundaries\n\nImplement [{}][sokf:{}]. {}\n\n## Requirements\n\nSCOPE must replace this initial recovery-safe draft with settled requirements before approval.\n\n## Contract changes\n\n- none.\n\n## ADR decisions\n\n- none.\n\n## Source and interface changes\n\nSCOPE must identify the exact source declarations and materialized interfaces.\n\n## Knowledge changes\n\nSCOPE must identify normative and current-state knowledge changes.\n\n## Documentation changes\n\nSCOPE must map applicable surfaces from the canonical documentation map.\n\n## Work blocks\n\n### Block 1: Deliver the approved scope\n\n- [ ] Done.\n- Dependencies: none.\n- Areas: to be settled by SCOPE.\n- Outcome: the approved issue is implemented and verified.\n- Verification: executable commands must be settled by SCOPE.\n- Tests: executable contract evidence must be settled by SCOPE.\n- Structural evidence: executable structural evidence must be settled by SCOPE.\n- Documentation: applicable surfaces and commands must be settled by SCOPE.\n\n## Build state\n\nCurrent block: 1. Attempts: 0. Final corrections: 0. Blocker: scope approval pending.\n\n## Implementation decisions\n\nnone.\n\n## Follow-up issues\n\nnone.\n\n## Completion evidence\n\nScope requirements review and human approval are pending.\n",
+        args.plan,
+        quote(&issue.title),
+        quote(&issue.description),
+        args.work_branch,
+        args.issue,
+        issue.title,
+        issue.title,
+        args.issue,
+        issue.description,
+    );
+    let path = root
+        .join("knowledge/plans/open")
+        .join(format!("{}.md", args.plan));
+    fs::create_dir_all(path.parent().expect("plan path has a parent")).map_err(|source| {
+        Error::Io {
+            path: path.parent().expect("plan path has a parent").to_path_buf(),
+            source,
+        }
+    })?;
+    fs::write(&path, content).map_err(|source| Error::Io {
+        path: path.clone(),
+        source,
+    })?;
+    superdev_core::validate::fix_repo(root, &root.join("knowledge"), &[])?;
+    let grammar = superdev_core::validate::schema::load_grammar(root)?;
+    let report =
+        superdev_core::validate::validate_repo(root, &root.join("knowledge"), &[path], &grammar)?;
+    if !report.report.passed() {
+        return Err(Error::Manifest {
+            message: format!(
+                "initial scope plan did not validate:\n{}",
+                report
+                    .report
+                    .render_human(superdev_core::validate::sokf::Warnings::Listed)
+            ),
+        });
+    }
+    Ok(())
+}
+
+fn bind(root: &Path, args: &BindArgs) -> Result<u8> {
+    let revision = plan_revision(root, &args.plan)?.1;
+    bind_with_revision(root, args, revision)
+}
+
+fn bind_with_revision(root: &Path, args: &BindArgs, revision: String) -> Result<u8> {
+    let text =
+        fs::read_to_string(plan_revision(root, &args.plan)?.0).map_err(|source| Error::Io {
+            path: plan_revision(root, &args.plan)
+                .expect("plan was just resolved")
+                .0,
+            source,
+        })?;
+    let candidate = evidence_revision(&text, "Candidate revision");
+    let verified_default = evidence_revision(&text, "Verified default revision");
+    let state = workflow_cache(args, revision, candidate, verified_default);
+    cache::bind(root, &state)?;
+    emit("bind", &state)
+}
+
+fn workflow_cache(
+    args: &BindArgs,
+    revision: String,
+    candidate_revision: Option<String>,
+    verified_default_revision: Option<String>,
+) -> WorkflowCache {
+    WorkflowCache {
+        version: 1,
+        session_id: args.session.clone(),
+        identity: WorkflowIdentity {
+            issue: args.issue.clone(),
+            plan: args.plan.clone(),
+            work_branch: args.work_branch.clone(),
+            default_branch: args.default_branch.clone(),
+        },
+        last_plan_revision: revision,
+        candidate_revision,
+        verified_default_revision,
+        child_role: None,
+        child_pid: None,
+        child_started: None,
+        cancelled: false,
+    }
+}
+
+#[derive(Debug)]
+struct PlanRecord {
+    phase: String,
+    lifecycle: String,
+    branch: String,
+    issue: String,
+}
+
+fn plan_record(root: &Path, id: &str) -> Result<PlanRecord> {
+    let (path, _) = plan_revision(root, id)?;
+    let text = fs::read_to_string(&path).map_err(|source| Error::Io {
+        path: path.clone(),
+        source,
+    })?;
+    let concept = parse_concept(&path.to_string_lossy(), &text).map_err(|error| Error::Sokf {
+        message: error.message,
+    })?;
+    let issues: Vec<String> = concept
+        .links
+        .iter()
+        .filter(|link| link.rel.as_deref() == Some("implements"))
+        .filter_map(|link| link.to.clone())
+        .collect();
+    if issues.len() != 1 {
+        return Err(Error::Manifest {
+            message: "workflow plan must implement exactly one issue".into(),
+        });
+    }
+    Ok(PlanRecord {
+        phase: concept.raw["phase"].as_str().unwrap_or_default().into(),
+        lifecycle: concept.lifecycle.unwrap_or_default(),
+        branch: concept.raw["branch"].as_str().unwrap_or_default().into(),
+        issue: issues[0].clone(),
+    })
+}
+
+fn validate_reserved_identity(args: &BindArgs) -> Result<()> {
+    git::validate_work_branch(&args.work_branch)?;
+    git::validate_ref(&args.default_branch)?;
+    let issue_tail = args
+        .issue
+        .strip_prefix("issue-")
+        .ok_or_else(|| Error::Manifest {
+            message: "workflow issue must match issue-NNN-slug".into(),
+        })?;
+    let plan_tail = args
+        .plan
+        .strip_prefix("plan-")
+        .ok_or_else(|| Error::Manifest {
+            message: "workflow plan must match plan-NNN-slug".into(),
+        })?;
+    if issue_tail != plan_tail || args.work_branch != format!("work/{issue_tail}") {
+        return Err(Error::Manifest {
+            message: "issue, plan, and work branch must carry one matching NNN-slug".into(),
+        });
+    }
+    Ok(())
+}
+
+fn validate_identity(root: &Path, args: &BindArgs) -> Result<()> {
+    validate_identity_values(
+        root,
+        &WorkflowIdentity {
+            issue: args.issue.clone(),
+            plan: args.plan.clone(),
+            work_branch: args.work_branch.clone(),
+            default_branch: args.default_branch.clone(),
+        },
+    )
+}
+
+fn validate_identity_values(root: &Path, identity: &WorkflowIdentity) -> Result<()> {
+    git::validate_work_branch(&identity.work_branch)?;
+    git::validate_ref(&identity.default_branch)?;
+    let record = plan_record(root, &identity.plan)?;
+    if record.issue != identity.issue || record.branch != identity.work_branch {
+        return Err(Error::Manifest {
+            message: "bound identity does not match the canonical plan".into(),
+        });
+    }
+    let issue_exists = ["open", "done", "wontfix"].iter().any(|lifecycle| {
+        root.join("knowledge/issues")
+            .join(lifecycle)
+            .join(format!("{}.md", identity.issue))
+            .is_file()
+    });
+    if !issue_exists {
+        return Err(Error::Manifest {
+            message: format!("primary issue `{}` was not found", identity.issue),
+        });
+    }
+    Ok(())
+}
+
+fn administrative_path(path: &str, identity: &WorkflowIdentity) -> bool {
+    path == "knowledge/issues/index.md"
+        || path == "knowledge/plans/index.md"
+        || path.ends_with(&format!("/{}.md", identity.issue))
+        || path.ends_with(&format!("/{}.md", identity.plan))
+}
+
+fn knowledge_contains(root: &Path, needle: &str) -> Result<bool> {
+    let mut directories = vec![root.join("knowledge")];
+    while let Some(directory) = directories.pop() {
+        for entry in fs::read_dir(&directory).map_err(|source| Error::Io {
+            path: directory.clone(),
+            source,
+        })? {
+            let entry = entry.map_err(|source| Error::Io {
+                path: directory.clone(),
+                source,
+            })?;
+            let path = entry.path();
+            if path.is_dir() {
+                directories.push(path);
+            } else if path.extension().is_some_and(|extension| extension == "md") {
+                let text = fs::read_to_string(&path).map_err(|source| Error::Io {
+                    path: path.clone(),
+                    source,
+                })?;
+                if text.contains(needle) {
+                    return Ok(true);
+                }
+            }
+        }
+    }
+    Ok(false)
+}
+
+fn transition(
+    root: &Path,
+    args: &TransitionArgs,
+    abandon: bool,
+    abandonment_reason: Option<&str>,
+) -> Result<u8> {
     let state = cache::load(root)?.ok_or_else(|| Error::Manifest {
         message: "workflow is unowned".into(),
     })?;
@@ -304,7 +719,27 @@ fn transition(root: &Path, args: &TransitionArgs, abandon: bool) -> Result<u8> {
             message: "workflow ownership or plan revision changed".into(),
         });
     }
+    validate_identity_values(root, &state.identity)?;
+    git::require_clean(root)?;
+    if git::current_branch(root)? != state.identity.work_branch {
+        return Err(Error::Manifest {
+            message: format!(
+                "workflow mutations require checked-out branch `{}`",
+                state.identity.work_branch
+            ),
+        });
+    }
+    let record = plan_record(root, &state.identity.plan)?;
     let phase = phase(args.phase);
+    if record.phase != phase_text(phase) {
+        return Err(Error::Manifest {
+            message: format!(
+                "canonical plan phase is `{}`, not `{}`",
+                record.phase,
+                phase_text(phase)
+            ),
+        });
+    }
     let transition = if abandon {
         Transition::Abandon
     } else {
@@ -317,13 +752,29 @@ fn transition(root: &Path, args: &TransitionArgs, abandon: bool) -> Result<u8> {
             TransitionName::RecoverStaleDefault => Transition::RecoverStaleDefault,
         }
     };
+    let plan_text =
+        fs::read_to_string(plan_revision(root, &state.identity.plan)?.0).map_err(|source| {
+            Error::Io {
+                path: plan_revision(root, &state.identity.plan)
+                    .expect("plan was just read")
+                    .0,
+                source,
+            }
+        })?;
+    let candidate_revision = matches!(transition, Transition::FinishBuild)
+        .then(|| git::revision(root, &state.identity.work_branch))
+        .transpose()?;
+    let verified_default_revision = matches!(transition, Transition::FinishBuild)
+        .then(|| git::revision(root, &state.identity.default_branch))
+        .transpose()?;
     let gates = GateEvidence {
         human_scope_approved: args.human_scope_approved,
         requirements_review_clean: args.requirements_review_clean,
-        all_blocks_complete: args.all_blocks_complete,
+        all_blocks_complete: args.all_blocks_complete && !plan_text.contains("- [ ] Done"),
         final_verification_current: args.final_verification_current,
         final_review_clean: args.final_review_clean,
-        no_pending_promises: args.no_pending_promises,
+        no_pending_promises: args.no_pending_promises
+            && !knowledge_contains(root, &format!("PENDING ({})", state.identity.plan))?,
         documentation_current: args.documentation_current,
         human_acceptance_approved: args.human_acceptance_approved,
         human_abandonment_approved: abandon,
@@ -350,27 +801,307 @@ fn transition(root: &Path, args: &TransitionArgs, abandon: bool) -> Result<u8> {
         old_text: format!("phase: {}", phase_text(phase)),
         new_text: format!("phase: {}", phase_text(next)),
     }];
+    if matches!(transition, Transition::ApproveScope) {
+        edits.push(completion_evidence_edit(
+            &plan_text,
+            &["Scope requirements review: clean; human approval: approved.".into()],
+        )?);
+    }
+    if matches!(transition, Transition::FinishBuild) {
+        let candidate = candidate_revision
+            .as_deref()
+            .expect("finish-build resolves a candidate");
+        let verified_default = verified_default_revision
+            .as_deref()
+            .expect("finish-build resolves the default tip");
+        edits.push(completion_evidence_edit(
+            &plan_text,
+            &[
+                format!("Candidate revision: {candidate}."),
+                format!("Verified default revision: {verified_default}."),
+                format!("Final verification: passed for {candidate}."),
+                format!("Final review: clean for {candidate}."),
+                format!("Documentation verification: passed for {candidate}."),
+            ],
+        )?);
+    }
     if matches!(next, Phase::Done | Phase::Abandoned) {
         edits.push(ExactEdit {
             old_text: "lifecycle: open".into(),
             new_text: format!("lifecycle: {}", phase_text(next)),
         });
     }
-    service.edit(
-        EditRequest {
-            path: path.to_string_lossy().into_owned(),
-            edits,
-        },
-        MutationPolicy::AgentSafe,
-    )?;
+    // Validate immutable-candidate ancestry before writing closure records.
+    // A rejected acceptance attempt must not leave a partially closed plan or
+    // issue behind.
+    if matches!(transition, Transition::Accept) {
+        let candidate = state
+            .candidate_revision
+            .as_deref()
+            .ok_or_else(|| Error::Manifest {
+                message: "acceptance requires an immutable reviewed candidate H".into(),
+            })?;
+        let head = git::revision(root, &state.identity.work_branch)?;
+        if !git::is_ancestor(root, candidate, &head)?
+            || git::changed_paths(root, candidate, &head)?
+                .iter()
+                .any(|path| !administrative_path(path, &state.identity))
+        {
+            return Err(Error::Manifest {
+                message: "candidate H changed outside administrative workflow records".into(),
+            });
+        }
+    }
+    if matches!(next, Phase::Done | Phase::Abandoned) {
+        close_records(root, &state.identity, next, abandonment_reason)?;
+    } else {
+        service.edit(
+            EditRequest {
+                path: path.to_string_lossy().into_owned(),
+                edits,
+            },
+            MutationPolicy::AgentSafe,
+        )?;
+    }
     let revision = plan_revision(root, &state.identity.plan)?.1;
     let state = cache::compare_and_swap(root, &args.session, &args.expected_revision, |state| {
-        state.last_plan_revision.clone_from(&revision)
+        state.last_plan_revision.clone_from(&revision);
+        if let Some(candidate) = candidate_revision {
+            state.candidate_revision = Some(candidate);
+            state.verified_default_revision = verified_default_revision;
+        }
     })?;
     emit(
         "transition",
         &serde_json::json!({"phase": phase_text(next), "state": state}),
     )
+}
+
+fn close_records(
+    root: &Path,
+    identity: &WorkflowIdentity,
+    next: Phase,
+    abandonment_reason: Option<&str>,
+) -> Result<()> {
+    // Build and validate the complete closure away from the live knowledge
+    // tree. A failed mutation, repair, or validation therefore leaves the
+    // canonical records byte-for-byte unchanged.
+    let staging_parent = root.join(".superdev/cache");
+    fs::create_dir_all(&staging_parent).map_err(|source| Error::Io {
+        path: staging_parent.clone(),
+        source,
+    })?;
+    let staging = tempfile::Builder::new()
+        .prefix("workflow-closure-")
+        .tempdir_in(&staging_parent)
+        .map_err(|source| Error::Io {
+            path: staging_parent,
+            source,
+        })?;
+    let staged_knowledge = staging.path().join("knowledge");
+    copy_tree(&root.join("knowledge"), &staged_knowledge)?;
+
+    let plan_path = ["open", "done", "abandoned"]
+        .into_iter()
+        .map(|lifecycle| {
+            staged_knowledge
+                .join("plans")
+                .join(lifecycle)
+                .join(format!("{}.md", identity.plan))
+        })
+        .find(|path| path.is_file())
+        .ok_or_else(|| Error::Manifest {
+            message: format!("workflow plan `{}` was not found", identity.plan),
+        })?;
+    let plan = fs::read_to_string(&plan_path).map_err(|source| Error::Io {
+        path: plan_path.clone(),
+        source,
+    })?;
+    let plan = replace_once(
+        &plan,
+        "lifecycle: open",
+        &format!("lifecycle: {}", phase_text(next)),
+    )?;
+    let current_phase = ["scope", "build", "accept"]
+        .into_iter()
+        .find(|phase| plan.matches(&format!("phase: {phase}")).count() == 1)
+        .ok_or_else(|| Error::Manifest {
+            message: "workflow closure could not identify the open plan phase".into(),
+        })?;
+    let plan = replace_once(
+        &plan,
+        &format!("phase: {current_phase}"),
+        &format!("phase: {}", phase_text(next)),
+    )?;
+    fs::write(&plan_path, plan).map_err(|source| Error::Io {
+        path: plan_path,
+        source,
+    })?;
+
+    let issue_path = staged_knowledge
+        .join("issues/open")
+        .join(format!("{}.md", identity.issue));
+    let issue = fs::read_to_string(&issue_path).map_err(|source| Error::Io {
+        path: issue_path.clone(),
+        source,
+    })?;
+    let issue_lifecycle = if next == Phase::Done {
+        "done"
+    } else {
+        "wontfix"
+    };
+    let issue = replace_once(
+        &issue,
+        "lifecycle: open",
+        &format!("lifecycle: {issue_lifecycle}"),
+    )?;
+    let resolution = if next == Phase::Done {
+        "The configured acceptance gate approved the reviewed candidate for local integration."
+            .to_string()
+    } else {
+        format!(
+            "The human abandoned this workflow without integrating partial product work. {}",
+            abandonment_reason.unwrap_or("No additional reason was supplied.")
+        )
+    };
+    let issue = if issue.contains("\n## Comments\n") {
+        replace_once(
+            &issue,
+            "\n## Comments\n",
+            &format!("\n## Resolution\n\n{resolution}\n\n## Comments\n"),
+        )?
+    } else if issue.contains("\n<!-- sokf:links -->") {
+        replace_once(
+            &issue,
+            "\n<!-- sokf:links -->",
+            &format!("\n## Resolution\n\n{resolution}\n\n<!-- sokf:links -->"),
+        )?
+    } else {
+        format!("{}\n\n## Resolution\n\n{resolution}\n", issue.trim_end())
+    };
+    fs::write(&issue_path, issue).map_err(|source| Error::Io {
+        path: issue_path,
+        source,
+    })?;
+
+    superdev_core::validate::fix_repo(root, &staged_knowledge, &[])?;
+    let grammar = superdev_core::validate::schema::load_grammar(root)?;
+    let report = superdev_core::validate::validate_repo(root, &staged_knowledge, &[], &grammar)?;
+    if !report.report.passed() {
+        return Err(Error::Manifest {
+            message: format!(
+                "workflow closure did not validate:\n{}",
+                report
+                    .report
+                    .render_human(superdev_core::validate::sokf::Warnings::Listed)
+            ),
+        });
+    }
+
+    let live = root.join("knowledge");
+    let backup = root.join(".superdev/cache/workflow-closure-backup");
+    if backup.exists() {
+        fs::remove_dir_all(&backup).map_err(|source| Error::Io {
+            path: backup.clone(),
+            source,
+        })?;
+    }
+    fs::rename(&live, &backup).map_err(|source| Error::Io {
+        path: live.clone(),
+        source,
+    })?;
+    if let Err(source) = fs::rename(&staged_knowledge, &live) {
+        let _ = fs::rename(&backup, &live);
+        return Err(Error::Io { path: live, source });
+    }
+    fs::remove_dir_all(&backup).map_err(|source| Error::Io {
+        path: backup,
+        source,
+    })?;
+    Ok(())
+}
+
+fn copy_tree(source: &Path, destination: &Path) -> Result<()> {
+    fs::create_dir_all(destination).map_err(|source_error| Error::Io {
+        path: destination.to_path_buf(),
+        source: source_error,
+    })?;
+    for entry in fs::read_dir(source).map_err(|source_error| Error::Io {
+        path: source.to_path_buf(),
+        source: source_error,
+    })? {
+        let entry = entry.map_err(|source_error| Error::Io {
+            path: source.to_path_buf(),
+            source: source_error,
+        })?;
+        let from = entry.path();
+        let to = destination.join(entry.file_name());
+        if entry
+            .file_type()
+            .map_err(|source_error| Error::Io {
+                path: from.clone(),
+                source: source_error,
+            })?
+            .is_dir()
+        {
+            copy_tree(&from, &to)?;
+        } else {
+            fs::copy(&from, &to).map_err(|source_error| Error::Io {
+                path: to,
+                source: source_error,
+            })?;
+        }
+    }
+    Ok(())
+}
+
+fn completion_evidence_edit(plan: &str, lines: &[String]) -> Result<ExactEdit> {
+    let marker = "## Completion evidence\n\n";
+    let start = plan.find(marker).ok_or_else(|| Error::Manifest {
+        message: "workflow plan has no Completion evidence section".into(),
+    })? + marker.len();
+    let tail = &plan[start..];
+    let end = tail
+        .find("\n## ")
+        .or_else(|| tail.find("\n<!-- sokf:links -->"))
+        .unwrap_or(tail.len());
+    let old = &tail[..end];
+    let mut new = old.trim_end().to_string();
+    for line in lines {
+        if !new.lines().any(|existing| existing == line) {
+            if !new.is_empty() {
+                new.push_str("\n\n");
+            }
+            new.push_str(line);
+        }
+    }
+    new.push('\n');
+    Ok(ExactEdit {
+        old_text: format!("{marker}{old}"),
+        new_text: format!("{marker}{new}"),
+    })
+}
+
+fn evidence_revision(plan: &str, label: &str) -> Option<String> {
+    let prefix = format!("{label}: ");
+    plan.lines()
+        .find_map(|line| line.strip_prefix(&prefix))
+        .map(|revision| revision.trim_end_matches('.').to_string())
+        .filter(|revision| {
+            revision.len() >= 7
+                && revision
+                    .chars()
+                    .all(|character| character.is_ascii_hexdigit())
+        })
+}
+
+fn replace_once(text: &str, old: &str, new: &str) -> Result<String> {
+    if text.matches(old).count() != 1 {
+        return Err(Error::Manifest {
+            message: format!("workflow expected exactly one `{old}` field"),
+        });
+    }
+    Ok(text.replacen(old, new, 1))
 }
 
 fn plan_revision(root: &Path, id: &str) -> Result<(PathBuf, String)> {
@@ -430,4 +1161,39 @@ fn emit<T: Serialize>(operation: &'static str, result: &T) -> Result<u8> {
         .expect("workflow response serializes")
     );
     Ok(0)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn completion_evidence_is_service_owned_and_recoverable() {
+        let plan = "## Completion evidence\n\nScope evidence.\n\n<!-- sokf:links -->\n";
+        let edit = completion_evidence_edit(
+            plan,
+            &[
+                "Candidate revision: abcdef1.".into(),
+                "Verified default revision: 1234567.".into(),
+            ],
+        )
+        .unwrap();
+        let changed = plan.replace(&edit.old_text, &edit.new_text);
+        assert_eq!(
+            evidence_revision(&changed, "Candidate revision").as_deref(),
+            Some("abcdef1")
+        );
+        assert_eq!(
+            evidence_revision(&changed, "Verified default revision").as_deref(),
+            Some("1234567")
+        );
+    }
+
+    #[test]
+    fn malformed_or_absent_evidence_is_not_recovered() {
+        assert!(
+            evidence_revision("Candidate revision: not-a-sha.", "Candidate revision").is_none()
+        );
+        assert!(evidence_revision("none.", "Candidate revision").is_none());
+    }
 }

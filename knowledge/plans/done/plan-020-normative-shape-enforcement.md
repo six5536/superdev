@@ -71,15 +71,16 @@ Historical documentation impact predates the documentation map; migration itself
 ### Block 1: The body-pattern vocabulary in the engine
 
 - [x] Done — ticked by integrate at merge.
-- Depends-on: none.
-- Change: `item-pattern` and `content-pattern` land in
+- Dependencies: none.
+- Areas: historical areas named by the recorded outcome.
+- Outcome: `item-pattern` and `content-pattern` land in
   `validate::schema` per ADR-030 — `SectionRule` fields, the item and
   body checks, the mis-declaration findings — with unit tests. No
   schema declares either yet.
-- Done-check: a probe schema declaring each pattern produces the
+- Verification: a probe schema declaring each pattern produces the
   ADR-030 findings on a failing document and a failing schema; the live
   tree's findings are unchanged.
-- Cases:
+- Tests:
   - unit: an item failing a declared item-pattern is an error naming
     the file, the section and the item's first line — covers 1.
   - unit: a wrapped item matches after its continuation lines join, and
@@ -95,56 +96,69 @@ Historical documentation impact predates the documentation map; migration itself
     document — covers 5.
   - unit: a schema's example is checked against the declaring schema's
     own patterns (ADR-024 path) — covers 1.
+- Structural evidence: the recorded verification and tests provide the historical evidence.
+- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
 
 ### Block 2: EARS criteria enforced at frame time
 
 - [x] Done — ticked by integrate at merge.
-- Depends-on: 1.
-- Change: `schema-feature-request` declares the ADR-031 item-pattern on
+- Dependencies: 1.
+- Areas: historical areas named by the recorded outcome.
+- Outcome: `schema-feature-request` declares the ADR-031 item-pattern on
   Acceptance criteria, in `knowledge/schemas/` and the pack mirror,
   with the section description updated to name the declaration.
-- Done-check: a probe feature-request with an untagged criterion fails
+- Verification: a probe feature-request with an untagged criterion fails
   validate naming the criterion; the shipped knowledge validates clean.
-- Cases:
+- Tests:
   - integration: a criterion without an EARS tag or `TBD — ` fails
     validate naming the file, the section and the item — covers 4.
   - integration: I030's TBD criteria and every on-file feature-request
     pass — covers 4, 6.
+- Structural evidence: the recorded verification and tests provide the historical evidence.
+- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
 
 ### Block 3: The contract kinds declare their promise shapes
 
 - [x] Done — ticked by integrate at merge.
-- Depends-on: 1.
-- Change: the fifteen contract-kind schemas declare the ADR-032
+- Dependencies: 1.
+- Areas: historical areas named by the recorded outcome.
+- Outcome: the fifteen contract-kind schemas declare the ADR-032
   item-patterns and content-patterns, in `knowledge/schemas/` and the
   pack mirror; each declaring section's description names the shape;
   each schema's `example:` block satisfies its own declarations.
-- Done-check: a live-repo test enumerates the ADR-032 assignment across
+- Verification: a live-repo test enumerates the ADR-032 assignment across
   the fifteen schemas and both trees; every schema example passes its
   own declared shapes.
-- Cases:
+- Tests:
   - integration: every ADR-032 section carries its declared pattern in
     both trees, and no definitional section carries one — covers 7.
   - integration: every contract-kind schema's example passes the
     schema's own declarations — covers 6.
+- Structural evidence: the recorded verification and tests provide the historical evidence.
+- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
 
 ### Block 4: The on-file contracts pass the declared shapes
 
 - [x] Done — ticked by integrate at merge.
-- Depends-on: 3.
-- Change: the nine active contracts are swept until the ADR-032
+- Dependencies: 3.
+- Areas: historical areas named by the recorded outcome.
+- Outcome: the nine active contracts are swept until the ADR-032
   declarations pass — promise items gain their keywords, promise
   sections state their promises — with no change to what any contract
   binds. Landed in block 3's commit: a declaration leaves the tree
   failing until its reconciliation follows, so the two cannot merge
   apart.
-- Done-check: `superdev validate` passes on the knowledge and the pack
+- Verification: `superdev validate` passes on the knowledge and the pack
   mirror with every declaration live; the sweep commits touch contract
   documents only.
-- Cases:
+- Tests:
   - e2e: a full validate run over the shipped knowledge and the pack
     mirror reports zero errors with every declared shape enforced —
     covers 6.
+
+- Structural evidence: the recorded verification and tests provide the historical evidence.
+
+- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
 
 ## Build state
 

@@ -49,6 +49,21 @@ pub fn revision(root: &Path, reference: &str) -> Result<String> {
     Ok(String::from_utf8_lossy(&output.stdout).trim().to_string())
 }
 
+/// Return whether a validated ref resolves.
+pub fn reference_exists(root: &Path, reference: &str) -> Result<bool> {
+    validate_ref(reference)?;
+    let status = Command::new("git")
+        .args(["rev-parse", "--verify", "--quiet", reference])
+        .current_dir(root)
+        .status()
+        .map_err(|source| Error::Command {
+            command: "git rev-parse --verify --quiet <ref>".into(),
+            status: None,
+            stderr: source.to_string(),
+        })?;
+    Ok(status.success())
+}
+
 /// Return the checked-out branch, refusing detached HEAD.
 pub fn current_branch(root: &Path) -> Result<String> {
     let output = git(root, &["symbolic-ref", "--short", "HEAD"])?;
@@ -72,6 +87,41 @@ pub fn create_work_branch(root: &Path, branch: &str) -> Result<()> {
     validate_work_branch(branch)?;
     require_clean(root)?;
     git(root, &["switch", "-c", branch]).map(|_| ())
+}
+
+/// Return whether `ancestor` is reachable from `descendant`.
+pub fn is_ancestor(root: &Path, ancestor: &str, descendant: &str) -> Result<bool> {
+    validate_ref(ancestor)?;
+    validate_ref(descendant)?;
+    let status = Command::new("git")
+        .args(["merge-base", "--is-ancestor", ancestor, descendant])
+        .current_dir(root)
+        .status()
+        .map_err(|source| Error::Command {
+            command: "git merge-base --is-ancestor <ancestor> <descendant>".into(),
+            status: None,
+            stderr: source.to_string(),
+        })?;
+    match status.code() {
+        Some(0) => Ok(true),
+        Some(1) => Ok(false),
+        code => Err(Error::Command {
+            command: "git merge-base --is-ancestor <ancestor> <descendant>".into(),
+            status: code,
+            stderr: "Git could not compare workflow revisions".into(),
+        }),
+    }
+}
+
+/// Paths changed between two revisions, without invoking a shell.
+pub fn changed_paths(root: &Path, from: &str, to: &str) -> Result<Vec<String>> {
+    validate_ref(from)?;
+    validate_ref(to)?;
+    let output = git(root, &["diff", "--name-only", from, to, "--"])?;
+    Ok(String::from_utf8_lossy(&output.stdout)
+        .lines()
+        .map(str::to_string)
+        .collect())
 }
 
 /// Merge a prepared work branch into the checked-out default branch.
@@ -118,13 +168,13 @@ pub fn validate_ref(reference: &str) -> Result<()> {
     }
     let status = Command::new("git")
         .args(["check-ref-format", "--branch", reference])
-        .status()
+        .output()
         .map_err(|source| Error::Command {
             command: "git check-ref-format --branch <ref>".into(),
             status: None,
             stderr: source.to_string(),
         })?;
-    if status.success() {
+    if status.status.success() {
         Ok(())
     } else {
         Err(Error::Manifest {

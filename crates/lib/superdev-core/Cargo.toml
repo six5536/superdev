@@ -22,6 +22,7 @@ rustdoc-args = ["--cfg", "docsrs"]
 unexpected_cfgs = { level = "warn", check-cfg = ['cfg(coverage_nightly)'] }
 
 [dependencies]
+fs2 = { workspace = true }
 model2vec-rs = { workspace = true }
 pulldown-cmark = { workspace = true }
 regex = { workspace = true }

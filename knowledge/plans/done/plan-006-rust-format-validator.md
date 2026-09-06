@@ -288,8 +288,9 @@ Historical documentation impact predates the documentation map; migration itself
 ### Block 1: Settle the grammar
 
 - [x] Done — ticked at merge.
-- Depends-on: none.
-- Change:
+- Dependencies: none.
+- Areas: historical areas named by the recorded outcome.
+- Outcome:
   1. Drop the ledger kind — remove its 30 lines from the grammar, its
      `checkLedger` function, and the suffix rule that claims ledger files,
      per D-9.
@@ -311,19 +312,22 @@ Historical documentation impact predates the documentation map; migration itself
   other people's repos where `.claude/skills` is a Claude Code convention
   rather than ours, and an allowlist of roots stays finite where a denylist
   of caches, backups, submodules and vendored packs does not.
-- Done-check: the Node script reports 61 passes and no findings over the
+- Verification: the Node script reports 61 passes and no findings over the
   live tree, given no paths.
-- Cases:
+- Tests:
   - e2e: after the grammar change the Node script still reports 61 passes
     and no findings, and `rg -n 'ledger' scripts/superdev-format/` returns
     nothing — the binary chooses the kind by the grammar's own `match` rules
     including `except` (FR-1).
+- Structural evidence: the recorded verification and tests provide the historical evidence.
+- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
 
 ### Block 2: Capture the reference behaviour
 
 - [x] Done — ticked at merge.
-- Depends-on: 1.
-- Change:
+- Dependencies: 1.
+- Areas: historical areas named by the recorded outcome.
+- Outcome:
   1. Add `--json` to the reference — emitting the shape `Report::to_json`
      uses, so one golden pins the finding texts and the JSON keys together,
      per D-12.
@@ -349,18 +353,21 @@ Historical documentation impact predates the documentation map; migration itself
   Decision: D-14 — the grammar changes land before the goldens are captured,
   over folding them into the golden-capture workstream; goldens recorded
   against the old rulebook would test rules the Rust no longer has.
-- Done-check: the goldens are committed, and `format_parity.rs` carries the
+- Verification: the goldens are committed, and `format_parity.rs` carries the
   same warning `validator_parity.rs` does about what editing one means.
-- Cases:
+- Tests:
   - observation: every fixture tree carries a golden captured from the
     reference's `--json` run, in the shape `Report::to_json` uses — the
     finding texts and the JSON keys are pinned together (FR-2, FR-5).
+- Structural evidence: the recorded verification and tests provide the historical evidence.
+- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
 
 ### Block 3: The grammar as types
 
 - [x] Done — ticked at merge.
-- Depends-on: 1.
-- Change:
+- Dependencies: 1.
+- Areas: historical areas named by the recorded outcome.
+- Outcome:
   1. Define the types — a module under `superdev-core` mirroring the
      grammar's shape, every struct `deny_unknown_fields`, so a typo in the
      grammar is a deserialisation error naming the key.
@@ -378,19 +385,22 @@ Historical documentation impact predates the documentation map; migration itself
   `schemaErrors` as well; `#[serde(deny_unknown_fields)]` plus required
   fields is the same contract, enforced by the compiler instead of at run
   time.
-- Done-check: the real grammar round-trips through the types, and a grammar
+- Verification: the real grammar round-trips through the types, and a grammar
   with an unknown key is refused naming the key.
-- Cases:
+- Tests:
   - unit: a grammar with a key removed and a key misspelled fails the run
     naming the key, before any file is read — the grammar is read into types
     that reject unknown keys, and a grammar violating its own constraints
     fails before any file is read (FR-3, FR-4).
+- Structural evidence: the recorded verification and tests provide the historical evidence.
+- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
 
 ### Block 4: The checks
 
 - [x] Done — ticked at merge.
-- Depends-on: 3.
-- Change:
+- Dependencies: 3.
+- Areas: historical areas named by the recorded outcome.
+- Outcome:
   1. Port the readers — `fenceMap`, `splitFrontmatter`, `extractYaml`,
      `proseOnly`, `parseElements`. These carry the subtle bugs already fixed
      once: blanking a multi-line code span while preserving indices, and
@@ -403,18 +413,21 @@ Historical documentation impact predates the documentation map; migration itself
   frontmatter, elements, prose); `crates/lib/superdev-core/src/format/check.rs`
   (the per-kind and cross-file checks); `crates/lib/superdev-core/Cargo.toml`
   (add `regex`).
-- Done-check: every check the reference performs has a Rust counterpart
+- Verification: every check the reference performs has a Rust counterpart
   passing its fixture goldens, with `regex` the one crate added (NFR-2).
-- Cases:
+- Tests:
   - integration: `cargo test -p superdev-core --test format_parity` passes
     on every captured golden — for any file, the finding texts the binary
     emits equal those the Node script emits (FR-2).
+- Structural evidence: the recorded verification and tests provide the historical evidence.
+- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
 
 ### Block 5: One report, one command
 
 - [x] Done — ticked at merge.
-- Depends-on: 4.
-- Change:
+- Dependencies: 4.
+- Areas: historical areas named by the recorded outcome.
+- Outcome:
   1. Emit AOKF findings — have the format checks build `Finding` values with
      `fatal` set, so one failing skill fails the run. Nothing in
      `crates/lib/superdev-core/src/aokf/validate.rs` needs teaching: ADR-017
@@ -465,11 +478,11 @@ Historical documentation impact predates the documentation map; migration itself
   renaming the hook and the verb together; the marker is the lock key in
   every managed repo, so renaming it orphans an entry everywhere for a
   cosmetic gain.
-- Done-check: `superdev validate` with no arguments reports the canonical
+- Verification: `superdev validate` with no arguments reports the canonical
   knowledge's concepts and the format's 61 files in one report with one
   exit code, `validator_parity` passes with its goldens unedited, and `npm
   run coverage:check` passes.
-- Cases:
+- Tests:
   - integration: `cargo test -p superdev-core --test validator_parity`
     passes with its goldens unedited — `aokf::validate` keeps emitting
     exactly what it emits today (NFR-4).
@@ -492,12 +505,15 @@ Historical documentation impact predates the documentation map; migration itself
     `.agents/format/grammar.yaml` byte for byte (FR-11).
   - e2e: `npm run coverage:check` passes — the new code clears the 90%
     line gate in each of `crates/lib` and `crates/app` (NFR-3).
+- Structural evidence: the recorded verification and tests provide the historical evidence.
+- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
 
 ### Block 6: Wire it in and retire the reference
 
 - [x] Done — ticked at merge.
-- Depends-on: 2, 5.
-- Change:
+- Dependencies: 2, 5.
+- Areas: historical areas named by the recorded outcome.
+- Outcome:
   1. Run it where it matters — point `check:aokf` at the merged command and
      rename it, and widen `hook_validate` in
      `crates/app/superdev/src/aokf_cli.rs` so it fires on an edit under the
@@ -531,7 +547,7 @@ Historical documentation impact predates the documentation map; migration itself
   the whole set, over demoting it to a warning or skipping it in the hook; a
   warning is not a check, and a hook that skipped it would pass a skill the
   merge gate then fails.
-- Done-check: every case across the plan passes on a clean checkout of the
+- Verification: every case across the plan passes on a clean checkout of the
   branch; `.claude/settings.json` still carries exactly one PostToolUse
   entry for superdev, under its original marker, and the lock entry is
   unchanged; `knowledge/plans/index.md` lists this plan and its status reads
@@ -542,7 +558,7 @@ Historical documentation impact predates the documentation map; migration itself
   generated-format-docs idea is filed as
   [issue-017][sokf:issue-017-the-format-has-no-agent-facing-document],
   since the doc renderer now exists in the binary with nothing consuming it.
-- Cases:
+- Tests:
   - e2e: breaking a skill and breaking a concept's frontmatter each make the
     one hook exit 2 with the finding on stderr — one PostToolUse hook runs
     the whole-set check on an edit under the knowledge or any root (FR-7).
@@ -551,6 +567,10 @@ Historical documentation impact predates the documentation map; migration itself
     exists (FR-10).
   - observation: a whole-set run is timed against the 50 ms hook budget
     (NFR-1); the measured 82 ms is recorded under Goal.
+
+- Structural evidence: the recorded verification and tests provide the historical evidence.
+
+- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
 
 ## Build state
 

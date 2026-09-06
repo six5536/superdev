@@ -101,6 +101,12 @@ pub struct WorkflowCache {
     pub identity: WorkflowIdentity,
     /// Plan revision last observed by the owning session.
     pub last_plan_revision: String,
+    /// Immutable candidate reviewed at the BUILD gate.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub candidate_revision: Option<String>,
+    /// Default-branch tip incorporated before candidate verification.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub verified_default_revision: Option<String>,
     /// Active isolated child role, when one exists.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub child_role: Option<String>,

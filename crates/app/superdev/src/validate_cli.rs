@@ -43,7 +43,7 @@ pub struct ValidateArgs {
     pub repo_root: Option<PathBuf>,
 }
 
-/// Claude Code hook plumbing (reads the hook payload from stdin).
+/// Legacy adapter hook plumbing (reads the hook payload from stdin).
 #[derive(clap::Subcommand)]
 pub enum HookCommand {
     /// PostToolUse: validate after an Edit/Write under the SOKF knowledge or

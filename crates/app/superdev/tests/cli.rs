@@ -1637,10 +1637,7 @@ fn init_always_hints_at_bootstrap() {
         .assert()
         .success();
     let stdout = String::from_utf8_lossy(&out.get_output().stdout).into_owned();
-    assert!(
-        stdout.contains("knowledge: run /bootstrap in Claude Code"),
-        "{stdout}"
-    );
+    assert!(stdout.contains("knowledge: run /scope in Pi"), "{stdout}");
 
     // Every other capability off changes nothing: the hint rides with SOKF.
     let bare = tempfile::tempdir().unwrap();
@@ -1651,10 +1648,7 @@ fn init_always_hints_at_bootstrap() {
         .assert()
         .success();
     let stdout = String::from_utf8_lossy(&out.get_output().stdout).into_owned();
-    assert!(
-        stdout.contains("knowledge: run /bootstrap in Claude Code"),
-        "{stdout}"
-    );
+    assert!(stdout.contains("knowledge: run /scope in Pi"), "{stdout}");
     assert!(bare.path().join("knowledge/index.md").is_file());
 }
 

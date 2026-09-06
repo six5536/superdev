@@ -81,17 +81,18 @@ Historical documentation impact predates the documentation map; migration itself
 ### Block 1: Coding-tool-shaped MCP reads
 
 - [x] Done — ticked by build at its commit.
-- Depends-on: none.
-- Change: revise contract-003 first, then change `sokf_read` to accept `path`,
+- Dependencies: none.
+- Areas: historical areas named by the recorded outcome.
+- Outcome: revise contract-003 first, then change `sokf_read` to accept `path`,
   `offset` and `limit`. Share virtual-address parsing and rendered line
   windowing with the CLI. Route `sokf:` to overview, virtual concept addresses
   to rendered concepts, and contained physical paths to their exact UTF-8
   contents; remove `sokf_overview`. Keep search semantic, exact-replacement
   edit, complete-file write and graph as separate SOKF operations; do not
   emulate grep or sed syntax.
-- Done-check: MCP advertises five tools with familiar request semantics, and
+- Verification: MCP advertises five tools with familiar request semantics, and
   every read target remains confined to the governed knowledge bundle.
-- Cases:
+- Tests:
   - contract: the generated MCP schema exposes `path`, `offset` and `limit` for
     `sokf_read` and no longer exposes `sokf_overview`.
   - unit: `sokf:` renders overview (covers P_overview-address), while
@@ -107,21 +108,24 @@ Historical documentation impact predates the documentation map; migration itself
     fail without reading arbitrary files.
   - integration: search, graph, edit and write retain their existing MCP
     arguments and results.
+- Structural evidence: the recorded verification and tests provide the historical evidence.
+- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
 
 ### Block 2: Lazy MCP embedding lifecycle
 
 - [x] Done — ticked by build at its commit.
-- Depends-on: 1.
-- Change: make the MCP service retain embedding configuration and initialize
+- Dependencies: 1.
+- Areas: historical areas named by the recorded outcome.
+- Outcome: make the MCP service retain embedding configuration and initialize
   its embedder on the first search or `sokf:` overview read; keep startup
   knowledge parsing but remove eager index synchronization. Cache the
   initialized embedder, including lexical fallback, for the process lifetime.
   Do not pass `None` through index synchronization merely to avoid loading:
   that would rebuild a semantic index as lexical-only.
-- Done-check: an MCP process serves direct retrieval before touching an
+- Verification: an MCP process serves direct retrieval before touching an
   unusable index, and repeated index-dependent calls initialize one embedder
   instance without downgrading the index.
-- Cases:
+- Tests:
   - unit: direct concept reads and graph calls do not initialize the embedder or
     open the index (covers contract-003-api-sokf P_direct-does-not-load).
   - unit: the first search or overview read initializes the configured embedder
@@ -134,22 +138,25 @@ Historical documentation impact predates the documentation map; migration itself
     lexical-only index as an optimization shortcut.
   - integration: missing or unreadable knowledge fails MCP startup, while an
     unusable index fails the first index-dependent call rather than startup.
+- Structural evidence: the recorded verification and tests provide the historical evidence.
+- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
 
 ### Block 3: Session-scoped MCP client
 
 - [x] Done — ticked by build at its commit.
-- Depends-on: 1.
-- Change: add a narrow MCP stdio client beside `.pi/extensions/sokf.ts` that
+- Dependencies: 1.
+- Areas: historical areas named by the recorded outcome.
+- Outcome: add a narrow MCP stdio client beside `.pi/extensions/sokf.ts` that
   lazily spawns one `superdev mcp sokf` child per repository, performs only the
   required initialize and `tools/call` exchange, parses fragmented newline-
   delimited JSON-RPC safely, drains stderr while retaining at most 64 KiB, and
   closes every child on `session_shutdown`. Limit one protocol response to
   16 MiB. Serialize SOKF calls per repository because the server already
   serializes them; do not build general MCP discovery or concurrency.
-- Done-check: one initialized child serves repeated calls in order; a dead or
+- Verification: one initialized child serves repeated calls in order; a dead or
   cancelled child rejects the active call and the next queued call starts a
   fresh process; session shutdown leaves no child running.
-- Cases:
+- Tests:
   - unit: initialization and the initialized notification complete before the
     first tool call is sent, and an incompatible protocol fails clearly.
   - unit: chunked lines, multiple lines in one chunk, notifications and matching
@@ -162,21 +169,24 @@ Historical documentation impact predates the documentation map; migration itself
     then forces termination.
   - integration: repositories receive distinct children and repeated calls in
     one repository reuse one child.
+- Structural evidence: the recorded verification and tests provide the historical evidence.
+- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
 
 ### Block 4: Pi tool parity over MCP
 
 - [x] Done — ticked by build at its commit.
-- Depends-on: 2, 3.
-- Change: route SOKF-aware read, search, graph, edit and write through MCP;
+- Dependencies: 2, 3.
+- Areas: historical areas named by the recorded outcome.
+- Outcome: route SOKF-aware read, search, graph, edit and write through MCP;
   translate MCP text and mutation `structuredContent` into the adapter's
   existing Pi results. For Pi reads, forward the path but let Pi's existing
   virtual-read wrapper apply offset, limit, byte limits and continuation
   notices exactly once; the MCP line-window arguments remain available to
   other clients. Keep ordinary file operations and turn-end
   `superdev validate` on their current paths.
-- Done-check: the existing real-Pi smoke suite passes against MCP and records
+- Verification: the existing real-Pi smoke suite passes against MCP and records
   one server process across repeated semantic searches.
-- Cases:
+- Tests:
   - integration: virtual overview, concept and section reads preserve Pi path,
     offset, limit and truncation behavior without applying a line window
     twice.
@@ -189,24 +199,31 @@ Historical documentation impact predates the documentation map; migration itself
   - integration: ordinary paths never start MCP and still use fresh built-in
     tools rooted at Pi's current working directory.
   - integration: final validation remains bounded to two repair-feedback turns.
+- Structural evidence: the recorded verification and tests provide the historical evidence.
+- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
 
 ### Block 5: Performance evidence and canonical documentation
 
 - [x] Done — ticked by build at its commit.
-- Depends-on: 4.
-- Change: update architecture, software components, development commands and
+- Dependencies: 4.
+- Areas: historical areas named by the recorded outcome.
+- Outcome: update architecture, software components, development commands and
   the changelog; add model-free fixtures for process and embedder reuse. Keep
   elapsed-time measurements as benchmarks, not pass/fail tests.
-- Done-check: documentation names the familiar MCP semantics and Pi's
+- Verification: documentation names the familiar MCP semantics and Pi's
   persistent transport, validation passes, and deterministic counters prove
   that repeated search excludes a second process and embedder initialization.
-- Cases:
+- Tests:
   - integration: the first search starts one MCP child and two later searches
     reuse it and one embedder instance.
   - regression: direct SOKF retrieval before any search does not initialize the
     embedder or index.
   - validation: `superdev validate` passes after every affected canonical
     concept is updated.
+
+- Structural evidence: the recorded verification and tests provide the historical evidence.
+
+- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
 
 ## Build state
 
