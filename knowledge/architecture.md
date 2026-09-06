@@ -33,7 +33,12 @@ validator's repair pass, and reports the final validation state plus requested
 and generated diffs. MCP exposes those two mutations only under the agent-safe
 policy; the deliberate human override remains CLI-only. The `validate`
 subsystem remains the check both paths share. The MCP tools are in
-[contract-003-api-sokf][sokf:contract-003-api-sokf]. Freshness is lazy: every tool call
+[contract-003-api-sokf][sokf:contract-003-api-sokf]. Pi's project extension is
+another thin adapter: it extends `read`, `edit`, and `write` for `sokf:` or
+physical knowledge targets, adds `sokf_search` and `sokf_graph`, invokes one
+CLI process per operation from the repository root, and delegates every
+ordinary path to Pi unchanged. It queues all knowledge mutations on that root
+so identity-addressed and path-addressed calls cannot race. Freshness is lazy: every tool call
 re-hashes the canonical knowledge and syncs only what changed, so there is no watcher and
 no daemon state to go stale.
 

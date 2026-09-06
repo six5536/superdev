@@ -34,7 +34,9 @@ only (pre-1.0, no backports).
   mutation tools can write only under the canonical knowledge root, reject
   path and symlink escapes, preserve existing identity and verification bytes,
   reject stamped fields, write atomically, and run repair plus validation.
-  Their machine schema carries no human override
+  Their machine schema carries no human override. The Pi extension adds no
+  authority of its own: it forwards SOKF requests to the same local CLI and
+  delegates non-knowledge paths to Pi's built-in tools
   ([contract-003-api-sokf][sokf:contract-003-api-sokf]).
 - **A pinned pack applies the bytes it was pinned to, or none.** Every
   resolved *git* pack is verified against the digest the lock recorded for

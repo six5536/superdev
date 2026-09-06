@@ -110,6 +110,22 @@ pipeline needs:
 `--version`, `completions` (clap_complete), and a hidden `man` subcommand
 (clap_mangen). The CLI contract is in [contract-002-cli-superdev][sokf:contract-002-cli-superdev].
 
+# Pi project extensions
+
+`.pi/extensions/sokf.ts` is a transport adapter over the CLI, not a second SOKF
+implementation. It overrides Pi's `read`, `edit`, and `write` slots only for
+virtual `sokf:` addresses or physical paths under the repository's knowledge
+root, delegates all other paths to fresh built-in tool instances rooted at the
+current working directory, and registers `sokf_search` and `sokf_graph`.
+Mutation calls share one queue keyed by the knowledge root and convert the
+versioned CLI envelope back into Pi's built-in result shapes. The extension
+walks to the repository root before invoking `superdev`, so it also works when
+Pi starts in a subdirectory.
+
+`.pi/extensions/system-prompt.ts` registers `/system-prompt` for inspecting the
+effective Pi prompt. Its `.pi/current-system-prompt.md` output is machine-local
+and ignored rather than project knowledge.
+
 # Publishing
 
 `superdev-core` and `superdev` publish to crates.io. The compiled binary is

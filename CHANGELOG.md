@@ -25,6 +25,12 @@ publish a version it cannot find a heading for.
   override, run automatic repair, and return requested and repair diffs with
   the resulting validation state. MCP exposes the same operations as
   mandatory agent-safe `sokf_edit` and `sokf_write` tools.
+- **Pi uses SOKF through familiar coding tools.** The project extension routes
+  `read path="sokf:<id>"`, SOKF `edit`, and physical knowledge `write` calls
+  through the portable CLI while ordinary file operations retain Pi's built-in
+  implementations. It also adds `sokf_search` and `sokf_graph`; every knowledge
+  mutation shares one root-level queue. A companion `/system-prompt` command
+  writes the effective prompt to ignored local inspection output.
 - **`/file` files an issue or an idea.** A knowledge-carried skill
   writes a bug, a feature or a chore as an `open` issue in the user's
   words — no interview, no branch, no criterion the user did not state

@@ -456,17 +456,24 @@ This approach gives agents familiar mechanics without presenting semantic search
 - The explicit CLI human override is `--allow-restricted`.
 - Direct mutation permits reserved `index.md` navigation files but refuses
   `manifest.sokf.yaml`; neither is treated as an ordinary concept.
+- Virtual section addresses use `sokf:<id>#<heading>`.
+- The initial Pi adapter invokes one CLI process per call. A warm development
+  shim benchmark was about two seconds per read, so latency remains an
+  evaluation concern; a persistent transport can replace it without changing
+  tool semantics if needed.
+- The Pi adapter finds the nearest `.git` or `.superdev/config.toml` ancestor,
+  treats its `knowledge/` directory as the routing boundary, and invokes the
+  CLI from that root. Physical mutation targets are forwarded as absolute
+  paths, while virtual targets retain their `sokf:` address.
+- Pi rejects responses whose protocol is not exactly `sokf-tools/v1` with a
+  clear incompatibility error.
 
 ## Open decisions
 
-1. Should `sokf:<id>#<heading>` be the section-address syntax?
-2. Should CLI `read` apply `offset` and `limit` before or after rendering metadata and headings?
-3. Should the Pi extension invoke one CLI process per call or maintain a long-running process? Benchmark cold-start time, index synchronization, and embedding-model loading before deciding.
-4. Should the Pi extension retain `sokf_read` and `sokf_overview` aliases during migration?
-5. Should `write path="sokf:<existing-id>"` remain enabled after evaluation, or should whole-file replacement require a physical path?
-6. How should turn-end validation deliver failures back to the model without creating an unbounded retry loop?
-7. Which checks belong in agent-safe mutation commands, and which remain authoritative only in `superdev validate` and the commit diff check?
-8. How should other harnesses express virtual SOKF addresses when they do not allow built-in tool overrides?
-9. What behavioral threshold demonstrates that the always-on instruction is sufficient?
-10. How does the extension locate the repository and configured knowledge root when Pi starts in a subdirectory?
-11. What happens when the extension and the installed `superdev` CLI expose incompatible JSON protocol versions?
+1. Should CLI `read` apply `offset` and `limit` before or after rendering metadata and headings?
+2. Should the Pi extension retain `sokf_read` and `sokf_overview` aliases during migration?
+3. Should `write path="sokf:<existing-id>"` remain enabled after evaluation, or should whole-file replacement require a physical path?
+4. How should turn-end validation deliver failures back to the model without creating an unbounded retry loop?
+5. Which checks belong in agent-safe mutation commands, and which remain authoritative only in `superdev validate` and the commit diff check?
+6. How should other harnesses express virtual SOKF addresses when they do not allow built-in tool overrides?
+7. What behavioral threshold demonstrates that the always-on instruction is sufficient?

@@ -31,6 +31,10 @@ What the annotated list does not say:
   one or creates it at a physical path. Both repair and validate automatically,
   default to preserving `id` and `verified`, and report applied-but-invalid
   intermediate states without turning them into retryable command failures.
+  Pi auto-loads `.pi/extensions/sokf.ts`, which adapts those commands into its
+  built-in file-tool shapes plus `sokf_search` and `sokf_graph`. Run
+  `/system-prompt` in Pi to refresh the ignored
+  `.pi/current-system-prompt.md` when inspecting effective instructions.
 - `cargo run -- validate --fix` is the same check with its repairs applied
   first: a link naming a concept by path becomes the id form, every
   `<!-- sokf:links -->` block is regenerated, and every include block is

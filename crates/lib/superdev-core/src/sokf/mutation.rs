@@ -356,7 +356,7 @@ fn physical_path(bundle_dir: &Path, repo_root: &Path, asked: &str) -> Result<Pat
     }
     let bundle_relative = bundle_dir.strip_prefix(repo_root).unwrap_or(bundle_dir);
     let path = if asked.is_absolute() {
-        repo_root.join(asked.strip_prefix(Path::new("/")).unwrap_or(asked))
+        asked.to_path_buf()
     } else if asked.starts_with(bundle_relative) {
         repo_root.join(asked)
     } else {
@@ -952,6 +952,24 @@ mod tests {
             .is_err()
         );
         assert!(!knowledge.join("c.md").exists());
+    }
+
+    #[test]
+    fn an_absolute_physical_path_can_create_a_concept() {
+        let repo = repo_with("---\ntype: T\nid: alpha\n---\na\n");
+        let destination = repo.path().join("knowledge/absolute.md");
+        let result = write(
+            &repo.path().join("knowledge"),
+            repo.path(),
+            WriteRequest {
+                path: destination.display().to_string(),
+                content: "---\ntype: T\nid: absolute\n---\nx\n".into(),
+            },
+            MutationPolicy::AgentSafe,
+        )
+        .unwrap();
+        assert_eq!(result.final_path, "knowledge/absolute.md");
+        assert!(destination.is_file());
     }
 
     #[cfg(unix)]

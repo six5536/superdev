@@ -33,5 +33,8 @@
 .codegraph/
 __old/
 
+# Pi inspection output is local session state; extensions themselves are shared.
+/.pi/current-system-prompt.md
+
 # Custom
 /cc-bench
