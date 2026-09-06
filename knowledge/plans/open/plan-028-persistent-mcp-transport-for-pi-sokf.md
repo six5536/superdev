@@ -15,8 +15,10 @@ read, search, edit and write semantics models already know. Tool names remain
 SOKF-specific to avoid collisions, while request shapes use paths, line windows
 and exact replacements. `sokf_read` handles `sokf:`, `sokf:<id>`,
 `sokf:<id>#<heading>` and governed physical knowledge paths;
-`sokf_overview` is removed while the API remains unreleased. Semantic search
-and graph traversal keep their specialized interfaces.
+`sokf_overview` is removed while the API remains unreleased. Virtual
+addresses return rendered SOKF concepts or overview; physical paths return the
+exact UTF-8 file text, matching familiar read behavior. Semantic search and
+graph traversal keep their specialized interfaces.
 
 Pi's SOKF tools reuse one `superdev mcp sokf` process per repository for the
 life of a Pi session. The first search or `sokf:` overview read loads the
@@ -35,11 +37,15 @@ for independent shell commands, and general MCP support for Pi.
 ## Contract changes
 
 - contract-003-api-sokf: replace the `sokf_read { id, heading }` and
-  `sokf_overview` interface with `sokf_read { path, offset?, limit? }`; preserve
-  `sokf_search`, `sokf_graph`, `sokf_edit` and `sokf_write`; revise
-  `P_fails-at-startup` so missing or unreadable knowledge still fails at
-  startup but index and embedder failures occur on the operation that first
-  needs them; add `P_lazy-embedding` with `AC_direct-does-not-load`,
+  `sokf_overview` interface with `sokf_read { path, offset?, limit? }`; add
+  `P_coding-read` with `AC_overview-address`, `AC_concept-address`,
+  `AC_physical-contained`, and `AC_line-window`; change
+  `P_direct-retrieval-skips-index` to exclude the overview address and change
+  `P_overview-warning-cap` to bind that address; preserve `sokf_search`,
+  `sokf_graph`, `sokf_edit` and `sokf_write`; revise `P_fails-at-startup` so
+  missing or unreadable knowledge still fails at startup but index and embedder
+  failures occur on the operation that first needs them; add
+  `P_lazy-embedding` with `AC_direct-does-not-load`,
   `AC_first-index-call-loads`, and `AC_later-index-call-reuses`; preserve
   `P_speaks-mcp-over-stdio`, `P_exits-on-closed-stdin`, mutation policy, and
   standard MCP result shapes.
@@ -52,21 +58,24 @@ for independent shell commands, and general MCP support for Pi.
 - Depends-on: none.
 - Change: revise contract-003 first, then change `sokf_read` to accept `path`,
   `offset` and `limit`. Share virtual-address parsing and rendered line
-  windowing with the CLI. Route `sokf:` to overview and remove
-  `sokf_overview`. Keep search semantic, exact-replacement edit, complete-file
-  write and graph as separate SOKF operations; do not emulate grep or sed
-  syntax.
+  windowing with the CLI. Route `sokf:` to overview, virtual concept addresses
+  to rendered concepts, and contained physical paths to their exact UTF-8
+  contents; remove `sokf_overview`. Keep search semantic, exact-replacement
+  edit, complete-file write and graph as separate SOKF operations; do not
+  emulate grep or sed syntax.
 - Done-check: MCP advertises five tools with familiar request semantics, and
   every read target remains confined to the governed knowledge bundle.
 - Cases:
   - contract: the generated MCP schema exposes `path`, `offset` and `limit` for
     `sokf_read` and no longer exposes `sokf_overview`.
-  - unit: `sokf:` renders overview, `sokf:<id>` renders a concept, and
-    `sokf:<id>#<heading>` renders one section.
-  - unit: a physical path inside `knowledge/` resolves while an absolute or
-    relative path outside that root is refused.
+  - unit: `sokf:` renders overview (covers AC_overview-address), while
+    `sokf:<id>` renders a concept and `sokf:<id>#<heading>` renders one section
+    (covers AC_concept-address).
+  - unit: relative and absolute physical paths inside `knowledge/` return exact
+    file text, including for a concept that does not parse, while either form
+    outside that root is refused (covers AC_physical-contained).
   - unit: offset and limit apply after metadata and headings are rendered,
-    matching CLI read semantics.
+    matching CLI read semantics (covers AC_line-window).
   - regression: unknown IDs retain near-miss recovery and malformed addresses
     fail without reading arbitrary files.
   - integration: search, graph, edit and write retain their existing MCP
@@ -133,14 +142,17 @@ for independent shell commands, and general MCP support for Pi.
 - Depends-on: 2, 3.
 - Change: route SOKF-aware read, search, graph, edit and write through MCP;
   translate MCP text and mutation `structuredContent` into the adapter's
-  existing Pi results. Forward Pi read parameters directly after repository
-  routing. Keep ordinary file operations and turn-end `superdev validate` on
-  their current paths.
+  existing Pi results. For Pi reads, forward the path but let Pi's existing
+  virtual-read wrapper apply offset, limit, byte limits and continuation
+  notices exactly once; the MCP line-window arguments remain available to
+  other clients. Keep ordinary file operations and turn-end
+  `superdev validate` on their current paths.
 - Done-check: the existing real-Pi smoke suite passes against MCP and records
   one server process across repeated semantic searches.
 - Cases:
   - integration: virtual overview, concept and section reads preserve Pi path,
-    offset, limit and truncation behavior.
+    offset, limit and truncation behavior without applying a line window
+    twice.
   - integration: search filters and graph IDs map to the corresponding MCP
     arguments; MCP protocol errors and tool results marked as errors become Pi
     tool errors rather than successful text.
