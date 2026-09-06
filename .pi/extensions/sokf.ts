@@ -15,7 +15,7 @@ import {
 } from "@earendil-works/pi-coding-agent";
 import { type Static, Type } from "typebox";
 
-const PROTOCOL = "sokf-tools/v1";
+import { SokfMcpClient, type McpToolResult } from "./sokf-mcp.ts";
 
 const searchSchema = Type.Object({
 	query: Type.String({ description: "What to find in the canonical project knowledge" }),
@@ -34,7 +34,6 @@ type GraphInput = Static<typeof graphSchema>;
 
 type TextContent = { type: "text"; text: string };
 type ToolEnvelope = {
-	protocol: string;
 	content: TextContent[];
 	details: unknown;
 };
@@ -58,17 +57,6 @@ function stripAt(path: string): string {
 
 function isSokfAddress(path: string): boolean {
 	return stripAt(path).startsWith("sokf:");
-}
-
-function readInvocation(address: string): string[] {
-	const target = stripAt(address).slice("sokf:".length);
-	if (target.length === 0) return ["sokf", "overview", "--json"];
-	const separator = target.indexOf("#");
-	if (separator < 0) return ["sokf", "read", target, "--json"];
-	const id = target.slice(0, separator);
-	const heading = target.slice(separator + 1);
-	if (!id || !heading) throw new Error(`Invalid SOKF address: ${address}`);
-	return ["sokf", "read", id, "--heading", heading, "--json"];
 }
 
 function findRepository(start: string): string | undefined {
@@ -120,22 +108,6 @@ function routesMutation(path: string, cwd: string): { route: boolean; queue: str
 	};
 }
 
-function parseEnvelope(stdout: string): ToolEnvelope {
-	let envelope: ToolEnvelope;
-	try {
-		envelope = JSON.parse(stdout) as ToolEnvelope;
-	} catch (error) {
-		throw new Error(`superdev returned malformed JSON: ${String(error)}`);
-	}
-	if (envelope.protocol !== PROTOCOL) {
-		throw new Error(`Incompatible superdev SOKF protocol: expected ${PROTOCOL}, got ${String(envelope.protocol)}`);
-	}
-	if (!Array.isArray(envelope.content) || !envelope.content.every((item) => item.type === "text")) {
-		throw new Error("superdev returned an invalid SOKF content shape");
-	}
-	return envelope;
-}
-
 type ProcessResult = { stdout: string; stderr: string; code: number | null };
 
 async function runSuperdev(
@@ -166,17 +138,16 @@ async function runSuperdev(
 	});
 }
 
-async function invoke(
-	cwd: string,
-	args: string[],
-	signal?: AbortSignal,
-	request?: unknown,
-): Promise<ToolEnvelope> {
-	const result = await runSuperdev(cwd, args, signal, request);
-	if (result.code !== 0) {
-		throw new Error(result.stderr.trim() || result.stdout.trim() || `superdev exited ${String(result.code)}`);
+function toolEnvelope(result: McpToolResult): ToolEnvelope {
+	const content = result.content ?? [];
+	if (!Array.isArray(content) || !content.every((item) => item.type === "text" && typeof item.text === "string")) {
+		throw new Error("superdev returned an invalid SOKF MCP content shape");
 	}
-	return parseEnvelope(result.stdout);
+	const textContent = content as TextContent[];
+	if (result.isError) {
+		throw new Error(textContent.map((item) => item.text).join("\n") || "SOKF MCP tool failed");
+	}
+	return { content: textContent, details: result.structuredContent ?? {} };
 }
 
 function textOf(envelope: ToolEnvelope): string {
@@ -263,6 +234,29 @@ export default function (pi: ExtensionAPI) {
 	let knowledgeMutated = false;
 	let validationFollowUps = 0;
 	const maxValidationFollowUps = 2;
+	const clients = new Map<string, SokfMcpClient>();
+
+	async function invokeMcp(
+		cwd: string,
+		name: string,
+		args: Record<string, unknown>,
+		signal?: AbortSignal,
+	): Promise<ToolEnvelope> {
+		const repository = findRepository(cwd);
+		if (!repository) throw new Error("No Superdev repository found from the current directory");
+		let client = clients.get(repository);
+		if (!client) {
+			client = new SokfMcpClient(repository);
+			clients.set(repository, client);
+		}
+		return toolEnvelope(await client.callTool(name, args, signal));
+	}
+
+	pi.on("session_shutdown", async () => {
+		const closing = [...clients.values()].map((client) => client.close());
+		clients.clear();
+		await Promise.allSettled(closing);
+	});
 
 	pi.on("turn_end", async (_event, ctx) => {
 		if (!knowledgeMutated) return;
@@ -316,7 +310,7 @@ export default function (pi: ExtensionAPI) {
 			if (!isSokfAddress(params.path)) {
 				return createReadTool(ctx.cwd).execute(toolCallId, params, signal, onUpdate);
 			}
-			const envelope = await invoke(ctx.cwd, readInvocation(params.path), signal);
+			const envelope = await invokeMcp(ctx.cwd, "sokf_read", { path: stripAt(params.path) }, signal);
 			const virtualRead = createReadTool(ctx.cwd, {
 				operations: {
 					access: async () => {},
@@ -336,12 +330,9 @@ export default function (pi: ExtensionAPI) {
 		promptGuidelines: ["Use sokf_search whenever project knowledge is needed and no concept ID is already known."],
 		parameters: searchSchema,
 		async execute(_toolCallId, params: SearchInput, signal, _onUpdate, ctx) {
-			const args = ["sokf", "search", params.query, "--json"];
-			if (params.limit !== undefined) args.push("--limit", String(params.limit));
-			for (const type of params.types ?? []) args.push("--type", type);
-			for (const tag of params.tags ?? []) args.push("--tag", tag);
-			for (const lifecycle of params.lifecycle ?? []) args.push("--lifecycle", lifecycle);
-			return boundedResult(await invoke(ctx.cwd, args, signal));
+			return boundedResult(
+				await invokeMcp(ctx.cwd, "sokf_search", { ...params }, signal),
+			);
 		},
 	});
 
@@ -352,10 +343,7 @@ export default function (pi: ExtensionAPI) {
 		promptSnippet: "Traverse relationships in the canonical SOKF project knowledge",
 		parameters: graphSchema,
 		async execute(_toolCallId, params: GraphInput, signal, _onUpdate, ctx) {
-			const args = ["sokf", "graph"];
-			if (params.id) args.push(params.id);
-			args.push("--json");
-			return boundedResult(await invoke(ctx.cwd, args, signal));
+			return boundedResult(await invokeMcp(ctx.cwd, "sokf_graph", { ...params }, signal));
 		},
 	});
 
@@ -376,11 +364,11 @@ export default function (pi: ExtensionAPI) {
 				return createEditTool(ctx.cwd).execute(toolCallId, params, signal, onUpdate);
 			}
 			return withFileMutationQueue(route.queue, async () => {
-				const envelope = await invoke(
+				const envelope = await invokeMcp(
 					ctx.cwd,
-					["sokf", "edit", "--request-json", "-", "--json"],
-					signal,
+					"sokf_edit",
 					{ ...params, path: route.target },
+					signal,
 				);
 				const details = mutationDetails(envelope);
 				knowledgeMutated = true;
@@ -409,11 +397,11 @@ export default function (pi: ExtensionAPI) {
 				return createWriteTool(ctx.cwd).execute(toolCallId, params, signal, onUpdate);
 			}
 			return withFileMutationQueue(route.queue, async () => {
-				const envelope = await invoke(
+				const envelope = await invokeMcp(
 					ctx.cwd,
-					["sokf", "write", "--request-json", "-", "--json"],
-					signal,
+					"sokf_write",
 					{ ...params, path: route.target },
+					signal,
 				);
 				mutationDetails(envelope);
 				knowledgeMutated = true;

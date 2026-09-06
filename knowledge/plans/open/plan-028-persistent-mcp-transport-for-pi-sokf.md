@@ -139,7 +139,7 @@ for independent shell commands, and general MCP support for Pi.
 
 ### Block 4: Pi tool parity over MCP
 
-- [ ] Done — ticked by build at its commit.
+- [x] Done — ticked by build at its commit.
 - Depends-on: 2, 3.
 - Change: route SOKF-aware read, search, graph, edit and write through MCP;
   translate MCP text and mutation `structuredContent` into the adapter's

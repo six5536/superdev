@@ -84,6 +84,7 @@ export default async function () {
 			throw new Error("A persistent SOKF validation failure was not deferred for manual continuation");
 		}
 	} finally {
+		await handlers.get("session_shutdown")?.({}, projectContext);
 		rmSync(sandbox, { recursive: true, force: true });
 	}
 }
