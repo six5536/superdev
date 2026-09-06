@@ -16,6 +16,7 @@ Create or update canonical project knowledge without loading the full SOKF speci
 </bootstrap_actions>
 
 <process_actions>
+<step name="ENSURE THE SCHEMA" task="If schema-{type} does not exist, create knowledge/schemas/{type}.md first, list it in knowledge/schemas/index.md, model it on an existing schema, define the type's frontmatter and document structure, and include a conforming example" />
 <step name="AUTHOR" task="Create a concept at a physical knowledge/&lt;path&gt;.md path, or edit an existing concept through sokf:&lt;id&gt; when possible" />
 <step name="RELATE" task="Record derivation materials in sources, use keyed footnotes for per-claim attribution, and use allowed typed links with required body mirrors" />
 <step name="CONVERGE" task="Treat applied invalid or unknown mutations as completed writes, finish related changes without retrying them, then run superdev validate --fix until validation passes" />

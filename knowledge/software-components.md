@@ -133,8 +133,9 @@ Authoring skills are harness-specific. The knowledge capability deploys
 `.claude/skills/sokf-authoring/SKILL.md` for Claude.
 `.pi/skills/sokf-authoring/SKILL.md` is independently authored around Pi's
 SOKF-aware `read`, `edit`, `write`, `sokf_search`, and `sokf_graph` tools. Pi
-does not link or scan `.claude/skills`. Both skills defer the full SOKF
-specification until syntax or semantics matter.
+does not link or scan `.claude/skills`. Both skills require authors to create
+and index a schema before using a previously unknown concept type. Both defer
+the full SOKF specification until syntax or semantics matter.
 
 `.pi/extensions/system-prompt.ts` registers `/system-prompt` for inspecting the
 effective Pi prompt. Its `.pi/current-system-prompt.md` output is machine-local

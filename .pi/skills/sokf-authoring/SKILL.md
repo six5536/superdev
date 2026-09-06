@@ -9,8 +9,9 @@ description: Author and revise canonical SOKF project knowledge with Pi's SOKF-a
 
 1. Use `sokf_search` when the relevant concept ID is unknown.
 2. Read `sokf:schema-{type}` before creating or changing a concept.
-3. Read the target with `read path="sokf:<id>"` before changing it.
-4. Read `.agents/sokf/SPEC.md` only when the task depends on SOKF syntax or semantics.
+3. If `schema-{type}` does not exist, create `knowledge/schemas/<type>.md` first and list it in `knowledge/schemas/index.md`. Model the new schema on an existing schema, define the type's frontmatter and document structure, and include a conforming example.
+4. Read the target with `read path="sokf:<id>"` before changing it.
+5. Read `.agents/sokf/SPEC.md` only when the task depends on SOKF syntax or semantics.
 
 ## Write through the SOKF adapter
 

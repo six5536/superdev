@@ -1979,8 +1979,17 @@ fn each_harness_receives_its_own_sokf_authoring_skill() {
         same(&pack_text),
         "{live} differs from {pack}"
     );
+    assert!(
+        live_text.contains("If schema-{type} does not exist"),
+        "{live} does not create missing type schemas"
+    );
     let pi_path = repo(".pi/skills/sokf-authoring/SKILL.md");
     let pi = std::fs::read_to_string(&pi_path).expect("Pi's authoring skill is on file");
+    assert!(
+        pi.contains("If `schema-{type}` does not exist"),
+        "{} does not create missing type schemas",
+        pi_path.display()
+    );
     assert!(
         pi.contains("sokf_search"),
         "{} is not Pi-specific",

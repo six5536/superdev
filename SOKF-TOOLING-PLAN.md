@@ -374,6 +374,7 @@ Tool descriptions should reinforce this instruction without repeating the SOKF s
 
 An on-demand skill can govern format-sensitive work. It should cover:
 
+- creating and indexing a schema before introducing a previously unknown `type`;
 - frontmatter rules;
 - stable identities;
 - sources and claim attribution;
