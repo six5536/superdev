@@ -111,7 +111,7 @@ for independent shell commands, and general MCP support for Pi.
 
 ### Block 3: Session-scoped MCP client
 
-- [ ] Done — ticked by build at its commit.
+- [x] Done — ticked by build at its commit.
 - Depends-on: 1.
 - Change: add a narrow MCP stdio client beside `.pi/extensions/sokf.ts` that
   lazily spawns one `superdev mcp sokf` child per repository, performs only the
