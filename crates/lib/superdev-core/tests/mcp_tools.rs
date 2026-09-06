@@ -261,6 +261,16 @@ async fn read_whole_and_section() {
     assert_eq!(unknown.is_error, Some(true), "{text}");
     assert!(text.contains("module-a"), "{text}");
 
+    for malformed in ["sokf:#Role", "sokf:module-a#", "sokf:../../outside"] {
+        let result = call(&client, "sokf_read", serde_json::json!({"path": malformed})).await;
+        assert_eq!(
+            result.is_error,
+            Some(true),
+            "{malformed}: {}",
+            text_of(&result)
+        );
+    }
+
     let window = text_of(
         &call(
             &client,
@@ -299,14 +309,23 @@ async fn physical_read_returns_even_an_unparseable_file_verbatim() {
     let rooted = text_of(&call(&client, "sokf_read", serde_json::json!({"path": absolute})).await);
     assert_eq!(rooted, expected);
 
-    let empty = call(
+    let windowed = call(
         &client,
         "sokf_read",
-        serde_json::json!({"path": "knowledge/notes/empty.md"}),
+        serde_json::json!({"path": "knowledge/notes/torn.md", "offset": 2, "limit": 1}),
     )
     .await;
-    assert_ne!(empty.is_error, Some(true));
-    assert_eq!(text_of(&empty), "");
+    assert_ne!(windowed.is_error, Some(true));
+    assert_eq!(text_of(&windowed), "id: torn");
+
+    for arguments in [
+        serde_json::json!({"path": "knowledge/notes/empty.md"}),
+        serde_json::json!({"path": "knowledge/notes/empty.md", "limit": 1}),
+    ] {
+        let empty = call(&client, "sokf_read", arguments).await;
+        assert_ne!(empty.is_error, Some(true));
+        assert_eq!(text_of(&empty), "");
+    }
 
     let outside = repo.path().join("outside.md");
     std::fs::write(&outside, "secret\n").unwrap();
