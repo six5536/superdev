@@ -4,6 +4,9 @@ export default function smoke() {
 	const commands: string[] = [];
 	const tools: string[] = [];
 	const fake = {
+		on() {
+			// Registration is enough for this load smoke.
+		},
 		registerCommand(name: string) {
 			commands.push(name);
 		},

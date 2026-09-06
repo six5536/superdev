@@ -94,6 +94,20 @@ async function isolated(
 }
 
 export default function superdev(pi: ExtensionAPI) {
+	const childRole = process.env.SUPERDEV_CHILD_ROLE;
+	pi.on("tool_call", (event) => {
+		if (!childRole) return;
+		if (readOnly.has(childRole) && ["bash", "edit", "write"].includes(event.toolName)) {
+			return { block: true, reason: `${childRole} is an isolated read-only role`, terminate: true };
+		}
+		if (event.toolName === "bash") {
+			const command = String((event.input as { command?: unknown }).command ?? "");
+			if (/\bsuperdev\s+workflow\s+(?:record-evidence|transition|integrate|abandon)\b/.test(command)) {
+				return { block: true, reason: "isolated roles cannot perform authoritative workflow transitions", terminate: true };
+			}
+		}
+	});
+
 	const children = new Set<ChildProcess>();
 	let modifyingChild: ChildProcess | undefined;
 	let modifyingBusy = false;
@@ -117,7 +131,29 @@ export default function superdev(pi: ExtensionAPI) {
 			return { content: [{ type: "text", text: result.stdout || "No changes." }], details: { readOnly: true } };
 		},
 	});
-	if (process.env.SUPERDEV_CHILD_ROLE) return;
+	if (childRole) return;
+
+	const workflowOwner = async (cwd: string) => {
+		const result = await pi.exec("superdev", ["workflow", "status", "--json"], { cwd });
+		if (result.code !== 0) return undefined;
+		try {
+			return JSON.parse(result.stdout).result?.owner as { session_id?: string; identity?: { plan?: string } } | undefined;
+		} catch {
+			return undefined;
+		}
+	};
+	const protectOwnedWorkflow = async (ctx: { cwd: string; ui: { notify(message: string, level: "warning"): void } }) => {
+		const owner = await workflowOwner(ctx.cwd);
+		if (!owner) return;
+		ctx.ui.notify(`Cancel or finish ${owner.identity?.plan ?? "the owned workflow"} before changing sessions`, "warning");
+		return { cancel: true };
+	};
+	pi.on("session_before_switch", async (_event, ctx) => protectOwnedWorkflow(ctx));
+	pi.on("session_before_fork", async (_event, ctx) => protectOwnedWorkflow(ctx));
+	pi.on("session_start", async (_event, ctx) => {
+		const owner = await workflowOwner(ctx.cwd);
+		ctx.ui.setStatus("superdev-workflow", owner ? `workflow: ${owner.identity?.plan ?? "owned"}` : undefined);
+	});
 
 	pi.registerTool({
 		name: "superdev_isolated_role",
