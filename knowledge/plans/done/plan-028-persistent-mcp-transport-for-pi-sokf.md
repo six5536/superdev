@@ -3,7 +3,7 @@ type: Plan
 id: plan-028-persistent-mcp-transport-for-pi-sokf
 title: Persistent MCP transport for Pi SOKF
 description: SOKF MCP adopts familiar coding-tool semantics and Pi reuses one repository-scoped server so frequent semantic searches load the local embedding model once.
-lifecycle: open
+lifecycle: done
 ---
 
 # Plan: Persistent MCP transport for Pi SOKF
@@ -38,15 +38,15 @@ for independent shell commands, and general MCP support for Pi.
 
 - contract-003-api-sokf: replace the `sokf_read { id, heading }` and
   `sokf_overview` interface with `sokf_read { path, offset?, limit? }`; add
-  `P_coding-read` with `AC_overview-address`, `AC_concept-address`,
-  `AC_physical-contained`, `AC_physical-refused`, and `AC_line-window`; change
+  `P_coding-read` with explicit overview, concept, contained-file, refusal and
+  line-window promises; change
   `P_direct-retrieval-skips-index` to exclude the overview address and change
   `P_overview-warning-cap` to bind that address; preserve `sokf_search`,
   `sokf_graph`, `sokf_edit` and `sokf_write`; revise `P_fails-at-startup` so
   missing or unreadable knowledge still fails at startup but index and embedder
   failures occur on the operation that first needs them; add
-  `P_lazy-embedding` with `AC_direct-does-not-load`,
-  `AC_first-index-call-loads`, and `AC_later-index-call-reuses`; preserve
+  `P_lazy-embedding` with explicit first-load, direct-read and reuse promises;
+  preserve
   `P_speaks-mcp-over-stdio`, `P_exits-on-closed-stdin`, mutation policy, and
   standard MCP result shapes.
 
@@ -68,15 +68,15 @@ for independent shell commands, and general MCP support for Pi.
 - Cases:
   - contract: the generated MCP schema exposes `path`, `offset` and `limit` for
     `sokf_read` and no longer exposes `sokf_overview`.
-  - unit: `sokf:` renders overview (covers AC_overview-address), while
+  - unit: `sokf:` renders overview (covers P_overview-address), while
     `sokf:<id>` renders a concept and `sokf:<id>#<heading>` renders one section
-    (covers AC_concept-address).
+    (covers P_concept-address).
   - unit: relative and absolute physical paths inside `knowledge/` return exact
     file text, including for a concept that does not parse, while either form
-    outside that root is refused (covers AC_physical-contained and
-    AC_physical-refused).
+    outside that root is refused (covers P_physical-contained and
+    P_physical-refused).
   - unit: offset and limit apply after metadata and headings are rendered,
-    matching CLI read semantics (covers AC_line-window).
+    matching CLI read semantics (covers P_line-window).
   - regression: unknown IDs retain near-miss recovery and malformed addresses
     fail without reading arbitrary files.
   - integration: search, graph, edit and write retain their existing MCP
@@ -97,11 +97,11 @@ for independent shell commands, and general MCP support for Pi.
   instance without downgrading the index.
 - Cases:
   - unit: direct concept reads and graph calls do not initialize the embedder or
-    open the index (covers contract-003-api-sokf AC_direct-does-not-load).
+    open the index (covers contract-003-api-sokf P_direct-does-not-load).
   - unit: the first search or overview read initializes the configured embedder
-    exactly once (covers contract-003-api-sokf AC_first-index-call-loads).
+    exactly once (covers contract-003-api-sokf P_first-index-call-loads).
   - unit: later search and overview reads reuse the initialized embedder
-    (covers contract-003-api-sokf AC_later-index-call-reuses).
+    (covers contract-003-api-sokf P_later-index-call-reuses).
   - unit: a failed local-model load selects lexical fallback once without
     repeatedly attempting initialization during the same process.
   - regression: overview never replaces an existing semantic index with a
@@ -166,7 +166,7 @@ for independent shell commands, and general MCP support for Pi.
 
 ### Block 5: Performance evidence and canonical documentation
 
-- [ ] Done — ticked by build at its commit.
+- [x] Done — ticked by build at its commit.
 - Depends-on: 4.
 - Change: update architecture, software components, development commands and
   the changelog; add model-free fixtures for process and embedder reuse. Keep

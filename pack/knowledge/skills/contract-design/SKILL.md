@@ -11,12 +11,12 @@ You decide only the interfaces that will be expensive to change once other code 
 
 <bootstrap_actions>
 <tool_call name="read_file" path=".agents/superdev.md" when="always" />
-<tool_call name="sokf_read" id="schema-contract" when="always" />
+<tool_call name="sokf_read" path="sokf:schema-contract" when="always" />
 <tool_call name="read_file" path="knowledge/schemas/adr.md" when="always" />
-<tool_call name="sokf_read" id="plan-{nnn}-{slug}" when="always" />
-<tool_call name="sokf_read" id="issue-{nnn}-{slug}" when="if the plan carries a Request line" />
-<tool_call name="sokf_read" id="architecture" when="always" />
-<tool_call name="sokf_read" id="architectural-rules" when="always" />
+<tool_call name="sokf_read" path="sokf:plan-{nnn}-{slug}" when="always" />
+<tool_call name="sokf_read" path="sokf:issue-{nnn}-{slug}" when="if the plan carries a Request line" />
+<tool_call name="sokf_read" path="sokf:architecture" when="always" />
+<tool_call name="sokf_read" path="sokf:architectural-rules" when="always" />
 <tool_call name="sokf_search" query="the contracts this project keeps, public and internal" when="always" />
 <tool_call name="codegraph_explore" when="before adding new interfaces" />
 </bootstrap_actions>

@@ -1762,7 +1762,7 @@ fn the_contract_design_skill_declares_in_source() {
             "{p}: the change set does not name the source declaration"
         );
         assert!(
-            text.contains("id=\"schema-contract\""),
+            text.contains("path=\"sokf:schema-contract\""),
             "{p} does not read the one contract schema"
         );
         assert!(
@@ -1866,7 +1866,7 @@ fn the_file_skill_files_in_the_users_words() {
             assert!(text.contains(phrase), "{p} lacks `{phrase}`");
         }
         assert!(
-            text.contains("<tool_call name=\"sokf_read\" id=\"schema-issue\""),
+            text.contains("<tool_call name=\"sokf_read\" path=\"sokf:schema-issue\""),
             "{p} does not read the issue schema"
         );
         for retired in [
@@ -1907,7 +1907,7 @@ fn the_file_skill_asks_for_a_missing_kind() {
 #[test]
 fn file_is_a_skill_and_not_a_phase() {
     for p in [
-        "crates/lib/superdev-core/src/pipeline.rs",
+        "crates/lib/superdev-core/src/agent-instructions.md",
         ".agents/superdev.md",
     ] {
         let text = std::fs::read_to_string(repo(p)).expect("the file is on file");
@@ -2133,7 +2133,7 @@ fn the_contract_design_skill_is_a_sub_skill_of_scope() {
         );
         assert!(
             text.contains(
-                "<tool_call name=\"sokf_read\" id=\"plan-{nnn}-{slug}\" when=\"always\" />"
+                "<tool_call name=\"sokf_read\" path=\"sokf:plan-{nnn}-{slug}\" when=\"always\" />"
             ),
             "{p} does not read the plan"
         );
@@ -2384,7 +2384,7 @@ fn the_accept_skill_reviews_before_the_criteria_walk() {
 #[test]
 fn the_workflow_reads_scope_build_accept() {
     for p in [
-        "crates/lib/superdev-core/src/pipeline.rs",
+        "crates/lib/superdev-core/src/agent-instructions.md",
         ".agents/superdev.md",
     ] {
         let text = std::fs::read_to_string(repo(p)).expect("the file is on file");

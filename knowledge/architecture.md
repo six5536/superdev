@@ -33,18 +33,21 @@ validator's repair pass, and reports the final validation state plus requested
 and generated diffs. MCP exposes those two mutations only under the agent-safe
 policy; the deliberate human override remains CLI-only. The `validate`
 subsystem remains the check both paths share. The MCP tools are in
-[contract-003-api-sokf][sokf:contract-003-api-sokf]. Pi's project extension is
-another thin adapter: it extends `read`, `edit`, and `write` for `sokf:` or
-physical knowledge targets, adds `sokf_search` and `sokf_graph`, invokes one
-CLI process per operation from the repository root, and delegates every
-ordinary path to Pi unchanged. It queues all knowledge mutations on that root
-so identity-addressed and path-addressed calls cannot race. A turn that mutates
-knowledge ends with validation and at most two automatic repair-feedback turns.
-Format-sensitive authoring instructions remain out of the standing prompt and
-load from the `sokf-authoring` skill on demand. Freshness is lazy: search and
-overview re-hash the canonical knowledge and sync only what changed. Direct
-reads and graph traversal parse current files without opening the index or
-loading embeddings. There is no watcher or daemon state to go stale.
+[contract-003-api-sokf][sokf:contract-003-api-sokf]. Its `sokf_read`
+uses familiar path, offset and limit semantics: virtual addresses render
+concepts or overview, while contained physical paths return exact UTF-8 text.
+Pi's project extension maps its familiar `read`, `edit` and `write` tools plus
+`sokf_search` and `sokf_graph` onto those MCP operations. It lazily starts one
+MCP process per repository and reuses it for the Pi session, while delegating
+every ordinary path to Pi unchanged. Calls are serialized on that root. A turn
+that mutates knowledge ends with one-shot CLI validation and at most two
+automatic repair-feedback turns. Format-sensitive authoring instructions
+remain out of the standing prompt and load from the `sokf-authoring` skill on
+demand. Freshness is lazy: search and the `sokf:` overview read re-hash the
+canonical knowledge and sync only what changed. The process initializes its
+embedder on the first such call and reuses it; direct concept reads and graph
+traversal parse current files without opening the index or loading embeddings.
+No repository daemon persists beyond the Pi session.
 
 # Content resolves before planning
 

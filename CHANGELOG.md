@@ -24,13 +24,17 @@ publish a version it cannot find a heading for.
   identity and verification rules by default, support a deliberate CLI human
   override, run automatic repair, and return requested and repair diffs with
   the resulting validation state. MCP exposes the same operations as
-  mandatory agent-safe `sokf_edit` and `sokf_write` tools.
+  mandatory agent-safe `sokf_edit` and `sokf_write` tools. Its `sokf_read`
+  uses familiar path, offset, and limit semantics for virtual SOKF addresses
+  and contained physical files; `sokf:` replaces the separate overview tool.
 - **Pi uses SOKF through familiar coding tools.** The project extension routes
   `read path="sokf:<id>"`, SOKF `edit`, and physical knowledge `write` calls
-  through the portable CLI while ordinary file operations retain Pi's built-in
-  implementations. It also adds `sokf_search` and `sokf_graph`; every knowledge
-  mutation shares one root-level queue. Mutation turns receive final validation
-  with at most two automatic repair follow-ups. The concise standing instruction
+  through one repository-scoped MCP process while ordinary file operations
+  retain Pi's built-in implementations. It also adds `sokf_search` and
+  `sokf_graph`; calls are serialized by repository, the configured embedder is
+  initialized on the first search or overview read and reused until session
+  shutdown, and a failed process restarts on the next call. Mutation turns
+  receive final validation with at most two automatic repair follow-ups. The concise standing instruction
   loads format details through a Pi-native `sokf-authoring` skill; Pi does not
   link Claude's skill directory. Authoring creates and indexes a schema before
   introducing a previously unknown concept type. A companion

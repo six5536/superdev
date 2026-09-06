@@ -11,9 +11,9 @@ You record what the user said and nothing more. File the record given in the inp
 
 <bootstrap_actions>
 <tool_call name="read_file" path=".agents/superdev.md" when="always" />
-<tool_call name="sokf_read" id="issue-tracker" when="always" />
-<tool_call name="sokf_read" id="schema-issue" when="if filing a bug, a feature request or a chore" />
-<tool_call name="sokf_read" id="schema-idea" when="if filing or promoting an idea" />
+<tool_call name="sokf_read" path="sokf:issue-tracker" when="always" />
+<tool_call name="sokf_read" path="sokf:schema-issue" when="if filing a bug, a feature request or a chore" />
+<tool_call name="sokf_read" path="sokf:schema-idea" when="if filing or promoting an idea" />
 <tool_call name="sokf_search" query="{the record, in the user's words}" when="always" />
 </bootstrap_actions>
 

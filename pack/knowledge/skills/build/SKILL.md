@@ -11,16 +11,16 @@ You build the plan given in the input above, one work block at a time and nothin
 
 <bootstrap_actions>
 <tool_call name="read_file" path=".agents/superdev.md" when="always" />
-<tool_call name="sokf_read" id="plan-{nnn}-{slug}" when="always" />
-<tool_call name="sokf_read" id="issue-{nnn}-{slug}" when="if the plan delivers an issue" />
-<tool_call name="sokf_read" id="{each contract the plan's Contract changes name}" when="always" />
-<tool_call name="sokf_read" id="coding-standards" when="before writing code and tests" />
-<tool_call name="sokf_read" id="testing-strategy" when="before writing code and tests" />
-<tool_call name="sokf_read" id="visual-system" when="if the block is UI work" />
-<tool_call name="sokf_read" id="development-procedure" when="before committing and before merging" />
-<tool_call name="sokf_read" id="definition-of-done" when="before verifying the whole change" />
-<tool_call name="sokf_read" id="schema-changelog" when="if the change is user-visible" />
-<tool_call name="sokf_read" id="schema-migration-guide" when="if a contract change breaks users" />
+<tool_call name="sokf_read" path="sokf:plan-{nnn}-{slug}" when="always" />
+<tool_call name="sokf_read" path="sokf:issue-{nnn}-{slug}" when="if the plan delivers an issue" />
+<tool_call name="sokf_read" path="sokf:{each contract the plan's Contract changes name}" when="always" />
+<tool_call name="sokf_read" path="sokf:coding-standards" when="before writing code and tests" />
+<tool_call name="sokf_read" path="sokf:testing-strategy" when="before writing code and tests" />
+<tool_call name="sokf_read" path="sokf:visual-system" when="if the block is UI work" />
+<tool_call name="sokf_read" path="sokf:development-procedure" when="before committing and before merging" />
+<tool_call name="sokf_read" path="sokf:definition-of-done" when="before verifying the whole change" />
+<tool_call name="sokf_read" path="sokf:schema-changelog" when="if the change is user-visible" />
+<tool_call name="sokf_read" path="sokf:schema-migration-guide" when="if a contract change breaks users" />
 <tool_call name="read_file" path="knowledge/schemas/investigation.md" when="if a failure needs investigation" />
 <tool_call name="codegraph_explore" query="{the code under change and its callers}" when="before editing" />
 </bootstrap_actions>

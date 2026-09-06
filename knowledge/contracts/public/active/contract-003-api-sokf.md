@@ -183,26 +183,25 @@ watcher or daemon state.
   error while the MCP process remains available.
 - `P_lazy-embedding` [ubiquitous] The MCP server SHALL retain one lazily
   initialized embedder result for its process lifetime.
-  - `AC_direct-does-not-load` [event] WHEN only concept reads, physical reads or
-    graph calls have run, the MCP server SHALL leave the embedder uninitialized.
-  - `AC_first-index-call-loads` [event] WHEN the first search or `sokf:` overview
-    read runs, the MCP server SHALL initialize the configured embedder once.
-  - `AC_later-index-call-reuses` [state] WHILE the embedder result is
-    initialized, later index-dependent calls SHALL reuse that result.
+- `P_direct-does-not-load` [event] WHEN only concept reads, physical reads or
+  graph calls have run, the MCP server SHALL leave the embedder uninitialized.
+- `P_first-index-call-loads` [event] WHEN the first search or `sokf:` overview
+  read runs, the MCP server SHALL initialize the configured embedder once.
+- `P_later-index-call-reuses` [state] WHILE the embedder result is initialized,
+  later index-dependent calls SHALL reuse that result.
 - `P_coding-read` [ubiquitous] `sokf_read` SHALL accept a familiar `path` with
   optional one-indexed `offset` and `limit` arguments.
-  - `AC_overview-address` [event] WHEN `path` is `sokf:`, `sokf_read` SHALL
-    return the knowledge overview.
-  - `AC_concept-address` [event] WHEN `path` is `sokf:<id>` or
-    `sokf:<id>#<heading>`, `sokf_read` SHALL return the rendered concept or
-    selected section.
-  - `AC_physical-contained` [conditional] IF `path` identifies an existing
-    physical file inside the knowledge root, `sokf_read` SHALL return its exact
-    UTF-8 text.
-  - `AC_physical-refused` [event] WHEN a physical `path` resolves outside the
-    knowledge root, `sokf_read` SHALL refuse it.
-  - `AC_line-window` [event] WHEN `offset` or `limit` is present, `sokf_read`
-    SHALL apply the line window after rendering or reading the target.
+- `P_overview-address` [event] WHEN `path` is `sokf:`, `sokf_read` SHALL return
+  the knowledge overview.
+- `P_concept-address` [event] WHEN `path` is `sokf:<id>` or
+  `sokf:<id>#<heading>`, `sokf_read` SHALL return the rendered concept or
+  selected section.
+- `P_physical-contained` [conditional] IF `path` identifies an existing physical
+  file inside the knowledge root, `sokf_read` SHALL return its exact UTF-8 text.
+- `P_physical-refused` [event] WHEN a physical `path` resolves outside the
+  knowledge root, `sokf_read` SHALL refuse it.
+- `P_line-window` [event] WHEN `offset` or `limit` is present, `sokf_read` SHALL
+  apply the line window after rendering or reading the target.
 - `P_direct-retrieval-skips-index` [event] WHEN `sokf_read` receives a concept
   address or contained physical path, `sokf_read` SHALL answer without opening
   or rewriting the search index.

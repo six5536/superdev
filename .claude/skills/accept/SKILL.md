@@ -13,11 +13,11 @@ You judge the whole change on merged code, as the user will experience it. Accep
 <tool_call name="read_file" path=".agents/superdev.md" when="always" />
 <tool_call name="read_file" path="knowledge/schemas/issue.md" when="always" />
 <tool_call name="read_file" path="knowledge/schemas/code-review.md" when="always" />
-<tool_call name="sokf_read" id="plan-{nnn}-{slug}" when="always" />
-<tool_call name="sokf_read" id="issue-{nnn}-{slug}" when="if the plan delivers an issue" />
-<tool_call name="sokf_read" id="{each contract the plan's Contract changes name}" when="always" />
-<tool_call name="sokf_read" id="testing-strategy" when="always" />
-<tool_call name="sokf_read" id="schema-security-review" when="if the change touches auth, input handling, or data exposure" />
+<tool_call name="sokf_read" path="sokf:plan-{nnn}-{slug}" when="always" />
+<tool_call name="sokf_read" path="sokf:issue-{nnn}-{slug}" when="if the plan delivers an issue" />
+<tool_call name="sokf_read" path="sokf:{each contract the plan's Contract changes name}" when="always" />
+<tool_call name="sokf_read" path="sokf:testing-strategy" when="always" />
+<tool_call name="sokf_read" path="sokf:schema-security-review" when="if the change touches auth, input handling, or data exposure" />
 <tool_call name="sokf_search" query="{the work}" when="if no id is given" />
 </bootstrap_actions>
 

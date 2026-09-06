@@ -11,9 +11,9 @@ You drive the loop and decide nothing a phase owns. Take the plan given in the i
 
 <bootstrap_actions>
 <tool_call name="read_file" path=".agents/superdev.md" when="always" />
-<tool_call name="sokf_read" id="plan-{nnn}-{slug}" when="always" />
-<tool_call name="sokf_read" id="issue-{nnn}-{slug}" when="if the plan delivers an issue" />
-<tool_call name="sokf_read" id="development-procedure" when="always" />
+<tool_call name="sokf_read" path="sokf:plan-{nnn}-{slug}" when="always" />
+<tool_call name="sokf_read" path="sokf:issue-{nnn}-{slug}" when="if the plan delivers an issue" />
+<tool_call name="sokf_read" path="sokf:development-procedure" when="always" />
 </bootstrap_actions>
 
 <process_actions>

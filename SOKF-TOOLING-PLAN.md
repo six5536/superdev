@@ -246,9 +246,10 @@ Keep graph traversal separate because it has no natural file-tool equivalent. Th
 
 ### MCP and fallback adapters
 
-Extend MCP from four read-only tools to six tools by adding `sokf_edit` and `sokf_write`. Their request shapes must match the coding tools:
+Expose five MCP tools with familiar request semantics. `sokf_read` uses a path and optional line window; `sokf:` is the overview address. Search and graph remain specialized, while mutations match coding tools:
 
 ```text
+sokf_read  { path, offset?, limit? }
 sokf_edit  { path, edits }
 sokf_write { path, content }
 ```
@@ -257,7 +258,7 @@ Both tools use the same `SokfService` mutation operations as the CLI, apply agen
 
 This changes the MCP server from read-only to mutation-capable. Update its tool descriptions, server instructions, API contract, security documentation, and tests accordingly. The server still trusts its local standard-input client and receives no new filesystem authority beyond the Superdev process.
 
-The Pi extension can omit separate `sokf_overview` and `sokf_read` tools after `read` supports virtual SOKF addresses. Harnesses that cannot override built-in tools can use all six `sokf_*` MCP tools. Whether Pi should retain read aliases during migration remains open.
+The separate `sokf_overview` tool is removed while the API is unreleased. Pi exposes virtual reads through its familiar `read` override; harnesses that cannot override built-in tools can call the five namespaced MCP tools.
 
 ## Workstream 3: Pi mutation adapters
 
@@ -458,24 +459,24 @@ This approach gives agents familiar mechanics without presenting semantic search
 - Direct mutation permits reserved `index.md` navigation files but refuses
   `manifest.sokf.yaml`; neither is treated as an ordinary concept.
 - Virtual section addresses use `sokf:<id>#<heading>`.
-- The initial Pi adapter invokes one CLI process per call. A warm development
-  shim benchmark was about two seconds per read, so latency remains an
-  evaluation concern; a persistent transport can replace it without changing
-  tool semantics if needed.
+- Pi lazily starts one `superdev mcp sokf` process per repository and reuses it
+  until session shutdown. The first search or overview read initializes the
+  embedder; later index-dependent calls reuse that instance.
 - The Pi adapter finds the nearest `.git` or `.superdev/config.toml` ancestor,
-  treats its `knowledge/` directory as the routing boundary, and invokes the
-  CLI from that root. Physical mutation targets are forwarded as absolute
-  paths, while virtual targets retain their `sokf:` address.
-- Pi rejects responses whose protocol is not exactly `sokf-tools/v1` with a
-  clear incompatibility error.
+  treats its `knowledge/` directory as the routing boundary, and starts MCP or
+  one-shot validation from that root. Physical mutation targets are forwarded
+  as absolute paths, while virtual targets retain their `sokf:` address.
+- Pi performs the narrow MCP initialize and `tools/call` exchange and rejects
+  an incompatible MCP protocol version with a clear error.
 - A Pi turn that applies a knowledge mutation runs final validation. A failed
   validation report triggers at most two automatic follow-up turns. Persistent
   failure is retained for the next manual turn and raises a user notification.
 - Behavioral fixtures use `sokf-behavior/v1`. A structural Node test protects
   the 12-scenario roster; model-session execution and scoring remain separate.
 - The script test suite loads the real adapter through Pi when Pi is available.
-  A model-free sandbox checks CLI/adapter result parity, subdirectory routing,
-  applied-invalid behavior, and the two-turn validation-feedback bound.
+  A model-free sandbox checks MCP/adapter result parity, persistent process
+  reuse, subdirectory routing, applied-invalid behavior, and the two-turn
+  validation-feedback bound.
 - Pi skills are independently authored under `.pi/skills`; Pi does not link the
   `.claude/skills` directory. Harness-specific skills may share SOKF policy but
   use each harness's native tool vocabulary and workflow conventions.
@@ -489,9 +490,9 @@ This approach gives agents familiar mechanics without presenting semantic search
   write: containment and symlink safety, exact-edit preconditions, immutable
   identity, restricted fields, stamped fields, and reserved targets. Repair and
   full structural or referential validity remain validator responsibilities.
-- The six MCP tools and six CLI operations are the fallback interface for
-  harnesses that cannot override built-in tools. No harness-specific adapter is
-  added until a target harness requires one.
+- The five MCP tools and six CLI operations are the fallback interface for
+  harnesses that cannot override built-in tools. No further harness-specific
+  adapter is added until a target harness requires one.
 - Behavioral acceptance requires three trials per supported model: every
   safety-critical scenario must pass, at least 90% of mechanically scored
   assertions must pass overall, and no forbidden write may occur. The short
@@ -499,9 +500,9 @@ This approach gives agents familiar mechanics without presenting semantic search
   knowledge-worthy scenarios without causing the code-local scenario to
   consult SOKF.
 - Direct reads and graph traversal parse current knowledge without loading an
-  embedding model or touching the search index. The warm development-shim
-  median fell from about 2 seconds to about 0.5 seconds; semantic search still
-  takes about 2 seconds and remains the only operation that pays model startup.
+  embedding model or touching the search index. Search and the overview address
+  initialize the model once in a persistent MCP process, so later Pi calls do
+  not repeat the roughly two-second startup.
 
 ## Open decisions
 

@@ -12,14 +12,14 @@ You decide how the work is cut and which interfaces it moves, and you build none
 <bootstrap_actions>
 <tool_call name="read_file" path=".agents/superdev.md" when="always" />
 <tool_call name="read_file" path="knowledge/schemas/plan.md" when="always" />
-<tool_call name="sokf_overview" when="always" />
-<tool_call name="sokf_read" id="issue-{nnn}-{slug}" when="if an issue is given" />
+<tool_call name="sokf_read" path="sokf:" when="always" />
+<tool_call name="sokf_read" path="sokf:issue-{nnn}-{slug}" when="if an issue is given" />
 <tool_call name="sokf_search" query="{the work, in the user's words}" when="if no issue is given" />
-<tool_call name="sokf_read" id="{each contract the work touches}" when="always" />
-<tool_call name="sokf_read" id="glossary" when="always" />
-<tool_call name="sokf_read" id="development-procedure" when="before branching and before committing" />
-<tool_call name="sokf_read" id="project-overview" when="always" />
-<tool_call name="sokf_read" id="constraints-non-goals" when="always" />
+<tool_call name="sokf_read" path="sokf:{each contract the work touches}" when="always" />
+<tool_call name="sokf_read" path="sokf:glossary" when="always" />
+<tool_call name="sokf_read" path="sokf:development-procedure" when="before branching and before committing" />
+<tool_call name="sokf_read" path="sokf:project-overview" when="always" />
+<tool_call name="sokf_read" path="sokf:constraints-non-goals" when="always" />
 <tool_call name="codegraph_explore" query="{the code under change and its callers}" when="before cutting the blocks" />
 </bootstrap_actions>
 

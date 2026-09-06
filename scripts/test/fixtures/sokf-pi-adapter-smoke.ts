@@ -37,6 +37,21 @@ export default async function () {
 		.get("sokf_search")
 		.execute("search", { query: "safe mutation", limit: 1 }, undefined, undefined, projectContext);
 	if (search.content[0]?.type !== "text") throw new Error("SOKF search did not return text content");
+	await tools
+		.get("sokf_search")
+		.execute("search-again", { query: "safe mutation", limit: 1 }, undefined, undefined, projectContext);
+	await tools
+		.get("sokf_search")
+		.execute("search-third", { query: "safe mutation", limit: 1 }, undefined, undefined, projectContext);
+	await tools
+		.get("read")
+		.execute("missing", { path: "sokf:not-a-concept" }, undefined, undefined, projectContext)
+		.then(
+			() => {
+				throw new Error("SOKF MCP tool error was returned as successful text");
+			},
+			() => undefined,
+		);
 
 	const sandbox = mkdtempSync(join(tmpdir(), "sokf-pi-adapter-"));
 	try {

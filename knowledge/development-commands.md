@@ -32,10 +32,15 @@ What the annotated list does not say:
   one or creates it at a physical path. Both repair and validate automatically,
   default to preserving `id` and `verified`, and report applied-but-invalid
   intermediate states without turning them into retryable command failures.
-  Pi auto-loads `.pi/extensions/sokf.ts`, which adapts those commands into its
-  built-in file-tool shapes plus `sokf_search` and `sokf_graph`. The adapter
-  performs final validation after mutation turns and limits automatic repair
-  feedback to two follow-up turns. Load Pi's native `/skill:sokf-authoring`
+  Pi auto-loads `.pi/extensions/sokf.ts`, which maps its built-in file-tool
+  shapes plus `sokf_search` and `sokf_graph` onto one lazily started
+  `superdev mcp sokf` process per repository. The MCP process initializes the
+  embedder on its first search or `sokf:` overview read and reuses it until Pi
+  session shutdown. The adapter performs final validation after mutation turns
+  through a one-shot CLI call and limits automatic repair feedback to two
+  follow-up turns. `node --test scripts/test/sokf-mcp-client.test.mjs` checks
+  MCP framing, process reuse, restart and shutdown without a model call. Load
+  Pi's native `/skill:sokf-authoring`
   for format-sensitive knowledge changes; Pi does not discover the Claude skill
   directory. Run `/system-prompt` in Pi to refresh
   the ignored `.pi/current-system-prompt.md` when inspecting effective

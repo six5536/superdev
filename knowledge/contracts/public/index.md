@@ -4,7 +4,7 @@ What this repository promises to callers outside it. One document per
 contract, each with its own stability promise.
 
 * [CLI contract for superdev][sokf:contract-002-cli-superdev] - the superdev command line — every command, argument and flag as clap declares it, the exit codes and streams each command promises, and what may change.
-* [API contract for sokf over MCP][sokf:contract-003-api-sokf] - the SOKF knowledge served to agents — four retrieval and two agent-safe mutation tools over stdio, and what each call promises beyond its signature.
+* [API contract for sokf over MCP][sokf:contract-003-api-sokf] - the SOKF knowledge served to agents — three retrieval and two agent-safe mutation tools over stdio, and what each call promises beyond its signature.
 * [Config contract for superdev][sokf:contract-004-config-superdev] - what a managed repo supplies to superdev — the manifest as the reader declares it, the four environment variables, which source defines what, and what an unknown or invalid setting does.
 * [Format contract for pack.toml][sokf:contract-005-format-pack] - what a content pack must look like for superdev to read it — pack.toml as the reader declares it, the tree that names each item, and what is refused.
 * [Format contract for lock.toml][sokf:contract-006-format-lock] - what superdev records of the last apply — lock.toml as the writer declares it, the per-capability components, the file hashes, the resolved packs — and what a reader may conclude from it.

@@ -85,15 +85,16 @@ All domain logic; no argument parsing. One module per concern:
   reaches the binary without a Rust edit; the contents are still `include_str!`
   literals, and only the list of them is generated.
 
-The MCP server exposes four retrieval tools over stdio — `sokf_search`,
-`sokf_read`, `sokf_graph`, `sokf_overview` — plus mandatory-agent-safe
-`sokf_edit` and `sokf_write` (see
-[contract-003-api-sokf][sokf:contract-003-api-sokf]). It holds one index directory and
-serialises its own tool calls with a mutex: a call keeps the index open across
-its whole body while another call's sync could delete and rebuild that
-directory underneath it. Search is hybrid — tantivy BM25 and cosine over
-section embeddings, fused by reciprocal rank fusion — and drops to lexical-only
-when no model loads.
+The MCP server exposes three retrieval tools over stdio — `sokf_search`,
+`sokf_read` and `sokf_graph` — plus mandatory-agent-safe `sokf_edit` and
+`sokf_write` (see [contract-003-api-sokf][sokf:contract-003-api-sokf]).
+`sokf_read` uses coding-tool-shaped path and line-window arguments; `sokf:` is
+the overview address. The server holds one index directory and serialises its
+tool calls: a call keeps the index open while another call's sync could rebuild
+that directory. Search is hybrid — tantivy BM25 and cosine over section
+embeddings, fused by reciprocal rank fusion — and drops to lexical-only when no
+model loads. MCP initializes the configured embedder on the first search or
+overview read and reuses that result for the process lifetime.
 
 # `crates/app/superdev` (binary)
 
@@ -112,19 +113,23 @@ pipeline needs:
 
 # Pi project extensions
 
-`.pi/extensions/sokf.ts` is a transport adapter over the CLI, not a second SOKF
-implementation. It overrides Pi's `read`, `edit`, and `write` slots only for
-virtual `sokf:` addresses or physical paths under the repository's knowledge
-root, delegates all other paths to fresh built-in tool instances rooted at the
-current working directory, and registers `sokf_search` and `sokf_graph`.
-Mutation calls share one queue keyed by the knowledge root and convert the
-versioned CLI envelope back into Pi's built-in result shapes. The extension
-walks to the repository root before invoking `superdev`, so it also works when
-Pi starts in a subdirectory. After a turn mutates knowledge, the extension runs
-final validation. A failure queues at most two repair turns with the validator
-report; a persistent failure stops automatic feedback and waits for manual
-continuation. `scripts/test/sokf-pi-adapter.test.mjs` loads the real extension
-through Pi when Pi is installed. Its sandbox checks virtual retrieval,
+`.pi/extensions/sokf.ts` is a transport adapter over the shared MCP service,
+not a second SOKF implementation. It overrides Pi's `read`, `edit`, and `write`
+slots only for virtual `sokf:` addresses or physical paths under the
+repository's knowledge root, delegates all other paths to fresh built-in tool
+instances rooted at the current working directory, and registers `sokf_search`
+and `sokf_graph`. `.pi/extensions/sokf-mcp.ts` lazily starts and initializes one
+narrow MCP stdio client per repository, serializes calls, reuses the child for
+the session, bounds protocol diagnostics, restarts after failure and closes it
+at session shutdown. Mutation responses convert standard MCP
+`structuredContent` into Pi's built-in result shapes. The extension walks to
+the repository root before spawning `superdev`, so it also works when Pi starts
+in a subdirectory. After a turn mutates knowledge, the extension runs final
+validation through a one-shot CLI call. A failure queues at most two repair
+turns with the validator report; a persistent failure stops automatic feedback
+and waits for manual continuation.
+`scripts/test/sokf-pi-adapter.test.mjs` loads the real extension through Pi when
+Pi is installed. Its sandbox checks virtual retrieval,
 structured edit results, subdirectory physical writes, applied-invalid
 handling, and bounded validation feedback without making a model call.
 
