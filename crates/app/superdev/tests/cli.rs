@@ -451,6 +451,18 @@ fn sokf_read_side_commands_share_the_service() {
     let graph = run(&["sokf", "graph", "module-a"]);
     assert!(graph.contains("no links"), "{graph}");
 
+    let json = run(&["sokf", "read", "module-a", "--json"]);
+    let json: serde_json::Value = serde_json::from_str(&json).unwrap();
+    assert_eq!(json["protocol"], "sokf-tools/v1");
+    assert_eq!(json["content"][0]["type"], "text");
+    assert!(
+        json["content"][0]["text"]
+            .as_str()
+            .is_some_and(|text| text.contains("It plans.")),
+        "{json}"
+    );
+    assert_eq!(json["details"], serde_json::json!({}));
+
     let out = superdev()
         .current_dir(dir.path())
         .env("XDG_CACHE_HOME", &cache)

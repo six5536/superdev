@@ -25,7 +25,8 @@ What the annotated list does not say:
   different verdicts. `cargo run -- sokf index` forces a full index rebuild, which
   nothing routine needs: every MCP or CLI `sokf overview`, `search`, `read` or
   `graph` call syncs the index lazily. Those four CLI commands expose the same
-  service for shell users and harness adapters.
+  service for shell users and harness adapters; their `--json` form wraps text
+  in the versioned `sokf-tools/v1` tool-result envelope.
 - `cargo run -- validate --fix` is the same check with its repairs applied
   first: a link naming a concept by path becomes the id form, every
   `<!-- sokf:links -->` block is regenerated, and every include block is

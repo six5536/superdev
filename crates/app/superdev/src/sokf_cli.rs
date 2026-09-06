@@ -33,7 +33,11 @@ pub enum SokfCommand {
         path: Option<PathBuf>,
     },
     /// Orient in the SOKF knowledge
-    Overview,
+    Overview {
+        /// Emit a tool-result JSON envelope
+        #[arg(long)]
+        json: bool,
+    },
     /// Search the SOKF knowledge
     Search {
         /// What to look for, in the caller's own words
@@ -50,6 +54,9 @@ pub enum SokfCommand {
         /// Keep only concepts with this lifecycle; repeat for more than one
         #[arg(long)]
         lifecycle: Vec<String>,
+        /// Emit a tool-result JSON envelope
+        #[arg(long)]
+        json: bool,
     },
     /// Read one concept or section
     Read {
@@ -64,11 +71,17 @@ pub enum SokfCommand {
         /// Most rendered lines to return
         #[arg(long)]
         limit: Option<usize>,
+        /// Emit a tool-result JSON envelope
+        #[arg(long)]
+        json: bool,
     },
     /// Show the whole link graph or one concept's neighbours
     Graph {
         /// Concept id or knowledge-relative path
         id: Option<String>,
+        /// Emit a tool-result JSON envelope
+        #[arg(long)]
+        json: bool,
     },
 }
 // sokf:end cli
@@ -139,14 +152,15 @@ pub fn run_sokf(cmd: &SokfCommand, root: &Path) -> Result<u8> {
             }
             Ok(0)
         }
-        SokfCommand::Overview => print_service(root, |service| service.overview()),
+        SokfCommand::Overview { json } => print_service(root, *json, |service| service.overview()),
         SokfCommand::Search {
             query,
             limit,
             types,
             tags,
             lifecycle,
-        } => print_service(root, |service| {
+            json,
+        } => print_service(root, *json, |service| {
             service.search(SearchRequest {
                 query: query.clone(),
                 limit: *limit,
@@ -160,18 +174,22 @@ pub fn run_sokf(cmd: &SokfCommand, root: &Path) -> Result<u8> {
             heading,
             offset,
             limit,
-        } => print_service(root, |service| {
+            json,
+        } => print_service(root, *json, |service| {
             service
                 .read(id, heading.as_deref())
                 .and_then(|text| line_window(&text, *offset, *limit))
         }),
-        SokfCommand::Graph { id } => print_service(root, |service| service.graph(id.as_deref())),
+        SokfCommand::Graph { id, json } => {
+            print_service(root, *json, |service| service.graph(id.as_deref()))
+        }
     }
 }
 
 /// Build the shared service, run one operation, and print its text result.
 fn print_service(
     root: &Path,
+    json: bool,
     operation: impl FnOnce(&SokfService) -> Result<String>,
 ) -> Result<u8> {
     let service = SokfService::new(
@@ -180,7 +198,19 @@ fn print_service(
         IndexDir(root.join(INDEX_DIR)),
         embedder(root)?,
     );
-    out(&operation(&service)?)?;
+    let text = operation(&service)?;
+    if json {
+        let value = serde_json::json!({
+            "protocol": "sokf-tools/v1",
+            "content": [{ "type": "text", "text": text }],
+            "details": {}
+        });
+        let rendered =
+            serde_json::to_string_pretty(&value).map_err(|e| io_error(io::Error::other(e)))?;
+        out(&rendered)?;
+    } else {
+        out(&text)?;
+    }
     Ok(0)
 }
 

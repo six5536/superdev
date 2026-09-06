@@ -220,7 +220,11 @@ pub enum SokfCommand {
         path: Option<PathBuf>,
     },
     /// Orient in the SOKF knowledge
-    Overview,
+    Overview {
+        /// Emit a tool-result JSON envelope
+        #[arg(long)]
+        json: bool,
+    },
     /// Search the SOKF knowledge
     Search {
         /// What to look for, in the caller's own words
@@ -237,6 +241,9 @@ pub enum SokfCommand {
         /// Keep only concepts with this lifecycle; repeat for more than one
         #[arg(long)]
         lifecycle: Vec<String>,
+        /// Emit a tool-result JSON envelope
+        #[arg(long)]
+        json: bool,
     },
     /// Read one concept or section
     Read {
@@ -251,11 +258,17 @@ pub enum SokfCommand {
         /// Most rendered lines to return
         #[arg(long)]
         limit: Option<usize>,
+        /// Emit a tool-result JSON envelope
+        #[arg(long)]
+        json: bool,
     },
     /// Show the whole link graph or one concept's neighbours
     Graph {
         /// Concept id or knowledge-relative path
         id: Option<String>,
+        /// Emit a tool-result JSON envelope
+        #[arg(long)]
+        json: bool,
     },
 }
 ```
@@ -478,6 +491,11 @@ Claude Code reads a hook's stderr. A closed stdout pipe ends the run as
   warnings appear only with `--warnings`, as in the text output),
   `knowledge` (the directory the run covered) and, with `--fix`,
   `repaired` (each file the run rewrote).
+- `P_sokf-read-json-shape` [event] WHEN `--json` is given to `sokf
+  overview`, `search`, `read` or `graph`, the command SHALL write one JSON
+  object with protocol `sokf-tools/v1`, one text content item carrying the
+  ordinary command output, and a `details` object reserved for structured
+  operation results.
 
 ### Prompting
 
