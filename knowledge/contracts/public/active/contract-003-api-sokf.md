@@ -65,41 +65,26 @@ struct GraphArgs {
     #[tool]
     async fn sokf_search(&self, Parameters(args): Parameters<SearchArgs>) -> ToolResult {
         let _guard = self.exclusive();
-        let (bundle, index, stats) = self.sync().map_err(|e| e.to_string())?;
-        let opts = SearchOpts {
-            limit: hit_limit(args.limit),
-            kinds: args.types.unwrap_or_default(),
-            tags: args.tags.unwrap_or_default(),
-            lifecycle: args.lifecycle.unwrap_or_default(),
-        };
-        // The embedder that built the vectors is the only one that can search
-        // them; anything else silently degrades to lexical.
-        let hits = index
-            .search(&args.query, self.embedder.as_deref(), &opts)
-            .map_err(|e| e.to_string())?;
-        Ok(text(render_hits(
-            &bundle,
-            &args.query,
-            &hits,
-            stats.lexical_only,
-        )))
+        self.service
+            .search(SearchRequest {
+                query: args.query,
+                limit: args.limit,
+                types: args.types.unwrap_or_default(),
+                tags: args.tags.unwrap_or_default(),
+                lifecycle: args.lifecycle.unwrap_or_default(),
+            })
+            .map(text)
+            .map_err(|e| e.to_string())
     }
 
     /// Read one concept whole, or one of its sections.
     #[tool]
     async fn sokf_read(&self, Parameters(args): Parameters<ReadArgs>) -> ToolResult {
         let _guard = self.exclusive();
-        let (bundle, _, _) = self.sync().map_err(|e| e.to_string())?;
-        let graph = Graph::build(&bundle);
-        let identity = resolve(&graph, &args.id)
-            .map_err(|e| broken_file_error(&bundle, &args.id).unwrap_or(e))?;
-        let concept =
-            concept_of(&bundle, &identity).ok_or_else(|| format!("no concept for `{identity}`"))?;
-        Ok(text(render_concept(
-            concept,
-            &identity,
-            args.heading.as_deref(),
-        )?))
+        self.service
+            .read(&args.id, args.heading.as_deref())
+            .map(text)
+            .map_err(|e| e.to_string())
     }
 
     /// Show the link graph: the whole edge map, or one concept's neighbours
@@ -107,16 +92,10 @@ struct GraphArgs {
     #[tool]
     async fn sokf_graph(&self, Parameters(args): Parameters<GraphArgs>) -> ToolResult {
         let _guard = self.exclusive();
-        let (bundle, _, _) = self.sync().map_err(|e| e.to_string())?;
-        let graph = Graph::build(&bundle);
-        let Some(id) = args.id else {
-            return Ok(text(render_edges(&graph.edge_map())));
-        };
-        let identity = resolve(&graph, &id)?;
-        let hops = graph
-            .neighbours(&identity)
-            .map_err(|unknown| format!("unknown id `{}`", unknown.asked))?;
-        Ok(text(render_neighbours(&bundle, &identity, &hops)))
+        self.service
+            .graph(args.id.as_deref())
+            .map(text)
+            .map_err(|e| e.to_string())
     }
 
     /// Orient in the bundle: its name, size, directory tree, and anything
@@ -124,8 +103,7 @@ struct GraphArgs {
     #[tool]
     async fn sokf_overview(&self) -> ToolResult {
         let _guard = self.exclusive();
-        let (bundle, _, stats) = self.sync().map_err(|e| e.to_string())?;
-        Ok(text(render_overview(&bundle, &stats, &self.repo_root)))
+        self.service.overview().map(text).map_err(|e| e.to_string())
     }
 ```
 <!-- /sokf:include -->

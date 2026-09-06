@@ -37,11 +37,8 @@ const MAX_LIMIT: usize = 50;
 /// What a tool returns: text, or a message the client shows as a tool error.
 type ToolResult = std::result::Result<CallToolResult, String>;
 
-/// An MCP server over one SOKF bundle.
-///
-/// Read-only: no tool writes to the bundle. The index directory is the
-/// server's alone.
-pub struct SokfServer {
+/// Harness-independent read operations over one SOKF knowledge tree.
+pub struct SokfService {
     bundle_dir: PathBuf,
     repo_root: PathBuf,
     index_dir: IndexDir,
@@ -49,6 +46,22 @@ pub struct SokfServer {
     /// search. The same instance must reach every search, or the index's
     /// vectors go unused.
     embedder: Option<Box<dyn Embedder>>,
+}
+
+impl std::fmt::Debug for SokfService {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("SokfService")
+            .field("bundle_dir", &self.bundle_dir)
+            .field("repo_root", &self.repo_root)
+            .field("index_dir", &self.index_dir.0)
+            .field("embedder", &self.embedder.as_ref().map(|e| e.model_id()))
+            .finish()
+    }
+}
+
+/// An MCP adapter over [`SokfService`].
+pub struct SokfServer {
+    service: SokfService,
     /// One tool call at a time. rmcp runs each request as its own task, and a
     /// call holds an [`Index`] open across its whole body while another call's
     /// sync may delete and rebuild the index directory underneath it — and two
@@ -61,10 +74,7 @@ pub struct SokfServer {
 impl std::fmt::Debug for SokfServer {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("SokfServer")
-            .field("bundle_dir", &self.bundle_dir)
-            .field("repo_root", &self.repo_root)
-            .field("index_dir", &self.index_dir.0)
-            .field("embedder", &self.embedder.as_ref().map(|e| e.model_id()))
+            .field("service", &self.service)
             .finish()
     }
 }
@@ -110,6 +120,99 @@ struct GraphArgs {
 }
 // sokf:end tools
 
+/// Filters accepted by [`SokfService::search`].
+#[derive(Debug, Default)]
+pub struct SearchRequest {
+    /// What to look for, in the caller's own words.
+    pub query: String,
+    /// Most hits to return; 8 by default.
+    pub limit: Option<u32>,
+    /// Keep only concepts of these frontmatter `type`s.
+    pub types: Vec<String>,
+    /// Keep only concepts carrying one of these tags.
+    pub tags: Vec<String>,
+    /// Keep only concepts whose `lifecycle` is one of these values.
+    pub lifecycle: Vec<String>,
+}
+
+impl SokfService {
+    /// Serve `bundle_dir`, resolving `/`-rooted links against `repo_root` and
+    /// keeping the search index in `index_dir`.
+    #[must_use]
+    pub fn new(
+        bundle_dir: PathBuf,
+        repo_root: PathBuf,
+        index_dir: IndexDir,
+        embedder: Option<Box<dyn Embedder>>,
+    ) -> Self {
+        Self {
+            bundle_dir,
+            repo_root,
+            index_dir,
+            embedder,
+        }
+    }
+
+    /// Search the knowledge and render the best matching sections.
+    pub fn search(&self, request: SearchRequest) -> crate::error::Result<String> {
+        let (bundle, index, stats) = self.sync()?;
+        let opts = SearchOpts {
+            limit: hit_limit(request.limit),
+            kinds: request.types,
+            tags: request.tags,
+            lifecycle: request.lifecycle,
+        };
+        let hits = index.search(&request.query, self.embedder.as_deref(), &opts)?;
+        Ok(render_hits(
+            &bundle,
+            &request.query,
+            &hits,
+            stats.lexical_only,
+        ))
+    }
+
+    /// Read and render one concept, optionally restricted to one heading.
+    pub fn read(&self, id: &str, heading: Option<&str>) -> crate::error::Result<String> {
+        let (bundle, _, _) = self.sync()?;
+        let graph = Graph::build(&bundle);
+        let identity = resolve(&graph, id)
+            .map_err(|message| broken_file_error(&bundle, id).unwrap_or(message))
+            .map_err(|message| Error::Sokf { message })?;
+        let concept = concept_of(&bundle, &identity).ok_or_else(|| Error::Sokf {
+            message: format!("no concept for `{identity}`"),
+        })?;
+        render_concept(concept, &identity, heading).map_err(|message| Error::Sokf { message })
+    }
+
+    /// Render the whole edge map or one concept's neighbours.
+    pub fn graph(&self, id: Option<&str>) -> crate::error::Result<String> {
+        let (bundle, _, _) = self.sync()?;
+        let graph = Graph::build(&bundle);
+        let Some(id) = id else {
+            return Ok(render_edges(&graph.edge_map()));
+        };
+        let identity = resolve(&graph, id).map_err(|message| Error::Sokf { message })?;
+        let hops = graph.neighbours(&identity).map_err(|unknown| Error::Sokf {
+            message: format!("unknown id `{}`", unknown.asked),
+        })?;
+        Ok(render_neighbours(&bundle, &identity, &hops))
+    }
+
+    /// Render the knowledge name, size, tree, index state, and findings.
+    pub fn overview(&self) -> crate::error::Result<String> {
+        let (bundle, _, stats) = self.sync()?;
+        Ok(render_overview(&bundle, &stats, &self.repo_root))
+    }
+
+    /// Reload the bundle and bring the index up to date.
+    fn sync(&self) -> crate::error::Result<(Bundle, Index, SyncStats)> {
+        let bundle = load_bundle(&self.bundle_dir)?;
+        let (index, stats) =
+            Index::open_and_sync(&self.index_dir, &bundle, self.embedder.as_deref())?;
+        Ok((bundle, index, stats))
+    }
+}
+
 #[tool_router(router = tool_router)]
 impl SokfServer {
     /// Serve `bundle_dir`, resolving `/`-rooted links against `repo_root` and
@@ -125,10 +228,7 @@ impl SokfServer {
         embedder: Option<Box<dyn Embedder>>,
     ) -> SokfServer {
         SokfServer {
-            bundle_dir,
-            repo_root,
-            index_dir,
-            embedder,
+            service: SokfService::new(bundle_dir, repo_root, index_dir, embedder),
             tool_lock: std::sync::Mutex::new(()),
             tool_router: SokfServer::tool_router(),
         }
@@ -140,41 +240,26 @@ impl SokfServer {
     #[tool]
     async fn sokf_search(&self, Parameters(args): Parameters<SearchArgs>) -> ToolResult {
         let _guard = self.exclusive();
-        let (bundle, index, stats) = self.sync().map_err(|e| e.to_string())?;
-        let opts = SearchOpts {
-            limit: hit_limit(args.limit),
-            kinds: args.types.unwrap_or_default(),
-            tags: args.tags.unwrap_or_default(),
-            lifecycle: args.lifecycle.unwrap_or_default(),
-        };
-        // The embedder that built the vectors is the only one that can search
-        // them; anything else silently degrades to lexical.
-        let hits = index
-            .search(&args.query, self.embedder.as_deref(), &opts)
-            .map_err(|e| e.to_string())?;
-        Ok(text(render_hits(
-            &bundle,
-            &args.query,
-            &hits,
-            stats.lexical_only,
-        )))
+        self.service
+            .search(SearchRequest {
+                query: args.query,
+                limit: args.limit,
+                types: args.types.unwrap_or_default(),
+                tags: args.tags.unwrap_or_default(),
+                lifecycle: args.lifecycle.unwrap_or_default(),
+            })
+            .map(text)
+            .map_err(|e| e.to_string())
     }
 
     /// Read one concept whole, or one of its sections.
     #[tool]
     async fn sokf_read(&self, Parameters(args): Parameters<ReadArgs>) -> ToolResult {
         let _guard = self.exclusive();
-        let (bundle, _, _) = self.sync().map_err(|e| e.to_string())?;
-        let graph = Graph::build(&bundle);
-        let identity = resolve(&graph, &args.id)
-            .map_err(|e| broken_file_error(&bundle, &args.id).unwrap_or(e))?;
-        let concept =
-            concept_of(&bundle, &identity).ok_or_else(|| format!("no concept for `{identity}`"))?;
-        Ok(text(render_concept(
-            concept,
-            &identity,
-            args.heading.as_deref(),
-        )?))
+        self.service
+            .read(&args.id, args.heading.as_deref())
+            .map(text)
+            .map_err(|e| e.to_string())
     }
 
     /// Show the link graph: the whole edge map, or one concept's neighbours
@@ -182,16 +267,10 @@ impl SokfServer {
     #[tool]
     async fn sokf_graph(&self, Parameters(args): Parameters<GraphArgs>) -> ToolResult {
         let _guard = self.exclusive();
-        let (bundle, _, _) = self.sync().map_err(|e| e.to_string())?;
-        let graph = Graph::build(&bundle);
-        let Some(id) = args.id else {
-            return Ok(text(render_edges(&graph.edge_map())));
-        };
-        let identity = resolve(&graph, &id)?;
-        let hops = graph
-            .neighbours(&identity)
-            .map_err(|unknown| format!("unknown id `{}`", unknown.asked))?;
-        Ok(text(render_neighbours(&bundle, &identity, &hops)))
+        self.service
+            .graph(args.id.as_deref())
+            .map(text)
+            .map_err(|e| e.to_string())
     }
 
     /// Orient in the bundle: its name, size, directory tree, and anything
@@ -199,8 +278,7 @@ impl SokfServer {
     #[tool]
     async fn sokf_overview(&self) -> ToolResult {
         let _guard = self.exclusive();
-        let (bundle, _, stats) = self.sync().map_err(|e| e.to_string())?;
-        Ok(text(render_overview(&bundle, &stats, &self.repo_root)))
+        self.service.overview().map(text).map_err(|e| e.to_string())
     }
     // sokf:end tools
 
@@ -233,15 +311,6 @@ impl SokfServer {
         self.tool_lock
             .lock()
             .unwrap_or_else(std::sync::PoisonError::into_inner)
-    }
-
-    /// Reload the bundle and bring the index up to date — the freshness rule,
-    /// run once per tool call.
-    fn sync(&self) -> crate::error::Result<(Bundle, Index, SyncStats)> {
-        let bundle = load_bundle(&self.bundle_dir)?;
-        let (index, stats) =
-            Index::open_and_sync(&self.index_dir, &bundle, self.embedder.as_deref())?;
-        Ok((bundle, index, stats))
     }
 }
 

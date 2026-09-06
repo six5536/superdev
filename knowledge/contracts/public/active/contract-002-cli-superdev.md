@@ -219,6 +219,44 @@ pub enum SokfCommand {
         /// SOKF knowledge directory (default: `knowledge`)
         path: Option<PathBuf>,
     },
+    /// Orient in the SOKF knowledge
+    Overview,
+    /// Search the SOKF knowledge
+    Search {
+        /// What to look for, in the caller's own words
+        query: String,
+        /// Most sections to return
+        #[arg(long)]
+        limit: Option<u32>,
+        /// Keep only concepts of this type; repeat for more than one
+        #[arg(long = "type")]
+        types: Vec<String>,
+        /// Keep only concepts carrying this tag; repeat for more than one
+        #[arg(long = "tag")]
+        tags: Vec<String>,
+        /// Keep only concepts with this lifecycle; repeat for more than one
+        #[arg(long)]
+        lifecycle: Vec<String>,
+    },
+    /// Read one concept or section
+    Read {
+        /// Concept id or knowledge-relative path
+        id: String,
+        /// Heading or `parent > child` heading path
+        #[arg(long)]
+        heading: Option<String>,
+        /// First rendered line to return, starting at 1
+        #[arg(long)]
+        offset: Option<usize>,
+        /// Most rendered lines to return
+        #[arg(long)]
+        limit: Option<usize>,
+    },
+    /// Show the whole link graph or one concept's neighbours
+    Graph {
+        /// Concept id or knowledge-relative path
+        id: Option<String>,
+    },
 }
 ```
 <!-- /sokf:include -->

@@ -10,7 +10,8 @@ use std::path::PathBuf;
 use superdev_core::error::{Error, Result};
 use superdev_core::manifest::{CONFIG_PATH, Manifest};
 use superdev_core::sokf::{
-    EmbeddingsConfig, Index, IndexDir, SokfServer, embedder_from, load_bundle,
+    EmbeddingsConfig, Index, IndexDir, SearchRequest, SokfServer, SokfService, embedder_from,
+    load_bundle,
 };
 
 use crate::cli::{INDEX_DIR, io_error, knowledge_dir, out};
@@ -30,6 +31,44 @@ pub enum SokfCommand {
     Index {
         /// SOKF knowledge directory (default: `knowledge`)
         path: Option<PathBuf>,
+    },
+    /// Orient in the SOKF knowledge
+    Overview,
+    /// Search the SOKF knowledge
+    Search {
+        /// What to look for, in the caller's own words
+        query: String,
+        /// Most sections to return
+        #[arg(long)]
+        limit: Option<u32>,
+        /// Keep only concepts of this type; repeat for more than one
+        #[arg(long = "type")]
+        types: Vec<String>,
+        /// Keep only concepts carrying this tag; repeat for more than one
+        #[arg(long = "tag")]
+        tags: Vec<String>,
+        /// Keep only concepts with this lifecycle; repeat for more than one
+        #[arg(long)]
+        lifecycle: Vec<String>,
+    },
+    /// Read one concept or section
+    Read {
+        /// Concept id or knowledge-relative path
+        id: String,
+        /// Heading or `parent > child` heading path
+        #[arg(long)]
+        heading: Option<String>,
+        /// First rendered line to return, starting at 1
+        #[arg(long)]
+        offset: Option<usize>,
+        /// Most rendered lines to return
+        #[arg(long)]
+        limit: Option<usize>,
+    },
+    /// Show the whole link graph or one concept's neighbours
+    Graph {
+        /// Concept id or knowledge-relative path
+        id: Option<String>,
     },
 }
 // sokf:end cli
@@ -100,6 +139,58 @@ pub fn run_sokf(cmd: &SokfCommand, root: &Path) -> Result<u8> {
             }
             Ok(0)
         }
+        SokfCommand::Overview => print_service(root, |service| service.overview()),
+        SokfCommand::Search {
+            query,
+            limit,
+            types,
+            tags,
+            lifecycle,
+        } => print_service(root, |service| {
+            service.search(SearchRequest {
+                query: query.clone(),
+                limit: *limit,
+                types: types.clone(),
+                tags: tags.clone(),
+                lifecycle: lifecycle.clone(),
+            })
+        }),
+        SokfCommand::Read {
+            id,
+            heading,
+            offset,
+            limit,
+        } => print_service(root, |service| {
+            service
+                .read(id, heading.as_deref())
+                .map(|text| line_window(&text, *offset, *limit))
+        }),
+        SokfCommand::Graph { id } => print_service(root, |service| service.graph(id.as_deref())),
+    }
+}
+
+/// Build the shared service, run one operation, and print its text result.
+fn print_service(
+    root: &Path,
+    operation: impl FnOnce(&SokfService) -> Result<String>,
+) -> Result<u8> {
+    let service = SokfService::new(
+        knowledge_dir(root, None),
+        root.to_path_buf(),
+        IndexDir(root.join(INDEX_DIR)),
+        embedder(root)?,
+    );
+    out(&operation(&service)?)?;
+    Ok(0)
+}
+
+/// Apply the coding-tool line window to rendered concept text.
+fn line_window(text: &str, offset: Option<usize>, limit: Option<usize>) -> String {
+    let start = offset.unwrap_or(1).saturating_sub(1);
+    let lines = text.lines().skip(start);
+    match limit {
+        Some(limit) => lines.take(limit).collect::<Vec<_>>().join("\n"),
+        None => lines.collect::<Vec<_>>().join("\n"),
     }
 }
 

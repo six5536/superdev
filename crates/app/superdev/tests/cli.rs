@@ -415,6 +415,44 @@ fn sokf_index_rebuilds_and_reports_lexical_only() {
 }
 
 #[test]
+fn sokf_read_side_commands_share_the_service() {
+    let dir = tempfile::tempdir().unwrap();
+    write_fixture_bundle(dir.path());
+    let cache = blocked_model_cache(dir.path());
+
+    let run = |args: &[&str]| {
+        let out = superdev()
+            .current_dir(dir.path())
+            .env("XDG_CACHE_HOME", &cache)
+            .args(args)
+            .assert()
+            .success();
+        String::from_utf8_lossy(&out.get_output().stdout).into_owned()
+    };
+
+    let overview = run(&["sokf", "overview"]);
+    assert!(
+        overview.contains("fixture-knowledge — 1 concepts"),
+        "{overview}"
+    );
+    assert!(overview.contains("module-a"), "{overview}");
+
+    let search = run(&["sokf", "search", "plans"]);
+    assert!(search.contains("module-a"), "{search}");
+    assert!(search.contains("module.md"), "{search}");
+
+    let read = run(&["sokf", "read", "module-a", "--heading", "Role"]);
+    assert!(read.contains("It plans."), "{read}");
+    assert!(!read.contains("no heading"), "{read}");
+
+    let window = run(&["sokf", "read", "module-a", "--offset", "1", "--limit", "1"]);
+    assert_eq!(window.trim(), "module-a");
+
+    let graph = run(&["sokf", "graph", "module-a"]);
+    assert!(graph.contains("no links"), "{graph}");
+}
+
+#[test]
 fn mcp_without_knowledge_fails_at_startup() {
     let dir = tempfile::tempdir().unwrap();
     let out = superdev()

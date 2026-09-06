@@ -23,4 +23,4 @@ pub use embed::{
 };
 pub use graph::{Edge, Graph, UnknownId, inverse_rel};
 pub use index::{Hit, Index, IndexDir, SCHEMA_VERSION, SearchOpts, SyncStats};
-pub use mcp::SokfServer;
+pub use mcp::{SearchRequest, SokfServer, SokfService};

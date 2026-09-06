@@ -46,6 +46,11 @@ pub enum Error {
         /// What failed.
         message: String,
     },
+    /// A SOKF knowledge operation could not be completed.
+    Sokf {
+        /// What failed.
+        message: String,
+    },
     /// The MCP server could not start or could not run to completion.
     Mcp {
         /// What failed.
@@ -92,6 +97,7 @@ impl fmt::Display for Error {
             Error::Manifest { message } => write!(f, "manifest: {message}"),
             Error::Embedding { message } => write!(f, "embedding: {message}"),
             Error::Index { message } => write!(f, "index: {message}"),
+            Error::Sokf { message } => write!(f, "sokf: {message}"),
             Error::Mcp { message } => write!(f, "mcp: {message}"),
             Error::Pack { pack, message } => write!(f, "pack `{pack}`: {message}"),
         }
@@ -171,6 +177,14 @@ mod tests {
             }
             .to_string(),
             "index: no such directory"
+        );
+
+        assert_eq!(
+            Error::Sokf {
+                message: "unknown id".into()
+            }
+            .to_string(),
+            "sokf: unknown id"
         );
 
         assert_eq!(
