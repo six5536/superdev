@@ -120,11 +120,32 @@ current working directory, and registers `sokf_search` and `sokf_graph`.
 Mutation calls share one queue keyed by the knowledge root and convert the
 versioned CLI envelope back into Pi's built-in result shapes. The extension
 walks to the repository root before invoking `superdev`, so it also works when
-Pi starts in a subdirectory.
+Pi starts in a subdirectory. After a turn mutates knowledge, the extension runs
+final validation. A failure queues at most two repair turns with the validator
+report; a persistent failure stops automatic feedback and waits for manual
+continuation.
+
+`pack/knowledge/skills/sokf-authoring/SKILL.md` is the canonical packaged
+authoring skill. The knowledge capability deploys it to
+`.claude/skills/sokf-authoring/SKILL.md`; `.pi/settings.json` adds the shared
+Claude skill directory to Pi's discovery paths. The standing prompt points to
+the skill and loads the full SOKF specification only when syntax or semantics
+matter.
 
 `.pi/extensions/system-prompt.ts` registers `/system-prompt` for inspecting the
 effective Pi prompt. Its `.pi/current-system-prompt.md` output is machine-local
 and ignored rather than project knowledge.
+
+# SOKF behavior evaluations
+
+`evals/sokf/behavioral.json` carries the versioned prompts and expected tool
+sequences for the 12 progressive-context scenarios. The fixtures distinguish
+knowledge-worthy tasks from code-local work and cover missing stores,
+format-sensitive work, intermediate invalid mutations, and outward-facing
+documentation. `scripts/test/sokf-behavior-fixtures.test.mjs` protects the
+fixture protocol and scenario roster. A model-session evaluator remains the
+consumer of these expectations; the structural test does not claim behavioral
+success.
 
 # Publishing
 

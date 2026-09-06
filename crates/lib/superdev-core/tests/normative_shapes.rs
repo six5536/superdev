@@ -1969,6 +1969,32 @@ fn the_file_skill_ships_in_the_pack_and_the_lock() {
     );
 }
 
+/// The format-sensitive SOKF instructions ship as one knowledge-carried skill,
+/// and Pi discovers the same deployed copy rather than maintaining a fork.
+#[test]
+fn the_sokf_authoring_skill_ships_once_and_pi_discovers_it() {
+    let [(live, live_text), (pack, pack_text)] = skill_copies("sokf-authoring");
+    assert_eq!(
+        same(&live_text),
+        same(&pack_text),
+        "{live} differs from {pack}"
+    );
+    assert!(
+        live_text.contains(".agents/sokf/SPEC.md"),
+        "{live} does not defer format semantics to the specification"
+    );
+    let lock = std::fs::read_to_string(repo(".superdev/lock.toml")).expect("the lock is on file");
+    assert!(
+        lock.contains("\".claude/skills/sokf-authoring/SKILL.md\" = \""),
+        "the lock does not claim the deployed authoring skill"
+    );
+    let pi = std::fs::read_to_string(repo(".pi/settings.json")).expect("Pi settings are on file");
+    assert!(
+        pi.contains("../.claude/skills"),
+        "Pi does not discover the shared skill directory"
+    );
+}
+
 /// Covers I052's scope criterion: `/scope` opens with the branch step, calls
 /// `/grill-me` where the design is open, calls `/contract-design` for the
 /// plan's contract changes, double-checks the plan and hands to `/build`

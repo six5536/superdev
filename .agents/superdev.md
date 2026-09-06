@@ -21,18 +21,15 @@ YOU follow the set of rules defined below, reminding yourself of the rules perio
 </workflow>
 
 <knowledge purpose="canonical data store">
-Store all canonical project knowledge in the SOKF knowledge under
-`knowledge/`:
-@../knowledge/index.md
-<tool_call name="read_file" path=".agents/sokf/SPEC.md" when="always" />
-<tool_call name="sokf_overview" when="always" />
-<retrieval>
-  <tool_call name="sokf_graph" when="if following links between concepts" />
-  <tool_call name="sokf_search" when="if the concept id is not known" />
-  <tool_call name="sokf_read" id="schema-{type}" when="before opening a {type} document, whether to read it, update it, or create it" why="understand document better"/>
-  <tool_call name="sokf_read" when="before editing a concept" />
-</retrieval>
-<validation when="if anything under `knowledge/`, `.claude/skills/` or `.agents/` changed"
+SOKF under `knowledge/` is the canonical store for all project knowledge.
+Use SOKF whenever project knowledge is needed. Read known concepts with
+`read path="sokf:<id>"`; use `sokf_search` when the concept ID is unknown.
+Write new project knowledge there and keep affected concepts current.
+Only outward-facing project information belongs outside SOKF. Summarize and
+cite that information in SOKF instead of duplicating it.
+Use the `sokf-authoring` skill when writing concepts. Read
+`.agents/sokf/SPEC.md` only when the task depends on format semantics.
+<validation when="if anything under `knowledge/`, `.claude/skills/`, or `.agents/` changed"
   until="the validator reports PASS">
   <tool_call name="superdev validate --fix" when="always" />
 </validation>

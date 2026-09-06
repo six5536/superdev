@@ -38,7 +38,10 @@ another thin adapter: it extends `read`, `edit`, and `write` for `sokf:` or
 physical knowledge targets, adds `sokf_search` and `sokf_graph`, invokes one
 CLI process per operation from the repository root, and delegates every
 ordinary path to Pi unchanged. It queues all knowledge mutations on that root
-so identity-addressed and path-addressed calls cannot race. Freshness is lazy: every tool call
+so identity-addressed and path-addressed calls cannot race. A turn that mutates
+knowledge ends with validation and at most two automatic repair-feedback turns.
+Format-sensitive authoring instructions remain out of the standing prompt and
+load from the `sokf-authoring` skill on demand. Freshness is lazy: every tool call
 re-hashes the canonical knowledge and syncs only what changed, so there is no watcher and
 no daemon state to go stale.
 

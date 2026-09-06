@@ -1,6 +1,6 @@
 # SOKF Tooling and Context Plan
 
-**Status:** Working draft
+**Status:** Implemented through behavioral fixture definition; model-session scoring and non-overriding harness adapters remain.
 
 ## Objective
 
@@ -57,7 +57,7 @@ Example:
 read path="sokf:architecture#Runtime > Startup"
 ```
 
-The exact section syntax remains an open design decision. It must avoid ambiguity and require little additional tool documentation.
+Section addresses use `#`; heading paths retain the rendered `A > B` form.
 
 ## Workstream 1: Portable SOKF CLI
 
@@ -467,13 +467,17 @@ This approach gives agents familiar mechanics without presenting semantic search
   paths, while virtual targets retain their `sokf:` address.
 - Pi rejects responses whose protocol is not exactly `sokf-tools/v1` with a
   clear incompatibility error.
+- A Pi turn that applies a knowledge mutation runs final validation. A failed
+  validation report triggers at most two automatic follow-up turns. Persistent
+  failure is retained for the next manual turn and raises a user notification.
+- Behavioral fixtures use `sokf-behavior/v1`. A structural Node test protects
+  the 12-scenario roster; model-session execution and scoring remain separate.
 
 ## Open decisions
 
 1. Should CLI `read` apply `offset` and `limit` before or after rendering metadata and headings?
 2. Should the Pi extension retain `sokf_read` and `sokf_overview` aliases during migration?
 3. Should `write path="sokf:<existing-id>"` remain enabled after evaluation, or should whole-file replacement require a physical path?
-4. How should turn-end validation deliver failures back to the model without creating an unbounded retry loop?
-5. Which checks belong in agent-safe mutation commands, and which remain authoritative only in `superdev validate` and the commit diff check?
-6. How should other harnesses express virtual SOKF addresses when they do not allow built-in tool overrides?
-7. What behavioral threshold demonstrates that the always-on instruction is sufficient?
+4. Which checks belong in agent-safe mutation commands, and which remain authoritative only in `superdev validate` and the commit diff check?
+5. How should other harnesses express virtual SOKF addresses when they do not allow built-in tool overrides?
+6. What behavioral threshold demonstrates that the always-on instruction is sufficient?

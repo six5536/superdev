@@ -32,9 +32,12 @@ What the annotated list does not say:
   default to preserving `id` and `verified`, and report applied-but-invalid
   intermediate states without turning them into retryable command failures.
   Pi auto-loads `.pi/extensions/sokf.ts`, which adapts those commands into its
-  built-in file-tool shapes plus `sokf_search` and `sokf_graph`. Run
-  `/system-prompt` in Pi to refresh the ignored
-  `.pi/current-system-prompt.md` when inspecting effective instructions.
+  built-in file-tool shapes plus `sokf_search` and `sokf_graph`. The adapter
+  performs final validation after mutation turns and limits automatic repair
+  feedback to two follow-up turns. Load `/skill:sokf-authoring` for
+  format-sensitive knowledge changes. Run `/system-prompt` in Pi to refresh
+  the ignored `.pi/current-system-prompt.md` when inspecting effective
+  instructions.
 - `cargo run -- validate --fix` is the same check with its repairs applied
   first: a link naming a concept by path becomes the id form, every
   `<!-- sokf:links -->` block is regenerated, and every include block is
@@ -72,7 +75,9 @@ Two traps:
 - `npm run lint` is only `cargo clippy --workspace`; CI runs clippy with
   `--all-targets -- -D warnings` plus fmt-check, doctests, rustdoc `-D
   warnings`, launcher tests, release-script tests (`npm run test:scripts`),
-  version consistency, and the coverage gate.
+  version consistency, and the coverage gate. The script tests also protect
+  the `sokf-behavior/v1` fixture roster and shape; behavioral scoring requires
+  a separate model-session evaluator.
   Before a PR, run the full list in CONTRIBUTING, not the dailies.
 - Only the launcher package is an npm workspace. The five platform-binary
   packages deliberately are not (npm enforces their `os`/`cpu` fields on

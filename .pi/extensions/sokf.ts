@@ -136,13 +136,15 @@ function parseEnvelope(stdout: string): ToolEnvelope {
 	return envelope;
 }
 
-async function invoke(
+type ProcessResult = { stdout: string; stderr: string; code: number | null };
+
+async function runSuperdev(
 	cwd: string,
 	args: string[],
 	signal?: AbortSignal,
 	request?: unknown,
-): Promise<ToolEnvelope> {
-	const result = await new Promise<{ stdout: string; stderr: string; code: number | null }>((accept, reject) => {
+): Promise<ProcessResult> {
+	return new Promise<ProcessResult>((accept, reject) => {
 		const child = spawn("superdev", args, {
 			cwd: findRepository(cwd) ?? cwd,
 			signal,
@@ -162,6 +164,15 @@ async function invoke(
 		child.on("close", (code) => accept({ stdout, stderr, code }));
 		child.stdin.end(request === undefined ? undefined : JSON.stringify(request));
 	});
+}
+
+async function invoke(
+	cwd: string,
+	args: string[],
+	signal?: AbortSignal,
+	request?: unknown,
+): Promise<ToolEnvelope> {
+	const result = await runSuperdev(cwd, args, signal, request);
 	if (result.code !== 0) {
 		throw new Error(result.stderr.trim() || result.stdout.trim() || `superdev exited ${String(result.code)}`);
 	}
@@ -239,7 +250,57 @@ function editDetails(details: MutationDetails): EditToolDetails {
 	};
 }
 
+function validationFeedback(result: ProcessResult): string {
+	const raw = [result.stdout.trim(), result.stderr.trim()].filter(Boolean).join("\n");
+	const report = raw || `superdev validate exited ${String(result.code)}`;
+	const truncation = truncateHead(report, { maxLines: 200, maxBytes: 8_000 });
+	return truncation.truncated
+		? `${truncation.content}\n[Validation output truncated; run superdev validate for the complete report.]`
+		: truncation.content;
+}
+
 export default function (pi: ExtensionAPI) {
+	let knowledgeMutated = false;
+	let validationFollowUps = 0;
+	const maxValidationFollowUps = 2;
+
+	pi.on("turn_end", async (_event, ctx) => {
+		if (!knowledgeMutated) return;
+		const result = await runSuperdev(ctx.cwd, ["validate"]);
+		if (result.code === 0) {
+			knowledgeMutated = false;
+			validationFollowUps = 0;
+			return;
+		}
+
+		const report = validationFeedback(result);
+		if (validationFollowUps < maxValidationFollowUps) {
+			validationFollowUps += 1;
+			pi.sendMessage(
+				{
+					customType: "sokf-validation",
+					content: `Final SOKF validation failed after a knowledge mutation. Fix these findings without retrying mutations that already report applied: true.\n\n${report}`,
+					display: true,
+					details: { attempt: validationFollowUps, maximum: maxValidationFollowUps },
+				},
+				{ deliverAs: "followUp", triggerTurn: true },
+			);
+			return;
+		}
+
+		knowledgeMutated = false;
+		validationFollowUps = 0;
+		pi.sendMessage(
+			{
+				customType: "sokf-validation",
+				content: `SOKF validation still fails after ${maxValidationFollowUps} automatic repair turns. Manual continuation is required.\n\n${report}`,
+				display: true,
+			},
+			{ deliverAs: "nextTurn" },
+		);
+		ctx.ui.notify("SOKF validation still fails; automatic repair feedback stopped", "error");
+	});
+
 	pi.registerTool({
 		name: "read",
 		label: "read",
@@ -322,6 +383,7 @@ export default function (pi: ExtensionAPI) {
 					{ ...params, path: route.target },
 				);
 				const details = mutationDetails(envelope);
+				knowledgeMutated = true;
 				return {
 					content: envelope.content,
 					details: editDetails(details),
@@ -354,6 +416,7 @@ export default function (pi: ExtensionAPI) {
 					{ ...params, path: route.target },
 				);
 				mutationDetails(envelope);
+				knowledgeMutated = true;
 				return { content: envelope.content, details: undefined };
 			});
 		},

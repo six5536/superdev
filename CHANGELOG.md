@@ -29,8 +29,12 @@ publish a version it cannot find a heading for.
   `read path="sokf:<id>"`, SOKF `edit`, and physical knowledge `write` calls
   through the portable CLI while ordinary file operations retain Pi's built-in
   implementations. It also adds `sokf_search` and `sokf_graph`; every knowledge
-  mutation shares one root-level queue. A companion `/system-prompt` command
-  writes the effective prompt to ignored local inspection output.
+  mutation shares one root-level queue. Mutation turns receive final validation
+  with at most two automatic repair follow-ups. The concise standing instruction
+  loads format details through the on-demand `sokf-authoring` skill. A companion
+  `/system-prompt` command writes the effective prompt to ignored local
+  inspection output. Versioned behavioral fixtures now cover the 12 planned
+  progressive-context scenarios.
 - **`/file` files an issue or an idea.** A knowledge-carried skill
   writes a bug, a feature or a chore as an `open` issue in the user's
   words — no interview, no branch, no criterion the user did not state
