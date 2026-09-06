@@ -474,7 +474,7 @@ declaration-only source edit sits under the approval ADR-028 requires.
 [sokf:adr-041-an-include-block-materializes-a-source-region]: /knowledge/adrs/active/adr-041-an-include-block-materializes-a-source-region.md
 [sokf:adr-042-a-contracts-definition-is-materialized-from-source]: /knowledge/adrs/active/adr-042-a-contracts-definition-is-materialized-from-source.md
 [sokf:adr-043-one-contract-schema-and-twelve-kinds]: /knowledge/adrs/active/adr-043-one-contract-schema-and-twelve-kinds.md
-[sokf:adr-044-a-pending-marker-applies-to-prose-and-a-declaration-goes-first-in-source]: /knowledge/adrs/active/adr-044-a-pending-marker-applies-to-prose-and-a-declaration-goes-first-in-source.md
+[sokf:adr-044-a-pending-marker-applies-to-prose-and-a-declaration-goes-first-in-source]: /knowledge/adrs/deprecated/adr-044-a-pending-marker-applies-to-prose-and-a-declaration-goes-first-in-source.md
 [sokf:adr-045-a-schema-declares-variants]: /knowledge/adrs/active/adr-045-a-schema-declares-variants.md
 [sokf:contract-010-interface-document-schemas]: /knowledge/contracts/internal/active/contract-010-interface-document-schemas.md
 [sokf:issue-038-the-template-format-contract-is-bound-by-no-drift-test]: /knowledge/issues/done/issue-038-the-template-format-contract-is-bound-by-no-drift-test.md

@@ -3,7 +3,7 @@ type: Decision
 id: adr-020-a-blocked-run-ends
 title: A Blocked Run Ends Rather Than Pauses
 description: A run that hits a question only the user can answer writes it into the plan's deferred decisions and ends, releasing the run state; resuming is a fresh invocation that re-reads the plan and the answers.
-lifecycle: active
+lifecycle: deprecated
 ---
 
 # ADR-020: A Blocked Run Ends Rather Than Pauses

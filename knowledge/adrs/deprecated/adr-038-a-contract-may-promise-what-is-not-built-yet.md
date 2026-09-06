@@ -62,5 +62,5 @@ gap before slices that do not, so most features never need the marker.
   the ordering rule, and the contract-kind schemas carry the marker.
 
 <!-- sokf:links -->
-[sokf:adr-028-the-contract-design-go-ahead-is-an-explicit-interaction]: /knowledge/adrs/active/adr-028-the-contract-design-go-ahead-is-an-explicit-interaction.md
+[sokf:adr-028-the-contract-design-go-ahead-is-an-explicit-interaction]: /knowledge/adrs/deprecated/adr-028-the-contract-design-go-ahead-is-an-explicit-interaction.md
 [sokf:adr-036-a-contract-is-bound-to-its-implementation]: /knowledge/adrs/deprecated/adr-036-a-contract-is-bound-to-its-implementation.md

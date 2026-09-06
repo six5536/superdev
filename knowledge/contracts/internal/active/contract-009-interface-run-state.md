@@ -181,9 +181,9 @@ Internal.
 - `P_internal` [ubiquitous] Every item above MAY change with the crate.
 
 <!-- sokf:links -->
-[sokf:adr-018-loop-in-the-skill-enforcement-in-the-hook]: /knowledge/adrs/active/adr-018-loop-in-the-skill-enforcement-in-the-hook.md
-[sokf:adr-019-run-state-is-a-session-owned-file-behind-cli-verbs]: /knowledge/adrs/active/adr-019-run-state-is-a-session-owned-file-behind-cli-verbs.md
-[sokf:adr-020-a-blocked-run-ends]: /knowledge/adrs/active/adr-020-a-blocked-run-ends.md
+[sokf:adr-018-loop-in-the-skill-enforcement-in-the-hook]: /knowledge/adrs/deprecated/adr-018-loop-in-the-skill-enforcement-in-the-hook.md
+[sokf:adr-019-run-state-is-a-session-owned-file-behind-cli-verbs]: /knowledge/adrs/deprecated/adr-019-run-state-is-a-session-owned-file-behind-cli-verbs.md
+[sokf:adr-020-a-blocked-run-ends]: /knowledge/adrs/deprecated/adr-020-a-blocked-run-ends.md
 [sokf:adr-042-a-contracts-definition-is-materialized-from-source]: /knowledge/adrs/active/adr-042-a-contracts-definition-is-materialized-from-source.md
 [sokf:contract-002-cli-superdev]: /knowledge/contracts/public/active/contract-002-cli-superdev.md
 [sokf:research-001-claude-code-stop-hook-behaviour]: /knowledge/research/research-001-claude-code-stop-hook-behaviour.md

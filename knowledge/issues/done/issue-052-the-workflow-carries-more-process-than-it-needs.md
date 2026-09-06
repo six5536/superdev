@@ -233,7 +233,7 @@ layers, five more of them filed as issues 053 and 055 to 058.
 [sokf:adr-031-ears-criteria-are-checked-by-item-pattern]: /knowledge/adrs/deprecated/adr-031-ears-criteria-are-checked-by-item-pattern.md
 [sokf:adr-046-a-promise-and-a-criterion-are-keyed-ears-items]: /knowledge/adrs/active/adr-046-a-promise-and-a-criterion-are-keyed-ears-items.md
 [sokf:adr-048-an-issues-lifecycle-distinguishes-framed-from-unframed]: /knowledge/adrs/deprecated/adr-048-an-issues-lifecycle-distinguishes-framed-from-unframed.md
-[sokf:adr-050-keys-and-ears-live-in-the-contracts-and-the-workflow-is-file-scope-build-accept]: /knowledge/adrs/active/adr-050-keys-and-ears-live-in-the-contracts-and-the-workflow-is-file-scope-build-accept.md
+[sokf:adr-050-keys-and-ears-live-in-the-contracts-and-the-workflow-is-file-scope-build-accept]: /knowledge/adrs/deprecated/adr-050-keys-and-ears-live-in-the-contracts-and-the-workflow-is-file-scope-build-accept.md
 [sokf:adr-051-a-section-rule-declares-nested-items-and-an-optional-key]: /knowledge/adrs/active/adr-051-a-section-rule-declares-nested-items-and-an-optional-key.md
 [sokf:code-review-011-the-workflow-is-file-scope-build-accept]: /knowledge/reports/code-review-011-the-workflow-is-file-scope-build-accept.md
 [sokf:contract-010-interface-document-schemas]: /knowledge/contracts/internal/active/contract-010-interface-document-schemas.md

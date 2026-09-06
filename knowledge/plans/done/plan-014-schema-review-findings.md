@@ -320,6 +320,6 @@ for title, sid, summ in re.findall(r'\* \[([^\]]+)\]\[sokf:(schema-[a-z-]+)\] - 
     checks that the records close.
 
 <!-- sokf:links -->
-[sokf:adr-020-a-blocked-run-ends]: /knowledge/adrs/active/adr-020-a-blocked-run-ends.md
+[sokf:adr-020-a-blocked-run-ends]: /knowledge/adrs/deprecated/adr-020-a-blocked-run-ends.md
 [sokf:issue-022-a-schemas-worked-example-is-checked-by-nothing]: /knowledge/issues/done/issue-022-a-schemas-worked-example-is-checked-by-nothing.md
 [sokf:plan-013-workflow-autonomy]: /knowledge/plans/done/plan-013-workflow-autonomy.md

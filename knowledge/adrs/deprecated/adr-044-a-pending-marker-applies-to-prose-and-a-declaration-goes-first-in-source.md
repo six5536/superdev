@@ -3,7 +3,7 @@ type: Decision
 id: adr-044-a-pending-marker-applies-to-prose-and-a-declaration-goes-first-in-source
 title: A pending marker applies to prose, and a declaration goes first in source
 description: A definition element cannot run ahead of its source once the definition is materialised from it, so contract-first for a definition is declaration-first in source — CONTRACT-DESIGN writes the field or the path into the marked region with its behaviour unbuilt — and the pending marker narrows to prose promises, where accept still refuses one.
-lifecycle: active
+lifecycle: deprecated
 links:
   - rel: supersedes
     to: adr-038-a-contract-may-promise-what-is-not-built-yet
@@ -87,6 +87,6 @@ the declaration either way.
   Stability only.
 
 <!-- sokf:links -->
-[sokf:adr-028-the-contract-design-go-ahead-is-an-explicit-interaction]: /knowledge/adrs/active/adr-028-the-contract-design-go-ahead-is-an-explicit-interaction.md
+[sokf:adr-028-the-contract-design-go-ahead-is-an-explicit-interaction]: /knowledge/adrs/deprecated/adr-028-the-contract-design-go-ahead-is-an-explicit-interaction.md
 [sokf:adr-038-a-contract-may-promise-what-is-not-built-yet]: /knowledge/adrs/deprecated/adr-038-a-contract-may-promise-what-is-not-built-yet.md
 [sokf:adr-042-a-contracts-definition-is-materialized-from-source]: /knowledge/adrs/active/adr-042-a-contracts-definition-is-materialized-from-source.md

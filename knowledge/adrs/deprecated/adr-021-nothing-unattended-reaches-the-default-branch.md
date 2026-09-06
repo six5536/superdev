@@ -3,7 +3,7 @@ type: Decision
 id: adr-021-nothing-unattended-reaches-the-default-branch
 title: Nothing Unattended Reaches the Default Branch
 description: A feature runs on the branch /frame creates and an adhoc plan touching code on adhoc/<slug>; an unattended run commits and merges only there, and a human fast-forwards the default branch.
-lifecycle: active
+lifecycle: deprecated
 ---
 
 # ADR-021: Nothing Unattended Reaches the Default Branch

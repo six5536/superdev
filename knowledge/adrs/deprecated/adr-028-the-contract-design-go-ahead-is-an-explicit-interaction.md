@@ -3,7 +3,7 @@ type: Decision
 id: adr-028-the-contract-design-go-ahead-is-an-explicit-interaction
 title: The contract-design go-ahead is an explicit interaction
 description: The contract-design skill interviews the user on every ADR decision, presents the complete change set, and commits only on explicit approval — restructured process steps rather than hook enforcement or a new gate vocabulary.
-lifecycle: active
+lifecycle: deprecated
 ---
 
 # ADR-028: The contract-design go-ahead is an explicit interaction

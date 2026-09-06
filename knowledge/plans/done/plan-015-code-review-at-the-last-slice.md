@@ -121,5 +121,5 @@ per slice and the condition lives inside the skill.
     checks that the edit conforms and the records close.
 
 <!-- sokf:links -->
-[sokf:adr-021-nothing-unattended-reaches-the-default-branch]: /knowledge/adrs/active/adr-021-nothing-unattended-reaches-the-default-branch.md
+[sokf:adr-021-nothing-unattended-reaches-the-default-branch]: /knowledge/adrs/deprecated/adr-021-nothing-unattended-reaches-the-default-branch.md
 [sokf:plan-013-workflow-autonomy]: /knowledge/plans/done/plan-013-workflow-autonomy.md
