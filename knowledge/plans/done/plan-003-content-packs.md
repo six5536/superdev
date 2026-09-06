@@ -79,7 +79,7 @@ Historical documentation impact predates the documentation map; migration itself
 
 - [x] Done — ticked by integrate at merge.
 - Dependencies: none.
-- Areas: historical areas named by the recorded outcome.
+- Areas: unknown (legacy record; no affected area inferred).
 - Outcome: move `crates/lib/superdev-core/assets/` to `/pack/` with its
   internal layout untouched, and leave `crates/lib/superdev-core/assets` as a
   relative symlink to it. Every `asset!()` path is therefore unchanged. Move
@@ -92,14 +92,14 @@ Historical documentation impact predates the documentation map; migration itself
   nothing else, and the block reverts cleanly.
 - Tests: none — regression coverage (the whole `cli.rs` suite; the default
   path must be byte-identical to today).
-- Structural evidence: the recorded verification and tests provide the historical evidence.
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 2: Reorganise /pack into pack layout
 
 - [x] Done — ticked by integrate at merge.
-- Dependencies: 1.
-- Areas: historical areas named by the recorded outcome.
+- Dependencies: unknown (legacy record; no dependency inferred).
+- Areas: unknown (legacy record; no affected area inferred).
 - Outcome: `aokf/skills/` → `knowledge/skills/`, `aokf/knowledge/*.md` →
   `knowledge/concepts/`, `aokf/knowledge/templates/` →
   `knowledge/templates/`, `templates/` → `projects/`; `skills/` and `agents/`
@@ -111,14 +111,14 @@ Historical documentation impact predates the documentation map; migration itself
   in a scratch repo writes byte-identical files to block 1's binary; no
   `asset!()` path resolves outside `pack/`.
 - Tests: none — a path-only change; covered by the regression suite.
-- Structural evidence: the recorded verification and tests provide the historical evidence.
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 3: The content module — items, layout rules, ContentSet
 
 - [x] Done — ticked by integrate at merge.
-- Dependencies: 2.
-- Areas: historical areas named by the recorded outcome.
+- Dependencies: unknown (legacy record; no dependency inferred).
+- Areas: unknown (legacy record; no affected area inferred).
 - Outcome: add `superdev-core::content` — `Owner`, `ItemKind`, `Item`,
   `Origin`, `Shadowed`, `ContentSet` — and the rules that turn a pack tree
   into items. Build the embedded snapshot's `ContentSet` from `/pack/`.
@@ -127,14 +127,14 @@ Historical documentation impact predates the documentation map; migration itself
   components currently ship, with identical bytes, asserted item by item; the
   existing suite is unchanged and green.
 - Tests: none — new code behind no caller; covered by its own unit tests.
-- Structural evidence: the recorded verification and tests provide the historical evidence.
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 4: Components read content from Ctx
 
 - [x] Done — ticked by integrate at merge.
-- Dependencies: 3.
-- Areas: historical areas named by the recorded outcome.
+- Dependencies: unknown (legacy record; no dependency inferred).
+- Areas: unknown (legacy record; no affected area inferred).
 - Outcome: add `content: &ContentSet` to `Ctx`, built by `pipeline` from the
   snapshot for now. Convert `components/aokf.rs`, `components/skillpack.rs`
   and the general-rules scaffolds in `pipeline.rs` to read items from
@@ -144,14 +144,14 @@ Historical documentation impact predates the documentation map; migration itself
   identical lock contents to block 3's binary; adding a file under
   `pack/knowledge/concepts/` makes it appear in the plan with no Rust edit.
 - Tests: 1.
-- Structural evidence: the recorded verification and tests provide the historical evidence.
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 5: Manifest and lock schemas
 
 - [x] Done — ticked by integrate at merge.
-- Dependencies: 4.
-- Areas: historical areas named by the recorded outcome.
+- Dependencies: unknown (legacy record; no dependency inferred).
+- Areas: unknown (legacy record; no affected area inferred).
 - Outcome: add `Manifest.packs: Vec<PackEntry>` and the lock's `[[packs]]`
   `PackLock` table, both defaulting to empty and skipped when empty. Parsing
   and saving only — nothing resolves yet, and an absent array means the
@@ -160,14 +160,14 @@ Historical documentation impact predates the documentation map; migration itself
   byte-identically; a manifest carrying `[[packs]]` round-trips; `sync` on a
   pre-pack manifest adds no pack entry.
 - Tests: 21.
-- Structural evidence: the recorded verification and tests provide the historical evidence.
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 6: Pack source, identity and the pack manifest
 
 - [x] Done — ticked by integrate at merge.
-- Dependencies: 5.
-- Areas: historical areas named by the recorded outcome.
+- Dependencies: unknown (legacy record; no dependency inferred).
+- Areas: unknown (legacy record; no affected area inferred).
 - Outcome: add `PackSource::parse` and `PackSource::identity` with the
   normalisation rules, `PackManifest` with `SUPPORTED_FORMATS`, the
   `REJECTED` path list and the `PROJECT.md` basename rule, and
@@ -180,14 +180,14 @@ Historical documentation impact predates the documentation map; migration itself
   claims to describe it cannot drift apart — belt to block 12's braces, since
   the release script sets both.
 - Tests: 10, 18.
-- Structural evidence: the recorded verification and tests provide the historical evidence.
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 7: Resolve a local pack and materialise its items
 
 - [x] Done — ticked by integrate at merge.
-- Dependencies: 6.
-- Areas: historical areas named by the recorded outcome.
+- Dependencies: unknown (legacy record; no dependency inferred).
+- Areas: unknown (legacy record; no affected area inferred).
 - Outcome: add `pack::resolve` for `PackSource::Path` only, with
   `ResolveMode` and `Resolution`, returning a `ContentSet` built from one
   pack over the snapshot. Call it from `pipeline` ahead of `plan_repo`,
@@ -198,14 +198,14 @@ Historical documentation impact predates the documentation map; migration itself
   a pin equal to the snapshot's rev resolves from the snapshot and makes no
   request.
 - Tests: 2, 19.
-- Structural evidence: the recorded verification and tests provide the historical evidence.
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 8: Layering, base replacement and the shadow report
 
 - [x] Done — ticked by integrate at merge.
-- Dependencies: 7.
-- Areas: historical areas named by the recorded outcome.
+- Dependencies: unknown (legacy record; no dependency inferred).
+- Areas: unknown (legacy record; no affected area inferred).
 - Outcome: add base-versus-layer selection on normalised source identity,
   item superseding in manifest order, shadow collection, and the removal of
   items the base no longer carries. Add the `status` content line naming the
@@ -215,14 +215,14 @@ Historical documentation impact predates the documentation map; migration itself
   report; two packs report the shadow; reversing manifest order flips the
   winner and changes nothing else; `status` names the base.
 - Tests: 5, 6, 7, 8, 9.
-- Structural evidence: the recorded verification and tests provide the historical evidence.
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 9: Git sources, digests and the cache
 
 - [x] Done — ticked by integrate at merge.
-- Dependencies: 8.
-- Areas: historical areas named by the recorded outcome.
+- Dependencies: unknown (legacy record; no dependency inferred).
+- Areas: unknown (legacy record; no affected area inferred).
 - Outcome: add `PackSource::Git` resolution by spawning the user's `git`
   through the injected `CommandRunner` — `clone --depth 1
   --filter=blob:none --sparse --branch <rev>` then `sparse-checkout set pack`
@@ -238,14 +238,14 @@ Historical documentation impact predates the documentation map; migration itself
   writing nothing, with the snapshot not substituted; a tag pin and a
   commit-sha pin both resolve; a missing `git` fails saying so.
 - Tests: 3, 4, 11, 12. Manual: M3.
-- Structural evidence: the recorded verification and tests provide the historical evidence.
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 10: Ownership — drift, custom and removal
 
 - [x] Done — ticked by integrate at merge.
-- Dependencies: 9.
-- Areas: historical areas named by the recorded outcome.
+- Dependencies: unknown (legacy record; no dependency inferred).
+- Areas: unknown (legacy record; no affected area inferred).
 - Outcome: wire pack-provided items through the existing ownership machinery
   so provenance changes nothing: lock hashing and drift reporting, the
   `custom` lists' name-guarded release, and orphan pruning when a pack entry
@@ -255,14 +255,14 @@ Historical documentation impact predates the documentation map; migration itself
   reported unmanaged; dropping a pack entry prunes its untouched files and
   releases its edited ones, reporting each once.
 - Tests: 13, 14, 15.
-- Structural evidence: the recorded verification and tests provide the historical evidence.
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 11: init and update
 
 - [x] Done — ticked by integrate at merge.
-- Dependencies: 10.
-- Areas: historical areas named by the recorded outcome.
+- Dependencies: unknown (legacy record; no dependency inferred).
+- Areas: unknown (legacy record; no affected area inferred).
 - Outcome: `init` writes the blueprint's default pack entry explicitly.
   `update` asks the default source for its newest release tag and moves that
   pin there, even ahead of the blueprint's default
@@ -275,14 +275,14 @@ Historical documentation impact predates the documentation map; migration itself
   reports why; a third-party pin is untouched and reported; `init` on a fresh
   repo writes the entry; a pre-pack manifest gains it.
 - Tests: 16, 17, 20, 22.
-- Structural evidence: the recorded verification and tests provide the historical evidence.
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 12: One command per release
 
 - [x] Done — ticked by integrate at merge.
-- Dependencies: 11.
-- Areas: historical areas named by the recorded outcome.
+- Dependencies: unknown (legacy record; no dependency inferred).
+- Areas: unknown (legacy record; no affected area inferred).
 - Outcome: teach `npm run release X.Y.Z` to set `/pack/pack.toml`'s version,
   set `DEFAULT_PACK.rev` to the pack tag it is about to cut, and create both
   `vX.Y.Z` and `assets-vA.B.C` from one commit. Add `npm run release:pack`,
@@ -296,14 +296,14 @@ Historical documentation impact predates the documentation map; migration itself
   workflow; a scratch repo pinned at a content tag resolves from it rather
   than from the snapshot.
 - Tests: none automated. Manual: M2.
-- Structural evidence: the recorded verification and tests provide the historical evidence.
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 13: A committed path pin reads the same everywhere
 
 - [x] Done — ticked by integrate at merge.
-- Dependencies: 12.
-- Areas: historical areas named by the recorded outcome.
+- Dependencies: unknown (legacy record; no dependency inferred).
+- Areas: unknown (legacy record; no affected area inferred).
 - Outcome: `PackSource::identity` takes the repo root, and a path source's key
   becomes its canonicalised path relative to that root with forward slashes.
   A pack outside the root keeps its `..` prefix; where no relative form exists
@@ -322,14 +322,14 @@ Historical documentation impact predates the documentation map; migration itself
   rather than replacing the embedded pack.
 - Tests: none — the test plan does not reach the lock's persisted form.
   Covered by its own tests and the existing pack suite.
-- Structural evidence: the recorded verification and tests provide the historical evidence.
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 14: Dogfood — superdev pins its own pack
 
 - [x] Done — ticked by integrate at merge.
-- Dependencies: 13.
-- Areas: historical areas named by the recorded outcome.
+- Dependencies: unknown (legacy record; no dependency inferred).
+- Areas: unknown (legacy record; no affected area inferred).
 - Outcome: point this repo's own manifest at `/pack/` as a local-path pack, so
   an asset edit reaches `.claude/skills/` on the next `sync` without a
   rebuild. Retire the `asset-backport` skill and the workflow note that
@@ -341,16 +341,16 @@ Historical documentation impact predates the documentation map; migration itself
   `superdev sync` updates `.claude/skills/frame/SKILL.md` with no rebuild;
   `asset-backport` is gone and nothing references it.
 - Tests: none automated. Manual: M1.
-- Structural evidence: the recorded verification and tests provide the historical evidence.
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 15: Nothing superdev spawns can be talked into running a command
 
 - [x] Done — ticked by integrate at merge.
 - Gap: [I007][sokf:issue-007-a-pack-source-reaches-git-with-no-scheme-check],
   the half of it that needs no decision — and the half that closes the hole.
-- Dependencies: 14.
-- Areas: historical areas named by the recorded outcome.
+- Dependencies: unknown (legacy record; no dependency inferred).
+- Areas: unknown (legacy record; no affected area inferred).
 - Outcome: add `-c protocol.ext.allow=never` (and the same for the other
   command-running helpers) to the `verbatim()` overrides every git invocation
   already carries, so the guarantee holds whatever the user's git config says.
@@ -368,15 +368,15 @@ Historical documentation impact predates the documentation map; migration itself
   `file://` pack and the scp form still resolve.
 - Tests: none from the test plan, which does not reach the transport. New
   tests per the issue, the reproduction among them.
-- Structural evidence: the recorded verification and tests provide the historical evidence.
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 16: A pack's symlinks are not followed
 
 - [x] Done — ticked by integrate at merge.
 - Gap: [I008][sokf:issue-008-a-symlinked-file-in-a-pack-is-followed].
-- Dependencies: 15.
-- Areas: historical areas named by the recorded outcome.
+- Dependencies: unknown (legacy record; no dependency inferred).
+- Areas: unknown (legacy record; no affected area inferred).
 - Outcome: skip every symlink in a pack tree, not only a linked directory —
   `read_dir` already computes `linked` and acts on it for one case out of two.
 - Verification: a pack whose item file is a symlink to a file outside the pack
@@ -385,8 +385,8 @@ Historical documentation impact predates the documentation map; migration itself
   resolves whole, since it ships no symlink.
 - Tests: none from the test plan. A new test putting a symlinked file in a
   fixture pack and asserting it is not among the resolved files.
-- Structural evidence: the recorded verification and tests provide the historical evidence.
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 17: The lock describes what is on disk, not only what was written
 
@@ -394,8 +394,8 @@ Historical documentation impact predates the documentation map; migration itself
 - Gap: [I005][sokf:issue-005-a-backport-leaves-the-lock-stale], filed
   during delivery rather than by accept, scheduled because it is contained and
   fires on every backport, which is how this repo's owner edits skills.
-- Dependencies: 16.
-- Areas: historical areas named by the recorded outcome.
+- Dependencies: unknown (legacy record; no dependency inferred).
+- Areas: unknown (legacy record; no affected area inferred).
 - Outcome: record an owned file's hash whenever the run resolves it as
   matching, not only when it writes it. `apply` pushes to `written` inside the
   write path alone, so a file that needed no write keeps whatever hash the
@@ -406,15 +406,15 @@ Historical documentation impact predates the documentation map; migration itself
   a genuinely hand-edited file is still reported and still backed up.
 - Tests: none from the test plan. A new test resolving a file that already
   matches and asserting its hash lands in the lock.
-- Structural evidence: the recorded verification and tests provide the historical evidence.
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 18: Document packs, and what `update` actually does
 
 - [x] Done — ticked by integrate at merge.
 - Gap: [I006][sokf:issue-006-content-packs-are-undocumented-for-users].
-- Dependencies: 17.
-- Areas: historical areas named by the recorded outcome.
+- Dependencies: unknown (legacy record; no dependency inferred).
+- Areas: unknown (legacy record; no affected area inferred).
 - Outcome: correct `update`'s description at
   `crates/app/superdev/src/main.rs` — clap renders it into `--help`, the man
   page and the completions — and the matching rustdoc in `manage.rs`, so both
@@ -433,9 +433,9 @@ Historical documentation impact predates the documentation map; migration itself
 - Tests: none from the test plan. A test asserting the help text names the
   network behaviour would stop it going stale again.
 
-- Structural evidence: the recorded verification and tests provide the historical evidence.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
 
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ## Build state
 

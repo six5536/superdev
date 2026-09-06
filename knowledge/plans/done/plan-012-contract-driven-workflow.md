@@ -190,7 +190,7 @@ Historical documentation impact predates the documentation map; migration itself
 
 - [x] Done — ticked at merge.
 - Dependencies: none.
-- Areas: historical areas named by the recorded outcome.
+- Areas: unknown (legacy record; no affected area inferred).
 - Outcome: rewrite `knowledge/schemas/feature-request.md` — a required
   numbered-list Acceptance criteria section of EARS sentences, each
   opening with its type tag, TBD permitted only while the request is
@@ -212,14 +212,14 @@ Historical documentation impact predates the documentation map; migration itself
     contains `## Acceptance criteria`.
   - checks that `rg 'Spec:' knowledge/schemas/feature-plan.md` returns
     nothing and that the schema's example links a feature-request.
-- Structural evidence: the recorded verification and tests provide the historical evidence.
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 2: Contracts become the description of the app
 
 - [x] Done — ticked at merge.
 - Dependencies: none.
-- Areas: historical areas named by the recorded outcome.
+- Areas: unknown (legacy record; no affected area inferred).
 - Outcome: move `knowledge/contracts/private/` to
   `knowledge/contracts/internal/`, within whatever lifecycle folders
   plan-011 left, and rewrite `knowledge/contracts/index.md`: two durable
@@ -242,14 +242,14 @@ Historical documentation impact predates the documentation map; migration itself
   - checks that `rg -l 'contract-001-interface-content-packs' knowledge
     --glob '!knowledge/plans/*'` returns nothing, and that the plans'
     mentions resolve to nothing typed.
-- Structural evidence: the recorded verification and tests provide the historical evidence.
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 3: The specs leave
 
 - [x] Done — ticked at merge.
 - Dependencies: 1, 2. The destinations for durable content must exist
-- Areas: historical areas named by the recorded outcome.
+- Areas: unknown (legacy record; no affected area inferred).
   first.
 - Outcome: disposition each of the fourteen specs — confirm its durable
   content is held by a contract, a concept or its feature's tracker
@@ -273,14 +273,14 @@ Historical documentation impact predates the documentation map; migration itself
     nothing.
   - checks that `rg 'implementing a spec' .agents/sokf/SPEC.md` returns
     nothing.
-- Structural evidence: the recorded verification and tests provide the historical evidence.
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 4: The flow says what the system does
 
 - [x] Done — ticked at merge.
 - Dependencies: 1, 2, 3. The skills must direct agents at documents that
-- Areas: historical areas named by the recorded outcome.
+- Areas: unknown (legacy record; no affected area inferred).
   exist.
 - Outcome: merge `.claude/skills/spec/` into `.claude/skills/frame/` —
   framing ends when the issue's criteria are concrete EARS sentences,
@@ -319,9 +319,9 @@ Historical documentation impact predates the documentation map; migration itself
   - checks that issue-021's surface list names this plan's pack drift, or
     states it left none.
 
-- Structural evidence: the recorded verification and tests provide the historical evidence.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
 
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ## Build state
 

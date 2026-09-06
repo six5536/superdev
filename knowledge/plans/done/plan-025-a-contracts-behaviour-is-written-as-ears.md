@@ -118,7 +118,7 @@ Historical documentation impact predates the documentation map; migration itself
 
 - [x] Done — ticked at merge.
 - Dependencies: none.
-- Areas: historical areas named by the recorded outcome.
+- Areas: unknown (legacy record; no affected area inferred).
 - Outcome: `validate::schema::document` reads `SectionRule.item_key`:
   compiles it, requires exactly one capture group, and on a rule whose
   `content` is a list kind checks every top-level item of that kind
@@ -156,14 +156,14 @@ Historical documentation impact predates the documentation map; migration itself
   - integration: contract-010's Behaviour carries no PENDING for
     `item-key` and the live tree validates — checks that contract-010
     carries the declaration the change adds.
-- Structural evidence: the recorded verification and tests provide the historical evidence.
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 2: The validator reads item-only-pattern and item-prohibited-pattern
 
 - [x] Done — ticked at merge.
-- Dependencies: 1.
-- Areas: historical areas named by the recorded outcome.
+- Dependencies: unknown (legacy record; no dependency inferred).
+- Areas: unknown (legacy record; no affected area inferred).
 - Outcome: `item-only-pattern` — compiled; every body line outside a
   top-level item of the rule's list kind (prose, a table row, a
   heading, an item of the other list kind; fenced lines skipped) that
@@ -201,14 +201,14 @@ Historical documentation impact predates the documentation map; migration itself
   - integration: contract-010 carries no PENDING and the live tree
     validates — checks that contract-010 carries the declarations the
     change adds.
-- Structural evidence: the recorded verification and tests provide the historical evidence.
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 3: The internal contracts are swept
 
 - [x] Done — ticked at merge.
-- Dependencies: 2.
-- Areas: historical areas named by the recorded outcome.
+- Dependencies: unknown (legacy record; no dependency inferred).
+- Areas: unknown (legacy record; no affected area inferred).
 - Outcome: contract-007, contract-009 and contract-010 — Behaviour and
   Stability rewritten to keyed EARS bullets per ADR-046: one promise
   per bullet, `P_` key, tag, one verb from SHALL/SHOULD/MAY, the
@@ -225,7 +225,7 @@ Historical documentation impact predates the documentation map; migration itself
   - integration: a scratch schema carrying the ADR-047 patterns on
     Behaviour and Stability passes the three swept contracts — checks
     that every active contract's Behaviour and Stability conform.
-  - structural: the reviewer confirms the promise count per contract
+  - Legacy evidence (non-executable): manual: the reviewer confirms the promise count per contract
     equals the modal-verb count before the sweep — checks that no
     promise was dropped.
   - Note, at merge: the counts and the merged sentences are in Contract
@@ -236,14 +236,14 @@ Historical documentation impact predates the documentation map; migration itself
     declarations reported nothing for the three contracts, and reported
     a keyless item, a `MUST` in prose and a tagless item when each was
     injected.
-- Structural evidence: the recorded verification and tests provide the historical evidence.
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 4: The cli, api and config contracts are swept
 
 - [x] Done — ticked at merge.
-- Dependencies: 2.
-- Areas: historical areas named by the recorded outcome.
+- Dependencies: unknown (legacy record; no dependency inferred).
+- Areas: unknown (legacy record; no affected area inferred).
 - Outcome: contract-002, contract-003 and contract-004, as block 3 —
   the sixty verbs of contract-002 included; the exit-code table stays
   as a table beside its promises.
@@ -252,41 +252,41 @@ Historical documentation impact predates the documentation map; migration itself
   - integration: the scratch schema of block 3 passes the three swept
     contracts — checks that every active contract's Behaviour and
     Stability conform.
-  - structural: the reviewer confirms the promise count equals the verb
+  - Legacy evidence (non-executable): manual: the reviewer confirms the promise count equals the verb
     count before the sweep — checks that no promise was dropped.
   - Note, at merge: the counts and the merged sentences are in Contract
     changes above; every other verb is one item. The scratch schema of
     block 3 reported nothing for the three, and reported a keyless
     item, a tagless item and a `MUST` in prose when each was injected.
-- Structural evidence: the recorded verification and tests provide the historical evidence.
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 5: The format contracts are swept
 
 - [x] Done — ticked at merge.
-- Dependencies: 2.
-- Areas: historical areas named by the recorded outcome.
+- Dependencies: unknown (legacy record; no dependency inferred).
+- Areas: unknown (legacy record; no affected area inferred).
 - Outcome: contract-005, contract-006 and contract-008, as block 3.
 - Verification: as block 3, for the three files.
 - Tests:
   - integration: the scratch schema of block 3 passes the three swept
     contracts — checks that every active contract's Behaviour and
     Stability conform.
-  - structural: the reviewer confirms the promise count equals the verb
+  - Legacy evidence (non-executable): manual: the reviewer confirms the promise count equals the verb
     count before the sweep — checks that no promise was dropped.
   - Note, at merge: the counts and the merged write-once sentence are
     in Contract changes above; every other verb is one item. The
     scratch schema of block 3 reported nothing for the three, and
     reported a keyless item, a tagless item and a `MUST` in prose when
     each was injected.
-- Structural evidence: the recorded verification and tests provide the historical evidence.
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 6: The contract schema takes its final form
 
 - [x] Done — ticked at merge.
 - Dependencies: 3, 4, 5.
-- Areas: historical areas named by the recorded outcome.
+- Areas: unknown (legacy record; no affected area inferred).
 - Outcome: `pack/knowledge/schemas/contract.md`, synced — Behaviour and
   Stability become `content: bullet-list` with the four ADR-047
   declarations (the `P_` key, the tag-and-verb `item-pattern`, the
@@ -328,14 +328,14 @@ Historical documentation impact predates the documentation map; migration itself
     the done-check asks. The skill check is not a test — a test cannot
     read git history — and integrate ran `git diff --stat main --
     .claude/skills pack/knowledge/skills`, which was empty.
-- Structural evidence: the recorded verification and tests provide the historical evidence.
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 7: The tracker's criteria carry keys
 
 - [x] Done — ticked at merge.
-- Dependencies: 1.
-- Areas: historical areas named by the recorded outcome.
+- Dependencies: unknown (legacy record; no dependency inferred).
+- Areas: unknown (legacy record; no affected area inferred).
 - Outcome: `pack/knowledge/schemas/feature-request.md`,
   `bug-report.md`, `chore.md` and `feature-plan.md`, synced — the
   Acceptance criteria, Steps to reproduce and Definition of done rules
@@ -377,14 +377,14 @@ Historical documentation impact predates the documentation map; migration itself
     `normative_shapes` loop over every issue's cited lists. The
     criterion `item-pattern` test of ADR-031 now expects the keyed
     pattern, deliberately.
-- Structural evidence: the recorded verification and tests provide the historical evidence.
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 8: The records close
 
 - [x] Done — ticked at merge.
 - Dependencies: 6, 7.
-- Areas: historical areas named by the recorded outcome.
+- Areas: unknown (legacy record; no affected area inferred).
 - Outcome: the glossary defines the promise form and the key (both
   prefixes tables, the `c<n>` slugs, the citation); the changelog's
   Unreleased carries the form, the three declarations and the sweep;
@@ -409,9 +409,9 @@ Historical documentation impact predates the documentation map; migration itself
     three major findings and seven minor, recorded and not fixed on
     the branch.
 
-- Structural evidence: the recorded verification and tests provide the historical evidence.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
 
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ## Build state
 

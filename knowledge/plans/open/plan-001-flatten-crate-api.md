@@ -72,7 +72,7 @@ Historical documentation impact predates the documentation map; migration itself
 
 - [ ] Done — ticked by build at its commit.
 - Dependencies: none.
-- Areas: historical areas named by the recorded outcome.
+- Areas: unknown (legacy record; no affected area inferred).
 - Outcome: inventory the current cross-crate surface (`grep
   superdev_core::` in the binary and tests) to get the exact re-export
   list.
@@ -81,14 +81,14 @@ Historical documentation impact predates the documentation map; migration itself
 - Tests:
   - observation: `grep superdev_core::` over the binary and the tests
     finds no path the list omits — no criterion.
-- Structural evidence: the recorded verification and tests provide the historical evidence.
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 2: flatten module by module
 
 - [ ] Done — ticked by build at its commit.
-- Dependencies: 1.
-- Areas: historical areas named by the recorded outcome.
+- Dependencies: unknown (legacy record; no dependency inferred).
+- Areas: unknown (legacy record; no affected area inferred).
 - Outcome: flatten one module at a time, keeping the suite green per step:
   `manifest`, `lock`, `capability`, `registry`, `component`, `action`,
   `pipeline`, `engine`, `orphan`, `report`, `runner`, `error`,
@@ -102,14 +102,14 @@ Historical documentation impact predates the documentation map; migration itself
   - observation: `grep superdev_core::` over the binary and the tests
     finds no two-segment path outside the kept namespaces — no
     criterion.
-- Structural evidence: the recorded verification and tests provide the historical evidence.
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 3: doc pass
 
 - [ ] Done — ticked by build at its commit.
-- Dependencies: 2.
-- Areas: historical areas named by the recorded outcome.
+- Dependencies: unknown (legacy record; no dependency inferred).
+- Areas: unknown (legacy record; no affected area inferred).
 - Outcome: `#![warn(missing_docs)]` stays satisfied; rustdoc links
   updated.
 - Verification: every gate (tests, clippy, rustdoc, check:aokf,
@@ -118,13 +118,13 @@ Historical documentation impact predates the documentation map; migration itself
   - e2e: rustdoc builds with no missing-docs warning and no broken
     link — no criterion.
 
-- Structural evidence: the recorded verification and tests provide the historical evidence.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
 
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ## Build state
 
-Current block is the first incomplete block; attempts: 0; final corrections: 0; blocker: none.
+Current block is unset; attempts: 0; final corrections: 0; blocker: human re-scope into executable evidence is required.
 
 ## Implementation decisions
 
@@ -132,7 +132,7 @@ none.
 
 ## Follow-up issues
 
-none.
+Unresolved discovery: human re-scope must replace legacy notes with approved executable evidence before BUILD.
 
 ## Completion evidence
 

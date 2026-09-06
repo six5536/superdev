@@ -82,7 +82,7 @@ Historical documentation impact predates the documentation map; migration itself
 
 - [x] Done — ticked by build at its commit.
 - Dependencies: none.
-- Areas: historical areas named by the recorded outcome.
+- Areas: unknown (legacy record; no affected area inferred).
 - Outcome: revise contract-003 first, then change `sokf_read` to accept `path`,
   `offset` and `limit`. Share virtual-address parsing and rendered line
   windowing with the CLI. Route `sokf:` to overview, virtual concept addresses
@@ -108,14 +108,14 @@ Historical documentation impact predates the documentation map; migration itself
     fail without reading arbitrary files.
   - integration: search, graph, edit and write retain their existing MCP
     arguments and results.
-- Structural evidence: the recorded verification and tests provide the historical evidence.
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 2: Lazy MCP embedding lifecycle
 
 - [x] Done — ticked by build at its commit.
-- Dependencies: 1.
-- Areas: historical areas named by the recorded outcome.
+- Dependencies: unknown (legacy record; no dependency inferred).
+- Areas: unknown (legacy record; no affected area inferred).
 - Outcome: make the MCP service retain embedding configuration and initialize
   its embedder on the first search or `sokf:` overview read; keep startup
   knowledge parsing but remove eager index synchronization. Cache the
@@ -138,14 +138,14 @@ Historical documentation impact predates the documentation map; migration itself
     lexical-only index as an optimization shortcut.
   - integration: missing or unreadable knowledge fails MCP startup, while an
     unusable index fails the first index-dependent call rather than startup.
-- Structural evidence: the recorded verification and tests provide the historical evidence.
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 3: Session-scoped MCP client
 
 - [x] Done — ticked by build at its commit.
-- Dependencies: 1.
-- Areas: historical areas named by the recorded outcome.
+- Dependencies: unknown (legacy record; no dependency inferred).
+- Areas: unknown (legacy record; no affected area inferred).
 - Outcome: add a narrow MCP stdio client beside `.pi/extensions/sokf.ts` that
   lazily spawns one `superdev mcp sokf` child per repository, performs only the
   required initialize and `tools/call` exchange, parses fragmented newline-
@@ -169,14 +169,14 @@ Historical documentation impact predates the documentation map; migration itself
     then forces termination.
   - integration: repositories receive distinct children and repeated calls in
     one repository reuse one child.
-- Structural evidence: the recorded verification and tests provide the historical evidence.
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 4: Pi tool parity over MCP
 
 - [x] Done — ticked by build at its commit.
 - Dependencies: 2, 3.
-- Areas: historical areas named by the recorded outcome.
+- Areas: unknown (legacy record; no affected area inferred).
 - Outcome: route SOKF-aware read, search, graph, edit and write through MCP;
   translate MCP text and mutation `structuredContent` into the adapter's
   existing Pi results. For Pi reads, forward the path but let Pi's existing
@@ -199,14 +199,14 @@ Historical documentation impact predates the documentation map; migration itself
   - integration: ordinary paths never start MCP and still use fresh built-in
     tools rooted at Pi's current working directory.
   - integration: final validation remains bounded to two repair-feedback turns.
-- Structural evidence: the recorded verification and tests provide the historical evidence.
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 5: Performance evidence and canonical documentation
 
 - [x] Done — ticked by build at its commit.
-- Dependencies: 4.
-- Areas: historical areas named by the recorded outcome.
+- Dependencies: unknown (legacy record; no dependency inferred).
+- Areas: unknown (legacy record; no affected area inferred).
 - Outcome: update architecture, software components, development commands and
   the changelog; add model-free fixtures for process and embedder reuse. Keep
   elapsed-time measurements as benchmarks, not pass/fail tests.
@@ -221,9 +221,9 @@ Historical documentation impact predates the documentation map; migration itself
   - validation: `superdev validate` passes after every affected canonical
     concept is updated.
 
-- Structural evidence: the recorded verification and tests provide the historical evidence.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
 
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ## Build state
 

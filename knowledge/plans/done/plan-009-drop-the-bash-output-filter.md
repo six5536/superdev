@@ -152,7 +152,7 @@ Historical documentation impact predates the documentation map; migration itself
 
 - [x] Done — ticked at merge.
 - Dependencies: none.
-- Areas: historical areas named by the recorded outcome.
+- Areas: unknown (legacy record; no affected area inferred).
 - Outcome: delete the `[bash-output-filter]` table from
   `.superdev/config.toml`, so `enabled` stops resolving the component and
   its five claims lose their owner; then run `cargo run -- sync`, which
@@ -188,14 +188,14 @@ Historical documentation impact predates the documentation map; migration itself
     user-edited copy of an owned file is released from the lock and left
     on disk, with zero deletions where the content differs from the
     recorded hash.
-- Structural evidence: the recorded verification and tests provide the historical evidence.
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 2: Remove the capability from the core
 
 - [x] Done — ticked at merge.
-- Dependencies: 1.
-- Areas: historical areas named by the recorded outcome.
+- Dependencies: unknown (legacy record; no dependency inferred).
+- Areas: unknown (legacy record; no affected area inferred).
 - Outcome: delete the component — `components/rtk.rs`, its `pub mod rtk;`
   (`components/mod.rs:8`), and its import and dispatch arm
   (`components/enabled.rs:7,58`). Delete the slot —
@@ -232,14 +232,14 @@ Historical documentation impact predates the documentation map; migration itself
     repository has no `.agents/superdev.md`: its `AGENTS.md` reads
     `@.agents/core.md`, and `status --drift` has reported the aggregator
     missing since before this plan.
-- Structural evidence: the recorded verification and tests provide the historical evidence.
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 3: Remove the CLI surface
 
 - [x] Done — ticked at merge.
-- Dependencies: 2.
-- Areas: historical areas named by the recorded outcome.
+- Dependencies: unknown (legacy record; no dependency inferred).
+- Areas: unknown (legacy record; no affected area inferred).
 - Outcome: delete the flag — `no_bash_output_filter` and its mapping
   (`manage.rs:36-39,53,450`). Update the tests — the 12
   `--no-bash-output-filter` sites in `tests/cli.rs`, the init-journey
@@ -256,14 +256,14 @@ Historical documentation impact predates the documentation map; migration itself
   - e2e: `superdev update bash-output-filter` fails with ``unknown
     capability `bash-output-filter` ``, as `workflows` does today — no
     criterion.
-- Structural evidence: the recorded verification and tests provide the historical evidence.
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 4: Remove what sits outside the blueprint
 
 - [x] Done — ticked at merge.
-- Dependencies: 2.
-- Areas: historical areas named by the recorded outcome.
+- Dependencies: unknown (legacy record; no dependency inferred).
+- Areas: unknown (legacy record; no affected area inferred).
 - Outcome: drop the dev pin — `"github:rtk-ai/rtk"` leaves
   `.mise.toml:13`, since no command in the repository reaches rtk once
   the hook is gone. Correct the project template's prose — the Dockerfile
@@ -276,14 +276,14 @@ Historical documentation impact predates the documentation map; migration itself
 - Tests:
   - checks that no file under `.mise.toml` or `pack/projects` names rtk —
     no criterion.
-- Structural evidence: the recorded verification and tests provide the historical evidence.
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 5: Update the knowledge
 
 - [x] Done — ticked at merge.
 - Dependencies: 2, 3.
-- Areas: historical areas named by the recorded outcome.
+- Areas: unknown (legacy record; no affected area inferred).
 - Outcome: the capability set — `architecture.md:71` loses its table row,
   `glossary.md:13` the name, `api-contracts.md:15,84-86` the flag and the
   update targets, and `software-components.md:45` and
@@ -317,9 +317,9 @@ Historical documentation impact predates the documentation map; migration itself
     `--all-targets -- -D warnings` is clean, and line coverage stays at
     or above 90% per crate.
 
-- Structural evidence: the recorded verification and tests provide the historical evidence.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
 
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ## Build state
 

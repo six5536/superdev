@@ -65,7 +65,7 @@ Historical documentation impact predates the documentation map; migration itself
 
 - [x] Done — ticked by integrate at merge.
 - Dependencies: none.
-- Areas: historical areas named by the recorded outcome.
+- Areas: unknown (legacy record; no affected area inferred).
 - Outcome: `holds` and `HOLD_CAP` land on the run state, as
   [contract-009][sokf:contract-009-interface-run-state] already declares
   them, together with the `hook run` behaviour that uses them: it refuses
@@ -100,14 +100,14 @@ Historical documentation impact predates the documentation map; migration itself
   - integration: unreadable knowledge exits 0, so the hook fails open.
   - integration: an armed run still continues as contract-009 says, so
     the two jobs of the hook do not interfere.
-- Structural evidence: the recorded verification and tests provide the historical evidence.
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 2: The five findings fail the run
 
 - [x] Done — ticked by integrate at merge.
 - Dependencies: none.
-- Areas: historical areas named by the recorded outcome.
+- Areas: unknown (legacy record; no affected area inferred).
 - Outcome: the five findings the repository alone settles become errors
   in `validate::sokf` — a broken body link, a missing `resource`, a
   missing `sources[].resource`, an index entry naming a missing file,
@@ -122,14 +122,14 @@ Historical documentation impact predates the documentation map; migration itself
   - unit: a non-core `rel` is still a warning, so the tier is split by
     decidability and not emptied — covers 2.
   - golden: the document-check snapshots carry the new severities.
-- Structural evidence: the recorded verification and tests provide the historical evidence.
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 3: The edit-time hook stops judging what it cannot see
 
 - [x] Done — ticked by integrate at merge.
-- Dependencies: 2.
-- Areas: historical areas named by the recorded outcome.
+- Dependencies: unknown (legacy record; no dependency inferred).
+- Areas: unknown (legacy record; no affected area inferred).
 - Outcome: `hook validate` no longer blocks on the two findings only the
   whole tree settles — a broken body link and an index entry naming a
   missing file — because it is handed one edited file and cannot see
@@ -142,14 +142,14 @@ Historical documentation impact predates the documentation map; migration itself
   - integration: a new index entry naming a missing file exits 0.
   - integration: a missing `resource` in the same file still exits 2, so
     the hook was scoped and not disarmed.
-- Structural evidence: the recorded verification and tests provide the historical evidence.
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 4: The knowledge and the records settle
 
 - [x] Done — ticked by integrate at merge.
 - Dependencies: 2, 3.
-- Areas: historical areas named by the recorded outcome.
+- Areas: unknown (legacy record; no affected area inferred).
 - Outcome: the canonical knowledge and the pack mirror pass with the five
   enforced, the changelog carries the change, and the documentation the
   hooks are configured from says what holds a turn open.
@@ -158,9 +158,9 @@ Historical documentation impact predates the documentation map; migration itself
 - Tests:
   - integration: the live tree and the pack mirror validate clean.
 
-- Structural evidence: the recorded verification and tests provide the historical evidence.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
 
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ## Build state
 

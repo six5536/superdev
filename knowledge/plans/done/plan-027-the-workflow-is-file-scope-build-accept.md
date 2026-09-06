@@ -103,7 +103,7 @@ Historical documentation impact predates the documentation map; migration itself
 
 - [x] Done — ticked by integrate at merge.
 - Dependencies: none.
-- Areas: historical areas named by the recorded outcome.
+- Areas: unknown (legacy record; no affected area inferred).
 - Outcome: `validate::schema::document` — `Items::read` learns depth: a
   marker of the section's list kind indented past the item above opens
   a nested item, to the depth the rule declares, and a deeper marker
@@ -140,14 +140,14 @@ Historical documentation impact predates the documentation map; migration itself
   `item-key` are each a finding on the schema (covers contract-010
   `P_misdeclared-nested`); the grammar's schema check accepts the two
   keys (checks that the grammar admits the declarations).
-- Structural evidence: the recorded verification and tests provide the historical evidence.
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 2: A contract's promise carries its criteria
 
 - [x] Done — ticked by integrate at merge.
-- Dependencies: 1.
-- Areas: historical areas named by the recorded outcome.
+- Dependencies: unknown (legacy record; no dependency inferred).
+- Areas: unknown (legacy record; no affected area inferred).
 - Outcome: `pack/knowledge/schemas/contract.md` — the Behaviour and
   Stability rules gain a `nested` rule: `item-key` `AC_`, the EARS
   tag pattern, `required: false`; the section descriptions say a
@@ -171,14 +171,14 @@ Historical documentation impact predates the documentation map; migration itself
   nested list passes); a normative test reads the contract schema's
   Behaviour rule and finds the `nested` `AC_` key with `required:
   false` (checks that the criteria are optional).
-- Structural evidence: the recorded verification and tests provide the historical evidence.
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 3: One issue template, and the issues on file rewritten
 
 - [x] Done — ticked by integrate at merge.
 - Dependencies: none.
-- Areas: historical areas named by the recorded outcome.
+- Areas: unknown (legacy record; no affected area inferred).
 - Outcome: `pack/knowledge/schemas/issue.md` — `type: Issue`, id
   `issue-\d{3}-[a-z0-9-]+`, `kind` enum `bug|feature|chore`
   required, `lifecycle` enum `open|done|wontfix` as `variant-key`;
@@ -218,14 +218,14 @@ Historical documentation impact predates the documentation map; migration itself
   and a `done` one settled, and no `framed` value ranks live (checks
   `LIVE_LIFECYCLES`); `/file`'s text names the template's headings and
   `lifecycle: open` (checks that `/file` writes the template).
-- Structural evidence: the recorded verification and tests provide the historical evidence.
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 4: One plan template, and the plans on file rewritten
 
 - [x] Done — ticked by integrate at merge.
 - Dependencies: none.
-- Areas: historical areas named by the recorded outcome.
+- Areas: unknown (legacy record; no affected area inferred).
 - Outcome: `pack/knowledge/schemas/plan.md` — `type: Plan`, id
   `plan-\d{3}-[a-z0-9-]+`, `lifecycle` enum `open|done|abandoned`;
   title heading `Plan: …` with an optional Request line; headings
@@ -254,14 +254,14 @@ Historical documentation impact predates the documentation map; migration itself
   no schema (checks that the two plan schemas are gone); a normative
   sweep test finds every plan on file typed `Plan` in its lifecycle
   folder and conforming (checks the sweep).
-- Structural evidence: the recorded verification and tests provide the historical evidence.
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 5: Scope, and contract-design as its sub-skill
 
 - [x] Done — ticked by integrate at merge.
 - Dependencies: 3, 4.
-- Areas: historical areas named by the recorded outcome.
+- Areas: unknown (legacy record; no affected area inferred).
 - Outcome: `pack/knowledge/skills/scope/SKILL.md` — persona, bootstrap
   reads (the issue or the request, the contracts, the plan schema),
   steps: branch (`feature/<nnn>-<slug>` after the issue,
@@ -292,14 +292,14 @@ Historical documentation impact predates the documentation map; migration itself
   changes and its hand-off is `/scope` (checks the sub-skill's
   interface); the pack manifest lists `scope` and not `frame` (checks
   the pack's skill set).
-- Structural evidence: the recorded verification and tests provide the historical evidence.
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 6: Build, execute-plan, accept, and the workflow text
 
 - [x] Done — ticked by build at its commit.
-- Dependencies: 5.
-- Areas: historical areas named by the recorded outcome.
+- Dependencies: unknown (legacy record; no dependency inferred).
+- Areas: unknown (legacy record; no affected area inferred).
 - Outcome: `build/SKILL.md` — reads the plan, works the blocks in
   order: tests, code, the block's own tests and the tests it touches,
   commit; after the last block the full build, tests, lint and
@@ -333,14 +333,14 @@ Historical documentation impact predates the documentation map; migration itself
   `.agents/superdev.md` and finds the flow `FILE → SCOPE → BUILD →
   ACCEPT`, an `optional` mark on accept, and no `CONTRACT-DESIGN`,
   `FEATURE-PLAN` or `INTEGRATE` phase (checks the workflow text).
-- Structural evidence: the recorded verification and tests provide the historical evidence.
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 7: The concepts and the records
 
 - [x] Done — ticked by build at its commit.
-- Dependencies: 6.
-- Areas: historical areas named by the recorded outcome.
+- Dependencies: unknown (legacy record; no dependency inferred).
+- Areas: unknown (legacy record; no affected area inferred).
 - Outcome: `definition-of-done`, `development-procedure`,
   `issue-tracker`, `glossary` (the phases, `Scope`, `Work block`,
   `Plan`, the retired terms `Frame`, `Slice`, `Framed`, `Unframed`,
@@ -366,9 +366,9 @@ Historical documentation impact predates the documentation map; migration itself
   defines Scope, Work block and Plan and no longer defines Frame,
   Slice, Framed or Unframed (checks the glossary).
 
-- Structural evidence: the recorded verification and tests provide the historical evidence.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
 
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ## Build state
 

@@ -20,8 +20,9 @@ approved specification but never erase execution history.
 A work block has a stable number and title, done checkbox, dependencies,
 affected areas, required outcome, focused commands, tests bound to contract
 keys where applicable, structural evidence otherwise, and documentation
-surfaces with generation and verification commands. All evidence is executable;
-there is no manual-case marker.
+surfaces with generation and verification commands. Active evidence is executable;
+completed migrated records may preserve old manual-case text only under an explicit
+`Legacy evidence (non-executable)` marker.
 
 ````yaml
 description: >

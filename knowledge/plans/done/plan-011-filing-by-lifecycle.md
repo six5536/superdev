@@ -187,7 +187,7 @@ Historical documentation impact predates the documentation map; migration itself
 
 - [x] Done — ticked at merge.
 - Dependencies: none. The plan as a whole runs after
-- Areas: historical areas named by the recorded outcome.
+- Areas: unknown (legacy record; no affected area inferred).
   plan-010-links-address-ids, which is what makes a document movable.
 - Outcome: add the `lifecycle` key to every schema governing a document in
   the five directories — `bug-report`, `feature-request`, `chore`,
@@ -207,14 +207,14 @@ Historical documentation impact predates the documentation map; migration itself
 - Tests:
   - checks that each schema in scope admits exactly the lifecycle values
     its kind uses, per the table under Goal.
-- Structural evidence: the recorded verification and tests provide the historical evidence.
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 2: Search reads the field
 
 - [x] Done — ticked at merge.
-- Dependencies: 1.
-- Areas: historical areas named by the recorded outcome.
+- Dependencies: unknown (legacy record; no dependency inferred).
+- Areas: unknown (legacy record; no affected area inferred).
 - Outcome: teach `SectionDoc::settled`
   (`crates/lib/superdev-core/src/sokf/index.rs:154`) to return true for
   any `lifecycle` value but the kind's live one. `DOWNRANK_TAGS` stays
@@ -240,14 +240,14 @@ Historical documentation impact predates the documentation map; migration itself
     concept's value.
   - checks that `git log -S DOWNRANK_TAGS` shows the ranker reading
     `lifecycle` no later than the commit deleting the tags.
-- Structural evidence: the recorded verification and tests provide the historical evidence.
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 3: The check and the filing repair
 
 - [x] Done — ticked at merge.
-- Dependencies: 2.
-- Areas: historical areas named by the recorded outcome.
+- Dependencies: unknown (legacy record; no dependency inferred).
+- Areas: unknown (legacy record; no affected area inferred).
 - Outcome: a new `crates/lib/superdev-core/src/validate/lifecycle.rs`
   reads `lifecycle` and reports a value outside the schema's enum, naming
   the value and the enum. It compares the document's last path segment
@@ -276,14 +276,14 @@ Historical documentation impact predates the documentation map; migration itself
   - unit: a document directly in a kind's base directory is reported
     unfiled, and `--fix` files it by its `lifecycle`.
   - unit: `--fix` moves only inside the SOKF knowledge — no criterion.
-- Structural evidence: the recorded verification and tests provide the historical evidence.
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 4: Migrate the tree
 
 - [x] Done — ticked at merge.
-- Dependencies: 3.
-- Areas: historical areas named by the recorded outcome.
+- Dependencies: unknown (legacy record; no dependency inferred).
+- Areas: unknown (legacy record; no affected area inferred).
 - Outcome: set `lifecycle` on all 68 documents by the derivation table
   under Goal, and delete the `tags` and `status` values it replaces.
   Delete `DOWNRANK_TAGS` and its branch, now that no tag it names
@@ -307,14 +307,14 @@ Historical documentation impact predates the documentation map; migration itself
     and no document.
   - checks that `git diff` shows renames and frontmatter changes only, so
     every moved document is byte-identical but for its frontmatter.
-- Structural evidence: the recorded verification and tests provide the historical evidence.
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 5: Close the gate
 
 - [x] Done — ticked at merge.
-- Dependencies: 4.
-- Areas: historical areas named by the recorded outcome.
+- Dependencies: unknown (legacy record; no dependency inferred).
+- Areas: unknown (legacy record; no affected area inferred).
 - Outcome: promote the enum, folder and unfiled findings from warning to
   error, now that the tree carries none of them. A document committed
   unfiled then fails the merge gate with a message naming the folder it
@@ -331,14 +331,14 @@ Historical documentation impact predates the documentation map; migration itself
     naming the value and the enum.
   - integration: moving a document by hand fails the run, and `--fix`
     restores it — checks the promoted findings are errors.
-- Structural evidence: the recorded verification and tests provide the historical evidence.
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 6: The live tree addresses ids
 
 - [x] Done — ticked at merge.
-- Dependencies: 1.
-- Areas: historical areas named by the recorded outcome.
+- Dependencies: unknown (legacy record; no dependency inferred).
+- Areas: unknown (legacy record; no affected area inferred).
 - Outcome: rewrite the filing lines in the 28 schemas under
   `knowledge/schemas/` that name a path, so each says a document is
   written under its kind's directory with the live `lifecycle` value and
@@ -361,14 +361,14 @@ Historical documentation impact predates the documentation map; migration itself
     highest across a kind's folders.
   - checks that `.agents/sokf.md` sends the agent to the `lifecycle`
     filter rather than to a directory listing.
-- Structural evidence: the recorded verification and tests provide the historical evidence.
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 7: Record what the pack still owes
 
 - [x] Done — ticked at merge.
 - Dependencies: 5, 6.
-- Areas: historical areas named by the recorded outcome.
+- Areas: unknown (legacy record; no affected area inferred).
 - Outcome: add this plan's share to
   [issue-021][sokf:issue-021-backport-the-knowledge-design-to-the-pack] —
   the folder scaffold `init` does not yet write, the 8 pack skills and 8
@@ -387,9 +387,9 @@ Historical documentation impact predates the documentation map; migration itself
     is filed and how it is addressed, and that the pack's copies of both
     are recorded as owing the same change.
 
-- Structural evidence: the recorded verification and tests provide the historical evidence.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
 
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ## Build state
 

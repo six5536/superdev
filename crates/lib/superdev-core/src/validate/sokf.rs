@@ -331,7 +331,11 @@ fn check_workflow_records(bundle: &Bundle, findings: &mut Vec<Finding>) {
 }
 
 fn check_plan_blocks(plan: &crate::sokf::concept::Concept, findings: &mut Vec<Finding>) {
-    if plan.body.contains("manual:") {
+    if plan
+        .body
+        .lines()
+        .any(|line| line.trim_start().starts_with("- manual:"))
+    {
         findings.push(error(
             &plan.path,
             "workflow: plans contain executable evidence only; `manual:` is prohibited".into(),
@@ -444,8 +448,10 @@ pub(crate) fn identities(
         if let Some(canonical) = canonical(&bundle.root.join(path)) {
             ids.by_path.insert(canonical, id.clone());
         }
-        ids.repo_paths
-            .insert(id.clone(), repo_path(repo_root, &bundle.root.join(path)));
+        ids.repo_paths.insert(
+            id.clone(),
+            repo_path(repo_root, &bundle.root, &bundle.root.join(path)),
+        );
         ids.by_id.insert(id, path.to_string());
     }
     ids
@@ -461,12 +467,19 @@ fn kind_and_number(id: &str) -> Option<(String, u32)> {
 }
 
 /// `path` as SPEC §9 writes it in a definition: rooted at the repository.
-fn repo_path(repo_root: &Path, path: &Path) -> String {
-    let relative = path
-        .strip_prefix(repo_root)
-        .map(|p| format!("/{}", p.display()))
-        .unwrap_or_else(|_| path.display().to_string());
-    relative.replace('\\', "/")
+fn repo_path(repo_root: &Path, bundle_root: &Path, path: &Path) -> String {
+    let staged = bundle_root.starts_with(repo_root.join(".superdev/cache"));
+    let rendered = if staged
+        && let (Ok(relative), Some(directory)) =
+            (path.strip_prefix(bundle_root), bundle_root.file_name())
+    {
+        format!("/{}/{}", directory.to_string_lossy(), relative.display())
+    } else if let Ok(relative) = path.strip_prefix(repo_root) {
+        format!("/{}", relative.display())
+    } else {
+        path.display().to_string()
+    };
+    rendered.replace('\\', "/")
 }
 
 /// The manifest parses and carries no stamped keys (document check); it
@@ -1948,6 +1961,18 @@ mod tests {
             assert!(!ok(bad), "{bad}");
         }
         assert!(!is_iso8601(&Value::Number(2026.into())));
+    }
+
+    #[test]
+    fn staged_knowledge_paths_render_as_their_published_location() {
+        assert_eq!(
+            repo_path(
+                Path::new("/repo"),
+                Path::new("/repo/.superdev/cache/staged/knowledge"),
+                Path::new("/repo/.superdev/cache/staged/knowledge/issues/index.md"),
+            ),
+            "/knowledge/issues/index.md"
+        );
     }
 
     #[test]

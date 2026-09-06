@@ -143,7 +143,7 @@ Historical documentation impact predates the documentation map; migration itself
 
 - [x] Done — ticked at merge.
 - Dependencies: none.
-- Areas: historical areas named by the recorded outcome.
+- Areas: unknown (legacy record; no affected area inferred).
 - Outcome: amend `.agents/sokf/SPEC.md` §8 — body mirroring is satisfied
   by a reference-style link labelled `sokf:<id>`, the id form is what a
   producer should write for a concept, and a path stays legal for
@@ -166,14 +166,14 @@ Historical documentation impact predates the documentation map; migration itself
 - Tests:
   - checks that a markdown renderer follows `[text][sokf:<id>]` to the
     linked file.
-- Structural evidence: the recorded verification and tests provide the historical evidence.
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 2: Resolve and check a link by id
 
 - [x] Done — ticked at merge.
-- Dependencies: 1.
-- Areas: historical areas named by the recorded outcome.
+- Dependencies: unknown (legacy record; no dependency inferred).
+- Areas: unknown (legacy record; no affected area inferred).
 - Outcome: `markdown_links_and_footnotes` in
   `crates/lib/superdev-core/src/validate/sokf.rs` recognises a reference
   link labelled `sokf:<id>` and records the id as a body target, so §8
@@ -207,14 +207,14 @@ Historical documentation impact predates the documentation map; migration itself
     criterion.
   - unit: two concepts claiming the same kind and number are reported,
     naming both paths — no criterion.
-- Structural evidence: the recorded verification and tests provide the historical evidence.
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 3: superdev validate --fix
 
 - [x] Done — ticked at merge.
-- Dependencies: 2.
-- Areas: historical areas named by the recorded outcome.
+- Dependencies: unknown (legacy record; no dependency inferred).
+- Areas: unknown (legacy record; no affected area inferred).
 - Outcome: add `fix: bool` to `ValidateArgs`
   (`crates/app/superdev/src/validate_cli.rs`) and a repair outcome on
   each repairable finding, so the report says what changed. The flag
@@ -245,14 +245,14 @@ Historical documentation impact predates the documentation map; migration itself
   - integration: a tree with every `<!-- sokf:links -->` block deleted
     resolves every link, and the findings name the blocks — checks that
     resolution is independent of the block.
-- Structural evidence: the recorded verification and tests provide the historical evidence.
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 4: Convert the knowledge tree
 
 - [x] Done — ticked at merge.
-- Dependencies: 3.
-- Areas: historical areas named by the recorded outcome.
+- Dependencies: unknown (legacy record; no dependency inferred).
+- Areas: unknown (legacy record; no affected area inferred).
 - Outcome: run `--fix` over `knowledge/` on a clean working tree, so 493
   concept links convert and every document gains its definition block.
   The pass is hard to reverse, because it rewrites most of the tree at
@@ -270,14 +270,14 @@ Historical documentation impact predates the documentation map; migration itself
   - checks that `git diff` after the pass shows link and definition-block
     changes only, so every converted document is byte-identical but for
     its links and its block.
-- Structural evidence: the recorded verification and tests provide the historical evidence.
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 5: Close the gate
 
 - [x] Done — ticked at merge.
-- Dependencies: 4.
-- Areas: historical areas named by the recorded outcome.
+- Dependencies: unknown (legacy record; no dependency inferred).
+- Areas: unknown (legacy record; no affected area inferred).
 - Outcome: promote the five findings from warning to error, now that the
   tree carries none of them. A warning is the state P008 found, where 39
   sat unread; the remedy here is one command, which is what makes `cargo
@@ -293,14 +293,14 @@ Historical documentation impact predates the documentation map; migration itself
     error naming both paths.
   - integration: a deleted definition block and a hand-written path link
     each fail the run — checks that the promoted findings are errors.
-- Structural evidence: the recorded verification and tests provide the historical evidence.
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 6: Tell the agent, and ship
 
 - [x] Done — ticked at merge.
-- Dependencies: 5.
-- Areas: historical areas named by the recorded outcome.
+- Dependencies: unknown (legacy record; no dependency inferred).
+- Areas: unknown (legacy record; no affected area inferred).
 - Outcome: `.agents/sokf.md` gains the link form, the one exception for
   non-concept files, and the instruction to run `superdev validate --fix`
   before committing. `CHANGELOG.md` records the SOKF bump as a breaking
@@ -316,9 +316,9 @@ Historical documentation impact predates the documentation map; migration itself
   - checks that issue-021's Surfaces name `pack/sokf/agents/` and
     `pack/knowledge/concepts/index.md` with the counts this plan leaves.
 
-- Structural evidence: the recorded verification and tests provide the historical evidence.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
 
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ## Build state
 

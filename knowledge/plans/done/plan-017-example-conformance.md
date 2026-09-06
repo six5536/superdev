@@ -60,7 +60,7 @@ Historical documentation impact predates the documentation map; migration itself
 
 - [x] Done — ticked by integrate at merge.
 - Dependencies: none.
-- Areas: historical areas named by the recorded outcome.
+- Areas: unknown (legacy record; no affected area inferred).
 - Outcome: `DocSchema` parses the `example:` key; `validate` reads each
   schema's example as a document and runs the existing document check
   over it with the declaring schema handed to it — no dispatch —
@@ -87,14 +87,14 @@ Historical documentation impact predates the documentation map; migration itself
     covers 5.
   - snapshot: a fixture tree whose schema carries a broken example
     carries a golden of the report — covers 1, 2, 5.
-- Structural evidence: the recorded verification and tests provide the historical evidence.
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 2: Link form binds inside the example, without resolution
 
 - [x] Done — ticked by integrate at merge.
-- Dependencies: 1.
-- Areas: historical areas named by the recorded outcome.
+- Dependencies: unknown (legacy record; no dependency inferred).
+- Areas: unknown (legacy record; no affected area inferred).
 - Outcome: the example check reads the example body's markdown links and
   reports, as an error on the schema file, a link whose target is a
   path into the knowledge — the `[text][sokf:<id>]` form is the
@@ -116,9 +116,9 @@ Historical documentation impact predates the documentation map; migration itself
   - e2e: `superdev validate` reports PASS on this repository with the
     example check live — covers 6.
 
-- Structural evidence: the recorded verification and tests provide the historical evidence.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
 
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ## Build state
 

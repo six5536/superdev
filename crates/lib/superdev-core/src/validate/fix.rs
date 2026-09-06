@@ -160,7 +160,7 @@ fn migrate_legacy_plan_labels(text: &str) -> String {
         ("- Test cases:", "- Tests:"),
         ("- Tests/cases:", "- Tests:"),
         ("- Cases:", "- Tests:"),
-        ("- manual:", "- structural:"),
+        ("- manual:", "- Legacy evidence (non-executable): manual:"),
     ];
     text.split_inclusive('\n')
         .map(|line| {
@@ -187,18 +187,13 @@ fn migrate_plan_blocks(bundle: &Bundle) -> Result<Vec<String>> {
         let parts: Vec<&str> = migrated.split("\n### Block ").collect();
         if parts.len() > 1 {
             let mut rebuilt = parts[0].to_string();
-            for (index, part) in parts.iter().skip(1).enumerate() {
+            for part in parts.iter().skip(1) {
                 let mut block = format!("\n### Block {part}");
                 let body_end = block.find("\n## Build state").unwrap_or(block.len());
-                if !block[..body_end].contains("\n- Dependencies:") {
-                    let dependency = if index == 0 {
-                        "none".into()
-                    } else {
-                        index.to_string()
-                    };
-                    if let Some(position) = block.find("\n- Outcome:") {
-                        block.insert_str(position, &format!("\n- Dependencies: {dependency}.\n- Areas: historical areas named by the recorded outcome."));
-                    }
+                if !block[..body_end].contains("\n- Dependencies:")
+                    && let Some(position) = block.find("\n- Outcome:")
+                {
+                    block.insert_str(position, "\n- Dependencies: unknown (legacy record; no dependency inferred).\n- Areas: unknown (legacy record; no affected area inferred).");
                 }
                 let body_end = block.find("\n## Build state").unwrap_or(block.len());
                 if !block[..body_end].contains("\n- Areas:")
@@ -207,17 +202,17 @@ fn migrate_plan_blocks(bundle: &Bundle) -> Result<Vec<String>> {
                 {
                     block.insert_str(
                         position + 1 + offset,
-                        "\n- Areas: historical areas named by the recorded outcome.",
+                        "\n- Areas: unknown (legacy record; no affected area inferred).",
                     );
                 }
                 for (marker, line) in [
                     (
                         "\n- Structural evidence:",
-                        "\n- Structural evidence: the recorded verification and tests provide the historical evidence.",
+                        "\n- Structural evidence: none recorded; this historical record makes no executable evidence claim.",
                     ),
                     (
                         "\n- Documentation:",
-                        "\n- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.",
+                        "\n- Documentation: none recorded; this historical record makes no documentation claim.",
                     ),
                 ] {
                     let body_end = block.find("\n## Build state").unwrap_or(block.len());

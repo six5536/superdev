@@ -36,8 +36,8 @@ async function isolated(
 	onClose?: (child: ChildProcess) => void,
 ): Promise<string> {
 	const promptPath = resolve(here, "prompts", `${role}.md`);
-	await readFile(promptPath, "utf8");
-	const args = ["--mode", "json", "-p", "--no-session", "--approve", "--append-system-prompt", promptPath];
+	const rolePrompt = await readFile(promptPath, "utf8");
+	const args = ["--mode", "json", "-p", "--no-session", "--approve", "--append-system-prompt", rolePrompt];
 	if (model) args.push("--provider", model.provider, "--model", model.id);
 	args.push("--tools", readOnly.has(role) ? "read,superdev_review_diff,sokf_search,sokf_graph" : role === "file" ? "read,sokf_search,sokf_graph" : "read,bash,edit,write,sokf_search,sokf_graph");
 	args.push(`Task: ${task}`);

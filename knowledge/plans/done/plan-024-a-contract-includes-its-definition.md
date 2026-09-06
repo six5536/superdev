@@ -106,7 +106,7 @@ Historical documentation impact predates the documentation map; migration itself
 
 - [x] Done — ticked by integrate at merge.
 - Dependencies: none.
-- Areas: historical areas named by the recorded outcome.
+- Areas: unknown (legacy record; no affected area inferred).
 - Outcome: `include_blocks` in
   `crates/lib/superdev-core/src/sokf/concept.rs` reads a `/`-rooted
   argument as a path with an optional `#region`, and `IncludeBlock`
@@ -154,14 +154,14 @@ Historical documentation impact predates the documentation map; migration itself
   - e2e: `superdev validate --fix` on a fixture knowledge writes the
     block, a second run writes nothing, and `superdev validate` after
     an edit inside the region exits 1 naming the path — covers 1, 2, 4.
-- Structural evidence: the recorded verification and tests provide the historical evidence.
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 2: A sixth content kind, and the block declarations withdrawn
 
 - [x] Done — ticked by integrate at merge.
-- Dependencies: 1.
-- Areas: historical areas named by the recorded outcome.
+- Dependencies: unknown (legacy record; no dependency inferred).
+- Areas: unknown (legacy record; no affected area inferred).
 - Outcome: `CONTENT_KINDS` in `validate/schema/document.rs` gains
   `include`; a section of that kind is satisfied by an include block
   whose argument is a `/`-rooted path, and a fenced block in such a
@@ -195,14 +195,14 @@ Historical documentation impact predates the documentation map; migration itself
     declared `block-keys` produces no finding — covers 7.
   - e2e: `superdev validate` on this repository passes with the contract
     schema's Definition declared `include` — covers 7, 9.
-- Structural evidence: the recorded verification and tests provide the historical evidence.
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 3: A schema declares variants
 
 - [x] Done — ticked by integrate at merge.
 - Dependencies: none.
-- Areas: historical areas named by the recorded outcome.
+- Areas: unknown (legacy record; no affected area inferred).
 - Outcome: `DocSchema` gains `variant-key`; `SectionRule`, the
   frontmatter rule and a prohibited entry gain `variants`; `example`
   deserialises as one document or a map keyed by variant value. A
@@ -239,14 +239,14 @@ Historical documentation impact predates the documentation map; migration itself
     finding on the schema — covers 13, 14.
   - unit: a schema with no `variant-key` and a string `example` is
     checked exactly as before — covers 13.
-- Structural evidence: the recorded verification and tests provide the historical evidence.
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 4: The contract schema in its final form
 
 - [x] Done — ticked by integrate at merge.
 - Dependencies: 2, 3.
-- Areas: historical areas named by the recorded outcome.
+- Areas: unknown (legacy record; no affected area inferred).
 - Outcome: `knowledge/schemas/contract.md` declares `variant-key: kind`;
   each checklist bullet becomes a level-3 section rule tagged with its
   kinds, `required: true` where the bullet was marked required, its
@@ -272,14 +272,14 @@ Historical documentation impact predates the documentation map; migration itself
     rule for its kind — covers 12.
   - e2e: `superdev validate` on this repository passes with the schema
     carrying twelve examples — covers 8, 14, 15.
-- Structural evidence: the recorded verification and tests provide the historical evidence.
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 5: The skills ask and declare
 
 - [x] Done — ticked by integrate at merge.
-- Dependencies: 4.
-- Areas: historical areas named by the recorded outcome.
+- Dependencies: unknown (legacy record; no dependency inferred).
+- Areas: unknown (legacy record; no affected area inferred).
 - Outcome: `.claude/skills/integrate/SKILL.md` gains a step, when a
   slice touched a contract, that reads the contract as its consumer
   would and reports where a marked region omits part of the promised
@@ -306,14 +306,14 @@ Historical documentation impact predates the documentation map; migration itself
     ADR-044 — covers 17.
   - integration: `superdev status` reports the three skills unchanged
     after `sync`, so the pack ships them — covers 22.
-- Structural evidence: the recorded verification and tests provide the historical evidence.
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 6: The CLI and MCP contracts include their source
 
 - [x] Done — ticked by integrate at merge.
 - Dependencies: 1, 4.
-- Areas: historical areas named by the recorded outcome.
+- Areas: unknown (legacy record; no affected area inferred).
 - Outcome: `sokf:begin cli` / `sokf:end cli` around every clap struct
   and enum in `crates/app/superdev/src/` — `main.rs`, `validate_cli.rs`,
   `manage.rs` and the rest, one region name across files, one include
@@ -344,14 +344,14 @@ Historical documentation impact predates the documentation map; migration itself
   - e2e: no test under `crates/` reads a fenced block out of
     `contract-002` or `contract-003` to compare it to the binary —
     covers 21.
-- Structural evidence: the recorded verification and tests provide the historical evidence.
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 7: The config and format contracts include their structs
 
 - [x] Done — ticked by integrate at merge.
 - Dependencies: 1, 4.
-- Areas: historical areas named by the recorded outcome.
+- Areas: unknown (legacy record; no affected area inferred).
 - Outcome: markers around the `serde` structs that read `config.toml`,
   `pack.toml` and `lock.toml`; `contract-004` becomes `kind: config`,
   `contract-005` and `contract-006` become `kind: format`, ids renamed
@@ -367,14 +367,14 @@ Historical documentation impact predates the documentation map; migration itself
     naming `contract-006`'s include — covers 4, 23.
   - e2e: no test compares a TOML block from a contract to the parser —
     covers 21.
-- Structural evidence: the recorded verification and tests provide the historical evidence.
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 8: The interface contracts include their modules
 
 - [x] Done — ticked by integrate at merge.
 - Dependencies: 1, 4.
-- Areas: historical areas named by the recorded outcome.
+- Areas: unknown (legacy record; no affected area inferred).
 - Outcome: markers around the `pub` items `contract-007`, `contract-009`
   and `contract-010` declare, in the modules they describe; each
   becomes `kind: interface`, its Data model & API replaced by includes,
@@ -393,14 +393,14 @@ Historical documentation impact predates the documentation map; migration itself
   - unit: contract-010 carries no `PENDING` — covers 23.
   - e2e: no test matches signatures out of a contract against source —
     covers 21.
-- Structural evidence: the recorded verification and tests provide the historical evidence.
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 9: The template contract includes its tree
 
 - [x] Done — ticked by integrate at merge.
 - Dependencies: 1, 4.
-- Areas: historical areas named by the recorded outcome.
+- Areas: unknown (legacy record; no affected area inferred).
 - Outcome: `contract-008` becomes `kind: format`. Its definition is the
   embedded template set and the substitution tokens, both declared in
   `crates/lib/superdev-core/src/templates.rs`; markers around the
@@ -420,15 +420,15 @@ Historical documentation impact predates the documentation map; migration itself
     naming `contract-008`'s include — covers 4, 23.
   - e2e: no test compares a block from `contract-008` to
     `templates.rs` — covers 23.
-- Structural evidence: the recorded verification and tests provide the historical evidence.
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 10: Fifteen schemas go, and the records catch up
 
 - [x] Done — ticked by integrate at merge. Sixteen kind schemas were on
   file, not fifteen: the count omitted `contract-interface`.
 - Dependencies: 6, 7, 8, 9.
-- Areas: historical areas named by the recorded outcome.
+- Areas: unknown (legacy record; no affected area inferred).
 - Outcome: the fifteen `contract-*` schemas under `knowledge/schemas/`
   and `pack/knowledge/schemas/` are deleted with their `contract-style`
   include blocks; the schemas index lists one contract schema; the
@@ -452,9 +452,9 @@ Historical documentation impact predates the documentation map; migration itself
     unreachable behaviour is prose bound by test, and that `PENDING`
     applies to prose alone — covers 16, 17.
 
-- Structural evidence: the recorded verification and tests provide the historical evidence.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
 
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ## Build state
 

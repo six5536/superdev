@@ -167,7 +167,7 @@ Historical documentation impact predates the documentation map; migration itself
 
 - [x] Done — ticked at merge.
 - Dependencies: none.
-- Areas: historical areas named by the recorded outcome.
+- Areas: unknown (legacy record; no affected area inferred).
 - Outcome: replace `.agents/aokf/SPEC.md` §11 — the ladder table goes, and
   conformance becomes the document check passing, with the diff check still
   independent of it; the sentence "a knowledge's level is the highest it
@@ -182,14 +182,14 @@ Historical documentation impact predates the documentation map; migration itself
   - observation: SPEC §11 states pass or fail and names no level, and the
     declared version is no longer `0.2` — checks that the format's statement
     of conformance drops the ladder.
-- Structural evidence: the recorded verification and tests provide the historical evidence.
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 2: Collapse the model and hold parity
 
 - [x] Done — ticked at merge.
-- Dependencies: 1.
-- Areas: historical areas named by the recorded outcome.
+- Dependencies: unknown (legacy record; no dependency inferred).
+- Areas: unknown (legacy record; no affected area inferred).
 - Outcome: `Finding` carries a severity, `Report` drops both level fields,
   and `achieved_level` is deleted along with the function that derives it;
   `passed()` stays and becomes the verdict (D-4). Drop "at Level 1" from the
@@ -224,14 +224,14 @@ Historical documentation impact predates the documentation map; migration itself
     classifications survive.
   - observation: `rg -n 'Level [0-9]' crates/lib/superdev-core/src/` returns
     nothing — checks that no finding message names a level.
-- Structural evidence: the recorded verification and tests provide the historical evidence.
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 3: Remove the flag and its callers
 
 - [x] Done — ticked at merge.
-- Dependencies: 2.
-- Areas: historical areas named by the recorded outcome.
+- Dependencies: unknown (legacy record; no dependency inferred).
+- Areas: unknown (legacy record; no affected area inferred).
 - Outcome: `--level` and `DEFAULT_LEVEL` leave
   `crates/app/superdev/src/aokf_cli.rs`, from the subcommand definition and
   from both call sites; `CHECKED_LEVEL` leaves
@@ -250,14 +250,14 @@ Historical documentation impact predates the documentation map; migration itself
   - e2e: deleting `knowledge/manifest.sokf.yaml` makes the run fail, where
     `--level 0` would once have passed it — checks that the escape hatch is
     gone.
-- Structural evidence: the recorded verification and tests provide the historical evidence.
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 4: Correct the prose
 
 - [x] Done — ticked at merge.
-- Dependencies: 3.
-- Areas: historical areas named by the recorded outcome.
+- Dependencies: unknown (legacy record; no dependency inferred).
+- Areas: unknown (legacy record; no affected area inferred).
 - Outcome: `.agents/aokf.md` no longer says the canonical knowledge "must
   PASS at level 2"; the loop in `.claude/skills/maintain/SKILL.md` ends on
   the validator passing rather than on a level; `knowledge/api-contracts.md`
@@ -289,9 +289,9 @@ Historical documentation impact predates the documentation map; migration itself
   - e2e: `npm run coverage:check` passes — checks the 90% per-crate line
     gate.
 
-- Structural evidence: the recorded verification and tests provide the historical evidence.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
 
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ## Build state
 

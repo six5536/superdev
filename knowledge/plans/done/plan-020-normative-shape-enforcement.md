@@ -72,7 +72,7 @@ Historical documentation impact predates the documentation map; migration itself
 
 - [x] Done — ticked by integrate at merge.
 - Dependencies: none.
-- Areas: historical areas named by the recorded outcome.
+- Areas: unknown (legacy record; no affected area inferred).
 - Outcome: `item-pattern` and `content-pattern` land in
   `validate::schema` per ADR-030 — `SectionRule` fields, the item and
   body checks, the mis-declaration findings — with unit tests. No
@@ -96,14 +96,14 @@ Historical documentation impact predates the documentation map; migration itself
     document — covers 5.
   - unit: a schema's example is checked against the declaring schema's
     own patterns (ADR-024 path) — covers 1.
-- Structural evidence: the recorded verification and tests provide the historical evidence.
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 2: EARS criteria enforced at frame time
 
 - [x] Done — ticked by integrate at merge.
-- Dependencies: 1.
-- Areas: historical areas named by the recorded outcome.
+- Dependencies: unknown (legacy record; no dependency inferred).
+- Areas: unknown (legacy record; no affected area inferred).
 - Outcome: `schema-feature-request` declares the ADR-031 item-pattern on
   Acceptance criteria, in `knowledge/schemas/` and the pack mirror,
   with the section description updated to name the declaration.
@@ -114,14 +114,14 @@ Historical documentation impact predates the documentation map; migration itself
     validate naming the file, the section and the item — covers 4.
   - integration: I030's TBD criteria and every on-file feature-request
     pass — covers 4, 6.
-- Structural evidence: the recorded verification and tests provide the historical evidence.
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 3: The contract kinds declare their promise shapes
 
 - [x] Done — ticked by integrate at merge.
-- Dependencies: 1.
-- Areas: historical areas named by the recorded outcome.
+- Dependencies: unknown (legacy record; no dependency inferred).
+- Areas: unknown (legacy record; no affected area inferred).
 - Outcome: the fifteen contract-kind schemas declare the ADR-032
   item-patterns and content-patterns, in `knowledge/schemas/` and the
   pack mirror; each declaring section's description names the shape;
@@ -134,14 +134,14 @@ Historical documentation impact predates the documentation map; migration itself
     both trees, and no definitional section carries one — covers 7.
   - integration: every contract-kind schema's example passes the
     schema's own declarations — covers 6.
-- Structural evidence: the recorded verification and tests provide the historical evidence.
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 4: The on-file contracts pass the declared shapes
 
 - [x] Done — ticked by integrate at merge.
-- Dependencies: 3.
-- Areas: historical areas named by the recorded outcome.
+- Dependencies: unknown (legacy record; no dependency inferred).
+- Areas: unknown (legacy record; no affected area inferred).
 - Outcome: the nine active contracts are swept until the ADR-032
   declarations pass — promise items gain their keywords, promise
   sections state their promises — with no change to what any contract
@@ -156,9 +156,9 @@ Historical documentation impact predates the documentation map; migration itself
     mirror reports zero errors with every declared shape enforced —
     covers 6.
 
-- Structural evidence: the recorded verification and tests provide the historical evidence.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
 
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ## Build state
 

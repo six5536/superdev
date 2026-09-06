@@ -49,6 +49,21 @@ pub fn revision(root: &Path, reference: &str) -> Result<String> {
     Ok(String::from_utf8_lossy(&output.stdout).trim().to_string())
 }
 
+/// Read one repository-relative file from an immutable revision without changing the worktree.
+pub fn file_at_revision(root: &Path, revision: &str, path: &str) -> Result<String> {
+    validate_ref(revision)?;
+    if path.starts_with('/') || path.contains("..") || path.contains(':') {
+        return Err(Error::Manifest {
+            message: format!("invalid repository-relative path `{path}`"),
+        });
+    }
+    let object = format!("{revision}:{path}");
+    let output = git(root, &["show", &object])?;
+    String::from_utf8(output.stdout).map_err(|source| Error::Manifest {
+        message: format!("`{path}` at `{revision}` is not UTF-8: {source}"),
+    })
+}
+
 /// Return whether a validated ref resolves.
 pub fn reference_exists(root: &Path, reference: &str) -> Result<bool> {
     validate_ref(reference)?;

@@ -77,7 +77,7 @@ Historical documentation impact predates the documentation map; migration itself
 
 - [x] Done — ticked by integrate at merge.
 - Dependencies: none.
-- Areas: historical areas named by the recorded outcome.
+- Areas: unknown (legacy record; no affected area inferred).
 - Outcome: `block-language`, `block-keys` and `block-entry-keys` land in
   `validate::schema` per ADR-035 — `SectionRule` fields, the block
   parse and key checks, the mis-declaration findings — and in both
@@ -99,14 +99,14 @@ Historical documentation impact predates the documentation map; migration itself
   - unit: a section declaring no block rule gains no finding — covers 2.
   - unit: a schema's example is checked against its own block rules
     (ADR-024 path) — covers 2.
-- Structural evidence: the recorded verification and tests provide the historical evidence.
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 2: The CLI contract defines the command line
 
 - [x] Done — ticked by integrate at merge.
-- Dependencies: 1.
-- Areas: historical areas named by the recorded outcome.
+- Dependencies: unknown (legacy record; no dependency inferred).
+- Areas: unknown (legacy record; no affected area inferred).
 - Outcome: `schema-contract-cli` declares the YAML definition form of
   ADR-034 — every command with its arguments, flags, exit codes and
   streams — in both trees; `contract-002` is rewritten to define the
@@ -126,14 +126,14 @@ Historical documentation impact predates the documentation map; migration itself
     the contract fails the drift test naming it — covers 4.
   - e2e: each exit code the contract declares is produced by running the
     binary — covers 5.
-- Structural evidence: the recorded verification and tests provide the historical evidence.
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 3: The MCP contract defines its tools
 
 - [x] Done — ticked by integrate at merge.
-- Dependencies: 1.
-- Areas: historical areas named by the recorded outcome.
+- Dependencies: unknown (legacy record; no dependency inferred).
+- Areas: unknown (legacy record; no affected area inferred).
 - Outcome: `schema-contract-mcp` gains the definition section it has
   never had, declaring each tool's input schema and result shape in
   JSON Schema, in both trees; `contract-003` is rewritten to define the
@@ -145,14 +145,14 @@ Historical documentation impact predates the documentation map; migration itself
     the contract declares, both directions — covers 4, 7.
   - integration: a tool argument added to the server and absent from the
     contract fails the drift test naming it — covers 4.
-- Structural evidence: the recorded verification and tests provide the historical evidence.
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 4: The file-format kind splits into text and binary
 
 - [x] Done — ticked by integrate at merge.
 - Dependencies: none.
-- Areas: historical areas named by the recorded outcome.
+- Areas: unknown (legacy record; no affected area inferred).
 - Outcome: `schema-contract-text-format` and
   `schema-contract-binary-format` replace `schema-contract-text-format`
   per ADR-037, each with its own worked example, in both trees;
@@ -166,14 +166,14 @@ Historical documentation impact predates the documentation map; migration itself
     conform — covers 9.
   - integration: no document, index or link names the retired kind —
     covers 9, 10.
-- Structural evidence: the recorded verification and tests provide the historical evidence.
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 5: The config and format contracts define their files
 
 - [x] Done — ticked by integrate at merge.
 - Dependencies: 1, 4.
-- Areas: historical areas named by the recorded outcome.
+- Areas: unknown (legacy record; no affected area inferred).
 - Outcome: `schema-contract-config` and `schema-contract-text-format`
   declare their definition blocks; contracts 004, 005, 006 and 008 are
   rewritten to define every key, its type, its default and what a
@@ -185,14 +185,14 @@ Historical documentation impact predates the documentation map; migration itself
   - integration: every key the implementation reads is declared, both
     directions, for the manifest, the lock, the pack file and the
     template — covers 1, 4.
-- Structural evidence: the recorded verification and tests provide the historical evidence.
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 6: The interface contracts define their boundaries
 
 - [x] Done — ticked by integrate at merge.
-- Dependencies: 1.
-- Areas: historical areas named by the recorded outcome.
+- Dependencies: unknown (legacy record; no dependency inferred).
+- Areas: unknown (legacy record; no affected area inferred).
 - Outcome: `schema-contract-interface` declares its definition block in
   the host language; contracts 007, 009 and 010 are rewritten to carry
   every exported signature and type they bind; a drift test binds each
@@ -202,14 +202,14 @@ Historical documentation impact predates the documentation map; migration itself
 - Tests:
   - integration: every signature a contract declares exists as declared,
     and every exported item the contract binds is declared — covers 4, 8.
-- Structural evidence: the recorded verification and tests provide the historical evidence.
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 7: The remaining kinds declare their forms
 
 - [x] Done — ticked by integrate at merge.
 - Dependencies: 1, 4.
-- Areas: historical areas named by the recorded outcome.
+- Areas: unknown (legacy record; no affected area inferred).
 - Outcome: the kinds with no contract on file — authz, data, deployment,
   events, graphql, library, rest, rpc, telemetry, ui and the new binary
   format — declare their definition blocks per ADR-034, and each
@@ -222,14 +222,14 @@ Historical documentation impact predates the documentation map; migration itself
     and its example satisfies it, in both trees — covers 1, 10.
   - integration: no schema names a framework or a toolchain in what it
     demands — covers 3.
-- Structural evidence: the recorded verification and tests provide the historical evidence.
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 8: The standard, the obligation and the records
 
 - [x] Done — ticked by integrate at merge.
 - Dependencies: 2, 3, 5, 6, 7.
-- Areas: historical areas named by the recorded outcome.
+- Areas: unknown (legacy record; no affected area inferred).
 - Outcome: the contract-style fragment carries ADR-033's rule and the
   drift obligation of ADR-036, materialized into every contract-kind
   schema; the changelog records each new demand and the retired kind;
@@ -242,14 +242,14 @@ Historical documentation impact predates the documentation map; migration itself
     obligation, and every contract-kind schema carries it — covers 11.
   - e2e: a full validate run over both trees reports zero errors with
     every declared demand enforced — covers 10.
-- Structural evidence: the recorded verification and tests provide the historical evidence.
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 9: A drift test says which kind of red it is
 
 - [x] Done — ticked by integrate at merge.
 - Dependencies: 2, 3, 5, 6.
-- Areas: historical areas named by the recorded outcome.
+- Areas: unknown (legacy record; no affected area inferred).
 - Outcome: every drift test reports its two directions apart per ADR-038 —
   an element the contract declares and the implementation lacks is named
   a pending promise, an element the implementation has and the contract
@@ -263,14 +263,14 @@ Historical documentation impact predates the documentation map; migration itself
     pending promise, naming the element — covers 12.
   - unit: an implemented element the contract omits reports as a defect,
     naming the element — covers 12.
-- Structural evidence: the recorded verification and tests provide the historical evidence.
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 10: The plan orders a contract gap first
 
 - [x] Done — ticked by integrate at merge.
 - Dependencies: none.
-- Areas: historical areas named by the recorded outcome.
+- Areas: unknown (legacy record; no affected area inferred).
 - Outcome: `schema-feature-plan` states the ordering rule of ADR-038 — a
   slice that closes a contract-implementation gap sorts before slices
   that do not, alongside dependency order and riskiest-early — and the
@@ -280,14 +280,14 @@ Historical documentation impact predates the documentation map; migration itself
 - Tests:
   - integration: the plan schema and the feature-plan skill both state
     the ordering rule, in both trees — covers 13.
-- Structural evidence: the recorded verification and tests provide the historical evidence.
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 11: A pending element is bound in reverse
 
 - [x] Done — ticked by integrate at merge.
-- Dependencies: 9.
-- Areas: historical areas named by the recorded outcome.
+- Dependencies: unknown (legacy record; no dependency inferred).
+- Areas: unknown (legacy record; no affected area inferred).
 - Outcome: a contract element may carry a `pending` marker naming the
   slice that will build it; the drift tests bind such an element in
   reverse, failing once the implementation has it; the contract-kind
@@ -302,14 +302,14 @@ Historical documentation impact predates the documentation map; migration itself
     acceptance check, naming the contract and the element — covers 15.
   - integration: no contract on file carries a pending marker — covers
     15.
-- Structural evidence: the recorded verification and tests provide the historical evidence.
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 12: The template format contract is bound to the templates
 
 - [x] Done — ticked by integrate at merge.
-- Dependencies: 5.
-- Areas: historical areas named by the recorded outcome.
+- Dependencies: unknown (legacy record; no dependency inferred).
+- Areas: unknown (legacy record; no affected area inferred).
 - Outcome: the token vocabulary and the shipped template set the
   [template format contract][sokf:contract-008-format-template]
   declares are compared to `crates/lib/superdev-core/src/templates.rs`
@@ -329,9 +329,9 @@ Historical documentation impact predates the documentation map; migration itself
     reports as a `DEFECT`, and a section naming no shipped template
     reports as `PENDING` — covers 4, 12.
 
-- Structural evidence: the recorded verification and tests provide the historical evidence.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
 
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ## Build state
 

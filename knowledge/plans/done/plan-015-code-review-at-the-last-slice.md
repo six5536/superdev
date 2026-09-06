@@ -112,7 +112,7 @@ Historical documentation impact predates the documentation map; migration itself
 
 - [x] Done — ticked at merge.
 - Dependencies: none.
-- Areas: historical areas named by the recorded outcome.
+- Areas: unknown (legacy record; no affected area inferred).
 - Outcome: in `pack/knowledge/skills/integrate/SKILL.md`, REVIEW THE DIFF
   gains `when="if the last slice"` and its task widens to the whole
   feature diff against the merge target, findings still returning to
@@ -127,28 +127,28 @@ Historical documentation impact predates the documentation map; migration itself
   last-slice condition, the two skill copies are identical, and
   `superdev validate` reports PASS with 0 errors.
 - Tests:
-  - structural: each `code-review` mention in
+  - Legacy evidence (non-executable): manual: each `code-review` mention in
     `.claude/skills/integrate/SKILL.md` sits on a line carrying
     `when="if the last slice"` or inside a conditioned step's text,
     confirmed by reading the three lines — checks that a non-final
     slice invokes no review and reads no code-review schema.
-  - structural: the REVIEW THE DIFF task names the whole feature diff and
+  - Legacy evidence (non-executable): manual: the REVIEW THE DIFF task names the whole feature diff and
     the merge target — checks that the last slice's review covers the
     feature.
-  - structural: the step still says findings return to build unapplied —
+  - Legacy evidence (non-executable): manual: the step still says findings return to build unapplied —
     checks that review findings of every kind return to build before
     the merge.
-  - structural: `diff .claude/skills/integrate/SKILL.md
+  - Legacy evidence (non-executable): manual: `diff .claude/skills/integrate/SKILL.md
     pack/knowledge/skills/integrate/SKILL.md` prints nothing — checks
     that the live skill and the pack copy stay byte-identical.
-  - structural: `superdev validate` reports PASS with 0 errors on a clean
+  - Legacy evidence (non-executable): manual: `superdev validate` reports PASS with 0 errors on a clean
     checkout, `CHANGELOG.md` names the change under Unreleased, and
     `knowledge/plans/index.md` lists this plan with `lifecycle: done` —
     checks that the edit conforms and the records close.
 
-- Structural evidence: the recorded verification and tests provide the historical evidence.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
 
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ## Build state
 

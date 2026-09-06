@@ -200,7 +200,7 @@ Historical documentation impact predates the documentation map; migration itself
 
 - [x] Done — ticked at merge.
 - Dependencies: none.
-- Areas: historical areas named by the recorded outcome.
+- Areas: unknown (legacy record; no affected area inferred).
 - Outcome:
   1. Give the config a home — add a top-level `[knowledge]` table to
      `Manifest` carrying `custom` and `embeddings`, and take `embeddings`
@@ -250,14 +250,14 @@ Historical documentation impact predates the documentation map; migration itself
     (FR-2, FR-3).
   - e2e: `superdev sync` against a config carrying `[knowledge] provider =
     "aokf"` fails naming the table and the edit (FR-3).
-- Structural evidence: the recorded verification and tests provide the historical evidence.
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 2: One validator module
 
 - [x] Done — ticked at merge.
 - Dependencies: none.
-- Areas: historical areas named by the recorded outcome.
+- Areas: unknown (legacy record; no affected area inferred).
 - Outcome:
   1. Create the parent — `src/validate/mod.rs` holding `validate_repo`,
      `RepoReport`, `Report` and `Finding`, moved from `format/mod.rs` and
@@ -294,14 +294,14 @@ Historical documentation impact predates the documentation map; migration itself
     `validate/mod.rs` names both (FR-4).
   - observation: after the move, `git diff --stat` over both golden trees
     shows no content change — only the directory renames (O2).
-- Structural evidence: the recorded verification and tests provide the historical evidence.
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 3: One command surface
 
 - [x] Done — ticked at merge.
-- Dependencies: 2.
-- Areas: historical areas named by the recorded outcome.
+- Dependencies: unknown (legacy record; no dependency inferred).
+- Areas: unknown (legacy record; no affected area inferred).
 - Outcome:
   1. Split the CLI module — `aokf_cli.rs` becomes `validate_cli.rs` (the
      `validate` verb and the hook) and `sokf_cli.rs` (`index` and `mcp`).
@@ -331,14 +331,14 @@ Historical documentation impact predates the documentation map; migration itself
     no `aokf`; `superdev sokf --help` lists `index` (FR-5).
   - integration: `superdev mcp sokf` starts, and `tests/mcp_tools.rs` drives
     `sokf_search`, `sokf_read`, `sokf_graph` and `sokf_overview` (FR-6).
-- Structural evidence: the recorded verification and tests provide the historical evidence.
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 4: SOKF, the format
 
 - [x] Done — ticked at merge.
-- Dependencies: 2.
-- Areas: historical areas named by the recorded outcome.
+- Dependencies: unknown (legacy record; no dependency inferred).
+- Areas: unknown (legacy record; no affected area inferred).
 - Outcome:
   1. Rewrite the specification — `.agents/aokf/SPEC.md` to
      `.agents/sokf/SPEC.md`, titled "SOKF — Superdev Open Knowledge Format",
@@ -377,14 +377,14 @@ Historical documentation impact predates the documentation map; migration itself
     -l 'manifest.aokf.yaml'` returns nothing outside the changelog (FR-7).
   - observation: `head -1 .agents/sokf/SPEC.md` reads `# SOKF — Superdev
     Open Knowledge Format`, and §1 defines "SOKF knowledge" (FR-8).
-- Structural evidence: the recorded verification and tests provide the historical evidence.
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 5: A type names a schema
 
 - [x] Done — ticked at merge.
 - Dependencies: none.
-- Areas: historical areas named by the recorded outcome.
+- Areas: unknown (legacy record; no affected area inferred).
 - Outcome:
   1. Give every schema a type const — the twelve without one get theirs;
      `interface-contract` gets `Contract`, which its documents already
@@ -420,14 +420,14 @@ Historical documentation impact predates the documentation map; migration itself
     are equal, and that every concept's type names a schema (FR-9).
   - unit: a test asserts `target-files` appears only on schemas whose
     documents carry no frontmatter (FR-10).
-- Structural evidence: the recorded verification and tests provide the historical evidence.
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 6: Reconcile the schemas to practice
 
 - [x] Done — ticked at merge.
-- Dependencies: 5.
-- Areas: historical areas named by the recorded outcome.
+- Dependencies: unknown (legacy record; no dependency inferred).
+- Areas: unknown (legacy record; no affected area inferred).
 - Outcome:
   1. Build the reconciliation harness — a test that runs every schema
      against the documents its type names and prints the disagreements.
@@ -507,14 +507,14 @@ Historical documentation impact predates the documentation map; migration itself
   not carry more: no test plan was written for them at the time, so their
   plans name the automated cases that exist and say plainly that no manual
   step was recorded, rather than inventing one.
-- Structural evidence: the recorded verification and tests provide the historical evidence.
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 7: Enforcement
 
 - [x] Done — ticked at merge.
 - Dependencies: 2, 6.
-- Areas: historical areas named by the recorded outcome.
+- Areas: unknown (legacy record; no affected area inferred).
 - Outcome:
   1. Dispatch by type — `validate::schema` resolves a concept to its schema
      through the frontmatter `type`, and reports a type naming no schema and
@@ -560,14 +560,14 @@ Historical documentation impact predates the documentation map; migration itself
   - integration: a fixture with a type naming no schema, and one schema
     declaring neither a type const nor a glob, are both reported —
     `unknown-type` and `governs-nothing` (FR-14).
-- Structural evidence: the recorded verification and tests provide the historical evidence.
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 8: The sweep
 
 - [x] Done — ticked at merge.
 - Dependencies: 1, 2, 3, 4, 5, 7.
-- Areas: historical areas named by the recorded outcome.
+- Areas: unknown (legacy record; no affected area inferred).
 - Outcome:
   1. Move the pack's instruction files — `pack/aokf/agents/**` to
      `pack/sokf/agents/**`. `classify` matches neither, which is what keeps
@@ -626,9 +626,9 @@ Historical documentation impact predates the documentation map; migration itself
     validate` over this repository is under 250 ms (NFR-1), and `superdev
     status --drift` names no path this plan touched (NFR-4).
 
-- Structural evidence: the recorded verification and tests provide the historical evidence.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
 
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ## Build state
 

@@ -60,7 +60,7 @@ Historical documentation impact predates the documentation map; migration itself
 
 - [x] Done — ticked by integrate at merge.
 - Dependencies: none.
-- Areas: historical areas named by the recorded outcome.
+- Areas: unknown (legacy record; no affected area inferred).
 - Outcome: `validate::schema` reads each section rule's `content` kind and
   reports, as an error naming the document, the section and the schema, a
   matched section whose body lacks the kind's form — one bullet, one
@@ -85,14 +85,14 @@ Historical documentation impact predates the documentation map; migration itself
     covers 1.
   - unit: a schema declaring `content: essay` is reported on the schema
     file — covers 5.
-- Structural evidence: the recorded verification and tests provide the historical evidence.
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 2: The frontmatter contract binds on present values
 
 - [x] Done — ticked by integrate at merge.
 - Dependencies: none.
-- Areas: historical areas named by the recorded outcome.
+- Areas: unknown (legacy record; no affected area inferred).
 - Outcome: `DocSchema` parses every frontmatter key's constraint block —
   today it reads only `type` and `lifecycle` — and reports, as an error
   naming the document, the key and the schema, a present value that
@@ -114,14 +114,14 @@ Historical documentation impact predates the documentation map; migration itself
     reported — covers 4.
   - unit: a schema `pattern` that does not compile is reported on the
     schema file — covers 5.
-- Structural evidence: the recorded verification and tests provide the historical evidence.
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 3: Required keys, declared across the schemas
 
 - [x] Done — ticked by integrate at merge.
-- Dependencies: 2.
-- Areas: historical areas named by the recorded outcome.
+- Dependencies: unknown (legacy record; no dependency inferred).
+- Areas: unknown (legacy record; no affected area inferred).
 - Outcome: the per-key `required: true` flag (ADR-022) is read, and an
   absent key marked required is an error naming the document, the key
   and the schema. The 53 schemas each declare their required keys —
@@ -141,9 +141,9 @@ Historical documentation impact predates the documentation map; migration itself
     document against its schema's content kinds and frontmatter
     contract — covers 6.
 
-- Structural evidence: the recorded verification and tests provide the historical evidence.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
 
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ## Build state
 

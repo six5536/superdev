@@ -182,7 +182,7 @@ Historical documentation impact predates the documentation map; migration itself
 
 - [x] Done — ticked at merge.
 - Dependencies: none.
-- Areas: historical areas named by the recorded outcome.
+- Areas: unknown (legacy record; no affected area inferred).
 - Outcome: add a branching line to
   `pack/knowledge/templates/development-procedure.md` and record this repo's
   own in `knowledge/development-procedure.md` — one branch per feature,
@@ -207,14 +207,14 @@ Historical documentation impact predates the documentation map; migration itself
   - observation: every slice in a plan cut from here on carries
     `Depends-on:`, and the planner's output is topologically ordered —
     checks that the plan format models dependencies rather than list order.
-- Structural evidence: the recorded verification and tests provide the historical evidence.
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 2: Branching and committing inside the workflow
 
 - [x] Done — ticked at merge.
-- Dependencies: 1.
-- Areas: historical areas named by the recorded outcome.
+- Dependencies: unknown (legacy record; no dependency inferred).
+- Areas: unknown (legacy record; no affected area inferred).
 - Outcome: `/frame` creates the branch per block 1's convention and commits
   its knowledge edits; `/spec` commits the spec; `/interface-design` GATEs on
   the user's go-ahead, commits the contract and the ADRs, and hands to
@@ -232,14 +232,14 @@ Historical documentation impact predates the documentation map; migration itself
     feature runs on a branch of its own.
   - e2e: `/integrate` leaves no uncommitted changelog, knowledge or plan
     edit — checks that integrate commits the records it writes.
-- Structural evidence: the recorded verification and tests provide the historical evidence.
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 3: The run facility and the unattended loop
 
 - [x] Done — ticked at merge.
 - Dependencies: 1, 2.
-- Areas: historical areas named by the recorded outcome.
+- Areas: unknown (legacy record; no affected area inferred).
 - Outcome: add `pack/knowledge/skills/execute-feature-plan/SKILL.md` covering
   stages 4-7. It runs `/feature-plan` when no plan exists, then picks the
   next slice whose `Depends-on` are all Done and runs build to verify to
@@ -281,14 +281,14 @@ Historical documentation impact predates the documentation map; migration itself
   - unit: `superdev run advance` resets the counter and refreshes the owning
     session, and `end` removes the file and is harmless when none exists —
     checks the run state's lifecycle.
-- Structural evidence: the recorded verification and tests provide the historical evidence.
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 4: Documents and dogfooding
 
 - [x] Done — ticked at merge.
-- Dependencies: 3.
-- Areas: historical areas named by the recorded outcome.
+- Dependencies: unknown (legacy record; no dependency inferred).
+- Areas: unknown (legacy record; no affected area inferred).
 - Outcome: update `pack/agents/process.md` — the branch at frame, the
   go-ahead gate after stage 3, the loop over stages 4-7, and the commit
   points, in the diagram and the phase list — and add
@@ -306,9 +306,9 @@ Historical documentation impact predates the documentation map; migration itself
   - e2e: `git log` on the default branch shows nothing from an unattended
     run — checks that unattended work stays on the feature branch.
 
-- Structural evidence: the recorded verification and tests provide the historical evidence.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
 
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ## Build state
 

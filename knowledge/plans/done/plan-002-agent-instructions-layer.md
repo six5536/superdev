@@ -50,7 +50,7 @@ Historical documentation impact predates the documentation map; migration itself
 
 - [x] Done — ticked at merge.
 - Dependencies: none.
-- Areas: historical areas named by the recorded outcome.
+- Areas: unknown (legacy record; no affected area inferred).
 - Outcome: the engine's ensure-line
   outcome carries a note when the line was appended to a file that
   already existed, so callers can ride a report on exactly the
@@ -62,14 +62,14 @@ Historical documentation impact predates the documentation map; migration itself
     appended to an existing file — no criterion.
   - unit: the outcome carries no note on create and on skip — no
     criterion.
-- Structural evidence: the recorded verification and tests provide the historical evidence.
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 2: entry-point restructure (knowledge)
 
 - [x] Done — ticked at merge.
-- Dependencies: 1.
-- Areas: historical areas named by the recorded outcome.
+- Dependencies: unknown (legacy record; no dependency inferred).
+- Areas: unknown (legacy record; no affected area inferred).
 - Outcome: the aokf component stops
   planning the AGENTS.md scaffold and ships `.agents/aokf.md` with the
   scaffold's content; a repo-level entry writes the fenced
@@ -87,14 +87,14 @@ Historical documentation impact predates the documentation map; migration itself
     set — no criterion.
   - e2e: the init journey produces the one-line AGENTS.md, the fenced
     aggregator and `.agents/aokf.md` — no criterion.
-- Structural evidence: the recorded verification and tests provide the historical evidence.
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 3: codegraph agent wiring
 
 - [x] Done — ticked at merge.
-- Dependencies: 2.
-- Areas: historical areas named by the recorded outcome.
+- Dependencies: unknown (legacy record; no dependency inferred).
+- Areas: unknown (legacy record; no affected area inferred).
 - Outcome: the codegraph component plans
   `.agents/codegraph.md` and the `mcpServers.codegraph` registration
   launching `codegraph serve --mcp` through mise; the aggregator
@@ -108,14 +108,14 @@ Historical documentation impact predates the documentation map; migration itself
     criterion.
   - e2e: disabling code-index sweeps the file, the key and the
     aggregator import — no criterion.
-- Structural evidence: the recorded verification and tests provide the historical evidence.
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 4: dogfood and knowledge upkeep
 
 - [x] Done — ticked at merge.
-- Dependencies: 3.
-- Areas: historical areas named by the recorded outcome.
+- Dependencies: unknown (legacy record; no dependency inferred).
+- Areas: unknown (legacy record; no affected area inferred).
 - Outcome: enable `[code-index]` in this
   repo's manifest and sync; trim this repo's AGENTS.md to the new
   minimal form; update the affected concepts (architecture,
@@ -130,9 +130,9 @@ Historical documentation impact predates the documentation map; migration itself
     no criterion.
   - e2e: `superdev aokf validate knowledge` passes — no criterion.
 
-- Structural evidence: the recorded verification and tests provide the historical evidence.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
 
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ## Build state
 

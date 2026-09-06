@@ -366,8 +366,14 @@ pub fn run(command: &WorkflowCommand, root: &Path) -> Result<u8> {
                     message: "integration refs do not match the bound workflow identity".into(),
                 });
             }
-            validate_identity_values(&root, &state.identity)?;
-            let record = plan_record(&root, &state.identity.plan)?;
+            let record = plan_record_at_revision(&root, &state.identity.plan, &args.expected_work)?;
+            if record.issue != state.identity.issue || record.branch != state.identity.work_branch {
+                return Err(Error::Manifest {
+                    message: "bound identity does not match the closure plan".into(),
+                });
+            }
+            let issue_path = format!("knowledge/issues/done/{}.md", state.identity.issue);
+            git::file_at_revision(&root, &args.expected_work, &issue_path)?;
             if record.phase != "done" || record.lifecycle != "done" {
                 return Err(Error::Manifest {
                     message: "integration requires a prepared done plan".into(),
@@ -631,7 +637,17 @@ fn plan_record(root: &Path, id: &str) -> Result<PlanRecord> {
         path: path.clone(),
         source,
     })?;
-    let concept = parse_concept(&path.to_string_lossy(), &text).map_err(|error| Error::Sokf {
+    parse_plan_record(&path.to_string_lossy(), &text)
+}
+
+fn plan_record_at_revision(root: &Path, id: &str, revision: &str) -> Result<PlanRecord> {
+    let path = format!("knowledge/plans/done/{id}.md");
+    let text = git::file_at_revision(root, revision, &path)?;
+    parse_plan_record(&path, &text)
+}
+
+fn parse_plan_record(path: &str, text: &str) -> Result<PlanRecord> {
+    let concept = parse_concept(path, text).map_err(|error| Error::Sokf {
         message: error.message,
     })?;
     let issues: Vec<String> = concept

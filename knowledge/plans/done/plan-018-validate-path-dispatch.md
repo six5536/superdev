@@ -53,7 +53,7 @@ Historical documentation impact predates the documentation map; migration itself
 
 - [x] Done — ticked by integrate at merge.
 - Dependencies: none.
-- Areas: historical areas named by the recorded outcome.
+- Areas: unknown (legacy record; no affected area inferred).
 - Outcome: `validate_repo` in
   `crates/lib/superdev-core/src/validate/mod.rs` builds the bare run's
   context for a named path too — the knowledge and the schema set load
@@ -72,14 +72,14 @@ Historical documentation impact predates the documentation map; migration itself
   - unit: a named run reports no finding about a file the paths do not
     cover — covers 1.
   - e2e: an unreadable path fails naming the path — covers 5.
-- Structural evidence: the recorded verification and tests provide the historical evidence.
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 2: The grammar half stops misreading a document
 
 - [x] Done — ticked by integrate at merge.
-- Dependencies: 1.
-- Areas: historical areas named by the recorded outcome.
+- Dependencies: unknown (legacy record; no dependency inferred).
+- Areas: unknown (legacy record; no affected area inferred).
 - Outcome: the named-path branch classifies before the grammar sees the
   file — a file dispatched as a document by `type` or glob never takes
   the grammar's fallback kind; the fallback applies only to a file no
@@ -99,9 +99,9 @@ Historical documentation impact predates the documentation map; migration itself
   - e2e: for each of a concept, README.md and a skill, the named run's
     findings equal the bare run's findings for that file — covers 1, 2.
 
-- Structural evidence: the recorded verification and tests provide the historical evidence.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
 
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ## Build state
 

@@ -84,7 +84,7 @@ Historical documentation impact predates the documentation map; migration itself
 
 - [x] Done — ticked by integrate at merge.
 - Dependencies: none.
-- Areas: historical areas named by the recorded outcome.
+- Areas: unknown (legacy record; no affected area inferred).
 - Outcome: `validate::schema::document` — where a heading (or heading
   pattern) is named by more than one section rule, the rules must all
   carry `variants` with pairwise-disjoint sets; a document is checked
@@ -118,14 +118,14 @@ Historical documentation impact predates the documentation map; migration itself
     heading — covers AC_one-schema-per-kind.
   - integration: contract-010 carries no PENDING for the per-variant
     heading and the live tree validates — covers AC_one-schema-per-kind.
-- Structural evidence: the recorded verification and tests provide the historical evidence.
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 2: The tracker schemas vary by lifecycle, and the issues on file are swept
 
 - [x] Done — ticked by integrate at merge.
-- Dependencies: 1.
-- Areas: historical areas named by the recorded outcome.
+- Dependencies: unknown (legacy record; no dependency inferred).
+- Areas: unknown (legacy record; no affected area inferred).
 - Outcome: `pack/knowledge/schemas/feature-request.md`, `bug-report.md`
   and `chore.md`, synced — `lifecycle` enum `[unframed, framed, done,
   wontfix]` with the description saying what each state means;
@@ -176,14 +176,14 @@ Historical documentation impact predates the documentation map; migration itself
     list whose words equal the paragraphs at `6bee067` — the test
     checks the form, and the sweep script checked the words against
     `6bee067` — covers AC_sweep.
-- Structural evidence: the recorded verification and tests provide the historical evidence.
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 3: `/file` and the workflow entry
 
 - [x] Done — ticked by integrate at merge.
-- Dependencies: 2.
-- Areas: historical areas named by the recorded outcome.
+- Dependencies: unknown (legacy record; no dependency inferred).
+- Areas: unknown (legacy record; no affected area inferred).
 - Outcome: `pack/knowledge/skills/file/SKILL.md`, synced into
   `.claude/skills/file/` and claimed in the lock — the skill per
   ADR-048: reads the tracker concept, the three schemas and the idea
@@ -213,7 +213,7 @@ Historical documentation impact predates the documentation map; migration itself
     AC_workflow-lists-file.
   - unit: the pack skill and the synced copy match, and the lock
     claims the copy — covers AC_skill-ships.
-  - structural: `/file` invoked on a probe bug in a scratch repository
+  - Legacy evidence (non-executable): manual: `/file` invoked on a probe bug in a scratch repository
     files an unframed issue that validates — covers AC_file-issue.
     Run at `dcc8878`: the record the skill writes for a probe report
     (`TBD — …` under Environment, Root cause, Proposed fix and
@@ -222,14 +222,14 @@ Historical documentation impact predates the documentation map; migration itself
     `validate --fix` to `issues/unframed/` and the tree passed. A
     record written at the knowledge root goes to `knowledge/unframed/`
     instead, so the skill says where to write it.
-- Structural evidence: the recorded verification and tests provide the historical evidence.
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 4: `/frame` frames in place, and the later phases refuse an unframed issue
 
 - [x] Done — ticked by integrate at merge.
-- Dependencies: 2.
-- Areas: historical areas named by the recorded outcome.
+- Dependencies: unknown (legacy record; no dependency inferred).
+- Areas: unknown (legacy record; no affected area inferred).
 - Outcome: `pack/knowledge/skills/frame/SKILL.md`, synced — the "File
   or fetch" step fetches an unframed issue and frames it in place; the
   close-out sets `lifecycle: framed` and lets `--fix` refile; run with
@@ -246,14 +246,14 @@ Historical documentation impact predates the documentation map; migration itself
     one pass — covers AC_frame-files.
   - unit: each of the three phase skills carries a gate on `framed`
     returning to `/frame` — covers AC_phases-refuse.
-- Structural evidence: the recorded verification and tests provide the historical evidence.
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 5: The backlog retires
 
 - [x] Done — ticked by integrate at merge.
-- Dependencies: 4.
-- Areas: historical areas named by the recorded outcome.
+- Dependencies: unknown (legacy record; no dependency inferred).
+- Areas: unknown (legacy record; no affected area inferred).
 - Outcome: three ideas — `idea-007` the knowledge-capture skill,
   `idea-008` template pre-filled skeletons, `idea-009`
   comment-preserving manifest stamping (`idea-006` was taken between
@@ -274,8 +274,8 @@ Historical documentation impact predates the documentation map; migration itself
     covers AC_backlog-retired.
   - integration: the three ideas and the wontfix chore validate and
     are listed — covers AC_backlog-retired.
-- Structural evidence: the recorded verification and tests provide the historical evidence.
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 6: The records close
 
@@ -285,7 +285,7 @@ Historical documentation impact predates the documentation map; migration itself
   unframed definitions in place of a separate entry, and the changelog
   stands at its 800-line limit.
 - Dependencies: 3, 5.
-- Areas: historical areas named by the recorded outcome.
+- Areas: unknown (legacy record; no affected area inferred).
 - Outcome: the issue-tracker concept says the four states, the folders,
   `/file` and `/frame`'s roles; the glossary's Lifecycle entry names
   the four values, its EARS entry the framed state, its Promise key
@@ -296,15 +296,15 @@ Historical documentation impact predates the documentation map; migration itself
 - Verification: `superdev validate` passes; the glossary's Promise key
   entry no longer says `EX_` is reserved.
 - Tests:
-  - structural: the tracker concept and the glossary name the four states
+  - Legacy evidence (non-executable): manual: the tracker concept and the glossary name the four states
     and `/file` — covers AC_records. Read at `9372773`; no test reads
     the records (code-review-010 finding 8).
-  - structural: the changelog's Unreleased names the states and `/file` —
+  - Legacy evidence (non-executable): manual: the changelog's Unreleased names the states and `/file` —
     covers AC_records. Read at `9372773`.
 
-- Structural evidence: the recorded verification and tests provide the historical evidence.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
 
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ## Build state
 

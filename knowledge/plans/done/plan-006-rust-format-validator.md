@@ -289,7 +289,7 @@ Historical documentation impact predates the documentation map; migration itself
 
 - [x] Done — ticked at merge.
 - Dependencies: none.
-- Areas: historical areas named by the recorded outcome.
+- Areas: unknown (legacy record; no affected area inferred).
 - Outcome:
   1. Drop the ledger kind — remove its 30 lines from the grammar, its
      `checkLedger` function, and the suffix rule that claims ledger files,
@@ -319,14 +319,14 @@ Historical documentation impact predates the documentation map; migration itself
     and no findings, and `rg -n 'ledger' scripts/superdev-format/` returns
     nothing — the binary chooses the kind by the grammar's own `match` rules
     including `except` (FR-1).
-- Structural evidence: the recorded verification and tests provide the historical evidence.
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 2: Capture the reference behaviour
 
 - [x] Done — ticked at merge.
-- Dependencies: 1.
-- Areas: historical areas named by the recorded outcome.
+- Dependencies: unknown (legacy record; no dependency inferred).
+- Areas: unknown (legacy record; no affected area inferred).
 - Outcome:
   1. Add `--json` to the reference — emitting the shape `Report::to_json`
      uses, so one golden pins the finding texts and the JSON keys together,
@@ -359,14 +359,14 @@ Historical documentation impact predates the documentation map; migration itself
   - observation: every fixture tree carries a golden captured from the
     reference's `--json` run, in the shape `Report::to_json` uses — the
     finding texts and the JSON keys are pinned together (FR-2, FR-5).
-- Structural evidence: the recorded verification and tests provide the historical evidence.
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 3: The grammar as types
 
 - [x] Done — ticked at merge.
-- Dependencies: 1.
-- Areas: historical areas named by the recorded outcome.
+- Dependencies: unknown (legacy record; no dependency inferred).
+- Areas: unknown (legacy record; no affected area inferred).
 - Outcome:
   1. Define the types — a module under `superdev-core` mirroring the
      grammar's shape, every struct `deny_unknown_fields`, so a typo in the
@@ -392,14 +392,14 @@ Historical documentation impact predates the documentation map; migration itself
     naming the key, before any file is read — the grammar is read into types
     that reject unknown keys, and a grammar violating its own constraints
     fails before any file is read (FR-3, FR-4).
-- Structural evidence: the recorded verification and tests provide the historical evidence.
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 4: The checks
 
 - [x] Done — ticked at merge.
-- Dependencies: 3.
-- Areas: historical areas named by the recorded outcome.
+- Dependencies: unknown (legacy record; no dependency inferred).
+- Areas: unknown (legacy record; no affected area inferred).
 - Outcome:
   1. Port the readers — `fenceMap`, `splitFrontmatter`, `extractYaml`,
      `proseOnly`, `parseElements`. These carry the subtle bugs already fixed
@@ -419,14 +419,14 @@ Historical documentation impact predates the documentation map; migration itself
   - integration: `cargo test -p superdev-core --test format_parity` passes
     on every captured golden — for any file, the finding texts the binary
     emits equal those the Node script emits (FR-2).
-- Structural evidence: the recorded verification and tests provide the historical evidence.
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 5: One report, one command
 
 - [x] Done — ticked at merge.
-- Dependencies: 4.
-- Areas: historical areas named by the recorded outcome.
+- Dependencies: unknown (legacy record; no dependency inferred).
+- Areas: unknown (legacy record; no affected area inferred).
 - Outcome:
   1. Emit AOKF findings — have the format checks build `Finding` values with
      `fatal` set, so one failing skill fails the run. Nothing in
@@ -505,14 +505,14 @@ Historical documentation impact predates the documentation map; migration itself
     `.agents/format/grammar.yaml` byte for byte (FR-11).
   - e2e: `npm run coverage:check` passes — the new code clears the 90%
     line gate in each of `crates/lib` and `crates/app` (NFR-3).
-- Structural evidence: the recorded verification and tests provide the historical evidence.
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 6: Wire it in and retire the reference
 
 - [x] Done — ticked at merge.
 - Dependencies: 2, 5.
-- Areas: historical areas named by the recorded outcome.
+- Areas: unknown (legacy record; no affected area inferred).
 - Outcome:
   1. Run it where it matters — point `check:aokf` at the merged command and
      rename it, and widen `hook_validate` in
@@ -568,9 +568,9 @@ Historical documentation impact predates the documentation map; migration itself
   - observation: a whole-set run is timed against the 50 ms hook budget
     (NFR-1); the measured 82 ms is recorded under Goal.
 
-- Structural evidence: the recorded verification and tests provide the historical evidence.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
 
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ## Build state
 

@@ -87,7 +87,7 @@ Historical documentation impact predates the documentation map; migration itself
 
 - [x] Done — ticked at merge.
 - Dependencies: none.
-- Areas: historical areas named by the recorded outcome.
+- Areas: unknown (legacy record; no affected area inferred).
 - Gap: [I007][sokf:issue-007-a-pack-source-reaches-git-with-no-scheme-check],
   the half left after block 15 of P003.
 - Outcome: add `SUPPORTED_SCHEMES` to `pack/source.rs`. `PackSource::parse`
@@ -127,14 +127,14 @@ Historical documentation impact predates the documentation map; migration itself
     ([ADR-012][sokf:adr-012-pack-source-schemes-are-allowlisted] carries the
     measurements). `GIT_CONFIG_GLOBAL` points git at the fixture config; the
     spawned git inherits it.
-- Structural evidence: the recorded verification and tests provide the historical evidence.
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 2: A symlink in a pack is refused, not skipped
 
 - [x] Done — ticked at merge.
 - Dependencies: none.
-- Areas: historical areas named by the recorded outcome.
+- Areas: unknown (legacy record; no affected area inferred).
 - Gap: [I009][sokf:issue-009-a-skipped-symlink-says-nothing], the half a
   filesystem check can reach.
 - Outcome: `read_dir` and `read_pack` in `pack/resolve.rs` refuse a symlink
@@ -157,14 +157,14 @@ Historical documentation impact predates the documentation map; migration itself
   - unit: superdev's own `pack/` resolves and contains no symlink, so the
     day one appears is the day that test fails rather than the day a release
     does.
-- Structural evidence: the recorded verification and tests provide the historical evidence.
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 3: Git decides what a symlink is
 
 - [x] Done — ticked at merge.
-- Dependencies: 2.
-- Areas: historical areas named by the recorded outcome.
+- Dependencies: unknown (legacy record; no dependency inferred).
+- Areas: unknown (legacy record; no affected area inferred).
 - Gap: [I009][sokf:issue-009-a-skipped-symlink-says-nothing], the
   cross-platform half.
 - Outcome: after the checkout and before anything is read or digested,
@@ -193,14 +193,14 @@ Historical documentation impact predates the documentation map; migration itself
     checks mode `160000`.
   - integration: a pack with neither resolves as it does today — checks that
     the added git call changes no verdict.
-- Structural evidence: the recorded verification and tests provide the historical evidence.
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 4: The spawn seam carries a deadline and an environment
 
 - [x] Done — ticked at merge.
 - Dependencies: none.
-- Areas: historical areas named by the recorded outcome.
+- Areas: unknown (legacy record; no affected area inferred).
 - Gap: [I002][sokf:issue-002-no-time-bound-on-the-update-query], the seam
   half.
 - Outcome: add `RunOptions { timeout, env }` to `runner.rs`. `run_with`
@@ -219,14 +219,14 @@ Historical documentation impact predates the documentation map; migration itself
     naming the timeout and is no longer running when the call returns.
   - unit: `timeout: None` waits, and an `env` entry reaches the child.
   - unit: `&dyn CommandRunner` still compiles — the object-safety check.
-- Structural evidence: the recorded verification and tests provide the historical evidence.
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 5: The one unprompted request is bounded, and never prompts
 
 - [x] Done — ticked at merge.
-- Dependencies: 4.
-- Areas: historical areas named by the recorded outcome.
+- Dependencies: unknown (legacy record; no dependency inferred).
+- Areas: unknown (legacy record; no affected area inferred).
 - Gap: [I002][sokf:issue-002-no-time-bound-on-the-update-query].
 - Outcome: `fetch::git` takes the options through. The `ls-remote` query sets
   a deadline of a few seconds; the clone sets none, because the user pinned
@@ -245,14 +245,14 @@ Historical documentation impact predates the documentation map; migration itself
   - unit: the clone carries no deadline, and every git call carries
     `GIT_TERMINAL_PROMPT=0` — checks that the pinned fetch still waits and
     that nothing prompts.
-- Structural evidence: the recorded verification and tests provide the historical evidence.
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 6: `update` proves a pin before it writes it
 
 - [x] Done — ticked at merge.
 - Dependencies: none.
-- Areas: historical areas named by the recorded outcome.
+- Areas: unknown (legacy record; no affected area inferred).
 - Gap: [I001][sokf:issue-001-update-can-pin-an-unreadable-pack-format].
 - Outcome: `update_pins` takes `&Lock` and resolves the entry it is about to
   move before writing it. On a refusal the pin stays where it is and the
@@ -284,14 +284,14 @@ Historical documentation impact predates the documentation map; migration itself
     cache already holds the release they move to, which is the state a
     second `update` on a synced repo starts from. What they assert is
     unchanged.
-- Structural evidence: the recorded verification and tests provide the historical evidence.
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 7: A path pack records no digest
 
 - [x] Done — ticked at merge.
 - Dependencies: none.
-- Areas: historical areas named by the recorded outcome.
+- Areas: unknown (legacy record; no affected area inferred).
 - Gap: [I004][sokf:issue-004-a-path-packs-digest-churns-and-is-never-checked].
 - Outcome: `PackLock.digest` becomes `Option<String>`, omitted for a path
   source; `resolve_one`'s path arm records none and the git arm's three
@@ -310,9 +310,9 @@ Historical documentation impact predates the documentation map; migration itself
   - integration: a git pack still verifies and still fails the run on a
     mismatch — checks that the digest still binds where it is read.
 
-- Structural evidence: the recorded verification and tests provide the historical evidence.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
 
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ## Build state
 

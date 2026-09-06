@@ -60,7 +60,7 @@ Historical documentation impact predates the documentation map; migration itself
 
 - [x] Done — ticked by integrate at merge.
 - Dependencies: none.
-- Areas: historical areas named by the recorded outcome.
+- Areas: unknown (legacy record; no affected area inferred).
 - Outcome: `ValidateArgs` gains `--warnings`, which
   [contract-002][sokf:contract-002-cli-superdev] already declares, so this
   block closes the pending element and the CLI drift test with it
@@ -86,14 +86,14 @@ Historical documentation impact predates the documentation map; migration itself
   - e2e: `superdev validate` and `superdev validate --warnings` on this
     repository exit 0 alike and differ only in the listed lines — covers
     1, 2, 6.
-- Structural evidence: the recorded verification and tests provide the historical evidence.
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 2: `--json` carries both counts and the same findings
 
 - [x] Done — ticked by integrate at merge.
-- Dependencies: 1.
-- Areas: historical areas named by the recorded outcome.
+- Dependencies: unknown (legacy record; no dependency inferred).
+- Areas: unknown (legacy record; no affected area inferred).
 - Outcome: `Report::to_json` gains `errors` and `warnings` counts and the
   same listing switch `render_human` took, so the two renderers report one
   thing. `run_validate` passes the flag. The `sokf_snapshots` goldens are
@@ -110,20 +110,20 @@ Historical documentation impact predates the documentation map; migration itself
   - unit: `passed` in the JSON is unchanged by the flag — covers 6.
   - e2e: `superdev validate --json` on this repository parses, states both
     counts, and lists no warning — covers 4.
-  - structural: the top-level keys of `superdev validate --json` and of
+  - Legacy evidence (non-executable): manual: the top-level keys of `superdev validate --json` and of
     `--json --fix` match the `json:` block of
     [contract-002][sokf:contract-002-cli-superdev], key for key — covers
     5. Manual because binding the two by test is
     [I043][sokf:issue-043-the-cli-contracts-json-keys-are-bound-by-no-test],
     which the framed issue puts out of scope.
-- Structural evidence: the recorded verification and tests provide the historical evidence.
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 3: The hooks default like the command line
 
 - [x] Done — ticked by integrate at merge.
-- Dependencies: 1.
-- Areas: historical areas named by the recorded outcome.
+- Dependencies: unknown (legacy record; no dependency inferred).
+- Areas: unknown (legacy record; no affected area inferred).
 - Outcome: `hook_validate` in `crates/app/superdev/src/validate_cli.rs` and
   `knowledge_hold` in `crates/app/superdev/src/run.rs` render without
   listing warnings, so one rule governs whoever ran the check. Neither
@@ -141,9 +141,9 @@ Historical documentation impact predates the documentation map; migration itself
   - e2e: a tree whose only findings are warnings leaves the PostToolUse
     hook at exit 0, as today — covers 6.
 
-- Structural evidence: the recorded verification and tests provide the historical evidence.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
 
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ## Build state
 

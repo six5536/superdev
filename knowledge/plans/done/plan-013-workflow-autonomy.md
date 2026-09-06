@@ -75,7 +75,7 @@ Historical documentation impact predates the documentation map; migration itself
 
 - [x] Done — ticked at merge.
 - Dependencies: none.
-- Areas: historical areas named by the recorded outcome.
+- Areas: unknown (legacy record; no affected area inferred).
 - Outcome: a `run` module in `crates/app/superdev` owning
   `.superdev/cache/run.toml` per contract-009, and the `run begin`,
   `run advance` and `run end` verbs in `main.rs`.
@@ -93,14 +93,14 @@ Historical documentation impact predates the documentation map; migration itself
     ownership the refusal reads.
   - unit: `end` removes the file; `end` with no file exits 0 and says so
     — checks that clearing the state is harmless without one.
-- Structural evidence: the recorded verification and tests provide the historical evidence.
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 2: The Stop hook
 
 - [x] Done — ticked at merge.
-- Dependencies: 1.
-- Areas: historical areas named by the recorded outcome.
+- Dependencies: unknown (legacy record; no dependency inferred).
+- Areas: unknown (legacy record; no affected area inferred).
 - Outcome: `hook run` beside `hook validate` in the hook namespace: the
   decision table of contract-009, the hook-owned counter, the cap of
   ten, no gating on `stop_hook_active`
@@ -122,14 +122,14 @@ Historical documentation impact predates the documentation map; migration itself
   - unit: a malformed payload exits 2 loudly; a malformed `run.toml` is
     reported and exits 0 — checks that an unreadable state leaves the
     session's turn boundaries untouched.
-- Structural evidence: the recorded verification and tests provide the historical evidence.
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 3: The managed Stop entry
 
 - [x] Done — ticked at merge.
-- Dependencies: 2.
-- Areas: historical areas named by the recorded outcome.
+- Dependencies: unknown (legacy record; no dependency inferred).
+- Areas: unknown (legacy record; no affected area inferred).
 - Outcome: `components/sokf.rs` declares the `hooks.Stop` JsonEntry with
   marker `superdev hook run`, claimed in the lock beside the PostToolUse
   entry.
@@ -143,14 +143,14 @@ Historical documentation impact predates the documentation map; migration itself
   - e2e: `sync` here writes `.claude/settings.json` and the lock claim;
     a repo with no run state sees every session end normally — checks
     that a repo with no run active keeps its turn boundaries untouched.
-- Structural evidence: the recorded verification and tests provide the historical evidence.
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 4: Dependencies in the plan format
 
 - [x] Done — ticked at merge.
 - Dependencies: none.
-- Areas: historical areas named by the recorded outcome.
+- Areas: unknown (legacy record; no affected area inferred).
 - Outcome: `Depends-on:` per block and a `## Deferred decisions` section
   in the feature-plan template and `schema-feature-plan`, in `pack/` and
   the live copies; the feature-plan skill states dependencies, orders
@@ -162,16 +162,16 @@ Historical documentation impact predates the documentation map; migration itself
   - unit: this plan and the schema's example validate with `Depends-on`
     lines — checks that a plan records, for every block, the blocks it
     depends on.
-  - structural: a plan with a dependency cycle is refused by the
+  - Legacy evidence (non-executable): manual: a plan with a dependency cycle is refused by the
     feature-plan skill's gate — checks that a cyclic plan is refused.
-- Structural evidence: the recorded verification and tests provide the historical evidence.
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 5: Branching conventions
 
 - [x] Done — ticked at merge.
 - Dependencies: none.
-- Areas: historical areas named by the recorded outcome.
+- Areas: unknown (legacy record; no affected area inferred).
 - Outcome: `/frame` creates `feature/<slug>` off the default branch and
   commits the framed issue; `/adhoc-plan` creates `adhoc/<slug>` when
   its work touches code; the development-procedure template gains the
@@ -180,21 +180,21 @@ Historical documentation impact predates the documentation map; migration itself
 - Verification: both skills carry the branch step and the repo-convention
   precedence; the development-procedure documents name the convention.
 - Tests:
-  - structural: `/frame` in a scratch repo leaves the tree on
+  - Legacy evidence (non-executable): manual: `/frame` in a scratch repo leaves the tree on
     `feature/<slug>` with the issue committed — checks that framing a
     feature cuts its branch off the default branch and commits the issue
     on it.
-  - structural: `/adhoc-plan` planning code work leaves the tree on
+  - Legacy evidence (non-executable): manual: `/adhoc-plan` planning code work leaves the tree on
     `adhoc/<slug>`; a documentation-only plan branches nothing — checks
     that ad-hoc work touching code cuts `adhoc/<slug>`.
-- Structural evidence: the recorded verification and tests provide the historical evidence.
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 6: Commit points
 
 - [x] Done — ticked at merge.
-- Dependencies: 5.
-- Areas: historical areas named by the recorded outcome.
+- Dependencies: unknown (legacy record; no dependency inferred).
+- Areas: unknown (legacy record; no affected area inferred).
 - Outcome: `/contract-design` ends with the go-ahead gate and commits the
   contract and ADR edits; `/integrate` commits the changelog, knowledge
   and plan edits after a successful merge — in `pack/` and the live
@@ -202,21 +202,21 @@ Historical documentation impact predates the documentation map; migration itself
 - Verification: both skills carry the commit step, and integrate's sits
   after the merge so a failed check commits nothing.
 - Tests:
-  - structural: `/contract-design` in a scratch repo ends by committing the
+  - Legacy evidence (non-executable): manual: `/contract-design` in a scratch repo ends by committing the
     records on the feature branch — checks that the contract and
     decision-record edits are committed before the unattended loop
     starts.
-  - structural: `/integrate` leaves no uncommitted changelog, knowledge or
+  - Legacy evidence (non-executable): manual: `/integrate` leaves no uncommitted changelog, knowledge or
     plan edit — checks that merging a block commits the record edits it
     made.
-- Structural evidence: the recorded verification and tests provide the historical evidence.
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 7: The driver skill
 
 - [x] Done — ticked at merge.
 - Dependencies: 2, 3, 4, 5, 6.
-- Areas: historical areas named by the recorded outcome.
+- Areas: unknown (legacy record; no affected area inferred).
 - Outcome: a new `execute-feature-plan` skill in
   `pack/knowledge/skills/` carrying the loop — cut the plan when none
   exists, pick a ready block, build and integrate it in a subagent,
@@ -228,25 +228,25 @@ Historical documentation impact predates the documentation map; migration itself
   carries, the autonomy rule names its gates, and the process documents
   name the skill.
 - Tests:
-  - structural: a multi-block plan in a scratch repo runs feature-plan,
+  - Legacy evidence (non-executable): manual: a multi-block plan in a scratch repo runs feature-plan,
     build and integrate to completion with no turn boundary stopping to
     ask — checks the unattended loop over ready blocks.
-  - structural: a block failing its checks twice is deferred and the loop
+  - Legacy evidence (non-executable): manual: a block failing its checks twice is deferred and the loop
     continues; the run ends putting the deferred decisions in sequence
     — checks the deferral after two returns to build, the gate written
     into the plan's deferred decisions, and the run's end when no block
     is ready.
-  - structural: `git log` on the scratch repo's default branch shows
+  - Legacy evidence (non-executable): manual: `git log` on the scratch repo's default branch shows
     nothing from the run — checks that a run makes no commit and no
     merge to the default branch.
-- Structural evidence: the recorded verification and tests provide the historical evidence.
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 8: Records and rehearsal
 
 - [x] Done — ticked at merge.
-- Dependencies: 7.
-- Areas: historical areas named by the recorded outcome.
+- Dependencies: unknown (legacy record; no dependency inferred).
+- Areas: unknown (legacy record; no affected area inferred).
 - Outcome: the changelog entry for the verbs, the hook and the skill;
   the glossary's run term; the development-procedure commit points;
   plan-004 refiled done with its supersession note.
@@ -257,13 +257,13 @@ Historical documentation impact predates the documentation map; migration itself
   - e2e: the pre-PR check list passes on a clean checkout — checks the
     plan format's dependency lines, the refusal of a second run, the
     continue cap and the untouched turn boundaries.
-  - structural: the rehearsal walks branching, the go-ahead commit, the
+  - Legacy evidence (non-executable): manual: the rehearsal walks branching, the go-ahead commit, the
     unattended loop, the commit at merge, the run's end and the
     untouched default branch in one scratch-repo run.
 
-- Structural evidence: the recorded verification and tests provide the historical evidence.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
 
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ## Build state
 

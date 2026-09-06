@@ -193,7 +193,7 @@ Historical documentation impact predates the documentation map; migration itself
 
 - [x] Done — ticked at merge.
 - Dependencies: none.
-- Areas: historical areas named by the recorded outcome.
+- Areas: unknown (legacy record; no affected area inferred).
 - Outcome: the 16 contract schemas — the 14 public ones gain a required
   title heading-pattern (`^{Kind} contract: .+$`) and move every section
   to level 2, `contract-interface.md` already having the shape; "public
@@ -207,20 +207,20 @@ Historical documentation impact predates the documentation map; migration itself
   schemas, and `grep -rl 'private together' knowledge/schemas` prints
   nothing.
 - Tests:
-  - structural: the conformance script reports no contract schema — checks
+  - Legacy evidence (non-executable): manual: the conformance script reports no contract schema — checks
     that every contract example satisfies its own frontmatter
     constraints.
-  - structural: no contract schema says "private together", and each names
+  - Legacy evidence (non-executable): manual: no contract schema says "private together", and each names
     a title heading-pattern — checks the corrected vocabulary and the
     unified shape.
-- Structural evidence: the recorded verification and tests provide the historical evidence.
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 2: The report family
 
 - [x] Done — ticked at merge.
 - Dependencies: none.
-- Areas: historical areas named by the recorded outcome.
+- Areas: unknown (legacy record; no affected area inferred).
 - Outcome: the seven report schemas — `code-review`, `security-review`,
   `investigation`, `postmortem`, `status-update`, `release-notes` and
   `migration-guide` — gain an `id` pattern
@@ -232,19 +232,19 @@ Historical documentation impact predates the documentation map; migration itself
 - Verification: `grep -L "pattern:"` over the seven prints nothing, and
   each names `knowledge/reports/`.
 - Tests:
-  - structural: each of the seven declares an id pattern and names
+  - Legacy evidence (non-executable): manual: each of the seven declares an id pattern and names
     `knowledge/reports/`, in a sentence that parses — checks that a
     report document can conform to SOKF.
-  - structural: the conformance script reports none of the seven — checks
+  - Legacy evidence (non-executable): manual: the conformance script reports none of the seven — checks
     that each example carries frontmatter with a conforming id.
-- Structural evidence: the recorded verification and tests provide the historical evidence.
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 3: The remaining schemas and their index
 
 - [x] Done — ticked at merge.
 - Dependencies: none.
-- Areas: historical areas named by the recorded outcome.
+- Areas: unknown (legacy record; no affected area inferred).
 - Outcome: 23 schemas — the 18 stale example types become the schema's
   `const` (`architecture`, `architectural-rules`, `software-components`,
   `configuration`, `directory-structure`, `technology-stack`,
@@ -268,25 +268,25 @@ Historical documentation impact predates the documentation map; migration itself
 - Verification: the conformance script and the index summary diff both
   print nothing; no schema names a spec as a workflow document.
 - Tests:
-  - structural: the conformance script prints nothing across all 53 schemas
+  - Legacy evidence (non-executable): manual: the conformance script prints nothing across all 53 schemas
     — checks that every worked example satisfies its own frontmatter
     constraints.
-  - structural: `grep -rilE '\ba spec\b|\bspecs\b' knowledge/schemas` prints
+  - Legacy evidence (non-executable): manual: `grep -rilE '\ba spec\b|\bspecs\b' knowledge/schemas` prints
     nothing, references to the SOKF spec by that name aside — checks
     that no schema routes work to a removed document type.
-  - structural: the index summary diff prints nothing — checks that each
+  - Legacy evidence (non-executable): manual: the index summary diff prints nothing — checks that each
     index summary matches its schema's description.
-  - structural: `feature-request.md` names the contract links and the
+  - Legacy evidence (non-executable): manual: `feature-request.md` names the contract links and the
     settled-issue home of `/accept`'s verdict — checks that the schema
     states the workflow's conventions.
-- Structural evidence: the recorded verification and tests provide the historical evidence.
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 4: The live documents
 
 - [x] Done — ticked at merge.
 - Dependencies: 1, 3.
-- Areas: historical areas named by the recorded outcome.
+- Areas: unknown (legacy record; no affected area inferred).
 - Outcome: the six public contracts gain their title heading and demote
   their sections to level 2, `contract-007` and `contract-009` being
   checked against the schema and left alone; the `- Status:` line leaves
@@ -298,23 +298,23 @@ Historical documentation impact predates the documentation map; migration itself
   ADR carries a Status bullet, `idea-001` has one level-1 heading, and
   `superdev validate` reports no ungoverned document.
 - Tests:
-  - structural: `grep -m1 '^#' knowledge/contracts/*/active/*.md` matches
+  - Legacy evidence (non-executable): manual: `grep -m1 '^#' knowledge/contracts/*/active/*.md` matches
     `contract: ` on all 8 — checks one heading shape for the family.
-  - structural: `grep -rl '^- Status:' knowledge/adrs/active` prints nothing
+  - Legacy evidence (non-executable): manual: `grep -rl '^- Status:' knowledge/adrs/active` prints nothing
     — checks that ADR state lives in `lifecycle` and links alone.
-  - structural: `grep -c '^# ' knowledge/ideas/idea-001-*.md` prints 1 —
+  - Legacy evidence (non-executable): manual: `grep -c '^# ' knowledge/ideas/idea-001-*.md` prints 1 —
     checks that the idea's sections sit at level 2.
-  - structural: `sokf_graph` resolves all eight contracts and `superdev
+  - Legacy evidence (non-executable): manual: `sokf_graph` resolves all eight contracts and `superdev
     validate` reports no link warning — checks that demoting the
     headings broke no section-addressed read.
-- Structural evidence: the recorded verification and tests provide the historical evidence.
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 5: The feature-plan schema
 
 - [x] Done — ticked at merge.
 - Dependencies: none.
-- Areas: historical areas named by the recorded outcome.
+- Areas: unknown (legacy record; no affected area inferred).
 - Outcome: `knowledge/schemas/feature-plan.md` — the slice Cases
   description says what a case covers when the framed issue is a bug:
   the numbered repro steps and the expected behaviour stand in for
@@ -327,20 +327,20 @@ Historical documentation impact predates the documentation map; migration itself
 - Verification: the schema defines bug coverage, and carries `Depends-on`
   and `Deferred decisions` whichever plan landed them.
 - Tests:
-  - structural: the Cases description names the repro steps and the expected
+  - Legacy evidence (non-executable): manual: the Cases description names the repro steps and the expected
     behaviour for a bug-framed plan — checks that coverage is defined
     for a bug.
-  - structural: `grep -l 'Depends-on'` and `grep -l 'Deferred decisions'`
+  - Legacy evidence (non-executable): manual: `grep -l 'Depends-on'` and `grep -l 'Deferred decisions'`
     both hit `feature-plan.md` — checks that the two sections stand,
     whichever plan landed them.
-- Structural evidence: the recorded verification and tests provide the historical evidence.
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 6: Mirror, evidence, verification
 
 - [x] Done — ticked at merge.
 - Dependencies: 1, 2, 3, 4, 5.
-- Areas: historical areas named by the recorded outcome.
+- Areas: unknown (legacy record; no affected area inferred).
 - Outcome: `knowledge/schemas/` is copied wholesale over
   `pack/knowledge/schemas/` (53 files); issue-022 gains a dated Comments
   entry recording that 26 examples broke their own frontmatter
@@ -351,19 +351,19 @@ Historical documentation impact predates the documentation map; migration itself
 - Verification: `diff -rq knowledge/schemas pack/knowledge/schemas` prints
   nothing and `superdev validate` reports PASS with 0 errors.
 - Tests:
-  - structural: `diff -rq knowledge/schemas pack/knowledge/schemas` prints
+  - Legacy evidence (non-executable): manual: `diff -rq knowledge/schemas pack/knowledge/schemas` prints
     nothing — checks that the pack mirrors the live schemas byte for
     byte.
-  - structural: `superdev validate` reports PASS with 0 errors on a clean
+  - Legacy evidence (non-executable): manual: `superdev validate` reports PASS with 0 errors on a clean
     checkout of the branch — checks that every schema edit conforms.
-  - structural: issue-022's Comments carry the appended evidence,
+  - Legacy evidence (non-executable): manual: issue-022's Comments carry the appended evidence,
     `CHANGELOG.md` names the reshape under Unreleased, and
     `knowledge/plans/index.md` lists this plan with `lifecycle: done` —
     checks that the records close.
 
-- Structural evidence: the recorded verification and tests provide the historical evidence.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
 
-- Documentation: canonical-knowledge; run `npm run check:docs` and `npm run check:validate`.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ## Build state
 
