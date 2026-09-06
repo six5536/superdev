@@ -150,9 +150,9 @@ pub fn run_sokf(cmd: &SokfCommand, root: &Path) -> Result<u8> {
             service.search(SearchRequest {
                 query: query.clone(),
                 limit: *limit,
-                types: types.clone(),
-                tags: tags.clone(),
-                lifecycle: lifecycle.clone(),
+                types: Some(types.clone()),
+                tags: Some(tags.clone()),
+                lifecycle: Some(lifecycle.clone()),
             })
         }),
         SokfCommand::Read {
@@ -163,7 +163,7 @@ pub fn run_sokf(cmd: &SokfCommand, root: &Path) -> Result<u8> {
         } => print_service(root, |service| {
             service
                 .read(id, heading.as_deref())
-                .map(|text| line_window(&text, *offset, *limit))
+                .and_then(|text| line_window(&text, *offset, *limit))
         }),
         SokfCommand::Graph { id } => print_service(root, |service| service.graph(id.as_deref())),
     }
@@ -185,13 +185,23 @@ fn print_service(
 }
 
 /// Apply the coding-tool line window to rendered concept text.
-fn line_window(text: &str, offset: Option<usize>, limit: Option<usize>) -> String {
+fn line_window(text: &str, offset: Option<usize>, limit: Option<usize>) -> Result<String> {
+    let lines: Vec<&str> = text.lines().collect();
     let start = offset.unwrap_or(1).saturating_sub(1);
-    let lines = text.lines().skip(start);
-    match limit {
-        Some(limit) => lines.take(limit).collect::<Vec<_>>().join("\n"),
-        None => lines.collect::<Vec<_>>().join("\n"),
+    if start >= lines.len() {
+        return Err(Error::Sokf {
+            message: format!(
+                "offset {} is beyond end of concept ({} rendered lines total)",
+                offset.unwrap_or(1),
+                lines.len()
+            ),
+        });
     }
+    let selected = lines.into_iter().skip(start);
+    Ok(match limit {
+        Some(limit) => selected.take(limit).collect::<Vec<_>>().join("\n"),
+        None => selected.collect::<Vec<_>>().join("\n"),
+    })
 }
 
 /// The embedder the manifest asks for, or the local default when the repo has

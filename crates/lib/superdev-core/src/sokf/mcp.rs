@@ -83,21 +83,21 @@ impl std::fmt::Debug for SokfServer {
 // structs and the `#[tool]` methods sit in `tools` regions, and the contract
 // includes them.
 // sokf:begin tools
-/// Arguments of `sokf_search`.
-#[derive(Debug, Deserialize, JsonSchema)]
+/// Arguments of `sokf_search` and [`SokfService::search`].
+#[derive(Debug, Default, Deserialize, JsonSchema)]
 #[schemars(crate = "rmcp::schemars")]
-struct SearchArgs {
+pub struct SearchRequest {
     /// What to look for, in the caller's own words.
-    query: String,
+    pub query: String,
     /// Most hits to return; 8 by default.
-    limit: Option<u32>,
+    pub limit: Option<u32>,
     /// Keep only concepts of these frontmatter `type`s.
-    types: Option<Vec<String>>,
+    pub types: Option<Vec<String>>,
     /// Keep only concepts carrying one of these tags.
-    tags: Option<Vec<String>>,
+    pub tags: Option<Vec<String>>,
     /// Keep only concepts whose `lifecycle` is one of these values, e.g.
     /// `["open"]` for live issues and plans.
-    lifecycle: Option<Vec<String>>,
+    pub lifecycle: Option<Vec<String>>,
 }
 
 /// Arguments of `sokf_read`.
@@ -119,21 +119,6 @@ struct GraphArgs {
     id: Option<String>,
 }
 // sokf:end tools
-
-/// Filters accepted by [`SokfService::search`].
-#[derive(Debug, Default)]
-pub struct SearchRequest {
-    /// What to look for, in the caller's own words.
-    pub query: String,
-    /// Most hits to return; 8 by default.
-    pub limit: Option<u32>,
-    /// Keep only concepts of these frontmatter `type`s.
-    pub types: Vec<String>,
-    /// Keep only concepts carrying one of these tags.
-    pub tags: Vec<String>,
-    /// Keep only concepts whose `lifecycle` is one of these values.
-    pub lifecycle: Vec<String>,
-}
 
 impl SokfService {
     /// Serve `bundle_dir`, resolving `/`-rooted links against `repo_root` and
@@ -158,9 +143,9 @@ impl SokfService {
         let (bundle, index, stats) = self.sync()?;
         let opts = SearchOpts {
             limit: hit_limit(request.limit),
-            kinds: request.types,
-            tags: request.tags,
-            lifecycle: request.lifecycle,
+            kinds: request.types.unwrap_or_default(),
+            tags: request.tags.unwrap_or_default(),
+            lifecycle: request.lifecycle.unwrap_or_default(),
         };
         let hits = index.search(&request.query, self.embedder.as_deref(), &opts)?;
         Ok(render_hits(
@@ -238,18 +223,18 @@ impl SokfServer {
     /// Search the bundle. Returns the best sections, grouped by concept, each
     /// with a `path:start-end` locator to read next.
     #[tool]
-    async fn sokf_search(&self, Parameters(args): Parameters<SearchArgs>) -> ToolResult {
+    async fn sokf_search(&self, Parameters(args): Parameters<SearchRequest>) -> ToolResult {
         let _guard = self.exclusive();
         self.service
             .search(SearchRequest {
                 query: args.query,
                 limit: args.limit,
-                types: args.types.unwrap_or_default(),
-                tags: args.tags.unwrap_or_default(),
-                lifecycle: args.lifecycle.unwrap_or_default(),
+                types: args.types,
+                tags: args.tags,
+                lifecycle: args.lifecycle,
             })
             .map(text)
-            .map_err(|e| e.to_string())
+            .map_err(tool_error)
     }
 
     /// Read one concept whole, or one of its sections.
@@ -259,7 +244,7 @@ impl SokfServer {
         self.service
             .read(&args.id, args.heading.as_deref())
             .map(text)
-            .map_err(|e| e.to_string())
+            .map_err(tool_error)
     }
 
     /// Show the link graph: the whole edge map, or one concept's neighbours
@@ -270,7 +255,7 @@ impl SokfServer {
         self.service
             .graph(args.id.as_deref())
             .map(text)
-            .map_err(|e| e.to_string())
+            .map_err(tool_error)
     }
 
     /// Orient in the bundle: its name, size, directory tree, and anything
@@ -278,7 +263,7 @@ impl SokfServer {
     #[tool]
     async fn sokf_overview(&self) -> ToolResult {
         let _guard = self.exclusive();
-        self.service.overview().map(text).map_err(|e| e.to_string())
+        self.service.overview().map(text).map_err(tool_error)
     }
     // sokf:end tools
 
@@ -336,6 +321,15 @@ fn hit_limit(requested: Option<u32>) -> usize {
 /// One text block, the only shape these tools return.
 fn text(body: String) -> CallToolResult {
     CallToolResult::success(vec![ContentBlock::text(body)])
+}
+
+/// Preserve the MCP tool's established domain-error text while retaining
+/// prefixes that identify infrastructure failures.
+fn tool_error(error: Error) -> String {
+    match error {
+        Error::Sokf { message } => message,
+        other => other.to_string(),
+    }
 }
 
 /// Resolve a caller's identity to a concept identity, naming near misses when

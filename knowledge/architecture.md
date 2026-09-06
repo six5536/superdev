@@ -24,10 +24,11 @@ setup current. Three layers:
 # Serving the canonical knowledge
 
 Installing the `knowledge` capability is half of it; the other half is reading
-it back. The `sokf` subsystem parses the SOKF knowledge, indexes it and
-serves it to agents over MCP (`superdev mcp sokf`) — the `validate` subsystem
-checks it — so an agent queries the
-knowledge instead of preloading every concept — the tools are in
+it back. The `sokf` subsystem parses and indexes the SOKF knowledge. A shared service
+serves it through MCP (`superdev mcp sokf`) and the `superdev sokf overview`,
+`search`, `read` and `graph` CLI commands — the `validate` subsystem checks it
+— so an agent queries the knowledge instead of preloading every concept. The
+MCP tools are in
 [contract-003-api-sokf][sokf:contract-003-api-sokf]. Freshness is lazy: every tool call
 re-hashes the canonical knowledge and syncs only what changed, so there is no watcher and
 no daemon state to go stale.

@@ -13,6 +13,10 @@ publish a version it cannot find a heading for.
 
 ### Added
 
+- **SOKF read operations are available from the CLI.** `superdev sokf
+  overview`, `search`, `read` and `graph` expose the same lazily refreshed
+  knowledge service as MCP; `search` accepts type, tag and lifecycle filters,
+  and `read` accepts a heading or rendered line window.
 - **`/file` files an issue or an idea.** A knowledge-carried skill
   writes a bug, a feature or a chore as an `open` issue in the user's
   words — no interview, no branch, no criterion the user did not state

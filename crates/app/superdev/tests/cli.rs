@@ -450,6 +450,15 @@ fn sokf_read_side_commands_share_the_service() {
 
     let graph = run(&["sokf", "graph", "module-a"]);
     assert!(graph.contains("no links"), "{graph}");
+
+    let out = superdev()
+        .current_dir(dir.path())
+        .env("XDG_CACHE_HOME", &cache)
+        .args(["sokf", "read", "module-a", "--offset", "999"])
+        .assert()
+        .code(2);
+    let stderr = String::from_utf8_lossy(&out.get_output().stderr);
+    assert!(stderr.contains("beyond end of concept"), "{stderr}");
 }
 
 #[test]

@@ -23,7 +23,9 @@ What the annotated list does not say:
   too (ADR-040). The Claude Code hook runs the same whole-set check by a
   different route (`superdev hook validate`), so the two cannot reach
   different verdicts. `cargo run -- sokf index` forces a full index rebuild, which
-  nothing routine needs: the MCP server syncs lazily on every call.
+  nothing routine needs: every MCP or CLI `sokf overview`, `search`, `read` or
+  `graph` call syncs the index lazily. Those four CLI commands expose the same
+  service for shell users and harness adapters.
 - `cargo run -- validate --fix` is the same check with its repairs applied
   first: a link naming a concept by path becomes the id form, every
   `<!-- sokf:links -->` block is regenerated, and every include block is

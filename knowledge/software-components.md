@@ -68,8 +68,8 @@ All domain logic; no argument parsing. One module per concern:
 - `sokf` — the read side of the SOKF knowledge, one module per stage:
   `concept` (frontmatter and section parsing), `bundle` (loading, reserved-file
   rules), `graph` (link resolution and inverse synthesis), `embed` (the
-  embedding providers), `index` (tantivy plus the vector store), `mcp` (the
-  server).
+  embedding providers), `index` (tantivy plus the vector store), and `mcp`
+  (the shared read service and its server adapter).
 - `validate` — the check, both halves meeting in the parent so neither
   imports the other: `sokf` (the specification's document checks) and
   `schema` (documents against the schema their `type` names, and skills and
@@ -100,9 +100,9 @@ and exit codes; `manage.rs` holds the `init`, `status`, `sync` and `update`
 verbs — each loads, calls the core pipeline, renders its lines and turns
 its facts into an exit code. `template_select.rs` decides init's project
 template: flags and TTY-ness feed logic behind a `Prompter` trait, with the
-dialoguer adapter as untested glue. `validate_cli.rs` holds `validate` and the hook, `sokf_cli.rs`
-`sokf index` and `mcp sokf`: path defaults, printed output, and the current-thread tokio
-runtime the server blocks on. Also present is the plumbing the release
+dialoguer adapter as untested glue. `validate_cli.rs` holds `validate` and the hook. `sokf_cli.rs` holds the
+`sokf` read and index commands plus `mcp sokf`: path defaults, printed output,
+and the current-thread tokio runtime the server blocks on. Also present is the plumbing the release
 pipeline needs:
 `--version`, `completions` (clap_complete), and a hidden `man` subcommand
 (clap_mangen). The CLI contract is in [contract-002-cli-superdev][sokf:contract-002-cli-superdev].
