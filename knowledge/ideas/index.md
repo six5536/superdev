@@ -16,6 +16,7 @@ it stays on file, linked from the issue that took it up.
 * [Comment-preserving manifest stamping][sokf:idea-009-comment-preserving-manifest-stamping] - stamp the blueprint version into config.toml with a targeted toml_edit edit of the one key, so a hand-editable file keeps its comments.
 * [A Pi extension runs the superdev process][sokf:idea-010-a-pi-extension-runs-the-superdev-process] - a thin Pi orchestration extension uses Pi's lifecycle, tools, sessions, interaction and child agents to run superdev's canonical FILE → SCOPE → BUILD → ACCEPT workflow without reimplementing it.
 * [Define an agent-learnings document model][sokf:idea-011-define-an-agent-learnings-document-model] - evaluate whether agent memory or learnings need a dedicated schema and document set, or belong in canonical project knowledge.
+* [SOKF mutations survive validation failures][sokf:idea-012-sokf-mutations-survive-validation-failures] - apply SOKF writes and edits before validation, then report findings without discarding the changed file or replacing Pi's file-tool contract.
 
 <!-- sokf:links -->
 [sokf:idea-001-schemas-carry-a-reading-reminder]: /knowledge/ideas/idea-001-schemas-carry-a-reading-reminder.md
@@ -29,3 +30,4 @@ it stays on file, linked from the issue that took it up.
 [sokf:idea-009-comment-preserving-manifest-stamping]: /knowledge/ideas/idea-009-comment-preserving-manifest-stamping.md
 [sokf:idea-010-a-pi-extension-runs-the-superdev-process]: /knowledge/ideas/idea-010-a-pi-extension-runs-the-superdev-process.md
 [sokf:idea-011-define-an-agent-learnings-document-model]: /knowledge/ideas/idea-011-define-an-agent-learnings-document-model.md
+[sokf:idea-012-sokf-mutations-survive-validation-failures]: /knowledge/ideas/idea-012-sokf-mutations-survive-validation-failures.md
