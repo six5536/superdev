@@ -123,6 +123,9 @@ pub struct WorkflowCache {
     /// The capability itself is never persisted; only this one-way digest is exposed.
     #[serde(default)]
     pub authority_digest: String,
+    /// Product baseline before the current SCOPE proposal began.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub scope_base_revision: Option<String>,
     /// Immutable candidate reviewed at the BUILD gate.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub candidate_revision: Option<String>,
@@ -325,7 +328,7 @@ mod tests {
 - `P_abandon-human-only` [event] WHEN abandonment is requested, the service SHALL require interactive human approval while excluding partial product work from integration.
 - `P_abandon-default-records` [event] WHEN abandonment closes the workflow, the service SHALL publish the closed issue and plan in a detached worktree and compare-and-swap the local default ref without carrying work-branch product history.
 - `P_evidence-durable` [event] WHEN a Pi-bound isolated scope review or final BUILD review completes cleanly, the evidence command SHALL require UI authority and record the extension-issued single-use review run plus immutable revisions in canonical Completion evidence.
-- `P_scope-publication` [event] WHEN isolated SCOPE work changes canonical knowledge, a SCOPE checkpoint SHALL reject product changes, validate the complete knowledge snapshot, publish one knowledge-only commit before isolated review, and bind subsequent scope-review evidence to the canonical plan revision and immutable checkpoint commit reviewed by Pi.
+- `P_scope-publication` [event] WHEN isolated SCOPE work changes canonical knowledge, a SCOPE checkpoint SHALL reject every product change after the service-owned SCOPE baseline, validate the complete knowledge snapshot, publish one knowledge-only commit before isolated review, and bind subsequent scope-review evidence to the canonical plan revision and immutable checkpoint commit reviewed by Pi.
 - `P_attestation-atomic` [event] WHEN verified BUILD receives a clean final review, the evidence command SHALL record candidate-bound evidence and enter ACCEPT in one administrative attestation commit.
 - `P_discoveries-resolved` [event] WHEN BUILD requests final attestation, the service SHALL refuse any unchecked discovery on the primary issue.
 - `P_build-synchronizes-default` [event] WHEN BUILD finalizes a candidate, the service SHALL compare expected default and work tips, prove a conflict-free merge without touching the worktree, and incorporate the default through a hook-free fast-forward before verification.

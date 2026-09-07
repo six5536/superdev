@@ -93,6 +93,9 @@ pub struct WorkflowCache {
     /// The capability itself is never persisted; only this one-way digest is exposed.
     #[serde(default)]
     pub authority_digest: String,
+    /// Product baseline before the current SCOPE proposal began.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub scope_base_revision: Option<String>,
     /// Immutable candidate reviewed at the BUILD gate.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub candidate_revision: Option<String>,

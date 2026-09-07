@@ -261,6 +261,7 @@ mod tests {
             },
             last_plan_revision: "one".into(),
             authority_digest: authority_digest("0123456789abcdef0123456789abcdef").unwrap(),
+            scope_base_revision: None,
             candidate_revision: None,
             verified_default_revision: None,
             child_role: None,

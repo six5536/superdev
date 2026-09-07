@@ -678,11 +678,12 @@ fn start(root: &Path, args: &BindArgs) -> Result<u8> {
         });
     }
     let issue = open_issue_record(root, &args.issue)?;
+    let scope_base = git::revision(root, &args.default_branch)?;
 
     // Reserve ownership before mutating Git or records. This makes concurrent
     // starts serialize through the same repository lock rather than racing on
     // a prior load followed by an independent write.
-    let reservation = workflow_cache(args, String::new(), None, None)?;
+    let reservation = workflow_cache(args, String::new(), Some(scope_base), None, None)?;
     cache::bind(root, &reservation)?;
     let started = (|| {
         git::create_work_branch(root, &args.work_branch)?;
@@ -820,7 +821,19 @@ fn bind_with_revision(root: &Path, args: &BindArgs, revision: String) -> Result<
         })?;
     let candidate = evidence_revision(&text, "Candidate revision");
     let verified_default = evidence_revision(&text, "Verified default revision");
-    let state = workflow_cache(args, revision, candidate, verified_default)?;
+    let scope_base = if plan_record(root, &args.plan)?.phase == "scope" {
+        match evidence_revision(&text, "Scope product baseline") {
+            Some(baseline) => Some(baseline),
+            None => Some(git::merge_base(
+                root,
+                &args.default_branch,
+                &args.work_branch,
+            )?),
+        }
+    } else {
+        None
+    };
+    let state = workflow_cache(args, revision, scope_base, candidate, verified_default)?;
     cache::bind(root, &state)?;
     emit("bind", &state)
 }
@@ -828,6 +841,7 @@ fn bind_with_revision(root: &Path, args: &BindArgs, revision: String) -> Result<
 fn workflow_cache(
     args: &BindArgs,
     revision: String,
+    scope_base_revision: Option<String>,
     candidate_revision: Option<String>,
     verified_default_revision: Option<String>,
 ) -> Result<WorkflowCache> {
@@ -843,6 +857,7 @@ fn workflow_cache(
         },
         last_plan_revision: revision,
         authority_digest: cache::authority_digest(&capability)?,
+        scope_base_revision,
         candidate_revision,
         verified_default_revision,
         child_role: None,
@@ -1022,6 +1037,14 @@ fn record_scope_checkpoint(root: &Path, args: &RevisionArgs) -> Result<u8> {
                 message: "SCOPE checkpoints are permitted only during SCOPE".into(),
             });
         }
+        let scope_base = owner
+            .scope_base_revision
+            .as_deref()
+            .ok_or_else(|| Error::Manifest {
+                message: "SCOPE checkpoint requires its service-owned product baseline".into(),
+            })?;
+        let head = git::revision(root, &owner.identity.work_branch)?;
+        git::require_knowledge_only_since(root, scope_base, &head)?;
         let (_, observed) = plan_revision(root, &owner.identity.plan)?;
         if observed == args.expected_revision {
             return Err(Error::Manifest {
@@ -1036,8 +1059,9 @@ fn record_scope_checkpoint(root: &Path, args: &RevisionArgs) -> Result<u8> {
                 message: "SCOPE checkpoint requires valid canonical knowledge".into(),
             });
         }
-        let parent = git::revision(root, "HEAD")?;
-        let commit = git::commit_knowledge_changes(root, git::SCOPE_CHECKPOINT_MESSAGE)?;
+        let parent = head;
+        let commit =
+            git::commit_knowledge_changes_at(root, git::SCOPE_CHECKPOINT_MESSAGE, &parent)?;
         let revision = plan_revision(root, &owner.identity.plan)?.1;
         let state =
             match transaction.compare_and_swap(&args.session, &args.expected_revision, |state| {
@@ -1520,6 +1544,13 @@ fn record_evidence_locked(
                 message: "scope review must bind the checkpointed canonical plan and commit".into(),
             });
         }
+        let scope_base = state
+            .scope_base_revision
+            .as_deref()
+            .ok_or_else(|| Error::Manifest {
+                message: "scope review requires its service-owned product baseline".into(),
+            })?;
+        git::require_knowledge_only_since(root, scope_base, &head)?;
         git::require_scope_checkpoint(root, &head, &path)?;
     } else if args.revision.is_some() || observed != args.expected_revision {
         return Err(Error::Manifest {
@@ -1829,20 +1860,14 @@ fn transition_locked(
             }
         })?;
     if matches!(transition, Transition::ApproveScope) {
-        let scope_base = evidence_revision(&plan_text, "Scope product baseline")
-            .unwrap_or(git::revision(root, &state.identity.default_branch)?);
+        let scope_base = state
+            .scope_base_revision
+            .as_deref()
+            .ok_or_else(|| Error::Manifest {
+                message: "scope approval requires its service-owned product baseline".into(),
+            })?;
         let head = git::revision(root, &state.identity.work_branch)?;
-        if !git::is_ancestor(root, &scope_base, &head)?
-            || git::changed_paths(root, &scope_base, &head)?
-                .iter()
-                .any(|path| !path.starts_with("knowledge/"))
-        {
-            return Err(Error::Manifest {
-                message:
-                    "SCOPE may change canonical knowledge only; product changes belong to BUILD"
-                        .into(),
-            });
-        }
+        git::require_knowledge_only_since(root, scope_base, &head)?;
     }
     let candidate_revision = evidence_revision(&plan_text, "Candidate revision");
     let verified_default_revision = evidence_revision(&plan_text, "Verified default revision");
@@ -1920,17 +1945,17 @@ fn transition_locked(
             &["Human scope approval: approved.".into()],
         )?);
     }
-    let scope_baseline = if matches!(
+    let scope_baseline_revision = if matches!(
         transition,
         Transition::ReturnToScope | Transition::RejectAcceptance
     ) {
-        Some(format!(
-            "Scope product baseline: {}.",
-            git::revision(root, &state.identity.work_branch)?
-        ))
+        Some(git::revision(root, &state.identity.work_branch)?)
     } else {
         None
     };
+    let scope_baseline = scope_baseline_revision
+        .as_ref()
+        .map(|revision| format!("Scope product baseline: {revision}."));
     if matches!(transition, Transition::RejectAcceptance) {
         edits.push(invalidate_scope_evidence_edit(
             &plan_text,
@@ -2032,6 +2057,11 @@ fn transition_locked(
     let revision = plan_revision(root, &state.identity.plan)?.1;
     let state = transaction.compare_and_swap(&args.session, &args.expected_revision, |state| {
         state.last_plan_revision.clone_from(&revision);
+        if matches!(transition, Transition::ApproveScope) {
+            state.scope_base_revision = None;
+        } else if let Some(scope_base) = &scope_baseline_revision {
+            state.scope_base_revision = Some(scope_base.clone());
+        }
         if let Some(candidate) = candidate_revision {
             state.candidate_revision = Some(candidate);
             state.verified_default_revision = verified_default_revision;

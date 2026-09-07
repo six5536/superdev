@@ -474,8 +474,46 @@ fn workflow_start_creates_a_canonical_scope_plan_and_resume_adopts_it() {
         cache::load(dir.path()).unwrap().unwrap().last_plan_revision,
         revision
     );
-    fs::remove_file(dir.path().join("src/scope.rs")).unwrap();
-    fs::remove_dir(dir.path().join("src")).unwrap();
+    assert!(
+        std::process::Command::new("git")
+            .current_dir(dir.path())
+            .args(["add", "--", "src/scope.rs"])
+            .status()
+            .unwrap()
+            .success()
+    );
+    assert!(
+        std::process::Command::new("git")
+            .current_dir(dir.path())
+            .args(["commit", "-m", "feat: forbidden scope product commit"])
+            .status()
+            .unwrap()
+            .success()
+    );
+    let product_commit = git::revision(dir.path(), "HEAD").unwrap();
+    Command::cargo_bin("superdev")
+        .unwrap()
+        .current_dir(dir.path())
+        .args([
+            "workflow",
+            "scope-checkpoint",
+            "--session",
+            "pi-b",
+            "--expected-revision",
+            &revision,
+        ])
+        .assert()
+        .failure();
+    assert_eq!(git::revision(dir.path(), "HEAD").unwrap(), product_commit);
+    assert!(
+        std::process::Command::new("git")
+            .current_dir(dir.path())
+            .args(["reset", "--hard", &before_scope_refusal])
+            .status()
+            .unwrap()
+            .success()
+    );
+    fs::write(&plan, &scoped).unwrap();
     let cache_dir = dir.path().join(".superdev/cache");
     let mut cache_permissions = fs::metadata(&cache_dir).unwrap().permissions();
     cache_permissions.set_mode(0o555);

@@ -122,7 +122,12 @@ fn valid_path(path: &str) -> bool {
         && !path.contains(['\n', '\r', '\0'])
 }
 
-fn commit_paths(root: &Path, message: &str, paths: &[String]) -> Result<String> {
+fn commit_paths(
+    root: &Path,
+    message: &str,
+    paths: &[String],
+    expected_parent: Option<&str>,
+) -> Result<String> {
     if message.trim().is_empty() || message.contains(['\n', '\r', '\0']) {
         return Err(Error::Manifest {
             message: "workflow commit message is invalid".into(),
@@ -137,6 +142,11 @@ fn commit_paths(root: &Path, message: &str, paths: &[String]) -> Result<String> 
     // Build the commit through an isolated index. A failed add/tree/commit/ref
     // operation therefore cannot stage files or otherwise alter the live index.
     let parent = revision(root, "HEAD")?;
+    if expected_parent.is_some_and(|expected| expected != parent) {
+        return Err(Error::Manifest {
+            message: "workflow commit parent changed before publication".into(),
+        });
+    }
     let temporary = tempfile::tempdir().map_err(|source| Error::Io {
         path: root.to_path_buf(),
         source,
@@ -204,7 +214,26 @@ pub fn commit_knowledge_changes(root: &Path, message: &str) -> Result<String> {
             message: "workflow commit refused changes outside canonical knowledge".into(),
         });
     }
-    commit_paths(root, message, &paths)
+    commit_paths(root, message, &paths, None)
+}
+
+/// Commit canonical knowledge only if the checked-out branch still has the expected parent.
+pub fn commit_knowledge_changes_at(
+    root: &Path,
+    message: &str,
+    expected_parent: &str,
+) -> Result<String> {
+    validate_ref(expected_parent)?;
+    let paths = worktree_paths(root)?;
+    if paths
+        .iter()
+        .any(|path| !valid_path(path) || !path.starts_with("knowledge/"))
+    {
+        return Err(Error::Manifest {
+            message: "workflow commit refused changes outside canonical knowledge".into(),
+        });
+    }
+    commit_paths(root, message, &paths, Some(expected_parent))
 }
 
 /// Commit one product-bearing BUILD checkpoint without absorbing paths outside
@@ -216,7 +245,7 @@ pub fn commit_block_changes(
 ) -> Result<String> {
     validate_block_paths(root, allowed_areas)?;
     let paths = worktree_paths(root)?;
-    commit_paths(root, message, &paths)
+    commit_paths(root, message, &paths, None)
 }
 
 /// Refuse a BUILD checkpoint's current changes before any service-owned edit.
@@ -271,6 +300,16 @@ pub fn is_ancestor(root: &Path, ancestor: &str, descendant: &str) -> Result<bool
     }
 }
 
+/// Resolve the immutable merge base of two validated revisions.
+pub fn merge_base(root: &Path, left: &str, right: &str) -> Result<String> {
+    validate_ref(left)?;
+    validate_ref(right)?;
+    let output = git(root, &["merge-base", left, right])?;
+    let revision = String::from_utf8_lossy(&output.stdout).trim().to_string();
+    validate_ref(&revision)?;
+    Ok(revision)
+}
+
 /// Paths changed between two revisions, without invoking a shell.
 pub fn changed_paths(root: &Path, from: &str, to: &str) -> Result<Vec<String>> {
     validate_ref(from)?;
@@ -280,6 +319,21 @@ pub fn changed_paths(root: &Path, from: &str, to: &str) -> Result<Vec<String>> {
         .lines()
         .map(str::to_string)
         .collect())
+}
+
+/// Require all commits after the service-owned SCOPE baseline to be knowledge-only.
+pub fn require_knowledge_only_since(root: &Path, baseline: &str, candidate: &str) -> Result<()> {
+    if !is_ancestor(root, baseline, candidate)?
+        || changed_paths(root, baseline, candidate)?
+            .iter()
+            .any(|path| !valid_path(path) || !path.starts_with("knowledge/"))
+    {
+        return Err(Error::Manifest {
+            message: "SCOPE may change canonical knowledge only; product changes belong to BUILD"
+                .into(),
+        });
+    }
+    Ok(())
 }
 
 /// Require that `candidate` is the service-owned knowledge commit that last changed the plan.
