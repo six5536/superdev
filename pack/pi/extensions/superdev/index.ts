@@ -220,6 +220,7 @@ export default function superdev(pi: ExtensionAPI) {
 			identity: { issue: string; plan: string; work_branch: string; default_branch: string };
 		};
 		phase?: "scope" | "build" | "accept";
+		canonicalPlanRevision?: string;
 		openWorkflows?: Array<{ issue: string; plan: string; work_branch: string; default_branch: string }>;
 		buildState?: { currentBlock: number; attempts: number; finalCorrections: number; fingerprint?: string; blocker: string };
 		maxStalledBlockAttempts?: number;
@@ -280,6 +281,7 @@ export default function superdev(pi: ExtensionAPI) {
 			workBranch: Type.Optional(Type.String()),
 			defaultBranch: Type.Optional(Type.String()),
 			expectedRevision: Type.Optional(Type.String()),
+			revision: Type.Optional(Type.String()),
 			reviewRun: Type.Optional(Type.String()),
 			candidate: Type.Optional(Type.String()),
 			phase: Type.Optional(StringEnum(["scope", "build", "accept"] as const)),
@@ -309,6 +311,10 @@ export default function superdev(pi: ExtensionAPI) {
 				if (!review || review.role !== expectedRole || review.result.status !== "clean") throw new Error("evidence does not name a clean bound review run");
 				if (input.action === "record-final-evidence" && (!input.candidate || input.candidate !== review.candidate)) throw new Error("final evidence candidate differs from the reviewed candidate");
 				args.push("evidence", "--session", input.session, "--expected-revision", input.expectedRevision, "--kind", input.action === "record-scope-review" ? "scope-review" : "final", "--review-session", input.reviewRun);
+				if (input.action === "record-scope-review") {
+					if (!input.revision) throw new Error("scope evidence requires the reviewed canonical revision");
+					args.push("--revision", input.revision);
+				}
 				if (input.candidate) args.push("--candidate", input.candidate);
 			} else if (input.action === "abandon") {
 				if (!input.expectedRevision || !input.phase || !input.reason?.trim()) throw new Error("abandonment disposition is incomplete");
@@ -422,7 +428,7 @@ export default function superdev(pi: ExtensionAPI) {
 			if (scoped.status !== "complete") return ctx.ui.notify(scoped.summary, "warning");
 			const status = await workflowStatus(ctx.cwd);
 			const owner = status.owner;
-			if (!owner || status.phase !== "scope") throw new Error("SCOPE ownership changed during isolated work");
+			if (!owner || status.phase !== "scope" || !status.canonicalPlanRevision) throw new Error("SCOPE ownership changed during isolated work");
 			const baseResult = await pi.exec("git", ["rev-parse", "--verify", owner.identity.default_branch], { cwd: ctx.cwd });
 			const candidateResult = await pi.exec("git", ["rev-parse", "--verify", owner.identity.work_branch], { cwd: ctx.cwd });
 			if (baseResult.code !== 0 || candidateResult.code !== 0) return ctx.ui.notify("Could not resolve immutable review revisions", "error");
@@ -434,8 +440,8 @@ export default function superdev(pi: ExtensionAPI) {
 			const reviewRun = randomBytes(24).toString("hex");
 			const evidence = await runSuperdev([
 				"workflow", "evidence", "--session", owner.session_id,
-				"--expected-revision", owner.last_plan_revision, "--kind", "scope-review",
-				"--review-session", reviewRun,
+				"--expected-revision", owner.last_plan_revision, "--revision", status.canonicalPlanRevision,
+				"--kind", "scope-review", "--review-session", reviewRun,
 			], ctx.cwd, authority) as { result?: { last_plan_revision?: string } };
 			const revision = evidence.result?.last_plan_revision;
 			if (!revision) throw new Error("scope evidence response omitted the new plan revision");

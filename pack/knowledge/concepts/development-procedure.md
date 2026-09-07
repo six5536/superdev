@@ -2,21 +2,15 @@
 type: DevelopmentProcedure
 id: development-procedure
 title: Development Procedure
-description: TBD — setup, the change workflow, and what to run before a PR.
+description: Setup, the SCOPE to BUILD to ACCEPT workflow, and required local verification.
 status: draft
 ---
 
-# Setup
-
-TBD: from clone to first green test run.
+Install the pinned project toolchain and run the repository's documented setup command before starting work.
 
 # Workflow
 
-TBD: how a change travels — branch, contracts, review, merge. Until this
-section names a branching convention, `/scope` cuts `feature/<nnn>-<slug>`
-after the issue, or `adhoc/<nnn>-<slug>` after the plan where there is no
-issue, off the default branch, and records the convention here.
-
-# Before a PR
-
-TBD: the checks to run locally.
+1. Start or resume one canonical issue and plan in SCOPE on its matching `work/<issue-number>-<slug>` branch; obtain a clean isolated requirements review and explicit human approval.
+2. In BUILD, complete dependency-ready stable blocks separately. Each block records executable evidence, updates applicable documentation, and receives one path-scoped checkpoint commit.
+3. Run full local verification and a fresh isolated read-only review against an immutable candidate. Correct findings within project-configured limits and rerun both gates.
+4. In ACCEPT, apply project acceptance policy and integrate locally with `git merge --no-ff`. Do not push, release, delete branches, stash, reset, discard work, or resolve conflicts automatically.

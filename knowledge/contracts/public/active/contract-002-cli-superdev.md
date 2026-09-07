@@ -459,6 +459,9 @@ pub struct EvidenceArgs {
     /// Expected current plan content revision
     #[arg(long)]
     expected_revision: String,
+    /// Reviewed SCOPE plan revision after isolated modifying work
+    #[arg(long)]
+    revision: Option<String>,
     /// Evidence gate being attested
     #[arg(long, value_enum)]
     kind: EvidenceKindName,

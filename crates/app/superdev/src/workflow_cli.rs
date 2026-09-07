@@ -164,6 +164,9 @@ pub struct EvidenceArgs {
     /// Expected current plan content revision
     #[arg(long)]
     expected_revision: String,
+    /// Reviewed SCOPE plan revision after isolated modifying work
+    #[arg(long)]
+    revision: Option<String>,
     /// Evidence gate being attested
     #[arg(long, value_enum)]
     kind: EvidenceKindName,
@@ -345,12 +348,19 @@ pub fn run(command: &WorkflowCommand, root: &Path) -> Result<u8> {
             } else {
                 None
             };
+            let canonical_plan_revision = owner
+                .as_ref()
+                .map(|state| {
+                    plan_revision(&root, &state.identity.plan).map(|(_, revision)| revision)
+                })
+                .transpose()?;
             let workflow_config = Manifest::load(&root)?.workflow;
             emit(
                 "status",
                 &serde_json::json!({
                     "owner": owner,
                     "phase": phase,
+                    "canonicalPlanRevision": canonical_plan_revision,
                     "buildState": build_state.as_ref().map(|state| serde_json::json!({
                         "currentBlock": state.current_block,
                         "attempts": state.attempts,
@@ -1225,7 +1235,9 @@ fn record_evidence_locked(
         });
     }
     validate_identity_values(root, &state.identity)?;
-    git::require_clean(root)?;
+    if !matches!(args.kind, EvidenceKindName::ScopeReview) {
+        git::require_clean(root)?;
+    }
     if git::current_branch(root)? != state.identity.work_branch {
         return Err(Error::Manifest {
             message: "evidence requires the checked-out work branch".into(),
@@ -1233,7 +1245,14 @@ fn record_evidence_locked(
     }
     let record = plan_record(root, &state.identity.plan)?;
     let (path, observed) = plan_revision(root, &state.identity.plan)?;
-    if observed != args.expected_revision {
+    if matches!(args.kind, EvidenceKindName::ScopeReview) {
+        if args.revision.as_deref() != Some(observed.as_str()) || observed == args.expected_revision
+        {
+            return Err(Error::Manifest {
+                message: "scope review must bind the changed canonical plan revision".into(),
+            });
+        }
+    } else if args.revision.is_some() || observed != args.expected_revision {
         return Err(Error::Manifest {
             message: "workflow plan revision changed".into(),
         });

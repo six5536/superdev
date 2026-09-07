@@ -324,6 +324,7 @@ mod tests {
 - `P_cancel-pauses` [event] WHEN cancellation occurs, the service SHALL release transient ownership without changing the canonical phase or deleting uncommitted SCOPE drafts.
 - `P_abandon-human-only` [event] WHEN abandonment is requested, the service SHALL require interactive human approval while excluding partial product work from integration.
 - `P_evidence-durable` [event] WHEN a Pi-bound isolated scope review or final BUILD review completes cleanly, the evidence command SHALL require UI authority and record the extension-issued single-use review run plus immutable revisions in canonical Completion evidence.
+- `P_scope-publication` [event] WHEN isolated SCOPE work changes canonical knowledge, scope-review evidence SHALL compare the owning revision with the reviewed canonical plan revision, reject product changes, validate the complete knowledge snapshot, and publish it in one knowledge-only commit.
 - `P_attestation-atomic` [event] WHEN verified BUILD receives a clean final review, the evidence command SHALL record candidate-bound evidence and enter ACCEPT in one administrative attestation commit.
 - `P_discoveries-resolved` [event] WHEN BUILD requests final attestation, the service SHALL refuse any unchecked discovery on the primary issue.
 - `P_verification-executed` [event] WHEN BUILD requests verification evidence before final review, the service SHALL execute every backtick command declared by plan Verification entries and reject failures, candidate movement, or a dirty result.

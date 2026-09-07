@@ -11,7 +11,10 @@ use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
 
 use assert_cmd::Command;
-use superdev_core::workflow::{cache, git};
+use superdev_core::{
+    sokf::parse_concept,
+    workflow::{cache, git},
+};
 
 /// A temp git repo plus a bin dir of fake `mise`/`claude`/`codegraph`.
 struct Sandbox {
@@ -375,6 +378,133 @@ fn workflow_start_creates_a_canonical_scope_plan_and_resume_adopts_it() {
         .args(resume)
         .assert()
         .success();
+
+    let revision = cache::load(dir.path()).unwrap().unwrap().last_plan_revision;
+    let scoped = fs::read_to_string(&plan)
+        .unwrap()
+        .replace(
+            "SCOPE must replace this initial recovery-safe draft with settled requirements before approval.",
+            "Implement one tested source checkpoint.",
+        )
+        .replace(
+            "SCOPE must identify the exact source declarations and materialized interfaces.",
+            "Add `src/lib.rs`; no generated interface changes.",
+        )
+        .replace(
+            "SCOPE must identify normative and current-state knowledge changes.",
+            "Update only this canonical plan.",
+        )
+        .replace(
+            "SCOPE must map applicable surfaces from the canonical documentation map.",
+            "No user-observable documentation surface is affected.",
+        )
+        .replace("- Areas: to be settled by SCOPE.", "- Areas: `src`.")
+        .replace(
+            "- Verification: executable commands must be settled by SCOPE.",
+            "- Verification: `true`.",
+        )
+        .replace(
+            "- Tests: executable contract evidence must be settled by SCOPE.",
+            "- Tests: `true`.",
+        )
+        .replace(
+            "- Structural evidence: executable structural evidence must be settled by SCOPE.",
+            "- Structural evidence: `true`.",
+        )
+        .replace(
+            "- Documentation: applicable surfaces and commands must be settled by SCOPE.",
+            "- Documentation: none; no user-observable change.",
+        );
+    fs::write(&plan, &scoped).unwrap();
+    Command::cargo_bin("superdev")
+        .unwrap()
+        .current_dir(dir.path())
+        .args(["validate", "--warnings"])
+        .assert()
+        .success();
+    let scoped_revision = parse_concept(&plan.to_string_lossy(), &scoped)
+        .unwrap()
+        .content_hash;
+    Command::cargo_bin("superdev")
+        .unwrap()
+        .current_dir(dir.path())
+        .env("SUPERDEV_UI_AUTHORITY", "fedcba9876543210fedcba9876543210")
+        .args([
+            "workflow",
+            "evidence",
+            "--session",
+            "pi-b",
+            "--expected-revision",
+            &revision,
+            "--revision",
+            &scoped_revision,
+            "--kind",
+            "scope-review",
+            "--review-session",
+            "review-scope",
+        ])
+        .assert()
+        .success();
+    let revision = cache::load(dir.path()).unwrap().unwrap().last_plan_revision;
+    Command::cargo_bin("superdev")
+        .unwrap()
+        .current_dir(dir.path())
+        .env("SUPERDEV_UI_AUTHORITY", "fedcba9876543210fedcba9876543210")
+        .args([
+            "workflow",
+            "transition",
+            "--session",
+            "pi-b",
+            "--expected-revision",
+            &revision,
+            "--phase",
+            "scope",
+            "--transition",
+            "approve-scope",
+        ])
+        .assert()
+        .success();
+
+    let expected = cache::load(dir.path()).unwrap().unwrap().last_plan_revision;
+    let text = fs::read_to_string(&plan)
+        .unwrap()
+        .replace("- [ ] Done.", "- [x] Done.")
+        .replace("- Areas: to be settled by SCOPE.", "- Areas: `src`.")
+        .replace(
+            "- Verification: executable commands must be settled by SCOPE.",
+            "- Verification: `true`.",
+        )
+        .replace("Blocker: scope approval pending.", "Blocker: none.");
+    fs::write(&plan, &text).unwrap();
+    fs::create_dir_all(dir.path().join("src")).unwrap();
+    fs::write(dir.path().join("src/lib.rs"), "pub fn checkpointed() {}\n").unwrap();
+    let changed = parse_concept(&plan.to_string_lossy(), &text)
+        .unwrap()
+        .content_hash;
+    Command::cargo_bin("superdev")
+        .unwrap()
+        .current_dir(dir.path())
+        .args([
+            "workflow",
+            "block",
+            "--session",
+            "pi-b",
+            "--expected-revision",
+            &expected,
+            "--revision",
+            &changed,
+        ])
+        .assert()
+        .success();
+    git::require_clean(dir.path()).unwrap();
+    let paths = std::process::Command::new("git")
+        .args(["show", "--format=", "--name-only", "HEAD"])
+        .current_dir(dir.path())
+        .output()
+        .unwrap();
+    let paths = String::from_utf8(paths.stdout).unwrap();
+    assert!(paths.contains("src/lib.rs"));
+    assert!(paths.contains("knowledge/plans/open/plan-001-canonical-recovery.md"));
 }
 
 #[test]
