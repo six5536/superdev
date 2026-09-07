@@ -115,7 +115,7 @@ The canonical-knowledge surface covers ADRs, contracts, schemas, procedures, con
 
 ## Build state
 
-Current block: 6. Attempts: 0. Final corrections: 2. Fingerprint: none. Blocker: none.
+Current block: 6. Attempts: 0. Final corrections: 3. Fingerprint: none. Blocker: final correction limit exhausted: Integration must perform no fallible cleanup or checkout after advancing the default ref.
 
 ## Implementation decisions
 
