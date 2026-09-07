@@ -45,11 +45,15 @@ export default function smoke() {
 	if (isolatedTools("scope").split(",").includes("bash")) throw new Error("SCOPE child has direct shell access");
 	if (isolatedTools("build").split(",").includes("bash")) throw new Error("BUILD child has direct shell access");
 	if (!isolatedTools("build").split(",").includes("superdev_build_exec")) throw new Error("BUILD child cannot execute bounded evidence");
-	if (buildCommandAllowed("python", ["-c", "mutate Git"])) throw new Error("BUILD can escape through another executable");
+	if (buildCommandAllowed("sh", ["-c", "mutate Git"])) throw new Error("BUILD can escape through a shell");
+	if (buildCommandAllowed("./script", [])) throw new Error("BUILD can escape through an unbounded executable path");
+	if (!buildCommandAllowed("just", ["check"])) throw new Error("BUILD cannot run a project-declared executable");
 	if (buildCommandAllowed("git", ["-C", ".", "commit"])) throw new Error("BUILD can bypass Git operation checks");
 	if (buildCommandAllowed("git", ["commit"])) throw new Error("BUILD can commit directly");
 	if (!buildCommandAllowed("git", ["diff", "--check"])) throw new Error("BUILD cannot inspect Git");
 	if (!buildCommandAllowed("superdev", ["workflow", "block"])) throw new Error("BUILD cannot publish a block checkpoint");
+	if (buildCommandAllowed("superdev", ["file"])) throw new Error("BUILD can escape through an unrelated service command");
+	if (buildCommandAllowed("superdev", ["workflow", "transition"])) throw new Error("BUILD can transition workflow state");
 	for (const command of [
 		"superdev workflow block",
 		"superdev workflow attempt",

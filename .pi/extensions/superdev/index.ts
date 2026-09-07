@@ -178,9 +178,12 @@ export function isolatedRoleMayNotRun(command: string): boolean {
 }
 
 export function buildCommandAllowed(command: string, args: string[]): boolean {
-	if (!["cargo", "npm", "node", "superdev", "git"].includes(command)) return false;
+	if (!/^[A-Za-z0-9_.+-]+$/.test(command) || ["bash", "sh", "zsh", "fish", "pwsh", "powershell", "cmd"].includes(command)) return false;
 	if (command === "git" && !["diff", "status", "show", "rev-parse", "merge-base", "ls-files"].includes(args[0] ?? "")) return false;
-	return command !== "superdev" || !isolatedRoleMayNotRun([command, ...args].join(" "));
+	if (command === "superdev") {
+		return args[0] === "workflow" && ["block", "attempt", "correction-checkpoint", "status"].includes(args[1] ?? "");
+	}
+	return true;
 }
 
 export default function superdev(pi: ExtensionAPI) {
@@ -240,9 +243,21 @@ export default function superdev(pi: ExtensionAPI) {
 			if (!buildCommandAllowed(input.command, input.args)) {
 				throw new Error(`BUILD executable or operation is not permitted: ${input.command}`);
 			}
+			const serviceCheckpoint = input.command === "superdev";
+			const before = serviceCheckpoint ? undefined : await pi.exec("git", ["rev-parse", "--verify", "HEAD"], { cwd: ctx.cwd });
+			if (before && before.code !== 0) throw new Error("could not capture the BUILD command baseline");
 			const result = await pi.exec(input.command, input.args, { cwd: ctx.cwd });
+			if (before) {
+				const after = await pi.exec("git", ["rev-parse", "--verify", "HEAD"], { cwd: ctx.cwd });
+				if (after.code !== 0 || after.stdout.trim() !== before.stdout.trim()) {
+					if (after.code === 0) {
+						await pi.exec("git", ["update-ref", "HEAD", before.stdout.trim(), after.stdout.trim()], { cwd: ctx.cwd });
+					}
+					throw new Error("BUILD command attempted to mutate Git history");
+				}
+			}
 			if (result.code !== 0) throw new Error(result.stderr.trim() || `${input.command} exited ${result.code}`);
-			return { content: [{ type: "text", text: result.stdout || "Command completed." }], details: { shellFree: true } };
+			return { content: [{ type: "text", text: result.stdout || "Command completed." }], details: { shellFree: true, headPreserved: !serviceCheckpoint } };
 		},
 	});
 	if (childRole) return;
