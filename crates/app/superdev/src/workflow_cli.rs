@@ -1763,6 +1763,7 @@ fn run_verification_command(root: &Path, command: &str) -> Result<()> {
     let output = process
         .current_dir(root)
         .env("SUPERDEV_VERIFICATION_ACTIVE", "1")
+        .env_remove("SUPERDEV_UI_AUTHORITY")
         .stdin(Stdio::null())
         .output()
         .map_err(|source| Error::Command {
