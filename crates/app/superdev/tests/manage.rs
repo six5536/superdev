@@ -446,6 +446,77 @@ fn workflow_start_creates_a_canonical_scope_plan_and_resume_adopts_it() {
     let scoped_revision = parse_concept(&plan.to_string_lossy(), &scoped)
         .unwrap()
         .content_hash;
+    fs::create_dir_all(dir.path().join("src")).unwrap();
+    fs::write(
+        dir.path().join("src/scope.rs"),
+        "product changes belong to BUILD\n",
+    )
+    .unwrap();
+    let before_scope_refusal = git::revision(dir.path(), "HEAD").unwrap();
+    Command::cargo_bin("superdev")
+        .unwrap()
+        .current_dir(dir.path())
+        .args([
+            "workflow",
+            "scope-checkpoint",
+            "--session",
+            "pi-b",
+            "--expected-revision",
+            &revision,
+        ])
+        .assert()
+        .failure();
+    assert_eq!(
+        git::revision(dir.path(), "HEAD").unwrap(),
+        before_scope_refusal
+    );
+    assert_eq!(
+        cache::load(dir.path()).unwrap().unwrap().last_plan_revision,
+        revision
+    );
+    fs::remove_file(dir.path().join("src/scope.rs")).unwrap();
+    fs::remove_dir(dir.path().join("src")).unwrap();
+    Command::cargo_bin("superdev")
+        .unwrap()
+        .current_dir(dir.path())
+        .args([
+            "workflow",
+            "scope-checkpoint",
+            "--session",
+            "pi-b",
+            "--expected-revision",
+            &revision,
+        ])
+        .assert()
+        .success();
+    let revision = cache::load(dir.path()).unwrap().unwrap().last_plan_revision;
+    let scope_candidate = git::revision(dir.path(), "HEAD").unwrap();
+    Command::cargo_bin("superdev")
+        .unwrap()
+        .current_dir(dir.path())
+        .env("SUPERDEV_UI_AUTHORITY", "fedcba9876543210fedcba9876543210")
+        .args([
+            "workflow",
+            "evidence",
+            "--session",
+            "pi-b",
+            "--expected-revision",
+            &revision,
+            "--revision",
+            &scoped_revision,
+            "--kind",
+            "scope-review",
+            "--review-session",
+            "review-wrong-candidate",
+            "--candidate",
+            &before_scope_refusal,
+        ])
+        .assert()
+        .failure();
+    assert_eq!(
+        cache::load(dir.path()).unwrap().unwrap().last_plan_revision,
+        revision
+    );
     Command::cargo_bin("superdev")
         .unwrap()
         .current_dir(dir.path())
@@ -463,6 +534,8 @@ fn workflow_start_creates_a_canonical_scope_plan_and_resume_adopts_it() {
             "scope-review",
             "--review-session",
             "review-scope",
+            "--candidate",
+            &scope_candidate,
         ])
         .assert()
         .success();
@@ -1076,6 +1149,21 @@ fn workflow_start_creates_a_canonical_scope_plan_and_resume_adopts_it() {
     Command::cargo_bin("superdev")
         .unwrap()
         .current_dir(dir.path())
+        .args([
+            "workflow",
+            "scope-checkpoint",
+            "--session",
+            "pi-b",
+            "--expected-revision",
+            &expected,
+        ])
+        .assert()
+        .success();
+    let expected = cache::load(dir.path()).unwrap().unwrap().last_plan_revision;
+    let scope_candidate = git::revision(dir.path(), "HEAD").unwrap();
+    Command::cargo_bin("superdev")
+        .unwrap()
+        .current_dir(dir.path())
         .env("SUPERDEV_UI_AUTHORITY", "fedcba9876543210fedcba9876543210")
         .args([
             "workflow",
@@ -1090,6 +1178,8 @@ fn workflow_start_creates_a_canonical_scope_plan_and_resume_adopts_it() {
             "scope-review",
             "--review-session",
             "review-rescope",
+            "--candidate",
+            &scope_candidate,
         ])
         .assert()
         .success();

@@ -426,6 +426,9 @@ export default function superdev(pi: ExtensionAPI) {
 			if (modifyingBusy || modifyingChild) return ctx.ui.notify("A modifying workflow role is already active", "error");
 			const initial = await workflowStatus(ctx.cwd);
 			if (!initial.owner || initial.phase !== "scope") return ctx.ui.notify("An owned SCOPE workflow is required", "error");
+			const scopeBaseResult = await pi.exec("git", ["rev-parse", "--verify", initial.owner.identity.work_branch], { cwd: ctx.cwd });
+			if (scopeBaseResult.code !== 0) return ctx.ui.notify("Could not resolve the pre-SCOPE revision", "error");
+			const scopeBase = scopeBaseResult.stdout.trim();
 			const scoped = await isolated("scope", args || `Complete ${initial.owner.identity.plan} from canonical state.`, ctx.cwd, ctx.model, undefined,
 				(child) => { children.add(child); modifyingChild = child; },
 				(child) => { children.delete(child); if (modifyingChild === child) modifyingChild = undefined; });
@@ -433,10 +436,10 @@ export default function superdev(pi: ExtensionAPI) {
 			const status = await workflowStatus(ctx.cwd);
 			const owner = status.owner;
 			if (!owner || status.phase !== "scope" || !status.canonicalPlanRevision) throw new Error("SCOPE ownership changed during isolated work");
-			const baseResult = await pi.exec("git", ["rev-parse", "--verify", owner.identity.default_branch], { cwd: ctx.cwd });
+			if (owner.last_plan_revision === initial.owner.last_plan_revision) throw new Error("SCOPE child did not publish a reviewable checkpoint");
 			const candidateResult = await pi.exec("git", ["rev-parse", "--verify", owner.identity.work_branch], { cwd: ctx.cwd });
-			if (baseResult.code !== 0 || candidateResult.code !== 0) return ctx.ui.notify("Could not resolve immutable review revisions", "error");
-			const base = baseResult.stdout.trim();
+			if (candidateResult.code !== 0) return ctx.ui.notify("Could not resolve immutable review revisions", "error");
+			const base = scopeBase;
 			const candidate = candidateResult.stdout.trim();
 			const reviewed = await isolated("requirements-review", `Review immutable SCOPE diff ${base}..${candidate} and return the required structured result.`, ctx.cwd, ctx.model, undefined,
 				(child) => children.add(child), (child) => children.delete(child), base, candidate);
@@ -445,7 +448,7 @@ export default function superdev(pi: ExtensionAPI) {
 			const evidence = await runSuperdev([
 				"workflow", "evidence", "--session", owner.session_id,
 				"--expected-revision", owner.last_plan_revision, "--revision", status.canonicalPlanRevision,
-				"--kind", "scope-review", "--review-session", reviewRun,
+				"--kind", "scope-review", "--review-session", reviewRun, "--candidate", candidate,
 			], ctx.cwd, authority) as { result?: { last_plan_revision?: string } };
 			const revision = evidence.result?.last_plan_revision;
 			if (!revision) throw new Error("scope evidence response omitted the new plan revision");

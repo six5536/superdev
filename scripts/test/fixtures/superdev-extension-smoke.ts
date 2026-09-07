@@ -41,6 +41,7 @@ export default function smoke() {
 		if (!isolatedRoleMayNotRun(command)) throw new Error(`isolated role may bypass ${command}`);
 	}
 	for (const command of [
+		"superdev workflow scope-checkpoint",
 		"superdev workflow block",
 		"superdev workflow attempt",
 		"superdev workflow correction-checkpoint",

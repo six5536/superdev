@@ -358,6 +358,8 @@ pub enum WorkflowCommand {
     Bind(BindArgs),
     /// Apply one typed phase transition after checking supplied evidence
     Transition(TransitionArgs),
+    /// Commit one review-ready, knowledge-only SCOPE proposal
+    ScopeCheckpoint(RevisionArgs),
     /// Commit a validated BUILD block checkpoint
     Block(ProgressArgs),
     /// Record one normalized failed BUILD attempt
@@ -811,6 +813,8 @@ the invoking adapter.
 | `superdev workflow bind` | 2 | identity, revision, branch, or ownership is invalid |
 | `superdev workflow transition` | 0 | the gated transition is persisted, including primary-issue discovery preservation when returning to SCOPE |
 | `superdev workflow transition` | 2 | ownership, revision, phase, required feedback, or evidence is invalid |
+| `superdev workflow scope-checkpoint` | 0 | one valid knowledge-only SCOPE proposal is committed for immutable review |
+| `superdev workflow scope-checkpoint` | 2 | ownership, revision, identity, branch, phase, canonical validation, or path scope is invalid |
 | `superdev workflow block` | 0 | the newly completed BUILD block passes dependency and executable checks and its path-scoped checkpoint is committed |
 | `superdev workflow block` | 2 | ownership, revision, identity, branch, phase, dependency, executable evidence, or path scope is invalid |
 | `superdev workflow attempt` | 0 | one normalized failed BUILD attempt is durably counted |

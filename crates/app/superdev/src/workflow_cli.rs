@@ -63,6 +63,8 @@ pub enum WorkflowCommand {
     Bind(BindArgs),
     /// Apply one typed phase transition after checking supplied evidence
     Transition(TransitionArgs),
+    /// Commit one review-ready, knowledge-only SCOPE proposal
+    ScopeCheckpoint(RevisionArgs),
     /// Commit a validated BUILD block checkpoint
     Block(ProgressArgs),
     /// Record one normalized failed BUILD attempt
@@ -414,6 +416,7 @@ pub fn run(command: &WorkflowCommand, root: &Path) -> Result<u8> {
                 &serde_json::json!({"phaseChanged": false, "ownershipReleased": true}),
             )
         }
+        WorkflowCommand::ScopeCheckpoint(args) => record_scope_checkpoint(&root, args),
         WorkflowCommand::Block(args) => cache::transaction(&root, |transaction| {
             let owner = transaction.load()?.ok_or_else(|| Error::Manifest {
                 message: "workflow is unowned".into(),
@@ -998,6 +1001,55 @@ fn knowledge_contains(root: &Path, needle: &str) -> Result<bool> {
     Ok(false)
 }
 
+fn record_scope_checkpoint(root: &Path, args: &RevisionArgs) -> Result<u8> {
+    cache::transaction(root, |transaction| {
+        let owner = transaction.load()?.ok_or_else(|| Error::Manifest {
+            message: "workflow is unowned".into(),
+        })?;
+        if owner.session_id != args.session || owner.last_plan_revision != args.expected_revision {
+            return Err(Error::Manifest {
+                message: "workflow ownership or plan revision changed".into(),
+            });
+        }
+        validate_identity_values(root, &owner.identity)?;
+        if git::current_branch(root)? != owner.identity.work_branch {
+            return Err(Error::Manifest {
+                message: "SCOPE checkpoint requires the checked-out work branch".into(),
+            });
+        }
+        if plan_record(root, &owner.identity.plan)?.phase != "scope" {
+            return Err(Error::Manifest {
+                message: "SCOPE checkpoints are permitted only during SCOPE".into(),
+            });
+        }
+        let (_, observed) = plan_revision(root, &owner.identity.plan)?;
+        if observed == args.expected_revision {
+            return Err(Error::Manifest {
+                message: "SCOPE checkpoint requires a changed canonical plan".into(),
+            });
+        }
+        let grammar = superdev_core::validate::schema::load_grammar(root)?;
+        let report =
+            superdev_core::validate::validate_repo(root, &root.join("knowledge"), &[], &grammar)?;
+        if !report.report.passed() {
+            return Err(Error::Manifest {
+                message: "SCOPE checkpoint requires valid canonical knowledge".into(),
+            });
+        }
+        let commit =
+            git::commit_knowledge_changes(root, "docs(workflow): checkpoint scope proposal")?;
+        let revision = plan_revision(root, &owner.identity.plan)?.1;
+        let state =
+            transaction.compare_and_swap(&args.session, &args.expected_revision, |state| {
+                state.last_plan_revision.clone_from(&revision)
+            })?;
+        emit(
+            "scope-checkpoint",
+            &serde_json::json!({"commit": commit, "revision": revision, "state": state}),
+        )
+    })
+}
+
 fn record_attempt(root: &Path, args: &AttemptArgs) -> Result<u8> {
     cache::transaction(root, |transaction| {
         let owner = transaction.load()?.ok_or_else(|| Error::Manifest {
@@ -1444,9 +1496,7 @@ fn record_evidence_locked(
         });
     }
     validate_identity_values(root, &state.identity)?;
-    if !matches!(args.kind, EvidenceKindName::ScopeReview) {
-        git::require_clean(root)?;
-    }
+    git::require_clean(root)?;
     if git::current_branch(root)? != state.identity.work_branch {
         return Err(Error::Manifest {
             message: "evidence requires the checked-out work branch".into(),
@@ -1455,10 +1505,13 @@ fn record_evidence_locked(
     let record = plan_record(root, &state.identity.plan)?;
     let (path, observed) = plan_revision(root, &state.identity.plan)?;
     if matches!(args.kind, EvidenceKindName::ScopeReview) {
-        if args.revision.as_deref() != Some(observed.as_str()) || observed == args.expected_revision
+        let head = git::revision(root, "HEAD")?;
+        if args.revision.as_deref() != Some(observed.as_str())
+            || observed != args.expected_revision
+            || args.candidate.as_deref() != Some(head.as_str())
         {
             return Err(Error::Manifest {
-                message: "scope review must bind the changed canonical plan revision".into(),
+                message: "scope review must bind the checkpointed canonical plan and commit".into(),
             });
         }
     } else if args.revision.is_some() || observed != args.expected_revision {
