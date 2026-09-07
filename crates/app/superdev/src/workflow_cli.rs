@@ -788,6 +788,7 @@ fn record_evidence_locked(
             message: "workflow ownership or plan revision changed".into(),
         });
     }
+    cache::verify_authority(&state, &ui_authority_capability()?)?;
     if args.review_session.trim().is_empty() || args.review_session == args.session {
         return Err(Error::Manifest {
             message: "evidence requires a distinct isolated reviewer session".into(),

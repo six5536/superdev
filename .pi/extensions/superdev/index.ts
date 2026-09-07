@@ -11,6 +11,8 @@ const here = dirname(fileURLToPath(import.meta.url));
 const schema = Type.Object({
 	role: StringEnum(["scope", "requirements-review", "build", "code-review", "accept", "file"] as const),
 	task: Type.String({ description: "Bounded task and all input the isolated role needs" }),
+	base: Type.Optional(Type.String({ description: "Immutable review base" })),
+	candidate: Type.Optional(Type.String({ description: "Immutable review candidate" })),
 });
 type Input = Static<typeof schema>;
 
@@ -93,9 +95,14 @@ async function isolated(
 	signal?: AbortSignal,
 	onSpawn?: (child: ChildProcess) => void,
 	onClose?: (child: ChildProcess) => void,
+	base?: string,
+	candidate?: string,
 ): Promise<RoleResult> {
 	const promptPath = resolve(here, "prompts", `${role}.md`);
 	const rolePrompt = await readFile(promptPath, "utf8");
+	if (readOnly.has(role) && (!base || !candidate || !/^[0-9a-f]{7,64}$/.test(base) || !/^[0-9a-f]{7,64}$/.test(candidate))) {
+		throw new Error(`${role} requires immutable hexadecimal base and candidate revisions`);
+	}
 	const args = ["--mode", "json", "-p", "--no-session", "--approve", "--append-system-prompt", rolePrompt];
 	if (model) args.push("--provider", model.provider, "--model", model.id);
 	args.push("--tools", readOnly.has(role) ? "read,superdev_review_diff,sokf_search,sokf_graph" : role === "file" ? "read,sokf_search,sokf_graph" : "read,bash,edit,write,sokf_search,sokf_graph");
@@ -106,7 +113,12 @@ async function isolated(
 			shell: false,
 			detached: process.platform !== "win32",
 			stdio: ["ignore", "pipe", "pipe"],
-			env: { ...process.env, SUPERDEV_CHILD_ROLE: role },
+			env: {
+				...process.env,
+				SUPERDEV_CHILD_ROLE: role,
+				...(base ? { SUPERDEV_REVIEW_BASE: base } : {}),
+				...(candidate ? { SUPERDEV_REVIEW_CANDIDATE: candidate } : {}),
+			},
 		});
 		onSpawn?.(child);
 		let stdout = "";
@@ -169,6 +181,7 @@ export default function superdev(pi: ExtensionAPI) {
 	});
 
 	const authority = randomBytes(32).toString("hex");
+	const reviewRuns = new Map<string, { role: "requirements-review" | "code-review"; result: RoleResult; base: string; candidate: string }>();
 	const children = new Set<ChildProcess>();
 	let modifyingChild: ChildProcess | undefined;
 	let modifyingBusy = false;
@@ -183,6 +196,10 @@ export default function superdev(pi: ExtensionAPI) {
 			candidate: Type.String(),
 		}),
 		execute: async (_id, input: { base: string; candidate: string }, _signal, _update, ctx) => {
+			if (childRole && readOnly.has(childRole) && (
+				input.base !== process.env.SUPERDEV_REVIEW_BASE
+				|| input.candidate !== process.env.SUPERDEV_REVIEW_CANDIDATE
+			)) throw new Error("review diff revisions differ from the orchestrator-bound candidate");
 			for (const revision of [input.base, input.candidate]) {
 				if (!/^[0-9a-f]{7,64}$/.test(revision)) throw new Error("review revisions must be hexadecimal object IDs");
 			}
@@ -229,13 +246,15 @@ export default function superdev(pi: ExtensionAPI) {
 		label: "Superdev workflow control",
 		description: "Invoke one typed Rust workflow operation; human-gated actions confirm in trusted Pi UI",
 		parameters: Type.Object({
-			action: StringEnum(["start", "resume", "approve-scope", "return-to-scope", "finish-build", "reject-acceptance", "accept", "abandon"] as const),
+			action: StringEnum(["start", "resume", "record-scope-review", "record-final-evidence", "approve-scope", "return-to-scope", "finish-build", "reject-acceptance", "accept", "abandon"] as const),
 			session: Type.String(),
 			issue: Type.Optional(Type.String()),
 			plan: Type.Optional(Type.String()),
 			workBranch: Type.Optional(Type.String()),
 			defaultBranch: Type.Optional(Type.String()),
 			expectedRevision: Type.Optional(Type.String()),
+			reviewRun: Type.Optional(Type.String()),
+			candidate: Type.Optional(Type.String()),
 			phase: Type.Optional(StringEnum(["scope", "build", "accept"] as const)),
 			feedback: Type.Optional(Type.String()),
 			reason: Type.Optional(Type.String()),
@@ -256,6 +275,14 @@ export default function superdev(pi: ExtensionAPI) {
 				if (!input.issue || !input.plan || !input.workBranch) throw new Error("workflow identity is incomplete");
 				args.push(input.action, "--session", input.session, "--issue", input.issue, "--plan", input.plan, "--work-branch", input.workBranch);
 				if (input.defaultBranch) args.push("--default-branch", input.defaultBranch);
+			} else if (input.action === "record-scope-review" || input.action === "record-final-evidence") {
+				if (!input.expectedRevision || !input.reviewRun) throw new Error("evidence compare-and-swap fields are incomplete");
+				const review = reviewRuns.get(input.reviewRun);
+				const expectedRole = input.action === "record-scope-review" ? "requirements-review" : "code-review";
+				if (!review || review.role !== expectedRole || review.result.status !== "clean") throw new Error("evidence does not name a clean bound review run");
+				if (input.action === "record-final-evidence" && (!input.candidate || input.candidate !== review.candidate)) throw new Error("final evidence candidate differs from the reviewed candidate");
+				args.push("evidence", "--session", input.session, "--expected-revision", input.expectedRevision, "--kind", input.action === "record-scope-review" ? "scope-review" : "final", "--review-session", input.reviewRun);
+				if (input.candidate) args.push("--candidate", input.candidate);
 			} else if (input.action === "abandon") {
 				if (!input.expectedRevision || !input.phase || !input.reason?.trim()) throw new Error("abandonment disposition is incomplete");
 				args.push("abandon", "--session", input.session, "--expected-revision", input.expectedRevision, "--phase", input.phase, "--reason", input.reason);
@@ -268,6 +295,7 @@ export default function superdev(pi: ExtensionAPI) {
 				}
 			}
 			const result = await runSuperdev(args, ctx.cwd, authority);
+			if ((input.action === "record-scope-review" || input.action === "record-final-evidence") && input.reviewRun) reviewRuns.delete(input.reviewRun);
 			return { content: [{ type: "text", text: JSON.stringify(result) }], details: { result, humanGated: humanAction || acceptanceRequiresHuman } };
 		},
 	});
@@ -296,10 +324,18 @@ export default function superdev(pi: ExtensionAPI) {
 						children.delete(child);
 						if (modifyingChild === child) modifyingChild = undefined;
 					},
+					input.base,
+					input.candidate,
 				);
+				let reviewRun: string | undefined;
+				if (input.role === "requirements-review" || input.role === "code-review") {
+					reviewRun = randomBytes(24).toString("hex");
+					reviewRuns.set(reviewRun, { role: input.role, result, base: input.base!, candidate: input.candidate! });
+				}
+				const terminal = { ...result, ...(reviewRun ? { reviewRun } : {}) };
 				return {
-					content: [{ type: "text", text: JSON.stringify(result) }],
-					details: { role: input.role, result, isolated: true, readOnly: readOnly.has(input.role) },
+					content: [{ type: "text", text: JSON.stringify(terminal) }],
+					details: { role: input.role, result, reviewRun, isolated: true, readOnly: readOnly.has(input.role) },
 				};
 			} finally {
 				if (modifying) modifyingBusy = false;

@@ -383,7 +383,7 @@ mod tests {
 - `P_ui-authority-adapter` [event] WHEN an action requires human authority, Pi SHALL expose its capability to the service only after interactive confirmation.
 - `P_cancel-pauses` [event] WHEN cancellation occurs, the service SHALL release transient ownership without changing the canonical phase or deleting uncommitted SCOPE drafts.
 - `P_abandon-human-only` [event] WHEN abandonment is requested, the service SHALL require interactive human approval while excluding partial product work from integration.
-- `P_evidence-durable` [event] WHEN an isolated scope review or final BUILD review completes cleanly, the evidence command SHALL record the distinct reviewer session and immutable revisions in canonical Completion evidence.
+- `P_evidence-durable` [event] WHEN a Pi-bound isolated scope review or final BUILD review completes cleanly, the evidence command SHALL require UI authority and record the extension-issued single-use review run plus immutable revisions in canonical Completion evidence.
 - `P_gates-derived` [ubiquitous] Phase transitions SHALL calculate non-human gates from canonical evidence and repository state rather than caller-provided boolean flags.
 - `P_resume-recovers-evidence` [event] WHEN ownership resumes, the service SHALL reconstruct candidate and verified-default revisions from canonical Completion evidence rather than treating cache loss as evidence loss.
 - `P_closure-transactional` [event] WHEN acceptance or abandonment closes records, the service SHALL stage, repair, and validate the complete knowledge closure before publishing it.
