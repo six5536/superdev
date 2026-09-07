@@ -1220,6 +1220,9 @@ fn transition_locked(
             &["Human scope approval: approved.".into()],
         )?);
     }
+    if matches!(transition, Transition::RejectAcceptance) {
+        edits.push(invalidate_final_evidence_edit(&plan_text)?);
+    }
     if matches!(next, Phase::Done | Phase::Abandoned) {
         edits.push(ExactEdit {
             old_text: "lifecycle: open".into(),
@@ -1642,6 +1645,35 @@ fn copy_tree(source: &Path, destination: &Path) -> Result<()> {
     Ok(())
 }
 
+fn invalidate_final_evidence_edit(plan: &str) -> Result<ExactEdit> {
+    let marker = "## Completion evidence\n\n";
+    let start = plan.find(marker).ok_or_else(|| Error::Manifest {
+        message: "workflow plan has no Completion evidence section".into(),
+    })? + marker.len();
+    let tail = &plan[start..];
+    let end = tail
+        .find("\n## ")
+        .or_else(|| tail.find("\n<!-- sokf:links -->"))
+        .unwrap_or(tail.len());
+    let old = &tail[..end];
+    let prefixes = [
+        "Candidate revision: ",
+        "Verified default revision: ",
+        "Final verification: ",
+        "Documentation verification: ",
+        "Final review: ",
+    ];
+    let retained = old
+        .lines()
+        .filter(|line| !prefixes.iter().any(|prefix| line.starts_with(prefix)))
+        .collect::<Vec<_>>()
+        .join("\n");
+    Ok(ExactEdit {
+        old_text: format!("{marker}{old}"),
+        new_text: format!("{marker}{}\n", retained.trim_end()),
+    })
+}
+
 fn completion_evidence_edit(plan: &str, lines: &[String]) -> Result<ExactEdit> {
     let marker = "## Completion evidence\n\n";
     let start = plan.find(marker).ok_or_else(|| Error::Manifest {
@@ -1774,6 +1806,17 @@ mod tests {
             evidence_revision(&changed, "Verified default revision").as_deref(),
             Some("1234567")
         );
+    }
+
+    #[test]
+    fn acceptance_rejection_invalidates_only_final_evidence() {
+        let plan = "## Completion evidence\n\nScope requirements review: clean.\n\nCandidate revision: abcdef1.\n\nVerified default revision: 1234567.\n\nFinal verification: passed for abcdef1.\n\nDocumentation verification: passed for abcdef1.\n\nFinal review: clean for abcdef1 by isolated session review.\n\n## Follow-up\n";
+        let edit = invalidate_final_evidence_edit(plan).unwrap();
+        let changed = plan.replace(&edit.old_text, &edit.new_text);
+        assert!(changed.contains("Scope requirements review: clean."));
+        assert!(!changed.contains("Candidate revision:"));
+        assert!(!changed.contains("Final review:"));
+        assert!(changed.contains("## Follow-up"));
     }
 
     #[test]

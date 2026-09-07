@@ -392,6 +392,7 @@ mod tests {
 - `P_closure-transactional` [event] WHEN acceptance or abandonment closes records, the service SHALL stage, repair, and validate the complete knowledge closure before publishing it.
 - `P_service-owned-commits` [event] WHEN canonical evidence or a durable transition is published after a clean-tree preflight, the service SHALL create a knowledge-only commit without invoking hooks or signing.
 - `P_rejection-preserves-feedback` [event] WHEN a human rejects a candidate, the service SHALL return the same plan to SCOPE and preserve the verbatim feedback as an unresolved primary-issue discovery.
+- `P_rejection-invalidates-final` [event] WHEN ACCEPT returns to SCOPE, the service SHALL remove the rejected candidate's verification and review attestations.
 - `P_transition-atomic` [ubiquitous] Evidence, transition, reopening, closure, and integration operations SHALL hold the repository workflow lock through canonical publication and the ownership compare-and-swap.
 
 ### Cross-cutting concerns
