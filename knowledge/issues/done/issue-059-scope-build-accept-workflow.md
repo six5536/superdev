@@ -4,7 +4,7 @@ id: issue-059-scope-build-accept-workflow
 title: The development workflow is contradictory and does not reliably deliver reviewed documentation
 description: The workflow duplicates ownership across skills, leaves manual cases unexecuted, and treats user-facing documentation as an optional final reminder.
 kind: feature
-lifecycle: open
+lifecycle: done
 ---
 
 # Feature: the development workflow is contradictory and does not reliably deliver reviewed documentation
@@ -38,6 +38,10 @@ The replacement covers the complete local development workflow and its managed a
 - [x] BUILD discovery: Final review 59a5aa521b0ced87f2fce9a45ad27c3796a8dd5b79a5ca68 found that cache transactions can report failure after a successful mutation if explicit advisory unlock fails. Add a stable Block 8 limited to crates/lib/superdev-core/src/workflow/cache.rs and the owning plan; make descriptor close the release fallback and never supersede an operation result with a post-mutation unlock error; rerun full Verification.
 - [x] BUILD discovery: A clean final review cannot be attested after approved re-scope because final evidence globally rejects the preserved exhausted correction count. Add Block 9 for crates/app/superdev/src/workflow_cli.rs and its tests: correction limits gate additional correction recording, not clean final evidence after a fresh reviewed and approved SCOPE; preserve the historical count and rerun full Verification.
 - [x] BUILD discovery: Resolve the four completed re-scope discoveries on issue 059 and publish that resolution as stable Block 10; no product behavior changes are authorized. Preserve all history and rerun full Verification.
+## Resolution
+
+The configured acceptance gate approved the reviewed candidate for local integration.
+
 ## Comments
 
 The bootstrap implementation specification is `SCOPE-BUILD-ACCEPT-IMPLEMENTATION-PLAN.md`; it intentionally predates the plan schema it installs.

@@ -65,4 +65,4 @@ work blocks that deliver it; scope writes it and build works it.
 [sokf:plan-026-filing-an-issue-without-framing-it]: /knowledge/plans/done/plan-026-filing-an-issue-without-framing-it.md
 [sokf:plan-027-the-workflow-is-file-scope-build-accept]: /knowledge/plans/done/plan-027-the-workflow-is-file-scope-build-accept.md
 [sokf:plan-028-persistent-mcp-transport-for-pi-sokf]: /knowledge/plans/done/plan-028-persistent-mcp-transport-for-pi-sokf.md
-[sokf:plan-059-scope-build-accept-workflow]: /knowledge/plans/open/plan-059-scope-build-accept-workflow.md
+[sokf:plan-059-scope-build-accept-workflow]: /knowledge/plans/done/plan-059-scope-build-accept-workflow.md
