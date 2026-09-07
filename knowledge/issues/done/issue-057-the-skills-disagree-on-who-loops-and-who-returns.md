@@ -4,7 +4,7 @@ id: issue-057-the-skills-disagree-on-who-loops-and-who-returns
 title: The skills disagree on who loops and who returns, so a literal reading of the pack cycles and the unattended driver duplicates build's loop
 description: contract-design ends with an unconditional call back to /scope, the only cycle in the pack's skill graph, and /execute-plan loops over the plan's blocks calling /build while /build loops over the same blocks and then merges.
 kind: bug
-lifecycle: open
+lifecycle: done
 links:
   - rel: references
     to: issue-052-the-workflow-carries-more-process-than-it-needs
@@ -98,6 +98,10 @@ ADR-050 records.
   asking for a fix.
 - Out: the run state machine and the Stop hook, which the driver drives
   either way.
+
+## Resolution
+
+ADR-052 replaced the overlapping Claude skill loops with one Pi-orchestrated workflow. BUILD now owns the only work-block loop, and the archived Claude skills are not active or materialized.
 
 <!-- sokf:links -->
 [sokf:issue-052-the-workflow-carries-more-process-than-it-needs]: /knowledge/issues/done/issue-052-the-workflow-carries-more-process-than-it-needs.md

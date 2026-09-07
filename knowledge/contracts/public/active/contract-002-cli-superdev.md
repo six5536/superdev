@@ -17,8 +17,8 @@ links:
 
 # CLI contract: superdev
 
-The superdev command line: the manage verbs, the knowledge verbs and the
-run verbs. The Definition is the clap tree as the binary declares it,
+The superdev command line: the manage verbs, knowledge verbs, and the
+local workflow adapter. The Definition is the clap tree as the binary declares it,
 one include per source file; a doc comment on a command or flag is its
 help text and its promise. Behaviour carries what the tree cannot say:
 the exit codes, the streams, and each verb's promises across its flags.
@@ -97,9 +97,11 @@ enum Command {
     /// SOKF knowledge commands
     #[command(subcommand)]
     Sokf(sokf_cli::SokfCommand),
-    /// Drive the state of an unattended workflow run
+    /// File a human-confirmed issue or idea on the local default branch
+    File(workflow_cli::FileArgs),
+    /// Drive the local SCOPE → BUILD → ACCEPT workflow
     #[command(subcommand)]
-    Run(run::RunCommand),
+    Workflow(workflow_cli::WorkflowCommand),
     /// Agent hook plumbing (reads the hook payload from stdin)
     #[command(subcommand)]
     Hook(validate_cli::HookCommand),
@@ -190,14 +192,12 @@ pub struct ValidateArgs {
     pub repo_root: Option<PathBuf>,
 }
 
-/// Claude Code hook plumbing (reads the hook payload from stdin).
+/// Legacy adapter hook plumbing (reads the hook payload from stdin).
 #[derive(clap::Subcommand)]
 pub enum HookCommand {
     /// PostToolUse: validate after an Edit/Write under the SOKF knowledge or
     /// a tree the grammar governs
     Validate,
-    /// Stop: continue an active unattended run, or let the turn end
-    Run,
 }
 ```
 <!-- /sokf:include -->
@@ -314,32 +314,294 @@ pub enum SokfCommand {
 ```
 <!-- /sokf:include -->
 
-<!-- sokf:include /crates/app/superdev/src/run.rs#cli -->
+<!-- sokf:include /crates/app/superdev/src/workflow_cli.rs#cli -->
 ```rust
-/// Drive the state of an unattended workflow run.
-#[derive(clap::Subcommand)]
-pub enum RunCommand {
-    /// Arm an unattended run: create the run state exclusively
-    Begin {
-        /// Session that owns the run (default: $CLAUDE_SESSION_ID)
-        #[arg(long, value_name = "ID")]
-        session: Option<String>,
-        /// The first next step, named by the Stop hook when it continues
-        #[arg(long, value_name = "TEXT")]
-        next: Option<String>,
+/// Human-confirmed out-of-band issue or idea filing.
+#[derive(Args)]
+pub struct FileArgs {
+    /// Record kind
+    #[arg(long, value_enum, default_value = "issue")]
+    kind: FilingKindName,
+    /// Short human title
+    #[arg(long)]
+    title: String,
+    /// Human description to preserve in the record
+    #[arg(long)]
+    description: String,
+    /// Local default branch to advance
+    #[arg(long, default_value = "main")]
+    default_branch: String,
+    /// Confirmation supplied only after the human approves the bounded diff
+    #[arg(long)]
+    human_approved: bool,
+}
+
+/// CLI spelling of fileable record kinds.
+#[derive(Clone, Copy, ValueEnum)]
+enum FilingKindName {
+    Issue,
+    Idea,
+}
+
+/// Versioned workflow operations used by the Pi adapter.
+#[derive(Subcommand)]
+pub enum WorkflowCommand {
+    /// Acquire a workflow for an issue, plan, and reserved work branch
+    Start(BindArgs),
+    /// Report transient ownership and canonical identity
+    Status {
+        /// Emit the versioned JSON protocol response
+        #[arg(long)]
+        json: bool,
     },
-    /// Record a step forward: rewrite next, reset the watchdog, refresh the
-    /// owner
-    Advance {
-        /// The next step, named by the Stop hook when it continues
-        #[arg(long, value_name = "TEXT")]
-        next: String,
-        /// Session that owns the run (default: $CLAUDE_SESSION_ID)
-        #[arg(long, value_name = "ID")]
-        session: Option<String>,
-    },
-    /// End the run: remove the state; harmless when none exists
-    End,
+    /// Acquire or resume ownership with the same identity
+    Bind(BindArgs),
+    /// Apply one typed phase transition after checking supplied evidence
+    Transition(TransitionArgs),
+    /// Commit one review-ready, knowledge-only SCOPE proposal
+    ScopeCheckpoint(RevisionArgs),
+    /// Commit a validated BUILD block checkpoint
+    Block(ProgressArgs),
+    /// Record one normalized failed BUILD attempt
+    Attempt(AttemptArgs),
+    /// Count one failed final verification/review correction cycle
+    Correction(CorrectionArgs),
+    /// Commit one path-scoped implementation correction after a failed final gate
+    CorrectionCheckpoint(RevisionArgs),
+    /// Record isolated review or final verification evidence canonically
+    Evidence(EvidenceArgs),
+    /// Incorporate the expected local default tip into BUILD
+    Sync(SyncArgs),
+    /// Reconstruct and acquire ownership for a known workflow
+    Resume(BindArgs),
+    /// Pause by releasing transient ownership without changing plan phase
+    Cancel(SessionArgs),
+    /// Apply the human-only abandonment transition
+    Abandon(AbandonArgs),
+    /// Merge an accepted closure locally with `git merge --no-ff`
+    Integrate(IntegrateArgs),
+}
+
+/// Stable workflow identity and Pi ownership arguments.
+#[derive(Args)]
+pub struct BindArgs {
+    /// Owning Pi session ID
+    #[arg(long)]
+    session: String,
+    /// Primary issue ID
+    #[arg(long)]
+    issue: String,
+    /// Implementing plan ID
+    #[arg(long)]
+    plan: String,
+    /// Reserved work branch
+    #[arg(long)]
+    work_branch: String,
+    /// Local default branch
+    #[arg(long, default_value = "main")]
+    default_branch: String,
+}
+
+/// Arguments common to compare-and-swap progress events.
+#[derive(Args)]
+pub struct ProgressArgs {
+    /// Owning Pi session ID
+    #[arg(long)]
+    session: String,
+    /// Expected current plan content revision
+    #[arg(long)]
+    expected_revision: String,
+    /// New plan content revision after the Rust-owned mutation
+    #[arg(long)]
+    revision: String,
+}
+
+/// Session and plan compare-and-swap arguments.
+#[derive(Args)]
+pub struct RevisionArgs {
+    /// Owning Pi session ID
+    #[arg(long)]
+    session: String,
+    /// Expected current plan content revision
+    #[arg(long)]
+    expected_revision: String,
+}
+
+/// One failed BUILD command, normalized and counted by Rust.
+#[derive(Args)]
+pub struct AttemptArgs {
+    /// Owning Pi session ID
+    #[arg(long)]
+    session: String,
+    /// Expected current plan content revision
+    #[arg(long)]
+    expected_revision: String,
+    /// Failed command as executed without a shell
+    #[arg(long)]
+    command: String,
+    /// Process exit status
+    #[arg(long)]
+    exit_status: i32,
+    /// Bounded command diagnostics
+    #[arg(long)]
+    diagnostics: String,
+}
+
+/// One candidate-bound failed final gate.
+#[derive(Args)]
+pub struct CorrectionArgs {
+    /// Owning Pi session ID
+    #[arg(long)]
+    session: String,
+    /// Expected current plan content revision
+    #[arg(long)]
+    expected_revision: String,
+    /// Candidate whose final gate failed
+    #[arg(long)]
+    candidate: String,
+    /// Fresh isolated reviewer run
+    #[arg(long)]
+    review_session: String,
+    /// Bounded structured finding summary
+    #[arg(long)]
+    summary: String,
+}
+
+/// Rust-owned canonical evidence attestation.
+#[derive(Args)]
+pub struct EvidenceArgs {
+    /// Owning Pi session ID
+    #[arg(long)]
+    session: String,
+    /// Expected current plan content revision
+    #[arg(long)]
+    expected_revision: String,
+    /// Reviewed SCOPE plan revision after isolated modifying work
+    #[arg(long)]
+    revision: Option<String>,
+    /// Evidence gate being attested
+    #[arg(long, value_enum)]
+    kind: EvidenceKindName,
+    /// Fresh isolated reviewer session ID
+    #[arg(long)]
+    review_session: Option<String>,
+    /// Immutable candidate for final BUILD evidence
+    #[arg(long)]
+    candidate: Option<String>,
+}
+
+#[derive(Clone, Copy, ValueEnum)]
+pub enum EvidenceKindName {
+    ScopeReview,
+    Verification,
+    Final,
+}
+
+/// Session ownership argument.
+#[derive(Args)]
+pub struct SessionArgs {
+    /// Owning Pi session ID
+    #[arg(long)]
+    session: String,
+}
+
+/// Compare-and-swap arguments for BUILD synchronization.
+#[derive(Args)]
+pub struct SyncArgs {
+    /// Owning Pi session ID
+    #[arg(long)]
+    session: String,
+    /// Expected current plan content revision
+    #[arg(long)]
+    expected_revision: String,
+    /// Expected local default-branch tip
+    #[arg(long)]
+    expected_default: String,
+    /// Expected local work-branch tip
+    #[arg(long)]
+    expected_work: String,
+}
+
+/// Typed phase transition names.
+#[derive(Clone, Copy, ValueEnum)]
+pub enum TransitionName {
+    /// SCOPE to BUILD
+    ApproveScope,
+    /// BUILD to SCOPE
+    ReturnToScope,
+    /// ACCEPT to SCOPE
+    RejectAcceptance,
+    /// ACCEPT to DONE
+    Accept,
+    /// Prepared DONE to BUILD after default branch drift
+    RecoverStaleDefault,
+}
+
+/// Compare-and-swap transition and gate evidence.
+#[derive(Args)]
+pub struct TransitionArgs {
+    /// Owning Pi session ID
+    #[arg(long)]
+    session: String,
+    /// Expected current plan content revision
+    #[arg(long)]
+    expected_revision: String,
+    /// Expected current phase
+    #[arg(long, value_enum)]
+    phase: PhaseName,
+    /// Enumerated transition
+    #[arg(long, value_enum)]
+    transition: TransitionName,
+    /// BUILD discovery or human rejection preserved verbatim on the primary issue
+    #[arg(long)]
+    feedback: Option<String>,
+}
+
+/// CLI spelling of durable phases.
+#[derive(Clone, Copy, ValueEnum)]
+pub enum PhaseName {
+    Scope,
+    Build,
+    Accept,
+    Done,
+    Abandoned,
+}
+
+/// Human-only abandonment request.
+#[derive(Args)]
+pub struct AbandonArgs {
+    /// Owning Pi session ID
+    #[arg(long)]
+    session: String,
+    /// Expected current plan content revision
+    #[arg(long)]
+    expected_revision: String,
+    /// Expected current phase
+    #[arg(long, value_enum)]
+    phase: PhaseName,
+    /// Human-approved disposition recorded on the issue
+    #[arg(long)]
+    reason: String,
+}
+
+/// Compare-and-swap local integration arguments.
+#[derive(Args)]
+pub struct IntegrateArgs {
+    /// Owning Pi session ID
+    #[arg(long)]
+    session: String,
+    /// Local default branch
+    #[arg(long)]
+    default_branch: String,
+    /// Expected default branch tip
+    #[arg(long)]
+    expected_default: String,
+    /// Accepted work branch
+    #[arg(long)]
+    work_branch: String,
+    /// Expected closure commit
+    #[arg(long)]
+    expected_work: String,
 }
 ```
 <!-- /sokf:include -->
@@ -360,9 +622,8 @@ usage errors and the side effects.
 - `P_init-manifest-first` [ubiquitous] `init` SHALL write the manifest
   before applying, so a failed run leaves the file the retry resumes
   from.
-- `P_init-agents-chain` [ubiquitous] `init` SHALL ensure `CLAUDE.md`
-  carries `@AGENTS.md` and `AGENTS.md` carries `@.agents/superdev.md`,
-  appending to an existing file.
+- `P_init-agents-chain` [ubiquitous] `init` SHALL ensure `AGENTS.md`
+  carries `@.agents/superdev.md`, appending to an existing file.
 - `P_init-releases-managed-name` [event] WHEN the repo already has a
   skill under a managed name, `init` SHALL release that skill into
   `custom` before anything is written.
@@ -408,9 +669,9 @@ usage errors and the side effects.
   absent, `validate` SHALL NOT list a warning.
 - `P_validate-states-both-counts` [ubiquitous] `validate` SHALL state
   both counts, with or without `--warnings`.
-- `P_hooks-share-validate-default` [ubiquitous] `hook validate` and
-  `hook run` SHALL report on the default `validate` reports on, so one
-  rule holds whoever ran the check (ADR-040).
+- `P_hook-shares-validate-default` [ubiquitous] `hook validate` SHALL
+  report on the default `validate` reports on, so one rule holds whoever
+  ran the check.
 - `P_validate-path-replaces-defaults` [event] WHEN a `PATH` is given,
   `validate` SHALL replace both defaults with the `PATH` for what is
   reported.
@@ -418,21 +679,25 @@ usage errors and the side effects.
   document, `validate` SHALL report the document with bare-run parity.
 - `P_hook-validate-no-fix` [ubiquitous] `hook validate` SHALL NOT pass
   `--fix`.
-- `P_run-begin-refusal-names-owner` [event] WHEN `run begin` refuses,
-  `run begin` SHALL name the owning session and `run end`.
-- `P_hook-run-fails-open` [event] WHEN the run state cannot be read,
-  `hook run` SHALL report it on stderr and exit `0`.
-- `P_hook-run-unreadable-payload` [event] WHEN the payload cannot be
-  read from stdin or parsed, `hook run` SHALL exit `2`.
-- `P_hook-run-holds-on-error` [state] WHILE `validate` reports an
-  error, `hook run` SHALL refuse to end the turn, naming the findings
-  on stderr, so a document cannot be left with a link to a file that
-  never arrived (ADR-039).
-- `P_hook-run-unreadable-knowledge` [event] WHEN the knowledge cannot
-  be read or checked, `hook run` SHALL let the turn end.
-- `P_hook-run-hold-cap` [event] WHEN `HOLD_CAP` holds have been held in
-  one session, `hook run` SHALL report and let the turn end, so a
-  finding the agent cannot resolve stalls nothing.
+- `P_workflow-versioned-json` [ubiquitous] Every successful `workflow`
+  command SHALL return one JSON object carrying protocol
+  `superdev-workflow/v1`.
+- `P_workflow-owned-transitions` [ubiquitous] A mutating `workflow`
+  command SHALL require the owning session and expected plan revision.
+- `P_workflow-cancel-pauses` [event] WHEN `workflow cancel` succeeds,
+  it SHALL release transient ownership without changing canonical phase.
+- `P_workflow-local-integration` [ubiquitous] After clean-tree and expected-tip
+  checks, `workflow integrate` SHALL execute shell-free local
+  `git merge --no-ff` without pushing, releasing, deleting branches, stashing,
+  resetting, discarding, absorbing unrelated changes, or resolving conflicts
+  implicitly.
+- `P_workflow-integration-bound` [ubiquitous] `workflow integrate` SHALL
+  require the bound issue, plan, refs, reviewed candidate, verified default
+  tip, done closure, and administrative-only descendants to agree.
+- `P_file-default-branch` [ubiquitous] `file` SHALL create and validate one
+  human-confirmed issue or idea in an isolated temporary worktree, commit only
+  knowledge, and compare-and-swap the local default branch without changing an
+  active workflow worktree.
 - `P_sokf-index-rebuilds-in-full` [ubiquitous] `sokf index` SHALL
   rebuild the index in full.
 - `P_sokf-index-says-lexical-only` [event] WHEN no embedding model
@@ -482,7 +747,7 @@ usage errors and the side effects.
   SHALL NOT block on a finding only the whole tree settles — a broken
   body link or an `index.md` entry naming a missing file: the hook is
   handed one edited file and cannot see whether the target arrives in
-  the next edit, and `hook run` judges those findings (ADR-039).
+  the next edit.
 - `P_mcp-sokf-serves-knowledge` [ubiquitous] `mcp sokf` SHALL serve
   the canonical knowledge over stdio; what it serves is
   [contract-003-api-sokf][sokf:contract-003-api-sokf]'s to bind.
@@ -493,8 +758,8 @@ usage errors and the side effects.
 ### Exit codes
 
 The table lists `2` only where the code carries a meaning beyond a
-usage error. For `hook validate` and `hook run`, `2` is the blocking
-code Claude Code hands back to the agent.
+usage error. For `hook validate`, `2` is the blocking code returned to
+the invoking adapter.
 
 - `P_usage-error-exits-2` [event] WHEN a usage error occurs, every
   command SHALL exit `2`.
@@ -538,17 +803,41 @@ code Claude Code hands back to the agent.
 | `superdev sokf edit` | 2 | malformed input or a failed precondition left the target unchanged |
 | `superdev sokf write` | 0 | the mutation was applied, including an invalid or unknown resulting state |
 | `superdev sokf write` | 2 | malformed input or a failed precondition left the target unchanged |
-| `superdev run` | 2 | no subcommand named |
-| `superdev run begin` | 0 | the run is armed |
-| `superdev run begin` | 2 | a run already exists |
-| `superdev run advance` | 0 | the step is recorded |
-| `superdev run advance` | 2 | no run, or a session that does not own it |
-| `superdev run end` | 0 | no run state remains |
+| `superdev file` | 0 | a confirmed issue or idea was committed on the default branch |
+| `superdev file` | 2 | confirmation, validation, duplicate, worktree, or compare-and-swap checks failed |
+| `superdev workflow` | 2 | no subcommand named |
+| `superdev workflow start` | 0 | ownership, a work branch, and an initial canonical SCOPE plan are created |
+| `superdev workflow start` | 2 | identity, ownership, issue, branch, tree, or plan state is invalid |
+| `superdev workflow status` | 0 | canonical and transient state is reported |
+| `superdev workflow bind` | 0 | transient ownership is acquired |
+| `superdev workflow bind` | 2 | identity, revision, branch, or ownership is invalid |
+| `superdev workflow transition` | 0 | the gated transition is persisted, including primary-issue discovery preservation when returning to SCOPE |
+| `superdev workflow transition` | 2 | ownership, revision, phase, required feedback, or evidence is invalid |
+| `superdev workflow scope-checkpoint` | 0 | one valid knowledge-only SCOPE proposal is committed for immutable review |
+| `superdev workflow scope-checkpoint` | 2 | ownership, revision, identity, branch, phase, canonical validation, or path scope is invalid |
+| `superdev workflow block` | 0 | the newly completed BUILD block passes dependency and executable checks and its path-scoped checkpoint is committed |
+| `superdev workflow block` | 2 | ownership, revision, identity, branch, phase, dependency, executable evidence, or path scope is invalid |
+| `superdev workflow attempt` | 0 | one normalized failed BUILD attempt is durably counted |
+| `superdev workflow attempt` | 2 | ownership, phase, revision, input, tree, or configured retry limit is invalid |
+| `superdev workflow correction` | 0 | one candidate-bound final correction cycle is durably counted |
+| `superdev workflow correction` | 2 | ownership, authority, candidate, review, phase, tree, or configured correction limit is invalid |
+| `superdev workflow correction-checkpoint` | 0 | approved executable checks pass and a focused correction within SCOPE-approved Areas is committed |
+| `superdev workflow correction-checkpoint` | 2 | ownership, revision, branch, phase, pending-correction, executable evidence, or path scope is invalid |
+| `superdev workflow evidence` | 0 | canonical BUILD evidence is acknowledged |
+| `superdev workflow evidence` | 2 | ownership, revision, identity, branch, or phase is invalid |
+| `superdev workflow sync` | 0 | the expected default tip is incorporated into the BUILD branch, or was already present |
+| `superdev workflow sync` | 2 | ownership, phase, revision, tree, ref, expected tip, or conflict checks failed |
+| `superdev workflow resume` | 0 | canonical state is reconstructed and ownership acquired |
+| `superdev workflow resume` | 2 | canonical identity, branch, phase, or ownership is invalid |
+| `superdev workflow cancel` | 0 | transient ownership is released |
+| `superdev workflow cancel` | 2 | another session owns the workflow |
+| `superdev workflow abandon` | 0 | approved abandonment is persisted |
+| `superdev workflow abandon` | 2 | ownership, revision, phase, or approval is invalid |
+| `superdev workflow integrate` | 0 | local no-ff integration completed |
+| `superdev workflow integrate` | 2 | ownership, revision, ref, tree, or expected tip is invalid |
 | `superdev hook` | 2 | no subcommand named |
 | `superdev hook validate` | 0 | the edited path is outside the governed trees, or the repo still validates |
 | `superdev hook validate` | 2 | findings on stderr, or a payload it cannot read |
-| `superdev hook run` | 0 | no run, another session's run, no next step, or the watchdog cap reached |
-| `superdev hook run` | 2 | the next step on stderr, or a payload it cannot read |
 | `superdev mcp` | 2 | no subcommand named |
 | `superdev mcp sokf` | 0 | the client closed stdin |
 | `superdev mcp sokf` | 2 | the server could not start |
@@ -558,18 +847,18 @@ code Claude Code hands back to the agent.
 
 ### Streams
 
-Claude Code reads a hook's stderr. A closed stdout pipe ends the run as
-`P_closed-stdout-exits-0` says.
+The hook invoker reads the validation hook's stderr. A closed stdout
+pipe ends the command as `P_closed-stdout-exits-0` says.
 
 - `P_report-stdout-diagnostics-stderr` [ubiquitous] Every command SHALL
   write its report to stdout and its diagnostics to stderr.
 - `P_completions-man-stdout-only` [ubiquitous] `completions` and `man`
   SHALL write their generated file to stdout and nothing else, so the
   output redirects cleanly.
-- `P_hooks-read-stdin` [ubiquitous] `hook validate` and `hook run`
-  SHALL read their payload from stdin.
-- `P_hooks-write-stderr` [ubiquitous] `hook validate` and `hook run`
-  SHALL write their findings and their next step to stderr.
+- `P_hook-reads-stdin` [ubiquitous] `hook validate` SHALL read its payload
+  from stdin.
+- `P_hook-writes-stderr` [ubiquitous] `hook validate` SHALL write findings
+  to stderr.
 - `P_mcp-sokf-speaks-mcp` [ubiquitous] `mcp sokf` SHALL speak the MCP
   protocol over stdin and stdout.
 - `P_mcp-sokf-stdout-reserved` [state] WHILE `mcp sokf` runs, `mcp
@@ -606,19 +895,19 @@ Claude Code reads a hook's stderr. A closed stdout pipe ends the run as
 ### Environment
 
 `CLAUDE_PROJECT_DIR` is described by
-[contract-004-config-superdev][sokf:contract-004-config-superdev]. No
-other command reads the environment beyond what `mise` and `git` read
-for themselves.
+[contract-004-config-superdev][sokf:contract-004-config-superdev]. Workflow
+ownership and human-gated transitions receive an unpersisted Pi UI capability
+through `SUPERDEV_UI_AUTHORITY`; ordinary callers cannot replace it with an
+approval flag. Other commands read only the environment that `mise` and `git`
+read for themselves.
 
-- `P_hooks-resolve-project-dir` [event] WHEN Claude Code sets
-  `CLAUDE_PROJECT_DIR`, `hook validate` and `hook run` SHALL resolve
-  the repository from `CLAUDE_PROJECT_DIR`.
-- `P_hooks-resolve-working-dir` [conditional] IF `CLAUDE_PROJECT_DIR`
-  is unset, `hook validate` and `hook run` SHALL resolve the repository
-  from the working directory.
-- `P_run-session-from-env` [event] WHEN `--session` is absent, `run
-  begin` and `run advance` SHALL take the session from
-  `CLAUDE_SESSION_ID`.
+- `P_hook-resolves-project-dir` [event] WHEN an adapter sets
+  `CLAUDE_PROJECT_DIR`, `hook validate` SHALL resolve the repository from
+  `CLAUDE_PROJECT_DIR`.
+- `P_hook-resolves-working-dir` [conditional] IF `CLAUDE_PROJECT_DIR`
+  is unset, `hook validate` SHALL resolve the repository from the working
+  directory.
+- `P_workflow-ui-authority-env` [event] WHEN Pi establishes workflow ownership or performs a human-gated transition, the command SHALL verify `SUPERDEV_UI_AUTHORITY` against the owning session's digest.
 
 ### Usage errors
 
@@ -642,8 +931,10 @@ reaches the network unasked, to find the newest pack release.
 - `P_fix-idempotent` [ubiquitous] `validate --fix` SHALL be idempotent.
 - `P_sokf-mutations-write-knowledge-only` [ubiquitous] `sokf edit` and `sokf
   write` SHALL write only inside the resolved knowledge directory.
-- `P_run-touches-cache-only` [ubiquitous] `run` SHALL NOT touch git,
-  the network, or any file outside `.superdev/cache/`.
+- `P_workflow-side-effects-bounded` [ubiquitous] `workflow` SHALL write only its transient cache, bound canonical records and indexes, product paths declared by the current BUILD block, and, for integration, the explicitly validated local refs and merge commit.
+- `P_file-side-effects-bounded` [ubiquitous] `file` SHALL write one canonical
+  record and generated index changes in a temporary worktree, then advance
+  only the validated local default ref.
 
 ## Stability
 

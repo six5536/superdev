@@ -477,17 +477,7 @@ mod tests {
         assert!(run.report.concept_count > 0, "the bundle was validated");
         assert!(run.files > 0, "the roots were walked");
         assert!(run.report.passed(), "{:#?}", run.report.findings);
-        // The five portability warnings, from files under .claude/skills —
-        // which is a root the SOKF half never walks.
-        assert_eq!(run.report.findings.len(), 5);
-        assert!(
-            run.report
-                .findings
-                .iter()
-                .all(|f| f.path.starts_with(".claude/skills/")),
-            "{:#?}",
-            run.report.findings
-        );
+        assert!(run.report.findings.is_empty(), "{:#?}", run.report.findings);
 
         let paths: Vec<&str> = run
             .report
@@ -506,10 +496,10 @@ mod tests {
     #[test]
     fn a_named_path_replaces_the_bundle_and_the_roots() {
         let root = repo();
-        let skills = vec![PathBuf::from(".claude/skills")];
-        let run = validate_repo(&root, &root.join("knowledge"), &skills, &live()).unwrap();
+        let extension = vec![PathBuf::from(".pi/extensions")];
+        let run = validate_repo(&root, &root.join("knowledge"), &extension, &live()).unwrap();
         assert_eq!(run.report.concept_count, 0, "no bundle was covered");
-        assert_eq!(run.report.findings.len(), 5);
+        assert!(run.report.findings.is_empty());
     }
 
     /// Naming the bundle covers it, and `.` covers everything.
@@ -1091,10 +1081,10 @@ example: |
     fn naming_a_directory_and_a_file_inside_it_checks_the_file_once() {
         let root = repo();
         let g = live();
-        let dir_only = vec![PathBuf::from(".claude/skills")];
+        let dir_only = vec![PathBuf::from("knowledge/issues")];
         let both = vec![
-            PathBuf::from(".claude/skills"),
-            PathBuf::from(".claude/skills/handoff/SKILL.md"),
+            PathBuf::from("knowledge/issues"),
+            PathBuf::from("knowledge/issues/index.md"),
         ];
         let a = validate_repo(&root, &root.join("knowledge"), &dir_only, &g).unwrap();
         let b = validate_repo(&root, &root.join("knowledge"), &both, &g).unwrap();

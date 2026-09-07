@@ -2,7 +2,7 @@
 type: Configuration
 id: configuration
 title: Configuration & Environments
-description: The .superdev directory — the config.toml manifest, the lock file, and the gitignored cache — plus the embeddings opt-in, the custom lists, the many-provider skills shape, the guided errors, the .mcp.json and .claude/settings.json merges, and the user-level model cache.
+description: The .superdev directory — the manifest, workflow policy, lock file, Git-ignored caches, content packs, embeddings opt-in, and managed interface registrations.
 status: stable
 resource: /crates/lib/superdev-core/src/manifest.rs
 ---
@@ -27,10 +27,16 @@ provider = "frontend-design"
 
 [knowledge]
 
-[skills]
-provider = "superdev-skills"
-version = "0.1.0"
+[workflow]
+human_acceptance_required = true
+max_stalled_block_attempts = 3
+max_final_correction_cycles = 3
 ```
+
+The `[workflow]` table is required from blueprint 0.2.0 onward. Older
+manifests receive these safe defaults, and their next managed rewrite writes
+the table. Both limits must be positive integers. Models, plans, and commands
+cannot override project policy; omitting the table after migration is an error.
 
 A `[[packs]]` array names the content packs to layer, in layer order, and is
 absent from the manifest above because absence is the default:
@@ -171,12 +177,10 @@ entries, one per pack, each with its own `provider`, `version` and
 `custom`. The single `[skills]` table is the one-entry case and keeps its
 shape on rewrites; the array form appears only from two entries up. The
 same pack listed twice, the array form on an exclusive slot, and an empty
-entry list are all refused at load with guided errors. A manifest still naming the
-removed `workflows` capability fails at load with a guided error telling the
-user to delete the table (moving any custom names to `[knowledge]`) — the
-skill set now ships with the SOKF knowledge, and superpowers users can
-`claude plugin install superpowers` by hand. The error never rewrites
-`config.toml`; the manifest is the user's file.
+entry list are all refused at load with guided errors. A manifest still naming the removed `workflows` capability fails at load with
+a guided error telling the user to delete the table. The Pi extension now owns
+the first-party workflow. The error never rewrites `config.toml`; the manifest
+is the user's file.
 
 An optional sub-table opts the canonical knowledge out of the local embedding
 model and onto an API:
@@ -214,12 +218,11 @@ with content of its own, keeps it — the name goes into `custom` and the
 adoption reports it. Content byte-identical to the shipped skill is superdev's
 own text and is left managed.
 
-`[knowledge] custom` releases an SOKF-carried skill the same way — the whole
-skill directory, companions included — with the same `init` adoption and the
-same `<capability>: custom names unknown skill '<name>' — no effect` line
-for a name the capability does not ship. The lists are name-guarded: a name
+`[knowledge] custom` remains a compatibility field for content from older or
+third-party packs. The first-party workflow roles are extension-private prompts,
+not knowledge skills. The lists are name-guarded: a name
 in one capability's list never releases another capability's file, even
-though both write into `.claude/skills/`.
+when a third-party compatibility provider uses a shared target.
 
 A `[template]` table records the project template `init` seeded the repo
 from, with the substituted token values:
@@ -262,8 +265,7 @@ version = "1.5.0"
 ```
 
 Entries superdev merges into a shared file are hashed under
-`<file>:<pointer>` instead — `.mise.toml:<tool>` for a pin,
-`.claude/settings.json:hooks.PostToolUse[<marker>]` for the hook. Drift is
+`<file>:<pointer>` instead, such as `.mise.toml:<tool>` for a pin. Drift is
 found by comparing a file against the content the blueprint wants, not against
 the lock; the hashes are what lets an apply tell that the file it just
 overwrote had been edited by hand, and say so (after backing it up).
@@ -334,18 +336,10 @@ digest is kept; a pack that failed verification leaves nothing behind.
   instruction files beside it (`.agents/sokf.md`, `.agents/codegraph.md`)
   are owned files; the general rules (`.agents/professionalism.md`, `.agents/process.md`,
   `.agents/coding.md`) are write-once scaffolds, the user's to adapt.
-- `.claude/settings.json` carries one managed `hooks.PostToolUse` element,
-  owned by the SOKF component (the hook validates the canonical knowledge, so it
-  exists exactly where knowledge does): superdev finds its own element by the
-  command string `superdev hook validate`, adds or updates it, and
-  leaves the user's hooks alone. Both files are re-serialised whole on
-  write, so key order is not preserved; the lock hashes the merged value, not
-  the file, so a reformat is not drift.
-- `.claude/skills/` holds the pack's two skills and the SOKF component's 17
-  carried skill directories as owned files, plus the MIT
-  notice for the derived set. A `PROJECT.md` beside a skill extends it —
-  superdev never writes, hashes or reads that file, so a project layer
-  survives every sync.
+- `.pi/extensions/superdev/` holds the workflow adapter and its private role
+  prompts. `.pi/skills/sokf-authoring/` holds the independently invocable SOKF
+  authoring skill. Both are owned pack content with ordinary lock and drift
+  behavior. Retired Claude assets exist only under `archive/claude-code/`.
 - The local embedding model lives in the *user* cache, not the repo:
   `$XDG_CACHE_HOME` (else `%LOCALAPPDATA%`, else `~/.cache`) +
   `/superdev/models/<model>/<revision>/`. Revision-scoped, so a pin bump

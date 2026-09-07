@@ -16,6 +16,7 @@
     "test": "cargo nextest run --workspace && npm run check:validate",
     "check": "cargo check --workspace --tests",
     "check:validate": "cargo run --quiet -- validate",
+    "check:docs": "node scripts/check-docs.mjs",
     "check:blueprint": "cargo run --quiet -- status --drift",
     "lint": "cargo clippy --workspace",
     "fmt": "cargo fmt --all",
@@ -35,8 +36,9 @@
     "awa": "awa"
   },
   "devDependencies": {
+    "@earendil-works/pi-ai": "^0.85.1",
     "@ncoderz/awa": "^1.10.3",
-    "@types/node": "^26.1.2"
-  },
-  "dependencies": {}
+    "@types/node": "^26.1.2",
+    "typebox": "^1.3.28"
+  }
 }

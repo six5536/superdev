@@ -2,13 +2,20 @@
 type: Plan
 id: plan-007-drop-the-aokf-conformance-ladder
 title: Drop the AOKF conformance ladder
-description: ADR-017 in code — the three-level ladder leaves the spec, the validator, the CLI and the parity goldens, knowledge passes or fails, and no file in the tree names a level but the ADR and this plan.
+description: ADR-017 in code — the three-level ladder leaves the spec, the validator, the CLI and the parity goldens, knowledge passes or fails, and no file in the tree names a level but the ADR and this
+  plan.
 lifecycle: done
+phase: done
+branch: work/064-historical-drop-the-aokf-conformance-ladder
+links:
+- rel: implements
+  to: issue-064-historical-drop-the-aokf-conformance-ladder
 ---
-
 # Plan: Drop the AOKF conformance ladder
 
-## Goal
+Primary issue: [issue-064-historical-drop-the-aokf-conformance-ladder][sokf:issue-064-historical-drop-the-aokf-conformance-ladder]
+
+## Goal and boundaries
 
 The validator has one verdict, and nothing in the tree offers a level to
 grade against.
@@ -130,17 +137,38 @@ option rejected rather than deferred — keeping the ladder but removing
 place and the reason for it gone, and that is the shape this plan drifts
 into if block 3 is dropped from it.
 
+## Requirements
+
+Preserve the historical plan intent and constraints recorded under Goal and boundaries.
+
 ## Contract changes
 
 - none.
+
+## ADR decisions
+
+- none beyond decisions already linked or described in this historical record.
+
+## Source and interface changes
+
+Historical source and interface changes remain described in the work blocks.
+
+## Knowledge changes
+
+Preserve this record under the canonical workflow schema.
+
+## Documentation changes
+
+Historical documentation impact predates the documentation map; migration itself is checked as canonical-knowledge.
 
 ## Work blocks
 
 ### Block 1: Amend the spec
 
 - [x] Done — ticked at merge.
-- Depends-on: none.
-- Change: replace `.agents/aokf/SPEC.md` §11 — the ladder table goes, and
+- Dependencies: none.
+- Areas: unknown (legacy record; no affected area inferred).
+- Outcome: replace `.agents/aokf/SPEC.md` §11 — the ladder table goes, and
   conformance becomes the document check passing, with the diff check still
   independent of it; the sentence "a knowledge's level is the highest it
   fully satisfies" goes with it. Reword what leans on it: §10's items that
@@ -148,18 +176,21 @@ into if block 3 is dropped from it.
   phrasings the validator echoes. Bump the version at both declaration sites
   and in `knowledge/manifest.sokf.yaml`, which names the version the
   canonical knowledge targets.
-- Done-check: SPEC §11 names no level, and the version differs from `0.2` at
+- Verification: SPEC §11 names no level, and the version differs from `0.2` at
   both declaration sites and in the manifest.
-- Cases:
+- Tests:
   - observation: SPEC §11 states pass or fail and names no level, and the
     declared version is no longer `0.2` — checks that the format's statement
     of conformance drops the ladder.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 2: Collapse the model and hold parity
 
 - [x] Done — ticked at merge.
-- Depends-on: 1.
-- Change: `Finding` carries a severity, `Report` drops both level fields,
+- Dependencies: unknown (legacy record; no dependency inferred).
+- Areas: unknown (legacy record; no affected area inferred).
+- Outcome: `Finding` carries a severity, `Report` drops both level fields,
   and `achieved_level` is deleted along with the function that derives it;
   `passed()` stays and becomes the verdict (D-4). Drop "at Level 1" from the
   manifest and `id` findings in
@@ -174,10 +205,10 @@ into if block 3 is dropped from it.
   to reverse: the reference that produced these is gone, so the diff is the
   only evidence the edit was a projection and not an invention — it lands on
   its own, reviewed on its own.
-- Done-check: `cargo test -p superdev-core --test validator_parity` passes
+- Verification: `cargo test -p superdev-core --test validator_parity` passes
   with no level-aware step in its comparison, and every fixture's verdict is
   unchanged.
-- Cases:
+- Tests:
   - integration: `cargo test -p superdev-core --test validator_parity`
     passes, and its comparison carries no level-aware step — checks that the
     goldens still pin the reference's behaviour.
@@ -193,20 +224,23 @@ into if block 3 is dropped from it.
     classifications survive.
   - observation: `rg -n 'Level [0-9]' crates/lib/superdev-core/src/` returns
     nothing — checks that no finding message names a level.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 3: Remove the flag and its callers
 
 - [x] Done — ticked at merge.
-- Depends-on: 2.
-- Change: `--level` and `DEFAULT_LEVEL` leave
+- Dependencies: unknown (legacy record; no dependency inferred).
+- Areas: unknown (legacy record; no affected area inferred).
+- Outcome: `--level` and `DEFAULT_LEVEL` leave
   `crates/app/superdev/src/aokf_cli.rs`, from the subcommand definition and
   from both call sites; `CHECKED_LEVEL` leaves
   `crates/lib/superdev-core/src/aokf/mcp.rs` and its two uses; the
   `achieved_level` assertion leaves
   `crates/lib/superdev-core/src/components/aokf.rs`.
-- Done-check: `superdev aokf validate --level 2` fails as an unknown
+- Verification: `superdev aokf validate --level 2` fails as an unknown
   argument, and no constant in `crates/` names a level.
-- Cases:
+- Tests:
   - e2e: `superdev aokf validate --level 2` fails as an unknown argument —
     checks that the flag is gone from the CLI.
   - observation: `rg -n -e achieved_level -e checked_level -e error_at -e
@@ -216,12 +250,15 @@ into if block 3 is dropped from it.
   - e2e: deleting `knowledge/manifest.sokf.yaml` makes the run fail, where
     `--level 0` would once have passed it — checks that the escape hatch is
     gone.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 4: Correct the prose
 
 - [x] Done — ticked at merge.
-- Depends-on: 3.
-- Change: `.agents/aokf.md` no longer says the canonical knowledge "must
+- Dependencies: unknown (legacy record; no dependency inferred).
+- Areas: unknown (legacy record; no affected area inferred).
+- Outcome: `.agents/aokf.md` no longer says the canonical knowledge "must
   PASS at level 2"; the loop in `.claude/skills/maintain/SKILL.md` ends on
   the validator passing rather than on a level; `knowledge/api-contracts.md`
   drops `--level` from the knowledge verbs, and
@@ -237,10 +274,10 @@ into if block 3 is dropped from it.
   entry for the removed flag, since it is a breaking change to a documented
   surface, and leave ADR-017's follow-up list empty or each remaining item
   filed as an issue.
-- Done-check: no file in the tree names a conformance level except ADR-017
+- Verification: no file in the tree names a conformance level except ADR-017
   and this plan, `knowledge/plans/index.md` lists this plan with status
   done, and `npm run coverage:check` passes.
-- Cases:
+- Tests:
   - observation: `rg -n -e achieved_level -e checked_level -e error_at -e
     'at level' -e 'Level [0-9]' -e conformance.level .agents .claude
     knowledge crates` returns hits only where the removal is recorded —
@@ -252,7 +289,15 @@ into if block 3 is dropped from it.
   - e2e: `npm run coverage:check` passes — checks the 90% per-crate line
     gate.
 
-## Deferred decisions
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+
+- Documentation: none recorded; this historical record makes no documentation claim.
+
+## Build state
+
+All historical blocks are complete; blocker: none.
+
+## Implementation decisions
 
 - Block 1: what version does the spec become? Recommended default: 0.3, with
   §12's rule reworded to ordinary pre-1.0 semantics, because §12 says minor
@@ -263,3 +308,14 @@ into if block 3 is dropped from it.
   yours; I have not touched it. Recommended default: `until="the validator
   passes"`, which is what the loop waits for and survives this change.
   Answer: this is yours too.
+
+## Follow-up issues
+
+none.
+
+## Completion evidence
+
+Historical plan migrated mechanically. Original completion evidence remains in its work blocks and Git history.
+
+<!-- sokf:links -->
+[sokf:issue-064-historical-drop-the-aokf-conformance-ladder]: /knowledge/issues/done/issue-064-historical-drop-the-aokf-conformance-ladder.md

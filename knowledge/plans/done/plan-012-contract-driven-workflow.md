@@ -2,20 +2,26 @@
 type: Plan
 id: plan-012-contract-driven-workflow
 title: The workflow becomes contract-driven
-description: The seven-phase spec-driven workflow becomes five contract-driven phases — criteria move into the feature-request as EARS sentences, contracts become durable in public/ and internal/, the spec documents are migrated and deleted, and the skills merge to match.
+description: The seven-phase spec-driven workflow becomes five contract-driven phases — criteria move into the feature-request as EARS sentences, contracts become durable in public/ and internal/, the spec
+  documents are migrated and deleted, and the skills merge to match.
 lifecycle: done
 links:
-  - rel: depends-on
-    to: plan-011-filing-by-lifecycle
-    note: Runs after the lifecycle filing lands; this plan writes in its vocabulary.
-  - rel: references
-    to: issue-021-backport-the-knowledge-design-to-the-pack
-    note: The pack copies of the workflow skills this plan changes join that backport debt.
+- rel: implements
+  to: issue-069-historical-contract-driven-workflow
+- rel: depends-on
+  to: plan-011-filing-by-lifecycle
+  note: Runs after the lifecycle filing lands; this plan writes in its vocabulary.
+- rel: references
+  to: issue-021-backport-the-knowledge-design-to-the-pack
+  note: The pack copies of the workflow skills this plan changes join that backport debt.
+phase: done
+branch: work/069-historical-contract-driven-workflow
 ---
-
 # Plan: The workflow becomes contract-driven
 
-## Goal
+Primary issue: [issue-069-historical-contract-driven-workflow][sokf:issue-069-historical-contract-driven-workflow]
+
+## Goal and boundaries
 
 The workflow runs FRAME → CONTRACT-DESIGN → FEATURE-PLAN → BUILD →
 INTEGRATE against durable contracts and EARS-stated acceptance criteria,
@@ -146,6 +152,10 @@ Block 3 dispositions every spec before it deletes any. Block 4 lands as
 one change, and no feature enters FRAME between its first commit and its
 merge, so no feature follows two workflows.
 
+## Requirements
+
+Preserve the historical plan intent and constraints recorded under Goal and boundaries.
+
 ## Contract changes
 
 - contract-001-interface-content-packs: dissolved and deleted. Its
@@ -158,13 +168,30 @@ merge, so no feature follows two workflows.
   resolved content set, the resolution phase and the `Ctx` — as a durable
   contract keyed to an interface rather than to a feature.
 
+## ADR decisions
+
+- none beyond decisions already linked or described in this historical record.
+
+## Source and interface changes
+
+Historical source and interface changes remain described in the work blocks.
+
+## Knowledge changes
+
+Preserve this record under the canonical workflow schema.
+
+## Documentation changes
+
+Historical documentation impact predates the documentation map; migration itself is checked as canonical-knowledge.
+
 ## Work blocks
 
 ### Block 1: The issue holds the criteria
 
 - [x] Done — ticked at merge.
-- Depends-on: none.
-- Change: rewrite `knowledge/schemas/feature-request.md` — a required
+- Dependencies: none.
+- Areas: unknown (legacy record; no affected area inferred).
+- Outcome: rewrite `knowledge/schemas/feature-request.md` — a required
   numbered-list Acceptance criteria section of EARS sentences, each
   opening with its type tag, TBD permitted only while the request is
   open; update the worked example. Backfill the nine FeatureRequest
@@ -177,20 +204,23 @@ merge, so no feature follows two workflows.
   feature-request in place of the spec, and each slice carries a Cases
   list inline, each case naming the criteria it covers; update the worked
   example.
-- Done-check: `superdev validate` exits 0 at this block's final commit.
-- Cases:
+- Verification: `superdev validate` exits 0 at this block's final commit.
+- Tests:
   - checks that `rg 'THE SYSTEM SHALL' knowledge/schemas/feature-request.md`
     matches.
   - checks that every file `rg -l 'type: FeatureRequest' knowledge` names
     contains `## Acceptance criteria`.
   - checks that `rg 'Spec:' knowledge/schemas/feature-plan.md` returns
     nothing and that the schema's example links a feature-request.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 2: Contracts become the description of the app
 
 - [x] Done — ticked at merge.
-- Depends-on: none.
-- Change: move `knowledge/contracts/private/` to
+- Dependencies: none.
+- Areas: unknown (legacy record; no affected area inferred).
+- Outcome: move `knowledge/contracts/private/` to
   `knowledge/contracts/internal/`, within whatever lifecycle folders
   plan-011 left, and rewrite `knowledge/contracts/index.md`: two durable
   tiers split by audience, updated by CONTRACT-DESIGN as features change
@@ -203,22 +233,25 @@ merge, so no feature follows two workflows.
   inbound link, then delete it. The deletion is hard to reverse, because
   it discards the only assembled view of those interfaces, so the new
   contracts land in the same commit.
-- Done-check: `superdev validate` exits 0 at this block's final commit,
+- Verification: `superdev validate` exits 0 at this block's final commit,
   and `ls knowledge/contracts` prints `index.md`, `internal` and
   `public`.
-- Cases:
+- Tests:
   - checks that `rg 'interface-\{feature-slug\}'
     knowledge/schemas/contract-interface.md` returns nothing.
   - checks that `rg -l 'contract-001-interface-content-packs' knowledge
     --glob '!knowledge/plans/*'` returns nothing, and that the plans'
     mentions resolve to nothing typed.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 3: The specs leave
 
 - [x] Done — ticked at merge.
-- Depends-on: 1, 2. The destinations for durable content must exist
+- Dependencies: 1, 2. The destinations for durable content must exist
+- Areas: unknown (legacy record; no affected area inferred).
   first.
-- Change: disposition each of the fourteen specs — confirm its durable
+- Outcome: disposition each of the fourteen specs — confirm its durable
   content is held by a contract, a concept or its feature's tracker
   record, and fold in what is not. Re-point or unlink the `sokf:spec-`
   references in the 48 documents holding them, each to the contract or
@@ -230,9 +263,9 @@ merge, so no feature follows two workflows.
   `.agents/sokf/SPEC.md` §8 to gloss `implements` as "a plan or issue
   implementing a contract or feature", and record the change in the SOKF
   changelog.
-- Done-check: `superdev validate` exits 0 at this block's final commit,
+- Verification: `superdev validate` exits 0 at this block's final commit,
   and `test ! -d knowledge/specs` succeeds.
-- Cases:
+- Tests:
   - checks that `rg -l 'sokf:spec-|knowledge/specs|schema-spec' knowledge
     .agents .claude` names only this plan and settled plans' historical
     prose.
@@ -240,13 +273,16 @@ merge, so no feature follows two workflows.
     nothing.
   - checks that `rg 'implementing a spec' .agents/sokf/SPEC.md` returns
     nothing.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 4: The flow says what the system does
 
 - [x] Done — ticked at merge.
-- Depends-on: 1, 2, 3. The skills must direct agents at documents that
+- Dependencies: 1, 2, 3. The skills must direct agents at documents that
+- Areas: unknown (legacy record; no affected area inferred).
   exist.
-- Change: merge `.claude/skills/spec/` into `.claude/skills/frame/` —
+- Outcome: merge `.claude/skills/spec/` into `.claude/skills/frame/` —
   framing ends when the issue's criteria are concrete EARS sentences,
   with a bug's repro steps or a chore's done-definition serving as the
   implicit criteria — and delete the spec skill. Rename
@@ -269,10 +305,10 @@ merge, so no feature follows two workflows.
   FEATURE-PLAN. Record the pack files this plan changed or left stale in
   issue-021's surface list, and remove the `.agents/core.md.bak` working
   copy from the drafting session.
-- Done-check: `superdev validate` exits 0 on the finished branch, and
+- Verification: `superdev validate` exits 0 on the finished branch, and
   `knowledge/plans/index.md` lists this plan, settled under the lifecycle
   convention plan-011 left in force.
-- Cases:
+- Tests:
   - checks that `rg -l 'FRAME → CONTRACT-DESIGN → FEATURE-PLAN → BUILD →
     INTEGRATE' .agents/core.md .agents/process.md` names both, and that
     the development procedure names the same five skills in order.
@@ -283,6 +319,27 @@ merge, so no feature follows two workflows.
   - checks that issue-021's surface list names this plan's pack drift, or
     states it left none.
 
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+
+- Documentation: none recorded; this historical record makes no documentation claim.
+
+## Build state
+
+All historical blocks are complete; blocker: none.
+
+## Implementation decisions
+
+none.
+
+## Follow-up issues
+
+none.
+
+## Completion evidence
+
+Historical plan migrated mechanically; original evidence remains in its work blocks and Git history.
+
 <!-- sokf:links -->
 [sokf:issue-021-backport-the-knowledge-design-to-the-pack]: /knowledge/issues/done/issue-021-backport-the-knowledge-design-to-the-pack.md
+[sokf:issue-069-historical-contract-driven-workflow]: /knowledge/issues/done/issue-069-historical-contract-driven-workflow.md
 [sokf:plan-011-filing-by-lifecycle]: /knowledge/plans/done/plan-011-filing-by-lifecycle.md

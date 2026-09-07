@@ -3,11 +3,10 @@
 superdev sets a repository up for agent-driven development and keeps that
 setup current.
 
-`init` writes canonical project knowledge with a full engineering skill
-set, builds a code index, wires up a bash output filter that compacts
-command output before it reaches agent context, and installs the Claude
-Code plugin superdev expects, then records the result in `.superdev/`.
-Pass `--no-code-index`, `--no-skills` or `--no-frontend` to leave a
+`init` writes canonical project knowledge, installs the Pi workflow extension
+and SOKF authoring skill, and can build a code index or install optional
+capabilities before recording the result in `.superdev/`. Pass
+`--no-code-index`, `--no-skills` or `--no-frontend` to leave an optional
 capability out. The SOKF knowledge has no such
 flag: it is part of superdev, not a capability something else could fill.
 Everything it owns can be repaired by re-running `sync`.
@@ -32,8 +31,8 @@ superdev sync      # re-apply the blueprint (--dry-run to preview)
 superdev update    # bring pins current, then sync
 ```
 
-`init` is safe to re-run, and everything superdev owns can be repaired by
-`sync`. A file you have edited is never overwritten in silence: `status`
+`init` refuses an already initialized repository; everything superdev owns can
+be repaired by `sync`. A file you have edited is never overwritten in silence: `status`
 reports it, and `sync` backs it up before writing.
 
 ## Usage
@@ -55,29 +54,29 @@ keyword-only if that model is unavailable.
 
 ### The workflow
 
-The knowledge-carried skills run one loop, and every record it writes
-lives in the knowledge tree. In your agent:
+Pi's project extension orchestrates exactly `SCOPE → BUILD → ACCEPT`; durable
+state remains in one canonical issue and plan while Rust owns legal transitions,
+transient session ownership, and Git safety.
 
 ```
-/file     # record the work as an issue, in your own words
-/scope    # cut the branch, change the contracts, write the plan
-/build    # work the plan's blocks, verify once, merge on the branch
-/accept   # optional: review, check the criteria, close the issue
+/superdev <request>  # run or continue the complete workflow
+/scope               # requirements, isolated review, explicit approval
+/build               # isolated block loop, evidence, verification, fresh review
+/accept              # configured acceptance and local --no-ff integration
+/superdev-resume     # reconstruct state from the canonical plan
+/superdev-cancel     # pause and release transient ownership
+/superdev-abandon    # explicit human-only abandonment
+/file <item>         # capture an issue or idea; not a workflow phase
 ```
 
-One issue template covers all three kinds — `kind` is `bug`, `feature`
-or `chore`, and `lifecycle` is `open`, `done` or `wontfix` — and one
-plan template holds the goal, the contract changes and the work blocks
-that deliver them. `/build` takes the blocks in order, tests before
-code, one commit each, and verifies the whole change once after the
-last one. `/accept` is optional and runs only when you ask for it.
-
-`/execute-plan` drives `/build` unattended over a plan's blocks and
-defers the questions only you can answer into the plan.
+Every plan implements exactly one issue and uses the matching
+`work/<issue-number>-<slug>` branch. ACCEPT never pushes, releases, deletes the
+branch, or runs remote CI. Human acceptance is controlled only by
+`.superdev/config.toml`.
 
 ### Where the content comes from
 
-The skills, templates and scaffolds superdev writes are a *content pack*. One
+The Pi assets, templates, schemas, and scaffolds superdev writes are a *content pack*. One
 ships inside the binary, and `.superdev/config.toml` records which pack a repo
 uses:
 
@@ -91,7 +90,7 @@ source = "./packs/acme"              # or a directory on this machine
 ```
 
 Entries layer in the order written and a later item of the same name wins, so
-you can add your own skills, or supersede superdev's, without forking. An
+you can add or supersede content without forking. An
 entry naming the source superdev's own content comes from *replaces* it rather
 than layering, so what that revision drops leaves your repo too. A repo that
 names no pack behaves exactly as it always did.
@@ -136,8 +135,8 @@ that you did not ask for, so it is the one on a clock. Nothing prompts for
 credentials either: a pack you cannot read anonymously fails rather than
 waiting for you to type.
 
-superdev is opinionated for one stack — Claude Code, mise and SOKF — and is
-still young: expect the surface to move before 1.0.
+superdev is opinionated for one stack — Pi, Rust, mise and SOKF — and is still
+young: expect the surface to move before 1.0.
 
 ## Configuration
 
@@ -149,7 +148,7 @@ rewritten by `update`:
 |--------|---------|-------------|
 | `blueprint` | the version that ran `init` | The superdev version this repo's setup was written by. |
 | `[[packs]]` | the pack inside the binary | Where skills, templates and scaffolds come from. Layers in the order written. |
-| `[knowledge] custom` | empty | SOKF skills you have taken over; superdev stops writing them. |
+| `[workflow]` | safe local defaults | Human-acceptance policy and positive retry limits. |
 | `[knowledge.embeddings]` | the local model | Search on an API instead. The key comes from the environment, never the file. |
 | `[frontend]`, `[skills]`, `[code-index]` | all enabled | One table per capability; an absent table means off. |
 
@@ -170,6 +169,11 @@ model    = "text-embedding-3-small"
 [code-index]                         # one table per enabled capability
 provider = "codegraph"
 version  = "1.5.0"
+
+[workflow]
+human_acceptance_required = true
+max_stalled_block_attempts = 3
+max_final_correction_cycles = 3
 ```
 
 An absent capability table means that capability is off. `lock.toml`

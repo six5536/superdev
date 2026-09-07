@@ -32,5 +32,5 @@ holds the history.
 [sokf:contract-006-format-lock]: /knowledge/contracts/public/active/contract-006-format-lock.md
 [sokf:contract-007-interface-pack-resolution]: /knowledge/contracts/internal/active/contract-007-interface-pack-resolution.md
 [sokf:contract-008-format-template]: /knowledge/contracts/public/active/contract-008-format-template.md
-[sokf:contract-009-interface-run-state]: /knowledge/contracts/internal/active/contract-009-interface-run-state.md
+[sokf:contract-009-interface-run-state]: /knowledge/contracts/internal/deprecated/contract-009-interface-run-state.md
 [sokf:contract-010-interface-document-schemas]: /knowledge/contracts/internal/active/contract-010-interface-document-schemas.md

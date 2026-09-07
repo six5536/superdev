@@ -4,13 +4,17 @@ id: plan-016-schema-layer-enforcement
 title: Schema layer enforcement
 description: Three blocks making the validator read what the schemas declare — content kinds, the frontmatter contract, and the required-key vocabulary — each landing with the reconciliation it surfaces.
 lifecycle: done
+phase: done
+branch: work/018-the-schema-layer-checks-sections-and-nothing-else
+links:
+- rel: implements
+  to: issue-018-the-schema-layer-checks-sections-and-nothing-else
 ---
-
 # Plan: the schema layer's declarations bind
 
-Request: [issue-018-the-schema-layer-checks-sections-and-nothing-else][sokf:issue-018-the-schema-layer-checks-sections-and-nothing-else]
+Primary issue: [issue-018-the-schema-layer-checks-sections-and-nothing-else][sokf:issue-018-the-schema-layer-checks-sections-and-nothing-else]
 
-## Goal
+## Goal and boundaries
 
 The vocabulary and its semantics are fixed in
 [contract-010-interface-document-schemas][sokf:contract-010-interface-document-schemas];
@@ -18,6 +22,10 @@ the user-facing promise in
 [contract-002-cli-superdev][sokf:contract-002-cli-superdev]. Each block
 lands its check and the live findings that check surfaces in one pass, so
 integrate's validate gate stays green at every merge.
+
+## Requirements
+
+Preserve the historical plan intent and constraints recorded under Goal and boundaries.
 
 ## Contract changes
 
@@ -30,13 +38,30 @@ integrate's validate gate stays green at every merge.
   content kinds, the frontmatter constraint block per key, and the
   per-key `required` flag (ADR-022, ADR-023).
 
+## ADR decisions
+
+- none beyond decisions already linked or described in this historical record.
+
+## Source and interface changes
+
+Historical source and interface changes remain described in the work blocks.
+
+## Knowledge changes
+
+Preserve this record under the canonical workflow schema.
+
+## Documentation changes
+
+Historical documentation impact predates the documentation map; migration itself is checked as canonical-knowledge.
+
 ## Work blocks
 
 ### Block 1: Content kinds bind by presence
 
 - [x] Done — ticked by integrate at merge.
-- Depends-on: none.
-- Change: `validate::schema` reads each section rule's `content` kind and
+- Dependencies: none.
+- Areas: unknown (legacy record; no affected area inferred).
+- Outcome: `validate::schema` reads each section rule's `content` kind and
   reports, as an error naming the document, the section and the schema, a
   matched section whose body lacks the kind's form — one bullet, one
   numbered item, one table, one fenced block, or one plain paragraph line
@@ -45,10 +70,10 @@ integrate's validate gate stays green at every merge.
   reconciled in the same block — the document fixed or the schema's
   declaration corrected — in `knowledge/schemas/` and the pack mirror
   alike.
-- Done-check: `cargo test` passes; `superdev validate` on a fixture with
+- Verification: `cargo test` passes; `superdev validate` on a fixture with
   a bullet-less bullet-list section reports the error, and on this
   repository reports no content-kind error.
-- Cases:
+- Tests:
   - unit: a bullet-list section with no bullet anywhere is an error
     naming the document, the section and the schema — covers 1.
   - unit: a bullet-list section opening with a lead-in sentence before
@@ -60,22 +85,25 @@ integrate's validate gate stays green at every merge.
     covers 1.
   - unit: a schema declaring `content: essay` is reported on the schema
     file — covers 5.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 2: The frontmatter contract binds on present values
 
 - [x] Done — ticked by integrate at merge.
-- Depends-on: none.
-- Change: `DocSchema` parses every frontmatter key's constraint block —
+- Dependencies: none.
+- Areas: unknown (legacy record; no affected area inferred).
+- Outcome: `DocSchema` parses every frontmatter key's constraint block —
   today it reads only `type` and `lifecycle` — and reports, as an error
   naming the document, the key and the schema, a present value that
   breaks its `const`, `pattern` or `enum`. A `pattern` that does not
   compile is reported on the schema file and binds nothing. A key
   declared with only a `description` is unchecked. Live findings are
   reconciled in the same block, both trees.
-- Done-check: `cargo test` passes; `superdev validate` on a fixture with
+- Verification: `cargo test` passes; `superdev validate` on a fixture with
   an id breaking its schema's pattern reports the error, and on this
   repository reports no frontmatter-value error.
-- Cases:
+- Tests:
   - unit: a present value breaking its `pattern` is an error naming the
     document, the key and the schema — covers 3.
   - unit: a present value outside its `enum`, and one differing from its
@@ -86,22 +114,25 @@ integrate's validate gate stays green at every merge.
     reported — covers 4.
   - unit: a schema `pattern` that does not compile is reported on the
     schema file — covers 5.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 3: Required keys, declared across the schemas
 
 - [x] Done — ticked by integrate at merge.
-- Depends-on: 2.
-- Change: the per-key `required: true` flag (ADR-022) is read, and an
+- Dependencies: unknown (legacy record; no dependency inferred).
+- Areas: unknown (legacy record; no affected area inferred).
+- Outcome: the per-key `required: true` flag (ADR-022) is read, and an
   absent key marked required is an error naming the document, the key
   and the schema. The 53 schemas each declare their required keys —
   `type` and `id` on filed kinds, `title` and `description` where the
   document's listing depends on them — in `knowledge/schemas/` and the
   pack mirror, byte-identical. Any absence the declarations surface in
   the live tree is fixed in the same block.
-- Done-check: `cargo test` passes; every schema in both trees declares
+- Verification: `cargo test` passes; every schema in both trees declares
   its required keys; `diff -rq knowledge/schemas pack/knowledge/schemas`
   prints nothing.
-- Cases:
+- Tests:
   - unit: an absent key marked `required: true` is an error naming the
     document, the key and the schema — covers 4.
   - unit: a present key marked required passes its value checks as in
@@ -109,6 +140,26 @@ integrate's validate gate stays green at every merge.
   - e2e: `superdev validate` reports PASS on this repository, every
     document against its schema's content kinds and frontmatter
     contract — covers 6.
+
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+
+- Documentation: none recorded; this historical record makes no documentation claim.
+
+## Build state
+
+All historical blocks are complete; blocker: none.
+
+## Implementation decisions
+
+none.
+
+## Follow-up issues
+
+none.
+
+## Completion evidence
+
+Historical plan migrated mechanically; original evidence remains in its work blocks and Git history.
 
 <!-- sokf:links -->
 [sokf:contract-002-cli-superdev]: /knowledge/contracts/public/active/contract-002-cli-superdev.md

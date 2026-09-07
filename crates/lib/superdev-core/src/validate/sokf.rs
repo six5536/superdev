@@ -245,10 +245,134 @@ pub fn validate(bundle: &Bundle, repo_root: &Path) -> Report {
         check_concept(concept, &context, &mut findings);
     }
     check_indexes(bundle, &context, &mut findings);
+    check_workflow_records(bundle, &mut findings);
 
     Report {
         findings,
         concept_count: bundle.concepts.len(),
+    }
+}
+
+/// Cross-document invariants for canonical issue/plan workflow records.
+fn check_workflow_records(bundle: &Bundle, findings: &mut Vec<Finding>) {
+    let mut open_by_issue: BTreeMap<String, String> = BTreeMap::new();
+    for plan in bundle
+        .concepts
+        .iter()
+        .filter(|concept| concept.kind == "Plan")
+    {
+        let path = plan.path.as_str();
+        let lifecycle = plan.lifecycle.as_deref().unwrap_or("");
+        let phase = plan.raw["phase"].as_str().unwrap_or("");
+        let compatible = matches!(
+            (lifecycle, phase),
+            ("open", "scope" | "build" | "accept") | ("done", "done") | ("abandoned", "abandoned")
+        );
+        if !compatible {
+            findings.push(error(
+                path,
+                format!("workflow: lifecycle `{lifecycle}` is incompatible with phase `{phase}`"),
+            ));
+        }
+
+        let implements: Vec<&str> = plan
+            .links
+            .iter()
+            .filter(|link| link.rel.as_deref() == Some("implements"))
+            .filter_map(|link| link.to.as_deref())
+            .collect();
+        if implements.len() != 1 {
+            findings.push(error(
+                path,
+                format!(
+                    "workflow: a plan must carry exactly one `implements` link (found {})",
+                    implements.len()
+                ),
+            ));
+            continue;
+        }
+        let issue = implements[0];
+        if !bundle
+            .concepts
+            .iter()
+            .any(|concept| concept.id.as_deref() == Some(issue) && concept.kind == "Issue")
+        {
+            findings.push(error(
+                path,
+                format!("workflow: `implements` target `{issue}` must resolve to an Issue"),
+            ));
+        }
+        let expected_branch = issue
+            .strip_prefix("issue-")
+            .map(|rest| format!("work/{rest}"));
+        if expected_branch.as_deref() != plan.raw["branch"].as_str() {
+            findings.push(error(
+                path,
+                format!(
+                    "workflow: branch must be `{}` for primary issue `{issue}`",
+                    expected_branch
+                        .as_deref()
+                        .unwrap_or("work/<issue-number>-<slug>")
+                ),
+            ));
+        }
+        check_plan_blocks(plan, findings);
+        if lifecycle == "open"
+            && let Some(first) = open_by_issue.insert(issue.to_string(), path.to_string())
+        {
+            findings.push(error(
+                path,
+                format!(
+                    "workflow: issue `{issue}` already has an open implementing plan in {first}"
+                ),
+            ));
+        }
+    }
+}
+
+fn check_plan_blocks(plan: &crate::sokf::concept::Concept, findings: &mut Vec<Finding>) {
+    if plan
+        .body
+        .lines()
+        .any(|line| line.trim_start().starts_with("- manual:"))
+    {
+        findings.push(error(
+            &plan.path,
+            "workflow: plans contain executable evidence only; `manual:` is prohibited".into(),
+        ));
+    }
+    for block in plan.body.split("\n### Block ").skip(1) {
+        let block = block.split("\n## Build state").next().unwrap_or(block);
+        let title = block.lines().next().unwrap_or("<untitled>");
+        for field in [
+            "Dependencies:",
+            "Areas:",
+            "Outcome:",
+            "Verification:",
+            "Tests:",
+            "Structural evidence:",
+            "Documentation:",
+        ] {
+            if !block
+                .lines()
+                .any(|line| line.starts_with(&format!("- {field}")))
+            {
+                findings.push(error(
+                    &plan.path,
+                    format!("workflow: Block {title} is missing `- {field}`"),
+                ));
+            }
+        }
+        if !block.lines().any(|line| {
+            line.starts_with("- [ ] Done")
+                || line.starts_with("- [x] Done")
+                || line.starts_with("- [X] Done")
+        }) {
+            findings.push(error(
+                &plan.path,
+                format!("workflow: Block {title} is missing its Done checkbox"),
+            ));
+        }
     }
 }
 
@@ -324,8 +448,10 @@ pub(crate) fn identities(
         if let Some(canonical) = canonical(&bundle.root.join(path)) {
             ids.by_path.insert(canonical, id.clone());
         }
-        ids.repo_paths
-            .insert(id.clone(), repo_path(repo_root, &bundle.root.join(path)));
+        ids.repo_paths.insert(
+            id.clone(),
+            repo_path(repo_root, &bundle.root, &bundle.root.join(path)),
+        );
         ids.by_id.insert(id, path.to_string());
     }
     ids
@@ -341,12 +467,19 @@ fn kind_and_number(id: &str) -> Option<(String, u32)> {
 }
 
 /// `path` as SPEC §9 writes it in a definition: rooted at the repository.
-fn repo_path(repo_root: &Path, path: &Path) -> String {
-    let relative = path
-        .strip_prefix(repo_root)
-        .map(|p| format!("/{}", p.display()))
-        .unwrap_or_else(|_| path.display().to_string());
-    relative.replace('\\', "/")
+fn repo_path(repo_root: &Path, bundle_root: &Path, path: &Path) -> String {
+    let staged = bundle_root.starts_with(repo_root.join(".superdev/cache"));
+    let rendered = if staged
+        && let (Ok(relative), Some(directory)) =
+            (path.strip_prefix(bundle_root), bundle_root.file_name())
+    {
+        format!("/{}/{}", directory.to_string_lossy(), relative.display())
+    } else if let Ok(relative) = path.strip_prefix(repo_root) {
+        format!("/{}", relative.display())
+    } else {
+        path.display().to_string()
+    };
+    rendered.replace('\\', "/")
 }
 
 /// The manifest parses and carries no stamped keys (document check); it
@@ -1621,16 +1754,16 @@ mod tests {
     }
 
     #[test]
-    fn implements_is_core_and_warns_nothing() {
+    fn implements_resolves_to_an_issue_and_warns_nothing() {
         let (b, _dir) = bundle_with(&[
             ("manifest.sokf.yaml", MANIFEST_YAML),
             (
                 "plan.md",
-                "---\ntype: Plan\nid: alpha\nlinks:\n  - rel: implements\n    to: beta\n---\nSee [beta][sokf:beta].\n\n<!-- sokf:links -->\n[sokf:beta]: /spec.md\n",
+                "---\ntype: Plan\nid: plan-001-beta\nlifecycle: done\nphase: done\nbranch: work/001-beta\nlinks:\n  - rel: implements\n    to: issue-001-beta\n---\nSee [beta][sokf:issue-001-beta].\n\n<!-- sokf:links -->\n[sokf:issue-001-beta]: /spec.md\n",
             ),
             (
                 "spec.md",
-                "---\ntype: Spec\nid: beta\nlinks:\n  - rel: implemented-by\n    to: alpha\n---\nSee [alpha][sokf:alpha].\n\n<!-- sokf:links -->\n[sokf:alpha]: /plan.md\n",
+                "---\ntype: Issue\nid: issue-001-beta\nlinks:\n  - rel: implemented-by\n    to: plan-001-beta\n---\nSee [plan][sokf:plan-001-beta].\n\n<!-- sokf:links -->\n[sokf:plan-001-beta]: /plan.md\n",
             ),
         ]);
         let r = validate(&b, &b.root);
@@ -1828,6 +1961,18 @@ mod tests {
             assert!(!ok(bad), "{bad}");
         }
         assert!(!is_iso8601(&Value::Number(2026.into())));
+    }
+
+    #[test]
+    fn staged_knowledge_paths_render_as_their_published_location() {
+        assert_eq!(
+            repo_path(
+                Path::new("/repo"),
+                Path::new("/repo/.superdev/cache/staged/knowledge"),
+                Path::new("/repo/.superdev/cache/staged/knowledge/issues/index.md"),
+            ),
+            "/knowledge/issues/index.md"
+        );
     }
 
     #[test]

@@ -3,7 +3,7 @@ type: Decision
 id: adr-018-loop-in-the-skill-enforcement-in-the-hook
 title: The Unattended Loop Is a Skill, Enforced by a Hook That Never Parses a Plan
 description: The loop over feature-plan, build and integrate lives in a knowledge-carried skill, and a managed Stop hook keeps the turn going by reading only the run state — so the slice format stays pack content and a repo without the hook still gets the behaviour.
-lifecycle: active
+lifecycle: deprecated
 ---
 
 # ADR-018: The Unattended Loop Is a Skill, Enforced by a Hook That Never Parses a Plan

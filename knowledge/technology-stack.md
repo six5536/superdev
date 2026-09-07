@@ -28,7 +28,8 @@ set:[^cargo-toml]
   manifest and lock types; `toml_edit` to read them and to edit `.mise.toml`
   in place, preserving the user's layout and comments; `sha2` for the sha256
   hashes that detect drift in superdev-owned files; `dialoguer` for init's
-  template and project-name prompts.
+  template and project-name prompts; `fs2` for cross-process workflow and
+  filing locks.
 - **Rust (knowledge side)**: `rmcp` (the official Rust MCP SDK) for the stdio
   server; `tantivy` for the BM25 index; `model2vec-rs` for local static
   embeddings; `serde_yaml_ng` to parse concept frontmatter; `pulldown-cmark`
@@ -43,8 +44,8 @@ set:[^cargo-toml]
   (with `tokio`) to drive the server in-process.
 - **Tooling** (pinned in `.mise.toml`): `cargo-zigbuild` and `zig` (the cross
   C compiler for the musl targets), `cargo-nextest`, `cargo-llvm-cov`.
-- **Agent tooling**: this repo's engineering skills are the knowledge-carried
-  set superdev itself writes into `.claude/skills/` — embedded in the binary.
+- **Agent tooling**: Pi loads the owned Superdev and SOKF TypeScript extensions
+  plus the independently invocable `sokf-authoring` skill from `.pi/`.
 
 The embedding model is pinned like a dependency:
 `minishlab/potion-retrieval-32M`, at commit `6fc8051…`, fetched once per

@@ -2,23 +2,29 @@
 type: Plan
 id: plan-014-schema-review-findings
 title: Bring every schema in line with its own rules and the workflow
-description: The schema review's findings land — worked examples satisfy their own schemas, the report schemas gain identity and filing, stale vocabulary leaves, the contract, ADR and idea shapes unify, and the pack mirror stays byte-identical.
+description: The schema review's findings land — worked examples satisfy their own schemas, the report schemas gain identity and filing, stale vocabulary leaves, the contract, ADR and idea shapes unify,
+  and the pack mirror stays byte-identical.
 lifecycle: done
 links:
-  - rel: references
-    to: issue-022-a-schemas-worked-example-is-checked-by-nothing
-    note: This plan hand-fixes the examples and appends the type-mismatch evidence.
-  - rel: relates-to
-    to: plan-013-workflow-autonomy
-    note: W5 applies the feature-plan schema additions only where plan-013 has not.
-  - rel: references
-    to: adr-020-a-blocked-run-ends
-    note: Names the Deferred decisions section W5 adds when plan-013 has not.
+- rel: implements
+  to: issue-070-historical-schema-review-findings
+- rel: references
+  to: issue-022-a-schemas-worked-example-is-checked-by-nothing
+  note: This plan hand-fixes the examples and appends the type-mismatch evidence.
+- rel: relates-to
+  to: plan-013-workflow-autonomy
+  note: W5 applies the feature-plan schema additions only where plan-013 has not.
+- rel: references
+  to: adr-020-a-blocked-run-ends
+  note: Names the Deferred decisions section W5 adds when plan-013 has not.
+phase: done
+branch: work/070-historical-schema-review-findings
 ---
-
 # Plan: Bring every schema in line with its own rules and the workflow
 
-## Goal
+Primary issue: [issue-070-historical-schema-review-findings][sokf:issue-070-historical-schema-review-findings]
+
+## Goal and boundaries
 
 Every schema states rules its own worked example satisfies, in the
 workflow's current vocabulary, with one heading shape per document
@@ -157,17 +163,38 @@ for title, sid, summ in re.findall(r'\* \[([^\]]+)\]\[sokf:(schema-[a-z-]+)\] - 
         print(f'{fn}: index and description differ')
 ```
 
+## Requirements
+
+Preserve the historical plan intent and constraints recorded under Goal and boundaries.
+
 ## Contract changes
 
 - none.
+
+## ADR decisions
+
+- none beyond decisions already linked or described in this historical record.
+
+## Source and interface changes
+
+Historical source and interface changes remain described in the work blocks.
+
+## Knowledge changes
+
+Preserve this record under the canonical workflow schema.
+
+## Documentation changes
+
+Historical documentation impact predates the documentation map; migration itself is checked as canonical-knowledge.
 
 ## Work blocks
 
 ### Block 1: The contract family
 
 - [x] Done — ticked at merge.
-- Depends-on: none.
-- Change: the 16 contract schemas — the 14 public ones gain a required
+- Dependencies: none.
+- Areas: unknown (legacy record; no affected area inferred).
+- Outcome: the 16 contract schemas — the 14 public ones gain a required
   title heading-pattern (`^{Kind} contract: .+$`) and move every section
   to level 2, `contract-interface.md` already having the shape; "public
   and private together" becomes "public and internal together" in all
@@ -176,22 +203,25 @@ for title, sid, summ in re.findall(r'\* \[([^\]]+)\]\[sokf:(schema-[a-z-]+)\] - 
   contract example gains or keeps conforming frontmatter
   (`contract-interface`'s lacks it entirely) and matches the unified
   shape.
-- Done-check: the conformance script prints nothing for the contract
+- Verification: the conformance script prints nothing for the contract
   schemas, and `grep -rl 'private together' knowledge/schemas` prints
   nothing.
-- Cases:
-  - manual: the conformance script reports no contract schema — checks
+- Tests:
+  - Legacy evidence (non-executable): manual: the conformance script reports no contract schema — checks
     that every contract example satisfies its own frontmatter
     constraints.
-  - manual: no contract schema says "private together", and each names
+  - Legacy evidence (non-executable): manual: no contract schema says "private together", and each names
     a title heading-pattern — checks the corrected vocabulary and the
     unified shape.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 2: The report family
 
 - [x] Done — ticked at merge.
-- Depends-on: none.
-- Change: the seven report schemas — `code-review`, `security-review`,
+- Dependencies: none.
+- Areas: unknown (legacy record; no affected area inferred).
+- Outcome: the seven report schemas — `code-review`, `security-review`,
   `investigation`, `postmortem`, `status-update`, `release-notes` and
   `migration-guide` — gain an `id` pattern
   (`^code-review-\d{3}-[a-z0-9-]+$` and likewise per kind) and the
@@ -199,20 +229,23 @@ for title, sid, summ in re.findall(r'\* \[([^\]]+)\]\[sokf:(schema-[a-z-]+)\] - 
   listed in that directory's index, selected by frontmatter `type`; the
   garbled filing sentence is deleted; each example gains conforming
   frontmatter with a pattern-satisfying id.
-- Done-check: `grep -L "pattern:"` over the seven prints nothing, and
+- Verification: `grep -L "pattern:"` over the seven prints nothing, and
   each names `knowledge/reports/`.
-- Cases:
-  - manual: each of the seven declares an id pattern and names
+- Tests:
+  - Legacy evidence (non-executable): manual: each of the seven declares an id pattern and names
     `knowledge/reports/`, in a sentence that parses — checks that a
     report document can conform to SOKF.
-  - manual: the conformance script reports none of the seven — checks
+  - Legacy evidence (non-executable): manual: the conformance script reports none of the seven — checks
     that each example carries frontmatter with a conforming id.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 3: The remaining schemas and their index
 
 - [x] Done — ticked at merge.
-- Depends-on: none.
-- Change: 23 schemas — the 18 stale example types become the schema's
+- Dependencies: none.
+- Areas: unknown (legacy record; no affected area inferred).
+- Outcome: 23 schemas — the 18 stale example types become the schema's
   `const` (`architecture`, `architectural-rules`, `software-components`,
   `configuration`, `directory-structure`, `technology-stack`,
   `dependency-policy`, `coding-standards`, `testing-strategy`,
@@ -232,51 +265,57 @@ for title, sid, summ in re.findall(r'\* \[([^\]]+)\]\[sokf:(schema-[a-z-]+)\] - 
   mirroring `bug-report.md`'s and a note that `/accept` records its
   verdict in the settled-issue section; `index.md`'s feature-request
   summary regains "EARS acceptance criteria".
-- Done-check: the conformance script and the index summary diff both
+- Verification: the conformance script and the index summary diff both
   print nothing; no schema names a spec as a workflow document.
-- Cases:
-  - manual: the conformance script prints nothing across all 53 schemas
+- Tests:
+  - Legacy evidence (non-executable): manual: the conformance script prints nothing across all 53 schemas
     — checks that every worked example satisfies its own frontmatter
     constraints.
-  - manual: `grep -rilE '\ba spec\b|\bspecs\b' knowledge/schemas` prints
+  - Legacy evidence (non-executable): manual: `grep -rilE '\ba spec\b|\bspecs\b' knowledge/schemas` prints
     nothing, references to the SOKF spec by that name aside — checks
     that no schema routes work to a removed document type.
-  - manual: the index summary diff prints nothing — checks that each
+  - Legacy evidence (non-executable): manual: the index summary diff prints nothing — checks that each
     index summary matches its schema's description.
-  - manual: `feature-request.md` names the contract links and the
+  - Legacy evidence (non-executable): manual: `feature-request.md` names the contract links and the
     settled-issue home of `/accept`'s verdict — checks that the schema
     states the workflow's conventions.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 4: The live documents
 
 - [x] Done — ticked at merge.
-- Depends-on: 1, 3.
-- Change: the six public contracts gain their title heading and demote
+- Dependencies: 1, 3.
+- Areas: unknown (legacy record; no affected area inferred).
+- Outcome: the six public contracts gain their title heading and demote
   their sections to level 2, `contract-007` and `contract-009` being
   checked against the schema and left alone; the `- Status:` line leaves
   all 21 ADRs, every one accepted and active; `idea-001`'s five sibling
   level-1 headings become level 2; `knowledge/constraints-non-goals.md`
   reads `type: ConstraintsNonGoals`, in the same commit as block 3's
   rename so no state has a schema-less document.
-- Done-check: every contract's first heading carries `contract: `, no
+- Verification: every contract's first heading carries `contract: `, no
   ADR carries a Status bullet, `idea-001` has one level-1 heading, and
   `superdev validate` reports no ungoverned document.
-- Cases:
-  - manual: `grep -m1 '^#' knowledge/contracts/*/active/*.md` matches
+- Tests:
+  - Legacy evidence (non-executable): manual: `grep -m1 '^#' knowledge/contracts/*/active/*.md` matches
     `contract: ` on all 8 — checks one heading shape for the family.
-  - manual: `grep -rl '^- Status:' knowledge/adrs/active` prints nothing
+  - Legacy evidence (non-executable): manual: `grep -rl '^- Status:' knowledge/adrs/active` prints nothing
     — checks that ADR state lives in `lifecycle` and links alone.
-  - manual: `grep -c '^# ' knowledge/ideas/idea-001-*.md` prints 1 —
+  - Legacy evidence (non-executable): manual: `grep -c '^# ' knowledge/ideas/idea-001-*.md` prints 1 —
     checks that the idea's sections sit at level 2.
-  - manual: `sokf_graph` resolves all eight contracts and `superdev
+  - Legacy evidence (non-executable): manual: `sokf_graph` resolves all eight contracts and `superdev
     validate` reports no link warning — checks that demoting the
     headings broke no section-addressed read.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 5: The feature-plan schema
 
 - [x] Done — ticked at merge.
-- Depends-on: none.
-- Change: `knowledge/schemas/feature-plan.md` — the slice Cases
+- Dependencies: none.
+- Areas: unknown (legacy record; no affected area inferred).
+- Outcome: `knowledge/schemas/feature-plan.md` — the slice Cases
   description says what a case covers when the framed issue is a bug:
   the numbered repro steps and the expected behaviour stand in for
   criteria numbers. If the schema still lacks them, it gains
@@ -285,41 +324,65 @@ for title, sid, summ in re.findall(r'\* \[([^\]]+)\]\[sokf:(schema-[a-z-]+)\] - 
   questions a blocked run leaves, per ADR-018 and
   [ADR-020][sokf:adr-020-a-blocked-run-ends]); whichever plan-013
   landed is left exactly as landed.
-- Done-check: the schema defines bug coverage, and carries `Depends-on`
+- Verification: the schema defines bug coverage, and carries `Depends-on`
   and `Deferred decisions` whichever plan landed them.
-- Cases:
-  - manual: the Cases description names the repro steps and the expected
+- Tests:
+  - Legacy evidence (non-executable): manual: the Cases description names the repro steps and the expected
     behaviour for a bug-framed plan — checks that coverage is defined
     for a bug.
-  - manual: `grep -l 'Depends-on'` and `grep -l 'Deferred decisions'`
+  - Legacy evidence (non-executable): manual: `grep -l 'Depends-on'` and `grep -l 'Deferred decisions'`
     both hit `feature-plan.md` — checks that the two sections stand,
     whichever plan landed them.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 6: Mirror, evidence, verification
 
 - [x] Done — ticked at merge.
-- Depends-on: 1, 2, 3, 4, 5.
-- Change: `knowledge/schemas/` is copied wholesale over
+- Dependencies: 1, 2, 3, 4, 5.
+- Areas: unknown (legacy record; no affected area inferred).
+- Outcome: `knowledge/schemas/` is copied wholesale over
   `pack/knowledge/schemas/` (53 files); issue-022 gains a dated Comments
   entry recording that 26 examples broke their own frontmatter
   constraints (18 types, 8 missing blocks), found by hand review and
   fixed by this plan; `CHANGELOG.md` gains an Unreleased entry for the
   pack-visible schema reshape; `superdev validate --fix` places files
   and regenerates definition blocks.
-- Done-check: `diff -rq knowledge/schemas pack/knowledge/schemas` prints
+- Verification: `diff -rq knowledge/schemas pack/knowledge/schemas` prints
   nothing and `superdev validate` reports PASS with 0 errors.
-- Cases:
-  - manual: `diff -rq knowledge/schemas pack/knowledge/schemas` prints
+- Tests:
+  - Legacy evidence (non-executable): manual: `diff -rq knowledge/schemas pack/knowledge/schemas` prints
     nothing — checks that the pack mirrors the live schemas byte for
     byte.
-  - manual: `superdev validate` reports PASS with 0 errors on a clean
+  - Legacy evidence (non-executable): manual: `superdev validate` reports PASS with 0 errors on a clean
     checkout of the branch — checks that every schema edit conforms.
-  - manual: issue-022's Comments carry the appended evidence,
+  - Legacy evidence (non-executable): manual: issue-022's Comments carry the appended evidence,
     `CHANGELOG.md` names the reshape under Unreleased, and
     `knowledge/plans/index.md` lists this plan with `lifecycle: done` —
     checks that the records close.
 
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+
+- Documentation: none recorded; this historical record makes no documentation claim.
+
+## Build state
+
+All historical blocks are complete; blocker: none.
+
+## Implementation decisions
+
+none.
+
+## Follow-up issues
+
+none.
+
+## Completion evidence
+
+Historical plan migrated mechanically; original evidence remains in its work blocks and Git history.
+
 <!-- sokf:links -->
-[sokf:adr-020-a-blocked-run-ends]: /knowledge/adrs/active/adr-020-a-blocked-run-ends.md
+[sokf:adr-020-a-blocked-run-ends]: /knowledge/adrs/deprecated/adr-020-a-blocked-run-ends.md
 [sokf:issue-022-a-schemas-worked-example-is-checked-by-nothing]: /knowledge/issues/done/issue-022-a-schemas-worked-example-is-checked-by-nothing.md
+[sokf:issue-070-historical-schema-review-findings]: /knowledge/issues/done/issue-070-historical-schema-review-findings.md
 [sokf:plan-013-workflow-autonomy]: /knowledge/plans/done/plan-013-workflow-autonomy.md

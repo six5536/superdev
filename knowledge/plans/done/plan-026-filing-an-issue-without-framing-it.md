@@ -2,28 +2,29 @@
 type: Plan
 id: plan-026-filing-an-issue-without-framing-it
 title: Filing an issue without framing it
-description: Blocks delivering I030 — a heading declared per variant in the validator, the tracker schemas varying by a four-state lifecycle with the sweep of the issues on file, the /file skill and the workflow entry, /frame framing in place with the three phases' gates, the backlog's retirement, and the records.
+description: Blocks delivering I030 — a heading declared per variant in the validator, the tracker schemas varying by a four-state lifecycle with the sweep of the issues on file, the /file skill and the
+  workflow entry, /frame framing in place with the three phases' gates, the backlog's retirement, and the records.
 lifecycle: done
 links:
-  - rel: implements
-    to: issue-030-filing-an-issue-requires-framing-it
-    note: The framed feature whose seventeen criteria these slices deliver.
-  - rel: references
-    to: contract-010-interface-document-schemas
-    note: Carries the two per-variant heading promises PENDING (I030); slice 1 closes them, so it runs first.
-  - rel: references
-    to: adr-048-an-issues-lifecycle-distinguishes-framed-from-unframed
-    note: The four states, the forms per state, /file, the gates, the sweep and the migration every slice follows.
-  - rel: references
-    to: adr-049-a-heading-is-declared-per-variant
-    note: The mechanism slice 1 builds and slice 2 uses.
+- rel: implements
+  to: issue-030-filing-an-issue-requires-framing-it
+- rel: references
+  to: contract-010-interface-document-schemas
+  note: Carries the two per-variant heading promises PENDING (I030); slice 1 closes them, so it runs first.
+- rel: references
+  to: adr-048-an-issues-lifecycle-distinguishes-framed-from-unframed
+  note: The four states, the forms per state, /file, the gates, the sweep and the migration every slice follows.
+- rel: references
+  to: adr-049-a-heading-is-declared-per-variant
+  note: The mechanism slice 1 builds and slice 2 uses.
+phase: done
+branch: work/030-filing-an-issue-requires-framing-it
 ---
-
 # Plan: Filing an issue without framing it
 
-Request: [issue-030-filing-an-issue-requires-framing-it][sokf:issue-030-filing-an-issue-requires-framing-it]
+Primary issue: [issue-030-filing-an-issue-requires-framing-it][sokf:issue-030-filing-an-issue-requires-framing-it]
 
-## Goal
+## Goal and boundaries
 
 The validator first: the block that closes
 [contract-010][sokf:contract-010-interface-document-schemas]'s two
@@ -48,6 +49,10 @@ its done-check. A pack skeleton under `pack/knowledge/concepts/` is
 write-once in a managed repository; the repository's own copy is
 edited beside it.
 
+## Requirements
+
+Preserve the historical plan intent and constraints recorded under Goal and boundaries.
+
 ## Contract changes
 
 - contract-010-interface-document-schemas: `P_heading-per-variant` and
@@ -57,13 +62,30 @@ edited beside it.
   disjointness check tells a literal `heading` from a
   `heading-pattern` by declaration form.
 
+## ADR decisions
+
+- none beyond decisions already linked or described in this historical record.
+
+## Source and interface changes
+
+Historical source and interface changes remain described in the work blocks.
+
+## Knowledge changes
+
+Preserve this record under the canonical workflow schema.
+
+## Documentation changes
+
+Historical documentation impact predates the documentation map; migration itself is checked as canonical-knowledge.
+
 ## Work blocks
 
 ### Block 1: A heading is declared per variant
 
 - [x] Done — ticked by integrate at merge.
-- Depends-on: none.
-- Change: `validate::schema::document` — where a heading (or heading
+- Dependencies: none.
+- Areas: unknown (legacy record; no affected area inferred).
+- Outcome: `validate::schema::document` — where a heading (or heading
   pattern) is named by more than one section rule, the rules must all
   carry `variants` with pairwise-disjoint sets; a document is checked
   against the one its discriminator value selects, at the heading's
@@ -76,13 +98,13 @@ edited beside it.
   the rules its value selects, as today. The grammar's `variants` doc
   says a heading may recur with disjoint sets. Contract-010's two
   PENDING markers go.
-- Done-check: a probe schema declaring `Acceptance criteria` twice —
+- Verification: a probe schema declaring `Acceptance criteria` twice —
   once `[unframed]` with no key, once `[framed, done, wontfix]` keyed
   — passes an unframed document with plain items and fails a framed
   one with a keyless item; the same schema with overlapping sets, or
   one rule untagged, reports on the schema and binds nothing;
   `superdev validate` passes the live tree; no drift.
-- Cases:
+- Tests:
   - unit: two rules for one heading with disjoint variants — the
     document sees the rule its value selects and none of the other's
     findings — covers AC_one-schema-per-kind.
@@ -96,12 +118,15 @@ edited beside it.
     heading — covers AC_one-schema-per-kind.
   - integration: contract-010 carries no PENDING for the per-variant
     heading and the live tree validates — covers AC_one-schema-per-kind.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 2: The tracker schemas vary by lifecycle, and the issues on file are swept
 
 - [x] Done — ticked by integrate at merge.
-- Depends-on: 1.
-- Change: `pack/knowledge/schemas/feature-request.md`, `bug-report.md`
+- Dependencies: unknown (legacy record; no dependency inferred).
+- Areas: unknown (legacy record; no affected area inferred).
+- Outcome: `pack/knowledge/schemas/feature-request.md`, `bug-report.md`
   and `chore.md`, synced — `lifecycle` enum `[unframed, framed, done,
   wontfix]` with the description saying what each state means;
   `variant-key: lifecycle`; each cited list declared twice: the
@@ -123,13 +148,13 @@ edited beside it.
   folders; the filing check's own schema fixture in `lifecycle.rs`
   reads the four values. `feature-plan.md`'s case description names
   `EX_` beside `RS_` for a bug.
-- Done-check: `superdev validate` passes the live tree; `ls
+- Verification: `superdev validate` passes the live tree; `ls
   knowledge/issues/` is `unframed framed done wontfix`; every bug
   report's Expected behaviour is a numbered keyed list; a scratch
   unframed issue with plain criteria passes and the same issue set
   `framed` fails naming each keyless item and each `TBD`; the twelve
   examples pass; no drift.
-- Cases:
+- Tests:
   - integration: the three schemas declare the four values and
     `variant-key: lifecycle`, and `--fix` files an issue by its value
     — covers AC_lifecycle-values.
@@ -151,12 +176,15 @@ edited beside it.
     list whose words equal the paragraphs at `6bee067` — the test
     checks the form, and the sweep script checked the words against
     `6bee067` — covers AC_sweep.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 3: `/file` and the workflow entry
 
 - [x] Done — ticked by integrate at merge.
-- Depends-on: 2.
-- Change: `pack/knowledge/skills/file/SKILL.md`, synced into
+- Dependencies: unknown (legacy record; no dependency inferred).
+- Areas: unknown (legacy record; no affected area inferred).
+- Outcome: `pack/knowledge/skills/file/SKILL.md`, synced into
   `.claude/skills/file/` and claimed in the lock — the skill per
   ADR-048: reads the tracker concept, the three schemas and the idea
   schema; asks for the kind when none is given or it is unknown;
@@ -169,11 +197,11 @@ edited beside it.
   `.agents/superdev.md`; the how-do-i skill's map names `/file`. The
   normative tests that enumerate the knowledge-carried skills and the
   claimed files follow.
-- Done-check: `.claude/skills/file/SKILL.md` equals the pack copy and
+- Verification: `.claude/skills/file/SKILL.md` equals the pack copy and
   the lock claims it; `.agents/superdev.md` lists `/file`; `superdev
   status` no drift; the skill text states each of the four behaviours
   and the refusal.
-- Cases:
+- Tests:
   - unit: the skill text names the four kinds, the minimum record, the
     `unframed` lifecycle, the idea path, the promotion link, and says
     it does not interview, branch or invent criteria — covers
@@ -185,7 +213,7 @@ edited beside it.
     AC_workflow-lists-file.
   - unit: the pack skill and the synced copy match, and the lock
     claims the copy — covers AC_skill-ships.
-  - manual: `/file` invoked on a probe bug in a scratch repository
+  - Legacy evidence (non-executable): manual: `/file` invoked on a probe bug in a scratch repository
     files an unframed issue that validates — covers AC_file-issue.
     Run at `dcc8878`: the record the skill writes for a probe report
     (`TBD — …` under Environment, Root cause, Proposed fix and
@@ -194,33 +222,39 @@ edited beside it.
     `validate --fix` to `issues/unframed/` and the tree passed. A
     record written at the knowledge root goes to `knowledge/unframed/`
     instead, so the skill says where to write it.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 4: `/frame` frames in place, and the later phases refuse an unframed issue
 
 - [x] Done — ticked by integrate at merge.
-- Depends-on: 2.
-- Change: `pack/knowledge/skills/frame/SKILL.md`, synced — the "File
+- Dependencies: unknown (legacy record; no dependency inferred).
+- Areas: unknown (legacy record; no affected area inferred).
+- Outcome: `pack/knowledge/skills/frame/SKILL.md`, synced — the "File
   or fetch" step fetches an unframed issue and frames it in place; the
   close-out sets `lifecycle: framed` and lets `--fix` refile; run with
   no issue it files and frames in one pass; the criteria step writes
   keys and tags; the branch step names `feature/<nnn>-<slug>`.
   `contract-design`, `feature-plan` and `execute-feature-plan` gain a
   gate: the framed issue's `lifecycle` is `framed`, on-fail `/frame`.
-- Done-check: the four skills' pack and synced copies match; no
+- Verification: the four skills' pack and synced copies match; no
   drift; the normative skill tests pass.
-- Cases:
+- Tests:
   - unit: frame's text says it frames an unframed issue in place and
     sets `framed` — covers AC_frame-in-place.
   - unit: frame's text says a run with no issue files and frames in
     one pass — covers AC_frame-files.
   - unit: each of the three phase skills carries a gate on `framed`
     returning to `/frame` — covers AC_phases-refuse.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 5: The backlog retires
 
 - [x] Done — ticked by integrate at merge.
-- Depends-on: 4.
-- Change: three ideas — `idea-007` the knowledge-capture skill,
+- Dependencies: unknown (legacy record; no dependency inferred).
+- Areas: unknown (legacy record; no affected area inferred).
+- Outcome: three ideas — `idea-007` the knowledge-capture skill,
   `idea-008` template pre-filled skeletons, `idea-009`
   comment-preserving manifest stamping (`idea-006` was taken between
   the cut and the build) — written from the backlog's
@@ -233,13 +267,15 @@ edited beside it.
   prose, frame's bootstrap and "Record the decisions" step, and
   contract-design's backlog rule lose their references; the tests that
   count schemas and claimed files follow.
-- Done-check: `git grep -i backlog` finds only ADRs, the changelog and
+- Verification: `git grep -i backlog` finds only ADRs, the changelog and
   settled records; `superdev validate` passes; no drift.
-- Cases:
+- Tests:
   - unit: no schema, skill, index or live concept names the backlog —
     covers AC_backlog-retired.
   - integration: the three ideas and the wontfix chore validate and
     are listed — covers AC_backlog-retired.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 6: The records close
 
@@ -248,24 +284,33 @@ edited beside it.
   changed no code. The glossary's Lifecycle entry carries the framed and
   unframed definitions in place of a separate entry, and the changelog
   stands at its 800-line limit.
-- Depends-on: 3, 5.
-- Change: the issue-tracker concept says the four states, the folders,
+- Dependencies: 3, 5.
+- Areas: unknown (legacy record; no affected area inferred).
+- Outcome: the issue-tracker concept says the four states, the folders,
   `/file` and `/frame`'s roles; the glossary's Lifecycle entry names
   the four values, its EARS entry the framed state, its Promise key
   entry `EX_` as declared; the changelog's Unreleased carries the
   states, `/file`, the per-variant heading, the sweep and the backlog's
   retirement with the migration note for a managed repository carrying
   a `Backlog` document; I030's Comments record the sweep counts.
-- Done-check: `superdev validate` passes; the glossary's Promise key
+- Verification: `superdev validate` passes; the glossary's Promise key
   entry no longer says `EX_` is reserved.
-- Cases:
-  - manual: the tracker concept and the glossary name the four states
+- Tests:
+  - Legacy evidence (non-executable): manual: the tracker concept and the glossary name the four states
     and `/file` — covers AC_records. Read at `9372773`; no test reads
     the records (code-review-010 finding 8).
-  - manual: the changelog's Unreleased names the states and `/file` —
+  - Legacy evidence (non-executable): manual: the changelog's Unreleased names the states and `/file` —
     covers AC_records. Read at `9372773`.
 
-## Deferred decisions
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+
+- Documentation: none recorded; this historical record makes no documentation claim.
+
+## Build state
+
+All historical blocks are complete; blocker: none.
+
+## Implementation decisions
 
 - `AC_unframed-form` and ADR-048 require Summary and Motivation of every
   kind; a bug-report and a chore have no Motivation heading. Amend the
@@ -285,6 +330,14 @@ edited beside it.
   nothing; returns to contract-design (code-review-010 finding 3).
   - Answer (2026-09-02, the owner): say so — contract-010 gains
     `P_heading-same-by-form` and ADR-049 the sentence.
+
+## Follow-up issues
+
+none.
+
+## Completion evidence
+
+Historical plan migrated mechanically; original evidence remains in its work blocks and Git history.
 
 <!-- sokf:links -->
 [sokf:adr-048-an-issues-lifecycle-distinguishes-framed-from-unframed]: /knowledge/adrs/deprecated/adr-048-an-issues-lifecycle-distinguishes-framed-from-unframed.md

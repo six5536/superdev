@@ -9,6 +9,7 @@ version = "1.5.0"
 
 [knowledge]
 
-[skills]
-provider = "superdev-skills"
-version = "0.2.0"
+[workflow]
+human_acceptance_required = true
+max_stalled_block_attempts = 3
+max_final_correction_cycles = 3

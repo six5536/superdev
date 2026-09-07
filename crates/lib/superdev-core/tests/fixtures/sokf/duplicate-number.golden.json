@@ -1,10 +1,30 @@
 {
   "concepts": 3,
-  "errors": 1,
+  "errors": 5,
   "findings": [
     {
       "file": "plan-001-second.md",
       "message": "duplicate `plan` number 001 (also in plan-001-first.md)",
+      "severity": "error"
+    },
+    {
+      "file": "plan-001-first.md",
+      "message": "workflow: lifecycle `` is incompatible with phase ``",
+      "severity": "error"
+    },
+    {
+      "file": "plan-001-first.md",
+      "message": "workflow: a plan must carry exactly one `implements` link (found 0)",
+      "severity": "error"
+    },
+    {
+      "file": "plan-001-second.md",
+      "message": "workflow: lifecycle `` is incompatible with phase ``",
+      "severity": "error"
+    },
+    {
+      "file": "plan-001-second.md",
+      "message": "workflow: a plan must carry exactly one `implements` link (found 0)",
       "severity": "error"
     }
   ],

@@ -2,13 +2,20 @@
 type: Plan
 id: plan-008-sokf-becomes-core
 title: SOKF becomes a core part of superdev
-description: AOKF is renamed SOKF and stops being a swappable capability, the two validators merge into one module behind one command, a document's type names the schema that governs it, and the schema layer is enforced for the first time.
+description: AOKF is renamed SOKF and stops being a swappable capability, the two validators merge into one module behind one command, a document's type names the schema that governs it, and the schema
+  layer is enforced for the first time.
 lifecycle: done
+phase: done
+branch: work/065-historical-sokf-becomes-core
+links:
+- rel: implements
+  to: issue-065-historical-sokf-becomes-core
 ---
-
 # Plan: SOKF becomes a core part of superdev
 
-## Goal
+Primary issue: [issue-065-historical-sokf-becomes-core][sokf:issue-065-historical-sokf-becomes-core]
+
+## Goal and boundaries
 
 The knowledge format is SOKF, is part of superdev rather than a component it
 loads, and every document it governs is checked against the schema its type
@@ -158,6 +165,10 @@ untouched. `templates/processes/` is 21 tracked Claude Code process
 templates with no relation to the schema layer; the `**/*code-review*.md`
 glob matches one of them by accident today, and under FR-11 it cannot.
 
+## Requirements
+
+Preserve the historical plan intent and constraints recorded under Goal and boundaries.
+
 ## Contract changes
 
 - contract-001-content-packs: the provider id `[knowledge] provider =
@@ -167,13 +178,30 @@ glob matches one of them by accident today, and under FR-11 it cannot.
   `.agents/sokf.md` beside `.agents/sokf/SPEC.md`. An interface change, made
   deliberately.
 
+## ADR decisions
+
+- none beyond decisions already linked or described in this historical record.
+
+## Source and interface changes
+
+Historical source and interface changes remain described in the work blocks.
+
+## Knowledge changes
+
+Preserve this record under the canonical workflow schema.
+
+## Documentation changes
+
+Historical documentation impact predates the documentation map; migration itself is checked as canonical-knowledge.
+
 ## Work blocks
 
 ### Block 1: Knowledge stops being a capability
 
 - [x] Done — ticked at merge.
-- Depends-on: none.
-- Change:
+- Dependencies: none.
+- Areas: unknown (legacy record; no affected area inferred).
+- Outcome:
   1. Give the config a home — add a top-level `[knowledge]` table to
      `Manifest` carrying `custom` and `embeddings`, and take `embeddings`
      off `CapabilityConfig`. Nothing reads it yet, so the tree stays green.
@@ -210,9 +238,9 @@ glob matches one of them by accident today, and under FR-11 it cannot.
   Decision: D-11 — an old `[knowledge]` capability table is a named error,
   over migrating it in place on load; an error naming the edit is honest,
   and migration code would outlive its purpose.
-- Done-check: `Capability::ALL` has four entries, `init` writes the scaffold
+- Verification: `Capability::ALL` has four entries, `init` writes the scaffold
   with no flag given, and an old capability table fails naming the edit.
-- Cases:
+- Tests:
   - unit: `git grep -n 'Capability::Knowledge\|no-knowledge\|no_knowledge'`
     returns nothing, and `Capability::ALL` has four entries — the registry
     carries four entries, none of them knowledge (FR-1).
@@ -222,12 +250,15 @@ glob matches one of them by accident today, and under FR-11 it cannot.
     (FR-2, FR-3).
   - e2e: `superdev sync` against a config carrying `[knowledge] provider =
     "aokf"` fails naming the table and the edit (FR-3).
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 2: One validator module
 
 - [x] Done — ticked at merge.
-- Depends-on: none.
-- Change:
+- Dependencies: none.
+- Areas: unknown (legacy record; no affected area inferred).
+- Outcome:
   1. Create the parent — `src/validate/mod.rs` holding `validate_repo`,
      `RepoReport`, `Report` and `Finding`, moved from `format/mod.rs` and
      `aokf/validate.rs`. The merge point is now above both halves.
@@ -254,21 +285,24 @@ glob matches one of them by accident today, and under FR-11 it cannot.
   Decision: D-9 — one `validate` module with `sokf` and `schema` beneath it,
   over one flat module; the D-18 boundary becomes structural instead of a
   doc comment.
-- Done-check: neither half calls the other, and both golden trees move with
+- Verification: neither half calls the other, and both golden trees move with
   no content change.
-- Cases:
+- Tests:
   - unit: `git grep -n 'schema' src/validate/sokf.rs` returns nothing, and
     the only `sokf` under `src/validate/schema/` is the grammar's own path
     and the four tool names it governs — no call in either direction, and
     `validate/mod.rs` names both (FR-4).
   - observation: after the move, `git diff --stat` over both golden trees
     shows no content change — only the directory renames (O2).
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 3: One command surface
 
 - [x] Done — ticked at merge.
-- Depends-on: 2.
-- Change:
+- Dependencies: unknown (legacy record; no dependency inferred).
+- Areas: unknown (legacy record; no affected area inferred).
+- Outcome:
   1. Split the CLI module — `aokf_cli.rs` becomes `validate_cli.rs` (the
      `validate` verb and the hook) and `sokf_cli.rs` (`index` and `mcp`).
   2. Set the verbs — `main.rs` gains `Hook`, `Sokf::Index` and `Mcp::Sokf`,
@@ -290,19 +324,22 @@ glob matches one of them by accident today, and under FR-11 it cannot.
   Decision: D-10 — no compatibility path for the old manifest, hook marker
   or MCP key, over accepting both for one release; the tree is pre-1.0, and
   the orphan pass is already the migration.
-- Done-check: the help lists the new verbs and no `aokf` verb group, and the
+- Verification: the help lists the new verbs and no `aokf` verb group, and the
   MCP server answers under its new name.
-- Cases:
+- Tests:
   - e2e: `superdev --help` lists `validate`, `hook`, `sokf` and `mcp`, and
     no `aokf`; `superdev sokf --help` lists `index` (FR-5).
   - integration: `superdev mcp sokf` starts, and `tests/mcp_tools.rs` drives
     `sokf_search`, `sokf_read`, `sokf_graph` and `sokf_overview` (FR-6).
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 4: SOKF, the format
 
 - [x] Done — ticked at merge.
-- Depends-on: 2.
-- Change:
+- Dependencies: unknown (legacy record; no dependency inferred).
+- Areas: unknown (legacy record; no affected area inferred).
+- Outcome:
   1. Rewrite the specification — `.agents/aokf/SPEC.md` to
      `.agents/sokf/SPEC.md`, titled "SOKF — Superdev Open Knowledge Format",
      every AOKF replaced, and §1 defining **SOKF knowledge** as the term for
@@ -332,20 +369,23 @@ glob matches one of them by accident today, and under FR-11 it cannot.
   Decision: D-16 — the specification and the instructions stay binary-owned,
   over shipping them from the pack; unchanged rule, since they describe a
   version the binary pins and a format its compiled validator enforces.
-- Done-check: the manifest, the specification and the instructions all name
+- Verification: the manifest, the specification and the instructions all name
   SOKF, and the regenerated goldens differ only in the manifest filename and
   key.
-- Cases:
+- Tests:
   - unit: `knowledge/manifest.sokf.yaml` holds `sokf: "0.3"`, and `git grep
     -l 'manifest.aokf.yaml'` returns nothing outside the changelog (FR-7).
   - observation: `head -1 .agents/sokf/SPEC.md` reads `# SOKF — Superdev
     Open Knowledge Format`, and §1 defines "SOKF knowledge" (FR-8).
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 5: A type names a schema
 
 - [x] Done — ticked at merge.
-- Depends-on: none.
-- Change:
+- Dependencies: none.
+- Areas: unknown (legacy record; no affected area inferred).
+- Outcome:
   1. Give every schema a type const — the twelve without one get theirs;
      `interface-contract` gets `Contract`, which its documents already
      carry.
@@ -372,20 +412,23 @@ glob matches one of them by accident today, and under FR-11 it cannot.
   frontmatter, over deleting it for exact paths plus an `index.md`
   convention; one dispatch mechanism rather than two, and it stays available
   for a schema that wants a pattern.
-- Done-check: every schema declares a distinct type const, every concept's
+- Verification: every schema declares a distinct type const, every concept's
   type names a schema, and `target-files` remains only where dispatch by
   type cannot reach.
-- Cases:
+- Tests:
   - unit: a test asserts every schema declares a `type` const, that no two
     are equal, and that every concept's type names a schema (FR-9).
   - unit: a test asserts `target-files` appears only on schemas whose
     documents carry no frontmatter (FR-10).
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 6: Reconcile the schemas to practice
 
 - [x] Done — ticked at merge.
-- Depends-on: 5.
-- Change:
+- Dependencies: unknown (legacy record; no dependency inferred).
+- Areas: unknown (legacy record; no affected area inferred).
+- Outcome:
   1. Build the reconciliation harness — a test that runs every schema
      against the documents its type names and prints the disagreements.
      Temporary scaffolding for step 2, kept afterwards as the enforcement
@@ -405,9 +448,9 @@ glob matches one of them by accident today, and under FR-11 it cannot.
   the schema is wrong, over bringing every document to its schema; 13 of 14
   specs already agree on a shape the schema does not describe, and the
   practice is the evidence.
-- Done-check: the harness reports zero disagreements across all 40 schemas,
+- Verification: the harness reports zero disagreements across all 40 schemas,
   and each judgement is recorded with the side it went against.
-- Cases:
+- Tests:
   - integration: the reconciliation harness reports zero disagreements
     across all 40 schemas (FR-12).
 - Record — 218 findings on the first run, zero on the last, judged as
@@ -464,12 +507,15 @@ glob matches one of them by accident today, and under FR-11 it cannot.
   not carry more: no test plan was written for them at the time, so their
   plans name the automated cases that exist and say plainly that no manual
   step was recorded, rather than inventing one.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 7: Enforcement
 
 - [x] Done — ticked at merge.
-- Depends-on: 2, 6.
-- Change:
+- Dependencies: 2, 6.
+- Areas: unknown (legacy record; no affected area inferred).
+- Outcome:
   1. Dispatch by type — `validate::schema` resolves a concept to its schema
      through the frontmatter `type`, and reports a type naming no schema and
      a schema that governs nothing.
@@ -501,10 +547,10 @@ glob matches one of them by accident today, and under FR-11 it cannot.
   6. Correct the fourteen invocations — the eleven skill gates and the three
      command sites say what they now check, rather than naming only the SOKF
      half.
-- Done-check: a document that breaks its schema fails `superdev validate`
+- Verification: a document that breaks its schema fails `superdev validate`
   with a message naming the rule, and the glob reaches nothing outside the
   knowledge root.
-- Cases:
+- Tests:
   - unit: a test feeds `**/*release-notes*.md` and asserts the resolver
     refuses `node_modules/`, refuses `knowledge/schemas/`, and stays inside
     the repository (FR-11).
@@ -514,12 +560,15 @@ glob matches one of them by accident today, and under FR-11 it cannot.
   - integration: a fixture with a type naming no schema, and one schema
     declaring neither a type const nor a glob, are both reported —
     `unknown-type` and `governs-nothing` (FR-14).
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 8: The sweep
 
 - [x] Done — ticked at merge.
-- Depends-on: 1, 2, 3, 4, 5, 7.
-- Change:
+- Dependencies: 1, 2, 3, 4, 5, 7.
+- Areas: unknown (legacy record; no affected area inferred).
+- Outcome:
   1. Move the pack's instruction files — `pack/aokf/agents/**` to
      `pack/sokf/agents/**`. `classify` matches neither, which is what keeps
      them binary-owned; `paths_matching_no_rule_are_not_items` gains both
@@ -549,11 +598,11 @@ glob matches one of them by accident today, and under FR-11 it cannot.
      enforcement.
   8. Close what this supersedes — I014 and I015 become done, naming this
      plan.
-- Done-check: no live file says AOKF, a repo built by the previous release
+- Verification: no live file says AOKF, a repo built by the previous release
   migrates on one `sync`, the old grammar path, fixture roots, cache
   directory and asset directories are absent, and the full check set is
   green.
-- Cases:
+- Tests:
   - observation: `git grep -Ii 'aokf' -- . ':!CHANGELOG.md'
     ':!knowledge/plans' ':!knowledge/decisions' ':!knowledge/specs'
     ':!knowledge/issues'` returns only deliberate references: the tests
@@ -576,3 +625,26 @@ glob matches one of them by accident today, and under FR-11 it cannot.
   - e2e: `npm run coverage:check` passes (NFR-2), `time ./target/release/superdev
     validate` over this repository is under 250 ms (NFR-1), and `superdev
     status --drift` names no path this plan touched (NFR-4).
+
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+
+- Documentation: none recorded; this historical record makes no documentation claim.
+
+## Build state
+
+All historical blocks are complete; blocker: none.
+
+## Implementation decisions
+
+none.
+
+## Follow-up issues
+
+none.
+
+## Completion evidence
+
+Historical plan migrated mechanically. Original completion evidence remains in its work blocks and Git history.
+
+<!-- sokf:links -->
+[sokf:issue-065-historical-sokf-becomes-core]: /knowledge/issues/done/issue-065-historical-sokf-becomes-core.md

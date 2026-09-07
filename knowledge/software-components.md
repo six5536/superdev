@@ -24,12 +24,10 @@ All domain logic; no argument parsing. One module per concern:
 - `manifest` / `lock` — `.superdev/config.toml` and `.superdev/lock.toml`.
 - `component` — the provider trait (`plan` observes and returns actions);
   `action` — the action enum and file ownership.
-- `components::{sokf, plugin, skillpack, codegraph}` — the SOKF
-  component and one provider per slot, plus the shared helpers: `mise`
-  for targeted `.mise.toml` editing, `pin` for registry-locked pin
-  planning, `skills` for the `.claude/skills/` path convention and
-  init-time adoption the skill pack and the SOKF component share,
-  `item` — the declarative managed-item list the static components
+- `components::{sokf, plugin, skillpack, codegraph}` — the SOKF component
+  and legacy/optional providers, plus shared `mise`, pin, item, and enabled
+  planning helpers. The first-party workflow no longer routes through the
+  legacy Claude skillpack component. `item` is the declarative list components
   derive both `plan` and `owned` from — and `enabled`, the
   manifest-to-component resolution.
 - `pack` — where content comes from: the source a pack is resolved from, the
@@ -76,10 +74,9 @@ All domain logic; no argument parsing. One module per concern:
   `schema` (documents against the schema their `type` names, and skills and
   the core file against the grammar, with `document`, `check`, `grammar`,
   `read` and `doc` beneath it).
-- The SOKF spec, agent files, starter concept skeleton and the 17 carried
-  skill directories the SOKF component writes, the two SKILL.md
-  files the `skills` capability writes, and the project templates all live in
-  `/pack` at the repository root, reached from the crate as `assets/` through a
+- The SOKF spec, agent files, starter concept skeleton, Pi extension and skill,
+  schemas, and project templates live in `/pack` at the repository root,
+  reached from the crate as `assets/` through a
   symlink and embedded at compile time. `superdev-core/build.rs` enumerates
   that tree into the file list `content` reads, so a file added to the pack
   reaches the binary without a Rust edit; the contents are still `include_str!`
@@ -133,14 +130,16 @@ Pi is installed. Its sandbox checks virtual retrieval,
 structured edit results, subdirectory physical writes, applied-invalid
 handling, and bounded validation feedback without making a model call.
 
-Authoring skills are harness-specific. The knowledge capability deploys
-`pack/knowledge/skills/sokf-authoring/SKILL.md` to
-`.claude/skills/sokf-authoring/SKILL.md` for Claude.
-`.pi/skills/sokf-authoring/SKILL.md` is independently authored around Pi's
-SOKF-aware `read`, `edit`, `write`, `sokf_search`, and `sokf_graph` tools. Pi
-does not link or scan `.claude/skills`. Both skills require authors to create
-and index a schema before using a previously unknown concept type. Both defer
-the full SOKF specification until syntax or semantics matter.
+`.pi/extensions/superdev/index.ts` registers `/superdev`, phase commands,
+resume, cancellation, human-only abandonment, and independent `/file`. Its
+private Markdown prompts are appended to fresh child Pi processes with fixed
+modifying or read-only tool sets. The extension delegates all durable changes
+to the versioned Rust workflow CLI.
+
+`.pi/skills/sokf-authoring/SKILL.md` is a genuine independently invocable Pi
+skill around SOKF-aware tools and is mirrored in `pack/pi/skills/`. Workflow
+roles are deliberately not Pi skills. All former Claude workflow skills and
+providers are retained only under `archive/claude-code/`.
 
 `.pi/extensions/system-prompt.ts` registers `/system-prompt` for inspecting the
 effective Pi prompt. Its `.pi/current-system-prompt.md` output is machine-local

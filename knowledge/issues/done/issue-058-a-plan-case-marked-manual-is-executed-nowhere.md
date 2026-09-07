@@ -4,7 +4,7 @@ id: issue-058-a-plan-case-marked-manual-is-executed-nowhere
 title: A plan case marked manual is executed nowhere, because the step that ran manual cases retired with integrate
 description: The retired /integrate ran the slice's cases from the plan including manual ones; /build runs tests and asks only that a case be implemented or marked manual, and /accept walks the contract criteria rather than the plan's cases, so a manual case covering no criterion is run by nobody.
 kind: bug
-lifecycle: open
+lifecycle: done
 links:
   - rel: references
     to: issue-052-the-workflow-carries-more-process-than-it-needs
@@ -89,6 +89,10 @@ The gate, the missing step, and the schema that defines a case.
 - Out: the `testing-strategy` concept's manual smoke run, which
   `knowledge/development-commands.md` already names and which no plan
   case stands in for.
+
+## Resolution
+
+The canonical plan schema now permits executable evidence only and rejects the retired `manual:` marker. Historical records were migrated to structural evidence, and BUILD owns every verification command.
 
 <!-- sokf:links -->
 [sokf:issue-052-the-workflow-carries-more-process-than-it-needs]: /knowledge/issues/done/issue-052-the-workflow-carries-more-process-than-it-needs.md

@@ -16,26 +16,18 @@ no Node.
 
 # Workflow
 
-1. Significant changes travel the knowledge-carried workflow skills in
-   `.claude/skills/` (FILE → SCOPE → BUILD → ACCEPT; see
-   `.agents/superdev.md`): `/file` records the work as a tracker issue
-   in the user's words; `/scope` takes the issue up, updates the
-   contracts it touches in place and files the plan as
-   `plan-<nnn>-<slug>` per `schema-plan`; `/build` works the plan's
-   work blocks and sets the plan `lifecycle: done` in the commit that
-   completes the work; `/accept` is optional, runs at the user's
-   request on the merged code, and closes the issue. One-off work
-   carries no issue and starts at `/scope`, its plan filed in the same
-   series and template.
-2. One branch per piece of work: `/scope` cuts `feature/<nnn>-<slug>` off
-   `main`, `<nnn>` the issue's number, and one-off work with no issue runs
-   on `adhoc/<nnn>-<slug>`, `<nnn>` the plan's number. A human
-   fast-forwards `main`; an unattended run commits and merges only on the
-   work's branch (ADR-021). The phases commit their own records:
-   `/scope` the plan with the contract, source-declaration and
-   decision-record edits `/contract-design` made under the user's
-   go-ahead; `/build` each work block with its tests, and the changelog,
-   knowledge and plan edits after the merge.
+1. Significant changes run through Pi's project extension as exactly
+   `SCOPE → BUILD → ACCEPT`. `/file` is an independent capture utility.
+   Every plan implements exactly one issue and uses its matching
+   `work/<issue-number>-<slug>` branch.
+2. SCOPE settles requirements, contracts, ADRs, documentation obligations,
+   stable blocks, and executable evidence; a fresh isolated read-only review
+   and explicit human approval are mandatory. BUILD delegates to one isolated
+   modifying child, owns block commits and evidence, then runs complete local
+   verification and a fresh isolated read-only code review. ACCEPT follows
+   `.superdev/config.toml` policy and integrates locally through Rust with
+   `git merge --no-ff`. It never pushes, releases, deletes the branch, stashes,
+   resets, discards, or resolves conflicts implicitly.
 3. Implement with focused commits, using
    [Conventional Commits](https://www.conventionalcommits.org/) (`feat:`,
    `fix:`, `docs:`, `test:`, `refactor:`, `chore:`).
@@ -46,27 +38,18 @@ no Node.
    Windows, the blueprint-drift check on every platform, and the coverage gate
    on Linux.
 
-# This repo manages its own skills and knowledge machinery
+# This repo manages its own Pi and knowledge machinery
 
-superdev fills the `skills` and `code-index` capabilities here, and carries
-the SOKF knowledge as part of itself: committed `.superdev/config.toml`
-and `.superdev/lock.toml`, with `cargo run -- sync` writing the two
-pack skills, the SOKF-carried skill set with its PostToolUse hook
-entry, the `.agents` files, and the codegraph pin, index and agent wiring.
-The knowledge scaffolds were this repo's before the component was
-enabled, so they are untouched; `frontend` stays off.
-`npm run check:blueprint` is what catches drift in the shipped skill assets —
-in the pre-PR list and in CI, through the product's own drift detection rather
-than a parity test.
+Committed `.superdev/config.toml` and `.superdev/lock.toml` govern the SOKF
+bundle, `.agents` files, code index, Pi workflow extension, and genuine Pi
+SOKF-authoring skill. `npm run check:blueprint` catches drift through the
+product's own lock and materialization behavior.
 
-The manifest also pins `/pack/` as a local-path pack, so this repo's content
-comes from the tree rather than from the copy compiled into the binary: edit a
-skill, template or scaffold under `pack/` and `cargo run -- sync` writes it to
-`.claude/skills/` with no rebuild in between. That retired the `asset-backport`
-skill; `pack-backport` replaced it. The pin removed the pack-to-live round
-trip — no rebuild stands between them — not the live-to-pack one, so an edit
-made to a live copy to try it still has to be mirrored into `pack/` before the
-next `sync` overwrites it.
+The manifest pins `/pack/` as a local-path pack. Edit the extension under
+`.pi/extensions/superdev/`, mirror it to `pack/pi/extensions/superdev/`, then
+run `cargo run -- sync`; similarly mirror the SOKF authoring skill under
+`pack/pi/skills/`. Retired Claude assets remain only under
+`archive/claude-code/` and are excluded from active materialization.
 
 Two things the pin does not do. It **layers** rather than replacing, because
 only the blueprint's default git source is the base
@@ -81,17 +64,12 @@ such a commit anyway — the per-file hashes still move when a live copy does,
 and a lock that has stopped describing what is on disk is the failure
 [I005][sokf:issue-005-a-backport-leaves-the-lock-stale] closed.
 
-The managed hook entry names a bare `superdev`, and this repo has no installed
-copy. `scripts/superdev` execs `cargo run` against this tree; symlink it onto
-your PATH once, as [CONTRIBUTING](/CONTRIBUTING.md) says.
-
 # Working with this repo's knowledge
 
-The canonical knowledge is served to agents over MCP. `.mcp.json` and the hook name a
-bare `superdev`, which the dev shim (`scripts/superdev`, symlinked onto PATH
-per [CONTRIBUTING](/CONTRIBUTING.md)) execs as `cargo run` against this
-tree; `npm run check:validate` runs `cargo run --quiet -- validate`
-directly. Compilation is cached, so the cost after the first
+The canonical knowledge is served to agents over MCP. `.mcp.json` names a bare
+`superdev`; the dev shim (`scripts/superdev`, symlinked onto PATH per
+[CONTRIBUTING](/CONTRIBUTING.md)) execs `cargo run` against this tree.
+`npm run check:validate` runs `cargo run --quiet -- validate` directly. Compilation is cached, so the cost after the first
 build is negligible — and every check tests the code you are editing rather
 than a binary from last month.
 

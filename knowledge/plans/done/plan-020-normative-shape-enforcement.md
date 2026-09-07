@@ -5,17 +5,18 @@ title: Normative shape enforcement
 description: Blocks delivering the body-pattern vocabulary, the EARS declaration, the contract-kind declarations and the contract sweep.
 lifecycle: done
 links:
-  - rel: implements
-    to: issue-034-normative-shapes-are-described-but-not-enforced
-    note: The plan delivers the framed issue's seven criteria.
+- rel: implements
+  to: issue-034-normative-shapes-are-described-but-not-enforced
+phase: done
+branch: work/034-normative-shapes-are-described-but-not-enforced
 ---
-
 # Plan: Normative shape enforcement
 
-Request:
+Primary issue: [issue-034-normative-shapes-are-described-but-not-enforced][sokf:issue-034-normative-shapes-are-described-but-not-enforced]
+
 [issue-034][sokf:issue-034-normative-shapes-are-described-but-not-enforced]
 
-## Goal
+## Goal and boundaries
 
 A schema binds the shape of normative text and the validator enforces
 the binding: a schema declares a per-item shape on a list section and
@@ -26,6 +27,10 @@ knowledge and the pack mirror validate clean with every declared shape
 enforced. The vocabulary lands first, in the engine, with no schema
 declaring it; each declaration then lands with the reconciliation it
 surfaces, so the tree never fails between a declaration and its sweep.
+
+## Requirements
+
+Preserve the historical plan intent and constraints recorded under Goal and boundaries.
 
 ## Contract changes
 
@@ -45,20 +50,37 @@ surfaces, so the tree never fails between a declaration and its sweep.
 - contract-009-interface-run-state: swept to the declared promise
   shapes; nothing it binds changes.
 
+## ADR decisions
+
+- none beyond decisions already linked or described in this historical record.
+
+## Source and interface changes
+
+Historical source and interface changes remain described in the work blocks.
+
+## Knowledge changes
+
+Preserve this record under the canonical workflow schema.
+
+## Documentation changes
+
+Historical documentation impact predates the documentation map; migration itself is checked as canonical-knowledge.
+
 ## Work blocks
 
 ### Block 1: The body-pattern vocabulary in the engine
 
 - [x] Done — ticked by integrate at merge.
-- Depends-on: none.
-- Change: `item-pattern` and `content-pattern` land in
+- Dependencies: none.
+- Areas: unknown (legacy record; no affected area inferred).
+- Outcome: `item-pattern` and `content-pattern` land in
   `validate::schema` per ADR-030 — `SectionRule` fields, the item and
   body checks, the mis-declaration findings — with unit tests. No
   schema declares either yet.
-- Done-check: a probe schema declaring each pattern produces the
+- Verification: a probe schema declaring each pattern produces the
   ADR-030 findings on a failing document and a failing schema; the live
   tree's findings are unchanged.
-- Cases:
+- Tests:
   - unit: an item failing a declared item-pattern is an error naming
     the file, the section and the item's first line — covers 1.
   - unit: a wrapped item matches after its continuation lines join, and
@@ -74,56 +96,85 @@ surfaces, so the tree never fails between a declaration and its sweep.
     document — covers 5.
   - unit: a schema's example is checked against the declaring schema's
     own patterns (ADR-024 path) — covers 1.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 2: EARS criteria enforced at frame time
 
 - [x] Done — ticked by integrate at merge.
-- Depends-on: 1.
-- Change: `schema-feature-request` declares the ADR-031 item-pattern on
+- Dependencies: unknown (legacy record; no dependency inferred).
+- Areas: unknown (legacy record; no affected area inferred).
+- Outcome: `schema-feature-request` declares the ADR-031 item-pattern on
   Acceptance criteria, in `knowledge/schemas/` and the pack mirror,
   with the section description updated to name the declaration.
-- Done-check: a probe feature-request with an untagged criterion fails
+- Verification: a probe feature-request with an untagged criterion fails
   validate naming the criterion; the shipped knowledge validates clean.
-- Cases:
+- Tests:
   - integration: a criterion without an EARS tag or `TBD — ` fails
     validate naming the file, the section and the item — covers 4.
   - integration: I030's TBD criteria and every on-file feature-request
     pass — covers 4, 6.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 3: The contract kinds declare their promise shapes
 
 - [x] Done — ticked by integrate at merge.
-- Depends-on: 1.
-- Change: the fifteen contract-kind schemas declare the ADR-032
+- Dependencies: unknown (legacy record; no dependency inferred).
+- Areas: unknown (legacy record; no affected area inferred).
+- Outcome: the fifteen contract-kind schemas declare the ADR-032
   item-patterns and content-patterns, in `knowledge/schemas/` and the
   pack mirror; each declaring section's description names the shape;
   each schema's `example:` block satisfies its own declarations.
-- Done-check: a live-repo test enumerates the ADR-032 assignment across
+- Verification: a live-repo test enumerates the ADR-032 assignment across
   the fifteen schemas and both trees; every schema example passes its
   own declared shapes.
-- Cases:
+- Tests:
   - integration: every ADR-032 section carries its declared pattern in
     both trees, and no definitional section carries one — covers 7.
   - integration: every contract-kind schema's example passes the
     schema's own declarations — covers 6.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 4: The on-file contracts pass the declared shapes
 
 - [x] Done — ticked by integrate at merge.
-- Depends-on: 3.
-- Change: the nine active contracts are swept until the ADR-032
+- Dependencies: unknown (legacy record; no dependency inferred).
+- Areas: unknown (legacy record; no affected area inferred).
+- Outcome: the nine active contracts are swept until the ADR-032
   declarations pass — promise items gain their keywords, promise
   sections state their promises — with no change to what any contract
   binds. Landed in block 3's commit: a declaration leaves the tree
   failing until its reconciliation follows, so the two cannot merge
   apart.
-- Done-check: `superdev validate` passes on the knowledge and the pack
+- Verification: `superdev validate` passes on the knowledge and the pack
   mirror with every declaration live; the sweep commits touch contract
   documents only.
-- Cases:
+- Tests:
   - e2e: a full validate run over the shipped knowledge and the pack
     mirror reports zero errors with every declared shape enforced —
     covers 6.
+
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+
+- Documentation: none recorded; this historical record makes no documentation claim.
+
+## Build state
+
+All historical blocks are complete; blocker: none.
+
+## Implementation decisions
+
+none.
+
+## Follow-up issues
+
+none.
+
+## Completion evidence
+
+Historical plan migrated mechanically; original evidence remains in its work blocks and Git history.
 
 <!-- sokf:links -->
 [sokf:issue-034-normative-shapes-are-described-but-not-enforced]: /knowledge/issues/done/issue-034-normative-shapes-are-described-but-not-enforced.md

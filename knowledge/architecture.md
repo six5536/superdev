@@ -76,14 +76,12 @@ A capability is a slot; the tool filling it is a swappable provider.
 |--------------|-------------------|---------------------------------|
 
 | `code-index` | `codegraph`       | checksummed release bundle (mise `http`) + `mise exec http:codegraph -- codegraph init` |
-| `frontend`   | `frontend-design` | Claude Code plugin              |
-| `skills`     | `superdev-skills` | owned files in the repo         |
+| `frontend`   | `frontend-design` | optional frontend plugin        |
 
 The registry holds one entry per (capability, provider) pair — its version, its
 checksum where it has one, and whether it is the default — and the manifest
-picks among them: one `provider` field per slot, except `skills`, whose
-many-provider shape is in
-[configuration][sokf:configuration]. Every capability currently has exactly one
+picks among them with one `provider` field per slot, as described by
+[configuration][sokf:configuration]. Every active capability has one
 registry entry; an id no entry matches fails with `<capability> provider must
 be one of: …`. A manifest still naming the removed `workflows` capability fails at
 load with a guided error.
@@ -93,17 +91,12 @@ carries beside the version, so superdev installs the registry version and
 refuses any other — see [contract-002-cli-superdev][sokf:contract-002-cli-superdev]. codegraph's bundles
 vendor their own Node, so a managed repo needs no node of its own.
 
-`skills` refuses any other version for a different reason: the pack's two
-skill files are embedded in the binary, which makes this binary the
-provenance. Nothing is installed. `sync` writes them to
-`.claude/skills/<name>/SKILL.md`; Claude Code reads them natively, so a
-teammate who clones the repo gets the pack without installing superdev. The
-SOKF component carries a much larger set the same way: the 17
-SOKF-carried skills — the workflow phases and their support skills — each
-materialised as its whole directory of owned files, and the document
-templates the skills fill in as owned files under `knowledge/templates/`. It also merges the
-validation hook's PostToolUse entry into `.claude/settings.json`, so hook and
-skills exist exactly where knowledge exists.
+The first-party pack carries the owned `.pi/extensions/superdev/` package and
+the independently invocable `.pi/skills/sokf-authoring/` skill. The workflow
+role prompts are private extension files, not discoverable Pi skills. Rust's
+content layout gives both Pi asset kinds ordinary lock hashes, drift reporting,
+adoption, rewrite, and orphan cleanup. Retired Claude skills and hook settings
+exist only under `archive/claude-code/`; sync cannot recreate them.
 
 # Files and artefacts
 
@@ -115,12 +108,9 @@ machine state and is gitignored. Their shape is in
 [configuration][sokf:configuration]; the code implementing them is listed in
 [software-components][sokf:software-components].
 
-Three things superdev keeps are lines in files it does not own: the
-`.gitignore` entries for the cache, `@AGENTS.md` in `CLAUDE.md` — the line
-that makes Claude Code load the entry point at all — and
-`@.agents/superdev.md` in AGENTS.md itself. All are added when missing,
-never rewritten and never hashed, so none can drift or be orphaned; delete
-one and the next `sync` puts it back.
+Two things superdev keeps are lines in files it does not own: the `.gitignore`
+entries for machine state and `@.agents/superdev.md` in AGENTS.md. They are
+added when missing, never rewritten, and never hashed.
 
 AGENTS.md is the user's file: superdev's guidance sits behind that one import
 in the owned `.agents/superdev.md`. The source is

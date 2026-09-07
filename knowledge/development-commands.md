@@ -20,9 +20,8 @@ What the annotated list does not say:
   specs it owns: the SOKF knowledge, and the files the grammar governs under the
   trees the grammar names. It exits 1 on errors, and warnings alone still
   pass. It lists its errors and counts its warnings; `--warnings` lists them
-  too (ADR-040). The Claude Code hook runs the same whole-set check by a
-  different route (`superdev hook validate`), so the two cannot reach
-  different verdicts. `cargo run -- sokf index` forces a full index rebuild, which
+  too (ADR-040). `superdev hook validate` remains a thin adapter over the same
+  whole-set check. `cargo run -- sokf index` forces a full index rebuild, which
   nothing routine needs: MCP or CLI `sokf search` and `overview` sync the index
   lazily. `sokf read` and `graph` parse current knowledge without opening the
   index or loading embeddings. Those four CLI commands expose the same service
@@ -40,9 +39,8 @@ What the annotated list does not say:
   through a one-shot CLI call and limits automatic repair feedback to two
   follow-up turns. `node --test scripts/test/sokf-mcp-client.test.mjs` checks
   MCP framing, process reuse, restart and shutdown without a model call. Load
-  Pi's native `/skill:sokf-authoring`
-  for format-sensitive knowledge changes; Pi does not discover the Claude skill
-  directory. Run `/system-prompt` in Pi to refresh
+  Pi's native `/skill:sokf-authoring` for format-sensitive knowledge changes.
+  Run `/system-prompt` in Pi to refresh
   the ignored `.pi/current-system-prompt.md` when inspecting effective
   instructions.
 - `npm run eval:sokf` validates the behavioral fixture without making model
@@ -59,9 +57,13 @@ What the annotated list does not say:
   Run it before committing a knowledge change. It is not what CI runs, and not what the hook runs —
   a gate that repairs what it is measuring reports on a repository nobody
   wrote.
-- `npm run check:blueprint` is `cargo run --quiet -- status` — the
-  superdev-owned files here (the pack skills, the knowledge-carried skill
-  set with its hook entry, and the `.agents` files) still match the
+- `cargo run -- workflow status --json` reports canonical workflow identity
+  and transient Pi ownership. The other typed `workflow` subcommands bind or
+  resume ownership, apply compare-and-swap transitions and evidence updates,
+  cancel, abandon after human confirmation, or integrate locally with checked
+  `git merge --no-ff`.
+- `npm run check:blueprint` is `cargo run --quiet -- status` — the owned Pi
+  extension, Pi authoring skill, schemas, and `.agents` files still match the
   blueprint. It exits 1 on drift, so CI gates on it.
 - Release CI runs `smoke` and `smoke:launcher` per buildable target;
   `smoke:manage` is manual-only and the one run that downloads the real

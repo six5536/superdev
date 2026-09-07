@@ -2,16 +2,22 @@
 type: Plan
 id: plan-005-content-pack-hardening
 title: Content pack hardening
-description: Deliver ADR-012 to ADR-016 in seven blocks — refuse an unsupported transport, refuse a symlink in a pack and let git decide what one is, give the spawn seam a deadline and an environment, bound the one unprompted request, prove a pin before writing it, and stop recording a digest nothing reads.
+description: Deliver ADR-012 to ADR-016 in seven blocks — refuse an unsupported transport, refuse a symlink in a pack and let git decide what one is, give the spawn seam a deadline and an environment, bound
+  the one unprompted request, prove a pin before writing it, and stop recording a digest nothing reads.
 lifecycle: done
 links:
-  - rel: references
-    to: contract-007-interface-pack-resolution
+- rel: implements
+  to: issue-062-historical-content-pack-hardening
+- rel: references
+  to: contract-007-interface-pack-resolution
+phase: done
+branch: work/062-historical-content-pack-hardening
 ---
-
 # Plan: content pack hardening
 
-## Goal
+Primary issue: [issue-062-historical-content-pack-hardening][sokf:issue-062-historical-content-pack-hardening]
+
+## Goal and boundaries
 
 Pack resolution refuses what it cannot fetch safely: a transport outside the
 allowlist, a symlink or a submodule anywhere under the pack, and a pin the
@@ -44,6 +50,10 @@ observably does nothing, which is what makes it safe to put in the middle.
 S014's test-plan cases are all assigned in P003 and none is left over; every
 case below is new and drawn from the issue it closes.
 
+## Requirements
+
+Preserve the historical plan intent and constraints recorded under Goal and boundaries.
+
 ## Contract changes
 
 - contract-007-interface-pack-resolution: pack resolution narrows.
@@ -55,15 +65,32 @@ case below is new and drawn from the issue it closes.
   writes the pin. A path source records no digest, and the lock's `digest`
   becomes optional.
 
+## ADR decisions
+
+- none beyond decisions already linked or described in this historical record.
+
+## Source and interface changes
+
+Historical source and interface changes remain described in the work blocks.
+
+## Knowledge changes
+
+Preserve this record under the canonical workflow schema.
+
+## Documentation changes
+
+Historical documentation impact predates the documentation map; migration itself is checked as canonical-knowledge.
+
 ## Work blocks
 
 ### Block 1: Refuse a transport superdev does not fetch over
 
 - [x] Done — ticked at merge.
-- Depends-on: none.
+- Dependencies: none.
+- Areas: unknown (legacy record; no affected area inferred).
 - Gap: [I007][sokf:issue-007-a-pack-source-reaches-git-with-no-scheme-check],
   the half left after block 15 of P003.
-- Change: add `SUPPORTED_SCHEMES` to `pack/source.rs`. `PackSource::parse`
+- Outcome: add `SUPPORTED_SCHEMES` to `pack/source.rs`. `PackSource::parse`
   refuses a `<name>::<address>` remote helper first — before its address is
   examined at all, so `ext::https://…` is a helper and not an https source —
   then a scheme outside the set, naming the source and the transport.
@@ -76,14 +103,14 @@ case below is new and drawn from the issue it closes.
   it. `file://` is not optional in the set: every git-source fixture in the
   suite spells its local repository that way, so dropping it fails every
   pack test that touches git rather than a documented use nobody exercises.
-- Done-check: `git://`, `http://` and `ext::` sources are refused at parse,
+- Verification: `git://`, `http://` and `ext::` sources are refused at parse,
   naming the transport, with no command run; `github:o/r`, `gitlab:o/r`,
   `https://`, `ssh://`, the scp form, a bare ssh alias and `file://` all
   still parse, and every `only_the_shorthand_is_expanded_for_git` case still
   passes; a test reads the override set off a real call and asserts all
   seven settings; `README.md` names the transports superdev accepts and no
   longer claims any other URL is passed through.
-- Cases:
+- Tests:
   - unit: `git://`, `http://` and `ext::` sources are refused at parse,
     naming the source and the transport, and no command runs — checks the
     transport allowlist.
@@ -100,24 +127,27 @@ case below is new and drawn from the issue it closes.
     ([ADR-012][sokf:adr-012-pack-source-schemes-are-allowlisted] carries the
     measurements). `GIT_CONFIG_GLOBAL` points git at the fixture config; the
     spawned git inherits it.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 2: A symlink in a pack is refused, not skipped
 
 - [x] Done — ticked at merge.
-- Depends-on: none.
+- Dependencies: none.
+- Areas: unknown (legacy record; no affected area inferred).
 - Gap: [I009][sokf:issue-009-a-skipped-symlink-says-nothing], the half a
   filesystem check can reach.
-- Change: `read_dir` and `read_pack` in `pack/resolve.rs` refuse a symlink
+- Outcome: `read_dir` and `read_pack` in `pack/resolve.rs` refuse a symlink
   naming the path instead of continuing past it, so the pack root and
   `pack.toml` refusals stop being special cases of a rule the rest of the
   tree does not follow.
-- Done-check: a path pack containing a symlink fails the run naming the
+- Verification: a path pack containing a symlink fails the run naming the
   path, and so does a fetched pack read back from the cache; the
   [I008][sokf:issue-008-a-symlinked-file-in-a-pack-is-followed] regression —
   a link to a secret outside the pack — still writes nothing; superdev's own
   `pack/` still resolves, and a test asserts it contains no symlink;
   `README.md`'s packs section says a pack may not contain one.
-- Cases:
+- Tests:
   - unit: a path pack containing a symlink fails the run naming the path —
     checks that a symlink is refused rather than skipped.
   - unit: a fetched pack read back from the cache fails the same way —
@@ -127,25 +157,28 @@ case below is new and drawn from the issue it closes.
   - unit: superdev's own `pack/` resolves and contains no symlink, so the
     day one appears is the day that test fails rather than the day a release
     does.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 3: Git decides what a symlink is
 
 - [x] Done — ticked at merge.
-- Depends-on: 2.
+- Dependencies: unknown (legacy record; no dependency inferred).
+- Areas: unknown (legacy record; no affected area inferred).
 - Gap: [I009][sokf:issue-009-a-skipped-symlink-says-nothing], the
   cross-platform half.
-- Change: after the checkout and before anything is read or digested,
+- Outcome: after the checkout and before anything is read or digested,
   `fetch` asks git for the pack subtree's index entries and refuses mode
   `120000` and mode `160000` — a submodule, which a shallow sparse clone
   leaves empty — naming the path. Through `fetch::git`, like every other git
   call.
-- Done-check: a fixture repository whose pack holds a symlink is refused at
+- Verification: a fixture repository whose pack holds a symlink is refused at
   fetch, before a digest is computed, both when the working tree holds a
   real link and when it holds the plain file a `core.symlinks=false`
   checkout produces; a submodule under the pack is refused the same way; a
   pack with neither resolves exactly as it does today, at the cost of one
   git call.
-- Cases:
+- Tests:
   - integration: a fixture repository whose pack holds a symlink is refused
     at fetch, before a digest is computed — checks that git, not the
     filesystem, decides.
@@ -160,59 +193,68 @@ case below is new and drawn from the issue it closes.
     checks mode `160000`.
   - integration: a pack with neither resolves as it does today — checks that
     the added git call changes no verdict.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 4: The spawn seam carries a deadline and an environment
 
 - [x] Done — ticked at merge.
-- Depends-on: none.
+- Dependencies: none.
+- Areas: unknown (legacy record; no affected area inferred).
 - Gap: [I002][sokf:issue-002-no-time-bound-on-the-update-query], the seam
   half.
-- Change: add `RunOptions { timeout, env }` to `runner.rs`. `run_with`
+- Outcome: add `RunOptions { timeout, env }` to `runner.rs`. `run_with`
   becomes the trait's one required method and `run` defaults onto it, so
   every existing call site is untouched. `SystemRunner` implements it over
   `std::process` — a reader thread per pipe and a kill on expiry, no new
   dependency. `FakeRunner` records what it was given. Nothing sets an option
   yet.
-- Done-check: the whole existing suite is green and unchanged; a child that
+- Verification: the whole existing suite is green and unchanged; a child that
   blocks past its deadline yields `Error::Command` naming the timeout and is
   no longer running when the call returns; `timeout: None` waits; an `env`
   entry reaches the child; `&dyn CommandRunner` still compiles, which is the
   object-safety check.
-- Cases:
+- Tests:
   - unit: a child that blocks past its deadline yields `Error::Command`
     naming the timeout and is no longer running when the call returns.
   - unit: `timeout: None` waits, and an `env` entry reaches the child.
   - unit: `&dyn CommandRunner` still compiles — the object-safety check.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 5: The one unprompted request is bounded, and never prompts
 
 - [x] Done — ticked at merge.
-- Depends-on: 4.
+- Dependencies: unknown (legacy record; no dependency inferred).
+- Areas: unknown (legacy record; no affected area inferred).
 - Gap: [I002][sokf:issue-002-no-time-bound-on-the-update-query].
-- Change: `fetch::git` takes the options through. The `ls-remote` query sets
+- Outcome: `fetch::git` takes the options through. The `ls-remote` query sets
   a deadline of a few seconds; the clone sets none, because the user pinned
   the pack and asked for it. Both set `GIT_TERMINAL_PROMPT=0`. `README.md`
   today tells the reader to "expect it to wait for your OS to give up
   first", which this block is what makes untrue.
-- Done-check: a fake runner that blocks past the deadline makes `update`
+- Verification: a fake runner that blocks past the deadline makes `update`
   report `could not reach it` and carry on, and the command returns in about
   the deadline rather than the OS connect timeout; the clone carries no
   deadline; every git call carries `GIT_TERMINAL_PROMPT=0`; `README.md` no
   longer promises the OS-length stall.
-- Cases:
+- Tests:
   - integration: a fake runner blocking past the deadline makes `update`
     report `could not reach it` and carry on, returning in about the
     deadline rather than the OS connect timeout.
   - unit: the clone carries no deadline, and every git call carries
     `GIT_TERMINAL_PROMPT=0` — checks that the pinned fetch still waits and
     that nothing prompts.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 6: `update` proves a pin before it writes it
 
 - [x] Done — ticked at merge.
-- Depends-on: none.
+- Dependencies: none.
+- Areas: unknown (legacy record; no affected area inferred).
 - Gap: [I001][sokf:issue-001-update-can-pin-an-unreadable-pack-format].
-- Change: `update_pins` takes `&Lock` and resolves the entry it is about to
+- Outcome: `update_pins` takes `&Lock` and resolves the entry it is about to
   move before writing it. On a refusal the pin stays where it is and the
   reason is reported in the line that would have announced the move.
   `manage.rs` passes the lock it already loads. `update` promises less than
@@ -220,14 +262,14 @@ case below is new and drawn from the issue it closes.
   which renders into `--help`, the man page and the completions, the
   rustdoc in `manage.rs`, and `README.md` — each of which says the pin moves
   to the newest release without saying "that this binary can read".
-- Done-check: against a fixture source whose newest release declares an
+- Verification: against a fixture source whose newest release declares an
   unsupported format, `.superdev/config.toml` is unchanged, the refusal
   names the format, and the run still succeeds; a readable release still
   moves the pin; a second unresolvable pack entry does not hold back a move
   that is fine; an unreachable source behaves exactly as it does today;
   `--help`, the man page and `README.md` agree on what `update` now
   guarantees, and the help table stays inside 80 columns.
-- Cases:
+- Tests:
   - integration: against a fixture source whose newest release declares an
     unsupported format, `.superdev/config.toml` is unchanged, the refusal
     names the format, and the run still succeeds.
@@ -242,28 +284,51 @@ case below is new and drawn from the issue it closes.
     cache already holds the release they move to, which is the state a
     second `update` on a synced repo starts from. What they assert is
     unchanged.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 7: A path pack records no digest
 
 - [x] Done — ticked at merge.
-- Depends-on: none.
+- Dependencies: none.
+- Areas: unknown (legacy record; no affected area inferred).
 - Gap: [I004][sokf:issue-004-a-path-packs-digest-churns-and-is-never-checked].
-- Change: `PackLock.digest` becomes `Option<String>`, omitted for a path
+- Outcome: `PackLock.digest` becomes `Option<String>`, omitted for a path
   source; `resolve_one`'s path arm records none and the git arm's three
   readers take it by `as_deref`. Re-run `sync` so this repository's own
   committed lock drops the line.
-- Done-check: `.superdev/lock.toml`'s `./pack` entry carries no `digest`; a
+- Verification: `.superdev/lock.toml`'s `./pack` entry carries no `digest`; a
   lock written before this still parses and loses only that field; editing a
   file under `pack/` and syncing leaves the `[[packs]]` block
   byte-identical, which is the churn this closes; a git pack still verifies
   and still fails the run on a mismatch.
-- Cases:
+- Tests:
   - unit: a lock written before this change still parses and loses only the
     `digest` field.
   - integration: editing a file under `pack/` and syncing leaves the
     `[[packs]]` block byte-identical — checks that the churn is closed.
   - integration: a git pack still verifies and still fails the run on a
     mismatch — checks that the digest still binds where it is read.
+
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+
+- Documentation: none recorded; this historical record makes no documentation claim.
+
+## Build state
+
+All historical blocks are complete; blocker: none.
+
+## Implementation decisions
+
+none.
+
+## Follow-up issues
+
+none.
+
+## Completion evidence
+
+Historical plan migrated mechanically; original evidence remains in its work blocks and Git history.
 
 <!-- sokf:links -->
 [sokf:adr-012-pack-source-schemes-are-allowlisted]: /knowledge/adrs/active/adr-012-pack-source-schemes-are-allowlisted.md
@@ -279,4 +344,5 @@ case below is new and drawn from the issue it closes.
 [sokf:issue-007-a-pack-source-reaches-git-with-no-scheme-check]: /knowledge/issues/done/issue-007-a-pack-source-reaches-git-with-no-scheme-check.md
 [sokf:issue-008-a-symlinked-file-in-a-pack-is-followed]: /knowledge/issues/done/issue-008-a-symlinked-file-in-a-pack-is-followed.md
 [sokf:issue-009-a-skipped-symlink-says-nothing]: /knowledge/issues/done/issue-009-a-skipped-symlink-says-nothing.md
+[sokf:issue-062-historical-content-pack-hardening]: /knowledge/issues/done/issue-062-historical-content-pack-hardening.md
 [sokf:plan-003-content-packs]: /knowledge/plans/done/plan-003-content-packs.md

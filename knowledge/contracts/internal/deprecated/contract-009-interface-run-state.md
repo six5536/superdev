@@ -4,8 +4,8 @@ id: contract-009-interface-run-state
 kind: interface
 title: Interface contract for run state
 description: The interface between the unattended loop's skill and its Stop hook — the run-state file, the verbs that write it, the hook's decision table, and the managed hook entry that arms it.
-lifecycle: active
-resource: /crates/app/superdev/src/run.rs
+lifecycle: deprecated
+resource: /archive/claude-code/run.rs
 links:
   - rel: references
     to: adr-018-loop-in-the-skill-enforcement-in-the-hook
@@ -38,7 +38,7 @@ The verbs' user-facing surface is in
 
 ## Definition
 
-<!-- sokf:include /crates/app/superdev/src/run.rs#run-state -->
+<!-- sokf:include /archive/claude-code/run.rs#run-state -->
 ```rust
 /// Where the state lives, relative to the repo root. It is machine state:
 /// `.superdev/cache/` is gitignored by `init`.
@@ -181,9 +181,9 @@ Internal.
 - `P_internal` [ubiquitous] Every item above MAY change with the crate.
 
 <!-- sokf:links -->
-[sokf:adr-018-loop-in-the-skill-enforcement-in-the-hook]: /knowledge/adrs/active/adr-018-loop-in-the-skill-enforcement-in-the-hook.md
-[sokf:adr-019-run-state-is-a-session-owned-file-behind-cli-verbs]: /knowledge/adrs/active/adr-019-run-state-is-a-session-owned-file-behind-cli-verbs.md
-[sokf:adr-020-a-blocked-run-ends]: /knowledge/adrs/active/adr-020-a-blocked-run-ends.md
+[sokf:adr-018-loop-in-the-skill-enforcement-in-the-hook]: /knowledge/adrs/deprecated/adr-018-loop-in-the-skill-enforcement-in-the-hook.md
+[sokf:adr-019-run-state-is-a-session-owned-file-behind-cli-verbs]: /knowledge/adrs/deprecated/adr-019-run-state-is-a-session-owned-file-behind-cli-verbs.md
+[sokf:adr-020-a-blocked-run-ends]: /knowledge/adrs/deprecated/adr-020-a-blocked-run-ends.md
 [sokf:adr-042-a-contracts-definition-is-materialized-from-source]: /knowledge/adrs/active/adr-042-a-contracts-definition-is-materialized-from-source.md
 [sokf:contract-002-cli-superdev]: /knowledge/contracts/public/active/contract-002-cli-superdev.md
 [sokf:research-001-claude-code-stop-hook-behaviour]: /knowledge/research/research-001-claude-code-stop-hook-behaviour.md

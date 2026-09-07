@@ -95,33 +95,6 @@ mod tests {
             std::fs::write(path, content).unwrap();
         }
     }
-
-    #[test]
-    fn a_fresh_repo_plans_every_skill() {
-        let dir = tempfile::tempdir().unwrap();
-        let (manifest, lock) = ctx_parts();
-        let fake = FakeRunner::new();
-        let ctx = Ctx {
-            root: dir.path(),
-            runner: &fake,
-            manifest: &manifest,
-            lock: &lock,
-            content: crate::content::test_snapshot(),
-        };
-        let actions = SkillPack.plan(&ctx).unwrap();
-        assert_eq!(actions.len(), 2);
-        let descs: Vec<String> = actions.iter().map(|a| a.describe()).collect();
-        for (name, _) in shipped() {
-            assert!(
-                descs
-                    .iter()
-                    .any(|d| d.contains(&format!(".claude/skills/{name}/SKILL.md"))),
-                "{descs:?}"
-            );
-        }
-        assert!(fake.calls().is_empty(), "planning must run nothing");
-    }
-
     #[test]
     fn a_converged_repo_plans_nothing() {
         let dir = tempfile::tempdir().unwrap();
@@ -137,52 +110,6 @@ mod tests {
         };
         assert!(SkillPack.plan(&ctx).unwrap().is_empty());
     }
-
-    #[test]
-    fn a_drifted_skill_is_rewritten_alone() {
-        let dir = tempfile::tempdir().unwrap();
-        converge(dir.path());
-        std::fs::write(
-            dir.path().join(".claude/skills/template-update/SKILL.md"),
-            "edited",
-        )
-        .unwrap();
-        let (manifest, lock) = ctx_parts();
-        let fake = FakeRunner::new();
-        let ctx = Ctx {
-            root: dir.path(),
-            runner: &fake,
-            manifest: &manifest,
-            lock: &lock,
-            content: crate::content::test_snapshot(),
-        };
-        let actions = SkillPack.plan(&ctx).unwrap();
-        assert_eq!(actions.len(), 1);
-        assert!(actions[0].describe().contains("template-update"));
-    }
-
-    #[test]
-    fn a_custom_skill_is_left_alone() {
-        let dir = tempfile::tempdir().unwrap();
-        converge(dir.path());
-        std::fs::write(
-            dir.path().join(".claude/skills/template-update/SKILL.md"),
-            "mine now",
-        )
-        .unwrap();
-        let (mut manifest, lock) = ctx_parts();
-        manifest.capabilities.get_mut("skills").unwrap()[0].custom = vec!["template-update".into()];
-        let fake = FakeRunner::new();
-        let ctx = Ctx {
-            root: dir.path(),
-            runner: &fake,
-            manifest: &manifest,
-            lock: &lock,
-            content: crate::content::test_snapshot(),
-        };
-        assert!(SkillPack.plan(&ctx).unwrap().is_empty());
-    }
-
     #[test]
     fn an_unknown_custom_name_is_ignored_by_planning() {
         let dir = tempfile::tempdir().unwrap();
@@ -215,75 +142,9 @@ mod tests {
         };
         assert!(SkillPack.plan(&ctx).is_err());
     }
-
-    #[test]
-    fn owned_omits_custom_skills() {
-        use crate::component::Claim;
-        let dir = tempfile::tempdir().unwrap();
-        let (mut manifest, lock) = ctx_parts();
-        manifest.capabilities.get_mut("skills").unwrap()[0].custom = vec!["template-update".into()];
-        let fake = FakeRunner::new();
-        let ctx = Ctx {
-            root: dir.path(),
-            runner: &fake,
-            manifest: &manifest,
-            lock: &lock,
-            content: crate::content::test_snapshot(),
-        };
-        let keys: Vec<String> = SkillPack.owned(&ctx).iter().map(Claim::lock_key).collect();
-        assert!(
-            !keys.iter().any(|k| k.contains("template-update")),
-            "{keys:?}"
-        );
-        assert!(keys.contains(&".claude/skills/double-check/SKILL.md".to_string()));
-    }
-
     #[test]
     fn reports_its_slot_and_provider() {
         assert_eq!(SkillPack.capability(), Some(Capability::Skills));
         assert_eq!(SkillPack.provider(), "superdev-skills");
-    }
-
-    #[test]
-    fn adoption_keeps_the_repos_own_skills_and_ignores_identical_ones() {
-        let dir = tempfile::tempdir().unwrap();
-        let write = |name: &str, body: &str| {
-            let path = dir.path().join(format!(".claude/skills/{name}/SKILL.md"));
-            std::fs::create_dir_all(path.parent().unwrap()).unwrap();
-            std::fs::write(path, body).unwrap();
-        };
-        // Theirs, under one of our names.
-        write("template-update", "# Ours, thanks\n");
-        // Already superdev's own text: nothing of the user's to keep.
-        let identities = shipped();
-        let (_, shipped) = identities
-            .iter()
-            .find(|(name, _)| *name == "double-check")
-            .unwrap();
-        write("double-check", shipped);
-
-        let mut manifest = Manifest::default_for("0.1.0", &[]);
-        let lines = adopt_existing(dir.path(), crate::content::test_snapshot(), &mut manifest);
-        assert_eq!(
-            manifest.capabilities["skills"][0].custom,
-            ["template-update"]
-        );
-        assert_eq!(
-            lines,
-            vec![format!(
-                "skills: kept your template-update — marked custom in {}",
-                crate::manifest::CONFIG_PATH
-            )]
-        );
-
-        // Nothing to adopt in an empty repo, or with skills disabled.
-        let empty = tempfile::tempdir().unwrap();
-        let mut manifest = Manifest::default_for("0.1.0", &[]);
-        assert!(
-            adopt_existing(empty.path(), crate::content::test_snapshot(), &mut manifest).is_empty()
-        );
-        assert!(manifest.capabilities["skills"][0].custom.is_empty());
-        let mut off = Manifest::default_for("0.1.0", &[crate::capability::Capability::Skills]);
-        assert!(adopt_existing(dir.path(), crate::content::test_snapshot(), &mut off).is_empty());
     }
 }

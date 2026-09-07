@@ -38,6 +38,11 @@ only (pre-1.0, no backports).
   authority of its own: it forwards SOKF requests to one session-scoped local
   MCP process and delegates non-knowledge paths to Pi's built-in tools
   ([contract-003-api-sokf][sokf:contract-003-api-sokf]).
+- **Workflow Git operations are local, shell-free, and compare-and-swapped.**
+  Rust validates branch names and exact tips, requires a clean tree, and invokes
+  `git merge --no-ff` without a shell. Automatic workflow paths never push,
+  release, delete branches, stash, reset, discard changes, absorb unrelated
+  work, or resolve conflicts implicitly.
 - **A pinned pack applies the bytes it was pinned to, or none.** Every
   resolved *git* pack is verified against the digest the lock recorded for
   that rev — over paths as well as contents, so a rename is a different pack, and

@@ -4,11 +4,17 @@ id: plan-011-filing-by-lifecycle
 title: Documents are filed by lifecycle
 description: One lifecycle field replaces two vocabularies, every document sits in a folder named for its state, and a document left in the base directory is unfiled — an error the fix pass repairs.
 lifecycle: done
+phase: done
+branch: work/068-historical-filing-by-lifecycle
+links:
+- rel: implements
+  to: issue-068-historical-filing-by-lifecycle
 ---
-
 # Plan: Documents are filed by lifecycle
 
-## Goal
+Primary issue: [issue-068-historical-filing-by-lifecycle][sokf:issue-068-historical-filing-by-lifecycle]
+
+## Goal and boundaries
 
 A document's directory names its lifecycle, and one field says the same
 thing inside the file. Every document in scope carries one lifecycle
@@ -151,18 +157,39 @@ lands, so a managed repository starts life in a shape this plan's gate
 refuses; that is one item in issue-021, alongside a scaffold that already
 fails validation for four other reasons.
 
+## Requirements
+
+Preserve the historical plan intent and constraints recorded under Goal and boundaries.
+
 ## Contract changes
 
 - none.
+
+## ADR decisions
+
+- none beyond decisions already linked or described in this historical record.
+
+## Source and interface changes
+
+Historical source and interface changes remain described in the work blocks.
+
+## Knowledge changes
+
+Preserve this record under the canonical workflow schema.
+
+## Documentation changes
+
+Historical documentation impact predates the documentation map; migration itself is checked as canonical-knowledge.
 
 ## Work blocks
 
 ### Block 1: One lifecycle field
 
 - [x] Done — ticked at merge.
-- Depends-on: none. The plan as a whole runs after
+- Dependencies: none. The plan as a whole runs after
+- Areas: unknown (legacy record; no affected area inferred).
   plan-010-links-address-ids, which is what makes a document movable.
-- Change: add the `lifecycle` key to every schema governing a document in
+- Outcome: add the `lifecycle` key to every schema governing a document in
   the five directories — `bug-report`, `feature-request`, `chore`,
   `spec`, `feature-plan`, `adhoc-plan`, `adr` and the 15 `contract-*`
   schemas — each with the enum its kind admits. The set is defined by
@@ -175,17 +202,20 @@ fails validation for four other reasons.
   lifecycle on those schemas today, so keeping it keeps two answers.
   `knowledge/glossary.md` states what `lifecycle` means, that the folder
   is its value, and why SOKF `status` no longer appears on these kinds.
-- Done-check: every schema in scope declares a `lifecycle` enum and no
+- Verification: every schema in scope declares a `lifecycle` enum and no
   `status` key.
-- Cases:
+- Tests:
   - checks that each schema in scope admits exactly the lifecycle values
     its kind uses, per the table under Goal.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 2: Search reads the field
 
 - [x] Done — ticked at merge.
-- Depends-on: 1.
-- Change: teach `SectionDoc::settled`
+- Dependencies: unknown (legacy record; no dependency inferred).
+- Areas: unknown (legacy record; no affected area inferred).
+- Outcome: teach `SectionDoc::settled`
   (`crates/lib/superdev-core/src/sokf/index.rs:154`) to return true for
   any `lifecycle` value but the kind's live one. `DOWNRANK_TAGS` stays
   until Block 4 deletes the tags it names, and `status == "deprecated"`
@@ -200,8 +230,8 @@ fails validation for four other reasons.
   each concept's `lifecycle`, as `mcp.rs:425` renders `status` today.
   Re-point `index.rs`'s ranking test so it gains a `lifecycle`-valued
   case, covering both paths while both are live.
-- Done-check: `cargo nextest run --workspace` passes.
-- Cases:
+- Verification: `cargo nextest run --workspace` passes.
+- Tests:
   - unit: `sokf_search` for a term in a `done` issue ranks it below the
     same term in an open one — checks that any value but the live one is
     down-ranked as a `done` tag is today.
@@ -210,12 +240,15 @@ fails validation for four other reasons.
     concept's value.
   - checks that `git log -S DOWNRANK_TAGS` shows the ranker reading
     `lifecycle` no later than the commit deleting the tags.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 3: The check and the filing repair
 
 - [x] Done — ticked at merge.
-- Depends-on: 2.
-- Change: a new `crates/lib/superdev-core/src/validate/lifecycle.rs`
+- Dependencies: unknown (legacy record; no dependency inferred).
+- Areas: unknown (legacy record; no affected area inferred).
+- Outcome: a new `crates/lib/superdev-core/src/validate/lifecycle.rs`
   reads `lifecycle` and reports a value outside the schema's enum, naming
   the value and the enum. It compares the document's last path segment
   before the filename with its `lifecycle` value, and reports a document
@@ -232,10 +265,10 @@ fails validation for four other reasons.
   `--fix` rather than a one-off script, because P008's scripted
   transforms dropped content from four issues, one of them 42% of the
   document, and the fix pass is code this plan ships and tests.
-- Done-check: the fixture cases under
+- Verification: the fixture cases under
   `crates/lib/superdev-core/tests/fixtures/lifecycle/` pass, and `--fix`
   writes zero files outside `<knowledge>/`.
-- Cases:
+- Tests:
   - unit: a `lifecycle` value outside the schema's enum raises one error
     naming the value and the enum.
   - unit: a document whose folder disagrees with its `lifecycle` raises
@@ -243,12 +276,15 @@ fails validation for four other reasons.
   - unit: a document directly in a kind's base directory is reported
     unfiled, and `--fix` files it by its `lifecycle`.
   - unit: `--fix` moves only inside the SOKF knowledge — no criterion.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 4: Migrate the tree
 
 - [x] Done — ticked at merge.
-- Depends-on: 3.
-- Change: set `lifecycle` on all 68 documents by the derivation table
+- Dependencies: unknown (legacy record; no dependency inferred).
+- Areas: unknown (legacy record; no affected area inferred).
+- Outcome: set `lifecycle` on all 68 documents by the derivation table
   under Goal, and delete the `tags` and `status` values it replaces.
   Delete `DOWNRANK_TAGS` and its branch, now that no tag it names
   survives. Run `--fix` on a clean working tree, so every document moves
@@ -258,10 +294,10 @@ fails validation for four other reasons.
   Read the diff, then confirm the indexes: their entries need no edit,
   since plan-010 made them id links, and their definition blocks are
   regenerated by the same pass.
-- Done-check: `cargo run -- validate` exits 0 on the migrated tree, and
+- Verification: `cargo run -- validate` exits 0 on the migrated tree, and
   `rg '^(tags|status):' knowledge/{issues,plans,specs,decisions,contracts}`
   returns nothing, against 24 tag lines and 68 status lines today.
-- Cases:
+- Tests:
   - checks that every document in scope carries a `lifecycle` value from
     its schema's enum and no `tags: [done]`, `[wontfix]` or
     `[needs-triage]` and no `status` key.
@@ -271,17 +307,20 @@ fails validation for four other reasons.
     and no document.
   - checks that `git diff` shows renames and frontmatter changes only, so
     every moved document is byte-identical but for its frontmatter.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 5: Close the gate
 
 - [x] Done — ticked at merge.
-- Depends-on: 4.
-- Change: promote the enum, folder and unfiled findings from warning to
+- Dependencies: unknown (legacy record; no dependency inferred).
+- Areas: unknown (legacy record; no affected area inferred).
+- Outcome: promote the enum, folder and unfiled findings from warning to
   error, now that the tree carries none of them. A document committed
   unfiled then fails the merge gate with a message naming the folder it
   belongs in.
-- Done-check: each positive control fails the run, and `--fix` clears it.
-- Cases:
+- Verification: each positive control fails the run, and `--fix` clears it.
+- Tests:
   - integration: setting a document's `lifecycle` to `done` without
     moving it raises one error naming the folder it belongs in; `--fix`
     moves it and the run exits 0.
@@ -292,12 +331,15 @@ fails validation for four other reasons.
     naming the value and the enum.
   - integration: moving a document by hand fails the run, and `--fix`
     restores it — checks the promoted findings are errors.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 6: The live tree addresses ids
 
 - [x] Done — ticked at merge.
-- Depends-on: 1.
-- Change: rewrite the filing lines in the 28 schemas under
+- Dependencies: unknown (legacy record; no dependency inferred).
+- Areas: unknown (legacy record; no affected area inferred).
+- Outcome: rewrite the filing lines in the 28 schemas under
   `knowledge/schemas/` that name a path, so each says a document is
   written under its kind's directory with the live `lifecycle` value and
   that `superdev validate --fix` files it; no schema names a state
@@ -309,22 +351,25 @@ fails validation for four other reasons.
   `sokf_read`. `.agents/sokf.md` says to ask `sokf_search` for a
   lifecycle and not to glob the knowledge tree, since a kind's base
   directory holds no documents at all.
-- Done-check: `rg
+- Verification: `rg
   'knowledge/(issues|plans|specs|decisions|contracts)/' knowledge/schemas
   .agents .claude/skills` returns nothing, against 35 files today.
-- Cases:
+- Tests:
   - checks that no schema, skill or process document in the live tree
     names a path under the five directories.
   - checks that every schema in scope tells the agent to number after the
     highest across a kind's folders.
   - checks that `.agents/sokf.md` sends the agent to the `lifecycle`
     filter rather than to a directory listing.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 7: Record what the pack still owes
 
 - [x] Done — ticked at merge.
-- Depends-on: 5, 6.
-- Change: add this plan's share to
+- Dependencies: 5, 6.
+- Areas: unknown (legacy record; no affected area inferred).
+- Outcome: add this plan's share to
   [issue-021][sokf:issue-021-backport-the-knowledge-design-to-the-pack] —
   the folder scaffold `init` does not yet write, the 8 pack skills and 8
   pack templates left naming paths, and the frontmatter change. Record
@@ -332,9 +377,9 @@ fails validation for four other reasons.
   frontmatter change and the new layout in the release notes rather than
   in a failing check. `knowledge/plans/index.md` lists this plan, and the
   plan reads `done`.
-- Done-check: issue-021's Surfaces name the folder scaffold, the 8 pack
+- Verification: issue-021's Surfaces name the folder scaffold, the 8 pack
   skills and the 8 pack templates this plan leaves.
-- Cases:
+- Tests:
   - checks that no document in the five directories carries a `status`
     key, and that `sokf_read` still reports a status for every concept,
     since SOKF defaults it.
@@ -342,6 +387,27 @@ fails validation for four other reasons.
     is filed and how it is addressed, and that the pack's copies of both
     are recorded as owing the same change.
 
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+
+- Documentation: none recorded; this historical record makes no documentation claim.
+
+## Build state
+
+All historical blocks are complete; blocker: none.
+
+## Implementation decisions
+
+none.
+
+## Follow-up issues
+
+none.
+
+## Completion evidence
+
+Historical plan migrated mechanically; original evidence remains in its work blocks and Git history.
+
 <!-- sokf:links -->
 [sokf:issue-018-the-schema-layer-checks-sections-and-nothing-else]: /knowledge/issues/done/issue-018-the-schema-layer-checks-sections-and-nothing-else.md
 [sokf:issue-021-backport-the-knowledge-design-to-the-pack]: /knowledge/issues/done/issue-021-backport-the-knowledge-design-to-the-pack.md
+[sokf:issue-068-historical-filing-by-lifecycle]: /knowledge/issues/done/issue-068-historical-filing-by-lifecycle.md

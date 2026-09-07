@@ -2,22 +2,24 @@
 type: Plan
 id: plan-022-decidable-findings-are-errors
 title: A decidable finding is an error
-description: Blocks closing the promised run-state fields, promoting the five findings the repository alone settles, scoping the edit-time hook off the two that span files, and holding the turn open while the knowledge carries an error.
+description: Blocks closing the promised run-state fields, promoting the five findings the repository alone settles, scoping the edit-time hook off the two that span files, and holding the turn open while
+  the knowledge carries an error.
 lifecycle: done
 links:
-  - rel: implements
-    to: issue-012-five-decidable-findings-only-warn
-    note: The plan delivers the framed issue's two criteria under ADR-039.
+- rel: implements
+  to: issue-012-five-decidable-findings-only-warn
+phase: done
+branch: work/012-five-decidable-findings-only-warn
 ---
-
 # Plan: a decidable finding is an error
 
-Request:
+Primary issue: [issue-012-five-decidable-findings-only-warn][sokf:issue-012-five-decidable-findings-only-warn]
+
 [issue-012][sokf:issue-012-five-decidable-findings-only-warn],
 decided by
 [ADR-039][sokf:adr-039-a-decidable-finding-is-an-error-and-the-turn-is-the-gate].
 
-## Goal
+## Goal and boundaries
 
 The five findings the repository alone settles — a broken body link, a
 missing `resource`, a missing `sources[].resource`, an index entry
@@ -30,6 +32,10 @@ file. ADR-039 settled the open question the issue carried, before this
 plan was cut. Blocks 1 and 4 of the first cut were merged during
 build: the hold cap and the hook that respects it are one deliverable.
 
+## Requirements
+
+Preserve the historical plan intent and constraints recorded under Goal and boundaries.
+
 ## Contract changes
 
 - contract-009-interface-run-state: `holds` and `HOLD_CAP`, already
@@ -37,13 +43,30 @@ build: the hold cap and the hook that respects it are one deliverable.
   interface drift test reports until the code matches the declaration
   (ADR-038).
 
+## ADR decisions
+
+- none beyond decisions already linked or described in this historical record.
+
+## Source and interface changes
+
+Historical source and interface changes remain described in the work blocks.
+
+## Knowledge changes
+
+Preserve this record under the canonical workflow schema.
+
+## Documentation changes
+
+Historical documentation impact predates the documentation map; migration itself is checked as canonical-knowledge.
+
 ## Work blocks
 
 ### Block 1: The run state holds the turn open
 
 - [x] Done — ticked by integrate at merge.
-- Depends-on: none.
-- Change: `holds` and `HOLD_CAP` land on the run state, as
+- Dependencies: none.
+- Areas: unknown (legacy record; no affected area inferred).
+- Outcome: `holds` and `HOLD_CAP` land on the run state, as
   [contract-009][sokf:contract-009-interface-run-state] already declares
   them, together with the `hook run` behaviour that uses them: it refuses
   to end the turn while `validate` reports an error, naming the findings
@@ -56,13 +79,13 @@ build: the hold cap and the hook that respects it are one deliverable.
   lands (ADR-038). The state and the hook ship together because a cap
   with nothing that holds is dead code, not a block — the first cut
   split them and clippy said so.
-- Done-check: `every_declared_signature_exists_in_the_source` passes; a
+- Verification: `every_declared_signature_exists_in_the_source` passes; a
   turn ending with the knowledge in error is held once and named; the
   same turn is held no more than `HOLD_CAP` times; unreadable knowledge
   ends the turn. The findings used here are the ones already fatal —
   block 2 is what adds the five, and a broken body link holds a turn
   only from then on.
-- Cases:
+- Tests:
   - unit: a state file with no `holds` key reads as zero, so a run armed
     by an older binary is not orphaned.
   - unit: `holds` round-trips through a write and a read.
@@ -77,56 +100,85 @@ build: the hold cap and the hook that respects it are one deliverable.
   - integration: unreadable knowledge exits 0, so the hook fails open.
   - integration: an armed run still continues as contract-009 says, so
     the two jobs of the hook do not interfere.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 2: The five findings fail the run
 
 - [x] Done — ticked by integrate at merge.
-- Depends-on: none.
-- Change: the five findings the repository alone settles become errors
+- Dependencies: none.
+- Areas: unknown (legacy record; no affected area inferred).
+- Outcome: the five findings the repository alone settles become errors
   in `validate::sokf` — a broken body link, a missing `resource`, a
   missing `sources[].resource`, an index entry naming a missing file,
   and a footnote label matching no `sources[].id`. The non-core `rel`
   stays a warning, being the one the repository cannot settle. The
   golden snapshots move with them.
-- Done-check: a tree carrying one of each exits 1 rather than 0, and
+- Verification: a tree carrying one of each exits 1 rather than 0, and
   the only warning the document check can still emit is the `rel` one.
-- Cases:
+- Tests:
   - unit: each of the five is reported as an error, naming the file and
     the target — covers 1, 2.
   - unit: a non-core `rel` is still a warning, so the tier is split by
     decidability and not emptied — covers 2.
   - golden: the document-check snapshots carry the new severities.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 3: The edit-time hook stops judging what it cannot see
 
 - [x] Done — ticked by integrate at merge.
-- Depends-on: 2.
-- Change: `hook validate` no longer blocks on the two findings only the
+- Dependencies: unknown (legacy record; no dependency inferred).
+- Areas: unknown (legacy record; no affected area inferred).
+- Outcome: `hook validate` no longer blocks on the two findings only the
   whole tree settles — a broken body link and an index entry naming a
   missing file — because it is handed one edited file and cannot see
   whether the target arrives in the next edit. It still reports them.
   Every other error blocks as it does today.
-- Done-check: editing a governed file to add a link to a file that does
+- Verification: editing a governed file to add a link to a file that does
   not exist exits 0, and the same file with a malformed `type` exits 2.
-- Cases:
+- Tests:
   - integration: a new broken body link in an edited concept exits 0.
   - integration: a new index entry naming a missing file exits 0.
   - integration: a missing `resource` in the same file still exits 2, so
     the hook was scoped and not disarmed.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 4: The knowledge and the records settle
 
 - [x] Done — ticked by integrate at merge.
-- Depends-on: 2, 3.
-- Change: the canonical knowledge and the pack mirror pass with the five
+- Dependencies: 2, 3.
+- Areas: unknown (legacy record; no affected area inferred).
+- Outcome: the canonical knowledge and the pack mirror pass with the five
   enforced, the changelog carries the change, and the documentation the
   hooks are configured from says what holds a turn open.
-- Done-check: `superdev validate` and `superdev validate pack` both pass,
+- Verification: `superdev validate` and `superdev validate pack` both pass,
   and the changelog names the new failure class.
-- Cases:
+- Tests:
   - integration: the live tree and the pack mirror validate clean.
+
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+
+- Documentation: none recorded; this historical record makes no documentation claim.
+
+## Build state
+
+All historical blocks are complete; blocker: none.
+
+## Implementation decisions
+
+none.
+
+## Follow-up issues
+
+none.
+
+## Completion evidence
+
+Historical plan migrated mechanically; original evidence remains in its work blocks and Git history.
 
 <!-- sokf:links -->
 [sokf:adr-039-a-decidable-finding-is-an-error-and-the-turn-is-the-gate]: /knowledge/adrs/active/adr-039-a-decidable-finding-is-an-error-and-the-turn-is-the-gate.md
-[sokf:contract-009-interface-run-state]: /knowledge/contracts/internal/active/contract-009-interface-run-state.md
+[sokf:contract-009-interface-run-state]: /knowledge/contracts/internal/deprecated/contract-009-interface-run-state.md
 [sokf:issue-012-five-decidable-findings-only-warn]: /knowledge/issues/done/issue-012-five-decidable-findings-only-warn.md

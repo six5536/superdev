@@ -13,6 +13,15 @@ publish a version it cannot find a heading for.
 
 ### Added
 
+- **The local workflow is now `SCOPE → BUILD → ACCEPT`.** A Pi extension
+  registers phase, recovery, cancellation, abandonment, and independent filing
+  commands; private prompts run modifying and read-only roles in fresh Pi
+  processes. Rust owns versioned transitions, transient ownership,
+  compare-and-swap plan revisions, configured acceptance policy, and safe local
+  `git merge --no-ff` integration.
+- **Pi workflow assets are first-class pack items.** Sync materializes and
+  hashes `.pi/extensions/superdev/` and the genuine
+  `.pi/skills/sokf-authoring/` capability.
 - **SOKF read operations are available from the CLI.** `superdev sokf
   overview`, `search`, `read` and `graph` expose the same lazily refreshed
   knowledge service as MCP; `search` accepts type, tag and lifecycle filters,
@@ -317,6 +326,9 @@ publish a version it cannot find a heading for.
 
 ### Changed
 
+- Active Claude workflow skills, providers, Stop/PostToolUse ownership, and the
+  `superdev run` protocol moved to `archive/claude-code/`; they are no longer
+  discovered or materialized. Historical records remain searchable.
 - **An issue is one template: `kind` in the frontmatter, `open`, `done`
   or `wontfix`, six headings in prose and bullets, no key.** `schema-issue`
   governs every issue — `type: Issue`, id `issue-<nnn>-<slug>`, `kind`

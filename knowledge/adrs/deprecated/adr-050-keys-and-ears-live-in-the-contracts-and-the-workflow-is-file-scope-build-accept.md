@@ -3,7 +3,7 @@ type: Decision
 id: adr-050-keys-and-ears-live-in-the-contracts-and-the-workflow-is-file-scope-build-accept
 title: Keys and EARS live in the contracts, and the workflow is file, scope, build, accept
 description: Keys and EARS are demanded of contracts alone, whose promises may nest keyed criteria; an issue is one plain template with kind and an open, done or wontfix lifecycle; a plan is one document holding the contract changes and the work blocks; the workflow is file, scope — which writes the plan and makes the contract changes through its sub-skills — build, which runs each block's tests and the full suite once, and an optional manual accept carrying the code review; the issues and plans on file are rewritten.
-lifecycle: active
+lifecycle: deprecated
 links:
   - rel: supersedes
     to: adr-031-ears-criteria-are-checked-by-item-pattern

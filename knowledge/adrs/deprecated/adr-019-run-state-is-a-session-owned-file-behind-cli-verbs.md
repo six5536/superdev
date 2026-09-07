@@ -3,7 +3,7 @@ type: Decision
 id: adr-019-run-state-is-a-session-owned-file-behind-cli-verbs
 title: Run State Is a Session-Owned File Behind CLI Verbs, and the Hook Owns the Counter
 description: An unattended run is armed by .superdev/cache/run.toml, created exclusively by superdev run begin and owned by one session; the Stop hook body is superdev hook run, and the hook alone increments the watchdog counter, capped at ten continues without progress.
-lifecycle: active
+lifecycle: deprecated
 ---
 
 # ADR-019: Run State Is a Session-Owned File Behind CLI Verbs, and the Hook Owns the Counter

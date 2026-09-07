@@ -201,9 +201,22 @@ pub fn plan_repo(
         .into_iter()
         .flat_map(|(_, _, claims)| claims)
         .collect();
-    // The aggregator is repo-level: no component claims it, and without a
-    // live claim its lock entry would read as an orphan every run.
+    // Repo-owned files need explicit claims because they do not belong to a
+    // component. Without these, each lock entry would look orphaned.
     claims.push(Claim::File(AGGREGATOR_PATH.into()));
+    for (kind, directory) in [
+        (ItemKind::PiExtension, "extensions"),
+        (ItemKind::PiSkill, "skills"),
+    ] {
+        for item in content.items_of(Owner::Repo, kind) {
+            for (relative, _) in &item.files {
+                claims.push(Claim::File(format!(
+                    ".pi/{directory}/{}/{}",
+                    item.name, relative
+                )));
+            }
+        }
+    }
     let orphans = orphan::plan(root, &lock, &claims)?;
     if !orphans.actions.is_empty() {
         planned.push(Planned {
@@ -524,6 +537,24 @@ fn repo_entry(root: &Path, manifest: &Manifest, content: &ContentSet) -> Result<
                 ownership: crate::action::Ownership::Scaffold,
                 reason: "general agent rules".into(),
             });
+        }
+    }
+    for (kind, directory, reason) in [
+        (ItemKind::PiExtension, "extensions", "Pi workflow extension"),
+        (ItemKind::PiSkill, "skills", "Pi skill"),
+    ] {
+        for item in content.items_of(Owner::Repo, kind) {
+            for (relative, content) in &item.files {
+                let path = format!(".pi/{directory}/{}/{}", item.name, relative);
+                if read_or_empty(root.join(&path))? != *content {
+                    actions.push(Action::WriteFile {
+                        path,
+                        content: content.clone(),
+                        ownership: crate::action::Ownership::Owned,
+                        reason: reason.into(),
+                    });
+                }
+            }
         }
     }
     if actions.is_empty() {
@@ -898,6 +929,22 @@ mod tests {
         }
         std::fs::write(dir.path().join(".gitignore"), ".superdev/cache/\n").unwrap();
         std::fs::write(dir.path().join("AGENTS.md"), "@.agents/superdev.md\n").unwrap();
+        let extension = content::test_snapshot()
+            .item(Owner::Repo, ItemKind::PiExtension, "superdev")
+            .unwrap();
+        for (relative, body) in &extension.files {
+            let path = dir.path().join(".pi/extensions/superdev").join(relative);
+            std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+            std::fs::write(path, body).unwrap();
+        }
+        let skill = content::test_snapshot()
+            .item(Owner::Repo, ItemKind::PiSkill, "sokf-authoring")
+            .unwrap();
+        for (relative, body) in &skill.files {
+            let path = dir.path().join(".pi/skills/sokf-authoring").join(relative);
+            std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+            std::fs::write(path, body).unwrap();
+        }
         let fake = FakeRunner::new();
         settle_sokf(dir.path(), &manifest, &fake);
         let mut plan = plan_repo(
@@ -1129,6 +1176,22 @@ mod tests {
         for path in rule_scaffold_paths() {
             std::fs::write(dir.path().join(path), "adapted by the user\n").unwrap();
         }
+        let extension = content::test_snapshot()
+            .item(Owner::Repo, ItemKind::PiExtension, "superdev")
+            .unwrap();
+        for (relative, body) in &extension.files {
+            let path = dir.path().join(".pi/extensions/superdev").join(relative);
+            std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+            std::fs::write(path, body).unwrap();
+        }
+        let skill = content::test_snapshot()
+            .item(Owner::Repo, ItemKind::PiSkill, "sokf-authoring")
+            .unwrap();
+        for (relative, body) in &skill.files {
+            let path = dir.path().join(".pi/skills/sokf-authoring").join(relative);
+            std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+            std::fs::write(path, body).unwrap();
+        }
         assert!(
             repo_entry(dir.path(), &manifest, content::test_snapshot())
                 .unwrap()
@@ -1136,30 +1199,20 @@ mod tests {
         );
     }
 
-    /// The SOKF component plans every carried skill file, so a
-    /// `[knowledge] custom` name can release any of them.
     #[test]
-    fn knowledge_plans_the_full_carried_skill_set() {
+    fn repo_entry_plans_the_complete_pi_extension() {
         let dir = tempfile::tempdir().unwrap();
-        std::fs::create_dir_all(dir.path().join(".git")).unwrap();
-        let fake = FakeRunner::new();
         let manifest = Manifest::default_for(crate::version(), &[]);
-        let plan = plan_repo(
-            dir.path(),
-            &fake,
-            &manifest,
-            &Lock::default(),
-            PlanMode::Sync,
-        )
-        .unwrap();
-        let descs = plan_descs(&plan);
-        for name in components::skill_names(content::test_snapshot(), sokf::OWNER) {
-            assert!(
-                descs
-                    .iter()
-                    .any(|d| d.contains(&format!(".claude/skills/{name}/SKILL.md"))),
-                "{name} missing from the plan"
-            );
+        let entry = repo_entry(dir.path(), &manifest, content::test_snapshot())
+            .unwrap()
+            .unwrap();
+        let descs: Vec<String> = entry.actions.iter().map(Action::describe).collect();
+        let extension = content::test_snapshot()
+            .item(Owner::Repo, ItemKind::PiExtension, "superdev")
+            .unwrap();
+        for (relative, _) in &extension.files {
+            let path = format!(".pi/extensions/superdev/{relative}");
+            assert!(descs.iter().any(|line| line.contains(&path)), "{path}");
         }
     }
 
@@ -1219,102 +1272,6 @@ mod tests {
         );
         assert!(err.contains("custom list"), "{err}");
     }
-
-    #[test]
-    fn custom_skills_are_pruned_from_the_lock_and_reported() {
-        let mut manifest = Manifest::default_for("0.1.0", &[]);
-        manifest.capabilities.get_mut("skills").unwrap()[0].custom =
-            vec!["template-update".into(), "grill-me".into()];
-        let mut lock = Lock::default();
-        lock.files.insert(
-            ".claude/skills/template-update/SKILL.md".into(),
-            "hash-a".into(),
-        );
-        lock.files.insert(
-            ".claude/skills/double-check/SKILL.md".into(),
-            "hash-b".into(),
-        );
-        assert!(prune_custom(&manifest, content::test_snapshot(), &mut lock));
-        assert!(
-            !lock
-                .files
-                .contains_key(".claude/skills/template-update/SKILL.md")
-        );
-        assert!(
-            lock.files
-                .contains_key(".claude/skills/double-check/SKILL.md")
-        );
-        // Nothing left to prune: reports no change.
-        assert!(!prune_custom(
-            &manifest,
-            content::test_snapshot(),
-            &mut lock
-        ));
-
-        assert_eq!(
-            custom_lines(&manifest, content::test_snapshot()),
-            vec![
-                "skills: template-update custom, unmanaged".to_string(),
-                "skills: custom names unknown skill 'grill-me' — no effect".to_string(),
-            ]
-        );
-        let no_skills = Manifest::default_for("0.1.0", &[Capability::Skills]);
-        assert!(custom_lines(&no_skills, content::test_snapshot()).is_empty());
-    }
-
-    #[test]
-    fn knowledge_custom_entries_release_the_whole_directory() {
-        let mut manifest = Manifest::default_for("0.1.0", &[]);
-        manifest.knowledge.custom = vec!["prototype".into()];
-        let mut lock = Lock::default();
-        // A skill-pack file, untouched by the knowledge custom list.
-        lock.files
-            .insert(".claude/skills/double-check/SKILL.md".into(), "h".into());
-        for key in [
-            ".claude/skills/prototype/SKILL.md",
-            ".claude/skills/prototype/refs/A.md",
-        ] {
-            lock.files.insert(key.into(), "h".into());
-        }
-        lock.files
-            .insert(".claude/skills/scope/SKILL.md".into(), "h".into());
-        assert!(prune_custom(&manifest, content::test_snapshot(), &mut lock));
-        assert!(!lock.files.keys().any(|k| k.contains("/prototype/")));
-        assert!(lock.files.contains_key(".claude/skills/scope/SKILL.md"));
-        assert!(
-            lock.files
-                .contains_key(".claude/skills/double-check/SKILL.md")
-        );
-        // Nothing left to prune: reports no change.
-        assert!(!prune_custom(
-            &manifest,
-            content::test_snapshot(),
-            &mut lock
-        ));
-    }
-
-    #[test]
-    fn knowledge_custom_lines_cover_every_carried_skill() {
-        let mut manifest = Manifest::default_for("0.1.0", &[]);
-        manifest.knowledge.custom = vec!["prototype".into(), "flying".into()];
-        let lines = custom_lines(&manifest, content::test_snapshot());
-        assert!(lines.contains(&"knowledge: prototype custom, unmanaged".to_string()));
-        assert!(
-            lines.contains(
-                &"knowledge: custom names unknown skill 'flying' — no effect".to_string()
-            )
-        );
-        // Every carried skill is a known custom name.
-        let mut manifest = Manifest::default_for("0.1.0", &[]);
-        manifest.knowledge.custom = components::skill_names(content::test_snapshot(), sokf::OWNER)
-            .into_iter()
-            .map(String::from)
-            .collect();
-        for line in custom_lines(&manifest, content::test_snapshot()) {
-            assert!(line.ends_with("custom, unmanaged"), "{line}");
-        }
-    }
-
     #[test]
     fn plan_repo_puts_the_orphan_entry_last_and_reports_released() {
         let dir = tempfile::tempdir().unwrap();

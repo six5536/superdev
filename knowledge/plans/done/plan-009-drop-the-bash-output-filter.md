@@ -4,11 +4,17 @@ id: plan-009-drop-the-bash-output-filter
 title: Drop rtk and the bash-output-filter capability
 description: The bash-output-filter slot, its rtk provider, the five things it owns and the flag that disabled it all leave, and a manifest still naming the table gets a guided error.
 lifecycle: done
+phase: done
+branch: work/066-historical-drop-the-bash-output-filter
+links:
+- rel: implements
+  to: issue-066-historical-drop-the-bash-output-filter
 ---
-
 # Plan: Drop rtk and the bash-output-filter capability
 
-## Goal
+Primary issue: [issue-066-historical-drop-the-bash-output-filter][sokf:issue-066-historical-drop-the-bash-output-filter]
+
+## Goal and boundaries
 
 superdev manages three capabilities, no repository it manages carries an
 rtk pin or a command-rewriting hook, and a manifest that still names the
@@ -114,19 +120,40 @@ All five blocks land in one pull request, Block 1 first. A binary that
 plans rtk against a repository whose manifest no longer names it, or the
 reverse, is the state the ordering prevents.
 
+## Requirements
+
+Preserve the historical plan intent and constraints recorded under Goal and boundaries.
+
 ## Contract changes
 
 - contract-001 (content packs): the quoted `pack::manifest::REJECTED`
   constant drops `agents/rtk.md`, so the contract no longer promises that
   an external pack carrying that path is refused.
 
+## ADR decisions
+
+- none beyond decisions already linked or described in this historical record.
+
+## Source and interface changes
+
+Historical source and interface changes remain described in the work blocks.
+
+## Knowledge changes
+
+Preserve this record under the canonical workflow schema.
+
+## Documentation changes
+
+Historical documentation impact predates the documentation map; migration itself is checked as canonical-knowledge.
+
 ## Work blocks
 
 ### Block 1: Sweep this repository
 
 - [x] Done — ticked at merge.
-- Depends-on: none.
-- Change: delete the `[bash-output-filter]` table from
+- Dependencies: none.
+- Areas: unknown (legacy record; no affected area inferred).
+- Outcome: delete the `[bash-output-filter]` table from
   `.superdev/config.toml`, so `enabled` stops resolving the component and
   its five claims lose their owner; then run `cargo run -- sync`, which
   removes `.miserc.toml`, `mise.unix.toml`, `mise.windows-x64.toml` and
@@ -144,11 +171,11 @@ reverse, is the state the ordering prevents.
   hand to exactly what the orphan pass would have planned, after checking
   all four files against their recorded hashes. `.agents/superdev.md`
   does not exist here, so there was no aggregator to rewrite.
-- Done-check: `git show <this block's commit> --stat` lists
+- Verification: `git show <this block's commit> --stat` lists
   `.miserc.toml`, `mise.unix.toml`, `mise.windows-x64.toml` and
   `.agents/rtk.md` deleted, with `.claude/settings.json`,
   `.agents/superdev.md` and `.superdev/lock.toml` modified.
-- Cases:
+- Tests:
   - e2e: with the table deleted, sync removes the three mise files, the
     instruction file and the `PreToolUse` element, and prunes their lock
     entries — no criterion.
@@ -161,12 +188,15 @@ reverse, is the state the ordering prevents.
     user-edited copy of an owned file is released from the lock and left
     on disk, with zero deletions where the content differs from the
     recorded hash.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 2: Remove the capability from the core
 
 - [x] Done — ticked at merge.
-- Depends-on: 1.
-- Change: delete the component — `components/rtk.rs`, its `pub mod rtk;`
+- Dependencies: unknown (legacy record; no dependency inferred).
+- Areas: unknown (legacy record; no affected area inferred).
+- Outcome: delete the component — `components/rtk.rs`, its `pub mod rtk;`
   (`components/mod.rs:8`), and its import and dispatch arm
   (`components/enabled.rs:7,58`). Delete the slot —
   `Capability::BashOutputFilter` with its `ALL` entry and `as_str` arm
@@ -187,12 +217,12 @@ reverse, is the state the ordering prevents.
   `agents/rtk.md` from `pack::manifest::REJECTED`
   (`pack/manifest.rs:24`): the entry exists because the binary owns that
   file, and once nothing does, the refusal names a file with no meaning.
-- Done-check: `rg 'rtk|bash-output-filter|BashOutputFilter' crates pack
+- Verification: `rg 'rtk|bash-output-filter|BashOutputFilter' crates pack
   README.md .mise.toml` returns only `manifest.rs`'s guided error and its
   test, and the message must name the table and the five files, so the
   check cannot be literally empty; `cargo check --workspace
   --all-targets` is clean and `cargo test --workspace` passes.
-- Cases:
+- Tests:
   - unit: a config carrying `[bash-output-filter]` is refused with a
     message naming the table to delete and the files sync then removes —
     `cargo test -p superdev-core manifest::` runs it.
@@ -202,12 +232,15 @@ reverse, is the state the ordering prevents.
     repository has no `.agents/superdev.md`: its `AGENTS.md` reads
     `@.agents/core.md`, and `status --drift` has reported the aggregator
     missing since before this plan.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 3: Remove the CLI surface
 
 - [x] Done — ticked at merge.
-- Depends-on: 2.
-- Change: delete the flag — `no_bash_output_filter` and its mapping
+- Dependencies: unknown (legacy record; no dependency inferred).
+- Areas: unknown (legacy record; no affected area inferred).
+- Outcome: delete the flag — `no_bash_output_filter` and its mapping
   (`manage.rs:36-39,53,450`). Update the tests — the 12
   `--no-bash-output-filter` sites in `tests/cli.rs`, the init-journey
   assertions (`tests/manage.rs:182-201`), and the disable journey
@@ -215,20 +248,23 @@ reverse, is the state the ordering prevents.
   Correct the README — the flag list at `README.md:18` and the manifest
   table's capability row at `README.md:132`, which this step first
   missed.
-- Done-check: `superdev init --help` lists `--no-frontend`, `--no-skills`
+- Verification: `superdev init --help` lists `--no-frontend`, `--no-skills`
   and `--no-code-index`, and no fourth flag.
-- Cases:
+- Tests:
   - e2e: `superdev init --help` offers three capability-disable flags —
     no criterion.
   - e2e: `superdev update bash-output-filter` fails with ``unknown
     capability `bash-output-filter` ``, as `workflows` does today — no
     criterion.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 4: Remove what sits outside the blueprint
 
 - [x] Done — ticked at merge.
-- Depends-on: 2.
-- Change: drop the dev pin — `"github:rtk-ai/rtk"` leaves
+- Dependencies: unknown (legacy record; no dependency inferred).
+- Areas: unknown (legacy record; no affected area inferred).
+- Outcome: drop the dev pin — `"github:rtk-ai/rtk"` leaves
   `.mise.toml:13`, since no command in the repository reaches rtk once
   the hook is gone. Correct the project template's prose — the Dockerfile
   comment (`pack/projects/rust-npm/devcontainer/Dockerfile:4`) and
@@ -236,16 +272,19 @@ reverse, is the state the ordering prevents.
   (`.../scripts/post-create.sh:10-12`) name codegraph alone. Removing
   `.miserc.toml` turns `auto_env` off, and codegraph, the only other
   pinned binary, is unaffected because it pins in `.mise.toml`.
-- Done-check: `rg 'rtk' .mise.toml pack/projects` returns nothing.
-- Cases:
+- Verification: `rg 'rtk' .mise.toml pack/projects` returns nothing.
+- Tests:
   - checks that no file under `.mise.toml` or `pack/projects` names rtk —
     no criterion.
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 5: Update the knowledge
 
 - [x] Done — ticked at merge.
-- Depends-on: 2, 3.
-- Change: the capability set — `architecture.md:71` loses its table row,
+- Dependencies: 2, 3.
+- Areas: unknown (legacy record; no affected area inferred).
+- Outcome: the capability set — `architecture.md:71` loses its table row,
   `glossary.md:13` the name, `api-contracts.md:15,84-86` the flag and the
   update targets, and `software-components.md:45` and
   `directory-structure.md:41` their rtk references. The configuration
@@ -263,11 +302,11 @@ reverse, is the state the ordering prevents.
   entry under `## [Unreleased]` naming the guided error and the files
   sync removes, so a user meets the manifest edit in the release notes.
   `knowledge/plans/index.md` lists this plan, and the plan reads `done`.
-- Done-check: `rg 'rtk|bash-output-filter' knowledge/` returns hits only
+- Verification: `rg 'rtk|bash-output-filter' knowledge/` returns hits only
   in `S011`, `S012`, `plan-003-content-packs`, `specs/index.md`,
   `plans/index.md` and this plan; `superdev validate` reports PASS over
   `knowledge/`.
-- Cases:
+- Tests:
   - checks that the knowledge names three capabilities and that `S012`
     reads `status: deprecated` — the `rg` sweep returns a file outside
     the historical list when a mention survives.
@@ -277,3 +316,26 @@ reverse, is the state the ordering prevents.
     check:validate` and `npm run check:blueprint` pass, clippy
     `--all-targets -- -D warnings` is clean, and line coverage stays at
     or above 90% per crate.
+
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+
+- Documentation: none recorded; this historical record makes no documentation claim.
+
+## Build state
+
+All historical blocks are complete; blocker: none.
+
+## Implementation decisions
+
+none.
+
+## Follow-up issues
+
+none.
+
+## Completion evidence
+
+Historical plan migrated mechanically. Original completion evidence remains in its work blocks and Git history.
+
+<!-- sokf:links -->
+[sokf:issue-066-historical-drop-the-bash-output-filter]: /knowledge/issues/done/issue-066-historical-drop-the-bash-output-filter.md

@@ -2,13 +2,20 @@
 type: Plan
 id: plan-006-rust-format-validator
 title: Fold the superdev-format validator into the Rust validator
-description: The grammar-driven format validator moves from a Node script into superdev-core and merges with the AOKF validator behind one command, one report and one hook, proved against goldens captured from the reference while it still ran.
+description: The grammar-driven format validator moves from a Node script into superdev-core and merges with the AOKF validator behind one command, one report and one hook, proved against goldens captured
+  from the reference while it still ran.
 lifecycle: done
+phase: done
+branch: work/063-historical-rust-format-validator
+links:
+- rel: implements
+  to: issue-063-historical-rust-format-validator
 ---
-
 # Plan: Fold the superdev-format validator into the Rust validator
 
-## Goal
+Primary issue: [issue-063-historical-rust-format-validator][sokf:issue-063-historical-rust-format-validator]
+
+## Goal and boundaries
 
 One command enforces both the AOKF spec and the superdev format, so a
 malformed skill or schema fails a check that runs without Node and cannot
@@ -252,17 +259,38 @@ run was configured with. When a positional path excludes the canonical knowledge
 is 0 and no knowledge finding appears; the key names the invocation, not what was
 read.
 
+## Requirements
+
+Preserve the historical plan intent and constraints recorded under Goal and boundaries.
+
 ## Contract changes
 
 - none.
+
+## ADR decisions
+
+- none beyond decisions already linked or described in this historical record.
+
+## Source and interface changes
+
+Historical source and interface changes remain described in the work blocks.
+
+## Knowledge changes
+
+Preserve this record under the canonical workflow schema.
+
+## Documentation changes
+
+Historical documentation impact predates the documentation map; migration itself is checked as canonical-knowledge.
 
 ## Work blocks
 
 ### Block 1: Settle the grammar
 
 - [x] Done — ticked at merge.
-- Depends-on: none.
-- Change:
+- Dependencies: none.
+- Areas: unknown (legacy record; no affected area inferred).
+- Outcome:
   1. Drop the ledger kind — remove its 30 lines from the grammar, its
      `checkLedger` function, and the suffix rule that claims ledger files,
      per D-9.
@@ -284,19 +312,22 @@ read.
   other people's repos where `.claude/skills` is a Claude Code convention
   rather than ours, and an allowlist of roots stays finite where a denylist
   of caches, backups, submodules and vendored packs does not.
-- Done-check: the Node script reports 61 passes and no findings over the
+- Verification: the Node script reports 61 passes and no findings over the
   live tree, given no paths.
-- Cases:
+- Tests:
   - e2e: after the grammar change the Node script still reports 61 passes
     and no findings, and `rg -n 'ledger' scripts/superdev-format/` returns
     nothing — the binary chooses the kind by the grammar's own `match` rules
     including `except` (FR-1).
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 2: Capture the reference behaviour
 
 - [x] Done — ticked at merge.
-- Depends-on: 1.
-- Change:
+- Dependencies: unknown (legacy record; no dependency inferred).
+- Areas: unknown (legacy record; no affected area inferred).
+- Outcome:
   1. Add `--json` to the reference — emitting the shape `Report::to_json`
      uses, so one golden pins the finding texts and the JSON keys together,
      per D-12.
@@ -322,18 +353,21 @@ read.
   Decision: D-14 — the grammar changes land before the goldens are captured,
   over folding them into the golden-capture workstream; goldens recorded
   against the old rulebook would test rules the Rust no longer has.
-- Done-check: the goldens are committed, and `format_parity.rs` carries the
+- Verification: the goldens are committed, and `format_parity.rs` carries the
   same warning `validator_parity.rs` does about what editing one means.
-- Cases:
+- Tests:
   - observation: every fixture tree carries a golden captured from the
     reference's `--json` run, in the shape `Report::to_json` uses — the
     finding texts and the JSON keys are pinned together (FR-2, FR-5).
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 3: The grammar as types
 
 - [x] Done — ticked at merge.
-- Depends-on: 1.
-- Change:
+- Dependencies: unknown (legacy record; no dependency inferred).
+- Areas: unknown (legacy record; no affected area inferred).
+- Outcome:
   1. Define the types — a module under `superdev-core` mirroring the
      grammar's shape, every struct `deny_unknown_fields`, so a typo in the
      grammar is a deserialisation error naming the key.
@@ -351,19 +385,22 @@ read.
   `schemaErrors` as well; `#[serde(deny_unknown_fields)]` plus required
   fields is the same contract, enforced by the compiler instead of at run
   time.
-- Done-check: the real grammar round-trips through the types, and a grammar
+- Verification: the real grammar round-trips through the types, and a grammar
   with an unknown key is refused naming the key.
-- Cases:
+- Tests:
   - unit: a grammar with a key removed and a key misspelled fails the run
     naming the key, before any file is read — the grammar is read into types
     that reject unknown keys, and a grammar violating its own constraints
     fails before any file is read (FR-3, FR-4).
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 4: The checks
 
 - [x] Done — ticked at merge.
-- Depends-on: 3.
-- Change:
+- Dependencies: unknown (legacy record; no dependency inferred).
+- Areas: unknown (legacy record; no affected area inferred).
+- Outcome:
   1. Port the readers — `fenceMap`, `splitFrontmatter`, `extractYaml`,
      `proseOnly`, `parseElements`. These carry the subtle bugs already fixed
      once: blanking a multi-line code span while preserving indices, and
@@ -376,18 +413,21 @@ read.
   frontmatter, elements, prose); `crates/lib/superdev-core/src/format/check.rs`
   (the per-kind and cross-file checks); `crates/lib/superdev-core/Cargo.toml`
   (add `regex`).
-- Done-check: every check the reference performs has a Rust counterpart
+- Verification: every check the reference performs has a Rust counterpart
   passing its fixture goldens, with `regex` the one crate added (NFR-2).
-- Cases:
+- Tests:
   - integration: `cargo test -p superdev-core --test format_parity` passes
     on every captured golden — for any file, the finding texts the binary
     emits equal those the Node script emits (FR-2).
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 5: One report, one command
 
 - [x] Done — ticked at merge.
-- Depends-on: 4.
-- Change:
+- Dependencies: unknown (legacy record; no dependency inferred).
+- Areas: unknown (legacy record; no affected area inferred).
+- Outcome:
   1. Emit AOKF findings — have the format checks build `Finding` values with
      `fatal` set, so one failing skill fails the run. Nothing in
      `crates/lib/superdev-core/src/aokf/validate.rs` needs teaching: ADR-017
@@ -438,11 +478,11 @@ read.
   renaming the hook and the verb together; the marker is the lock key in
   every managed repo, so renaming it orphans an entry everywhere for a
   cosmetic gain.
-- Done-check: `superdev validate` with no arguments reports the canonical
+- Verification: `superdev validate` with no arguments reports the canonical
   knowledge's concepts and the format's 61 files in one report with one
   exit code, `validator_parity` passes with its goldens unedited, and `npm
   run coverage:check` passes.
-- Cases:
+- Tests:
   - integration: `cargo test -p superdev-core --test validator_parity`
     passes with its goldens unedited — `aokf::validate` keeps emitting
     exactly what it emits today (NFR-4).
@@ -465,12 +505,15 @@ read.
     `.agents/format/grammar.yaml` byte for byte (FR-11).
   - e2e: `npm run coverage:check` passes — the new code clears the 90%
     line gate in each of `crates/lib` and `crates/app` (NFR-3).
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+- Documentation: none recorded; this historical record makes no documentation claim.
 
 ### Block 6: Wire it in and retire the reference
 
 - [x] Done — ticked at merge.
-- Depends-on: 2, 5.
-- Change:
+- Dependencies: 2, 5.
+- Areas: unknown (legacy record; no affected area inferred).
+- Outcome:
   1. Run it where it matters — point `check:aokf` at the merged command and
      rename it, and widen `hook_validate` in
      `crates/app/superdev/src/aokf_cli.rs` so it fires on an edit under the
@@ -504,7 +547,7 @@ read.
   the whole set, over demoting it to a warning or skipping it in the hook; a
   warning is not a check, and a hook that skipped it would pass a skill the
   merge gate then fails.
-- Done-check: every case across the plan passes on a clean checkout of the
+- Verification: every case across the plan passes on a clean checkout of the
   branch; `.claude/settings.json` still carries exactly one PostToolUse
   entry for superdev, under its original marker, and the lock entry is
   unchanged; `knowledge/plans/index.md` lists this plan and its status reads
@@ -515,7 +558,7 @@ read.
   generated-format-docs idea is filed as
   [issue-017][sokf:issue-017-the-format-has-no-agent-facing-document],
   since the doc renderer now exists in the binary with nothing consuming it.
-- Cases:
+- Tests:
   - e2e: breaking a skill and breaking a concept's frontmatter each make the
     one hook exit 2 with the finding on stderr — one PostToolUse hook runs
     the whole-set check on an edit under the knowledge or any root (FR-7).
@@ -525,6 +568,27 @@ read.
   - observation: a whole-set run is timed against the 50 ms hook budget
     (NFR-1); the measured 82 ms is recorded under Goal.
 
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+
+- Documentation: none recorded; this historical record makes no documentation claim.
+
+## Build state
+
+All historical blocks are complete; blocker: none.
+
+## Implementation decisions
+
+none.
+
+## Follow-up issues
+
+none.
+
+## Completion evidence
+
+Historical plan migrated mechanically; original evidence remains in its work blocks and Git history.
+
 <!-- sokf:links -->
 [sokf:issue-016-sync-would-revert-the-schema-migration]: /knowledge/issues/done/issue-016-sync-would-revert-the-schema-migration.md
 [sokf:issue-017-the-format-has-no-agent-facing-document]: /knowledge/issues/open/issue-017-the-format-has-no-agent-facing-document.md
+[sokf:issue-063-historical-rust-format-validator]: /knowledge/issues/done/issue-063-historical-rust-format-validator.md

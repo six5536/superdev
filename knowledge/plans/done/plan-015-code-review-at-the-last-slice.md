@@ -5,14 +5,19 @@ title: Integrate runs /code-review once, at the last slice
 description: The per-slice /code-review in integrate becomes one feature-wide review at the last slice, over the whole diff, with findings returning to build as today.
 lifecycle: done
 links:
-  - rel: relates-to
-    to: plan-013-workflow-autonomy
-    note: Plan-013 edits the same integrate skill; whichever lands second rebases its step list.
+- rel: implements
+  to: issue-071-historical-code-review-at-the-last-slice
+- rel: relates-to
+  to: plan-013-workflow-autonomy
+  note: Plan-013 edits the same integrate skill; whichever lands second rebases its step list.
+phase: done
+branch: work/071-historical-code-review-at-the-last-slice
 ---
-
 # Plan: Integrate runs /code-review once, at the last slice
 
-## Goal
+Primary issue: [issue-071-historical-code-review-at-the-last-slice][sokf:issue-071-historical-code-review-at-the-last-slice]
+
+## Goal and boundaries
 
 A feature's code is reviewed by `/code-review` exactly once, at the last
 slice's integrate, over the whole feature diff. Integrate on any earlier
@@ -77,17 +82,38 @@ this is skill content. The unattended driver plan-013 adds inherits the
 new behaviour with no edit of its own, because it invokes `/integrate`
 per slice and the condition lives inside the skill.
 
+## Requirements
+
+Preserve the historical plan intent and constraints recorded under Goal and boundaries.
+
 ## Contract changes
 
 - none.
+
+## ADR decisions
+
+- none beyond decisions already linked or described in this historical record.
+
+## Source and interface changes
+
+Historical source and interface changes remain described in the work blocks.
+
+## Knowledge changes
+
+Preserve this record under the canonical workflow schema.
+
+## Documentation changes
+
+Historical documentation impact predates the documentation map; migration itself is checked as canonical-knowledge.
 
 ## Work blocks
 
 ### Block 1: The integrate skill
 
 - [x] Done — ticked at merge.
-- Depends-on: none.
-- Change: in `pack/knowledge/skills/integrate/SKILL.md`, REVIEW THE DIFF
+- Dependencies: none.
+- Areas: unknown (legacy record; no affected area inferred).
+- Outcome: in `pack/knowledge/skills/integrate/SKILL.md`, REVIEW THE DIFF
   gains `when="if the last slice"` and its task widens to the whole
   feature diff against the merge target, findings still returning to
   build unapplied; the code-review half of WRITE FINDINGS moves under
@@ -97,29 +123,50 @@ per slice and the condition lives inside the skill.
   `.claude/skills/integrate/SKILL.md`, and `CHANGELOG.md` gains an
   Unreleased line: integrate reviews once per feature, at the last
   slice, over the whole diff.
-- Done-check: every remaining mention of the review sits under the
+- Verification: every remaining mention of the review sits under the
   last-slice condition, the two skill copies are identical, and
   `superdev validate` reports PASS with 0 errors.
-- Cases:
-  - manual: each `code-review` mention in
+- Tests:
+  - Legacy evidence (non-executable): manual: each `code-review` mention in
     `.claude/skills/integrate/SKILL.md` sits on a line carrying
     `when="if the last slice"` or inside a conditioned step's text,
     confirmed by reading the three lines — checks that a non-final
     slice invokes no review and reads no code-review schema.
-  - manual: the REVIEW THE DIFF task names the whole feature diff and
+  - Legacy evidence (non-executable): manual: the REVIEW THE DIFF task names the whole feature diff and
     the merge target — checks that the last slice's review covers the
     feature.
-  - manual: the step still says findings return to build unapplied —
+  - Legacy evidence (non-executable): manual: the step still says findings return to build unapplied —
     checks that review findings of every kind return to build before
     the merge.
-  - manual: `diff .claude/skills/integrate/SKILL.md
+  - Legacy evidence (non-executable): manual: `diff .claude/skills/integrate/SKILL.md
     pack/knowledge/skills/integrate/SKILL.md` prints nothing — checks
     that the live skill and the pack copy stay byte-identical.
-  - manual: `superdev validate` reports PASS with 0 errors on a clean
+  - Legacy evidence (non-executable): manual: `superdev validate` reports PASS with 0 errors on a clean
     checkout, `CHANGELOG.md` names the change under Unreleased, and
     `knowledge/plans/index.md` lists this plan with `lifecycle: done` —
     checks that the edit conforms and the records close.
 
+- Structural evidence: none recorded; this historical record makes no executable evidence claim.
+
+- Documentation: none recorded; this historical record makes no documentation claim.
+
+## Build state
+
+All historical blocks are complete; blocker: none.
+
+## Implementation decisions
+
+none.
+
+## Follow-up issues
+
+none.
+
+## Completion evidence
+
+Historical plan migrated mechanically; original evidence remains in its work blocks and Git history.
+
 <!-- sokf:links -->
-[sokf:adr-021-nothing-unattended-reaches-the-default-branch]: /knowledge/adrs/active/adr-021-nothing-unattended-reaches-the-default-branch.md
+[sokf:adr-021-nothing-unattended-reaches-the-default-branch]: /knowledge/adrs/deprecated/adr-021-nothing-unattended-reaches-the-default-branch.md
+[sokf:issue-071-historical-code-review-at-the-last-slice]: /knowledge/issues/done/issue-071-historical-code-review-at-the-last-slice.md
 [sokf:plan-013-workflow-autonomy]: /knowledge/plans/done/plan-013-workflow-autonomy.md
