@@ -297,8 +297,9 @@ export default function superdev(pi: ExtensionAPI) {
 		parameters: Type.Object({
 			base: Type.String(),
 			candidate: Type.String(),
+			path: Type.Optional(Type.String({ description: "One repo-relative changed path; omit for the immutable diff inventory" })),
 		}),
-		execute: async (_id, input: { base: string; candidate: string }, _signal, _update, ctx) => {
+		execute: async (_id, input: { base: string; candidate: string; path?: string }, _signal, _update, ctx) => {
 			if (childRole && readOnly.has(childRole) && (
 				input.base !== process.env.SUPERDEV_REVIEW_BASE
 				|| input.candidate !== process.env.SUPERDEV_REVIEW_CANDIDATE
@@ -306,18 +307,19 @@ export default function superdev(pi: ExtensionAPI) {
 			for (const revision of [input.base, input.candidate]) {
 				if (!/^[0-9a-f]{7,64}$/.test(revision)) throw new Error("review revisions must be hexadecimal object IDs");
 			}
-			const projection = [
-				".",
-				":(exclude)package-lock.json",
-				":(exclude)pack/**",
-				":(exclude)knowledge/plans/done/**",
-				":(exclude)knowledge/issues/done/**",
-			];
-			const result = await pi.exec("git", ["diff", "--no-ext-diff", "--unified=0", input.base, input.candidate, "--", ...projection], { cwd: ctx.cwd });
+			if (!input.path) {
+				const [names, stat] = await Promise.all([
+					pi.exec("git", ["diff", "--no-ext-diff", "--name-status", input.base, input.candidate, "--"], { cwd: ctx.cwd }),
+					pi.exec("git", ["diff", "--no-ext-diff", "--stat", input.base, input.candidate, "--"], { cwd: ctx.cwd }),
+				]);
+				if (names.code !== 0 || stat.code !== 0) throw new Error(names.stderr.trim() || stat.stderr.trim() || "git diff inventory failed");
+				return { content: [{ type: "text", text: `Changed paths:\n${names.stdout}\nDiff stat:\n${stat.stdout}` }], details: { readOnly: true, inventory: true } };
+			}
+			if (isAbsolute(input.path) || input.path.split(/[\\/]/).includes("..")) throw new Error("review path must be repo-relative without parent traversal");
+			const result = await pi.exec("git", ["diff", "--no-ext-diff", "--unified=20", input.base, input.candidate, "--", input.path], { cwd: ctx.cwd });
 			if (result.code !== 0) throw new Error(result.stderr.trim() || "git diff failed");
-			if (result.stdout.length > 900_000) throw new Error("review diff exceeds the 900 KB review bound");
-			const excluded = "Mechanical projection exclusions: package-lock.json (generated lock), pack/** (materialized mirrors checked by hash parity), and settled issue/plan migrations (schema-validated historical records).";
-			return { content: [{ type: "text", text: `${excluded}\n\n${result.stdout || "No projected changes."}` }], details: { readOnly: true, projection } };
+			if (result.stdout.length > 300_000) throw new Error("one-file review diff exceeds the 300 KB review bound");
+			return { content: [{ type: "text", text: result.stdout || "No changes for that path." }], details: { readOnly: true, path: input.path } };
 		},
 	});
 	pi.registerTool({
