@@ -1,4 +1,4 @@
-import superdev, { isolatedRoleMayNotRun, parseRoleResult } from "../../../.pi/extensions/superdev/index.ts";
+import superdev, { isolatedRoleMayNotRun, isolatedTools, parseRoleResult } from "../../../.pi/extensions/superdev/index.ts";
 
 export default function smoke() {
 	const commands: string[] = [];
@@ -42,6 +42,8 @@ export default function smoke() {
 		if (!isolatedRoleMayNotRun(command)) throw new Error(`isolated role may bypass ${command}`);
 	}
 	if (!isolatedRoleMayNotRun("git commit -am bypass")) throw new Error("isolated role may mutate Git history");
+	if (isolatedTools("scope").split(",").includes("bash")) throw new Error("SCOPE child has direct shell access");
+	if (!isolatedTools("build").split(",").includes("bash")) throw new Error("BUILD child cannot execute evidence");
 	for (const command of [
 		"superdev workflow block",
 		"superdev workflow attempt",

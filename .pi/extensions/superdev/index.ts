@@ -87,6 +87,13 @@ async function runSuperdev(args: string[], cwd: string, authority: string): Prom
 	});
 }
 
+export function isolatedTools(role: Input["role"]): string {
+	if (readOnly.has(role)) return "read,superdev_review_diff,sokf_search,sokf_graph";
+	if (role === "file") return "read,sokf_search,sokf_graph";
+	if (role === "scope") return "read,edit,write,sokf_search,sokf_graph";
+	return "read,bash,edit,write,sokf_search,sokf_graph";
+}
+
 async function isolated(
 	role: Input["role"],
 	task: string,
@@ -105,7 +112,7 @@ async function isolated(
 	}
 	const args = ["--mode", "json", "-p", "--no-session", "--approve", "--append-system-prompt", rolePrompt];
 	if (model) args.push("--provider", model.provider, "--model", model.id);
-	args.push("--tools", readOnly.has(role) ? "read,superdev_review_diff,sokf_search,sokf_graph" : role === "file" ? "read,sokf_search,sokf_graph" : "read,bash,edit,write,sokf_search,sokf_graph");
+	args.push("--tools", isolatedTools(role));
 	args.push(`Task: ${task}`);
 	return new Promise((accept, reject) => {
 		const child = spawn("pi", args, {
