@@ -15,6 +15,42 @@ type Input = Static<typeof schema>;
 
 const readOnly = new Set(["requirements-review", "code-review"]);
 
+type RoleResult = {
+	status: "complete" | "clean" | "findings" | "rescope" | "rejected" | "duplicate" | "blocked";
+	summary: string;
+	findings?: string[];
+};
+
+export function parseRoleResult(role: Input["role"], answer: string): RoleResult {
+	const marker = "SUPERDEV_RESULT ";
+	const line = answer.split("\n").reverse().find((candidate) => candidate.startsWith(marker));
+	if (!line) throw new Error(`${role} omitted its structured terminal result`);
+	let result: RoleResult;
+	try {
+		result = JSON.parse(line.slice(marker.length)) as RoleResult;
+	} catch {
+		throw new Error(`${role} returned malformed terminal JSON`);
+	}
+	const allowed: Record<Input["role"], RoleResult["status"][]> = {
+		scope: ["complete", "blocked"],
+		"requirements-review": ["clean", "findings"],
+		build: ["complete", "rescope", "blocked"],
+		"code-review": ["clean", "findings"],
+		accept: ["complete", "rejected", "blocked"],
+		file: ["complete", "duplicate", "blocked"],
+	};
+	if (!allowed[role].includes(result.status) || typeof result.summary !== "string" || !result.summary.trim()) {
+		throw new Error(`${role} returned an invalid terminal result`);
+	}
+	if (result.status === "findings" && (!Array.isArray(result.findings) || result.findings.length === 0)) {
+		throw new Error(`${role} reported findings without structured findings`);
+	}
+	if (result.status === "clean" && result.findings?.length) {
+		throw new Error(`${role} reported clean with findings`);
+	}
+	return result;
+}
+
 function stopProcess(child: ChildProcess) {
 	const signal = (name: NodeJS.Signals) => {
 		try {
@@ -34,7 +70,7 @@ async function isolated(
 	signal?: AbortSignal,
 	onSpawn?: (child: ChildProcess) => void,
 	onClose?: (child: ChildProcess) => void,
-): Promise<string> {
+): Promise<RoleResult> {
 	const promptPath = resolve(here, "prompts", `${role}.md`);
 	const rolePrompt = await readFile(promptPath, "utf8");
 	const args = ["--mode", "json", "-p", "--no-session", "--approve", "--append-system-prompt", rolePrompt];
@@ -81,10 +117,11 @@ async function isolated(
 					}
 				} catch { /* ignore non-events */ }
 			}
-			if (readOnly.has(role) && answer && !/(^CLEAN\b|^## (CRITICAL|HIGH|MEDIUM|LOW)\b)/m.test(answer)) {
-				return reject(new Error(`${role} did not return a structured terminal result`));
+			try {
+				accept(parseRoleResult(role, answer));
+			} catch (error) {
+				reject(error);
 			}
-			accept(answer || "Isolated role completed without text output.");
 		});
 		if (signal) {
 			const stop = () => stopProcess(child);
@@ -173,7 +210,7 @@ export default function superdev(pi: ExtensionAPI) {
 			if (modifying && (modifyingBusy || modifyingChild)) throw new Error("one modifying workflow child is already active");
 			if (modifying) modifyingBusy = true;
 			try {
-				const text = await isolated(
+				const result = await isolated(
 					input.role,
 					input.task,
 					ctx.cwd,
@@ -189,8 +226,8 @@ export default function superdev(pi: ExtensionAPI) {
 					},
 				);
 				return {
-					content: [{ type: "text", text }],
-					details: { role: input.role, isolated: true, readOnly: readOnly.has(input.role) },
+					content: [{ type: "text", text: JSON.stringify(result) }],
+					details: { role: input.role, result, isolated: true, readOnly: readOnly.has(input.role) },
 				};
 			} finally {
 				if (modifying) modifyingBusy = false;
