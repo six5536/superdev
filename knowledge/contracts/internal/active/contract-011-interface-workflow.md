@@ -340,6 +340,8 @@ mod tests {
 - `P_git-preserves-unrelated` [ubiquitous] Automatic Git operations SHALL NOT stash, reset, discard, absorb, or implicitly resolve unrelated changes.
 - `P_git-no-shell` [ubiquitous] Workflow Git operations SHALL validate refs and invoke Git with argument arrays without a shell.
 - `P_bounded-retries` [ubiquitous] Retry and correction limits SHALL be positive project configuration values that plans, prompts, adapters, and models cannot override.
+- `P_failure-fingerprint` [event] WHEN BUILD records a failed command, the service SHALL normalize bounded diagnostics and durably count consecutive equivalent fingerprints against the configured limit.
+- `P_retry-reset` [event] WHEN BUILD lowers or replaces a block's retry state, the checkpoint service SHALL require completion of that same stable block.
 - `P_cache-transient` [ubiquitous] Absence of `.superdev/cache/workflow.toml` SHALL mean unowned rather than complete.
 
 ## Stability

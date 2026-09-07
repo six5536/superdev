@@ -14,6 +14,7 @@ use superdev_core::sokf::{
 use superdev_core::workflow::cache;
 use superdev_core::workflow::filing::{self, FilingKind, FilingRequest};
 use superdev_core::workflow::git;
+use superdev_core::workflow::retry::{self, RetryState};
 use superdev_core::workflow::{
     GateEvidence, Phase, Transition, WORKFLOW_PROTOCOL, WorkflowCache, WorkflowIdentity,
     apply_transition,
@@ -62,8 +63,10 @@ pub enum WorkflowCommand {
     Bind(BindArgs),
     /// Apply one typed phase transition after checking supplied evidence
     Transition(TransitionArgs),
-    /// Record that BUILD changed a work block
+    /// Commit a validated BUILD block checkpoint
     Block(ProgressArgs),
+    /// Record one normalized failed BUILD attempt
+    Attempt(AttemptArgs),
     /// Record isolated review or final verification evidence canonically
     Evidence(EvidenceArgs),
     /// Reconstruct and acquire ownership for a known workflow
@@ -108,6 +111,26 @@ pub struct ProgressArgs {
     /// New plan content revision after the Rust-owned mutation
     #[arg(long)]
     revision: String,
+}
+
+/// One failed BUILD command, normalized and counted by Rust.
+#[derive(Args)]
+pub struct AttemptArgs {
+    /// Owning Pi session ID
+    #[arg(long)]
+    session: String,
+    /// Expected current plan content revision
+    #[arg(long)]
+    expected_revision: String,
+    /// Failed command as executed without a shell
+    #[arg(long)]
+    command: String,
+    /// Process exit status
+    #[arg(long)]
+    exit_status: i32,
+    /// Bounded command diagnostics
+    #[arg(long)]
+    diagnostics: String,
 }
 
 /// Rust-owned canonical evidence attestation.
@@ -331,10 +354,33 @@ pub fn run(command: &WorkflowCommand, root: &Path) -> Result<u8> {
                     message: "block evidence may be recorded only during BUILD".into(),
                 });
             }
-            let observed = plan_revision(&root, &owner.identity.plan)?.1;
+            let (plan_path, observed) = plan_revision(&root, &owner.identity.plan)?;
             if observed != args.revision || observed == args.expected_revision {
                 return Err(Error::Manifest {
                     message: "supplied revision must identify a changed canonical plan".into(),
+                });
+            }
+            let relative_plan = plan_path
+                .strip_prefix(&root)
+                .map_err(|_| Error::Manifest {
+                    message: "workflow plan is outside the repository".into(),
+                })?
+                .to_string_lossy();
+            let previous_text = git::file_at_revision(&root, "HEAD", &relative_plan)?;
+            let current_text = fs::read_to_string(&plan_path).map_err(|source| Error::Io {
+                path: plan_path.clone(),
+                source,
+            })?;
+            let previous_retry = parse_retry_state(build_state_line(&previous_text)?)?;
+            let current_retry = parse_retry_state(build_state_line(&current_text)?)?;
+            let retry_reset = current_retry.attempts < previous_retry.attempts
+                || current_retry.fingerprint != previous_retry.fingerprint;
+            let newly_completed = block_is_done(&current_text, previous_retry.current_block)
+                && !block_is_done(&previous_text, previous_retry.current_block);
+            if retry_reset && !newly_completed {
+                return Err(Error::Manifest {
+                    message: "BUILD retry state may reset only when its current block completes"
+                        .into(),
                 });
             }
             let grammar = superdev_core::validate::schema::load_grammar(&root)?;
@@ -356,6 +402,7 @@ pub fn run(command: &WorkflowCommand, root: &Path) -> Result<u8> {
                 })?;
             emit("progress", &state)
         }),
+        WorkflowCommand::Attempt(args) => record_attempt(&root, args),
         WorkflowCommand::Evidence(args) => record_evidence(&root, args),
         WorkflowCommand::Transition(args) => transition(&root, args, false, None),
         WorkflowCommand::Abandon(args) => transition(
@@ -794,6 +841,154 @@ fn knowledge_contains(root: &Path, needle: &str) -> Result<bool> {
         }
     }
     Ok(false)
+}
+
+fn record_attempt(root: &Path, args: &AttemptArgs) -> Result<u8> {
+    cache::transaction(root, |transaction| {
+        let owner = transaction.load()?.ok_or_else(|| Error::Manifest {
+            message: "workflow is unowned".into(),
+        })?;
+        if owner.session_id != args.session || owner.last_plan_revision != args.expected_revision {
+            return Err(Error::Manifest {
+                message: "workflow ownership or plan revision changed".into(),
+            });
+        }
+        validate_identity_values(root, &owner.identity)?;
+        git::require_clean(root)?;
+        if git::current_branch(root)? != owner.identity.work_branch {
+            return Err(Error::Manifest {
+                message: "BUILD attempt requires the checked-out work branch".into(),
+            });
+        }
+        let record = plan_record(root, &owner.identity.plan)?;
+        if record.phase != "build" {
+            return Err(Error::Manifest {
+                message: "failed attempts may be recorded only during BUILD".into(),
+            });
+        }
+        if args.command.trim().is_empty()
+            || args.exit_status == 0
+            || args.diagnostics.trim().is_empty()
+        {
+            return Err(Error::Manifest {
+                message: "failed attempt requires command, nonzero status, and diagnostics".into(),
+            });
+        }
+        let (path, observed) = plan_revision(root, &owner.identity.plan)?;
+        let text = fs::read_to_string(&path).map_err(|source| Error::Io {
+            path: path.clone(),
+            source,
+        })?;
+        let old_line = build_state_line(&text)?;
+        let current = parse_retry_state(old_line)?;
+        let config = Manifest::load(root)?.workflow;
+        let fingerprint =
+            retry::failure_fingerprint(&args.command, args.exit_status, &args.diagnostics);
+        if current.fingerprint.as_deref() == Some(&fingerprint)
+            && current.attempts >= config.max_stalled_block_attempts
+        {
+            return Err(Error::Manifest {
+                message: "equivalent BUILD failure exhausted the configured attempt limit".into(),
+            });
+        }
+        let next = retry::record_failure(
+            &current,
+            &args.command,
+            args.exit_status,
+            &args.diagnostics,
+            config.max_stalled_block_attempts,
+        );
+        let new_line = render_retry_state(&next);
+        apply_plan_edits_transactionally(
+            root,
+            &path,
+            vec![ExactEdit {
+                old_text: old_line.into(),
+                new_text: new_line,
+            }],
+        )?;
+        git::commit_knowledge_changes(root, "chore(workflow): record failed build attempt")?;
+        let revision = plan_revision(root, &owner.identity.plan)?.1;
+        let state = transaction.compare_and_swap(&args.session, &observed, |state| {
+            state.last_plan_revision.clone_from(&revision);
+        })?;
+        emit(
+            "attempt",
+            &serde_json::json!({
+                "state": state,
+                "attempts": next.attempts,
+                "fingerprint": next.fingerprint,
+                "stalled": next.attempts >= config.max_stalled_block_attempts,
+            }),
+        )
+    })
+}
+
+fn block_is_done(plan: &str, block: u32) -> bool {
+    let heading = format!("### Block {block}: ");
+    let Some(start) = plan.find(&heading) else {
+        return false;
+    };
+    let body = &plan[start..];
+    let end = body[heading.len()..]
+        .find("\n### Block ")
+        .map(|offset| heading.len() + offset)
+        .or_else(|| {
+            body[heading.len()..]
+                .find("\n## ")
+                .map(|offset| heading.len() + offset)
+        })
+        .unwrap_or(body.len());
+    body[..end]
+        .lines()
+        .any(|line| matches!(line, "- [x] Done." | "- [X] Done."))
+}
+
+fn build_state_line(plan: &str) -> Result<&str> {
+    plan.lines()
+        .find(|line| line.starts_with("Current block: "))
+        .ok_or_else(|| Error::Manifest {
+            message: "workflow plan has no machine-readable Build state".into(),
+        })
+}
+
+fn parse_retry_state(line: &str) -> Result<RetryState> {
+    let invalid = || Error::Manifest {
+        message: "workflow plan Build state is malformed".into(),
+    };
+    let rest = line.strip_prefix("Current block: ").ok_or_else(&invalid)?;
+    let (block, rest) = rest.split_once(". Attempts: ").ok_or_else(&invalid)?;
+    let (attempts, rest) = rest
+        .split_once(". Final corrections: ")
+        .ok_or_else(&invalid)?;
+    let (corrections, rest) = rest.split_once(". ").ok_or_else(&invalid)?;
+    let (fingerprint, blocker) = if let Some(rest) = rest.strip_prefix("Fingerprint: ") {
+        let (fingerprint, blocker) = rest.split_once(". Blocker: ").ok_or_else(&invalid)?;
+        (
+            (fingerprint != "none").then(|| fingerprint.to_string()),
+            blocker,
+        )
+    } else {
+        (None, rest.strip_prefix("Blocker: ").ok_or_else(&invalid)?)
+    };
+    Ok(RetryState {
+        current_block: block.parse().map_err(|_| invalid())?,
+        attempts: attempts.parse().map_err(|_| invalid())?,
+        final_corrections: corrections.parse().map_err(|_| invalid())?,
+        fingerprint,
+        blocker: blocker.trim_end_matches('.').to_string(),
+    })
+}
+
+fn render_retry_state(state: &RetryState) -> String {
+    format!(
+        "Current block: {}. Attempts: {}. Final corrections: {}. Fingerprint: {}. Blocker: {}.",
+        state.current_block,
+        state.attempts,
+        state.final_corrections,
+        state.fingerprint.as_deref().unwrap_or("none"),
+        state.blocker.trim_end_matches('.'),
+    )
 }
 
 fn record_evidence(root: &Path, args: &EvidenceArgs) -> Result<u8> {
@@ -1793,6 +1988,31 @@ mod tests {
             evidence_revision(&changed, "Verified default revision").as_deref(),
             Some("1234567")
         );
+    }
+
+    #[test]
+    fn block_completion_is_scoped_to_the_requested_stable_block() {
+        let plan = "### Block 1: first\n\n- [x] Done.\n\n### Block 2: second\n\n- [ ] Done.\n\n## Build state\n";
+        assert!(block_is_done(plan, 1));
+        assert!(!block_is_done(plan, 2));
+        assert!(!block_is_done(plan, 3));
+    }
+
+    #[test]
+    fn retry_state_round_trips_legacy_and_fingerprinted_lines() {
+        let legacy = parse_retry_state(
+            "Current block: 2. Attempts: 1. Final corrections: 3. Blocker: none.",
+        )
+        .unwrap();
+        assert_eq!(legacy.current_block, 2);
+        assert_eq!(legacy.fingerprint, None);
+        let rendered = render_retry_state(&RetryState {
+            fingerprint: Some("abc123".into()),
+            blocker: "retrying".into(),
+            ..legacy
+        });
+        assert_eq!(parse_retry_state(&rendered).unwrap().attempts, 1);
+        assert!(rendered.contains("Fingerprint: abc123."));
     }
 
     #[test]

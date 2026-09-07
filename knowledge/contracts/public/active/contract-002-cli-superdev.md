@@ -358,8 +358,10 @@ pub enum WorkflowCommand {
     Bind(BindArgs),
     /// Apply one typed phase transition after checking supplied evidence
     Transition(TransitionArgs),
-    /// Record that BUILD changed a work block
+    /// Commit a validated BUILD block checkpoint
     Block(ProgressArgs),
+    /// Record one normalized failed BUILD attempt
+    Attempt(AttemptArgs),
     /// Record isolated review or final verification evidence canonically
     Evidence(EvidenceArgs),
     /// Reconstruct and acquire ownership for a known workflow
@@ -404,6 +406,26 @@ pub struct ProgressArgs {
     /// New plan content revision after the Rust-owned mutation
     #[arg(long)]
     revision: String,
+}
+
+/// One failed BUILD command, normalized and counted by Rust.
+#[derive(Args)]
+pub struct AttemptArgs {
+    /// Owning Pi session ID
+    #[arg(long)]
+    session: String,
+    /// Expected current plan content revision
+    #[arg(long)]
+    expected_revision: String,
+    /// Failed command as executed without a shell
+    #[arg(long)]
+    command: String,
+    /// Process exit status
+    #[arg(long)]
+    exit_status: i32,
+    /// Bounded command diagnostics
+    #[arg(long)]
+    diagnostics: String,
 }
 
 /// Rust-owned canonical evidence attestation.
@@ -734,6 +756,8 @@ the invoking adapter.
 | `superdev workflow transition` | 2 | ownership, revision, phase, or evidence is invalid |
 | `superdev workflow block` | 0 | canonical BUILD block progress is acknowledged |
 | `superdev workflow block` | 2 | ownership, revision, identity, branch, or phase is invalid |
+| `superdev workflow attempt` | 0 | one normalized failed BUILD attempt is durably counted |
+| `superdev workflow attempt` | 2 | ownership, phase, revision, input, tree, or configured retry limit is invalid |
 | `superdev workflow evidence` | 0 | canonical BUILD evidence is acknowledged |
 | `superdev workflow evidence` | 2 | ownership, revision, identity, branch, or phase is invalid |
 | `superdev workflow resume` | 0 | canonical state is reconstructed and ownership acquired |
