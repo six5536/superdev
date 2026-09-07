@@ -35,7 +35,7 @@ pub fn apply_transition(
 ) -> Result<Phase, TransitionError> {
     use Phase::{Abandoned, Accept, Build, Done, Scope};
     use Transition::{
-        Abandon, Accept as AcceptTransition, ApproveScope, FinishBuild, RecordBuildProgress,
+        Abandon, Accept as AcceptTransition, ApproveScope, RecordBuildProgress,
         RecoverStaleDefault, RejectAcceptance, ReturnToScope,
     };
 
@@ -50,23 +50,6 @@ pub fn apply_transition(
         }
         (Build, ReturnToScope) => Ok(Scope),
         (Build, RecordBuildProgress) => Ok(Build),
-        (Build, FinishBuild) => {
-            require(gates.all_blocks_complete, "work blocks are incomplete")?;
-            require(
-                gates.final_verification_current,
-                "final verification is stale or absent",
-            )?;
-            require(gates.final_review_clean, "final review is not clean")?;
-            require(
-                gates.no_pending_promises,
-                "affected contract promises remain PENDING",
-            )?;
-            require(
-                gates.documentation_current,
-                "documentation evidence is stale or absent",
-            )?;
-            Ok(Accept)
-        }
         (Accept, RejectAcceptance) => Ok(Scope),
         (Accept, AcceptTransition) => {
             if config.human_acceptance_required {
@@ -135,51 +118,6 @@ mod tests {
             ),
             Ok(Phase::Build)
         );
-    }
-
-    #[test]
-    fn finish_build_requires_all_executable_evidence() {
-        let complete = GateEvidence {
-            all_blocks_complete: true,
-            final_verification_current: true,
-            final_review_clean: true,
-            no_pending_promises: true,
-            documentation_current: true,
-            ..GateEvidence::default()
-        };
-        assert_eq!(
-            apply_transition(
-                Phase::Build,
-                Transition::FinishBuild,
-                &complete,
-                &config(true)
-            ),
-            Ok(Phase::Accept)
-        );
-        for incomplete in [
-            GateEvidence {
-                all_blocks_complete: false,
-                ..complete.clone()
-            },
-            GateEvidence {
-                final_review_clean: false,
-                ..complete.clone()
-            },
-            GateEvidence {
-                documentation_current: false,
-                ..complete.clone()
-            },
-        ] {
-            assert!(
-                apply_transition(
-                    Phase::Build,
-                    Transition::FinishBuild,
-                    &incomplete,
-                    &config(true)
-                )
-                .is_err()
-            );
-        }
     }
 
     #[test]

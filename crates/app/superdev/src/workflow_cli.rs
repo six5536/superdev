@@ -152,8 +152,6 @@ pub enum TransitionName {
     ApproveScope,
     /// BUILD to SCOPE
     ReturnToScope,
-    /// BUILD to ACCEPT
-    FinishBuild,
     /// ACCEPT to SCOPE
     RejectAcceptance,
     /// ACCEPT to DONE
@@ -1087,7 +1085,6 @@ fn transition_locked(
         match args.transition {
             TransitionName::ApproveScope => Transition::ApproveScope,
             TransitionName::ReturnToScope => Transition::ReturnToScope,
-            TransitionName::FinishBuild => Transition::FinishBuild,
             TransitionName::RejectAcceptance => Transition::RejectAcceptance,
             TransitionName::Accept => Transition::Accept,
             TransitionName::RecoverStaleDefault => Transition::RecoverStaleDefault,
@@ -1135,30 +1132,6 @@ fn transition_locked(
     }
     let candidate_revision = evidence_revision(&plan_text, "Candidate revision");
     let verified_default_revision = evidence_revision(&plan_text, "Verified default revision");
-    if matches!(transition, Transition::FinishBuild) {
-        let candidate = candidate_revision
-            .as_deref()
-            .ok_or_else(|| Error::Manifest {
-                message: "final evidence has no candidate H".into(),
-            })?;
-        let default = verified_default_revision
-            .as_deref()
-            .ok_or_else(|| Error::Manifest {
-                message: "final evidence has no verified default revision".into(),
-            })?;
-        let head = git::revision(root, &state.identity.work_branch)?;
-        if !git::is_ancestor(root, default, candidate)?
-            || !git::is_ancestor(root, candidate, &head)?
-            || git::changed_paths(root, candidate, &head)?
-                .iter()
-                .any(|path| !administrative_path(path, &state.identity))
-        {
-            return Err(Error::Manifest {
-                message: "final evidence is stale or followed by non-administrative changes".into(),
-            });
-        }
-    }
-    let candidate = candidate_revision.as_deref().unwrap_or_default();
     let config = Manifest::load(root)?.workflow;
     let human_authorized = matches!(
         transition,
@@ -1173,21 +1146,6 @@ fn transition_locked(
         requirements_review_clean: plan_text
             .lines()
             .any(|line| line.starts_with("Scope requirements review: clean by isolated session ")),
-        all_blocks_complete: !plan_text.contains("- [ ] Done"),
-        final_verification_current: plan_text
-            .contains(&format!("Final verification: passed for {candidate}.")),
-        final_review_clean: plan_text.lines().any(|line| {
-            line.starts_with(&format!(
-                "Final review: clean for {candidate} by isolated session "
-            ))
-        }),
-        no_pending_promises: !knowledge_contains(
-            root,
-            &format!("PENDING ({}", state.identity.plan),
-        )?,
-        documentation_current: plan_text.contains(&format!(
-            "Documentation verification: passed for {candidate}."
-        )),
         human_acceptance_approved: human_authorized && matches!(transition, Transition::Accept),
         human_abandonment_approved: human_authorized && abandon,
         closure_integrated: if phase == Phase::Done {
@@ -1281,7 +1239,6 @@ fn transition_locked(
             "chore(workflow): return to scope"
         }
         Transition::RecordBuildProgress => "chore(workflow): record build progress",
-        Transition::FinishBuild => "chore(workflow): attest build completion",
         Transition::Accept => "chore(workflow): close accepted work",
         Transition::RecoverStaleDefault => "chore(workflow): reopen stale closure",
         Transition::Abandon => "chore(workflow): close abandoned work",

@@ -30,8 +30,6 @@ pub enum Transition {
     ReturnToScope,
     /// Persist block progress while remaining in BUILD.
     RecordBuildProgress,
-    /// Enter ACCEPT after all BUILD gates pass.
-    FinishBuild,
     /// Return a human rejection to SCOPE as a discovery.
     RejectAcceptance,
     /// Accept the immutable candidate under project policy.
@@ -59,16 +57,6 @@ pub struct GateEvidence {
     pub human_scope_approved: bool,
     /// Whether the isolated requirements review has no findings.
     pub requirements_review_clean: bool,
-    /// Whether all stable work blocks are complete.
-    pub all_blocks_complete: bool,
-    /// Whether complete local verification is current for the candidate.
-    pub final_verification_current: bool,
-    /// Whether the fresh isolated final review is clean.
-    pub final_review_clean: bool,
-    /// Whether affected contracts carry no pending promises.
-    pub no_pending_promises: bool,
-    /// Whether all applicable documentation evidence is current.
-    pub documentation_current: bool,
     /// Whether the interactive human accepted the candidate.
     pub human_acceptance_approved: bool,
     /// Whether the interactive human approved abandonment and disposition.

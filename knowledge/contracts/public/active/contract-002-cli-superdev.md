@@ -448,8 +448,6 @@ pub enum TransitionName {
     ApproveScope,
     /// BUILD to SCOPE
     ReturnToScope,
-    /// BUILD to ACCEPT
-    FinishBuild,
     /// ACCEPT to SCOPE
     RejectAcceptance,
     /// ACCEPT to DONE

@@ -253,7 +253,7 @@ export default function superdev(pi: ExtensionAPI) {
 		label: "Superdev workflow control",
 		description: "Invoke one typed Rust workflow operation; human-gated actions confirm in trusted Pi UI",
 		parameters: Type.Object({
-			action: StringEnum(["start", "resume", "record-scope-review", "record-final-evidence", "approve-scope", "return-to-scope", "finish-build", "reject-acceptance", "accept", "abandon"] as const),
+			action: StringEnum(["start", "resume", "record-scope-review", "record-final-evidence", "approve-scope", "return-to-scope", "reject-acceptance", "accept", "abandon"] as const),
 			session: Type.String(),
 			issue: Type.Optional(Type.String()),
 			plan: Type.Optional(Type.String()),
