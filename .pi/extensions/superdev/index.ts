@@ -367,8 +367,42 @@ export default function superdev(pi: ExtensionAPI) {
 		handler: async (_args, ctx) => send("Run `superdev workflow status --json`, bind this Pi session if unowned, then resume the canonical phase. Do not infer completion from an absent cache.", ctx),
 	});
 	pi.registerCommand("scope", {
-		description: "SCOPE phase of the canonical workflow",
-		handler: async (args, ctx) => send(`Run SCOPE through the private scope role, isolated requirements review, and explicit human approval. ${args}`.trim(), ctx),
+		description: "Deterministically run SCOPE, isolated review, and human approval",
+		handler: async (args, ctx) => {
+			if (modifyingBusy || modifyingChild) return ctx.ui.notify("A modifying workflow role is already active", "error");
+			const initial = await workflowStatus(ctx.cwd);
+			if (!initial.owner || initial.phase !== "scope") return ctx.ui.notify("An owned SCOPE workflow is required", "error");
+			const scoped = await isolated("scope", args || `Complete ${initial.owner.identity.plan} from canonical state.`, ctx.cwd, ctx.model, undefined,
+				(child) => { children.add(child); modifyingChild = child; },
+				(child) => { children.delete(child); if (modifyingChild === child) modifyingChild = undefined; });
+			if (scoped.status !== "complete") return ctx.ui.notify(scoped.summary, "warning");
+			const status = await workflowStatus(ctx.cwd);
+			const owner = status.owner;
+			if (!owner || status.phase !== "scope") throw new Error("SCOPE ownership changed during isolated work");
+			const baseResult = await pi.exec("git", ["rev-parse", "--verify", owner.identity.default_branch], { cwd: ctx.cwd });
+			const candidateResult = await pi.exec("git", ["rev-parse", "--verify", owner.identity.work_branch], { cwd: ctx.cwd });
+			if (baseResult.code !== 0 || candidateResult.code !== 0) return ctx.ui.notify("Could not resolve immutable review revisions", "error");
+			const base = baseResult.stdout.trim();
+			const candidate = candidateResult.stdout.trim();
+			const reviewed = await isolated("requirements-review", `Review immutable SCOPE diff ${base}..${candidate} and return the required structured result.`, ctx.cwd, ctx.model, undefined,
+				(child) => children.add(child), (child) => children.delete(child), base, candidate);
+			if (reviewed.status !== "clean") return ctx.ui.notify(reviewed.summary, "warning");
+			const reviewRun = randomBytes(24).toString("hex");
+			const evidence = await runSuperdev([
+				"workflow", "evidence", "--session", owner.session_id,
+				"--expected-revision", owner.last_plan_revision, "--kind", "scope-review",
+				"--review-session", reviewRun,
+			], ctx.cwd, authority) as { result?: { last_plan_revision?: string } };
+			const revision = evidence.result?.last_plan_revision;
+			if (!revision) throw new Error("scope evidence response omitted the new plan revision");
+			if (!await ctx.ui.confirm("Approve SCOPE?", `Approve the reviewed SCOPE for ${owner.identity.plan} and enter BUILD?`)) return;
+			await runSuperdev([
+				"workflow", "transition", "--session", owner.session_id,
+				"--expected-revision", revision, "--phase", "scope", "--transition", "approve-scope",
+			], ctx.cwd, authority);
+			ctx.ui.setStatus("superdev-workflow", `BUILD: ${owner.identity.plan}`);
+			ctx.ui.notify("SCOPE approved; workflow advanced to BUILD", "info");
+		},
 	});
 	pi.registerCommand("build", {
 		description: "Deterministically run BUILD, verification, and immutable review",
