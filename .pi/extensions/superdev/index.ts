@@ -283,6 +283,7 @@ export default function superdev(pi: ExtensionAPI) {
 	const children = new Set<ChildProcess>();
 	let modifyingChild: ChildProcess | undefined;
 	let modifyingBusy = false;
+	let modifyingCommandAbort: AbortController | undefined;
 	const stopChild = stopProcess;
 
 	pi.registerTool({
@@ -549,14 +550,19 @@ export default function superdev(pi: ExtensionAPI) {
 		description: "Deterministically run SCOPE, isolated review, and human approval",
 		handler: async (args, ctx) => {
 			if (modifyingBusy || modifyingChild) return ctx.ui.notify("A modifying workflow role is already active", "error");
+			modifyingBusy = true;
+			const commandAbort = new AbortController();
+			modifyingCommandAbort = commandAbort;
+			try {
 			const initial = await workflowStatus(ctx.cwd);
 			if (!initial.owner || initial.phase !== "scope") return ctx.ui.notify("An owned SCOPE workflow is required", "error");
 			const scopeBaseResult = await pi.exec("git", ["rev-parse", "--verify", initial.owner.identity.work_branch], { cwd: ctx.cwd });
 			if (scopeBaseResult.code !== 0) return ctx.ui.notify("Could not resolve the pre-SCOPE revision", "error");
 			const scopeBase = scopeBaseResult.stdout.trim();
-			const scoped = await isolated("scope", args || `Complete ${initial.owner.identity.plan} from canonical state.`, ctx.cwd, ctx.model, undefined,
+			const scoped = await isolated("scope", args || `Complete ${initial.owner.identity.plan} from canonical state.`, ctx.cwd, ctx.model, commandAbort.signal,
 				(child) => { children.add(child); modifyingChild = child; },
 				(child) => { children.delete(child); if (modifyingChild === child) modifyingChild = undefined; });
+			if (commandAbort.signal.aborted) return ctx.ui.notify("SCOPE cancelled before publication", "warning");
 			if (scoped.status !== "complete") return ctx.ui.notify(scoped.summary, "warning");
 			await runSuperdev([
 				"workflow", "scope-checkpoint", "--session", initial.owner.session_id,
@@ -595,12 +601,20 @@ export default function superdev(pi: ExtensionAPI) {
 			], ctx.cwd, authority);
 			ctx.ui.setStatus("superdev-workflow", `BUILD: ${owner.identity.plan}`);
 			ctx.ui.notify("SCOPE approved; workflow advanced to BUILD", "info");
+			} finally {
+				if (modifyingCommandAbort === commandAbort) modifyingCommandAbort = undefined;
+				modifyingBusy = false;
+			}
 		},
 	});
 	pi.registerCommand("build", {
 		description: "Deterministically run BUILD, verification, and immutable review",
 		handler: async (args, ctx) => {
 			if (modifyingBusy || modifyingChild) return ctx.ui.notify("A modifying workflow role is already active", "error");
+			modifyingBusy = true;
+			const commandAbort = new AbortController();
+			modifyingCommandAbort = commandAbort;
+			try {
 			let instruction = args;
 			while (true) {
 				const status = await workflowStatus(ctx.cwd);
@@ -611,9 +625,10 @@ export default function superdev(pi: ExtensionAPI) {
 					return ctx.ui.notify("Final correction limit is exhausted; human guidance or re-scope is required", "error");
 				}
 				if (!status.executable || !isAbsolute(status.executable)) throw new Error("Rust status omitted its trusted executable path");
-				const built = await isolated("build", instruction || `Complete ${owner.identity.plan} from canonical state.`, ctx.cwd, ctx.model, undefined,
+				const built = await isolated("build", instruction || `Complete ${owner.identity.plan} from canonical state.`, ctx.cwd, ctx.model, commandAbort.signal,
 				(child) => { children.add(child); modifyingChild = child; },
 				(child) => { children.delete(child); if (modifyingChild === child) modifyingChild = undefined; }, undefined, undefined, status.executable, parentServiceDigest);
+			if (commandAbort.signal.aborted) return ctx.ui.notify("BUILD cancelled before publication", "warning");
 			if (built.status === "rescope") {
 				const latest = await workflowStatus(ctx.cwd);
 				if (!latest.owner || latest.phase !== "build") throw new Error("BUILD ownership changed before re-scope");
@@ -682,6 +697,10 @@ export default function superdev(pi: ExtensionAPI) {
 				ctx.ui.setStatus("superdev-workflow", `ACCEPT: ${synchronizedOwner.identity.plan}`);
 				return ctx.ui.notify("BUILD gates passed; workflow advanced to ACCEPT", "info");
 			}
+			} finally {
+				if (modifyingCommandAbort === commandAbort) modifyingCommandAbort = undefined;
+				modifyingBusy = false;
+			}
 		},
 	});
 	pi.registerCommand("accept", {
@@ -737,12 +756,17 @@ export default function superdev(pi: ExtensionAPI) {
 	pi.registerCommand("superdev-cancel", {
 		description: "Pause the workflow and release transient ownership",
 		handler: async (_args, ctx) => {
+			modifyingCommandAbort?.abort();
 			const stopping = [...children];
 			for (const child of stopping) stopChild(child);
 			await Promise.race([
 				Promise.all(stopping.map((child) => new Promise<void>((done) => child.once("close", () => done())))),
 				new Promise<void>((done) => setTimeout(done, 2_500)),
 			]);
+			for (let attempt = 0; modifyingBusy && attempt < 100; attempt += 1) {
+				await new Promise((done) => setTimeout(done, 25));
+			}
+			if (modifyingBusy) return ctx.ui.notify("Could not safely pause while a modifying command is still shutting down", "error");
 			const session = ctx.sessionManager.getSessionId();
 			try {
 				await runSuperdev(["workflow", "cancel", "--session", session], ctx.cwd, authority);
