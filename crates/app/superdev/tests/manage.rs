@@ -910,6 +910,80 @@ fn file_commits_on_default_without_a_workflow_branch() {
     assert_eq!(after, work_tip);
     assert!(git::revision(dir.path(), "main").is_ok());
 
+    let binary = assert_cmd::cargo::cargo_bin("superdev");
+    let mut first = std::process::Command::new(&binary);
+    first.current_dir(dir.path()).args([
+        "file",
+        "--kind",
+        "issue",
+        "--title",
+        "Concurrent filing one",
+        "--description",
+        "The filing lock must allocate this independently.",
+        "--human-approved",
+    ]);
+    let mut second = std::process::Command::new(&binary);
+    second.current_dir(dir.path()).args([
+        "file",
+        "--kind",
+        "issue",
+        "--title",
+        "Concurrent filing two",
+        "--description",
+        "The filing lock must serialize this allocation.",
+        "--human-approved",
+    ]);
+    let first = first.spawn().unwrap();
+    let second = second.spawn().unwrap();
+    assert!(first.wait_with_output().unwrap().status.success());
+    assert!(second.wait_with_output().unwrap().status.success());
+    assert!(
+        git::file_at_revision(
+            dir.path(),
+            "main",
+            "knowledge/issues/open/issue-002-concurrent-filing-one.md"
+        )
+        .is_ok()
+            || git::file_at_revision(
+                dir.path(),
+                "main",
+                "knowledge/issues/open/issue-003-concurrent-filing-one.md"
+            )
+            .is_ok()
+    );
+    assert!(
+        git::file_at_revision(
+            dir.path(),
+            "main",
+            "knowledge/issues/open/issue-002-concurrent-filing-two.md"
+        )
+        .is_ok()
+            || git::file_at_revision(
+                dir.path(),
+                "main",
+                "knowledge/issues/open/issue-003-concurrent-filing-two.md"
+            )
+            .is_ok()
+    );
+    assert_eq!(git::current_branch(dir.path()).unwrap(), "work/001-active");
+    let after_concurrent = std::process::Command::new("git")
+        .args(["rev-parse", "HEAD"])
+        .current_dir(dir.path())
+        .output()
+        .unwrap()
+        .stdout;
+    assert_eq!(after_concurrent, work_tip);
+    let cache_entries = fs::read_dir(dir.path().join(".superdev/cache"))
+        .unwrap()
+        .map(|entry| entry.unwrap().file_name().to_string_lossy().into_owned())
+        .collect::<Vec<_>>();
+    assert!(
+        cache_entries
+            .iter()
+            .all(|entry| !entry.starts_with("filing-worktree-")),
+        "stale filing worktree: {cache_entries:?}"
+    );
+
     Command::cargo_bin("superdev")
         .unwrap()
         .current_dir(dir.path())
