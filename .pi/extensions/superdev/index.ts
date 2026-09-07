@@ -438,8 +438,8 @@ export default function superdev(pi: ExtensionAPI) {
 			const humanAction = input.action === "approve-scope" || input.action === "reject-acceptance" || input.action === "abandon";
 			let acceptanceRequiresHuman = false;
 			if (input.action === "accept") {
-				const config = await readFile(resolve(ctx.cwd, ".superdev/config.toml"), "utf8");
-				acceptanceRequiresHuman = !/^human_acceptance_required\s*=\s*false\s*$/m.test(config);
+				const status = await workflowStatus(ctx.cwd);
+				acceptanceRequiresHuman = requiresHumanAcceptance(status.humanAcceptanceRequired);
 			}
 			if ((humanAction || acceptanceRequiresHuman) && (!ctx.hasUI || !(await ctx.ui.confirm(
 				`${input.action}?`,
@@ -455,10 +455,11 @@ export default function superdev(pi: ExtensionAPI) {
 				const review = reviewRuns.get(input.reviewRun);
 				const expectedRole = input.action === "record-scope-review" ? "requirements-review" : "code-review";
 				if (!review || review.role !== expectedRole || review.result.status !== "clean") throw new Error("evidence does not name a clean bound review run");
-				if (input.action === "record-final-evidence" && (!input.candidate || input.candidate !== review.candidate)) throw new Error("final evidence candidate differs from the reviewed candidate");
+				if (!input.candidate || input.candidate !== review.candidate) throw new Error("evidence candidate differs from the reviewed candidate");
 				args.push("evidence", "--session", input.session, "--expected-revision", input.expectedRevision, "--kind", input.action === "record-scope-review" ? "scope-review" : "final", "--review-session", input.reviewRun);
 				if (input.action === "record-scope-review") {
-					if (!input.revision) throw new Error("scope evidence requires the reviewed canonical revision");
+					const status = await workflowStatus(ctx.cwd);
+					if (!input.revision || input.revision !== status.canonicalPlanRevision) throw new Error("scope evidence revision differs from canonical reviewed state");
 					args.push("--revision", input.revision);
 				}
 				if (input.candidate) args.push("--candidate", input.candidate);
