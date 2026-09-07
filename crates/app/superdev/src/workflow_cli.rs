@@ -1036,13 +1036,19 @@ fn record_scope_checkpoint(root: &Path, args: &RevisionArgs) -> Result<u8> {
                 message: "SCOPE checkpoint requires valid canonical knowledge".into(),
             });
         }
-        let commit =
-            git::commit_knowledge_changes(root, "docs(workflow): checkpoint scope proposal")?;
+        let parent = git::revision(root, "HEAD")?;
+        let commit = git::commit_knowledge_changes(root, git::SCOPE_CHECKPOINT_MESSAGE)?;
         let revision = plan_revision(root, &owner.identity.plan)?.1;
         let state =
-            transaction.compare_and_swap(&args.session, &args.expected_revision, |state| {
+            match transaction.compare_and_swap(&args.session, &args.expected_revision, |state| {
                 state.last_plan_revision.clone_from(&revision)
-            })?;
+            }) {
+                Ok(state) => state,
+                Err(error) => {
+                    git::rollback_commit(root, &commit, &parent)?;
+                    return Err(error);
+                }
+            };
         emit(
             "scope-checkpoint",
             &serde_json::json!({"commit": commit, "revision": revision, "state": state}),
@@ -1514,6 +1520,7 @@ fn record_evidence_locked(
                 message: "scope review must bind the checkpointed canonical plan and commit".into(),
             });
         }
+        git::require_scope_checkpoint(root, &head, &path)?;
     } else if args.revision.is_some() || observed != args.expected_revision {
         return Err(Error::Manifest {
             message: "workflow plan revision changed".into(),

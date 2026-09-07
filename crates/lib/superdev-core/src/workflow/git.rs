@@ -5,6 +5,9 @@ use std::process::{Command, Output};
 
 use crate::error::{Error, Result};
 
+/// Fixed service-owned subject for immutable SCOPE proposal checkpoints.
+pub const SCOPE_CHECKPOINT_MESSAGE: &str = "docs(workflow): checkpoint scope proposal";
+
 /// Run Git without a shell and return bounded command failures.
 fn git(root: &Path, args: &[&str]) -> Result<Output> {
     Command::new("git")
@@ -277,6 +280,48 @@ pub fn changed_paths(root: &Path, from: &str, to: &str) -> Result<Vec<String>> {
         .lines()
         .map(str::to_string)
         .collect())
+}
+
+/// Require that `candidate` is the service-owned knowledge commit that last changed the plan.
+pub fn require_scope_checkpoint(root: &Path, candidate: &str, plan_path: &Path) -> Result<()> {
+    validate_ref(candidate)?;
+    let plan_path = plan_path
+        .strip_prefix(root)
+        .ok()
+        .and_then(Path::to_str)
+        .filter(|path| valid_path(path) && path.starts_with("knowledge/"))
+        .ok_or_else(|| Error::Manifest {
+            message: "SCOPE checkpoint plan path is invalid".into(),
+        })?;
+    let subject = git(root, &["show", "-s", "--format=%s", candidate])?;
+    if String::from_utf8_lossy(&subject.stdout).trim() != SCOPE_CHECKPOINT_MESSAGE {
+        return Err(Error::Manifest {
+            message: "scope review candidate is not a service-owned SCOPE checkpoint".into(),
+        });
+    }
+    let parent_expression = format!("{candidate}^");
+    let parent = git(root, &["rev-parse", "--verify", &parent_expression])?;
+    let parent = String::from_utf8_lossy(&parent.stdout).trim().to_string();
+    let paths = changed_paths(root, &parent, candidate)?;
+    if !paths.iter().any(|path| path == plan_path)
+        || paths
+            .iter()
+            .any(|path| !valid_path(path) || !path.starts_with("knowledge/"))
+    {
+        return Err(Error::Manifest {
+            message: "scope review candidate is not the knowledge-only plan checkpoint".into(),
+        });
+    }
+    Ok(())
+}
+
+/// Compensate a just-published service commit after its cache CAS fails.
+pub fn rollback_commit(root: &Path, commit: &str, parent: &str) -> Result<()> {
+    validate_ref(commit)?;
+    validate_ref(parent)?;
+    git(root, &["update-ref", "HEAD", parent, commit])?;
+    git(root, &["read-tree", parent])?;
+    Ok(())
 }
 
 /// Incorporate an expected default tip into the checked-out work branch.

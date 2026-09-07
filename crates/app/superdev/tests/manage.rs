@@ -476,6 +476,34 @@ fn workflow_start_creates_a_canonical_scope_plan_and_resume_adopts_it() {
     );
     fs::remove_file(dir.path().join("src/scope.rs")).unwrap();
     fs::remove_dir(dir.path().join("src")).unwrap();
+    let cache_dir = dir.path().join(".superdev/cache");
+    let mut cache_permissions = fs::metadata(&cache_dir).unwrap().permissions();
+    cache_permissions.set_mode(0o555);
+    fs::set_permissions(&cache_dir, cache_permissions).unwrap();
+    Command::cargo_bin("superdev")
+        .unwrap()
+        .current_dir(dir.path())
+        .args([
+            "workflow",
+            "scope-checkpoint",
+            "--session",
+            "pi-b",
+            "--expected-revision",
+            &revision,
+        ])
+        .assert()
+        .failure();
+    let mut cache_permissions = fs::metadata(&cache_dir).unwrap().permissions();
+    cache_permissions.set_mode(0o755);
+    fs::set_permissions(&cache_dir, cache_permissions).unwrap();
+    assert_eq!(
+        git::revision(dir.path(), "HEAD").unwrap(),
+        before_scope_refusal
+    );
+    assert_eq!(
+        cache::load(dir.path()).unwrap().unwrap().last_plan_revision,
+        revision
+    );
     Command::cargo_bin("superdev")
         .unwrap()
         .current_dir(dir.path())
@@ -491,6 +519,63 @@ fn workflow_start_creates_a_canonical_scope_plan_and_resume_adopts_it() {
         .success();
     let revision = cache::load(dir.path()).unwrap().unwrap().last_plan_revision;
     let scope_candidate = git::revision(dir.path(), "HEAD").unwrap();
+    let issue_path = dir
+        .path()
+        .join("knowledge/issues/open/issue-001-canonical-recovery.md");
+    let mut post_checkpoint_issue = fs::read_to_string(&issue_path).unwrap();
+    post_checkpoint_issue.push_str("\nPost-checkpoint mutation.\n");
+    fs::write(&issue_path, post_checkpoint_issue).unwrap();
+    assert!(
+        std::process::Command::new("git")
+            .current_dir(dir.path())
+            .args([
+                "add",
+                "--",
+                "knowledge/issues/open/issue-001-canonical-recovery.md"
+            ])
+            .status()
+            .unwrap()
+            .success()
+    );
+    assert!(
+        std::process::Command::new("git")
+            .current_dir(dir.path())
+            .args(["commit", "-m", "docs: mutate after scope checkpoint"])
+            .status()
+            .unwrap()
+            .success()
+    );
+    let post_checkpoint_candidate = git::revision(dir.path(), "HEAD").unwrap();
+    Command::cargo_bin("superdev")
+        .unwrap()
+        .current_dir(dir.path())
+        .env("SUPERDEV_UI_AUTHORITY", "fedcba9876543210fedcba9876543210")
+        .args([
+            "workflow",
+            "evidence",
+            "--session",
+            "pi-b",
+            "--expected-revision",
+            &revision,
+            "--revision",
+            &scoped_revision,
+            "--kind",
+            "scope-review",
+            "--review-session",
+            "review-post-checkpoint-mutation",
+            "--candidate",
+            &post_checkpoint_candidate,
+        ])
+        .assert()
+        .failure();
+    assert!(
+        std::process::Command::new("git")
+            .current_dir(dir.path())
+            .args(["reset", "--hard", &scope_candidate])
+            .status()
+            .unwrap()
+            .success()
+    );
     Command::cargo_bin("superdev")
         .unwrap()
         .current_dir(dir.path())
