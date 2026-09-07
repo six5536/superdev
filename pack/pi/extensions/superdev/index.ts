@@ -220,6 +220,7 @@ export default function superdev(pi: ExtensionAPI) {
 			identity: { issue: string; plan: string; work_branch: string; default_branch: string };
 		};
 		phase?: "scope" | "build" | "accept";
+		openWorkflows?: Array<{ issue: string; plan: string; work_branch: string; default_branch: string }>;
 		buildState?: { currentBlock: number; attempts: number; finalCorrections: number; fingerprint?: string; blocker: string };
 		maxStalledBlockAttempts?: number;
 		maxFinalCorrectionCycles?: number;
@@ -249,6 +250,22 @@ export default function superdev(pi: ExtensionAPI) {
 			"superdev-workflow",
 			status.owner ? `${status.phase?.toUpperCase() ?? "WORKFLOW"}: ${status.owner.identity?.plan ?? "owned"}` : undefined,
 		);
+		if (!status.owner && status.openWorkflows?.length) {
+			ctx.ui.notify(`Canonical workflows are available to resume: ${status.openWorkflows.map((workflow) => workflow.plan).join(", ")}`, "info");
+		}
+	});
+	pi.on("before_agent_start", async (event, ctx) => {
+		const status = await workflowStatus(ctx.cwd);
+		if (!status.owner || !status.phase) return;
+		const durable = {
+			phase: status.phase,
+			identity: status.owner.identity,
+			planRevision: status.owner.last_plan_revision,
+			buildState: status.buildState,
+		};
+		return {
+			systemPrompt: `${event.systemPrompt}\n\nCanonical Superdev workflow state (reloaded from Rust for this turn; never infer completion from conversation history):\n${JSON.stringify(durable)}`,
+		};
 	});
 
 	pi.registerTool({
@@ -369,8 +386,29 @@ export default function superdev(pi: ExtensionAPI) {
 		},
 	});
 	pi.registerCommand("superdev-resume", {
-		description: "Resume the canonical workflow after reconstructing Rust-owned state",
-		handler: async (_args, ctx) => send("Run `superdev workflow status --json`, bind this Pi session if unowned, then resume the canonical phase. Do not infer completion from an absent cache.", ctx),
+		description: "Resume one canonical workflow after Rust reconstructs its durable state",
+		handler: async (args, ctx) => {
+			const status = await workflowStatus(ctx.cwd);
+			if (status.owner) {
+				ctx.ui.setStatus("superdev-workflow", `${status.phase?.toUpperCase() ?? "WORKFLOW"}: ${status.owner.identity.plan}`);
+				return ctx.ui.notify(`${status.owner.identity.plan} is already owned and ready to continue`, "info");
+			}
+			const requested = args.trim();
+			const candidates = (status.openWorkflows ?? []).filter((workflow) => !requested || workflow.plan === requested);
+			if (candidates.length !== 1) {
+				const plans = (status.openWorkflows ?? []).map((workflow) => workflow.plan).join(", ") || "none";
+				return ctx.ui.notify(`Specify exactly one plan with /superdev-resume <plan-id>. Open workflows: ${plans}`, "warning");
+			}
+			const workflow = candidates[0];
+			await runSuperdev([
+				"workflow", "resume", "--session", ctx.sessionManager.getSessionId(),
+				"--issue", workflow.issue, "--plan", workflow.plan,
+				"--work-branch", workflow.work_branch, "--default-branch", workflow.default_branch,
+			], ctx.cwd, authority);
+			const resumed = await workflowStatus(ctx.cwd);
+			ctx.ui.setStatus("superdev-workflow", `${resumed.phase?.toUpperCase() ?? "WORKFLOW"}: ${workflow.plan}`);
+			ctx.ui.notify(`Resumed ${workflow.plan} from canonical ${resumed.phase?.toUpperCase() ?? "workflow"} state`, "info");
+		},
 	});
 	pi.registerCommand("scope", {
 		description: "Deterministically run SCOPE, isolated review, and human approval",

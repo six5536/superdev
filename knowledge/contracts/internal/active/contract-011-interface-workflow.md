@@ -346,6 +346,7 @@ mod tests {
 - `P_retry-reset` [event] WHEN BUILD lowers or replaces a block's retry state, the checkpoint service SHALL require completion of that same stable block.
 - `P_block-checkpoint` [event] WHEN BUILD checkpoints a newly completed stable block, the service SHALL verify its declared dependencies and executable Verification commands before committing only changes within its path-scoped Areas plus the owning plan.
 - `P_cache-transient` [ubiquitous] Absence of `.superdev/cache/workflow.toml` SHALL mean unowned rather than complete.
+- `P_compaction-reloads-state` [ubiquitous] Before every parent agent turn, Pi SHALL reload canonical phase, identity, plan revision, and BUILD state from Rust into the turn context rather than rely on conversation or compaction summaries.
 
 ## Stability
 
