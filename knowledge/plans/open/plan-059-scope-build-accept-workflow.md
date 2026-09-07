@@ -82,7 +82,7 @@ The canonical-knowledge surface covers ADRs, contracts, schemas, procedures, con
 
 ### Block 4: Enforce BUILD checkpoints and bounded correction loops
 
-- [ ] Done.
+- [x] Done.
 - Dependencies: Blocks 2 and 3.
 - Areas: Rust workflow services, Pi scheduler, plan evidence, and workflow configuration.
 - Outcome: stable blocks execute separately with fingerprints, focused evidence, separate commits, configured stalled-attempt limits, full verification, immutable review, and bounded final correction cycles.
@@ -115,7 +115,7 @@ The canonical-knowledge surface covers ADRs, contracts, schemas, procedures, con
 
 ## Build state
 
-Current block: 4. Attempts: 0. Final corrections: 0. Fingerprint: none. Blocker: none.
+Current block: 5. Attempts: 0. Final corrections: 0. Fingerprint: none. Blocker: none.
 
 ## Implementation decisions
 
