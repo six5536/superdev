@@ -554,6 +554,17 @@ pub fn integrate_no_ff(
     if current_branch(root)? != default_branch {
         git(root, &["switch", default_branch])?;
     }
+    require_clean(root)?;
+    if revision(root, default_branch)? != expected_default {
+        return Err(Error::Manifest {
+            message: "default branch moved; return the prepared closure to BUILD".into(),
+        });
+    }
+    if revision(root, work_branch)? != expected_work {
+        return Err(Error::Manifest {
+            message: "work branch moved after acceptance attestation".into(),
+        });
+    }
     git(
         root,
         &[
@@ -566,7 +577,7 @@ pub fn integrate_no_ff(
             "--no-edit",
             "-m",
             "chore(workflow): integrate accepted work",
-            work_branch,
+            expected_work,
         ],
     )
     .map(|_| ())
