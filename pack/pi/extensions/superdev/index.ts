@@ -107,6 +107,7 @@ export function requiresHumanAcceptance(value: boolean | undefined): boolean {
 }
 
 export function isolatedTools(role: Input["role"]): string {
+	if (role === "code-review") return "superdev_review_diff,sokf_search,sokf_graph";
 	if (readOnly.has(role)) return "read,superdev_review_diff,sokf_search,sokf_graph";
 	if (role === "file") return "read,sokf_search,sokf_graph";
 	if (role === "build") return "read,edit,write,sokf_search,sokf_graph,superdev_build_exec";
@@ -288,6 +289,7 @@ export default function superdev(pi: ExtensionAPI) {
 
 	const authority = randomBytes(32).toString("hex");
 	const reviewRuns = new Map<string, { role: "requirements-review" | "code-review"; result: RoleResult; base: string; candidate: string }>();
+	let reviewDiffBytes = 0;
 	const children = new Set<ChildProcess>();
 	let modifyingChild: ChildProcess | undefined;
 	let modifyingBusy = false;
@@ -318,12 +320,17 @@ export default function superdev(pi: ExtensionAPI) {
 					pi.exec("git", ["diff", "--no-ext-diff", "--stat", input.base, input.candidate, "--"], { cwd: ctx.cwd }),
 				]);
 				if (names.code !== 0 || stat.code !== 0) throw new Error(names.stderr.trim() || stat.stderr.trim() || "git diff inventory failed");
-				return { content: [{ type: "text", text: `Changed paths:\n${names.stdout}\nDiff stat:\n${stat.stdout}` }], details: { readOnly: true, inventory: true } };
+				const inventory = `Changed paths:\n${names.stdout}\nDiff stat:\n${stat.stdout}`;
+				if (inventory.length > 100_000 || reviewDiffBytes + inventory.length > 400_000) throw new Error("review diff output budget exceeded");
+				reviewDiffBytes += inventory.length;
+				return { content: [{ type: "text", text: inventory }], details: { readOnly: true, inventory: true } };
 			}
 			if (isAbsolute(input.path) || input.path.split(/[\\/]/).includes("..")) throw new Error("review path must be repo-relative without parent traversal");
 			const result = await pi.exec("git", ["diff", "--no-ext-diff", "--unified=20", input.base, input.candidate, "--", input.path], { cwd: ctx.cwd });
 			if (result.code !== 0) throw new Error(result.stderr.trim() || "git diff failed");
-			if (result.stdout.length > 300_000) throw new Error("one-file review diff exceeds the 300 KB review bound");
+			if (result.stdout.length > 80_000) throw new Error("one-file review diff exceeds the 80 KB review bound");
+			if (reviewDiffBytes + result.stdout.length > 400_000) throw new Error("review diff output budget exceeded");
+			reviewDiffBytes += result.stdout.length;
 			return { content: [{ type: "text", text: result.stdout || "No changes for that path." }], details: { readOnly: true, path: input.path } };
 		},
 	});

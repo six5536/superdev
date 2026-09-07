@@ -55,6 +55,7 @@ export default async function smoke() {
 	if (isolatedTools("scope").split(",").includes("bash")) throw new Error("SCOPE child has direct shell access");
 	if (isolatedTools("build").split(",").includes("bash")) throw new Error("BUILD child has direct shell access");
 	if (isolatedTools("accept").split(",").some((tool) => ["bash", "edit", "write"].includes(tool))) throw new Error("ACCEPT assessor is not read-only");
+if (isolatedTools("code-review").split(",").includes("read")) throw new Error("final reviewer can bypass immutable diff bounds");
 	if (!isolatedTools("build").split(",").includes("superdev_build_exec")) throw new Error("BUILD child cannot execute bounded evidence");
 	if (buildCommandAllowed("sh", ["-c", "mutate Git"])) throw new Error("BUILD can escape through a shell");
 	if (buildCommandAllowed("cargo", ["test"])) throw new Error("BUILD can bypass Rust-owned verification");
