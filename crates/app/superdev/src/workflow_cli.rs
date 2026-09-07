@@ -69,6 +69,8 @@ pub enum WorkflowCommand {
     Attempt(AttemptArgs),
     /// Count one failed final verification/review correction cycle
     Correction(CorrectionArgs),
+    /// Commit one path-scoped implementation correction after a failed final gate
+    CorrectionCheckpoint(RevisionArgs),
     /// Record isolated review or final verification evidence canonically
     Evidence(EvidenceArgs),
     /// Incorporate the expected local default tip into BUILD
@@ -115,6 +117,17 @@ pub struct ProgressArgs {
     /// New plan content revision after the Rust-owned mutation
     #[arg(long)]
     revision: String,
+}
+
+/// Session and plan compare-and-swap arguments.
+#[derive(Args)]
+pub struct RevisionArgs {
+    /// Owning Pi session ID
+    #[arg(long)]
+    session: String,
+    /// Expected current plan content revision
+    #[arg(long)]
+    expected_revision: String,
 }
 
 /// One failed BUILD command, normalized and counted by Rust.
@@ -515,6 +528,7 @@ pub fn run(command: &WorkflowCommand, root: &Path) -> Result<u8> {
         }),
         WorkflowCommand::Attempt(args) => record_attempt(&root, args),
         WorkflowCommand::Correction(args) => record_correction(&root, args),
+        WorkflowCommand::CorrectionCheckpoint(args) => record_correction_checkpoint(&root, args),
         WorkflowCommand::Evidence(args) => record_evidence(&root, args),
         WorkflowCommand::Sync(args) => cache::transaction(&root, |transaction| {
             let owner = transaction.load()?.ok_or_else(|| Error::Manifest {
@@ -1156,6 +1170,108 @@ fn record_correction(root: &Path, args: &CorrectionArgs) -> Result<u8> {
     })
 }
 
+fn record_correction_checkpoint(root: &Path, args: &RevisionArgs) -> Result<u8> {
+    cache::transaction(root, |transaction| {
+        let owner = transaction.load()?.ok_or_else(|| Error::Manifest {
+            message: "workflow is unowned".into(),
+        })?;
+        if owner.session_id != args.session || owner.last_plan_revision != args.expected_revision {
+            return Err(Error::Manifest {
+                message: "workflow ownership or plan revision changed".into(),
+            });
+        }
+        validate_identity_values(root, &owner.identity)?;
+        if git::current_branch(root)? != owner.identity.work_branch {
+            return Err(Error::Manifest {
+                message: "final correction checkpoint requires the checked-out work branch".into(),
+            });
+        }
+        if plan_record(root, &owner.identity.plan)?.phase != "build" {
+            return Err(Error::Manifest {
+                message: "final correction checkpoints are permitted only during BUILD".into(),
+            });
+        }
+        let (plan_path, observed) = plan_revision(root, &owner.identity.plan)?;
+        if observed != args.expected_revision {
+            return Err(Error::Manifest {
+                message: "workflow plan revision changed".into(),
+            });
+        }
+        let text = fs::read_to_string(&plan_path).map_err(|source| Error::Io {
+            path: plan_path.clone(),
+            source,
+        })?;
+        let retry_state = parse_retry_state(build_state_line(&text)?)?;
+        if retry_state.final_corrections == 0
+            || !retry_state.blocker.starts_with("final correction ")
+            || !retry_state.blocker.contains(" required:")
+        {
+            return Err(Error::Manifest {
+                message: "no failed final gate is awaiting an implementation correction".into(),
+            });
+        }
+        let mut areas = Vec::new();
+        let mut block = 1;
+        while let Ok(body) = plan_block(&text, block) {
+            areas.extend(block_area_paths(body));
+            block += 1;
+        }
+        areas.sort();
+        areas.dedup();
+        git::validate_block_paths(root, &areas)?;
+        let commands = plan_verification_commands(&text);
+        if commands.is_empty() {
+            return Err(Error::Manifest {
+                message: "final correction checkpoint has no executable Verification commands"
+                    .into(),
+            });
+        }
+        let head = git::revision(root, "HEAD")?;
+        for command in commands {
+            run_verification_command(root, &command)?;
+            if git::revision(root, "HEAD")? != head {
+                return Err(Error::Manifest {
+                    message: "a final correction Verification command changed HEAD".into(),
+                });
+            }
+        }
+        let relative_plan = plan_path
+            .strip_prefix(root)
+            .map_err(|_| Error::Manifest {
+                message: "workflow plan is outside the repository".into(),
+            })?
+            .to_string_lossy()
+            .to_string();
+        let mut corrected_state = retry_state.clone();
+        corrected_state.blocker = "none".into();
+        apply_plan_edits_transactionally(
+            root,
+            &plan_path,
+            vec![ExactEdit {
+                old_text: build_state_line(&text)?.into(),
+                new_text: render_retry_state(&corrected_state),
+            }],
+        )?;
+        areas.push(relative_plan);
+        let commit = git::commit_block_changes(
+            root,
+            &format!(
+                "fix(workflow): checkpoint final correction {}",
+                retry_state.final_corrections
+            ),
+            &areas,
+        )?;
+        let revision = plan_revision(root, &owner.identity.plan)?.1;
+        let state = transaction.compare_and_swap(&args.session, &observed, |state| {
+            state.last_plan_revision.clone_from(&revision)
+        })?;
+        emit(
+            "correction-checkpoint",
+            &serde_json::json!({"commit": commit, "revision": revision, "state": state}),
+        )
+    })
+}
+
 fn plan_block(plan: &str, block: u32) -> Result<&str> {
     let heading = format!("### Block {block}: ");
     let start = plan.find(&heading).ok_or_else(|| Error::Manifest {
@@ -1364,6 +1480,16 @@ fn record_evidence_locked(
             None,
         ),
         EvidenceKindName::Verification if record.phase == "build" => {
+            let retry_state = parse_retry_state(build_state_line(&text)?)?;
+            if retry_state.blocker.starts_with("final correction ")
+                && retry_state.blocker.contains(" required:")
+            {
+                return Err(Error::Manifest {
+                    message:
+                        "final-review findings require a correction checkpoint before verification"
+                            .into(),
+                });
+            }
             let candidate = args.candidate.as_deref().ok_or_else(|| Error::Manifest {
                 message: "verification evidence requires candidate H".into(),
             })?;

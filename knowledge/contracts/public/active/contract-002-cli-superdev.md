@@ -364,6 +364,8 @@ pub enum WorkflowCommand {
     Attempt(AttemptArgs),
     /// Count one failed final verification/review correction cycle
     Correction(CorrectionArgs),
+    /// Commit one path-scoped implementation correction after a failed final gate
+    CorrectionCheckpoint(RevisionArgs),
     /// Record isolated review or final verification evidence canonically
     Evidence(EvidenceArgs),
     /// Incorporate the expected local default tip into BUILD
@@ -410,6 +412,17 @@ pub struct ProgressArgs {
     /// New plan content revision after the Rust-owned mutation
     #[arg(long)]
     revision: String,
+}
+
+/// Session and plan compare-and-swap arguments.
+#[derive(Args)]
+pub struct RevisionArgs {
+    /// Owning Pi session ID
+    #[arg(long)]
+    session: String,
+    /// Expected current plan content revision
+    #[arg(long)]
+    expected_revision: String,
 }
 
 /// One failed BUILD command, normalized and counted by Rust.
@@ -804,6 +817,8 @@ the invoking adapter.
 | `superdev workflow attempt` | 2 | ownership, phase, revision, input, tree, or configured retry limit is invalid |
 | `superdev workflow correction` | 0 | one candidate-bound final correction cycle is durably counted |
 | `superdev workflow correction` | 2 | ownership, authority, candidate, review, phase, tree, or configured correction limit is invalid |
+| `superdev workflow correction-checkpoint` | 0 | approved executable checks pass and a focused correction within SCOPE-approved Areas is committed |
+| `superdev workflow correction-checkpoint` | 2 | ownership, revision, branch, phase, pending-correction, executable evidence, or path scope is invalid |
 | `superdev workflow evidence` | 0 | canonical BUILD evidence is acknowledged |
 | `superdev workflow evidence` | 2 | ownership, revision, identity, branch, or phase is invalid |
 | `superdev workflow sync` | 0 | the expected default tip is incorporated into the BUILD branch, or was already present |

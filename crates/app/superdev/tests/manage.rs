@@ -743,6 +743,80 @@ fn workflow_start_creates_a_canonical_scope_plan_and_resume_adopts_it() {
             ])
             .assert()
             .success();
+        if cycle <= 2 {
+            let correction_owner = cache::load(dir.path()).unwrap().unwrap();
+            if cycle == 1 {
+                let pending_candidate = git::revision(dir.path(), "HEAD").unwrap();
+                Command::cargo_bin("superdev")
+                    .unwrap()
+                    .current_dir(dir.path())
+                    .env("SUPERDEV_UI_AUTHORITY", "fedcba9876543210fedcba9876543210")
+                    .args([
+                        "workflow",
+                        "evidence",
+                        "--session",
+                        "pi-b",
+                        "--expected-revision",
+                        &correction_owner.last_plan_revision,
+                        "--kind",
+                        "verification",
+                        "--candidate",
+                        &pending_candidate,
+                    ])
+                    .assert()
+                    .failure();
+                let before_refusal = git::revision(dir.path(), "HEAD").unwrap();
+                fs::write(dir.path().join("outside"), "not correction scoped\n").unwrap();
+                Command::cargo_bin("superdev")
+                    .unwrap()
+                    .current_dir(dir.path())
+                    .args([
+                        "workflow",
+                        "correction-checkpoint",
+                        "--session",
+                        "pi-b",
+                        "--expected-revision",
+                        &correction_owner.last_plan_revision,
+                    ])
+                    .assert()
+                    .failure();
+                assert_eq!(git::revision(dir.path(), "HEAD").unwrap(), before_refusal);
+                assert_eq!(
+                    cache::load(dir.path()).unwrap().unwrap().last_plan_revision,
+                    correction_owner.last_plan_revision
+                );
+                fs::remove_file(dir.path().join("outside")).unwrap();
+            }
+            fs::write(
+                dir.path().join("src/lib.rs"),
+                format!("pub fn checkpointed() {{ /* correction {cycle} */ }}\n"),
+            )
+            .unwrap();
+            Command::cargo_bin("superdev")
+                .unwrap()
+                .current_dir(dir.path())
+                .args([
+                    "workflow",
+                    "correction-checkpoint",
+                    "--session",
+                    "pi-b",
+                    "--expected-revision",
+                    &correction_owner.last_plan_revision,
+                ])
+                .assert()
+                .success();
+            git::require_clean(dir.path()).unwrap();
+            let checkpointed_owner = cache::load(dir.path()).unwrap().unwrap();
+            assert_ne!(
+                checkpointed_owner.last_plan_revision,
+                correction_owner.last_plan_revision
+            );
+            assert!(
+                fs::read_to_string(&plan)
+                    .unwrap()
+                    .contains("Blocker: none.")
+            );
+        }
     }
     let exhausted = fs::read_to_string(&plan).unwrap();
     assert!(exhausted.contains("Final corrections: 3."));
