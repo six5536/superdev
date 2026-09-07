@@ -4,7 +4,7 @@ id: plan-059-scope-build-accept-workflow
 title: Scope build accept workflow
 description: Replace contradictory agent workflows with one durable Rust-owned SCOPE to BUILD to ACCEPT process orchestrated by Pi.
 lifecycle: open
-phase: build
+phase: scope
 branch: work/059-scope-build-accept-workflow
 links:
   - rel: implements
@@ -170,11 +170,7 @@ none.
 
 The root specification was explicitly approved before commit `83e04ea`, and an isolated requirements pass reported no unresolved requirement before BUILD. Rejected candidates through `1e8f20e` were superseded. Service-owned checkpoints completed Blocks 2 through 5 after their exact Verification commands passed. The full Rust workspace, 854-test npm matrix, formatting, clippy, documentation, SOKF validation, pack parity, standalone Pi smoke, and diff checks pass. Fresh immutable review run `fabfbef210cc6ac658eed6036a8dc9bde11210722952e0b1` reported no actionable finding for candidate `2571c058b69e84fedc4f4306a01152feaf837041`. Three subsequent bounded final reviews identified and drove corrections for integration ref races, predictable cache temporary files, checked-out default synchronization, and symlinked cache ancestors. Exhaustion returned the same workflow to SCOPE at product baseline `e92d9e3f005690d56453f79aaa1296106040c0e3`. Clean requirements reviews `7d143a819ea834717694974929ef5a0a0e72b163a064a144` and `2ddf1814955ef26c01c46d32c617c4bce857d9ecfd696653`, followed by explicit human approvals, authorized the final Block 6 corrections and their exact Areas. The implementation now creates the integration merge from immutable revisions and atomically verifies both refs while advancing the default, synchronizes its checked-out worktree, and rejects another worktree owning the default. Cache transactions hold one capability directory for locking, reads, atomic writes, and ownership CAS so concurrent ancestor, lock, or state symlink replacement cannot escape the repository or split serialization. Historical execution remains recorded: scope baseline `99d9f42b8b11543a40bef210342ef73ba7db3de9` led to scope review `2ddf1814955ef26c01c46d32c617c4bce857d9ecfd696653`, which was clean and received explicit human approval before candidate `1328e3b41d6f1825520fe2e774a92d3150709552`; final review `4bf5b86b16264e9a6e671341c19883c9bc0cff0ce77c45b0` then found the remaining descriptor race, and its first final-correction count is preserved across this re-scope. Scope review `82901c57da085875bc1aa9256b4b60742e1453a9b0d2ddba` was clean and explicit human approval authorized the descriptor-relative correction.
 
-Scope product baseline: 887bc928731312a0b0033727fa34ca072502a9d6.
-
-Scope requirements review: clean by isolated session 3f9e4eda2d09a77e145e9baf714ca75c8af43958c82b09f3.
-
-Human scope approval: approved.
+Scope product baseline: e2f8f12b6280336aa6f36cc5a8ef525735ff960c.
 
 <!-- sokf:links -->
 [sokf:issue-059-scope-build-accept-workflow]: /knowledge/issues/open/issue-059-scope-build-accept-workflow.md
