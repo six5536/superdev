@@ -226,6 +226,7 @@ export async function runPinnedSuperdev(path: string, digest: string | undefined
 			const child = spawn("/proc/self/fd/3", args, {
 				cwd,
 				shell: false,
+				detached: true,
 				stdio: ["ignore", "pipe", "pipe", executable!.fd],
 				env: environment ? { ...process.env, ...environment } : process.env,
 			});
@@ -236,9 +237,12 @@ export async function runPinnedSuperdev(path: string, digest: string | undefined
 			child.stdout.on("data", (chunk: string) => { stdout = (stdout + chunk).slice(-1_000_000); });
 			child.stderr.on("data", (chunk: string) => { stderr = (stderr + chunk).slice(-100_000); });
 			let killTimer: NodeJS.Timeout | undefined;
+			const signalChild = (name: NodeJS.Signals) => {
+				try { if (child.pid) process.kill(-child.pid, name); } catch { /* Process group already exited. */ }
+			};
 			const stop = () => {
-				child.kill("SIGTERM");
-				killTimer = setTimeout(() => { if (child.exitCode === null) child.kill("SIGKILL"); }, 2_000);
+				signalChild("SIGTERM");
+				killTimer = setTimeout(() => { if (child.exitCode === null) signalChild("SIGKILL"); }, 2_000);
 				killTimer.unref();
 			};
 			const cleanup = () => {
@@ -466,6 +470,7 @@ export default function superdev(pi: ExtensionAPI) {
 		description: "Run one extension-private workflow role in a fresh isolated Pi process",
 		parameters: schema,
 		execute: async (_id, input, signal, _update, ctx) => {
+			if (cancelling) throw new Error("workflow cancellation is in progress");
 			const modifying = !readOnly.has(input.role) && input.role !== "file";
 			if (modifying && (cancelling || modifyingBusy || modifyingChild)) throw new Error("one modifying workflow child is already active");
 			if (modifying) modifyingBusy = true;
