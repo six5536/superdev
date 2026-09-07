@@ -527,14 +527,18 @@ pub fn run(command: &WorkflowCommand, root: &Path) -> Result<u8> {
             git::validate_block_paths(&root, &areas)?;
             run_block_verification(&root, approved_block)?;
             let next_retry = retry_state_after_checkpoint(&current_text, &previous_retry);
-            apply_plan_edits_transactionally(
-                &root,
-                &plan_path,
-                vec![ExactEdit {
-                    old_text: build_state_line(&current_text)?.into(),
-                    new_text: render_retry_state(&next_retry),
-                }],
-            )?;
+            let current_retry_line = build_state_line(&current_text)?;
+            let next_retry_line = render_retry_state(&next_retry);
+            if current_retry_line != next_retry_line {
+                apply_plan_edits_transactionally(
+                    &root,
+                    &plan_path,
+                    vec![ExactEdit {
+                        old_text: current_retry_line.into(),
+                        new_text: next_retry_line,
+                    }],
+                )?;
+            }
             let grammar = superdev_core::validate::schema::load_grammar(&root)?;
             let report = superdev_core::validate::validate_repo(
                 &root,
