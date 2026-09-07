@@ -259,6 +259,27 @@ fn init_materializes_pi_workflow_without_claude_assets() {
     assert!(lock.contains(".pi/skills/sokf-authoring/SKILL.md"));
     assert!(!lock.contains(".claude/skills"));
     assert!(!lock.contains("superdev hook run"));
+
+    let retired = b"retired managed workflow skill\n";
+    let retired_path = repo.join(".claude/skills/build/SKILL.md");
+    fs::create_dir_all(retired_path.parent().unwrap()).unwrap();
+    fs::write(&retired_path, retired).unwrap();
+    let mut old_lock = lock;
+    old_lock = old_lock.replacen(
+        "[files]\n",
+        &format!(
+            "[files]\n\".claude/skills/build/SKILL.md\" = \"{}\"\n",
+            superdev_core::lock::sha256_hex(retired)
+        ),
+        1,
+    );
+    sb.write(".superdev/lock.toml", &old_lock);
+    sb.superdev().arg("sync").assert().success();
+    assert!(!retired_path.exists());
+    assert!(
+        !sb.read(".superdev/lock.toml")
+            .contains(".claude/skills/build")
+    );
 }
 
 #[test]
