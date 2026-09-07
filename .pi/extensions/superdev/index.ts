@@ -186,6 +186,27 @@ export function buildCommandAllowed(command: string, args: string[]): boolean {
 	return true;
 }
 
+type ExecResult = { code: number; stdout: string; stderr: string };
+type BuildExec = (command: string, args: string[], cwd: string) => Promise<ExecResult>;
+
+export async function runGuardedBuildCommand(exec: BuildExec, command: string, args: string[], cwd: string): Promise<ExecResult> {
+	if (!buildCommandAllowed(command, args)) throw new Error(`BUILD executable or operation is not permitted: ${command}`);
+	const serviceCommand = command === "superdev";
+	const before = serviceCommand ? undefined : await exec("git", ["rev-parse", "--verify", "HEAD"], cwd);
+	if (before && before.code !== 0) throw new Error("could not capture the BUILD command baseline");
+	const result = await exec(command, args, cwd);
+	if (before) {
+		const after = await exec("git", ["rev-parse", "--verify", "HEAD"], cwd);
+		if (after.code !== 0 || after.stdout.trim() !== before.stdout.trim()) {
+			if (after.code !== 0) throw new Error("BUILD command changed HEAD and its new value could not be resolved");
+			const rollback = await exec("git", ["update-ref", "HEAD", before.stdout.trim(), after.stdout.trim()], cwd);
+			if (rollback.code !== 0) throw new Error("BUILD command changed HEAD and rollback failed");
+			throw new Error("BUILD command attempted to mutate Git history");
+		}
+	}
+	return result;
+}
+
 export default function superdev(pi: ExtensionAPI) {
 	const childRole = process.env.SUPERDEV_CHILD_ROLE;
 	pi.on("tool_call", (event) => {
@@ -240,24 +261,14 @@ export default function superdev(pi: ExtensionAPI) {
 		}),
 		execute: async (_id, input: { command: string; args: string[] }, _signal, _update, ctx) => {
 			if (childRole !== "build") throw new Error("BUILD command execution is available only to the BUILD role");
-			if (!buildCommandAllowed(input.command, input.args)) {
-				throw new Error(`BUILD executable or operation is not permitted: ${input.command}`);
-			}
-			const serviceCheckpoint = input.command === "superdev";
-			const before = serviceCheckpoint ? undefined : await pi.exec("git", ["rev-parse", "--verify", "HEAD"], { cwd: ctx.cwd });
-			if (before && before.code !== 0) throw new Error("could not capture the BUILD command baseline");
-			const result = await pi.exec(input.command, input.args, { cwd: ctx.cwd });
-			if (before) {
-				const after = await pi.exec("git", ["rev-parse", "--verify", "HEAD"], { cwd: ctx.cwd });
-				if (after.code !== 0 || after.stdout.trim() !== before.stdout.trim()) {
-					if (after.code === 0) {
-						await pi.exec("git", ["update-ref", "HEAD", before.stdout.trim(), after.stdout.trim()], { cwd: ctx.cwd });
-					}
-					throw new Error("BUILD command attempted to mutate Git history");
-				}
-			}
+			const result = await runGuardedBuildCommand(
+				async (command, args, cwd) => pi.exec(command, args, { cwd }),
+				input.command,
+				input.args,
+				ctx.cwd,
+			);
 			if (result.code !== 0) throw new Error(result.stderr.trim() || `${input.command} exited ${result.code}`);
-			return { content: [{ type: "text", text: result.stdout || "Command completed." }], details: { shellFree: true, headPreserved: !serviceCheckpoint } };
+			return { content: [{ type: "text", text: result.stdout || "Command completed." }], details: { shellFree: true, canonicalEvidence: false } };
 		},
 	});
 	if (childRole) return;

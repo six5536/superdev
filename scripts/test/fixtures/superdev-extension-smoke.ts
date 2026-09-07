@@ -1,6 +1,6 @@
-import superdev, { buildCommandAllowed, isolatedRoleMayNotRun, isolatedTools, parseRoleResult } from "../../../.pi/extensions/superdev/index.ts";
+import superdev, { buildCommandAllowed, isolatedRoleMayNotRun, isolatedTools, parseRoleResult, runGuardedBuildCommand } from "../../../.pi/extensions/superdev/index.ts";
 
-export default function smoke() {
+export default async function smoke() {
 	const commands: string[] = [];
 	const tools: string[] = [];
 	const fake = {
@@ -72,5 +72,28 @@ export default function smoke() {
 		throw new Error("unstructured review was accepted");
 	} catch (error) {
 		if (String(error).includes("unstructured review was accepted")) throw error;
+	}
+	const ok = (stdout = "") => ({ code: 0, stdout, stderr: "" });
+	const stable = [ok("aaa\n"), ok("checked\n"), ok("aaa\n")];
+	const stableResult = await runGuardedBuildCommand(async () => stable.shift()!, "just", ["check"], "/repo");
+	if (stableResult.stdout !== "checked\n") throw new Error("guarded BUILD result was lost");
+	const movedCalls: string[][] = [];
+	const moved = [ok("aaa\n"), ok(), ok("bbb\n"), ok()];
+	try {
+		await runGuardedBuildCommand(async (command, args) => {
+			movedCalls.push([command, ...args]);
+			return moved.shift()!;
+		}, "cargo", ["test"], "/repo");
+		throw new Error("moved BUILD HEAD was accepted");
+	} catch (error) {
+		if (!String(error).includes("attempted to mutate Git history")) throw error;
+	}
+	if (movedCalls.at(-1)?.join(" ") !== "git update-ref HEAD aaa bbb") throw new Error("moved BUILD HEAD was not rolled back by CAS");
+	const rollbackFailure = [ok("aaa\n"), ok(), ok("bbb\n"), { code: 1, stdout: "", stderr: "stale" }];
+	try {
+		await runGuardedBuildCommand(async () => rollbackFailure.shift()!, "npm", ["test"], "/repo");
+		throw new Error("BUILD rollback failure was accepted");
+	} catch (error) {
+		if (!String(error).includes("rollback failed")) throw error;
 	}
 }
