@@ -131,6 +131,10 @@ pub struct WorkflowCache {
     pub identity: WorkflowIdentity,
     /// Plan revision last observed by the owning session.
     pub last_plan_revision: String,
+    /// SHA-256 digest of the owning Pi UI's in-memory authority capability.
+    /// The capability itself is never persisted; only this one-way digest is exposed.
+    #[serde(default)]
+    pub authority_digest: String,
     /// Immutable candidate reviewed at the BUILD gate.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub candidate_revision: Option<String>,
@@ -375,6 +379,8 @@ mod tests {
 - `P_scope-gate` [event] WHEN SCOPE enters BUILD, the service SHALL require explicit human scope approval and a clean isolated requirements review.
 - `P_build-gate` [event] WHEN BUILD enters ACCEPT, the service SHALL require complete blocks, current executable and documentation evidence, no affected pending promise, and a clean fresh isolated final review.
 - `P_accept-policy` [event] WHEN ACCEPT decides a candidate, the service SHALL derive human acceptance solely from project configuration before merging an accepted closure locally with `git merge --no-ff`.
+- `P_ui-authority-service` [event] WHEN scope approval, configured human acceptance, rejection, or abandonment changes durable state, the service SHALL require the owning Pi UI's unpersisted capability.
+- `P_ui-authority-adapter` [event] WHEN an action requires human authority, Pi SHALL expose its capability to the service only after interactive confirmation.
 - `P_cancel-pauses` [event] WHEN cancellation occurs, the service SHALL release transient ownership without changing the canonical phase or deleting uncommitted SCOPE drafts.
 - `P_abandon-human-only` [event] WHEN abandonment is requested, the service SHALL require interactive human approval while excluding partial product work from integration.
 - `P_evidence-durable` [event] WHEN an isolated scope review or final BUILD review completes cleanly, the evidence command SHALL record the distinct reviewer session and immutable revisions in canonical Completion evidence.

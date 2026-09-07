@@ -11,7 +11,7 @@ use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
 
 use assert_cmd::Command;
-use superdev_core::workflow::git;
+use superdev_core::workflow::{cache, git};
 
 /// A temp git repo plus a bin dir of fake `mise`/`claude`/`codegraph`.
 struct Sandbox {
@@ -310,6 +310,14 @@ fn workflow_start_creates_a_canonical_scope_plan_and_resume_adopts_it() {
     Command::cargo_bin("superdev")
         .unwrap()
         .current_dir(dir.path())
+        .args(start.clone())
+        .assert()
+        .failure();
+    assert!(!git::reference_exists(dir.path(), "work/001-canonical-recovery").unwrap());
+    Command::cargo_bin("superdev")
+        .unwrap()
+        .current_dir(dir.path())
+        .env("SUPERDEV_UI_AUTHORITY", "0123456789abcdef0123456789abcdef")
         .args(start)
         .assert()
         .success();
@@ -321,6 +329,32 @@ fn workflow_start_creates_a_canonical_scope_plan_and_resume_adopts_it() {
         .path()
         .join("knowledge/plans/open/plan-001-canonical-recovery.md");
     assert!(plan.is_file());
+    assert!(fs::read_to_string(&plan).unwrap().contains("phase: scope"));
+    let revision = cache::load(dir.path())
+        .unwrap()
+        .unwrap()
+        .last_plan_revision;
+    Command::cargo_bin("superdev")
+        .unwrap()
+        .current_dir(dir.path())
+        .env(
+            "SUPERDEV_UI_AUTHORITY",
+            "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        )
+        .args([
+            "workflow",
+            "transition",
+            "--session",
+            "pi-a",
+            "--expected-revision",
+            &revision,
+            "--phase",
+            "scope",
+            "--transition",
+            "approve-scope",
+        ])
+        .assert()
+        .failure();
     assert!(fs::read_to_string(&plan).unwrap().contains("phase: scope"));
 
     Command::cargo_bin("superdev")
@@ -343,6 +377,7 @@ fn workflow_start_creates_a_canonical_scope_plan_and_resume_adopts_it() {
     Command::cargo_bin("superdev")
         .unwrap()
         .current_dir(dir.path())
+        .env("SUPERDEV_UI_AUTHORITY", "fedcba9876543210fedcba9876543210")
         .args(resume)
         .assert()
         .success();

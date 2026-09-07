@@ -472,12 +472,6 @@ pub struct TransitionArgs {
     /// Enumerated transition
     #[arg(long, value_enum)]
     transition: TransitionName,
-    /// Explicit human scope approval was obtained
-    #[arg(long)]
-    human_scope_approved: bool,
-    /// Interactive human acceptance was obtained
-    #[arg(long)]
-    human_acceptance_approved: bool,
     /// Human rejection feedback preserved as an unresolved issue discovery
     #[arg(long)]
     feedback: Option<String>,
@@ -505,9 +499,6 @@ pub struct AbandonArgs {
     /// Expected current phase
     #[arg(long, value_enum)]
     phase: PhaseName,
-    /// Set only by the interactive Pi command after confirmation
-    #[arg(long)]
-    human_approved: bool,
     /// Human-approved disposition recorded on the issue
     #[arg(long)]
     reason: String,
@@ -814,9 +805,11 @@ pipe ends the command as `P_closed-stdout-exits-0` says.
 ### Environment
 
 `CLAUDE_PROJECT_DIR` is described by
-[contract-004-config-superdev][sokf:contract-004-config-superdev]. No
-other command reads the environment beyond what `mise` and `git` read
-for themselves.
+[contract-004-config-superdev][sokf:contract-004-config-superdev]. Workflow
+ownership and human-gated transitions receive an unpersisted Pi UI capability
+through `SUPERDEV_UI_AUTHORITY`; ordinary callers cannot replace it with an
+approval flag. Other commands read only the environment that `mise` and `git`
+read for themselves.
 
 - `P_hook-resolves-project-dir` [event] WHEN an adapter sets
   `CLAUDE_PROJECT_DIR`, `hook validate` SHALL resolve the repository from
@@ -824,6 +817,7 @@ for themselves.
 - `P_hook-resolves-working-dir` [conditional] IF `CLAUDE_PROJECT_DIR`
   is unset, `hook validate` SHALL resolve the repository from the working
   directory.
+- `P_workflow-ui-authority-env` [event] WHEN Pi establishes workflow ownership or performs a human-gated transition, the command SHALL verify `SUPERDEV_UI_AUTHORITY` against the owning session's digest.
 
 ### Usage errors
 

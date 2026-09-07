@@ -1,4 +1,5 @@
 import { spawn, type ChildProcess } from "node:child_process";
+import { randomBytes } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -60,6 +61,28 @@ function stopProcess(child: ChildProcess) {
 	};
 	signal("SIGTERM");
 	setTimeout(() => { if (child.exitCode === null) signal("SIGKILL"); }, 2_000).unref();
+}
+
+async function runSuperdev(args: string[], cwd: string, authority: string): Promise<unknown> {
+	return new Promise((accept, reject) => {
+		const child = spawn("superdev", args, {
+			cwd,
+			shell: false,
+			stdio: ["ignore", "pipe", "pipe"],
+			env: { ...process.env, SUPERDEV_UI_AUTHORITY: authority },
+		});
+		let stdout = "";
+		let stderr = "";
+		child.stdout.setEncoding("utf8");
+		child.stderr.setEncoding("utf8");
+		child.stdout.on("data", (chunk: string) => { stdout = (stdout + chunk).slice(-1_000_000); });
+		child.stderr.on("data", (chunk: string) => { stderr = (stderr + chunk).slice(-100_000); });
+		child.on("error", reject);
+		child.on("close", (code) => {
+			if (code !== 0) return reject(new Error(stderr.trim() || `superdev exited ${code}`));
+			try { accept(JSON.parse(stdout)); } catch { reject(new Error("superdev returned invalid workflow JSON")); }
+		});
+	});
 }
 
 async function isolated(
@@ -145,6 +168,7 @@ export default function superdev(pi: ExtensionAPI) {
 		}
 	});
 
+	const authority = randomBytes(32).toString("hex");
 	const children = new Set<ChildProcess>();
 	let modifyingChild: ChildProcess | undefined;
 	let modifyingBusy = false;
@@ -198,6 +222,54 @@ export default function superdev(pi: ExtensionAPI) {
 			"superdev-workflow",
 			status.owner ? `${status.phase?.toUpperCase() ?? "WORKFLOW"}: ${status.owner.identity?.plan ?? "owned"}` : undefined,
 		);
+	});
+
+	pi.registerTool({
+		name: "superdev_workflow_control",
+		label: "Superdev workflow control",
+		description: "Invoke one typed Rust workflow operation; human-gated actions confirm in trusted Pi UI",
+		parameters: Type.Object({
+			action: StringEnum(["start", "resume", "approve-scope", "return-to-scope", "finish-build", "reject-acceptance", "accept", "abandon"] as const),
+			session: Type.String(),
+			issue: Type.Optional(Type.String()),
+			plan: Type.Optional(Type.String()),
+			workBranch: Type.Optional(Type.String()),
+			defaultBranch: Type.Optional(Type.String()),
+			expectedRevision: Type.Optional(Type.String()),
+			phase: Type.Optional(StringEnum(["scope", "build", "accept"] as const)),
+			feedback: Type.Optional(Type.String()),
+			reason: Type.Optional(Type.String()),
+		}),
+		execute: async (_id, input, _signal, _update, ctx) => {
+			const humanAction = input.action === "approve-scope" || input.action === "reject-acceptance" || input.action === "abandon";
+			let acceptanceRequiresHuman = false;
+			if (input.action === "accept") {
+				const config = await readFile(resolve(ctx.cwd, ".superdev/config.toml"), "utf8");
+				acceptanceRequiresHuman = !/^human_acceptance_required\s*=\s*false\s*$/m.test(config);
+			}
+			if ((humanAction || acceptanceRequiresHuman) && (!ctx.hasUI || !(await ctx.ui.confirm(
+				`${input.action}?`,
+				input.action === "abandon" ? "Partial product work will not be integrated." : "This records an authoritative human workflow decision.",
+			)))) throw new Error("human workflow decision was not approved");
+			const args = ["workflow"];
+			if (input.action === "start" || input.action === "resume") {
+				if (!input.issue || !input.plan || !input.workBranch) throw new Error("workflow identity is incomplete");
+				args.push(input.action, "--session", input.session, "--issue", input.issue, "--plan", input.plan, "--work-branch", input.workBranch);
+				if (input.defaultBranch) args.push("--default-branch", input.defaultBranch);
+			} else if (input.action === "abandon") {
+				if (!input.expectedRevision || !input.phase || !input.reason?.trim()) throw new Error("abandonment disposition is incomplete");
+				args.push("abandon", "--session", input.session, "--expected-revision", input.expectedRevision, "--phase", input.phase, "--reason", input.reason);
+			} else {
+				if (!input.expectedRevision || !input.phase) throw new Error("transition compare-and-swap fields are incomplete");
+				args.push("transition", "--session", input.session, "--expected-revision", input.expectedRevision, "--phase", input.phase, "--transition", input.action);
+				if (input.action === "reject-acceptance") {
+					if (!input.feedback?.trim()) throw new Error("rejection feedback is required");
+					args.push("--feedback", input.feedback);
+				}
+			}
+			const result = await runSuperdev(args, ctx.cwd, authority);
+			return { content: [{ type: "text", text: JSON.stringify(result) }], details: { result, humanGated: humanAction || acceptanceRequiresHuman } };
+		},
 	});
 
 	pi.registerTool({

@@ -175,12 +175,6 @@ pub struct TransitionArgs {
     /// Enumerated transition
     #[arg(long, value_enum)]
     transition: TransitionName,
-    /// Explicit human scope approval was obtained
-    #[arg(long)]
-    human_scope_approved: bool,
-    /// Interactive human acceptance was obtained
-    #[arg(long)]
-    human_acceptance_approved: bool,
     /// Human rejection feedback preserved as an unresolved issue discovery
     #[arg(long)]
     feedback: Option<String>,
@@ -208,9 +202,6 @@ pub struct AbandonArgs {
     /// Expected current phase
     #[arg(long, value_enum)]
     phase: PhaseName,
-    /// Set only by the interactive Pi command after confirmation
-    #[arg(long)]
-    human_approved: bool,
     /// Human-approved disposition recorded on the issue
     #[arg(long)]
     reason: String,
@@ -341,27 +332,18 @@ pub fn run(command: &WorkflowCommand, root: &Path) -> Result<u8> {
         }
         WorkflowCommand::Evidence(args) => record_evidence(&root, args),
         WorkflowCommand::Transition(args) => transition(&root, args, false, None),
-        WorkflowCommand::Abandon(args) => {
-            if !args.human_approved {
-                return Err(Error::Manifest {
-                    message: "abandonment requires interactive human approval".into(),
-                });
-            }
-            transition(
-                &root,
-                &TransitionArgs {
-                    session: args.session.clone(),
-                    expected_revision: args.expected_revision.clone(),
-                    phase: args.phase,
-                    transition: TransitionName::Accept,
-                    human_scope_approved: false,
-                    human_acceptance_approved: false,
-                    feedback: None,
-                },
-                true,
-                Some(&args.reason),
-            )
-        }
+        WorkflowCommand::Abandon(args) => transition(
+            &root,
+            &TransitionArgs {
+                session: args.session.clone(),
+                expected_revision: args.expected_revision.clone(),
+                phase: args.phase,
+                transition: TransitionName::Accept,
+                feedback: None,
+            },
+            true,
+            Some(&args.reason),
+        ),
         WorkflowCommand::Integrate(args) => cache::transaction(&root, |transaction| {
             let state = transaction.load()?.ok_or_else(|| Error::Manifest {
                 message: "workflow is unowned".into(),
@@ -440,6 +422,7 @@ pub fn run(command: &WorkflowCommand, root: &Path) -> Result<u8> {
 }
 
 fn start(root: &Path, args: &BindArgs) -> Result<u8> {
+    ui_authority_capability()?;
     validate_reserved_identity(args)?;
     git::require_clean(root)?;
     if git::current_branch(root)? != args.default_branch {
@@ -468,7 +451,7 @@ fn start(root: &Path, args: &BindArgs) -> Result<u8> {
     // Reserve ownership before mutating Git or records. This makes concurrent
     // starts serialize through the same repository lock rather than racing on
     // a prior load followed by an independent write.
-    let reservation = workflow_cache(args, String::new(), None, None);
+    let reservation = workflow_cache(args, String::new(), None, None)?;
     cache::bind(root, &reservation)?;
     let started = (|| {
         git::create_work_branch(root, &args.work_branch)?;
@@ -605,7 +588,7 @@ fn bind_with_revision(root: &Path, args: &BindArgs, revision: String) -> Result<
         })?;
     let candidate = evidence_revision(&text, "Candidate revision");
     let verified_default = evidence_revision(&text, "Verified default revision");
-    let state = workflow_cache(args, revision, candidate, verified_default);
+    let state = workflow_cache(args, revision, candidate, verified_default)?;
     cache::bind(root, &state)?;
     emit("bind", &state)
 }
@@ -615,8 +598,9 @@ fn workflow_cache(
     revision: String,
     candidate_revision: Option<String>,
     verified_default_revision: Option<String>,
-) -> WorkflowCache {
-    WorkflowCache {
+) -> Result<WorkflowCache> {
+    let capability = ui_authority_capability()?;
+    Ok(WorkflowCache {
         version: 1,
         session_id: args.session.clone(),
         identity: WorkflowIdentity {
@@ -626,13 +610,20 @@ fn workflow_cache(
             default_branch: args.default_branch.clone(),
         },
         last_plan_revision: revision,
+        authority_digest: cache::authority_digest(&capability)?,
         candidate_revision,
         verified_default_revision,
         child_role: None,
         child_pid: None,
         child_started: None,
         cancelled: false,
-    }
+    })
+}
+
+fn ui_authority_capability() -> Result<String> {
+    std::env::var("SUPERDEV_UI_AUTHORITY").map_err(|_| Error::Manifest {
+        message: "workflow ownership must be established by the interactive Pi UI".into(),
+    })
 }
 
 #[derive(Debug)]
@@ -1005,8 +996,17 @@ fn transition_locked(
         }
     }
     let candidate = candidate_revision.as_deref().unwrap_or_default();
+    let config = Manifest::load(root)?.workflow;
+    let human_authorized = matches!(
+        transition,
+        Transition::ApproveScope | Transition::RejectAcceptance | Transition::Abandon
+    ) || matches!(transition, Transition::Accept)
+        && config.human_acceptance_required;
+    if human_authorized {
+        cache::verify_authority(&state, &ui_authority_capability()?)?;
+    }
     let gates = GateEvidence {
-        human_scope_approved: args.human_scope_approved,
+        human_scope_approved: human_authorized && matches!(transition, Transition::ApproveScope),
         requirements_review_clean: plan_text
             .lines()
             .any(|line| line.starts_with("Scope requirements review: clean by isolated session ")),
@@ -1025,8 +1025,8 @@ fn transition_locked(
         documentation_current: plan_text.contains(&format!(
             "Documentation verification: passed for {candidate}."
         )),
-        human_acceptance_approved: args.human_acceptance_approved,
-        human_abandonment_approved: abandon,
+        human_acceptance_approved: human_authorized && matches!(transition, Transition::Accept),
+        human_abandonment_approved: human_authorized && abandon,
         closure_integrated: if phase == Phase::Done {
             git::is_ancestor(
                 root,
@@ -1037,7 +1037,6 @@ fn transition_locked(
             false
         },
     };
-    let config = Manifest::load(root)?.workflow;
     let next =
         apply_transition(phase, transition, &gates, &config).map_err(|error| Error::Manifest {
             message: error.to_string(),

@@ -30,6 +30,7 @@ export default function smoke() {
 	}
 	if (!tools.includes("superdev_isolated_role")) throw new Error("missing isolated role tool");
 	if (!tools.includes("superdev_review_diff")) throw new Error("missing read-only review diff tool");
+	if (!tools.includes("superdev_workflow_control")) throw new Error("missing UI-gated workflow control tool");
 	const clean = parseRoleResult(
 		"code-review",
 		'analysis\nSUPERDEV_RESULT {"status":"clean","summary":"No actionable findings."}',

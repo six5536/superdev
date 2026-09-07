@@ -101,6 +101,10 @@ pub struct WorkflowCache {
     pub identity: WorkflowIdentity,
     /// Plan revision last observed by the owning session.
     pub last_plan_revision: String,
+    /// SHA-256 digest of the owning Pi UI's in-memory authority capability.
+    /// The capability itself is never persisted; only this one-way digest is exposed.
+    #[serde(default)]
+    pub authority_digest: String,
     /// Immutable candidate reviewed at the BUILD gate.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub candidate_revision: Option<String>,

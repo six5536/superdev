@@ -4,6 +4,7 @@ use std::fs::{self, OpenOptions};
 use std::path::{Path, PathBuf};
 
 use fs2::FileExt;
+use sha2::{Digest, Sha256};
 
 use super::{WORKFLOW_CACHE_PATH, WorkflowCache};
 use crate::error::{Error, Result};
@@ -14,6 +15,40 @@ fn path(root: &Path) -> PathBuf {
 
 fn lock_path(root: &Path) -> PathBuf {
     root.join(".superdev/cache/workflow.lock")
+}
+
+/// Digest an unpersisted UI authority capability for transient ownership.
+pub fn authority_digest(capability: &str) -> Result<String> {
+    if capability.len() < 32 {
+        return Err(Error::Manifest {
+            message: "workflow UI authority capability is absent or too short".into(),
+        });
+    }
+    Ok(Sha256::digest(capability.as_bytes())
+        .iter()
+        .map(|byte| format!("{byte:02x}"))
+        .collect())
+}
+
+/// Verify UI authority without exposing or persisting the capability itself.
+pub fn verify_authority(cache: &WorkflowCache, capability: &str) -> Result<()> {
+    let supplied = authority_digest(capability)?;
+    let expected = cache.authority_digest.as_bytes();
+    let supplied = supplied.as_bytes();
+    let mut difference = expected.len() ^ supplied.len();
+    for index in 0..expected.len().max(supplied.len()) {
+        difference |= usize::from(
+            expected.get(index).copied().unwrap_or_default()
+                ^ supplied.get(index).copied().unwrap_or_default(),
+        );
+    }
+    if difference == 0 {
+        Ok(())
+    } else {
+        Err(Error::Manifest {
+            message: "interactive Pi UI authority is absent or invalid".into(),
+        })
+    }
 }
 
 /// Hold the repository workflow lock for one complete read/check/write
@@ -107,15 +142,24 @@ fn load_unlocked(root: &Path) -> Result<Option<WorkflowCache>> {
 
 /// Acquire unowned state or resume it with the same session and identity.
 pub fn bind(root: &Path, cache: &WorkflowCache) -> Result<()> {
-    if cache.version != 1 || cache.session_id.trim().is_empty() {
+    if cache.version != 1
+        || cache.session_id.trim().is_empty()
+        || cache.authority_digest.len() != 64
+        || !cache
+            .authority_digest
+            .chars()
+            .all(|character| character.is_ascii_hexdigit())
+    {
         return Err(Error::Manifest {
-            message: "workflow ownership requires cache version 1 and a non-empty Pi session"
+            message: "workflow ownership requires cache version 1, a non-empty Pi session, and UI authority"
                 .into(),
         });
     }
     locked(root, || {
         if let Some(owner) = load_unlocked(root)?
-            && (owner.session_id != cache.session_id || owner.identity != cache.identity)
+            && (owner.session_id != cache.session_id
+                || owner.identity != cache.identity
+                || owner.authority_digest != cache.authority_digest)
         {
             return Err(Error::Manifest {
                 message: format!("workflow is owned by Pi session `{}`", owner.session_id),
@@ -216,6 +260,7 @@ mod tests {
                 default_branch: "main".into(),
             },
             last_plan_revision: "one".into(),
+            authority_digest: authority_digest("0123456789abcdef0123456789abcdef").unwrap(),
             candidate_revision: None,
             verified_default_revision: None,
             child_role: None,
@@ -223,6 +268,15 @@ mod tests {
             child_started: None,
             cancelled: false,
         }
+    }
+
+    #[test]
+    fn authority_capabilities_are_hashed_and_compared() {
+        let state = state("a");
+        assert!(!state.authority_digest.contains("0123456789abcdef"));
+        assert!(verify_authority(&state, "0123456789abcdef0123456789abcdef").is_ok());
+        assert!(verify_authority(&state, "fedcba9876543210fedcba9876543210").is_err());
+        assert!(authority_digest("short").is_err());
     }
 
     #[test]
