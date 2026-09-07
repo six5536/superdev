@@ -124,7 +124,7 @@ pub struct EvidenceArgs {
     kind: EvidenceKindName,
     /// Fresh isolated reviewer session ID
     #[arg(long)]
-    review_session: String,
+    review_session: Option<String>,
     /// Immutable candidate for final BUILD evidence
     #[arg(long)]
     candidate: Option<String>,
@@ -133,6 +133,7 @@ pub struct EvidenceArgs {
 #[derive(Clone, Copy, ValueEnum)]
 pub enum EvidenceKindName {
     ScopeReview,
+    Verification,
     Final,
 }
 
@@ -790,9 +791,17 @@ fn record_evidence_locked(
         });
     }
     cache::verify_authority(&state, &ui_authority_capability()?)?;
-    if args.review_session.trim().is_empty() || args.review_session == args.session {
+    let review_session = args.review_session.as_deref();
+    if !matches!(args.kind, EvidenceKindName::Verification)
+        && review_session.is_none_or(|review| review.trim().is_empty() || review == args.session)
+    {
         return Err(Error::Manifest {
-            message: "evidence requires a distinct isolated reviewer session".into(),
+            message: "review evidence requires a distinct isolated reviewer session".into(),
+        });
+    }
+    if matches!(args.kind, EvidenceKindName::Verification) && review_session.is_some() {
+        return Err(Error::Manifest {
+            message: "verification evidence does not accept a reviewer session".into(),
         });
     }
     validate_identity_values(root, &state.identity)?;
@@ -817,19 +826,19 @@ fn record_evidence_locked(
         EvidenceKindName::ScopeReview if record.phase == "scope" => (
             vec![format!(
                 "Scope requirements review: clean by isolated session {}.",
-                args.review_session
+                review_session.expect("scope review session was checked")
             )],
             None,
             None,
         ),
-        EvidenceKindName::Final if record.phase == "build" => {
+        EvidenceKindName::Verification if record.phase == "build" => {
             let candidate = args.candidate.as_deref().ok_or_else(|| Error::Manifest {
-                message: "final evidence requires candidate H".into(),
+                message: "verification evidence requires candidate H".into(),
             })?;
             let head = git::revision(root, &state.identity.work_branch)?;
             if candidate != head {
                 return Err(Error::Manifest {
-                    message: "final evidence candidate must be the clean work-branch tip".into(),
+                    message: "verification candidate must be the clean work-branch tip".into(),
                 });
             }
             let default = git::revision(root, &state.identity.default_branch)?;
@@ -839,16 +848,36 @@ fn record_evidence_locked(
                 });
             }
             run_plan_verification(root, &text, candidate)?;
+            (Vec::new(), Some(candidate.to_string()), Some(default))
+        }
+        EvidenceKindName::Final if record.phase == "build" => {
+            let candidate = args.candidate.as_deref().ok_or_else(|| Error::Manifest {
+                message: "final review evidence requires candidate H".into(),
+            })?;
+            if state.candidate_revision.as_deref() != Some(candidate)
+                || git::revision(root, &state.identity.work_branch)? != candidate
+            {
+                return Err(Error::Manifest {
+                    message: "final review is not bound to current successful verification".into(),
+                });
+            }
+            let default =
+                state
+                    .verified_default_revision
+                    .clone()
+                    .ok_or_else(|| Error::Manifest {
+                        message: "final review is missing the verified default revision".into(),
+                    })?;
             (
                 vec![
                     format!("Candidate revision: {candidate}."),
                     format!("Verified default revision: {default}."),
                     format!("Final verification: passed for {candidate}."),
+                    format!("Documentation verification: passed for {candidate}."),
                     format!(
                         "Final review: clean for {candidate} by isolated session {}.",
-                        args.review_session
+                        review_session.expect("final review session was checked")
                     ),
-                    format!("Documentation verification: passed for {candidate}."),
                 ],
                 Some(candidate.to_string()),
                 Some(default),
@@ -860,6 +889,16 @@ fn record_evidence_locked(
             });
         }
     };
+    if matches!(args.kind, EvidenceKindName::Verification) {
+        let state =
+            transaction.compare_and_swap(&args.session, &args.expected_revision, |state| {
+                state.candidate_revision.clone_from(&candidate);
+                state
+                    .verified_default_revision
+                    .clone_from(&verified_default);
+            })?;
+        return emit("verification", &state);
+    }
     apply_plan_edits_transactionally(root, &path, vec![completion_evidence_edit(&text, &lines)?])?;
     let revision = plan_revision(root, &state.identity.plan)?.1;
     let state = transaction.compare_and_swap(&args.session, &args.expected_revision, |state| {

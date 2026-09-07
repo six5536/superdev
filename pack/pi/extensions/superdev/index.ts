@@ -386,6 +386,13 @@ export default function superdev(pi: ExtensionAPI) {
 			if (baseResult.code !== 0 || candidateResult.code !== 0) return ctx.ui.notify("Could not resolve immutable review revisions", "error");
 			const base = baseResult.stdout.trim();
 			const candidate = candidateResult.stdout.trim();
+			const verification = await runSuperdev([
+				"workflow", "evidence", "--session", owner.session_id,
+				"--expected-revision", owner.last_plan_revision, "--kind", "verification",
+				"--candidate", candidate,
+			], ctx.cwd, authority) as { result?: { last_plan_revision?: string } };
+			const verifiedRevision = verification.result?.last_plan_revision;
+			if (!verifiedRevision) throw new Error("verification response omitted the new plan revision");
 			const reviewed = await isolated("code-review", `Review immutable diff ${base}..${candidate} and return the required structured result.`, ctx.cwd, ctx.model, undefined,
 				(child) => children.add(child), (child) => children.delete(child), base, candidate);
 			if (reviewed.status !== "clean") return ctx.ui.notify(reviewed.summary, "warning");
@@ -393,7 +400,7 @@ export default function superdev(pi: ExtensionAPI) {
 			reviewRuns.set(reviewRun, { role: "code-review", result: reviewed, base, candidate });
 			const evidence = await runSuperdev([
 				"workflow", "evidence", "--session", owner.session_id,
-				"--expected-revision", owner.last_plan_revision, "--kind", "final",
+				"--expected-revision", verifiedRevision, "--kind", "final",
 				"--review-session", reviewRun, "--candidate", candidate,
 			], ctx.cwd, authority) as { result?: { last_plan_revision?: string } };
 			const revision = evidence.result?.last_plan_revision;

@@ -420,7 +420,7 @@ pub struct EvidenceArgs {
     kind: EvidenceKindName,
     /// Fresh isolated reviewer session ID
     #[arg(long)]
-    review_session: String,
+    review_session: Option<String>,
     /// Immutable candidate for final BUILD evidence
     #[arg(long)]
     candidate: Option<String>,
@@ -429,6 +429,7 @@ pub struct EvidenceArgs {
 #[derive(Clone, Copy, ValueEnum)]
 pub enum EvidenceKindName {
     ScopeReview,
+    Verification,
     Final,
 }
 
