@@ -31,3 +31,5 @@ crates/lib/superdev-core/src/pipeline.rs -diff
 crates/lib/superdev-core/src/pack/resolve.rs -diff
 crates/lib/superdev-core/src/validate/fix.rs -diff
 crates/lib/superdev-core/src/validate/sokf.rs -diff
+knowledge/** -diff
+crates/lib/superdev-core/src/workflow/filing.rs -diff
