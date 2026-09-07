@@ -435,7 +435,14 @@ export default function superdev(pi: ExtensionAPI) {
 			if (scoped.status !== "complete") return ctx.ui.notify(scoped.summary, "warning");
 			const status = await workflowStatus(ctx.cwd);
 			const owner = status.owner;
-			if (!owner || status.phase !== "scope" || !status.canonicalPlanRevision) throw new Error("SCOPE ownership changed during isolated work");
+			if (!owner || status.phase !== "scope" || !status.canonicalPlanRevision
+				|| owner.session_id !== initial.owner.session_id
+				|| owner.identity.issue !== initial.owner.identity.issue
+				|| owner.identity.plan !== initial.owner.identity.plan
+				|| owner.identity.work_branch !== initial.owner.identity.work_branch
+				|| owner.identity.default_branch !== initial.owner.identity.default_branch) {
+				throw new Error("SCOPE ownership changed during isolated work");
+			}
 			if (owner.last_plan_revision === initial.owner.last_plan_revision) throw new Error("SCOPE child did not publish a reviewable checkpoint");
 			const candidateResult = await pi.exec("git", ["rev-parse", "--verify", owner.identity.work_branch], { cwd: ctx.cwd });
 			if (candidateResult.code !== 0) return ctx.ui.notify("Could not resolve immutable review revisions", "error");
