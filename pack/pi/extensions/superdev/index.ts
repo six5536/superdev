@@ -242,11 +242,10 @@ export async function runPinnedSuperdev(path: string, digest: string | undefined
 			};
 			const stop = () => {
 				signalChild("SIGTERM");
-				killTimer = setTimeout(() => { if (child.exitCode === null) signalChild("SIGKILL"); }, 2_000);
+				killTimer = setTimeout(() => signalChild("SIGKILL"), 2_000);
 				killTimer.unref();
 			};
 			const cleanup = () => {
-				if (killTimer) clearTimeout(killTimer);
 				signal?.removeEventListener("abort", stop);
 			};
 			child.on("error", (error) => { cleanup(); reject(error); });
@@ -476,6 +475,7 @@ export default function superdev(pi: ExtensionAPI) {
 			if (modifying) modifyingBusy = true;
 			try {
 				const trustedExecutable = input.role === "build" ? (await workflowStatus(ctx.cwd)).executable : undefined;
+				if (cancelling || signal.aborted) throw new Error("workflow role launch was cancelled during initialization");
 				if (input.role === "build" && (!trustedExecutable || !isAbsolute(trustedExecutable))) throw new Error("Rust status omitted its trusted executable path");
 				const result = await isolated(
 					input.role,
