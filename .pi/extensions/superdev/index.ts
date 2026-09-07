@@ -421,7 +421,7 @@ export default function superdev(pi: ExtensionAPI) {
 		label: "Superdev workflow control",
 		description: "Invoke one typed Rust workflow operation; human-gated actions confirm in trusted Pi UI",
 		parameters: Type.Object({
-			action: StringEnum(["start", "resume", "record-scope-review", "record-final-evidence", "approve-scope", "return-to-scope", "reject-acceptance", "accept", "abandon"] as const),
+			action: StringEnum(["start", "resume", "record-scope-review", "record-verification", "record-final-evidence", "approve-scope", "return-to-scope", "reject-acceptance", "accept", "abandon"] as const),
 			session: Type.String(),
 			issue: Type.Optional(Type.String()),
 			plan: Type.Optional(Type.String()),
@@ -451,6 +451,9 @@ export default function superdev(pi: ExtensionAPI) {
 				if (!input.issue || !input.plan || !input.workBranch) throw new Error("workflow identity is incomplete");
 				args.push(input.action, "--session", input.session, "--issue", input.issue, "--plan", input.plan, "--work-branch", input.workBranch);
 				if (input.defaultBranch) args.push("--default-branch", input.defaultBranch);
+			} else if (input.action === "record-verification") {
+				if (!input.expectedRevision || !input.candidate) throw new Error("verification evidence fields are incomplete");
+				args.push("evidence", "--session", input.session, "--expected-revision", input.expectedRevision, "--kind", "verification", "--candidate", input.candidate);
 			} else if (input.action === "record-scope-review" || input.action === "record-final-evidence") {
 				if (!input.expectedRevision || !input.reviewRun) throw new Error("evidence compare-and-swap fields are incomplete");
 				const review = reviewRuns.get(input.reviewRun);
