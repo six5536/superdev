@@ -14,6 +14,8 @@ it stays on file, linked from the issue that took it up.
 * [A knowledge-capture skill][sokf:idea-007-a-knowledge-capture-skill] - the write-side complement to the search-first AGENTS.md — a skill that teaches an agent when and how to record a durable learning in the knowledge mid-task.
 * [Templates pre-fill knowledge skeletons][sokf:idea-008-templates-pre-fill-knowledge-skeletons] - a project template fixes facts about the repository it creates, so it could pre-fill parts of the technology-stack and architecture skeletons instead of leaving them TBD.
 * [Comment-preserving manifest stamping][sokf:idea-009-comment-preserving-manifest-stamping] - stamp the blueprint version into config.toml with a targeted toml_edit edit of the one key, so a hand-editable file keeps its comments.
+* [A Pi extension runs the superdev process][sokf:idea-010-a-pi-extension-runs-the-superdev-process] - a thin Pi orchestration extension uses Pi's lifecycle, tools, sessions, interaction and child agents to run superdev's canonical FILE → SCOPE → BUILD → ACCEPT workflow without reimplementing it.
+* [Define an agent-learnings document model][sokf:idea-011-define-an-agent-learnings-document-model] - evaluate whether agent memory or learnings need a dedicated schema and document set, or belong in canonical project knowledge.
 
 <!-- sokf:links -->
 [sokf:idea-001-schemas-carry-a-reading-reminder]: /knowledge/ideas/idea-001-schemas-carry-a-reading-reminder.md
@@ -25,3 +27,5 @@ it stays on file, linked from the issue that took it up.
 [sokf:idea-007-a-knowledge-capture-skill]: /knowledge/ideas/idea-007-a-knowledge-capture-skill.md
 [sokf:idea-008-templates-pre-fill-knowledge-skeletons]: /knowledge/ideas/idea-008-templates-pre-fill-knowledge-skeletons.md
 [sokf:idea-009-comment-preserving-manifest-stamping]: /knowledge/ideas/idea-009-comment-preserving-manifest-stamping.md
+[sokf:idea-010-a-pi-extension-runs-the-superdev-process]: /knowledge/ideas/idea-010-a-pi-extension-runs-the-superdev-process.md
+[sokf:idea-011-define-an-agent-learnings-document-model]: /knowledge/ideas/idea-011-define-an-agent-learnings-document-model.md

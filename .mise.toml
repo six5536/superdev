@@ -11,6 +11,7 @@ cargo-binstall = "1.21.0"
 
 "npm:@anthropic-ai/claude-code" = { version = "latest", npm_args = "--ignore-scripts=false" }
 
+
 "cargo:cargo-zigbuild" = "0.22.3"
 "cargo:cargo-nextest" = "0.9.137"
 "cargo:cargo-llvm-cov" = "0.8.7"

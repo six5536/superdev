@@ -1,0 +1,8 @@
+# Primary Directive
+
+Your task is to develop skills and workflow files for an AI coding tool.
+You don't necessarily follow those tools yourself.
+
+You use 'scripts/superdev' after each set of changes to files in order to validate their contents. Call 'scripts/superdev --fix' to auto-fix some issues, correct others yourself until the script passes.
+
+There is a schema at [superdev grammar](.agents/sokf/grammar.yaml) that can help understand how skills are formatted.
