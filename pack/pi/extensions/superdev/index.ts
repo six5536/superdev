@@ -284,6 +284,7 @@ export default function superdev(pi: ExtensionAPI) {
 	let modifyingChild: ChildProcess | undefined;
 	let modifyingBusy = false;
 	let modifyingCommandAbort: AbortController | undefined;
+	let cancelling = false;
 	const stopChild = stopProcess;
 
 	pi.registerTool({
@@ -466,7 +467,7 @@ export default function superdev(pi: ExtensionAPI) {
 		parameters: schema,
 		execute: async (_id, input, signal, _update, ctx) => {
 			const modifying = !readOnly.has(input.role) && input.role !== "file";
-			if (modifying && (modifyingBusy || modifyingChild)) throw new Error("one modifying workflow child is already active");
+			if (modifying && (cancelling || modifyingBusy || modifyingChild)) throw new Error("one modifying workflow child is already active");
 			if (modifying) modifyingBusy = true;
 			try {
 				const trustedExecutable = input.role === "build" ? (await workflowStatus(ctx.cwd)).executable : undefined;
@@ -549,12 +550,13 @@ export default function superdev(pi: ExtensionAPI) {
 	pi.registerCommand("scope", {
 		description: "Deterministically run SCOPE, isolated review, and human approval",
 		handler: async (args, ctx) => {
-			if (modifyingBusy || modifyingChild) return ctx.ui.notify("A modifying workflow role is already active", "error");
+			if (cancelling || modifyingBusy || modifyingChild) return ctx.ui.notify("A modifying workflow role is already active", "error");
 			modifyingBusy = true;
 			const commandAbort = new AbortController();
 			modifyingCommandAbort = commandAbort;
 			try {
 			const initial = await workflowStatus(ctx.cwd);
+			if (commandAbort.signal.aborted) return ctx.ui.notify("SCOPE cancelled during initialization", "warning");
 			if (!initial.owner || initial.phase !== "scope") return ctx.ui.notify("An owned SCOPE workflow is required", "error");
 			const scopeBaseResult = await pi.exec("git", ["rev-parse", "--verify", initial.owner.identity.work_branch], { cwd: ctx.cwd });
 			if (scopeBaseResult.code !== 0) return ctx.ui.notify("Could not resolve the pre-SCOPE revision", "error");
@@ -610,7 +612,7 @@ export default function superdev(pi: ExtensionAPI) {
 	pi.registerCommand("build", {
 		description: "Deterministically run BUILD, verification, and immutable review",
 		handler: async (args, ctx) => {
-			if (modifyingBusy || modifyingChild) return ctx.ui.notify("A modifying workflow role is already active", "error");
+			if (cancelling || modifyingBusy || modifyingChild) return ctx.ui.notify("A modifying workflow role is already active", "error");
 			modifyingBusy = true;
 			const commandAbort = new AbortController();
 			modifyingCommandAbort = commandAbort;
@@ -618,6 +620,7 @@ export default function superdev(pi: ExtensionAPI) {
 			let instruction = args;
 			while (true) {
 				const status = await workflowStatus(ctx.cwd);
+				if (commandAbort.signal.aborted) return ctx.ui.notify("BUILD cancelled during initialization", "warning");
 				const owner = status.owner;
 				if (!owner || status.phase !== "build") return ctx.ui.notify("An owned BUILD workflow is required", "error");
 				if (status.buildState && status.maxFinalCorrectionCycles !== undefined
@@ -756,6 +759,9 @@ export default function superdev(pi: ExtensionAPI) {
 	pi.registerCommand("superdev-cancel", {
 		description: "Pause the workflow and release transient ownership",
 		handler: async (_args, ctx) => {
+			if (cancelling) return ctx.ui.notify("Workflow cancellation is already in progress", "warning");
+			cancelling = true;
+			try {
 			modifyingCommandAbort?.abort();
 			const stopping = [...children];
 			for (const child of stopping) stopChild(child);
@@ -773,6 +779,9 @@ export default function superdev(pi: ExtensionAPI) {
 				ctx.ui.notify("Workflow paused; canonical phase unchanged", "info");
 			} catch (error) {
 				ctx.ui.notify(String(error), "error");
+			}
+			} finally {
+				cancelling = false;
 			}
 		},
 	});
