@@ -569,6 +569,29 @@ mod tests {
     }
 
     #[test]
+    fn synchronization_refuses_dirty_or_stale_tips_without_moving_the_branch() {
+        let dir = repository();
+        let root = dir.path();
+        let default = revision(root, "main").unwrap();
+        create_work_branch(root, "work/059-test").unwrap();
+        std::fs::write(root.join("work-file"), "work\n").unwrap();
+        command(root, &["add", "work-file"]);
+        command(root, &["commit", "-q", "-m", "work"]);
+        let work = revision(root, "work/059-test").unwrap();
+
+        std::fs::write(root.join("dirty"), "leave this alone\n").unwrap();
+        assert!(synchronize_default(root, "main", &default, "work/059-test", &work).is_err());
+        assert_eq!(revision(root, "work/059-test").unwrap(), work);
+        assert!(root.join("dirty").is_file());
+        std::fs::remove_file(root.join("dirty")).unwrap();
+
+        assert!(synchronize_default(root, "main", &work, "work/059-test", &work).is_err());
+        assert!(synchronize_default(root, "main", &default, "work/059-test", &default).is_err());
+        assert_eq!(revision(root, "work/059-test").unwrap(), work);
+        require_clean(root).unwrap();
+    }
+
+    #[test]
     fn integration_creates_a_no_ff_merge_commit() {
         let dir = repository();
         let root = dir.path();
