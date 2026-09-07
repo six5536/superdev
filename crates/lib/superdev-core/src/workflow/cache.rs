@@ -18,6 +18,19 @@ fn lock_path(root: &Path) -> PathBuf {
     root.join(".superdev/cache/workflow.lock")
 }
 
+fn reject_symlink(path: &Path) -> Result<()> {
+    if fs::symlink_metadata(path).is_ok_and(|metadata| metadata.file_type().is_symlink()) {
+        Err(Error::Manifest {
+            message: format!(
+                "workflow cache path may not be a symlink: {}",
+                path.display()
+            ),
+        })
+    } else {
+        Ok(())
+    }
+}
+
 fn require_cache_directory(root: &Path) -> Result<PathBuf> {
     let superdev = root.join(".superdev");
     let cache = superdev.join("cache");
@@ -87,6 +100,7 @@ pub fn verify_authority(cache: &WorkflowCache, capability: &str) -> Result<()> {
 fn locked<T>(root: &Path, operation: impl FnOnce() -> Result<T>) -> Result<T> {
     require_cache_directory(root)?;
     let lock_path = lock_path(root);
+    reject_symlink(&lock_path)?;
     let file = OpenOptions::new()
         .create(true)
         .truncate(false)
@@ -97,6 +111,7 @@ fn locked<T>(root: &Path, operation: impl FnOnce() -> Result<T>) -> Result<T> {
             path: lock_path.clone(),
             source,
         })?;
+    reject_symlink(&lock_path)?;
     file.lock_exclusive().map_err(|source| Error::Io {
         path: lock_path.clone(),
         source,
@@ -170,6 +185,7 @@ pub fn load(root: &Path) -> Result<Option<WorkflowCache>> {
 pub fn try_load(root: &Path) -> Result<CacheSnapshot> {
     require_cache_directory(root)?;
     let lock_path = lock_path(root);
+    reject_symlink(&lock_path)?;
     let file = OpenOptions::new()
         .create(true)
         .truncate(false)
@@ -180,6 +196,7 @@ pub fn try_load(root: &Path) -> Result<CacheSnapshot> {
             path: lock_path.clone(),
             source,
         })?;
+    reject_symlink(&lock_path)?;
     match file.try_lock_exclusive() {
         Ok(()) => {
             let result = load_unlocked(root);
@@ -202,6 +219,7 @@ pub fn try_load(root: &Path) -> Result<CacheSnapshot> {
 
 fn load_unlocked(root: &Path) -> Result<Option<WorkflowCache>> {
     let path = path(root);
+    reject_symlink(&path)?;
     let text = match fs::read_to_string(&path) {
         Ok(text) => text,
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(None),
@@ -377,6 +395,23 @@ mod tests {
         symlink(outside.path(), root.path().join(".superdev")).unwrap();
         assert!(bind(root.path(), &state("a")).is_err());
         assert!(!outside.path().join("cache/workflow.lock").exists());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn cache_operations_reject_symlinked_lock_and_state_files() {
+        use std::os::unix::fs::symlink;
+
+        for name in ["workflow.lock", "workflow.toml"] {
+            let root = tempfile::tempdir().unwrap();
+            let directory = root.path().join(".superdev/cache");
+            fs::create_dir_all(&directory).unwrap();
+            let victim = root.path().join("victim");
+            fs::write(&victim, "preserve\n").unwrap();
+            symlink(&victim, directory.join(name)).unwrap();
+            assert!(bind(root.path(), &state("a")).is_err());
+            assert_eq!(fs::read_to_string(victim).unwrap(), "preserve\n");
+        }
     }
 
     #[cfg(unix)]

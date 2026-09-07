@@ -115,7 +115,7 @@ The canonical-knowledge surface covers ADRs, contracts, schemas, procedures, con
 
 ## Build state
 
-Current block: 6. Attempts: 0. Final corrections: 1. Fingerprint: none. Blocker: final correction 1 required: Integration lacks atomic verification of both refs and must reject a default branch checked out in another worktree; cache lock and state file symlinks must be rejected.
+Current block: 6. Attempts: 0. Final corrections: 1. Fingerprint: none. Blocker: none.
 
 ## Implementation decisions
 

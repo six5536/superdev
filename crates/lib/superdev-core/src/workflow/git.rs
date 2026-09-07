@@ -1,7 +1,8 @@
 //! Shell-free Git operations and invariants used by workflow transitions.
 
+use std::io::Write;
 use std::path::{Path, PathBuf};
-use std::process::{Command, Output};
+use std::process::{Command, Output, Stdio};
 
 use crate::error::{Error, Result};
 
@@ -33,6 +34,48 @@ fn git(root: &Path, args: &[&str]) -> Result<Output> {
                 })
             }
         })
+}
+
+fn git_with_input(root: &Path, args: &[&str], input: &str) -> Result<Output> {
+    let mut child = Command::new("git")
+        .args(args)
+        .current_dir(root)
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .map_err(|source| Error::Command {
+            command: format!("git {}", args.join(" ")),
+            status: None,
+            stderr: source.to_string(),
+        })?;
+    child
+        .stdin
+        .take()
+        .expect("Git stdin was piped")
+        .write_all(input.as_bytes())
+        .map_err(|source| Error::Command {
+            command: format!("git {}", args.join(" ")),
+            status: None,
+            stderr: source.to_string(),
+        })?;
+    let output = child.wait_with_output().map_err(|source| Error::Command {
+        command: format!("git {}", args.join(" ")),
+        status: None,
+        stderr: source.to_string(),
+    })?;
+    if output.status.success() {
+        Ok(output)
+    } else {
+        Err(Error::Command {
+            command: format!("git {}", args.join(" ")),
+            status: output.status.code(),
+            stderr: String::from_utf8_lossy(&output.stderr)
+                .chars()
+                .take(8_000)
+                .collect(),
+        })
+    }
 }
 
 /// Discover the containing repository's absolute work-tree root.
@@ -528,6 +571,32 @@ pub fn synchronize_default(
     Ok(commit)
 }
 
+fn branch_checked_out_elsewhere(root: &Path, branch: &str) -> Result<bool> {
+    let output = git(root, &["worktree", "list", "--porcelain"])?;
+    let root = std::fs::canonicalize(root).map_err(|source| Error::Io {
+        path: root.into(),
+        source,
+    })?;
+    let mut worktree = None;
+    for line in String::from_utf8_lossy(&output.stdout).lines() {
+        if let Some(path) = line.strip_prefix("worktree ") {
+            worktree = Some(PathBuf::from(path));
+        } else if line == format!("branch refs/heads/{branch}") {
+            let Some(path) = worktree.as_ref() else {
+                continue;
+            };
+            let path = std::fs::canonicalize(path).map_err(|source| Error::Io {
+                path: path.clone(),
+                source,
+            })?;
+            if path != root {
+                return Ok(true);
+            }
+        }
+    }
+    Ok(false)
+}
+
 /// Merge a prepared work branch into the checked-out default branch.
 ///
 /// Both tips are compare-and-swapped immediately before `git merge --no-ff`.
@@ -542,6 +611,13 @@ pub fn integrate_no_ff(
     validate_work_branch(work_branch)?;
     require_clean(root)?;
     let original_branch = current_branch(root)?;
+    if branch_checked_out_elsewhere(root, default_branch)? {
+        return Err(Error::Manifest {
+            message: format!(
+                "default branch `{default_branch}` is checked out in another worktree"
+            ),
+        });
+    }
     if revision(root, default_branch)? != expected_default {
         return Err(Error::Manifest {
             message: "default branch moved; return the prepared closure to BUILD".into(),
@@ -616,15 +692,10 @@ pub fn integrate_no_ff(
             message: "work branch moved after acceptance attestation".into(),
         });
     }
-    if let Err(error) = git(
-        root,
-        &[
-            "update-ref",
-            &format!("refs/heads/{default_branch}"),
-            &prepared,
-            expected_default,
-        ],
-    ) {
+    let transaction = format!(
+        "start\nverify refs/heads/{work_branch} {expected_work}\nupdate refs/heads/{default_branch} {prepared} {expected_default}\nprepare\ncommit\n"
+    );
+    if let Err(error) = git_with_input(root, &["update-ref", "--stdin"], &transaction) {
         let _ = git(
             root,
             &["-c", "core.hooksPath=/dev/null", "switch", &original_branch],
@@ -966,6 +1037,31 @@ mod tests {
                 .split_whitespace()
                 .count(),
             3
+        );
+    }
+
+    #[test]
+    fn integration_refuses_a_default_checked_out_in_another_worktree() {
+        let dir = repository();
+        let root = dir.path();
+        let default = revision(root, "main").unwrap();
+        create_work_branch(root, "work/059-test").unwrap();
+        std::fs::write(root.join("file"), "work\n").unwrap();
+        command(root, &["commit", "-q", "-am", "work"]);
+        let work = revision(root, "work/059-test").unwrap();
+        let linked_parent = tempfile::tempdir().unwrap();
+        let linked = linked_parent.path().join("default");
+        command(
+            root,
+            &["worktree", "add", "-q", linked.to_str().unwrap(), "main"],
+        );
+
+        assert!(integrate_no_ff(root, "main", &default, "work/059-test", &work).is_err());
+        assert_eq!(revision(root, "main").unwrap(), default);
+        assert_eq!(revision(root, "work/059-test").unwrap(), work);
+        command(
+            root,
+            &["worktree", "remove", "--force", linked.to_str().unwrap()],
         );
     }
 
