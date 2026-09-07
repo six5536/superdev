@@ -330,17 +330,11 @@ fn workflow_start_creates_a_canonical_scope_plan_and_resume_adopts_it() {
         .join("knowledge/plans/open/plan-001-canonical-recovery.md");
     assert!(plan.is_file());
     assert!(fs::read_to_string(&plan).unwrap().contains("phase: scope"));
-    let revision = cache::load(dir.path())
-        .unwrap()
-        .unwrap()
-        .last_plan_revision;
+    let revision = cache::load(dir.path()).unwrap().unwrap().last_plan_revision;
     Command::cargo_bin("superdev")
         .unwrap()
         .current_dir(dir.path())
-        .env(
-            "SUPERDEV_UI_AUTHORITY",
-            "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-        )
+        .env("SUPERDEV_UI_AUTHORITY", "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
         .args([
             "workflow",
             "transition",
