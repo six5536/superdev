@@ -1,4 +1,4 @@
-import superdev, { isolatedRoleMayNotRun, isolatedTools, parseRoleResult } from "../../../.pi/extensions/superdev/index.ts";
+import superdev, { buildCommandAllowed, isolatedRoleMayNotRun, isolatedTools, parseRoleResult } from "../../../.pi/extensions/superdev/index.ts";
 
 export default function smoke() {
 	const commands: string[] = [];
@@ -43,7 +43,13 @@ export default function smoke() {
 	}
 	if (!isolatedRoleMayNotRun("git commit -am bypass")) throw new Error("isolated role may mutate Git history");
 	if (isolatedTools("scope").split(",").includes("bash")) throw new Error("SCOPE child has direct shell access");
-	if (!isolatedTools("build").split(",").includes("bash")) throw new Error("BUILD child cannot execute evidence");
+	if (isolatedTools("build").split(",").includes("bash")) throw new Error("BUILD child has direct shell access");
+	if (!isolatedTools("build").split(",").includes("superdev_build_exec")) throw new Error("BUILD child cannot execute bounded evidence");
+	if (buildCommandAllowed("python", ["-c", "mutate Git"])) throw new Error("BUILD can escape through another executable");
+	if (buildCommandAllowed("git", ["-C", ".", "commit"])) throw new Error("BUILD can bypass Git operation checks");
+	if (buildCommandAllowed("git", ["commit"])) throw new Error("BUILD can commit directly");
+	if (!buildCommandAllowed("git", ["diff", "--check"])) throw new Error("BUILD cannot inspect Git");
+	if (!buildCommandAllowed("superdev", ["workflow", "block"])) throw new Error("BUILD cannot publish a block checkpoint");
 	for (const command of [
 		"superdev workflow block",
 		"superdev workflow attempt",

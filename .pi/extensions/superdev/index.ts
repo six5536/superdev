@@ -90,8 +90,8 @@ async function runSuperdev(args: string[], cwd: string, authority: string): Prom
 export function isolatedTools(role: Input["role"]): string {
 	if (readOnly.has(role)) return "read,superdev_review_diff,sokf_search,sokf_graph";
 	if (role === "file") return "read,sokf_search,sokf_graph";
-	if (role === "scope") return "read,edit,write,sokf_search,sokf_graph";
-	return "read,bash,edit,write,sokf_search,sokf_graph";
+	if (role === "build") return "read,edit,write,sokf_search,sokf_graph,superdev_build_exec";
+	return "read,edit,write,sokf_search,sokf_graph";
 }
 
 async function isolated(
@@ -177,6 +177,12 @@ export function isolatedRoleMayNotRun(command: string): boolean {
 		|| /\bgit\s+(?:add|commit|update-ref|reset|switch|checkout|merge|rebase|cherry-pick|branch|tag|stash|clean|restore|rm|mv)\b/.test(command);
 }
 
+export function buildCommandAllowed(command: string, args: string[]): boolean {
+	if (!["cargo", "npm", "node", "superdev", "git"].includes(command)) return false;
+	if (command === "git" && !["diff", "status", "show", "rev-parse", "merge-base", "ls-files"].includes(args[0] ?? "")) return false;
+	return command !== "superdev" || !isolatedRoleMayNotRun([command, ...args].join(" "));
+}
+
 export default function superdev(pi: ExtensionAPI) {
 	const childRole = process.env.SUPERDEV_CHILD_ROLE;
 	pi.on("tool_call", (event) => {
@@ -219,6 +225,24 @@ export default function superdev(pi: ExtensionAPI) {
 			if (result.code !== 0) throw new Error(result.stderr.trim() || "git diff failed");
 			if (result.stdout.length > 900_000) throw new Error("review diff exceeds the 900 KB review bound");
 			return { content: [{ type: "text", text: result.stdout || "No changes." }], details: { readOnly: true } };
+		},
+	});
+	pi.registerTool({
+		name: "superdev_build_exec",
+		label: "Superdev BUILD command",
+		description: "Run one shell-free BUILD verification or service checkpoint command",
+		parameters: Type.Object({
+			command: Type.String(),
+			args: Type.Array(Type.String()),
+		}),
+		execute: async (_id, input: { command: string; args: string[] }, _signal, _update, ctx) => {
+			if (childRole !== "build") throw new Error("BUILD command execution is available only to the BUILD role");
+			if (!buildCommandAllowed(input.command, input.args)) {
+				throw new Error(`BUILD executable or operation is not permitted: ${input.command}`);
+			}
+			const result = await pi.exec(input.command, input.args, { cwd: ctx.cwd });
+			if (result.code !== 0) throw new Error(result.stderr.trim() || `${input.command} exited ${result.code}`);
+			return { content: [{ type: "text", text: result.stdout || "Command completed." }], details: { shellFree: true } };
 		},
 	});
 	if (childRole) return;
