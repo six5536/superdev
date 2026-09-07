@@ -137,7 +137,7 @@ The canonical-knowledge surface covers ADRs, contracts, schemas, procedures, con
 
 ### Block 9: Permit clean attestation after approved re-scope
 
-- [ ] Done.
+- [x] Done.
 - Dependencies: Block 8.
 - Areas: `crates/app/superdev/src/workflow_cli.rs`, `crates/app/superdev/tests/`, and `knowledge/issues/open/issue-059-scope-build-accept-workflow.md`.
 - Outcome: the correction limit continues to refuse additional correction recording, while a fresh clean review after approved re-scope may be attested without erasing the historical correction count.

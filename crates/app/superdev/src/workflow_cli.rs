@@ -1629,15 +1629,6 @@ fn record_evidence_locked(
             (Vec::new(), Some(candidate.to_string()), Some(default))
         }
         EvidenceKindName::Final if record.phase == "build" => {
-            let retry_state = parse_retry_state(build_state_line(&text)?)?;
-            if retry_state.final_corrections
-                >= Manifest::load(root)?.workflow.max_final_correction_cycles
-            {
-                return Err(Error::Manifest {
-                    message: "final correction limit is exhausted; human guidance is required"
-                        .into(),
-                });
-            }
             if text.contains("- [ ] Done") {
                 return Err(Error::Manifest {
                     message: "final attestation requires every work block to be complete".into(),

@@ -1259,6 +1259,12 @@ fn workflow_start_creates_a_canonical_scope_plan_and_resume_adopts_it() {
     .unwrap();
     assert!(issue.contains("- [ ] BUILD discovery:"));
     assert!(issue.contains("The public behavior needs a clarified requirement."));
+    fs::write(
+        dir.path()
+            .join("knowledge/issues/open/issue-001-canonical-recovery.md"),
+        issue.replace("- [ ] BUILD discovery:", "- [x] BUILD discovery:"),
+    )
+    .unwrap();
 
     let expected = cache::load(dir.path()).unwrap().unwrap().last_plan_revision;
     let rescoped = returned.replace(
@@ -1325,7 +1331,82 @@ fn workflow_start_creates_a_canonical_scope_plan_and_resume_adopts_it() {
         ])
         .assert()
         .success();
-    assert!(fs::read_to_string(&plan).unwrap().contains("phase: build"));
+    let approved = fs::read_to_string(&plan).unwrap();
+    assert!(approved.contains("phase: build"));
+    assert!(approved.contains("Final corrections: 3."));
+    assert!(approved.contains("Scope product baseline:"));
+    assert!(approved.contains("Scope requirements review: clean"));
+    assert!(approved.contains("Human scope approval: approved"));
+
+    let owner = cache::load(dir.path()).unwrap().unwrap();
+    let candidate = git::revision(dir.path(), "HEAD").unwrap();
+    Command::cargo_bin("superdev")
+        .unwrap()
+        .current_dir(dir.path())
+        .env("SUPERDEV_UI_AUTHORITY", "fedcba9876543210fedcba9876543210")
+        .args([
+            "workflow",
+            "evidence",
+            "--session",
+            "pi-b",
+            "--expected-revision",
+            &owner.last_plan_revision,
+            "--kind",
+            "verification",
+            "--candidate",
+            &candidate,
+        ])
+        .assert()
+        .success();
+    let verified = cache::load(dir.path()).unwrap().unwrap();
+    Command::cargo_bin("superdev")
+        .unwrap()
+        .current_dir(dir.path())
+        .env("SUPERDEV_UI_AUTHORITY", "fedcba9876543210fedcba9876543210")
+        .args([
+            "workflow",
+            "evidence",
+            "--session",
+            "pi-b",
+            "--expected-revision",
+            &verified.last_plan_revision,
+            "--kind",
+            "final",
+            "--review-session",
+            "review-clean-after-exhausted-rescope",
+            "--candidate",
+            &candidate,
+        ])
+        .assert()
+        .success();
+    let accepted = fs::read_to_string(&plan).unwrap();
+    assert!(accepted.contains("phase: accept"));
+    assert!(accepted.contains("Final corrections: 3."));
+    assert!(accepted.contains("Scope product baseline:"));
+    assert!(accepted.contains("Scope requirements review: clean"));
+    assert!(accepted.contains("Human scope approval: approved"));
+
+    let revision = cache::load(dir.path()).unwrap().unwrap().last_plan_revision;
+    Command::cargo_bin("superdev")
+        .unwrap()
+        .current_dir(dir.path())
+        .env("SUPERDEV_UI_AUTHORITY", "fedcba9876543210fedcba9876543210")
+        .args([
+            "workflow",
+            "transition",
+            "--session",
+            "pi-b",
+            "--expected-revision",
+            &revision,
+            "--phase",
+            "accept",
+            "--transition",
+            "reject-acceptance",
+            "--feedback",
+            "Exercise cleanup after the clean exhausted-budget attestation.",
+        ])
+        .assert()
+        .success();
 
     let revision = cache::load(dir.path()).unwrap().unwrap().last_plan_revision;
     Command::cargo_bin("superdev")
@@ -1340,7 +1421,7 @@ fn workflow_start_creates_a_canonical_scope_plan_and_resume_adopts_it() {
             "--expected-revision",
             &revision,
             "--phase",
-            "build",
+            "scope",
             "--reason",
             "Human chose not to continue.",
         ])
