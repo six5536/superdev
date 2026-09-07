@@ -655,6 +655,98 @@ fn workflow_start_creates_a_canonical_scope_plan_and_resume_adopts_it() {
             .content_hash
     );
 
+    for cycle in 1..=3 {
+        let owner = cache::load(dir.path()).unwrap().unwrap();
+        let candidate = git::revision(dir.path(), "HEAD").unwrap();
+        Command::cargo_bin("superdev")
+            .unwrap()
+            .current_dir(dir.path())
+            .env("SUPERDEV_UI_AUTHORITY", "fedcba9876543210fedcba9876543210")
+            .args([
+                "workflow",
+                "evidence",
+                "--session",
+                "pi-b",
+                "--expected-revision",
+                &owner.last_plan_revision,
+                "--kind",
+                "verification",
+                "--candidate",
+                &candidate,
+            ])
+            .assert()
+            .success();
+        let verified = cache::load(dir.path()).unwrap().unwrap();
+        Command::cargo_bin("superdev")
+            .unwrap()
+            .current_dir(dir.path())
+            .env("SUPERDEV_UI_AUTHORITY", "fedcba9876543210fedcba9876543210")
+            .args([
+                "workflow",
+                "correction",
+                "--session",
+                "pi-b",
+                "--expected-revision",
+                &verified.last_plan_revision,
+                "--candidate",
+                &candidate,
+                "--review-session",
+                &format!("review-final-{cycle}"),
+                "--summary",
+                "One bounded review finding",
+            ])
+            .assert()
+            .success();
+    }
+    let exhausted = fs::read_to_string(&plan).unwrap();
+    assert!(exhausted.contains("Final corrections: 3."));
+    assert!(exhausted.contains("Blocker: final correction limit exhausted"));
+    let owner = cache::load(dir.path()).unwrap().unwrap();
+    assert!(owner.candidate_revision.is_none());
+    assert!(owner.verified_default_revision.is_none());
+    let candidate = git::revision(dir.path(), "HEAD").unwrap();
+    Command::cargo_bin("superdev")
+        .unwrap()
+        .current_dir(dir.path())
+        .env("SUPERDEV_UI_AUTHORITY", "fedcba9876543210fedcba9876543210")
+        .args([
+            "workflow",
+            "evidence",
+            "--session",
+            "pi-b",
+            "--expected-revision",
+            &owner.last_plan_revision,
+            "--kind",
+            "verification",
+            "--candidate",
+            &candidate,
+        ])
+        .assert()
+        .success();
+    let verified = cache::load(dir.path()).unwrap().unwrap();
+    let before_refusal = git::revision(dir.path(), "HEAD").unwrap();
+    Command::cargo_bin("superdev")
+        .unwrap()
+        .current_dir(dir.path())
+        .env("SUPERDEV_UI_AUTHORITY", "fedcba9876543210fedcba9876543210")
+        .args([
+            "workflow",
+            "correction",
+            "--session",
+            "pi-b",
+            "--expected-revision",
+            &verified.last_plan_revision,
+            "--candidate",
+            &candidate,
+            "--review-session",
+            "review-final-exhausted",
+            "--summary",
+            "Must not exceed project policy",
+        ])
+        .assert()
+        .failure();
+    assert_eq!(git::revision(dir.path(), "HEAD").unwrap(), before_refusal);
+
     Command::cargo_bin("superdev")
         .unwrap()
         .current_dir(dir.path())
@@ -716,6 +808,9 @@ fn workflow_start_creates_a_canonical_scope_plan_and_resume_adopts_it() {
         .assert()
         .success();
     let returned = fs::read_to_string(&plan).unwrap();
+    let returned_owner = cache::load(dir.path()).unwrap().unwrap();
+    assert!(returned_owner.candidate_revision.is_none());
+    assert!(returned_owner.verified_default_revision.is_none());
     assert!(returned.contains("phase: scope"));
     assert!(returned.contains("Scope product baseline: "));
     assert!(!returned.contains("Scope requirements review: clean"));

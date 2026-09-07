@@ -1850,7 +1850,9 @@ fn transition_locked(
             state.verified_default_revision = verified_default_revision;
         } else if matches!(
             transition,
-            Transition::RecoverStaleDefault | Transition::RejectAcceptance
+            Transition::ReturnToScope
+                | Transition::RecoverStaleDefault
+                | Transition::RejectAcceptance
         ) {
             state.candidate_revision = None;
             state.verified_default_revision = None;
