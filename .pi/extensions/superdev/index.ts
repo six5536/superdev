@@ -482,14 +482,29 @@ export default function superdev(pi: ExtensionAPI) {
 				return ctx.ui.notify("BUILD discovery was preserved on the primary issue; the same plan returned to SCOPE", "warning");
 			}
 			if (built.status !== "complete") return ctx.ui.notify(built.summary, "error");
-			const baseResult = await pi.exec("git", ["rev-parse", "--verify", owner.identity.default_branch], { cwd: ctx.cwd });
-			const candidateResult = await pi.exec("git", ["rev-parse", "--verify", owner.identity.work_branch], { cwd: ctx.cwd });
-			if (baseResult.code !== 0 || candidateResult.code !== 0) return ctx.ui.notify("Could not resolve immutable review revisions", "error");
-			const base = baseResult.stdout.trim();
-			const candidate = candidateResult.stdout.trim();
+			const ready = await workflowStatus(ctx.cwd);
+			const currentOwner = ready.owner;
+			if (!currentOwner || ready.phase !== "build") throw new Error("BUILD ownership changed before synchronization");
+			const baseResult = await pi.exec("git", ["rev-parse", "--verify", currentOwner.identity.default_branch], { cwd: ctx.cwd });
+			const candidateResult = await pi.exec("git", ["rev-parse", "--verify", currentOwner.identity.work_branch], { cwd: ctx.cwd });
+			if (baseResult.code !== 0 || candidateResult.code !== 0) return ctx.ui.notify("Could not resolve synchronization revisions", "error");
+			await runSuperdev([
+				"workflow", "sync", "--session", currentOwner.session_id,
+				"--expected-revision", currentOwner.last_plan_revision,
+				"--expected-default", baseResult.stdout.trim(),
+				"--expected-work", candidateResult.stdout.trim(),
+			], ctx.cwd, authority);
+			const synchronized = await workflowStatus(ctx.cwd);
+			const synchronizedOwner = synchronized.owner;
+			if (!synchronizedOwner || synchronized.phase !== "build") throw new Error("BUILD ownership changed after synchronization");
+			const synchronizedBase = await pi.exec("git", ["rev-parse", "--verify", synchronizedOwner.identity.default_branch], { cwd: ctx.cwd });
+			const synchronizedCandidate = await pi.exec("git", ["rev-parse", "--verify", synchronizedOwner.identity.work_branch], { cwd: ctx.cwd });
+			if (synchronizedBase.code !== 0 || synchronizedCandidate.code !== 0) return ctx.ui.notify("Could not resolve immutable review revisions", "error");
+			const base = synchronizedBase.stdout.trim();
+			const candidate = synchronizedCandidate.stdout.trim();
 			const verification = await runSuperdev([
-				"workflow", "evidence", "--session", owner.session_id,
-				"--expected-revision", owner.last_plan_revision, "--kind", "verification",
+				"workflow", "evidence", "--session", synchronizedOwner.session_id,
+				"--expected-revision", synchronizedOwner.last_plan_revision, "--kind", "verification",
 				"--candidate", candidate,
 			], ctx.cwd, authority) as { result?: { last_plan_revision?: string } };
 			const verifiedRevision = verification.result?.last_plan_revision;
@@ -499,7 +514,7 @@ export default function superdev(pi: ExtensionAPI) {
 			const reviewRun = randomBytes(24).toString("hex");
 			if (reviewed.status !== "clean") {
 				const correction = await runSuperdev([
-					"workflow", "correction", "--session", owner.session_id,
+					"workflow", "correction", "--session", synchronizedOwner.session_id,
 					"--expected-revision", verifiedRevision, "--candidate", candidate,
 					"--review-session", reviewRun,
 					"--summary", (reviewed.findings ?? [reviewed.summary]).join("\n"),
@@ -507,20 +522,20 @@ export default function superdev(pi: ExtensionAPI) {
 				const stalled = correction.result?.stalled === true;
 				if (stalled) return ctx.ui.notify(`Final correction limit exhausted: ${reviewed.summary}`, "error");
 				ctx.ui.notify(`Final review requires correction: ${reviewed.summary}`, "warning");
-				instruction = `Correct the latest immutable final-review findings for ${owner.identity.plan}:\n${(reviewed.findings ?? [reviewed.summary]).join("\n")}`;
+				instruction = `Correct the latest immutable final-review findings for ${synchronizedOwner.identity.plan}:\n${(reviewed.findings ?? [reviewed.summary]).join("\n")}`;
 				continue;
 			}
 
 			reviewRuns.set(reviewRun, { role: "code-review", result: reviewed, base, candidate });
 			const evidence = await runSuperdev([
-				"workflow", "evidence", "--session", owner.session_id,
+				"workflow", "evidence", "--session", synchronizedOwner.session_id,
 				"--expected-revision", verifiedRevision, "--kind", "final",
 				"--review-session", reviewRun, "--candidate", candidate,
 			], ctx.cwd, authority) as { result?: { last_plan_revision?: string } };
 			const revision = evidence.result?.last_plan_revision;
 			if (!revision) throw new Error("attestation response omitted the new plan revision");
 			reviewRuns.delete(reviewRun);
-				ctx.ui.setStatus("superdev-workflow", `ACCEPT: ${owner.identity.plan}`);
+				ctx.ui.setStatus("superdev-workflow", `ACCEPT: ${synchronizedOwner.identity.plan}`);
 				return ctx.ui.notify("BUILD gates passed; workflow advanced to ACCEPT", "info");
 			}
 		},

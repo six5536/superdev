@@ -240,6 +240,99 @@ pub fn changed_paths(root: &Path, from: &str, to: &str) -> Result<Vec<String>> {
         .collect())
 }
 
+/// Incorporate an expected default tip into the checked-out work branch.
+///
+/// `merge-tree` proves the merge in the object database before the worktree is
+/// touched. A conflict therefore leaves refs, index, and files unchanged. The
+/// final fast-forward disables hooks and occurs only after both refs are
+/// compare-and-swapped again.
+pub fn synchronize_default(
+    root: &Path,
+    default_branch: &str,
+    expected_default: &str,
+    work_branch: &str,
+    expected_work: &str,
+) -> Result<String> {
+    validate_ref(default_branch)?;
+    validate_work_branch(work_branch)?;
+    validate_ref(expected_default)?;
+    validate_ref(expected_work)?;
+    require_clean(root)?;
+    if current_branch(root)? != work_branch {
+        return Err(Error::Manifest {
+            message: format!("synchronization requires checked-out branch `{work_branch}`"),
+        });
+    }
+    if revision(root, default_branch)? != expected_default
+        || revision(root, work_branch)? != expected_work
+    {
+        return Err(Error::Manifest {
+            message: "workflow synchronization tips changed before merge".into(),
+        });
+    }
+    if is_ancestor(root, expected_default, expected_work)? {
+        return Ok(expected_work.to_string());
+    }
+
+    let merged = git(
+        root,
+        &[
+            "merge-tree",
+            "--write-tree",
+            expected_work,
+            expected_default,
+        ],
+    )?;
+    let tree = String::from_utf8_lossy(&merged.stdout)
+        .lines()
+        .next()
+        .unwrap_or_default()
+        .trim()
+        .to_string();
+    validate_ref(&tree)?;
+    let commit = git(
+        root,
+        &[
+            "commit-tree",
+            &tree,
+            "-p",
+            expected_work,
+            "-p",
+            expected_default,
+            "-m",
+            "chore(workflow): synchronize default branch",
+        ],
+    )?;
+    let commit = String::from_utf8_lossy(&commit.stdout).trim().to_string();
+    validate_ref(&commit)?;
+
+    if revision(root, default_branch)? != expected_default
+        || revision(root, work_branch)? != expected_work
+    {
+        return Err(Error::Manifest {
+            message: "workflow synchronization tips changed; no ref was advanced".into(),
+        });
+    }
+    git(
+        root,
+        &[
+            "-c",
+            "core.hooksPath=/dev/null",
+            "merge",
+            "--ff-only",
+            "--no-edit",
+            &commit,
+        ],
+    )?;
+    require_clean(root)?;
+    if revision(root, work_branch)? != commit {
+        return Err(Error::Manifest {
+            message: "work branch did not reach the prepared synchronization commit".into(),
+        });
+    }
+    Ok(commit)
+}
+
 /// Merge a prepared work branch into the checked-out default branch.
 ///
 /// Both tips are compare-and-swapped immediately before `git merge --no-ff`.
@@ -420,6 +513,52 @@ mod tests {
         ] {
             assert!(validate_work_branch(bad).is_err(), "{bad}");
         }
+    }
+
+    #[test]
+    fn synchronization_merges_expected_tips_without_exposing_conflicts() {
+        let dir = repository();
+        let root = dir.path();
+        create_work_branch(root, "work/059-test").unwrap();
+        std::fs::write(root.join("work-file"), "work\n").unwrap();
+        command(root, &["add", "work-file"]);
+        command(root, &["commit", "-q", "-m", "work"]);
+        let work = revision(root, "work/059-test").unwrap();
+        command(root, &["switch", "-q", "main"]);
+        std::fs::write(root.join("default-file"), "default\n").unwrap();
+        command(root, &["add", "default-file"]);
+        command(root, &["commit", "-q", "-m", "default"]);
+        let default = revision(root, "main").unwrap();
+        command(root, &["switch", "-q", "work/059-test"]);
+
+        let synchronized =
+            synchronize_default(root, "main", &default, "work/059-test", &work).unwrap();
+        assert_eq!(revision(root, "work/059-test").unwrap(), synchronized);
+        assert!(is_ancestor(root, &default, &synchronized).unwrap());
+        assert!(root.join("default-file").is_file());
+        require_clean(root).unwrap();
+
+        command(root, &["switch", "-q", "main"]);
+        std::fs::write(root.join("file"), "default conflict\n").unwrap();
+        command(root, &["commit", "-q", "-am", "default conflict"]);
+        let conflicting_default = revision(root, "main").unwrap();
+        command(root, &["switch", "-q", "work/059-test"]);
+        std::fs::write(root.join("file"), "work conflict\n").unwrap();
+        command(root, &["commit", "-q", "-am", "work conflict"]);
+        let conflicting_work = revision(root, "work/059-test").unwrap();
+
+        assert!(
+            synchronize_default(
+                root,
+                "main",
+                &conflicting_default,
+                "work/059-test",
+                &conflicting_work,
+            )
+            .is_err()
+        );
+        assert_eq!(revision(root, "work/059-test").unwrap(), conflicting_work);
+        require_clean(root).unwrap();
     }
 
     #[test]

@@ -506,6 +506,46 @@ fn workflow_start_creates_a_canonical_scope_plan_and_resume_adopts_it() {
     assert!(paths.contains("src/lib.rs"));
     assert!(paths.contains("knowledge/plans/open/plan-001-canonical-recovery.md"));
 
+    Command::cargo_bin("superdev")
+        .unwrap()
+        .current_dir(dir.path())
+        .args([
+            "file",
+            "--title",
+            "Default branch advance",
+            "--description",
+            "Exercise BUILD synchronization with a concurrent knowledge filing.",
+            "--human-approved",
+        ])
+        .assert()
+        .success();
+    let owner = cache::load(dir.path()).unwrap().unwrap();
+    let expected_default = git::revision(dir.path(), "main").unwrap();
+    let expected_work = git::revision(dir.path(), "work/001-canonical-recovery").unwrap();
+    Command::cargo_bin("superdev")
+        .unwrap()
+        .current_dir(dir.path())
+        .args([
+            "workflow",
+            "sync",
+            "--session",
+            "pi-b",
+            "--expected-revision",
+            &owner.last_plan_revision,
+            "--expected-default",
+            &expected_default,
+            "--expected-work",
+            &expected_work,
+        ])
+        .assert()
+        .success();
+    let synchronized = git::revision(dir.path(), "work/001-canonical-recovery").unwrap();
+    assert!(git::is_ancestor(dir.path(), &expected_default, &synchronized).unwrap());
+    assert_eq!(
+        cache::load(dir.path()).unwrap().unwrap().last_plan_revision,
+        owner.last_plan_revision
+    );
+
     let revision = cache::load(dir.path()).unwrap().unwrap().last_plan_revision;
     Command::cargo_bin("superdev")
         .unwrap()

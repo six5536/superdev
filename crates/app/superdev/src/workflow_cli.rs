@@ -71,6 +71,8 @@ pub enum WorkflowCommand {
     Correction(CorrectionArgs),
     /// Record isolated review or final verification evidence canonically
     Evidence(EvidenceArgs),
+    /// Incorporate the expected local default tip into BUILD
+    Sync(SyncArgs),
     /// Reconstruct and acquire ownership for a known workflow
     Resume(BindArgs),
     /// Pause by releasing transient ownership without changing plan phase
@@ -191,6 +193,23 @@ pub struct SessionArgs {
     /// Owning Pi session ID
     #[arg(long)]
     session: String,
+}
+
+/// Compare-and-swap arguments for BUILD synchronization.
+#[derive(Args)]
+pub struct SyncArgs {
+    /// Owning Pi session ID
+    #[arg(long)]
+    session: String,
+    /// Expected current plan content revision
+    #[arg(long)]
+    expected_revision: String,
+    /// Expected local default-branch tip
+    #[arg(long)]
+    expected_default: String,
+    /// Expected local work-branch tip
+    #[arg(long)]
+    expected_work: String,
 }
 
 /// Typed phase transition names.
@@ -471,6 +490,35 @@ pub fn run(command: &WorkflowCommand, root: &Path) -> Result<u8> {
         WorkflowCommand::Attempt(args) => record_attempt(&root, args),
         WorkflowCommand::Correction(args) => record_correction(&root, args),
         WorkflowCommand::Evidence(args) => record_evidence(&root, args),
+        WorkflowCommand::Sync(args) => cache::transaction(&root, |transaction| {
+            let owner = transaction.load()?.ok_or_else(|| Error::Manifest {
+                message: "workflow is unowned".into(),
+            })?;
+            if owner.session_id != args.session
+                || owner.last_plan_revision != args.expected_revision
+            {
+                return Err(Error::Manifest {
+                    message: "workflow ownership or plan revision changed".into(),
+                });
+            }
+            validate_identity_values(&root, &owner.identity)?;
+            if plan_record(&root, &owner.identity.plan)?.phase != "build" {
+                return Err(Error::Manifest {
+                    message: "default synchronization is permitted only during BUILD".into(),
+                });
+            }
+            let revision = git::synchronize_default(
+                &root,
+                &owner.identity.default_branch,
+                &args.expected_default,
+                &owner.identity.work_branch,
+                &args.expected_work,
+            )?;
+            emit(
+                "synchronization",
+                &serde_json::json!({"revision": revision, "state": owner}),
+            )
+        }),
         WorkflowCommand::Transition(args) => transition(&root, args, false, None),
         WorkflowCommand::Abandon(args) => transition(
             &root,

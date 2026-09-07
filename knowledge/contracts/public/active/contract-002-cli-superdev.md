@@ -366,6 +366,8 @@ pub enum WorkflowCommand {
     Correction(CorrectionArgs),
     /// Record isolated review or final verification evidence canonically
     Evidence(EvidenceArgs),
+    /// Incorporate the expected local default tip into BUILD
+    Sync(SyncArgs),
     /// Reconstruct and acquire ownership for a known workflow
     Resume(BindArgs),
     /// Pause by releasing transient ownership without changing plan phase
@@ -486,6 +488,23 @@ pub struct SessionArgs {
     /// Owning Pi session ID
     #[arg(long)]
     session: String,
+}
+
+/// Compare-and-swap arguments for BUILD synchronization.
+#[derive(Args)]
+pub struct SyncArgs {
+    /// Owning Pi session ID
+    #[arg(long)]
+    session: String,
+    /// Expected current plan content revision
+    #[arg(long)]
+    expected_revision: String,
+    /// Expected local default-branch tip
+    #[arg(long)]
+    expected_default: String,
+    /// Expected local work-branch tip
+    #[arg(long)]
+    expected_work: String,
 }
 
 /// Typed phase transition names.
@@ -787,6 +806,8 @@ the invoking adapter.
 | `superdev workflow correction` | 2 | ownership, authority, candidate, review, phase, tree, or configured correction limit is invalid |
 | `superdev workflow evidence` | 0 | canonical BUILD evidence is acknowledged |
 | `superdev workflow evidence` | 2 | ownership, revision, identity, branch, or phase is invalid |
+| `superdev workflow sync` | 0 | the expected default tip is incorporated into the BUILD branch, or was already present |
+| `superdev workflow sync` | 2 | ownership, phase, revision, tree, ref, expected tip, or conflict checks failed |
 | `superdev workflow resume` | 0 | canonical state is reconstructed and ownership acquired |
 | `superdev workflow resume` | 2 | canonical identity, branch, phase, or ownership is invalid |
 | `superdev workflow cancel` | 0 | transient ownership is released |
