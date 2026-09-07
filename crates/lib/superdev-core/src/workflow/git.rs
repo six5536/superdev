@@ -321,6 +321,44 @@ pub fn changed_paths(root: &Path, from: &str, to: &str) -> Result<Vec<String>> {
         .collect())
 }
 
+/// Recover the baseline from the most recent service-owned transition into SCOPE.
+pub fn scope_base_from_history(root: &Path, work_branch: &str, plan_path: &Path) -> Result<String> {
+    validate_work_branch(work_branch)?;
+    let plan_path = plan_path
+        .strip_prefix(root)
+        .ok()
+        .and_then(Path::to_str)
+        .filter(|path| valid_path(path) && path.starts_with("knowledge/"))
+        .ok_or_else(|| Error::Manifest {
+            message: "SCOPE baseline plan path is invalid".into(),
+        })?;
+    let history = git(root, &["log", "--format=%H", work_branch, "--", plan_path])?;
+    for commit in String::from_utf8_lossy(&history.stdout).lines() {
+        validate_ref(commit)?;
+        let subject = git(root, &["show", "-s", "--format=%s", commit])?;
+        let subject = String::from_utf8_lossy(&subject.stdout);
+        if !matches!(
+            subject.trim(),
+            "chore(workflow): start scope" | "chore(workflow): return to scope"
+        ) {
+            continue;
+        }
+        let parent_expression = format!("{commit}^");
+        let parent = git(root, &["rev-parse", "--verify", &parent_expression])?;
+        let parent = String::from_utf8_lossy(&parent.stdout).trim().to_string();
+        validate_ref(&parent)?;
+        if changed_paths(root, &parent, commit)?
+            .iter()
+            .all(|path| valid_path(path) && path.starts_with("knowledge/"))
+        {
+            return Ok(parent);
+        }
+    }
+    Err(Error::Manifest {
+        message: "could not recover the service-owned SCOPE baseline from Git history".into(),
+    })
+}
+
 /// Require all commits after the service-owned SCOPE baseline to be knowledge-only.
 pub fn require_knowledge_only_since(root: &Path, baseline: &str, candidate: &str) -> Result<()> {
     if !is_ancestor(root, baseline, candidate)?
@@ -621,6 +659,52 @@ mod tests {
                 .unwrap()
                 .stdout
                 .is_empty()
+        );
+    }
+
+    #[test]
+    fn scope_baseline_is_recovered_from_transition_history_not_plan_prose() {
+        let dir = repository();
+        let root = dir.path();
+        let baseline = revision(root, "HEAD").unwrap();
+        command(root, &["switch", "-q", "-c", "work/001-history"]);
+        std::fs::create_dir_all(root.join("knowledge/plans/open")).unwrap();
+        let plan = root.join("knowledge/plans/open/plan-001-history.md");
+        std::fs::write(&plan, "phase: scope\n").unwrap();
+        command(root, &["add", "knowledge"]);
+        command(
+            root,
+            &["commit", "-q", "-m", "chore(workflow): start scope"],
+        );
+        std::fs::write(root.join("file"), "forbidden product\n").unwrap();
+        std::fs::write(&plan, "phase: scope\nScope product baseline: HEAD.\n").unwrap();
+        command(root, &["add", "."]);
+        command(
+            root,
+            &["commit", "-q", "-m", "docs: caller-edited baseline"],
+        );
+
+        assert_eq!(
+            scope_base_from_history(root, "work/001-history", &plan).unwrap(),
+            baseline
+        );
+    }
+
+    #[test]
+    fn expected_parent_refuses_a_racing_commit_without_publishing() {
+        let dir = repository();
+        let root = dir.path();
+        let stale_parent = revision(root, "HEAD").unwrap();
+        std::fs::create_dir_all(root.join("knowledge")).unwrap();
+        std::fs::write(root.join("knowledge/plan.md"), "first\n").unwrap();
+        let current = commit_knowledge_changes(root, "docs: concurrent change").unwrap();
+        std::fs::write(root.join("knowledge/plan.md"), "approval\n").unwrap();
+
+        assert!(commit_knowledge_changes_at(root, "docs: approve", &stale_parent).is_err());
+        assert_eq!(revision(root, "HEAD").unwrap(), current);
+        assert_eq!(
+            std::fs::read_to_string(root.join("knowledge/plan.md")).unwrap(),
+            "approval\n"
         );
     }
 

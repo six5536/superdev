@@ -812,24 +812,19 @@ fn bind(root: &Path, args: &BindArgs) -> Result<u8> {
 }
 
 fn bind_with_revision(root: &Path, args: &BindArgs, revision: String) -> Result<u8> {
-    let text =
-        fs::read_to_string(plan_revision(root, &args.plan)?.0).map_err(|source| Error::Io {
-            path: plan_revision(root, &args.plan)
-                .expect("plan was just resolved")
-                .0,
-            source,
-        })?;
+    let plan_path = plan_revision(root, &args.plan)?.0;
+    let text = fs::read_to_string(&plan_path).map_err(|source| Error::Io {
+        path: plan_path.clone(),
+        source,
+    })?;
     let candidate = evidence_revision(&text, "Candidate revision");
     let verified_default = evidence_revision(&text, "Verified default revision");
     let scope_base = if plan_record(root, &args.plan)?.phase == "scope" {
-        match evidence_revision(&text, "Scope product baseline") {
-            Some(baseline) => Some(baseline),
-            None => Some(git::merge_base(
-                root,
-                &args.default_branch,
-                &args.work_branch,
-            )?),
-        }
+        Some(git::scope_base_from_history(
+            root,
+            &args.work_branch,
+            &plan_path,
+        )?)
     } else {
         None
     };
@@ -1859,6 +1854,7 @@ fn transition_locked(
                 source,
             }
         })?;
+    let mut scope_approval_parent = None;
     if matches!(transition, Transition::ApproveScope) {
         let scope_base = state
             .scope_base_revision
@@ -1868,6 +1864,7 @@ fn transition_locked(
             })?;
         let head = git::revision(root, &state.identity.work_branch)?;
         git::require_knowledge_only_since(root, scope_base, &head)?;
+        scope_approval_parent = Some(head);
     }
     let candidate_revision = evidence_revision(&plan_text, "Candidate revision");
     let verified_default_revision = evidence_revision(&plan_text, "Verified default revision");
@@ -2045,7 +2042,11 @@ fn transition_locked(
         Transition::RecoverStaleDefault => "chore(workflow): reopen stale closure",
         Transition::Abandon => "chore(workflow): close abandoned work",
     };
-    git::commit_knowledge_changes(root, commit_message)?;
+    if let Some(parent) = &scope_approval_parent {
+        git::commit_knowledge_changes_at(root, commit_message, parent)?;
+    } else {
+        git::commit_knowledge_changes(root, commit_message)?;
+    }
     if matches!(transition, Transition::Abandon) {
         filing::publish_abandonment(
             root,
