@@ -109,7 +109,7 @@ The canonical-knowledge surface covers ADRs, contracts, schemas, procedures, con
 - Areas: complete repository diff and local integration path.
 - Outcome: every bootstrap checklist item is satisfied, full verification passes, a fresh isolated read-only review reports no findings for immutable candidate `H`, configured acceptance is recorded, closure is committed, and the local default branch receives a no-fast-forward merge.
 - Verification: `cargo fmt --all -- --check`, `cargo clippy --workspace --all-targets -- -D warnings`, `cargo test --workspace --all-targets`, `npm test`, `npm run check:docs`, `cargo run -- validate --warnings`, `cargo run -- sync --dry-run`, and `git diff --check`.
-- Tests: complete acceptance journeys cover contract-011 acceptance, stale-default, rollback, ownership-CAS, and integration promises; focused cache tests reject symlinked `.superdev` and `.superdev/cache` ancestors without creating lock or cache files outside the repository.
+- Tests: complete acceptance journeys cover contract-011 acceptance, stale-default, rollback, ownership-CAS, and integration promises; a focused integration regression proves an already-checked-out default worktree matches the no-fast-forward merge, and focused cache tests reject symlinked `.superdev` and `.superdev/cache` ancestors without creating lock or cache files outside the repository.
 - Structural evidence: review input is the immutable diff from the approved base to candidate `H`, and integration verifies identity, ancestry, closure-at-revision, and exact administrative descendants.
 - Documentation: every applicable surface must be current before this block can complete.
 
