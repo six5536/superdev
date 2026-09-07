@@ -11,28 +11,4 @@ crates/lib/superdev-core/tests/fixtures/** -text
 knowledge/templates/** -text
 .miserc.toml -text
 mise.*.toml -text
-pack/** -text -diff
-
-# Generated locks, materialized mirrors, and settled migration records are
-# reviewed through their source declarations and parity/schema checks rather
-# than duplicated in bounded immutable review payloads.
-package-lock.json -diff
-knowledge/plans/done/** -diff
-knowledge/issues/done/** -diff
-crates/**/tests/** -diff
-scripts/test/** -diff
-knowledge/schemas/** -diff
-archive/** -diff
-knowledge/contracts/public/active/contract-002-cli-superdev.md -diff
-.superdev/lock.toml -diff
-crates/lib/superdev-core/src/components/sokf.rs -diff
-crates/lib/superdev-core/src/components/skillpack.rs -diff
-crates/lib/superdev-core/src/pipeline.rs -diff
-crates/lib/superdev-core/src/pack/resolve.rs -diff
-crates/lib/superdev-core/src/validate/fix.rs -diff
-crates/lib/superdev-core/src/validate/sokf.rs -diff
-knowledge/** -diff
-crates/lib/superdev-core/src/workflow/filing.rs -diff
-crates/app/superdev/src/workflow_cli.rs -diff
-crates/** -diff
-.pi/** -diff
+pack/** -text
