@@ -97,6 +97,47 @@ pub fn require_clean(root: &Path) -> Result<()> {
     }
 }
 
+/// Commit only canonical knowledge changes produced after a clean-tree preflight.
+///
+/// Workflow callers hold the repository lock and establish cleanliness before
+/// publishing their staged knowledge snapshot. Refuse any post-publication
+/// change outside `knowledge/` rather than accidentally absorbing it.
+pub fn commit_knowledge_changes(root: &Path, message: &str) -> Result<String> {
+    if message.trim().is_empty() || message.contains(['\n', '\r', '\0']) {
+        return Err(Error::Manifest {
+            message: "workflow commit message is invalid".into(),
+        });
+    }
+    let tracked = git(root, &["diff", "--name-only", "HEAD", "--"])?;
+    let untracked = git(root, &["ls-files", "--others", "--exclude-standard", "--"])?;
+    let tracked_paths = String::from_utf8_lossy(&tracked.stdout);
+    let untracked_paths = String::from_utf8_lossy(&untracked.stdout);
+    let paths = tracked_paths
+        .lines()
+        .chain(untracked_paths.lines())
+        .map(str::to_string)
+        .collect::<Vec<_>>();
+    if paths.is_empty() {
+        return Err(Error::Manifest {
+            message: "workflow mutation produced no commit changes".into(),
+        });
+    }
+    if paths.iter().any(|path| {
+        !path.starts_with("knowledge/") || path.contains("..") || path.contains(['\n', '\r', '\0'])
+    }) {
+        return Err(Error::Manifest {
+            message: "workflow commit refused changes outside canonical knowledge".into(),
+        });
+    }
+    git(root, &["add", "--all", "--", "knowledge"])?;
+    git(
+        root,
+        &["commit", "--no-verify", "--no-gpg-sign", "-m", message],
+    )?;
+    require_clean(root)?;
+    revision(root, "HEAD")
+}
+
 /// Create and check out a validated work branch from the current revision.
 pub fn create_work_branch(root: &Path, branch: &str) -> Result<()> {
     validate_work_branch(branch)?;
@@ -152,11 +193,6 @@ pub fn integrate_no_ff(
     validate_ref(default_branch)?;
     validate_work_branch(work_branch)?;
     require_clean(root)?;
-    if current_branch(root)? != default_branch {
-        return Err(Error::Manifest {
-            message: format!("integration requires checked-out default branch `{default_branch}`"),
-        });
-    }
     if revision(root, default_branch)? != expected_default {
         return Err(Error::Manifest {
             message: "default branch moved; return the prepared closure to BUILD".into(),
@@ -167,11 +203,17 @@ pub fn integrate_no_ff(
             message: "work branch moved after acceptance attestation".into(),
         });
     }
+    if current_branch(root)? != default_branch {
+        git(root, &["switch", default_branch])?;
+    }
     git(root, &["merge", "--no-ff", work_branch]).map(|_| ())
 }
 
 /// Refuse option-like, traversal-like, or syntactically invalid refs.
 pub fn validate_ref(reference: &str) -> Result<()> {
+    if reference == "HEAD" {
+        return Ok(());
+    }
     if reference.is_empty()
         || reference.starts_with('-')
         || reference.contains("..")
@@ -250,6 +292,33 @@ mod tests {
     }
 
     #[test]
+    fn canonical_knowledge_commit_refuses_unrelated_changes() {
+        let dir = repository();
+        std::fs::create_dir_all(dir.path().join("knowledge")).unwrap();
+        std::fs::write(dir.path().join("knowledge/plan.md"), "plan\n").unwrap();
+        let revision = commit_knowledge_changes(dir.path(), "chore: record evidence").unwrap();
+        assert_eq!(revision, super::revision(dir.path(), "HEAD").unwrap());
+        assert!(
+            String::from_utf8_lossy(
+                &git(dir.path(), &["show", "--format=", "--name-only", "HEAD"])
+                    .unwrap()
+                    .stdout
+            )
+            .contains("knowledge/plan.md")
+        );
+
+        std::fs::write(dir.path().join("knowledge/plan.md"), "changed\n").unwrap();
+        std::fs::write(dir.path().join("unrelated"), "must remain\n").unwrap();
+        assert!(commit_knowledge_changes(dir.path(), "chore: unsafe").is_err());
+        assert!(
+            !git(dir.path(), &["status", "--porcelain=v1"])
+                .unwrap()
+                .stdout
+                .is_empty()
+        );
+    }
+
+    #[test]
     fn work_branch_validation_is_strict() {
         assert!(validate_work_branch("work/059-scope-build-accept").is_ok());
         for bad in [
@@ -272,9 +341,9 @@ mod tests {
         std::fs::write(root.join("file"), "work\n").unwrap();
         command(root, &["commit", "-q", "-am", "work"]);
         let work = revision(root, "work/059-test").unwrap();
-        command(root, &["switch", "-q", "main"]);
 
         integrate_no_ff(root, "main", &default, "work/059-test", &work).unwrap();
+        assert_eq!(current_branch(root).unwrap(), "main");
 
         let parents = git(root, &["rev-list", "--parents", "-n", "1", "HEAD"]).unwrap();
         assert_eq!(

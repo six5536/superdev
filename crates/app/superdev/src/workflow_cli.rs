@@ -298,6 +298,7 @@ pub fn run(command: &WorkflowCommand, root: &Path) -> Result<u8> {
                 &serde_json::json!({
                     "owner": owner,
                     "phase": phase,
+                    "humanAcceptanceRequired": Manifest::load(&root)?.workflow.human_acceptance_required,
                     "openWorkflows": discover_open_workflows(&root)?,
                 }),
             )
@@ -309,11 +310,23 @@ pub fn run(command: &WorkflowCommand, root: &Path) -> Result<u8> {
                 &serde_json::json!({"phaseChanged": false, "ownershipReleased": true}),
             )
         }
-        WorkflowCommand::Block(args) => {
-            let owner = cache::load(&root)?.ok_or_else(|| Error::Manifest {
+        WorkflowCommand::Block(args) => cache::transaction(&root, |transaction| {
+            let owner = transaction.load()?.ok_or_else(|| Error::Manifest {
                 message: "workflow is unowned".into(),
             })?;
+            if owner.session_id != args.session
+                || owner.last_plan_revision != args.expected_revision
+            {
+                return Err(Error::Manifest {
+                    message: "workflow ownership or plan revision changed".into(),
+                });
+            }
             validate_identity_values(&root, &owner.identity)?;
+            if git::current_branch(&root)? != owner.identity.work_branch {
+                return Err(Error::Manifest {
+                    message: "block checkpoint requires the checked-out work branch".into(),
+                });
+            }
             let record = plan_record(&root, &owner.identity.plan)?;
             if record.phase != "build" {
                 return Err(Error::Manifest {
@@ -321,17 +334,30 @@ pub fn run(command: &WorkflowCommand, root: &Path) -> Result<u8> {
                 });
             }
             let observed = plan_revision(&root, &owner.identity.plan)?.1;
-            if observed != args.revision {
+            if observed != args.revision || observed == args.expected_revision {
                 return Err(Error::Manifest {
-                    message: "supplied revision does not match the canonical plan".into(),
+                    message: "supplied revision must identify a changed canonical plan".into(),
                 });
             }
+            let grammar = superdev_core::validate::schema::load_grammar(&root)?;
+            let report = superdev_core::validate::validate_repo(
+                &root,
+                &root.join("knowledge"),
+                &[],
+                &grammar,
+            )?;
+            if !report.report.passed() {
+                return Err(Error::Manifest {
+                    message: "block checkpoint requires valid canonical knowledge".into(),
+                });
+            }
+            git::commit_knowledge_changes(&root, "chore(workflow): checkpoint build block")?;
             let state =
-                cache::compare_and_swap(&root, &args.session, &args.expected_revision, |state| {
+                transaction.compare_and_swap(&args.session, &args.expected_revision, |state| {
                     state.last_plan_revision.clone_from(&observed)
                 })?;
             emit("progress", &state)
-        }
+        }),
         WorkflowCommand::Evidence(args) => record_evidence(&root, args),
         WorkflowCommand::Transition(args) => transition(&root, args, false, None),
         WorkflowCommand::Abandon(args) => transition(
@@ -458,6 +484,7 @@ fn start(root: &Path, args: &BindArgs) -> Result<u8> {
     let started = (|| {
         git::create_work_branch(root, &args.work_branch)?;
         create_scope_plan(root, args, &issue)?;
+        git::commit_knowledge_changes(root, "chore(workflow): start scope")?;
         let revision = plan_revision(root, &args.plan)?.1;
         let state = cache::compare_and_swap(root, &args.session, "", |state| {
             state.last_plan_revision.clone_from(&revision)
@@ -900,6 +927,7 @@ fn record_evidence_locked(
         return emit("verification", &state);
     }
     apply_plan_edits_transactionally(root, &path, vec![completion_evidence_edit(&text, &lines)?])?;
+    git::commit_knowledge_changes(root, "chore(workflow): record canonical evidence")?;
     let revision = plan_revision(root, &state.identity.plan)?.1;
     let state = transaction.compare_and_swap(&args.session, &args.expected_revision, |state| {
         state.last_plan_revision.clone_from(&revision);
@@ -1218,6 +1246,18 @@ fn transition_locked(
     } else {
         apply_plan_edits_transactionally(root, &path, edits)?;
     }
+    let commit_message = match transition {
+        Transition::ApproveScope => "chore(workflow): approve scope",
+        Transition::ReturnToScope | Transition::RejectAcceptance => {
+            "chore(workflow): return to scope"
+        }
+        Transition::RecordBuildProgress => "chore(workflow): record build progress",
+        Transition::FinishBuild => "chore(workflow): attest build completion",
+        Transition::Accept => "chore(workflow): close accepted work",
+        Transition::RecoverStaleDefault => "chore(workflow): reopen stale closure",
+        Transition::Abandon => "chore(workflow): close abandoned work",
+    };
+    git::commit_knowledge_changes(root, commit_message)?;
     let revision = plan_revision(root, &state.identity.plan)?.1;
     let state = transaction.compare_and_swap(&args.session, &args.expected_revision, |state| {
         state.last_plan_revision.clone_from(&revision);

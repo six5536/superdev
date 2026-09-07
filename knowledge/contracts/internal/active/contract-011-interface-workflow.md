@@ -388,6 +388,7 @@ mod tests {
 - `P_gates-derived` [ubiquitous] Phase transitions SHALL calculate non-human gates from canonical evidence and repository state rather than caller-provided boolean flags.
 - `P_resume-recovers-evidence` [event] WHEN ownership resumes, the service SHALL reconstruct candidate and verified-default revisions from canonical Completion evidence rather than treating cache loss as evidence loss.
 - `P_closure-transactional` [event] WHEN acceptance or abandonment closes records, the service SHALL stage, repair, and validate the complete knowledge closure before publishing it.
+- `P_service-owned-commits` [event] WHEN canonical evidence or a durable transition is published after a clean-tree preflight, the service SHALL create a knowledge-only commit without invoking hooks or signing.
 - `P_rejection-preserves-feedback` [event] WHEN a human rejects a candidate, the service SHALL return the same plan to SCOPE and preserve the verbatim feedback as an unresolved primary-issue discovery.
 - `P_transition-atomic` [ubiquitous] Evidence, transition, reopening, closure, and integration operations SHALL hold the repository workflow lock through canonical publication and the ownership compare-and-swap.
 

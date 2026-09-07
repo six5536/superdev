@@ -215,9 +215,12 @@ export default function superdev(pi: ExtensionAPI) {
 		owner?: {
 			session_id: string;
 			last_plan_revision: string;
+			candidate_revision?: string;
+			verified_default_revision?: string;
 			identity: { issue: string; plan: string; work_branch: string; default_branch: string };
 		};
 		phase?: "scope" | "build" | "accept";
+		humanAcceptanceRequired?: boolean;
 	};
 	const workflowStatus = async (cwd: string): Promise<WorkflowStatus> => {
 		const result = await pi.exec("superdev", ["workflow", "status", "--json"], { cwd });
@@ -449,8 +452,43 @@ export default function superdev(pi: ExtensionAPI) {
 		},
 	});
 	pi.registerCommand("accept", {
-		description: "ACCEPT phase of the canonical workflow",
-		handler: async (args, ctx) => send(`Run ACCEPT under project-configured human policy and local Rust-owned integration. ${args}`.trim(), ctx),
+		description: "Deterministically decide ACCEPT and integrate locally",
+		handler: async (_args, ctx) => {
+			const status = await workflowStatus(ctx.cwd);
+			const owner = status.owner;
+			if (!owner || status.phase !== "accept") return ctx.ui.notify("An owned ACCEPT workflow is required", "error");
+			if (!owner.candidate_revision || !owner.verified_default_revision) throw new Error("ACCEPT state is missing candidate-bound BUILD evidence");
+			let accepted = true;
+			if (status.humanAcceptanceRequired) {
+				accepted = await ctx.ui.confirm("Accept candidate?", `Accept reviewed candidate ${owner.candidate_revision} and integrate it locally?`);
+			}
+			if (!accepted) {
+				const feedback = await ctx.ui.input("Rejection feedback", "Required feedback for returning this plan to SCOPE");
+				if (!feedback?.trim()) return ctx.ui.notify("Rejection requires non-empty feedback", "error");
+				await runSuperdev([
+					"workflow", "transition", "--session", owner.session_id,
+					"--expected-revision", owner.last_plan_revision, "--phase", "accept",
+					"--transition", "reject-acceptance", "--feedback", feedback,
+				], ctx.cwd, authority);
+				ctx.ui.setStatus("superdev-workflow", `SCOPE: ${owner.identity.plan}`);
+				return ctx.ui.notify("Candidate rejected; feedback preserved and workflow returned to SCOPE", "warning");
+			}
+			await runSuperdev([
+				"workflow", "transition", "--session", owner.session_id,
+				"--expected-revision", owner.last_plan_revision, "--phase", "accept", "--transition", "accept",
+			], ctx.cwd, authority);
+			const closureResult = await pi.exec("git", ["rev-parse", "--verify", owner.identity.work_branch], { cwd: ctx.cwd });
+			if (closureResult.code !== 0) throw new Error("could not resolve the prepared closure commit");
+			await runSuperdev([
+				"workflow", "integrate", "--session", owner.session_id,
+				"--default-branch", owner.identity.default_branch,
+				"--expected-default", owner.verified_default_revision,
+				"--work-branch", owner.identity.work_branch,
+				"--expected-work", closureResult.stdout.trim(),
+			], ctx.cwd, authority);
+			ctx.ui.setStatus("superdev-workflow", undefined);
+			ctx.ui.notify("Candidate accepted and integrated locally; nothing was pushed or deleted", "info");
+		},
 	});
 	pi.registerCommand("superdev-cancel", {
 		description: "Pause the workflow and release transient ownership",
