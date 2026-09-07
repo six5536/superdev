@@ -97,7 +97,7 @@ pub fn verify_authority(cache: &WorkflowCache, capability: &str) -> Result<()> {
 }
 
 /// Hold the repository workflow lock for one complete read/check/write
-/// transaction. The persistent empty lock file makes crash recovery safe.
+/// transaction. Closing the repository descriptor releases the advisory lock.
 fn locked<T>(root: &Path, operation: impl FnOnce(&CacheFiles) -> Result<T>) -> Result<T> {
     let files = cache_files(root)?;
     let lock_path = lock_path(root);
@@ -109,10 +109,9 @@ fn locked<T>(root: &Path, operation: impl FnOnce(&CacheFiles) -> Result<T>) -> R
             source,
         })?;
     let result = operation(&files);
-    FileExt::unlock(&files.repository_lock).map_err(|source| Error::Io {
-        path: lock_path,
-        source,
-    })?;
+    // Never turn a completed mutation into a reported failure. Dropping
+    // `files` releases the advisory lock even if explicit unlock fails.
+    let _ = FileExt::unlock(&files.repository_lock);
     result
 }
 
@@ -181,10 +180,7 @@ pub fn try_load(root: &Path) -> Result<CacheSnapshot> {
     match files.repository_lock.try_lock_exclusive() {
         Ok(()) => {
             let result = load_unlocked(&files);
-            FileExt::unlock(&files.repository_lock).map_err(|source| Error::Io {
-                path: lock_path,
-                source,
-            })?;
+            let _ = FileExt::unlock(&files.repository_lock);
             result.map(|owner| match owner {
                 Some(owner) => CacheSnapshot::Owned(Box::new(owner)),
                 None => CacheSnapshot::Unowned,

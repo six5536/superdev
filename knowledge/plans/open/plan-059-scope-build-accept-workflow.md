@@ -126,7 +126,7 @@ The canonical-knowledge surface covers ADRs, contracts, schemas, procedures, con
 
 ### Block 8: Preserve successful cache transaction results
 
-- [ ] Done.
+- [x] Done.
 - Dependencies: Block 7.
 - Areas: `crates/lib/superdev-core/src/workflow/cache.rs` and `knowledge/issues/open/issue-059-scope-build-accept-workflow.md`.
 - Outcome: once a cache operation succeeds, advisory unlock cannot replace that success with an error; descriptor close remains the lock-release fallback.
