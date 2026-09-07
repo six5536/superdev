@@ -601,6 +601,31 @@ fn workflow_start_creates_a_canonical_scope_plan_and_resume_adopts_it() {
         .failure();
     assert_eq!(git::revision(dir.path(), "HEAD").unwrap(), before_refusal);
 
+    let out_of_scope = attempted.replace("- [ ] Done.", "- [x] Done.");
+    fs::write(&plan, &out_of_scope).unwrap();
+    fs::write(dir.path().join("outside"), "not scope approved\n").unwrap();
+    let out_of_scope_revision = parse_concept(&plan.to_string_lossy(), &out_of_scope)
+        .unwrap()
+        .content_hash;
+    Command::cargo_bin("superdev")
+        .unwrap()
+        .current_dir(dir.path())
+        .args([
+            "workflow",
+            "block",
+            "--session",
+            "pi-b",
+            "--expected-revision",
+            &expected,
+            "--revision",
+            &out_of_scope_revision,
+        ])
+        .assert()
+        .failure();
+    assert_eq!(fs::read_to_string(&plan).unwrap(), out_of_scope);
+    assert_eq!(git::revision(dir.path(), "HEAD").unwrap(), before_refusal);
+    fs::remove_file(dir.path().join("outside")).unwrap();
+
     let broadened = attempted
         .replace("- [ ] Done.", "- [x] Done.")
         .replace("- Areas: `src`.", "- Areas: `src` and `outside`.");

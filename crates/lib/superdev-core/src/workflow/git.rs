@@ -179,6 +179,13 @@ pub fn commit_block_changes(
     message: &str,
     allowed_areas: &[String],
 ) -> Result<String> {
+    validate_block_paths(root, allowed_areas)?;
+    let paths = worktree_paths(root)?;
+    commit_paths(root, message, &paths)
+}
+
+/// Refuse a BUILD checkpoint's current changes before any service-owned edit.
+pub fn validate_block_paths(root: &Path, allowed_areas: &[String]) -> Result<()> {
     if allowed_areas.is_empty() || allowed_areas.iter().any(|area| !valid_path(area)) {
         return Err(Error::Manifest {
             message: "BUILD checkpoint has no valid path-scoped Areas".into(),
@@ -195,7 +202,7 @@ pub fn commit_block_changes(
             message: "BUILD checkpoint refused a change outside the current block Areas".into(),
         });
     }
-    commit_paths(root, message, &paths)
+    Ok(())
 }
 
 /// Create and check out a validated work branch from the current revision.

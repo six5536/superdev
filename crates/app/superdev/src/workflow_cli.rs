@@ -478,6 +478,7 @@ pub fn run(command: &WorkflowCommand, root: &Path) -> Result<u8> {
             }
             let mut areas = block_area_paths(approved_block);
             areas.push(relative_plan.to_string());
+            git::validate_block_paths(&root, &areas)?;
             run_block_verification(&root, approved_block)?;
             let next_retry = retry_state_after_checkpoint(&current_text, &previous_retry);
             apply_plan_edits_transactionally(
