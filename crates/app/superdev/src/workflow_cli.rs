@@ -442,7 +442,12 @@ pub fn run(command: &WorkflowCommand, root: &Path) -> Result<u8> {
                 source,
             })?;
             let previous_retry = parse_retry_state(build_state_line(&previous_text)?)?;
-            parse_retry_state(build_state_line(&current_text)?)?;
+            let supplied_retry = parse_retry_state(build_state_line(&current_text)?)?;
+            if supplied_retry != previous_retry {
+                return Err(Error::Manifest {
+                    message: "BUILD checkpoint retry state is service-owned".into(),
+                });
+            }
             let block = previous_retry.current_block;
             let newly_completed =
                 block_is_done(&current_text, block) && !block_is_done(&previous_text, block);
@@ -451,8 +456,18 @@ pub fn run(command: &WorkflowCommand, root: &Path) -> Result<u8> {
                     message: "BUILD checkpoint must newly complete the current stable block".into(),
                 });
             }
+            let approved_block = plan_block(&previous_text, block)?;
             let block_text = plan_block(&current_text, block)?;
-            for dependency in block_dependencies(block_text) {
+            if block_dependencies(block_text) != block_dependencies(approved_block)
+                || block_area_paths(block_text) != block_area_paths(approved_block)
+                || plan_verification_commands(block_text)
+                    != plan_verification_commands(approved_block)
+            {
+                return Err(Error::Manifest {
+                    message: "BUILD checkpoint cannot change SCOPE-approved dependencies, Areas, or Verification commands".into(),
+                });
+            }
+            for dependency in block_dependencies(approved_block) {
                 if dependency >= block || !block_is_done(&current_text, dependency) {
                     return Err(Error::Manifest {
                         message: format!(
@@ -461,9 +476,18 @@ pub fn run(command: &WorkflowCommand, root: &Path) -> Result<u8> {
                     });
                 }
             }
-            let mut areas = block_area_paths(block_text);
+            let mut areas = block_area_paths(approved_block);
             areas.push(relative_plan.to_string());
-            run_block_verification(&root, block_text)?;
+            run_block_verification(&root, approved_block)?;
+            let next_retry = retry_state_after_checkpoint(&current_text, &previous_retry);
+            apply_plan_edits_transactionally(
+                &root,
+                &plan_path,
+                vec![ExactEdit {
+                    old_text: build_state_line(&current_text)?.into(),
+                    new_text: render_retry_state(&next_retry),
+                }],
+            )?;
             let grammar = superdev_core::validate::schema::load_grammar(&root)?;
             let report = superdev_core::validate::validate_repo(
                 &root,
@@ -481,9 +505,10 @@ pub fn run(command: &WorkflowCommand, root: &Path) -> Result<u8> {
                 &format!("chore(workflow): checkpoint build block {block}"),
                 &areas,
             )?;
+            let revision = plan_revision(&root, &owner.identity.plan)?.1;
             let state =
                 transaction.compare_and_swap(&args.session, &args.expected_revision, |state| {
-                    state.last_plan_revision.clone_from(&observed)
+                    state.last_plan_revision.clone_from(&revision)
                 })?;
             emit("progress", &state)
         }),
@@ -1247,6 +1272,25 @@ fn render_retry_state(state: &RetryState) -> String {
         state.fingerprint.as_deref().unwrap_or("none"),
         state.blocker.trim_end_matches('.'),
     )
+}
+
+fn retry_state_after_checkpoint(plan: &str, previous: &RetryState) -> RetryState {
+    let mut current_block = previous.current_block;
+    let mut candidate = current_block.saturating_add(1);
+    while plan_block(plan, candidate).is_ok() {
+        if !block_is_done(plan, candidate) {
+            current_block = candidate;
+            break;
+        }
+        candidate = candidate.saturating_add(1);
+    }
+    RetryState {
+        current_block,
+        attempts: 0,
+        final_corrections: previous.final_corrections,
+        fingerprint: None,
+        blocker: "none".into(),
+    }
 }
 
 fn record_evidence(root: &Path, args: &EvidenceArgs) -> Result<u8> {
@@ -2421,6 +2465,24 @@ mod tests {
         });
         assert_eq!(parse_retry_state(&rendered).unwrap().attempts, 1);
         assert!(rendered.contains("Fingerprint: abc123."));
+    }
+
+    #[test]
+    fn successful_checkpoint_advances_and_resets_only_build_retry_state() {
+        let plan = "### Block 1: first\n\n- [x] Done.\n\n### Block 2: second\n\n- [x] Done.\n\n### Block 3: third\n\n- [ ] Done.\n\n## Build state\n";
+        let previous = RetryState {
+            current_block: 1,
+            attempts: 3,
+            final_corrections: 2,
+            fingerprint: Some("failure".into()),
+            blocker: "stalled".into(),
+        };
+        let reset = retry_state_after_checkpoint(plan, &previous);
+        assert_eq!(reset.current_block, 3);
+        assert_eq!(reset.attempts, 0);
+        assert_eq!(reset.final_corrections, 2);
+        assert_eq!(reset.fingerprint, None);
+        assert_eq!(reset.blocker, "none");
     }
 
     #[test]

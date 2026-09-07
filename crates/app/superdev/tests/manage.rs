@@ -465,9 +465,97 @@ fn workflow_start_creates_a_canonical_scope_plan_and_resume_adopts_it() {
         .assert()
         .success();
 
+    let attempt_head = git::revision(dir.path(), "HEAD").unwrap();
+    for diagnostics in [
+        "tests   failed at src/lib.rs",
+        " tests failed at src/lib.rs ",
+    ] {
+        let revision = cache::load(dir.path()).unwrap().unwrap().last_plan_revision;
+        Command::cargo_bin("superdev")
+            .unwrap()
+            .current_dir(dir.path())
+            .args([
+                "workflow",
+                "attempt",
+                "--session",
+                "pi-b",
+                "--expected-revision",
+                &revision,
+                "--command",
+                "cargo test",
+                "--exit-status",
+                "1",
+                "--diagnostics",
+                diagnostics,
+            ])
+            .assert()
+            .success();
+    }
+    let attempted = fs::read_to_string(&plan).unwrap();
+    assert!(attempted.contains("Attempts: 2."));
+    assert!(attempted.contains("Fingerprint: "));
+    assert_ne!(git::revision(dir.path(), "HEAD").unwrap(), attempt_head);
+
     let expected = cache::load(dir.path()).unwrap().unwrap().last_plan_revision;
-    let text = fs::read_to_string(&plan)
+    let tampered = attempted
+        .replace("- [ ] Done.", "- [x] Done.")
+        .replace("Attempts: 2.", "Attempts: 0.")
+        .replace("- Areas: to be settled by SCOPE.", "- Areas: `src`.")
+        .replace(
+            "- Verification: executable commands must be settled by SCOPE.",
+            "- Verification: `true`.",
+        );
+    fs::write(&plan, &tampered).unwrap();
+    fs::create_dir_all(dir.path().join("src")).unwrap();
+    fs::write(dir.path().join("src/lib.rs"), "pub fn checkpointed() {}\n").unwrap();
+    let tampered_revision = parse_concept(&plan.to_string_lossy(), &tampered)
         .unwrap()
+        .content_hash;
+    let before_refusal = git::revision(dir.path(), "HEAD").unwrap();
+    Command::cargo_bin("superdev")
+        .unwrap()
+        .current_dir(dir.path())
+        .args([
+            "workflow",
+            "block",
+            "--session",
+            "pi-b",
+            "--expected-revision",
+            &expected,
+            "--revision",
+            &tampered_revision,
+        ])
+        .assert()
+        .failure();
+    assert_eq!(git::revision(dir.path(), "HEAD").unwrap(), before_refusal);
+
+    let broadened = attempted
+        .replace("- [ ] Done.", "- [x] Done.")
+        .replace("- Areas: `src`.", "- Areas: `src` and `outside`.");
+    fs::write(&plan, &broadened).unwrap();
+    fs::write(dir.path().join("outside"), "not scope approved\n").unwrap();
+    let broadened_revision = parse_concept(&plan.to_string_lossy(), &broadened)
+        .unwrap()
+        .content_hash;
+    Command::cargo_bin("superdev")
+        .unwrap()
+        .current_dir(dir.path())
+        .args([
+            "workflow",
+            "block",
+            "--session",
+            "pi-b",
+            "--expected-revision",
+            &expected,
+            "--revision",
+            &broadened_revision,
+        ])
+        .assert()
+        .failure();
+    assert_eq!(git::revision(dir.path(), "HEAD").unwrap(), before_refusal);
+    fs::remove_file(dir.path().join("outside")).unwrap();
+
+    let text = attempted
         .replace("- [ ] Done.", "- [x] Done.")
         .replace("- Areas: to be settled by SCOPE.", "- Areas: `src`.")
         .replace(
@@ -505,6 +593,16 @@ fn workflow_start_creates_a_canonical_scope_plan_and_resume_adopts_it() {
     let paths = String::from_utf8(paths.stdout).unwrap();
     assert!(paths.contains("src/lib.rs"));
     assert!(paths.contains("knowledge/plans/open/plan-001-canonical-recovery.md"));
+    let checkpointed = fs::read_to_string(&plan).unwrap();
+    assert!(checkpointed.contains("Attempts: 0."));
+    assert!(checkpointed.contains("Fingerprint: none."));
+    assert!(checkpointed.contains("Blocker: none."));
+    assert_eq!(
+        cache::load(dir.path()).unwrap().unwrap().last_plan_revision,
+        parse_concept(&plan.to_string_lossy(), &checkpointed)
+            .unwrap()
+            .content_hash
+    );
 
     Command::cargo_bin("superdev")
         .unwrap()
