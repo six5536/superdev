@@ -32,4 +32,4 @@ The replacement covers the complete local development workflow and its managed a
 
 The bootstrap implementation specification is `SCOPE-BUILD-ACCEPT-IMPLEMENTATION-PLAN.md`; it intentionally predates the plan schema it installs.
 
-The human explicitly approved that specification before commit `83e04ea`. A separate requirements pass found no unresolved requirement before BUILD began on `work/059-scope-build-accept`.
+The human explicitly approved that specification before commit `83e04ea`. A separate requirements pass found no unresolved requirement before BUILD began on `work/059-scope-build-accept-workflow`.
