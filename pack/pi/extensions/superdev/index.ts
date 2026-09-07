@@ -1,7 +1,7 @@
 import { spawn, type ChildProcess } from "node:child_process";
-import { randomBytes } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 import { readFile } from "node:fs/promises";
-import { dirname, resolve } from "node:path";
+import { dirname, isAbsolute, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { StringEnum } from "@earendil-works/pi-ai";
@@ -104,12 +104,16 @@ async function isolated(
 	onClose?: (child: ChildProcess) => void,
 	base?: string,
 	candidate?: string,
+	trustedExecutable?: string,
 ): Promise<RoleResult> {
 	const promptPath = resolve(here, "prompts", `${role}.md`);
 	const rolePrompt = await readFile(promptPath, "utf8");
 	if (readOnly.has(role) && (!base || !candidate || !/^[0-9a-f]{7,64}$/.test(base) || !/^[0-9a-f]{7,64}$/.test(candidate))) {
 		throw new Error(`${role} requires immutable hexadecimal base and candidate revisions`);
 	}
+	const trustedExecutableSha256 = trustedExecutable
+		? createHash("sha256").update(await readFile(trustedExecutable)).digest("hex")
+		: undefined;
 	const args = ["--mode", "json", "-p", "--no-session", "--approve", "--append-system-prompt", rolePrompt];
 	if (model) args.push("--provider", model.provider, "--model", model.id);
 	args.push("--tools", isolatedTools(role));
@@ -125,6 +129,8 @@ async function isolated(
 				SUPERDEV_CHILD_ROLE: role,
 				...(base ? { SUPERDEV_REVIEW_BASE: base } : {}),
 				...(candidate ? { SUPERDEV_REVIEW_CANDIDATE: candidate } : {}),
+				...(trustedExecutable ? { SUPERDEV_TRUSTED_EXECUTABLE: trustedExecutable } : {}),
+				...(trustedExecutableSha256 ? { SUPERDEV_TRUSTED_EXECUTABLE_SHA256: trustedExecutableSha256 } : {}),
 			},
 		});
 		onSpawn?.(child);
@@ -245,8 +251,13 @@ export default function superdev(pi: ExtensionAPI) {
 		}),
 		execute: async (_id, input: { command: string; args: string[] }, _signal, _update, ctx) => {
 			if (childRole !== "build") throw new Error("BUILD command execution is available only to the BUILD role");
+			const trustedExecutable = process.env.SUPERDEV_TRUSTED_EXECUTABLE;
+			const trustedDigest = process.env.SUPERDEV_TRUSTED_EXECUTABLE_SHA256;
+			if (!trustedExecutable || !isAbsolute(trustedExecutable) || !trustedDigest) throw new Error("BUILD service executable is not pinned by the parent");
+			const observedDigest = createHash("sha256").update(await readFile(trustedExecutable)).digest("hex");
+			if (observedDigest !== trustedDigest) throw new Error("BUILD service executable changed after the parent pinned it");
 			const result = await runGuardedBuildCommand(
-				async (command, args, cwd) => pi.exec(command, args, { cwd }),
+				async (_command, args, cwd) => pi.exec(trustedExecutable, args, { cwd }),
 				input.command,
 				input.args,
 				ctx.cwd,
@@ -272,6 +283,7 @@ export default function superdev(pi: ExtensionAPI) {
 		maxStalledBlockAttempts?: number;
 		maxFinalCorrectionCycles?: number;
 		humanAcceptanceRequired?: boolean;
+		executable?: string;
 	};
 	const workflowStatus = async (cwd: string): Promise<WorkflowStatus> => {
 		const result = await pi.exec("superdev", ["workflow", "status", "--json"], { cwd });
@@ -389,6 +401,8 @@ export default function superdev(pi: ExtensionAPI) {
 			if (modifying && (modifyingBusy || modifyingChild)) throw new Error("one modifying workflow child is already active");
 			if (modifying) modifyingBusy = true;
 			try {
+				const trustedExecutable = input.role === "build" ? (await workflowStatus(ctx.cwd)).executable : undefined;
+				if (input.role === "build" && (!trustedExecutable || !isAbsolute(trustedExecutable))) throw new Error("Rust status omitted its trusted executable path");
 				const result = await isolated(
 					input.role,
 					input.task,
@@ -405,6 +419,7 @@ export default function superdev(pi: ExtensionAPI) {
 					},
 					input.base,
 					input.candidate,
+					trustedExecutable,
 				);
 				let reviewRun: string | undefined;
 				if (input.role === "requirements-review" || input.role === "code-review") {
@@ -527,9 +542,10 @@ export default function superdev(pi: ExtensionAPI) {
 					&& status.buildState.finalCorrections >= status.maxFinalCorrectionCycles) {
 					return ctx.ui.notify("Final correction limit is exhausted; human guidance or re-scope is required", "error");
 				}
+				if (!status.executable || !isAbsolute(status.executable)) throw new Error("Rust status omitted its trusted executable path");
 				const built = await isolated("build", instruction || `Complete ${owner.identity.plan} from canonical state.`, ctx.cwd, ctx.model, undefined,
 				(child) => { children.add(child); modifyingChild = child; },
-				(child) => { children.delete(child); if (modifyingChild === child) modifyingChild = undefined; });
+				(child) => { children.delete(child); if (modifyingChild === child) modifyingChild = undefined; }, undefined, undefined, status.executable);
 			if (built.status === "rescope") {
 				const latest = await workflowStatus(ctx.cwd);
 				if (!latest.owner || latest.phase !== "build") throw new Error("BUILD ownership changed before re-scope");

@@ -389,6 +389,10 @@ pub fn run(command: &WorkflowCommand, root: &Path) -> Result<u8> {
                 })
                 .transpose()?;
             let workflow_config = Manifest::load(&root)?.workflow;
+            let executable = std::env::current_exe().map_err(|source| Error::Io {
+                path: root.join("superdev"),
+                source,
+            })?;
             emit(
                 "status",
                 &serde_json::json!({
@@ -405,6 +409,7 @@ pub fn run(command: &WorkflowCommand, root: &Path) -> Result<u8> {
                     "maxStalledBlockAttempts": workflow_config.max_stalled_block_attempts,
                     "maxFinalCorrectionCycles": workflow_config.max_final_correction_cycles,
                     "humanAcceptanceRequired": workflow_config.human_acceptance_required,
+                    "executable": executable,
                     "openWorkflows": discover_open_workflows(&root)?,
                 }),
             )
