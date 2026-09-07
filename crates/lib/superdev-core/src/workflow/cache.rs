@@ -120,9 +120,56 @@ pub fn transaction<T>(
     locked(root, || operation(&mut Transaction { root }))
 }
 
+/// A non-blocking ownership read used by observational status adapters.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum CacheSnapshot {
+    /// The lock was acquired and ownership was read consistently.
+    Available(Option<WorkflowCache>),
+    /// Another workflow transaction currently owns the repository lock.
+    Busy,
+}
+
 /// Read transient ownership. Absence means unowned, never complete.
 pub fn load(root: &Path) -> Result<Option<WorkflowCache>> {
     locked(root, || load_unlocked(root))
+}
+
+/// Read ownership without waiting behind a workflow transaction.
+///
+/// A busy result is distinct from absent ownership so status adapters cannot
+/// mistake an in-progress publication for an unowned workflow.
+pub fn try_load(root: &Path) -> Result<CacheSnapshot> {
+    let lock_path = lock_path(root);
+    let parent = lock_path.parent().expect("workflow lock has a parent");
+    fs::create_dir_all(parent).map_err(|source| Error::Io {
+        path: parent.into(),
+        source,
+    })?;
+    let file = OpenOptions::new()
+        .create(true)
+        .truncate(false)
+        .read(true)
+        .write(true)
+        .open(&lock_path)
+        .map_err(|source| Error::Io {
+            path: lock_path.clone(),
+            source,
+        })?;
+    match file.try_lock_exclusive() {
+        Ok(()) => {
+            let result = load_unlocked(root);
+            FileExt::unlock(&file).map_err(|source| Error::Io {
+                path: lock_path,
+                source,
+            })?;
+            result.map(CacheSnapshot::Available)
+        }
+        Err(error) if error.kind() == std::io::ErrorKind::WouldBlock => Ok(CacheSnapshot::Busy),
+        Err(source) => Err(Error::Io {
+            path: lock_path,
+            source,
+        }),
+    }
 }
 
 fn load_unlocked(root: &Path) -> Result<Option<WorkflowCache>> {
@@ -318,6 +365,7 @@ mod tests {
             .unwrap();
         });
         entered_rx.recv().unwrap();
+        assert_eq!(try_load(root.path()).unwrap(), CacheSnapshot::Busy);
 
         let (finished_tx, finished_rx) = mpsc::channel();
         let waiting_root = std::sync::Arc::clone(&root);
@@ -337,6 +385,10 @@ mod tests {
             load(root.path()).unwrap().unwrap().last_plan_revision,
             "two"
         );
+        assert!(matches!(
+            try_load(root.path()).unwrap(),
+            CacheSnapshot::Available(Some(cache)) if cache.last_plan_revision == "two"
+        ));
     }
 
     #[test]

@@ -353,6 +353,7 @@ mod tests {
 - `P_retry-reset` [event] WHEN BUILD checkpoints its newly completed current stable block, the service SHALL reject caller edits to retry state, reset that block's attempts and fingerprint, preserve final-correction accounting, and advance to the next incomplete stable block when one exists.
 - `P_block-checkpoint` [event] WHEN BUILD checkpoints a newly completed stable block, the service SHALL reject changes to its SCOPE-approved dependencies, path-scoped Areas, or executable Verification commands, execute that approved verification, and commit only changes within the approved Areas plus the owning plan.
 - `P_cache-transient` [ubiquitous] Absence of `.superdev/cache/workflow.toml` SHALL mean unowned rather than complete.
+- `P_status-during-transaction` [event] WHEN observational status encounters a held workflow transaction, it SHALL return an explicit busy snapshot without waiting or representing that state as unowned.
 - `P_compaction-reloads-state` [ubiquitous] Before every parent agent turn, Pi SHALL reload canonical phase, identity, plan revision, and BUILD state from Rust into the turn context rather than rely on conversation or compaction summaries.
 
 ## Stability

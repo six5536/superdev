@@ -368,7 +368,31 @@ pub fn run(command: &WorkflowCommand, root: &Path) -> Result<u8> {
             bind(&root, args)
         }
         WorkflowCommand::Status { json: _ } => {
-            let owner = cache::load(&root)?;
+            let owner = match cache::try_load(&root)? {
+                cache::CacheSnapshot::Available(owner) => owner,
+                cache::CacheSnapshot::Busy => {
+                    let workflow_config = Manifest::load(&root)?.workflow;
+                    let executable = std::env::current_exe().map_err(|source| Error::Io {
+                        path: root.join("superdev"),
+                        source,
+                    })?;
+                    return emit(
+                        "status",
+                        &serde_json::json!({
+                            "busy": true,
+                            "owner": null,
+                            "phase": null,
+                            "canonicalPlanRevision": null,
+                            "buildState": null,
+                            "maxStalledBlockAttempts": workflow_config.max_stalled_block_attempts,
+                            "maxFinalCorrectionCycles": workflow_config.max_final_correction_cycles,
+                            "humanAcceptanceRequired": workflow_config.human_acceptance_required,
+                            "executable": executable,
+                            "openWorkflows": [],
+                        }),
+                    );
+                }
+            };
             let phase = owner
                 .as_ref()
                 .map(|state| plan_record(&root, &state.identity.plan).map(|record| record.phase))
