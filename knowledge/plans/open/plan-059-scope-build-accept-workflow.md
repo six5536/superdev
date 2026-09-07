@@ -124,9 +124,20 @@ The canonical-knowledge surface covers ADRs, contracts, schemas, procedures, con
 - Structural evidence: the compare-and-swap is the final fallible integration operation; all temporary worktree cleanup and primary-worktree preparation precede it.
 - Documentation: canonical knowledge is updated by this plan; run validation.
 
+### Block 8: Preserve successful cache transaction results
+
+- [ ] Done.
+- Dependencies: Block 7.
+- Areas: `crates/lib/superdev-core/src/workflow/cache.rs` and `knowledge/issues/open/issue-059-scope-build-accept-workflow.md`.
+- Outcome: once a cache operation succeeds, advisory unlock cannot replace that success with an error; descriptor close remains the lock-release fallback.
+- Verification: `cargo fmt --all -- --check`, `cargo clippy --workspace --all-targets -- -D warnings`, `cargo test --workspace --all-targets`, `npm test`, `npm run check:docs`, `cargo run -- validate --warnings`, `cargo run -- sync --dry-run`, and `git diff --check`.
+- Tests: focused cache transaction and ownership-CAS tests remain green.
+- Structural evidence: explicit unlock is best-effort after operation completion and dropping the repository descriptor releases the advisory lock.
+- Documentation: canonical knowledge is updated by this plan; run validation.
+
 ## Build state
 
-Current block: 7. Attempts: 0. Final corrections: 3. Fingerprint: none. Blocker: none.
+Current block: 8. Attempts: 0. Final corrections: 3. Fingerprint: none. Blocker: none.
 
 ## Implementation decisions
 
