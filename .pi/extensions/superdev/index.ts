@@ -454,6 +454,17 @@ export default function superdev(pi: ExtensionAPI) {
 			const owner = status.owner;
 			if (!owner || status.phase !== "accept") return ctx.ui.notify("An owned ACCEPT workflow is required", "error");
 			if (!owner.candidate_revision || !owner.verified_default_revision) throw new Error("ACCEPT state is missing candidate-bound BUILD evidence");
+			const currentDefault = await pi.exec("git", ["rev-parse", "--verify", owner.identity.default_branch], { cwd: ctx.cwd });
+			if (currentDefault.code !== 0) throw new Error("could not resolve the configured default branch");
+			if (currentDefault.stdout.trim() !== owner.verified_default_revision) {
+				await runSuperdev([
+					"workflow", "transition", "--session", owner.session_id,
+					"--expected-revision", owner.last_plan_revision, "--phase", "accept",
+					"--transition", "recover-stale-default",
+				], ctx.cwd, authority);
+				ctx.ui.setStatus("superdev-workflow", `BUILD: ${owner.identity.plan}`);
+				return ctx.ui.notify("Default branch advanced; final evidence was invalidated and workflow returned to BUILD", "warning");
+			}
 			let accepted = true;
 			if (status.humanAcceptanceRequired) {
 				accepted = await ctx.ui.confirm("Accept candidate?", `Accept reviewed candidate ${owner.candidate_revision} and integrate it locally?`);

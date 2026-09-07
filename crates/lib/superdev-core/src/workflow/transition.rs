@@ -60,7 +60,7 @@ pub fn apply_transition(
             }
             Ok(Done)
         }
-        (Done, RecoverStaleDefault) if !gates.closure_integrated => Ok(Build),
+        (Accept | Done, RecoverStaleDefault) if !gates.closure_integrated => Ok(Build),
         (Scope | Build | Accept, Abandon) => {
             require(
                 gates.human_abandonment_approved,
@@ -115,6 +115,19 @@ mod tests {
                 Transition::ApproveScope,
                 &gates,
                 &config(true)
+            ),
+            Ok(Phase::Build)
+        );
+    }
+
+    #[test]
+    fn stale_default_returns_accept_to_build() {
+        assert_eq!(
+            apply_transition(
+                Phase::Accept,
+                Transition::RecoverStaleDefault,
+                &GateEvidence::default(),
+                &config(true),
             ),
             Ok(Phase::Build)
         );

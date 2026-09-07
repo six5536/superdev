@@ -1141,6 +1141,34 @@ fn transition_locked(
     if human_authorized {
         cache::verify_authority(&state, &ui_authority_capability()?)?;
     }
+    if matches!(transition, Transition::Accept) {
+        let verified =
+            state
+                .verified_default_revision
+                .as_deref()
+                .ok_or_else(|| Error::Manifest {
+                    message: "acceptance requires a verified default revision".into(),
+                })?;
+        if git::revision(root, &state.identity.default_branch)? != verified {
+            return Err(Error::Manifest {
+                message: "default branch advanced; return ACCEPT to BUILD before closure".into(),
+            });
+        }
+    }
+    if matches!(transition, Transition::RecoverStaleDefault) && phase == Phase::Accept {
+        let verified =
+            state
+                .verified_default_revision
+                .as_deref()
+                .ok_or_else(|| Error::Manifest {
+                    message: "stale-default recovery requires a verified default revision".into(),
+                })?;
+        if git::revision(root, &state.identity.default_branch)? == verified {
+            return Err(Error::Manifest {
+                message: "default branch still matches BUILD verification".into(),
+            });
+        }
+    }
     let gates = GateEvidence {
         human_scope_approved: human_authorized && matches!(transition, Transition::ApproveScope),
         requirements_review_clean: plan_text
@@ -1178,7 +1206,9 @@ fn transition_locked(
             &["Human scope approval: approved.".into()],
         )?);
     }
-    if matches!(transition, Transition::RejectAcceptance) {
+    if matches!(transition, Transition::RejectAcceptance)
+        || matches!(transition, Transition::RecoverStaleDefault) && phase == Phase::Accept
+    {
         edits.push(invalidate_final_evidence_edit(&plan_text)?);
     }
     if matches!(next, Phase::Done | Phase::Abandoned) {
@@ -1208,7 +1238,7 @@ fn transition_locked(
             });
         }
     }
-    if matches!(transition, Transition::RecoverStaleDefault) {
+    if matches!(transition, Transition::RecoverStaleDefault) && phase == Phase::Done {
         reopen_stale_closure(root, &state.identity)?;
     } else if matches!(next, Phase::Done | Phase::Abandoned) {
         close_records(root, &state.identity, next, abandonment_reason)?;
