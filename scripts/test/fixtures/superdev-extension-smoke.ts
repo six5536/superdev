@@ -1,4 +1,4 @@
-import superdev, { parseRoleResult } from "../../../.pi/extensions/superdev/index.ts";
+import superdev, { isolatedRoleMayNotRun, parseRoleResult } from "../../../.pi/extensions/superdev/index.ts";
 
 export default function smoke() {
 	const commands: string[] = [];
@@ -31,6 +31,23 @@ export default function smoke() {
 	if (!tools.includes("superdev_isolated_role")) throw new Error("missing isolated role tool");
 	if (!tools.includes("superdev_review_diff")) throw new Error("missing read-only review diff tool");
 	if (!tools.includes("superdev_workflow_control")) throw new Error("missing UI-gated workflow control tool");
+	for (const command of [
+		"superdev workflow evidence",
+		"superdev workflow correction",
+		"superdev workflow sync",
+		"superdev workflow transition",
+		"superdev workflow integrate",
+	]) {
+		if (!isolatedRoleMayNotRun(command)) throw new Error(`isolated role may bypass ${command}`);
+	}
+	for (const command of [
+		"superdev workflow block",
+		"superdev workflow attempt",
+		"superdev workflow correction-checkpoint",
+		"superdev workflow status",
+	]) {
+		if (isolatedRoleMayNotRun(command)) throw new Error(`isolated role cannot perform ${command}`);
+	}
 	const clean = parseRoleResult(
 		"code-review",
 		'analysis\nSUPERDEV_RESULT {"status":"clean","summary":"No actionable findings."}',

@@ -165,6 +165,10 @@ async function isolated(
 	});
 }
 
+export function isolatedRoleMayNotRun(command: string): boolean {
+	return /\bsuperdev\s+workflow\s+(?:start|resume|cancel|record-evidence|evidence|sync|correction(?!-checkpoint)|transition|integrate|abandon)\b/.test(command);
+}
+
 export default function superdev(pi: ExtensionAPI) {
 	const childRole = process.env.SUPERDEV_CHILD_ROLE;
 	pi.on("tool_call", (event) => {
@@ -174,7 +178,7 @@ export default function superdev(pi: ExtensionAPI) {
 		}
 		if (event.toolName === "bash") {
 			const command = String((event.input as { command?: unknown }).command ?? "");
-			if (/\bsuperdev\s+workflow\s+(?:record-evidence|transition|integrate|abandon)\b/.test(command)) {
+			if (isolatedRoleMayNotRun(command)) {
 				return { block: true, reason: "isolated roles cannot perform authoritative workflow transitions", terminate: true };
 			}
 		}
