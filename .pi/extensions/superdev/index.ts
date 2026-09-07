@@ -1,8 +1,9 @@
 import { spawn, type ChildProcess } from "node:child_process";
 import { createHash, randomBytes } from "node:crypto";
 import { constants } from "node:fs";
-import { access, open, readFile } from "node:fs/promises";
-import { delimiter, dirname, isAbsolute, resolve } from "node:path";
+import { access, mkdtemp, open, readFile, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { delimiter, dirname, isAbsolute, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { StringEnum } from "@earendil-works/pi-ai";
@@ -196,10 +197,19 @@ type BuildExec = (command: string, args: string[], cwd: string) => Promise<ExecR
 
 export async function runPinnedSuperdev(path: string, digest: string | undefined, args: string[], cwd: string, signal?: AbortSignal, environment?: Record<string, string>): Promise<ExecResult & { digest: string }> {
 	if (process.platform !== "linux") throw new Error("pinned BUILD service execution currently requires Linux /proc file descriptors");
-	const executable = await open(path, "r");
+	const source = await open(path, "r");
+	let bytes: Buffer;
+	try { bytes = await source.readFile(); } finally { await source.close(); }
+	const observed = createHash("sha256").update(bytes).digest("hex");
+	if (digest && observed !== digest) throw new Error("BUILD service executable changed after the parent pinned it");
+
+	const directory = await mkdtemp(join(tmpdir(), "superdev-exec-"));
+	const privatePath = join(directory, "service");
+	const writer = await open(privatePath, "wx", 0o500);
+	try { await writer.writeFile(bytes); await writer.sync(); } finally { await writer.close(); }
+	const executable = await open(privatePath, "r");
+	await rm(privatePath);
 	try {
-		const observed = createHash("sha256").update(await executable.readFile()).digest("hex");
-		if (digest && observed !== digest) throw new Error("BUILD service executable changed after the parent pinned it");
 		const result = await new Promise<ExecResult>((accept, reject) => {
 			const child = spawn("/proc/self/fd/3", args, {
 				cwd,
@@ -223,6 +233,7 @@ export async function runPinnedSuperdev(path: string, digest: string | undefined
 		return { ...result, digest: observed };
 	} finally {
 		await executable.close();
+		await rm(directory, { recursive: true, force: true });
 	}
 }
 
