@@ -121,6 +121,8 @@ Current block: 2. Attempts: 1. Final corrections: 0. Blocker: the latest isolate
 
 Block 2: repository workflow transactions retain the cache lock across canonical publication and ownership CAS so concurrent sessions cannot observe or overwrite half-applied progress. A rejected ACCEPT transition updates the plan and primary issue in one staged knowledge publication.
 
+Block 3: every isolated role must terminate with role-specific `SUPERDEV_RESULT` JSON; the extension rejects missing, malformed, contradictory, or out-of-vocabulary results before orchestration can consume them. Owned sessions block switch and fork, and child tool preflight enforces read-only reviewer roles and prohibits authoritative transitions.
+
 ## Follow-up issues
 
 none.
