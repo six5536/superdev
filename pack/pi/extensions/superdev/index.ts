@@ -355,6 +355,7 @@ export default function superdev(pi: ExtensionAPI) {
 		executable?: string;
 	};
 	const workflowStatus = async (cwd: string): Promise<WorkflowStatus> => {
+		if (process.env.SUPERDEV_VERIFICATION_ACTIVE === "1") return {};
 		try {
 			const service = await ensureParentService(cwd);
 			const result = await runPinnedSuperdev(service.path, service.digest, ["workflow", "status", "--json"], cwd);

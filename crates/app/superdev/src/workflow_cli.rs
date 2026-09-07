@@ -1733,6 +1733,7 @@ fn run_verification_command(root: &Path, command: &str) -> Result<()> {
     };
     let status = process
         .current_dir(root)
+        .env("SUPERDEV_VERIFICATION_ACTIVE", "1")
         .stdin(Stdio::null())
         .stdout(Stdio::null())
         .stderr(Stdio::null())
