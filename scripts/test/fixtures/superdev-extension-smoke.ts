@@ -46,11 +46,8 @@ export default async function smoke() {
 	if (isolatedTools("build").split(",").includes("bash")) throw new Error("BUILD child has direct shell access");
 	if (!isolatedTools("build").split(",").includes("superdev_build_exec")) throw new Error("BUILD child cannot execute bounded evidence");
 	if (buildCommandAllowed("sh", ["-c", "mutate Git"])) throw new Error("BUILD can escape through a shell");
-	if (buildCommandAllowed("./script", [])) throw new Error("BUILD can escape through an unbounded executable path");
-	if (!buildCommandAllowed("just", ["check"])) throw new Error("BUILD cannot run a project-declared executable");
-	if (buildCommandAllowed("git", ["-C", ".", "commit"])) throw new Error("BUILD can bypass Git operation checks");
-	if (buildCommandAllowed("git", ["commit"])) throw new Error("BUILD can commit directly");
-	if (!buildCommandAllowed("git", ["diff", "--check"])) throw new Error("BUILD cannot inspect Git");
+	if (buildCommandAllowed("cargo", ["test"])) throw new Error("BUILD can bypass Rust-owned verification");
+	if (buildCommandAllowed("git", ["diff", "--check"])) throw new Error("BUILD can invoke Git directly");
 	if (!buildCommandAllowed("superdev", ["workflow", "block"])) throw new Error("BUILD cannot publish a block checkpoint");
 	if (buildCommandAllowed("superdev", ["file"])) throw new Error("BUILD can escape through an unrelated service command");
 	if (buildCommandAllowed("superdev", ["workflow", "transition"])) throw new Error("BUILD can transition workflow state");
@@ -73,27 +70,15 @@ export default async function smoke() {
 	} catch (error) {
 		if (String(error).includes("unstructured review was accepted")) throw error;
 	}
-	const ok = (stdout = "") => ({ code: 0, stdout, stderr: "" });
-	const stable = [ok("aaa\n"), ok("checked\n"), ok("aaa\n")];
-	const stableResult = await runGuardedBuildCommand(async () => stable.shift()!, "just", ["check"], "/repo");
-	if (stableResult.stdout !== "checked\n") throw new Error("guarded BUILD result was lost");
-	const movedCalls: string[][] = [];
-	const moved = [ok("aaa\n"), ok(), ok("bbb\n"), ok()];
+	const checkpoint = await runGuardedBuildCommand(async (command, args, cwd) => {
+		if (command !== "superdev" || args.join(" ") !== "workflow block" || cwd !== "/repo") throw new Error("BUILD service command changed");
+		return { code: 0, stdout: "checkpointed\n", stderr: "" };
+	}, "superdev", ["workflow", "block"], "/repo");
+	if (checkpoint.stdout !== "checkpointed\n") throw new Error("BUILD checkpoint result was lost");
 	try {
-		await runGuardedBuildCommand(async (command, args) => {
-			movedCalls.push([command, ...args]);
-			return moved.shift()!;
-		}, "cargo", ["test"], "/repo");
-		throw new Error("moved BUILD HEAD was accepted");
+		await runGuardedBuildCommand(async () => ({ code: 0, stdout: "", stderr: "" }), "cargo", ["test"], "/repo");
+		throw new Error("direct BUILD executable was accepted");
 	} catch (error) {
-		if (!String(error).includes("attempted to mutate Git history")) throw error;
-	}
-	if (movedCalls.at(-1)?.join(" ") !== "git update-ref HEAD aaa bbb") throw new Error("moved BUILD HEAD was not rolled back by CAS");
-	const rollbackFailure = [ok("aaa\n"), ok(), ok("bbb\n"), { code: 1, stdout: "", stderr: "stale" }];
-	try {
-		await runGuardedBuildCommand(async () => rollbackFailure.shift()!, "npm", ["test"], "/repo");
-		throw new Error("BUILD rollback failure was accepted");
-	} catch (error) {
-		if (!String(error).includes("rollback failed")) throw error;
+		if (!String(error).includes("not permitted")) throw error;
 	}
 }

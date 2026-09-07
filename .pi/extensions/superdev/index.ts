@@ -178,12 +178,9 @@ export function isolatedRoleMayNotRun(command: string): boolean {
 }
 
 export function buildCommandAllowed(command: string, args: string[]): boolean {
-	if (!/^[A-Za-z0-9_.+-]+$/.test(command) || ["bash", "sh", "zsh", "fish", "pwsh", "powershell", "cmd"].includes(command)) return false;
-	if (command === "git" && !["diff", "status", "show", "rev-parse", "merge-base", "ls-files"].includes(args[0] ?? "")) return false;
-	if (command === "superdev") {
-		return args[0] === "workflow" && ["block", "attempt", "correction-checkpoint", "status"].includes(args[1] ?? "");
-	}
-	return true;
+	return command === "superdev"
+		&& args[0] === "workflow"
+		&& ["block", "attempt", "correction-checkpoint", "status"].includes(args[1] ?? "");
 }
 
 type ExecResult = { code: number; stdout: string; stderr: string };
@@ -191,20 +188,7 @@ type BuildExec = (command: string, args: string[], cwd: string) => Promise<ExecR
 
 export async function runGuardedBuildCommand(exec: BuildExec, command: string, args: string[], cwd: string): Promise<ExecResult> {
 	if (!buildCommandAllowed(command, args)) throw new Error(`BUILD executable or operation is not permitted: ${command}`);
-	const serviceCommand = command === "superdev";
-	const before = serviceCommand ? undefined : await exec("git", ["rev-parse", "--verify", "HEAD"], cwd);
-	if (before && before.code !== 0) throw new Error("could not capture the BUILD command baseline");
-	const result = await exec(command, args, cwd);
-	if (before) {
-		const after = await exec("git", ["rev-parse", "--verify", "HEAD"], cwd);
-		if (after.code !== 0 || after.stdout.trim() !== before.stdout.trim()) {
-			if (after.code !== 0) throw new Error("BUILD command changed HEAD and its new value could not be resolved");
-			const rollback = await exec("git", ["update-ref", "HEAD", before.stdout.trim(), after.stdout.trim()], cwd);
-			if (rollback.code !== 0) throw new Error("BUILD command changed HEAD and rollback failed");
-			throw new Error("BUILD command attempted to mutate Git history");
-		}
-	}
-	return result;
+	return exec(command, args, cwd);
 }
 
 export default function superdev(pi: ExtensionAPI) {
@@ -254,7 +238,7 @@ export default function superdev(pi: ExtensionAPI) {
 	pi.registerTool({
 		name: "superdev_build_exec",
 		label: "Superdev BUILD command",
-		description: "Run one shell-free BUILD verification or service checkpoint command",
+		description: "Run one BUILD-owned Rust checkpoint, attempt, correction checkpoint, or status command",
 		parameters: Type.Object({
 			command: Type.String(),
 			args: Type.Array(Type.String()),
@@ -268,7 +252,7 @@ export default function superdev(pi: ExtensionAPI) {
 				ctx.cwd,
 			);
 			if (result.code !== 0) throw new Error(result.stderr.trim() || `${input.command} exited ${result.code}`);
-			return { content: [{ type: "text", text: result.stdout || "Command completed." }], details: { shellFree: true, canonicalEvidence: false } };
+			return { content: [{ type: "text", text: result.stdout || "Command completed." }], details: { shellFree: true, serviceOwned: true } };
 		},
 	});
 	if (childRole) return;
