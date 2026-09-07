@@ -4,7 +4,7 @@ id: plan-059-scope-build-accept-workflow
 title: Scope build accept workflow
 description: Replace contradictory agent workflows with one durable Rust-owned SCOPE to BUILD to ACCEPT process orchestrated by Pi.
 lifecycle: open
-phase: scope
+phase: build
 branch: work/059-scope-build-accept-workflow
 links:
   - rel: implements
@@ -173,6 +173,8 @@ The root specification was explicitly approved before commit `83e04ea`, and an i
 Scope product baseline: 887bc928731312a0b0033727fa34ca072502a9d6.
 
 Scope requirements review: clean by isolated session 3f9e4eda2d09a77e145e9baf714ca75c8af43958c82b09f3.
+
+Human scope approval: approved.
 
 <!-- sokf:links -->
 [sokf:issue-059-scope-build-accept-workflow]: /knowledge/issues/open/issue-059-scope-build-accept-workflow.md
