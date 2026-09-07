@@ -1,4 +1,7 @@
-import superdev, { buildCommandAllowed, isolatedRoleMayNotRun, isolatedTools, parseRoleResult, runGuardedBuildCommand } from "../../../.pi/extensions/superdev/index.ts";
+import { createHash } from "node:crypto";
+import { readFile } from "node:fs/promises";
+
+import superdev, { buildCommandAllowed, isolatedRoleMayNotRun, isolatedTools, parseRoleResult, runGuardedBuildCommand, runPinnedSuperdev } from "../../../.pi/extensions/superdev/index.ts";
 
 export default async function smoke() {
 	const commands: string[] = [];
@@ -80,5 +83,16 @@ export default async function smoke() {
 		throw new Error("direct BUILD executable was accepted");
 	} catch (error) {
 		if (!String(error).includes("not permitted")) throw error;
+	}
+	if (process.platform === "linux") {
+		const digest = createHash("sha256").update(await readFile(process.execPath)).digest("hex");
+		const pinned = await runPinnedSuperdev(process.execPath, digest, ["-e", "process.stdout.write('pinned')"], process.cwd());
+		if (pinned.code !== 0 || pinned.stdout !== "pinned") throw new Error("descriptor-pinned executable did not run");
+		try {
+			await runPinnedSuperdev(process.execPath, "0".repeat(64), ["--version"], process.cwd());
+			throw new Error("pinned executable accepted a stale digest");
+		} catch (error) {
+			if (!String(error).includes("changed after the parent pinned it")) throw error;
+		}
 	}
 }

@@ -1,6 +1,6 @@
 import { spawn, type ChildProcess } from "node:child_process";
 import { createHash, randomBytes } from "node:crypto";
-import { readFile } from "node:fs/promises";
+import { open, readFile } from "node:fs/promises";
 import { dirname, isAbsolute, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
@@ -192,6 +192,36 @@ export function buildCommandAllowed(command: string, args: string[]): boolean {
 type ExecResult = { code: number; stdout: string; stderr: string };
 type BuildExec = (command: string, args: string[], cwd: string) => Promise<ExecResult>;
 
+export async function runPinnedSuperdev(path: string, digest: string, args: string[], cwd: string, signal?: AbortSignal): Promise<ExecResult> {
+	if (process.platform !== "linux") throw new Error("pinned BUILD service execution currently requires Linux /proc file descriptors");
+	const executable = await open(path, "r");
+	try {
+		const observed = createHash("sha256").update(await executable.readFile()).digest("hex");
+		if (observed !== digest) throw new Error("BUILD service executable changed after the parent pinned it");
+		return await new Promise((accept, reject) => {
+			const child = spawn("/proc/self/fd/3", args, {
+				cwd,
+				shell: false,
+				stdio: ["ignore", "pipe", "pipe", executable.fd],
+			});
+			let stdout = "";
+			let stderr = "";
+			child.stdout.setEncoding("utf8");
+			child.stderr.setEncoding("utf8");
+			child.stdout.on("data", (chunk: string) => { stdout = (stdout + chunk).slice(-1_000_000); });
+			child.stderr.on("data", (chunk: string) => { stderr = (stderr + chunk).slice(-100_000); });
+			child.on("error", reject);
+			child.on("close", (code) => accept({ code: code ?? 2, stdout, stderr }));
+			if (signal) {
+				const stop = () => child.kill("SIGTERM");
+				if (signal.aborted) stop(); else signal.addEventListener("abort", stop, { once: true });
+			}
+		});
+	} finally {
+		await executable.close();
+	}
+}
+
 export async function runGuardedBuildCommand(exec: BuildExec, command: string, args: string[], cwd: string): Promise<ExecResult> {
 	if (!buildCommandAllowed(command, args)) throw new Error(`BUILD executable or operation is not permitted: ${command}`);
 	return exec(command, args, cwd);
@@ -249,15 +279,13 @@ export default function superdev(pi: ExtensionAPI) {
 			command: Type.String(),
 			args: Type.Array(Type.String()),
 		}),
-		execute: async (_id, input: { command: string; args: string[] }, _signal, _update, ctx) => {
+		execute: async (_id, input: { command: string; args: string[] }, signal, _update, ctx) => {
 			if (childRole !== "build") throw new Error("BUILD command execution is available only to the BUILD role");
 			const trustedExecutable = process.env.SUPERDEV_TRUSTED_EXECUTABLE;
 			const trustedDigest = process.env.SUPERDEV_TRUSTED_EXECUTABLE_SHA256;
 			if (!trustedExecutable || !isAbsolute(trustedExecutable) || !trustedDigest) throw new Error("BUILD service executable is not pinned by the parent");
-			const observedDigest = createHash("sha256").update(await readFile(trustedExecutable)).digest("hex");
-			if (observedDigest !== trustedDigest) throw new Error("BUILD service executable changed after the parent pinned it");
 			const result = await runGuardedBuildCommand(
-				async (_command, args, cwd) => pi.exec(trustedExecutable, args, { cwd }),
+				async (_command, args, cwd) => runPinnedSuperdev(trustedExecutable, trustedDigest, args, cwd, signal),
 				input.command,
 				input.args,
 				ctx.cwd,
