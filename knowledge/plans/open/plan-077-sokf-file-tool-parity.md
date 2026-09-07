@@ -70,7 +70,7 @@ Primary implementation and evidence files are `.pi/extensions/sokf.ts`, `.pi/ext
 
 ## Knowledge changes
 
-Add `contract-012-api-sokf-pi-file-tools` and `adr-053-sokf-file-tools-delegate-to-pi`. Update `contract-003-api-sokf`, `architecture`, `software-components`, `testing-strategy`, `development-commands`, and `error-handling` after implementation. The contract and architecture must describe `sokf_resolve_source`, `sokf_retrieve`, the removal of `sokf_read`, and the compare-and-swap `sokf_edit` schema. Keep the issue and this plan current through BUILD evidence and acceptance. Let validation regenerate contract, ADR, issue, and plan indexes and all source include and link blocks.
+Add `contract-012-api-sokf-pi-file-tools` and `adr-053-sokf-file-tools-delegate-to-pi`. Update `contract-003-api-sokf`, `architecture`, `software-components`, `testing-strategy`, `development-commands`, and `error-handling` after implementation. Update `idea-012-sokf-mutations-survive-validation-failures` with the settled post-persistence cancellation behavior, and link `issue-077-sokf-file-tool-parity` to that originating idea with `references`. The contract and architecture must describe `sokf_resolve_source`, `sokf_retrieve`, the removal of `sokf_read`, and the compare-and-swap `sokf_edit` schema. Keep the idea, issue, and this plan current through BUILD evidence and acceptance. Let validation regenerate contract, ADR, idea, issue, and plan indexes and all source include and link blocks.
 
 Remove `/SOKF-EDIT-RELIABILITY-PLAN.md` in the final documentation block. The canonical issue, plan, contracts, and ADR become the durable record of its parity, architecture, work plan, files, verification, and acceptance intent.
 
@@ -136,7 +136,7 @@ The documentation map triggers the following surfaces.
 
 - [ ] Done.
 - Dependencies: Blocks 1, 2, 3, and 4.
-- Areas: `/README.md`, `/CONTRIBUTING.md`, `/CHANGELOG.md`, `/SOKF-EDIT-RELIABILITY-PLAN.md`, `architecture`, `software-components`, `testing-strategy`, `development-commands`, `error-handling`, all changed contracts and ADRs, and generated indexes.
+- Areas: `/README.md`, `/CONTRIBUTING.md`, `/CHANGELOG.md`, `/SOKF-EDIT-RELIABILITY-PLAN.md`, `idea-012-sokf-mutations-survive-validation-failures`, `issue-077-sokf-file-tool-parity`, `architecture`, `software-components`, `testing-strategy`, `development-commands`, `error-handling`, all changed contracts and ADRs, and generated indexes.
 - Outcome: public and canonical documentation describe the implemented behavior, the obsolete root proposal is gone, every pending contract marker is removed, and focused plus complete suites pass.
 - Verification: `cargo fmt --all -- --check && cargo clippy --workspace --all-targets -- -D warnings && cargo nextest run --workspace && cargo test --doc --workspace && RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps && npm run test:launcher && npm run test:scripts && npm run verify-version && npm run check:docs && npm run check:validate && npm run check:blueprint && npm run coverage:check && cargo deny check licenses bans sources`.
 - Tests: `cargo test -p superdev-core sokf`, `cargo test -p superdev-core --test mcp_tools`, `node --test scripts/test/sokf-pi-adapter.test.mjs`, and `node --test scripts/test/sokf-mcp-client.test.mjs` remain named focused evidence for all parity contract criteria.

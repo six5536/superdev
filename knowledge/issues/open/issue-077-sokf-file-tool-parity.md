@@ -5,6 +5,10 @@ title: SOKF-routed file tools diverge from Pi's built-in contracts
 description: SOKF-routed read, edit, and write return different source, result, error, diff, rendering, and prompt behaviour from Pi's built-in file tools, making targeted knowledge edits fragile and expensive in model context.
 kind: feature
 lifecycle: open
+links:
+  - rel: references
+    to: idea-012-sokf-mutations-survive-validation-failures
+    note: Originating mutation-survival idea; this issue settles the post-persistence cancellation behavior.
 ---
 
 # Feature: SOKF-routed file tools match Pi's built-in contracts
@@ -14,6 +18,10 @@ lifecycle: open
 Agents need `read`, `edit`, and `write` to retain Pi's built-in contracts when a path routes through SOKF. Current routing makes targeted knowledge edits fragile, returns oversized mutation internals, and creates a second file-tool user experience.
 
 ## Context
+
+The [SOKF mutations survive validation failures][sokf:idea-012-sokf-mutations-survive-validation-failures]
+idea originated the mutation-survival requirement. This issue settles the
+idea's post-persistence cancellation behavior.
 
 `SOKF-EDIT-RELIABILITY-PLAN.md` records the observed gaps and the proposed parity boundary. Repository inspection confirms each gap. Virtual reads use `SokfService::read_path()` and return rendered concepts. The Pi edit adapter reconstructs a display diff from `MutationResult`, while `whole_file_diff()` marks every old and new line as changed. Edit and write return the MCP mutation JSON as model-visible content. Custom file-tool metadata replaces Pi's built-in prompt text.
 
@@ -41,3 +49,6 @@ A caller using a physical path or an equivalent SOKF identity observes the same 
 The work covers the Pi SOKF adapter, the SOKF MCP tool list and schemas required to separate exact-source routing from semantic retrieval, the SOKF service and mutation boundary, parity tests, bounded repair reporting, generated-content rejection, prompt metadata, existing shipped and materialized copies, packaging lock updates, and affected documentation and canonical knowledge. MCP compatibility changes are limited to removing the mixed-purpose `sokf_read`, adding source resolution, naming semantic retrieval `sokf_retrieve`, and narrowing mutation transport or diagnostics when parity requires it.
 
 The work excludes a semantic retrieval dialect in the Pi `read` slot, changes to semantic ranking or rendered retrieval content, unrelated MCP transport or lifecycle changes, approximate forks of Pi's algorithms, whole-file rewrites as automatic recovery from failed targeted edits, a new extension packaging model, and any weakening of SOKF safety or final validation.
+
+<!-- sokf:links -->
+[sokf:idea-012-sokf-mutations-survive-validation-failures]: /knowledge/ideas/idea-012-sokf-mutations-survive-validation-failures.md
