@@ -469,6 +469,7 @@ fn workflow_start_creates_a_canonical_scope_plan_and_resume_adopts_it() {
     for diagnostics in [
         "tests   failed at src/lib.rs",
         " tests failed at src/lib.rs ",
+        "tests failed   at src/lib.rs",
     ] {
         let revision = cache::load(dir.path()).unwrap().unwrap().last_plan_revision;
         Command::cargo_bin("superdev")
@@ -491,15 +492,65 @@ fn workflow_start_creates_a_canonical_scope_plan_and_resume_adopts_it() {
             .assert()
             .success();
     }
-    let attempted = fs::read_to_string(&plan).unwrap();
-    assert!(attempted.contains("Attempts: 2."));
-    assert!(attempted.contains("Fingerprint: "));
+    let stalled = fs::read_to_string(&plan).unwrap();
+    assert!(stalled.contains("Attempts: 3."));
+    assert!(stalled.contains("Fingerprint: "));
+    assert!(stalled.contains("Blocker: stalled after 3 equivalent failures"));
     assert_ne!(git::revision(dir.path(), "HEAD").unwrap(), attempt_head);
+    let stalled_head = git::revision(dir.path(), "HEAD").unwrap();
+    let stalled_revision = cache::load(dir.path()).unwrap().unwrap().last_plan_revision;
+    Command::cargo_bin("superdev")
+        .unwrap()
+        .current_dir(dir.path())
+        .args([
+            "workflow",
+            "attempt",
+            "--session",
+            "pi-b",
+            "--expected-revision",
+            &stalled_revision,
+            "--command",
+            "cargo test",
+            "--exit-status",
+            "1",
+            "--diagnostics",
+            "tests failed at src/lib.rs",
+        ])
+        .assert()
+        .failure();
+    assert_eq!(git::revision(dir.path(), "HEAD").unwrap(), stalled_head);
+    assert_eq!(
+        cache::load(dir.path()).unwrap().unwrap().last_plan_revision,
+        stalled_revision
+    );
+
+    Command::cargo_bin("superdev")
+        .unwrap()
+        .current_dir(dir.path())
+        .args([
+            "workflow",
+            "attempt",
+            "--session",
+            "pi-b",
+            "--expected-revision",
+            &stalled_revision,
+            "--command",
+            "cargo test",
+            "--exit-status",
+            "1",
+            "--diagnostics",
+            "a new failure",
+        ])
+        .assert()
+        .success();
+    let attempted = fs::read_to_string(&plan).unwrap();
+    assert!(attempted.contains("Attempts: 1."));
+    assert!(attempted.contains("Blocker: retrying after failure"));
 
     let expected = cache::load(dir.path()).unwrap().unwrap().last_plan_revision;
     let tampered = attempted
         .replace("- [ ] Done.", "- [x] Done.")
-        .replace("Attempts: 2.", "Attempts: 0.")
+        .replace("Attempts: 1.", "Attempts: 0.")
         .replace("- Areas: to be settled by SCOPE.", "- Areas: `src`.")
         .replace(
             "- Verification: executable commands must be settled by SCOPE.",
