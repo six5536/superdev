@@ -4,7 +4,7 @@ id: plan-059-scope-build-accept-workflow
 title: Scope build accept workflow
 description: Replace contradictory agent workflows with one durable Rust-owned SCOPE to BUILD to ACCEPT process orchestrated by Pi.
 lifecycle: open
-phase: build
+phase: scope
 branch: work/059-scope-build-accept-workflow
 links:
   - rel: implements
@@ -137,11 +137,7 @@ none.
 
 The root specification was explicitly approved before commit `83e04ea`, and an isolated requirements pass reported no unresolved requirement before BUILD. Rejected candidates through `1e8f20e` were superseded. Service-owned checkpoints completed Blocks 2 through 5 after their exact Verification commands passed. The full Rust workspace, 854-test npm matrix, formatting, clippy, documentation, SOKF validation, pack parity, standalone Pi smoke, and diff checks pass. Fresh immutable review run `fabfbef210cc6ac658eed6036a8dc9bde11210722952e0b1` reported no actionable finding for candidate `2571c058b69e84fedc4f4306a01152feaf837041`. Three subsequent bounded final reviews identified and drove corrections for integration ref races, predictable cache temporary files, checked-out default synchronization, and symlinked cache ancestors. Exhaustion returned the same workflow to SCOPE at product baseline `e92d9e3f005690d56453f79aaa1296106040c0e3` so Block 6 can implement the final two findings under a freshly approved correction budget.
 
-Scope product baseline: e92d9e3f005690d56453f79aaa1296106040c0e3.
-
-Scope requirements review: clean by isolated session 7d143a819ea834717694974929ef5a0a0e72b163a064a144.
-
-Human scope approval: approved.
+Scope product baseline: 99d9f42b8b11543a40bef210342ef73ba7db3de9.
 
 <!-- sokf:links -->
 [sokf:issue-059-scope-build-accept-workflow]: /knowledge/issues/open/issue-059-scope-build-accept-workflow.md
