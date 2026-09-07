@@ -93,7 +93,7 @@ The canonical-knowledge surface covers ADRs, contracts, schemas, procedures, con
 
 ### Block 5: Complete safe filing, packaging, archival, and migration surfaces
 
-- [ ] Done.
+- [x] Done.
 - Dependencies: Blocks 2 and 3.
 - Areas: filing service, pack manifests and assets, archive, launchers, indexes, configuration, and migration tests.
 - Outcome: `/file` remains independently transactional and race-safe; Pi assets ship from first-class pack sources; Claude assets remain archived and inactive; configuration and indexes are current.
@@ -115,7 +115,7 @@ The canonical-knowledge surface covers ADRs, contracts, schemas, procedures, con
 
 ## Build state
 
-Current block: 5. Attempts: 0. Final corrections: 0. Fingerprint: none. Blocker: none.
+Current block: 6. Attempts: 0. Final corrections: 0. Fingerprint: none. Blocker: none.
 
 ## Implementation decisions
 
