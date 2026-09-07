@@ -33,6 +33,7 @@ The replacement covers the complete local development workflow and its managed a
 - [x] BUILD discovery: Final review after correction exhaustion found that integration can leave an already-checked-out default worktree stale and cache operations allow a symlinked private parent directory; re-scope Block 6 to address both findings.
 - [x] BUILD discovery: Block 6 checkpoint correctly refused the final correction because its SCOPE-approved Areas did not explicitly include the Rust workflow paths and primary issue record; re-scope only the Areas metadata needed for the approved corrections.
 - [x] BUILD discovery: Final review found the cache symlink checks remain check-then-use raceable; re-scope Block 6 to permit a descriptor-relative no-follow filesystem dependency and Cargo lockfile changes for atomic cache access.
+- [ ] BUILD discovery: Preserve all execution history and Block 6. Permit the final integration correction in crates/lib/superdev-core/src/workflow/git.rs and its existing tests: construct the prepared tree before publication, reserve the default branch through a worktree, synchronize the primary worktree to the prepared candidate before CAS, and make the immutable two-ref CAS the final fallible integration operation so no post-publication cleanup or checkout can fail.
 ## Comments
 
 The bootstrap implementation specification is `SCOPE-BUILD-ACCEPT-IMPLEMENTATION-PLAN.md`; it intentionally predates the plan schema it installs.
