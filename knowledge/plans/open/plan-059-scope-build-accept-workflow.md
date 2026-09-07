@@ -119,7 +119,7 @@ Current block: 2. Attempts: 1. Final corrections: 0. Blocker: the latest isolate
 
 ## Implementation decisions
 
-Block 2: repository workflow transactions retain the cache lock across canonical publication and ownership CAS so concurrent sessions cannot observe or overwrite half-applied progress. A rejected ACCEPT transition updates the plan and primary issue in one staged knowledge publication.
+Block 2: repository workflow transactions retain the cache lock across canonical publication and ownership CAS so concurrent sessions cannot observe or overwrite half-applied progress. A rejected ACCEPT transition updates the plan and primary issue in one staged knowledge publication. Human-gated transitions no longer accept approval flags: Rust verifies an in-memory Pi capability against the owning cache digest, while the parent-only control tool releases it only after trusted UI confirmation. Review evidence consumes a single-use extension-issued run bound to fixed base/candidate revisions, and Rust reruns every executable plan Verification command before recording final evidence.
 
 Block 3: every isolated role must terminate with role-specific `SUPERDEV_RESULT` JSON; the extension rejects missing, malformed, contradictory, or out-of-vocabulary results before orchestration can consume them. Owned sessions block switch and fork, and child tool preflight enforces read-only reviewer roles and prohibits authoritative transitions.
 
