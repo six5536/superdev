@@ -1681,6 +1681,34 @@ fn the_plan_orders_a_contract_gap_first() {
         );
     }
 }
+/// First-class Pi assets are byte-identical to their pack sources and the
+/// committed lock describes those exact materialized bytes.
+#[test]
+fn packed_pi_assets_and_their_lock_hashes_are_synchronized() {
+    let lock = superdev_core::lock::Lock::load(&repo(".")).unwrap();
+    for relative in [
+        "extensions/superdev/index.ts",
+        "extensions/superdev/prompts/accept.md",
+        "extensions/superdev/prompts/build.md",
+        "extensions/superdev/prompts/code-review.md",
+        "extensions/superdev/prompts/file.md",
+        "extensions/superdev/prompts/orchestrator.md",
+        "extensions/superdev/prompts/requirements-review.md",
+        "extensions/superdev/prompts/scope.md",
+        "skills/sokf-authoring/SKILL.md",
+    ] {
+        let live_path = format!(".pi/{relative}");
+        let live = std::fs::read(repo(&live_path)).unwrap();
+        let packed = std::fs::read(repo(&format!("pack/pi/{relative}"))).unwrap();
+        assert_eq!(live, packed, "{live_path} differs from its pack source");
+        assert_eq!(
+            lock.files.get(&live_path).map(String::as_str),
+            Some(superdev_core::lock::sha256_hex(&live).as_str()),
+            "{live_path} has a stale managed-content hash"
+        );
+    }
+}
+
 /// The independently invocable SOKF authoring capability remains a genuine Pi
 /// skill and is shipped byte-for-byte by the pack.
 #[test]
