@@ -130,32 +130,64 @@ fn commit_paths(root: &Path, message: &str, paths: &[String]) -> Result<String> 
             message: "workflow mutation produced no commit changes".into(),
         });
     }
-    let mut command = Command::new("git");
-    command
-        .args(["add", "--all", "--"])
-        .args(paths)
-        .current_dir(root);
-    let output = command.output().map_err(|source| Error::Command {
-        command: "git add --all -- <workflow paths>".into(),
-        status: None,
-        stderr: source.to_string(),
+
+    // Build the commit through an isolated index. A failed add/tree/commit/ref
+    // operation therefore cannot stage files or otherwise alter the live index.
+    let parent = revision(root, "HEAD")?;
+    let temporary = tempfile::tempdir().map_err(|source| Error::Io {
+        path: root.to_path_buf(),
+        source,
     })?;
-    if !output.status.success() {
-        return Err(Error::Command {
-            command: "git add --all -- <workflow paths>".into(),
+    let index = temporary.path().join("index");
+    git_with_index(root, &index, &["read-tree", &parent])?;
+    let mut add = vec!["add", "--all", "--"];
+    add.extend(paths.iter().map(String::as_str));
+    git_with_index(root, &index, &add)?;
+    let tree_output = git_with_index(root, &index, &["write-tree"])?;
+    let tree = String::from_utf8_lossy(&tree_output.stdout)
+        .trim()
+        .to_string();
+    validate_ref(&tree)?;
+    let commit_output = git_with_index(
+        root,
+        &index,
+        &["commit-tree", &tree, "-p", &parent, "-m", message],
+    )?;
+    let commit = String::from_utf8_lossy(&commit_output.stdout)
+        .trim()
+        .to_string();
+    validate_ref(&commit)?;
+    git(root, &["update-ref", "HEAD", &commit, &parent])?;
+    // Every live-index/worktree change was included above. Align only the
+    // index with the newly published tree; `read-tree` never changes files.
+    git(root, &["read-tree", &commit])?;
+    require_clean(root)?;
+    Ok(commit)
+}
+
+fn git_with_index(root: &Path, index: &Path, args: &[&str]) -> Result<Output> {
+    let output = Command::new("git")
+        .args(args)
+        .env("GIT_INDEX_FILE", index)
+        .current_dir(root)
+        .output()
+        .map_err(|source| Error::Command {
+            command: format!("git {}", args.join(" ")),
+            status: None,
+            stderr: source.to_string(),
+        })?;
+    if output.status.success() {
+        Ok(output)
+    } else {
+        Err(Error::Command {
+            command: format!("git {}", args.join(" ")),
             status: output.status.code(),
             stderr: String::from_utf8_lossy(&output.stderr)
                 .chars()
                 .take(8_000)
                 .collect(),
-        });
+        })
     }
-    git(
-        root,
-        &["commit", "--no-verify", "--no-gpg-sign", "-m", message],
-    )?;
-    require_clean(root)?;
-    revision(root, "HEAD")
 }
 
 /// Commit only canonical knowledge changes produced after a clean-tree preflight.
@@ -475,6 +507,32 @@ mod tests {
                 .unwrap()
                 .stdout
                 .is_empty()
+        );
+    }
+
+    #[test]
+    fn failed_commit_construction_preserves_head_index_and_worktree() {
+        let dir = repository();
+        let root = dir.path();
+        let head = revision(root, "HEAD").unwrap();
+        std::fs::create_dir_all(root.join("knowledge")).unwrap();
+        std::fs::write(root.join("knowledge/record.md"), "pending\n").unwrap();
+        command(root, &["config", "user.name", ""]);
+        command(root, &["config", "user.email", ""]);
+
+        assert!(commit_knowledge_changes(root, "chore: must fail").is_err());
+        assert_eq!(revision(root, "HEAD").unwrap(), head);
+        assert_eq!(
+            std::fs::read_to_string(root.join("knowledge/record.md")).unwrap(),
+            "pending\n"
+        );
+        assert!(
+            Command::new("git")
+                .args(["diff", "--cached", "--quiet"])
+                .current_dir(root)
+                .status()
+                .unwrap()
+                .success()
         );
     }
 
