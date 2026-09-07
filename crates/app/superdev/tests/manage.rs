@@ -701,6 +701,127 @@ fn workflow_start_creates_a_canonical_scope_plan_and_resume_adopts_it() {
             .content_hash
     );
 
+    // Exercise the complete configured human-acceptance and local integration
+    // journey from this ready BUILD state without consuming the retry fixture.
+    let accepted = tempfile::tempdir().unwrap();
+    assert!(
+        std::process::Command::new("cp")
+            .args([
+                "-a",
+                &format!("{}/.", dir.path().display()),
+                accepted.path().to_str().unwrap(),
+            ])
+            .status()
+            .unwrap()
+            .success()
+    );
+    let accepted_owner = cache::load(accepted.path()).unwrap().unwrap();
+    let accepted_candidate = git::revision(accepted.path(), "HEAD").unwrap();
+    let accepted_default = git::revision(accepted.path(), "main").unwrap();
+    Command::cargo_bin("superdev")
+        .unwrap()
+        .current_dir(accepted.path())
+        .env("SUPERDEV_UI_AUTHORITY", "fedcba9876543210fedcba9876543210")
+        .args([
+            "workflow",
+            "evidence",
+            "--session",
+            "pi-b",
+            "--expected-revision",
+            &accepted_owner.last_plan_revision,
+            "--kind",
+            "verification",
+            "--candidate",
+            &accepted_candidate,
+        ])
+        .assert()
+        .success();
+    let accepted_owner = cache::load(accepted.path()).unwrap().unwrap();
+    Command::cargo_bin("superdev")
+        .unwrap()
+        .current_dir(accepted.path())
+        .env("SUPERDEV_UI_AUTHORITY", "fedcba9876543210fedcba9876543210")
+        .args([
+            "workflow",
+            "evidence",
+            "--session",
+            "pi-b",
+            "--expected-revision",
+            &accepted_owner.last_plan_revision,
+            "--kind",
+            "final",
+            "--review-session",
+            "review-final-clean",
+            "--candidate",
+            &accepted_candidate,
+        ])
+        .assert()
+        .success();
+    let accepted_owner = cache::load(accepted.path()).unwrap().unwrap();
+    Command::cargo_bin("superdev")
+        .unwrap()
+        .current_dir(accepted.path())
+        .env("SUPERDEV_UI_AUTHORITY", "fedcba9876543210fedcba9876543210")
+        .args([
+            "workflow",
+            "transition",
+            "--session",
+            "pi-b",
+            "--expected-revision",
+            &accepted_owner.last_plan_revision,
+            "--phase",
+            "accept",
+            "--transition",
+            "accept",
+        ])
+        .assert()
+        .success();
+    let closure = git::revision(accepted.path(), "HEAD").unwrap();
+    Command::cargo_bin("superdev")
+        .unwrap()
+        .current_dir(accepted.path())
+        .args([
+            "workflow",
+            "integrate",
+            "--session",
+            "pi-b",
+            "--default-branch",
+            "main",
+            "--expected-default",
+            &accepted_default,
+            "--work-branch",
+            "work/001-canonical-recovery",
+            "--expected-work",
+            &closure,
+        ])
+        .assert()
+        .success();
+    assert!(cache::load(accepted.path()).unwrap().is_none());
+    assert_eq!(git::current_branch(accepted.path()).unwrap(), "main");
+    let parents = std::process::Command::new("git")
+        .args(["rev-list", "--parents", "-n", "1", "HEAD"])
+        .current_dir(accepted.path())
+        .output()
+        .unwrap();
+    assert_eq!(
+        String::from_utf8_lossy(&parents.stdout)
+            .split_whitespace()
+            .count(),
+        3
+    );
+    assert!(
+        std::process::Command::new("git")
+            .args([
+                "cat-file",
+                "-e",
+                "main:knowledge/plans/done/plan-001-canonical-recovery.md",
+            ])
+            .current_dir(accepted.path())
+            .status()
+            .unwrap()
+            .success()
+    );
+
     for cycle in 1..=3 {
         let owner = cache::load(dir.path()).unwrap().unwrap();
         let candidate = git::revision(dir.path(), "HEAD").unwrap();
