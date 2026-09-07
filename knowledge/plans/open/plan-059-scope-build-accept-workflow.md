@@ -146,9 +146,20 @@ The canonical-knowledge surface covers ADRs, contracts, schemas, procedures, con
 - Structural evidence: final evidence derives from completed blocks, fresh candidate-bound verification, and a clean candidate-bound review; correction accounting remains service-owned and unchanged.
 - Documentation: canonical knowledge is updated by this plan; run validation.
 
+### Block 10: Resolve completed re-scope discoveries
+
+- [ ] Done.
+- Dependencies: Block 9.
+- Areas: `knowledge/issues/open/issue-059-scope-build-accept-workflow.md`.
+- Outcome: the four discoveries implemented through Blocks 7 through 9 are marked resolved without changing product behavior or erasing their history.
+- Verification: `cargo fmt --all -- --check`, `cargo clippy --workspace --all-targets -- -D warnings`, `cargo test --workspace --all-targets`, `npm test`, `npm run check:docs`, `cargo run -- validate --warnings`, `cargo run -- sync --dry-run`, and `git diff --check`.
+- Tests: final attestation's unresolved-discovery gate passes only after every completed discovery is explicitly resolved.
+- Structural evidence: issue history remains verbatim except for checked resolution state.
+- Documentation: canonical knowledge is updated by this issue; run validation.
+
 ## Build state
 
-Current block: 9. Attempts: 0. Final corrections: 3. Fingerprint: none. Blocker: none.
+Current block: 10. Attempts: 0. Final corrections: 3. Fingerprint: none. Blocker: none.
 
 ## Implementation decisions
 
