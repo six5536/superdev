@@ -115,7 +115,7 @@ The canonical-knowledge surface covers ADRs, contracts, schemas, procedures, con
 
 ## Build state
 
-Current block: 6. Attempts: 0. Final corrections: 0. Fingerprint: none. Blocker: none.
+Current block: 6. Attempts: 0. Final corrections: 1. Fingerprint: none. Blocker: final correction 1 required: High: crates/lib/superdev-core/src/workflow/git.rs integrate_no_ff merges mutable work_branch after a TOCTOU window; revalidate after switching and merge expected_work.
 
 ## Implementation decisions
 
