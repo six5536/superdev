@@ -135,9 +135,20 @@ The canonical-knowledge surface covers ADRs, contracts, schemas, procedures, con
 - Structural evidence: explicit unlock is best-effort after operation completion and dropping the repository descriptor releases the advisory lock.
 - Documentation: canonical knowledge is updated by this plan; run validation.
 
+### Block 9: Permit clean attestation after approved re-scope
+
+- [ ] Done.
+- Dependencies: Block 8.
+- Areas: `crates/app/superdev/src/workflow_cli.rs`, `crates/app/superdev/tests/`, and `knowledge/issues/open/issue-059-scope-build-accept-workflow.md`.
+- Outcome: the correction limit continues to refuse additional correction recording, while a fresh clean review after approved re-scope may be attested without erasing the historical correction count.
+- Verification: `cargo fmt --all -- --check`, `cargo clippy --workspace --all-targets -- -D warnings`, `cargo test --workspace --all-targets`, `npm test`, `npm run check:docs`, `cargo run -- validate --warnings`, `cargo run -- sync --dry-run`, and `git diff --check`.
+- Tests: workflow evidence tests cover clean final attestation with an exhausted preserved correction count after fresh SCOPE approval, while further correction recording remains refused.
+- Structural evidence: final evidence derives from completed blocks, fresh candidate-bound verification, and a clean candidate-bound review; correction accounting remains service-owned and unchanged.
+- Documentation: canonical knowledge is updated by this plan; run validation.
+
 ## Build state
 
-Current block: 8. Attempts: 0. Final corrections: 3. Fingerprint: none. Blocker: none.
+Current block: 9. Attempts: 0. Final corrections: 3. Fingerprint: none. Blocker: none.
 
 ## Implementation decisions
 
