@@ -153,37 +153,42 @@ async function isolated(
 			},
 		});
 		onSpawn?.(child);
-		let stdout = "";
+		let pending = "";
 		let stderr = "";
-		const append = (current: string, chunk: string) => {
-			const next = current + chunk;
-			if (next.length > 1_000_000) {
-				stopProcess(child);
-				throw new Error(`${role} output exceeded 1 MB`);
-			}
-			return next;
+		let answer = "";
+		let emittedBytes = 0;
+		const consume = (line: string) => {
+			try {
+				const event = JSON.parse(line);
+				if (event.type === "message_end" && event.message?.role === "assistant") {
+					for (const part of event.message.content ?? []) if (part.type === "text") answer = part.text;
+				}
+			} catch { /* ignore non-events */ }
 		};
 		child.stdout.setEncoding("utf8");
 		child.stderr.setEncoding("utf8");
 		child.stdout.on("data", (chunk: string) => {
-			try { stdout = append(stdout, chunk); } catch (error) { reject(error); }
+			emittedBytes += chunk.length;
+			if (emittedBytes > 20_000_000) {
+				stopProcess(child);
+				return reject(new Error(`${role} event stream exceeded 20 MB`));
+			}
+			pending += chunk;
+			let newline;
+			while ((newline = pending.indexOf("\n")) >= 0) {
+				consume(pending.slice(0, newline));
+				pending = pending.slice(newline + 1);
+			}
 		});
 		child.stderr.on("data", (chunk: string) => {
-			try { stderr = append(stderr, chunk); } catch (error) { reject(error); }
+			stderr = (stderr + chunk).slice(-1_000_000);
 		});
 		child.on("error", reject);
 		child.on("close", (code) => {
 			onClose?.(child);
+			if (pending) consume(pending);
 			if (code !== 0) return reject(new Error(stderr.trim() || `${role} exited ${code}`));
-			let answer = "";
-			for (const line of stdout.split("\n")) {
-				try {
-					const event = JSON.parse(line);
-					if (event.type === "message_end" && event.message?.role === "assistant") {
-						for (const part of event.message.content ?? []) if (part.type === "text") answer = part.text;
-					}
-				} catch { /* ignore non-events */ }
-			}
+			if (answer.length > 20_000) return reject(new Error(`${role} final answer exceeded 20 KB`));
 			try {
 				accept(parseRoleResult(role, answer));
 			} catch (error) {
