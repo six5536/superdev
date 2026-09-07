@@ -123,8 +123,10 @@ pub fn transaction<T>(
 /// A non-blocking ownership read used by observational status adapters.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum CacheSnapshot {
-    /// The lock was acquired and ownership was read consistently.
-    Available(Option<WorkflowCache>),
+    /// The lock was acquired and an owner was read consistently.
+    Owned(Box<WorkflowCache>),
+    /// The lock was acquired and no owner exists.
+    Unowned,
     /// Another workflow transaction currently owns the repository lock.
     Busy,
 }
@@ -162,7 +164,10 @@ pub fn try_load(root: &Path) -> Result<CacheSnapshot> {
                 path: lock_path,
                 source,
             })?;
-            result.map(CacheSnapshot::Available)
+            result.map(|owner| match owner {
+                Some(owner) => CacheSnapshot::Owned(Box::new(owner)),
+                None => CacheSnapshot::Unowned,
+            })
         }
         Err(error) if error.kind() == std::io::ErrorKind::WouldBlock => Ok(CacheSnapshot::Busy),
         Err(source) => Err(Error::Io {
@@ -387,7 +392,7 @@ mod tests {
         );
         assert!(matches!(
             try_load(root.path()).unwrap(),
-            CacheSnapshot::Available(Some(cache)) if cache.last_plan_revision == "two"
+            CacheSnapshot::Owned(cache) if cache.last_plan_revision == "two"
         ));
     }
 

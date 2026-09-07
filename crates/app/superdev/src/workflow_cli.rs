@@ -369,7 +369,8 @@ pub fn run(command: &WorkflowCommand, root: &Path) -> Result<u8> {
         }
         WorkflowCommand::Status { json: _ } => {
             let owner = match cache::try_load(&root)? {
-                cache::CacheSnapshot::Available(owner) => owner,
+                cache::CacheSnapshot::Owned(owner) => Some(*owner),
+                cache::CacheSnapshot::Unowned => None,
                 cache::CacheSnapshot::Busy => {
                     let workflow_config = Manifest::load(&root)?.workflow;
                     let executable = std::env::current_exe().map_err(|source| Error::Io {
