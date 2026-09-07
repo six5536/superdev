@@ -104,7 +104,7 @@ The canonical-knowledge surface covers ADRs, contracts, schemas, procedures, con
 
 ### Block 6: Verify and accept an immutable candidate
 
-- [ ] Done.
+- [x] Done.
 - Dependencies: Blocks 1 through 5.
 - Areas: complete repository diff and local integration path.
 - Outcome: every bootstrap checklist item is satisfied, full verification passes, a fresh isolated read-only review reports no findings for immutable candidate `H`, configured acceptance is recorded, closure is committed, and the local default branch receives a no-fast-forward merge.
@@ -125,13 +125,17 @@ Block 3: every isolated role must terminate with role-specific `SUPERDEV_RESULT`
 
 Block 4: failed BUILD commands are normalized and SHA-256 fingerprinted by the shared Rust retry service. The typed attempt command updates the plan's durable consecutive-attempt state in a knowledge-only commit, marks the configured limit as stalled, refuses equivalent attempts beyond that limit, and permits checkpoint reset only when the same stable block newly completes. Successful checkpoints now require that current block to become newly complete, derive and enforce its declared dependencies and backtick Verification commands, and commit product, test, documentation, and plan changes only when every changed path is within the block's backtick-delimited Areas or the owning plan. Human abandonment closes and preserves the work-branch records, then publishes only the abandoned plan, wontfix issue, and generated indexes through a detached default-tip worktree and compare-and-swap update; partial product history never reaches the default branch. BUILD re-scope now transactionally preserves the child's discovery on the same primary issue, invalidates prior SCOPE evidence, records the existing product tip as the SCOPE baseline, and requires fresh review and approval while retaining the same issue, plan, branch, and stable blocks. Before final verification, typed BUILD synchronization compares both expected tips, uses `git merge-tree --write-tree` so conflicts leave the live index and worktree untouched, creates a hook-free merge object, rechecks both refs, and fast-forwards the checked-out work branch. Checkpoint publication rejects caller changes to service-owned retry fields, resets attempts and fingerprints only after the current stable block newly completes, preserves final-correction accounting, advances to the next incomplete block, and stores the resulting canonical plan revision in transient ownership.
 
+Block 5: filing allocation and publication are serialized and compare-and-swap the local default from a temporary detached worktree. Pi workflow assets and the independently useful SOKF authoring skill are first-class pack items with byte-for-byte lock parity. Retired Claude workflow assets remain inactive under `archive/claude-code/`, while sync removes only previously managed retired paths. Standalone adapter smoke dependencies are declared by the workspace so the SCOPE-approved command executes without relying on Pi's private installation tree.
+
+Block 6: observational status uses an explicit nonblocking busy snapshot during held workflow transactions, preventing nested Pi smoke processes from deadlocking service-owned verification. Immutable review uses a bounded inventory followed by per-path diffs, acceptance policy is loaded from pinned Rust status and fails closed when absent, scope and final evidence bind both candidate and authoritative review base, and ACCEPT runs a fresh isolated read-only assessment before the parent-owned configured decision.
+
 ## Follow-up issues
 
 none.
 
 ## Completion evidence
 
-The root specification was explicitly approved before commit `83e04ea`, and an isolated requirements pass reported no unresolved requirement before BUILD. Candidate commits through `1e8f20e` were rejected by fresh isolated review and are not acceptable candidates. Block 1 evidence is recorded in its block; remaining BUILD and acceptance evidence is pending.
+The root specification was explicitly approved before commit `83e04ea`, and an isolated requirements pass reported no unresolved requirement before BUILD. Rejected candidates through `1e8f20e` were superseded. Service-owned checkpoints completed Blocks 2 through 5 after their exact Verification commands passed. The full Rust workspace, 854-test npm matrix, formatting, clippy, documentation, SOKF validation, pack parity, standalone Pi smoke, and diff checks pass. Fresh immutable review run `fabfbef210cc6ac658eed6036a8dc9bde11210722952e0b1` reported no actionable finding for candidate `2571c058b69e84fedc4f4306a01152feaf837041`; later administrative and review-hardening commits require the final candidate-bound review before ACCEPT.
 
 <!-- sokf:links -->
 [sokf:issue-059-scope-build-accept-workflow]: /knowledge/issues/open/issue-059-scope-build-accept-workflow.md
