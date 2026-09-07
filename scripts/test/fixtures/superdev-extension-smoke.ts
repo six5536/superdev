@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 
-import superdev, { buildCommandAllowed, isolatedRoleMayNotRun, isolatedTools, parseRoleResult, runGuardedBuildCommand, runPinnedSuperdev } from "../../../.pi/extensions/superdev/index.ts";
+import superdev, { buildCommandAllowed, isolatedRoleMayNotRun, isolatedTools, parseRoleResult, requiresHumanAcceptance, runGuardedBuildCommand, runPinnedSuperdev } from "../../../.pi/extensions/superdev/index.ts";
 
 export default async function smoke() {
 	const commands: string[] = [];
@@ -34,6 +34,13 @@ export default async function smoke() {
 	if (!tools.includes("superdev_isolated_role")) throw new Error("missing isolated role tool");
 	if (!tools.includes("superdev_review_diff")) throw new Error("missing read-only review diff tool");
 	if (!tools.includes("superdev_workflow_control")) throw new Error("missing UI-gated workflow control tool");
+	if (!requiresHumanAcceptance(true) || requiresHumanAcceptance(false)) throw new Error("configured acceptance policy changed");
+	try {
+		requiresHumanAcceptance(undefined);
+		throw new Error("missing acceptance policy was treated as automatic");
+	} catch (error) {
+		if (!String(error).includes("omitted")) throw error;
+	}
 	for (const command of [
 		"superdev workflow evidence",
 		"superdev workflow scope-checkpoint",

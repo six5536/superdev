@@ -101,6 +101,11 @@ async function runSuperdev(args: string[], cwd: string, authority: string): Prom
 	try { return JSON.parse(result.stdout); } catch { throw new Error("superdev returned invalid workflow JSON"); }
 }
 
+export function requiresHumanAcceptance(value: boolean | undefined): boolean {
+	if (value === undefined) throw new Error("ACCEPT status omitted the configured human-acceptance policy");
+	return value;
+}
+
 export function isolatedTools(role: Input["role"]): string {
 	if (readOnly.has(role)) return "read,superdev_review_diff,sokf_search,sokf_graph";
 	if (role === "file") return "read,sokf_search,sokf_graph";
@@ -740,8 +745,9 @@ export default function superdev(pi: ExtensionAPI) {
 				ctx.ui.setStatus("superdev-workflow", `BUILD: ${owner.identity.plan}`);
 				return ctx.ui.notify("Default branch advanced; final evidence was invalidated and workflow returned to BUILD", "warning");
 			}
+			const humanAcceptanceRequired = requiresHumanAcceptance(status.humanAcceptanceRequired);
 			let accepted = true;
-			if (status.humanAcceptanceRequired) {
+			if (humanAcceptanceRequired) {
 				accepted = await ctx.ui.confirm("Accept candidate?", `Accept reviewed candidate ${owner.candidate_revision} and integrate it locally?`);
 			}
 			if (!accepted) {
