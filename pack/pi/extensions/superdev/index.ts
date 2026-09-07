@@ -441,11 +441,7 @@ export default function superdev(pi: ExtensionAPI) {
 				"--review-session", reviewRun, "--candidate", candidate,
 			], ctx.cwd, authority) as { result?: { last_plan_revision?: string } };
 			const revision = evidence.result?.last_plan_revision;
-			if (!revision) throw new Error("evidence response omitted the new plan revision");
-			await runSuperdev([
-				"workflow", "transition", "--session", owner.session_id,
-				"--expected-revision", revision, "--phase", "build", "--transition", "finish-build",
-			], ctx.cwd, authority);
+			if (!revision) throw new Error("attestation response omitted the new plan revision");
 			reviewRuns.delete(reviewRun);
 			ctx.ui.setStatus("superdev-workflow", `ACCEPT: ${owner.identity.plan}`);
 			ctx.ui.notify("BUILD gates passed; workflow advanced to ACCEPT", "info");

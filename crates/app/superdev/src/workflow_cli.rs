@@ -878,6 +878,22 @@ fn record_evidence_locked(
             (Vec::new(), Some(candidate.to_string()), Some(default))
         }
         EvidenceKindName::Final if record.phase == "build" => {
+            if text.contains("- [ ] Done") {
+                return Err(Error::Manifest {
+                    message: "final attestation requires every work block to be complete".into(),
+                });
+            }
+            if knowledge_contains(root, &format!("PENDING ({})", state.identity.plan))? {
+                return Err(Error::Manifest {
+                    message: "final attestation refuses affected pending promises".into(),
+                });
+            }
+            if primary_issue_has_unresolved_discoveries(root, &state.identity.issue)? {
+                return Err(Error::Manifest {
+                    message: "final attestation refuses unresolved primary-issue discoveries"
+                        .into(),
+                });
+            }
             let candidate = args.candidate.as_deref().ok_or_else(|| Error::Manifest {
                 message: "final review evidence requires candidate H".into(),
             })?;
@@ -926,8 +942,18 @@ fn record_evidence_locked(
             })?;
         return emit("verification", &state);
     }
-    apply_plan_edits_transactionally(root, &path, vec![completion_evidence_edit(&text, &lines)?])?;
-    git::commit_knowledge_changes(root, "chore(workflow): record canonical evidence")?;
+    let mut edits = vec![completion_evidence_edit(&text, &lines)?];
+    let commit_message = if matches!(args.kind, EvidenceKindName::Final) {
+        edits.push(ExactEdit {
+            old_text: "phase: build".into(),
+            new_text: "phase: accept".into(),
+        });
+        "chore(workflow): attest build completion"
+    } else {
+        "chore(workflow): record canonical evidence"
+    };
+    apply_plan_edits_transactionally(root, &path, edits)?;
+    git::commit_knowledge_changes(root, commit_message)?;
     let revision = plan_revision(root, &state.identity.plan)?.1;
     let state = transaction.compare_and_swap(&args.session, &args.expected_revision, |state| {
         state.last_plan_revision.clone_from(&revision);
@@ -1319,6 +1345,25 @@ fn apply_record_edits_transactionally(
         }
     }
     publish_staged_knowledge(root, &staged_knowledge)
+}
+
+fn primary_issue_has_unresolved_discoveries(root: &Path, issue: &str) -> Result<bool> {
+    let path = root
+        .join("knowledge/issues/open")
+        .join(format!("{issue}.md"));
+    let text = fs::read_to_string(&path).map_err(|source| Error::Io {
+        path: path.clone(),
+        source,
+    })?;
+    let Some(start) = text.find("## Discoveries\n") else {
+        return Ok(false);
+    };
+    let body = &text[start + "## Discoveries\n".len()..];
+    let end = body
+        .find("\n## ")
+        .or_else(|| body.find("\n<!-- sokf:links -->"))
+        .unwrap_or(body.len());
+    Ok(body[..end].lines().any(|line| line.starts_with("- [ ] ")))
 }
 
 fn rejection_discovery_edit(issue: &str, feedback: &str) -> Result<ExactEdit> {
@@ -1729,6 +1774,25 @@ mod tests {
             evidence_revision(&changed, "Verified default revision").as_deref(),
             Some("1234567")
         );
+    }
+
+    #[test]
+    fn unresolved_discoveries_are_limited_to_the_discovery_section() {
+        let dir = tempfile::tempdir().unwrap();
+        let issues = dir.path().join("knowledge/issues/open");
+        fs::create_dir_all(&issues).unwrap();
+        fs::write(
+            issues.join("issue-001-test.md"),
+            "## Discoveries\n\n- [x] settled\n\n## Comments\n\n- [ ] not a discovery\n",
+        )
+        .unwrap();
+        assert!(!primary_issue_has_unresolved_discoveries(dir.path(), "issue-001-test").unwrap());
+        fs::write(
+            issues.join("issue-001-test.md"),
+            "## Discoveries\n\n- [ ] unresolved\n\n## Comments\n\nnone\n",
+        )
+        .unwrap();
+        assert!(primary_issue_has_unresolved_discoveries(dir.path(), "issue-001-test").unwrap());
     }
 
     #[test]
