@@ -71,7 +71,7 @@ The canonical-knowledge surface covers ADRs, contracts, schemas, procedures, con
 
 ### Block 3: Implement deterministic Pi orchestration
 
-- [ ] Done.
+- [x] Done.
 - Dependencies: Block 2.
 - Areas: `.pi/extensions/superdev/`, private role prompts, Pi settings, and `pack/pi/extensions/superdev/`.
 - Outcome: a typed phase state machine schedules bounded isolated roles, consumes structured terminal results, persists across compaction, protects session switch/fork, displays status, gates human decisions in UI, and preflights prohibited tool calls.
@@ -115,7 +115,7 @@ The canonical-knowledge surface covers ADRs, contracts, schemas, procedures, con
 
 ## Build state
 
-Current block: 3. Attempts: 0. Final corrections: 0. Fingerprint: none. Blocker: none.
+Current block: 4. Attempts: 0. Final corrections: 0. Fingerprint: none. Blocker: none.
 
 ## Implementation decisions
 
