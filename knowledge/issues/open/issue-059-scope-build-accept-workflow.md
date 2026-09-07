@@ -28,6 +28,10 @@ The replacement covers the complete local development workflow and its managed a
 - In: workflow schemas and state, Pi orchestration, isolated agents, Git safety, documentation mapping, record migration, pack shipping, and Claude-skill archival.
 - Out: remote CI, pushing, releases, and future Claude Code support.
 
+## Discoveries
+
+- [ ] BUILD discovery: Final review after correction exhaustion found that integration can leave an already-checked-out default worktree stale and cache operations allow a symlinked private parent directory; re-scope Block 6 to address both findings.
+
 ## Comments
 
 The bootstrap implementation specification is `SCOPE-BUILD-ACCEPT-IMPLEMENTATION-PLAN.md`; it intentionally predates the plan schema it installs.
