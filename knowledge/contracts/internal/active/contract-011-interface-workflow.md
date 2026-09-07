@@ -317,7 +317,7 @@ mod tests {
 
 - `P_scope-gate` [event] WHEN SCOPE enters BUILD, the service SHALL require explicit human scope approval and a clean isolated requirements review.
 - `P_build-gate` [event] WHEN BUILD enters ACCEPT, the service SHALL require complete blocks, current executable and documentation evidence, no affected pending promise, and a clean fresh isolated final review.
-- `P_accept-policy` [event] WHEN ACCEPT decides a candidate, the service SHALL derive human acceptance solely from project configuration before merging an accepted closure locally with `git merge --no-ff`.
+- `P_accept-policy` [event] WHEN ACCEPT decides a candidate, the service SHALL derive human acceptance solely from project configuration before merging an accepted closure locally with a hook-free, signing-free `git merge --no-ff`.
 - `P_accept-stale-default` [event] WHEN the verified default revision advances before closure, the service SHALL invalidate final evidence and return the same plan to BUILD without preparing DONE records.
 - `P_ui-authority-service` [event] WHEN scope approval, configured human acceptance, rejection, or abandonment changes durable state, the service SHALL require the owning Pi UI's unpersisted capability.
 - `P_ui-authority-adapter` [event] WHEN an action requires human authority, Pi SHALL expose its capability to the service only after interactive confirmation.
