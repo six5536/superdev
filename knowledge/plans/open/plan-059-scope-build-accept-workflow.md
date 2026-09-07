@@ -113,9 +113,20 @@ The canonical-knowledge surface covers ADRs, contracts, schemas, procedures, con
 - Structural evidence: review input is the immutable diff from the approved base to candidate `H`, and integration verifies identity, ancestry, closure-at-revision, and exact administrative descendants.
 - Documentation: every applicable surface must be current before this block can complete.
 
+### Block 7: Publish the final integration correction
+
+- [ ] Done.
+- Dependencies: Block 6.
+- Areas: `crates/lib/superdev-core/src/workflow/` and `knowledge/issues/open/issue-059-scope-build-accept-workflow.md`.
+- Outcome: integration reserves the default branch, synchronizes the primary worktree before publication, and performs no fallible operation after the immutable two-ref compare-and-swap succeeds.
+- Verification: `cargo fmt --all -- --check`, `cargo clippy --workspace --all-targets -- -D warnings`, `cargo test --workspace --all-targets`, `npm test`, `npm run check:docs`, `cargo run -- validate --warnings`, `cargo run -- sync --dry-run`, and `git diff --check`.
+- Tests: focused integration tests prove successful no-fast-forward integration leaves the primary worktree attached, clean, and synchronized, while stale tips and another worktree owning the default fail before publication.
+- Structural evidence: the compare-and-swap is the final fallible integration operation; all temporary worktree cleanup and primary-worktree preparation precede it.
+- Documentation: canonical knowledge is updated by this plan; run validation.
+
 ## Build state
 
-Current block: 6. Attempts: 0. Final corrections: 3. Fingerprint: none. Blocker: final correction limit exhausted: Integration must perform no fallible cleanup or checkout after advancing the default ref.
+Current block: 7. Attempts: 0. Final corrections: 3. Fingerprint: none. Blocker: none.
 
 ## Implementation decisions
 
