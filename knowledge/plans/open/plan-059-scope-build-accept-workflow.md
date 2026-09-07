@@ -115,7 +115,7 @@ The canonical-knowledge surface covers ADRs, contracts, schemas, procedures, con
 
 ### Block 7: Publish the final integration correction
 
-- [ ] Done.
+- [x] Done.
 - Dependencies: Block 6.
 - Areas: `crates/lib/superdev-core/src/workflow/` and `knowledge/issues/open/issue-059-scope-build-accept-workflow.md`.
 - Outcome: integration reserves the default branch, synchronizes the primary worktree before publication, and performs no fallible operation after the immutable two-ref compare-and-swap succeeds.

@@ -694,27 +694,36 @@ pub fn integrate_no_ff(
         }
         return Err(error);
     }
+    git(
+        root,
+        &[
+            "-c",
+            "core.hooksPath=/dev/null",
+            "switch",
+            "--detach",
+            &prepared,
+        ],
+    )?;
+    let default_ref = format!("refs/heads/{default_branch}");
+    git(root, &["symbolic-ref", "HEAD", &default_ref])?;
+    git(root, &["worktree", "remove", "--force", &reservation_text])?;
+
     let transaction = format!(
         "start\nverify refs/heads/{work_branch} {expected_work}\nupdate refs/heads/{default_branch} {prepared} {expected_default}\nprepare\ncommit\n"
     );
-    let update = git_with_input(root, &["update-ref", "--stdin"], &transaction);
-    let cleanup = git(root, &["worktree", "remove", "--force", &reservation_text]);
-    if let Err(error) = update {
-        cleanup?;
-        if original_branch == default_branch {
+    match git_with_input(root, &["update-ref", "--stdin"], &transaction) {
+        Ok(_) => Ok(()),
+        Err(error) => {
+            // Publication did not occur. Restore a coherent checkout before
+            // reporting the compare-and-swap failure.
+            git(root, &["update-ref", "--no-deref", "HEAD", &prepared])?;
             git(
                 root,
-                &["-c", "core.hooksPath=/dev/null", "switch", default_branch],
+                &["-c", "core.hooksPath=/dev/null", "switch", &original_branch],
             )?;
+            Err(error)
         }
-        return Err(error);
     }
-    cleanup?;
-    git(
-        root,
-        &["-c", "core.hooksPath=/dev/null", "switch", default_branch],
-    )?;
-    Ok(())
 }
 
 /// Refuse option-like, traversal-like, or syntactically invalid refs.
