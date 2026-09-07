@@ -34,3 +34,5 @@ crates/lib/superdev-core/src/validate/sokf.rs -diff
 knowledge/** -diff
 crates/lib/superdev-core/src/workflow/filing.rs -diff
 crates/app/superdev/src/workflow_cli.rs -diff
+crates/** -diff
+.pi/** -diff
