@@ -873,32 +873,32 @@ Summarize outward-facing content and cite canonical SOKF concepts rather than du
 
 The implementation is acceptable only when all are true:
 
-- [ ] A request can enter `/scope`, automatically gain an issue/plan/branch, receive explicit scope approval, and proceed without a separate FILE phase.
-- [ ] SCOPE cannot commit product source or generated Definition edits.
-- [ ] Requirements review is isolated, read-only, mandatory, and clean on the approved revision.
-- [ ] BUILD is one isolated modifying child and owns the whole dependency-ready block loop.
-- [ ] Every block has executable focused evidence and a separate commit.
-- [ ] Every user-observable change is mapped to all applicable project-declared documentation surfaces, or carries a checked `none` rationale.
-- [ ] Local decisions are recorded in Implementation decisions without transcript/chain-of-thought content.
-- [ ] Discoveries follow the agreed original-issue/re-scope policy.
-- [ ] Retry limits come only from project configuration and survive resume.
-- [ ] No affected promise or criterion can pass with `PENDING` or missing automated evidence.
-- [ ] Source declarations regenerate contract Definitions through validation.
-- [ ] Handwritten docs, generated references, and docs-site sources are updated through their declared source of truth; generators are clean on a second run and declared docs checks pass.
-- [ ] Full local verification and a fresh isolated read-only review—including the consumer documentation lens—are bound to immutable candidate `H`; only diff-gated administrative attestation/closure commits follow it.
-- [ ] Review/verification correction cycles rerun both gates and stop at the configured limit.
-- [ ] ACCEPT obeys the project-wide human flag and never delegates a checklist to the human.
-- [ ] Rejection returns the same issue/plan to SCOPE.
-- [ ] Human-only abandonment records a truthful issue/plan disposition on default without merging partial product work.
-- [ ] Successful ACCEPT commits closure and merges locally with `--no-ff`.
-- [ ] Dirty trees, stale commits, advanced default refs, and conflicts fail safely.
-- [ ] `/file` can land a human-confirmed issue/idea independently while a workflow branch is active.
-- [ ] Remote CI, push, release, and branch deletion do not occur.
-- [ ] Every existing issue/plan validates under the one new schema; historical orphan plans have migration-derived issues.
-- [ ] Active Claude workflow skills/hooks are gone; archived copies are clearly deprecated and searchable.
-- [ ] `superdev sync` installs and governs the Pi workflow assets.
-- [ ] Rust, script, adapter, migration, real-Pi smoke, formatting, lint, validation, and diff checks all pass.
-- [ ] A final isolated code review reports no actionable finding.
+- [x] A request can enter `/scope`, automatically gain an issue/plan/branch, receive explicit scope approval, and proceed without a separate FILE phase.
+- [x] SCOPE cannot commit product source or generated Definition edits.
+- [x] Requirements review is isolated, read-only, mandatory, and clean on the approved revision.
+- [x] BUILD is one isolated modifying child and owns the whole dependency-ready block loop.
+- [x] Every block has executable focused evidence and a separate commit.
+- [x] Every user-observable change is mapped to all applicable project-declared documentation surfaces, or carries a checked `none` rationale.
+- [x] Local decisions are recorded in Implementation decisions without transcript/chain-of-thought content.
+- [x] Discoveries follow the agreed original-issue/re-scope policy.
+- [x] Retry limits come only from project configuration and survive resume.
+- [x] No affected promise or criterion can pass with `PENDING` or missing automated evidence.
+- [x] Source declarations regenerate contract Definitions through validation.
+- [x] Handwritten docs, generated references, and docs-site sources are updated through their declared source of truth; generators are clean on a second run and declared docs checks pass.
+- [x] Full local verification and a fresh isolated read-only review—including the consumer documentation lens—are bound to immutable candidate `H`; only diff-gated administrative attestation/closure commits follow it.
+- [x] Review/verification correction cycles rerun both gates and stop at the configured limit.
+- [x] ACCEPT obeys the project-wide human flag and never delegates a checklist to the human.
+- [x] Rejection returns the same issue/plan to SCOPE.
+- [x] Human-only abandonment records a truthful issue/plan disposition on default without merging partial product work.
+- [x] Successful ACCEPT commits closure and merges locally with `--no-ff`.
+- [x] Dirty trees, stale commits, advanced default refs, and conflicts fail safely.
+- [x] `/file` can land a human-confirmed issue/idea independently while a workflow branch is active.
+- [x] Remote CI, push, release, and branch deletion do not occur.
+- [x] Every existing issue/plan validates under the one new schema; historical orphan plans have migration-derived issues.
+- [x] Active Claude workflow skills/hooks are gone; archived copies are clearly deprecated and searchable.
+- [x] `superdev sync` installs and governs the Pi workflow assets.
+- [x] Rust, script, adapter, migration, real-Pi smoke, formatting, lint, validation, and diff checks all pass.
+- [x] A final isolated code review reports no actionable finding.
 
 ## Implementation completion rule
 
