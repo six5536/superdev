@@ -18,6 +18,7 @@ it stays on file, linked from the issue that took it up.
 * [Define an agent-learnings document model][sokf:idea-011-define-an-agent-learnings-document-model] - evaluate whether agent memory or learnings need a dedicated schema and document set, or belong in canonical project knowledge.
 * [SOKF mutations survive validation failures][sokf:idea-012-sokf-mutations-survive-validation-failures] - apply SOKF writes and edits before validation, then report findings without discarding the changed file or replacing Pi's file-tool contract.
 * [Workflow commits name their phase and plan][sokf:idea-013-workflow-commits-name-their-phase-and-plan] - replace generic workflow commit subjects with phase-specific subjects that identify the plan and describe the recorded change.
+* [Superdev subprocesses show progress and control][sokf:idea-014-superdev-subprocesses-show-progress-and-control] - make every user-awaited Superdev and Pi subprocess visibly report its stage, elapsed time, cancellation path, timeout, and final outcome.
 
 <!-- sokf:links -->
 [sokf:idea-001-schemas-carry-a-reading-reminder]: /knowledge/ideas/idea-001-schemas-carry-a-reading-reminder.md
@@ -33,3 +34,4 @@ it stays on file, linked from the issue that took it up.
 [sokf:idea-011-define-an-agent-learnings-document-model]: /knowledge/ideas/idea-011-define-an-agent-learnings-document-model.md
 [sokf:idea-012-sokf-mutations-survive-validation-failures]: /knowledge/ideas/idea-012-sokf-mutations-survive-validation-failures.md
 [sokf:idea-013-workflow-commits-name-their-phase-and-plan]: /knowledge/ideas/idea-013-workflow-commits-name-their-phase-and-plan.md
+[sokf:idea-014-superdev-subprocesses-show-progress-and-control]: /knowledge/ideas/idea-014-superdev-subprocesses-show-progress-and-control.md
