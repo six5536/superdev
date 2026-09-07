@@ -18,7 +18,7 @@ it stays on file, linked from the issue that took it up.
 * [Define an agent-learnings document model][sokf:idea-011-define-an-agent-learnings-document-model] - evaluate whether agent memory or learnings need a dedicated schema and document set, or belong in canonical project knowledge.
 * [SOKF mutations survive validation failures][sokf:idea-012-sokf-mutations-survive-validation-failures] - apply SOKF writes and edits before validation, then report findings without discarding the changed file or replacing Pi's file-tool contract.
 * [Workflow commits name their phase and plan][sokf:idea-013-workflow-commits-name-their-phase-and-plan] - replace generic workflow commit subjects with phase-specific subjects that identify the plan and describe the recorded change.
-* [Superdev subprocess workflows stay visible and resumable][sokf:idea-014-superdev-subprocesses-show-progress-and-control] - make Superdev drive subprocess work, review corrections, interruption recovery, and the next user decision through one visible resumable flow.
+* [Superdev subprocess workflows stay visible and resumable][sokf:idea-014-superdev-subprocesses-show-progress-and-control] - expose subprocess progress, fix mechanical findings quickly, and use the question tool to resolve substantive findings in the main Pi flow.
 
 <!-- sokf:links -->
 [sokf:idea-001-schemas-carry-a-reading-reminder]: /knowledge/ideas/idea-001-schemas-carry-a-reading-reminder.md

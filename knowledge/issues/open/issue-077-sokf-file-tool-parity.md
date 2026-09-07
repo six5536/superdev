@@ -28,6 +28,7 @@ A caller using a physical path or an equivalent SOKF identity observes the same 
 - The MCP contract replaces the mixed-purpose `sokf_read` operation with a source resolver for file routing and a semantic `sokf_retrieve` operation for overviews, rendered concepts, and sections. The change requires no compatibility alias or deprecation path.
 - SOKF-routed edits preserve built-in argument preparation, matching, uniqueness, overlap, byte-order mark and line-ending preservation, queueing, errors, concise content, compact details, metadata, and rendering.
 - SOKF-routed writes preserve built-in parameters, parent creation, queueing, errors, cancellation, concise content, undefined details, metadata, and rendering.
+- Before persistence starts, cancellation leaves the target unchanged. After persistence starts, edit and write keep the canonical target queued until the mutation settles. An applied mutation still records repair and validation work when Pi reports the tool as aborted.
 - Virtual and physical aliases serialize on the same canonical physical mutation-queue key.
 - SOKF continues to enforce stable identity, byte-preserved verification data, generated ownership, repair, refiling, and validation without replacing standard tool results.
 - A generated-projection edit fails before mutation and names its authoritative source.
