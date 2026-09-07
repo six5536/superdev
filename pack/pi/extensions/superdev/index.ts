@@ -1,7 +1,7 @@
 import { spawn, type ChildProcess } from "node:child_process";
 import { createHash, randomBytes } from "node:crypto";
 import { constants } from "node:fs";
-import { access, mkdtemp, open, readFile, rm } from "node:fs/promises";
+import { access, chmod, mkdtemp, open, readFile, rm, type FileHandle } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { delimiter, dirname, isAbsolute, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -205,16 +205,18 @@ export async function runPinnedSuperdev(path: string, digest: string | undefined
 
 	const directory = await mkdtemp(join(tmpdir(), "superdev-exec-"));
 	const privatePath = join(directory, "service");
-	const writer = await open(privatePath, "wx", 0o500);
-	try { await writer.writeFile(bytes); await writer.sync(); } finally { await writer.close(); }
-	const executable = await open(privatePath, "r");
-	await rm(privatePath);
+	let executable: FileHandle | undefined;
 	try {
+		const writer = await open(privatePath, "wx", 0o600);
+		try { await writer.writeFile(bytes); await writer.sync(); } finally { await writer.close(); }
+		await chmod(privatePath, 0o500);
+		executable = await open(privatePath, "r");
+		await rm(privatePath);
 		const result = await new Promise<ExecResult>((accept, reject) => {
 			const child = spawn("/proc/self/fd/3", args, {
 				cwd,
 				shell: false,
-				stdio: ["ignore", "pipe", "pipe", executable.fd],
+				stdio: ["ignore", "pipe", "pipe", executable!.fd],
 				env: environment ? { ...process.env, ...environment } : process.env,
 			});
 			let stdout = "";
@@ -232,7 +234,7 @@ export async function runPinnedSuperdev(path: string, digest: string | undefined
 		});
 		return { ...result, digest: observed };
 	} finally {
-		await executable.close();
+		await executable?.close();
 		await rm(directory, { recursive: true, force: true });
 	}
 }
