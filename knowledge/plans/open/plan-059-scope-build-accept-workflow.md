@@ -115,7 +115,7 @@ The canonical-knowledge surface covers ADRs, contracts, schemas, procedures, con
 
 ## Build state
 
-Current block: 6. Attempts: 0. Final corrections: 2. Fingerprint: none. Blocker: final correction 2 required: High: integrate_no_ff lacks atomic default-ref CAS; cache save follows a predictable temporary-path symlink.
+Current block: 6. Attempts: 0. Final corrections: 2. Fingerprint: none. Blocker: none.
 
 ## Implementation decisions
 

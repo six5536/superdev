@@ -1,6 +1,7 @@
 //! Atomic transient Pi-session ownership for a workflow.
 
 use std::fs::{self, OpenOptions};
+use std::io::Write;
 use std::path::{Path, PathBuf};
 
 use fs2::FileExt;
@@ -288,12 +289,24 @@ fn save_unlocked(root: &Path, cache: &WorkflowCache) -> Result<()> {
         path: path.clone(),
         message: error.to_string(),
     })?;
-    let temporary = path.with_extension(format!("tmp-{}", std::process::id()));
-    fs::write(&temporary, text).map_err(|source| Error::Io {
-        path: temporary.clone(),
+    let mut temporary = tempfile::NamedTempFile::new_in(parent).map_err(|source| Error::Io {
+        path: parent.into(),
         source,
     })?;
-    fs::rename(&temporary, &path).map_err(|source| Error::Io { path, source })
+    temporary
+        .write_all(text.as_bytes())
+        .and_then(|()| temporary.as_file().sync_all())
+        .map_err(|source| Error::Io {
+            path: temporary.path().into(),
+            source,
+        })?;
+    temporary
+        .persist(&path)
+        .map(|_| ())
+        .map_err(|error| Error::Io {
+            path,
+            source: error.error,
+        })
 }
 
 #[cfg(test)]
@@ -330,6 +343,24 @@ mod tests {
         assert!(verify_authority(&state, "0123456789abcdef0123456789abcdef").is_ok());
         assert!(verify_authority(&state, "fedcba9876543210fedcba9876543210").is_err());
         assert!(authority_digest("short").is_err());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn cache_save_does_not_follow_the_legacy_predictable_temporary_symlink() {
+        use std::os::unix::fs::symlink;
+
+        let root = tempfile::tempdir().unwrap();
+        let cache = path(root.path());
+        fs::create_dir_all(cache.parent().unwrap()).unwrap();
+        let victim = root.path().join("victim");
+        fs::write(&victim, "preserve\n").unwrap();
+        let legacy_temporary = cache.with_extension(format!("tmp-{}", std::process::id()));
+        symlink(&victim, legacy_temporary).unwrap();
+
+        bind(root.path(), &state("a")).unwrap();
+        assert_eq!(fs::read_to_string(victim).unwrap(), "preserve\n");
+        assert_eq!(load(root.path()).unwrap().unwrap().session_id, "a");
     }
 
     #[test]

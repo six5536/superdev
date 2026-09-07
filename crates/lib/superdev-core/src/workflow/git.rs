@@ -551,22 +551,24 @@ pub fn integrate_no_ff(
             message: "work branch moved after acceptance attestation".into(),
         });
     }
-    if current_branch(root)? != default_branch {
-        git(root, &["switch", default_branch])?;
-    }
-    require_clean(root)?;
-    if revision(root, default_branch)? != expected_default {
-        return Err(Error::Manifest {
-            message: "default branch moved; return the prepared closure to BUILD".into(),
-        });
-    }
-    if revision(root, work_branch)? != expected_work {
-        return Err(Error::Manifest {
-            message: "work branch moved after acceptance attestation".into(),
-        });
-    }
+    let temporary = tempfile::tempdir().map_err(|source| Error::Io {
+        path: root.into(),
+        source,
+    })?;
+    let worktree = temporary.path().join("integration");
+    let worktree_text = worktree.to_string_lossy().into_owned();
     git(
         root,
+        &[
+            "worktree",
+            "add",
+            "--detach",
+            &worktree_text,
+            expected_default,
+        ],
+    )?;
+    let prepared = git(
+        &worktree,
         &[
             "-c",
             "core.hooksPath=/dev/null",
@@ -580,7 +582,37 @@ pub fn integrate_no_ff(
             expected_work,
         ],
     )
-    .map(|_| ())
+    .and_then(|_| revision(&worktree, "HEAD"));
+    let cleanup = git(root, &["worktree", "remove", "--force", &worktree_text]);
+    cleanup?;
+    let prepared = prepared?;
+
+    if revision(root, default_branch)? != expected_default {
+        return Err(Error::Manifest {
+            message: "default branch moved; return the prepared closure to BUILD".into(),
+        });
+    }
+    if revision(root, work_branch)? != expected_work {
+        return Err(Error::Manifest {
+            message: "work branch moved after acceptance attestation".into(),
+        });
+    }
+    git(
+        root,
+        &[
+            "update-ref",
+            &format!("refs/heads/{default_branch}"),
+            &prepared,
+            expected_default,
+        ],
+    )?;
+    if current_branch(root)? != default_branch {
+        git(
+            root,
+            &["-c", "core.hooksPath=/dev/null", "switch", default_branch],
+        )?;
+    }
+    Ok(())
 }
 
 /// Refuse option-like, traversal-like, or syntactically invalid refs.
