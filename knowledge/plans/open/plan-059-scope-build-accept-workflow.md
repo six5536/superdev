@@ -115,7 +115,7 @@ The canonical-knowledge surface covers ADRs, contracts, schemas, procedures, con
 
 ## Build state
 
-Current block: 6. Attempts: 0. Final corrections: 2. Fingerprint: none. Blocker: final correction 2 required: Integration must close the default-worktree occupancy race; cache serialization must not depend on a replaceable lock-file inode.
+Current block: 6. Attempts: 0. Final corrections: 2. Fingerprint: none. Blocker: none.
 
 ## Implementation decisions
 

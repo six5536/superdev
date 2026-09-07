@@ -664,44 +664,52 @@ pub fn integrate_no_ff(
     cleanup?;
     let prepared = prepared?;
 
-    git(
-        root,
-        &[
-            "-c",
-            "core.hooksPath=/dev/null",
-            "switch",
-            "--detach",
-            expected_default,
-        ],
-    )?;
-    if revision(root, default_branch)? != expected_default {
-        let _ = git(
+    if original_branch == default_branch {
+        git(
             root,
-            &["-c", "core.hooksPath=/dev/null", "switch", &original_branch],
-        );
+            &["-c", "core.hooksPath=/dev/null", "switch", work_branch],
+        )?;
+    } else if original_branch != work_branch {
         return Err(Error::Manifest {
-            message: "default branch moved; return the prepared closure to BUILD".into(),
+            message: "integration requires the checked-out work or default branch".into(),
         });
     }
-    if revision(root, work_branch)? != expected_work {
-        let _ = git(
-            root,
-            &["-c", "core.hooksPath=/dev/null", "switch", &original_branch],
-        );
-        return Err(Error::Manifest {
-            message: "work branch moved after acceptance attestation".into(),
-        });
+    let reservation = temporary.path().join("default-reservation");
+    let reservation_text = reservation.to_string_lossy().into_owned();
+    if let Err(error) = git(
+        root,
+        &[
+            "worktree",
+            "add",
+            "--quiet",
+            &reservation_text,
+            default_branch,
+        ],
+    ) {
+        if original_branch == default_branch {
+            let _ = git(
+                root,
+                &["-c", "core.hooksPath=/dev/null", "switch", default_branch],
+            );
+        }
+        return Err(error);
     }
     let transaction = format!(
         "start\nverify refs/heads/{work_branch} {expected_work}\nupdate refs/heads/{default_branch} {prepared} {expected_default}\nprepare\ncommit\n"
     );
-    if let Err(error) = git_with_input(root, &["update-ref", "--stdin"], &transaction) {
-        let _ = git(
-            root,
-            &["-c", "core.hooksPath=/dev/null", "switch", &original_branch],
-        );
+    let update = git_with_input(root, &["update-ref", "--stdin"], &transaction);
+    let cleanup = git(root, &["worktree", "remove", "--force", &reservation_text]);
+    if let Err(error) = update {
+        cleanup?;
+        if original_branch == default_branch {
+            git(
+                root,
+                &["-c", "core.hooksPath=/dev/null", "switch", default_branch],
+            )?;
+        }
         return Err(error);
     }
+    cleanup?;
     git(
         root,
         &["-c", "core.hooksPath=/dev/null", "switch", default_branch],

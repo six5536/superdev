@@ -24,6 +24,7 @@ fn lock_path(root: &Path) -> PathBuf {
 
 struct CacheFiles {
     directory: Dir,
+    repository_lock: std::fs::File,
     display: PathBuf,
 }
 
@@ -33,6 +34,13 @@ fn cache_files(root: &Path) -> Result<CacheFiles> {
             path: root.into(),
             source,
         })?;
+    let repository_lock = repository
+        .open_with(".", OpenOptions::new().read(true))
+        .map_err(|source| Error::Io {
+            path: root.into(),
+            source,
+        })?
+        .into_std();
     repository
         .create_dir_all(".superdev/cache")
         .map_err(|source| Error::Io {
@@ -47,6 +55,7 @@ fn cache_files(root: &Path) -> Result<CacheFiles> {
         })?;
     Ok(CacheFiles {
         directory,
+        repository_lock,
         display: root.join(".superdev/cache"),
     })
 }
@@ -92,27 +101,15 @@ pub fn verify_authority(cache: &WorkflowCache, capability: &str) -> Result<()> {
 fn locked<T>(root: &Path, operation: impl FnOnce(&CacheFiles) -> Result<T>) -> Result<T> {
     let files = cache_files(root)?;
     let lock_path = lock_path(root);
-    let file = files
-        .directory
-        .open_with(
-            "workflow.lock",
-            OpenOptions::new()
-                .create(true)
-                .truncate(false)
-                .read(true)
-                .write(true),
-        )
+    files
+        .repository_lock
+        .lock_exclusive()
         .map_err(|source| Error::Io {
             path: lock_path.clone(),
             source,
-        })?
-        .into_std();
-    file.lock_exclusive().map_err(|source| Error::Io {
-        path: lock_path.clone(),
-        source,
-    })?;
+        })?;
     let result = operation(&files);
-    FileExt::unlock(&file).map_err(|source| Error::Io {
+    FileExt::unlock(&files.repository_lock).map_err(|source| Error::Io {
         path: lock_path,
         source,
     })?;
@@ -181,25 +178,10 @@ pub fn load(root: &Path) -> Result<Option<WorkflowCache>> {
 pub fn try_load(root: &Path) -> Result<CacheSnapshot> {
     let files = cache_files(root)?;
     let lock_path = lock_path(root);
-    let file = files
-        .directory
-        .open_with(
-            "workflow.lock",
-            OpenOptions::new()
-                .create(true)
-                .truncate(false)
-                .read(true)
-                .write(true),
-        )
-        .map_err(|source| Error::Io {
-            path: lock_path.clone(),
-            source,
-        })?
-        .into_std();
-    match file.try_lock_exclusive() {
+    match files.repository_lock.try_lock_exclusive() {
         Ok(()) => {
             let result = load_unlocked(&files);
-            FileExt::unlock(&file).map_err(|source| Error::Io {
+            FileExt::unlock(&files.repository_lock).map_err(|source| Error::Io {
                 path: lock_path,
                 source,
             })?;
@@ -454,19 +436,22 @@ mod tests {
 
     #[cfg(unix)]
     #[test]
-    fn cache_operations_reject_symlinked_lock_and_state_files() {
+    fn cache_operations_ignore_legacy_lock_symlinks_and_reject_state_symlinks() {
         use std::os::unix::fs::symlink;
 
-        for name in ["workflow.lock", "workflow.toml"] {
-            let root = tempfile::tempdir().unwrap();
-            let directory = root.path().join(".superdev/cache");
-            fs::create_dir_all(&directory).unwrap();
-            let victim = root.path().join("victim");
-            fs::write(&victim, "preserve\n").unwrap();
-            symlink(&victim, directory.join(name)).unwrap();
-            assert!(bind(root.path(), &state("a")).is_err());
-            assert_eq!(fs::read_to_string(victim).unwrap(), "preserve\n");
-        }
+        let root = tempfile::tempdir().unwrap();
+        let directory = root.path().join(".superdev/cache");
+        fs::create_dir_all(&directory).unwrap();
+        let victim = root.path().join("victim");
+        fs::write(&victim, "preserve\n").unwrap();
+        symlink(&victim, directory.join("workflow.lock")).unwrap();
+        bind(root.path(), &state("a")).unwrap();
+        assert_eq!(fs::read_to_string(&victim).unwrap(), "preserve\n");
+
+        release(root.path(), "a").unwrap();
+        symlink(&victim, directory.join("workflow.toml")).unwrap();
+        assert!(bind(root.path(), &state("a")).is_err());
+        assert_eq!(fs::read_to_string(victim).unwrap(), "preserve\n");
     }
 
     #[cfg(unix)]
