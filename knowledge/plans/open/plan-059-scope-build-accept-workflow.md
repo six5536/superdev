@@ -148,7 +148,7 @@ The canonical-knowledge surface covers ADRs, contracts, schemas, procedures, con
 
 ### Block 10: Resolve completed re-scope discoveries
 
-- [ ] Done.
+- [x] Done.
 - Dependencies: Block 9.
 - Areas: `knowledge/issues/open/issue-059-scope-build-accept-workflow.md`.
 - Outcome: the four discoveries implemented through Blocks 7 through 9 are marked resolved without changing product behavior or erasing their history.
