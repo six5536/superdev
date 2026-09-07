@@ -1,9 +1,13 @@
 //! Atomic transient Pi-session ownership for a workflow.
 
-use std::fs::{self, OpenOptions};
-use std::io::Write;
+#[cfg(test)]
+use std::fs;
+use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicU64, Ordering};
 
+use cap_std::ambient_authority;
+use cap_std::fs::{Dir, OpenOptions};
 use fs2::FileExt;
 use sha2::{Digest, Sha256};
 
@@ -18,48 +22,36 @@ fn lock_path(root: &Path) -> PathBuf {
     root.join(".superdev/cache/workflow.lock")
 }
 
-fn reject_symlink(path: &Path) -> Result<()> {
-    if fs::symlink_metadata(path).is_ok_and(|metadata| metadata.file_type().is_symlink()) {
-        Err(Error::Manifest {
-            message: format!(
-                "workflow cache path may not be a symlink: {}",
-                path.display()
-            ),
-        })
-    } else {
-        Ok(())
-    }
+struct CacheFiles {
+    directory: Dir,
+    display: PathBuf,
 }
 
-fn require_cache_directory(root: &Path) -> Result<PathBuf> {
-    let superdev = root.join(".superdev");
-    let cache = superdev.join("cache");
-    for directory in [&superdev, &cache] {
-        if fs::symlink_metadata(directory).is_ok_and(|metadata| metadata.file_type().is_symlink()) {
-            return Err(Error::Manifest {
-                message: format!(
-                    "workflow cache directory may not be a symlink: {}",
-                    directory.display()
-                ),
-            });
-        }
-    }
-    fs::create_dir_all(&cache).map_err(|source| Error::Io {
-        path: cache.clone(),
-        source,
-    })?;
-    for directory in [&superdev, &cache] {
-        if fs::symlink_metadata(directory).is_ok_and(|metadata| metadata.file_type().is_symlink()) {
-            return Err(Error::Manifest {
-                message: format!(
-                    "workflow cache directory may not be a symlink: {}",
-                    directory.display()
-                ),
-            });
-        }
-    }
-    Ok(cache)
+fn cache_files(root: &Path) -> Result<CacheFiles> {
+    let repository =
+        Dir::open_ambient_dir(root, ambient_authority()).map_err(|source| Error::Io {
+            path: root.into(),
+            source,
+        })?;
+    repository
+        .create_dir_all(".superdev/cache")
+        .map_err(|source| Error::Io {
+            path: root.join(".superdev/cache"),
+            source,
+        })?;
+    let directory = repository
+        .open_dir(".superdev/cache")
+        .map_err(|source| Error::Io {
+            path: root.join(".superdev/cache"),
+            source,
+        })?;
+    Ok(CacheFiles {
+        directory,
+        display: root.join(".superdev/cache"),
+    })
 }
+
+static TEMPORARY_SEQUENCE: AtomicU64 = AtomicU64::new(0);
 
 /// Digest an unpersisted UI authority capability for transient ownership.
 pub fn authority_digest(capability: &str) -> Result<String> {
@@ -97,26 +89,29 @@ pub fn verify_authority(cache: &WorkflowCache, capability: &str) -> Result<()> {
 
 /// Hold the repository workflow lock for one complete read/check/write
 /// transaction. The persistent empty lock file makes crash recovery safe.
-fn locked<T>(root: &Path, operation: impl FnOnce() -> Result<T>) -> Result<T> {
-    require_cache_directory(root)?;
+fn locked<T>(root: &Path, operation: impl FnOnce(&CacheFiles) -> Result<T>) -> Result<T> {
+    let files = cache_files(root)?;
     let lock_path = lock_path(root);
-    reject_symlink(&lock_path)?;
-    let file = OpenOptions::new()
-        .create(true)
-        .truncate(false)
-        .read(true)
-        .write(true)
-        .open(&lock_path)
+    let file = files
+        .directory
+        .open_with(
+            "workflow.lock",
+            OpenOptions::new()
+                .create(true)
+                .truncate(false)
+                .read(true)
+                .write(true),
+        )
         .map_err(|source| Error::Io {
             path: lock_path.clone(),
             source,
-        })?;
-    reject_symlink(&lock_path)?;
+        })?
+        .into_std();
     file.lock_exclusive().map_err(|source| Error::Io {
         path: lock_path.clone(),
         source,
     })?;
-    let result = operation();
+    let result = operation(&files);
     FileExt::unlock(&file).map_err(|source| Error::Io {
         path: lock_path,
         source,
@@ -129,12 +124,13 @@ fn locked<T>(root: &Path, operation: impl FnOnce() -> Result<T>) -> Result<T> {
 /// its ownership compare-and-swap.
 pub struct Transaction<'a> {
     root: &'a Path,
+    files: &'a CacheFiles,
 }
 
 impl Transaction<'_> {
     /// Read transient ownership without reacquiring the transaction lock.
     pub fn load(&self) -> Result<Option<WorkflowCache>> {
-        load_unlocked(self.root)
+        load_unlocked(self.files)
     }
 
     /// Compare and swap ownership state while retaining the transaction lock.
@@ -144,12 +140,12 @@ impl Transaction<'_> {
         expected_revision: &str,
         update: impl FnOnce(&mut WorkflowCache),
     ) -> Result<WorkflowCache> {
-        compare_and_swap_unlocked(self.root, session, expected_revision, update)
+        compare_and_swap_unlocked(self.files, session, expected_revision, update)
     }
 
     /// Release matching ownership while retaining the transaction lock.
     pub fn release(&mut self, session: &str) -> Result<()> {
-        release_unlocked(self.root, session)
+        release_unlocked(self.root, self.files, session)
     }
 }
 
@@ -159,7 +155,7 @@ pub fn transaction<T>(
     root: &Path,
     operation: impl FnOnce(&mut Transaction<'_>) -> Result<T>,
 ) -> Result<T> {
-    locked(root, || operation(&mut Transaction { root }))
+    locked(root, |files| operation(&mut Transaction { root, files }))
 }
 
 /// A non-blocking ownership read used by observational status adapters.
@@ -175,7 +171,7 @@ pub enum CacheSnapshot {
 
 /// Read transient ownership. Absence means unowned, never complete.
 pub fn load(root: &Path) -> Result<Option<WorkflowCache>> {
-    locked(root, || load_unlocked(root))
+    locked(root, load_unlocked)
 }
 
 /// Read ownership without waiting behind a workflow transaction.
@@ -183,23 +179,26 @@ pub fn load(root: &Path) -> Result<Option<WorkflowCache>> {
 /// A busy result is distinct from absent ownership so status adapters cannot
 /// mistake an in-progress publication for an unowned workflow.
 pub fn try_load(root: &Path) -> Result<CacheSnapshot> {
-    require_cache_directory(root)?;
+    let files = cache_files(root)?;
     let lock_path = lock_path(root);
-    reject_symlink(&lock_path)?;
-    let file = OpenOptions::new()
-        .create(true)
-        .truncate(false)
-        .read(true)
-        .write(true)
-        .open(&lock_path)
+    let file = files
+        .directory
+        .open_with(
+            "workflow.lock",
+            OpenOptions::new()
+                .create(true)
+                .truncate(false)
+                .read(true)
+                .write(true),
+        )
         .map_err(|source| Error::Io {
             path: lock_path.clone(),
             source,
-        })?;
-    reject_symlink(&lock_path)?;
+        })?
+        .into_std();
     match file.try_lock_exclusive() {
         Ok(()) => {
-            let result = load_unlocked(root);
+            let result = load_unlocked(&files);
             FileExt::unlock(&file).map_err(|source| Error::Io {
                 path: lock_path,
                 source,
@@ -217,14 +216,18 @@ pub fn try_load(root: &Path) -> Result<CacheSnapshot> {
     }
 }
 
-fn load_unlocked(root: &Path) -> Result<Option<WorkflowCache>> {
-    let path = path(root);
-    reject_symlink(&path)?;
-    let text = match fs::read_to_string(&path) {
-        Ok(text) => text,
+fn load_unlocked(files: &CacheFiles) -> Result<Option<WorkflowCache>> {
+    let path = files.display.join("workflow.toml");
+    let mut file = match files.directory.open("workflow.toml") {
+        Ok(file) => file,
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(None),
         Err(source) => return Err(Error::Io { path, source }),
     };
+    let mut text = String::new();
+    file.read_to_string(&mut text).map_err(|source| Error::Io {
+        path: path.clone(),
+        source,
+    })?;
     toml_edit::de::from_str(&text)
         .map(Some)
         .map_err(|error| Error::Toml {
@@ -248,8 +251,8 @@ pub fn bind(root: &Path, cache: &WorkflowCache) -> Result<()> {
                 .into(),
         });
     }
-    locked(root, || {
-        if let Some(owner) = load_unlocked(root)?
+    locked(root, |files| {
+        if let Some(owner) = load_unlocked(files)?
             && (owner.session_id != cache.session_id
                 || owner.identity != cache.identity
                 || owner.authority_digest != cache.authority_digest)
@@ -258,7 +261,7 @@ pub fn bind(root: &Path, cache: &WorkflowCache) -> Result<()> {
                 message: format!("workflow is owned by Pi session `{}`", owner.session_id),
             });
         }
-        save_unlocked(root, cache)
+        save_unlocked(files, cache)
     })
 }
 
@@ -269,18 +272,18 @@ pub fn compare_and_swap(
     expected_revision: &str,
     update: impl FnOnce(&mut WorkflowCache),
 ) -> Result<WorkflowCache> {
-    locked(root, || {
-        compare_and_swap_unlocked(root, session, expected_revision, update)
+    locked(root, |files| {
+        compare_and_swap_unlocked(files, session, expected_revision, update)
     })
 }
 
 fn compare_and_swap_unlocked(
-    root: &Path,
+    files: &CacheFiles,
     session: &str,
     expected_revision: &str,
     update: impl FnOnce(&mut WorkflowCache),
 ) -> Result<WorkflowCache> {
-    let mut cache = load_unlocked(root)?.ok_or_else(|| Error::Manifest {
+    let mut cache = load_unlocked(files)?.ok_or_else(|| Error::Manifest {
         message: "workflow has no owning Pi session; bind or resume it first".into(),
     })?;
     if cache.session_id != session {
@@ -294,17 +297,17 @@ fn compare_and_swap_unlocked(
         });
     }
     update(&mut cache);
-    save_unlocked(root, &cache)?;
+    save_unlocked(files, &cache)?;
     Ok(cache)
 }
 
 /// Release ownership for the matching session without touching canonical state.
 pub fn release(root: &Path, session: &str) -> Result<()> {
-    locked(root, || release_unlocked(root, session))
+    locked(root, |files| release_unlocked(root, files, session))
 }
 
-fn release_unlocked(root: &Path, session: &str) -> Result<()> {
-    let Some(cache) = load_unlocked(root)? else {
+fn release_unlocked(root: &Path, files: &CacheFiles, session: &str) -> Result<()> {
+    let Some(cache) = load_unlocked(files)? else {
         return Ok(());
     };
     if cache.session_id != session {
@@ -312,41 +315,52 @@ fn release_unlocked(root: &Path, session: &str) -> Result<()> {
             message: format!("workflow is owned by Pi session `{}`", cache.session_id),
         });
     }
-    fs::remove_file(path(root)).map_err(|source| Error::Io {
-        path: path(root),
-        source,
-    })
+    files
+        .directory
+        .remove_file("workflow.toml")
+        .map_err(|source| Error::Io {
+            path: path(root),
+            source,
+        })
 }
 
-fn save_unlocked(root: &Path, cache: &WorkflowCache) -> Result<()> {
-    let path = path(root);
-    let parent = path.parent().expect("cache path has a parent");
-    fs::create_dir_all(parent).map_err(|source| Error::Io {
-        path: parent.into(),
-        source,
-    })?;
+fn save_unlocked(files: &CacheFiles, cache: &WorkflowCache) -> Result<()> {
+    let path = files.display.join("workflow.toml");
     let text = toml_edit::ser::to_string_pretty(cache).map_err(|error| Error::Toml {
         path: path.clone(),
         message: error.to_string(),
     })?;
-    let mut temporary = tempfile::NamedTempFile::new_in(parent).map_err(|source| Error::Io {
-        path: parent.into(),
-        source,
-    })?;
-    temporary
-        .write_all(text.as_bytes())
-        .and_then(|()| temporary.as_file().sync_all())
+    let temporary = format!(
+        ".workflow-{}-{}.tmp",
+        std::process::id(),
+        TEMPORARY_SEQUENCE.fetch_add(1, Ordering::Relaxed)
+    );
+    let mut file = files
+        .directory
+        .open_with(&temporary, OpenOptions::new().create_new(true).write(true))
         .map_err(|source| Error::Io {
-            path: temporary.path().into(),
+            path: files.display.join(&temporary),
             source,
         })?;
-    temporary
-        .persist(&path)
-        .map(|_| ())
-        .map_err(|error| Error::Io {
-            path,
-            source: error.error,
-        })
+    if let Err(source) = file
+        .write_all(text.as_bytes())
+        .and_then(|()| file.sync_all())
+    {
+        let _ = files.directory.remove_file(&temporary);
+        return Err(Error::Io {
+            path: files.display.join(&temporary),
+            source,
+        });
+    }
+    drop(file);
+    if let Err(source) = files
+        .directory
+        .rename(&temporary, &files.directory, "workflow.toml")
+    {
+        let _ = files.directory.remove_file(&temporary);
+        return Err(Error::Io { path, source });
+    }
+    Ok(())
 }
 
 #[cfg(test)]
@@ -395,6 +409,47 @@ mod tests {
         symlink(outside.path(), root.path().join(".superdev")).unwrap();
         assert!(bind(root.path(), &state("a")).is_err());
         assert!(!outside.path().join("cache/workflow.lock").exists());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn held_transactions_keep_one_descriptor_root_when_ancestors_are_replaced() {
+        use std::os::unix::fs::symlink;
+
+        for replace_cache_only in [false, true] {
+            let root = tempfile::tempdir().unwrap();
+            bind(root.path(), &state("a")).unwrap();
+            let outside = tempfile::tempdir().unwrap();
+            let (target, moved) = if replace_cache_only {
+                (
+                    root.path().join(".superdev/cache"),
+                    root.path().join("cache-moved"),
+                )
+            } else {
+                (
+                    root.path().join(".superdev"),
+                    root.path().join("superdev-moved"),
+                )
+            };
+            transaction(root.path(), |transaction| {
+                fs::rename(&target, &moved).unwrap();
+                symlink(outside.path(), &target).unwrap();
+                let updated = transaction.compare_and_swap("a", "one", |cache| {
+                    cache.last_plan_revision = "two".into();
+                })?;
+                assert_eq!(updated.last_plan_revision, "two");
+                Ok(())
+            })
+            .unwrap();
+            assert!(!outside.path().join("workflow.lock").exists());
+            assert!(!outside.path().join("workflow.toml").exists());
+            let state_path = if replace_cache_only {
+                moved.join("workflow.toml")
+            } else {
+                moved.join("cache/workflow.toml")
+            };
+            assert!(fs::read_to_string(state_path).unwrap().contains("two"));
+        }
     }
 
     #[cfg(unix)]
