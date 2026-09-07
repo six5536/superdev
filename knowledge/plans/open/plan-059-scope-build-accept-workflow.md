@@ -104,7 +104,7 @@ The canonical-knowledge surface covers ADRs, contracts, schemas, procedures, con
 
 ### Block 6: Verify and accept an immutable candidate
 
-- [x] Done.
+- [ ] Done.
 - Dependencies: Blocks 1 through 5.
 - Areas: complete repository diff and local integration path.
 - Outcome: every bootstrap checklist item is satisfied, full verification passes, a fresh isolated read-only review reports no findings for immutable candidate `H`, configured acceptance is recorded, closure is committed, and the local default branch receives a no-fast-forward merge.
@@ -115,7 +115,7 @@ The canonical-knowledge surface covers ADRs, contracts, schemas, procedures, con
 
 ## Build state
 
-Current block: 6. Attempts: 0. Final corrections: 3. Fingerprint: none. Blocker: final correction limit exhausted: Integration can leave an already-checked-out default worktree stale; cache operations allow a symlinked private parent directory.
+Current block: 6. Attempts: 0. Final corrections: 0. Fingerprint: none. Blocker: none.
 
 ## Implementation decisions
 
@@ -127,7 +127,7 @@ Block 4: failed BUILD commands are normalized and SHA-256 fingerprinted by the s
 
 Block 5: filing allocation and publication are serialized and compare-and-swap the local default from a temporary detached worktree. Pi workflow assets and the independently useful SOKF authoring skill are first-class pack items with byte-for-byte lock parity. Retired Claude workflow assets remain inactive under `archive/claude-code/`, while sync removes only previously managed retired paths. Standalone adapter smoke dependencies are declared by the workspace so the SCOPE-approved command executes without relying on Pi's private installation tree.
 
-Block 6: observational status uses an explicit nonblocking busy snapshot during held workflow transactions, preventing nested Pi smoke processes from deadlocking service-owned verification. Immutable review uses a bounded inventory followed by per-path diffs, acceptance policy is loaded from pinned Rust status and fails closed when absent, scope and final evidence bind both candidate and authoritative review base, and ACCEPT runs a fresh isolated read-only assessment before the parent-owned configured decision.
+Block 6: observational status uses an explicit nonblocking busy snapshot during held workflow transactions, preventing nested Pi smoke processes from deadlocking service-owned verification. Immutable review uses a bounded inventory followed by per-path diffs, acceptance policy is loaded from pinned Rust status and fails closed when absent, scope and final evidence bind both candidate and authoritative review base, and ACCEPT runs a fresh isolated read-only assessment before the parent-owned configured decision. The re-scoped final integration correction must construct the no-fast-forward merge from immutable revisions, compare-and-swap the default ref, and leave an already-checked-out default worktree synchronized; transient cache and lock writes must reject symlinked private-directory ancestors and use unpredictable exclusive temporary files.
 
 ## Follow-up issues
 
@@ -135,7 +135,7 @@ none.
 
 ## Completion evidence
 
-The root specification was explicitly approved before commit `83e04ea`, and an isolated requirements pass reported no unresolved requirement before BUILD. Rejected candidates through `1e8f20e` were superseded. Service-owned checkpoints completed Blocks 2 through 5 after their exact Verification commands passed. The full Rust workspace, 854-test npm matrix, formatting, clippy, documentation, SOKF validation, pack parity, standalone Pi smoke, and diff checks pass. Fresh immutable review run `fabfbef210cc6ac658eed6036a8dc9bde11210722952e0b1` reported no actionable finding for candidate `2571c058b69e84fedc4f4306a01152feaf837041`; later administrative and review-hardening commits require the final candidate-bound review before ACCEPT.
+The root specification was explicitly approved before commit `83e04ea`, and an isolated requirements pass reported no unresolved requirement before BUILD. Rejected candidates through `1e8f20e` were superseded. Service-owned checkpoints completed Blocks 2 through 5 after their exact Verification commands passed. The full Rust workspace, 854-test npm matrix, formatting, clippy, documentation, SOKF validation, pack parity, standalone Pi smoke, and diff checks pass. Fresh immutable review run `fabfbef210cc6ac658eed6036a8dc9bde11210722952e0b1` reported no actionable finding for candidate `2571c058b69e84fedc4f4306a01152feaf837041`. Three subsequent bounded final reviews identified and drove corrections for integration ref races, predictable cache temporary files, checked-out default synchronization, and symlinked cache ancestors. Exhaustion returned the same workflow to SCOPE at product baseline `e92d9e3f005690d56453f79aaa1296106040c0e3` so Block 6 can implement the final two findings under a freshly approved correction budget.
 
 Scope product baseline: e92d9e3f005690d56453f79aaa1296106040c0e3.
 
