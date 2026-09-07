@@ -122,7 +122,7 @@ sections:
   - heading: "Discoveries"
     level: 2
     content: bullet-list
-    item-pattern: '^- \[[ xX]\] .+$'
+    item-pattern: '^\[[ xX]\] .+$'
     description: >
       BUILD-time behavioural, scope, architectural, security, or ambiguous
       discoveries represented as checkbox bullets. Each item names the evidence,
@@ -196,6 +196,10 @@ example:
 
     - In: the timeout the resolver applies to a read.
     - Out: reporting a slow link before the download starts.
+
+    ## Discoveries
+
+    - [ ] BUILD discovery: the resolver may also impose a total request deadline.
   done: |
     ---
     type: Issue

@@ -518,7 +518,7 @@ pub struct TransitionArgs {
     /// Enumerated transition
     #[arg(long, value_enum)]
     transition: TransitionName,
-    /// Human rejection feedback preserved as an unresolved issue discovery
+    /// BUILD discovery or human rejection preserved verbatim on the primary issue
     #[arg(long)]
     feedback: Option<String>,
 }
@@ -777,8 +777,8 @@ the invoking adapter.
 | `superdev workflow status` | 0 | canonical and transient state is reported |
 | `superdev workflow bind` | 0 | transient ownership is acquired |
 | `superdev workflow bind` | 2 | identity, revision, branch, or ownership is invalid |
-| `superdev workflow transition` | 0 | the gated transition is persisted |
-| `superdev workflow transition` | 2 | ownership, revision, phase, or evidence is invalid |
+| `superdev workflow transition` | 0 | the gated transition is persisted, including primary-issue discovery preservation when returning to SCOPE |
+| `superdev workflow transition` | 2 | ownership, revision, phase, required feedback, or evidence is invalid |
 | `superdev workflow block` | 0 | the newly completed BUILD block passes dependency and executable checks and its path-scoped checkpoint is committed |
 | `superdev workflow block` | 2 | ownership, revision, identity, branch, phase, dependency, executable evidence, or path scope is invalid |
 | `superdev workflow attempt` | 0 | one normalized failed BUILD attempt is durably counted |

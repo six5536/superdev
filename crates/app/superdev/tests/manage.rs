@@ -510,6 +510,89 @@ fn workflow_start_creates_a_canonical_scope_plan_and_resume_adopts_it() {
     Command::cargo_bin("superdev")
         .unwrap()
         .current_dir(dir.path())
+        .args([
+            "workflow",
+            "transition",
+            "--session",
+            "pi-b",
+            "--expected-revision",
+            &revision,
+            "--phase",
+            "build",
+            "--transition",
+            "return-to-scope",
+            "--feedback",
+            "The public behavior needs a clarified requirement.",
+        ])
+        .assert()
+        .success();
+    let returned = fs::read_to_string(&plan).unwrap();
+    assert!(returned.contains("phase: scope"));
+    assert!(returned.contains("Scope product baseline: "));
+    assert!(!returned.contains("Scope requirements review: clean"));
+    assert!(!returned.contains("Human scope approval: approved"));
+    let issue = fs::read_to_string(
+        dir.path()
+            .join("knowledge/issues/open/issue-001-canonical-recovery.md"),
+    )
+    .unwrap();
+    assert!(issue.contains("- [ ] BUILD discovery:"));
+    assert!(issue.contains("The public behavior needs a clarified requirement."));
+
+    let expected = cache::load(dir.path()).unwrap().unwrap().last_plan_revision;
+    let rescoped = returned.replace(
+        "Implement one tested source checkpoint.",
+        "Implement one tested source checkpoint with clarified public behavior.",
+    );
+    fs::write(&plan, &rescoped).unwrap();
+    let rescoped_revision = parse_concept(&plan.to_string_lossy(), &rescoped)
+        .unwrap()
+        .content_hash;
+    Command::cargo_bin("superdev")
+        .unwrap()
+        .current_dir(dir.path())
+        .env("SUPERDEV_UI_AUTHORITY", "fedcba9876543210fedcba9876543210")
+        .args([
+            "workflow",
+            "evidence",
+            "--session",
+            "pi-b",
+            "--expected-revision",
+            &expected,
+            "--revision",
+            &rescoped_revision,
+            "--kind",
+            "scope-review",
+            "--review-session",
+            "review-rescope",
+        ])
+        .assert()
+        .success();
+    let revision = cache::load(dir.path()).unwrap().unwrap().last_plan_revision;
+    Command::cargo_bin("superdev")
+        .unwrap()
+        .current_dir(dir.path())
+        .env("SUPERDEV_UI_AUTHORITY", "fedcba9876543210fedcba9876543210")
+        .args([
+            "workflow",
+            "transition",
+            "--session",
+            "pi-b",
+            "--expected-revision",
+            &revision,
+            "--phase",
+            "scope",
+            "--transition",
+            "approve-scope",
+        ])
+        .assert()
+        .success();
+    assert!(fs::read_to_string(&plan).unwrap().contains("phase: build"));
+
+    let revision = cache::load(dir.path()).unwrap().unwrap().last_plan_revision;
+    Command::cargo_bin("superdev")
+        .unwrap()
+        .current_dir(dir.path())
         .env("SUPERDEV_UI_AUTHORITY", "fedcba9876543210fedcba9876543210")
         .args([
             "workflow",

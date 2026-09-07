@@ -223,7 +223,7 @@ pub struct TransitionArgs {
     /// Enumerated transition
     #[arg(long, value_enum)]
     transition: TransitionName,
-    /// Human rejection feedback preserved as an unresolved issue discovery
+    /// BUILD discovery or human rejection preserved verbatim on the primary issue
     #[arg(long)]
     feedback: Option<String>,
 }
@@ -1519,19 +1519,23 @@ fn transition_locked(
             TransitionName::RecoverStaleDefault => Transition::RecoverStaleDefault,
         }
     };
-    let rejection_feedback = if matches!(transition, Transition::RejectAcceptance) {
+    let rescope_feedback = if matches!(
+        transition,
+        Transition::ReturnToScope | Transition::RejectAcceptance
+    ) {
         Some(
             args.feedback
                 .as_deref()
                 .filter(|feedback| !feedback.trim().is_empty())
                 .ok_or_else(|| Error::Manifest {
-                    message: "acceptance rejection requires verbatim human feedback".into(),
+                    message: "return to SCOPE requires verbatim discovery or rejection feedback"
+                        .into(),
                 })?,
         )
     } else {
         if args.feedback.is_some() {
             return Err(Error::Manifest {
-                message: "feedback is accepted only for rejection to SCOPE".into(),
+                message: "feedback is accepted only when returning to SCOPE".into(),
             });
         }
         None
@@ -1546,11 +1550,13 @@ fn transition_locked(
             }
         })?;
     if matches!(transition, Transition::ApproveScope) {
-        let default = git::revision(root, &state.identity.default_branch)?;
+        let scope_base = evidence_revision(&plan_text, "Scope product baseline")
+            .unwrap_or(git::revision(root, &state.identity.default_branch)?);
         let head = git::revision(root, &state.identity.work_branch)?;
-        if git::changed_paths(root, &default, &head)?
-            .iter()
-            .any(|path| !path.starts_with("knowledge/"))
+        if !git::is_ancestor(root, &scope_base, &head)?
+            || git::changed_paths(root, &scope_base, &head)?
+                .iter()
+                .any(|path| !path.starts_with("knowledge/"))
         {
             return Err(Error::Manifest {
                 message:
@@ -1635,9 +1641,34 @@ fn transition_locked(
             &["Human scope approval: approved.".into()],
         )?);
     }
-    if matches!(transition, Transition::RejectAcceptance)
-        || matches!(transition, Transition::RecoverStaleDefault) && phase == Phase::Accept
-    {
+    let scope_baseline = if matches!(
+        transition,
+        Transition::ReturnToScope | Transition::RejectAcceptance
+    ) {
+        Some(format!(
+            "Scope product baseline: {}.",
+            git::revision(root, &state.identity.work_branch)?
+        ))
+    } else {
+        None
+    };
+    if matches!(transition, Transition::RejectAcceptance) {
+        edits.push(invalidate_scope_evidence_edit(
+            &plan_text,
+            scope_baseline
+                .as_ref()
+                .expect("rejection has a scope baseline"),
+            true,
+        )?);
+    } else if matches!(transition, Transition::ReturnToScope) {
+        edits.push(invalidate_scope_evidence_edit(
+            &plan_text,
+            scope_baseline
+                .as_ref()
+                .expect("return has a scope baseline"),
+            false,
+        )?);
+    } else if matches!(transition, Transition::RecoverStaleDefault) && phase == Phase::Accept {
         edits.push(invalidate_final_evidence_edit(&plan_text)?);
     }
     if matches!(next, Phase::Done | Phase::Abandoned) {
@@ -1671,7 +1702,7 @@ fn transition_locked(
         reopen_stale_closure(root, &state.identity)?;
     } else if matches!(next, Phase::Done | Phase::Abandoned) {
         close_records(root, &state.identity, next, abandonment_reason)?;
-    } else if let Some(feedback) = rejection_feedback {
+    } else if let Some(feedback) = rescope_feedback {
         let issue_path = root
             .join("knowledge/issues/open")
             .join(format!("{}.md", state.identity.issue));
@@ -1685,7 +1716,15 @@ fn transition_locked(
                 (&path, edits),
                 (
                     &issue_path,
-                    vec![rejection_discovery_edit(&issue_text, feedback)?],
+                    vec![rescope_discovery_edit(
+                        &issue_text,
+                        if matches!(transition, Transition::RejectAcceptance) {
+                            "ACCEPT rejection"
+                        } else {
+                            "BUILD discovery"
+                        },
+                        feedback,
+                    )?],
                 ),
             ],
         )?;
@@ -1773,8 +1812,16 @@ fn apply_record_edits_transactionally(
             MutationPolicy::AgentSafe,
         )?;
         if mutation.validation != superdev_core::sokf::ValidationState::Valid {
+            let findings = mutation
+                .findings
+                .iter()
+                .map(|finding| finding.message.as_str())
+                .collect::<Vec<_>>()
+                .join("; ");
             return Err(Error::Manifest {
-                message: "workflow transition did not leave valid canonical knowledge".into(),
+                message: format!(
+                    "workflow transition did not leave valid canonical knowledge: {findings}"
+                ),
             });
         }
     }
@@ -1800,9 +1847,18 @@ fn primary_issue_has_unresolved_discoveries(root: &Path, issue: &str) -> Result<
     Ok(body[..end].lines().any(|line| line.starts_with("- [ ] ")))
 }
 
-fn rejection_discovery_edit(issue: &str, feedback: &str) -> Result<ExactEdit> {
-    let preserved = feedback.split('\n').collect::<Vec<_>>().join("\n      ");
-    let item = format!("- [ ] ACCEPT rejection:\n\n      {preserved}");
+fn rescope_discovery_edit(issue: &str, label: &str, feedback: &str) -> Result<ExactEdit> {
+    let mut feedback_lines = feedback.split('\n');
+    let first = feedback_lines.next().unwrap_or_default();
+    let remaining = feedback_lines.collect::<Vec<_>>();
+    let item = if remaining.is_empty() {
+        format!("- [ ] {label}: {first}")
+    } else {
+        format!(
+            "- [ ] {label}: {first}\n\n      {}",
+            remaining.join("\n      ")
+        )
+    };
     if let Some(start) = issue.find("## Discoveries\n") {
         let content_start = start + "## Discoveries\n".len();
         let end = issue[content_start..]
@@ -2077,6 +2133,46 @@ fn copy_tree(source: &Path, destination: &Path) -> Result<()> {
 }
 
 fn invalidate_final_evidence_edit(plan: &str) -> Result<ExactEdit> {
+    filter_completion_evidence(
+        plan,
+        &[
+            "Candidate revision: ",
+            "Verified default revision: ",
+            "Final verification: ",
+            "Documentation verification: ",
+            "Final review: ",
+        ],
+        &[],
+    )
+}
+
+fn invalidate_scope_evidence_edit(
+    plan: &str,
+    baseline: &str,
+    invalidate_final: bool,
+) -> Result<ExactEdit> {
+    let mut prefixes = vec![
+        "Scope requirements review: ",
+        "Human scope approval: ",
+        "Scope product baseline: ",
+    ];
+    if invalidate_final {
+        prefixes.extend([
+            "Candidate revision: ",
+            "Verified default revision: ",
+            "Final verification: ",
+            "Documentation verification: ",
+            "Final review: ",
+        ]);
+    }
+    filter_completion_evidence(plan, &prefixes, &[baseline.to_string()])
+}
+
+fn filter_completion_evidence(
+    plan: &str,
+    prefixes: &[&str],
+    appended_lines: &[String],
+) -> Result<ExactEdit> {
     let marker = "## Completion evidence\n\n";
     let start = plan.find(marker).ok_or_else(|| Error::Manifest {
         message: "workflow plan has no Completion evidence section".into(),
@@ -2087,21 +2183,24 @@ fn invalidate_final_evidence_edit(plan: &str) -> Result<ExactEdit> {
         .or_else(|| tail.find("\n<!-- sokf:links -->"))
         .unwrap_or(tail.len());
     let old = &tail[..end];
-    let prefixes = [
-        "Candidate revision: ",
-        "Verified default revision: ",
-        "Final verification: ",
-        "Documentation verification: ",
-        "Final review: ",
-    ];
-    let retained = old
+    let mut retained = old
         .lines()
         .filter(|line| !prefixes.iter().any(|prefix| line.starts_with(prefix)))
         .collect::<Vec<_>>()
-        .join("\n");
+        .join("\n")
+        .trim_end()
+        .to_string();
+    for line in appended_lines {
+        if !retained.lines().any(|existing| existing == line) {
+            if !retained.is_empty() {
+                retained.push_str("\n\n");
+            }
+            retained.push_str(line);
+        }
+    }
     Ok(ExactEdit {
         old_text: format!("{marker}{old}"),
-        new_text: format!("{marker}{}\n", retained.trim_end()),
+        new_text: format!("{marker}{retained}\n"),
     })
 }
 
@@ -2288,6 +2387,19 @@ mod tests {
     }
 
     #[test]
+    fn rescope_invalidates_prior_scope_evidence_and_replaces_the_product_baseline() {
+        let plan = "## Completion evidence\n\nScope requirements review: clean by isolated session old.\n\nHuman scope approval: approved.\n\nScope product baseline: 1111111.\n\nBlock evidence remains.\n\n## Follow-up\n";
+        let edit = invalidate_scope_evidence_edit(plan, "Scope product baseline: 2222222.", false)
+            .unwrap();
+        let changed = plan.replace(&edit.old_text, &edit.new_text);
+        assert!(!changed.contains("isolated session old"));
+        assert!(!changed.contains("Human scope approval"));
+        assert!(!changed.contains("1111111"));
+        assert!(changed.contains("Scope product baseline: 2222222."));
+        assert!(changed.contains("Block evidence remains."));
+    }
+
+    #[test]
     fn unresolved_discoveries_are_limited_to_the_discovery_section() {
         let dir = tempfile::tempdir().unwrap();
         let issues = dir.path().join("knowledge/issues/open");
@@ -2309,10 +2421,11 @@ mod tests {
     #[test]
     fn rejection_feedback_becomes_an_unresolved_discovery() {
         let issue = "## Behaviour\n\nExpected.\n\n## Comments\n\nPrior.\n";
-        let edit = rejection_discovery_edit(issue, "First line\nsecond line").unwrap();
+        let edit =
+            rescope_discovery_edit(issue, "ACCEPT rejection", "First line\nsecond line").unwrap();
         let changed = issue.replace(&edit.old_text, &edit.new_text);
         assert!(changed.contains(
-            "## Discoveries\n\n- [ ] ACCEPT rejection:\n\n      First line\n      second line\n"
+            "## Discoveries\n\n- [ ] ACCEPT rejection: First line\n\n      second line\n"
         ));
         assert!(changed.find("## Discoveries").unwrap() < changed.find("## Comments").unwrap());
     }
@@ -2320,11 +2433,10 @@ mod tests {
     #[test]
     fn rejection_appends_without_erasing_existing_discoveries() {
         let issue = "## Discoveries\n\n- [x] Existing.\n\n## Comments\n\nnone.\n";
-        let edit = rejection_discovery_edit(issue, "Rejected because X").unwrap();
+        let edit = rescope_discovery_edit(issue, "ACCEPT rejection", "Rejected because X").unwrap();
         let changed = issue.replace(&edit.old_text, &edit.new_text);
         assert!(
-            changed
-                .contains("- [x] Existing.\n- [ ] ACCEPT rejection:\n\n      Rejected because X"),
+            changed.contains("- [x] Existing.\n- [ ] ACCEPT rejection: Rejected because X"),
             "{changed}"
         );
     }

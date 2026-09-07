@@ -470,7 +470,18 @@ export default function superdev(pi: ExtensionAPI) {
 				const built = await isolated("build", instruction || `Complete ${owner.identity.plan} from canonical state.`, ctx.cwd, ctx.model, undefined,
 				(child) => { children.add(child); modifyingChild = child; },
 				(child) => { children.delete(child); if (modifyingChild === child) modifyingChild = undefined; });
-			if (built.status !== "complete") return ctx.ui.notify(built.summary, built.status === "rescope" ? "warning" : "error");
+			if (built.status === "rescope") {
+				const latest = await workflowStatus(ctx.cwd);
+				if (!latest.owner || latest.phase !== "build") throw new Error("BUILD ownership changed before re-scope");
+				await runSuperdev([
+					"workflow", "transition", "--session", latest.owner.session_id,
+					"--expected-revision", latest.owner.last_plan_revision, "--phase", "build",
+					"--transition", "return-to-scope", "--feedback", built.summary,
+				], ctx.cwd, authority);
+				ctx.ui.setStatus("superdev-workflow", `SCOPE: ${latest.owner.identity.plan}`);
+				return ctx.ui.notify("BUILD discovery was preserved on the primary issue; the same plan returned to SCOPE", "warning");
+			}
+			if (built.status !== "complete") return ctx.ui.notify(built.summary, "error");
 			const baseResult = await pi.exec("git", ["rev-parse", "--verify", owner.identity.default_branch], { cwd: ctx.cwd });
 			const candidateResult = await pi.exec("git", ["rev-parse", "--verify", owner.identity.work_branch], { cwd: ctx.cwd });
 			if (baseResult.code !== 0 || candidateResult.code !== 0) return ctx.ui.notify("Could not resolve immutable review revisions", "error");
