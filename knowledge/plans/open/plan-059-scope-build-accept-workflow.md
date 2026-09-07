@@ -123,6 +123,8 @@ Block 2: repository workflow transactions retain the cache lock across canonical
 
 Block 3: every isolated role must terminate with role-specific `SUPERDEV_RESULT` JSON; the extension rejects missing, malformed, contradictory, or out-of-vocabulary results before orchestration can consume them. Owned sessions block switch and fork, child tool preflight enforces read-only reviewer roles and prohibits authoritative transitions, and the `/scope`, `/build`, and `/accept` commands now schedule their typed phase gates directly rather than forwarding orchestration prose.
 
+Block 4: failed BUILD commands are normalized and SHA-256 fingerprinted by the shared Rust retry service. The typed attempt command updates the plan's durable consecutive-attempt state in a knowledge-only commit, marks the configured limit as stalled, refuses equivalent attempts beyond that limit, and permits checkpoint reset only when the same stable block newly completes.
+
 ## Follow-up issues
 
 none.
