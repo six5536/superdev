@@ -1703,6 +1703,14 @@ fn transition_locked(
         Transition::Abandon => "chore(workflow): close abandoned work",
     };
     git::commit_knowledge_changes(root, commit_message)?;
+    if matches!(transition, Transition::Abandon) {
+        filing::publish_abandonment(
+            root,
+            &state.identity.default_branch,
+            &state.identity.issue,
+            &state.identity.plan,
+        )?;
+    }
     let revision = plan_revision(root, &state.identity.plan)?.1;
     let state = transaction.compare_and_swap(&args.session, &args.expected_revision, |state| {
         state.last_plan_revision.clone_from(&revision);
@@ -1717,9 +1725,16 @@ fn transition_locked(
             state.verified_default_revision = None;
         }
     })?;
+    if matches!(transition, Transition::Abandon) {
+        transaction.release(&args.session)?;
+    }
     emit(
         "transition",
-        &serde_json::json!({"phase": phase_text(next), "state": state}),
+        &serde_json::json!({
+            "phase": phase_text(next),
+            "state": state,
+            "ownershipReleased": matches!(transition, Transition::Abandon),
+        }),
     )
 }
 

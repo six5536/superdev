@@ -505,6 +505,50 @@ fn workflow_start_creates_a_canonical_scope_plan_and_resume_adopts_it() {
     let paths = String::from_utf8(paths.stdout).unwrap();
     assert!(paths.contains("src/lib.rs"));
     assert!(paths.contains("knowledge/plans/open/plan-001-canonical-recovery.md"));
+
+    let revision = cache::load(dir.path()).unwrap().unwrap().last_plan_revision;
+    Command::cargo_bin("superdev")
+        .unwrap()
+        .current_dir(dir.path())
+        .env("SUPERDEV_UI_AUTHORITY", "fedcba9876543210fedcba9876543210")
+        .args([
+            "workflow",
+            "abandon",
+            "--session",
+            "pi-b",
+            "--expected-revision",
+            &revision,
+            "--phase",
+            "build",
+            "--reason",
+            "Human chose not to continue.",
+        ])
+        .assert()
+        .success();
+    assert!(cache::load(dir.path()).unwrap().is_none());
+    let default_plan = std::process::Command::new("git")
+        .args([
+            "show",
+            "main:knowledge/plans/abandoned/plan-001-canonical-recovery.md",
+        ])
+        .current_dir(dir.path())
+        .output()
+        .unwrap();
+    assert!(default_plan.status.success());
+    assert!(
+        String::from_utf8(default_plan.stdout)
+            .unwrap()
+            .contains("phase: abandoned")
+    );
+    let default_product = std::process::Command::new("git")
+        .args(["cat-file", "-e", "main:src/lib.rs"])
+        .current_dir(dir.path())
+        .output()
+        .unwrap();
+    assert!(
+        !default_product.status.success(),
+        "partial product reached main"
+    );
 }
 
 #[test]
