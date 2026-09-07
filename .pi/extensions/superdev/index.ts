@@ -18,7 +18,7 @@ const schema = Type.Object({
 });
 type Input = Static<typeof schema>;
 
-const readOnly = new Set(["requirements-review", "code-review"]);
+const readOnly = new Set(["requirements-review", "code-review", "accept"]);
 
 type RoleResult = {
 	status: "complete" | "clean" | "findings" | "rescope" | "rejected" | "duplicate" | "blocked";
@@ -356,6 +356,7 @@ export default function superdev(pi: ExtensionAPI) {
 		owner?: {
 			session_id: string;
 			last_plan_revision: string;
+			scope_base_revision?: string;
 			candidate_revision?: string;
 			verified_default_revision?: string;
 			identity: { issue: string; plan: string; work_branch: string; default_branch: string };
@@ -456,9 +457,13 @@ export default function superdev(pi: ExtensionAPI) {
 				const expectedRole = input.action === "record-scope-review" ? "requirements-review" : "code-review";
 				if (!review || review.role !== expectedRole || review.result.status !== "clean") throw new Error("evidence does not name a clean bound review run");
 				if (!input.candidate || input.candidate !== review.candidate) throw new Error("evidence candidate differs from the reviewed candidate");
+				const status = await workflowStatus(ctx.cwd);
+				const expectedBase = input.action === "record-scope-review"
+					? status.owner?.scope_base_revision
+					: status.owner?.verified_default_revision;
+				if (!expectedBase || review.base !== expectedBase) throw new Error("evidence review base differs from authoritative workflow state");
 				args.push("evidence", "--session", input.session, "--expected-revision", input.expectedRevision, "--kind", input.action === "record-scope-review" ? "scope-review" : "final", "--review-session", input.reviewRun);
 				if (input.action === "record-scope-review") {
-					const status = await workflowStatus(ctx.cwd);
 					if (!input.revision || input.revision !== status.canonicalPlanRevision) throw new Error("scope evidence revision differs from canonical reviewed state");
 					args.push("--revision", input.revision);
 				}
@@ -735,6 +740,18 @@ export default function superdev(pi: ExtensionAPI) {
 			const owner = status.owner;
 			if (!owner || status.phase !== "accept") return ctx.ui.notify("An owned ACCEPT workflow is required", "error");
 			if (!owner.candidate_revision || !owner.verified_default_revision) throw new Error("ACCEPT state is missing candidate-bound BUILD evidence");
+			const decision = await isolated(
+				"accept",
+				`Assess whether immutable candidate ${owner.candidate_revision} is ready for the parent-owned configured acceptance decision.`,
+				ctx.cwd,
+				ctx.model,
+				undefined,
+				(child) => children.add(child),
+				(child) => children.delete(child),
+				owner.verified_default_revision,
+				owner.candidate_revision,
+			);
+			if (decision.status !== "complete") return ctx.ui.notify(decision.summary, "error");
 			const currentDefault = await pi.exec("git", ["rev-parse", "--verify", owner.identity.default_branch], { cwd: ctx.cwd });
 			if (currentDefault.code !== 0) throw new Error("could not resolve the configured default branch");
 			if (currentDefault.stdout.trim() !== owner.verified_default_revision) {
