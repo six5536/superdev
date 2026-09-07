@@ -34,6 +34,7 @@ work blocks that deliver it; scope writes it and build works it.
 * [Filing an issue without framing it][sokf:plan-026-filing-an-issue-without-framing-it] - slices delivering I030 — a heading declared per variant in the validator, the tracker schemas varying by a four-state lifecycle with the sweep of the issues on file, the /file skill and the workflow entry, /frame framing in place with the three phases' gates, the backlog's retirement, and the records.
 * [The workflow is file, scope, build, accept][sokf:plan-027-the-workflow-is-file-scope-build-accept] - blocks delivering I052 — the validator's nested items and optional key closing contract-010's five PENDING promises, a contract's nested criteria, one issue schema with the sweep of the issues on file, one plan schema with the sweep of the plans, the scope and contract-design skills, the build, execute-plan and accept skills with the workflow text, and the concepts and records.
 * [Persistent MCP transport for Pi SOKF][sokf:plan-028-persistent-mcp-transport-for-pi-sokf] - SOKF MCP adopts familiar coding-tool semantics and Pi reuses one repository-scoped server so frequent semantic searches load the local embedding model once.
+* [Scope build accept workflow][sokf:plan-059-scope-build-accept-workflow] - replace contradictory agent workflows with one durable Rust-owned SCOPE to BUILD to ACCEPT process orchestrated by Pi.
 
 <!-- sokf:links -->
 [sokf:plan-001-flatten-crate-api]: /knowledge/plans/open/plan-001-flatten-crate-api.md
@@ -64,3 +65,4 @@ work blocks that deliver it; scope writes it and build works it.
 [sokf:plan-026-filing-an-issue-without-framing-it]: /knowledge/plans/done/plan-026-filing-an-issue-without-framing-it.md
 [sokf:plan-027-the-workflow-is-file-scope-build-accept]: /knowledge/plans/done/plan-027-the-workflow-is-file-scope-build-accept.md
 [sokf:plan-028-persistent-mcp-transport-for-pi-sokf]: /knowledge/plans/done/plan-028-persistent-mcp-transport-for-pi-sokf.md
+[sokf:plan-059-scope-build-accept-workflow]: /knowledge/plans/open/plan-059-scope-build-accept-workflow.md
