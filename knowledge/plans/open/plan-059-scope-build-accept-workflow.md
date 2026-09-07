@@ -60,7 +60,7 @@ The canonical-knowledge surface covers ADRs, contracts, schemas, procedures, con
 
 ### Block 2: Complete Rust-owned authority and atomic transitions
 
-- [ ] Done.
+- [x] Done.
 - Dependencies: Block 1.
 - Areas: `crates/lib/superdev-core/src/workflow/`, `crates/app/superdev/src/workflow_cli.rs`, and contracts 002 and 011.
 - Outcome: typed candidate-bound results, unforgeable human authority, service-owned approval/checkpoint/attestation/closure/reopening commits, phase ownership, atomic record publication and cache CAS, rejection, and abandonment are enforced by Rust.
@@ -115,7 +115,7 @@ The canonical-knowledge surface covers ADRs, contracts, schemas, procedures, con
 
 ## Build state
 
-Current block: 2. Attempts: 1. Final corrections: 0. Blocker: the latest isolated review rejected caller-forgeable evidence and authority, incomplete Rust-owned attestation transactions, prompt-driven Pi orchestration, and missing BUILD retry semantics.
+Current block: 3. Attempts: 0. Final corrections: 0. Fingerprint: none. Blocker: none.
 
 ## Implementation decisions
 
