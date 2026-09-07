@@ -1760,25 +1760,28 @@ fn run_verification_command(root: &Path, command: &str) -> Result<()> {
         process.args(["/C", command]);
         process
     };
-    let status = process
+    let output = process
         .current_dir(root)
         .env("SUPERDEV_VERIFICATION_ACTIVE", "1")
         .stdin(Stdio::null())
-        .stdout(Stdio::null())
-        .stderr(Stdio::null())
-        .status()
+        .output()
         .map_err(|source| Error::Command {
             command: command.into(),
             status: None,
             stderr: source.to_string(),
         })?;
-    if status.success() {
+    if output.status.success() {
         Ok(())
     } else {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        let diagnostics = format!("{stderr}\n{stdout}");
+        let diagnostics = diagnostics.chars().rev().take(16_000).collect::<String>();
+        let diagnostics = diagnostics.chars().rev().collect();
         Err(Error::Command {
             command: command.into(),
-            status: status.code(),
-            stderr: "plan verification failed".into(),
+            status: output.status.code(),
+            stderr: diagnostics,
         })
     }
 }
