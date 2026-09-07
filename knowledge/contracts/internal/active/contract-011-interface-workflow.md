@@ -344,6 +344,7 @@ mod tests {
 - `P_bounded-retries` [ubiquitous] Retry and correction limits SHALL be positive project configuration values that plans, prompts, adapters, and models cannot override.
 - `P_failure-fingerprint` [event] WHEN BUILD records a failed command, the service SHALL normalize bounded diagnostics and durably count consecutive equivalent fingerprints against the configured limit.
 - `P_retry-reset` [event] WHEN BUILD lowers or replaces a block's retry state, the checkpoint service SHALL require completion of that same stable block.
+- `P_block-checkpoint` [event] WHEN BUILD checkpoints a newly completed stable block, the service SHALL verify its declared dependencies and executable Verification commands before committing only changes within its path-scoped Areas plus the owning plan.
 - `P_cache-transient` [ubiquitous] Absence of `.superdev/cache/workflow.toml` SHALL mean unowned rather than complete.
 
 ## Stability

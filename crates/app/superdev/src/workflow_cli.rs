@@ -413,17 +413,28 @@ pub fn run(command: &WorkflowCommand, root: &Path) -> Result<u8> {
                 source,
             })?;
             let previous_retry = parse_retry_state(build_state_line(&previous_text)?)?;
-            let current_retry = parse_retry_state(build_state_line(&current_text)?)?;
-            let retry_reset = current_retry.attempts < previous_retry.attempts
-                || current_retry.fingerprint != previous_retry.fingerprint;
-            let newly_completed = block_is_done(&current_text, previous_retry.current_block)
-                && !block_is_done(&previous_text, previous_retry.current_block);
-            if retry_reset && !newly_completed {
+            parse_retry_state(build_state_line(&current_text)?)?;
+            let block = previous_retry.current_block;
+            let newly_completed =
+                block_is_done(&current_text, block) && !block_is_done(&previous_text, block);
+            if !newly_completed {
                 return Err(Error::Manifest {
-                    message: "BUILD retry state may reset only when its current block completes"
-                        .into(),
+                    message: "BUILD checkpoint must newly complete the current stable block".into(),
                 });
             }
+            let block_text = plan_block(&current_text, block)?;
+            for dependency in block_dependencies(block_text) {
+                if dependency >= block || !block_is_done(&current_text, dependency) {
+                    return Err(Error::Manifest {
+                        message: format!(
+                            "BUILD block {block} has an incomplete or invalid dependency {dependency}"
+                        ),
+                    });
+                }
+            }
+            let mut areas = block_area_paths(block_text);
+            areas.push(relative_plan.to_string());
+            run_block_verification(&root, block_text)?;
             let grammar = superdev_core::validate::schema::load_grammar(&root)?;
             let report = superdev_core::validate::validate_repo(
                 &root,
@@ -436,7 +447,11 @@ pub fn run(command: &WorkflowCommand, root: &Path) -> Result<u8> {
                     message: "block checkpoint requires valid canonical knowledge".into(),
                 });
             }
-            git::commit_knowledge_changes(&root, "chore(workflow): checkpoint build block")?;
+            git::commit_block_changes(
+                &root,
+                &format!("chore(workflow): checkpoint build block {block}"),
+                &areas,
+            )?;
             let state =
                 transaction.compare_and_swap(&args.session, &args.expected_revision, |state| {
                     state.last_plan_revision.clone_from(&observed)
@@ -1057,11 +1072,11 @@ fn record_correction(root: &Path, args: &CorrectionArgs) -> Result<u8> {
     })
 }
 
-fn block_is_done(plan: &str, block: u32) -> bool {
+fn plan_block(plan: &str, block: u32) -> Result<&str> {
     let heading = format!("### Block {block}: ");
-    let Some(start) = plan.find(&heading) else {
-        return false;
-    };
+    let start = plan.find(&heading).ok_or_else(|| Error::Manifest {
+        message: format!("workflow plan has no stable block {block}"),
+    })?;
     let body = &plan[start..];
     let end = body[heading.len()..]
         .find("\n### Block ")
@@ -1072,9 +1087,61 @@ fn block_is_done(plan: &str, block: u32) -> bool {
                 .map(|offset| heading.len() + offset)
         })
         .unwrap_or(body.len());
-    body[..end]
+    Ok(&body[..end])
+}
+
+fn block_is_done(plan: &str, block: u32) -> bool {
+    plan_block(plan, block).is_ok_and(|body| {
+        body.lines()
+            .any(|line| matches!(line, "- [x] Done." | "- [X] Done."))
+    })
+}
+
+fn block_dependencies(block: &str) -> Vec<u32> {
+    block
         .lines()
-        .any(|line| matches!(line, "- [x] Done." | "- [X] Done."))
+        .find(|line| line.starts_with("- Dependencies:"))
+        .into_iter()
+        .flat_map(|line| line.split(|character: char| !character.is_ascii_digit()))
+        .filter_map(|value| value.parse().ok())
+        .collect()
+}
+
+fn block_area_paths(block: &str) -> Vec<String> {
+    let Some(line) = block.lines().find(|line| line.starts_with("- Areas:")) else {
+        return Vec::new();
+    };
+    let mut paths = Vec::new();
+    let mut rest = line;
+    while let Some(open) = rest.find('`') {
+        rest = &rest[open + 1..];
+        let Some(close) = rest.find('`') else { break };
+        let path = rest[..close].trim().trim_end_matches('/');
+        if !path.is_empty() {
+            paths.push(path.to_string());
+        }
+        rest = &rest[close + 1..];
+    }
+    paths
+}
+
+fn run_block_verification(root: &Path, block: &str) -> Result<()> {
+    let commands = plan_verification_commands(block);
+    if commands.is_empty() {
+        return Err(Error::Manifest {
+            message: "BUILD block checkpoint has no executable Verification commands".into(),
+        });
+    }
+    let head = git::revision(root, "HEAD")?;
+    for command in commands {
+        run_verification_command(root, &command)?;
+        if git::revision(root, "HEAD")? != head {
+            return Err(Error::Manifest {
+                message: "a block Verification command changed HEAD".into(),
+            });
+        }
+    }
+    Ok(())
 }
 
 fn build_state_line(plan: &str) -> Result<&str> {
@@ -1322,6 +1389,41 @@ fn plan_verification_commands(plan: &str) -> Vec<String> {
         .collect()
 }
 
+fn run_verification_command(root: &Path, command: &str) -> Result<()> {
+    #[cfg(unix)]
+    let mut process = {
+        let mut process = Command::new("sh");
+        process.args(["-c", command]);
+        process
+    };
+    #[cfg(windows)]
+    let mut process = {
+        let mut process = Command::new("cmd");
+        process.args(["/C", command]);
+        process
+    };
+    let status = process
+        .current_dir(root)
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .status()
+        .map_err(|source| Error::Command {
+            command: command.into(),
+            status: None,
+            stderr: source.to_string(),
+        })?;
+    if status.success() {
+        Ok(())
+    } else {
+        Err(Error::Command {
+            command: command.into(),
+            status: status.code(),
+            stderr: "plan verification failed".into(),
+        })
+    }
+}
+
 fn run_plan_verification(root: &Path, plan: &str, candidate: &str) -> Result<()> {
     let commands = plan_verification_commands(plan);
     if commands.is_empty() {
@@ -1330,36 +1432,7 @@ fn run_plan_verification(root: &Path, plan: &str, candidate: &str) -> Result<()>
         });
     }
     for command in commands {
-        #[cfg(unix)]
-        let mut process = {
-            let mut process = Command::new("sh");
-            process.args(["-c", &command]);
-            process
-        };
-        #[cfg(windows)]
-        let mut process = {
-            let mut process = Command::new("cmd");
-            process.args(["/C", &command]);
-            process
-        };
-        let status = process
-            .current_dir(root)
-            .stdin(Stdio::null())
-            .stdout(Stdio::null())
-            .stderr(Stdio::null())
-            .status()
-            .map_err(|source| Error::Command {
-                command: command.clone(),
-                status: None,
-                stderr: source.to_string(),
-            })?;
-        if !status.success() {
-            return Err(Error::Command {
-                command,
-                status: status.code(),
-                stderr: "plan verification failed".into(),
-            });
-        }
+        run_verification_command(root, &command)?;
         if git::revision(root, "HEAD")? != candidate {
             return Err(Error::Manifest {
                 message: "a verification command changed candidate H".into(),
@@ -2138,6 +2211,18 @@ mod tests {
         assert!(block_is_done(plan, 1));
         assert!(!block_is_done(plan, 2));
         assert!(!block_is_done(plan, 3));
+    }
+
+    #[test]
+    fn block_scope_and_dependencies_are_derived_from_the_current_block() {
+        let plan = "### Block 2: build\n\n- [ ] Done.\n- Dependencies: Blocks 1 and 3.\n- Areas: `src/workflow` and `knowledge/contracts/a.md`.\n- Verification: `cargo test -p app`.\n\n## Build state\n";
+        let block = plan_block(plan, 2).unwrap();
+        assert_eq!(block_dependencies(block), vec![1, 3]);
+        assert_eq!(
+            block_area_paths(block),
+            vec!["src/workflow", "knowledge/contracts/a.md"]
+        );
+        assert_eq!(plan_verification_commands(block), vec!["cargo test -p app"]);
     }
 
     #[test]

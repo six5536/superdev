@@ -97,45 +97,105 @@ pub fn require_clean(root: &Path) -> Result<()> {
     }
 }
 
-/// Commit only canonical knowledge changes produced after a clean-tree preflight.
-///
-/// Workflow callers hold the repository lock and establish cleanliness before
-/// publishing their staged knowledge snapshot. Refuse any post-publication
-/// change outside `knowledge/` rather than accidentally absorbing it.
-pub fn commit_knowledge_changes(root: &Path, message: &str) -> Result<String> {
+fn worktree_paths(root: &Path) -> Result<Vec<String>> {
+    let tracked = git(root, &["diff", "--name-only", "HEAD", "--"])?;
+    let untracked = git(root, &["ls-files", "--others", "--exclude-standard", "--"])?;
+    let tracked_paths = String::from_utf8_lossy(&tracked.stdout);
+    let untracked_paths = String::from_utf8_lossy(&untracked.stdout);
+    let mut paths = tracked_paths
+        .lines()
+        .chain(untracked_paths.lines())
+        .map(str::to_string)
+        .collect::<Vec<_>>();
+    paths.sort();
+    paths.dedup();
+    Ok(paths)
+}
+
+fn valid_path(path: &str) -> bool {
+    !path.is_empty()
+        && !path.starts_with('/')
+        && !path.contains("..")
+        && !path.contains(['\n', '\r', '\0'])
+}
+
+fn commit_paths(root: &Path, message: &str, paths: &[String]) -> Result<String> {
     if message.trim().is_empty() || message.contains(['\n', '\r', '\0']) {
         return Err(Error::Manifest {
             message: "workflow commit message is invalid".into(),
         });
     }
-    let tracked = git(root, &["diff", "--name-only", "HEAD", "--"])?;
-    let untracked = git(root, &["ls-files", "--others", "--exclude-standard", "--"])?;
-    let tracked_paths = String::from_utf8_lossy(&tracked.stdout);
-    let untracked_paths = String::from_utf8_lossy(&untracked.stdout);
-    let paths = tracked_paths
-        .lines()
-        .chain(untracked_paths.lines())
-        .map(str::to_string)
-        .collect::<Vec<_>>();
     if paths.is_empty() {
         return Err(Error::Manifest {
             message: "workflow mutation produced no commit changes".into(),
         });
     }
-    if paths.iter().any(|path| {
-        !path.starts_with("knowledge/") || path.contains("..") || path.contains(['\n', '\r', '\0'])
-    }) {
-        return Err(Error::Manifest {
-            message: "workflow commit refused changes outside canonical knowledge".into(),
+    let mut command = Command::new("git");
+    command
+        .args(["add", "--all", "--"])
+        .args(paths)
+        .current_dir(root);
+    let output = command.output().map_err(|source| Error::Command {
+        command: "git add --all -- <workflow paths>".into(),
+        status: None,
+        stderr: source.to_string(),
+    })?;
+    if !output.status.success() {
+        return Err(Error::Command {
+            command: "git add --all -- <workflow paths>".into(),
+            status: output.status.code(),
+            stderr: String::from_utf8_lossy(&output.stderr)
+                .chars()
+                .take(8_000)
+                .collect(),
         });
     }
-    git(root, &["add", "--all", "--", "knowledge"])?;
     git(
         root,
         &["commit", "--no-verify", "--no-gpg-sign", "-m", message],
     )?;
     require_clean(root)?;
     revision(root, "HEAD")
+}
+
+/// Commit only canonical knowledge changes produced after a clean-tree preflight.
+pub fn commit_knowledge_changes(root: &Path, message: &str) -> Result<String> {
+    let paths = worktree_paths(root)?;
+    if paths
+        .iter()
+        .any(|path| !valid_path(path) || !path.starts_with("knowledge/"))
+    {
+        return Err(Error::Manifest {
+            message: "workflow commit refused changes outside canonical knowledge".into(),
+        });
+    }
+    commit_paths(root, message, &paths)
+}
+
+/// Commit one product-bearing BUILD checkpoint without absorbing paths outside
+/// the current block's canonical Areas declarations.
+pub fn commit_block_changes(
+    root: &Path,
+    message: &str,
+    allowed_areas: &[String],
+) -> Result<String> {
+    if allowed_areas.is_empty() || allowed_areas.iter().any(|area| !valid_path(area)) {
+        return Err(Error::Manifest {
+            message: "BUILD checkpoint has no valid path-scoped Areas".into(),
+        });
+    }
+    let paths = worktree_paths(root)?;
+    let allowed = |path: &str| {
+        allowed_areas.iter().any(|area| {
+            path == area || path.starts_with(&format!("{}/", area.trim_end_matches('/')))
+        })
+    };
+    if paths.iter().any(|path| !valid_path(path) || !allowed(path)) {
+        return Err(Error::Manifest {
+            message: "BUILD checkpoint refused a change outside the current block Areas".into(),
+        });
+    }
+    commit_paths(root, message, &paths)
 }
 
 /// Create and check out a validated work branch from the current revision.
@@ -312,6 +372,36 @@ mod tests {
         assert!(commit_knowledge_changes(dir.path(), "chore: unsafe").is_err());
         assert!(
             !git(dir.path(), &["status", "--porcelain=v1"])
+                .unwrap()
+                .stdout
+                .is_empty()
+        );
+    }
+
+    #[test]
+    fn block_commit_accepts_declared_product_and_knowledge_paths() {
+        let dir = repository();
+        let root = dir.path();
+        std::fs::create_dir_all(root.join("knowledge/plans/open")).unwrap();
+        std::fs::create_dir_all(root.join("src")).unwrap();
+        std::fs::write(root.join("knowledge/plans/open/plan.md"), "done\n").unwrap();
+        std::fs::write(root.join("src/lib.rs"), "pub fn built() {}\n").unwrap();
+        let areas = vec!["knowledge/plans".into(), "src".into()];
+        commit_block_changes(root, "feat: checkpoint block", &areas).unwrap();
+        require_clean(root).unwrap();
+    }
+
+    #[test]
+    fn block_commit_refuses_and_preserves_out_of_scope_changes() {
+        let dir = repository();
+        let root = dir.path();
+        std::fs::create_dir_all(root.join("src")).unwrap();
+        std::fs::write(root.join("src/lib.rs"), "pub fn built() {}\n").unwrap();
+        std::fs::write(root.join("unrelated"), "leave me\n").unwrap();
+        assert!(commit_block_changes(root, "feat: unsafe", &["src".into()]).is_err());
+        assert!(root.join("unrelated").exists());
+        assert!(
+            !git(root, &["status", "--porcelain=v1"])
                 .unwrap()
                 .stdout
                 .is_empty()

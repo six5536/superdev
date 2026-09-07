@@ -776,8 +776,8 @@ the invoking adapter.
 | `superdev workflow bind` | 2 | identity, revision, branch, or ownership is invalid |
 | `superdev workflow transition` | 0 | the gated transition is persisted |
 | `superdev workflow transition` | 2 | ownership, revision, phase, or evidence is invalid |
-| `superdev workflow block` | 0 | canonical BUILD block progress is acknowledged |
-| `superdev workflow block` | 2 | ownership, revision, identity, branch, or phase is invalid |
+| `superdev workflow block` | 0 | the newly completed BUILD block passes dependency and executable checks and its path-scoped checkpoint is committed |
+| `superdev workflow block` | 2 | ownership, revision, identity, branch, phase, dependency, executable evidence, or path scope is invalid |
 | `superdev workflow attempt` | 0 | one normalized failed BUILD attempt is durably counted |
 | `superdev workflow attempt` | 2 | ownership, phase, revision, input, tree, or configured retry limit is invalid |
 | `superdev workflow correction` | 0 | one candidate-bound final correction cycle is durably counted |
@@ -888,9 +888,7 @@ reaches the network unasked, to find the newest pack release.
 - `P_fix-idempotent` [ubiquitous] `validate --fix` SHALL be idempotent.
 - `P_sokf-mutations-write-knowledge-only` [ubiquitous] `sokf edit` and `sokf
   write` SHALL write only inside the resolved knowledge directory.
-- `P_workflow-side-effects-bounded` [ubiquitous] `workflow` SHALL write
-  only its transient cache, bound canonical records and indexes, and, for
-  integration, the explicitly validated local refs and merge commit.
+- `P_workflow-side-effects-bounded` [ubiquitous] `workflow` SHALL write only its transient cache, bound canonical records and indexes, product paths declared by the current BUILD block, and, for integration, the explicitly validated local refs and merge commit.
 - `P_file-side-effects-bounded` [ubiquitous] `file` SHALL write one canonical
   record and generated index changes in a temporary worktree, then advance
   only the validated local default ref.
