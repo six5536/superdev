@@ -139,5 +139,7 @@ The root specification was explicitly approved before commit `83e04ea`, and an i
 
 Scope product baseline: 1328e3b41d6f1825520fe2e774a92d3150709552.
 
+Scope requirements review: clean by isolated session 82901c57da085875bc1aa9256b4b60742e1453a9b0d2ddba.
+
 <!-- sokf:links -->
 [sokf:issue-059-scope-build-accept-workflow]: /knowledge/issues/open/issue-059-scope-build-accept-workflow.md
