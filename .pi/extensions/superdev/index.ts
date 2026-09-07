@@ -306,10 +306,18 @@ export default function superdev(pi: ExtensionAPI) {
 			for (const revision of [input.base, input.candidate]) {
 				if (!/^[0-9a-f]{7,64}$/.test(revision)) throw new Error("review revisions must be hexadecimal object IDs");
 			}
-			const result = await pi.exec("git", ["diff", "--no-ext-diff", "--unified=80", input.base, input.candidate, "--"], { cwd: ctx.cwd });
+			const projection = [
+				".",
+				":(exclude)package-lock.json",
+				":(exclude)pack/**",
+				":(exclude)knowledge/plans/done/**",
+				":(exclude)knowledge/issues/done/**",
+			];
+			const result = await pi.exec("git", ["diff", "--no-ext-diff", "--unified=0", input.base, input.candidate, "--", ...projection], { cwd: ctx.cwd });
 			if (result.code !== 0) throw new Error(result.stderr.trim() || "git diff failed");
 			if (result.stdout.length > 900_000) throw new Error("review diff exceeds the 900 KB review bound");
-			return { content: [{ type: "text", text: result.stdout || "No changes." }], details: { readOnly: true } };
+			const excluded = "Mechanical projection exclusions: package-lock.json (generated lock), pack/** (materialized mirrors checked by hash parity), and settled issue/plan migrations (schema-validated historical records).";
+			return { content: [{ type: "text", text: `${excluded}\n\n${result.stdout || "No projected changes."}` }], details: { readOnly: true, projection } };
 		},
 	});
 	pi.registerTool({
