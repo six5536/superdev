@@ -69,6 +69,7 @@ function stopProcess(child: ChildProcess) {
 
 let parentServicePath: string | undefined;
 let parentServiceDigest: string | undefined;
+let parentServicePin: Promise<{ path: string; digest: string }> | undefined;
 
 async function resolveServicePath(): Promise<string> {
 	for (const directory of (process.env.PATH ?? "").split(delimiter)) {
@@ -79,14 +80,23 @@ async function resolveServicePath(): Promise<string> {
 	throw new Error("superdev executable was not found on PATH");
 }
 
-async function runSuperdev(args: string[], cwd: string, authority: string): Promise<unknown> {
-	if (!parentServicePath) parentServicePath = await resolveServicePath();
-	if (!parentServiceDigest) {
-		const probe = await runPinnedSuperdev(parentServicePath, undefined, ["workflow", "status", "--json"], cwd);
-		if (probe.code !== 0) throw new Error(probe.stderr.trim() || "superdev status probe failed");
-		parentServiceDigest = probe.digest;
+async function ensureParentService(cwd: string): Promise<{ path: string; digest: string }> {
+	if (!parentServicePin) {
+		parentServicePin = (async () => {
+			const path = await resolveServicePath();
+			const probe = await runPinnedSuperdev(path, undefined, ["workflow", "status", "--json"], cwd);
+			if (probe.code !== 0) throw new Error(probe.stderr.trim() || "superdev status probe failed");
+			parentServicePath = path;
+			parentServiceDigest = probe.digest;
+			return { path, digest: probe.digest };
+		})().catch((error) => { parentServicePin = undefined; throw error; });
 	}
-	const result = await runPinnedSuperdev(parentServicePath, parentServiceDigest, args, cwd, undefined, { SUPERDEV_UI_AUTHORITY: authority });
+	return parentServicePin;
+}
+
+async function runSuperdev(args: string[], cwd: string, authority: string): Promise<unknown> {
+	const service = await ensureParentService(cwd);
+	const result = await runPinnedSuperdev(service.path, service.digest, args, cwd, undefined, { SUPERDEV_UI_AUTHORITY: authority });
 	if (result.code !== 0) throw new Error(result.stderr.trim() || `superdev exited ${result.code}`);
 	try { return JSON.parse(result.stdout); } catch { throw new Error("superdev returned invalid workflow JSON"); }
 }
@@ -225,10 +235,19 @@ export async function runPinnedSuperdev(path: string, digest: string | undefined
 			child.stderr.setEncoding("utf8");
 			child.stdout.on("data", (chunk: string) => { stdout = (stdout + chunk).slice(-1_000_000); });
 			child.stderr.on("data", (chunk: string) => { stderr = (stderr + chunk).slice(-100_000); });
-			child.on("error", reject);
-			child.on("close", (code) => accept({ code: code ?? 2, stdout, stderr }));
+			let killTimer: NodeJS.Timeout | undefined;
+			const stop = () => {
+				child.kill("SIGTERM");
+				killTimer = setTimeout(() => { if (child.exitCode === null) child.kill("SIGKILL"); }, 2_000);
+				killTimer.unref();
+			};
+			const cleanup = () => {
+				if (killTimer) clearTimeout(killTimer);
+				signal?.removeEventListener("abort", stop);
+			};
+			child.on("error", (error) => { cleanup(); reject(error); });
+			child.on("close", (code) => { cleanup(); accept({ code: code ?? 2, stdout, stderr }); });
 			if (signal) {
-				const stop = () => child.kill("SIGTERM");
 				if (signal.aborted) stop(); else signal.addEventListener("abort", stop, { once: true });
 			}
 		});
@@ -332,12 +351,11 @@ export default function superdev(pi: ExtensionAPI) {
 	};
 	const workflowStatus = async (cwd: string): Promise<WorkflowStatus> => {
 		try {
-			if (!parentServicePath) parentServicePath = await resolveServicePath();
-			const result = await runPinnedSuperdev(parentServicePath, parentServiceDigest, ["workflow", "status", "--json"], cwd);
+			const service = await ensureParentService(cwd);
+			const result = await runPinnedSuperdev(service.path, service.digest, ["workflow", "status", "--json"], cwd);
 			if (result.code !== 0) return {};
-			parentServiceDigest ??= result.digest;
 			const status = JSON.parse(result.stdout).result as WorkflowStatus;
-			status.executable = parentServicePath;
+			status.executable = service.path;
 			return status;
 		} catch {
 			return {};
