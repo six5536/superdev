@@ -1,7 +1,8 @@
 import { spawn, type ChildProcess } from "node:child_process";
 import { createHash, randomBytes } from "node:crypto";
-import { open, readFile } from "node:fs/promises";
-import { dirname, isAbsolute, resolve } from "node:path";
+import { constants } from "node:fs";
+import { access, open, readFile } from "node:fs/promises";
+import { delimiter, dirname, isAbsolute, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { StringEnum } from "@earendil-works/pi-ai";
@@ -65,26 +66,28 @@ function stopProcess(child: ChildProcess) {
 	setTimeout(() => { if (child.exitCode === null) signal("SIGKILL"); }, 2_000).unref();
 }
 
+let parentServicePath: string | undefined;
+let parentServiceDigest: string | undefined;
+
+async function resolveServicePath(): Promise<string> {
+	for (const directory of (process.env.PATH ?? "").split(delimiter)) {
+		if (!directory) continue;
+		const candidate = resolve(directory, "superdev");
+		try { await access(candidate, constants.X_OK); return candidate; } catch { /* Try the next PATH entry. */ }
+	}
+	throw new Error("superdev executable was not found on PATH");
+}
+
 async function runSuperdev(args: string[], cwd: string, authority: string): Promise<unknown> {
-	return new Promise((accept, reject) => {
-		const child = spawn("superdev", args, {
-			cwd,
-			shell: false,
-			stdio: ["ignore", "pipe", "pipe"],
-			env: { ...process.env, SUPERDEV_UI_AUTHORITY: authority },
-		});
-		let stdout = "";
-		let stderr = "";
-		child.stdout.setEncoding("utf8");
-		child.stderr.setEncoding("utf8");
-		child.stdout.on("data", (chunk: string) => { stdout = (stdout + chunk).slice(-1_000_000); });
-		child.stderr.on("data", (chunk: string) => { stderr = (stderr + chunk).slice(-100_000); });
-		child.on("error", reject);
-		child.on("close", (code) => {
-			if (code !== 0) return reject(new Error(stderr.trim() || `superdev exited ${code}`));
-			try { accept(JSON.parse(stdout)); } catch { reject(new Error("superdev returned invalid workflow JSON")); }
-		});
-	});
+	if (!parentServicePath) parentServicePath = await resolveServicePath();
+	if (!parentServiceDigest) {
+		const probe = await runPinnedSuperdev(parentServicePath, undefined, ["workflow", "status", "--json"], cwd);
+		if (probe.code !== 0) throw new Error(probe.stderr.trim() || "superdev status probe failed");
+		parentServiceDigest = probe.digest;
+	}
+	const result = await runPinnedSuperdev(parentServicePath, parentServiceDigest, args, cwd, undefined, { SUPERDEV_UI_AUTHORITY: authority });
+	if (result.code !== 0) throw new Error(result.stderr.trim() || `superdev exited ${result.code}`);
+	try { return JSON.parse(result.stdout); } catch { throw new Error("superdev returned invalid workflow JSON"); }
 }
 
 export function isolatedTools(role: Input["role"]): string {
@@ -105,15 +108,14 @@ async function isolated(
 	base?: string,
 	candidate?: string,
 	trustedExecutable?: string,
+	trustedExecutableSha256?: string,
 ): Promise<RoleResult> {
 	const promptPath = resolve(here, "prompts", `${role}.md`);
 	const rolePrompt = await readFile(promptPath, "utf8");
 	if (readOnly.has(role) && (!base || !candidate || !/^[0-9a-f]{7,64}$/.test(base) || !/^[0-9a-f]{7,64}$/.test(candidate))) {
 		throw new Error(`${role} requires immutable hexadecimal base and candidate revisions`);
 	}
-	const trustedExecutableSha256 = trustedExecutable
-		? createHash("sha256").update(await readFile(trustedExecutable)).digest("hex")
-		: undefined;
+	if (trustedExecutable && !trustedExecutableSha256) throw new Error("trusted executable digest was not supplied");
 	const args = ["--mode", "json", "-p", "--no-session", "--approve", "--append-system-prompt", rolePrompt];
 	if (model) args.push("--provider", model.provider, "--model", model.id);
 	args.push("--tools", isolatedTools(role));
@@ -192,17 +194,18 @@ export function buildCommandAllowed(command: string, args: string[]): boolean {
 type ExecResult = { code: number; stdout: string; stderr: string };
 type BuildExec = (command: string, args: string[], cwd: string) => Promise<ExecResult>;
 
-export async function runPinnedSuperdev(path: string, digest: string, args: string[], cwd: string, signal?: AbortSignal): Promise<ExecResult> {
+export async function runPinnedSuperdev(path: string, digest: string | undefined, args: string[], cwd: string, signal?: AbortSignal, environment?: Record<string, string>): Promise<ExecResult & { digest: string }> {
 	if (process.platform !== "linux") throw new Error("pinned BUILD service execution currently requires Linux /proc file descriptors");
 	const executable = await open(path, "r");
 	try {
 		const observed = createHash("sha256").update(await executable.readFile()).digest("hex");
-		if (observed !== digest) throw new Error("BUILD service executable changed after the parent pinned it");
-		return await new Promise((accept, reject) => {
+		if (digest && observed !== digest) throw new Error("BUILD service executable changed after the parent pinned it");
+		const result = await new Promise<ExecResult>((accept, reject) => {
 			const child = spawn("/proc/self/fd/3", args, {
 				cwd,
 				shell: false,
 				stdio: ["ignore", "pipe", "pipe", executable.fd],
+				env: environment ? { ...process.env, ...environment } : process.env,
 			});
 			let stdout = "";
 			let stderr = "";
@@ -217,6 +220,7 @@ export async function runPinnedSuperdev(path: string, digest: string, args: stri
 				if (signal.aborted) stop(); else signal.addEventListener("abort", stop, { once: true });
 			}
 		});
+		return { ...result, digest: observed };
 	} finally {
 		await executable.close();
 	}
@@ -314,10 +318,14 @@ export default function superdev(pi: ExtensionAPI) {
 		executable?: string;
 	};
 	const workflowStatus = async (cwd: string): Promise<WorkflowStatus> => {
-		const result = await pi.exec("superdev", ["workflow", "status", "--json"], { cwd });
-		if (result.code !== 0) return {};
 		try {
-			return JSON.parse(result.stdout).result as WorkflowStatus;
+			if (!parentServicePath) parentServicePath = await resolveServicePath();
+			const result = await runPinnedSuperdev(parentServicePath, parentServiceDigest, ["workflow", "status", "--json"], cwd);
+			if (result.code !== 0) return {};
+			parentServiceDigest ??= result.digest;
+			const status = JSON.parse(result.stdout).result as WorkflowStatus;
+			status.executable = parentServicePath;
+			return status;
 		} catch {
 			return {};
 		}
@@ -448,6 +456,7 @@ export default function superdev(pi: ExtensionAPI) {
 					input.base,
 					input.candidate,
 					trustedExecutable,
+					input.role === "build" ? parentServiceDigest : undefined,
 				);
 				let reviewRun: string | undefined;
 				if (input.role === "requirements-review" || input.role === "code-review") {
@@ -476,8 +485,8 @@ export default function superdev(pi: ExtensionAPI) {
 	pi.registerCommand("superdev-status", {
 		description: "Show canonical workflow phase and transient ownership",
 		handler: async (_args, ctx) => {
-			const result = await pi.exec("superdev", ["workflow", "status", "--json"], { cwd: ctx.cwd });
-			ctx.ui.notify(result.code === 0 ? result.stdout.trim() : result.stderr.trim(), result.code === 0 ? "info" : "error");
+			const status = await workflowStatus(ctx.cwd);
+			ctx.ui.notify(JSON.stringify(status), "info");
 		},
 	});
 	pi.registerCommand("superdev-resume", {
@@ -573,7 +582,7 @@ export default function superdev(pi: ExtensionAPI) {
 				if (!status.executable || !isAbsolute(status.executable)) throw new Error("Rust status omitted its trusted executable path");
 				const built = await isolated("build", instruction || `Complete ${owner.identity.plan} from canonical state.`, ctx.cwd, ctx.model, undefined,
 				(child) => { children.add(child); modifyingChild = child; },
-				(child) => { children.delete(child); if (modifyingChild === child) modifyingChild = undefined; }, undefined, undefined, status.executable);
+				(child) => { children.delete(child); if (modifyingChild === child) modifyingChild = undefined; }, undefined, undefined, status.executable, parentServiceDigest);
 			if (built.status === "rescope") {
 				const latest = await workflowStatus(ctx.cwd);
 				if (!latest.owner || latest.phase !== "build") throw new Error("BUILD ownership changed before re-scope");
@@ -704,8 +713,12 @@ export default function superdev(pi: ExtensionAPI) {
 				new Promise<void>((done) => setTimeout(done, 2_500)),
 			]);
 			const session = ctx.sessionManager.getSessionId();
-			const result = await pi.exec("superdev", ["workflow", "cancel", "--session", session], { cwd: ctx.cwd });
-			ctx.ui.notify(result.code === 0 ? "Workflow paused; canonical phase unchanged" : result.stderr, result.code === 0 ? "info" : "error");
+			try {
+				await runSuperdev(["workflow", "cancel", "--session", session], ctx.cwd, authority);
+				ctx.ui.notify("Workflow paused; canonical phase unchanged", "info");
+			} catch (error) {
+				ctx.ui.notify(String(error), "error");
+			}
 		},
 	});
 	pi.registerCommand("superdev-abandon", {
