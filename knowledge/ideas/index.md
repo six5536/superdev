@@ -17,6 +17,7 @@ it stays on file, linked from the issue that took it up.
 * [A Pi extension runs the superdev process][sokf:idea-010-a-pi-extension-runs-the-superdev-process] - a thin Pi orchestration extension uses Pi's lifecycle, tools, sessions, interaction and child agents to run superdev's canonical FILE → SCOPE → BUILD → ACCEPT workflow without reimplementing it.
 * [Define an agent-learnings document model][sokf:idea-011-define-an-agent-learnings-document-model] - evaluate whether agent memory or learnings need a dedicated schema and document set, or belong in canonical project knowledge.
 * [SOKF mutations survive validation failures][sokf:idea-012-sokf-mutations-survive-validation-failures] - apply SOKF writes and edits before validation, then report findings without discarding the changed file or replacing Pi's file-tool contract.
+* [Workflow commits name their phase and plan][sokf:idea-013-workflow-commits-name-their-phase-and-plan] - replace generic workflow commit subjects with phase-specific subjects that identify the plan and describe the recorded change.
 
 <!-- sokf:links -->
 [sokf:idea-001-schemas-carry-a-reading-reminder]: /knowledge/ideas/idea-001-schemas-carry-a-reading-reminder.md
@@ -31,3 +32,4 @@ it stays on file, linked from the issue that took it up.
 [sokf:idea-010-a-pi-extension-runs-the-superdev-process]: /knowledge/ideas/idea-010-a-pi-extension-runs-the-superdev-process.md
 [sokf:idea-011-define-an-agent-learnings-document-model]: /knowledge/ideas/idea-011-define-an-agent-learnings-document-model.md
 [sokf:idea-012-sokf-mutations-survive-validation-failures]: /knowledge/ideas/idea-012-sokf-mutations-survive-validation-failures.md
+[sokf:idea-013-workflow-commits-name-their-phase-and-plan]: /knowledge/ideas/idea-013-workflow-commits-name-their-phase-and-plan.md
