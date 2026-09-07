@@ -212,7 +212,11 @@ export default function superdev(pi: ExtensionAPI) {
 	if (childRole) return;
 
 	type WorkflowStatus = {
-		owner?: { session_id?: string; identity?: { plan?: string } };
+		owner?: {
+			session_id: string;
+			last_plan_revision: string;
+			identity: { issue: string; plan: string; work_branch: string; default_branch: string };
+		};
 		phase?: "scope" | "build" | "accept";
 	};
 	const workflowStatus = async (cwd: string): Promise<WorkflowStatus> => {
@@ -362,16 +366,51 @@ export default function superdev(pi: ExtensionAPI) {
 		description: "Resume the canonical workflow after reconstructing Rust-owned state",
 		handler: async (_args, ctx) => send("Run `superdev workflow status --json`, bind this Pi session if unowned, then resume the canonical phase. Do not infer completion from an absent cache.", ctx),
 	});
-	for (const [name, instruction] of [
-		["scope", "Run SCOPE through the private scope role, isolated requirements review, and explicit human approval."],
-		["build", "Run BUILD through the one modifying build child, complete verification, and a fresh read-only code review."],
-		["accept", "Run ACCEPT under project-configured human policy and local Rust-owned integration."],
-	] as const) {
-		pi.registerCommand(name, {
-			description: `${name.toUpperCase()} phase of the canonical workflow`,
-			handler: async (args, ctx) => send(`${instruction} ${args}`.trim(), ctx),
-		});
-	}
+	pi.registerCommand("scope", {
+		description: "SCOPE phase of the canonical workflow",
+		handler: async (args, ctx) => send(`Run SCOPE through the private scope role, isolated requirements review, and explicit human approval. ${args}`.trim(), ctx),
+	});
+	pi.registerCommand("build", {
+		description: "Deterministically run BUILD, verification, and immutable review",
+		handler: async (args, ctx) => {
+			if (modifyingBusy || modifyingChild) return ctx.ui.notify("A modifying workflow role is already active", "error");
+			const status = await workflowStatus(ctx.cwd);
+			const owner = status.owner;
+			if (!owner || status.phase !== "build") return ctx.ui.notify("An owned BUILD workflow is required", "error");
+			const built = await isolated("build", args || `Complete ${owner.identity.plan} from canonical state.`, ctx.cwd, ctx.model, undefined,
+				(child) => { children.add(child); modifyingChild = child; },
+				(child) => { children.delete(child); if (modifyingChild === child) modifyingChild = undefined; });
+			if (built.status !== "complete") return ctx.ui.notify(built.summary, built.status === "rescope" ? "warning" : "error");
+			const baseResult = await pi.exec("git", ["rev-parse", "--verify", owner.identity.default_branch], { cwd: ctx.cwd });
+			const candidateResult = await pi.exec("git", ["rev-parse", "--verify", owner.identity.work_branch], { cwd: ctx.cwd });
+			if (baseResult.code !== 0 || candidateResult.code !== 0) return ctx.ui.notify("Could not resolve immutable review revisions", "error");
+			const base = baseResult.stdout.trim();
+			const candidate = candidateResult.stdout.trim();
+			const reviewed = await isolated("code-review", `Review immutable diff ${base}..${candidate} and return the required structured result.`, ctx.cwd, ctx.model, undefined,
+				(child) => children.add(child), (child) => children.delete(child), base, candidate);
+			if (reviewed.status !== "clean") return ctx.ui.notify(reviewed.summary, "warning");
+			const reviewRun = randomBytes(24).toString("hex");
+			reviewRuns.set(reviewRun, { role: "code-review", result: reviewed, base, candidate });
+			const evidence = await runSuperdev([
+				"workflow", "evidence", "--session", owner.session_id,
+				"--expected-revision", owner.last_plan_revision, "--kind", "final",
+				"--review-session", reviewRun, "--candidate", candidate,
+			], ctx.cwd, authority) as { result?: { last_plan_revision?: string } };
+			const revision = evidence.result?.last_plan_revision;
+			if (!revision) throw new Error("evidence response omitted the new plan revision");
+			await runSuperdev([
+				"workflow", "transition", "--session", owner.session_id,
+				"--expected-revision", revision, "--phase", "build", "--transition", "finish-build",
+			], ctx.cwd, authority);
+			reviewRuns.delete(reviewRun);
+			ctx.ui.setStatus("superdev-workflow", `ACCEPT: ${owner.identity.plan}`);
+			ctx.ui.notify("BUILD gates passed; workflow advanced to ACCEPT", "info");
+		},
+	});
+	pi.registerCommand("accept", {
+		description: "ACCEPT phase of the canonical workflow",
+		handler: async (args, ctx) => send(`Run ACCEPT under project-configured human policy and local Rust-owned integration. ${args}`.trim(), ctx),
+	});
 	pi.registerCommand("superdev-cancel", {
 		description: "Pause the workflow and release transient ownership",
 		handler: async (_args, ctx) => {
