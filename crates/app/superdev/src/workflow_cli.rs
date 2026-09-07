@@ -2,6 +2,7 @@
 
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::process::{Command, Stdio};
 
 use clap::{Args, Subcommand, ValueEnum};
 use serde::Serialize;
@@ -837,6 +838,7 @@ fn record_evidence_locked(
                     message: "candidate H does not contain the default-branch tip".into(),
                 });
             }
+            run_plan_verification(root, &text, candidate)?;
             (
                 vec![
                     format!("Candidate revision: {candidate}."),
@@ -870,6 +872,73 @@ fn record_evidence_locked(
         }
     })?;
     emit("evidence", &state)
+}
+
+fn plan_verification_commands(plan: &str) -> Vec<String> {
+    plan.lines()
+        .filter(|line| line.trim_start().starts_with("- Verification:"))
+        .flat_map(|line| {
+            let mut commands = Vec::new();
+            let mut rest = line;
+            while let Some(open) = rest.find('`') {
+                rest = &rest[open + 1..];
+                let Some(close) = rest.find('`') else { break };
+                let command = rest[..close].trim();
+                if !command.is_empty() {
+                    commands.push(command.to_string());
+                }
+                rest = &rest[close + 1..];
+            }
+            commands
+        })
+        .collect()
+}
+
+fn run_plan_verification(root: &Path, plan: &str, candidate: &str) -> Result<()> {
+    let commands = plan_verification_commands(plan);
+    if commands.is_empty() {
+        return Err(Error::Manifest {
+            message: "final verification has no executable plan commands".into(),
+        });
+    }
+    for command in commands {
+        #[cfg(unix)]
+        let mut process = {
+            let mut process = Command::new("sh");
+            process.args(["-c", &command]);
+            process
+        };
+        #[cfg(windows)]
+        let mut process = {
+            let mut process = Command::new("cmd");
+            process.args(["/C", &command]);
+            process
+        };
+        let status = process
+            .current_dir(root)
+            .stdin(Stdio::null())
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .status()
+            .map_err(|source| Error::Command {
+                command: command.clone(),
+                status: None,
+                stderr: source.to_string(),
+            })?;
+        if !status.success() {
+            return Err(Error::Command {
+                command,
+                status: status.code(),
+                stderr: "plan verification failed".into(),
+            });
+        }
+        if git::revision(root, "HEAD")? != candidate {
+            return Err(Error::Manifest {
+                message: "a verification command changed candidate H".into(),
+            });
+        }
+    }
+    git::require_clean(root)
 }
 
 fn transition(
@@ -1603,6 +1672,15 @@ mod tests {
             changed
                 .contains("- [x] Existing.\n- [ ] ACCEPT rejection:\n\n      Rejected because X"),
             "{changed}"
+        );
+    }
+
+    #[test]
+    fn verification_commands_are_extracted_only_from_executable_entries() {
+        let plan = "- Outcome: ignore `not-a-command`.\n- Verification: `cargo test -p one` and `npm test`.\n- Verification: prose only.\n";
+        assert_eq!(
+            plan_verification_commands(plan),
+            vec!["cargo test -p one", "npm test"]
         );
     }
 
