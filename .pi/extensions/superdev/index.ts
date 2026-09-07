@@ -220,6 +220,9 @@ export default function superdev(pi: ExtensionAPI) {
 			identity: { issue: string; plan: string; work_branch: string; default_branch: string };
 		};
 		phase?: "scope" | "build" | "accept";
+		buildState?: { currentBlock: number; attempts: number; finalCorrections: number; fingerprint?: string; blocker: string };
+		maxStalledBlockAttempts?: number;
+		maxFinalCorrectionCycles?: number;
 		humanAcceptanceRequired?: boolean;
 	};
 	const workflowStatus = async (cwd: string): Promise<WorkflowStatus> => {
@@ -411,10 +414,16 @@ export default function superdev(pi: ExtensionAPI) {
 		description: "Deterministically run BUILD, verification, and immutable review",
 		handler: async (args, ctx) => {
 			if (modifyingBusy || modifyingChild) return ctx.ui.notify("A modifying workflow role is already active", "error");
-			const status = await workflowStatus(ctx.cwd);
-			const owner = status.owner;
-			if (!owner || status.phase !== "build") return ctx.ui.notify("An owned BUILD workflow is required", "error");
-			const built = await isolated("build", args || `Complete ${owner.identity.plan} from canonical state.`, ctx.cwd, ctx.model, undefined,
+			let instruction = args;
+			while (true) {
+				const status = await workflowStatus(ctx.cwd);
+				const owner = status.owner;
+				if (!owner || status.phase !== "build") return ctx.ui.notify("An owned BUILD workflow is required", "error");
+				if (status.buildState && status.maxFinalCorrectionCycles !== undefined
+					&& status.buildState.finalCorrections >= status.maxFinalCorrectionCycles) {
+					return ctx.ui.notify("Final correction limit is exhausted; human guidance or re-scope is required", "error");
+				}
+				const built = await isolated("build", instruction || `Complete ${owner.identity.plan} from canonical state.`, ctx.cwd, ctx.model, undefined,
 				(child) => { children.add(child); modifyingChild = child; },
 				(child) => { children.delete(child); if (modifyingChild === child) modifyingChild = undefined; });
 			if (built.status !== "complete") return ctx.ui.notify(built.summary, built.status === "rescope" ? "warning" : "error");
@@ -432,8 +441,21 @@ export default function superdev(pi: ExtensionAPI) {
 			if (!verifiedRevision) throw new Error("verification response omitted the new plan revision");
 			const reviewed = await isolated("code-review", `Review immutable diff ${base}..${candidate} and return the required structured result.`, ctx.cwd, ctx.model, undefined,
 				(child) => children.add(child), (child) => children.delete(child), base, candidate);
-			if (reviewed.status !== "clean") return ctx.ui.notify(reviewed.summary, "warning");
 			const reviewRun = randomBytes(24).toString("hex");
+			if (reviewed.status !== "clean") {
+				const correction = await runSuperdev([
+					"workflow", "correction", "--session", owner.session_id,
+					"--expected-revision", verifiedRevision, "--candidate", candidate,
+					"--review-session", reviewRun,
+					"--summary", (reviewed.findings ?? [reviewed.summary]).join("\n"),
+				], ctx.cwd, authority) as { result?: { stalled?: boolean } };
+				const stalled = correction.result?.stalled === true;
+				if (stalled) return ctx.ui.notify(`Final correction limit exhausted: ${reviewed.summary}`, "error");
+				ctx.ui.notify(`Final review requires correction: ${reviewed.summary}`, "warning");
+				instruction = `Correct the latest immutable final-review findings for ${owner.identity.plan}:\n${(reviewed.findings ?? [reviewed.summary]).join("\n")}`;
+				continue;
+			}
+
 			reviewRuns.set(reviewRun, { role: "code-review", result: reviewed, base, candidate });
 			const evidence = await runSuperdev([
 				"workflow", "evidence", "--session", owner.session_id,
@@ -443,8 +465,9 @@ export default function superdev(pi: ExtensionAPI) {
 			const revision = evidence.result?.last_plan_revision;
 			if (!revision) throw new Error("attestation response omitted the new plan revision");
 			reviewRuns.delete(reviewRun);
-			ctx.ui.setStatus("superdev-workflow", `ACCEPT: ${owner.identity.plan}`);
-			ctx.ui.notify("BUILD gates passed; workflow advanced to ACCEPT", "info");
+				ctx.ui.setStatus("superdev-workflow", `ACCEPT: ${owner.identity.plan}`);
+				return ctx.ui.notify("BUILD gates passed; workflow advanced to ACCEPT", "info");
+			}
 		},
 	});
 	pi.registerCommand("accept", {

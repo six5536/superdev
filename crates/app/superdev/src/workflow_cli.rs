@@ -67,6 +67,8 @@ pub enum WorkflowCommand {
     Block(ProgressArgs),
     /// Record one normalized failed BUILD attempt
     Attempt(AttemptArgs),
+    /// Count one failed final verification/review correction cycle
+    Correction(CorrectionArgs),
     /// Record isolated review or final verification evidence canonically
     Evidence(EvidenceArgs),
     /// Reconstruct and acquire ownership for a known workflow
@@ -131,6 +133,26 @@ pub struct AttemptArgs {
     /// Bounded command diagnostics
     #[arg(long)]
     diagnostics: String,
+}
+
+/// One candidate-bound failed final gate.
+#[derive(Args)]
+pub struct CorrectionArgs {
+    /// Owning Pi session ID
+    #[arg(long)]
+    session: String,
+    /// Expected current plan content revision
+    #[arg(long)]
+    expected_revision: String,
+    /// Candidate whose final gate failed
+    #[arg(long)]
+    candidate: String,
+    /// Fresh isolated reviewer run
+    #[arg(long)]
+    review_session: String,
+    /// Bounded structured finding summary
+    #[arg(long)]
+    summary: String,
 }
 
 /// Rust-owned canonical evidence attestation.
@@ -314,12 +336,31 @@ pub fn run(command: &WorkflowCommand, root: &Path) -> Result<u8> {
                 .as_ref()
                 .map(|state| plan_record(&root, &state.identity.plan).map(|record| record.phase))
                 .transpose()?;
+            let build_state = if phase.as_deref() == Some("build") {
+                let state = owner.as_ref().expect("BUILD status has an owner");
+                let (path, _) = plan_revision(&root, &state.identity.plan)?;
+                let text =
+                    fs::read_to_string(&path).map_err(|source| Error::Io { path, source })?;
+                Some(parse_retry_state(build_state_line(&text)?)?)
+            } else {
+                None
+            };
+            let workflow_config = Manifest::load(&root)?.workflow;
             emit(
                 "status",
                 &serde_json::json!({
                     "owner": owner,
                     "phase": phase,
-                    "humanAcceptanceRequired": Manifest::load(&root)?.workflow.human_acceptance_required,
+                    "buildState": build_state.as_ref().map(|state| serde_json::json!({
+                        "currentBlock": state.current_block,
+                        "attempts": state.attempts,
+                        "finalCorrections": state.final_corrections,
+                        "fingerprint": state.fingerprint,
+                        "blocker": state.blocker,
+                    })),
+                    "maxStalledBlockAttempts": workflow_config.max_stalled_block_attempts,
+                    "maxFinalCorrectionCycles": workflow_config.max_final_correction_cycles,
+                    "humanAcceptanceRequired": workflow_config.human_acceptance_required,
                     "openWorkflows": discover_open_workflows(&root)?,
                 }),
             )
@@ -403,6 +444,7 @@ pub fn run(command: &WorkflowCommand, root: &Path) -> Result<u8> {
             emit("progress", &state)
         }),
         WorkflowCommand::Attempt(args) => record_attempt(&root, args),
+        WorkflowCommand::Correction(args) => record_correction(&root, args),
         WorkflowCommand::Evidence(args) => record_evidence(&root, args),
         WorkflowCommand::Transition(args) => transition(&root, args, false, None),
         WorkflowCommand::Abandon(args) => transition(
@@ -924,6 +966,97 @@ fn record_attempt(root: &Path, args: &AttemptArgs) -> Result<u8> {
     })
 }
 
+fn record_correction(root: &Path, args: &CorrectionArgs) -> Result<u8> {
+    cache::transaction(root, |transaction| {
+        let owner = transaction.load()?.ok_or_else(|| Error::Manifest {
+            message: "workflow is unowned".into(),
+        })?;
+        if owner.session_id != args.session || owner.last_plan_revision != args.expected_revision {
+            return Err(Error::Manifest {
+                message: "workflow ownership or plan revision changed".into(),
+            });
+        }
+        cache::verify_authority(&owner, &ui_authority_capability()?)?;
+        validate_identity_values(root, &owner.identity)?;
+        git::require_clean(root)?;
+        if git::current_branch(root)? != owner.identity.work_branch {
+            return Err(Error::Manifest {
+                message: "final correction requires the checked-out work branch".into(),
+            });
+        }
+        if plan_record(root, &owner.identity.plan)?.phase != "build" {
+            return Err(Error::Manifest {
+                message: "final corrections may be recorded only during BUILD".into(),
+            });
+        }
+        if args.review_session.trim().is_empty() || args.review_session == args.session {
+            return Err(Error::Manifest {
+                message: "final correction requires a distinct isolated reviewer run".into(),
+            });
+        }
+        if owner.candidate_revision.as_deref() != Some(args.candidate.as_str())
+            || git::revision(root, &owner.identity.work_branch)? != args.candidate
+        {
+            return Err(Error::Manifest {
+                message: "final correction is not bound to the verified candidate".into(),
+            });
+        }
+        let summary = retry::normalize_diagnostics(&args.summary).replace('\n', " | ");
+        if summary.is_empty() {
+            return Err(Error::Manifest {
+                message: "final correction requires bounded structured findings".into(),
+            });
+        }
+        let (path, observed) = plan_revision(root, &owner.identity.plan)?;
+        let text = fs::read_to_string(&path).map_err(|source| Error::Io {
+            path: path.clone(),
+            source,
+        })?;
+        let mut state = parse_retry_state(build_state_line(&text)?)?;
+        let config = Manifest::load(root)?.workflow;
+        if state.final_corrections >= config.max_final_correction_cycles {
+            return Err(Error::Manifest {
+                message: "configured final correction limit is already exhausted".into(),
+            });
+        }
+        state.final_corrections += 1;
+        state.blocker = if state.final_corrections >= config.max_final_correction_cycles {
+            format!("final correction limit exhausted: {summary}")
+        } else {
+            format!(
+                "final correction {} required: {summary}",
+                state.final_corrections
+            )
+        };
+        apply_plan_edits_transactionally(
+            root,
+            &path,
+            vec![
+                ExactEdit {
+                    old_text: build_state_line(&text)?.into(),
+                    new_text: render_retry_state(&state),
+                },
+                invalidate_final_evidence_edit(&text)?,
+            ],
+        )?;
+        git::commit_knowledge_changes(root, "chore(workflow): record final correction")?;
+        let revision = plan_revision(root, &owner.identity.plan)?.1;
+        let cache = transaction.compare_and_swap(&args.session, &observed, |cache| {
+            cache.last_plan_revision.clone_from(&revision);
+            cache.candidate_revision = None;
+            cache.verified_default_revision = None;
+        })?;
+        emit(
+            "correction",
+            &serde_json::json!({
+                "state": cache,
+                "finalCorrections": state.final_corrections,
+                "stalled": state.final_corrections >= config.max_final_correction_cycles,
+            }),
+        )
+    })
+}
+
 fn block_is_done(plan: &str, block: u32) -> bool {
     let heading = format!("### Block {block}: ");
     let Some(start) = plan.find(&heading) else {
@@ -1071,6 +1204,15 @@ fn record_evidence_locked(
             (Vec::new(), Some(candidate.to_string()), Some(default))
         }
         EvidenceKindName::Final if record.phase == "build" => {
+            let retry_state = parse_retry_state(build_state_line(&text)?)?;
+            if retry_state.final_corrections
+                >= Manifest::load(root)?.workflow.max_final_correction_cycles
+            {
+                return Err(Error::Manifest {
+                    message: "final correction limit is exhausted; human guidance is required"
+                        .into(),
+                });
+            }
             if text.contains("- [ ] Done") {
                 return Err(Error::Manifest {
                     message: "final attestation requires every work block to be complete".into(),

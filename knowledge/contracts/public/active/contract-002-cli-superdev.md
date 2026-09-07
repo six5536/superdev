@@ -362,6 +362,8 @@ pub enum WorkflowCommand {
     Block(ProgressArgs),
     /// Record one normalized failed BUILD attempt
     Attempt(AttemptArgs),
+    /// Count one failed final verification/review correction cycle
+    Correction(CorrectionArgs),
     /// Record isolated review or final verification evidence canonically
     Evidence(EvidenceArgs),
     /// Reconstruct and acquire ownership for a known workflow
@@ -426,6 +428,26 @@ pub struct AttemptArgs {
     /// Bounded command diagnostics
     #[arg(long)]
     diagnostics: String,
+}
+
+/// One candidate-bound failed final gate.
+#[derive(Args)]
+pub struct CorrectionArgs {
+    /// Owning Pi session ID
+    #[arg(long)]
+    session: String,
+    /// Expected current plan content revision
+    #[arg(long)]
+    expected_revision: String,
+    /// Candidate whose final gate failed
+    #[arg(long)]
+    candidate: String,
+    /// Fresh isolated reviewer run
+    #[arg(long)]
+    review_session: String,
+    /// Bounded structured finding summary
+    #[arg(long)]
+    summary: String,
 }
 
 /// Rust-owned canonical evidence attestation.
@@ -758,6 +780,8 @@ the invoking adapter.
 | `superdev workflow block` | 2 | ownership, revision, identity, branch, or phase is invalid |
 | `superdev workflow attempt` | 0 | one normalized failed BUILD attempt is durably counted |
 | `superdev workflow attempt` | 2 | ownership, phase, revision, input, tree, or configured retry limit is invalid |
+| `superdev workflow correction` | 0 | one candidate-bound final correction cycle is durably counted |
+| `superdev workflow correction` | 2 | ownership, authority, candidate, review, phase, tree, or configured correction limit is invalid |
 | `superdev workflow evidence` | 0 | canonical BUILD evidence is acknowledged |
 | `superdev workflow evidence` | 2 | ownership, revision, identity, branch, or phase is invalid |
 | `superdev workflow resume` | 0 | canonical state is reconstructed and ownership acquired |

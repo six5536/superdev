@@ -249,7 +249,7 @@ fn validate_returns_the_one_it_declares_on_an_error() {
 fn every_declared_exit_code_is_probed_or_named_undrivable() {
     // A code a probe cannot reach from a clean checkout without changing the
     // repository. Each names why, so the list cannot quietly grow.
-    const UNDRIVABLE: [(&str, i64, &str); 37] = [
+    const UNDRIVABLE: [(&str, i64, &str); 39] = [
         ("superdev init", 0, "would set this repository up"),
         ("superdev init", 2, "would write into this repository"),
         (
@@ -297,6 +297,16 @@ fn every_declared_exit_code_is_probed_or_named_undrivable() {
         ),
         (
             "superdev workflow attempt",
+            2,
+            "requires an owned BUILD plan fixture",
+        ),
+        (
+            "superdev workflow correction",
+            0,
+            "requires a candidate-bound isolated review fixture",
+        ),
+        (
+            "superdev workflow correction",
             2,
             "requires an owned BUILD plan fixture",
         ),

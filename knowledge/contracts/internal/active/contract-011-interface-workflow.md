@@ -327,6 +327,8 @@ mod tests {
 - `P_attestation-atomic` [event] WHEN verified BUILD receives a clean final review, the evidence command SHALL record candidate-bound evidence and enter ACCEPT in one administrative attestation commit.
 - `P_discoveries-resolved` [event] WHEN BUILD requests final attestation, the service SHALL refuse any unchecked discovery on the primary issue.
 - `P_verification-executed` [event] WHEN BUILD requests verification evidence before final review, the service SHALL execute every backtick command declared by plan Verification entries and reject failures, candidate movement, or a dirty result.
+- `P_final-correction-service` [event] WHEN immutable final review reports findings, the service SHALL durably count the correction and invalidate that candidate's final evidence.
+- `P_final-correction-adapter` [event] WHEN a final correction remains within the configured limit, Pi SHALL schedule correction, verification, and a fresh immutable review.
 - `P_gates-derived` [ubiquitous] Phase transitions SHALL calculate non-human gates from canonical evidence and repository state rather than caller-provided boolean flags.
 - `P_resume-recovers-evidence` [event] WHEN ownership resumes, the service SHALL reconstruct candidate and verified-default revisions from canonical Completion evidence rather than treating cache loss as evidence loss.
 - `P_closure-transactional` [event] WHEN acceptance or abandonment closes records, the service SHALL stage, repair, and validate the complete knowledge closure before publishing it.
