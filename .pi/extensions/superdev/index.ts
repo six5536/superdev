@@ -166,7 +166,8 @@ async function isolated(
 }
 
 export function isolatedRoleMayNotRun(command: string): boolean {
-	return /\bsuperdev\s+workflow\s+(?:start|resume|cancel|record-evidence|evidence|sync|correction(?!-checkpoint)|transition|integrate|abandon)\b/.test(command);
+	return /\bsuperdev\s+workflow\s+(?:start|resume|cancel|record-evidence|evidence|scope-checkpoint|sync|correction(?!-checkpoint)|transition|integrate|abandon)\b/.test(command)
+		|| /\bgit\s+(?:add|commit|update-ref|reset|switch|checkout|merge|rebase|cherry-pick|branch|tag|stash|clean|restore|rm|mv)\b/.test(command);
 }
 
 export default function superdev(pi: ExtensionAPI) {
@@ -433,6 +434,10 @@ export default function superdev(pi: ExtensionAPI) {
 				(child) => { children.add(child); modifyingChild = child; },
 				(child) => { children.delete(child); if (modifyingChild === child) modifyingChild = undefined; });
 			if (scoped.status !== "complete") return ctx.ui.notify(scoped.summary, "warning");
+			await runSuperdev([
+				"workflow", "scope-checkpoint", "--session", initial.owner.session_id,
+				"--expected-revision", initial.owner.last_plan_revision,
+			], ctx.cwd, authority);
 			const status = await workflowStatus(ctx.cwd);
 			const owner = status.owner;
 			if (!owner || status.phase !== "scope" || !status.canonicalPlanRevision

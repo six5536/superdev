@@ -33,6 +33,7 @@ export default function smoke() {
 	if (!tools.includes("superdev_workflow_control")) throw new Error("missing UI-gated workflow control tool");
 	for (const command of [
 		"superdev workflow evidence",
+		"superdev workflow scope-checkpoint",
 		"superdev workflow correction",
 		"superdev workflow sync",
 		"superdev workflow transition",
@@ -40,8 +41,8 @@ export default function smoke() {
 	]) {
 		if (!isolatedRoleMayNotRun(command)) throw new Error(`isolated role may bypass ${command}`);
 	}
+	if (!isolatedRoleMayNotRun("git commit -am bypass")) throw new Error("isolated role may mutate Git history");
 	for (const command of [
-		"superdev workflow scope-checkpoint",
 		"superdev workflow block",
 		"superdev workflow attempt",
 		"superdev workflow correction-checkpoint",

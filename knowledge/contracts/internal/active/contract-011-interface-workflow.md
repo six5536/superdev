@@ -314,7 +314,7 @@ mod tests {
 ### Module boundaries
 
 - `P_rust-authority` [ubiquitous] The Rust workflow service SHALL validate every durable phase transition, plan revision comparison, ownership comparison, and automatic Git operation.
-- `P_pi-orchestrates` [ubiquitous] Pi SHALL orchestrate interaction and isolated roles through typed workflow commands without rewriting durable workflow state directly.
+- `P_pi-orchestrates` [ubiquitous] Pi SHALL orchestrate interaction and isolated roles through typed workflow commands while blocking isolated roles from direct Git mutation or durable workflow-state rewrites.
 
 ### Key flows
 

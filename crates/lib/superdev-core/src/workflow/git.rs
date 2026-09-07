@@ -349,7 +349,26 @@ pub fn scope_base_from_history(root: &Path, work_branch: &str, plan_path: &Path)
         validate_ref(&parent)?;
         if changed_paths(root, &parent, commit)?
             .iter()
-            .all(|path| valid_path(path) && path.starts_with("knowledge/"))
+            .any(|path| !valid_path(path) || !path.starts_with("knowledge/"))
+        {
+            continue;
+        }
+        let scoped = file_at_revision(root, commit, plan_path)?;
+        if !scoped.lines().any(|line| line == "phase: scope") {
+            continue;
+        }
+        let parent_plan = file_at_revision(root, &parent, plan_path);
+        if subject.trim() == "chore(workflow): start scope" && parent_plan.is_err() {
+            return Ok(parent);
+        }
+        if subject.trim() == "chore(workflow): return to scope"
+            && parent_plan.is_ok_and(|text| {
+                text.lines()
+                    .any(|line| matches!(line, "phase: build" | "phase: accept"))
+            })
+            && scoped
+                .lines()
+                .any(|line| line == format!("Scope product baseline: {parent}."))
         {
             return Ok(parent);
         }
@@ -681,7 +700,7 @@ mod tests {
         command(root, &["add", "."]);
         command(
             root,
-            &["commit", "-q", "-m", "docs: caller-edited baseline"],
+            &["commit", "-q", "-m", "chore(workflow): return to scope"],
         );
 
         assert_eq!(
