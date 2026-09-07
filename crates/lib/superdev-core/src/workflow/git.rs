@@ -541,6 +541,7 @@ pub fn integrate_no_ff(
     validate_ref(default_branch)?;
     validate_work_branch(work_branch)?;
     require_clean(root)?;
+    let original_branch = current_branch(root)?;
     if revision(root, default_branch)? != expected_default {
         return Err(Error::Manifest {
             message: "default branch moved; return the prepared closure to BUILD".into(),
@@ -587,17 +588,35 @@ pub fn integrate_no_ff(
     cleanup?;
     let prepared = prepared?;
 
+    git(
+        root,
+        &[
+            "-c",
+            "core.hooksPath=/dev/null",
+            "switch",
+            "--detach",
+            expected_default,
+        ],
+    )?;
     if revision(root, default_branch)? != expected_default {
+        let _ = git(
+            root,
+            &["-c", "core.hooksPath=/dev/null", "switch", &original_branch],
+        );
         return Err(Error::Manifest {
             message: "default branch moved; return the prepared closure to BUILD".into(),
         });
     }
     if revision(root, work_branch)? != expected_work {
+        let _ = git(
+            root,
+            &["-c", "core.hooksPath=/dev/null", "switch", &original_branch],
+        );
         return Err(Error::Manifest {
             message: "work branch moved after acceptance attestation".into(),
         });
     }
-    git(
+    if let Err(error) = git(
         root,
         &[
             "update-ref",
@@ -605,13 +624,17 @@ pub fn integrate_no_ff(
             &prepared,
             expected_default,
         ],
-    )?;
-    if current_branch(root)? != default_branch {
-        git(
+    ) {
+        let _ = git(
             root,
-            &["-c", "core.hooksPath=/dev/null", "switch", default_branch],
-        )?;
+            &["-c", "core.hooksPath=/dev/null", "switch", &original_branch],
+        );
+        return Err(error);
     }
+    git(
+        root,
+        &["-c", "core.hooksPath=/dev/null", "switch", default_branch],
+    )?;
     Ok(())
 }
 
@@ -928,9 +951,14 @@ mod tests {
             std::fs::set_permissions(&hook, permissions).unwrap();
         }
         command(root, &["config", "commit.gpgsign", "true"]);
+        command(root, &["switch", "-q", "main"]);
 
         integrate_no_ff(root, "main", &default, "work/059-test", &work).unwrap();
         assert_eq!(current_branch(root).unwrap(), "main");
+        assert_eq!(
+            std::fs::read_to_string(root.join("file")).unwrap(),
+            "work\n"
+        );
 
         let parents = git(root, &["rev-list", "--parents", "-n", "1", "HEAD"]).unwrap();
         assert_eq!(

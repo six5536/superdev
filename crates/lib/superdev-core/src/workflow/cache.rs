@@ -18,6 +18,36 @@ fn lock_path(root: &Path) -> PathBuf {
     root.join(".superdev/cache/workflow.lock")
 }
 
+fn require_cache_directory(root: &Path) -> Result<PathBuf> {
+    let superdev = root.join(".superdev");
+    let cache = superdev.join("cache");
+    for directory in [&superdev, &cache] {
+        if fs::symlink_metadata(directory).is_ok_and(|metadata| metadata.file_type().is_symlink()) {
+            return Err(Error::Manifest {
+                message: format!(
+                    "workflow cache directory may not be a symlink: {}",
+                    directory.display()
+                ),
+            });
+        }
+    }
+    fs::create_dir_all(&cache).map_err(|source| Error::Io {
+        path: cache.clone(),
+        source,
+    })?;
+    for directory in [&superdev, &cache] {
+        if fs::symlink_metadata(directory).is_ok_and(|metadata| metadata.file_type().is_symlink()) {
+            return Err(Error::Manifest {
+                message: format!(
+                    "workflow cache directory may not be a symlink: {}",
+                    directory.display()
+                ),
+            });
+        }
+    }
+    Ok(cache)
+}
+
 /// Digest an unpersisted UI authority capability for transient ownership.
 pub fn authority_digest(capability: &str) -> Result<String> {
     if capability.len() < 32 {
@@ -55,12 +85,8 @@ pub fn verify_authority(cache: &WorkflowCache, capability: &str) -> Result<()> {
 /// Hold the repository workflow lock for one complete read/check/write
 /// transaction. The persistent empty lock file makes crash recovery safe.
 fn locked<T>(root: &Path, operation: impl FnOnce() -> Result<T>) -> Result<T> {
+    require_cache_directory(root)?;
     let lock_path = lock_path(root);
-    let parent = lock_path.parent().expect("workflow lock has a parent");
-    fs::create_dir_all(parent).map_err(|source| Error::Io {
-        path: parent.into(),
-        source,
-    })?;
     let file = OpenOptions::new()
         .create(true)
         .truncate(false)
@@ -142,12 +168,8 @@ pub fn load(root: &Path) -> Result<Option<WorkflowCache>> {
 /// A busy result is distinct from absent ownership so status adapters cannot
 /// mistake an in-progress publication for an unowned workflow.
 pub fn try_load(root: &Path) -> Result<CacheSnapshot> {
+    require_cache_directory(root)?;
     let lock_path = lock_path(root);
-    let parent = lock_path.parent().expect("workflow lock has a parent");
-    fs::create_dir_all(parent).map_err(|source| Error::Io {
-        path: parent.into(),
-        source,
-    })?;
     let file = OpenOptions::new()
         .create(true)
         .truncate(false)
@@ -343,6 +365,18 @@ mod tests {
         assert!(verify_authority(&state, "0123456789abcdef0123456789abcdef").is_ok());
         assert!(verify_authority(&state, "fedcba9876543210fedcba9876543210").is_err());
         assert!(authority_digest("short").is_err());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn cache_operations_reject_a_symlinked_private_directory() {
+        use std::os::unix::fs::symlink;
+
+        let root = tempfile::tempdir().unwrap();
+        let outside = tempfile::tempdir().unwrap();
+        symlink(outside.path(), root.path().join(".superdev")).unwrap();
+        assert!(bind(root.path(), &state("a")).is_err());
+        assert!(!outside.path().join("cache/workflow.lock").exists());
     }
 
     #[cfg(unix)]
