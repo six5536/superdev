@@ -353,12 +353,14 @@ export function registerPhaseDrivers(deps: any) {
 		if (!owner || status.phase !== "build" || owner.last_plan_revision !== state.candidate) throw new Error("BUILD exhaustion decision changed; inspect status and restart discussion");
 		const answer = state.answers[state.findings[0]?.id]?.answer?.trim();
 		if (!answer || !/^return to scope\s*:/i.test(answer)) throw new Error("BUILD exhaustion can continue only through an explicitly confirmed `Return to SCOPE: …` decision");
-		await runSuperdev([
+		const transitioned = await runSuperdev([
 			"workflow", "transition", "--session", owner.session_id,
 			"--expected-revision", owner.last_plan_revision, "--phase", "build",
 			"--transition", "return-to-scope", "--feedback", `${answer}\n${JSON.stringify(state.mechanicalFindings ?? [])}`,
-		], ctx.cwd, authority);
-		return await runScopePhase(`Review the confirmed correction-budget exhaustion decision and complete re-scope: ${answer}`, ctx);
+		], ctx.cwd, authority) as { result?: { state?: { last_plan_revision?: string } } };
+		const revision = transitioned.result?.state?.last_plan_revision;
+		if (!revision) throw new Error("BUILD-to-SCOPE exhaustion routing omitted the new plan revision");
+		return await runScopePhase("", ctx, { ...state, candidate: revision, originPhase: "scope", status: "submitted" });
 	};
 	pi.registerCommand("build", {
 		description: "Run BUILD through automatic ACCEPT assessment",

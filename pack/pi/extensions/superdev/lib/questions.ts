@@ -96,11 +96,16 @@ export function registerWorkflowQuestions(
 			restoreIssue = stateIssue(value);
 			if (!restoreIssue) state = value as QuestionState;
 		}
-		if (state?.status === "active" || state?.status === "paused") activate();
+		if (state?.status === "active") activate();
 		return state;
 	};
 	const begin = (next: QuestionState) => { state = next; persist(); activate(); };
 	const current = () => state;
+	const resume = async (ctx: any) => {
+		if (!state || state.status !== "paused") throw new Error("no paused workflow question queue is available");
+		await options.onResume?.(state, ctx);
+		state.status = "active"; persist(); activate();
+	};
 	const supersede = (reason: string) => {
 		if (!state) return;
 		state.status = "superseded";
@@ -144,11 +149,11 @@ export function registerWorkflowQuestions(
 			if (input.action === "pause") {
 				state.status = "paused"; persist();
 				await options.onPause?.(state, ctx);
+				deactivate();
 				return { content: [{ type: "text", text: "Workflow questions paused and ownership released. Say ‘resume workflow questions’ to continue." }], details: { paused: true } };
 			}
 			if (input.action === "resume") {
-				await options.onResume?.(state, ctx);
-				state.status = "active"; persist(); activate();
+				await resume(ctx);
 				return { content: [{ type: "text", text: "Workflow questions resumed. Inspect the queue and ask the next dependency-eligible finding." }], details: { resumed: true } };
 			}
 			if (state.status !== "active") throw new Error(`workflow question queue is ${state.status}`);
@@ -168,6 +173,7 @@ export function registerWorkflowQuestions(
 				if (!ctx.hasUI) {
 					state.status = "paused"; persist();
 					await options.onPause?.(state, ctx);
+					deactivate();
 					return { content: [{ type: "text", text: JSON.stringify({ status: "human-input-required", workflow: state.workflow, phase: state.originPhase ?? "scope", pendingAction: `answer ${finding.id}`, resume: "Resume workflow questions in an interactive session" }) }], details: { humanInputRequired: true } };
 				}
 				const choices = [...(finding.choices ?? []).map((choice) => choice.label), "Type another answer", "Back", "Discuss", "Pause workflow questions"];
@@ -177,6 +183,7 @@ export function registerWorkflowQuestions(
 				if (selected === "Pause workflow questions") {
 					state.status = "paused"; persist();
 					await options.onPause?.(state, ctx);
+					deactivate();
 					return { content: [{ type: "text", text: "Workflow questions paused and ownership released." }], details: { paused: true } };
 				}
 				let answer = selected;
@@ -195,6 +202,7 @@ export function registerWorkflowQuestions(
 				if (!ctx.hasUI) {
 					state.status = "paused"; persist();
 					await options.onPause?.(state, ctx);
+					deactivate();
 					return { content: [{ type: "text", text: JSON.stringify({ status: "human-input-required", workflow: state.workflow, phase: state.originPhase ?? "scope", pendingAction: `confirm answer for ${ids.join(", ")}`, resume: "Resume workflow questions in an interactive session" }) }], details: { humanInputRequired: true, confirmed: false } };
 				}
 				if (!(await ctx.ui.confirm("Confirm proposed workflow answer?", `${input.proposedAnswer}\n\nCovers:\n${impact}`))) {
@@ -217,15 +225,23 @@ export function registerWorkflowQuestions(
 			if (!ctx.hasUI) {
 				state.status = "paused"; persist();
 				await options.onPause?.(state, ctx);
+				deactivate();
 				return { content: [{ type: "text", text: JSON.stringify({ status: "human-input-required", workflow: state.workflow, phase: state.originPhase ?? "scope", pendingAction: "submit all confirmed answers", resume: "Resume workflow questions in an interactive session" }) }], details: { humanInputRequired: true, submitted: false } };
 			}
 			if (!(await ctx.ui.confirm("Submit all workflow answers?", summary))) {
 				return { content: [{ type: "text", text: "Answers remain provisional and editable." }], details: { submitted: false } };
 			}
 			state.status = "submitted"; persist(); deactivate();
-			await options.onSubmit(state, ctx);
+			try {
+				await options.onSubmit(state, ctx);
+			} catch (error) {
+				state.status = "paused";
+				state.reason = `continuation failed: ${String(error)}`;
+				persist();
+				throw error;
+			}
 			return { content: [{ type: "text", text: "Submitted the complete confirmed answer set for one batched correction." }], details: { submitted: true } };
 		},
 	});
-	return { begin, current, restore, restoreIssue: () => restoreIssue, activate, deactivate, supersede };
+	return { begin, current, resume, restore, restoreIssue: () => restoreIssue, activate, deactivate, supersede };
 }

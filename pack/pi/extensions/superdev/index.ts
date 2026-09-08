@@ -733,6 +733,7 @@ export default function superdev(pi: ExtensionAPI) {
 				}
 			}
 			const result = await runSuperdev(args, ctx.cwd, authority);
+			if (input.action === "resume" && questions.current()?.status === "paused") await questions.resume(ctx);
 			if ((input.action === "record-scope-review" || input.action === "record-final-evidence") && input.reviewRun) reviewRuns.delete(input.reviewRun);
 			return { content: [{ type: "text", text: JSON.stringify(result) }], details: { result, humanGated: humanAction || acceptanceRequiresHuman } };
 		},
@@ -844,6 +845,7 @@ export default function superdev(pi: ExtensionAPI) {
 				"--issue", workflow.issue, "--plan", workflow.plan,
 				"--work-branch", workflow.work_branch, "--default-branch", workflow.default_branch,
 			], ctx.cwd, authority);
+			if (questions.current()?.status === "paused") await questions.resume(ctx);
 			const resumed = await workflowStatus(ctx.cwd);
 			ctx.ui.setStatus("superdev-workflow", `${resumed.phase?.toUpperCase() ?? "WORKFLOW"}: ${workflow.plan}`);
 			ctx.ui.notify(`Resumed ${workflow.plan} from canonical ${resumed.phase?.toUpperCase() ?? "workflow"} state`, "info");
