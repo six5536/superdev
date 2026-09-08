@@ -26,6 +26,7 @@ export class IsolatedArtifact {
 	private stream: WriteStream;
 	private stderrBytes = 0;
 	private discardedStderrBytes = 0;
+	private streamError: unknown;
 	private readonly limit: number;
 	private constructor(directory: string, limit: number) {
 		this.directory = directory;
@@ -33,6 +34,7 @@ export class IsolatedArtifact {
 		this.stderrPath = join(directory, "stderr.log");
 		this.resultPath = join(directory, "result.json");
 		this.stream = createWriteStream(this.stderrPath, { flags: "wx", mode: 0o600 });
+		this.stream.on("error", (error) => { this.streamError = error; });
 	}
 
 	static async create(session: string, role: string, limit: number): Promise<IsolatedArtifact> {
@@ -41,23 +43,39 @@ export class IsolatedArtifact {
 		return new IsolatedArtifact(directory, limit);
 	}
 
-	writeStderr(chunk: Buffer | string): void {
+	writeStderr(chunk: Buffer | string): boolean {
 		const bytes = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
 		const remaining = Math.max(0, this.limit - this.stderrBytes);
+		let writable = true;
 		if (remaining) {
 			const kept = bytes.subarray(0, remaining);
-			this.stream.write(kept);
+			writable = this.stream.write(kept);
 			this.stderrBytes += kept.length;
 		}
 		this.discardedStderrBytes += Math.max(0, bytes.length - remaining);
+		return writable;
+	}
+
+	onStderrDrain(resume: () => void): void {
+		const done = () => {
+			this.stream.off("drain", done);
+			this.stream.off("error", done);
+			resume();
+		};
+		this.stream.once("drain", done);
+		this.stream.once("error", done);
 	}
 
 	async finishStderr(): Promise<void> {
-		if (this.stream.closed) return;
-		await new Promise<void>((resolve, reject) => {
-			this.stream.once("error", reject);
-			this.stream.end(resolve);
-		});
+		if (this.streamError) throw this.streamError;
+		if (!this.stream.closed) {
+			await new Promise<void>((resolve, reject) => {
+				this.stream.once("error", reject);
+				this.stream.once("finish", resolve);
+				this.stream.end();
+			});
+		}
+		if (this.streamError) throw this.streamError;
 	}
 
 	async writeResult(value: unknown): Promise<number> {

@@ -202,7 +202,10 @@ async function isolated(
 			}
 		});
 		child.stderr.on("data", (chunk: string) => {
-			artifact.writeStderr(chunk);
+			if (!artifact.writeStderr(chunk)) {
+				child.stderr.pause();
+				artifact.onStderrDrain(() => child.stderr.resume());
+			}
 			stderrTail = (stderrTail + chunk).slice(-Math.max(policy.maxContextBytes * 2, 16_384));
 		});
 		child.on("error", (error) => finish(async () => { await onClose?.(child); await artifact.finishStderr(); reject(error); }));
@@ -456,6 +459,7 @@ export default function superdev(pi: ExtensionAPI) {
 	if (childRole) return;
 
 	type WorkflowStatus = {
+		busy?: boolean;
 		owner?: {
 			session_id: string;
 			last_plan_revision: string;
@@ -491,20 +495,19 @@ export default function superdev(pi: ExtensionAPI) {
 	let reviewFindingLimit = 100;
 	const workflowStatus = async (cwd: string): Promise<WorkflowStatus> => {
 		if (process.env.SUPERDEV_VERIFICATION_ACTIVE === "1") return {};
-		try {
-			const service = await ensureParentService(cwd);
-			const result = await runPinnedSuperdev(service.path, service.digest, ["workflow", "status", "--json"], cwd);
-			if (result.code !== 0) return {};
-			const response = JSON.parse(result.stdout);
-			if (response.protocol !== "superdev-workflow/v2") throw new Error(`unsupported workflow protocol ${String(response.protocol)}`);
-			const status = response.result as WorkflowStatus;
-			reviewStateLimit = status.maxReviewStateBytes ?? reviewStateLimit;
-			reviewFindingLimit = status.maxReviewFindings ?? reviewFindingLimit;
-			status.executable = service.path;
-			return status;
-		} catch {
-			return {};
-		}
+		const service = await ensureParentService(cwd);
+		const result = await runPinnedSuperdev(service.path, service.digest, ["workflow", "status", "--json"], cwd);
+		if (result.code !== 0) throw new Error(boundedText(result.stderr.trim() || "workflow status failed", defaultOutputPolicy));
+		let response: any;
+		try { response = JSON.parse(result.stdout); }
+		catch { throw new Error("superdev returned invalid workflow status JSON"); }
+		if (response.protocol !== "superdev-workflow/v2") throw new Error(`unsupported workflow protocol ${String(response.protocol)}`);
+		if (!response.result || typeof response.result !== "object") throw new Error("superdev workflow status omitted its result");
+		const status = response.result as WorkflowStatus;
+		reviewStateLimit = status.maxReviewStateBytes ?? reviewStateLimit;
+		reviewFindingLimit = status.maxReviewFindings ?? reviewFindingLimit;
+		status.executable = service.path;
+		return status;
 	};
 	const policyFrom = (status: WorkflowStatus): OutputPolicy => ({
 		timeoutSeconds: status.isolatedRoleTimeoutSeconds ?? 1_200,
@@ -516,7 +519,7 @@ export default function superdev(pi: ExtensionAPI) {
 		maxArtifacts: status.maxIsolatedArtifactsPerSession ?? 20,
 		retentionHours: status.isolatedArtifactRetentionHours ?? 24,
 	});
-	let phaseContinuations: { continueScopeFromAnswers(state: QuestionState, ctx: any): Promise<void>; continueAcceptRequest(state: QuestionState, ctx: any): Promise<void> } | undefined;
+	let phaseContinuations: { continueScopeFromAnswers(state: QuestionState, ctx: any): Promise<void>; continueBuildDecision(state: QuestionState, ctx: any): Promise<void>; continueAcceptRequest(state: QuestionState, ctx: any): Promise<void> } | undefined;
 	const questions = registerWorkflowQuestions(pi, {
 		maxBytes: () => reviewStateLimit,
 		maxFindings: () => reviewFindingLimit,
@@ -536,11 +539,9 @@ export default function superdev(pi: ExtensionAPI) {
 			], ctx.cwd, authority);
 		},
 		onSubmit: async (state, ctx) => {
-			if (state.originPhase === "accept") {
-				if (!phaseContinuations) throw new Error("ACCEPT continuation is unavailable");
-				return await phaseContinuations.continueAcceptRequest(state, ctx);
-			}
-			if (!phaseContinuations) throw new Error("SCOPE continuation is unavailable");
+			if (!phaseContinuations) throw new Error("workflow phase continuation is unavailable");
+			if (state.originPhase === "accept") return await phaseContinuations.continueAcceptRequest(state, ctx);
+			if (state.originPhase === "build") return await phaseContinuations.continueBuildDecision(state, ctx);
 			await phaseContinuations.continueScopeFromAnswers(state, ctx);
 		},
 	});
@@ -566,16 +567,24 @@ export default function superdev(pi: ExtensionAPI) {
 		], cwd, authority);
 	};
 	const recordChildFinish = async (cwd: string, expectedPid: number | undefined) => {
-		const latest = await workflowStatus(cwd);
+		let latest = await workflowStatus(cwd);
+		for (let attempt = 0; latest.busy && attempt < 100; attempt += 1) {
+			await new Promise((done) => setTimeout(done, 25));
+			latest = await workflowStatus(cwd);
+		}
+		if (latest.busy) throw new Error("workflow transaction remained busy while clearing child activity");
 		if (!latest.owner || !expectedPid || latest.owner.child_pid !== expectedPid) return;
 		await runSuperdev(["workflow", "activity-finish", "--session", latest.owner.session_id, "--expected-revision", latest.owner.last_plan_revision], cwd, authority);
 	};
 	const activityRegistrations = new Map<ChildProcess, Promise<void>>();
+	const activityRegistrationErrors = new Map<ChildProcess, unknown>();
 	const childStarted = (ctx: any, status: WorkflowStatus, role: Role, modifying = false) => (child: ChildProcess) => {
 		children.add(child);
 		if (modifying) runtime.modifyingChild = child;
-		const registration = recordChildStart(ctx.cwd, status, role, child)
-			.catch((error) => ctx.ui.notify(`Could not record child activity: ${String(error)}`, "warning"));
+		const registration = recordChildStart(ctx.cwd, status, role, child).catch((error) => {
+			activityRegistrationErrors.set(child, error);
+			stopChild(child);
+		});
 		activityRegistrations.set(child, registration);
 	};
 	const childFinished = async (ctx: any, child: ChildProcess) => {
@@ -583,11 +592,14 @@ export default function superdev(pi: ExtensionAPI) {
 		if (runtime.modifyingChild === child) runtime.modifyingChild = undefined;
 		const registration = activityRegistrations.get(child) ?? Promise.resolve();
 		activityRegistrations.delete(child);
+		await registration;
+		const startError = activityRegistrationErrors.get(child);
+		activityRegistrationErrors.delete(child);
+		if (startError) throw new Error(`Could not record child activity: ${String(startError)}`);
 		try {
-			await registration;
 			await recordChildFinish(ctx.cwd, child.pid);
 		} catch (error) {
-			ctx.ui.notify(`Could not clear child activity: ${String(error)}`, "warning");
+			throw new Error(`Could not clear child activity: ${String(error)}`);
 		}
 	};
 	const workflowOwner = async (cwd: string) => (await workflowStatus(cwd)).owner;
@@ -677,10 +689,13 @@ export default function superdev(pi: ExtensionAPI) {
 				const status = await workflowStatus(ctx.cwd);
 				acceptanceRequiresHuman = requiresHumanAcceptance(status.humanAcceptanceRequired);
 			}
-			if ((humanAction || acceptanceRequiresHuman) && (!ctx.hasUI || !(await ctx.ui.confirm(
+			if ((humanAction || acceptanceRequiresHuman) && !ctx.hasUI) {
+				throw new Error(`human-input-required: interactive confirmation is required for ${input.action}; resume this workflow in an interactive Pi session`);
+			}
+			if ((humanAction || acceptanceRequiresHuman) && !(await ctx.ui.confirm(
 				`${input.action}?`,
 				input.action === "abandon" ? "Partial product work will not be integrated." : "This records an authoritative human workflow decision.",
-			)))) throw new Error("human workflow decision was not approved");
+			))) throw new Error("human workflow decision was not approved");
 			const args = ["workflow"];
 			if (input.action === "start" || input.action === "resume") {
 				if (!input.issue || !input.plan || !input.workBranch) throw new Error("workflow identity is incomplete");
@@ -791,17 +806,19 @@ export default function superdev(pi: ExtensionAPI) {
 				}));
 				pausedWorkflows = states.join(", ");
 			}
-			const activity = status.owner?.child_role
+			const activity = status.busy ? "repository workflow transaction is busy"
+				: status.owner?.child_role
 				? `running ${status.owner.child_role}${status.owner.child_started ? ` since ${status.owner.child_started}` : ""}`
 				: pending && pending.status !== "submitted" && pending.status !== "superseded"
 					? `${pending.status} questions (${Object.keys(pending.answers).length}/${pending.findings.length})`
 					: status.owner ? "awaiting phase action" : pausedWorkflows ? `paused: ${pausedWorkflows}` : "unowned";
-			const nextAction = status.owner?.child_role ? "Esc or /superdev-cancel to interrupt"
+			const nextAction = status.busy ? "Wait for the current workflow transaction, then check status again"
+				: status.owner?.child_role ? "Esc or /superdev-cancel to interrupt"
 				: pending?.status === "paused" ? "Resume workflow questions"
 					: pending?.status === "active" ? "Answer or discuss the next workflow question"
 						: status.owner ? `Continue ${status.phase?.toUpperCase() ?? "workflow"}`
 							: status.openWorkflows?.length ? "Run /superdev-resume and select a workflow" : "Start /superdev";
-			ctx.ui.notify(`${status.phase?.toUpperCase() ?? "NO ACTIVE PHASE"} · ${activity}\nNext: ${nextAction}`, "info");
+			ctx.ui.notify(`${status.busy ? "TRANSACTION BUSY" : status.phase?.toUpperCase() ?? "NO ACTIVE PHASE"} · ${activity}\nNext: ${nextAction}`, "info");
 		},
 	});
 	pi.registerCommand("superdev-resume", {

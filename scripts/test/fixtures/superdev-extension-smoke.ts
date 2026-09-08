@@ -190,6 +190,8 @@ export default async function smoke() {
 	let owned = true;
 	let humanAcceptanceRequired = false;
 	let candidateEvidence = false;
+	let finalCorrections = 0;
+	let pendingPhaseQuestions: any;
 	const baseRevision = "1".repeat(40);
 	const candidateRevision = "2".repeat(40);
 	const runtime: PhaseRuntime = { cancelling: false, modifyingBusy: false };
@@ -205,7 +207,7 @@ export default async function smoke() {
 		owner: owner(), phase, canonicalPlanRevision: revision,
 		humanAcceptanceRequired, executable: "/service",
 		maxFinalCorrectionCycles: 3, maxScopeReviewCycles: 3,
-		buildState: { currentBlock: 1, attempts: 0, finalCorrections: 0, blocker: "none" },
+		buildState: { currentBlock: 1, attempts: 0, finalCorrections, blocker: finalCorrections >= 3 ? "final correction limit exhausted: remaining findings" : "none" },
 	});
 	const phasePi = {
 		registerCommand(name: string, command: any) { phaseCommands.set(name, command); },
@@ -245,7 +247,7 @@ export default async function smoke() {
 		workflowStatus: status,
 		authority: "authority",
 		policyFrom: () => ({ timeoutSeconds: 1, maxContextBytes: 8192, maxContextLines: 200, maxReviewStateBytes: 262144, maxReviewFindings: 100, maxArtifactBytes: 10485760, maxArtifacts: 20, retentionHours: 24 }),
-		questions: { begin() { throw new Error("nominal phase path unexpectedly opened questions"); } },
+		questions: { begin(state: any) { pendingPhaseQuestions = state; }, current() { return pendingPhaseQuestions; } },
 		isolated: async (role: string) => {
 			if (roleFailure === role) throw new Error(`${role} timed out after 1s`);
 			return role === "scope" || role === "build"
@@ -272,6 +274,12 @@ export default async function smoke() {
 	await phaseCommands.get("build").handler("", phaseCtx);
 	if (owned || !serviceCalls.slice(callsBeforeTimeout).some((args) => args.includes("cancel"))) throw new Error("timed-out BUILD did not pause and release ownership");
 	if (serviceCalls.slice(callsBeforeTimeout).some((args) => args.includes("resume"))) throw new Error("timed-out BUILD retried without explicit Retry selection");
+
+	owned = true; phase = "build"; revision = "revision-exhausted"; roleFailure = undefined; finalCorrections = 3;
+	await phaseCommands.get("build").handler("", phaseCtx);
+	if (pendingPhaseQuestions?.originPhase !== "build" || pendingPhaseQuestions?.candidate !== revision) {
+		throw new Error("exhausted BUILD did not preserve a revision-bound human decision queue");
+	}
 
 	let progressAborted = false;
 	let progressCleared = false;

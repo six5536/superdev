@@ -7,7 +7,7 @@ export type QuestionState = {
 	version: 1;
 	workflow: string;
 	candidate: string;
-	originPhase?: "scope" | "accept";
+	originPhase?: "scope" | "build" | "accept";
 	status: "active" | "paused" | "submitted" | "superseded";
 	findings: ReviewFinding[];
 	mechanicalFindings?: ReviewFinding[];
@@ -192,7 +192,12 @@ export function registerWorkflowQuestions(
 				const findings = ids.map((id: string) => state!.findings.find((finding) => finding.id === id));
 				if (findings.some((finding: ReviewFinding | undefined) => !finding)) throw new Error("proposed answer names an unknown finding");
 				const impact = findings.map((finding: ReviewFinding) => `${finding.id}: ${finding.summary}`).join("\n");
-				if (!ctx.hasUI || !(await ctx.ui.confirm("Confirm proposed workflow answer?", `${input.proposedAnswer}\n\nCovers:\n${impact}`))) {
+				if (!ctx.hasUI) {
+					state.status = "paused"; persist();
+					await options.onPause?.(state, ctx);
+					return { content: [{ type: "text", text: JSON.stringify({ status: "human-input-required", workflow: state.workflow, phase: state.originPhase ?? "scope", pendingAction: `confirm answer for ${ids.join(", ")}`, resume: "Resume workflow questions in an interactive session" }) }], details: { humanInputRequired: true, confirmed: false } };
+				}
+				if (!(await ctx.ui.confirm("Confirm proposed workflow answer?", `${input.proposedAnswer}\n\nCovers:\n${impact}`))) {
 					return { content: [{ type: "text", text: "Proposed answer was not confirmed; continue discussion." }], details: { confirmed: false } };
 				}
 				const replacedGroups = new Set(ids.flatMap((id: string) => state!.answers[id]?.findingIds ?? []));
@@ -209,7 +214,12 @@ export function registerWorkflowQuestions(
 			const groups = new Map<string, ConfirmedAnswer>();
 			for (const answer of Object.values(state.answers)) groups.set(`${answer.findingIds.join("\0")}\0${answer.answer}`, answer);
 			const summary = [...groups.values()].map((answer) => `${answer.findingIds.join(", ")}: ${answer.answer}`).join("\n");
-			if (!ctx.hasUI || !(await ctx.ui.confirm("Submit all workflow answers?", summary))) {
+			if (!ctx.hasUI) {
+				state.status = "paused"; persist();
+				await options.onPause?.(state, ctx);
+				return { content: [{ type: "text", text: JSON.stringify({ status: "human-input-required", workflow: state.workflow, phase: state.originPhase ?? "scope", pendingAction: "submit all confirmed answers", resume: "Resume workflow questions in an interactive session" }) }], details: { humanInputRequired: true, submitted: false } };
+			}
+			if (!(await ctx.ui.confirm("Submit all workflow answers?", summary))) {
 				return { content: [{ type: "text", text: "Answers remain provisional and editable." }], details: { submitted: false } };
 			}
 			state.status = "submitted"; persist(); deactivate();

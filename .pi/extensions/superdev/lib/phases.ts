@@ -14,6 +14,7 @@ export type PhaseRuntime = {
 
 export function registerPhaseDrivers(deps: any) {
 	const { pi, runSuperdev, workflowStatus, authority, policyFrom, questions, isolated, childStarted, childFinished, reviewRuns, parentServiceDigest, requiresHumanAcceptance, runtime } = deps;
+	const hasPendingQuestions = () => ["active", "paused"].includes(questions.current?.()?.status ?? "");
 	const pauseAfterFailure = async (ctx: any, phase: string, error: unknown): Promise<boolean> => {
 		const status = await workflowStatus(ctx.cwd);
 		const workflow = status.owner?.identity;
@@ -39,8 +40,26 @@ export function registerPhaseDrivers(deps: any) {
 		], ctx.cwd, authority);
 		return true;
 	};
+	const pauseForBuildExhaustion = async (ctx: any, summary: string, findings: ReviewFinding[] = []) => {
+		const status = await workflowStatus(ctx.cwd);
+		const owner = status.owner;
+		if (!owner || status.phase !== "build") throw new Error("BUILD correction exhaustion lost workflow ownership");
+		const decision: ReviewFinding = {
+			id: "build-correction-limit-exhausted",
+			classification: "substantive",
+			summary,
+			evidence: `The configured final-correction budget is exhausted. ${status.buildState?.blocker ?? ""}`.trim(),
+			impact: "BUILD cannot spend another correction cycle without fresh SCOPE approval.",
+			question: "Should the complete finding set return to SCOPE for review and a fresh approval?",
+			choices: [{ label: "Return to SCOPE: review findings and renew the correction budget" }],
+			recommendation: "Return to SCOPE when the findings still warrant implementation work; otherwise pause for discussion.",
+		};
+		questions.begin({ version: 1, workflow: owner.identity.plan, candidate: owner.last_plan_revision, originPhase: "build", status: "active", findings: [decision], mechanicalFindings: findings, answers: {} });
+		ctx.ui.notify(`Final correction limit exhausted: ${summary}. Findings were preserved for discussion, return to SCOPE, or pause.`, "error");
+	};
 	let startBuildPhase: ((args: string, ctx: any) => Promise<void>) | undefined;
 	const runScopePhase = async (args: string, ctx: any, submitted?: QuestionState) => {
+		if (!submitted && hasPendingQuestions()) return ctx.ui.notify("Resolve or pause the active workflow questions before starting a phase role", "error");
 		if (runtime.cancelling || runtime.modifyingBusy || runtime.modifyingChild) return ctx.ui.notify("A modifying workflow role is already active", "error");
 		runtime.modifyingBusy = true;
 		const commandAbort = new AbortController();
@@ -107,7 +126,11 @@ export function registerPhaseDrivers(deps: any) {
 							if (answer) reused[finding.id] = { ...answer, findingIds: [finding.id] };
 						}
 						if (substantive.every((finding) => reused[finding.id])) {
-							if (cycle >= (status.maxScopeReviewCycles ?? 3)) return ctx.ui.notify(`SCOPE correction limit exhausted: ${reviewed.summary}`, "error");
+							if (cycle >= (status.maxScopeReviewCycles ?? 3)) {
+								questions.begin({ version: 1, workflow: owner.identity.plan, candidate: status.canonicalPlanRevision, status: "active", findings: substantive, mechanicalFindings: mechanical, cycle, answers: reused });
+								ctx.ui.notify(`SCOPE correction limit exhausted: ${reviewed.summary}. Review the preserved answers, then explicitly submit them to authorize one retry cycle or pause for discussion.`, "error");
+								return;
+							}
 							correction = { version: 1, workflow: owner.identity.plan, candidate: status.canonicalPlanRevision, status: "submitted", findings: substantive, mechanicalFindings: mechanical, cycle, answers: reused };
 							continue;
 						}
@@ -115,7 +138,21 @@ export function registerPhaseDrivers(deps: any) {
 						ctx.ui.notify(`Requirements review found ${substantive.length} substantive and ${mechanical.length} mechanical findings. Discuss or answer them one at a time.`, "warning");
 						return;
 					}
-					if (cycle >= (status.maxScopeReviewCycles ?? 3)) return ctx.ui.notify(`SCOPE correction limit exhausted: ${reviewed.summary}`, "error");
+					if (cycle >= (status.maxScopeReviewCycles ?? 3)) {
+						const exhaustion: ReviewFinding = {
+							id: "scope-correction-limit-exhausted",
+							classification: "substantive",
+							summary: reviewed.summary,
+							evidence: `${mechanical.length} actionable findings remain after ${cycle} complete correction and review cycles.`,
+							impact: "No further model correction runs automatically; the findings and retry decision must remain available for human discussion.",
+							question: "Should SCOPE run one explicitly authorized retry cycle, revise intent, or remain paused?",
+							choices: [{ label: "Retry one cycle" }, { label: "Revise scope intent" }],
+							recommendation: "Retry one cycle only when the remaining fixes are still deterministic under approved intent.",
+						};
+						questions.begin({ version: 1, workflow: owner.identity.plan, candidate: status.canonicalPlanRevision, status: "active", findings: [exhaustion], mechanicalFindings: mechanical, cycle, answers: {} });
+						ctx.ui.notify(`SCOPE correction limit exhausted: ${reviewed.summary}. Findings were preserved for discussion, explicit retry, or pause.`, "error");
+						return;
+					}
 					correction = { version: 1, workflow: owner.identity.plan, candidate: status.canonicalPlanRevision, status: "submitted", findings: [], mechanicalFindings: mechanical, cycle, answers: {} };
 					continue;
 				}
@@ -181,6 +218,7 @@ export function registerPhaseDrivers(deps: any) {
 	});
 	let runAcceptPhase: ((args: string, ctx: any) => Promise<void>) | undefined;
 	const runBuildPhase = async (args: string, ctx: any) => {
+			if (hasPendingQuestions()) return ctx.ui.notify("Resolve or pause the active workflow questions before starting a phase role", "error");
 			if (runtime.cancelling || runtime.modifyingBusy || runtime.modifyingChild) return ctx.ui.notify("A modifying workflow role is already active", "error");
 			runtime.modifyingBusy = true;
 			const commandAbort = new AbortController();
@@ -195,7 +233,8 @@ export function registerPhaseDrivers(deps: any) {
 				if (!owner || status.phase !== "build") return ctx.ui.notify("An owned BUILD workflow is required", "error");
 				if (status.buildState && status.maxFinalCorrectionCycles !== undefined
 					&& status.buildState.finalCorrections >= status.maxFinalCorrectionCycles) {
-					return ctx.ui.notify("Final correction limit is exhausted; human guidance or re-scope is required", "error");
+					await pauseForBuildExhaustion(ctx, status.buildState.blocker || "Final correction budget exhausted");
+					return;
 				}
 				if (!status.executable || !isAbsolute(status.executable)) throw new Error("Rust status omitted its trusted executable path");
 				const built = await withProgress(ctx, { key: "superdev-workflow", title: `BUILD ${owner.identity.plan}`, stage: instruction ? "batched correction" : "implementation" },
@@ -276,7 +315,10 @@ export function registerPhaseDrivers(deps: any) {
 					"--summary", reviewed.findings?.map((finding) => `${finding.id}: ${finding.summary}`).join("\n") ?? reviewed.summary,
 				], ctx.cwd, authority) as { result?: { stalled?: boolean } };
 				const stalled = correction.result?.stalled === true;
-				if (stalled) return ctx.ui.notify(`Final correction limit exhausted: ${reviewed.summary}`, "error");
+				if (stalled) {
+					await pauseForBuildExhaustion(ctx, reviewed.summary, reviewed.findings ?? []);
+					return;
+				}
 				ctx.ui.notify(`Final review requires correction: ${reviewed.summary}`, "warning");
 				instruction = `Correct the complete immutable final-review finding set for ${synchronizedOwner.identity.plan}:\n${JSON.stringify(reviewed.findings ?? [], null, 2)}`;
 				continue;
@@ -305,11 +347,25 @@ export function registerPhaseDrivers(deps: any) {
 			if (retryBuild) return runBuildPhase(args, ctx);
 	};
 	startBuildPhase = runBuildPhase;
+	const continueBuildDecision = async (state: QuestionState, ctx: any) => {
+		const status = await workflowStatus(ctx.cwd);
+		const owner = status.owner;
+		if (!owner || status.phase !== "build" || owner.last_plan_revision !== state.candidate) throw new Error("BUILD exhaustion decision changed; inspect status and restart discussion");
+		const answer = state.answers[state.findings[0]?.id]?.answer?.trim();
+		if (!answer || !/^return to scope\s*:/i.test(answer)) throw new Error("BUILD exhaustion can continue only through an explicitly confirmed `Return to SCOPE: …` decision");
+		await runSuperdev([
+			"workflow", "transition", "--session", owner.session_id,
+			"--expected-revision", owner.last_plan_revision, "--phase", "build",
+			"--transition", "return-to-scope", "--feedback", `${answer}\n${JSON.stringify(state.mechanicalFindings ?? [])}`,
+		], ctx.cwd, authority);
+		return await runScopePhase(`Review the confirmed correction-budget exhaustion decision and complete re-scope: ${answer}`, ctx);
+	};
 	pi.registerCommand("build", {
 		description: "Run BUILD through automatic ACCEPT assessment",
 		handler: runBuildPhase,
 	});
 	const executeAcceptPhase = async (_args: string, ctx: any) => {
+			if (hasPendingQuestions()) return ctx.ui.notify("Resolve or pause the active workflow questions before starting a phase role", "error");
 			const status = await workflowStatus(ctx.cwd);
 			const owner = status.owner;
 			if (!owner || status.phase !== "accept") return ctx.ui.notify("An owned ACCEPT workflow is required", "error");
@@ -455,5 +511,5 @@ export function registerPhaseDrivers(deps: any) {
 		description: "Assess ACCEPT and integrate after configured human authority",
 		handler: (args, ctx) => runAcceptPhase!(args, ctx),
 	});
-	return { continueScopeFromAnswers, continueAcceptRequest };
+	return { continueScopeFromAnswers, continueBuildDecision, continueAcceptRequest };
 }
