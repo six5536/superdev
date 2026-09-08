@@ -205,7 +205,8 @@ export async function isolated(
 			lastEventType,
 			submission: { starts: submissionStarts, ends: submissionEnds, successful: submissions, errors: submissionErrors, duplicates: submissionDuplicates, payloadPresent: submission !== undefined, diagnostics: submissionDiagnostics },
 			terminalTimeline,
-			stderr: { ...artifact.stderrSummary(), path: artifact.stderrPath },
+			events: artifact.stdoutSummary(),
+			stderr: artifact.stderrSummary(),
 			...(error === undefined ? {} : { error: String(error).slice(0, 2_048) }),
 		});
 		const finish = (operation: () => Promise<void>) => {
@@ -257,18 +258,23 @@ export async function isolated(
 			}
 		};
 		const stop = () => stopProcess(child);
+		const finishArtifactStreams = async () => { await Promise.all([artifact.finishStdout(), artifact.finishStderr()]); };
 		const timeout = setTimeout(() => { timedOut = true; stop(); }, policyTimeoutMs(policy));
 		timeout.unref();
 		child.stdout.setEncoding("utf8");
 		child.stderr.setEncoding("utf8");
 		child.stdout.on("data", (chunk: string) => {
 			stdoutBytes += Buffer.byteLength(chunk);
+			if (!artifact.writeStdout(chunk)) {
+				child.stdout.pause();
+				artifact.onStdoutDrain(() => child.stdout.resume());
+			}
 			pending += chunk;
 			if (Buffer.byteLength(pending) > policy.maxArtifactBytes) {
 				stop();
 				return finish(async () => {
 					await onClose?.(child);
-					await artifact.finishStderr();
+					await finishArtifactStreams();
 					await writeDiagnostic("stdout-overflow", null, `${role} emitted an over-cap event`);
 					reject(new Error(`isolated-output-overflow: ${role} emitted an over-cap event; diagnostics: ${artifact.diagnosticPath}`));
 				});
@@ -288,14 +294,14 @@ export async function isolated(
 		});
 		child.on("error", (error) => finish(async () => {
 			await onClose?.(child);
-			await artifact.finishStderr();
+			await finishArtifactStreams();
 			await writeDiagnostic("spawn-error", null, error);
 			reject(new Error(`${String(error)}; diagnostics: ${artifact.diagnosticPath}`));
 		}));
 		child.on("close", (code) => finish(async () => {
 			await onClose?.(child);
 			if (pending) consume(pending);
-			await artifact.finishStderr();
+			await finishArtifactStreams();
 			if (timedOut) {
 				await writeDiagnostic("timeout", code, `timed out after ${policyTimeoutMs(policy) / 1_000}s`);
 				return reject(new Error(`isolated role timed out after ${policyTimeoutMs(policy) / 1_000}s; diagnostics: ${artifact.diagnosticPath}`));

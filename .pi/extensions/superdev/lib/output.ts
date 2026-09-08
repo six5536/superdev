@@ -19,50 +19,37 @@ function safeToken(value: string): string {
 	return value.replace(/[^a-zA-Z0-9_.-]/g, "_").slice(0, 80) || "session";
 }
 
-export class IsolatedArtifact {
-	readonly directory: string;
-	readonly stderrPath: string;
-	readonly resultPath: string;
-	readonly diagnosticPath: string;
-	private stream: WriteStream;
-	private stderrBytes = 0;
-	private discardedStderrBytes = 0;
+class BoundedArtifactStream {
+	readonly path: string;
+	private readonly stream: WriteStream;
+	private keptBytes = 0;
+	private discardedBytes = 0;
 	private streamError: unknown;
-	private readonly limit: number;
-	private constructor(directory: string, limit: number) {
-		this.directory = directory;
-		this.limit = limit;
-		this.stderrPath = join(directory, "stderr.log");
-		this.resultPath = join(directory, "result.json");
-		this.diagnosticPath = join(directory, "diagnostic.json");
-		this.stream = createWriteStream(this.stderrPath, { flags: "wx", mode: 0o600 });
+
+	constructor(path: string, private readonly limit: number) {
+		this.path = path;
+		this.stream = createWriteStream(path, { flags: "wx", mode: 0o600 });
 		this.stream.on("error", (error) => { this.streamError = error; });
 	}
 
-	static async create(session: string, role: string, limit: number): Promise<IsolatedArtifact> {
-		const directory = await mkdtemp(join(tmpdir(), `superdev-isolated-${safeToken(session)}-${safeToken(role)}-`));
-		await chmod(directory, 0o700);
-		return new IsolatedArtifact(directory, limit);
-	}
-
-	writeStderr(chunk: Buffer | string): boolean {
+	write(chunk: Buffer | string): boolean {
 		const bytes = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
 		if (this.streamError) {
-			this.discardedStderrBytes += bytes.length;
+			this.discardedBytes += bytes.length;
 			return true;
 		}
-		const remaining = Math.max(0, this.limit - this.stderrBytes);
+		const remaining = Math.max(0, this.limit - this.keptBytes);
 		let writable = true;
 		if (remaining) {
 			const kept = bytes.subarray(0, remaining);
 			writable = this.stream.write(kept);
-			this.stderrBytes += kept.length;
+			this.keptBytes += kept.length;
 		}
-		this.discardedStderrBytes += Math.max(0, bytes.length - remaining);
+		this.discardedBytes += Math.max(0, bytes.length - remaining);
 		return writable;
 	}
 
-	onStderrDrain(resume: () => void): void {
+	onDrain(resume: () => void): void {
 		const done = () => {
 			this.stream.off("drain", done);
 			this.stream.off("error", done);
@@ -72,7 +59,7 @@ export class IsolatedArtifact {
 		this.stream.once("error", done);
 	}
 
-	async finishStderr(): Promise<void> {
+	async finish(): Promise<void> {
 		if (this.streamError) throw this.streamError;
 		if (!this.stream.closed) {
 			await new Promise<void>((resolve, reject) => {
@@ -83,6 +70,43 @@ export class IsolatedArtifact {
 		}
 		if (this.streamError) throw this.streamError;
 	}
+
+	summary(): { bytes: number; discardedBytes: number; path: string } {
+		return { bytes: this.keptBytes, discardedBytes: this.discardedBytes, path: this.path };
+	}
+}
+
+export class IsolatedArtifact {
+	readonly directory: string;
+	readonly stdoutPath: string;
+	readonly stderrPath: string;
+	readonly resultPath: string;
+	readonly diagnosticPath: string;
+	private readonly stdout: BoundedArtifactStream;
+	private readonly stderr: BoundedArtifactStream;
+	private constructor(directory: string, private readonly limit: number) {
+		this.directory = directory;
+		this.stdoutPath = join(directory, "events.jsonl");
+		this.stderrPath = join(directory, "stderr.log");
+		this.resultPath = join(directory, "result.json");
+		this.diagnosticPath = join(directory, "diagnostic.json");
+		this.stdout = new BoundedArtifactStream(this.stdoutPath, limit);
+		this.stderr = new BoundedArtifactStream(this.stderrPath, limit);
+	}
+
+	static async create(session: string, role: string, limit: number): Promise<IsolatedArtifact> {
+		const directory = await mkdtemp(join(tmpdir(), `superdev-isolated-${safeToken(session)}-${safeToken(role)}-`));
+		await chmod(directory, 0o700);
+		return new IsolatedArtifact(directory, limit);
+	}
+
+	writeStdout(chunk: Buffer | string): boolean { return this.stdout.write(chunk); }
+	onStdoutDrain(resume: () => void): void { this.stdout.onDrain(resume); }
+	async finishStdout(): Promise<void> { await this.stdout.finish(); }
+	stdoutSummary(): { bytes: number; discardedBytes: number; path: string } { return this.stdout.summary(); }
+	writeStderr(chunk: Buffer | string): boolean { return this.stderr.write(chunk); }
+	onStderrDrain(resume: () => void): void { this.stderr.onDrain(resume); }
+	async finishStderr(): Promise<void> { await this.stderr.finish(); }
 
 	async writeDiagnostic(value: unknown): Promise<number> {
 		const bytes = Buffer.from(JSON.stringify(value, null, 2));
@@ -99,12 +123,8 @@ export class IsolatedArtifact {
 		return bytes.length;
 	}
 
-	stderrSummary(): { bytes: number; discardedBytes: number; path?: string } {
-		return {
-			bytes: this.stderrBytes,
-			discardedBytes: this.discardedStderrBytes,
-			...(this.stderrBytes ? { path: this.stderrPath } : {}),
-		};
+	stderrSummary(): { bytes: number; discardedBytes: number; path: string } {
+		return this.stderr.summary();
 	}
 }
 

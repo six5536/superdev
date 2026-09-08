@@ -183,8 +183,11 @@ async function smoke() {
 	if (!bounded.includes("Showing 2 of 3 lines")) throw new Error("model-visible output was not line bounded");
 	const artifact = await IsolatedArtifact.create("smoke", "review", 16);
 	try {
+		artifact.writeStdout("0123456789abcdefghijklmnop");
 		artifact.writeStderr("0123456789abcdefghijklmnop");
-		await artifact.finishStderr();
+		await Promise.all([artifact.finishStdout(), artifact.finishStderr()]);
+		if (artifact.stdoutSummary().bytes !== 16 || artifact.stdoutSummary().discardedBytes !== 10) throw new Error("raw isolated trace was not bounded");
+		if ((await stat(artifact.stdoutPath)).mode & 0o077) throw new Error("raw isolated trace is not owner-only");
 		if ((await stat(artifact.directory)).mode & 0o077) throw new Error("artifact directory is not owner-only");
 		try {
 			await artifact.writeResult({ result: "this authoritative result is too large" });
@@ -214,6 +217,11 @@ async function smoke() {
 			if (diagnostic.outcome !== "terminal-protocol-failure" || diagnostic.submission.starts !== 1 || diagnostic.submission.ends !== 1 || diagnostic.submission.errors !== 1 || diagnostic.assistantEnds !== 1) {
 				throw new Error("isolated terminal diagnostics omitted lifecycle evidence");
 			}
+			if (!diagnostic.events?.path?.endsWith("/events.jsonl") || diagnostic.events.bytes === 0 || diagnostic.events.discardedBytes !== 0) {
+				throw new Error("isolated terminal diagnostic omitted its retained raw event trace");
+			}
+			const trace = await readFile(diagnostic.events.path, "utf8");
+			if (!trace.includes('"toolName":"superdev_submit_result"')) throw new Error("raw isolated trace omitted terminal events");
 		}
 		await writeFile(fakePi, `#!/usr/bin/env node\nconst result={status:"complete",summary:"accepted once"};\nconsole.log(JSON.stringify({type:"turn_start"}));\nconsole.log(JSON.stringify({type:"tool_execution_start",toolName:"superdev_submit_result",args:result}));\nconsole.log(JSON.stringify({type:"tool_execution_end",toolName:"superdev_submit_result",isError:false,result:{details:{superdevResult:result}}}));\nconsole.log(JSON.stringify({type:"tool_execution_start",toolName:"superdev_submit_result",args:result}));\nconsole.log(JSON.stringify({type:"tool_execution_end",toolName:"superdev_submit_result",isError:false,result:{details:{superdevDuplicate:true}}}));\n`, { mode: 0o700 });
 		const accepted = await isolated("scope", "exercise duplicate suppression", process.cwd());
