@@ -3,6 +3,8 @@ import { readFile, rm, stat } from "node:fs/promises";
 
 import superdev, { buildCommandAllowed, isolatedRoleMayNotRun, isolatedTools, parseRoleResult, requiresHumanAcceptance, runGuardedBuildCommand, runPinnedSuperdev } from "../../../.pi/extensions/superdev/index.ts";
 import { IsolatedArtifact, boundedText } from "../../../.pi/extensions/superdev/lib/output.ts";
+import { registerPhaseDrivers, type PhaseRuntime } from "../../../.pi/extensions/superdev/lib/phases.ts";
+import { withProgress } from "../../../.pi/extensions/superdev/lib/progress.ts";
 import { registerWorkflowQuestions } from "../../../.pi/extensions/superdev/lib/questions.ts";
 import { findingFingerprint, validateRoleResult, type ReviewFinding } from "../../../.pi/extensions/superdev/lib/review.ts";
 
@@ -175,4 +177,119 @@ export default async function smoke() {
 			if (!String(error).includes("changed after the parent pinned it")) throw error;
 		}
 	}
+
+	// Execute the registered phase handlers against a deterministic fake Pi and
+	// workflow service. This catches orchestration gaps that registration-only
+	// smoke coverage cannot observe.
+	const phaseCommands = new Map<string, any>();
+	const serviceCalls: string[][] = [];
+	const progress: string[] = [];
+	const selections: string[] = ["Approve only"];
+	let phase: "scope" | "build" | "accept" = "scope";
+	let revision = "revision-1";
+	let owned = true;
+	let humanAcceptanceRequired = false;
+	let candidateEvidence = false;
+	const baseRevision = "1".repeat(40);
+	const candidateRevision = "2".repeat(40);
+	const runtime: PhaseRuntime = { cancelling: false, modifyingBusy: false };
+	let roleFailure: string | undefined;
+	const owner = () => owned ? {
+		session_id: "session-smoke",
+		last_plan_revision: revision,
+		scope_base_revision: baseRevision,
+		...(candidateEvidence ? { candidate_revision: candidateRevision, verified_default_revision: baseRevision } : {}),
+		identity: { issue: "issue-smoke", plan: "plan-smoke", work_branch: "work/smoke", default_branch: "main" },
+	} : undefined;
+	const status = async () => ({
+		owner: owner(), phase, canonicalPlanRevision: revision,
+		humanAcceptanceRequired, executable: "/service",
+		maxFinalCorrectionCycles: 3, maxScopeReviewCycles: 3,
+		buildState: { currentBlock: 1, attempts: 0, finalCorrections: 0, blocker: "none" },
+	});
+	const phasePi = {
+		registerCommand(name: string, command: any) { phaseCommands.set(name, command); },
+		async exec(_command: string, args: string[]) {
+			if (args[0] === "status") return { code: 0, stdout: "", stderr: "" };
+			const target = args.at(-1);
+			return { code: 0, stdout: `${target === "main" || target === baseRevision ? baseRevision : candidateRevision}\n`, stderr: "" };
+		},
+	};
+	const runService = async (args: string[]) => {
+		serviceCalls.push(args);
+		if (args.includes("scope-checkpoint")) revision = "revision-2";
+		if (args.includes("scope-review")) revision = "revision-3";
+		if (args.includes("approve-scope")) { phase = "build"; revision = "revision-4"; }
+		if (args.includes("final")) { phase = "accept"; revision = "revision-5"; candidateEvidence = true; }
+		if (args.includes("integrate")) owned = false;
+		if (args.includes("cancel")) owned = false;
+		return { result: args.includes("transition") ? { state: { last_plan_revision: revision } } : { last_plan_revision: revision } };
+	};
+	const ui = {
+		setStatus(_key: string, value?: string) { if (value) progress.push(value); },
+		notify() {},
+		async select() { return selections.shift(); },
+		async confirm() { return true; },
+		async input() { return "confirmed"; },
+		async custom(factory: any) {
+			return await new Promise((resolve) => {
+				const component = factory({ requestRender() {} }, { fg(_style: string, text: string) { return text; } }, {}, resolve);
+				component.render(80);
+			});
+		},
+	};
+	const phaseCtx = { cwd: "/repo", model: undefined, hasUI: true, sessionManager: { getSessionId: () => "session-smoke" }, ui };
+	registerPhaseDrivers({
+		pi: phasePi,
+		runSuperdev: runService,
+		workflowStatus: status,
+		authority: "authority",
+		policyFrom: () => ({ timeoutSeconds: 1, maxContextBytes: 8192, maxContextLines: 200, maxReviewStateBytes: 262144, maxReviewFindings: 100, maxArtifactBytes: 10485760, maxArtifacts: 20, retentionHours: 24 }),
+		questions: { begin() { throw new Error("nominal phase path unexpectedly opened questions"); } },
+		isolated: async (role: string) => {
+			if (roleFailure === role) throw new Error(`${role} timed out after 1s`);
+			return role === "scope" || role === "build"
+				? { status: "complete", summary: `${role} complete` }
+				: { status: role === "accept" ? "complete" : "clean", summary: `${role} clean`, checklist };
+		},
+		childStarted: () => () => {}, childFinished: async () => {}, reviewRuns: new Map(),
+		parentServiceDigest: "digest", requiresHumanAcceptance, runtime,
+	});
+	await phaseCommands.get("scope").handler("", phaseCtx);
+	if (phase !== "build") throw new Error("SCOPE handler did not approve into BUILD");
+	await phaseCommands.get("build").handler("", phaseCtx);
+	if (owned || !serviceCalls.some((args) => args.includes("integrate"))) throw new Error("BUILD did not continue through automatic ACCEPT integration");
+	if (!progress.some((value) => value.includes("SCOPE")) || !progress.some((value) => value.includes("BUILD")) || !progress.some((value) => value.includes("ACCEPT"))) {
+		throw new Error("phase handlers did not publish immediate progress");
+	}
+	owned = true; phase = "accept"; revision = "revision-pause"; candidateEvidence = true; humanAcceptanceRequired = true; selections.push("Pause");
+	await phaseCommands.get("accept").handler("", phaseCtx);
+	if (owned || !serviceCalls.at(-1)?.includes("cancel")) throw new Error("paused ACCEPT did not release workflow ownership");
+
+	owned = true; phase = "build"; revision = "revision-timeout"; candidateEvidence = false; humanAcceptanceRequired = false;
+	roleFailure = "build"; selections.push("Discuss");
+	const callsBeforeTimeout = serviceCalls.length;
+	await phaseCommands.get("build").handler("", phaseCtx);
+	if (owned || !serviceCalls.slice(callsBeforeTimeout).some((args) => args.includes("cancel"))) throw new Error("timed-out BUILD did not pause and release ownership");
+	if (serviceCalls.slice(callsBeforeTimeout).some((args) => args.includes("resume"))) throw new Error("timed-out BUILD retried without explicit Retry selection");
+
+	let progressAborted = false;
+	let progressCleared = false;
+	try {
+		await withProgress({ hasUI: true, ui: {
+			setStatus(_key: string, value?: string) { if (!value) progressCleared = true; },
+			async custom(factory: any) {
+				return await new Promise((resolve) => {
+					const component = factory({ requestRender() {} }, { fg(_style: string, text: string) { return text; } }, {}, resolve);
+					component.handleInput("\u001b");
+				});
+			},
+		} }, { key: "smoke-progress", title: "BUILD plan-smoke", stage: "implementation" }, async (signal) => {
+			await new Promise<void>((_resolve, reject) => signal.addEventListener("abort", () => { progressAborted = true; reject(new Error("cancelled")); }, { once: true }));
+		});
+		throw new Error("Esc cancellation unexpectedly completed");
+	} catch (error) {
+		if (!progressAborted || !String(error).includes("cancelled")) throw error;
+	}
+	if (!progressCleared) throw new Error("Esc cancellation left stale progress status");
 }

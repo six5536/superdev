@@ -1,6 +1,6 @@
 # Superdev workflow UX repair plan
 
-**Status:** Approved and substantially implemented. Final phase-driver extraction, handler-level fixture coverage, and manual Pi UX verification remain open.
+**Status:** Approved and implemented. Automated verification, including deterministic phase-handler UX coverage, is complete; final manual Pi visual acceptance remains for the user.
 
 ## Purpose
 
