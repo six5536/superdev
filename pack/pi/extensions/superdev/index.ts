@@ -990,16 +990,23 @@ export default function superdev(pi: ExtensionAPI) {
 		executionMode: "sequential",
 		execute: async (_id, input, _signal, _update, ctx) => {
 			const respond = (result: Record<string, unknown>) => ({ content: [{ type: "text", text: JSON.stringify(result) }], details: result });
-			let status = await workflowStatus(ctx.cwd);
-			const failed = (failedStage: string, error: unknown) => respond({
-				status: "failed",
-				phase: input.phase,
-				failedStage,
-				diagnostic: boundedText(String(error), policyFrom(status)),
-				partialWorkPreserved: true,
-				recoveryOperations: ["retry", "cancel"],
-				recommendation: "Inspect and discuss the diagnostic before selecting an explicit recovery operation.",
-			});
+			let status: WorkflowStatus | undefined;
+			const failed = (failedStage: string, error: unknown) => {
+				const rawDiagnostic = String(error);
+				const diagnosticPath = rawDiagnostic.match(/diagnostics:\s*([^;\n]+)/)?.[1]?.trim();
+				return respond({
+					status: "failed",
+					phase: input.phase,
+					failedStage,
+					diagnostic: boundedText(rawDiagnostic, policyFrom(status ?? {})),
+					...(diagnosticPath ? { diagnosticPath } : {}),
+					partialWorkPreserved: true,
+					recoveryOperations: ["retry", "cancel"],
+					recommendation: "Inspect and discuss the diagnostic before selecting an explicit recovery operation.",
+				});
+			};
+			try {
+				status = await workflowStatus(ctx.cwd);
 			if (input.action === "inspect") {
 				const questionState = questions.snapshot(input.offset, input.limit);
 				const publicQuestions = questionState ? { ...questionState, candidate: undefined } : null;
@@ -1072,7 +1079,12 @@ export default function superdev(pi: ExtensionAPI) {
 					work_branch: input.workBranch,
 					default_branch: input.defaultBranch ?? "main",
 				} : status.openWorkflows?.length === 1 ? status.openWorkflows[0] : undefined;
-				if (!requested) throw new Error("The skill must select one exact issue and plan when zero or multiple open workflows exist.");
+				if (!requested) return respond({
+					status: "selection-required",
+					phase: input.phase,
+					openWorkflows: status.openWorkflows ?? [],
+					recommendation: "Select one exact issue, plan, and issue-derived work branch semantically.",
+				});
 				const existing = status.openWorkflows?.find((workflow) => workflow.issue === requested.issue && workflow.plan === requested.plan && workflow.work_branch === requested.work_branch);
 				if (!existing && input.phase !== "scope") throw new Error("Only SCOPE can establish a new workflow.");
 				const identity = ["--session", ctx.sessionManager.getSessionId(), "--issue", requested.issue, "--plan", requested.plan, "--work-branch", requested.work_branch, "--default-branch", existing?.default_branch ?? requested.default_branch];
@@ -1083,7 +1095,12 @@ export default function superdev(pi: ExtensionAPI) {
 					return failed(existing ? "workflow resume" : "workflow start", error);
 				}
 			}
-			if (status.phase !== input.phase) throw new Error(`Canonical workflow is in ${status.phase?.toUpperCase() ?? "an unknown phase"}; invoke /skill:${status.phase ?? "scope"}.`);
+			if (status.phase !== input.phase) return respond({
+				status: "routed",
+				phase: status.phase ?? null,
+				workflow: status.owner?.identity,
+				recommendation: `Invoke /skill:${status.phase ?? "scope"} for the canonical workflow phase.`,
+			});
 			if (questions.current()?.status === "paused") {
 				if (input.action !== "retry") return respond({ status: "paused", phase: input.phase, partialWorkPreserved: true, recoveryOperations: ["retry", "cancel"] });
 				await questions.resume(ctx);
@@ -1098,7 +1115,7 @@ export default function superdev(pi: ExtensionAPI) {
 				if (input.phase === "accept" && (runtime.lastOutcome?.status !== "ready-for-approval" || runtime.lastOutcome?.expectedRevision !== status.owner.last_plan_revision)) {
 					throw new Error("Run the current ACCEPT assessment before approving it.");
 				}
-				if (!ctx.hasUI) throw new Error(`human-input-required: ${input.phase.toUpperCase()} approval requires an interactive Pi session`);
+				if (!ctx.hasUI) return respond({ status: "human-input-required", phase: input.phase, recommendation: `${input.phase.toUpperCase()} approval requires an interactive Pi session.` });
 				if (!(await ctx.ui.confirm(`Approve reviewed ${input.phase.toUpperCase()}?`, input.phase === "scope" ? `Approve ${status.owner.identity.plan} and advance it to BUILD?` : `Accept ${status.owner.identity.plan} and integrate it locally?`))) {
 					return respond({ status: "approval-declined", phase: input.phase });
 				}
@@ -1120,10 +1137,13 @@ export default function superdev(pi: ExtensionAPI) {
 			runtime.lastOutcome = undefined;
 			const runner = input.phase === "scope" ? phaseContinuations.runScopePhase : input.phase === "build" ? phaseContinuations.runBuildPhase : phaseContinuations.runAcceptPhase;
 			await runner(input.intent ?? "", ctx);
+			if (runtime.lastOutcome) return respond(runtime.lastOutcome);
 			const after = await workflowStatus(ctx.cwd);
 			const pending = questions.current();
-			const result = runtime.lastOutcome ?? { status: pending?.status === "active" ? "findings" : "complete", phase: after.phase, workflow: after.owner?.identity, questions: pending?.status === "active" ? pending.findings.length : 0 };
-			return respond(result);
+			return respond({ status: pending?.status === "active" ? "findings" : "complete", phase: after.phase, workflow: after.owner?.identity, questions: pending?.status === "active" ? pending.findings.length : 0 });
+			} catch (error) {
+				return failed(`${input.phase} ${input.action}`, error);
+			}
 		},
 	});
 	pi.registerCommand("superdev-cancel", {

@@ -253,6 +253,9 @@ async function smoke() {
 	const candidateRevision = "2".repeat(40);
 	const runtime: PhaseRuntime = { cancelling: false, modifyingBusy: false };
 	let roleFailure: string | undefined;
+	let blockedRole: string | undefined;
+	let cancellableRole: string | undefined;
+	let cancelNextProgress = false;
 	const owner = () => owned ? {
 		session_id: "session-smoke",
 		last_plan_revision: revision,
@@ -294,6 +297,10 @@ async function smoke() {
 			return await new Promise((resolve) => {
 				const component = factory({ requestRender() {} }, { fg(_style: string, text: string) { return text; } }, {}, resolve);
 				component.render(80);
+				if (cancelNextProgress) {
+					cancelNextProgress = false;
+					component.handleInput("\u001b");
+				}
 			});
 		},
 	};
@@ -305,8 +312,14 @@ async function smoke() {
 		authority: "authority",
 		policyFrom: () => ({ timeoutSeconds: 1, maxContextBytes: 8192, maxContextLines: 200, maxReviewStateBytes: 262144, maxReviewFindings: 100, maxArtifactBytes: 10485760, maxArtifacts: 20, retentionHours: 24 }),
 		questions: { begin(state: any) { pendingPhaseQuestions = state; }, current() { return pendingPhaseQuestions; } },
-		isolated: async (role: string) => {
-			if (roleFailure === role) throw new Error(`${role} timed out after 1s`);
+		isolated: async (role: string, _task: string, _cwd: string, _model: unknown, signal: AbortSignal) => {
+			if (roleFailure === role) throw new Error(`${role} timed out after 1s; diagnostics: /tmp/${role}-diagnostic.json`);
+			if (cancellableRole === role) return await new Promise((_resolve, reject) => {
+				const cancelled = () => reject(new Error(`${role} role was cancelled; diagnostics: /tmp/${role}-cancelled.json`));
+				if (signal.aborted) cancelled();
+				else signal.addEventListener("abort", cancelled, { once: true });
+			});
+			if (blockedRole === role) return { status: "blocked", summary: `${role} blocked`, artifactPath: `/tmp/${role}-result.json` };
 			return role === "scope" || role === "build"
 				? { status: "complete", summary: `${role} complete` }
 				: { status: role === "accept" ? "complete" : "clean", summary: `${role} clean`, checklist };
@@ -332,10 +345,20 @@ async function smoke() {
 	roleFailure = "build"; runtime.lastOutcome = undefined;
 	const callsBeforeTimeout = serviceCalls.length;
 	await phaseDrivers.runBuildPhase("", phaseCtx);
-	if (!owned || runtime.lastOutcome?.status !== "failed" || runtime.lastOutcome?.failedStage !== "build implementation" || runtime.lastOutcome?.partialWorkPreserved !== true) throw new Error("timed-out BUILD did not return stage-specific typed recovery");
+	if (owned || runtime.lastOutcome?.status !== "failed" || runtime.lastOutcome?.failedStage !== "build implementation" || runtime.lastOutcome?.diagnosticPath !== "/tmp/build-diagnostic.json" || runtime.lastOutcome?.partialWorkPreserved !== true) throw new Error("timed-out BUILD did not release ownership with stage-specific typed recovery");
 	if (serviceCalls.slice(callsBeforeTimeout).some((args) => args.includes("resume"))) throw new Error("timed-out BUILD retried without an explicit retry operation");
 
-	owned = true; phase = "build"; revision = "revision-exhausted"; roleFailure = undefined; finalCorrections = 3;
+	owned = true; phase = "build"; revision = "revision-review-blocked"; roleFailure = undefined; blockedRole = "code-review"; finalCorrections = 0; runtime.lastOutcome = undefined;
+	const callsBeforeBlockedReview = serviceCalls.length;
+	await phaseDrivers.runBuildPhase("", phaseCtx);
+	if (runtime.lastOutcome?.status !== "blocked" || runtime.lastOutcome?.artifactPath !== "/tmp/code-review-result.json") throw new Error("blocked code review did not return typed recovery with its exact artifact path");
+	if (serviceCalls.slice(callsBeforeBlockedReview).some((args) => args.includes("correction"))) throw new Error("blocked code review consumed a semantic correction cycle");
+
+	owned = true; phase = "accept"; revision = "revision-cancelled"; candidateEvidence = true; blockedRole = undefined; cancellableRole = "accept"; cancelNextProgress = true; runtime.lastOutcome = undefined;
+	await phaseDrivers.runAcceptPhase("", phaseCtx);
+	if (owned || runtime.lastOutcome?.status !== "paused" || runtime.lastOutcome?.failedStage !== "accept assessment" || runtime.lastOutcome?.diagnosticPath !== "/tmp/accept-cancelled.json") throw new Error("Esc did not pause ACCEPT with typed preserved-work recovery");
+
+	owned = true; phase = "build"; revision = "revision-exhausted"; candidateEvidence = false; cancellableRole = undefined; finalCorrections = 3;
 	await phaseDrivers.runBuildPhase("", phaseCtx);
 	if (pendingPhaseQuestions?.originPhase !== "build" || pendingPhaseQuestions?.candidate !== revision) {
 		throw new Error("exhausted BUILD did not preserve a revision-bound human decision queue");
