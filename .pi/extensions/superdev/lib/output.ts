@@ -45,6 +45,10 @@ export class IsolatedArtifact {
 
 	writeStderr(chunk: Buffer | string): boolean {
 		const bytes = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+		if (this.streamError) {
+			this.discardedStderrBytes += bytes.length;
+			return true;
+		}
 		const remaining = Math.max(0, this.limit - this.stderrBytes);
 		let writable = true;
 		if (remaining) {

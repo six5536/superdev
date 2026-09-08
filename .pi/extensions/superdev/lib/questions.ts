@@ -96,7 +96,11 @@ export function registerWorkflowQuestions(
 			restoreIssue = stateIssue(value);
 			if (!restoreIssue) state = value as QuestionState;
 		}
-		if (state?.status === "active") activate();
+		if (state?.status === "active") {
+			state.status = "paused";
+			state.reason = "restored after session restart; explicit resume required";
+			persist();
+		}
 		return state;
 	};
 	const begin = (next: QuestionState) => { state = next; persist(); activate(); };
