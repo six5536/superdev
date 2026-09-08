@@ -297,6 +297,17 @@ fn init_materializes_pi_workflow_without_claude_assets() {
             "SCOPE skill omitted `{instruction}`"
         );
     }
+    let scope_prompt = sb.read(".pi/extensions/superdev/prompts/scope.md");
+    for instruction in [
+        "Keep every plan in `phase: scope`",
+        "Do not claim that requirements review or human scope approval has occurred",
+        "Confirmation supplied in the task authorizes drafting only",
+    ] {
+        assert!(
+            scope_prompt.contains(instruction),
+            "isolated SCOPE prompt omitted `{instruction}`"
+        );
+    }
     let build_skill = sb.read(".pi/extensions/superdev/skills/build/SKILL.md");
     assert!(build_skill.contains("Assume no earlier SCOPE or BUILD conversation is present"));
     assert!(build_skill.contains("before taking any action"));
