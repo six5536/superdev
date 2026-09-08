@@ -287,7 +287,7 @@ export default async function smoke() {
 		parentServiceDigest: "digest", requiresHumanAcceptance, runtime,
 	});
 	owned = false;
-	await phaseCommands.get("scope").handler("isse 77", phaseCtx);
+	await phaseCommands.get("scope").handler("issue 77", phaseCtx);
 	if (!serviceCalls.some((args) => args.includes("resume"))) throw new Error("/scope issue 77 did not acquire existing workflow ownership");
 	if (phase !== "build") throw new Error("SCOPE handler did not approve into BUILD");
 	await phaseCommands.get("build").handler("", phaseCtx);
