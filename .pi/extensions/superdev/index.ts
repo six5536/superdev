@@ -10,6 +10,7 @@ import { StringEnum } from "@earendil-works/pi-ai";
 import { Type, type Static } from "typebox";
 import { IsolatedArtifact, boundedText, cleanupArtifacts, type OutputPolicy } from "./lib/output.ts";
 import { registerPhaseDrivers, type PhaseRuntime } from "./lib/phases.ts";
+import { withProgress } from "./lib/progress.ts";
 import { registerWorkflowQuestions, type QuestionState } from "./lib/questions.ts";
 import { parseLegacyRoleResult, roleResultSchema, validateRoleResult, type Role, type RoleResult } from "./lib/review.ts";
 
@@ -172,8 +173,9 @@ async function isolated(
 			let event: any;
 			try { event = JSON.parse(line); } catch { return; }
 			if (event.type === "tool_execution_start") {
-				const target = typeof event.args?.path === "string" ? ` ${event.args.path}` : "";
-				onActivity?.(`${event.toolName}${target}`);
+				const path = typeof event.args?.path === "string" ? event.args.path : "";
+				const target = path && !isAbsolute(path) && !path.split(/[\\/]/).includes("..") ? ` ${path.slice(0, 160)}` : "";
+				onActivity?.(`${String(event.toolName ?? "tool").replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 80)}${target}`);
 			}
 			if (event.type === "tool_execution_end" && event.toolName === "superdev_submit_result" && !event.isError) {
 				submissions += 1;
@@ -744,7 +746,7 @@ export default function superdev(pi: ExtensionAPI) {
 		label: "Superdev isolated role",
 		description: "Run one extension-private workflow role in a fresh isolated Pi process",
 		parameters: schema,
-		execute: async (_id, input, signal, _update, ctx) => {
+		execute: async (_id, input, signal, updateTool, ctx) => {
 			if (runtime.cancelling) throw new Error("workflow cancellation is in progress");
 			const modifying = !readOnly.has(input.role) && input.role !== "file";
 			if (modifying && (runtime.cancelling || runtime.modifyingBusy || runtime.modifyingChild)) throw new Error("one modifying workflow child is already active");
@@ -754,21 +756,48 @@ export default function superdev(pi: ExtensionAPI) {
 				const trustedExecutable = input.role === "build" ? status.executable : undefined;
 				if (runtime.cancelling || signal.aborted) throw new Error("workflow role launch was cancelled during initialization");
 				if (input.role === "build" && (!trustedExecutable || !isAbsolute(trustedExecutable))) throw new Error("Rust status omitted its trusted executable path");
-				const result = await isolated(
-					input.role,
-					input.task,
-					ctx.cwd,
-					ctx.model,
-					signal,
-					childStarted(ctx, status, input.role, modifying),
-					(child) => childFinished(ctx, child),
-					input.base,
-					input.candidate,
-					trustedExecutable,
-					input.role === "build" ? parentServiceDigest : undefined,
-					policyFrom(status),
-					ctx.sessionManager.getSessionId(),
-				);
+				const stage = ({
+					scope: "scope authoring",
+					"requirements-review": "requirements review",
+					build: "implementation",
+					"code-review": "code review",
+					accept: "acceptance assessment",
+					file: "filing",
+				} as const)[input.role];
+				const plan = status.owner?.identity.plan;
+				const startedAt = Date.now();
+				let currentActivity = "starting isolated process";
+				const emitToolProgress = () => updateTool?.({
+					content: [{ type: "text", text: `${stage} · ${currentActivity} · ${Math.floor((Date.now() - startedAt) / 1000)}s elapsed · Esc cancels` }],
+					details: { role: input.role, stage, activity: currentActivity, running: true },
+				});
+				emitToolProgress();
+				const progressTimer = setInterval(emitToolProgress, 1_000);
+				progressTimer.unref?.();
+				const result = await withProgress(
+					ctx,
+					{ key: "superdev-workflow", title: `${input.role.toUpperCase()}${plan ? ` ${plan}` : ""}`, stage },
+					(progressSignal, update) => isolated(
+						input.role,
+						input.task,
+						ctx.cwd,
+						ctx.model,
+						AbortSignal.any([signal, progressSignal]),
+						childStarted(ctx, status, input.role, modifying),
+						(child) => childFinished(ctx, child),
+						input.base,
+						input.candidate,
+						trustedExecutable,
+						input.role === "build" ? parentServiceDigest : undefined,
+						policyFrom(status),
+						ctx.sessionManager.getSessionId(),
+						(activity) => {
+							currentActivity = activity;
+							update({ stage, activity });
+							emitToolProgress();
+						},
+					),
+				).finally(() => clearInterval(progressTimer));
 				let reviewRun: string | undefined;
 				if (input.role === "requirements-review" || input.role === "code-review") {
 					reviewRun = randomBytes(24).toString("hex");
