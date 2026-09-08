@@ -103,8 +103,8 @@ export function registerPhaseDrivers(deps: any) {
 					firstBase = resolved.stdout.trim();
 				}
 				const task = correction
-					? `Apply this complete SCOPE correction batch for ${initial.owner.identity.plan}. Mechanical findings: ${JSON.stringify(correction.mechanicalFindings ?? [])}. Confirmed human answers: ${JSON.stringify(correction.answers)}.`
-					: args || `Complete ${initial.owner.identity.plan} from canonical state.`;
+					? `Apply this complete SCOPE correction batch for issue ${initial.owner.identity.issue} and plan ${initial.owner.identity.plan}. Mechanical findings: ${JSON.stringify(correction.mechanicalFindings ?? [])}. Confirmed human answers: ${JSON.stringify(correction.answers)}.`
+					: `Prepare issue ${initial.owner.identity.issue} and plan ${initial.owner.identity.plan} from canonical state.${args ? ` Confirmed intent: ${args}` : ""}`;
 				runtime.currentStage = correction ? "scope batched correction" : "scope authoring";
 				const scoped = await withProgress(ctx, { key: "superdev-workflow", title: `SCOPE ${initial.owner.identity.plan}`, stage: correction ? "batched correction" : "scope authoring" },
 					(signal, update) => isolated("scope", task, ctx.cwd, ctx.model, phaseSignal(signal, commandAbort),
@@ -130,7 +130,7 @@ export function registerPhaseDrivers(deps: any) {
 				}
 				runtime.currentStage = "requirements review";
 				const reviewed = await withProgress(ctx, { key: "superdev-workflow", title: `SCOPE ${owner.identity.plan}`, stage: "requirements review" },
-					(signal, update) => isolated("requirements-review", `Review the complete immutable SCOPE candidate ${candidate} against baseline ${firstBase}.`, ctx.cwd, ctx.model, phaseSignal(signal, commandAbort),
+					(signal, update) => isolated("requirements-review", `Review issue ${owner.identity.issue} and plan ${owner.identity.plan} in the complete immutable SCOPE candidate ${candidate} against baseline ${firstBase}.`, ctx.cwd, ctx.model, phaseSignal(signal, commandAbort),
 						childStarted(ctx, status, "requirements-review"), (child) => childFinished(ctx, child), firstBase, candidate,
 						undefined, undefined, policyFrom(status), owner.session_id,
 						(activity) => update({ stage: "requirements review", activity })));
@@ -243,7 +243,7 @@ export function registerPhaseDrivers(deps: any) {
 				if (!status.executable || !isAbsolute(status.executable)) throw new Error("Rust status omitted its trusted executable path");
 				runtime.currentStage = instruction ? "build batched correction" : "build implementation";
 				const built = await withProgress(ctx, { key: "superdev-workflow", title: `BUILD ${owner.identity.plan}`, stage: instruction ? "batched correction" : "implementation" },
-					(signal, update) => isolated("build", instruction || `Complete ${owner.identity.plan} from canonical state.`, ctx.cwd, ctx.model, phaseSignal(signal, commandAbort),
+					(signal, update) => isolated("build", `Build issue ${owner.identity.issue} from approved plan ${owner.identity.plan}.${instruction ? ` Complete correction batch: ${instruction}` : " Complete all dependency-ready blocks from canonical state."}`, ctx.cwd, ctx.model, phaseSignal(signal, commandAbort),
 						childStarted(ctx, status, "build", true),
 						(child) => childFinished(ctx, child), undefined, undefined, status.executable, parentServiceDigest,
 						policyFrom(status), owner.session_id,
@@ -415,7 +415,7 @@ export function registerPhaseDrivers(deps: any) {
 			const decision = await withProgress(ctx, { key: "superdev-workflow", title: `ACCEPT ${owner.identity.plan}`, stage: "assessment" },
 				(signal, update) => isolated(
 					"accept",
-					`Assess whether immutable candidate ${owner.candidate_revision} is ready for the parent-owned configured acceptance decision.`,
+					`Assess whether issue ${owner.identity.issue} and plan ${owner.identity.plan} at immutable candidate ${owner.candidate_revision} are ready for the parent-owned configured acceptance decision.`,
 					ctx.cwd,
 					ctx.model,
 					phaseSignal(signal, commandAbort),

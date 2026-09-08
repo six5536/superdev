@@ -162,15 +162,22 @@ export async function isolated(
 		let submissionStarts = 0;
 		let submissionEnds = 0;
 		let submissionErrors = 0;
+		let submissionDuplicates = 0;
 		let stdoutBytes = 0;
 		let parsedEvents = 0;
 		let malformedLines = 0;
+		let turns = 0;
 		let assistantEnds = 0;
 		let lastAssistantStopReason: string | undefined;
 		let lastEventType: string | undefined;
 		const eventCounts: Record<string, number> = {};
 		const toolStarts: Record<string, number> = {};
 		const submissionDiagnostics: string[] = [];
+		const terminalTimeline: Array<Record<string, unknown>> = [];
+		const recordTerminalEvent = (event: Record<string, unknown>) => {
+			terminalTimeline.push({ sequence: parsedEvents, turn: turns, assistant: assistantEnds, ...event });
+			if (terminalTimeline.length > 128) terminalTimeline.shift();
+		};
 		const startedAt = Date.now();
 		let settled = false;
 		let timedOut = false;
@@ -196,7 +203,8 @@ export async function isolated(
 			assistantEnds,
 			...(lastAssistantStopReason ? { lastAssistantStopReason } : {}),
 			lastEventType,
-			submission: { starts: submissionStarts, ends: submissionEnds, successful: submissions, errors: submissionErrors, payloadPresent: submission !== undefined, diagnostics: submissionDiagnostics },
+			submission: { starts: submissionStarts, ends: submissionEnds, successful: submissions, errors: submissionErrors, duplicates: submissionDuplicates, payloadPresent: submission !== undefined, diagnostics: submissionDiagnostics },
+			terminalTimeline,
 			stderr: { ...artifact.stderrSummary(), path: artifact.stderrPath },
 			...(error === undefined ? {} : { error: String(error).slice(0, 2_048) }),
 		});
@@ -214,20 +222,30 @@ export async function isolated(
 			parsedEvents += 1;
 			lastEventType = String(event.type ?? "unknown").slice(0, 80);
 			increment(eventCounts, event.type);
+			if (event.type === "turn_start") turns += 1;
+			if (event.type === "message_start" && event.message?.customType) {
+				recordTerminalEvent({ type: "custom-message", customType: String(event.message.customType).slice(0, 80) });
+			}
 			if (event.type === "message_end" && event.message?.role === "assistant") {
 				assistantEnds += 1;
 				if (typeof event.message.stopReason === "string") lastAssistantStopReason = event.message.stopReason.slice(0, 160);
 			}
 			if (event.type === "tool_execution_start") {
 				increment(toolStarts, event.toolName);
+				recordTerminalEvent({ type: "tool-start", tool: String(event.toolName ?? "unknown").slice(0, 80) });
 				if (event.toolName === "superdev_submit_result") submissionStarts += 1;
 				const path = typeof event.args?.path === "string" ? event.args.path : "";
 				const target = path && !isAbsolute(path) && !path.split(/[\\/]/).includes("..") ? ` ${path.slice(0, 160)}` : "";
 				onActivity?.(`${String(event.toolName ?? "tool").replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 80)}${target}`);
 			}
-			if (event.type === "tool_execution_end" && event.toolName === "superdev_submit_result") {
+			if (event.type === "tool_execution_end") {
+				const duplicate = event.result?.details?.superdevDuplicate === true;
+				recordTerminalEvent({ type: "tool-end", tool: String(event.toolName ?? "unknown").slice(0, 80), error: Boolean(event.isError), ...(duplicate ? { duplicate: true } : {}) });
+				if (event.toolName !== "superdev_submit_result") return;
 				submissionEnds += 1;
-				if (event.isError) {
+				if (duplicate) {
+					submissionDuplicates += 1;
+				} else if (event.isError) {
 					submissionErrors += 1;
 					const diagnostic = JSON.stringify(event.result?.content ?? event.error ?? "submission tool returned an error");
 					submissionDiagnostics.push(diagnostic.slice(0, 2_048));
@@ -397,6 +415,7 @@ export default function superdev(pi: ExtensionAPI) {
 	let inventoryLoaded = false;
 	let inventoryExpectedOffset = 1;
 	let inventoryComplete = false;
+	let childResultSubmitted = false;
 	if (childRole) {
 		pi.registerTool({
 			name: "superdev_submit_result",
@@ -405,6 +424,13 @@ export default function superdev(pi: ExtensionAPI) {
 			parameters: roleResultSchema,
 			executionMode: "sequential",
 			execute: async (_id, input) => {
+				if (childResultSubmitted) {
+					return {
+						content: [{ type: "text", text: `The ${childRole} result was already submitted; this duplicate was ignored.` }],
+						details: { superdevDuplicate: true },
+						terminate: true,
+					};
+				}
 				const result = validateRoleResult(childRole, input, {
 					maxBytes: Number(process.env.SUPERDEV_MAX_REVIEW_STATE_BYTES ?? 262_144),
 					maxFindings: Number(process.env.SUPERDEV_MAX_REVIEW_FINDINGS ?? 100),
@@ -414,6 +440,7 @@ export default function superdev(pi: ExtensionAPI) {
 					const missing = [...reviewPaths].filter((path) => reviewOffsets.get(path) !== -1);
 					if (missing.length) throw new Error(`code review omitted changed paths: ${missing.join(", ")}`);
 				}
+				childResultSubmitted = true;
 				return {
 					content: [{ type: "text", text: `Submitted ${childRole} result: ${result.status}` }],
 					details: { superdevResult: result },

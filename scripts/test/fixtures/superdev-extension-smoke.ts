@@ -32,6 +32,24 @@ async function smoke() {
 	if (!discovered?.skillPaths?.some((path: string) => path.endsWith("/.pi/extensions/superdev/skills"))) {
 		throw new Error("workflow skills were not discovered from inside the Superdev extension");
 	}
+	for (const role of ["scope", "requirements-review", "build", "code-review", "accept", "file"]) {
+		const prompt = await readFile(join(process.cwd(), ".pi", "extensions", "superdev", "prompts", `${role}.md`), "utf8");
+		if (!prompt.includes("only tool call in the final assistant turn") || !prompt.includes("exactly once")) {
+			throw new Error(`${role} prompt does not keep terminal submission separate and singular`);
+		}
+	}
+	const scopePrompt = await readFile(join(process.cwd(), ".pi", "extensions", "superdev", "prompts", "scope.md"), "utf8");
+	if (!scopePrompt.includes("primary issue and canonical plan named by the task") || !scopePrompt.includes("Keep their established identities")) {
+		throw new Error("SCOPE prompt permits identity drift");
+	}
+	const filePrompt = await readFile(join(process.cwd(), ".pi", "extensions", "superdev", "prompts", "file.md"), "utf8");
+	if (!filePrompt.includes("Do not write files, invoke the filing service") || !filePrompt.includes("parent presents that proposal")) {
+		throw new Error("filing child prompt exceeds its read-only preparation role");
+	}
+	const phaseSource = await readFile(join(process.cwd(), ".pi", "extensions", "superdev", "lib", "phases.ts"), "utf8");
+	for (const identityTask of ["Prepare issue ${initial.owner.identity.issue} and plan ${initial.owner.identity.plan}", "Review issue ${owner.identity.issue} and plan ${owner.identity.plan}", "Build issue ${owner.identity.issue} from approved plan ${owner.identity.plan}", "Assess whether issue ${owner.identity.issue} and plan ${owner.identity.plan}"]) {
+		if (!phaseSource.includes(identityTask)) throw new Error(`phase task omits canonical identity: ${identityTask}`);
+	}
 	for (const removed of ["scope", "build", "accept"]) {
 		if (commands.includes(removed)) throw new Error(`legacy phase command ${removed} remains public`);
 	}
@@ -47,6 +65,22 @@ async function smoke() {
 	}
 	if (!tools.includes("superdev_run_phase")) throw new Error("missing generic phase tool");
 	if (!tools.includes("superdev_isolated_role")) throw new Error("missing isolated filing role tool");
+	const priorChildRole = process.env.SUPERDEV_CHILD_ROLE;
+	process.env.SUPERDEV_CHILD_ROLE = "scope";
+	try {
+		const childTools = new Map<string, any>();
+		superdev({ on() {}, registerCommand() {}, registerTool(tool: any) { childTools.set(tool.name, tool); } } as never);
+		const submit = childTools.get("superdev_submit_result");
+		const first = await submit.execute("first", { status: "complete", summary: "Scoped once" });
+		const duplicate = await submit.execute("duplicate", { status: "complete", summary: "Scoped twice" });
+		if (first.details?.superdevResult?.summary !== "Scoped once" || first.terminate !== true) throw new Error("first terminal result was not accepted");
+		if (duplicate.details?.superdevDuplicate !== true || duplicate.details?.superdevResult !== undefined || duplicate.terminate !== true) {
+			throw new Error("duplicate terminal result was not terminated without replacing authority");
+		}
+	} finally {
+		if (priorChildRole === undefined) delete process.env.SUPERDEV_CHILD_ROLE;
+		else process.env.SUPERDEV_CHILD_ROLE = priorChildRole;
+	}
 	if (tools.includes("superdev_review_diff")) throw new Error("immutable review diff leaked into the main agent tool set");
 	if (!tools.includes("superdev_workflow_control")) throw new Error("missing extension-private workflow control adapter");
 	if (tools.includes("superdev_workflow_questions")) throw new Error("internal workflow question tool was exposed");
@@ -181,6 +215,18 @@ async function smoke() {
 				throw new Error("isolated terminal diagnostics omitted lifecycle evidence");
 			}
 		}
+		await writeFile(fakePi, `#!/usr/bin/env node\nconst result={status:"complete",summary:"accepted once"};\nconsole.log(JSON.stringify({type:"turn_start"}));\nconsole.log(JSON.stringify({type:"tool_execution_start",toolName:"superdev_submit_result",args:result}));\nconsole.log(JSON.stringify({type:"tool_execution_end",toolName:"superdev_submit_result",isError:false,result:{details:{superdevResult:result}}}));\nconsole.log(JSON.stringify({type:"tool_execution_start",toolName:"superdev_submit_result",args:result}));\nconsole.log(JSON.stringify({type:"tool_execution_end",toolName:"superdev_submit_result",isError:false,result:{details:{superdevDuplicate:true}}}));\n`, { mode: 0o700 });
+		const accepted = await isolated("scope", "exercise duplicate suppression", process.cwd());
+		if (accepted.status !== "complete" || accepted.summary !== "accepted once" || !accepted.artifactPath) throw new Error("one-shot terminal authority was not preserved");
+		const acceptedDirectory = dirname(accepted.artifactPath);
+		const acceptedDiagnostic = JSON.parse(await readFile(join(acceptedDirectory, "diagnostic.json"), "utf8"));
+		if (acceptedDiagnostic.outcome !== "complete" || acceptedDiagnostic.submission.successful !== 1 || acceptedDiagnostic.submission.duplicates !== 1) {
+			throw new Error("duplicate terminal submission was not recorded without failing the child");
+		}
+		if (!acceptedDiagnostic.terminalTimeline.some((event: any) => event.tool === "superdev_submit_result" && event.duplicate === true)) {
+			throw new Error("terminal timeline omitted the duplicate event");
+		}
+		await rm(acceptedDirectory, { recursive: true, force: true });
 	} finally {
 		process.env.PATH = originalPath;
 		await rm(fakePiDirectory, { recursive: true, force: true });
