@@ -10,9 +10,10 @@ import { withProgress } from "../../../.pi/extensions/superdev/lib/progress.ts";
 import { registerWorkflowQuestions } from "../../../.pi/extensions/superdev/lib/questions.ts";
 import { findingFingerprint, validateRoleResult, type ReviewFinding } from "../../../.pi/extensions/superdev/lib/review.ts";
 
-export default async function smoke() {
+async function smoke() {
 	const commands: string[] = [];
 	const tools: string[] = [];
+	const toolDefinitions = new Map<string, any>();
 	const fake = {
 		on() {
 			// Registration is enough for this load smoke.
@@ -22,6 +23,7 @@ export default async function smoke() {
 		},
 		registerTool(tool: { name: string }) {
 			tools.push(tool.name);
+			toolDefinitions.set(tool.name, tool);
 		},
 	};
 	superdev(fake as never);
@@ -43,6 +45,33 @@ export default async function smoke() {
 	if (tools.includes("superdev_review_diff")) throw new Error("immutable review diff leaked into the main agent tool set");
 	if (!tools.includes("superdev_workflow_control")) throw new Error("missing extension-private workflow control adapter");
 	if (tools.includes("superdev_workflow_questions")) throw new Error("internal workflow question tool was exposed");
+	const phaseSchema = JSON.stringify(toolDefinitions.get("superdev_run_phase")?.parameters);
+	for (const action of ["run", "retry", "inspect", "record-answer", "revise-answer", "submit-answers", "approve", "cancel"]) {
+		if (!phaseSchema.includes(`\"${action}\"`)) throw new Error(`generic phase tool omitted ${action}`);
+	}
+	if (phaseSchema.includes("expectedRevision") || phaseSchema.includes("session")) throw new Error("generic phase tool exposed internal ownership mechanics");
+	const isolatedSchema = JSON.stringify(toolDefinitions.get("superdev_isolated_role")?.parameters);
+	if (!isolatedSchema.includes("file") || ["scope", "build", "accept", "code-review", "requirements-review"].some((role) => isolatedSchema.includes(role))) {
+		throw new Error("direct isolated tool exposed a workflow phase role");
+	}
+	const priorVerification = process.env.SUPERDEV_VERIFICATION_ACTIVE;
+	process.env.SUPERDEV_VERIFICATION_ACTIVE = "1";
+	try {
+		const phaseTool = toolDefinitions.get("superdev_run_phase");
+		const inspect = await phaseTool.execute("inspect", { phase: "scope", action: "inspect" }, undefined, undefined, { cwd: "/repo" });
+		if (inspect.details?.status !== "idle" || inspect.details?.questions !== null) throw new Error("generic inspect did not return typed idle state");
+		const cancel = await phaseTool.execute("cancel", { phase: "scope", action: "cancel" }, undefined, undefined, { cwd: "/repo" });
+		if (cancel.details?.status !== "idle") throw new Error("generic cancel did not return typed idle state");
+		try {
+			await toolDefinitions.get("superdev_isolated_role").execute("direct", { role: "scope", task: "bypass" }, undefined, undefined, {});
+			throw new Error("direct phase-role invocation was accepted");
+		} catch (error) {
+			if (!String(error).includes("internal")) throw error;
+		}
+	} finally {
+		if (priorVerification === undefined) delete process.env.SUPERDEV_VERIFICATION_ACTIVE;
+		else process.env.SUPERDEV_VERIFICATION_ACTIVE = priorVerification;
+	}
 	if (!requiresHumanAcceptance(true) || requiresHumanAcceptance(false)) throw new Error("configured acceptance policy changed");
 	try {
 		requiresHumanAcceptance(undefined);
@@ -303,7 +332,7 @@ export default async function smoke() {
 	roleFailure = "build"; runtime.lastOutcome = undefined;
 	const callsBeforeTimeout = serviceCalls.length;
 	await phaseDrivers.runBuildPhase("", phaseCtx);
-	if (!owned || runtime.lastOutcome?.status !== "failed" || runtime.lastOutcome?.partialWorkPreserved !== true) throw new Error("timed-out BUILD did not return typed recovery");
+	if (!owned || runtime.lastOutcome?.status !== "failed" || runtime.lastOutcome?.failedStage !== "build implementation" || runtime.lastOutcome?.partialWorkPreserved !== true) throw new Error("timed-out BUILD did not return stage-specific typed recovery");
 	if (serviceCalls.slice(callsBeforeTimeout).some((args) => args.includes("resume"))) throw new Error("timed-out BUILD retried without an explicit retry operation");
 
 	owned = true; phase = "build"; revision = "revision-exhausted"; roleFailure = undefined; finalCorrections = 3;
@@ -331,4 +360,10 @@ export default async function smoke() {
 		if (!progressAborted || !String(error).includes("cancelled")) throw error;
 	}
 	if (!progressCleared) throw new Error("Esc cancellation left stale progress status");
+}
+
+await smoke();
+
+export default function loadedSmoke() {
+	// Top-level await completes the deterministic smoke before Pi registers this fixture.
 }

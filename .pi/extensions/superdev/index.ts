@@ -991,6 +991,15 @@ export default function superdev(pi: ExtensionAPI) {
 		execute: async (_id, input, _signal, _update, ctx) => {
 			const respond = (result: Record<string, unknown>) => ({ content: [{ type: "text", text: JSON.stringify(result) }], details: result });
 			let status = await workflowStatus(ctx.cwd);
+			const failed = (failedStage: string, error: unknown) => respond({
+				status: "failed",
+				phase: input.phase,
+				failedStage,
+				diagnostic: boundedText(String(error), policyFrom(status)),
+				partialWorkPreserved: true,
+				recoveryOperations: ["retry", "cancel"],
+				recommendation: "Inspect and discuss the diagnostic before selecting an explicit recovery operation.",
+			});
 			if (input.action === "inspect") {
 				const questionState = questions.snapshot(input.offset, input.limit);
 				const publicQuestions = questionState ? { ...questionState, candidate: undefined } : null;
@@ -1043,8 +1052,12 @@ export default function superdev(pi: ExtensionAPI) {
 				}
 				if (input.action === "submit-answers") {
 					runtime.lastOutcome = undefined;
-					const submitted = await questions.operate({ action: "submit" }, ctx);
-					return respond(runtime.lastOutcome ?? { status: submitted.details?.submitted ? "answers-submitted" : "submission-declined", phase: input.phase });
+					try {
+						const submitted = await questions.operate({ action: "submit" }, ctx);
+						return respond(runtime.lastOutcome ?? { status: submitted.details?.submitted ? "answers-submitted" : "submission-declined", phase: input.phase });
+					} catch (error) {
+						return failed(`${input.phase} answer continuation`, error);
+					}
 				}
 				const answer = input.phase === "accept" && pending.findings[0]?.id === "human-acceptance-change"
 					? `${input.destination === "build" ? "BUILD correction" : "Return to SCOPE"}: ${input.answer ?? ""}`
@@ -1063,8 +1076,12 @@ export default function superdev(pi: ExtensionAPI) {
 				const existing = status.openWorkflows?.find((workflow) => workflow.issue === requested.issue && workflow.plan === requested.plan && workflow.work_branch === requested.work_branch);
 				if (!existing && input.phase !== "scope") throw new Error("Only SCOPE can establish a new workflow.");
 				const identity = ["--session", ctx.sessionManager.getSessionId(), "--issue", requested.issue, "--plan", requested.plan, "--work-branch", requested.work_branch, "--default-branch", existing?.default_branch ?? requested.default_branch];
-				await runSuperdev(["workflow", existing ? "resume" : "start", ...identity], ctx.cwd, authority);
-				status = await workflowStatus(ctx.cwd);
+				try {
+					await runSuperdev(["workflow", existing ? "resume" : "start", ...identity], ctx.cwd, authority);
+					status = await workflowStatus(ctx.cwd);
+				} catch (error) {
+					return failed(existing ? "workflow resume" : "workflow start", error);
+				}
 			}
 			if (status.phase !== input.phase) throw new Error(`Canonical workflow is in ${status.phase?.toUpperCase() ?? "an unknown phase"}; invoke /skill:${status.phase ?? "scope"}.`);
 			if (questions.current()?.status === "paused") {
@@ -1086,12 +1103,19 @@ export default function superdev(pi: ExtensionAPI) {
 					return respond({ status: "approval-declined", phase: input.phase });
 				}
 				if (pending?.status === "active") questions.supersede("the human approved the unchanged reviewed candidate");
-				if (input.phase === "scope") {
-					await runSuperdev(["workflow", "transition", "--session", status.owner.session_id, "--expected-revision", status.owner.last_plan_revision, "--phase", "scope", "--transition", "approve-scope"], ctx.cwd, authority);
-					return respond({ status: "approved", phase: "build", workflow: status.owner.identity });
+				try {
+					if (input.phase === "scope") {
+						await runSuperdev(["workflow", "transition", "--session", status.owner.session_id, "--expected-revision", status.owner.last_plan_revision, "--phase", "scope", "--transition", "approve-scope"], ctx.cwd, authority);
+						return respond({ status: "approved", phase: "build", workflow: status.owner.identity });
+					}
+					await phaseContinuations.approveAccept(status, ctx);
+					return respond({ status: "accepted", phase: null, workflow: status.owner.identity });
+				} catch (error) {
+					return failed(`${input.phase} approval`, error);
 				}
-				await phaseContinuations.approveAccept(status, ctx);
-				return respond({ status: "accepted", phase: null, workflow: status.owner.identity });
+			}
+			if (runtime.cancelling || runtime.modifyingBusy || runtime.modifyingChild) {
+				return respond({ status: "busy", phase: input.phase, recommendation: "Wait for the active operation to finish or cancel it explicitly." });
 			}
 			runtime.lastOutcome = undefined;
 			const runner = input.phase === "scope" ? phaseContinuations.runScopePhase : input.phase === "build" ? phaseContinuations.runBuildPhase : phaseContinuations.runAcceptPhase;

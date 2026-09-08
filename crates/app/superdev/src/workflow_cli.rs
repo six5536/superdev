@@ -383,18 +383,11 @@ pub fn run(command: &WorkflowCommand, root: &Path) -> Result<u8> {
             bind(&root, args)
         }
         WorkflowCommand::Resume(args) => {
-            validate_identity(&root, args)?;
-            let record = plan_record(&root, &args.plan)?;
-            if record.lifecycle != "open"
-                || !matches!(record.phase.as_str(), "scope" | "build" | "accept")
-            {
-                return Err(Error::Manifest {
-                    message: "resume requires one open canonical workflow".into(),
-                });
-            }
+            validate_resumable_identity(&root, args)?;
             if git::current_branch(&root)? != args.work_branch {
                 git::checkout_work_branch(&root, &args.work_branch)?;
             }
+            validate_resumable_identity(&root, args)?;
             bind(&root, args)
         }
         WorkflowCommand::Status { json: _ } => {
@@ -1050,6 +1043,18 @@ fn validate_reserved_identity(args: &BindArgs) -> Result<()> {
             message:
                 "work branch must derive from the issue identity; plan identity is independent"
                     .into(),
+        });
+    }
+    Ok(())
+}
+
+fn validate_resumable_identity(root: &Path, args: &BindArgs) -> Result<()> {
+    validate_identity(root, args)?;
+    let record = plan_record(root, &args.plan)?;
+    if record.lifecycle != "open" || !matches!(record.phase.as_str(), "scope" | "build" | "accept")
+    {
+        return Err(Error::Manifest {
+            message: "resume requires one open canonical workflow".into(),
         });
     }
     Ok(())

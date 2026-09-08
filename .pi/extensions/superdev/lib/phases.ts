@@ -10,6 +10,7 @@ export type PhaseRuntime = {
 	modifyingBusy: boolean;
 	modifyingChild?: unknown;
 	modifyingCommandAbort?: AbortController;
+	currentStage?: string;
 	lastOutcome?: Record<string, unknown>;
 };
 
@@ -28,6 +29,7 @@ export function registerPhaseDrivers(deps: any) {
 		runtime.lastOutcome = {
 			status: "failed",
 			phase: phase.toLowerCase(),
+			failedStage: runtime.currentStage ?? phase.toLowerCase(),
 			diagnostic,
 			partialWorkPreserved: true,
 			workflow,
@@ -36,6 +38,16 @@ export function registerPhaseDrivers(deps: any) {
 		};
 		ctx.ui.notify(`${phase} paused after a failure. The invoking skill has the diagnostic and recovery operations.`, "error");
 		return false;
+	};
+	const publishRoleOutcome = (phase: "scope" | "build" | "accept", result: any) => {
+		runtime.lastOutcome = {
+			status: result.status,
+			phase,
+			summary: result.summary,
+			artifactPath: result.artifactPath,
+			partialWorkPreserved: true,
+			recoveryOperations: result.status === "blocked" ? ["retry", "cancel"] : ["cancel"],
+		};
 	};
 	const pauseForBuildExhaustion = async (ctx: any, summary: string, findings: ReviewFinding[] = []) => {
 		const status = await workflowStatus(ctx.cwd);
@@ -59,6 +71,7 @@ export function registerPhaseDrivers(deps: any) {
 		if (!submitted && hasPendingQuestions()) return ctx.ui.notify("Resolve or pause the active workflow questions before starting a phase role", "error");
 		if (runtime.cancelling || runtime.modifyingBusy || runtime.modifyingChild) return ctx.ui.notify("A modifying workflow role is already active", "error");
 		runtime.modifyingBusy = true;
+		runtime.currentStage = "scope initialization";
 		const commandAbort = new AbortController();
 		runtime.modifyingCommandAbort = commandAbort;
 		let launchBuild = false;
@@ -80,13 +93,18 @@ export function registerPhaseDrivers(deps: any) {
 				const task = correction
 					? `Apply this complete SCOPE correction batch for ${initial.owner.identity.plan}. Mechanical findings: ${JSON.stringify(correction.mechanicalFindings ?? [])}. Confirmed human answers: ${JSON.stringify(correction.answers)}.`
 					: args || `Complete ${initial.owner.identity.plan} from canonical state.`;
+				runtime.currentStage = correction ? "scope batched correction" : "scope authoring";
 				const scoped = await withProgress(ctx, { key: "superdev-workflow", title: `SCOPE ${initial.owner.identity.plan}`, stage: correction ? "batched correction" : "scope authoring" },
 					(signal, update) => isolated("scope", task, ctx.cwd, ctx.model, signal,
 						childStarted(ctx, initial, "scope", true),
 						(child) => childFinished(ctx, child),
 						undefined, undefined, undefined, undefined, policyFrom(initial), initial.owner!.session_id,
 						(activity) => update({ stage: correction ? "batched correction" : "scope authoring", activity })));
-				if (scoped.status !== "complete") return ctx.ui.notify(scoped.summary, "warning");
+				if (scoped.status !== "complete") {
+					publishRoleOutcome("scope", scoped);
+					return ctx.ui.notify(scoped.summary, "warning");
+				}
+				runtime.currentStage = "scope checkpoint";
 				await runSuperdev(["workflow", "scope-checkpoint", "--session", initial.owner.session_id, "--expected-revision", initial.owner.last_plan_revision], ctx.cwd, authority);
 				const status = await workflowStatus(ctx.cwd);
 				const owner = status.owner;
@@ -98,6 +116,7 @@ export function registerPhaseDrivers(deps: any) {
 				if (candidateResult.code !== 0 || headBefore.code !== 0 || cleanBefore.code !== 0 || cleanBefore.stdout.trim() || headBefore.stdout.trim() !== candidate) {
 					throw new Error("requirements review requires the clean immutable candidate at HEAD");
 				}
+				runtime.currentStage = "requirements review";
 				const reviewed = await withProgress(ctx, { key: "superdev-workflow", title: `SCOPE ${owner.identity.plan}`, stage: "requirements review" },
 					(signal, update) => isolated("requirements-review", `Review the complete immutable SCOPE candidate ${candidate} against baseline ${firstBase}.`, ctx.cwd, ctx.model, signal,
 						childStarted(ctx, status, "requirements-review"), (child) => childFinished(ctx, child), firstBase, candidate,
@@ -154,6 +173,7 @@ export function registerPhaseDrivers(deps: any) {
 					continue;
 				}
 				if (reviewed.status !== "clean") return ctx.ui.notify(reviewed.summary, "error");
+				runtime.currentStage = "scope review evidence";
 				const reviewRun = randomBytes(24).toString("hex");
 				reviewRuns.set(reviewRun, { role: "requirements-review", result: reviewed, base: firstBase, candidate });
 				const evidence = await runSuperdev(["workflow", "evidence", "--session", owner.session_id, "--expected-revision", owner.last_plan_revision, "--revision", status.canonicalPlanRevision, "--kind", "scope-review", "--review-session", reviewRun, "--candidate", candidate], ctx.cwd, authority) as { result?: { last_plan_revision?: string } };
@@ -189,6 +209,7 @@ export function registerPhaseDrivers(deps: any) {
 			if (hasPendingQuestions()) return ctx.ui.notify("Resolve or pause the active workflow questions before starting a phase role", "error");
 			if (runtime.cancelling || runtime.modifyingBusy || runtime.modifyingChild) return ctx.ui.notify("A modifying workflow role is already active", "error");
 			runtime.modifyingBusy = true;
+			runtime.currentStage = "build initialization";
 			const commandAbort = new AbortController();
 			runtime.modifyingCommandAbort = commandAbort;
 			let retryBuild = false;
@@ -205,6 +226,7 @@ export function registerPhaseDrivers(deps: any) {
 					return;
 				}
 				if (!status.executable || !isAbsolute(status.executable)) throw new Error("Rust status omitted its trusted executable path");
+				runtime.currentStage = instruction ? "build batched correction" : "build implementation";
 				const built = await withProgress(ctx, { key: "superdev-workflow", title: `BUILD ${owner.identity.plan}`, stage: instruction ? "batched correction" : "implementation" },
 					(signal, update) => isolated("build", instruction || `Complete ${owner.identity.plan} from canonical state.`, ctx.cwd, ctx.model, signal,
 						childStarted(ctx, status, "build", true),
@@ -213,6 +235,7 @@ export function registerPhaseDrivers(deps: any) {
 						(activity) => update({ stage: instruction ? "batched correction" : "implementation", activity })));
 			if (commandAbort.signal.aborted) return ctx.ui.notify("BUILD cancelled before publication", "warning");
 			if (built.status === "rescope") {
+				runtime.currentStage = "build return to scope";
 				const latest = await workflowStatus(ctx.cwd);
 				if (!latest.owner || latest.phase !== "build") throw new Error("BUILD ownership changed before re-scope");
 				await runSuperdev([
@@ -221,9 +244,14 @@ export function registerPhaseDrivers(deps: any) {
 					"--transition", "return-to-scope", "--feedback", built.summary,
 				], ctx.cwd, authority);
 				ctx.ui.setStatus("superdev-workflow", `SCOPE: ${latest.owner.identity.plan}`);
+				runtime.lastOutcome = { status: "routed", phase: "scope", summary: built.summary, workflow: latest.owner.identity };
 				return ctx.ui.notify("BUILD discovery was preserved on the primary issue; the same plan returned to SCOPE", "warning");
 			}
-			if (built.status !== "complete") return ctx.ui.notify(built.summary, "error");
+			if (built.status !== "complete") {
+				publishRoleOutcome("build", built);
+				return ctx.ui.notify(built.summary, "error");
+			}
+			runtime.currentStage = "build synchronization";
 			const ready = await workflowStatus(ctx.cwd);
 			const currentOwner = ready.owner;
 			if (!currentOwner || ready.phase !== "build") throw new Error("BUILD ownership changed before synchronization");
@@ -244,6 +272,7 @@ export function registerPhaseDrivers(deps: any) {
 			if (synchronizedBase.code !== 0 || synchronizedCandidate.code !== 0) return ctx.ui.notify("Could not resolve immutable review revisions", "error");
 			const base = synchronizedBase.stdout.trim();
 			const candidate = synchronizedCandidate.stdout.trim();
+			runtime.currentStage = "build verification";
 			const verification = await runSuperdev([
 				"workflow", "evidence", "--session", synchronizedOwner.session_id,
 				"--expected-revision", synchronizedOwner.last_plan_revision, "--kind", "verification",
@@ -251,11 +280,13 @@ export function registerPhaseDrivers(deps: any) {
 			], ctx.cwd, authority) as { result?: { last_plan_revision?: string } };
 			const verifiedRevision = verification.result?.last_plan_revision;
 			if (!verifiedRevision) throw new Error("verification response omitted the new plan revision");
+			runtime.currentStage = "code review";
 			const reviewed = await withProgress(ctx, { key: "superdev-workflow", title: `BUILD ${synchronizedOwner.identity.plan}`, stage: "code review" },
 				(signal, update) => isolated("code-review", `Review immutable diff ${base}..${candidate} and return the required structured result.`, ctx.cwd, ctx.model, signal,
 					childStarted(ctx, synchronized, "code-review"), (child) => childFinished(ctx, child), base, candidate,
 					undefined, undefined, policyFrom(synchronized), synchronizedOwner.session_id,
 					(activity) => update({ stage: "code review", activity })));
+			runtime.currentStage = "build review routing";
 			const reviewRun = randomBytes(24).toString("hex");
 			if (reviewed.status === "findings" && reviewed.findings?.some((finding) => finding.classification === "requires-scope")) {
 				const latest = await workflowStatus(ctx.cwd);
@@ -331,6 +362,7 @@ export function registerPhaseDrivers(deps: any) {
 		return await runScopePhase("", ctx, { ...state, candidate: revision, originPhase: "scope", status: "submitted" });
 	};
 	const approveAccept = async (status: any, ctx: any) => {
+		runtime.currentStage = "acceptance integration";
 		const owner = status.owner;
 		if (!owner || status.phase !== "accept" || !owner.verified_default_revision) throw new Error("an evidence-bound ACCEPT workflow is required");
 		await runSuperdev([
@@ -350,6 +382,7 @@ export function registerPhaseDrivers(deps: any) {
 		ctx.ui.notify("Candidate accepted and integrated locally; nothing was pushed or deleted", "info");
 	};
 	const executeAcceptPhase = async (_args: string, ctx: any) => {
+			runtime.currentStage = "accept initialization";
 			if (hasPendingQuestions()) return ctx.ui.notify("Resolve or pause the active workflow questions before starting a phase role", "error");
 			const status = await workflowStatus(ctx.cwd);
 			const owner = status.owner;
@@ -359,6 +392,7 @@ export function registerPhaseDrivers(deps: any) {
 			const acceptCleanBefore = await pi.exec("git", ["status", "--porcelain"], { cwd: ctx.cwd });
 			if (acceptHeadBefore.code !== 0 || acceptCleanBefore.code !== 0 || acceptCleanBefore.stdout.trim()
 				|| acceptHeadBefore.stdout.trim() !== owner.candidate_revision) throw new Error("ACCEPT assessment requires the clean immutable candidate at HEAD");
+			runtime.currentStage = "accept assessment";
 			const decision = await withProgress(ctx, { key: "superdev-workflow", title: `ACCEPT ${owner.identity.plan}`, stage: "assessment" },
 				(signal, update) => isolated(
 					"accept",
@@ -382,6 +416,7 @@ export function registerPhaseDrivers(deps: any) {
 				throw new Error("candidate changed during ACCEPT assessment; result discarded");
 			}
 			if (decision.status === "findings") {
+				runtime.currentStage = "accept finding routing";
 				const requiresScope = decision.findings?.some((finding) => finding.classification === "requires-scope");
 				const routed = await runSuperdev([
 					"workflow", "transition", "--session", owner.session_id,
@@ -411,16 +446,21 @@ export function registerPhaseDrivers(deps: any) {
 				}
 				throw new Error("BUILD driver is unavailable for ACCEPT correction");
 			}
-			if (decision.status !== "complete") return ctx.ui.notify(decision.summary, "error");
+			if (decision.status !== "complete") {
+				publishRoleOutcome("accept", decision);
+				return ctx.ui.notify(decision.summary, "error");
+			}
 			const currentDefault = await pi.exec("git", ["rev-parse", "--verify", owner.identity.default_branch], { cwd: ctx.cwd });
 			if (currentDefault.code !== 0) throw new Error("could not resolve the configured default branch");
 			if (currentDefault.stdout.trim() !== owner.verified_default_revision) {
+				runtime.currentStage = "accept stale-default recovery";
 				await runSuperdev([
 					"workflow", "transition", "--session", owner.session_id,
 					"--expected-revision", owner.last_plan_revision, "--phase", "accept",
 					"--transition", "recover-stale-default",
 				], ctx.cwd, authority);
 				ctx.ui.setStatus("superdev-workflow", `BUILD: ${owner.identity.plan}`);
+				runtime.lastOutcome = { status: "routed", phase: "build", summary: "Default branch advanced; final evidence was invalidated." };
 				return ctx.ui.notify("Default branch advanced; final evidence was invalidated and workflow returned to BUILD", "warning");
 			}
 			const humanAcceptanceRequired = requiresHumanAcceptance(status.humanAcceptanceRequired);

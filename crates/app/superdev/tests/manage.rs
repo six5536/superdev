@@ -278,6 +278,23 @@ fn init_materializes_pi_workflow_without_claude_assets() {
         assert!(text.contains(command));
         assert!(text.contains("Examples:"));
     }
+    let scope_skill = sb.read(".pi/skills/scope/SKILL.md");
+    for instruction in [
+        "semantic user intent",
+        "If no suitable linked plan exists",
+        "Keep issue and plan IDs independent",
+        "Discuss one question at a time",
+        "Confirm, Revise, or Cancel",
+    ] {
+        assert!(
+            scope_skill.contains(instruction),
+            "SCOPE skill omitted `{instruction}`"
+        );
+    }
+    let build_skill = sb.read(".pi/skills/build/SKILL.md");
+    assert!(build_skill.contains("instead of silently expanding BUILD"));
+    let accept_skill = sb.read(".pi/skills/accept/SKILL.md");
+    assert!(accept_skill.contains("destination `build` or `scope`"));
 
     let retired = b"retired managed workflow skill\n";
     let retired_path = repo.join(".claude/skills/build/SKILL.md");
