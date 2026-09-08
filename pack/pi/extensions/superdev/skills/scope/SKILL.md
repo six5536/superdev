@@ -44,7 +44,7 @@ Present all of the following in ordinary language:
 - the selected or proposed issue title and description;
 - the selected or proposed plan title, approach, and acceptance criteria.
 
-Discuss one unresolved decision at a time. Recommend one answer. Before authoring or revising canonical records, ask the user to **Confirm**, **Revise**, or **Cancel** the complete proposal.
+Discuss one unresolved decision at a time. Recommend one answer. Before authoring or revising canonical records, ask the user to **Confirm**, **Revise**, or **Cancel** the complete proposal. After the user selects **Revise**, present the revised complete proposal and require a new explicit **Confirm**; do not infer confirmation from sentiment or conversational agreement.
 
 ## Author canonical records
 
@@ -70,7 +70,7 @@ Interpret tool results as follows:
 - `selection-required`: select the exact workflow semantically; do not guess.
 - `routed`: invoke the skill named by the returned phase.
 - `findings`: inspect the persistent questions, discuss one finding at a time, recommend an answer, then use `record-answer`.
-- `paused`, `blocked`, or `failed`: explain the returned stage, diagnostic path, preserved-work state, recommendation, and valid recovery operations before asking what to do.
+- `paused`, `blocked`, or `failed`: explain the returned stage, diagnostic path, preserved-work state, recommendation, and valid recovery operations before asking what to do. Never recommend retry while the reported precondition remains unresolved. `cancel` pauses and releases ownership; it never abandons the workflow.
 - `ready-for-approval`: summarize the reviewed scope and ask whether to approve or request one revision.
 - `busy`: wait or offer cancellation; do not start another phase run.
 

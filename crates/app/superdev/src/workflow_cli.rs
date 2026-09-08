@@ -63,6 +63,8 @@ pub enum WorkflowCommand {
     Bind(BindArgs),
     /// Apply one typed phase transition after checking supplied evidence
     Transition(TransitionArgs),
+    /// Adopt the current committed work tip as the next SCOPE attempt baseline
+    ScopeBaseline(ScopeBaselineArgs),
     /// Commit one review-ready, knowledge-only SCOPE proposal
     ScopeCheckpoint(RevisionArgs),
     /// Commit a validated BUILD block checkpoint
@@ -149,6 +151,20 @@ pub struct ProgressArgs {
     /// New plan content revision after the Rust-owned mutation
     #[arg(long)]
     revision: String,
+}
+
+/// Compare-and-swap arguments for a SCOPE attempt baseline.
+#[derive(Args)]
+pub struct ScopeBaselineArgs {
+    /// Owning Pi session ID
+    #[arg(long)]
+    session: String,
+    /// Expected current plan content revision
+    #[arg(long)]
+    expected_revision: String,
+    /// Expected current work-branch tip
+    #[arg(long)]
+    expected_work: String,
 }
 
 /// Session and plan compare-and-swap arguments.
@@ -524,6 +540,7 @@ pub fn run(command: &WorkflowCommand, root: &Path) -> Result<u8> {
                 &serde_json::json!({"phaseChanged": false, "ownershipReleased": true}),
             )
         }
+        WorkflowCommand::ScopeBaseline(args) => record_scope_baseline(&root, args),
         WorkflowCommand::ScopeCheckpoint(args) => record_scope_checkpoint(&root, args),
         WorkflowCommand::Block(args) => cache::transaction(&root, |transaction| {
             let owner = transaction.load()?.ok_or_else(|| Error::Manifest {
@@ -1132,6 +1149,42 @@ fn knowledge_contains(root: &Path, needle: &str) -> Result<bool> {
         }
     }
     Ok(false)
+}
+
+fn record_scope_baseline(root: &Path, args: &ScopeBaselineArgs) -> Result<u8> {
+    cache::transaction(root, |transaction| {
+        let owner = transaction.load()?.ok_or_else(|| Error::Manifest {
+            message: "workflow is unowned".into(),
+        })?;
+        if owner.session_id != args.session || owner.last_plan_revision != args.expected_revision {
+            return Err(Error::Manifest {
+                message: "workflow ownership or plan revision changed".into(),
+            });
+        }
+        validate_identity_values(root, &owner.identity)?;
+        if git::current_branch(root)? != owner.identity.work_branch
+            || plan_record(root, &owner.identity.plan)?.phase != "scope"
+        {
+            return Err(Error::Manifest {
+                message: "SCOPE baseline requires the checked-out SCOPE work branch".into(),
+            });
+        }
+        git::require_knowledge_only_worktree(root)?;
+        let baseline = git::revision(root, &owner.identity.work_branch)?;
+        if baseline != args.expected_work {
+            return Err(Error::Manifest {
+                message: "work branch moved before the SCOPE baseline was recorded".into(),
+            });
+        }
+        let state =
+            transaction.compare_and_swap(&args.session, &args.expected_revision, |state| {
+                state.scope_base_revision = Some(baseline.clone())
+            })?;
+        emit(
+            "scope-baseline",
+            &serde_json::json!({"baseline": baseline, "state": state}),
+        )
+    })
 }
 
 fn record_scope_checkpoint(root: &Path, args: &RevisionArgs) -> Result<u8> {

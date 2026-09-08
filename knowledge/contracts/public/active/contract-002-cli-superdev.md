@@ -358,6 +358,8 @@ pub enum WorkflowCommand {
     Bind(BindArgs),
     /// Apply one typed phase transition after checking supplied evidence
     Transition(TransitionArgs),
+    /// Adopt the current committed work tip as the next SCOPE attempt baseline
+    ScopeBaseline(ScopeBaselineArgs),
     /// Commit one review-ready, knowledge-only SCOPE proposal
     ScopeCheckpoint(RevisionArgs),
     /// Commit a validated BUILD block checkpoint
@@ -444,6 +446,20 @@ pub struct ProgressArgs {
     /// New plan content revision after the Rust-owned mutation
     #[arg(long)]
     revision: String,
+}
+
+/// Compare-and-swap arguments for a SCOPE attempt baseline.
+#[derive(Args)]
+pub struct ScopeBaselineArgs {
+    /// Owning Pi session ID
+    #[arg(long)]
+    session: String,
+    /// Expected current plan content revision
+    #[arg(long)]
+    expected_revision: String,
+    /// Expected current work-branch tip
+    #[arg(long)]
+    expected_work: String,
 }
 
 /// Session and plan compare-and-swap arguments.
@@ -716,6 +732,11 @@ usage errors and the side effects.
   `superdev-workflow/v2`.
 - `P_workflow-owned-transitions` [ubiquitous] A mutating `workflow`
   command SHALL require the owning session and expected plan revision.
+- `P_workflow-scope-baseline` [event] WHEN `workflow scope-baseline` succeeds,
+  it SHALL require the owned SCOPE work branch, compare-and-swap the expected
+  current work tip, reject uncommitted paths outside `knowledge/`, and record
+  that tip as the attempt's `scope_base_revision` without granting review,
+  approval, or a phase transition.
 - `P_workflow-cancel-pauses` [event] WHEN `workflow cancel` succeeds,
   it SHALL release transient ownership without changing canonical phase.
 - `P_workflow-local-integration` [ubiquitous] After clean-tree and expected-tip
@@ -845,6 +866,8 @@ the invoking adapter.
 | `superdev workflow bind` | 2 | identity, revision, branch, or ownership is invalid |
 | `superdev workflow transition` | 0 | the gated transition is persisted, including primary-issue discovery preservation when returning to SCOPE |
 | `superdev workflow transition` | 2 | ownership, revision, phase, required feedback, or evidence is invalid |
+| `superdev workflow scope-baseline` | 0 | the current committed SCOPE work-branch tip is recorded as the attempt baseline |
+| `superdev workflow scope-baseline` | 2 | ownership, plan revision, expected work tip, branch, phase, or uncommitted path scope is invalid |
 | `superdev workflow scope-checkpoint` | 0 | one valid knowledge-only SCOPE proposal is committed for immutable review |
 | `superdev workflow scope-checkpoint` | 2 | ownership, revision, identity, branch, phase, canonical validation, or path scope is invalid |
 | `superdev workflow block` | 0 | the newly completed BUILD block passes dependency and executable checks and its path-scoped checkpoint is committed |

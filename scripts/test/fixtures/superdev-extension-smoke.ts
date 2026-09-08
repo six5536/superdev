@@ -120,6 +120,7 @@ async function smoke() {
 	}
 	for (const command of [
 		"superdev workflow evidence",
+		"superdev workflow scope-baseline",
 		"superdev workflow scope-checkpoint",
 		"superdev workflow correction",
 		"superdev workflow sync",

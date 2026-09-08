@@ -247,17 +247,23 @@ fn git_with_index(root: &Path, index: &Path, args: &[&str]) -> Result<Output> {
     }
 }
 
-/// Commit only canonical knowledge changes produced after a clean-tree preflight.
-pub fn commit_knowledge_changes(root: &Path, message: &str) -> Result<String> {
-    let paths = worktree_paths(root)?;
-    if paths
+/// Require every current worktree change to remain in canonical knowledge.
+pub fn require_knowledge_only_worktree(root: &Path) -> Result<()> {
+    if worktree_paths(root)?
         .iter()
         .any(|path| !valid_path(path) || !path.starts_with("knowledge/"))
     {
         return Err(Error::Manifest {
-            message: "workflow commit refused changes outside canonical knowledge".into(),
+            message: "SCOPE attempt requires only canonical knowledge worktree changes".into(),
         });
     }
+    Ok(())
+}
+
+/// Commit only canonical knowledge changes produced after a clean-tree preflight.
+pub fn commit_knowledge_changes(root: &Path, message: &str) -> Result<String> {
+    require_knowledge_only_worktree(root)?;
+    let paths = worktree_paths(root)?;
     commit_paths(root, message, &paths, None)
 }
 
@@ -436,7 +442,9 @@ pub fn scope_base_from_history(root: &Path, work_branch: &str, plan_path: &Path)
         let subject = String::from_utf8_lossy(&subject.stdout);
         if !matches!(
             subject.trim(),
-            "chore(workflow): start scope" | "chore(workflow): return to scope"
+            "chore(workflow): start scope"
+                | "chore(workflow): return to scope"
+                | SCOPE_CHECKPOINT_MESSAGE
         ) {
             continue;
         }
@@ -453,6 +461,9 @@ pub fn scope_base_from_history(root: &Path, work_branch: &str, plan_path: &Path)
         let scoped = file_at_revision(root, commit, plan_path)?;
         if !scoped.lines().any(|line| line == "phase: scope") {
             continue;
+        }
+        if subject.trim() == SCOPE_CHECKPOINT_MESSAGE {
+            return Ok(parent);
         }
         let parent_plan = file_at_revision(root, &parent, plan_path);
         if subject.trim() == "chore(workflow): start scope" && parent_plan.is_err() {
@@ -914,6 +925,19 @@ mod tests {
         assert_eq!(
             scope_base_from_history(root, "work/001-history", &plan).unwrap(),
             baseline
+        );
+
+        let checkpoint_parent = revision(root, "HEAD").unwrap();
+        std::fs::write(
+            &plan,
+            "phase: scope\nScope product baseline: current attempt.\n",
+        )
+        .unwrap();
+        command(root, &["add", "knowledge"]);
+        command(root, &["commit", "-q", "-m", SCOPE_CHECKPOINT_MESSAGE]);
+        assert_eq!(
+            scope_base_from_history(root, "work/001-history", &plan).unwrap(),
+            checkpoint_parent
         );
     }
 

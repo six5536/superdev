@@ -344,7 +344,7 @@ function policyTimeoutMs(policy: OutputPolicy & { timeoutSeconds?: number }): nu
 }
 
 export function isolatedRoleMayNotRun(command: string): boolean {
-	return /\bsuperdev\s+workflow\s+(?:start|resume|cancel|record-evidence|evidence|scope-checkpoint|sync|correction(?!-checkpoint)|transition|integrate|abandon)\b/.test(command)
+	return /\bsuperdev\s+workflow\s+(?:start|resume|cancel|record-evidence|evidence|scope-baseline|scope-checkpoint|sync|correction(?!-checkpoint)|transition|integrate|abandon)\b/.test(command)
 		|| /\bgit\s+(?:add|commit|update-ref|reset|switch|checkout|merge|rebase|cherry-pick|branch|tag|stash|clean|restore|rm|mv)\b/.test(command);
 }
 

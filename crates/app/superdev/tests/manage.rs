@@ -560,6 +560,21 @@ fn workflow_start_adopts_an_llm_authored_independently_numbered_plan() {
         cache::load(dir.path()).unwrap().unwrap().last_plan_revision,
         revision
     );
+    Command::cargo_bin("superdev")
+        .unwrap()
+        .current_dir(dir.path())
+        .args([
+            "workflow",
+            "scope-baseline",
+            "--session",
+            "pi-b",
+            "--expected-revision",
+            &revision,
+            "--expected-work",
+            &before_scope_refusal,
+        ])
+        .assert()
+        .failure();
     assert!(
         std::process::Command::new("git")
             .current_dir(dir.path())
@@ -591,15 +606,56 @@ fn workflow_start_adopts_an_llm_authored_independently_numbered_plan() {
         .assert()
         .failure();
     assert_eq!(git::revision(dir.path(), "HEAD").unwrap(), product_commit);
-    assert!(
-        std::process::Command::new("git")
-            .current_dir(dir.path())
-            .args(["reset", "--hard", &before_scope_refusal])
-            .status()
-            .unwrap()
-            .success()
-    );
-    fs::write(&plan, &scoped).unwrap();
+    let mut expected_state = cache::load(dir.path()).unwrap().unwrap();
+    Command::cargo_bin("superdev")
+        .unwrap()
+        .current_dir(dir.path())
+        .args([
+            "workflow",
+            "scope-baseline",
+            "--session",
+            "pi-b",
+            "--expected-revision",
+            &revision,
+            "--expected-work",
+            &before_scope_refusal,
+        ])
+        .assert()
+        .failure();
+    assert_eq!(cache::load(dir.path()).unwrap().unwrap(), expected_state);
+    Command::cargo_bin("superdev")
+        .unwrap()
+        .current_dir(dir.path())
+        .args([
+            "workflow",
+            "scope-baseline",
+            "--session",
+            "pi-b",
+            "--expected-revision",
+            &revision,
+            "--expected-work",
+            &product_commit,
+        ])
+        .assert()
+        .success();
+    expected_state.scope_base_revision = Some(product_commit.clone());
+    assert_eq!(cache::load(dir.path()).unwrap().unwrap(), expected_state);
+    Command::cargo_bin("superdev")
+        .unwrap()
+        .current_dir(dir.path())
+        .args([
+            "workflow",
+            "scope-baseline",
+            "--session",
+            "pi-b",
+            "--expected-revision",
+            "stale-plan-revision",
+            "--expected-work",
+            &product_commit,
+        ])
+        .assert()
+        .failure();
+    assert_eq!(cache::load(dir.path()).unwrap().unwrap(), expected_state);
     let cache_dir = dir.path().join(".superdev/cache");
     let mut cache_permissions = fs::metadata(&cache_dir).unwrap().permissions();
     cache_permissions.set_mode(0o555);
@@ -620,10 +676,7 @@ fn workflow_start_adopts_an_llm_authored_independently_numbered_plan() {
     let mut cache_permissions = fs::metadata(&cache_dir).unwrap().permissions();
     cache_permissions.set_mode(0o755);
     fs::set_permissions(&cache_dir, cache_permissions).unwrap();
-    assert_eq!(
-        git::revision(dir.path(), "HEAD").unwrap(),
-        before_scope_refusal
-    );
+    assert_eq!(git::revision(dir.path(), "HEAD").unwrap(), product_commit);
     assert_eq!(
         cache::load(dir.path()).unwrap().unwrap().last_plan_revision,
         revision

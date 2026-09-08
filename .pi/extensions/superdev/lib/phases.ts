@@ -38,12 +38,12 @@ export function registerPhaseDrivers(deps: any) {
 			...(diagnosticPath ? { diagnosticPath } : {}),
 			partialWorkPreserved: true,
 			workflow,
-			recoveryOperations: cancelled ? ["retry"] : ["retry", "cancel"],
+			recoveryOperations: ["retry"],
 			recommendation: cancelled
-				? "Resume with an explicit retry when ready."
-				: "Inspect the diagnostic, discuss it with the active phase skill, then retry only when the cause is understood.",
+				? "The phase is paused and ownership was released. Resume with an explicit retry when ready."
+				: "The phase is paused and ownership was released. Inspect and resolve the reported cause before retrying.",
 		};
-		ctx.ui.notify(cancelled ? `${phase} cancelled; partial work was preserved.` : `${phase} paused after a failure. The invoking skill has the diagnostic and recovery operations.`, cancelled ? "warning" : "error");
+		ctx.ui.notify(cancelled ? `${phase} paused; ownership was released and partial work was preserved.` : `${phase} paused after a failure; ownership was released. The invoking skill has the diagnostic and recovery operation.`, cancelled ? "warning" : "error");
 		return false;
 	};
 	const phaseSignal = (progressSignal: AbortSignal, commandAbort: AbortController) => {
@@ -93,14 +93,17 @@ export function registerPhaseDrivers(deps: any) {
 			let cycle = submitted?.cycle ?? 0;
 			let firstBase: string | undefined;
 			while (true) {
-				const initial = await workflowStatus(ctx.cwd);
+				let initial = await workflowStatus(ctx.cwd);
 				if (commandAbort.signal.aborted) throw new Error("SCOPE was cancelled during initialization");
 				if (!initial.owner || initial.phase !== "scope") throw new Error("An owned SCOPE workflow is required");
 				if (correction && initial.owner.last_plan_revision !== correction.candidate) throw new Error("SCOPE candidate changed; saved answers were superseded");
 				if (!firstBase) {
-					const resolved = await pi.exec("git", ["rev-parse", "--verify", initial.owner.scope_base_revision ?? initial.owner.identity.work_branch], { cwd: ctx.cwd });
-					if (resolved.code !== 0) throw new Error("Could not resolve the pre-SCOPE revision");
-					firstBase = resolved.stdout.trim();
+					const resolved = await pi.exec("git", ["rev-parse", "--verify", initial.owner.identity.work_branch], { cwd: ctx.cwd });
+					if (resolved.code !== 0) throw new Error("Could not resolve the committed SCOPE starting revision");
+					await runSuperdev(["workflow", "scope-baseline", "--session", initial.owner.session_id, "--expected-revision", initial.owner.last_plan_revision, "--expected-work", resolved.stdout.trim()], ctx.cwd, authority);
+					initial = await workflowStatus(ctx.cwd);
+					if (!initial.owner?.scope_base_revision) throw new Error("SCOPE baseline operation omitted the committed starting revision");
+					firstBase = initial.owner.scope_base_revision;
 				}
 				const task = correction
 					? `Apply this complete SCOPE correction batch for issue ${initial.owner.identity.issue} and plan ${initial.owner.identity.plan}. Mechanical findings: ${JSON.stringify(correction.mechanicalFindings ?? [])}. Confirmed human answers: ${JSON.stringify(correction.answers)}.`

@@ -496,7 +496,7 @@ mod tests {
     #[test]
     fn a_named_path_replaces_the_bundle_and_the_roots() {
         let root = repo();
-        let extension = vec![PathBuf::from(".pi/extensions")];
+        let extension = vec![PathBuf::from(".pi/extensions/superdev/lib")];
         let run = validate_repo(&root, &root.join("knowledge"), &extension, &live()).unwrap();
         assert_eq!(run.report.concept_count, 0, "no bundle was covered");
         assert!(run.report.findings.is_empty());
