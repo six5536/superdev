@@ -599,9 +599,10 @@ export default function superdev(pi: ExtensionAPI) {
 		maxArtifacts: status.maxIsolatedArtifactsPerSession ?? 20,
 		retentionHours: status.isolatedArtifactRetentionHours ?? 24,
 	});
-	let phaseContinuations: { continueScopeFromAnswers(state: QuestionState, ctx: any): Promise<void>; continueBuildDecision(state: QuestionState, ctx: any): Promise<void>; continueAcceptRequest(state: QuestionState, ctx: any): Promise<void> } | undefined;
+	let phaseContinuations: any;
 	const questions = registerWorkflowQuestions(pi, {
 		maxBytes: () => reviewStateLimit,
+		exposeTool: false,
 		maxFindings: () => reviewFindingLimit,
 		onPause: async (_state, ctx) => {
 			const status = await workflowStatus(ctx.cwd);
@@ -701,6 +702,8 @@ export default function superdev(pi: ExtensionAPI) {
 			status.owner = undefined;
 			status.phase = undefined;
 		}
+		const internalTools = new Set(["superdev_workflow_control", "superdev_workflow_questions"]);
+		pi.setActiveTools(pi.getActiveTools().filter((tool: string) => !internalTools.has(tool)));
 		const restoredQuestions = questions.restore(ctx.sessionManager.getEntries());
 		if (questions.restoreIssue()) ctx.ui.notify(`${questions.restoreIssue()}; restart exhaustive review explicitly`, "warning");
 		if (restoredQuestions && status.canonicalPlanRevision && restoredQuestions.candidate !== status.canonicalPlanRevision) {
@@ -821,10 +824,14 @@ export default function superdev(pi: ExtensionAPI) {
 
 	pi.registerTool({
 		name: "superdev_isolated_role",
-		label: "Superdev isolated role",
-		description: "Run one extension-private workflow role in a fresh isolated Pi process",
-		parameters: schema,
+		label: "Superdev isolated filing",
+		description: "Prepare one bounded filing in a fresh isolated Pi process",
+		parameters: Type.Object({
+			role: StringEnum(["file"] as const),
+			task: Type.String({ description: "Bounded filing task and all input the isolated role needs" }),
+		}),
 		execute: async (_id, input, signal, updateTool, ctx) => {
+			if (input.role !== "file") throw new Error("Direct phase-role invocation is internal; use an explicit workflow skill.");
 			if (runtime.cancelling) throw new Error("workflow cancellation is in progress");
 			const modifying = !readOnly.has(input.role) && input.role !== "file";
 			if (modifying && (runtime.cancelling || runtime.modifyingBusy || runtime.modifyingChild)) throw new Error("one modifying workflow child is already active");
@@ -961,6 +968,139 @@ export default function superdev(pi: ExtensionAPI) {
 	phaseContinuations = registerPhaseDrivers({
 		pi, runSuperdev, workflowStatus, authority, policyFrom, questions, isolated, childStarted, childFinished,
 		reviewRuns, parentServiceDigest, requiresHumanAcceptance, runtime,
+	});
+	pi.registerTool({
+		name: "superdev_run_phase",
+		label: "Run Superdev phase",
+		description: "Run or continue one workflow phase using human-level operations; ownership and revision mechanics remain internal",
+		parameters: Type.Object({
+			phase: StringEnum(["scope", "build", "accept"] as const),
+			action: StringEnum(["run", "retry", "inspect", "record-answer", "revise-answer", "submit-answers", "approve", "cancel"] as const),
+			intent: Type.Optional(Type.String()),
+			issue: Type.Optional(Type.String()),
+			plan: Type.Optional(Type.String()),
+			workBranch: Type.Optional(Type.String()),
+			defaultBranch: Type.Optional(Type.String()),
+			findingIds: Type.Optional(Type.Array(Type.String())),
+			answer: Type.Optional(Type.String()),
+			destination: Type.Optional(StringEnum(["scope", "build"] as const)),
+			offset: Type.Optional(Type.Number({ minimum: 0 })),
+			limit: Type.Optional(Type.Number({ minimum: 1, maximum: 20 })),
+		}),
+		executionMode: "sequential",
+		execute: async (_id, input, _signal, _update, ctx) => {
+			const respond = (result: Record<string, unknown>) => ({ content: [{ type: "text", text: JSON.stringify(result) }], details: result });
+			let status = await workflowStatus(ctx.cwd);
+			if (input.action === "inspect") {
+				const questionState = questions.snapshot(input.offset, input.limit);
+				const publicQuestions = questionState ? { ...questionState, candidate: undefined } : null;
+				return respond({
+					status: status.owner ? "active" : status.openWorkflows?.length ? "paused" : "idle",
+					phase: status.phase ?? null,
+					workflow: status.owner?.identity,
+					openWorkflows: status.openWorkflows ?? [],
+					questions: publicQuestions,
+				});
+			}
+			if (input.action === "cancel") {
+				if (questions.current()?.status === "active") {
+					await questions.operate({ action: "pause" }, ctx);
+					return respond({ status: "paused", phase: input.phase, partialWorkPreserved: true });
+				}
+				if (!status.owner) return respond({ status: "idle", phase: null });
+				await runSuperdev(["workflow", "cancel", "--session", status.owner.session_id], ctx.cwd, authority);
+				return respond({ status: "paused", phase: status.phase, partialWorkPreserved: true });
+			}
+			if (["record-answer", "revise-answer", "submit-answers"].includes(input.action)) {
+				let pending = questions.current();
+				if (!pending && input.action === "record-answer") {
+					if (!status.owner || status.phase !== input.phase || !["scope", "accept"].includes(input.phase)) throw new Error("record-answer requires active findings or a SCOPE/ACCEPT approval gate");
+					const scope = input.phase === "scope";
+					if (!scope && !input.destination) throw new Error("an ACCEPT change requires destination `build` or `scope`");
+					questions.begin({
+						version: 1,
+						workflow: status.owner.identity.plan,
+						candidate: status.owner.last_plan_revision,
+						originPhase: input.phase,
+						status: "active",
+						findings: [{
+							id: scope ? "human-scope-change" : "human-acceptance-change",
+							classification: "substantive",
+							summary: scope ? "Human requested a revision to reviewed SCOPE" : "Human requested a routed acceptance change",
+							evidence: `The reviewed ${input.phase.toUpperCase()} candidate reached its human approval gate.`,
+							impact: scope ? "The plan requires one correction and complete requirements re-review." : `The confirmed change returns the workflow to ${input.destination?.toUpperCase()}.`,
+							question: "What exact change should the workflow apply?",
+							recommendation: "Confirm the smallest concrete change that resolves the concern.",
+						}],
+						answers: {},
+					});
+					pending = questions.current();
+				}
+				if (!pending || (pending.originPhase ?? "scope") !== input.phase) throw new Error(`no ${input.phase.toUpperCase()} question queue is active`);
+				if (input.action === "revise-answer") {
+					const revised = await questions.operate({ action: "revise", findingId: input.findingIds?.[0] }, ctx);
+					return respond({ status: "answer-reopened", phase: input.phase, reopened: revised.details?.reopened ?? [] });
+				}
+				if (input.action === "submit-answers") {
+					runtime.lastOutcome = undefined;
+					const submitted = await questions.operate({ action: "submit" }, ctx);
+					return respond(runtime.lastOutcome ?? { status: submitted.details?.submitted ? "answers-submitted" : "submission-declined", phase: input.phase });
+				}
+				const answer = input.phase === "accept" && pending.findings[0]?.id === "human-acceptance-change"
+					? `${input.destination === "build" ? "BUILD correction" : "Return to SCOPE"}: ${input.answer ?? ""}`
+					: input.answer;
+				const recorded = await questions.operate({ action: "propose-answer", findingIds: input.findingIds?.length ? input.findingIds : [pending.findings[0]?.id], proposedAnswer: answer }, ctx);
+				return respond({ status: recorded.details?.confirmed ? "answer-recorded" : recorded.details?.humanInputRequired ? "human-input-required" : "answer-declined", phase: input.phase, answered: recorded.details?.answered ?? [] });
+			}
+			if (!status.owner) {
+				const requested = input.issue && input.plan && input.workBranch ? {
+					issue: input.issue,
+					plan: input.plan,
+					work_branch: input.workBranch,
+					default_branch: input.defaultBranch ?? "main",
+				} : status.openWorkflows?.length === 1 ? status.openWorkflows[0] : undefined;
+				if (!requested) throw new Error("The skill must select one exact issue and plan when zero or multiple open workflows exist.");
+				const existing = status.openWorkflows?.find((workflow) => workflow.issue === requested.issue && workflow.plan === requested.plan && workflow.work_branch === requested.work_branch);
+				if (!existing && input.phase !== "scope") throw new Error("Only SCOPE can establish a new workflow.");
+				const identity = ["--session", ctx.sessionManager.getSessionId(), "--issue", requested.issue, "--plan", requested.plan, "--work-branch", requested.work_branch, "--default-branch", existing?.default_branch ?? requested.default_branch];
+				await runSuperdev(["workflow", existing ? "resume" : "start", ...identity], ctx.cwd, authority);
+				status = await workflowStatus(ctx.cwd);
+			}
+			if (status.phase !== input.phase) throw new Error(`Canonical workflow is in ${status.phase?.toUpperCase() ?? "an unknown phase"}; invoke /skill:${status.phase ?? "scope"}.`);
+			if (questions.current()?.status === "paused") {
+				if (input.action !== "retry") return respond({ status: "paused", phase: input.phase, partialWorkPreserved: true, recoveryOperations: ["retry", "cancel"] });
+				await questions.resume(ctx);
+				return respond({ status: "findings", phase: input.phase, questions: questions.current()?.findings.length ?? 0 });
+			}
+			if (input.action === "approve") {
+				if (!status.owner || !["scope", "accept"].includes(input.phase)) throw new Error("approve is available only at a SCOPE or ACCEPT human gate");
+				const pending = questions.current();
+				if (pending && pending.status === "active" && !pending.findings.every((finding) => finding.id.startsWith("human-"))) {
+					throw new Error("Resolve the active review findings before approval.");
+				}
+				if (input.phase === "accept" && (runtime.lastOutcome?.status !== "ready-for-approval" || runtime.lastOutcome?.expectedRevision !== status.owner.last_plan_revision)) {
+					throw new Error("Run the current ACCEPT assessment before approving it.");
+				}
+				if (!ctx.hasUI) throw new Error(`human-input-required: ${input.phase.toUpperCase()} approval requires an interactive Pi session`);
+				if (!(await ctx.ui.confirm(`Approve reviewed ${input.phase.toUpperCase()}?`, input.phase === "scope" ? `Approve ${status.owner.identity.plan} and advance it to BUILD?` : `Accept ${status.owner.identity.plan} and integrate it locally?`))) {
+					return respond({ status: "approval-declined", phase: input.phase });
+				}
+				if (pending?.status === "active") questions.supersede("the human approved the unchanged reviewed candidate");
+				if (input.phase === "scope") {
+					await runSuperdev(["workflow", "transition", "--session", status.owner.session_id, "--expected-revision", status.owner.last_plan_revision, "--phase", "scope", "--transition", "approve-scope"], ctx.cwd, authority);
+					return respond({ status: "approved", phase: "build", workflow: status.owner.identity });
+				}
+				await phaseContinuations.approveAccept(status, ctx);
+				return respond({ status: "accepted", phase: null, workflow: status.owner.identity });
+			}
+			runtime.lastOutcome = undefined;
+			const runner = input.phase === "scope" ? phaseContinuations.runScopePhase : input.phase === "build" ? phaseContinuations.runBuildPhase : phaseContinuations.runAcceptPhase;
+			await runner(input.intent ?? "", ctx);
+			const after = await workflowStatus(ctx.cwd);
+			const pending = questions.current();
+			const result = runtime.lastOutcome ?? { status: pending?.status === "active" ? "findings" : "complete", phase: after.phase, workflow: after.owner?.identity, questions: pending?.status === "active" ? pending.findings.length : 0 };
+			return respond(result);
+		},
 	});
 	pi.registerCommand("superdev-cancel", {
 		description: "Pause the workflow and release transient ownership",

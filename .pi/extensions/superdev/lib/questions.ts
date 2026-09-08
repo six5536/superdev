@@ -26,6 +26,7 @@ export function registerWorkflowQuestions(
 		onSubmit: (state: QuestionState, ctx: any) => Promise<void>;
 		onPause?: (state: QuestionState, ctx: any) => Promise<void>;
 		onResume?: (state: QuestionState, ctx: any) => Promise<void>;
+		exposeTool?: boolean;
 	},
 ) {
 	let state: QuestionState | undefined;
@@ -81,8 +82,8 @@ export function registerWorkflowQuestions(
 	};
 	const activate = () => {
 		if (!priorTools) priorTools = pi.getActiveTools();
-		const allowed = new Set(["read", "sokf_search", "sokf_graph", "superdev_review_diff", "superdev_workflow_control", "superdev_workflow_questions"]);
-		pi.setActiveTools([...new Set([...priorTools.filter((tool: string) => allowed.has(tool)), "superdev_workflow_questions"])]);
+		const allowed = new Set(["read", "sokf_search", "sokf_graph", "superdev_run_phase", ...(options.exposeTool === false ? [] : ["superdev_workflow_questions"])]);
+		pi.setActiveTools([...new Set([...priorTools.filter((tool: string) => allowed.has(tool)), ...(options.exposeTool === false ? [] : ["superdev_workflow_questions"])])]);
 	};
 	const deactivate = () => {
 		if (priorTools) pi.setActiveTools(priorTools);
@@ -118,7 +119,24 @@ export function registerWorkflowQuestions(
 		deactivate();
 	};
 
-	pi.registerTool({
+	const snapshot = (offsetInput = 0, limitInput = 20) => {
+		if (!state || state.status === "superseded") return undefined;
+		const offset = Math.max(0, Math.floor(offsetInput));
+		const limit = Math.min(20, Math.max(1, Math.floor(limitInput)));
+		const page = state.findings.slice(offset, offset + limit);
+		return {
+			workflow: state.workflow,
+			candidate: state.candidate,
+			phase: state.originPhase ?? "scope",
+			status: state.status,
+			offset,
+			total: state.findings.length,
+			nextOffset: offset + page.length < state.findings.length ? offset + page.length : undefined,
+			findings: page.map((finding) => ({ ...finding, dependsOn: finding.dependsOn ?? [], answered: Boolean(state!.answers[finding.id]) })),
+		};
+	};
+
+	const questionTool = {
 		name: "superdev_workflow_questions",
 		label: "Superdev workflow questions",
 		description: "Inspect, ask, confirm, revise, pause, resume, or submit the active revision-bound workflow decision queue",
@@ -134,19 +152,8 @@ export function registerWorkflowQuestions(
 		execute: async (_id: string, input: any, _signal: AbortSignal, _update: unknown, ctx: any) => {
 			if (!state || state.status === "superseded") throw new Error("no active workflow question queue");
 			if (input.action === "inspect") {
-				const offset = Math.max(0, Math.floor(input.offset ?? 0));
-				const limit = Math.min(20, Math.max(1, Math.floor(input.limit ?? 20)));
-				const page = state.findings.slice(offset, offset + limit);
 				return {
-					content: [{ type: "text", text: JSON.stringify({
-						workflow: state.workflow,
-						candidate: state.candidate,
-						status: state.status,
-						offset,
-						total: state.findings.length,
-						nextOffset: offset + page.length < state.findings.length ? offset + page.length : undefined,
-						findings: page.map((finding) => ({ id: finding.id, summary: finding.summary, dependsOn: finding.dependsOn ?? [], answered: Boolean(state!.answers[finding.id]) })),
-					}) }],
+					content: [{ type: "text", text: JSON.stringify(snapshot(input.offset, input.limit)) }],
 					details: { questionState: true },
 				};
 			}
@@ -246,6 +253,8 @@ export function registerWorkflowQuestions(
 			}
 			return { content: [{ type: "text", text: "Submitted the complete confirmed answer set for one batched correction." }], details: { submitted: true } };
 		},
-	});
-	return { begin, current, resume, restore, restoreIssue: () => restoreIssue, activate, deactivate, supersede };
+	};
+	if (options.exposeTool !== false) pi.registerTool(questionTool);
+	const operate = (input: any, ctx: any) => questionTool.execute("internal", input, new AbortController().signal, undefined, ctx);
+	return { begin, current, snapshot, resume, restore, restoreIssue: () => restoreIssue, activate, deactivate, supersede, operate };
 }

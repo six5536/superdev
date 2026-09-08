@@ -25,11 +25,11 @@ export default async function smoke() {
 		},
 	};
 	superdev(fake as never);
+	for (const removed of ["scope", "build", "accept"]) {
+		if (commands.includes(removed)) throw new Error(`legacy phase command ${removed} remains public`);
+	}
 	for (const command of [
 		"superdev",
-		"scope",
-		"build",
-		"accept",
 		"superdev-status",
 		"superdev-resume",
 		"superdev-cancel",
@@ -38,10 +38,11 @@ export default async function smoke() {
 	]) {
 		if (!commands.includes(command)) throw new Error(`missing command ${command}`);
 	}
-	if (!tools.includes("superdev_isolated_role")) throw new Error("missing isolated role tool");
+	if (!tools.includes("superdev_run_phase")) throw new Error("missing generic phase tool");
+	if (!tools.includes("superdev_isolated_role")) throw new Error("missing isolated filing role tool");
 	if (tools.includes("superdev_review_diff")) throw new Error("immutable review diff leaked into the main agent tool set");
-	if (!tools.includes("superdev_workflow_control")) throw new Error("missing UI-gated workflow control tool");
-	if (!tools.includes("superdev_workflow_questions")) throw new Error("missing stateful workflow question tool");
+	if (!tools.includes("superdev_workflow_control")) throw new Error("missing extension-private workflow control adapter");
+	if (tools.includes("superdev_workflow_questions")) throw new Error("internal workflow question tool was exposed");
 	if (!requiresHumanAcceptance(true) || requiresHumanAcceptance(false)) throw new Error("configured acceptance policy changed");
 	try {
 		requiresHumanAcceptance(undefined);
@@ -268,7 +269,7 @@ export default async function smoke() {
 		},
 	};
 	const phaseCtx = { cwd: "/repo", model: undefined, hasUI: true, sessionManager: { getSessionId: () => "session-smoke" }, ui };
-	registerPhaseDrivers({
+	const phaseDrivers = registerPhaseDrivers({
 		pi: phasePi,
 		runSuperdev: runService,
 		workflowStatus: status,
@@ -284,26 +285,29 @@ export default async function smoke() {
 		childStarted: () => () => {}, childFinished: async () => {}, reviewRuns: new Map(),
 		parentServiceDigest: "digest", requiresHumanAcceptance, runtime,
 	});
-	await phaseCommands.get("scope").handler("", phaseCtx);
-	if (phase !== "build") throw new Error("SCOPE handler did not approve into BUILD");
-	await phaseCommands.get("build").handler("", phaseCtx);
+	await phaseDrivers.runScopePhase("", phaseCtx);
+	if (runtime.lastOutcome?.status !== "ready-for-approval" || phase !== "scope") throw new Error("SCOPE did not return a typed approval gate to its skill");
+	phase = "build"; revision = "revision-4"; runtime.lastOutcome = undefined;
+	await phaseDrivers.runBuildPhase("", phaseCtx);
 	if (owned || !serviceCalls.some((args) => args.includes("integrate"))) throw new Error("BUILD did not continue through automatic ACCEPT integration");
 	if (!progress.some((value) => value.includes("SCOPE")) || !progress.some((value) => value.includes("BUILD")) || !progress.some((value) => value.includes("ACCEPT"))) {
 		throw new Error("phase handlers did not publish immediate progress");
 	}
-	owned = true; phase = "accept"; revision = "revision-pause"; candidateEvidence = true; humanAcceptanceRequired = true; selections.push("Pause");
-	await phaseCommands.get("accept").handler("", phaseCtx);
-	if (owned || !serviceCalls.at(-1)?.includes("cancel")) throw new Error("paused ACCEPT did not release workflow ownership");
+	owned = true; phase = "accept"; revision = "revision-approval"; candidateEvidence = true; humanAcceptanceRequired = true; runtime.lastOutcome = undefined;
+	await phaseDrivers.runAcceptPhase("", phaseCtx);
+	if (!owned || runtime.lastOutcome?.status !== "ready-for-approval" || runtime.lastOutcome?.expectedRevision !== revision) {
+		throw new Error("ACCEPT did not return a revision-bound typed approval gate");
+	}
 
 	owned = true; phase = "build"; revision = "revision-timeout"; candidateEvidence = false; humanAcceptanceRequired = false;
-	roleFailure = "build"; selections.push("Discuss");
+	roleFailure = "build"; runtime.lastOutcome = undefined;
 	const callsBeforeTimeout = serviceCalls.length;
-	await phaseCommands.get("build").handler("", phaseCtx);
-	if (owned || !serviceCalls.slice(callsBeforeTimeout).some((args) => args.includes("cancel"))) throw new Error("timed-out BUILD did not pause and release ownership");
-	if (serviceCalls.slice(callsBeforeTimeout).some((args) => args.includes("resume"))) throw new Error("timed-out BUILD retried without explicit Retry selection");
+	await phaseDrivers.runBuildPhase("", phaseCtx);
+	if (!owned || runtime.lastOutcome?.status !== "failed" || runtime.lastOutcome?.partialWorkPreserved !== true) throw new Error("timed-out BUILD did not return typed recovery");
+	if (serviceCalls.slice(callsBeforeTimeout).some((args) => args.includes("resume"))) throw new Error("timed-out BUILD retried without an explicit retry operation");
 
 	owned = true; phase = "build"; revision = "revision-exhausted"; roleFailure = undefined; finalCorrections = 3;
-	await phaseCommands.get("build").handler("", phaseCtx);
+	await phaseDrivers.runBuildPhase("", phaseCtx);
 	if (pendingPhaseQuestions?.originPhase !== "build" || pendingPhaseQuestions?.candidate !== revision) {
 		throw new Error("exhausted BUILD did not preserve a revision-bound human decision queue");
 	}

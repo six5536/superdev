@@ -10,6 +10,7 @@ export type PhaseRuntime = {
 	modifyingBusy: boolean;
 	modifyingChild?: unknown;
 	modifyingCommandAbort?: AbortController;
+	lastOutcome?: Record<string, unknown>;
 };
 
 export function registerPhaseDrivers(deps: any) {
@@ -24,22 +25,17 @@ export function registerPhaseDrivers(deps: any) {
 		}
 		ctx.ui.setStatus("superdev-workflow", undefined);
 		const diagnostic = boundedText(String(error), policyFrom(status));
-		if (!ctx.hasUI) {
-			ctx.ui.notify(`human-input-required: ${phase} interrupted; partial work was preserved. Resume explicitly. ${diagnostic}`, "error");
-			return false;
-		}
-		const diagnosticSummary = diagnostic.replace(/\s+/g, " ").slice(0, 1_000);
-		const action = await ctx.ui.select(`${phase} interrupted; partial work was preserved\nCause: ${diagnosticSummary}`, ["Retry phase", "Discuss", "Cancel workflow"]);
-		if (action !== "Retry phase" || !workflow) {
-			ctx.ui.notify(action === "Discuss" ? `${phase} remains paused for discussion. ${diagnostic}` : `${phase} remains paused; automatic retry is disabled. ${diagnostic}`, "error");
-			return false;
-		}
-		await runSuperdev([
-			"workflow", "resume", "--session", ctx.sessionManager.getSessionId(),
-			"--issue", workflow.issue, "--plan", workflow.plan,
-			"--work-branch", workflow.work_branch, "--default-branch", workflow.default_branch,
-		], ctx.cwd, authority);
-		return true;
+		runtime.lastOutcome = {
+			status: "failed",
+			phase: phase.toLowerCase(),
+			diagnostic,
+			partialWorkPreserved: true,
+			workflow,
+			recoveryOperations: ["retry", "cancel"],
+			recommendation: "Inspect the diagnostic, discuss it with the active phase skill, then retry only when the cause is understood.",
+		};
+		ctx.ui.notify(`${phase} paused after a failure. The invoking skill has the diagnostic and recovery operations.`, "error");
+		return false;
 	};
 	const pauseForBuildExhaustion = async (ctx: any, summary: string, findings: ReviewFinding[] = []) => {
 		const status = await workflowStatus(ctx.cwd);
@@ -164,41 +160,16 @@ export function registerPhaseDrivers(deps: any) {
 				const revision = evidence.result?.last_plan_revision;
 				if (!revision) throw new Error("scope evidence response omitted the new plan revision");
 				reviewRuns.delete(reviewRun);
-				if (!ctx.hasUI) {
-					await runSuperdev(["workflow", "cancel", "--session", owner.session_id], ctx.cwd, authority);
-					return ctx.ui.notify(`human-input-required: ${owner.identity.plan} SCOPE approval is pending; resume in an interactive session`, "warning");
-				}
-				const action = await ctx.ui.select("Reviewed SCOPE is clean", ["Approve and start BUILD", "Approve only", "Request changes", "Discuss", "Pause", "Abandon workflow"]);
-				if (!action || action === "Pause") {
-					await runSuperdev(["workflow", "cancel", "--session", owner.session_id], ctx.cwd, authority);
-					return ctx.ui.notify("SCOPE paused at the human gate; ownership released", "info");
-				}
-				if (action === "Discuss" || action === "Request changes") {
-					const finding: ReviewFinding = {
-						id: "human-scope-change",
-						classification: "substantive",
-						summary: action === "Request changes" ? "Human requested changes to reviewed SCOPE" : "Human wants to discuss reviewed SCOPE before approval",
-						evidence: `The complete SCOPE candidate ${candidate} passed exhaustive requirements review.`,
-						impact: "Any confirmed change requires one batched correction and complete requirements re-review before approval.",
-						question: "What, if anything, should change in the reviewed scope before approval?",
-						recommendation: "Describe the smallest concrete change needed, or confirm that no change is required.",
-					};
-					questions.begin({ version: 1, workflow: owner.identity.plan, candidate: revision, status: "active", findings: [finding], cycle, answers: {} });
-					return ctx.ui.notify("Reviewed SCOPE is ready for discussion and an explicitly confirmed answer", "info");
-				}
-				if (action === "Abandon workflow") {
-					if (!(await ctx.ui.confirm("Abandon workflow?", "Partial product work will not be integrated; approved knowledge disposition will be published."))) return ctx.ui.notify("Abandonment was not confirmed", "info");
-					const reason = (await ctx.ui.input("Abandonment reason", "Why should this workflow be abandoned?"))?.trim();
-					if (!reason) return ctx.ui.notify("Abandonment requires a reason", "warning");
-					await runSuperdev(["workflow", "abandon", "--session", owner.session_id, "--expected-revision", revision, "--phase", "scope", "--reason", reason], ctx.cwd, authority);
-					ctx.ui.setStatus("superdev-workflow", undefined);
-					return ctx.ui.notify("Workflow abandoned; partial product work was not integrated", "info");
-				}
-				await runSuperdev(["workflow", "transition", "--session", owner.session_id, "--expected-revision", revision, "--phase", "scope", "--transition", "approve-scope"], ctx.cwd, authority);
-				ctx.ui.setStatus("superdev-workflow", `BUILD: ${owner.identity.plan}`);
-				launchBuild = action === "Approve and start BUILD";
-				if (!launchBuild) ctx.ui.notify("SCOPE approved; say ‘start build’ when ready", "info");
-				break;
+				runtime.lastOutcome = {
+					status: "ready-for-approval",
+					phase: "scope",
+					workflow: owner.identity,
+					candidate,
+					expectedRevision: revision,
+					recommendation: "Review the clean SCOPE summary, then use the SCOPE skill to approve or request a revision.",
+				};
+				ctx.ui.notify("Requirements review is clean; the SCOPE skill now owns discussion and approval", "info");
+				return;
 			}
 		} catch (error) {
 			retryScope = await pauseAfterFailure(ctx, "SCOPE", error);
@@ -213,10 +184,6 @@ export function registerPhaseDrivers(deps: any) {
 		}
 	};
 	const continueScopeFromAnswers = (state, ctx) => runScopePhase("", ctx, state);
-	pi.registerCommand("scope", {
-		description: "Run SCOPE through exhaustive review and human approval",
-		handler: (args, ctx) => runScopePhase(args, ctx),
-	});
 	let runAcceptPhase: ((args: string, ctx: any) => Promise<void>) | undefined;
 	const runBuildPhase = async (args: string, ctx: any) => {
 			if (hasPendingQuestions()) return ctx.ui.notify("Resolve or pause the active workflow questions before starting a phase role", "error");
@@ -363,10 +330,25 @@ export function registerPhaseDrivers(deps: any) {
 		if (!revision) throw new Error("BUILD-to-SCOPE exhaustion routing omitted the new plan revision");
 		return await runScopePhase("", ctx, { ...state, candidate: revision, originPhase: "scope", status: "submitted" });
 	};
-	pi.registerCommand("build", {
-		description: "Run BUILD through automatic ACCEPT assessment",
-		handler: runBuildPhase,
-	});
+	const approveAccept = async (status: any, ctx: any) => {
+		const owner = status.owner;
+		if (!owner || status.phase !== "accept" || !owner.verified_default_revision) throw new Error("an evidence-bound ACCEPT workflow is required");
+		await runSuperdev([
+			"workflow", "transition", "--session", owner.session_id,
+			"--expected-revision", owner.last_plan_revision, "--phase", "accept", "--transition", "accept",
+		], ctx.cwd, authority);
+		const closureResult = await pi.exec("git", ["rev-parse", "--verify", owner.identity.work_branch], { cwd: ctx.cwd });
+		if (closureResult.code !== 0) throw new Error("could not resolve the prepared closure commit");
+		await runSuperdev([
+			"workflow", "integrate", "--session", owner.session_id,
+			"--default-branch", owner.identity.default_branch,
+			"--expected-default", owner.verified_default_revision,
+			"--work-branch", owner.identity.work_branch,
+			"--expected-work", closureResult.stdout.trim(),
+		], ctx.cwd, authority);
+		ctx.ui.setStatus("superdev-workflow", undefined);
+		ctx.ui.notify("Candidate accepted and integrated locally; nothing was pushed or deleted", "info");
+	};
 	const executeAcceptPhase = async (_args: string, ctx: any) => {
 			if (hasPendingQuestions()) return ctx.ui.notify("Resolve or pause the active workflow questions before starting a phase role", "error");
 			const status = await workflowStatus(ctx.cwd);
@@ -443,45 +425,17 @@ export function registerPhaseDrivers(deps: any) {
 			}
 			const humanAcceptanceRequired = requiresHumanAcceptance(status.humanAcceptanceRequired);
 			if (humanAcceptanceRequired) {
-				if (!ctx.hasUI) {
-					await runSuperdev(["workflow", "cancel", "--session", owner.session_id], ctx.cwd, authority);
-					return ctx.ui.notify(`human-input-required: ${owner.identity.plan} ACCEPT decision is pending; resume in an interactive session`, "warning");
-				}
-				const action = await ctx.ui.select("ACCEPT assessment is clean", ["Accept", "Request changes", "Discuss", "Pause"]);
-				if (!action || action === "Pause") {
-					await runSuperdev(["workflow", "cancel", "--session", owner.session_id], ctx.cwd, authority);
-					ctx.ui.setStatus("superdev-workflow", undefined);
-					return ctx.ui.notify("ACCEPT paused at the human decision; ownership released", "info");
-				}
-				if (action !== "Accept") {
-					const finding: ReviewFinding = {
-						id: "human-acceptance-change",
-						classification: "substantive",
-						summary: "Human requested changes at final acceptance",
-						evidence: "The immutable candidate reached the configured human acceptance gate.",
-						impact: "The request must be clarified and routed to BUILD or SCOPE before more work starts.",
-						question: "What change is required? Confirm it as `BUILD correction: …` when intent is unchanged, or `Return to SCOPE: …` when requirements, architecture, API, or acceptance intent changes.",
-						recommendation: "Discuss the change, then confirm both its concrete wording and destination.",
-					};
-					questions.begin({ version: 1, workflow: owner.identity.plan, candidate: owner.last_plan_revision, originPhase: "accept", status: "active", findings: [finding], answers: {} });
-					return ctx.ui.notify("Acceptance change request is ready for discussion and explicit routing confirmation", "warning");
-				}
+				runtime.lastOutcome = {
+					status: "ready-for-approval",
+					phase: "accept",
+					workflow: owner.identity,
+					expectedRevision: owner.last_plan_revision,
+					recommendation: "Review the clean acceptance assessment, then approve it or discuss one routed change through the ACCEPT skill.",
+				};
+				ctx.ui.notify("ACCEPT assessment is clean; the ACCEPT skill now owns discussion and approval", "info");
+				return;
 			}
-			await runSuperdev([
-				"workflow", "transition", "--session", owner.session_id,
-				"--expected-revision", owner.last_plan_revision, "--phase", "accept", "--transition", "accept",
-			], ctx.cwd, authority);
-			const closureResult = await pi.exec("git", ["rev-parse", "--verify", owner.identity.work_branch], { cwd: ctx.cwd });
-			if (closureResult.code !== 0) throw new Error("could not resolve the prepared closure commit");
-			await runSuperdev([
-				"workflow", "integrate", "--session", owner.session_id,
-				"--default-branch", owner.identity.default_branch,
-				"--expected-default", owner.verified_default_revision,
-				"--work-branch", owner.identity.work_branch,
-				"--expected-work", closureResult.stdout.trim(),
-			], ctx.cwd, authority);
-			ctx.ui.setStatus("superdev-workflow", undefined);
-			ctx.ui.notify("Candidate accepted and integrated locally; nothing was pushed or deleted", "info");
+			await approveAccept(status, ctx);
 	};
 	runAcceptPhase = async (args, ctx) => {
 		while (true) {
@@ -510,9 +464,13 @@ export function registerPhaseDrivers(deps: any) {
 		}
 		return await runScopePhase(`Apply confirmed acceptance scope change: ${answer}`, ctx);
 	};
-	pi.registerCommand("accept", {
-		description: "Assess ACCEPT and integrate after configured human authority",
-		handler: (args, ctx) => runAcceptPhase!(args, ctx),
-	});
-	return { continueScopeFromAnswers, continueBuildDecision, continueAcceptRequest };
+	return {
+		continueScopeFromAnswers,
+		continueBuildDecision,
+		continueAcceptRequest,
+		runScopePhase,
+		runBuildPhase,
+		runAcceptPhase: (args: string, ctx: any) => runAcceptPhase!(args, ctx),
+		approveAccept,
+	};
 }
