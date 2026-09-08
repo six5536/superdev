@@ -2,7 +2,7 @@
 type: Idea
 id: idea-014-superdev-subprocesses-show-progress-and-control
 title: Superdev subprocess workflows stay visible and resumable
-description: Make Superdev expose subprocess progress, fix mechanical review findings quickly, return substantive findings to the main Pi conversation, and resume through one visible flow.
+description: Make Superdev expose subprocess progress, fix mechanical findings quickly, and present each complete substantive review as one user questionnaire before correction and re-review.
 status: draft
 ---
 
@@ -27,7 +27,8 @@ A lone notification such as `Warning: Post-persistence abort handling lacks
 complete contract and test coverage.` neither explains the gap nor tells the
 user what decision or action comes next. The finding also disappears from the
 main agent's working conversation, leaving the user to carry it into another
-command.
+command. Returning one finding, correcting it, and rerunning review only to
+reveal the next finding turns one review into a slow serial guessing loop.
 
 That interface exposes orchestration mechanics instead of the next meaningful
 user decision. The same problems apply to correction cycles, BUILD review,
@@ -40,19 +41,27 @@ single subprocess launchers. Each driver reconstructs canonical state and
 performs all safe automatic steps until it reaches a human decision, an
 exhausted retry budget, or an actionable failure.
 
-Require isolated reviews to classify every finding as mechanical or
-substantive. Apply mechanical fixes automatically through a tightly bounded,
-visible correction-and-review loop. Mechanical fixes include deterministic
-format, generated-link, and similarly unambiguous corrections that do not
-change requirements or design intent.
+Require each isolated review to inspect the complete candidate and return its
+complete finding set in one structured result. The reviewer must not stop after
+the first finding. Classify every finding as mechanical or substantive.
 
-Return every substantive SCOPE finding to the main Pi instance as structured
-context, not as a transient warning. Use the question tool to ask the end-user
-about each finding separately. Each question must explain what is missing,
-identify the affected artifact or requirement, present concrete choices,
-recommend one choice, and allow a free-form answer when the choices are
-incomplete. Preserve all answers, pass them to the SCOPE correction role, and
-rerun requirements review without requiring another slash command.
+Apply all mechanical fixes as one quick, tightly bounded, visible correction
+batch. Mechanical fixes include deterministic format, generated-link, and
+similarly unambiguous corrections that do not change requirements or design
+intent.
+
+Return the complete substantive SCOPE finding set to the main Pi instance as
+structured context, not as transient warnings. Present one questionnaire that
+contains one question per finding, ordered so prerequisite decisions come
+first. Each question must explain what is missing, identify the affected
+artifact or requirement, present concrete choices, recommend one choice, and
+allow a free-form answer when the choices are incomplete.
+
+Wait until the end-user answers the complete questionnaire. Preserve the answer
+set, pass all answers to one SCOPE correction run, and then rerun one complete
+requirements review. Repeat only when that review returns a new or remaining
+finding set. Never perform a correction-and-review cycle for each individual
+finding, and never require another slash command.
 
 Wrap user-awaited subprocess execution in one shared progress presenter. Use
 Pi's existing notification, status, widget, and prompt APIs to show the plan,
@@ -77,7 +86,9 @@ daemon-like transport processes quiet unless startup fails or health changes.
 
 ## Trade-offs
 
-- Mechanical correction loops spend more model time before returning control,
+- Complete reviews take longer than fail-fast reviews, but avoid repeated model
+  launches and repeated user interruptions for findings discoverable together.
+- Mechanical correction batches spend more model time before returning control,
   so each phase needs a small explicit retry budget and a narrow classifier.
 - Misclassifying a substantive finding as mechanical could change intent
   without approval, so uncertain findings must return to the end-user.
@@ -92,8 +103,8 @@ daemon-like transport processes quiet unless startup fails or health changes.
   or unstable model text?
 - What objective rule classifies a finding as mechanical rather than
   substantive?
-- How should the question tool order dependent findings and combine answers
-  before the SCOPE correction role runs?
+- How should the questionnaire represent findings whose available choices
+  depend on an earlier answer without splitting the review into serial loops?
 - What proves that an owning Pi instance is stale enough for safe recovery?
 - What timeout and retry budget applies to each isolated role and non-model
   subprocess?
