@@ -838,8 +838,8 @@ the invoking adapter.
 | `superdev file` | 0 | a confirmed issue or idea was committed on the default branch |
 | `superdev file` | 2 | confirmation, validation, duplicate, worktree, or compare-and-swap checks failed |
 | `superdev workflow` | 2 | no subcommand named |
-| `superdev workflow start` | 0 | ownership, a work branch, and an initial canonical SCOPE plan are created |
-| `superdev workflow start` | 2 | identity, ownership, issue, branch, tree, or plan state is invalid |
+| `superdev workflow start` | 0 | validated LLM-authored issue and plan records are published, their issue-derived work branch is created, and ownership is acquired |
+| `superdev workflow start` | 2 | authored records, relationship, independent identities, ownership, issue-derived branch, unrelated tree state, or validation is invalid |
 | `superdev workflow status` | 0 | canonical and transient state is reported |
 | `superdev workflow bind` | 0 | transient ownership is acquired |
 | `superdev workflow bind` | 2 | identity, revision, branch, or ownership is invalid |
@@ -859,8 +859,8 @@ the invoking adapter.
 | `superdev workflow evidence` | 2 | ownership, revision, identity, branch, or phase is invalid |
 | `superdev workflow sync` | 0 | the expected default tip is incorporated into the BUILD branch, or was already present |
 | `superdev workflow sync` | 2 | ownership, phase, revision, tree, ref, expected tip, or conflict checks failed |
-| `superdev workflow resume` | 0 | canonical state is reconstructed and ownership acquired |
-| `superdev workflow resume` | 2 | canonical identity, branch, phase, or ownership is invalid |
+| `superdev workflow resume` | 0 | a clean worktree is switched to the canonical work branch when required, canonical state is reconstructed, and ownership is acquired |
+| `superdev workflow resume` | 2 | canonical identity, branch, phase, worktree, or ownership is invalid |
 | `superdev workflow cancel` | 0 | transient ownership is released |
 | `superdev workflow cancel` | 2 | another session owns the workflow |
 | `superdev workflow abandon` | 0 | approved abandonment is persisted |

@@ -1,5 +1,6 @@
 //! Shell-free Git operations and invariants used by workflow transitions.
 
+use std::collections::BTreeSet;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output, Stdio};
@@ -312,11 +313,45 @@ pub fn validate_block_paths(root: &Path, allowed_areas: &[String]) -> Result<()>
     Ok(())
 }
 
+/// Return whether a validated local work branch exists.
+pub fn local_work_branch_exists(root: &Path, branch: &str) -> Result<bool> {
+    validate_work_branch(branch)?;
+    let reference = format!("refs/heads/{branch}");
+    let output = Command::new("git")
+        .args(["show-ref", "--verify", "--quiet", &reference])
+        .current_dir(root)
+        .output()
+        .map_err(|source| Error::Command {
+            command: format!("git show-ref --verify --quiet {reference}"),
+            status: None,
+            stderr: source.to_string(),
+        })?;
+    match output.status.code() {
+        Some(0) => Ok(true),
+        Some(1) => Ok(false),
+        status => Err(Error::Command {
+            command: format!("git show-ref --verify --quiet {reference}"),
+            status,
+            stderr: String::from_utf8_lossy(&output.stderr)
+                .chars()
+                .take(8_000)
+                .collect(),
+        }),
+    }
+}
+
 /// Create and check out a validated work branch from the current revision.
 pub fn create_work_branch(root: &Path, branch: &str) -> Result<()> {
     validate_work_branch(branch)?;
     require_clean(root)?;
     git(root, &["switch", "-c", branch]).map(|_| ())
+}
+
+/// Check out an existing validated work branch without carrying local changes.
+pub fn checkout_work_branch(root: &Path, branch: &str) -> Result<()> {
+    validate_work_branch(branch)?;
+    require_clean(root)?;
+    git(root, &["switch", branch]).map(|_| ())
 }
 
 /// Return whether `ancestor` is reachable from `descendant`.
@@ -351,6 +386,25 @@ pub fn merge_base(root: &Path, left: &str, right: &str) -> Result<String> {
     let revision = String::from_utf8_lossy(&output.stdout).trim().to_string();
     validate_ref(&revision)?;
     Ok(revision)
+}
+
+/// Return every tracked or untracked working-tree path without invoking a shell.
+pub fn working_paths(root: &Path) -> Result<Vec<String>> {
+    let mut paths = BTreeSet::new();
+    for args in [
+        ["diff", "--name-only", "--"].as_slice(),
+        ["diff", "--cached", "--name-only", "--"].as_slice(),
+        ["ls-files", "--others", "--exclude-standard"].as_slice(),
+    ] {
+        let output = git(root, args)?;
+        paths.extend(
+            String::from_utf8_lossy(&output.stdout)
+                .lines()
+                .filter(|path| !path.is_empty())
+                .map(str::to_string),
+        );
+    }
+    Ok(paths.into_iter().collect())
 }
 
 /// Paths changed between two revisions, without invoking a shell.

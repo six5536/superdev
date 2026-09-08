@@ -393,9 +393,7 @@ pub fn run(command: &WorkflowCommand, root: &Path) -> Result<u8> {
                 });
             }
             if git::current_branch(&root)? != args.work_branch {
-                return Err(Error::Manifest {
-                    message: format!("resume requires checked-out branch `{}`", args.work_branch),
-                });
+                git::checkout_work_branch(&root, &args.work_branch)?;
             }
             bind(&root, args)
         }
@@ -776,7 +774,6 @@ pub fn run(command: &WorkflowCommand, root: &Path) -> Result<u8> {
 fn start(root: &Path, args: &BindArgs) -> Result<u8> {
     ui_authority_capability()?;
     validate_reserved_identity(args)?;
-    git::require_clean(root)?;
     if git::current_branch(root)? != args.default_branch {
         return Err(Error::Manifest {
             message: format!(
@@ -793,12 +790,64 @@ fn start(root: &Path, args: &BindArgs) -> Result<u8> {
             ),
         });
     }
-    if plan_revision(root, &args.plan).is_ok() {
+    if git::local_work_branch_exists(root, &args.work_branch)? {
         return Err(Error::Manifest {
-            message: format!("workflow plan `{}` already exists; use resume", args.plan),
+            message: format!(
+                "SCOPE work branch `{}` already exists; select or recover its canonical workflow",
+                args.work_branch
+            ),
         });
     }
-    let issue = open_issue_record(root, &args.issue)?;
+    let issue_path = format!("knowledge/issues/open/{}.md", args.issue);
+    let plan_path = format!("knowledge/plans/open/{}.md", args.plan);
+    let allowed = [
+        issue_path.as_str(),
+        plan_path.as_str(),
+        "knowledge/issues/index.md",
+        "knowledge/plans/index.md",
+    ];
+    let unexpected: Vec<String> = git::working_paths(root)?
+        .into_iter()
+        .filter(|path| !allowed.contains(&path.as_str()))
+        .collect();
+    if !unexpected.is_empty() {
+        return Err(Error::Manifest {
+            message: format!(
+                "SCOPE start found unrelated working-tree changes: {}",
+                unexpected.join(", ")
+            ),
+        });
+    }
+    validate_open_issue(root, &args.issue)?;
+    let record = plan_record(root, &args.plan).map_err(|_| Error::Manifest {
+        message: format!(
+            "SCOPE skill must author open plan `{}` before deterministic start",
+            args.plan
+        ),
+    })?;
+    if record.lifecycle != "open"
+        || record.phase != "scope"
+        || record.issue != args.issue
+        || record.branch != args.work_branch
+    {
+        return Err(Error::Manifest {
+            message: "authored SCOPE plan does not match the selected issue, phase, or issue-derived branch".into(),
+        });
+    }
+    let grammar = superdev_core::validate::schema::load_grammar(root)?;
+    let targets = [root.join(&issue_path), root.join(&plan_path)];
+    let report =
+        superdev_core::validate::validate_repo(root, &root.join("knowledge"), &targets, &grammar)?;
+    if !report.report.passed() {
+        return Err(Error::Manifest {
+            message: format!(
+                "LLM-authored SCOPE records did not validate:\n{}",
+                report
+                    .report
+                    .render_human(superdev_core::validate::sokf::Warnings::Listed)
+            ),
+        });
+    }
     let scope_base = git::revision(root, &args.default_branch)?;
 
     // Reserve ownership before mutating Git or records. This makes concurrent
@@ -807,9 +856,8 @@ fn start(root: &Path, args: &BindArgs) -> Result<u8> {
     let reservation = workflow_cache(args, String::new(), Some(scope_base), None, None)?;
     cache::bind(root, &reservation)?;
     let started = (|| {
-        git::create_work_branch(root, &args.work_branch)?;
-        create_scope_plan(root, args, &issue)?;
         git::commit_knowledge_changes(root, "chore(workflow): start scope")?;
+        git::create_work_branch(root, &args.work_branch)?;
         let revision = plan_revision(root, &args.plan)?.1;
         let state = cache::compare_and_swap(root, &args.session, "", |state| {
             state.last_plan_revision.clone_from(&revision)
@@ -822,13 +870,7 @@ fn start(root: &Path, args: &BindArgs) -> Result<u8> {
     started
 }
 
-#[derive(Debug)]
-struct IssueRecord {
-    title: String,
-    description: String,
-}
-
-fn open_issue_record(root: &Path, id: &str) -> Result<IssueRecord> {
+fn validate_open_issue(root: &Path, id: &str) -> Result<()> {
     let path = root.join("knowledge/issues/open").join(format!("{id}.md"));
     let text = fs::read_to_string(&path).map_err(|source| Error::Io {
         path: path.clone(),
@@ -840,56 +882,6 @@ fn open_issue_record(root: &Path, id: &str) -> Result<IssueRecord> {
     if concept.id.as_deref() != Some(id) || concept.lifecycle.as_deref() != Some("open") {
         return Err(Error::Manifest {
             message: format!("`{id}` is not the matching open canonical issue"),
-        });
-    }
-    Ok(IssueRecord {
-        title: concept.raw["title"].as_str().unwrap_or(id).to_string(),
-        description: concept.raw["description"]
-            .as_str()
-            .unwrap_or("Implement the scoped issue.")
-            .to_string(),
-    })
-}
-
-fn create_scope_plan(root: &Path, args: &BindArgs, issue: &IssueRecord) -> Result<()> {
-    let quote = |value: &str| serde_json::to_string(value).expect("string serializes");
-    let content = format!(
-        "---\ntype: Plan\nid: {}\ntitle: {}\ndescription: {}\nlifecycle: open\nphase: scope\nbranch: {}\nlinks:\n  - rel: implements\n    to: {}\n---\n\n# Plan: {}\n\n## Goal and boundaries\n\nImplement [{}][sokf:{}]. {}\n\n## Requirements\n\nSCOPE must replace this initial recovery-safe draft with settled requirements before approval.\n\n## Contract changes\n\n- none.\n\n## ADR decisions\n\n- none.\n\n## Source and interface changes\n\nSCOPE must identify the exact source declarations and materialized interfaces.\n\n## Knowledge changes\n\nSCOPE must identify normative and current-state knowledge changes.\n\n## Documentation changes\n\nSCOPE must map applicable surfaces from the canonical documentation map.\n\n## Work blocks\n\n### Block 1: Deliver the approved scope\n\n- [ ] Done.\n- Dependencies: none.\n- Areas: to be settled by SCOPE.\n- Outcome: the approved issue is implemented and verified.\n- Verification: executable commands must be settled by SCOPE.\n- Tests: executable contract evidence must be settled by SCOPE.\n- Structural evidence: executable structural evidence must be settled by SCOPE.\n- Documentation: applicable surfaces and commands must be settled by SCOPE.\n\n## Build state\n\nCurrent block: 1. Attempts: 0. Final corrections: 0. Blocker: scope approval pending.\n\n## Implementation decisions\n\nnone.\n\n## Follow-up issues\n\nnone.\n\n## Completion evidence\n\nScope requirements review and human approval are pending.\n",
-        args.plan,
-        quote(&issue.title),
-        quote(&issue.description),
-        args.work_branch,
-        args.issue,
-        issue.title,
-        issue.title,
-        args.issue,
-        issue.description,
-    );
-    let path = root
-        .join("knowledge/plans/open")
-        .join(format!("{}.md", args.plan));
-    fs::create_dir_all(path.parent().expect("plan path has a parent")).map_err(|source| {
-        Error::Io {
-            path: path.parent().expect("plan path has a parent").to_path_buf(),
-            source,
-        }
-    })?;
-    fs::write(&path, content).map_err(|source| Error::Io {
-        path: path.clone(),
-        source,
-    })?;
-    superdev_core::validate::fix_repo(root, &root.join("knowledge"), &[])?;
-    let grammar = superdev_core::validate::schema::load_grammar(root)?;
-    let report =
-        superdev_core::validate::validate_repo(root, &root.join("knowledge"), &[path], &grammar)?;
-    if !report.report.passed() {
-        return Err(Error::Manifest {
-            message: format!(
-                "initial scope plan did not validate:\n{}",
-                report
-                    .report
-                    .render_human(superdev_core::validate::sokf::Warnings::Listed)
-            ),
         });
     }
     Ok(())
@@ -914,6 +906,7 @@ fn discover_open_workflows(root: &Path) -> Result<Vec<WorkflowIdentity>> {
         let record = plan_record(root, plan)?;
         if record.lifecycle == "open"
             && matches!(record.phase.as_str(), "scope" | "build" | "accept")
+            && git::local_work_branch_exists(root, &record.branch)?
         {
             workflows.push(WorkflowIdentity {
                 issue: record.issue,
@@ -1052,9 +1045,11 @@ fn validate_reserved_identity(args: &BindArgs) -> Result<()> {
         .ok_or_else(|| Error::Manifest {
             message: "workflow plan must match plan-NNN-slug".into(),
         })?;
-    if issue_tail != plan_tail || args.work_branch != format!("work/{issue_tail}") {
+    if plan_tail.is_empty() || args.work_branch != format!("work/{issue_tail}") {
         return Err(Error::Manifest {
-            message: "issue, plan, and work branch must carry one matching NNN-slug".into(),
+            message:
+                "work branch must derive from the issue identity; plan identity is independent"
+                    .into(),
         });
     }
     Ok(())

@@ -242,6 +242,7 @@ fn init_materializes_pi_workflow_without_claude_assets() {
     let repo = sb.repo();
     for path in [
         ".pi/extensions/superdev/index.ts",
+        ".pi/extensions/superdev/lib/phases.ts",
         ".pi/extensions/superdev/prompts/scope.md",
         ".pi/extensions/superdev/prompts/requirements-review.md",
         ".pi/extensions/superdev/prompts/build.md",
@@ -249,6 +250,9 @@ fn init_materializes_pi_workflow_without_claude_assets() {
         ".pi/extensions/superdev/prompts/accept.md",
         ".pi/extensions/superdev/prompts/file.md",
         ".pi/skills/sokf-authoring/SKILL.md",
+        ".pi/skills/scope/SKILL.md",
+        ".pi/skills/build/SKILL.md",
+        ".pi/skills/accept/SKILL.md",
     ] {
         assert!(repo.join(path).is_file(), "{path} was not materialized");
     }
@@ -256,9 +260,24 @@ fn init_materializes_pi_workflow_without_claude_assets() {
     assert!(!repo.join(".claude/settings.json").exists());
     let lock = sb.read(".superdev/lock.toml");
     assert!(lock.contains(".pi/extensions/superdev/index.ts"));
+    assert!(lock.contains(".pi/extensions/superdev/lib/phases.ts"));
     assert!(lock.contains(".pi/skills/sokf-authoring/SKILL.md"));
+    assert!(lock.contains(".pi/skills/scope/SKILL.md"));
+    assert!(lock.contains(".pi/skills/build/SKILL.md"));
+    assert!(lock.contains(".pi/skills/accept/SKILL.md"));
     assert!(!lock.contains(".claude/skills"));
     assert!(!lock.contains("superdev hook run"));
+    for (skill, command) in [
+        ("scope", "/skill:scope"),
+        ("build", "/skill:build"),
+        ("accept", "/skill:accept"),
+    ] {
+        let text = sb.read(&format!(".pi/skills/{skill}/SKILL.md"));
+        assert!(text.contains("disable-model-invocation: true"));
+        assert!(text.contains("superdev_run_phase"));
+        assert!(text.contains(command));
+        assert!(text.contains("Examples:"));
+    }
 
     let retired = b"retired managed workflow skill\n";
     let retired_path = repo.join(".claude/skills/build/SKILL.md");
@@ -283,7 +302,7 @@ fn init_materializes_pi_workflow_without_claude_assets() {
 }
 
 #[test]
-fn workflow_start_creates_a_canonical_scope_plan_and_resume_adopts_it() {
+fn workflow_start_adopts_an_llm_authored_independently_numbered_plan() {
     let dir = tempfile::tempdir().unwrap();
     let git = |args: &[&str]| {
         let status = std::process::Command::new("git")
@@ -319,13 +338,23 @@ fn workflow_start_creates_a_canonical_scope_plan_and_resume_adopts_it() {
         .assert()
         .success();
 
+    let plan = dir
+        .path()
+        .join("knowledge/plans/open/plan-042-canonical-recovery.md");
+    fs::create_dir_all(plan.parent().unwrap()).unwrap();
+    fs::write(
+        &plan,
+        "---\ntype: Plan\nid: plan-042-canonical-recovery\ntitle: Canonical recovery plan\ndescription: LLM-authored scope proposal.\nlifecycle: open\nphase: scope\nbranch: work/001-canonical-recovery\nlinks:\n  - rel: implements\n    to: issue-001-canonical-recovery\n---\n\n# Plan: Canonical recovery\n\n## Goal and boundaries\n\nImplement [the issue][sokf:issue-001-canonical-recovery].\n\n## Requirements\n\nSettle requirements in SCOPE.\n\n## Contract changes\n\n- none.\n\n## ADR decisions\n\n- none.\n\n## Source and interface changes\n\nSettle source surfaces in SCOPE.\n\n## Knowledge changes\n\nMaintain this issue and plan.\n\n## Documentation changes\n\nSettle documentation in SCOPE.\n\n## Work blocks\n\n### Block 1: Deliver scope\n\n- [ ] Done.\n- Dependencies: none.\n- Areas: pending SCOPE.\n- Outcome: approved work delivered.\n- Verification: pending SCOPE.\n- Tests: pending SCOPE.\n- Structural evidence: pending SCOPE.\n- Documentation: pending SCOPE.\n\n## Build state\n\nCurrent block: 1. Attempts: 0. Final corrections: 0. Blocker: scope approval pending.\n\n## Implementation decisions\n\nnone.\n\n## Follow-up issues\n\nnone.\n\n## Completion evidence\n\nScope review and approval pending.\n\n<!-- sokf:links -->\n[sokf:issue-001-canonical-recovery]: /knowledge/issues/open/issue-001-canonical-recovery.md\n",
+    )
+    .unwrap();
+
     let identity = [
         "--session",
         "pi-a",
         "--issue",
         "issue-001-canonical-recovery",
         "--plan",
-        "plan-001-canonical-recovery",
+        "plan-042-canonical-recovery",
         "--work-branch",
         "work/001-canonical-recovery",
     ];
@@ -338,6 +367,29 @@ fn workflow_start_creates_a_canonical_scope_plan_and_resume_adopts_it() {
         .assert()
         .failure();
     assert!(!git::reference_exists(dir.path(), "work/001-canonical-recovery").unwrap());
+    let status_output = Command::cargo_bin("superdev")
+        .unwrap()
+        .current_dir(dir.path())
+        .args(["workflow", "status", "--json"])
+        .output()
+        .unwrap();
+    assert!(status_output.status.success());
+    let status: serde_json::Value = serde_json::from_slice(&status_output.stdout).unwrap();
+    assert_eq!(status["result"]["openWorkflows"], serde_json::json!([]));
+    git(&["branch", "work/001-canonical-recovery"]);
+    Command::cargo_bin("superdev")
+        .unwrap()
+        .current_dir(dir.path())
+        .env("SUPERDEV_UI_AUTHORITY", "0123456789abcdef0123456789abcdef")
+        .args(start.clone())
+        .assert()
+        .failure();
+    assert!(
+        git::working_paths(dir.path())
+            .unwrap()
+            .contains(&"knowledge/plans/open/plan-042-canonical-recovery.md".into())
+    );
+    git(&["branch", "-D", "work/001-canonical-recovery"]);
     Command::cargo_bin("superdev")
         .unwrap()
         .current_dir(dir.path())
@@ -349,9 +401,6 @@ fn workflow_start_creates_a_canonical_scope_plan_and_resume_adopts_it() {
         git::current_branch(dir.path()).unwrap(),
         "work/001-canonical-recovery"
     );
-    let plan = dir
-        .path()
-        .join("knowledge/plans/open/plan-001-canonical-recovery.md");
     assert!(plan.is_file());
     assert!(fs::read_to_string(&plan).unwrap().contains("phase: scope"));
     let revision = cache::load(dir.path()).unwrap().unwrap().last_plan_revision;
@@ -381,6 +430,7 @@ fn workflow_start_creates_a_canonical_scope_plan_and_resume_adopts_it() {
         .args(["workflow", "cancel", "--session", "pi-a"])
         .assert()
         .success();
+    git(&["switch", "-q", "main"]);
     let mut resume = vec!["workflow", "resume"];
     resume.extend([
         "--session",
@@ -388,7 +438,7 @@ fn workflow_start_creates_a_canonical_scope_plan_and_resume_adopts_it() {
         "--issue",
         "issue-001-canonical-recovery",
         "--plan",
-        "plan-001-canonical-recovery",
+        "plan-042-canonical-recovery",
         "--work-branch",
         "work/001-canonical-recovery",
     ]);
@@ -404,36 +454,30 @@ fn workflow_start_creates_a_canonical_scope_plan_and_resume_adopts_it() {
     let scoped = fs::read_to_string(&plan)
         .unwrap()
         .replace(
-            "SCOPE must replace this initial recovery-safe draft with settled requirements before approval.",
+            "Settle requirements in SCOPE.",
             "Implement one tested source checkpoint.",
         )
         .replace(
-            "SCOPE must identify the exact source declarations and materialized interfaces.",
+            "Settle source surfaces in SCOPE.",
             "Add `src/lib.rs`; no generated interface changes.",
         )
         .replace(
-            "SCOPE must identify normative and current-state knowledge changes.",
+            "Maintain this issue and plan.",
             "Update only this canonical plan.",
         )
         .replace(
-            "SCOPE must map applicable surfaces from the canonical documentation map.",
+            "Settle documentation in SCOPE.",
             "No user-observable documentation surface is affected.",
         )
-        .replace("- Areas: to be settled by SCOPE.", "- Areas: `src`.")
+        .replace("- Areas: pending SCOPE.", "- Areas: `src`.")
+        .replace("- Verification: pending SCOPE.", "- Verification: `true`.")
+        .replace("- Tests: pending SCOPE.", "- Tests: `true`.")
         .replace(
-            "- Verification: executable commands must be settled by SCOPE.",
-            "- Verification: `true`.",
-        )
-        .replace(
-            "- Tests: executable contract evidence must be settled by SCOPE.",
-            "- Tests: `true`.",
-        )
-        .replace(
-            "- Structural evidence: executable structural evidence must be settled by SCOPE.",
+            "- Structural evidence: pending SCOPE.",
             "- Structural evidence: `true`.",
         )
         .replace(
-            "- Documentation: applicable surfaces and commands must be settled by SCOPE.",
+            "- Documentation: pending SCOPE.",
             "- Documentation: none; no user-observable change.",
         );
     fs::write(&plan, &scoped).unwrap();
@@ -885,7 +929,7 @@ fn workflow_start_creates_a_canonical_scope_plan_and_resume_adopts_it() {
         .unwrap();
     let paths = String::from_utf8(paths.stdout).unwrap();
     assert!(paths.contains("src/lib.rs"));
-    assert!(paths.contains("knowledge/plans/open/plan-001-canonical-recovery.md"));
+    assert!(paths.contains("knowledge/plans/open/plan-042-canonical-recovery.md"));
     let checkpointed = fs::read_to_string(&plan).unwrap();
     assert!(checkpointed.contains("Attempts: 0."));
     assert!(checkpointed.contains("Fingerprint: none."));
@@ -1010,7 +1054,7 @@ fn workflow_start_creates_a_canonical_scope_plan_and_resume_adopts_it() {
             .args([
                 "cat-file",
                 "-e",
-                "main:knowledge/plans/done/plan-001-canonical-recovery.md",
+                "main:knowledge/plans/done/plan-042-canonical-recovery.md",
             ])
             .current_dir(accepted.path())
             .status()
@@ -1505,7 +1549,7 @@ fn workflow_start_creates_a_canonical_scope_plan_and_resume_adopts_it() {
     let default_plan = std::process::Command::new("git")
         .args([
             "show",
-            "main:knowledge/plans/abandoned/plan-001-canonical-recovery.md",
+            "main:knowledge/plans/abandoned/plan-042-canonical-recovery.md",
         ])
         .current_dir(dir.path())
         .output()
