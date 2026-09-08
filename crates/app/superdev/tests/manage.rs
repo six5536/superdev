@@ -1018,7 +1018,9 @@ fn workflow_start_creates_a_canonical_scope_plan_and_resume_adopts_it() {
             .success()
     );
 
-    for cycle in 1..=3 {
+    // The first finding schedules a correction without consuming the budget. Each
+    // subsequent complete valid review consumes the preceding correction cycle.
+    for cycle in 1..=4 {
         let owner = cache::load(dir.path()).unwrap().unwrap();
         let candidate = git::revision(dir.path(), "HEAD").unwrap();
         Command::cargo_bin("superdev")
@@ -1060,7 +1062,11 @@ fn workflow_start_creates_a_canonical_scope_plan_and_resume_adopts_it() {
             ])
             .assert()
             .success();
-        if cycle <= 2 {
+        assert!(fs::read_to_string(&plan).unwrap().contains(&format!(
+            "Final corrections: {}.",
+            cycle - 1
+        )));
+        if cycle <= 3 {
             let correction_owner = cache::load(dir.path()).unwrap().unwrap();
             if cycle == 1 {
                 let pending_candidate = git::revision(dir.path(), "HEAD").unwrap();
@@ -1131,7 +1137,7 @@ fn workflow_start_creates_a_canonical_scope_plan_and_resume_adopts_it() {
             assert!(
                 fs::read_to_string(&plan)
                     .unwrap()
-                    .contains("Blocker: none.")
+                    .contains("Blocker: final correction awaiting review.")
             );
         }
     }
@@ -1159,30 +1165,7 @@ fn workflow_start_creates_a_canonical_scope_plan_and_resume_adopts_it() {
             &candidate,
         ])
         .assert()
-        .success();
-    let verified = cache::load(dir.path()).unwrap().unwrap();
-    let before_refusal = git::revision(dir.path(), "HEAD").unwrap();
-    Command::cargo_bin("superdev")
-        .unwrap()
-        .current_dir(dir.path())
-        .env("SUPERDEV_UI_AUTHORITY", "fedcba9876543210fedcba9876543210")
-        .args([
-            "workflow",
-            "correction",
-            "--session",
-            "pi-b",
-            "--expected-revision",
-            &verified.last_plan_revision,
-            "--candidate",
-            &candidate,
-            "--review-session",
-            "review-final-exhausted",
-            "--summary",
-            "Must not exceed project policy",
-        ])
-        .assert()
         .failure();
-    assert_eq!(git::revision(dir.path(), "HEAD").unwrap(), before_refusal);
 
     Command::cargo_bin("superdev")
         .unwrap()

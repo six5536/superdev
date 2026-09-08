@@ -1327,19 +1327,18 @@ fn record_correction(root: &Path, args: &CorrectionArgs) -> Result<u8> {
         })?;
         let mut state = parse_retry_state(build_state_line(&text)?)?;
         let config = Manifest::load(root)?.workflow;
-        if state.final_corrections >= config.max_final_correction_cycles {
+        if state.blocker == "final correction awaiting review" {
+            state.final_corrections += 1;
+        } else if state.blocker != "none" {
             return Err(Error::Manifest {
-                message: "configured final correction limit is already exhausted".into(),
+                message: "the previous final-correction cycle is not ready for review accounting"
+                    .into(),
             });
         }
-        state.final_corrections += 1;
         state.blocker = if state.final_corrections >= config.max_final_correction_cycles {
             format!("final correction limit exhausted: {summary}")
         } else {
-            format!(
-                "final correction {} required: {summary}",
-                state.final_corrections
-            )
+            format!("final correction pending: {summary}")
         };
         apply_plan_edits_transactionally(
             root,
@@ -1402,10 +1401,7 @@ fn record_correction_checkpoint(root: &Path, args: &RevisionArgs) -> Result<u8> 
             source,
         })?;
         let retry_state = parse_retry_state(build_state_line(&text)?)?;
-        if retry_state.final_corrections == 0
-            || !retry_state.blocker.starts_with("final correction ")
-            || !retry_state.blocker.contains(" required:")
-        {
+        if !retry_state.blocker.starts_with("final correction pending:") {
             return Err(Error::Manifest {
                 message: "no failed final gate is awaiting an implementation correction".into(),
             });
@@ -1443,7 +1439,7 @@ fn record_correction_checkpoint(root: &Path, args: &RevisionArgs) -> Result<u8> 
             .to_string_lossy()
             .to_string();
         let mut corrected_state = retry_state.clone();
-        corrected_state.blocker = "none".into();
+        corrected_state.blocker = "final correction awaiting review".into();
         apply_plan_edits_transactionally(
             root,
             &plan_path,
@@ -1457,7 +1453,7 @@ fn record_correction_checkpoint(root: &Path, args: &RevisionArgs) -> Result<u8> 
             root,
             &format!(
                 "fix(workflow): checkpoint final correction {}",
-                retry_state.final_corrections
+                retry_state.final_corrections + 1
             ),
             &areas,
         )?;
@@ -1690,8 +1686,10 @@ fn record_evidence_locked(
         ),
         EvidenceKindName::Verification if record.phase == "build" => {
             let retry_state = parse_retry_state(build_state_line(&text)?)?;
-            if retry_state.blocker.starts_with("final correction ")
-                && retry_state.blocker.contains(" required:")
+            if retry_state.blocker.starts_with("final correction pending:")
+                || retry_state
+                    .blocker
+                    .starts_with("final correction limit exhausted:")
             {
                 return Err(Error::Manifest {
                     message:
@@ -1784,6 +1782,20 @@ fn record_evidence_locked(
     }
     let mut edits = vec![completion_evidence_edit(&text, &lines)?];
     let commit_message = if matches!(args.kind, EvidenceKindName::Final) {
+        let mut retry_state = parse_retry_state(build_state_line(&text)?)?;
+        if retry_state.blocker == "final correction awaiting review" {
+            retry_state.final_corrections += 1;
+            retry_state.blocker = "none".into();
+            edits.push(ExactEdit {
+                old_text: build_state_line(&text)?.into(),
+                new_text: render_retry_state(&retry_state),
+            });
+        } else if retry_state.blocker != "none" {
+            return Err(Error::Manifest {
+                message: "BUILD cannot complete while a final correction is pending or exhausted"
+                    .into(),
+            });
+        }
         edits.push(ExactEdit {
             old_text: "phase: build".into(),
             new_text: "phase: accept".into(),
@@ -2069,7 +2081,7 @@ fn transition_locked(
         let old_retry = build_state_line(&plan_text)?;
         let mut reset_retry = parse_retry_state(old_retry)?;
         reset_retry.final_corrections = 0;
-        if reset_retry.blocker == "final correction limit exhausted" {
+        if reset_retry.blocker.starts_with("final correction ") {
             reset_retry.blocker = "none".into();
         }
         let new_retry = render_retry_state(&reset_retry);
