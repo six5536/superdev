@@ -14,9 +14,10 @@ async function smoke() {
 	const commands: string[] = [];
 	const tools: string[] = [];
 	const toolDefinitions = new Map<string, any>();
+	const eventHandlers = new Map<string, any>();
 	const fake = {
-		on() {
-			// Registration is enough for this load smoke.
+		on(name: string, handler: any) {
+			eventHandlers.set(name, handler);
 		},
 		registerCommand(name: string) {
 			commands.push(name);
@@ -27,6 +28,10 @@ async function smoke() {
 		},
 	};
 	superdev(fake as never);
+	const discovered = await eventHandlers.get("resources_discover")?.({ cwd: "/repo", reason: "startup" }, {});
+	if (!discovered?.skillPaths?.some((path: string) => path.endsWith("/.pi/extensions/superdev/skills"))) {
+		throw new Error("workflow skills were not discovered from inside the Superdev extension");
+	}
 	for (const removed of ["scope", "build", "accept"]) {
 		if (commands.includes(removed)) throw new Error(`legacy phase command ${removed} remains public`);
 	}

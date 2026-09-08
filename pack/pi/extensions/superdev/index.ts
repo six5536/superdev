@@ -387,6 +387,7 @@ export async function runGuardedBuildCommand(exec: BuildExec, command: string, a
 }
 
 export default function superdev(pi: ExtensionAPI) {
+	pi.on("resources_discover", () => ({ skillPaths: [resolve(here, "skills")] }));
 	const childRoleValue = process.env.SUPERDEV_CHILD_ROLE;
 	const childRole = childRoleValue && ["scope", "requirements-review", "build", "code-review", "accept", "file"].includes(childRoleValue)
 		? childRoleValue as Role

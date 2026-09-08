@@ -231,6 +231,8 @@ fn a_failed_init_reports_the_manifest_it_leaves_behind() {
     sb.superdev().arg("sync").assert().success();
 }
 
+/// contract-011-interface-workflow P_extension-skills
+/// contract-011-interface-workflow P_skill-cold-start
 #[test]
 fn init_materializes_pi_workflow_without_claude_assets() {
     let sb = Sandbox::new();
@@ -250,9 +252,9 @@ fn init_materializes_pi_workflow_without_claude_assets() {
         ".pi/extensions/superdev/prompts/accept.md",
         ".pi/extensions/superdev/prompts/file.md",
         ".pi/skills/sokf-authoring/SKILL.md",
-        ".pi/skills/scope/SKILL.md",
-        ".pi/skills/build/SKILL.md",
-        ".pi/skills/accept/SKILL.md",
+        ".pi/extensions/superdev/skills/scope/SKILL.md",
+        ".pi/extensions/superdev/skills/build/SKILL.md",
+        ".pi/extensions/superdev/skills/accept/SKILL.md",
     ] {
         assert!(repo.join(path).is_file(), "{path} was not materialized");
     }
@@ -262,9 +264,12 @@ fn init_materializes_pi_workflow_without_claude_assets() {
     assert!(lock.contains(".pi/extensions/superdev/index.ts"));
     assert!(lock.contains(".pi/extensions/superdev/lib/phases.ts"));
     assert!(lock.contains(".pi/skills/sokf-authoring/SKILL.md"));
-    assert!(lock.contains(".pi/skills/scope/SKILL.md"));
-    assert!(lock.contains(".pi/skills/build/SKILL.md"));
-    assert!(lock.contains(".pi/skills/accept/SKILL.md"));
+    assert!(lock.contains(".pi/extensions/superdev/skills/scope/SKILL.md"));
+    assert!(lock.contains(".pi/extensions/superdev/skills/build/SKILL.md"));
+    assert!(lock.contains(".pi/extensions/superdev/skills/accept/SKILL.md"));
+    assert!(!repo.join(".pi/skills/scope").exists());
+    assert!(!repo.join(".pi/skills/build").exists());
+    assert!(!repo.join(".pi/skills/accept").exists());
     assert!(!lock.contains(".claude/skills"));
     assert!(!lock.contains("superdev hook run"));
     for (skill, command) in [
@@ -272,50 +277,59 @@ fn init_materializes_pi_workflow_without_claude_assets() {
         ("build", "/skill:build"),
         ("accept", "/skill:accept"),
     ] {
-        let text = sb.read(&format!(".pi/skills/{skill}/SKILL.md"));
+        let text = sb.read(&format!(".pi/extensions/superdev/skills/{skill}/SKILL.md"));
         assert!(text.contains("disable-model-invocation: true"));
         assert!(text.contains("superdev_run_phase"));
         assert!(text.contains(command));
         assert!(text.contains("Examples:"));
     }
-    let scope_skill = sb.read(".pi/skills/scope/SKILL.md");
+    let scope_skill = sb.read(".pi/extensions/superdev/skills/scope/SKILL.md");
     for instruction in [
-        "semantic user intent",
-        "If no suitable linked plan exists",
-        "Keep issue and plan IDs independent",
-        "Discuss one question at a time",
-        "Confirm, Revise, or Cancel",
+        "Assume no workflow conversation is present in context",
+        "Call `superdev_run_phase` with `phase: \"scope\"` and `action: \"inspect\"",
+        "If the issue exists but no suitable linked plan exists",
+        "Never derive a plan ID from an issue ID",
+        "Discuss one unresolved decision at a time",
+        "Confirm**, **Revise**, or **Cancel",
     ] {
         assert!(
             scope_skill.contains(instruction),
             "SCOPE skill omitted `{instruction}`"
         );
     }
-    let build_skill = sb.read(".pi/skills/build/SKILL.md");
-    assert!(build_skill.contains("instead of silently expanding BUILD"));
-    let accept_skill = sb.read(".pi/skills/accept/SKILL.md");
-    assert!(accept_skill.contains("destination `build` or `scope`"));
+    let build_skill = sb.read(".pi/extensions/superdev/skills/build/SKILL.md");
+    assert!(build_skill.contains("Assume no earlier SCOPE or BUILD conversation is present"));
+    assert!(build_skill.contains("before taking any action"));
+    assert!(build_skill.contains("recommend `/skill:scope <requested change>`"));
+    let accept_skill = sb.read(".pi/extensions/superdev/skills/accept/SKILL.md");
+    assert!(accept_skill.contains("Assume no earlier workflow discussion is present"));
+    assert!(accept_skill.contains("before taking any action"));
+    assert!(accept_skill.contains("destination: \"build\""));
+    assert!(accept_skill.contains("destination: \"scope\""));
 
     let retired = b"retired managed workflow skill\n";
     let retired_path = repo.join(".claude/skills/build/SKILL.md");
+    let retired_project_skill = repo.join(".pi/skills/scope/SKILL.md");
     fs::create_dir_all(retired_path.parent().unwrap()).unwrap();
+    fs::create_dir_all(retired_project_skill.parent().unwrap()).unwrap();
     fs::write(&retired_path, retired).unwrap();
+    fs::write(&retired_project_skill, retired).unwrap();
+    let retired_hash = superdev_core::lock::sha256_hex(retired);
     let mut old_lock = lock;
     old_lock = old_lock.replacen(
         "[files]\n",
         &format!(
-            "[files]\n\".claude/skills/build/SKILL.md\" = \"{}\"\n",
-            superdev_core::lock::sha256_hex(retired)
+            "[files]\n\".claude/skills/build/SKILL.md\" = \"{retired_hash}\"\n\".pi/skills/scope/SKILL.md\" = \"{retired_hash}\"\n"
         ),
         1,
     );
     sb.write(".superdev/lock.toml", &old_lock);
     sb.superdev().arg("sync").assert().success();
     assert!(!retired_path.exists());
-    assert!(
-        !sb.read(".superdev/lock.toml")
-            .contains(".claude/skills/build")
-    );
+    assert!(!retired_project_skill.exists());
+    let converged_lock = sb.read(".superdev/lock.toml");
+    assert!(!converged_lock.contains(".claude/skills/build"));
+    assert!(!converged_lock.contains(".pi/skills/scope"));
 }
 
 #[test]
