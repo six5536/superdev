@@ -107,7 +107,7 @@ const defaultOutputPolicy: OutputPolicy = {
 	retentionHours: 24,
 };
 
-async function isolated(
+export async function isolated(
 	role: Input["role"],
 	task: string,
 	cwd: string,
@@ -159,8 +159,47 @@ async function isolated(
 		let stderrTail = "";
 		let submission: unknown;
 		let submissions = 0;
+		let submissionStarts = 0;
+		let submissionEnds = 0;
+		let submissionErrors = 0;
+		let stdoutBytes = 0;
+		let parsedEvents = 0;
+		let malformedLines = 0;
+		let assistantEnds = 0;
+		let lastAssistantStopReason: string | undefined;
+		let lastEventType: string | undefined;
+		const eventCounts: Record<string, number> = {};
+		const toolStarts: Record<string, number> = {};
+		const submissionDiagnostics: string[] = [];
+		const startedAt = Date.now();
 		let settled = false;
 		let timedOut = false;
+		const increment = (counts: Record<string, number>, raw: unknown) => {
+			const key = String(raw ?? "unknown").replace(/[^a-zA-Z0-9_.-]/g, "_").slice(0, 80) || "unknown";
+			if (Object.hasOwn(counts, key) || Object.keys(counts).length < 40) counts[key] = (counts[key] ?? 0) + 1;
+		};
+		const writeDiagnostic = async (outcome: string, code: number | null, error?: unknown) => artifact.writeDiagnostic({
+			version: 1,
+			role,
+			outcome,
+			exitCode: code,
+			timedOut,
+			cancelled: Boolean(signal?.aborted),
+			startedAt: new Date(startedAt).toISOString(),
+			finishedAt: new Date().toISOString(),
+			elapsedMs: Date.now() - startedAt,
+			stdoutBytes,
+			parsedEvents,
+			malformedLines,
+			eventCounts,
+			toolStarts,
+			assistantEnds,
+			...(lastAssistantStopReason ? { lastAssistantStopReason } : {}),
+			lastEventType,
+			submission: { starts: submissionStarts, ends: submissionEnds, successful: submissions, errors: submissionErrors, payloadPresent: submission !== undefined, diagnostics: submissionDiagnostics },
+			stderr: { ...artifact.stderrSummary(), path: artifact.stderrPath },
+			...(error === undefined ? {} : { error: String(error).slice(0, 2_048) }),
+		});
 		const finish = (operation: () => Promise<void>) => {
 			if (settled) return;
 			settled = true;
@@ -171,15 +210,32 @@ async function isolated(
 		const consume = (line: string) => {
 			if (!line.trim()) return;
 			let event: any;
-			try { event = JSON.parse(line); } catch { return; }
+			try { event = JSON.parse(line); } catch { malformedLines += 1; return; }
+			parsedEvents += 1;
+			lastEventType = String(event.type ?? "unknown").slice(0, 80);
+			increment(eventCounts, event.type);
+			if (event.type === "message_end" && event.message?.role === "assistant") {
+				assistantEnds += 1;
+				if (typeof event.message.stopReason === "string") lastAssistantStopReason = event.message.stopReason.slice(0, 160);
+			}
 			if (event.type === "tool_execution_start") {
+				increment(toolStarts, event.toolName);
+				if (event.toolName === "superdev_submit_result") submissionStarts += 1;
 				const path = typeof event.args?.path === "string" ? event.args.path : "";
 				const target = path && !isAbsolute(path) && !path.split(/[\\/]/).includes("..") ? ` ${path.slice(0, 160)}` : "";
 				onActivity?.(`${String(event.toolName ?? "tool").replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 80)}${target}`);
 			}
-			if (event.type === "tool_execution_end" && event.toolName === "superdev_submit_result" && !event.isError) {
-				submissions += 1;
-				submission = event.result?.details?.superdevResult;
+			if (event.type === "tool_execution_end" && event.toolName === "superdev_submit_result") {
+				submissionEnds += 1;
+				if (event.isError) {
+					submissionErrors += 1;
+					const diagnostic = JSON.stringify(event.result?.content ?? event.error ?? "submission tool returned an error");
+					submissionDiagnostics.push(diagnostic.slice(0, 2_048));
+				} else {
+					submissions += 1;
+					submission = event.result?.details?.superdevResult;
+					if (submission === undefined) submissionDiagnostics.push("successful submission event omitted details.superdevResult");
+				}
 			}
 		};
 		const stop = () => stopProcess(child);
@@ -188,13 +244,15 @@ async function isolated(
 		child.stdout.setEncoding("utf8");
 		child.stderr.setEncoding("utf8");
 		child.stdout.on("data", (chunk: string) => {
+			stdoutBytes += Buffer.byteLength(chunk);
 			pending += chunk;
 			if (Buffer.byteLength(pending) > policy.maxArtifactBytes) {
 				stop();
 				return finish(async () => {
 					await onClose?.(child);
 					await artifact.finishStderr();
-					reject(new Error(`isolated-output-overflow: ${role} emitted an over-cap event`));
+					await writeDiagnostic("stdout-overflow", null, `${role} emitted an over-cap event`);
+					reject(new Error(`isolated-output-overflow: ${role} emitted an over-cap event; diagnostics: ${artifact.diagnosticPath}`));
 				});
 			}
 			let newline;
@@ -210,26 +268,46 @@ async function isolated(
 			}
 			stderrTail = (stderrTail + chunk).slice(-Math.max(policy.maxContextBytes * 2, 16_384));
 		});
-		child.on("error", (error) => finish(async () => { await onClose?.(child); await artifact.finishStderr(); reject(error); }));
+		child.on("error", (error) => finish(async () => {
+			await onClose?.(child);
+			await artifact.finishStderr();
+			await writeDiagnostic("spawn-error", null, error);
+			reject(new Error(`${String(error)}; diagnostics: ${artifact.diagnosticPath}`));
+		}));
 		child.on("close", (code) => finish(async () => {
 			await onClose?.(child);
 			if (pending) consume(pending);
 			await artifact.finishStderr();
-			if (timedOut) return reject(new Error(`isolated role timed out after ${policyTimeoutMs(policy) / 1_000}s; diagnostics: ${artifact.stderrPath}`));
-			if (signal?.aborted) return reject(new Error(`isolated ${role} role was cancelled; diagnostics: ${artifact.stderrPath}`));
+			if (timedOut) {
+				await writeDiagnostic("timeout", code, `timed out after ${policyTimeoutMs(policy) / 1_000}s`);
+				return reject(new Error(`isolated role timed out after ${policyTimeoutMs(policy) / 1_000}s; diagnostics: ${artifact.diagnosticPath}`));
+			}
+			if (signal?.aborted) {
+				await writeDiagnostic("cancelled", code, `${role} role was cancelled`);
+				return reject(new Error(`isolated ${role} role was cancelled; diagnostics: ${artifact.diagnosticPath}`));
+			}
 			if (code !== 0) {
 				const diagnostic = boundedText(stderrTail.trim() || `${role} exited ${code}`, policy, "tail", artifact.stderrPath);
-				return reject(new Error(diagnostic));
+				await writeDiagnostic("nonzero-exit", code, diagnostic);
+				return reject(new Error(`${diagnostic}; diagnostics: ${artifact.diagnosticPath}`));
 			}
-			if (submissions !== 1 || submission === undefined) return reject(new Error(`${role} must submit exactly one typed terminal result`));
+			if (submissions !== 1 || submission === undefined) {
+				const reason = submissions !== 1 ? `observed ${submissions} successful terminal submissions` : "successful submission omitted its typed payload";
+				await writeDiagnostic("terminal-protocol-failure", code, reason);
+				return reject(new Error(`${role} must submit exactly one typed terminal result (${reason}); diagnostics: ${artifact.diagnosticPath}`));
+			}
 			try {
 				const result = validateRoleResult(role, submission, {
 					maxBytes: policy.maxReviewStateBytes ?? 262_144,
 					maxFindings: policy.maxReviewFindings ?? 100,
 				});
 				await artifact.writeResult(result);
+				await writeDiagnostic("complete", code);
 				accept({ ...result, artifactPath: artifact.resultPath });
-			} catch (error) { reject(error); }
+			} catch (error) {
+				await writeDiagnostic("invalid-terminal-result", code, error);
+				reject(new Error(`${String(error)}; diagnostics: ${artifact.diagnosticPath}`));
+			}
 		}));
 		if (signal) {
 			if (signal.aborted) stop(); else signal.addEventListener("abort", stop, { once: true });

@@ -23,6 +23,7 @@ export class IsolatedArtifact {
 	readonly directory: string;
 	readonly stderrPath: string;
 	readonly resultPath: string;
+	readonly diagnosticPath: string;
 	private stream: WriteStream;
 	private stderrBytes = 0;
 	private discardedStderrBytes = 0;
@@ -33,6 +34,7 @@ export class IsolatedArtifact {
 		this.limit = limit;
 		this.stderrPath = join(directory, "stderr.log");
 		this.resultPath = join(directory, "result.json");
+		this.diagnosticPath = join(directory, "diagnostic.json");
 		this.stream = createWriteStream(this.stderrPath, { flags: "wx", mode: 0o600 });
 		this.stream.on("error", (error) => { this.streamError = error; });
 	}
@@ -80,6 +82,14 @@ export class IsolatedArtifact {
 			});
 		}
 		if (this.streamError) throw this.streamError;
+	}
+
+	async writeDiagnostic(value: unknown): Promise<number> {
+		const bytes = Buffer.from(JSON.stringify(value, null, 2));
+		const diagnosticLimit = Math.min(this.limit, 65_536);
+		if (bytes.length > diagnosticLimit) throw new Error(`isolated-output-overflow: diagnostic exceeded ${diagnosticLimit} bytes`);
+		await writeFile(this.diagnosticPath, bytes, { flag: "wx", mode: 0o600 });
+		return bytes.length;
 	}
 
 	async writeResult(value: unknown): Promise<number> {

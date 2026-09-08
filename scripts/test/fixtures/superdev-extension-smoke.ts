@@ -1,7 +1,9 @@
 import { createHash } from "node:crypto";
-import { readFile, rm, stat } from "node:fs/promises";
+import { chmod, mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { dirname, join } from "node:path";
 
-import superdev, { buildCommandAllowed, isolatedRoleMayNotRun, isolatedTools, parseRoleResult, requiresHumanAcceptance, runGuardedBuildCommand, runPinnedSuperdev } from "../../../.pi/extensions/superdev/index.ts";
+import superdev, { buildCommandAllowed, isolated, isolatedRoleMayNotRun, isolatedTools, parseRoleResult, requiresHumanAcceptance, runGuardedBuildCommand, runPinnedSuperdev } from "../../../.pi/extensions/superdev/index.ts";
 import { IsolatedArtifact, boundedText } from "../../../.pi/extensions/superdev/lib/output.ts";
 import { registerPhaseDrivers, type PhaseRuntime } from "../../../.pi/extensions/superdev/lib/phases.ts";
 import { withProgress } from "../../../.pi/extensions/superdev/lib/progress.ts";
@@ -123,6 +125,31 @@ export default async function smoke() {
 		}
 	} finally {
 		await rm(artifact.directory, { recursive: true, force: true });
+	}
+	const fakePiDirectory = await mkdtemp(join(tmpdir(), "superdev-fake-pi-"));
+	const fakePi = join(fakePiDirectory, "pi");
+	const originalPath = process.env.PATH;
+	let diagnosticDirectory: string | undefined;
+	try {
+		await writeFile(fakePi, `#!/usr/bin/env node\nconsole.log(JSON.stringify({type:"message_end",message:{role:"assistant",stopReason:"stop"}}));\nconsole.log(JSON.stringify({type:"tool_execution_start",toolName:"superdev_submit_result",args:{status:"complete"}}));\nconsole.log(JSON.stringify({type:"tool_execution_end",toolName:"superdev_submit_result",isError:true,result:{content:[{type:"text",text:"summary is required"}]}}));\n`, { mode: 0o700 });
+		await chmod(fakePi, 0o700);
+		process.env.PATH = `${fakePiDirectory}:${originalPath ?? ""}`;
+		try {
+			await isolated("scope", "exercise diagnostic capture", process.cwd());
+			throw new Error("invalid terminal submission was accepted");
+		} catch (error) {
+			const match = String(error).match(/diagnostics: (\/[^\s]+)/);
+			if (!match) throw error;
+			diagnosticDirectory = dirname(match[1]);
+			const diagnostic = JSON.parse(await readFile(match[1], "utf8"));
+			if (diagnostic.outcome !== "terminal-protocol-failure" || diagnostic.submission.starts !== 1 || diagnostic.submission.ends !== 1 || diagnostic.submission.errors !== 1 || diagnostic.assistantEnds !== 1) {
+				throw new Error("isolated terminal diagnostics omitted lifecycle evidence");
+			}
+		}
+	} finally {
+		process.env.PATH = originalPath;
+		await rm(fakePiDirectory, { recursive: true, force: true });
+		if (diagnosticDirectory) await rm(diagnosticDirectory, { recursive: true, force: true });
 	}
 	const questionTools = new Map<string, any>();
 	const entries: any[] = [];
