@@ -17,9 +17,9 @@ export function registerPhaseDrivers(deps: any) {
 	const hasPendingQuestions = () => ["active", "paused"].includes(questions.current?.()?.status ?? "");
 	const requestedIssueNumber = (request: string): number | undefined => {
 		const explicit = request.match(/\bissue[\s#:_-]*0*(\d{1,6})\b/i);
-		const bare = request.trim().match(/^#?0*(\d{1,6})$/);
-		const value = explicit?.[1] ?? bare?.[1];
-		return value ? Number(value) : undefined;
+		if (explicit?.[1]) return Number(explicit[1]);
+		const numbers = [...request.matchAll(/\b0*(\d{1,6})\b/g)];
+		return numbers.length === 1 ? Number(numbers[0][1]) : undefined;
 	};
 	const issueNumber = (id: string): number | undefined => {
 		const match = id.match(/^issue-0*(\d+)(?:-|$)/i);
