@@ -28,7 +28,8 @@ export function registerPhaseDrivers(deps: any) {
 			ctx.ui.notify(`human-input-required: ${phase} interrupted; partial work was preserved. Resume explicitly. ${diagnostic}`, "error");
 			return false;
 		}
-		const action = await ctx.ui.select(`${phase} interrupted; partial work was preserved`, ["Retry phase", "Discuss", "Cancel workflow"]);
+		const diagnosticSummary = diagnostic.replace(/\s+/g, " ").slice(0, 1_000);
+		const action = await ctx.ui.select(`${phase} interrupted; partial work was preserved\nCause: ${diagnosticSummary}`, ["Retry phase", "Discuss", "Cancel workflow"]);
 		if (action !== "Retry phase" || !workflow) {
 			ctx.ui.notify(action === "Discuss" ? `${phase} remains paused for discussion. ${diagnostic}` : `${phase} remains paused; automatic retry is disabled. ${diagnostic}`, "error");
 			return false;
