@@ -112,6 +112,11 @@ A reviewer reads every line to extract meaning; efficient work requires efficien
 <rule level="MUST NOT">change behaviour and tests in the same breath to make a suite go green.
   Fix the code, or change the test deliberately and say why.</rule>
 </rules>
+
+<file_size_limits>
+Any code file exceeding 800 lines MUST be split logically into multiple files unless impossible.
+</file_size_limits>
+
 </coding>
 </core_principles>
 
