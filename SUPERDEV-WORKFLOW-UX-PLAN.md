@@ -1,6 +1,6 @@
 # Superdev workflow UX repair plan
 
-**Status:** Under human design review. Implementation is not approved.
+**Status:** Approved and substantially implemented. Final handler-level fixture coverage and manual Pi UX verification remain open.
 
 ## Purpose
 

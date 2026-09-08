@@ -113,7 +113,7 @@ async function isolated(
 	model?: { provider: string; id: string },
 	signal?: AbortSignal,
 	onSpawn?: (child: ChildProcess) => void,
-	onClose?: (child: ChildProcess) => void,
+	onClose?: (child: ChildProcess) => void | Promise<void>,
 	base?: string,
 	candidate?: string,
 	trustedExecutable?: string,
@@ -165,7 +165,7 @@ async function isolated(
 			settled = true;
 			clearTimeout(timeout);
 			signal?.removeEventListener("abort", stop);
-			void operation();
+			void operation().catch((error) => reject(error));
 		};
 		const consume = (line: string) => {
 			if (!line.trim()) return;
@@ -190,7 +190,7 @@ async function isolated(
 			if (Buffer.byteLength(pending) > policy.maxArtifactBytes) {
 				stop();
 				return finish(async () => {
-					onClose?.(child);
+					await onClose?.(child);
 					await artifact.finishStderr();
 					reject(new Error(`isolated-output-overflow: ${role} emitted an over-cap event`));
 				});
@@ -205,9 +205,9 @@ async function isolated(
 			artifact.writeStderr(chunk);
 			stderrTail = (stderrTail + chunk).slice(-Math.max(policy.maxContextBytes * 2, 16_384));
 		});
-		child.on("error", (error) => finish(async () => { onClose?.(child); await artifact.finishStderr(); reject(error); }));
+		child.on("error", (error) => finish(async () => { await onClose?.(child); await artifact.finishStderr(); reject(error); }));
 		child.on("close", (code) => finish(async () => {
-			onClose?.(child);
+			await onClose?.(child);
 			if (pending) consume(pending);
 			await artifact.finishStderr();
 			if (timedOut) return reject(new Error(`isolated role timed out after ${policyTimeoutMs(policy) / 1_000}s; diagnostics: ${artifact.stderrPath}`));
@@ -491,6 +491,7 @@ export default function superdev(pi: ExtensionAPI) {
 		executable?: string;
 	};
 	let reviewStateLimit = 262_144;
+	let reviewFindingLimit = 100;
 	const workflowStatus = async (cwd: string): Promise<WorkflowStatus> => {
 		if (process.env.SUPERDEV_VERIFICATION_ACTIVE === "1") return {};
 		try {
@@ -501,6 +502,7 @@ export default function superdev(pi: ExtensionAPI) {
 			if (response.protocol !== "superdev-workflow/v2") throw new Error(`unsupported workflow protocol ${String(response.protocol)}`);
 			const status = response.result as WorkflowStatus;
 			reviewStateLimit = status.maxReviewStateBytes ?? reviewStateLimit;
+			reviewFindingLimit = status.maxReviewFindings ?? reviewFindingLimit;
 			status.executable = service.path;
 			return status;
 		} catch {
@@ -521,6 +523,7 @@ export default function superdev(pi: ExtensionAPI) {
 	let continueAcceptRequest: ((state: QuestionState, ctx: any) => Promise<void>) | undefined;
 	const questions = registerWorkflowQuestions(pi, {
 		maxBytes: () => reviewStateLimit,
+		maxFindings: () => reviewFindingLimit,
 		onPause: async (_state, ctx) => {
 			const status = await workflowStatus(ctx.cwd);
 			if (status.owner) await runSuperdev(["workflow", "cancel", "--session", status.owner.session_id], ctx.cwd, authority);
@@ -579,13 +582,17 @@ export default function superdev(pi: ExtensionAPI) {
 			.catch((error) => ctx.ui.notify(`Could not record child activity: ${String(error)}`, "warning"));
 		activityRegistrations.set(child, registration);
 	};
-	const childFinished = (ctx: any, child: ChildProcess) => {
+	const childFinished = async (ctx: any, child: ChildProcess) => {
 		children.delete(child);
 		if (modifyingChild === child) modifyingChild = undefined;
 		const registration = activityRegistrations.get(child) ?? Promise.resolve();
 		activityRegistrations.delete(child);
-		void registration.then(() => recordChildFinish(ctx.cwd, child.pid))
-			.catch((error) => ctx.ui.notify(`Could not clear child activity: ${String(error)}`, "warning"));
+		try {
+			await registration;
+			await recordChildFinish(ctx.cwd, child.pid);
+		} catch (error) {
+			ctx.ui.notify(`Could not clear child activity: ${String(error)}`, "warning");
+		}
 	};
 	const workflowOwner = async (cwd: string) => (await workflowStatus(cwd)).owner;
 	const protectOwnedWorkflow = async (ctx: { cwd: string; ui: { notify(message: string, level: "warning"): void } }) => {
@@ -829,14 +836,30 @@ export default function superdev(pi: ExtensionAPI) {
 			ctx.ui.notify(`Resumed ${workflow.plan} from canonical ${resumed.phase?.toUpperCase() ?? "workflow"} state`, "info");
 		},
 	});
-	const pauseAfterFailure = async (ctx: any, phase: string, error: unknown) => {
+	const pauseAfterFailure = async (ctx: any, phase: string, error: unknown): Promise<boolean> => {
 		const status = await workflowStatus(ctx.cwd);
+		const workflow = status.owner?.identity;
 		if (status.owner) {
 			try { await runSuperdev(["workflow", "cancel", "--session", status.owner.session_id], ctx.cwd, authority); }
 			catch { /* Preserve the original failure as the actionable diagnostic. */ }
 		}
 		ctx.ui.setStatus("superdev-workflow", undefined);
-		ctx.ui.notify(`${phase} interrupted; partial work was preserved and automatic retry is disabled. Resume explicitly. ${boundedText(String(error), policyFrom(status))}`, "error");
+		const diagnostic = boundedText(String(error), policyFrom(status));
+		if (!ctx.hasUI) {
+			ctx.ui.notify(`human-input-required: ${phase} interrupted; partial work was preserved. Resume explicitly. ${diagnostic}`, "error");
+			return false;
+		}
+		const action = await ctx.ui.select(`${phase} interrupted; partial work was preserved`, ["Retry phase", "Discuss", "Cancel workflow"]);
+		if (action !== "Retry phase" || !workflow) {
+			ctx.ui.notify(action === "Discuss" ? `${phase} remains paused for discussion. ${diagnostic}` : `${phase} remains paused; automatic retry is disabled. ${diagnostic}`, "error");
+			return false;
+		}
+		await runSuperdev([
+			"workflow", "resume", "--session", ctx.sessionManager.getSessionId(),
+			"--issue", workflow.issue, "--plan", workflow.plan,
+			"--work-branch", workflow.work_branch, "--default-branch", workflow.default_branch,
+		], ctx.cwd, authority);
+		return true;
 	};
 	let startBuildPhase: ((args: string, ctx: any) => Promise<void>) | undefined;
 	const runScopePhase = async (args: string, ctx: any, submitted?: QuestionState) => {
@@ -845,6 +868,7 @@ export default function superdev(pi: ExtensionAPI) {
 		const commandAbort = new AbortController();
 		modifyingCommandAbort = commandAbort;
 		let launchBuild = false;
+		let retryScope = false;
 		try {
 			let correction = submitted;
 			let cycle = submitted?.cycle ?? 0;
@@ -874,16 +898,24 @@ export default function superdev(pi: ExtensionAPI) {
 				const owner = status.owner;
 				if (!owner || status.phase !== "scope" || !status.canonicalPlanRevision || owner.session_id !== initial.owner.session_id) throw new Error("SCOPE ownership changed during isolated work");
 				const candidateResult = await pi.exec("git", ["rev-parse", "--verify", owner.identity.work_branch], { cwd: ctx.cwd });
+				const headBefore = await pi.exec("git", ["rev-parse", "HEAD"], { cwd: ctx.cwd });
 				const cleanBefore = await pi.exec("git", ["status", "--porcelain"], { cwd: ctx.cwd });
-				if (candidateResult.code !== 0 || cleanBefore.code !== 0 || cleanBefore.stdout.trim()) throw new Error("requirements review requires a clean immutable candidate");
 				const candidate = candidateResult.stdout.trim();
+				if (candidateResult.code !== 0 || headBefore.code !== 0 || cleanBefore.code !== 0 || cleanBefore.stdout.trim() || headBefore.stdout.trim() !== candidate) {
+					throw new Error("requirements review requires the clean immutable candidate at HEAD");
+				}
 				const reviewed = await withProgress(ctx, { key: "superdev-workflow", title: `SCOPE ${owner.identity.plan}`, stage: "requirements review" },
 					(signal, update) => isolated("requirements-review", `Review the complete immutable SCOPE candidate ${candidate} against baseline ${firstBase}.`, ctx.cwd, ctx.model, signal,
 						childStarted(ctx, status, "requirements-review"), (child) => childFinished(ctx, child), firstBase, candidate,
 						undefined, undefined, policyFrom(status), owner.session_id,
 						(activity) => update({ stage: "requirements review", activity })));
-				const cleanAfter = await pi.exec("git", ["status", "--porcelain"], { cwd: ctx.cwd });
-				if (cleanAfter.code !== 0 || cleanAfter.stdout.trim()) throw new Error("candidate changed during requirements review; result discarded");
+				const [headAfter, cleanAfter] = await Promise.all([
+					pi.exec("git", ["rev-parse", "HEAD"], { cwd: ctx.cwd }),
+					pi.exec("git", ["status", "--porcelain"], { cwd: ctx.cwd }),
+				]);
+				if (headAfter.code !== 0 || cleanAfter.code !== 0 || cleanAfter.stdout.trim() || headAfter.stdout.trim() !== candidate) {
+					throw new Error("candidate changed during requirements review; result discarded");
+				}
 				const completedCorrection = correction;
 				if (correction) { cycle += 1; correction = undefined; }
 				if (reviewed.status === "findings") {
@@ -916,7 +948,10 @@ export default function superdev(pi: ExtensionAPI) {
 				const revision = evidence.result?.last_plan_revision;
 				if (!revision) throw new Error("scope evidence response omitted the new plan revision");
 				reviewRuns.delete(reviewRun);
-				if (!ctx.hasUI) return ctx.ui.notify("human-input-required: reviewed SCOPE is awaiting approval", "warning");
+				if (!ctx.hasUI) {
+					await runSuperdev(["workflow", "cancel", "--session", owner.session_id], ctx.cwd, authority);
+					return ctx.ui.notify(`human-input-required: ${owner.identity.plan} SCOPE approval is pending; resume in an interactive session`, "warning");
+				}
 				const action = await ctx.ui.select("Reviewed SCOPE is clean", ["Approve and start BUILD", "Approve only", "Request changes", "Discuss", "Pause", "Abandon workflow"]);
 				if (!action || action === "Pause") {
 					await runSuperdev(["workflow", "cancel", "--session", owner.session_id], ctx.cwd, authority);
@@ -950,12 +985,12 @@ export default function superdev(pi: ExtensionAPI) {
 				break;
 			}
 		} catch (error) {
-			await pauseAfterFailure(ctx, "SCOPE", error);
-			return;
+			retryScope = await pauseAfterFailure(ctx, "SCOPE", error);
 		} finally {
 			if (modifyingCommandAbort === commandAbort) modifyingCommandAbort = undefined;
 			modifyingBusy = false;
 		}
+		if (retryScope) return runScopePhase(args, ctx, submitted);
 		if (launchBuild) {
 			if (!startBuildPhase) throw new Error("BUILD driver is unavailable");
 			await startBuildPhase("", ctx);
@@ -972,6 +1007,7 @@ export default function superdev(pi: ExtensionAPI) {
 			modifyingBusy = true;
 			const commandAbort = new AbortController();
 			modifyingCommandAbort = commandAbort;
+			let retryBuild = false;
 			try {
 			let instruction = args;
 			while (true) {
@@ -1083,12 +1119,12 @@ export default function superdev(pi: ExtensionAPI) {
 				return await runAcceptPhase("", ctx);
 			}
 			} catch (error) {
-				await pauseAfterFailure(ctx, "BUILD", error);
-				return;
+				retryBuild = await pauseAfterFailure(ctx, "BUILD", error);
 			} finally {
 				if (modifyingCommandAbort === commandAbort) modifyingCommandAbort = undefined;
 				modifyingBusy = false;
 			}
+			if (retryBuild) return runBuildPhase(args, ctx);
 	};
 	startBuildPhase = runBuildPhase;
 	pi.registerCommand("build", {
@@ -1102,7 +1138,8 @@ export default function superdev(pi: ExtensionAPI) {
 			if (!owner.candidate_revision || !owner.verified_default_revision) throw new Error("ACCEPT state is missing candidate-bound BUILD evidence");
 			const acceptHeadBefore = await pi.exec("git", ["rev-parse", "HEAD"], { cwd: ctx.cwd });
 			const acceptCleanBefore = await pi.exec("git", ["status", "--porcelain"], { cwd: ctx.cwd });
-			if (acceptHeadBefore.code !== 0 || acceptCleanBefore.code !== 0 || acceptCleanBefore.stdout.trim()) throw new Error("ACCEPT assessment requires a clean stable worktree");
+			if (acceptHeadBefore.code !== 0 || acceptCleanBefore.code !== 0 || acceptCleanBefore.stdout.trim()
+				|| acceptHeadBefore.stdout.trim() !== owner.candidate_revision) throw new Error("ACCEPT assessment requires the clean immutable candidate at HEAD");
 			const decision = await withProgress(ctx, { key: "superdev-workflow", title: `ACCEPT ${owner.identity.plan}`, stage: "assessment" },
 				(signal, update) => isolated(
 					"accept",
@@ -1127,20 +1164,33 @@ export default function superdev(pi: ExtensionAPI) {
 			}
 			if (decision.status === "findings") {
 				const requiresScope = decision.findings?.some((finding) => finding.classification === "requires-scope");
-				await runSuperdev([
+				const routed = await runSuperdev([
 					"workflow", "transition", "--session", owner.session_id,
 					"--expected-revision", owner.last_plan_revision, "--phase", "accept",
 					"--transition", requiresScope ? "reject-acceptance" : "return-to-build",
 					"--feedback", JSON.stringify(decision.findings),
-				], ctx.cwd, authority);
+				], ctx.cwd, authority) as { result?: { state?: { last_plan_revision?: string } } };
 				ctx.ui.setStatus("superdev-workflow", `${requiresScope ? "SCOPE" : "BUILD"}: ${owner.identity.plan}`);
 				ctx.ui.notify(`ACCEPT findings returned the workflow to ${requiresScope ? "SCOPE" : "BUILD"}`, "warning");
-				if (!requiresScope && startBuildPhase) {
+				if (requiresScope) {
+					const revision = routed.result?.state?.last_plan_revision;
+					if (!revision) throw new Error("ACCEPT-to-SCOPE routing omitted the new plan revision");
+					const substantive = (decision.findings ?? []).filter((finding) => finding.classification === "requires-scope").map((finding) => ({
+						...finding,
+						classification: "substantive" as const,
+						question: finding.question ?? `How should SCOPE resolve ${finding.summary}?`,
+						recommendation: finding.recommendation ?? "Choose the smallest intent change that resolves the acceptance defect.",
+					}));
+					const mechanical = (decision.findings ?? []).filter((finding) => finding.classification === "correctable-within-scope");
+					questions.begin({ version: 1, workflow: owner.identity.plan, candidate: revision, status: "active", findings: substantive, mechanicalFindings: mechanical, answers: {} });
+					return;
+				}
+				if (startBuildPhase) {
 					modifyingBusy = false;
 					modifyingCommandAbort = undefined;
 					return await startBuildPhase(`Correct this complete ACCEPT finding set: ${JSON.stringify(decision.findings)}`, ctx);
 				}
-				return;
+				throw new Error("BUILD driver is unavailable for ACCEPT correction");
 			}
 			if (decision.status !== "complete") return ctx.ui.notify(decision.summary, "error");
 			const currentDefault = await pi.exec("git", ["rev-parse", "--verify", owner.identity.default_branch], { cwd: ctx.cwd });
@@ -1156,9 +1206,16 @@ export default function superdev(pi: ExtensionAPI) {
 			}
 			const humanAcceptanceRequired = requiresHumanAcceptance(status.humanAcceptanceRequired);
 			if (humanAcceptanceRequired) {
-				if (!ctx.hasUI) return ctx.ui.notify("human-input-required: ACCEPT decision is pending", "warning");
+				if (!ctx.hasUI) {
+					await runSuperdev(["workflow", "cancel", "--session", owner.session_id], ctx.cwd, authority);
+					return ctx.ui.notify(`human-input-required: ${owner.identity.plan} ACCEPT decision is pending; resume in an interactive session`, "warning");
+				}
 				const action = await ctx.ui.select("ACCEPT assessment is clean", ["Accept", "Request changes", "Discuss", "Pause"]);
-				if (!action || action === "Pause") return ctx.ui.notify("ACCEPT paused at the human decision", "info");
+				if (!action || action === "Pause") {
+					await runSuperdev(["workflow", "cancel", "--session", owner.session_id], ctx.cwd, authority);
+					ctx.ui.setStatus("superdev-workflow", undefined);
+					return ctx.ui.notify("ACCEPT paused at the human decision; ownership released", "info");
+				}
 				if (action !== "Accept") {
 					const finding: ReviewFinding = {
 						id: "human-acceptance-change",
@@ -1190,8 +1247,10 @@ export default function superdev(pi: ExtensionAPI) {
 			ctx.ui.notify("Candidate accepted and integrated locally; nothing was pushed or deleted", "info");
 	};
 	runAcceptPhase = async (args, ctx) => {
-		try { await executeAcceptPhase(args, ctx); }
-		catch (error) { await pauseAfterFailure(ctx, "ACCEPT", error); }
+		while (true) {
+			try { return await executeAcceptPhase(args, ctx); }
+			catch (error) { if (!(await pauseAfterFailure(ctx, "ACCEPT", error))) return; }
+		}
 	};
 	continueAcceptRequest = async (state, ctx) => {
 		const status = await workflowStatus(ctx.cwd);

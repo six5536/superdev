@@ -89,8 +89,23 @@ export default async function smoke() {
 	} catch (error) {
 		if (!String(error).includes("more than 1")) throw error;
 	}
-	const finding: ReviewFinding = { id: "f1", classification: "substantive", summary: "Choose policy", evidence: "Policy is absent", impact: "Behavior is unsettled", question: "Which policy?" };
+	const finding: ReviewFinding = { id: "f1", classification: "substantive", summary: "Choose policy", evidence: "Policy is absent", impact: "Behavior is unsettled", question: "Which policy?", recommendation: "Use the safe policy" };
 	if (findingFingerprint(finding) === findingFingerprint({ ...finding, impact: "Different behavior" })) throw new Error("semantic fingerprint ignored impact");
+	for (const [label, result] of [
+		["contradictory status", { status: "complete", summary: "contradiction", findings: [{ ...finding, classification: "correctable-within-scope" }], checklist }],
+		["cyclic dependencies", { status: "findings", summary: "cycle", findings: [
+			{ ...finding, id: "a", classification: "correctable-within-scope", dependsOn: ["b"] },
+			{ ...finding, id: "b", classification: "correctable-within-scope", dependsOn: ["a"] },
+		], checklist }],
+		["duplicate checklist", { status: "clean", summary: "duplicate", checklist: [...checklist, checklist[0]] }],
+	] as const) {
+		try {
+			validateRoleResult("code-review", result, { maxBytes: 100_000, maxFindings: 100 });
+			throw new Error(`${label} was accepted`);
+		} catch (error) {
+			if (String(error).includes("was accepted")) throw error;
+		}
+	}
 	const bounded = boundedText("one\ntwo\nthree", { maxContextBytes: 20, maxContextLines: 2, maxArtifactBytes: 100, maxArtifacts: 2, retentionHours: 1 });
 	if (!bounded.includes("Showing 2 of 3 lines")) throw new Error("model-visible output was not line bounded");
 	const artifact = await IsolatedArtifact.create("smoke", "review", 16);
@@ -119,6 +134,7 @@ export default async function smoke() {
 	};
 	const controller = registerWorkflowQuestions(questionPi, {
 		maxBytes: () => 16_384,
+		maxFindings: () => 100,
 		onPause: async () => { paused = true; },
 		onResume: async () => { paused = false; },
 		onSubmit: async () => {},

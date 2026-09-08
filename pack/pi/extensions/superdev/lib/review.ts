@@ -28,7 +28,7 @@ export type ChecklistItem = {
 };
 
 export type RoleResult = {
-	status: "complete" | "clean" | "findings" | "rescope" | "rejected" | "duplicate" | "blocked";
+	status: "complete" | "clean" | "findings" | "rescope" | "duplicate" | "blocked";
 	summary: string;
 	findings?: ReviewFinding[];
 	checklist?: ChecklistItem[];
@@ -60,7 +60,7 @@ const checklistSchema = Type.Object({
 });
 
 export const roleResultSchema = Type.Object({
-	status: StringEnum(["complete", "clean", "findings", "rescope", "rejected", "duplicate", "blocked"] as const),
+	status: StringEnum(["complete", "clean", "findings", "rescope", "duplicate", "blocked"] as const),
 	summary: Type.String(),
 	findings: Type.Optional(Type.Array(findingSchema)),
 	checklist: Type.Optional(Type.Array(checklistSchema)),
@@ -72,7 +72,7 @@ const allowed: Record<Role, RoleResult["status"][]> = {
 	"requirements-review": ["clean", "findings"],
 	build: ["complete", "rescope", "blocked"],
 	"code-review": ["clean", "findings"],
-	accept: ["complete", "findings", "rejected", "blocked"],
+	accept: ["complete", "findings", "blocked"],
 	file: ["complete", "duplicate", "blocked"],
 };
 
@@ -90,7 +90,9 @@ export function validateRoleResult(role: Role, value: unknown, limits?: { maxByt
 	if (result.status === "findings" && (!Array.isArray(result.findings) || result.findings.length === 0)) {
 		throw new Error(`${role} reported findings without structured findings`);
 	}
-	if (result.status === "clean" && result.findings?.length) throw new Error(`${role} reported clean with findings`);
+	if (result.status !== "findings" && result.findings?.length) {
+		throw new Error(`${role} returned findings with contradictory status ${result.status}`);
+	}
 	if (result.findings) {
 		const ids = new Set<string>();
 		for (const finding of result.findings) {
@@ -100,8 +102,9 @@ export function validateRoleResult(role: Role, value: unknown, limits?: { maxByt
 			if (role === "requirements-review" && !["mechanical", "substantive"].includes(finding.classification)) {
 				throw new Error("requirements-review finding omitted its mechanical/substantive classification");
 			}
-			if (role === "requirements-review" && finding.classification === "substantive" && !finding.question?.trim()) {
-				throw new Error("substantive SCOPE finding omitted its user question");
+			if (role === "requirements-review" && finding.classification === "substantive"
+				&& (!finding.question?.trim() || !finding.recommendation?.trim())) {
+				throw new Error("substantive SCOPE finding omitted its user question or recommendation");
 			}
 			if (role === "code-review" && !["correctable-within-scope", "requires-scope"].includes(finding.classification)) {
 				throw new Error("code-review finding omitted its routing classification");
@@ -115,11 +118,25 @@ export function validateRoleResult(role: Role, value: unknown, limits?: { maxByt
 				throw new Error(`${role} returned an invalid finding dependency`);
 			}
 		}
+		const visiting = new Set<string>();
+		const visited = new Set<string>();
+		const byId = new Map(result.findings.map((finding) => [finding.id, finding]));
+		const visit = (id: string): void => {
+			if (visiting.has(id)) throw new Error(`${role} returned a cyclic finding dependency`);
+			if (visited.has(id)) return;
+			visiting.add(id);
+			for (const dependency of byId.get(id)?.dependsOn ?? []) visit(dependency);
+			visiting.delete(id);
+			visited.add(id);
+		};
+		for (const id of ids) visit(id);
 	}
 	if (reviewRoles.has(role) && result.status !== "blocked") {
 		const expected = new Set(["requirements", "contracts", "architecture", "tests", "documentation", "scope", "consistency"]);
+		const seen = new Set<string>();
 		for (const item of result.checklist ?? []) {
-			if (!item.complete || !item.evidence?.trim()) throw new Error(`${role} returned an incomplete review checklist`);
+			if (!item.complete || !item.evidence?.trim() || seen.has(item.area)) throw new Error(`${role} returned an incomplete or duplicate review checklist`);
+			seen.add(item.area);
 			expected.delete(item.area);
 		}
 		if (expected.size) throw new Error(`${role} omitted review checklist areas: ${[...expected].join(", ")}`);

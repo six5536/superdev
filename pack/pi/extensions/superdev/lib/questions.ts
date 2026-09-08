@@ -22,6 +22,7 @@ export function registerWorkflowQuestions(
 	pi: any,
 	options: {
 		maxBytes: () => number;
+		maxFindings: () => number;
 		onSubmit: (state: QuestionState, ctx: any) => Promise<void>;
 		onPause?: (state: QuestionState, ctx: any) => Promise<void>;
 		onResume?: (state: QuestionState, ctx: any) => Promise<void>;
@@ -30,10 +31,52 @@ export function registerWorkflowQuestions(
 	let state: QuestionState | undefined;
 	let restoreIssue: string | undefined;
 	let priorTools: string[] | undefined;
+	const stateIssue = (value: Partial<QuestionState>): string | undefined => {
+		if (value.version !== 1 || typeof value.workflow !== "string" || typeof value.candidate !== "string"
+			|| !["active", "paused", "submitted", "superseded"].includes(String(value.status))
+			|| !Array.isArray(value.findings) || value.findings.length > options.maxFindings()
+			|| value.answers === null || typeof value.answers !== "object") return "saved workflow question state is corrupt or exceeds configured limits";
+		const ids = new Set<string>();
+		for (const finding of value.findings) {
+			if (!finding || typeof finding !== "object" || typeof finding.id !== "string" || !finding.id.trim()
+				|| ids.has(finding.id) || typeof finding.summary !== "string" || typeof finding.evidence !== "string"
+				|| typeof finding.impact !== "string" || !Array.isArray(finding.dependsOn ?? [])) {
+				return "saved workflow question state contains malformed findings";
+			}
+			ids.add(finding.id);
+		}
+		const byId = new Map(value.findings.map((finding) => [finding.id, finding]));
+		const visiting = new Set<string>();
+		const visited = new Set<string>();
+		const visit = (id: string): boolean => {
+			if (visiting.has(id)) return false;
+			if (visited.has(id)) return true;
+			visiting.add(id);
+			for (const dependency of byId.get(id)?.dependsOn ?? []) {
+				if (!ids.has(dependency) || dependency === id || !visit(dependency)) return false;
+			}
+			visiting.delete(id);
+			visited.add(id);
+			return true;
+		};
+		for (const id of ids) if (!visit(id)) return "saved workflow question state contains invalid or cyclic dependencies";
+		for (const [id, answer] of Object.entries(value.answers ?? {})) {
+			if (!ids.has(id) || !answer || typeof answer.answer !== "string" || !answer.answer.trim()
+				|| !Array.isArray(answer.findingIds) || !answer.findingIds.includes(id)
+				|| answer.findingIds.some((covered) => !ids.has(covered))) return "saved workflow question state contains malformed answers";
+			for (const covered of answer.findingIds) {
+				const peer = value.answers?.[covered];
+				if (!peer || peer.answer !== answer.answer || peer.findingIds.join("\0") !== answer.findingIds.join("\0")) {
+					return "saved workflow question state contains inconsistent multi-finding answers";
+				}
+			}
+		}
+		if (Buffer.byteLength(JSON.stringify(value)) > options.maxBytes()) return "saved workflow question state is corrupt or exceeds configured limits";
+	};
 	const persist = () => {
 		if (!state) return;
-		const bytes = Buffer.byteLength(JSON.stringify(state));
-		if (bytes > options.maxBytes()) throw new Error(`workflow question state exceeded ${options.maxBytes()} bytes`);
+		const issue = stateIssue(state);
+		if (issue) throw new Error(issue);
 		pi.appendEntry(QUESTION_ENTRY, state);
 	};
 	const activate = () => {
@@ -50,12 +93,8 @@ export function registerWorkflowQuestions(
 		for (const entry of entries) if (entry.type === "custom" && entry.customType === QUESTION_ENTRY) candidate = entry.data;
 		if (candidate !== undefined) {
 			const value = candidate as Partial<QuestionState>;
-			const valid = value.version === 1 && typeof value.workflow === "string" && typeof value.candidate === "string"
-				&& ["active", "paused", "submitted", "superseded"].includes(String(value.status))
-				&& Array.isArray(value.findings) && value.answers !== null && typeof value.answers === "object"
-				&& Buffer.byteLength(JSON.stringify(value)) <= options.maxBytes();
-			if (valid) state = value as QuestionState;
-			else restoreIssue = "saved workflow question state is corrupt or exceeds configured limits";
+			restoreIssue = stateIssue(value);
+			if (!restoreIssue) state = value as QuestionState;
 		}
 		if (state?.status === "active" || state?.status === "paused") activate();
 		return state;
@@ -123,9 +162,14 @@ export function registerWorkflowQuestions(
 			if (input.action === "ask") {
 				const finding = state.findings.find((candidate) => candidate.id === input.findingId);
 				if (!finding) throw new Error("ask requires a finding from the active queue");
+				if (state.answers[finding.id]) throw new Error("answered findings must be reopened with revise before asking again");
 				const unresolved = (finding.dependsOn ?? []).filter((id) => !state!.answers[id]);
 				if (unresolved.length) throw new Error(`finding depends on unresolved answers: ${unresolved.join(", ")}`);
-				if (!ctx.hasUI) return { content: [{ type: "text", text: JSON.stringify({ status: "human-input-required", finding }) }], details: { humanInputRequired: true } };
+				if (!ctx.hasUI) {
+					state.status = "paused"; persist();
+					await options.onPause?.(state, ctx);
+					return { content: [{ type: "text", text: JSON.stringify({ status: "human-input-required", workflow: state.workflow, phase: state.originPhase ?? "scope", pendingAction: `answer ${finding.id}`, resume: "Resume workflow questions in an interactive session" }) }], details: { humanInputRequired: true } };
+				}
 				const choices = [...(finding.choices ?? []).map((choice) => choice.label), "Type another answer", "Back", "Discuss", "Pause workflow questions"];
 				const selected = await ctx.ui.select(`${finding.question ?? finding.summary}\nRecommendation: ${finding.recommendation ?? "Discuss before deciding."}`, choices);
 				if (!selected || selected === "Discuss") return { content: [{ type: "text", text: `Discuss finding ${finding.id}: ${finding.summary}\n${finding.evidence}\nImpact: ${finding.impact}` }], details: { discuss: finding.id } };
@@ -151,6 +195,10 @@ export function registerWorkflowQuestions(
 				if (!ctx.hasUI || !(await ctx.ui.confirm("Confirm proposed workflow answer?", `${input.proposedAnswer}\n\nCovers:\n${impact}`))) {
 					return { content: [{ type: "text", text: "Proposed answer was not confirmed; continue discussion." }], details: { confirmed: false } };
 				}
+				const replacedGroups = new Set(ids.flatMap((id: string) => state!.answers[id]?.findingIds ?? []));
+				for (const [id, answer] of Object.entries(state.answers)) {
+					if (answer.findingIds.some((covered) => ids.includes(covered)) || replacedGroups.has(id)) delete state.answers[id];
+				}
 				const confirmed: ConfirmedAnswer = { answer: input.proposedAnswer.trim(), findingIds: ids, confirmedAt: new Date().toISOString() };
 				for (const id of ids) state.answers[id] = confirmed;
 				persist();
@@ -158,8 +206,9 @@ export function registerWorkflowQuestions(
 			}
 			const unanswered = state.findings.filter((finding) => !state!.answers[finding.id]);
 			if (unanswered.length) throw new Error(`cannot submit; unanswered findings: ${unanswered.map((finding) => finding.id).join(", ")}`);
-			const summary = Object.values(state.answers).filter((answer, index, all) => all.indexOf(answer) === index)
-				.map((answer) => `${answer.findingIds.join(", ")}: ${answer.answer}`).join("\n");
+			const groups = new Map<string, ConfirmedAnswer>();
+			for (const answer of Object.values(state.answers)) groups.set(`${answer.findingIds.join("\0")}\0${answer.answer}`, answer);
+			const summary = [...groups.values()].map((answer) => `${answer.findingIds.join(", ")}: ${answer.answer}`).join("\n");
 			if (!ctx.hasUI || !(await ctx.ui.confirm("Submit all workflow answers?", summary))) {
 				return { content: [{ type: "text", text: "Answers remain provisional and editable." }], details: { submitted: false } };
 			}

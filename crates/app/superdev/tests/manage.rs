@@ -1062,10 +1062,11 @@ fn workflow_start_creates_a_canonical_scope_plan_and_resume_adopts_it() {
             ])
             .assert()
             .success();
-        assert!(fs::read_to_string(&plan).unwrap().contains(&format!(
-            "Final corrections: {}.",
-            cycle - 1
-        )));
+        assert!(
+            fs::read_to_string(&plan)
+                .unwrap()
+                .contains(&format!("Final corrections: {}.", cycle - 1))
+        );
         if cycle <= 3 {
             let correction_owner = cache::load(dir.path()).unwrap().unwrap();
             if cycle == 1 {
@@ -1368,6 +1369,96 @@ fn workflow_start_creates_a_canonical_scope_plan_and_resume_adopts_it() {
     assert!(accepted.contains("Scope product baseline:"));
     assert!(accepted.contains("Scope requirements review: clean"));
     assert!(accepted.contains("Human scope approval: approved"));
+
+    let revision = cache::load(dir.path()).unwrap().unwrap().last_plan_revision;
+    Command::cargo_bin("superdev")
+        .unwrap()
+        .current_dir(dir.path())
+        .env("SUPERDEV_UI_AUTHORITY", "fedcba9876543210fedcba9876543210")
+        .args([
+            "workflow",
+            "transition",
+            "--session",
+            "pi-b",
+            "--expected-revision",
+            &revision,
+            "--phase",
+            "accept",
+            "--transition",
+            "return-to-build",
+            "--feedback",
+            "One within-scope ACCEPT defect",
+        ])
+        .assert()
+        .success();
+    assert!(
+        fs::read_to_string(&plan)
+            .unwrap()
+            .contains("Blocker: final correction pending: One within-scope ACCEPT defect.")
+    );
+    let owner = cache::load(dir.path()).unwrap().unwrap();
+    fs::write(
+        dir.path().join("src/lib.rs"),
+        "pub fn checkpointed() { /* accept correction */ }\n",
+    )
+    .unwrap();
+    Command::cargo_bin("superdev")
+        .unwrap()
+        .current_dir(dir.path())
+        .args([
+            "workflow",
+            "correction-checkpoint",
+            "--session",
+            "pi-b",
+            "--expected-revision",
+            &owner.last_plan_revision,
+        ])
+        .assert()
+        .success();
+    let owner = cache::load(dir.path()).unwrap().unwrap();
+    let candidate = git::revision(dir.path(), "HEAD").unwrap();
+    Command::cargo_bin("superdev")
+        .unwrap()
+        .current_dir(dir.path())
+        .env("SUPERDEV_UI_AUTHORITY", "fedcba9876543210fedcba9876543210")
+        .args([
+            "workflow",
+            "evidence",
+            "--session",
+            "pi-b",
+            "--expected-revision",
+            &owner.last_plan_revision,
+            "--kind",
+            "verification",
+            "--candidate",
+            &candidate,
+        ])
+        .assert()
+        .success();
+    let owner = cache::load(dir.path()).unwrap().unwrap();
+    Command::cargo_bin("superdev")
+        .unwrap()
+        .current_dir(dir.path())
+        .env("SUPERDEV_UI_AUTHORITY", "fedcba9876543210fedcba9876543210")
+        .args([
+            "workflow",
+            "evidence",
+            "--session",
+            "pi-b",
+            "--expected-revision",
+            &owner.last_plan_revision,
+            "--kind",
+            "final",
+            "--review-session",
+            "review-clean-after-accept-correction",
+            "--candidate",
+            &candidate,
+        ])
+        .assert()
+        .success();
+    let corrected = fs::read_to_string(&plan).unwrap();
+    assert!(corrected.contains("Final corrections: 1."));
+    assert!(corrected.contains("Blocker: none."));
 
     let revision = cache::load(dir.path()).unwrap().unwrap().last_plan_revision;
     Command::cargo_bin("superdev")

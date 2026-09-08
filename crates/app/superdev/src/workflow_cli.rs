@@ -2124,6 +2124,26 @@ fn transition_locked(
         Transition::RecoverStaleDefault | Transition::ReturnToBuild
     ) && phase == Phase::Accept
     {
+        if let Some(feedback) = accept_build_feedback.as_ref() {
+            let old_retry = build_state_line(&plan_text)?;
+            let mut retry_state = parse_retry_state(old_retry)?;
+            if retry_state.blocker != "none" {
+                return Err(Error::Manifest {
+                    message: "ACCEPT findings cannot replace an unresolved final correction".into(),
+                });
+            }
+            let summary = retry::normalize_diagnostics(feedback).replace('\n', " | ");
+            retry_state.blocker =
+                if retry_state.final_corrections >= config.max_final_correction_cycles {
+                    format!("final correction limit exhausted: {summary}")
+                } else {
+                    format!("final correction pending: {summary}")
+                };
+            edits.push(ExactEdit {
+                old_text: old_retry.into(),
+                new_text: render_retry_state(&retry_state),
+            });
+        }
         edits.push(if let Some(feedback) = accept_build_feedback {
             filter_completion_evidence(
                 &plan_text,
