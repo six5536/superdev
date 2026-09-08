@@ -1,7 +1,10 @@
 import { createHash } from "node:crypto";
-import { readFile } from "node:fs/promises";
+import { readFile, rm, stat } from "node:fs/promises";
 
 import superdev, { buildCommandAllowed, isolatedRoleMayNotRun, isolatedTools, parseRoleResult, requiresHumanAcceptance, runGuardedBuildCommand, runPinnedSuperdev } from "../../../.pi/extensions/superdev/index.ts";
+import { IsolatedArtifact, boundedText } from "../../../.pi/extensions/superdev/lib/output.ts";
+import { registerWorkflowQuestions } from "../../../.pi/extensions/superdev/lib/questions.ts";
+import { findingFingerprint, validateRoleResult, type ReviewFinding } from "../../../.pi/extensions/superdev/lib/review.ts";
 
 export default async function smoke() {
 	const commands: string[] = [];
@@ -32,8 +35,9 @@ export default async function smoke() {
 		if (!commands.includes(command)) throw new Error(`missing command ${command}`);
 	}
 	if (!tools.includes("superdev_isolated_role")) throw new Error("missing isolated role tool");
-	if (!tools.includes("superdev_review_diff")) throw new Error("missing read-only review diff tool");
+	if (tools.includes("superdev_review_diff")) throw new Error("immutable review diff leaked into the main agent tool set");
 	if (!tools.includes("superdev_workflow_control")) throw new Error("missing UI-gated workflow control tool");
+	if (!tools.includes("superdev_workflow_questions")) throw new Error("missing stateful workflow question tool");
 	if (!requiresHumanAcceptance(true) || requiresHumanAcceptance(false)) throw new Error("configured acceptance policy changed");
 	try {
 		requiresHumanAcceptance(undefined);
@@ -55,7 +59,8 @@ export default async function smoke() {
 	if (isolatedTools("scope").split(",").includes("bash")) throw new Error("SCOPE child has direct shell access");
 	if (isolatedTools("build").split(",").includes("bash")) throw new Error("BUILD child has direct shell access");
 	if (isolatedTools("accept").split(",").some((tool) => ["bash", "edit", "write"].includes(tool))) throw new Error("ACCEPT assessor is not read-only");
-if (isolatedTools("code-review").split(",").includes("read")) throw new Error("final reviewer can bypass immutable diff bounds");
+	if (isolatedTools("code-review").split(",").includes("read")) throw new Error("final reviewer can bypass immutable diff bounds");
+	if (!isolatedTools("code-review").split(",").includes("superdev_submit_result")) throw new Error("reviewer lacks typed terminal submission");
 	if (!isolatedTools("build").split(",").includes("superdev_build_exec")) throw new Error("BUILD child cannot execute bounded evidence");
 	if (buildCommandAllowed("sh", ["-c", "mutate Git"])) throw new Error("BUILD can escape through a shell");
 	if (buildCommandAllowed("cargo", ["test"])) throw new Error("BUILD can bypass Rust-owned verification");
@@ -71,11 +76,61 @@ if (isolatedTools("code-review").split(",").includes("read")) throw new Error("f
 	]) {
 		if (isolatedRoleMayNotRun(command)) throw new Error(`isolated role cannot perform ${command}`);
 	}
+	const checklist = ["requirements", "contracts", "architecture", "tests", "documentation", "scope", "consistency"]
+		.map((area) => ({ area, complete: true, evidence: `${area} checked` }));
 	const clean = parseRoleResult(
 		"code-review",
-		'analysis\nSUPERDEV_RESULT {"status":"clean","summary":"No actionable findings."}',
+		`analysis\nSUPERDEV_RESULT ${JSON.stringify({ status: "clean", summary: "No actionable findings.", checklist })}`,
 	);
 	if (clean.status !== "clean") throw new Error("structured clean review was not parsed");
+	try {
+		validateRoleResult("code-review", { status: "findings", summary: "too many", findings: Array(2).fill({ id: "duplicate" }), checklist }, { maxBytes: 10_000, maxFindings: 1 });
+		throw new Error("review finding limit was ignored");
+	} catch (error) {
+		if (!String(error).includes("more than 1")) throw error;
+	}
+	const finding: ReviewFinding = { id: "f1", classification: "substantive", summary: "Choose policy", evidence: "Policy is absent", impact: "Behavior is unsettled", question: "Which policy?" };
+	if (findingFingerprint(finding) === findingFingerprint({ ...finding, impact: "Different behavior" })) throw new Error("semantic fingerprint ignored impact");
+	const bounded = boundedText("one\ntwo\nthree", { maxContextBytes: 20, maxContextLines: 2, maxArtifactBytes: 100, maxArtifacts: 2, retentionHours: 1 });
+	if (!bounded.includes("Showing 2 of 3 lines")) throw new Error("model-visible output was not line bounded");
+	const artifact = await IsolatedArtifact.create("smoke", "review", 16);
+	try {
+		artifact.writeStderr("0123456789abcdefghijklmnop");
+		await artifact.finishStderr();
+		if ((await stat(artifact.directory)).mode & 0o077) throw new Error("artifact directory is not owner-only");
+		try {
+			await artifact.writeResult({ result: "this authoritative result is too large" });
+			throw new Error("oversized authoritative result was accepted");
+		} catch (error) {
+			if (!String(error).includes("isolated-output-overflow")) throw error;
+		}
+	} finally {
+		await rm(artifact.directory, { recursive: true, force: true });
+	}
+	const questionTools = new Map<string, any>();
+	const entries: any[] = [];
+	let active = ["read", "edit"];
+	let paused = false;
+	const questionPi = {
+		appendEntry(type: string, data: unknown) { entries.push({ type: "custom", customType: type, data: structuredClone(data) }); },
+		getActiveTools() { return active; },
+		setActiveTools(next: string[]) { active = next; },
+		registerTool(tool: any) { questionTools.set(tool.name, tool); },
+	};
+	const controller = registerWorkflowQuestions(questionPi, {
+		maxBytes: () => 16_384,
+		onPause: async () => { paused = true; },
+		onResume: async () => { paused = false; },
+		onSubmit: async () => {},
+	});
+	controller.begin({ version: 1, workflow: "plan-smoke", candidate: "abcdef1", status: "active", findings: [finding], answers: {} });
+	if (active.includes("edit") || !active.includes("superdev_workflow_questions")) throw new Error("question discussion tools are not read-only");
+	const questionTool = questionTools.get("superdev_workflow_questions");
+	await questionTool.execute("q1", { action: "propose-answer", findingIds: ["f1"], proposedAnswer: "Use the safe policy" }, new AbortController().signal, undefined, { hasUI: true, ui: { confirm: async () => true } });
+	await questionTool.execute("q2", { action: "pause" }, new AbortController().signal, undefined, {});
+	if (!paused || controller.current()?.status !== "paused") throw new Error("question pause did not persist and release ownership");
+	await questionTool.execute("q3", { action: "resume" }, new AbortController().signal, undefined, {});
+	if (paused || controller.current()?.status !== "active") throw new Error("question resume did not reacquire ownership");
 	try {
 		parseRoleResult("code-review", "CLEAN");
 		throw new Error("unstructured review was accepted");

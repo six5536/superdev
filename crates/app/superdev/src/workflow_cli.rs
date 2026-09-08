@@ -79,6 +79,10 @@ pub enum WorkflowCommand {
     Sync(SyncArgs),
     /// Reconstruct and acquire ownership for a known workflow
     Resume(BindArgs),
+    /// Record one active isolated child for cross-instance status and recovery
+    ActivityStart(ActivityStartArgs),
+    /// Clear the active isolated child after exit
+    ActivityFinish(RevisionArgs),
     /// Pause by releasing transient ownership without changing plan phase
     Cancel(SessionArgs),
     /// Apply the human-only abandonment transition
@@ -105,6 +109,32 @@ pub struct BindArgs {
     /// Local default branch
     #[arg(long, default_value = "main")]
     default_branch: String,
+}
+
+/// Active parent and child process identity.
+#[derive(Args)]
+pub struct ActivityStartArgs {
+    /// Owning Pi session ID.
+    #[arg(long)]
+    session: String,
+    /// Expected current plan content revision.
+    #[arg(long)]
+    expected_revision: String,
+    /// Isolated workflow role.
+    #[arg(long)]
+    role: String,
+    /// Owning Pi process ID.
+    #[arg(long)]
+    owner_pid: u32,
+    /// OS process-start identity for the owning Pi.
+    #[arg(long)]
+    owner_started: String,
+    /// Isolated child process ID.
+    #[arg(long)]
+    child_pid: u32,
+    /// OS process-start identity for the child.
+    #[arg(long)]
+    child_started: String,
 }
 
 /// Arguments common to compare-and-swap progress events.
@@ -236,6 +266,8 @@ pub enum TransitionName {
     ReturnToScope,
     /// ACCEPT to SCOPE
     RejectAcceptance,
+    /// ACCEPT findings within approved intent to BUILD
+    ReturnToBuild,
     /// ACCEPT to DONE
     Accept,
     /// Prepared DONE to BUILD after default branch drift
@@ -387,6 +419,15 @@ pub fn run(command: &WorkflowCommand, root: &Path) -> Result<u8> {
                             "buildState": null,
                             "maxStalledBlockAttempts": workflow_config.max_stalled_block_attempts,
                             "maxFinalCorrectionCycles": workflow_config.max_final_correction_cycles,
+                            "maxScopeReviewCycles": workflow_config.max_scope_review_cycles,
+                            "isolatedRoleTimeoutSeconds": workflow_config.isolated_role_timeout_seconds,
+                            "maxIsolatedContextBytes": workflow_config.max_isolated_context_bytes,
+                            "maxIsolatedContextLines": workflow_config.max_isolated_context_lines,
+                            "maxReviewStateBytes": workflow_config.max_review_state_bytes,
+                            "maxReviewFindings": workflow_config.max_review_findings,
+                            "maxIsolatedArtifactBytes": workflow_config.max_isolated_artifact_bytes,
+                            "maxIsolatedArtifactsPerSession": workflow_config.max_isolated_artifacts_per_session,
+                            "isolatedArtifactRetentionHours": workflow_config.isolated_artifact_retention_hours,
                             "humanAcceptanceRequired": workflow_config.human_acceptance_required,
                             "executable": executable,
                             "openWorkflows": [],
@@ -433,11 +474,57 @@ pub fn run(command: &WorkflowCommand, root: &Path) -> Result<u8> {
                     })),
                     "maxStalledBlockAttempts": workflow_config.max_stalled_block_attempts,
                     "maxFinalCorrectionCycles": workflow_config.max_final_correction_cycles,
+                    "maxScopeReviewCycles": workflow_config.max_scope_review_cycles,
+                    "isolatedRoleTimeoutSeconds": workflow_config.isolated_role_timeout_seconds,
+                    "maxIsolatedContextBytes": workflow_config.max_isolated_context_bytes,
+                    "maxIsolatedContextLines": workflow_config.max_isolated_context_lines,
+                    "maxReviewStateBytes": workflow_config.max_review_state_bytes,
+                    "maxReviewFindings": workflow_config.max_review_findings,
+                    "maxIsolatedArtifactBytes": workflow_config.max_isolated_artifact_bytes,
+                    "maxIsolatedArtifactsPerSession": workflow_config.max_isolated_artifacts_per_session,
+                    "isolatedArtifactRetentionHours": workflow_config.isolated_artifact_retention_hours,
                     "humanAcceptanceRequired": workflow_config.human_acceptance_required,
                     "executable": executable,
                     "openWorkflows": discover_open_workflows(&root)?,
                 }),
             )
+        }
+        WorkflowCommand::ActivityStart(args) => {
+            if !matches!(
+                args.role.as_str(),
+                "scope" | "requirements-review" | "build" | "code-review" | "accept" | "file"
+            ) || args.owner_pid == 0
+                || args.child_pid == 0
+                || args.owner_started.trim().is_empty()
+                || args.child_started.trim().is_empty()
+            {
+                return Err(Error::Manifest {
+                    message:
+                        "workflow activity requires a known role and complete process identity"
+                            .into(),
+                });
+            }
+            let state =
+                cache::compare_and_swap(&root, &args.session, &args.expected_revision, |state| {
+                    state.owner_pid = Some(args.owner_pid);
+                    state.owner_started = Some(args.owner_started.clone());
+                    state.child_role = Some(args.role.clone());
+                    state.child_pid = Some(args.child_pid);
+                    state.child_started = Some(args.child_started.clone());
+                    state.cancelled = false;
+                })?;
+            emit("activity-start", &serde_json::json!({ "state": state }))
+        }
+        WorkflowCommand::ActivityFinish(args) => {
+            let state =
+                cache::compare_and_swap(&root, &args.session, &args.expected_revision, |state| {
+                    state.owner_pid = None;
+                    state.owner_started = None;
+                    state.child_role = None;
+                    state.child_pid = None;
+                    state.child_started = None;
+                })?;
+            emit("activity-finish", &serde_json::json!({ "state": state }))
         }
         WorkflowCommand::Cancel(args) => {
             cache::release(&root, &args.session)?;
@@ -889,6 +976,8 @@ fn workflow_cache(
         scope_base_revision,
         candidate_revision,
         verified_default_revision,
+        owner_pid: None,
+        owner_started: None,
         child_role: None,
         child_pid: None,
         child_started: None,
@@ -1850,31 +1939,37 @@ fn transition_locked(
             TransitionName::ApproveScope => Transition::ApproveScope,
             TransitionName::ReturnToScope => Transition::ReturnToScope,
             TransitionName::RejectAcceptance => Transition::RejectAcceptance,
+            TransitionName::ReturnToBuild => Transition::ReturnToBuild,
             TransitionName::Accept => Transition::Accept,
             TransitionName::RecoverStaleDefault => Transition::RecoverStaleDefault,
         }
     };
+    let feedback = args
+        .feedback
+        .as_deref()
+        .filter(|value| !value.trim().is_empty());
     let rescope_feedback = if matches!(
         transition,
         Transition::ReturnToScope | Transition::RejectAcceptance
     ) {
-        Some(
-            args.feedback
-                .as_deref()
-                .filter(|feedback| !feedback.trim().is_empty())
-                .ok_or_else(|| Error::Manifest {
-                    message: "return to SCOPE requires verbatim discovery or rejection feedback"
-                        .into(),
-                })?,
-        )
+        Some(feedback.ok_or_else(|| Error::Manifest {
+            message: "return to SCOPE requires verbatim discovery or rejection feedback".into(),
+        })?)
     } else {
-        if args.feedback.is_some() {
-            return Err(Error::Manifest {
-                message: "feedback is accepted only when returning to SCOPE".into(),
-            });
-        }
         None
     };
+    let accept_build_feedback = if matches!(transition, Transition::ReturnToBuild) {
+        Some(feedback.ok_or_else(|| Error::Manifest {
+            message: "return to BUILD requires the complete ACCEPT finding set".into(),
+        })?)
+    } else {
+        None
+    };
+    if feedback.is_some() && rescope_feedback.is_none() && accept_build_feedback.is_none() {
+        return Err(Error::Manifest {
+            message: "feedback is accepted only when routing findings to SCOPE or BUILD".into(),
+        });
+    }
     let plan_text =
         fs::read_to_string(plan_revision(root, &state.identity.plan)?.0).map_err(|source| {
             Error::Io {
@@ -1971,6 +2066,19 @@ fn transition_locked(
             &plan_text,
             &["Human scope approval: approved.".into()],
         )?);
+        let old_retry = build_state_line(&plan_text)?;
+        let mut reset_retry = parse_retry_state(old_retry)?;
+        reset_retry.final_corrections = 0;
+        if reset_retry.blocker == "final correction limit exhausted" {
+            reset_retry.blocker = "none".into();
+        }
+        let new_retry = render_retry_state(&reset_retry);
+        if old_retry != new_retry {
+            edits.push(ExactEdit {
+                old_text: old_retry.into(),
+                new_text: new_retry,
+            });
+        }
     }
     let scope_baseline_revision = if matches!(
         transition,
@@ -1999,8 +2107,27 @@ fn transition_locked(
                 .expect("return has a scope baseline"),
             false,
         )?);
-    } else if matches!(transition, Transition::RecoverStaleDefault) && phase == Phase::Accept {
-        edits.push(invalidate_final_evidence_edit(&plan_text)?);
+    } else if matches!(
+        transition,
+        Transition::RecoverStaleDefault | Transition::ReturnToBuild
+    ) && phase == Phase::Accept
+    {
+        edits.push(if let Some(feedback) = accept_build_feedback {
+            filter_completion_evidence(
+                &plan_text,
+                &[
+                    "Candidate revision: ",
+                    "Verified default revision: ",
+                    "Final verification: ",
+                    "Documentation verification: ",
+                    "Final review: ",
+                    "Pending ACCEPT correction: ",
+                ],
+                &[format!("Pending ACCEPT correction: {feedback}")],
+            )?
+        } else {
+            invalidate_final_evidence_edit(&plan_text)?
+        });
     }
     if matches!(next, Phase::Done | Phase::Abandoned) {
         edits.push(ExactEdit {
@@ -2068,6 +2195,7 @@ fn transition_locked(
             "chore(workflow): return to scope"
         }
         Transition::RecordBuildProgress => "chore(workflow): record build progress",
+        Transition::ReturnToBuild => "chore(workflow): return acceptance findings to build",
         Transition::Accept => "chore(workflow): close accepted work",
         Transition::RecoverStaleDefault => "chore(workflow): reopen stale closure",
         Transition::Abandon => "chore(workflow): close abandoned work",
@@ -2099,6 +2227,7 @@ fn transition_locked(
         } else if matches!(
             transition,
             Transition::ReturnToScope
+                | Transition::ReturnToBuild
                 | Transition::RecoverStaleDefault
                 | Transition::RejectAcceptance
         ) {

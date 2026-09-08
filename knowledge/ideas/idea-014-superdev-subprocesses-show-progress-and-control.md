@@ -36,53 +36,50 @@ ACCEPT assessment, and interrupted nested processes.
 
 ## Sketch
 
-Treat `/scope`, `/build`, and `/accept` as resumable phase drivers rather than
-single subprocess launchers. Each driver reconstructs canonical state and
-performs all safe automatic steps until it reaches a human decision, an
-exhausted retry budget, or an actionable failure.
+Treat `/scope`, `/build`, and `/accept` as resumable phase drivers. Each driver
+reconstructs canonical state and performs safe automatic steps until a human
+decision, exhausted semantic retry budget, or actionable failure.
 
-Require each isolated review to inspect the complete candidate and return its
-complete finding set in one structured result. The reviewer must not stop after
-the first finding. Classify every finding as mechanical or substantive.
+Each isolated role ends through one typed terminating `superdev_submit_result`
+tool. One checklist-driven reviewer inspects the complete candidate without
+failing fast and returns every actionable finding together. Code review reads a
+parent-bound immutable diff through bounded path pagination and cannot report
+clean until every required path is covered. Reviews have no advisory category.
 
-Apply all mechanical fixes as one quick, tightly bounded, visible correction
-batch. Mechanical fixes include deterministic format, generated-link, and
-similarly unambiguous corrections that do not change requirements or design
-intent.
+SCOPE divides findings at a strict intent boundary: only deterministic repairs
+derived from settled intent are mechanical; uncertainty is substantive. Mixed
+findings and confirmed answers enter one correction pass followed by one
+complete re-review. Semantic fingerprints reuse answers for materially
+unchanged findings, and configured cycle budgets count only a successful
+correction plus complete valid re-review.
 
-Return the complete substantive SCOPE finding set to the main Pi instance as
-structured context, not as transient warnings. Present one questionnaire that
-contains one question per finding, ordered so prerequisite decisions come
-first. Each question must explain what is missing, identify the affected
-artifact or requirement, present concrete choices, recommend one choice, and
-allow a free-form answer when the choices are incomplete.
+A revision-bound `superdev_workflow_questions` state machine persists findings
+and provisional answer revisions in non-context Pi session entries. The main Pi
+agent selects the next dependency-eligible question dynamically, presents one
+question at a time, supports normal read-only discussion, summarizes a proposed
+answer, and requires explicit confirmation. The user may revise answers before
+Submit all. One confirmed answer may cover several findings only when the UI
+shows and confirms the mapping.
 
-Wait until the end-user answers the complete questionnaire. Preserve the answer
-set, pass all answers to one SCOPE correction run, and then rerun one complete
-requirements review. Repeat only when that review returns a new or remaining
-finding set. Never perform a correction-and-review cycle for each individual
-finding, and never require another slash command.
+A focused custom progress component and footer show plan, stage, elapsed time,
+and sanitized tool/path activity. Esc immediately kills the detached process
+group, preserving partial files. Configured deadlines never retry automatically.
+Rust transient state records parent and child process identity for cross-instance
+status. Graceful shutdown releases ownership; a new Pi kills only a proven
+orphan, marks work interrupted, and waits for explicit resume.
 
-Wrap user-awaited subprocess execution in one shared progress presenter. Use
-Pi's existing notification, status, widget, and prompt APIs to show the plan,
-current stage, elapsed time, recent completed stage, and available controls.
-Consume structured child events for bounded progress without exposing private
-reasoning or flooding the transcript.
+Isolated JSON events are parsed incrementally. Parent-model output is bounded by
+configured line and byte limits; full final results and stderr diagnostics go to
+owner-only temporary artifacts readable through ordinary bounded `read`. Raw
+Pi events, reasoning, prompts, and tool payloads are not persisted. Artifact,
+review-state, finding-count, timeout, retention, and SCOPE-cycle defaults live in
+`[workflow]` under fixed safety ceilings.
 
-Make interruption recovery one action. A resumed Pi session should reclaim or
-rebind recoverable transient ownership safely and continue from canonical
-state. When automatic recovery is unsafe, present one confirmation that names
-the consequence and performs the required release and resume operations. Never
-require the user to discover or paste a session ID.
-
-Make `/superdev-status` distinguish the durable phase from live activity. Show
-states such as running, awaiting approval, paused after findings, timed out, and
-owned by another live session. Include exactly one recommended next action.
-
-Give each subprocess class an explicit timeout and distinguish timeout,
-cancellation, child failure, malformed output, review findings, and successful
-completion. Always clear or replace progress UI in a `finally` path. Keep
-daemon-like transport processes quiet unless startup fails or health changes.
+A clean BUILD starts ACCEPT automatically. ACCEPT findings route to BUILD or
+SCOPE as one set. When final human acceptance is disabled, explicit Start BUILD
+authorizes the nominal automatic path through review corrections, assessment,
+and local integration. Human questions, scope changes, timeouts, malformed
+results, configured exhaustion, and terminal failures still pause fail-closed.
 
 ## Trade-offs
 
@@ -99,12 +96,5 @@ daemon-like transport processes quiet unless startup fails or health changes.
 
 ## Open questions
 
-- Which child events provide useful progress without exposing private reasoning
-  or unstable model text?
-- What objective rule classifies a finding as mechanical rather than
-  substantive?
-- How should the questionnaire represent findings whose available choices
-  depend on an earlier answer without splitting the review into serial loops?
-- What proves that an owning Pi instance is stale enough for safe recovery?
-- What timeout and retry budget applies to each isolated role and non-model
-  subprocess?
+- None. `SUPERDEV-WORKFLOW-UX-PLAN.md` settles progress, cancellation, review,
+  question, recovery, output, timeout, artifact, routing, and retry behavior.

@@ -374,6 +374,10 @@ pub enum WorkflowCommand {
     Sync(SyncArgs),
     /// Reconstruct and acquire ownership for a known workflow
     Resume(BindArgs),
+    /// Record one active isolated child for cross-instance status and recovery
+    ActivityStart(ActivityStartArgs),
+    /// Clear the active isolated child after exit
+    ActivityFinish(RevisionArgs),
     /// Pause by releasing transient ownership without changing plan phase
     Cancel(SessionArgs),
     /// Apply the human-only abandonment transition
@@ -400,6 +404,32 @@ pub struct BindArgs {
     /// Local default branch
     #[arg(long, default_value = "main")]
     default_branch: String,
+}
+
+/// Active parent and child process identity.
+#[derive(Args)]
+pub struct ActivityStartArgs {
+    /// Owning Pi session ID.
+    #[arg(long)]
+    session: String,
+    /// Expected current plan content revision.
+    #[arg(long)]
+    expected_revision: String,
+    /// Isolated workflow role.
+    #[arg(long)]
+    role: String,
+    /// Owning Pi process ID.
+    #[arg(long)]
+    owner_pid: u32,
+    /// OS process-start identity for the owning Pi.
+    #[arg(long)]
+    owner_started: String,
+    /// Isolated child process ID.
+    #[arg(long)]
+    child_pid: u32,
+    /// OS process-start identity for the child.
+    #[arg(long)]
+    child_started: String,
 }
 
 /// Arguments common to compare-and-swap progress events.
@@ -531,6 +561,8 @@ pub enum TransitionName {
     ReturnToScope,
     /// ACCEPT to SCOPE
     RejectAcceptance,
+    /// ACCEPT findings within approved intent to BUILD
+    ReturnToBuild,
     /// ACCEPT to DONE
     Accept,
     /// Prepared DONE to BUILD after default branch drift
@@ -681,7 +713,7 @@ usage errors and the side effects.
   `--fix`.
 - `P_workflow-versioned-json` [ubiquitous] Every successful `workflow`
   command SHALL return one JSON object carrying protocol
-  `superdev-workflow/v1`.
+  `superdev-workflow/v2`.
 - `P_workflow-owned-transitions` [ubiquitous] A mutating `workflow`
   command SHALL require the owning session and expected plan revision.
 - `P_workflow-cancel-pauses` [event] WHEN `workflow cancel` succeeds,

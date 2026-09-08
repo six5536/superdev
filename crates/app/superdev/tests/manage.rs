@@ -1333,7 +1333,7 @@ fn workflow_start_creates_a_canonical_scope_plan_and_resume_adopts_it() {
         .success();
     let approved = fs::read_to_string(&plan).unwrap();
     assert!(approved.contains("phase: build"));
-    assert!(approved.contains("Final corrections: 3."));
+    assert!(approved.contains("Final corrections: 0."));
     assert!(approved.contains("Scope product baseline:"));
     assert!(approved.contains("Scope requirements review: clean"));
     assert!(approved.contains("Human scope approval: approved"));
@@ -1381,7 +1381,7 @@ fn workflow_start_creates_a_canonical_scope_plan_and_resume_adopts_it() {
         .success();
     let accepted = fs::read_to_string(&plan).unwrap();
     assert!(accepted.contains("phase: accept"));
-    assert!(accepted.contains("Final corrections: 3."));
+    assert!(accepted.contains("Final corrections: 0."));
     assert!(accepted.contains("Scope product baseline:"));
     assert!(accepted.contains("Scope requirements review: clean"));
     assert!(accepted.contains("Human scope approval: approved"));

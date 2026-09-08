@@ -166,9 +166,10 @@ Agreed decisions:
     decisions into canonical knowledge, but leave the root plan in place after
     verification until the user removes it manually.
 
-Pending decision:
+Approval status:
 
-- Question 60 will continue the design review.
+- The design interview is complete through Question 60, and the user approved
+  this document as implementation authority.
 
 ## Current failure
 
@@ -752,9 +753,7 @@ architecture, configuration, contracts, UX behavior, and testing decisions into
 canonical SOKF knowledge. Leave this root plan in place after verification; the
 user will remove it manually.
 
-Continue grilling from the pending question recorded in Grill status.
-Implementation starts only after every design branch is resolved and the user
-approves this root plan. After approval, implement directly on the current
-branch without invoking the Superdev workflow. Report verification evidence and
-commit the repair without merging, pushing, deleting branches, rewriting
-existing commits, or absorbing unrelated changes.
+The design interview and approval gate are complete. Implement directly on the
+current branch without invoking the Superdev workflow. Report verification
+evidence and commit the repair without merging, pushing, deleting branches,
+rewriting existing commits, or absorbing unrelated changes.

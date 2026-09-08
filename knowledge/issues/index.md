@@ -110,6 +110,7 @@ places it.
 * [Historical plan: Persistent MCP transport for Pi SOKF][sokf:issue-074-historical-persistent-mcp-transport-for-pi-sokf] - Migration-derived issue preserving the primary issue relationship for plan-028-persistent-mcp-transport-for-pi-sokf.
 * [Historical plan: Content packs][sokf:issue-076-historical-content-packs] - Migration-derived issue preserving the primary issue relationship for plan-003-content-packs.
 * [The development workflow is contradictory and does not reliably deliver reviewed documentation][sokf:issue-059-scope-build-accept-workflow] - The workflow duplicates ownership across skills, leaves manual cases unexecuted, and treats user-facing documentation as an optional final reminder.
+* [SOKF-routed file tools diverge from Pi's built-in contracts][sokf:issue-077-sokf-file-tool-parity] - SOKF-routed read, edit, and write return different source, result, error, diff, rendering, and prompt behaviour from Pi's built-in file tools, making targeted knowledge edits fragile and expensive in model context.
 * [Historical plan: Flatten the superdev-core API][sokf:issue-075-historical-flatten-crate-api] - Migration-derived issue preserving the primary issue relationship for plan-001-flatten-crate-api.
 
 <!-- sokf:links -->
@@ -189,3 +190,4 @@ places it.
 [sokf:issue-074-historical-persistent-mcp-transport-for-pi-sokf]: /knowledge/issues/done/issue-074-historical-persistent-mcp-transport-for-pi-sokf.md
 [sokf:issue-075-historical-flatten-crate-api]: /knowledge/issues/open/issue-075-historical-flatten-crate-api.md
 [sokf:issue-076-historical-content-packs]: /knowledge/issues/done/issue-076-historical-content-packs.md
+[sokf:issue-077-sokf-file-tool-parity]: /knowledge/issues/open/issue-077-sokf-file-tool-parity.md

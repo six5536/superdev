@@ -36,7 +36,7 @@ pub fn apply_transition(
     use Phase::{Abandoned, Accept, Build, Done, Scope};
     use Transition::{
         Abandon, Accept as AcceptTransition, ApproveScope, RecordBuildProgress,
-        RecoverStaleDefault, RejectAcceptance, ReturnToScope,
+        RecoverStaleDefault, RejectAcceptance, ReturnToBuild, ReturnToScope,
     };
 
     match (phase, transition) {
@@ -51,6 +51,7 @@ pub fn apply_transition(
         (Build, ReturnToScope) => Ok(Scope),
         (Build, RecordBuildProgress) => Ok(Build),
         (Accept, RejectAcceptance) => Ok(Scope),
+        (Accept, ReturnToBuild) => Ok(Build),
         (Accept, AcceptTransition) => {
             if config.human_acceptance_required {
                 require(
@@ -81,8 +82,7 @@ mod tests {
     fn config(human: bool) -> WorkflowConfig {
         WorkflowConfig {
             human_acceptance_required: human,
-            max_stalled_block_attempts: 3,
-            max_final_correction_cycles: 3,
+            ..WorkflowConfig::default()
         }
     }
 
@@ -115,6 +115,19 @@ mod tests {
                 Transition::ApproveScope,
                 &gates,
                 &config(true)
+            ),
+            Ok(Phase::Build)
+        );
+    }
+
+    #[test]
+    fn within_scope_accept_findings_return_to_build() {
+        assert_eq!(
+            apply_transition(
+                Phase::Accept,
+                Transition::ReturnToBuild,
+                &GateEvidence::default(),
+                &config(true),
             ),
             Ok(Phase::Build)
         );

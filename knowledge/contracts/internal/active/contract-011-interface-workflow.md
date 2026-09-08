@@ -31,7 +31,7 @@ materialization follows
 use serde::{Deserialize, Serialize};
 
 /// Version returned by every workflow adapter response.
-pub const WORKFLOW_PROTOCOL: &str = "superdev-workflow/v1";
+pub const WORKFLOW_PROTOCOL: &str = "superdev-workflow/v2";
 /// Transient, gitignored session ownership. Canonical progress remains in the plan.
 pub const WORKFLOW_CACHE_PATH: &str = ".superdev/cache/workflow.toml";
 
@@ -62,6 +62,8 @@ pub enum Transition {
     RecordBuildProgress,
     /// Return a human rejection to SCOPE as a discovery.
     RejectAcceptance,
+    /// Return ACCEPT findings that preserve approved intent to BUILD.
+    ReturnToBuild,
     /// Accept the immutable candidate under project policy.
     Accept,
     /// Reopen a prepared closure when the default branch became stale.
@@ -132,6 +134,12 @@ pub struct WorkflowCache {
     /// Default-branch tip incorporated before candidate verification.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub verified_default_revision: Option<String>,
+    /// Owning Pi process ID while an isolated child is active.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub owner_pid: Option<u32>,
+    /// OS-specific owning Pi process start identity, guarding PID reuse.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub owner_started: Option<String>,
     /// Active isolated child role, when one exists.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub child_role: Option<String>,
@@ -188,7 +196,7 @@ pub fn apply_transition(
     use Phase::{Abandoned, Accept, Build, Done, Scope};
     use Transition::{
         Abandon, Accept as AcceptTransition, ApproveScope, RecordBuildProgress,
-        RecoverStaleDefault, RejectAcceptance, ReturnToScope,
+        RecoverStaleDefault, RejectAcceptance, ReturnToBuild, ReturnToScope,
     };
 
     match (phase, transition) {
@@ -203,6 +211,7 @@ pub fn apply_transition(
         (Build, ReturnToScope) => Ok(Scope),
         (Build, RecordBuildProgress) => Ok(Build),
         (Accept, RejectAcceptance) => Ok(Scope),
+        (Accept, ReturnToBuild) => Ok(Build),
         (Accept, AcceptTransition) => {
             if config.human_acceptance_required {
                 require(
@@ -233,8 +242,7 @@ mod tests {
     fn config(human: bool) -> WorkflowConfig {
         WorkflowConfig {
             human_acceptance_required: human,
-            max_stalled_block_attempts: 3,
-            max_final_correction_cycles: 3,
+            ..WorkflowConfig::default()
         }
     }
 
@@ -267,6 +275,19 @@ mod tests {
                 Transition::ApproveScope,
                 &gates,
                 &config(true)
+            ),
+            Ok(Phase::Build)
+        );
+    }
+
+    #[test]
+    fn within_scope_accept_findings_return_to_build() {
+        assert_eq!(
+            apply_transition(
+                Phase::Accept,
+                Transition::ReturnToBuild,
+                &GateEvidence::default(),
+                &config(true),
             ),
             Ok(Phase::Build)
         );
@@ -315,6 +336,12 @@ mod tests {
 
 - `P_rust-authority` [ubiquitous] The Rust workflow service SHALL validate every durable phase transition, plan revision comparison, ownership comparison, and automatic Git operation.
 - `P_pi-orchestrates` [ubiquitous] Pi SHALL orchestrate interaction and isolated roles through typed workflow commands while withholding direct shell and Git access from every child, giving BUILD only its Rust-owned checkpoint, attempt, correction-checkpoint, and status operations through the parent-pinned executable and digest, and blocking isolated invocations of authoritative workflow operations.
+- `P_phase-driver` [ubiquitous] One SCOPE, BUILD, or ACCEPT invocation SHALL continue through safe automatic stages until a genuine human decision, configured exhaustion, interruption, or terminal failure, including automatic ACCEPT startup after a clean BUILD.
+- `P_typed-role-result` [ubiquitous] Every isolated role SHALL terminate through exactly one typed structured result whose status, exhaustive checklist, findings, routing classification, count, and serialized size are validated before it can authorize workflow progress.
+- `P_review-exhaustive` [ubiquitous] An isolated reviewer SHALL return every actionable blocking finding in one pass without advisory findings or fail-fast behavior and prove sequential paginated coverage of the complete parent-bound changed-path inventory and each changed diff during immutable code review.
+- `P_questions-persisted` [event] WHEN review or human rejection requires intent, Pi SHALL persist a revision-bound bounded question queue and provisional answers in labeled session entries, present one dependency-eligible finding at a time, require explicit confirmation of discussed answers and multi-finding mappings, permit revision and pause, and submit one complete answer set for one correction and re-review.
+- `P_progress-cancellable` [event] WHILE an isolated child runs, Pi SHALL render one in-place stage, elapsed-time, sanitized-activity, and Esc-cancellation component without transcript timer events and immediately terminate the process group while preserving partial files when cancellation occurs.
+- `P_output-bounded` [ubiquitous] Pi SHALL parse isolated events incrementally, keep model-visible output within configured byte and line limits, persist only bounded typed results, diagnostics, and minimal metadata in owner-only temporary artifacts, and omit raw event streams, reasoning, prompts, and tool payloads from persistence.
 
 ### Key flows
 
@@ -322,6 +349,8 @@ mod tests {
 - `P_build-gate` [event] WHEN BUILD enters ACCEPT, the service SHALL require complete blocks, current executable and documentation evidence, no affected pending promise, and a clean fresh isolated final review.
 - `P_accept-policy` [event] WHEN ACCEPT decides a candidate, the service SHALL derive human acceptance solely from project configuration before merging an accepted closure locally with a hook-free, signing-free `git merge --no-ff`.
 - `P_accept-stale-default` [event] WHEN the verified default revision advances before closure, the service SHALL invalidate final evidence and return the same plan to BUILD without preparing DONE records.
+- `P_accept-routes-findings` [event] WHEN ACCEPT reports findings, the workflow SHALL route the complete set to BUILD when approved intent is unchanged or to SCOPE when intent changes while invalidating final evidence and preserving the routed finding set canonically.
+- `P_automatic-acceptance-path` [event] WHEN human acceptance is disabled and the human starts BUILD after fresh SCOPE approval, Pi SHALL continue the nominal clean path through correction, ACCEPT assessment, acceptance, and local integration unless a scope decision or terminal intervention is required.
 - `P_ui-authority-service` [event] WHEN scope approval, configured human acceptance, rejection, or abandonment changes durable state, the service SHALL require the owning Pi UI's unpersisted capability.
 - `P_ui-authority-adapter` [event] WHEN an action requires human authority, Pi SHALL expose its capability to the service only after interactive confirmation.
 - `P_cancel-pauses` [event] WHEN cancellation occurs, the service SHALL release transient ownership without changing the canonical phase or deleting uncommitted SCOPE drafts.
@@ -351,6 +380,8 @@ mod tests {
 - `P_bounded-retries` [ubiquitous] Retry and correction limits SHALL be positive project configuration values that plans, prompts, adapters, and models cannot override.
 - `P_failure-fingerprint` [event] WHEN BUILD records a failed command, the service SHALL normalize bounded diagnostics and durably count consecutive equivalent fingerprints against the configured limit.
 - `P_retry-reset` [event] WHEN BUILD checkpoints its newly completed current stable block, the service SHALL reject caller edits to retry state, reset that block's attempts and fingerprint, preserve final-correction accounting, and advance to the next incomplete stable block when one exists.
+- `P_semantic-cycle-accounting` [ubiquitous] SCOPE and final correction budgets SHALL count only successful correction-plus-complete-valid-review cycles, exclude infrastructure, timeout, malformed-result, and artifact failures, and reset final-correction accounting upon fresh SCOPE approval for the next BUILD run.
+- `P_process-recovery` [event] WHEN Pi starts or shuts down around an active child, it SHALL use parent and child process-start identity to avoid PID reuse, kill only a proven orphan, clear transient activity, release ownership, preserve partial work and pending questions, and wait for explicit resume.
 - `P_block-checkpoint` [event] WHEN BUILD checkpoints a newly completed stable block, the service SHALL reject changes to its SCOPE-approved dependencies, path-scoped Areas, or executable Verification commands, execute that approved verification, and commit only changes within the approved Areas plus the owning plan.
 - `P_cache-transient` [ubiquitous] Absence of `.superdev/cache/workflow.toml` SHALL mean unowned rather than complete.
 - `P_status-during-transaction` [event] WHEN observational status encounters a held workflow transaction, it SHALL return an explicit busy snapshot without waiting or representing that state as unowned.
@@ -361,7 +392,7 @@ mod tests {
 Internal and unreleased; the protocol is versioned so adapter incompatibility
 fails explicitly.
 
-- `P_versioned` [ubiquitous] Every machine-readable workflow response SHALL name `superdev-workflow/v1`.
+- `P_versioned` [ubiquitous] Every machine-readable workflow response SHALL name `superdev-workflow/v2`.
 
 <!-- sokf:links -->
 [sokf:adr-042-a-contracts-definition-is-materialized-from-source]: /knowledge/adrs/active/adr-042-a-contracts-definition-is-materialized-from-source.md

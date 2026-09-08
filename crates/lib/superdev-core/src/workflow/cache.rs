@@ -361,6 +361,8 @@ mod tests {
             scope_base_revision: None,
             candidate_revision: None,
             verified_default_revision: None,
+            owner_pid: None,
+            owner_started: None,
             child_role: None,
             child_pid: None,
             child_started: None,

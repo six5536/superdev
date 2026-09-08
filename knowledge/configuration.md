@@ -31,12 +31,32 @@ provider = "frontend-design"
 human_acceptance_required = true
 max_stalled_block_attempts = 3
 max_final_correction_cycles = 3
+max_scope_review_cycles = 3
+isolated_role_timeout_seconds = 1200
+max_isolated_context_bytes = 8192
+max_isolated_context_lines = 200
+max_review_state_bytes = 262144
+max_review_findings = 100
+max_isolated_artifact_bytes = 10485760
+max_isolated_artifacts_per_session = 20
+isolated_artifact_retention_hours = 24
 ```
 
-The `[workflow]` table is required from blueprint 0.2.0 onward. Older
-manifests receive these safe defaults, and their next managed rewrite writes
-the table. Both limits must be positive integers. Models, plans, and commands
-cannot override project policy; omitting the table after migration is an error.
+The `[workflow]` table is required from blueprint 0.2.0 onward. Omitted policy
+fields receive the defaults above, and a managed rewrite materializes them. All
+numeric limits must be positive. Fixed safety ceilings are 50 KiB and 2,000
+lines for parent-model context, 1 MiB and 1,000 findings for review state, 100
+MiB per isolated artifact, 100 artifacts per session, and 168 retention hours.
+Models, plans, and commands cannot override project policy; omitting the table
+after migration is an error.
+
+One isolated role receives the configured deadline. Oversized final results and
+review state fail closed; diagnostic stderr may be capped without invalidating
+an otherwise valid role result. Full bounded diagnostics live temporarily
+outside model context and are available through ordinary bounded file reads.
+The SCOPE review limit counts completed batched correction plus complete
+re-review cycles. The final correction limit spans the complete BUILD-to-ACCEPT
+run rather than resetting at the phase boundary.
 
 A `[[packs]]` array names the content packs to layer, in layer order, and is
 absent from the manifest above because absence is the default:
