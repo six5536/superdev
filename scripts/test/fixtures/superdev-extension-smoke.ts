@@ -228,11 +228,10 @@ export default async function smoke() {
 		last_plan_revision: revision,
 		scope_base_revision: baseRevision,
 		...(candidateEvidence ? { candidate_revision: candidateRevision, verified_default_revision: baseRevision } : {}),
-		identity: { issue: "issue-077-smoke", plan: "plan-smoke", work_branch: "work/smoke", default_branch: "main" },
+		identity: { issue: "issue-smoke", plan: "plan-smoke", work_branch: "work/smoke", default_branch: "main" },
 	} : undefined;
 	const status = async () => ({
 		owner: owner(), phase, canonicalPlanRevision: revision,
-		openWorkflows: [{ issue: "issue-077-smoke", plan: "plan-smoke", work_branch: "work/smoke", default_branch: "main" }],
 		humanAcceptanceRequired, executable: "/service",
 		maxFinalCorrectionCycles: 3, maxScopeReviewCycles: 3,
 		buildState: { currentBlock: 1, attempts: 0, finalCorrections, blocker: finalCorrections >= 3 ? "final correction limit exhausted: remaining findings" : "none" },
@@ -247,7 +246,6 @@ export default async function smoke() {
 	};
 	const runService = async (args: string[]) => {
 		serviceCalls.push(args);
-		if (args.includes("resume")) owned = true;
 		if (args.includes("scope-checkpoint")) revision = "revision-2";
 		if (args.includes("scope-review")) revision = "revision-3";
 		if (args.includes("approve-scope")) { phase = "build"; revision = "revision-4"; }
@@ -286,9 +284,7 @@ export default async function smoke() {
 		childStarted: () => () => {}, childFinished: async () => {}, reviewRuns: new Map(),
 		parentServiceDigest: "digest", requiresHumanAcceptance, runtime,
 	});
-	owned = false;
-	await phaseCommands.get("scope").handler("issue 77", phaseCtx);
-	if (!serviceCalls.some((args) => args.includes("resume"))) throw new Error("/scope issue 77 did not acquire existing workflow ownership");
+	await phaseCommands.get("scope").handler("", phaseCtx);
 	if (phase !== "build") throw new Error("SCOPE handler did not approve into BUILD");
 	await phaseCommands.get("build").handler("", phaseCtx);
 	if (owned || !serviceCalls.some((args) => args.includes("integrate"))) throw new Error("BUILD did not continue through automatic ACCEPT integration");

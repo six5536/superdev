@@ -15,46 +15,6 @@ export type PhaseRuntime = {
 export function registerPhaseDrivers(deps: any) {
 	const { pi, runSuperdev, workflowStatus, authority, policyFrom, questions, isolated, childStarted, childFinished, reviewRuns, parentServiceDigest, requiresHumanAcceptance, runtime } = deps;
 	const hasPendingQuestions = () => ["active", "paused"].includes(questions.current?.()?.status ?? "");
-	const requestedIssueNumber = (request: string): number | undefined => {
-		const explicit = request.match(/\bissue[\s#:_-]*0*(\d{1,6})\b/i);
-		const bare = request.trim().match(/^#?0*(\d{1,6})$/);
-		const value = explicit?.[1] ?? bare?.[1];
-		return value ? Number(value) : undefined;
-	};
-	const issueNumber = (id: string): number | undefined => {
-		const match = id.match(/^issue-0*(\d+)(?:-|$)/i);
-		return match ? Number(match[1]) : undefined;
-	};
-	const ensureScopeOwnership = async (request: string, ctx: any) => {
-		let status = await workflowStatus(ctx.cwd);
-		const requested = requestedIssueNumber(request);
-		if (status.owner) {
-			if (requested !== undefined && issueNumber(status.owner.identity.issue) !== requested) {
-				throw new Error(`Workflow ${status.owner.identity.plan} currently owns ${status.phase?.toUpperCase() ?? "the repository"}. Pause or finish it before starting issue ${requested}.`);
-			}
-			if (status.phase !== "scope") {
-				throw new Error(`${status.owner.identity.plan} is currently in ${status.phase?.toUpperCase() ?? "another phase"}; use /${status.phase ?? "superdev-status"} instead of /scope.`);
-			}
-			return status;
-		}
-		if (requested === undefined) {
-			throw new Error("No SCOPE workflow is active. Run `/scope issue <number>` to select and resume an existing open workflow.");
-		}
-		const matches = (status.openWorkflows ?? []).filter((workflow: any) => issueNumber(workflow.issue) === requested);
-		if (matches.length === 0) throw new Error(`No open canonical workflow was found for issue ${requested}. Confirm the issue number with /superdev-status.`);
-		if (matches.length > 1) throw new Error(`Issue ${requested} has multiple open workflows (${matches.map((workflow: any) => workflow.plan).join(", ")}); resolve the canonical records before continuing.`);
-		const workflow = matches[0];
-		await runSuperdev([
-			"workflow", "resume", "--session", ctx.sessionManager.getSessionId(),
-			"--issue", workflow.issue, "--plan", workflow.plan,
-			"--work-branch", workflow.work_branch, "--default-branch", workflow.default_branch,
-		], ctx.cwd, authority);
-		status = await workflowStatus(ctx.cwd);
-		if (!status.owner) throw new Error(`Could not acquire workflow ownership for ${workflow.plan}; check /superdev-status and retry.`);
-		if (status.phase !== "scope") throw new Error(`${workflow.plan} resumed in ${status.phase?.toUpperCase() ?? "an unknown phase"}; use /${status.phase ?? "superdev-status"} instead.`);
-		ctx.ui.notify(`Resumed SCOPE for ${workflow.plan}`, "info");
-		return status;
-	};
 	const pauseAfterFailure = async (ctx: any, phase: string, error: unknown): Promise<boolean> => {
 		const status = await workflowStatus(ctx.cwd);
 		const workflow = status.owner?.identity;
@@ -102,8 +62,6 @@ export function registerPhaseDrivers(deps: any) {
 	const runScopePhase = async (args: string, ctx: any, submitted?: QuestionState) => {
 		if (!submitted && hasPendingQuestions()) return ctx.ui.notify("Resolve or pause the active workflow questions before starting a phase role", "error");
 		if (runtime.cancelling || runtime.modifyingBusy || runtime.modifyingChild) return ctx.ui.notify("A modifying workflow role is already active", "error");
-		try { await ensureScopeOwnership(args, ctx); }
-		catch (error) { return ctx.ui.notify(String(error), "error"); }
 		runtime.modifyingBusy = true;
 		const commandAbort = new AbortController();
 		runtime.modifyingCommandAbort = commandAbort;
