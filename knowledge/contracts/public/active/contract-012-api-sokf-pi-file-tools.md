@@ -439,6 +439,8 @@ export default function (pi: ExtensionAPI) {
 
 ### Transport
 
+The `sokf-validation-state` non-context entry carries one closed `ValidationStateSnapshot` payload. Every variant rejects additional properties and identifies the repository with its canonical absolute root. `Finding` has the exact closed shape bound by `contract-003-api-sokf P_routed-schemas`.
+
 - `P_source-routing` [ubiquitous] The adapter SHALL PENDING(plan-077/block-1) resolve a routed argument to one logical knowledge ingress and one canonical repository-contained target before invoking a Pi file-tool factory.
   - `AC_source-existing` [event] WHEN an identity or physical knowledge path names an existing regular file, the adapter SHALL PENDING(plan-077/block-1) execute against its canonical target.
   - `AC_source-missing` [event] WHEN a physical knowledge path names a missing destination, the adapter SHALL PENDING(plan-077/block-1) canonicalize its nearest existing ancestor and append the normalized missing suffix.
@@ -470,6 +472,12 @@ export default function (pi: ExtensionAPI) {
   - `AC_successful-repairs-survive` [event] WHEN repair or refiling persists before a later finding, the adapter SHALL PENDING(plan-077/block-2) retain every successful persisted change.
   - `AC_indeterminate-outcome-guidance` [event] WHEN local MCP transport fails without an authoritative outcome after bytes may have changed, the adapter SHALL PENDING(plan-077/block-3) return a tool error directing target inspection and `superdev validate`.
   - `AC_failed-persistence-not-dirty` [event] WHEN authoritative persistence establishes that apply did not occur, the adapter SHALL PENDING(plan-077/block-2) create no applied state or validation schedule.
+- `P_validation-state-schema` [ubiquitous] Each `sokf-validation-state` entry SHALL PENDING(plan-077/block-3) carry exactly one versioned closed `ValidationStateSnapshot` variant.
+  - `AC_clean-state-schema` [event] WHEN the repository state is clean, the snapshot SHALL PENDING(plan-077/block-3) equal `{ version: 1, repositoryRoot: string, state: "clean" }`.
+  - `AC_pending-auto-state-schema` [event] WHEN automatic validation is pending, the snapshot SHALL PENDING(plan-077/block-3) equal `{ version: 1, repositoryRoot: string, state: "pending-auto", followUpCount: 0 | 1 | 2, changedPaths: string[], findings: Finding[], diagnosticsTruncated: boolean }`.
+  - `AC_manual-state-schema` [event] WHEN the repository has reached the automatic cap, the snapshot SHALL PENDING(plan-077/block-3) equal `{ version: 1, repositoryRoot: string, state: "manual", changedPaths: string[], findings: Finding[], diagnosticsTruncated: boolean }`.
+  - `AC_pending-manual-state-schema` [event] WHEN one manual-state validation is pending, the snapshot SHALL PENDING(plan-077/block-3) equal `{ version: 1, repositoryRoot: string, state: "pending-manual", changedPaths: string[], findings: Finding[], diagnosticsTruncated: boolean }`.
+  - `AC_invalid-state-entry` [event] WHEN recovery encounters an unsupported version, unknown state, missing field, or additional field, the adapter SHALL PENDING(plan-077/block-3) preserve any in-memory state and emit bounded non-triggering inspection and `superdev validate` guidance without resetting inherited state.
 - `P_validation-follow-up` [ubiquitous] The adapter SHALL PENDING(plan-077/block-3) keep post-persistence findings outside file-tool results in a repository-scoped bounded persisted follow-up sequence.
   - `AC_initial-pending` [event] WHEN a clean repository records `applied: true`, the adapter SHALL PENDING(plan-077/block-3) enter `pending-auto(0)` with changed paths and findings.
   - `AC_turn-end-validation-once` [state] WHILE validation is pending, one eligible `turn_end` SHALL PENDING(plan-077/block-3) run final validation exactly once.
