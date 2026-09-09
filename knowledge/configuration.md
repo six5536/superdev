@@ -353,6 +353,21 @@ truncation of the separately retained raw `events.jsonl` stream. Raw events can
 contain sensitive payloads; artifacts follow configured retention limits.
 A textual imitation of `superdev_submit_result` remains a protocol failure,
 not an accepted review. Role prompts require an actual, separate tool call.
+Each role receives a result schema with only its allowed statuses and fields.
+SCOPE and BUILD report resolved corrections in `summary`, not reviewer `findings`.
+Rejected submissions do not count as acceptance; the child can correct and
+resubmit the payload. If the child stops normally without an accepted result,
+the extension queues at most 1 terminal-repair prompt in that same child.
+Only `superdev_submit_result` remains available during repair. The parent keeps
+the original deadline, candidate, and review checks; repair cannot repeat file
+mutations or workflow operations. Cancellation, provider errors, and terminating
+tool batches do not trigger repair. A remaining failure surfaces the last
+submission rejection alongside the diagnostic path.
+
+A phase `ask` request must name exactly 1 unanswered, dependency-eligible ID in
+`findingIds`. Missing or ineligible IDs return `finding-selection-required` with
+at most 20 eligible IDs and their total count, without changing answers or
+restarting review. Inspect the queue before selecting a finding.
 
 - `.mcp.json` at the repo root registers the MCP servers: the canonical knowledge
   knowledge under `mcpServers.superdev-sokf`, and — with code-index enabled —

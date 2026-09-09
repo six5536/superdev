@@ -14,7 +14,7 @@ import { IsolatedArtifact, boundedText, cleanupArtifacts, type OutputPolicy } fr
 import { registerPhaseDrivers, type PhaseRuntime } from "./lib/phases.ts";
 import { withProgress } from "./lib/progress.ts";
 import { registerWorkflowQuestions, type QuestionState } from "./lib/questions.ts";
-import { parseLegacyRoleResult, roleResultSchema, validateRoleResult, type Role, type RoleResult } from "./lib/review.ts";
+import { parseLegacyRoleResult, roleResultSchemaFor, validateRoleResult, type Role, type RoleResult } from "./lib/review.ts";
 
 import { killProcessTree, stopProcess, ensureParentService, runSuperdev, readOnly, defaultOutputPolicy, isolated, runGuardedBuildCommand, runPinnedSuperdev, requiresHumanAcceptance, isolatedRoleMayNotRun } from "./lib/process.ts";
 export { isolated, isolatedTools, isolatedRoleMayNotRun, parseRoleResult, runPinnedSuperdev, runGuardedBuildCommand, requiresHumanAcceptance, buildCommandAllowed } from "./lib/process.ts";
@@ -33,12 +33,30 @@ export default function superdev(pi: ExtensionAPI) {
 	let inventoryExpectedOffset = 1;
 	let inventoryComplete = false;
 	let childResultSubmitted = false;
+	let terminalRepairQueued = false;
+	let lastSubmissionError: string | undefined;
 	if (childRole) {
+		// Repair only the terminal envelope, once, in the same child and deadline.
+		// A cancelled, failed, or terminating tool batch never triggers this turn.
+		pi.on("agent_end", (event, ctx) => {
+			const last = event.messages.findLast((message) => message.role === "assistant");
+			if (childResultSubmitted || terminalRepairQueued || ctx.signal?.aborted || !last || last.stopReason !== "stop") return;
+			// Schema validation failures bypass execute/tool_result; finalized messages retain them.
+			const rejected = event.messages.findLast((message) => message.role === "toolResult" && message.toolName === "superdev_submit_result" && message.isError);
+			if (rejected?.role === "toolResult") lastSubmissionError = rejected.content.filter((part) => part.type === "text").map((part) => part.text).join("\n").slice(0, 2_048);
+			terminalRepairQueued = true;
+			pi.setActiveTools(["superdev_submit_result"]);
+			pi.sendMessage({
+				customType: "superdev-terminal-repair",
+				content: `The ${childRole} role stopped without an accepted typed result. ${lastSubmissionError ?? "No successful submission was observed."} This is the only terminal repair turn. Use the existing evidence; do not repeat work or invent review evidence. Invoke superdev_submit_result with a valid result. Put completed corrections in summary, not findings. If completion is unsupported, report an allowed non-success status.`,
+				display: false,
+			}, { deliverAs: "followUp", triggerTurn: true });
+		});
 		pi.registerTool({
 			name: "superdev_submit_result",
 			label: "Submit Superdev role result",
-			description: "Submit the one authoritative typed result and terminate this isolated role",
-			parameters: roleResultSchema,
+			description: "Submit one accepted typed result and terminate this isolated role. Rejected submissions do not count: correct the payload and submit again. Describe resolved corrections in summary, never findings.",
+			parameters: roleResultSchemaFor(childRole),
 			executionMode: "sequential",
 			execute: async (_id, input) => {
 				if (childResultSubmitted) {
@@ -48,14 +66,20 @@ export default function superdev(pi: ExtensionAPI) {
 						terminate: true,
 					};
 				}
-				const result = validateRoleResult(childRole, input, {
-					maxBytes: Number(process.env.SUPERDEV_MAX_REVIEW_STATE_BYTES ?? 262_144),
-					maxFindings: Number(process.env.SUPERDEV_MAX_REVIEW_FINDINGS ?? 100),
-				});
-				if (childRole === "code-review" && result.status !== "blocked") {
-					if (!inventoryLoaded || !inventoryComplete) throw new Error("code review did not completely inspect the changed-path inventory");
-					const missing = [...reviewPaths].filter((path) => reviewOffsets.get(path) !== -1);
-					if (missing.length) throw new Error(`code review omitted changed paths: ${missing.join(", ")}`);
+				let result: RoleResult;
+				try {
+					result = validateRoleResult(childRole, input, {
+						maxBytes: Number(process.env.SUPERDEV_MAX_REVIEW_STATE_BYTES ?? 262_144),
+						maxFindings: Number(process.env.SUPERDEV_MAX_REVIEW_FINDINGS ?? 100),
+					});
+					if (childRole === "code-review" && result.status !== "blocked") {
+						if (!inventoryLoaded || !inventoryComplete) throw new Error("code review did not completely inspect the changed-path inventory");
+						const missing = [...reviewPaths].filter((path) => reviewOffsets.get(path) !== -1);
+						if (missing.length) throw new Error(`code review omitted changed paths: ${missing.join(", ")}`);
+					}
+				} catch (error) {
+					lastSubmissionError = String(error).slice(0, 2_048);
+					throw new Error(`${lastSubmissionError}. No result was accepted. Correct the payload and submit again; rejected submissions do not count. Describe resolved corrections in summary, not findings.`, { cause: error });
 				}
 				childResultSubmitted = true;
 				return {
@@ -68,6 +92,9 @@ export default function superdev(pi: ExtensionAPI) {
 	}
 	pi.on("tool_call", (event) => {
 		if (!childRole) return;
+		if (terminalRepairQueued && event.toolName !== "superdev_submit_result") {
+			return { block: true, reason: "Terminal repair permits only superdev_submit_result; prior work must not run again", terminate: true };
+		}
 		if (readOnly.has(childRole) && ["bash", "edit", "write"].includes(event.toolName)) {
 			return { block: true, reason: `${childRole} is an isolated read-only role`, terminate: true };
 		}
