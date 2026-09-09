@@ -355,6 +355,7 @@ mod tests {
 - `P_cancel-pauses` [event] WHEN cancellation occurs, the service SHALL release transient ownership without changing the canonical phase or deleting uncommitted SCOPE drafts.
 - `P_cancel-always-available` [ubiquitous] Pi SHALL permit cancellation regardless of which session holds the claim, so that no recorded claim can leave a checkout without a recovery path.
 - `P_human-release` [event] WHEN a claim cannot be proven abandoned and its session is not the caller, the service SHALL require the interactive Pi UI's capability before releasing it.
+- `P_human-release-names-claim` [event] WHEN a human authorizes a release, the service SHALL release only the claim whose session the human was shown, refusing any claim that replaced it.
 - `P_human-release-confirmed` [event] WHEN Pi releases a claim held by another session, Pi SHALL obtain explicit human confirmation first.
 - `P_abandon-human-only` [event] WHEN abandonment is requested, the service SHALL require interactive human approval while excluding partial product work from integration.
 - `P_abandon-default-records` [event] WHEN abandonment closes the workflow, the service SHALL publish the closed issue and plan in a detached worktree and compare-and-swap the local default ref without carrying work-branch product history.

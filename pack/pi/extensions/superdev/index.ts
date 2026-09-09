@@ -242,10 +242,8 @@ export default function superdev(pi: ExtensionAPI) {
 			candidate_revision?: string;
 			verified_default_revision?: string;
 			owner_pid?: number;
-			owner_started?: string;
 			child_role?: Role;
 			child_pid?: number;
-			child_started?: string;
 			identity: { issue: string; plan: string; work_branch: string; default_branch: string };
 		};
 		phase?: "scope" | "build" | "accept";
@@ -465,7 +463,7 @@ export default function superdev(pi: ExtensionAPI) {
 			}
 			const activity = status.busy ? "repository workflow transaction is busy"
 				: status.owner?.child_role
-				? `running ${status.owner.child_role}${status.owner.child_started ? ` since ${status.owner.child_started}` : ""}`
+				? `running ${status.owner.child_role}${status.owner.child_pid ? ` (pid ${status.owner.child_pid})` : ""}`
 				: pending && pending.status !== "submitted" && pending.status !== "superseded"
 					? `${pending.status} questions (${Object.keys(pending.answers).length}/${pending.findings.length})`
 					: status.owner ? "awaiting phase action" : pausedWorkflows ? `paused: ${pausedWorkflows}` : "unowned";

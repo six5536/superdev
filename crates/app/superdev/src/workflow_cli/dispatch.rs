@@ -163,7 +163,7 @@ pub fn run(command: &WorkflowCommand, root: &Path) -> Result<u8> {
             // interactive UI's capability rather than through a bare flag.
             if args.human_release {
                 ui_authority_capability()?;
-                cache::release_any(&root)?;
+                cache::release_approved(&root, &args.session)?;
             } else {
                 cache::release(&root, &args.session)?;
             }

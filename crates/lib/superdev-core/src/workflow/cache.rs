@@ -147,7 +147,7 @@ impl Transaction<'_> {
 
     /// Release matching ownership while retaining the transaction lock.
     pub fn release(&mut self, session: &str) -> Result<()> {
-        release_unlocked(self.root, self.files, Some(session))
+        release_unlocked(self.root, self.files, session, Approval::Session)
     }
 }
 
@@ -308,33 +308,53 @@ fn compare_and_swap_unlocked(
 
 /// Release ownership for the matching session without touching canonical state.
 pub fn release(root: &Path, session: &str) -> Result<()> {
-    locked(root, |files| release_unlocked(root, files, Some(session)))
+    locked(root, |files| {
+        release_unlocked(root, files, session, Approval::Session)
+    })
 }
 
-/// Release ownership whichever session recorded it.
+/// Release the named claim on human authority, without proving it abandoned.
 ///
 /// A claim that records no process is unfalsifiable, so no session can prove it
 /// abandoned and no session can release it. That leaves a human as the only
 /// remaining judge, and this is the path their decision takes.
 ///
+/// The session is still required to match. A human approves one claim they were
+/// shown, so releasing a different claim that arrived in between would discard
+/// work they never saw.
+///
 /// Releasing ownership is safe to authorize because ownership is transient:
 /// the phase, the plan, and every commit stay in Git, so the workflow is
 /// paused rather than lost.
-pub fn release_any(root: &Path) -> Result<()> {
-    locked(root, |files| release_unlocked(root, files, None))
+pub fn release_approved(root: &Path, session: &str) -> Result<()> {
+    locked(root, |files| {
+        release_unlocked(root, files, session, Approval::Human)
+    })
 }
 
-fn release_unlocked(root: &Path, files: &CacheFiles, session: Option<&str>) -> Result<()> {
+/// Who authorized a release, which decides what still has to be proven.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Approval {
+    /// Only the owning session, or a claim provably abandoned, may release.
+    Session,
+    /// A human approved this exact claim, so liveness no longer has to be proven.
+    Human,
+}
+
+fn release_unlocked(
+    root: &Path,
+    files: &CacheFiles,
+    session: &str,
+    approval: Approval,
+) -> Result<()> {
     let Some(cache) = load_unlocked(files)? else {
         return Ok(());
     };
     // Releasing an abandoned claim is the recovery path for a session that
     // exited without pausing. Without it, the only session able to release the
     // claim is the one that no longer exists.
-    if let Some(session) = session
-        && cache.session_id != session
-        && !abandoned(&cache)
-    {
+    let reclaimable = approval == Approval::Session && abandoned(&cache);
+    if cache.session_id != session && !reclaimable {
         return Err(Error::Manifest {
             message: format!("workflow is owned by Pi session `{}`", cache.session_id),
         });
@@ -505,16 +525,20 @@ mod tests {
 
         // The session check refuses, because the owner is provably running.
         assert!(release(root.path(), "b").is_err());
+        // A human approves one claim they were shown, so a different claim
+        // arriving in between is still refused rather than silently discarded.
+        assert!(release_approved(root.path(), "someone-else").is_err());
+        assert_eq!(load(root.path()).unwrap().unwrap().session_id, "a");
         // The human path is the last resort and pauses rather than destroys:
         // only the transient claim is removed.
-        release_any(root.path()).unwrap();
+        release_approved(root.path(), "a").unwrap();
         assert!(load(root.path()).unwrap().is_none());
     }
 
     #[test]
     fn releasing_an_unowned_workflow_succeeds_without_a_claim_to_remove() {
         let root = tempfile::tempdir().unwrap();
-        release_any(root.path()).unwrap();
+        release_approved(root.path(), "a").unwrap();
         release(root.path(), "a").unwrap();
         assert!(load(root.path()).unwrap().is_none());
     }

@@ -32,6 +32,193 @@ fn service(root: &Path, args: &[&str]) -> serde_json::Value {
     serde_json::from_slice(&output.stdout).unwrap()
 }
 
+fn refuse(root: &Path, args: &[&str]) {
+    Command::cargo_bin("superdev")
+        .unwrap()
+        .current_dir(root)
+        .env("SUPERDEV_UI_AUTHORITY", AUTHORITY)
+        .args(args)
+        .assert()
+        .failure();
+}
+
+/// One managed repository carrying the canonical issue and authored plan that
+/// `workflow start` adopts.
+fn managed_repository(root: &Path) {
+    command(root, &["init", "-q", "-b", "main"]);
+    command(root, &["config", "user.name", "Test"]);
+    command(root, &["config", "user.email", "test@example.com"]);
+    command(root, &["config", "commit.gpgsign", "false"]);
+    Command::cargo_bin("superdev")
+        .unwrap()
+        .current_dir(root)
+        .args(["init", "--no-frontend", "--no-code-index"])
+        .assert()
+        .success();
+    command(root, &["add", "-A"]);
+    command(root, &["commit", "-qm", "init"]);
+    fs::create_dir_all(root.join("knowledge/issues/open")).unwrap();
+    fs::write(
+        root.join("knowledge/issues/open/issue-001-canonical-recovery.md"),
+        include_str!("fixtures/workflow-issue.md"),
+    )
+    .unwrap();
+    command(root, &["add", "knowledge"]);
+    command(root, &["commit", "-qm", "docs: file canonical recovery"]);
+    fs::create_dir_all(root.join("knowledge/plans/open")).unwrap();
+    fs::write(
+        root.join("knowledge/plans/open/plan-042-canonical-recovery.md"),
+        include_str!("fixtures/workflow-plan.md"),
+    )
+    .unwrap();
+}
+
+fn identity(session: &str) -> Vec<String> {
+    [
+        "--session",
+        session,
+        "--issue",
+        "issue-001-canonical-recovery",
+        "--plan",
+        "plan-042-canonical-recovery",
+        "--work-branch",
+        "work/001-canonical-recovery",
+    ]
+    .iter()
+    .map(|value| (*value).to_owned())
+    .collect()
+}
+
+/// A Pi session that stops without pausing leaves a claim behind. Recovering
+/// from that must not require editing `.superdev/cache/workflow.toml` by hand.
+#[cfg(unix)]
+#[test]
+fn a_claim_from_a_stopped_session_recovers_without_manual_repair() {
+    let directory = tempfile::tempdir().unwrap();
+    let root = directory.path();
+    managed_repository(root);
+
+    // Stand in for the owning Pi process, which outlives the short-lived CLI.
+    let mut owner = Command::new("sleep").arg("120").spawn().unwrap();
+    let owner_pid = owner.id().to_string();
+    let mut start = vec!["workflow".to_owned(), "start".to_owned()];
+    start.extend(identity("pi-stopped"));
+    start.extend(["--owner-pid".to_owned(), owner_pid]);
+    let started: Vec<&str> = start.iter().map(String::as_str).collect();
+    service(root, &started);
+
+    // While that process runs, its claim holds the checkout against everyone.
+    let live = service(root, &["workflow", "status", "--json"]);
+    assert_eq!(live["result"]["owner"]["session_id"], "pi-stopped");
+    assert!(live["result"]["abandonedOwner"].is_null());
+    let mut intruder = vec!["workflow".to_owned(), "resume".to_owned()];
+    intruder.extend(identity("pi-intruder"));
+    let refused: Vec<&str> = intruder.iter().map(String::as_str).collect();
+    refuse(root, &refused);
+    refuse(root, &["workflow", "cancel", "--session", "pi-intruder"]);
+
+    owner.kill().unwrap();
+    owner.wait().unwrap();
+
+    // The service now decides the claim is abandoned, and says so once for
+    // every consumer rather than leaving each to re-derive it.
+    let stopped = service(root, &["workflow", "status", "--json"]);
+    assert!(
+        stopped["result"]["owner"].is_null(),
+        "a claim whose owner exited no longer blocks the checkout"
+    );
+    assert_eq!(
+        stopped["result"]["abandonedOwner"]["session_id"],
+        "pi-stopped"
+    );
+    assert_eq!(stopped["result"]["abandonedOwner"]["child_running"], false);
+
+    // A fresh session reclaims the checkout with no manual repair, which is the
+    // behaviour whose absence wedged the workflow.
+    let mut resume = vec!["workflow".to_owned(), "resume".to_owned()];
+    resume.extend(identity("pi-next"));
+    resume.extend(["--owner-pid".to_owned(), std::process::id().to_string()]);
+    let resumed: Vec<&str> = resume.iter().map(String::as_str).collect();
+    service(root, &resumed);
+
+    let recovered = cache::load(root).unwrap().unwrap();
+    assert_eq!(recovered.session_id, "pi-next");
+    assert_eq!(recovered.owner_pid, Some(std::process::id()));
+    assert_eq!(
+        git::current_branch(root).unwrap(),
+        "work/001-canonical-recovery"
+    );
+    // Canonical work is untouched by any of this; only the claim moved.
+    assert!(
+        git::file_at_revision(
+            root,
+            "work/001-canonical-recovery",
+            "knowledge/plans/open/plan-042-canonical-recovery.md",
+        )
+        .is_ok()
+    );
+    service(root, &["workflow", "cancel", "--session", "pi-next"]);
+}
+
+/// A claim recording no owning process cannot be proven abandoned, so it stays
+/// until a human decides. That decision releases the claim they were shown.
+#[test]
+fn an_undecidable_claim_waits_for_the_human_who_was_shown_it() {
+    let directory = tempfile::tempdir().unwrap();
+    let root = directory.path();
+    managed_repository(root);
+
+    // A claim from before owner processes were recorded, or from a platform
+    // that exposes none.
+    let mut start = vec!["workflow".to_owned(), "start".to_owned()];
+    start.extend(identity("pi-unfalsifiable"));
+    let started: Vec<&str> = start.iter().map(String::as_str).collect();
+    service(root, &started);
+    assert_eq!(cache::load(root).unwrap().unwrap().owner_pid, None);
+
+    // Uncertainty favours the incumbent, so the claim still holds the checkout.
+    let status = service(root, &["workflow", "status", "--json"]);
+    assert_eq!(status["result"]["owner"]["session_id"], "pi-unfalsifiable");
+    assert!(status["result"]["abandonedOwner"].is_null());
+    refuse(root, &["workflow", "cancel", "--session", "pi-other"]);
+
+    // A human approves one claim they were shown. Naming a different claim is
+    // refused rather than releasing work they never saw.
+    refuse(
+        root,
+        &[
+            "workflow",
+            "cancel",
+            "--session",
+            "pi-other",
+            "--human-release",
+        ],
+    );
+    assert_eq!(
+        cache::load(root).unwrap().unwrap().session_id,
+        "pi-unfalsifiable"
+    );
+
+    service(
+        root,
+        &[
+            "workflow",
+            "cancel",
+            "--session",
+            "pi-unfalsifiable",
+            "--human-release",
+        ],
+    );
+    // Releasing pauses rather than destroys: the claim is gone, the workflow
+    // remains open and resumable.
+    assert!(cache::load(root).unwrap().is_none());
+    let paused = service(root, &["workflow", "status", "--json"]);
+    assert_eq!(
+        paused["result"]["openWorkflows"][0]["plan"],
+        "plan-042-canonical-recovery"
+    );
+}
+
 #[test]
 fn trunk_reserves_independent_plans_and_recovers_each_branch_without_cache() {
     let directory = tempfile::tempdir().unwrap();
