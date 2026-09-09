@@ -9,6 +9,7 @@ import { StringEnum } from "@earendil-works/pi-ai";
 import { Type, type Static } from "typebox";
 import { IsolatedArtifact, boundedText, cleanupArtifacts, type OutputPolicy } from "./output.ts";
 import { parseLegacyRoleResult, validateRoleResult, type RoleResult, type Role } from "./review.ts";
+import { pinService } from "./service-pin.ts";
 
 const here = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const schema = Type.Object({
@@ -54,12 +55,10 @@ async function resolveServicePath(): Promise<string> {
 export async function ensureParentService(cwd: string): Promise<{ path: string; digest: string }> {
 	if (!parentServicePin) {
 		parentServicePin = (async () => {
-			const path = await resolveServicePath();
-			const probe = await runPinnedSuperdev(path, undefined, ["workflow", "status", "--json"], cwd);
-			if (probe.code !== 0) throw new Error(probe.stderr.trim() || "superdev status probe failed");
-			parentServicePath = path;
-			parentServiceDigest = probe.digest;
-			return { path, digest: probe.digest };
+			const service = await pinService(await resolveServicePath(), cwd);
+			parentServicePath = service.path;
+			parentServiceDigest = service.digest;
+			return { path: service.path, digest: service.digest };
 		})().catch((error) => { parentServicePin = undefined; throw error; });
 	}
 	return parentServicePin;

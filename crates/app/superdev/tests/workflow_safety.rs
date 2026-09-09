@@ -112,6 +112,91 @@ fn trunk_reserves_independent_plans_and_recovers_each_branch_without_cache() {
                 .unwrap()
                 .contains("Workflow default branch: trunk.")
         );
+        // A pre-upgrade Pi session omits --expected-work. Rust resolves it under
+        // the repository lock without asking the human to repair the invocation.
+        let owner = cache::load(root).unwrap().unwrap();
+        let baseline = service(
+            root,
+            &[
+                "workflow",
+                "scope-baseline",
+                "--session",
+                "owner",
+                "--expected-revision",
+                &owner.last_plan_revision,
+            ],
+        );
+        assert_eq!(
+            baseline["result"]["baseline"],
+            git::revision(root, &branch).unwrap()
+        );
+        // Explicit caller expectations still reject stale work tips.
+        Command::cargo_bin("superdev")
+            .unwrap()
+            .current_dir(root)
+            .env("SUPERDEV_UI_AUTHORITY", AUTHORITY)
+            .args([
+                "workflow",
+                "scope-baseline",
+                "--session",
+                "owner",
+                "--expected-revision",
+                &owner.last_plan_revision,
+                "--expected-work",
+                "0000000000000000000000000000000000000000",
+            ])
+            .assert()
+            .failure();
+        // Omission is not permission to ignore stale plan revisions.
+        Command::cargo_bin("superdev")
+            .unwrap()
+            .current_dir(root)
+            .env("SUPERDEV_UI_AUTHORITY", AUTHORITY)
+            .args([
+                "workflow",
+                "scope-baseline",
+                "--session",
+                "owner",
+                "--expected-revision",
+                "stale",
+            ])
+            .assert()
+            .failure();
+        Command::cargo_bin("superdev")
+            .unwrap()
+            .current_dir(root)
+            .env("SUPERDEV_UI_AUTHORITY", AUTHORITY)
+            .args([
+                "workflow",
+                "scope-baseline",
+                "--session",
+                "intruder",
+                "--expected-revision",
+                &owner.last_plan_revision,
+            ])
+            .assert()
+            .failure();
+        let explicit = service(
+            root,
+            &[
+                "workflow",
+                "scope-baseline",
+                "--session",
+                "owner",
+                "--expected-revision",
+                &owner.last_plan_revision,
+                "--expected-work",
+                &git::revision(root, &branch).unwrap(),
+            ],
+        );
+        assert_eq!(
+            explicit["result"]["baseline"],
+            baseline["result"]["baseline"]
+        );
+        assert_eq!(
+            cache::load(root).unwrap().unwrap().scope_base_revision,
+            Some(git::revision(root, &branch).unwrap())
+        );
         // A second session cannot switch the shared checkout under the owner.
         Command::cargo_bin("superdev")
             .unwrap()

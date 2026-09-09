@@ -462,9 +462,9 @@ pub struct ScopeBaselineArgs {
     /// Expected current plan content revision
     #[arg(long)]
     expected_revision: String,
-    /// Expected current work-branch tip
+    /// Expected work-branch tip; omitted callers use the owned tip under the repository lock
     #[arg(long)]
-    expected_work: String,
+    expected_work: Option<String>,
 }
 
 /// Session and plan compare-and-swap arguments.

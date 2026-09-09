@@ -21,7 +21,11 @@ pub(super) fn record_scope_baseline(root: &Path, args: &ScopeBaselineArgs) -> Re
         }
         git::require_knowledge_only_worktree(root)?;
         let baseline = git::revision(root, &owner.identity.work_branch)?;
-        if baseline != args.expected_work {
+        if args
+            .expected_work
+            .as_ref()
+            .is_some_and(|expected| expected != &baseline)
+        {
             return Err(Error::Manifest {
                 message: "work branch moved before the SCOPE baseline was recorded".into(),
             });

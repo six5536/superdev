@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { chmod, mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
+import { chmod, copyFile, mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 
@@ -7,12 +7,37 @@ import superdev, { buildCommandAllowed, isolated, isolatedRoleMayNotRun, isolate
 import { IsolatedArtifact, boundedText } from "../../../.pi/extensions/superdev/lib/output.ts";
 import { registerPhaseDrivers, type PhaseRuntime } from "../../../.pi/extensions/superdev/lib/phases.ts";
 import { registerPhaseTool } from "../../../.pi/extensions/superdev/lib/phase-tool.ts";
+import { pinService } from "../../../.pi/extensions/superdev/lib/service-pin.ts";
 import { registerIntakeTools } from "../../../.pi/extensions/superdev/lib/intake.ts";
 import { withProgress } from "../../../.pi/extensions/superdev/lib/progress.ts";
 import { registerWorkflowQuestions } from "../../../.pi/extensions/superdev/lib/questions.ts";
 import { findingFingerprint, validateRoleResult, type ReviewFinding } from "../../../.pi/extensions/superdev/lib/review.ts";
 
 async function smoke() {
+	if (process.platform === "linux") {
+		const root = await mkdtemp(join(tmpdir(), "superdev-launcher-test-"));
+		let pinned: Awaited<ReturnType<typeof pinService>> | undefined;
+		try {
+			const launcher = join(root, "launcher");
+			const native = join(root, "native");
+			await copyFile("/bin/echo", native);
+			await writeFile(launcher, '#!/bin/sh\nroot="$(dirname "$0")"\n[ -f "$root/native" ] || exit 2\nprintf \'{"protocol":"superdev-workflow/v2","result":{"executable":"%s/native"}}\\n\' "$root"\n');
+			await chmod(launcher, 0o700);
+			// Copying a relative-path launcher to /proc/fd loses its original root.
+			const broken = await runPinnedSuperdev(launcher, undefined, ["workflow", "status", "--json"], root);
+			if (broken.code === 0) throw new Error("launcher regression did not reproduce");
+			pinned = await pinService(launcher, root);
+			await rm(native);
+			await rm(launcher);
+			// The source checkout may now contain an older launcher or a rebuilt
+			// executable. Neither affects the parent/child service snapshot.
+			const result = await runPinnedSuperdev(pinned.path, pinned.digest, ["stable-service"], root);
+			if (result.code !== 0 || result.stdout.trim() !== "stable-service") throw new Error("service snapshot depended on the changed checkout");
+		} finally {
+			pinned?.dispose();
+			await rm(root, { recursive: true, force: true });
+		}
+	}
 	const commands: string[] = [];
 	const tools: string[] = [];
 	const toolDefinitions = new Map<string, any>();

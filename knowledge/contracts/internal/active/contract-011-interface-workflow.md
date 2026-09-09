@@ -337,6 +337,8 @@ mod tests {
 - `P_rust-authority` [ubiquitous] The Rust workflow service SHALL validate every durable phase transition, plan revision comparison, ownership comparison, and automatic Git operation.
 - `P_pi-orchestrates` [ubiquitous] Pi SHALL orchestrate discoverable issue, scope, build, and accept skills through typed tools while withholding direct shell and Git access from children and resolving BUILD's executable and digest together at invocation time.
 - `P_extension-skills` [ubiquitous] The extension SHALL contribute self-contained workflow skills through resource discovery.
+- `P_service-snapshot` [event] WHEN Pi initializes its workflow service, the adapter SHALL bootstrap the trusted launcher in place and retain a private native executable snapshot independent of subsequent checkout switches and rebuilds.
+- `P_baseline-compatible` [event] WHEN a SCOPE baseline caller omits its optional expected work tip, Rust SHALL resolve the owned work-branch tip under the repository lock while retaining session, plan-revision, phase, and checkout checks. Explicit expected tips retain compare-and-swap rejection.
 - `P_skill-cold-start` [event] WHEN a workflow skill starts, the skill SHALL reconstruct canonical identity and phase before mutation.
 - `P_questions-persisted` [event] WHEN review requires intent, Pi SHALL persist post-transition revision-bound questions and confirmed answers for one batched correction and re-review.
 - `P_questions-ui` [event] WHEN a skill asks a question, Pi SHALL offer concrete choices, a recommendation, a typed answer, and chat discussion through the public typed tool.
