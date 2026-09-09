@@ -182,6 +182,17 @@ semantic overview retrieval sync it lazily. Source resolution, direct semantic
 retrieval, and graph traversal parse current knowledge without opening the
 index. There is no watcher or daemon state.
 
+The routed schema notation below names JSON objects. `?` marks an optional
+field. Every object is closed to additional properties. Every path is a
+repository-relative slash-separated string. A symlink-reached Markdown file is
+eligible when its selected logical path has no hidden directory component and
+its final name ends in `.md`; `index.md` remains a reserved index and every
+other eligible file remains a concept candidate or broken file. A `GeneratedRegion` is
+`{ startLine: integer >= 1, endLine: integer >= startLine,
+authoritativePath: string, authoritativeRegion?: string }`. A `Finding` is
+`{ severity: "error" | "warning", path?: string, location?: { line: integer
+>= 1, column?: integer >= 1 }, message: string, action: string }`.
+
 - `P_speaks-mcp-over-stdio` [ubiquitous] `superdev mcp sokf` SHALL
   speak the MCP protocol over stdin and stdout, serving one client.
 - `P_exits-on-closed-stdin` [event] WHEN the client closes stdin,
@@ -201,9 +212,31 @@ index. There is no watcher or daemon state.
   configured embedder once.
 - `P_later-index-call-reuses` [state] WHILE the embedder result is initialized,
   later index-dependent calls SHALL reuse that result.
+- `P_routed-schemas` [ubiquitous] The routed MCP operations SHALL
+  PENDING(plan-077/block-3) expose only the closed request and success-result
+  schemas specified below.
+  - `AC_resolve-schema` [ubiquitous] `sokf_resolve_source` SHALL
+    PENDING(plan-077/block-1) accept `{ path: string }` and return structured
+    content `{ ingressPath: string, canonicalPath: string, exists: boolean,
+    generatedRegions: GeneratedRegion[] }`.
+  - `AC_retrieve-schema` [ubiquitous] `sokf_retrieve` SHALL
+    PENDING(plan-077/block-1) accept `{ path: string, offset?: integer >= 1,
+    limit?: integer >= 1 }` and return one text content item with no structured
+    content.
+  - `AC_edit-schema` [ubiquitous] `sokf_edit` SHALL
+    PENDING(plan-077/block-2) accept `{ ingressPath: string,
+    expectedCanonicalPath: string, expectedContent: string, content: string }`.
+  - `AC_write-schema` [ubiquitous] `sokf_write` SHALL
+    PENDING(plan-077/block-3) accept `{ ingressPath: string,
+    expectedCanonicalPath: string, content: string }`.
+  - `AC_mutation-result-schema` [ubiquitous] A successful `sokf_edit` or
+    `sokf_write` SHALL PENDING(plan-077/block-3) return structured content
+    `{ applied: true, validation: "valid" | "invalid" | "unknown",
+    resolvedPath: string, finalPath: string, changedPaths: string[], findings:
+    Finding[], diagnosticsTruncated: boolean }`.
 - `P_source-resolution` [ubiquitous] `sokf_resolve_source` SHALL
   PENDING(plan-077/block-1) return one logical `knowledge/` ingress, canonical
-  repository-relative target, existence flag, and generated-authority metadata
+  repository-relative target, existence flag, and generated-region metadata
   without semantic content.
   - `AC_source-identity` [event] WHEN the resolver receives an unqualified
     `sokf:<id>` or physical knowledge path, it SHALL PENDING(plan-077/block-1)
@@ -227,6 +260,33 @@ index. There is no watcher or daemon state.
     physical path, it SHALL PENDING(plan-077/block-1) refuse the path.
 - `P_no-read-alias` [ubiquitous] The MCP tool list SHALL NOT
   PENDING(plan-077/block-1) expose `sokf_read`.
+- `P_symlink-membership` [event] WHEN an eligible Markdown file is reachable
+  from `knowledge/` through a repository-contained file or directory symlink,
+  SOKF SHALL PENDING(plan-077/block-1) treat the canonical file as knowledge
+  under one selected logical ingress.
+  - `AC_symlink-member-surfaces` [event] WHEN SOKF selects a symlink ingress,
+    bundle loading, identity resolution, search, graph traversal, repair,
+    refiling, and validation SHALL PENDING(plan-077/block-1) use its logical
+    `knowledge/` path.
+  - `AC_symlink-member-once` [event] WHEN multiple ingresses reach one canonical
+    file, SOKF SHALL PENDING(plan-077/block-1) process it once, prefer a direct
+    ingress, and otherwise select the lexically first symlink ingress.
+  - `AC_symlink-cycle` [event] WHEN a directory symlink forms a canonical
+    cycle, SOKF SHALL PENDING(plan-077/block-1) stop traversal at the repeated
+    canonical directory identity.
+  - `AC_symlink-nonmember` [event] WHEN a target escapes the repository or has
+    no logical ingress from `knowledge/`, SOKF SHALL PENDING(plan-077/block-1)
+    exclude it from knowledge and refuse an escaping ingress.
+  - `AC_symlink-repair-location` [event] WHEN repair changes a selected symlink
+    member, SOKF SHALL PENDING(plan-077/block-1) write the canonical file and
+    preserve every ingress symlink.
+  - `AC_file-symlink-refiling` [event] WHEN refiling changes a member selected
+    through a file symlink, SOKF SHALL PENDING(plan-077/block-1) move the logical
+    symlink directory entry without moving its canonical target.
+  - `AC_directory-symlink-refiling` [event] WHEN a wrong-location member is
+    reachable only beneath a directory symlink, SOKF SHALL
+    PENDING(plan-077/block-1) leave the canonical target and ancestor symlink
+    unchanged and return an actionable finding.
 - `P_direct-retrieval-skips-index` [event] WHEN source resolution or direct
   semantic retrieval runs, the MCP server SHALL PENDING(plan-077/block-1)
   answer without opening or rewriting the search index.
@@ -311,8 +371,10 @@ A tool failure is an MCP error payload, never a process exit.
     problem after apply, the tool SHALL PENDING(plan-077/block-3) return
     `applied: true` with an actionable finding.
 - `P_mutation-result-shape` [ubiquitous] A routed mutation result SHALL
-  PENDING(plan-077/block-3) carry authoritative applied and validation states,
-  resolved and final paths, changed-path summaries, and actionable findings.
+  PENDING(plan-077/block-3) carry literal applied state, validation state,
+  resolved and final paths, unique repository-relative changed paths in lexical
+  order, actionable findings, and an explicit diagnostic-truncation flag as
+  specified by `AC_mutation-result-schema`.
 - `P_mutation-diagnostics-bounded` [ubiquitous] Routed mutation results SHALL
   PENDING(plan-077/block-3) omit patches and mutation envelopes and stop
   diagnostics at 200 lines or 8 KiB.

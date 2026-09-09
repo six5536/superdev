@@ -24,11 +24,13 @@ We will resolve SOKF identities before execution, then delegate file semantics a
 
 We will queue virtual and physical aliases by canonical physical target. Edits will persist through an agent-safe compare-and-swap source transport that re-resolves the logical ingress and rejects target drift. A missing physical destination will canonicalize through its nearest existing ancestor. Repository-contained symlink targets are accepted, including targets outside `knowledge/`; repository escapes are rejected.
 
+A repository-contained file or directory symlink below `knowledge/` makes each reachable eligible Markdown file an SOKF member under a logical `knowledge/` ingress. SOKF will process each canonical file once across loading, identity resolution, search, graph traversal, repair, refiling, and validation. A direct ingress wins; otherwise the lexically first symlink ingress wins. Canonical directory identities break cycles. Repair changes the canonical file without replacing ingress symlinks. Refiling moves a selected file-symlink directory entry without moving its canonical target. A wrong-location member reached only beneath a directory symlink stays in place with an actionable finding because it has no independently movable alias. A repository file with no logical `knowledge/` ingress is not SOKF knowledge.
+
 An authoritative `applied: true` response is the mutation outcome boundary. The adapter will retain the requested bytes and every successfully persisted repair or refiling change, shield dispatched persistence from late cancellation, hold the queue through mutation-state capture, and return Pi's unchanged success result. Failures without an authoritative applied response remain tool errors. An indeterminate local MCP failure requires target inspection and `superdev validate`, not durable outcome reconciliation.
 
 Validation diagnostics will remain outside file-tool content. Repository-scoped non-context snapshots will preserve the `clean`, `pending-auto(0..2)`, `manual`, and `pending-manual` follow-up states on the active session branch. Only valid final validation resets the sequence. Snapshot failure after apply preserves success and in-memory pending validation while producing separate non-triggering manual guidance.
 
-The unreleased MCP surface will replace `sokf_read` with `sokf_resolve_source` and `sokf_retrieve`. The resolver carries no semantic content. The retrieval operation retains semantic overview, rendered-concept, section, and line-window behavior.
+The unreleased MCP surface will replace `sokf_read` with `sokf_resolve_source` and `sokf_retrieve`. The resolver carries no semantic content. The retrieval operation retains semantic overview, rendered-concept, section, and line-window behavior. Every replacement request and structured result will use the exact closed schema in `contract-003-api-sokf P_routed-schemas`; the adapter will reject missing and additional fields. Resolver output includes line-bounded generated regions and their authoritative source. Mutation output includes literal applied state, unique lexical changed paths, actionable findings, and an explicit diagnostics-truncation flag without patches.
 
 ## Options considered
 
@@ -45,7 +47,9 @@ The unreleased MCP surface will replace `sokf_read` with `sokf_resolve_source` a
 
 - Positive: physical paths and equivalent SOKF identities share Pi's tested file semantics, results, metadata, and rendering.
 - Positive: SOKF safety, repair, refiling, and validation remain authoritative without replacing successful file-tool results.
+- Positive: logical-ingress membership gives contained symlink targets one deterministic identity across every SOKF surface.
 - Positive: bounded follow-ups retain enough active-branch state to prevent lifecycle events from resetting the correction cap.
 - Negative: parity evidence pins Pi 0.85.1 and requires synchronization when Pi changes its built-in contracts.
 - Negative: an indeterminate local MCP failure requires manual filesystem inspection and validation.
+- Negative: schema evolution requires coordinated Rust and TypeScript changes because routed MCP objects reject additional fields.
 - Follow-ups: changes to semantic ranking, unrelated MCP lifecycle behavior, durable outcome reconciliation, and packaging design require separate issues.
