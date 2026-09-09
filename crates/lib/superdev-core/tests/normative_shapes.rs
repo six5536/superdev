@@ -1905,19 +1905,24 @@ fn nothing_a_writer_builds_against_names_a_retired_phase() {
 /// ADR-052 is the active workflow decision and supersedes ADR-050, which
 /// remains immutable in the deprecated history with its earlier decisions.
 #[test]
-fn adr_052_supersedes_the_previous_workflow() {
+fn the_workflow_decision_chain_stays_superseded_rather_than_edited() {
     let active = std::fs::read_to_string(repo(
-        "knowledge/adrs/active/adr-052-the-workflow-is-scope-build-accept-under-a-durable-core.md",
+        "knowledge/adrs/active/adr-054-the-workflow-core-owns-state-branch-and-refusals.md",
     ))
-    .expect("ADR-052 is on file");
+    .expect("ADR-054 is on file");
     assert_eq!(frontmatter_of(&active, "lifecycle"), Some("active"));
     assert!(active.contains(
-        "  - rel: supersedes\n    to: adr-050-keys-and-ears-live-in-the-contracts-and-the-workflow-is-file-scope-build-accept\n"
+        "  - rel: supersedes\n    to: adr-052-the-workflow-is-scope-build-accept-under-a-durable-core\n"
     ));
-    let old = repo(
+    for superseded in [
+        "knowledge/adrs/deprecated/adr-052-the-workflow-is-scope-build-accept-under-a-durable-core.md",
         "knowledge/adrs/deprecated/adr-050-keys-and-ears-live-in-the-contracts-and-the-workflow-is-file-scope-build-accept.md",
-    );
-    assert!(old.exists(), "ADR-050 remains in deprecated history");
+    ] {
+        assert!(
+            repo(superseded).exists(),
+            "{superseded} remains in deprecated history"
+        );
+    }
 }
 
 /// Covers I052's glossary criterion: the glossary defines the workflow's

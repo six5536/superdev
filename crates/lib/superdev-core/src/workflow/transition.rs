@@ -36,16 +36,12 @@ pub fn apply_transition(
     use Phase::{Abandoned, Accept, Build, Done, Scope};
     use Transition::{
         Abandon, Accept as AcceptTransition, ApproveScope, CompleteBuild, RecordBuildProgress,
-        RecoverStaleDefault, RejectAcceptance, ReturnToBuild, ReturnToScope,
+        RejectAcceptance, ReturnToBuild, ReturnToScope,
     };
 
     match (phase, transition) {
         (Scope, ApproveScope) => {
             require(gates.human_scope_approved, "scope approval is absent")?;
-            require(
-                gates.requirements_review_clean,
-                "requirements review is not clean",
-            )?;
             Ok(Build)
         }
         (Build, ReturnToScope) => Ok(Scope),
@@ -62,7 +58,6 @@ pub fn apply_transition(
             }
             Ok(Done)
         }
-        (Accept | Done, RecoverStaleDefault) if !gates.closure_integrated => Ok(Build),
         (Scope | Build | Accept, Abandon) => {
             require(
                 gates.human_abandonment_approved,
@@ -88,7 +83,7 @@ mod tests {
     }
 
     #[test]
-    fn scope_requires_both_human_approval_and_clean_review() {
+    fn scope_requires_human_approval() {
         let mut gates = GateEvidence::default();
         assert!(
             apply_transition(
@@ -100,16 +95,6 @@ mod tests {
             .is_err()
         );
         gates.human_scope_approved = true;
-        assert!(
-            apply_transition(
-                Phase::Scope,
-                Transition::ApproveScope,
-                &gates,
-                &config(true)
-            )
-            .is_err()
-        );
-        gates.requirements_review_clean = true;
         assert_eq!(
             apply_transition(
                 Phase::Scope,
@@ -118,6 +103,28 @@ mod tests {
                 &config(true)
             ),
             Ok(Phase::Build)
+        );
+    }
+
+    #[test]
+    fn build_completion_is_an_explicit_edge_rather_than_an_evidence_side_effect() {
+        assert_eq!(
+            apply_transition(
+                Phase::Build,
+                Transition::CompleteBuild,
+                &GateEvidence::default(),
+                &config(true),
+            ),
+            Ok(Phase::Accept)
+        );
+        assert!(
+            apply_transition(
+                Phase::Scope,
+                Transition::CompleteBuild,
+                &GateEvidence::default(),
+                &config(true),
+            )
+            .is_err()
         );
     }
 
@@ -127,19 +134,6 @@ mod tests {
             apply_transition(
                 Phase::Accept,
                 Transition::ReturnToBuild,
-                &GateEvidence::default(),
-                &config(true),
-            ),
-            Ok(Phase::Build)
-        );
-    }
-
-    #[test]
-    fn stale_default_returns_accept_to_build() {
-        assert_eq!(
-            apply_transition(
-                Phase::Accept,
-                Transition::RecoverStaleDefault,
                 &GateEvidence::default(),
                 &config(true),
             ),

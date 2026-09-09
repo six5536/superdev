@@ -68,8 +68,6 @@ pub enum Transition {
     ReturnToBuild,
     /// Accept the immutable candidate under project policy.
     Accept,
-    /// Reopen a prepared closure when the default branch became stale.
-    RecoverStaleDefault,
     /// End open work through the human-only disposition path.
     Abandon,
 }
@@ -84,19 +82,18 @@ pub enum AcceptanceMode {
     Automatic,
 }
 
-/// Gate facts computed by the Rust service before a transition.
+/// Human authority observed before a transition.
+///
+/// These record who authorized a phase change, not whether the work is good.
+/// Judging a review's quality belongs to the role that performed it.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct GateEvidence {
     /// Whether the human approved the complete SCOPE diff.
     pub human_scope_approved: bool,
-    /// Whether the isolated requirements review has no findings.
-    pub requirements_review_clean: bool,
     /// Whether the interactive human accepted the candidate.
     pub human_acceptance_approved: bool,
     /// Whether the interactive human approved abandonment and disposition.
     pub human_abandonment_approved: bool,
-    /// Whether the closure commit is reachable from the default branch.
-    pub closure_integrated: bool,
 }
 
 /// Stable identifiers for one open workflow.
@@ -127,15 +124,6 @@ pub struct WorkflowCache {
     /// The capability itself is never persisted; only this one-way digest is exposed.
     #[serde(default)]
     pub authority_digest: String,
-    /// Product baseline before the current SCOPE proposal began.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub scope_base_revision: Option<String>,
-    /// Immutable candidate reviewed at the BUILD gate.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub candidate_revision: Option<String>,
-    /// Default-branch tip incorporated before candidate verification.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub verified_default_revision: Option<String>,
     /// Owning Pi process ID while an isolated child is active.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub owner_pid: Option<u32>,
@@ -198,16 +186,12 @@ pub fn apply_transition(
     use Phase::{Abandoned, Accept, Build, Done, Scope};
     use Transition::{
         Abandon, Accept as AcceptTransition, ApproveScope, CompleteBuild, RecordBuildProgress,
-        RecoverStaleDefault, RejectAcceptance, ReturnToBuild, ReturnToScope,
+        RejectAcceptance, ReturnToBuild, ReturnToScope,
     };
 
     match (phase, transition) {
         (Scope, ApproveScope) => {
             require(gates.human_scope_approved, "scope approval is absent")?;
-            require(
-                gates.requirements_review_clean,
-                "requirements review is not clean",
-            )?;
             Ok(Build)
         }
         (Build, ReturnToScope) => Ok(Scope),
@@ -224,7 +208,6 @@ pub fn apply_transition(
             }
             Ok(Done)
         }
-        (Accept | Done, RecoverStaleDefault) if !gates.closure_integrated => Ok(Build),
         (Scope | Build | Accept, Abandon) => {
             require(
                 gates.human_abandonment_approved,
@@ -250,7 +233,7 @@ mod tests {
     }
 
     #[test]
-    fn scope_requires_both_human_approval_and_clean_review() {
+    fn scope_requires_human_approval() {
         let mut gates = GateEvidence::default();
         assert!(
             apply_transition(
@@ -262,16 +245,6 @@ mod tests {
             .is_err()
         );
         gates.human_scope_approved = true;
-        assert!(
-            apply_transition(
-                Phase::Scope,
-                Transition::ApproveScope,
-                &gates,
-                &config(true)
-            )
-            .is_err()
-        );
-        gates.requirements_review_clean = true;
         assert_eq!(
             apply_transition(
                 Phase::Scope,
@@ -280,6 +253,28 @@ mod tests {
                 &config(true)
             ),
             Ok(Phase::Build)
+        );
+    }
+
+    #[test]
+    fn build_completion_is_an_explicit_edge_rather_than_an_evidence_side_effect() {
+        assert_eq!(
+            apply_transition(
+                Phase::Build,
+                Transition::CompleteBuild,
+                &GateEvidence::default(),
+                &config(true),
+            ),
+            Ok(Phase::Accept)
+        );
+        assert!(
+            apply_transition(
+                Phase::Scope,
+                Transition::CompleteBuild,
+                &GateEvidence::default(),
+                &config(true),
+            )
+            .is_err()
         );
     }
 
@@ -289,19 +284,6 @@ mod tests {
             apply_transition(
                 Phase::Accept,
                 Transition::ReturnToBuild,
-                &GateEvidence::default(),
-                &config(true),
-            ),
-            Ok(Phase::Build)
-        );
-    }
-
-    #[test]
-    fn stale_default_returns_accept_to_build() {
-        assert_eq!(
-            apply_transition(
-                Phase::Accept,
-                Transition::RecoverStaleDefault,
                 &GateEvidence::default(),
                 &config(true),
             ),
