@@ -30,6 +30,8 @@ pub enum Transition {
     ReturnToScope,
     /// Persist block progress while remaining in BUILD.
     RecordBuildProgress,
+    /// Report BUILD complete and move the candidate to ACCEPT.
+    CompleteBuild,
     /// Return a human rejection to SCOPE as a discovery.
     RejectAcceptance,
     /// Return ACCEPT findings that preserve approved intent to BUILD.

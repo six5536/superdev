@@ -60,6 +60,8 @@ pub enum Transition {
     ReturnToScope,
     /// Persist block progress while remaining in BUILD.
     RecordBuildProgress,
+    /// Report BUILD complete and move the candidate to ACCEPT.
+    CompleteBuild,
     /// Return a human rejection to SCOPE as a discovery.
     RejectAcceptance,
     /// Return ACCEPT findings that preserve approved intent to BUILD.
@@ -195,7 +197,7 @@ pub fn apply_transition(
 ) -> Result<Phase, TransitionError> {
     use Phase::{Abandoned, Accept, Build, Done, Scope};
     use Transition::{
-        Abandon, Accept as AcceptTransition, ApproveScope, RecordBuildProgress,
+        Abandon, Accept as AcceptTransition, ApproveScope, CompleteBuild, RecordBuildProgress,
         RecoverStaleDefault, RejectAcceptance, ReturnToBuild, ReturnToScope,
     };
 
@@ -210,6 +212,7 @@ pub fn apply_transition(
         }
         (Build, ReturnToScope) => Ok(Scope),
         (Build, RecordBuildProgress) => Ok(Build),
+        (Build, CompleteBuild) => Ok(Accept),
         (Accept, RejectAcceptance) => Ok(Scope),
         (Accept, ReturnToBuild) => Ok(Build),
         (Accept, AcceptTransition) => {

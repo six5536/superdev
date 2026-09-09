@@ -422,6 +422,7 @@ async function smoke() {
 	let roleFailure: string | undefined;
 	let blockedRole: string | undefined;
 	let reviewFindings: any[] | undefined;
+	let codeReviewFindings: any[] | undefined;
 	const isolatedTasks: Array<{ role: string; task: string }> = [];
 	let cancellableRole: string | undefined;
 	let cancelNextProgress = false;
@@ -450,11 +451,11 @@ async function smoke() {
 	};
 	const runService = async (args: string[]) => {
 		serviceCalls.push(args);
-		// The authoring role leaves the valid plan unchanged; checkpointing must
-		// still reach requirements review with the same canonical revision.
-		if (args.includes("scope-review")) revision = "revision-3";
+		// The authoring role leaves the valid plan unchanged; the checkpoint commit
+		// must still reach requirements review with the same canonical revision.
+		if (args.includes("commit")) revision = "revision-3";
 		if (args.includes("approve-scope")) { phase = "build"; revision = "revision-4"; }
-		if (args.includes("final")) { phase = "accept"; revision = "revision-5"; candidateEvidence = true; attested = true; }
+		if (args.includes("complete-build")) { phase = "accept"; revision = "revision-5"; candidateEvidence = true; attested = true; }
 		if (args.includes("integrate")) throw new Error("ACCEPT must never merge");
         if (args.includes("--transition") && args.at(-1) === "accept") owned = false;
 		if (args.includes("cancel")) owned = false;
@@ -496,6 +497,7 @@ async function smoke() {
 			});
 			if (blockedRole === role) return { status: "blocked", summary: `${role} blocked`, artifactPath: `/tmp/${role}-result.json` };
 			if (role === "requirements-review" && reviewFindings) return { status: "findings", summary: "mixed findings", findings: reviewFindings, checklist };
+			if (role === "code-review" && codeReviewFindings) return { status: "findings", summary: "correctable findings", findings: codeReviewFindings, checklist };
 			return role === "scope" || role === "build"
 				? { status: "complete", summary: `${role} complete` }
 				: { status: role === "accept" ? "complete" : "clean", summary: `${role} clean`, checklist };
@@ -505,8 +507,11 @@ async function smoke() {
 	});
 	await phaseDrivers.runScopePhase("", phaseCtx);
 	if (runtime.lastOutcome?.status !== "ready-for-approval" || phase !== "scope") throw new Error("SCOPE did not return a typed approval gate to its skill");
-	const scopeEvidence = serviceCalls.find((args) => args.includes("scope-review"));
-	if (!scopeEvidence || scopeEvidence[scopeEvidence.indexOf("--revision") + 1] !== "revision-1") throw new Error("unchanged SCOPE did not bind review to the original plan revision");
+	const scopeCommit = serviceCalls.find((args) => args.includes("commit"));
+	if (!scopeCommit || scopeCommit[scopeCommit.indexOf("--expected-revision") + 1] !== "revision-1") throw new Error("unchanged SCOPE did not checkpoint at the original plan revision");
+	if (serviceCalls.some((args) => args.some((value) => ["evidence", "assess", "sync", "scope-baseline", "scope-checkpoint", "correction"].includes(value)))) {
+		throw new Error("a phase driver still calls a removed service verb");
+	}
 	phase = "build"; revision = "revision-4"; runtime.lastOutcome = undefined; lateDigest = "digest";
 	await phaseDrivers.runBuildPhase("", phaseCtx);
 	if (owned || serviceCalls.some((args) => args.includes("integrate"))) throw new Error("BUILD did not finish at the manual merge boundary");
@@ -536,11 +541,18 @@ async function smoke() {
 	await phaseDrivers.runAcceptPhase("", phaseCtx);
 	if (owned || runtime.lastOutcome?.status !== "paused" || runtime.lastOutcome?.failedStage !== "accept assessment" || runtime.lastOutcome?.diagnosticPath !== "/tmp/accept-cancelled.json") throw new Error("Esc did not pause ACCEPT with typed preserved-work recovery");
 
-	owned = true; phase = "build"; revision = "revision-exhausted"; candidateEvidence = false; cancellableRole = undefined; finalCorrections = 3;
+	// The correction budget is counted in the driver, not parsed out of the plan.
+	owned = true; phase = "build"; revision = "revision-exhausted"; candidateEvidence = false; cancellableRole = undefined;
+	pendingPhaseQuestions = undefined;
+	codeReviewFindings = [{ id: "cr-1", classification: "correctable-within-scope", summary: "Correct it", evidence: "absent", impact: "drift" }];
+	const tasksBeforeExhaustion = isolatedTasks.length;
 	await phaseDrivers.runBuildPhase("", phaseCtx);
+	codeReviewFindings = undefined;
 	if (pendingPhaseQuestions?.originPhase !== "build" || pendingPhaseQuestions?.candidate !== revision) {
 		throw new Error("exhausted BUILD did not preserve a revision-bound human decision queue");
 	}
+	const corrections = isolatedTasks.slice(tasksBeforeExhaustion).filter((entry) => entry.role === "build" && entry.task.includes("correction batch")).length;
+	if (corrections !== 2) throw new Error(`BUILD spent ${corrections} correction cycles instead of its configured budget`);
 
 	// A mixed requirements review must ask before correcting anything, because a
 	// mechanical finding may declare an unanswered substantive finding as a dependency.

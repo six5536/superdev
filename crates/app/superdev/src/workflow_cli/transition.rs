@@ -56,6 +56,7 @@ pub(super) fn transition_locked(
             TransitionName::ReturnToScope => Transition::ReturnToScope,
             TransitionName::RejectAcceptance => Transition::RejectAcceptance,
             TransitionName::ReturnToBuild => Transition::ReturnToBuild,
+            TransitionName::CompleteBuild => Transition::CompleteBuild,
             TransitionName::Accept => Transition::Accept,
             TransitionName::RecoverStaleDefault => Transition::RecoverStaleDefault,
         }
@@ -331,6 +332,7 @@ pub(super) fn transition_locked(
             "chore(workflow): return to scope"
         }
         Transition::RecordBuildProgress => "chore(workflow): record build progress",
+        Transition::CompleteBuild => "chore(workflow): complete build",
         Transition::ReturnToBuild => "chore(workflow): return acceptance findings to build",
         Transition::Accept => "chore(workflow): close accepted work",
         Transition::RecoverStaleDefault => "chore(workflow): reopen stale closure",

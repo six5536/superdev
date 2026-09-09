@@ -35,7 +35,7 @@ pub fn apply_transition(
 ) -> Result<Phase, TransitionError> {
     use Phase::{Abandoned, Accept, Build, Done, Scope};
     use Transition::{
-        Abandon, Accept as AcceptTransition, ApproveScope, RecordBuildProgress,
+        Abandon, Accept as AcceptTransition, ApproveScope, CompleteBuild, RecordBuildProgress,
         RecoverStaleDefault, RejectAcceptance, ReturnToBuild, ReturnToScope,
     };
 
@@ -50,6 +50,7 @@ pub fn apply_transition(
         }
         (Build, ReturnToScope) => Ok(Scope),
         (Build, RecordBuildProgress) => Ok(Build),
+        (Build, CompleteBuild) => Ok(Accept),
         (Accept, RejectAcceptance) => Ok(Scope),
         (Accept, ReturnToBuild) => Ok(Build),
         (Accept, AcceptTransition) => {

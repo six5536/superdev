@@ -38,6 +38,8 @@ pub enum WorkflowCommand {
     Bind(BindArgs),
     /// Apply one typed phase transition after checking supplied evidence
     Transition(TransitionArgs),
+    /// Commit the current owned work-branch changes under one message
+    Commit(CommitArgs),
     /// Adopt the current committed work tip as the next SCOPE attempt baseline
     ScopeBaseline(ScopeBaselineArgs),
     /// Commit one review-ready, knowledge-only SCOPE proposal
@@ -140,6 +142,20 @@ pub struct ScopeBaselineArgs {
     /// Expected work-branch tip; omitted callers use the owned tip under the repository lock
     #[arg(long)]
     expected_work: Option<String>,
+}
+
+/// One committed workflow checkpoint on the owned work branch.
+#[derive(Args)]
+pub struct CommitArgs {
+    /// Owning Pi session ID
+    #[arg(long)]
+    session: String,
+    /// Expected current plan content revision
+    #[arg(long)]
+    expected_revision: String,
+    /// Single-line commit message
+    #[arg(long)]
+    message: String,
 }
 
 /// Session and plan compare-and-swap arguments.
@@ -259,6 +275,8 @@ pub enum TransitionName {
     RejectAcceptance,
     /// ACCEPT findings within approved intent to BUILD
     ReturnToBuild,
+    /// BUILD to ACCEPT once the reviewed candidate is ready
+    CompleteBuild,
     /// ACCEPT to DONE
     Accept,
     /// Prepared DONE to BUILD after default branch drift

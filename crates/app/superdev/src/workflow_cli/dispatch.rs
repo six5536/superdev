@@ -157,6 +157,45 @@ pub fn run(command: &WorkflowCommand, root: &Path) -> Result<u8> {
                 &serde_json::json!({"phaseChanged": false, "ownershipReleased": true}),
             )
         }
+        WorkflowCommand::Commit(args) => cache::transaction(&root, |transaction| {
+            let owner = transaction.load()?.ok_or_else(|| Error::Manifest {
+                message: "workflow is unowned".into(),
+            })?;
+            if owner.session_id != args.session
+                || owner.last_plan_revision != args.expected_revision
+            {
+                return Err(Error::Manifest {
+                    message: "workflow ownership or plan revision changed".into(),
+                });
+            }
+            validate_identity_values(&root, &owner.identity)?;
+            if git::current_branch(&root)? != owner.identity.work_branch {
+                return Err(Error::Manifest {
+                    message: format!(
+                        "workflow commits require checked-out branch `{}`",
+                        owner.identity.work_branch
+                    ),
+                });
+            }
+            let parent = git::revision(&root, "HEAD")?;
+            let commit = git::commit_worktree_changes(&root, &args.message)?;
+            let revision = plan_revision(&root, &owner.identity.plan)?.1;
+            let state = match transaction.compare_and_swap(
+                &args.session,
+                &args.expected_revision,
+                |state| state.last_plan_revision.clone_from(&revision),
+            ) {
+                Ok(state) => state,
+                Err(error) => {
+                    git::rollback_commit(&root, &commit, &parent)?;
+                    return Err(error);
+                }
+            };
+            emit(
+                "commit",
+                &serde_json::json!({"commit": commit, "revision": revision, "state": state}),
+            )
+        }),
         WorkflowCommand::ScopeBaseline(args) => record_scope_baseline(&root, args),
         WorkflowCommand::ScopeCheckpoint(args) => record_scope_checkpoint(&root, args),
         WorkflowCommand::Block(args) => cache::transaction(&root, |transaction| {

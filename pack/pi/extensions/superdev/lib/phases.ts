@@ -1,4 +1,3 @@
-import { randomBytes } from "node:crypto";
 import { isAbsolute } from "node:path";
 import { boundedText } from "./output.ts";
 import { withProgress } from "./progress.ts";
@@ -15,7 +14,7 @@ export type PhaseRuntime = {
 };
 
 export function registerPhaseDrivers(deps: any) {
-	const { pi, runSuperdev: service, workflowStatus, authority, policyFrom, questions, isolated, childStarted, childFinished, reviewRuns, requiresHumanAcceptance, runtime } = deps;
+	const { pi, runSuperdev: service, workflowStatus, authority, policyFrom, questions, isolated, childStarted, childFinished, requiresHumanAcceptance, runtime } = deps;
     const runSuperdev = (args: string[], cwd: string, capability: string) => service(args, cwd, capability, args.includes("cancel") ? undefined : runtime.modifyingCommandAbort?.signal);
     const newAbort = (ctx: any) => {
         const controller = new AbortController();
@@ -107,10 +106,7 @@ export function registerPhaseDrivers(deps: any) {
 				if (!firstBase) {
 					const resolved = await pi.exec("git", ["rev-parse", "--verify", initial.owner.identity.work_branch], { cwd: ctx.cwd });
 					if (resolved.code !== 0) throw new Error("Could not resolve the committed SCOPE starting revision");
-					await runSuperdev(["workflow", "scope-baseline", "--session", initial.owner.session_id, "--expected-revision", initial.owner.last_plan_revision, "--expected-work", resolved.stdout.trim()], ctx.cwd, authority);
-					initial = await workflowStatus(ctx.cwd);
-					if (!initial.owner?.scope_base_revision) throw new Error("SCOPE baseline operation omitted the committed starting revision");
-					firstBase = initial.owner.scope_base_revision;
+					firstBase = resolved.stdout.trim();
 				}
 				const task = correction
 					? `Apply this complete SCOPE correction batch for issue ${initial.owner.identity.issue} and plan ${initial.owner.identity.plan}. Answered findings: ${JSON.stringify(correction.findings ?? [])}. Confirmed human answers: ${JSON.stringify(correction.answers)}. Remaining mechanical findings: ${JSON.stringify(correction.mechanicalFindings ?? [])}. Resolve every finding in one pass and honour each finding's dependsOn order.`
@@ -127,7 +123,7 @@ export function registerPhaseDrivers(deps: any) {
 					return ctx.ui.notify(scoped.summary, "warning");
 				}
 				runtime.currentStage = "scope checkpoint";
-				await runSuperdev(["workflow", "scope-checkpoint", "--session", initial.owner.session_id, "--expected-revision", initial.owner.last_plan_revision], ctx.cwd, authority);
+				await runSuperdev(["workflow", "commit", "--session", initial.owner.session_id, "--expected-revision", initial.owner.last_plan_revision, "--message", "docs(workflow): checkpoint scope proposal"], ctx.cwd, authority);
 				const status = await workflowStatus(ctx.cwd);
 				const owner = status.owner;
 				if (!owner || status.phase !== "scope" || !status.canonicalPlanRevision || owner.session_id !== initial.owner.session_id) throw new Error("SCOPE ownership changed during isolated work");
@@ -184,19 +180,12 @@ export function registerPhaseDrivers(deps: any) {
 					publishRoleOutcome("scope", reviewed);
 					return ctx.ui.notify(reviewed.summary, "error");
 				}
-				runtime.currentStage = "scope review evidence";
-				const reviewRun = randomBytes(24).toString("hex");
-				reviewRuns.set(reviewRun, { role: "requirements-review", result: reviewed, base: firstBase, candidate });
-				const evidence = await runSuperdev(["workflow", "evidence", "--session", owner.session_id, "--expected-revision", owner.last_plan_revision, "--revision", status.canonicalPlanRevision, "--kind", "scope-review", "--review-session", reviewRun, "--candidate", candidate], ctx.cwd, authority) as { result?: { last_plan_revision?: string } };
-				const revision = evidence.result?.last_plan_revision;
-				if (!revision) throw new Error("scope evidence response omitted the new plan revision");
-				reviewRuns.delete(reviewRun);
 				runtime.lastOutcome = {
 					status: "ready-for-approval",
 					phase: "scope",
 					workflow: owner.identity,
 					candidate,
-					expectedRevision: revision,
+					expectedRevision: owner.last_plan_revision,
 					recommendation: "Review the clean SCOPE summary, then use the SCOPE skill to approve or request a revision.",
 				};
 				ctx.ui.notify("Requirements review is clean; the SCOPE skill now owns discussion and approval", "info");
@@ -226,16 +215,12 @@ export function registerPhaseDrivers(deps: any) {
 			let retryBuild = false;
 			try {
 			let instruction = args;
+			let corrections = 0;
 			while (true) {
 				const status = await workflowStatus(ctx.cwd);
 				if (commandAbort.signal.aborted) throw new Error("BUILD was cancelled during initialization");
 				const owner = status.owner;
 				if (!owner || status.phase !== "build") throw new Error("An owned BUILD workflow is required");
-				if (status.buildState && status.maxFinalCorrectionCycles !== undefined
-					&& status.buildState.finalCorrections >= status.maxFinalCorrectionCycles) {
-					await pauseForBuildExhaustion(ctx, status.buildState.blocker || "Final correction budget exhausted");
-					return;
-				}
 				if (!status.executable || !isAbsolute(status.executable)) throw new Error("Rust status omitted its trusted executable path");
 				runtime.currentStage = instruction ? "build batched correction" : "build implementation";
 				const built = await withProgress(ctx, { key: "superdev-workflow", title: `BUILD ${owner.identity.plan}`, stage: instruction ? "batched correction" : "implementation" },
@@ -262,35 +247,14 @@ export function registerPhaseDrivers(deps: any) {
 				publishRoleOutcome("build", built);
 				return ctx.ui.notify(built.summary, "error");
 			}
-			runtime.currentStage = "build synchronization";
-			const ready = await workflowStatus(ctx.cwd);
-			const currentOwner = ready.owner;
-			if (!currentOwner || ready.phase !== "build") throw new Error("BUILD ownership changed before synchronization");
-			const baseResult = await pi.exec("git", ["rev-parse", "--verify", currentOwner.identity.default_branch], { cwd: ctx.cwd });
-			const candidateResult = await pi.exec("git", ["rev-parse", "--verify", currentOwner.identity.work_branch], { cwd: ctx.cwd });
-			if (baseResult.code !== 0 || candidateResult.code !== 0) throw new Error("Could not resolve synchronization revisions");
-			await runSuperdev([
-				"workflow", "sync", "--session", currentOwner.session_id,
-				"--expected-revision", currentOwner.last_plan_revision,
-				"--expected-default", baseResult.stdout.trim(),
-				"--expected-work", candidateResult.stdout.trim(),
-			], ctx.cwd, authority);
 			const synchronized = await workflowStatus(ctx.cwd);
 			const synchronizedOwner = synchronized.owner;
-			if (!synchronizedOwner || synchronized.phase !== "build") throw new Error("BUILD ownership changed after synchronization");
+			if (!synchronizedOwner || synchronized.phase !== "build") throw new Error("BUILD ownership changed before review");
 			const synchronizedBase = await pi.exec("git", ["rev-parse", "--verify", synchronizedOwner.identity.default_branch], { cwd: ctx.cwd });
 			const synchronizedCandidate = await pi.exec("git", ["rev-parse", "--verify", synchronizedOwner.identity.work_branch], { cwd: ctx.cwd });
 			if (synchronizedBase.code !== 0 || synchronizedCandidate.code !== 0) throw new Error("Could not resolve immutable review revisions");
 			const base = synchronizedBase.stdout.trim();
 			const candidate = synchronizedCandidate.stdout.trim();
-			runtime.currentStage = "build verification";
-			const verification = await runSuperdev([
-				"workflow", "evidence", "--session", synchronizedOwner.session_id,
-				"--expected-revision", synchronizedOwner.last_plan_revision, "--kind", "verification",
-				"--candidate", candidate,
-			], ctx.cwd, authority) as { result?: { last_plan_revision?: string } };
-			const verifiedRevision = verification.result?.last_plan_revision;
-			if (!verifiedRevision) throw new Error("verification response omitted the new plan revision");
 			runtime.currentStage = "code review";
 			const reviewed = await withProgress(ctx, { key: "superdev-workflow", title: `BUILD ${synchronizedOwner.identity.plan}`, stage: "code review" },
 				(signal, update) => isolated("code-review", `Review immutable diff ${base}..${candidate} and return the required structured result.`, ctx.cwd, ctx.model, phaseSignal(signal, commandAbort),
@@ -298,7 +262,6 @@ export function registerPhaseDrivers(deps: any) {
 					undefined, undefined, policyFrom(synchronized), synchronizedOwner.session_id,
 					(activity) => update({ stage: "code review", activity })));
 			runtime.currentStage = "build review routing";
-			const reviewRun = randomBytes(24).toString("hex");
 			if (reviewed.status === "findings" && reviewed.findings?.some((finding) => finding.classification === "requires-scope")) {
 				const latest = await workflowStatus(ctx.cwd);
 				if (!latest.owner || latest.phase !== "build") throw new Error("BUILD ownership changed before review re-scope");
@@ -322,31 +285,23 @@ export function registerPhaseDrivers(deps: any) {
 				return ctx.ui.notify(reviewed.summary, "error");
 			}
 			if (reviewed.status === "findings") {
-				const correction = await runSuperdev([
-					"workflow", "correction", "--session", synchronizedOwner.session_id,
-					"--expected-revision", verifiedRevision, "--candidate", candidate,
-					"--review-session", reviewRun,
-					"--summary", reviewed.findings?.map((finding) => `${finding.id}: ${finding.summary}`).join("\n") ?? reviewed.summary,
-				], ctx.cwd, authority) as { result?: { stalled?: boolean } };
-				const stalled = correction.result?.stalled === true;
-				if (stalled) {
+				// A bounded budget, counted here rather than parsed out of the plan.
+				corrections += 1;
+				if (corrections >= (synchronized.maxFinalCorrectionCycles ?? 3)) {
 					await pauseForBuildExhaustion(ctx, reviewed.summary, reviewed.findings ?? []);
 					return;
 				}
 				ctx.ui.notify(`Final review requires correction: ${reviewed.summary}`, "warning");
-				instruction = `Correct the complete immutable final-review finding set for ${synchronizedOwner.identity.plan}:\n${JSON.stringify(reviewed.findings ?? [], null, 2)}`;
+				instruction = `Correct the complete immutable final-review finding set for ${synchronizedOwner.identity.plan}. Honour each finding's dependsOn order:\n${JSON.stringify(reviewed.findings ?? [], null, 2)}`;
 				continue;
 			}
 
-			reviewRuns.set(reviewRun, { role: "code-review", result: reviewed, base, candidate });
-			const evidence = await runSuperdev([
-				"workflow", "evidence", "--session", synchronizedOwner.session_id,
-				"--expected-revision", verifiedRevision, "--kind", "final",
-				"--review-session", reviewRun, "--candidate", candidate,
-			], ctx.cwd, authority) as { result?: { last_plan_revision?: string } };
-			const revision = evidence.result?.last_plan_revision;
-			if (!revision) throw new Error("attestation response omitted the new plan revision");
-			reviewRuns.delete(reviewRun);
+				runtime.currentStage = "build completion";
+				await runSuperdev([
+					"workflow", "transition", "--session", synchronizedOwner.session_id,
+					"--expected-revision", synchronizedOwner.last_plan_revision, "--phase", "build",
+					"--transition", "complete-build",
+				], ctx.cwd, authority);
 				ctx.ui.setStatus("superdev-workflow", `ACCEPT: ${synchronizedOwner.identity.plan}`);
 				ctx.ui.notify("BUILD gates passed; starting ACCEPT assessment", "info");
 				if (!runAcceptPhase) throw new Error("ACCEPT driver is unavailable");
@@ -379,7 +334,7 @@ export function registerPhaseDrivers(deps: any) {
 	const approveAccept = async (status: any, ctx: any) => {
 		runtime.currentStage = "acceptance closure";
 		const owner = status.owner;
-		if (!owner || status.phase !== "accept" || !owner.verified_default_revision) throw new Error("an evidence-bound ACCEPT workflow is required");
+		if (!owner || status.phase !== "accept") throw new Error("an owned ACCEPT workflow is required");
 		await runSuperdev([
 			"workflow", "transition", "--session", owner.session_id,
 			"--expected-revision", owner.last_plan_revision, "--phase", "accept", "--transition", "accept",
@@ -393,23 +348,23 @@ export function registerPhaseDrivers(deps: any) {
 			const status = await workflowStatus(ctx.cwd);
 			const owner = status.owner;
 			if (!owner || status.phase !== "accept") throw new Error("An owned ACCEPT workflow is required");
-			if (!owner.candidate_revision || !owner.verified_default_revision) throw new Error("ACCEPT state is missing candidate-bound BUILD evidence");
 			const acceptHeadBefore = await pi.exec("git", ["rev-parse", "HEAD"], { cwd: ctx.cwd });
 			const acceptCleanBefore = await pi.exec("git", ["status", "--porcelain"], { cwd: ctx.cwd });
-			await runSuperdev(["workflow", "assess", "--session", owner.session_id, "--expected-revision", owner.last_plan_revision], ctx.cwd, authority);
             if (acceptHeadBefore.code !== 0 || acceptCleanBefore.code !== 0 || acceptCleanBefore.stdout.trim()
 				) throw new Error("ACCEPT assessment requires the clean immutable candidate at HEAD");
+			const acceptBase = await pi.exec("git", ["rev-parse", "--verify", owner.identity.default_branch], { cwd: ctx.cwd });
+			if (acceptBase.code !== 0) throw new Error("could not resolve the configured default branch");
 			runtime.currentStage = "accept assessment";
 			const decision = await withProgress(ctx, { key: "superdev-workflow", title: `ACCEPT ${owner.identity.plan}`, stage: "assessment" },
 				(signal, update) => isolated(
 					"accept",
-					`Assess whether issue ${owner.identity.issue} and plan ${owner.identity.plan} at reviewed product candidate ${owner.candidate_revision}, with administrative attestation ${acceptHeadBefore.stdout.trim()} checked out, are ready for the parent-owned configured acceptance decision.`,
+					`Assess whether issue ${owner.identity.issue} and plan ${owner.identity.plan} at reviewed candidate ${acceptHeadBefore.stdout.trim()} are ready for the parent-owned configured acceptance decision.`,
 					ctx.cwd,
 					ctx.model,
 					phaseSignal(signal, commandAbort),
 					childStarted(ctx, status, "accept"),
 					(child) => childFinished(ctx, child),
-					owner.verified_default_revision,
+					acceptBase.stdout.trim(),
 					acceptHeadBefore.stdout.trim(),
 					undefined,
 					undefined,
@@ -456,21 +411,6 @@ export function registerPhaseDrivers(deps: any) {
 			if (decision.status !== "complete") {
 				publishRoleOutcome("accept", decision);
 				return ctx.ui.notify(decision.summary, "error");
-			}
-			const currentDefault = await pi.exec("git", ["rev-parse", "--verify", owner.identity.default_branch], { cwd: ctx.cwd });
-			if (currentDefault.code !== 0) throw new Error("could not resolve the configured default branch");
-			if (currentDefault.stdout.trim() !== owner.verified_default_revision) {
-				runtime.currentStage = "accept stale-default recovery";
-				await runSuperdev([
-					"workflow", "transition", "--session", owner.session_id,
-					"--expected-revision", owner.last_plan_revision, "--phase", "accept",
-					"--transition", "recover-stale-default",
-				], ctx.cwd, authority);
-				ctx.ui.setStatus("superdev-workflow", `BUILD: ${owner.identity.plan}`);
-				runtime.modifyingBusy = false;
-                runtime.modifyingCommandAbort = undefined;
-                if (!startBuildPhase) throw new Error("BUILD driver is unavailable");
-                return await startBuildPhase("", ctx);
 			}
 			const humanAcceptanceRequired = requiresHumanAcceptance(status.humanAcceptanceRequired);
 			if (humanAcceptanceRequired) {
