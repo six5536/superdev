@@ -2,7 +2,6 @@
 
 use std::fs;
 use std::path::{Path, PathBuf};
-use std::process::{Command, Stdio};
 
 use clap::{Args, Subcommand, ValueEnum};
 use serde::Serialize;
@@ -14,7 +13,6 @@ use superdev_core::sokf::{
 use superdev_core::workflow::abandonment;
 use superdev_core::workflow::cache;
 use superdev_core::workflow::git;
-use superdev_core::workflow::retry::{self, RetryState};
 use superdev_core::workflow::{
     GateEvidence, Phase, Transition, WORKFLOW_PROTOCOL, WorkflowCache, WorkflowIdentity,
     apply_transition,
@@ -26,8 +24,6 @@ use superdev_core::workflow::{
 pub enum WorkflowCommand {
     /// Acquire a workflow for an issue, plan, and reserved work branch
     Start(BindArgs),
-    /// Validate the service attestation above the immutable reviewed candidate
-    Assess(RevisionArgs),
     /// Report transient ownership and canonical identity
     Status {
         /// Emit the versioned JSON protocol response
@@ -38,22 +34,8 @@ pub enum WorkflowCommand {
     Bind(BindArgs),
     /// Apply one typed phase transition after checking supplied evidence
     Transition(TransitionArgs),
-    /// Adopt the current committed work tip as the next SCOPE attempt baseline
-    ScopeBaseline(ScopeBaselineArgs),
-    /// Commit one review-ready, knowledge-only SCOPE proposal
-    ScopeCheckpoint(RevisionArgs),
-    /// Commit a validated BUILD block checkpoint
-    Block(ProgressArgs),
-    /// Record one normalized failed BUILD attempt
-    Attempt(AttemptArgs),
-    /// Count one failed final verification/review correction cycle
-    Correction(CorrectionArgs),
-    /// Commit one path-scoped implementation correction after a failed final gate
-    CorrectionCheckpoint(RevisionArgs),
-    /// Record isolated review or final verification evidence canonically
-    Evidence(EvidenceArgs),
-    /// Incorporate the expected local default tip into BUILD
-    Sync(SyncArgs),
+    /// Commit the current owned work-branch changes under one message
+    Commit(CommitArgs),
     /// Reconstruct and acquire ownership for a known workflow
     Resume(BindArgs),
     /// Record one active isolated child for cross-instance status and recovery
@@ -64,8 +46,6 @@ pub enum WorkflowCommand {
     Cancel(SessionArgs),
     /// Apply the human-only abandonment transition
     Abandon(AbandonArgs),
-    /// Merge an accepted closure locally with `git merge --no-ff`
-    Integrate(IntegrateArgs),
 }
 
 /// Stable workflow identity and Pi ownership arguments.
@@ -114,32 +94,18 @@ pub struct ActivityStartArgs {
     child_started: String,
 }
 
-/// Arguments common to compare-and-swap progress events.
+/// One committed workflow checkpoint on the owned work branch.
 #[derive(Args)]
-pub struct ProgressArgs {
+pub struct CommitArgs {
     /// Owning Pi session ID
     #[arg(long)]
     session: String,
     /// Expected current plan content revision
     #[arg(long)]
     expected_revision: String,
-    /// New plan content revision after the Rust-owned mutation
+    /// Single-line commit message
     #[arg(long)]
-    revision: String,
-}
-
-/// Compare-and-swap arguments for a SCOPE attempt baseline.
-#[derive(Args)]
-pub struct ScopeBaselineArgs {
-    /// Owning Pi session ID
-    #[arg(long)]
-    session: String,
-    /// Expected current plan content revision
-    #[arg(long)]
-    expected_revision: String,
-    /// Expected work-branch tip; omitted callers use the owned tip under the repository lock
-    #[arg(long)]
-    expected_work: Option<String>,
+    message: String,
 }
 
 /// Session and plan compare-and-swap arguments.
@@ -153,99 +119,12 @@ pub struct RevisionArgs {
     expected_revision: String,
 }
 
-/// One failed BUILD command, normalized and counted by Rust.
-#[derive(Args)]
-pub struct AttemptArgs {
-    /// Owning Pi session ID
-    #[arg(long)]
-    session: String,
-    /// Expected current plan content revision
-    #[arg(long)]
-    expected_revision: String,
-    /// Failed command as executed without a shell
-    #[arg(long)]
-    command: String,
-    /// Process exit status
-    #[arg(long)]
-    exit_status: i32,
-    /// Bounded command diagnostics
-    #[arg(long)]
-    diagnostics: String,
-}
-
-/// One candidate-bound failed final gate.
-#[derive(Args)]
-pub struct CorrectionArgs {
-    /// Owning Pi session ID
-    #[arg(long)]
-    session: String,
-    /// Expected current plan content revision
-    #[arg(long)]
-    expected_revision: String,
-    /// Candidate whose final gate failed
-    #[arg(long)]
-    candidate: String,
-    /// Fresh isolated reviewer run
-    #[arg(long)]
-    review_session: String,
-    /// Bounded structured finding summary
-    #[arg(long)]
-    summary: String,
-}
-
-/// Rust-owned canonical evidence attestation.
-#[derive(Args)]
-pub struct EvidenceArgs {
-    /// Owning Pi session ID
-    #[arg(long)]
-    session: String,
-    /// Expected current plan content revision
-    #[arg(long)]
-    expected_revision: String,
-    /// Reviewed SCOPE plan revision after isolated modifying work
-    #[arg(long)]
-    revision: Option<String>,
-    /// Evidence gate being attested
-    #[arg(long, value_enum)]
-    kind: EvidenceKindName,
-    /// Fresh isolated reviewer session ID
-    #[arg(long)]
-    review_session: Option<String>,
-    /// Immutable candidate for final BUILD evidence
-    #[arg(long)]
-    candidate: Option<String>,
-}
-
-#[derive(Clone, Copy, ValueEnum)]
-pub enum EvidenceKindName {
-    ScopeReview,
-    Verification,
-    Final,
-}
-
 /// Session ownership argument.
 #[derive(Args)]
 pub struct SessionArgs {
     /// Owning Pi session ID
     #[arg(long)]
     session: String,
-}
-
-/// Compare-and-swap arguments for BUILD synchronization.
-#[derive(Args)]
-pub struct SyncArgs {
-    /// Owning Pi session ID
-    #[arg(long)]
-    session: String,
-    /// Expected current plan content revision
-    #[arg(long)]
-    expected_revision: String,
-    /// Expected local default-branch tip
-    #[arg(long)]
-    expected_default: String,
-    /// Expected local work-branch tip
-    #[arg(long)]
-    expected_work: String,
 }
 
 /// Typed phase transition names.
@@ -259,10 +138,10 @@ pub enum TransitionName {
     RejectAcceptance,
     /// ACCEPT findings within approved intent to BUILD
     ReturnToBuild,
+    /// BUILD to ACCEPT once the reviewed candidate is ready
+    CompleteBuild,
     /// ACCEPT to DONE
     Accept,
-    /// Prepared DONE to BUILD after default branch drift
-    RecoverStaleDefault,
 }
 
 /// Compare-and-swap transition and gate evidence.
@@ -312,39 +191,14 @@ pub struct AbandonArgs {
     reason: String,
 }
 
-/// Compare-and-swap local integration arguments.
-#[derive(Args)]
-pub struct IntegrateArgs {
-    /// Owning Pi session ID
-    #[arg(long)]
-    session: String,
-    /// Local default branch
-    #[arg(long)]
-    default_branch: String,
-    /// Expected default branch tip
-    #[arg(long)]
-    expected_default: String,
-    /// Accepted work branch
-    #[arg(long)]
-    work_branch: String,
-    /// Expected closure commit
-    #[arg(long)]
-    expected_work: String,
-}
 // sokf:end cli
 
 mod dispatch;
 use dispatch::*;
 mod identity;
 use identity::*;
-mod build;
-use build::*;
-mod evidence;
-use evidence::*;
 mod transition;
 use transition::*;
 mod records;
-use records::*;
-#[cfg(test)]
-mod tests;
 pub use dispatch::run;
+use records::*;

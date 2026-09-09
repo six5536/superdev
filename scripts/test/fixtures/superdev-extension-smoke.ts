@@ -4,7 +4,7 @@ import { chmod, copyFile, mkdtemp, readFile, rm, stat, writeFile } from "node:fs
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 
-import superdev, { buildCommandAllowed, isolated, isolatedRoleMayNotRun, isolatedTools, parseRoleResult, requiresHumanAcceptance, runGuardedBuildCommand, runPinnedSuperdev } from "../../../.pi/extensions/superdev/index.ts";
+import superdev, { buildCommandAllowed, buildCommands, isolated, isolatedRoleMayNotRun, isolatedTools, parseRoleResult, requiresHumanAcceptance, runGuardedBuildCommand, runPinnedSuperdev } from "../../../.pi/extensions/superdev/index.ts";
 import { IsolatedArtifact, boundedText } from "../../../.pi/extensions/superdev/lib/output.ts";
 import { registerPhaseDrivers, type PhaseRuntime } from "../../../.pi/extensions/superdev/lib/phases.ts";
 import { registerPhaseTool } from "../../../.pi/extensions/superdev/lib/phase-tool.ts";
@@ -12,7 +12,7 @@ import { pinService } from "../../../.pi/extensions/superdev/lib/service-pin.ts"
 import { registerIntakeTools } from "../../../.pi/extensions/superdev/lib/intake.ts";
 import { withProgress } from "../../../.pi/extensions/superdev/lib/progress.ts";
 import { registerWorkflowQuestions } from "../../../.pi/extensions/superdev/lib/questions.ts";
-import { findingFingerprint, roleResultSchemaFor, roles, validateRoleResult, type ReviewFinding } from "../../../.pi/extensions/superdev/lib/review.ts";
+import { roleResultSchemaFor, roles, validateRoleResult, type ReviewFinding } from "../../../.pi/extensions/superdev/lib/review.ts";
 
 async function smoke() {
 	if (process.platform === "linux") {
@@ -134,8 +134,8 @@ async function smoke() {
 		const submit = childTools.get("superdev_submit_result");
 		if (submit.parameters.properties.findings || submit.parameters.properties.status.enum.join(",") !== "complete,blocked") throw new Error("SCOPE submission schema invites reviewer findings or invalid statuses");
 		try {
-			await submit.execute("rejected", { status: "complete", summary: "Resolved correction", findings: [{ id: "resolved" }] });
-			throw new Error("contradictory SCOPE result was accepted");
+			await submit.execute("rejected", { status: "complete", summary: "   " });
+			throw new Error("an undecodable SCOPE result was accepted");
 		} catch (error) {
 			if (!String(error).includes("No result was accepted") || !String(error).includes("submit again")) throw error;
 		}
@@ -148,7 +148,7 @@ async function smoke() {
 		await end("error");
 		if (repairs.length) throw new Error("terminal repair continued cancellation or provider failure");
 		await end("stop");
-		if (repairs.length !== 1 || childActiveTools.join(",") !== "superdev_submit_result" || repairs[0].options.deliverAs !== "followUp" || !repairs[0].message.content.includes("contradictory status complete")) throw new Error("stopped child did not receive one terminal-only repair with its rejection");
+		if (repairs.length !== 1 || childActiveTools.join(",") !== "superdev_submit_result" || repairs[0].options.deliverAs !== "followUp" || !repairs[0].message.content.includes("invalid terminal result")) throw new Error("stopped child did not receive one terminal-only repair with its rejection");
 		await end("stop");
 		if (repairs.length !== 1) throw new Error("terminal repair loop is unbounded");
 		for (const toolName of ["read", "edit", "superdev_run_phase"]) {
@@ -196,13 +196,11 @@ async function smoke() {
 		if (!String(error).includes("omitted")) throw error;
 	}
 	for (const command of [
-		"superdev workflow evidence",
-		"superdev workflow scope-baseline",
-		"superdev workflow scope-checkpoint",
-		"superdev workflow correction",
-		"superdev workflow sync",
+		"superdev workflow start",
+		"superdev workflow resume",
+		"superdev workflow cancel",
 		"superdev workflow transition",
-		"superdev workflow integrate",
+		"superdev workflow abandon",
 	]) {
 		if (!isolatedRoleMayNotRun(command)) throw new Error(`isolated role may bypass ${command}`);
 	}
@@ -214,18 +212,18 @@ async function smoke() {
 	if (!isolatedTools("code-review").split(",").includes("superdev_submit_result")) throw new Error("reviewer lacks typed terminal submission");
 	if (!isolatedTools("build").split(",").includes("superdev_build_exec")) throw new Error("BUILD child cannot execute bounded evidence");
 	if (buildCommandAllowed("sh", ["-c", "mutate Git"])) throw new Error("BUILD can escape through a shell");
-	if (buildCommandAllowed("cargo", ["test"])) throw new Error("BUILD can bypass Rust-owned verification");
 	if (buildCommandAllowed("git", ["diff", "--check"])) throw new Error("BUILD can invoke Git directly");
-	if (!buildCommandAllowed("superdev", ["workflow", "block"])) throw new Error("BUILD cannot publish a block checkpoint");
 	if (buildCommandAllowed("superdev", ["file"])) throw new Error("BUILD can escape through an unrelated service command");
 	if (buildCommandAllowed("superdev", ["workflow", "transition"])) throw new Error("BUILD can transition workflow state");
-	for (const command of [
-		"superdev workflow block",
-		"superdev workflow attempt",
-		"superdev workflow correction-checkpoint",
-		"superdev workflow status",
-	]) {
-		if (isolatedRoleMayNotRun(command)) throw new Error(`isolated role cannot perform ${command}`);
+	// BUILD commits its own blocks, because only BUILD knows which one it finished.
+	if (!buildCommandAllowed("superdev", ["workflow", "commit"])) throw new Error("BUILD cannot commit its own block");
+	if (!buildCommandAllowed("superdev", ["workflow", "status"])) throw new Error("BUILD cannot read canonical status");
+	// Every permitted verb must still exist, or BUILD stalls at its first checkpoint.
+	const workflowCli = await readFile(join(process.cwd(), "crates/app/superdev/src/workflow_cli.rs"), "utf8");
+	for (const verb of buildCommands) {
+		const variant = verb.split("-").map((part) => part[0].toUpperCase() + part.slice(1)).join("");
+		if (!new RegExp(`^\\s+${variant}\\s*[({]`, "m").test(workflowCli)) throw new Error(`BUILD may run removed verb ${verb}`);
+		if (isolatedRoleMayNotRun(`superdev workflow ${verb}`)) throw new Error(`isolated role cannot perform ${verb}`);
 	}
 	const checklist = ["requirements", "contracts", "architecture", "tests", "documentation", "scope", "consistency"]
 		.map((area) => ({ area, complete: true, evidence: `${area} checked` }));
@@ -241,14 +239,25 @@ async function smoke() {
 		if (!String(error).includes("more than 1")) throw error;
 	}
 	const finding: ReviewFinding = { id: "f1", classification: "substantive", summary: "Choose policy", evidence: "Policy is absent", impact: "Behavior is unsettled", question: "Which policy?", recommendation: "Use the safe policy" };
-	if (findingFingerprint(finding) === findingFingerprint({ ...finding, impact: "Different behavior" })) throw new Error("semantic fingerprint ignored impact");
+	// A completed review that contradicted its own status is routed, not discarded.
+	const routed = validateRoleResult("code-review", { status: "clean", summary: "contradiction", findings: [{ ...finding, classification: "correctable-within-scope" }] }, { maxBytes: 100_000, maxFindings: 100 });
+	if (routed.status !== "findings" || routed.findings?.length !== 1) throw new Error("a contradicted status discarded a completed review");
+	// A role without a findings channel reports completed work in its summary alone.
+	const unrouted = validateRoleResult("scope", { status: "complete", summary: "resolved corrections", findings: [{ ...finding }] }, { maxBytes: 100_000, maxFindings: 100 });
+	if (unrouted.status !== "complete" || unrouted.findings) throw new Error("an unroutable finding set was not dropped from a completed result");
+	// Quality and completeness belong to the author; only decodability is enforced.
+	const sparse = validateRoleResult("code-review", { status: "findings", summary: "sparse", findings: [{ id: "only-id", classification: "requires-scope", summary: "", evidence: "", impact: "" }] }, { maxBytes: 100_000, maxFindings: 100 });
+	if (sparse.findings?.length !== 1) throw new Error("an incomplete finding was discarded instead of routed");
+	if (validateRoleResult("code-review", { status: "clean", summary: "no checklist" }, { maxBytes: 100_000, maxFindings: 100 }).status !== "clean") {
+		throw new Error("a clean review required a checklist the parent never reads");
+	}
 	for (const [label, result] of [
-		["contradictory status", { status: "complete", summary: "contradiction", findings: [{ ...finding, classification: "correctable-within-scope" }], checklist }],
+		["duplicate finding IDs", { status: "findings", summary: "duplicate", findings: [{ ...finding, id: "a", classification: "requires-scope" }, { ...finding, id: "a", classification: "requires-scope" }] }],
 		["cyclic dependencies", { status: "findings", summary: "cycle", findings: [
 			{ ...finding, id: "a", classification: "correctable-within-scope", dependsOn: ["b"] },
 			{ ...finding, id: "b", classification: "correctable-within-scope", dependsOn: ["a"] },
-		], checklist }],
-		["duplicate checklist", { status: "clean", summary: "duplicate", checklist: [...checklist, checklist[0]] }],
+		] }],
+		["unknown dependency", { status: "findings", summary: "dangling", findings: [{ ...finding, id: "a", classification: "requires-scope", dependsOn: ["missing"] }] }],
 	] as const) {
 		try {
 			validateRoleResult("code-review", result, { maxBytes: 100_000, maxFindings: 100 });
@@ -369,9 +378,9 @@ async function smoke() {
 		if (String(error).includes("unstructured review was accepted")) throw error;
 	}
 	const checkpoint = await runGuardedBuildCommand(async (command, args, cwd) => {
-		if (command !== "superdev" || args.join(" ") !== "workflow block" || cwd !== "/repo") throw new Error("BUILD service command changed");
+		if (command !== "superdev" || args.join(" ") !== "workflow commit" || cwd !== "/repo") throw new Error("BUILD service command changed");
 		return { code: 0, stdout: "checkpointed\n", stderr: "" };
-	}, "superdev", ["workflow", "block"], "/repo");
+	}, "superdev", ["workflow", "commit"], "/repo");
 	if (checkpoint.stdout !== "checkpointed\n") throw new Error("BUILD checkpoint result was lost");
 	try {
 		await runGuardedBuildCommand(async () => ({ code: 0, stdout: "", stderr: "" }), "cargo", ["test"], "/repo");
@@ -410,6 +419,9 @@ async function smoke() {
 	const runtime: PhaseRuntime = { cancelling: false, modifyingBusy: false };
 	let roleFailure: string | undefined;
 	let blockedRole: string | undefined;
+	let reviewFindings: any[] | undefined;
+	let codeReviewFindings: any[] | undefined;
+	const isolatedTasks: Array<{ role: string; task: string }> = [];
 	let cancellableRole: string | undefined;
 	let cancelNextProgress = false;
 	const owner = () => owned ? {
@@ -437,11 +449,11 @@ async function smoke() {
 	};
 	const runService = async (args: string[]) => {
 		serviceCalls.push(args);
-		// The authoring role leaves the valid plan unchanged; checkpointing must
-		// still reach requirements review with the same canonical revision.
-		if (args.includes("scope-review")) revision = "revision-3";
+		// The authoring role leaves the valid plan unchanged; the checkpoint commit
+		// must still reach requirements review with the same canonical revision.
+		if (args.includes("commit")) revision = "revision-3";
 		if (args.includes("approve-scope")) { phase = "build"; revision = "revision-4"; }
-		if (args.includes("final")) { phase = "accept"; revision = "revision-5"; candidateEvidence = true; attested = true; }
+		if (args.includes("complete-build")) { phase = "accept"; revision = "revision-5"; candidateEvidence = true; attested = true; }
 		if (args.includes("integrate")) throw new Error("ACCEPT must never merge");
         if (args.includes("--transition") && args.at(-1) === "accept") owned = false;
 		if (args.includes("cancel")) owned = false;
@@ -472,7 +484,8 @@ async function smoke() {
 		authority: "authority",
 		policyFrom: () => ({ timeoutSeconds: 1, maxContextBytes: 8192, maxContextLines: 200, maxReviewStateBytes: 262144, maxReviewFindings: 100, maxArtifactBytes: 10485760, maxArtifacts: 20, retentionHours: 24 }),
 		questions: { begin(state: any) { pendingPhaseQuestions = state; }, current() { return pendingPhaseQuestions; } },
-		isolated: async (role: string, _task: string, _cwd: string, _model: unknown, signal: AbortSignal, _spawn: any, _close: any, _base: any, _candidate: any, executable: any, digest: any) => {
+		isolated: async (role: string, task: string, _cwd: string, _model: unknown, signal: AbortSignal, _spawn: any, _close: any, _base: any, _candidate: any, executable: any, digest: any) => {
+			isolatedTasks.push({ role, task });
             if (role === "build" && (executable !== "/service" || digest !== "digest")) throw new Error("BUILD did not use its invocation-time executable pin");
 			if (roleFailure === role) throw new Error(`${role} timed out after 1s; diagnostics: /tmp/${role}-diagnostic.json`);
 			if (cancellableRole === role) return await new Promise((_resolve, reject) => {
@@ -481,6 +494,8 @@ async function smoke() {
 				else signal.addEventListener("abort", cancelled, { once: true });
 			});
 			if (blockedRole === role) return { status: "blocked", summary: `${role} blocked`, artifactPath: `/tmp/${role}-result.json` };
+			if (role === "requirements-review" && reviewFindings) return { status: "findings", summary: "mixed findings", findings: reviewFindings, checklist };
+			if (role === "code-review" && codeReviewFindings) return { status: "findings", summary: "correctable findings", findings: codeReviewFindings, checklist };
 			return role === "scope" || role === "build"
 				? { status: "complete", summary: `${role} complete` }
 				: { status: role === "accept" ? "complete" : "clean", summary: `${role} clean`, checklist };
@@ -490,8 +505,11 @@ async function smoke() {
 	});
 	await phaseDrivers.runScopePhase("", phaseCtx);
 	if (runtime.lastOutcome?.status !== "ready-for-approval" || phase !== "scope") throw new Error("SCOPE did not return a typed approval gate to its skill");
-	const scopeEvidence = serviceCalls.find((args) => args.includes("scope-review"));
-	if (!scopeEvidence || scopeEvidence[scopeEvidence.indexOf("--revision") + 1] !== "revision-1") throw new Error("unchanged SCOPE did not bind review to the original plan revision");
+	const scopeCommit = serviceCalls.find((args) => args.includes("commit"));
+	if (!scopeCommit || scopeCommit[scopeCommit.indexOf("--expected-revision") + 1] !== "revision-1") throw new Error("unchanged SCOPE did not checkpoint at the original plan revision");
+	if (serviceCalls.some((args) => args.some((value) => ["evidence", "assess", "sync", "scope-baseline", "scope-checkpoint", "correction"].includes(value)))) {
+		throw new Error("a phase driver still calls a removed service verb");
+	}
 	phase = "build"; revision = "revision-4"; runtime.lastOutcome = undefined; lateDigest = "digest";
 	await phaseDrivers.runBuildPhase("", phaseCtx);
 	if (owned || serviceCalls.some((args) => args.includes("integrate"))) throw new Error("BUILD did not finish at the manual merge boundary");
@@ -521,10 +539,40 @@ async function smoke() {
 	await phaseDrivers.runAcceptPhase("", phaseCtx);
 	if (owned || runtime.lastOutcome?.status !== "paused" || runtime.lastOutcome?.failedStage !== "accept assessment" || runtime.lastOutcome?.diagnosticPath !== "/tmp/accept-cancelled.json") throw new Error("Esc did not pause ACCEPT with typed preserved-work recovery");
 
-	owned = true; phase = "build"; revision = "revision-exhausted"; candidateEvidence = false; cancellableRole = undefined; finalCorrections = 3;
+	// The correction budget is counted in the driver, not parsed out of the plan.
+	owned = true; phase = "build"; revision = "revision-exhausted"; candidateEvidence = false; cancellableRole = undefined;
+	pendingPhaseQuestions = undefined;
+	codeReviewFindings = [{ id: "cr-1", classification: "correctable-within-scope", summary: "Correct it", evidence: "absent", impact: "drift" }];
+	const tasksBeforeExhaustion = isolatedTasks.length;
 	await phaseDrivers.runBuildPhase("", phaseCtx);
+	codeReviewFindings = undefined;
 	if (pendingPhaseQuestions?.originPhase !== "build" || pendingPhaseQuestions?.candidate !== revision) {
 		throw new Error("exhausted BUILD did not preserve a revision-bound human decision queue");
+	}
+	const corrections = isolatedTasks.slice(tasksBeforeExhaustion).filter((entry) => entry.role === "build" && entry.task.includes("correction batch")).length;
+	if (corrections !== 2) throw new Error(`BUILD spent ${corrections} correction cycles instead of its configured budget`);
+
+	// A mixed requirements review must ask before correcting anything, because a
+	// mechanical finding may declare an unanswered substantive finding as a dependency.
+	owned = true; phase = "scope"; revision = "revision-mixed"; finalCorrections = 0;
+	pendingPhaseQuestions = undefined; runtime.lastOutcome = undefined;
+	reviewFindings = [
+		{ id: "sub-1", classification: "substantive", summary: "Choose the policy", evidence: "absent", impact: "unsettled", question: "Which policy?", recommendation: "The safe one" },
+		{ id: "mech-1", classification: "mechanical", summary: "Update the map", evidence: "absent", impact: "drift", dependsOn: ["sub-1"] },
+	];
+	const tasksBeforeMixed = isolatedTasks.length;
+	await phaseDrivers.runScopePhase("", phaseCtx);
+	if (pendingPhaseQuestions?.findings?.length !== 1 || pendingPhaseQuestions?.mechanicalFindings?.length !== 1) {
+		throw new Error("mixed requirements review did not preserve the complete finding set for one decision batch");
+	}
+	if (isolatedTasks.slice(tasksBeforeMixed).some((entry) => entry.task.includes("correction batch"))) {
+		throw new Error("mixed requirements review corrected a dependent finding before its substantive answer");
+	}
+	reviewFindings = undefined;
+	await phaseDrivers.continueScopeFromAnswers({ ...pendingPhaseQuestions, status: "submitted", answers: { "sub-1": { answer: "Use the safe policy", findingIds: ["sub-1"], confirmedAt: "now" } } }, phaseCtx);
+	const correctionTask = isolatedTasks.findLast((entry) => entry.task.includes("correction batch"))?.task ?? "";
+	for (const required of ["sub-1", "mech-1", "Use the safe policy", "dependsOn"]) {
+		if (!correctionTask.includes(required)) throw new Error(`SCOPE correction batch omitted ${required}`);
 	}
 
     {

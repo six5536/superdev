@@ -30,14 +30,14 @@ pub enum Transition {
     ReturnToScope,
     /// Persist block progress while remaining in BUILD.
     RecordBuildProgress,
+    /// Report BUILD complete and move the candidate to ACCEPT.
+    CompleteBuild,
     /// Return a human rejection to SCOPE as a discovery.
     RejectAcceptance,
     /// Return ACCEPT findings that preserve approved intent to BUILD.
     ReturnToBuild,
     /// Accept the immutable candidate under project policy.
     Accept,
-    /// Reopen a prepared closure when the default branch became stale.
-    RecoverStaleDefault,
     /// End open work through the human-only disposition path.
     Abandon,
 }
@@ -52,19 +52,18 @@ pub enum AcceptanceMode {
     Automatic,
 }
 
-/// Gate facts computed by the Rust service before a transition.
+/// Human authority observed before a transition.
+///
+/// These record who authorized a phase change, not whether the work is good.
+/// Judging a review's quality belongs to the role that performed it.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct GateEvidence {
     /// Whether the human approved the complete SCOPE diff.
     pub human_scope_approved: bool,
-    /// Whether the isolated requirements review has no findings.
-    pub requirements_review_clean: bool,
     /// Whether the interactive human accepted the candidate.
     pub human_acceptance_approved: bool,
     /// Whether the interactive human approved abandonment and disposition.
     pub human_abandonment_approved: bool,
-    /// Whether the closure commit is reachable from the default branch.
-    pub closure_integrated: bool,
 }
 
 /// Stable identifiers for one open workflow.
@@ -95,15 +94,6 @@ pub struct WorkflowCache {
     /// The capability itself is never persisted; only this one-way digest is exposed.
     #[serde(default)]
     pub authority_digest: String,
-    /// Product baseline before the current SCOPE proposal began.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub scope_base_revision: Option<String>,
-    /// Immutable candidate reviewed at the BUILD gate.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub candidate_revision: Option<String>,
-    /// Default-branch tip incorporated before candidate verification.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub verified_default_revision: Option<String>,
     /// Owning Pi process ID while an isolated child is active.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub owner_pid: Option<u32>,

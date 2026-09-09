@@ -52,25 +52,6 @@ pub(super) fn apply_record_edits_transactionally(
     publish_staged_knowledge(root, &staged_knowledge)
 }
 
-pub(super) fn primary_issue_has_unresolved_discoveries(root: &Path, issue: &str) -> Result<bool> {
-    let path = root
-        .join("knowledge/issues/open")
-        .join(format!("{issue}.md"));
-    let text = fs::read_to_string(&path).map_err(|source| Error::Io {
-        path: path.clone(),
-        source,
-    })?;
-    let Some(start) = text.find("## Discoveries\n") else {
-        return Ok(false);
-    };
-    let body = &text[start + "## Discoveries\n".len()..];
-    let end = body
-        .find("\n## ")
-        .or_else(|| body.find("\n<!-- sokf:links -->"))
-        .unwrap_or(body.len());
-    Ok(body[..end].lines().any(|line| line.starts_with("- [ ] ")))
-}
-
 pub(super) fn rescope_discovery_edit(
     issue: &str,
     label: &str,
@@ -153,65 +134,6 @@ pub(super) fn publish_staged_knowledge(root: &Path, staged_knowledge: &Path) -> 
         source,
     })?;
     Ok(())
-}
-
-pub(super) fn reopen_stale_closure(root: &Path, identity: &WorkflowIdentity) -> Result<()> {
-    let staging = stage_knowledge(root, "workflow-reopen-")?;
-    let knowledge = staging.path().join("knowledge");
-    let plan_path = knowledge
-        .join("plans/done")
-        .join(format!("{}.md", identity.plan));
-    let plan = fs::read_to_string(&plan_path).map_err(|source| Error::Io {
-        path: plan_path.clone(),
-        source,
-    })?;
-    let plan = replace_once(&plan, "lifecycle: done", "lifecycle: open")?;
-    let plan = replace_once(&plan, "phase: done", "phase: build")?;
-    fs::write(&plan_path, plan).map_err(|source| Error::Io {
-        path: plan_path,
-        source,
-    })?;
-
-    let issue_path = knowledge
-        .join("issues/done")
-        .join(format!("{}.md", identity.issue));
-    let issue = fs::read_to_string(&issue_path).map_err(|source| Error::Io {
-        path: issue_path.clone(),
-        source,
-    })?;
-    let issue = replace_once(&issue, "lifecycle: done", "lifecycle: open")?;
-    let issue = remove_resolution(&issue);
-    fs::write(&issue_path, issue).map_err(|source| Error::Io {
-        path: issue_path,
-        source,
-    })?;
-
-    superdev_core::validate::fix_repo(root, &knowledge, &[])?;
-    let grammar = superdev_core::validate::schema::load_grammar(root)?;
-    let report = superdev_core::validate::validate_repo(root, &knowledge, &[], &grammar)?;
-    if !report.report.passed() {
-        return Err(Error::Manifest {
-            message: "stale-default recovery did not produce valid canonical records".into(),
-        });
-    }
-    publish_staged_knowledge(root, &knowledge)
-}
-
-pub(super) fn remove_resolution(issue: &str) -> String {
-    let Some(start) = issue.find("\n## Resolution\n") else {
-        return issue.to_string();
-    };
-    let tail = &issue[start + 1..];
-    let end = tail["## Resolution\n".len()..]
-        .find("\n## ")
-        .map(|offset| start + 1 + "## Resolution\n".len() + offset)
-        .or_else(|| {
-            issue[start..]
-                .find("\n<!-- sokf:links -->")
-                .map(|offset| start + offset)
-        })
-        .unwrap_or(issue.len());
-    format!("{}{}", issue[..start].trim_end(), &issue[end..])
 }
 
 pub(super) fn close_records(
@@ -360,78 +282,6 @@ pub(super) fn copy_tree(source: &Path, destination: &Path) -> Result<()> {
     Ok(())
 }
 
-pub(super) fn invalidate_final_evidence_edit(plan: &str) -> Result<ExactEdit> {
-    filter_completion_evidence(
-        plan,
-        &[
-            "Candidate revision: ",
-            "Verified default revision: ",
-            "Final verification: ",
-            "Documentation verification: ",
-            "Final review: ",
-        ],
-        &[],
-    )
-}
-
-pub(super) fn invalidate_scope_evidence_edit(
-    plan: &str,
-    baseline: &str,
-    invalidate_final: bool,
-) -> Result<ExactEdit> {
-    let mut prefixes = vec![
-        "Scope requirements review: ",
-        "Human scope approval: ",
-        "Scope product baseline: ",
-    ];
-    if invalidate_final {
-        prefixes.extend([
-            "Candidate revision: ",
-            "Verified default revision: ",
-            "Final verification: ",
-            "Documentation verification: ",
-            "Final review: ",
-        ]);
-    }
-    filter_completion_evidence(plan, &prefixes, &[baseline.to_string()])
-}
-
-pub(super) fn filter_completion_evidence(
-    plan: &str,
-    prefixes: &[&str],
-    appended_lines: &[String],
-) -> Result<ExactEdit> {
-    let marker = "## Completion evidence\n\n";
-    let start = plan.find(marker).ok_or_else(|| Error::Manifest {
-        message: "workflow plan has no Completion evidence section".into(),
-    })? + marker.len();
-    let tail = &plan[start..];
-    let end = tail
-        .find("\n## ")
-        .or_else(|| tail.find("\n<!-- sokf:links -->"))
-        .unwrap_or(tail.len());
-    let old = &tail[..end];
-    let mut retained = old
-        .lines()
-        .filter(|line| !prefixes.iter().any(|prefix| line.starts_with(prefix)))
-        .collect::<Vec<_>>()
-        .join("\n")
-        .trim_end()
-        .to_string();
-    for line in appended_lines {
-        if !retained.lines().any(|existing| existing == line) {
-            if !retained.is_empty() {
-                retained.push_str("\n\n");
-            }
-            retained.push_str(line);
-        }
-    }
-    Ok(ExactEdit {
-        old_text: format!("{marker}{old}"),
-        new_text: format!("{marker}{retained}\n"),
-    })
-}
-
 pub(super) fn completion_evidence_edit(plan: &str, lines: &[String]) -> Result<ExactEdit> {
     let marker = "## Completion evidence\n\n";
     let start = plan.find(marker).ok_or_else(|| Error::Manifest {
@@ -457,19 +307,6 @@ pub(super) fn completion_evidence_edit(plan: &str, lines: &[String]) -> Result<E
         old_text: format!("{marker}{old}"),
         new_text: format!("{marker}{new}"),
     })
-}
-
-pub(super) fn evidence_revision(plan: &str, label: &str) -> Option<String> {
-    let prefix = format!("{label}: ");
-    plan.lines()
-        .find_map(|line| line.strip_prefix(&prefix))
-        .map(|revision| revision.trim_end_matches('.').to_string())
-        .filter(|revision| {
-            revision.len() >= 7
-                && revision
-                    .chars()
-                    .all(|character| character.is_ascii_hexdigit())
-        })
 }
 
 pub(super) fn replace_once(text: &str, old: &str, new: &str) -> Result<String> {

@@ -29,7 +29,6 @@ provider = "frontend-design"
 
 [workflow]
 human_acceptance_required = true
-max_stalled_block_attempts = 3
 max_final_correction_cycles = 3
 max_scope_review_cycles = 3
 isolated_role_timeout_seconds = 1200

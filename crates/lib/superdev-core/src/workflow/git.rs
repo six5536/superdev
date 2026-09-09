@@ -314,6 +314,22 @@ pub fn commit_scope_checkpoint(root: &Path, expected_parent: &str) -> Result<Str
     )
 }
 
+/// Commit the current worktree under one caller-supplied message.
+///
+/// Path shapes are validated and the commit stays local. Deciding *what*
+/// belongs in the commit is the caller's judgement, not this function's.
+/// An empty commit is permitted so an already-committed proposal can still be
+/// published as an immutable checkpoint.
+pub fn commit_worktree_changes(root: &Path, message: &str) -> Result<String> {
+    let paths = worktree_paths(root)?;
+    if paths.iter().any(|path| !valid_path(path)) {
+        return Err(Error::Manifest {
+            message: "workflow commit refused an unsafe path".into(),
+        });
+    }
+    commit_paths(root, message, &paths, None, true)
+}
+
 /// Commit one product-bearing BUILD checkpoint without absorbing paths outside
 /// the current block's canonical Areas declarations.
 pub fn commit_block_changes(

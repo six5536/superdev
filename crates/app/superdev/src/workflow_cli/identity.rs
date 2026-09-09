@@ -88,12 +88,10 @@ pub(super) fn start_locked(
             ),
         });
     }
-    let scope_base = git::revision(root, &args.default_branch)?;
-
     // Reserve ownership before mutating Git or records. This makes concurrent
     // starts serialize through the same repository lock rather than racing on
     // a prior load followed by an independent write.
-    let reservation = workflow_cache(args, String::new(), Some(scope_base), None, None)?;
+    let reservation = workflow_cache(args, String::new())?;
     transaction.bind(&reservation)?;
     let started = (|| {
         let path = root.join(&plan_path);
@@ -228,69 +226,10 @@ pub(super) fn resume(root: &Path, args: &BindArgs) -> Result<u8> {
             git::checkout_work_branch(root, &args.work_branch)?;
         }
         validate_resumable_identity(root, args)?;
-        let (path, revision) = plan_revision(root, &args.plan)?;
-        let text = fs::read_to_string(&path).map_err(|source| Error::Io {
-            path: path.clone(),
-            source,
-        })?;
-        let baseline = if plan_record(root, &args.plan)?.phase == "scope" {
-            Some(git::scope_base_from_history(
-                root,
-                &args.work_branch,
-                &path,
-            )?)
-        } else {
-            None
-        };
-        let state = workflow_cache(
-            args,
-            revision,
-            baseline,
-            evidence_revision(&text, "Candidate revision"),
-            evidence_revision(&text, "Verified default revision"),
-        )?;
+        let (_, revision) = plan_revision(root, &args.plan)?;
+        let state = workflow_cache(args, revision)?;
         transaction.bind(&state)?;
         emit("resume", &state)
-    })
-}
-
-pub(super) fn assess(root: &Path, args: &RevisionArgs) -> Result<u8> {
-    cache::transaction(root, |transaction| {
-        let owner = transaction.load()?.ok_or_else(|| Error::Manifest {
-            message: "workflow is unowned".into(),
-        })?;
-        cache::verify_authority(&owner, &ui_authority_capability()?)?;
-        if owner.session_id != args.session
-            || owner.last_plan_revision != args.expected_revision
-            || plan_revision(root, &owner.identity.plan)?.1 != args.expected_revision
-            || plan_record(root, &owner.identity.plan)?.phase != "accept"
-        {
-            return Err(Error::Manifest {
-                message: "assessment requires the current owned ACCEPT revision".into(),
-            });
-        }
-        git::require_clean(root)?;
-        let candidate = owner
-            .candidate_revision
-            .as_deref()
-            .ok_or_else(|| Error::Manifest {
-                message: "assessment requires reviewed candidate H".into(),
-            })?;
-        let head = git::revision(root, "HEAD")?;
-        if git::current_branch(root)? != owner.identity.work_branch
-            || !git::is_ancestor(root, candidate, &head)?
-            || git::changed_paths(root, candidate, &head)?
-                .iter()
-                .any(|path| !administrative_path(path, &owner.identity))
-        {
-            return Err(Error::Manifest {
-                message: "candidate changed outside administrative workflow records".into(),
-            });
-        }
-        emit(
-            "assess",
-            &serde_json::json!({ "candidate": candidate, "attestation": head }),
-        )
     })
 }
 
@@ -300,34 +239,12 @@ pub(super) fn bind(root: &Path, args: &BindArgs) -> Result<u8> {
 }
 
 pub(super) fn bind_with_revision(root: &Path, args: &BindArgs, revision: String) -> Result<u8> {
-    let plan_path = plan_revision(root, &args.plan)?.0;
-    let text = fs::read_to_string(&plan_path).map_err(|source| Error::Io {
-        path: plan_path.clone(),
-        source,
-    })?;
-    let candidate = evidence_revision(&text, "Candidate revision");
-    let verified_default = evidence_revision(&text, "Verified default revision");
-    let scope_base = if plan_record(root, &args.plan)?.phase == "scope" {
-        Some(git::scope_base_from_history(
-            root,
-            &args.work_branch,
-            &plan_path,
-        )?)
-    } else {
-        None
-    };
-    let state = workflow_cache(args, revision, scope_base, candidate, verified_default)?;
+    let state = workflow_cache(args, revision)?;
     cache::bind(root, &state)?;
     emit("bind", &state)
 }
 
-pub(super) fn workflow_cache(
-    args: &BindArgs,
-    revision: String,
-    scope_base_revision: Option<String>,
-    candidate_revision: Option<String>,
-    verified_default_revision: Option<String>,
-) -> Result<WorkflowCache> {
+pub(super) fn workflow_cache(args: &BindArgs, revision: String) -> Result<WorkflowCache> {
     let capability = ui_authority_capability()?;
     Ok(WorkflowCache {
         version: 1,
@@ -340,9 +257,6 @@ pub(super) fn workflow_cache(
         },
         last_plan_revision: revision,
         authority_digest: cache::authority_digest(&capability)?,
-        scope_base_revision,
-        candidate_revision,
-        verified_default_revision,
         owner_pid: None,
         owner_started: None,
         child_role: None,
@@ -373,12 +287,6 @@ pub(super) fn plan_record(root: &Path, id: &str) -> Result<PlanRecord> {
         source,
     })?;
     parse_plan_record(&path.to_string_lossy(), &text)
-}
-
-pub(super) fn plan_record_at_revision(root: &Path, id: &str, revision: &str) -> Result<PlanRecord> {
-    let path = format!("knowledge/plans/done/{id}.md");
-    let text = git::file_at_revision(root, revision, &path)?;
-    parse_plan_record(&path, &text)
 }
 
 pub(super) fn parse_plan_record(path: &str, text: &str) -> Result<PlanRecord> {
@@ -474,43 +382,4 @@ pub(super) fn validate_identity_values(root: &Path, identity: &WorkflowIdentity)
         });
     }
     Ok(())
-}
-
-pub(super) fn administrative_path(path: &str, identity: &WorkflowIdentity) -> bool {
-    path == "knowledge/issues/index.md"
-        || path == "knowledge/plans/index.md"
-        || ["open", "done", "wontfix"]
-            .iter()
-            .any(|state| path == format!("knowledge/issues/{state}/{}.md", identity.issue))
-        || ["open", "done", "abandoned"]
-            .iter()
-            .any(|state| path == format!("knowledge/plans/{state}/{}.md", identity.plan))
-}
-
-pub(super) fn knowledge_contains(root: &Path, needle: &str) -> Result<bool> {
-    let mut directories = vec![root.join("knowledge")];
-    while let Some(directory) = directories.pop() {
-        for entry in fs::read_dir(&directory).map_err(|source| Error::Io {
-            path: directory.clone(),
-            source,
-        })? {
-            let entry = entry.map_err(|source| Error::Io {
-                path: directory.clone(),
-                source,
-            })?;
-            let path = entry.path();
-            if path.is_dir() {
-                directories.push(path);
-            } else if path.extension().is_some_and(|extension| extension == "md") {
-                let text = fs::read_to_string(&path).map_err(|source| Error::Io {
-                    path: path.clone(),
-                    source,
-                })?;
-                if text.contains(needle) {
-                    return Ok(true);
-                }
-            }
-        }
-    }
-    Ok(false)
 }

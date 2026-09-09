@@ -60,14 +60,14 @@ pub enum Transition {
     ReturnToScope,
     /// Persist block progress while remaining in BUILD.
     RecordBuildProgress,
+    /// Report BUILD complete and move the candidate to ACCEPT.
+    CompleteBuild,
     /// Return a human rejection to SCOPE as a discovery.
     RejectAcceptance,
     /// Return ACCEPT findings that preserve approved intent to BUILD.
     ReturnToBuild,
     /// Accept the immutable candidate under project policy.
     Accept,
-    /// Reopen a prepared closure when the default branch became stale.
-    RecoverStaleDefault,
     /// End open work through the human-only disposition path.
     Abandon,
 }
@@ -82,19 +82,18 @@ pub enum AcceptanceMode {
     Automatic,
 }
 
-/// Gate facts computed by the Rust service before a transition.
+/// Human authority observed before a transition.
+///
+/// These record who authorized a phase change, not whether the work is good.
+/// Judging a review's quality belongs to the role that performed it.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct GateEvidence {
     /// Whether the human approved the complete SCOPE diff.
     pub human_scope_approved: bool,
-    /// Whether the isolated requirements review has no findings.
-    pub requirements_review_clean: bool,
     /// Whether the interactive human accepted the candidate.
     pub human_acceptance_approved: bool,
     /// Whether the interactive human approved abandonment and disposition.
     pub human_abandonment_approved: bool,
-    /// Whether the closure commit is reachable from the default branch.
-    pub closure_integrated: bool,
 }
 
 /// Stable identifiers for one open workflow.
@@ -125,15 +124,6 @@ pub struct WorkflowCache {
     /// The capability itself is never persisted; only this one-way digest is exposed.
     #[serde(default)]
     pub authority_digest: String,
-    /// Product baseline before the current SCOPE proposal began.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub scope_base_revision: Option<String>,
-    /// Immutable candidate reviewed at the BUILD gate.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub candidate_revision: Option<String>,
-    /// Default-branch tip incorporated before candidate verification.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub verified_default_revision: Option<String>,
     /// Owning Pi process ID while an isolated child is active.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub owner_pid: Option<u32>,
@@ -195,21 +185,18 @@ pub fn apply_transition(
 ) -> Result<Phase, TransitionError> {
     use Phase::{Abandoned, Accept, Build, Done, Scope};
     use Transition::{
-        Abandon, Accept as AcceptTransition, ApproveScope, RecordBuildProgress,
-        RecoverStaleDefault, RejectAcceptance, ReturnToBuild, ReturnToScope,
+        Abandon, Accept as AcceptTransition, ApproveScope, CompleteBuild, RecordBuildProgress,
+        RejectAcceptance, ReturnToBuild, ReturnToScope,
     };
 
     match (phase, transition) {
         (Scope, ApproveScope) => {
             require(gates.human_scope_approved, "scope approval is absent")?;
-            require(
-                gates.requirements_review_clean,
-                "requirements review is not clean",
-            )?;
             Ok(Build)
         }
         (Build, ReturnToScope) => Ok(Scope),
         (Build, RecordBuildProgress) => Ok(Build),
+        (Build, CompleteBuild) => Ok(Accept),
         (Accept, RejectAcceptance) => Ok(Scope),
         (Accept, ReturnToBuild) => Ok(Build),
         (Accept, AcceptTransition) => {
@@ -221,7 +208,6 @@ pub fn apply_transition(
             }
             Ok(Done)
         }
-        (Accept | Done, RecoverStaleDefault) if !gates.closure_integrated => Ok(Build),
         (Scope | Build | Accept, Abandon) => {
             require(
                 gates.human_abandonment_approved,
@@ -247,7 +233,7 @@ mod tests {
     }
 
     #[test]
-    fn scope_requires_both_human_approval_and_clean_review() {
+    fn scope_requires_human_approval() {
         let mut gates = GateEvidence::default();
         assert!(
             apply_transition(
@@ -259,16 +245,6 @@ mod tests {
             .is_err()
         );
         gates.human_scope_approved = true;
-        assert!(
-            apply_transition(
-                Phase::Scope,
-                Transition::ApproveScope,
-                &gates,
-                &config(true)
-            )
-            .is_err()
-        );
-        gates.requirements_review_clean = true;
         assert_eq!(
             apply_transition(
                 Phase::Scope,
@@ -277,6 +253,28 @@ mod tests {
                 &config(true)
             ),
             Ok(Phase::Build)
+        );
+    }
+
+    #[test]
+    fn build_completion_is_an_explicit_edge_rather_than_an_evidence_side_effect() {
+        assert_eq!(
+            apply_transition(
+                Phase::Build,
+                Transition::CompleteBuild,
+                &GateEvidence::default(),
+                &config(true),
+            ),
+            Ok(Phase::Accept)
+        );
+        assert!(
+            apply_transition(
+                Phase::Scope,
+                Transition::CompleteBuild,
+                &GateEvidence::default(),
+                &config(true),
+            )
+            .is_err()
         );
     }
 
@@ -286,19 +284,6 @@ mod tests {
             apply_transition(
                 Phase::Accept,
                 Transition::ReturnToBuild,
-                &GateEvidence::default(),
-                &config(true),
-            ),
-            Ok(Phase::Build)
-        );
-    }
-
-    #[test]
-    fn stale_default_returns_accept_to_build() {
-        assert_eq!(
-            apply_transition(
-                Phase::Accept,
-                Transition::RecoverStaleDefault,
                 &GateEvidence::default(),
                 &config(true),
             ),
@@ -338,7 +323,6 @@ mod tests {
 - `P_pi-orchestrates` [ubiquitous] Pi SHALL orchestrate discoverable scope, build, and accept skills through typed tools while withholding direct shell and Git access from children and resolving BUILD's executable and digest together at invocation time.
 - `P_extension-skills` [ubiquitous] The Superdev extension SHALL register its bundled file, scope, build, and accept skills from `.pi/extensions/superdev/skills/` through Pi's `resources_discover` event on startup and reload, exposing native `/skill:*` commands without copies in `.pi/skills/`.
 - `P_service-snapshot` [event] WHEN Pi initializes its workflow service, the adapter SHALL bootstrap the trusted launcher in place and retain a private native executable snapshot independent of subsequent checkout switches and rebuilds.
-- `P_baseline-compatible` [event] WHEN a SCOPE baseline caller omits its optional expected work tip, Rust SHALL resolve the owned work-branch tip under the repository lock while retaining session, plan-revision, phase, and checkout checks. Explicit expected tips retain compare-and-swap rejection.
 - `P_skill-cold-start` [event] WHEN a workflow skill starts, the skill SHALL reconstruct canonical identity and phase before mutation.
 - `P_questions-persisted` [event] WHEN review requires intent, Pi SHALL persist post-transition revision-bound questions and confirmed answers for one batched correction and re-review.
 - `P_questions-ui` [event] WHEN a skill asks a question, Pi SHALL offer concrete choices, a recommendation, a typed answer, and chat discussion through the public typed tool.
@@ -347,10 +331,9 @@ mod tests {
 
 ### Key flows
 
-- `P_scope-gate` [event] WHEN SCOPE enters BUILD, the service SHALL require explicit human scope approval and a clean isolated requirements review.
-- `P_build-gate` [event] WHEN BUILD enters ACCEPT, the service SHALL require complete blocks, current executable and documentation evidence, no affected pending promise, and a clean fresh isolated final review.
+- `P_scope-gate` [event] WHEN SCOPE enters BUILD, the service SHALL require explicit human scope approval.
+- `P_build-gate` [event] WHEN BUILD enters ACCEPT, the service SHALL apply the explicit completion transition from the BUILD phase alone, without judging the work it carries.
 - `P_accept-policy` [event] WHEN ACCEPT decides a candidate, the service SHALL derive human acceptance solely from project configuration before committing accepted closure on the work branch and releasing ownership without merging.
-- `P_accept-assessment` [event] WHEN ACCEPT assesses reviewed candidate H, the service SHALL validate the current plan revision and allow only administrative record differences between H and the clean checked-out attestation snapshot.
 - `P_accept-routes-findings` [event] WHEN ACCEPT reports findings, Pi SHALL automatically return within-scope corrections to BUILD and route intent-changing findings to human SCOPE discussion.
 - `P_scope-bootstrap` [event] WHEN a new workflow starts, the service SHALL validate and commit the initial issue and independently numbered plan on the default branch under the repository lock before switching the shared checkout to the work branch.
 - `P_identity-reservation` [event] WHEN an issue or initial plan reserves a numeric identity, the service SHALL refuse a number already held by another canonical identity in the local repository.
@@ -359,41 +342,30 @@ mod tests {
 - `P_issue-capture` [event] WHEN `/skill:file` captures an issue or idea, the skill SHALL direct the LLM to choose an unused number, author the schema-conforming record and index entry, validate, and commit only those paths on the discovered default branch without pausing active work.
 - `P_file-skill-only` [ubiquitous] Pi SHALL expose capture only through the native `file` skill, without issue or file command aliases, a dedicated filing tool, or a filing child role.
 - `P_file-skill-worktree` [event] WHEN capture starts outside the default branch, the skill SHALL direct the LLM to use an existing or temporary default-branch worktree through ordinary tools while preserving the caller's branch, pending edits, and workflow ownership.
-- `P_accept-stale-default` [event] WHEN the verified default revision advances before closure, the service SHALL invalidate final evidence and return the same plan to BUILD without preparing DONE records.
 - `P_ui-authority-service` [event] WHEN scope approval, configured human acceptance, rejection, or abandonment changes durable state, the service SHALL require the owning Pi UI's unpersisted capability.
 - `P_ui-authority-adapter` [event] WHEN an action requires human authority, Pi SHALL expose its capability to the service only after interactive confirmation.
 - `P_cancel-pauses` [event] WHEN cancellation occurs, the service SHALL release transient ownership without changing the canonical phase or deleting uncommitted SCOPE drafts.
 - `P_abandon-human-only` [event] WHEN abandonment is requested, the service SHALL require interactive human approval while excluding partial product work from integration.
 - `P_abandon-default-records` [event] WHEN abandonment closes the workflow, the service SHALL publish the closed issue and plan in a detached worktree and compare-and-swap the local default ref without carrying work-branch product history.
-- `P_evidence-durable` [event] WHEN a Pi-bound isolated scope review or final BUILD review completes cleanly, the evidence command SHALL require UI authority and record the extension-issued single-use review run plus immutable revisions in canonical Completion evidence.
-- `P_scope-publication` [event] WHEN isolated SCOPE preparation completes, a SCOPE checkpoint SHALL reject every product change after the service-owned SCOPE baseline, validate the complete knowledge snapshot, and publish an immutable knowledge-only checkpoint for review even when the plan is unchanged or no files changed. An unchanged snapshot uses an empty administrative commit without editing the plan; review evidence binds the canonical plan revision and that checkpoint commit.
-- `P_attestation-atomic` [event] WHEN verified BUILD receives a clean final review, the evidence command SHALL record candidate-bound evidence and enter ACCEPT in one administrative attestation commit.
-- `P_discoveries-resolved` [event] WHEN BUILD requests final attestation, the service SHALL refuse any unchecked discovery on the primary issue.
-- `P_build-synchronizes-default` [event] WHEN BUILD finalizes a candidate, the service SHALL compare expected default and work tips, prove a conflict-free merge without touching the worktree, and incorporate the default through a hook-free fast-forward before verification.
-- `P_verification-executed` [event] WHEN all blocks are complete and BUILD requests verification evidence, the service SHALL execute approved Verification and Final verification commands without UI authority and reject failures, candidate movement, or a dirty result.
-- `P_verification-staged` [event] WHEN BUILD checkpoints a block, the service SHALL execute that block's focused Verification commands without executing the separate Final verification entries declared for complete suites.
-- `P_final-correction-service` [event] WHEN immutable final review reports findings, the service SHALL schedule a bounded correction, invalidate candidate evidence, require a checkpoint within approved Areas, and count the cycle after correction and complete valid re-review.
-- `P_final-correction-adapter` [event] WHEN a final correction remains within the configured limit, Pi SHALL schedule correction, verification, and a fresh immutable review.
-- `P_gates-derived` [ubiquitous] Phase transitions SHALL calculate non-human gates from canonical evidence and repository state rather than caller-provided boolean flags.
-- `P_resume-recovers-evidence` [event] WHEN ownership resumes, the service SHALL reconstruct the SCOPE product baseline from service-owned Git transition history and candidate and verified-default revisions from canonical Completion evidence rather than treating cache loss as evidence loss.
+- `P_progress-unparsed` [ubiquitous] The service SHALL NOT parse plan prose. Work-block progress, verification, and completion evidence are written and read by the workflow roles as advisory records.
+- `P_commit-caller-scoped` [event] WHEN a role commits, the service SHALL require the owning session, the expected plan revision, and the checked-out work branch, then commit the present worktree under the caller's message; choosing what belongs in that commit is the caller's judgement.
+- `P_build-commits-blocks` [event] WHEN BUILD completes a block, the BUILD role SHALL run that block's declared verification and commit the block through the service before starting the next one.
+- `P_final-correction-adapter` [event] WHEN a final correction remains within the configured limit, Pi SHALL schedule one correction carrying the complete finding set and a fresh immutable review.
+- `P_gates-human-only` [ubiquitous] Phase transitions SHALL gate on recorded human authority alone. Judging a review's quality belongs to the role that performed it.
 - `P_closure-transactional` [event] WHEN acceptance or abandonment closes records, the service SHALL stage, repair, and validate the complete knowledge closure before publishing it.
 - `P_service-owned-commits` [event] WHEN canonical evidence or a durable transition is published after a clean-tree preflight, the service SHALL create a knowledge-only commit through an isolated index without invoking hooks or signing, leaving the live index, worktree, and HEAD unchanged if commit construction fails.
-- `P_rescope-preserves-identity` [event] WHEN BUILD returns a discovery to SCOPE, the service SHALL preserve it verbatim on the primary issue, retain the same issue, plan, branch, and stable block numbers, invalidate prior scope approval evidence and transient candidate attestations, and permit only knowledge changes after the recorded product baseline until fresh review and approval.
-- `P_rejection-preserves-feedback` [event] WHEN a human rejects a candidate, the service SHALL return the same plan to SCOPE, preserve the verbatim feedback as an unresolved primary-issue discovery, invalidate prior scope approval and final evidence, and record the rejected product baseline.
-- `P_rejection-invalidates-final` [event] WHEN ACCEPT returns to SCOPE, the service SHALL remove the rejected candidate's verification and review attestations.
-- `P_transition-atomic` [ubiquitous] Evidence, transition, reopening, closure, and integration operations SHALL hold the repository workflow lock through canonical publication and the ownership compare-and-swap.
+- `P_rescope-preserves-identity` [event] WHEN BUILD returns a discovery to SCOPE, the service SHALL preserve it verbatim on the primary issue and retain the same issue, plan, and branch.
+- `P_rejection-preserves-feedback` [event] WHEN a human rejects a candidate, the service SHALL return the same plan to SCOPE and preserve the verbatim feedback as an unresolved primary-issue discovery.
+- `P_transition-atomic` [ubiquitous] Commit, transition, and closure operations SHALL hold the repository workflow lock through canonical publication and the ownership compare-and-swap.
 
 ### Cross-cutting concerns
 
 - `P_git-preserves-unrelated` [ubiquitous] Automatic Git operations SHALL NOT stash, reset, discard, absorb, or implicitly resolve unrelated changes.
 - `P_git-no-shell` [ubiquitous] Workflow Git operations SHALL validate refs and invoke Git with argument arrays without a shell.
 - `P_bounded-retries` [ubiquitous] Retry and correction limits SHALL be positive project configuration values that plans, prompts, adapters, and models cannot override.
-- `P_failure-fingerprint` [event] WHEN BUILD records a failed command, the service SHALL normalize bounded diagnostics and durably count consecutive equivalent fingerprints against the configured limit.
-- `P_retry-reset` [event] WHEN BUILD checkpoints its newly completed current stable block, the service SHALL reject caller edits to retry state, reset that block's attempts and fingerprint, preserve final-correction accounting, and advance to the next incomplete stable block when one exists.
-- `P_block-checkpoint` [event] WHEN BUILD checkpoints a newly completed stable block, the service SHALL reject changes to its SCOPE-approved dependencies, path-scoped Areas, or executable Verification commands, execute that approved verification, and commit only changes within the approved Areas plus the owning plan.
 - `P_cache-transient` [ubiquitous] Absence of `.superdev/cache/workflow.toml` SHALL mean unowned rather than complete.
 - `P_status-during-transaction` [event] WHEN observational status encounters a held workflow transaction, it SHALL return an explicit busy snapshot without waiting or representing that state as unowned.
-- `P_compaction-reloads-state` [ubiquitous] Before every parent agent turn, Pi SHALL reload canonical phase, identity, plan revision, and BUILD state from Rust into the turn context rather than rely on conversation or compaction summaries.
+- `P_compaction-reloads-state` [ubiquitous] Before every parent agent turn, Pi SHALL reload canonical phase, identity, and plan revision from Rust into the turn context rather than rely on conversation or compaction summaries.
 
 ## Stability
 
@@ -404,4 +376,4 @@ fails explicitly.
 
 <!-- sokf:links -->
 [sokf:adr-042-a-contracts-definition-is-materialized-from-source]: /knowledge/adrs/active/adr-042-a-contracts-definition-is-materialized-from-source.md
-[sokf:adr-052-the-workflow-is-scope-build-accept-under-a-durable-core]: /knowledge/adrs/active/adr-052-the-workflow-is-scope-build-accept-under-a-durable-core.md
+[sokf:adr-052-the-workflow-is-scope-build-accept-under-a-durable-core]: /knowledge/adrs/deprecated/adr-052-the-workflow-is-scope-build-accept-under-a-durable-core.md

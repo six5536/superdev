@@ -319,8 +319,6 @@ pub enum SokfCommand {
 pub enum WorkflowCommand {
     /// Acquire a workflow for an issue, plan, and reserved work branch
     Start(BindArgs),
-    /// Validate the service attestation above the immutable reviewed candidate
-    Assess(RevisionArgs),
     /// Report transient ownership and canonical identity
     Status {
         /// Emit the versioned JSON protocol response
@@ -331,22 +329,8 @@ pub enum WorkflowCommand {
     Bind(BindArgs),
     /// Apply one typed phase transition after checking supplied evidence
     Transition(TransitionArgs),
-    /// Adopt the current committed work tip as the next SCOPE attempt baseline
-    ScopeBaseline(ScopeBaselineArgs),
-    /// Commit one review-ready, knowledge-only SCOPE proposal
-    ScopeCheckpoint(RevisionArgs),
-    /// Commit a validated BUILD block checkpoint
-    Block(ProgressArgs),
-    /// Record one normalized failed BUILD attempt
-    Attempt(AttemptArgs),
-    /// Count one failed final verification/review correction cycle
-    Correction(CorrectionArgs),
-    /// Commit one path-scoped implementation correction after a failed final gate
-    CorrectionCheckpoint(RevisionArgs),
-    /// Record isolated review or final verification evidence canonically
-    Evidence(EvidenceArgs),
-    /// Incorporate the expected local default tip into BUILD
-    Sync(SyncArgs),
+    /// Commit the current owned work-branch changes under one message
+    Commit(CommitArgs),
     /// Reconstruct and acquire ownership for a known workflow
     Resume(BindArgs),
     /// Record one active isolated child for cross-instance status and recovery
@@ -357,8 +341,6 @@ pub enum WorkflowCommand {
     Cancel(SessionArgs),
     /// Apply the human-only abandonment transition
     Abandon(AbandonArgs),
-    /// Merge an accepted closure locally with `git merge --no-ff`
-    Integrate(IntegrateArgs),
 }
 
 /// Stable workflow identity and Pi ownership arguments.
@@ -407,32 +389,18 @@ pub struct ActivityStartArgs {
     child_started: String,
 }
 
-/// Arguments common to compare-and-swap progress events.
+/// One committed workflow checkpoint on the owned work branch.
 #[derive(Args)]
-pub struct ProgressArgs {
+pub struct CommitArgs {
     /// Owning Pi session ID
     #[arg(long)]
     session: String,
     /// Expected current plan content revision
     #[arg(long)]
     expected_revision: String,
-    /// New plan content revision after the Rust-owned mutation
+    /// Single-line commit message
     #[arg(long)]
-    revision: String,
-}
-
-/// Compare-and-swap arguments for a SCOPE attempt baseline.
-#[derive(Args)]
-pub struct ScopeBaselineArgs {
-    /// Owning Pi session ID
-    #[arg(long)]
-    session: String,
-    /// Expected current plan content revision
-    #[arg(long)]
-    expected_revision: String,
-    /// Expected work-branch tip; omitted callers use the owned tip under the repository lock
-    #[arg(long)]
-    expected_work: Option<String>,
+    message: String,
 }
 
 /// Session and plan compare-and-swap arguments.
@@ -446,99 +414,12 @@ pub struct RevisionArgs {
     expected_revision: String,
 }
 
-/// One failed BUILD command, normalized and counted by Rust.
-#[derive(Args)]
-pub struct AttemptArgs {
-    /// Owning Pi session ID
-    #[arg(long)]
-    session: String,
-    /// Expected current plan content revision
-    #[arg(long)]
-    expected_revision: String,
-    /// Failed command as executed without a shell
-    #[arg(long)]
-    command: String,
-    /// Process exit status
-    #[arg(long)]
-    exit_status: i32,
-    /// Bounded command diagnostics
-    #[arg(long)]
-    diagnostics: String,
-}
-
-/// One candidate-bound failed final gate.
-#[derive(Args)]
-pub struct CorrectionArgs {
-    /// Owning Pi session ID
-    #[arg(long)]
-    session: String,
-    /// Expected current plan content revision
-    #[arg(long)]
-    expected_revision: String,
-    /// Candidate whose final gate failed
-    #[arg(long)]
-    candidate: String,
-    /// Fresh isolated reviewer run
-    #[arg(long)]
-    review_session: String,
-    /// Bounded structured finding summary
-    #[arg(long)]
-    summary: String,
-}
-
-/// Rust-owned canonical evidence attestation.
-#[derive(Args)]
-pub struct EvidenceArgs {
-    /// Owning Pi session ID
-    #[arg(long)]
-    session: String,
-    /// Expected current plan content revision
-    #[arg(long)]
-    expected_revision: String,
-    /// Reviewed SCOPE plan revision after isolated modifying work
-    #[arg(long)]
-    revision: Option<String>,
-    /// Evidence gate being attested
-    #[arg(long, value_enum)]
-    kind: EvidenceKindName,
-    /// Fresh isolated reviewer session ID
-    #[arg(long)]
-    review_session: Option<String>,
-    /// Immutable candidate for final BUILD evidence
-    #[arg(long)]
-    candidate: Option<String>,
-}
-
-#[derive(Clone, Copy, ValueEnum)]
-pub enum EvidenceKindName {
-    ScopeReview,
-    Verification,
-    Final,
-}
-
 /// Session ownership argument.
 #[derive(Args)]
 pub struct SessionArgs {
     /// Owning Pi session ID
     #[arg(long)]
     session: String,
-}
-
-/// Compare-and-swap arguments for BUILD synchronization.
-#[derive(Args)]
-pub struct SyncArgs {
-    /// Owning Pi session ID
-    #[arg(long)]
-    session: String,
-    /// Expected current plan content revision
-    #[arg(long)]
-    expected_revision: String,
-    /// Expected local default-branch tip
-    #[arg(long)]
-    expected_default: String,
-    /// Expected local work-branch tip
-    #[arg(long)]
-    expected_work: String,
 }
 
 /// Typed phase transition names.
@@ -552,10 +433,10 @@ pub enum TransitionName {
     RejectAcceptance,
     /// ACCEPT findings within approved intent to BUILD
     ReturnToBuild,
+    /// BUILD to ACCEPT once the reviewed candidate is ready
+    CompleteBuild,
     /// ACCEPT to DONE
     Accept,
-    /// Prepared DONE to BUILD after default branch drift
-    RecoverStaleDefault,
 }
 
 /// Compare-and-swap transition and gate evidence.
@@ -605,25 +486,6 @@ pub struct AbandonArgs {
     reason: String,
 }
 
-/// Compare-and-swap local integration arguments.
-#[derive(Args)]
-pub struct IntegrateArgs {
-    /// Owning Pi session ID
-    #[arg(long)]
-    session: String,
-    /// Local default branch
-    #[arg(long)]
-    default_branch: String,
-    /// Expected default branch tip
-    #[arg(long)]
-    expected_default: String,
-    /// Accepted work branch
-    #[arg(long)]
-    work_branch: String,
-    /// Expected closure commit
-    #[arg(long)]
-    expected_work: String,
-}
 ```
 <!-- /sokf:include -->
 
@@ -707,16 +569,11 @@ usage errors and the side effects.
   command SHALL require the owning session and expected plan revision.
 - `P_workflow-cancel-pauses` [event] WHEN `workflow cancel` succeeds,
   it SHALL release transient ownership without changing canonical phase.
-- `P_workflow-local-integration` [ubiquitous] After clean-tree and expected-tip
-  checks, `workflow integrate` SHALL execute shell-free local
-  `git merge --no-ff` without pushing, releasing, deleting branches, stashing,
-  resetting, discarding, absorbing unrelated changes, or resolving conflicts
-  implicitly.
-- `P_workflow-integration-bound` [ubiquitous] `workflow integrate` SHALL
-  require the bound issue, plan, refs, reviewed candidate, verified default
-  tip, done closure, and administrative-only descendants to agree.
-- `P_workflow-manual-merge` [event] WHEN ACCEPT closes the issue and plan, the service SHALL release ownership and leave the accepted work branch checked out without merging. `workflow integrate` remains an explicit low-level operation, not an acceptance step.
-- `P_workflow-assess` [ubiquitous] `workflow assess` SHALL require the owned clean ACCEPT revision and administrative-only changes above reviewed candidate H.
+- `P_workflow-commit` [ubiquitous] `workflow commit` SHALL require the owning
+  session, the expected plan revision, and the checked-out work branch, then
+  commit the present worktree under the caller's message without pushing,
+  merging, deleting branches, stashing, resetting, or discarding.
+- `P_workflow-manual-merge` [event] WHEN ACCEPT closes the issue and plan, the service SHALL release ownership and leave the accepted work branch checked out without merging. The service never merges a work branch.
 - `P_workflow-default-recovery` [ubiquitous] Startup SHALL discover and persist the default branch, reserve independent issue and plan numbers under the repository lock before switching branches, and recover unfinished plans from their local work-branch snapshots.
 - `P_sokf-index-rebuilds-in-full` [ubiquitous] `sokf index` SHALL
   rebuild the index in full.
@@ -831,28 +688,14 @@ the invoking adapter.
 | `superdev workflow bind` | 2 | identity, revision, branch, or ownership is invalid |
 | `superdev workflow transition` | 0 | the gated transition is persisted, including primary-issue discovery preservation when returning to SCOPE |
 | `superdev workflow transition` | 2 | ownership, revision, phase, required feedback, or evidence is invalid |
-| `superdev workflow scope-checkpoint` | 0 | one valid knowledge-only SCOPE proposal is committed for immutable review |
-| `superdev workflow scope-checkpoint` | 2 | ownership, revision, identity, branch, phase, canonical validation, or path scope is invalid |
-| `superdev workflow block` | 0 | the newly completed BUILD block passes dependency and executable checks and its path-scoped checkpoint is committed |
-| `superdev workflow block` | 2 | ownership, revision, identity, branch, phase, dependency, executable evidence, or path scope is invalid |
-| `superdev workflow attempt` | 0 | one normalized failed BUILD attempt is durably counted |
-| `superdev workflow attempt` | 2 | ownership, phase, revision, input, tree, or configured retry limit is invalid |
-| `superdev workflow correction` | 0 | one candidate-bound final correction cycle is durably counted |
-| `superdev workflow correction` | 2 | ownership, authority, candidate, review, phase, tree, or configured correction limit is invalid |
-| `superdev workflow correction-checkpoint` | 0 | approved executable checks pass and a focused correction within SCOPE-approved Areas is committed |
-| `superdev workflow correction-checkpoint` | 2 | ownership, revision, branch, phase, pending-correction, executable evidence, or path scope is invalid |
-| `superdev workflow evidence` | 0 | canonical BUILD evidence is acknowledged |
-| `superdev workflow evidence` | 2 | ownership, revision, identity, branch, or phase is invalid |
-| `superdev workflow sync` | 0 | the expected default tip is incorporated into the BUILD branch, or was already present |
-| `superdev workflow sync` | 2 | ownership, phase, revision, tree, ref, expected tip, or conflict checks failed |
+| `superdev workflow commit` | 0 | the present worktree is committed on the owned work branch |
+| `superdev workflow commit` | 2 | ownership, revision, identity, branch, or path scope is invalid |
 | `superdev workflow resume` | 0 | canonical state is reconstructed and ownership acquired |
 | `superdev workflow resume` | 2 | canonical identity, branch, phase, or ownership is invalid |
 | `superdev workflow cancel` | 0 | transient ownership is released |
 | `superdev workflow cancel` | 2 | another session owns the workflow |
 | `superdev workflow abandon` | 0 | approved abandonment is persisted |
 | `superdev workflow abandon` | 2 | ownership, revision, phase, or approval is invalid |
-| `superdev workflow integrate` | 0 | local no-ff integration completed |
-| `superdev workflow integrate` | 2 | ownership, revision, ref, tree, or expected tip is invalid |
 | `superdev hook` | 2 | no subcommand named |
 | `superdev hook validate` | 0 | the edited path is outside the governed trees, or the repo still validates |
 | `superdev hook validate` | 2 | findings on stderr, or a payload it cannot read |
@@ -949,7 +792,7 @@ reaches the network unasked, to find the newest pack release.
 - `P_fix-idempotent` [ubiquitous] `validate --fix` SHALL be idempotent.
 - `P_sokf-mutations-write-knowledge-only` [ubiquitous] `sokf edit` and `sokf
   write` SHALL write only inside the resolved knowledge directory.
-- `P_workflow-side-effects-bounded` [ubiquitous] `workflow` SHALL write only its transient cache, bound canonical records and indexes, product paths declared by the current BUILD block, and, for integration, the explicitly validated local refs and merge commit.
+- `P_workflow-side-effects-bounded` [ubiquitous] `workflow` SHALL write only its transient cache, the bound canonical records and indexes, and the owned work branch it commits to.
 
 ## Stability
 

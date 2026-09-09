@@ -81,8 +81,6 @@ pub struct KnowledgeConfig {
 pub struct WorkflowConfig {
     /// Require an interactive human decision before local integration.
     pub human_acceptance_required: bool,
-    /// Attempts with an unchanged failure fingerprint before BUILD pauses.
-    pub max_stalled_block_attempts: u32,
     /// Maximum final review correction cycles before BUILD pauses.
     pub max_final_correction_cycles: u32,
     /// Maximum batched correction/re-review cycles during SCOPE.
@@ -146,7 +144,6 @@ impl Default for WorkflowConfig {
     fn default() -> Self {
         Self {
             human_acceptance_required: true,
-            max_stalled_block_attempts: 3,
             max_final_correction_cycles: 3,
             max_scope_review_cycles: default_max_scope_review_cycles(),
             isolated_role_timeout_seconds: default_isolated_role_timeout_seconds(),
@@ -164,10 +161,6 @@ impl Default for WorkflowConfig {
 impl WorkflowConfig {
     fn validate(&self) -> Result<()> {
         let positive = [
-            (
-                "max_stalled_block_attempts",
-                self.max_stalled_block_attempts,
-            ),
             (
                 "max_final_correction_cycles",
                 self.max_final_correction_cycles,

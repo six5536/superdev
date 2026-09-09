@@ -49,27 +49,21 @@ try {
 		(error: any) => error.code === 99);
 	assert.deepEqual(await ensureParentService(root), pinned);
 	const status = await service("workflow", "status", "--json");
-	// This is the exact old adapter invocation from the reported failure.
-	const baseline = await service("workflow", "scope-baseline", "--session", "checkout-test",
-		"--expected-revision", status.result.owner.last_plan_revision);
-	assert.equal(baseline.result.baseline, (await git("rev-parse", "HEAD")).stdout.trim());
+	const baseline = (await git("rev-parse", "HEAD")).stdout.trim();
 	assert.equal((await git("branch", "--show-current")).stdout.trim(), "work/001-canonical-recovery");
 	assert.equal((await git("rev-parse", "trunk")).stdout.trim(), defaultBefore);
 	assert.equal((await git("status", "--porcelain")).stdout.trim(), "");
-	// An unchanged proposal must checkpoint and bind review evidence through the
+	// An unchanged proposal must still publish an immutable checkpoint through the
 	// same pinned service even though the branch-local launcher is unusable.
 	const planPath = join(root, "knowledge/plans/open/plan-042-canonical-recovery.md");
 	const planBefore = await readFile(planPath, "utf8");
-	const checkpoint = await service("workflow", "scope-checkpoint", "--session", "checkout-test",
-		"--expected-revision", status.result.owner.last_plan_revision);
+	const checkpoint = await service("workflow", "commit", "--session", "checkout-test",
+		"--expected-revision", status.result.owner.last_plan_revision,
+		"--message", "docs(workflow): checkpoint scope proposal");
 	assert.equal(checkpoint.result.revision, status.result.owner.last_plan_revision);
 	assert.equal(await readFile(planPath, "utf8"), planBefore);
-	assert.notEqual(checkpoint.result.commit, baseline.result.baseline);
-	assert.equal((await git("diff", "--name-only", baseline.result.baseline, checkpoint.result.commit)).stdout.trim(), "");
-	await service("workflow", "evidence", "--session", "checkout-test",
-		"--expected-revision", checkpoint.result.revision, "--revision", checkpoint.result.revision,
-		"--kind", "scope-review", "--review-session", "isolated-unchanged-review", "--candidate", checkpoint.result.commit);
-	assert.match(await readFile(planPath, "utf8"), /Scope requirements review: clean by isolated session isolated-unchanged-review\./);
+	assert.notEqual(checkpoint.result.commit, baseline);
+	assert.equal((await git("diff", "--name-only", baseline, checkpoint.result.commit)).stdout.trim(), "");
 	assert.equal((await git("status", "--porcelain")).stdout.trim(), "");
 	assert.equal((await git("rev-parse", "trunk")).stdout.trim(), defaultBefore);
 	await service("workflow", "cancel", "--session", "checkout-test");
