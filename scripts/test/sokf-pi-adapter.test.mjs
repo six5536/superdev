@@ -46,19 +46,27 @@ test("the Pi adapter preserves CLI and built-in tool semantics", { timeout: 180_
   assert.match(`${stdout}\n${stderr}`, /No models matching/);
 });
 
-test("the Superdev Pi extension loads and registers its complete surface", { timeout: 180_000 }, async (t) => {
-  await run(process.execPath, ["--check", resolve(repository, ".pi/extensions/superdev/index.ts")], {
-    cwd: repository,
-  });
-  if (!(await commandExists("pi"))) {
-    t.skip("pi is not installed");
+test("the pinned workflow service resumes an older work branch without merging", { timeout: 180_000 }, async (t) => {
+  if (process.platform !== "linux") {
+    t.skip("pinned workflow execution uses Linux file descriptors");
     return;
   }
+  const built = await run("cargo", ["build", "--quiet", "-p", "superdev", "--message-format=json"], {
+    cwd: repository, timeout: 120_000, maxBuffer: 8 * 1024 * 1024,
+  });
+  const executable = built.stdout.trim().split("\n").map((line) => JSON.parse(line))
+    .find((event) => event.reason === "compiler-artifact" && event.target?.name === "superdev" && event.executable)?.executable;
+  assert.ok(executable, "cargo omitted the built superdev executable");
+  const { stdout } = await run(process.execPath, ["--experimental-transform-types",
+    resolve(here, "fixtures/superdev-service-checkout-smoke.ts"), executable], {
+    cwd: repository, timeout: 50_000,
+  });
+  assert.match(stdout, /SUPERDEV_SERVICE_CHECKOUT_PASS/);
+});
 
-  const { stdout, stderr } = await run(
-    "pi",
-    ["--no-extensions", "--offline", "-e", workflowFixture, "--list-models", "__superdev_smoke_no_model__"],
-    { cwd: repository, timeout: 170_000 },
-  );
-  assert.match(`${stdout}\n${stderr}`, /No models matching/);
+test("the Superdev Pi extension executes its complete surface", { timeout: 180_000 }, async () => {
+  const { stdout } = await run(process.execPath, ["--experimental-transform-types", workflowFixture], {
+    cwd: repository, timeout: 170_000,
+  });
+  assert.match(stdout, /SUPERDEV_WORKFLOW_SMOKE_PASS/);
 });

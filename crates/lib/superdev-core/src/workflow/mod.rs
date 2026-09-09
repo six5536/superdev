@@ -3,8 +3,8 @@
 //! Harness adapters request typed transitions; they never rewrite workflow
 //! state or choose project policy themselves.
 
+pub mod abandonment;
 pub mod cache;
-pub mod filing;
 pub mod git;
 pub mod retry;
 mod state;

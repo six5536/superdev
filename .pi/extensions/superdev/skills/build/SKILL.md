@@ -1,8 +1,7 @@
 ---
 name: build
-description: Reconstruct the approved workflow context and run Superdev BUILD strictly within its canonical plan. Invoke explicitly with /skill:build.
-disable-model-invocation: true
-allowed-tools: read sokf_search sokf_graph superdev_run_phase
+description: Reconstruct the approved workflow context and run Superdev BUILD strictly within its canonical plan. Use for matching user intent or invoke with /skill:build.
+allowed-tools: read sokf_search sokf_graph superdev_run_phase superdev_ask
 ---
 
 # Superdev BUILD
@@ -42,7 +41,7 @@ Interpret tool results as follows:
 - `findings`: inspect the persistent question state and discuss one decision at a time.
 - `paused`, `blocked`, or `failed`: explain the failed stage, diagnostic or artifact path, preserved-work state, recommendation, and valid recovery operations.
 - `ready-for-approval`: BUILD and ACCEPT reached a human acceptance gate; hand control to `/skill:accept`.
-- `accepted`: report that deterministic integration completed locally. Do not claim a push or release.
+- `accepted`: report that the branch is accepted and ready for the user to merge. Do not claim a push or release.
 - `busy`: wait or offer cancellation; do not start another phase run.
 
 Use `record-answer`, `revise-answer`, and `submit-answers` only for questions returned by the tool. Use `cancel` to pause while preserving partial work.

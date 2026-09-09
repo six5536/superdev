@@ -38,6 +38,8 @@ places it.
 
 ## The authoring format
 
+* [SOKF-routed file tools diverge from Pi's built-in contracts][sokf:issue-077-sokf-file-tool-parity] - SOKF-routed read, edit, and write return different source, result, error, diff, rendering, and prompt behaviour from Pi's built-in file tools, making targeted knowledge edits fragile and expensive in model context.
+
 * [The format the agent must write in has no document, and the renderer that would produce one has no consumer][sokf:issue-017-the-format-has-no-agent-facing-document] - every skill and schema is written in superdev-format, and the only statement of it is a 700-line grammar file the agent is never pointed at; the doc renderer ported for exactly this now exists in the binary with nothing calling it but a flag nobody runs.
 
 ## The schema layer
@@ -110,7 +112,6 @@ places it.
 * [Historical plan: Persistent MCP transport for Pi SOKF][sokf:issue-074-historical-persistent-mcp-transport-for-pi-sokf] - Migration-derived issue preserving the primary issue relationship for plan-028-persistent-mcp-transport-for-pi-sokf.
 * [Historical plan: Content packs][sokf:issue-076-historical-content-packs] - Migration-derived issue preserving the primary issue relationship for plan-003-content-packs.
 * [The development workflow is contradictory and does not reliably deliver reviewed documentation][sokf:issue-059-scope-build-accept-workflow] - The workflow duplicates ownership across skills, leaves manual cases unexecuted, and treats user-facing documentation as an optional final reminder.
-* [SOKF-routed file tools diverge from Pi's built-in contracts][sokf:issue-077-sokf-file-tool-parity] - SOKF-routed read, edit, and write return different source, result, error, diff, rendering, and prompt behaviour from Pi's built-in file tools, making targeted knowledge edits fragile and expensive in model context.
 * [Historical plan: Flatten the superdev-core API][sokf:issue-075-historical-flatten-crate-api] - Migration-derived issue preserving the primary issue relationship for plan-001-flatten-crate-api.
 
 <!-- sokf:links -->

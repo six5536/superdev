@@ -82,7 +82,7 @@ export function registerWorkflowQuestions(
 	};
 	const activate = () => {
 		if (!priorTools) priorTools = pi.getActiveTools();
-		const allowed = new Set(["read", "sokf_search", "sokf_graph", "superdev_run_phase", ...(options.exposeTool === false ? [] : ["superdev_workflow_questions"])]);
+		const allowed = new Set(["read", "sokf_search", "sokf_graph", "superdev_run_phase", "superdev_ask", ...(options.exposeTool === false ? [] : ["superdev_workflow_questions"])]);
 		pi.setActiveTools([...new Set([...priorTools.filter((tool: string) => allowed.has(tool)), ...(options.exposeTool === false ? [] : ["superdev_workflow_questions"])])]);
 	};
 	const deactivate = () => {
@@ -170,7 +170,19 @@ export function registerWorkflowQuestions(
 			if (state.status !== "active") throw new Error(`workflow question queue is ${state.status}`);
 			if (input.action === "revise") {
 				if (!input.findingId || !state.answers[input.findingId]) throw new Error("revise requires one answered finding ID");
-				const covered = state.answers[input.findingId].findingIds;
+				const affected = new Set(state.answers[input.findingId].findingIds);
+                let changed = true;
+                while (changed) {
+                    changed = false;
+                    for (const finding of state.findings) {
+                        if ((finding.dependsOn ?? []).some(id => affected.has(id)) && !affected.has(finding.id)) {
+                            affected.add(finding.id);
+                            for (const id of state.answers[finding.id]?.findingIds ?? []) affected.add(id);
+                            changed = true;
+                        }
+                    }
+                }
+                const covered = [...affected];
 				for (const id of covered) delete state.answers[id];
 				persist();
 				return { content: [{ type: "text", text: `Reopened ${covered.join(", ")}. Discuss or ask it again.` }], details: { reopened: covered } };
@@ -209,7 +221,9 @@ export function registerWorkflowQuestions(
 				if (!ids.length || !input.proposedAnswer?.trim()) throw new Error("propose-answer requires finding IDs and a proposed answer");
 				const findings = ids.map((id: string) => state!.findings.find((finding) => finding.id === id));
 				if (findings.some((finding: ReviewFinding | undefined) => !finding)) throw new Error("proposed answer names an unknown finding");
-				const impact = findings.map((finding: ReviewFinding) => `${finding.id}: ${finding.summary}`).join("\n");
+				const unresolved = findings.flatMap((finding: ReviewFinding) => (finding.dependsOn ?? []).filter(id => !state!.answers[id] && !ids.includes(id)));
+                if (unresolved.length) throw new Error(`finding depends on unresolved answers: ${unresolved.join(", ")}`);
+                const impact = findings.map((finding: ReviewFinding) => `${finding.id}: ${finding.summary}`).join("\n");
 				if (!ctx.hasUI) {
 					state.status = "paused"; persist();
 					await options.onPause?.(state, ctx);

@@ -1,16 +1,44 @@
 import { createHash } from "node:crypto";
-import { chmod, mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
+import { loadSkills, formatSkillsForPrompt } from "@earendil-works/pi-coding-agent";
+import { chmod, copyFile, mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 
 import superdev, { buildCommandAllowed, isolated, isolatedRoleMayNotRun, isolatedTools, parseRoleResult, requiresHumanAcceptance, runGuardedBuildCommand, runPinnedSuperdev } from "../../../.pi/extensions/superdev/index.ts";
 import { IsolatedArtifact, boundedText } from "../../../.pi/extensions/superdev/lib/output.ts";
 import { registerPhaseDrivers, type PhaseRuntime } from "../../../.pi/extensions/superdev/lib/phases.ts";
+import { registerPhaseTool } from "../../../.pi/extensions/superdev/lib/phase-tool.ts";
+import { pinService } from "../../../.pi/extensions/superdev/lib/service-pin.ts";
+import { registerIntakeTools } from "../../../.pi/extensions/superdev/lib/intake.ts";
 import { withProgress } from "../../../.pi/extensions/superdev/lib/progress.ts";
 import { registerWorkflowQuestions } from "../../../.pi/extensions/superdev/lib/questions.ts";
 import { findingFingerprint, validateRoleResult, type ReviewFinding } from "../../../.pi/extensions/superdev/lib/review.ts";
 
 async function smoke() {
+	if (process.platform === "linux") {
+		const root = await mkdtemp(join(tmpdir(), "superdev-launcher-test-"));
+		let pinned: Awaited<ReturnType<typeof pinService>> | undefined;
+		try {
+			const launcher = join(root, "launcher");
+			const native = join(root, "native");
+			await copyFile("/bin/echo", native);
+			await writeFile(launcher, '#!/bin/sh\nroot="$(dirname "$0")"\n[ -f "$root/native" ] || exit 2\nprintf \'{"protocol":"superdev-workflow/v2","result":{"executable":"%s/native"}}\\n\' "$root"\n');
+			await chmod(launcher, 0o700);
+			// Copying a relative-path launcher to /proc/fd loses its original root.
+			const broken = await runPinnedSuperdev(launcher, undefined, ["workflow", "status", "--json"], root);
+			if (broken.code === 0) throw new Error("launcher regression did not reproduce");
+			pinned = await pinService(launcher, root);
+			await rm(native);
+			await rm(launcher);
+			// The source checkout may now contain an older launcher or a rebuilt
+			// executable. Neither affects the parent/child service snapshot.
+			const result = await runPinnedSuperdev(pinned.path, pinned.digest, ["stable-service"], root);
+			if (result.code !== 0 || result.stdout.trim() !== "stable-service") throw new Error("service snapshot depended on the changed checkout");
+		} finally {
+			pinned?.dispose();
+			await rm(root, { recursive: true, force: true });
+		}
+	}
 	const commands: string[] = [];
 	const tools: string[] = [];
 	const toolDefinitions = new Map<string, any>();
@@ -28,11 +56,37 @@ async function smoke() {
 		},
 	};
 	superdev(fake as never);
-	const discovered = await eventHandlers.get("resources_discover")?.({ cwd: "/repo", reason: "startup" }, {});
-	if (!discovered?.skillPaths?.some((path: string) => path.endsWith("/.pi/extensions/superdev/skills"))) {
-		throw new Error("workflow skills were not discovered from inside the Superdev extension");
-	}
-	for (const role of ["scope", "requirements-review", "build", "code-review", "accept", "file"]) {
+	const skillAgentDir = await mkdtemp(join(tmpdir(), "superdev-skill-discovery-"));
+	try {
+		const defaults = loadSkills({ cwd: process.cwd(), agentDir: skillAgentDir, skillPaths: [], includeDefaults: true });
+		if (defaults.skills.some((skill) => ["file", "scope", "build", "accept"].includes(skill.name))) throw new Error("Superdev skills leaked into general Pi discovery");
+		const discover = eventHandlers.get("resources_discover");
+		if (!discover) throw new Error("extension did not register its skills");
+		const startup = await discover({ cwd: skillAgentDir, reason: "startup" });
+		const reloaded = await discover({ cwd: skillAgentDir, reason: "reload" });
+		if (JSON.stringify(startup) !== JSON.stringify(reloaded)) throw new Error("skill registration differs on reload");
+		const discovered = loadSkills({ cwd: skillAgentDir, agentDir: skillAgentDir, skillPaths: startup.skillPaths, includeDefaults: false });
+		const prompt = formatSkillsForPrompt(discovered.skills);
+		if (discovered.skills.some((skill) => skill.name === "issue")) throw new Error("retired issue skill remains discoverable");
+		const filing = await readFile(join(process.cwd(), ".pi/extensions/superdev/skills/file/SKILL.md"), "utf8");
+		for (const instruction of ["Choose the next unused number", "If already on the default branch", "worktree on the default branch", "superdev validate --fix", "Commit only the authored record", "preserve unfinished files", "refuse pre-existing edits", "read-only `superdev validate`", "git commit --only", "../../../../skills/sokf-authoring/SKILL.md"]) {
+			if (!filing.includes(instruction)) throw new Error(`file skill omitted ${instruction}`);
+		}
+		if (filing.includes("superdev_file_issue") || filing.includes("superdev_run_phase")) throw new Error("file skill still depends on deterministic filing or workflow state");
+		const scopeSkill = await readFile(join(process.cwd(), ".pi/extensions/superdev/skills/scope/SKILL.md"), "utf8");
+		if (!scopeSkill.includes("Git mutation commands are permitted only while following `../file/SKILL.md`") || !scopeSkill.split("\n").find((line) => line.startsWith("allowed-tools:"))?.split(" ").includes("bash")) {
+			throw new Error("SCOPE cannot delegate issue creation to the native file skill");
+		}
+		for (const name of ["file", "scope", "build", "accept"]) {
+			const skill = discovered.skills.find((skill) => skill.name === name);
+			if (!skill || skill.disableModelInvocation || !skill.filePath.endsWith(`/.pi/extensions/superdev/skills/${name}/SKILL.md`) || !prompt.includes(`<name>${name}</name>`)) {
+				throw new Error(`native Pi discovery omitted ${name} from its prompt`);
+			}
+			const packed = await readFile(join(process.cwd(), "pack/pi/extensions/superdev/skills", name, "SKILL.md"), "utf8");
+			if (packed !== await readFile(skill.filePath, "utf8")) throw new Error(`${name} skill pack differs`);
+		}
+	} finally { await rm(skillAgentDir, { recursive: true, force: true }); }
+	for (const role of ["scope", "requirements-review", "build", "code-review", "accept"]) {
 		const prompt = await readFile(join(process.cwd(), ".pi", "extensions", "superdev", "prompts", `${role}.md`), "utf8");
 		if (!prompt.includes("only tool call in the final assistant turn") || !prompt.includes("exactly once")) {
 			throw new Error(`${role} prompt does not keep terminal submission separate and singular`);
@@ -42,15 +96,11 @@ async function smoke() {
 	if (!scopePrompt.includes("primary issue and canonical plan named by the task") || !scopePrompt.includes("Keep their established identities")) {
 		throw new Error("SCOPE prompt permits identity drift");
 	}
-	const filePrompt = await readFile(join(process.cwd(), ".pi", "extensions", "superdev", "prompts", "file.md"), "utf8");
-	if (!filePrompt.includes("Do not write files, invoke the filing service") || !filePrompt.includes("parent presents that proposal")) {
-		throw new Error("filing child prompt exceeds its read-only preparation role");
-	}
 	const phaseSource = await readFile(join(process.cwd(), ".pi", "extensions", "superdev", "lib", "phases.ts"), "utf8");
 	for (const identityTask of ["Prepare issue ${initial.owner.identity.issue} and plan ${initial.owner.identity.plan}", "Review issue ${owner.identity.issue} and plan ${owner.identity.plan}", "Build issue ${owner.identity.issue} from approved plan ${owner.identity.plan}", "Assess whether issue ${owner.identity.issue} and plan ${owner.identity.plan}"]) {
 		if (!phaseSource.includes(identityTask)) throw new Error(`phase task omits canonical identity: ${identityTask}`);
 	}
-	for (const removed of ["scope", "build", "accept"]) {
+	for (const removed of ["scope", "build", "accept", "issue", "file"]) {
 		if (commands.includes(removed)) throw new Error(`legacy phase command ${removed} remains public`);
 	}
 	for (const command of [
@@ -59,12 +109,11 @@ async function smoke() {
 		"superdev-resume",
 		"superdev-cancel",
 		"superdev-abandon",
-		"file",
 	]) {
 		if (!commands.includes(command)) throw new Error(`missing command ${command}`);
 	}
 	if (!tools.includes("superdev_run_phase")) throw new Error("missing generic phase tool");
-	if (!tools.includes("superdev_isolated_role")) throw new Error("missing isolated filing role tool");
+	if (tools.includes("superdev_file_issue") || !tools.includes("superdev_ask")) throw new Error("filing must be skill-only; questions remain available");
 	const priorChildRole = process.env.SUPERDEV_CHILD_ROLE;
 	process.env.SUPERDEV_CHILD_ROLE = "scope";
 	try {
@@ -82,17 +131,13 @@ async function smoke() {
 		else process.env.SUPERDEV_CHILD_ROLE = priorChildRole;
 	}
 	if (tools.includes("superdev_review_diff")) throw new Error("immutable review diff leaked into the main agent tool set");
-	if (!tools.includes("superdev_workflow_control")) throw new Error("missing extension-private workflow control adapter");
+	if (tools.includes("superdev_workflow_control")) throw new Error("low-level workflow control leaked");
 	if (tools.includes("superdev_workflow_questions")) throw new Error("internal workflow question tool was exposed");
 	const phaseSchema = JSON.stringify(toolDefinitions.get("superdev_run_phase")?.parameters);
-	for (const action of ["run", "retry", "inspect", "record-answer", "revise-answer", "submit-answers", "approve", "cancel"]) {
+	for (const action of ["run", "retry", "inspect", "ask", "record-answer", "revise-answer", "submit-answers", "approve", "cancel"]) {
 		if (!phaseSchema.includes(`\"${action}\"`)) throw new Error(`generic phase tool omitted ${action}`);
 	}
 	if (phaseSchema.includes("expectedRevision") || phaseSchema.includes("session")) throw new Error("generic phase tool exposed internal ownership mechanics");
-	const isolatedSchema = JSON.stringify(toolDefinitions.get("superdev_isolated_role")?.parameters);
-	if (!isolatedSchema.includes("file") || ["scope", "build", "accept", "code-review", "requirements-review"].some((role) => isolatedSchema.includes(role))) {
-		throw new Error("direct isolated tool exposed a workflow phase role");
-	}
 	const priorVerification = process.env.SUPERDEV_VERIFICATION_ACTIVE;
 	process.env.SUPERDEV_VERIFICATION_ACTIVE = "1";
 	try {
@@ -101,12 +146,7 @@ async function smoke() {
 		if (inspect.details?.status !== "idle" || inspect.details?.questions !== null) throw new Error("generic inspect did not return typed idle state");
 		const cancel = await phaseTool.execute("cancel", { phase: "scope", action: "cancel" }, undefined, undefined, { cwd: "/repo" });
 		if (cancel.details?.status !== "idle") throw new Error("generic cancel did not return typed idle state");
-		try {
-			await toolDefinitions.get("superdev_isolated_role").execute("direct", { role: "scope", task: "bypass" }, undefined, undefined, {});
-			throw new Error("direct phase-role invocation was accepted");
-		} catch (error) {
-			if (!String(error).includes("internal")) throw error;
-		}
+
 	} finally {
 		if (priorVerification === undefined) delete process.env.SUPERDEV_VERIFICATION_ACTIVE;
 		else process.env.SUPERDEV_VERIFICATION_ACTIVE = priorVerification;
@@ -325,25 +365,29 @@ async function smoke() {
 	} : undefined;
 	const status = async () => ({
 		owner: owner(), phase, canonicalPlanRevision: revision,
-		humanAcceptanceRequired, executable: "/service",
+		humanAcceptanceRequired, executable: "/service", executableSha256: lateDigest,
 		maxFinalCorrectionCycles: 3, maxScopeReviewCycles: 3,
 		buildState: { currentBlock: 1, attempts: 0, finalCorrections, blocker: finalCorrections >= 3 ? "final correction limit exhausted: remaining findings" : "none" },
 	});
-	const phasePi = {
+	let attested = false;
+    let lateDigest: string | undefined;
+    const phasePi = {
 		registerCommand(name: string, command: any) { phaseCommands.set(name, command); },
 		async exec(_command: string, args: string[]) {
 			if (args[0] === "status") return { code: 0, stdout: "", stderr: "" };
 			const target = args.at(-1);
-			return { code: 0, stdout: `${target === "main" || target === baseRevision ? baseRevision : candidateRevision}\n`, stderr: "" };
+			return { code: 0, stdout: `${target === "main" || target === baseRevision ? baseRevision : attested ? "c".repeat(40) : candidateRevision}\n`, stderr: "" };
 		},
 	};
 	const runService = async (args: string[]) => {
 		serviceCalls.push(args);
-		if (args.includes("scope-checkpoint")) revision = "revision-2";
+		// The authoring role leaves the valid plan unchanged; checkpointing must
+		// still reach requirements review with the same canonical revision.
 		if (args.includes("scope-review")) revision = "revision-3";
 		if (args.includes("approve-scope")) { phase = "build"; revision = "revision-4"; }
-		if (args.includes("final")) { phase = "accept"; revision = "revision-5"; candidateEvidence = true; }
-		if (args.includes("integrate")) owned = false;
+		if (args.includes("final")) { phase = "accept"; revision = "revision-5"; candidateEvidence = true; attested = true; }
+		if (args.includes("integrate")) throw new Error("ACCEPT must never merge");
+        if (args.includes("--transition") && args.at(-1) === "accept") owned = false;
 		if (args.includes("cancel")) owned = false;
 		return { result: args.includes("transition") ? { state: { last_plan_revision: revision } } : { last_plan_revision: revision } };
 	};
@@ -372,7 +416,8 @@ async function smoke() {
 		authority: "authority",
 		policyFrom: () => ({ timeoutSeconds: 1, maxContextBytes: 8192, maxContextLines: 200, maxReviewStateBytes: 262144, maxReviewFindings: 100, maxArtifactBytes: 10485760, maxArtifacts: 20, retentionHours: 24 }),
 		questions: { begin(state: any) { pendingPhaseQuestions = state; }, current() { return pendingPhaseQuestions; } },
-		isolated: async (role: string, _task: string, _cwd: string, _model: unknown, signal: AbortSignal) => {
+		isolated: async (role: string, _task: string, _cwd: string, _model: unknown, signal: AbortSignal, _spawn: any, _close: any, _base: any, _candidate: any, executable: any, digest: any) => {
+            if (role === "build" && (executable !== "/service" || digest !== "digest")) throw new Error("BUILD did not use its invocation-time executable pin");
 			if (roleFailure === role) throw new Error(`${role} timed out after 1s; diagnostics: /tmp/${role}-diagnostic.json`);
 			if (cancellableRole === role) return await new Promise((_resolve, reject) => {
 				const cancelled = () => reject(new Error(`${role} role was cancelled; diagnostics: /tmp/${role}-cancelled.json`));
@@ -385,13 +430,15 @@ async function smoke() {
 				: { status: role === "accept" ? "complete" : "clean", summary: `${role} clean`, checklist };
 		},
 		childStarted: () => () => {}, childFinished: async () => {}, reviewRuns: new Map(),
-		parentServiceDigest: "digest", requiresHumanAcceptance, runtime,
+		requiresHumanAcceptance, runtime,
 	});
 	await phaseDrivers.runScopePhase("", phaseCtx);
 	if (runtime.lastOutcome?.status !== "ready-for-approval" || phase !== "scope") throw new Error("SCOPE did not return a typed approval gate to its skill");
-	phase = "build"; revision = "revision-4"; runtime.lastOutcome = undefined;
+	const scopeEvidence = serviceCalls.find((args) => args.includes("scope-review"));
+	if (!scopeEvidence || scopeEvidence[scopeEvidence.indexOf("--revision") + 1] !== "revision-1") throw new Error("unchanged SCOPE did not bind review to the original plan revision");
+	phase = "build"; revision = "revision-4"; runtime.lastOutcome = undefined; lateDigest = "digest";
 	await phaseDrivers.runBuildPhase("", phaseCtx);
-	if (owned || !serviceCalls.some((args) => args.includes("integrate"))) throw new Error("BUILD did not continue through automatic ACCEPT integration");
+	if (owned || serviceCalls.some((args) => args.includes("integrate"))) throw new Error("BUILD did not finish at the manual merge boundary");
 	if (!progress.some((value) => value.includes("SCOPE")) || !progress.some((value) => value.includes("BUILD")) || !progress.some((value) => value.includes("ACCEPT"))) {
 		throw new Error("phase handlers did not publish immediate progress");
 	}
@@ -424,6 +471,25 @@ async function smoke() {
 		throw new Error("exhausted BUILD did not preserve a revision-bound human decision queue");
 	}
 
+    {
+    const publicTools = new Map<string, any>();
+    const questionPi = { registerTool(tool: any) { publicTools.set(tool.name, tool); }, registerCommand() {},
+        getActiveTools() { return ["read", "superdev_run_phase"]; }, setActiveTools() {}, appendEntry() {} };
+    let selectedChoices: string[] = [];
+    const questionCtx = { ...phaseCtx, ui: { ...ui, async select(_question: string, choices: string[]) { selectedChoices = choices; return choices[0]; } } };
+    const queue = registerWorkflowQuestions(questionPi, { exposeTool: false, maxBytes: () => 262144, maxFindings: () => 100, onSubmit: async () => {} });
+    queue.begin({ version: 1, workflow: "plan-smoke", candidate: "queue-revision", status: "active", findings: [{ id: "choice", classification: "substantive", summary: "Choose", evidence: "Evidence", impact: "Impact", question: "Which?", recommendation: "First", choices: [{ label: "First" }, { label: "Second" }] }], answers: {} });
+    registerPhaseTool({ pi: questionPi, workflowStatus: async () => ({ owner: { session_id: "session-smoke", last_plan_revision: "queue-revision", identity: { plan: "plan-smoke" } }, phase: "scope" }), questions: queue, runtime: {}, policyFrom: () => ({ maxContextBytes: 8192, maxContextLines: 200 }), phaseContinuations: {} });
+    const asked = await publicTools.get("superdev_run_phase").execute("ask", { phase: "scope", action: "ask", findingIds: ["choice"] }, undefined, undefined, questionCtx);
+    if (!asked.details?.answered?.includes("choice") || !selectedChoices.includes("Type another answer") || !selectedChoices.includes("Discuss")) throw new Error("Public phase tool cannot reach the question selector");
+    await queue.operate({ action: "submit" }, questionCtx);
+    const revised = await publicTools.get("superdev_run_phase").execute("change", { phase: "scope", action: "record-answer", answer: "A later human revision" }, undefined, undefined, questionCtx);
+    if (revised.details?.status !== "answer-recorded") throw new Error("A submitted prior batch blocked a later human revision");
+    registerIntakeTools({ pi: questionPi });
+    const intake = await publicTools.get("superdev_ask").execute("intake", { question: "Choose scope", choices: ["Small", "Large"], recommendation: "Small" }, undefined, undefined, questionCtx);
+    if (intake.details?.answer !== "Small" || !selectedChoices.includes("Discuss in chat")) throw new Error("Intake choices are unavailable");
+
+    }
 	let progressAborted = false;
 	let progressCleared = false;
 	try {
@@ -446,6 +512,7 @@ async function smoke() {
 }
 
 await smoke();
+console.log("SUPERDEV_WORKFLOW_SMOKE_PASS");
 
 export default function loadedSmoke() {
 	// Top-level await completes the deterministic smoke before Pi registers this fixture.

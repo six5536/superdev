@@ -15,7 +15,14 @@ export type PhaseRuntime = {
 };
 
 export function registerPhaseDrivers(deps: any) {
-	const { pi, runSuperdev, workflowStatus, authority, policyFrom, questions, isolated, childStarted, childFinished, reviewRuns, parentServiceDigest, requiresHumanAcceptance, runtime } = deps;
+	const { pi, runSuperdev: service, workflowStatus, authority, policyFrom, questions, isolated, childStarted, childFinished, reviewRuns, requiresHumanAcceptance, runtime } = deps;
+    const runSuperdev = (args: string[], cwd: string, capability: string) => service(args, cwd, capability, args.includes("cancel") ? undefined : runtime.modifyingCommandAbort?.signal);
+    const newAbort = (ctx: any) => {
+        const controller = new AbortController();
+        if (ctx.workflowSignal?.aborted) controller.abort();
+        else ctx.workflowSignal?.addEventListener("abort", () => controller.abort(), { once: true, signal: controller.signal });
+        return controller;
+    };
 	const hasPendingQuestions = () => ["active", "paused"].includes(questions.current?.()?.status ?? "");
 	const pauseWithOutcome = async (ctx: any, phase: string, error: unknown, cancelled: boolean): Promise<boolean> => {
 		let status: any;
@@ -84,7 +91,7 @@ export function registerPhaseDrivers(deps: any) {
 		if (runtime.cancelling || runtime.modifyingBusy || runtime.modifyingChild) return ctx.ui.notify("A modifying workflow role is already active", "error");
 		runtime.modifyingBusy = true;
 		runtime.currentStage = "scope initialization";
-		const commandAbort = new AbortController();
+		const commandAbort = newAbort(ctx);
 		runtime.modifyingCommandAbort = commandAbort;
 		let launchBuild = false;
 		let retryScope = false;
@@ -149,6 +156,11 @@ export function registerPhaseDrivers(deps: any) {
 				if (reviewed.status === "findings") {
 					const substantive = (reviewed.findings ?? []).filter((finding) => finding.classification === "substantive");
 					const mechanical = (reviewed.findings ?? []).filter((finding) => finding.classification === "mechanical");
+                    if (substantive.length && mechanical.length && cycle < (status.maxScopeReviewCycles ?? 3)) {
+                        correction = { version: 1, workflow: owner.identity.plan, candidate: status.canonicalPlanRevision,
+                            status: "submitted", findings: [], mechanicalFindings: mechanical, cycle, answers: {} };
+                        continue;
+                    }
 					if (substantive.length) {
 						const reused: QuestionState["answers"] = {};
 						for (const finding of substantive) {
@@ -228,7 +240,7 @@ export function registerPhaseDrivers(deps: any) {
 			if (runtime.cancelling || runtime.modifyingBusy || runtime.modifyingChild) return ctx.ui.notify("A modifying workflow role is already active", "error");
 			runtime.modifyingBusy = true;
 			runtime.currentStage = "build initialization";
-			const commandAbort = new AbortController();
+			const commandAbort = newAbort(ctx);
 			runtime.modifyingCommandAbort = commandAbort;
 			let retryBuild = false;
 			try {
@@ -248,7 +260,7 @@ export function registerPhaseDrivers(deps: any) {
 				const built = await withProgress(ctx, { key: "superdev-workflow", title: `BUILD ${owner.identity.plan}`, stage: instruction ? "batched correction" : "implementation" },
 					(signal, update) => isolated("build", `Build issue ${owner.identity.issue} from approved plan ${owner.identity.plan}.${instruction ? ` Complete correction batch: ${instruction}` : " Complete all dependency-ready blocks from canonical state."}`, ctx.cwd, ctx.model, phaseSignal(signal, commandAbort),
 						childStarted(ctx, status, "build", true),
-						(child) => childFinished(ctx, child), undefined, undefined, status.executable, parentServiceDigest,
+						(child) => childFinished(ctx, child), undefined, undefined, status.executable, status.executableSha256,
 						policyFrom(status), owner.session_id,
 						(activity) => update({ stage: instruction ? "batched correction" : "implementation", activity })));
 			if (commandAbort.signal.aborted) throw new Error("BUILD was cancelled before publication");
@@ -309,18 +321,18 @@ export function registerPhaseDrivers(deps: any) {
 			if (reviewed.status === "findings" && reviewed.findings?.some((finding) => finding.classification === "requires-scope")) {
 				const latest = await workflowStatus(ctx.cwd);
 				if (!latest.owner || latest.phase !== "build") throw new Error("BUILD ownership changed before review re-scope");
-				await runSuperdev([
+				const routed = await runSuperdev([
 					"workflow", "transition", "--session", latest.owner.session_id,
 					"--expected-revision", latest.owner.last_plan_revision, "--phase", "build",
 					"--transition", "return-to-scope", "--feedback", JSON.stringify(reviewed.findings),
-				], ctx.cwd, authority);
+				], ctx.cwd, authority) as { result: { state: { last_plan_revision: string } } };
 				const substantive = reviewed.findings.filter((finding) => finding.classification === "requires-scope").map((finding) => ({
 					...finding,
 					classification: "substantive" as const,
 					question: finding.question ?? `How should SCOPE resolve ${finding.summary}?`,
 				}));
 				const mechanical = reviewed.findings.filter((finding) => finding.classification === "correctable-within-scope");
-				questions.begin({ version: 1, workflow: latest.owner.identity.plan, candidate: latest.owner.last_plan_revision, status: "active", findings: substantive, mechanicalFindings: mechanical, answers: {} });
+				questions.begin({ version: 1, workflow: latest.owner.identity.plan, candidate: routed.result.state.last_plan_revision, status: "active", findings: substantive, mechanicalFindings: mechanical, answers: {} });
 				ctx.ui.notify("Final review returned the workflow to SCOPE with the complete finding set", "warning");
 				return;
 			}
@@ -384,24 +396,15 @@ export function registerPhaseDrivers(deps: any) {
 		return await runScopePhase("", ctx, { ...state, candidate: revision, originPhase: "scope", status: "submitted" });
 	};
 	const approveAccept = async (status: any, ctx: any) => {
-		runtime.currentStage = "acceptance integration";
+		runtime.currentStage = "acceptance closure";
 		const owner = status.owner;
 		if (!owner || status.phase !== "accept" || !owner.verified_default_revision) throw new Error("an evidence-bound ACCEPT workflow is required");
 		await runSuperdev([
 			"workflow", "transition", "--session", owner.session_id,
 			"--expected-revision", owner.last_plan_revision, "--phase", "accept", "--transition", "accept",
 		], ctx.cwd, authority);
-		const closureResult = await pi.exec("git", ["rev-parse", "--verify", owner.identity.work_branch], { cwd: ctx.cwd });
-		if (closureResult.code !== 0) throw new Error("could not resolve the prepared closure commit");
-		await runSuperdev([
-			"workflow", "integrate", "--session", owner.session_id,
-			"--default-branch", owner.identity.default_branch,
-			"--expected-default", owner.verified_default_revision,
-			"--work-branch", owner.identity.work_branch,
-			"--expected-work", closureResult.stdout.trim(),
-		], ctx.cwd, authority);
-		ctx.ui.setStatus("superdev-workflow", undefined);
-		ctx.ui.notify("Candidate accepted and integrated locally; nothing was pushed or deleted", "info");
+        ctx.ui.setStatus("superdev-workflow", undefined);
+        ctx.ui.notify(`Accepted ${owner.identity.work_branch}. The branch remains checked out; review and merge it when ready. Nothing was merged or pushed.`, "info");
 	};
 	const executeAcceptPhase = async (_args: string, ctx: any, commandAbort: AbortController) => {
 			runtime.currentStage = "accept initialization";
@@ -412,20 +415,21 @@ export function registerPhaseDrivers(deps: any) {
 			if (!owner.candidate_revision || !owner.verified_default_revision) throw new Error("ACCEPT state is missing candidate-bound BUILD evidence");
 			const acceptHeadBefore = await pi.exec("git", ["rev-parse", "HEAD"], { cwd: ctx.cwd });
 			const acceptCleanBefore = await pi.exec("git", ["status", "--porcelain"], { cwd: ctx.cwd });
-			if (acceptHeadBefore.code !== 0 || acceptCleanBefore.code !== 0 || acceptCleanBefore.stdout.trim()
-				|| acceptHeadBefore.stdout.trim() !== owner.candidate_revision) throw new Error("ACCEPT assessment requires the clean immutable candidate at HEAD");
+			await runSuperdev(["workflow", "assess", "--session", owner.session_id, "--expected-revision", owner.last_plan_revision], ctx.cwd, authority);
+            if (acceptHeadBefore.code !== 0 || acceptCleanBefore.code !== 0 || acceptCleanBefore.stdout.trim()
+				) throw new Error("ACCEPT assessment requires the clean immutable candidate at HEAD");
 			runtime.currentStage = "accept assessment";
 			const decision = await withProgress(ctx, { key: "superdev-workflow", title: `ACCEPT ${owner.identity.plan}`, stage: "assessment" },
 				(signal, update) => isolated(
 					"accept",
-					`Assess whether issue ${owner.identity.issue} and plan ${owner.identity.plan} at immutable candidate ${owner.candidate_revision} are ready for the parent-owned configured acceptance decision.`,
+					`Assess whether issue ${owner.identity.issue} and plan ${owner.identity.plan} at reviewed product candidate ${owner.candidate_revision}, with administrative attestation ${acceptHeadBefore.stdout.trim()} checked out, are ready for the parent-owned configured acceptance decision.`,
 					ctx.cwd,
 					ctx.model,
 					phaseSignal(signal, commandAbort),
 					childStarted(ctx, status, "accept"),
 					(child) => childFinished(ctx, child),
 					owner.verified_default_revision,
-					owner.candidate_revision,
+					acceptHeadBefore.stdout.trim(),
 					undefined,
 					undefined,
 					policyFrom(status),
@@ -482,8 +486,10 @@ export function registerPhaseDrivers(deps: any) {
 					"--transition", "recover-stale-default",
 				], ctx.cwd, authority);
 				ctx.ui.setStatus("superdev-workflow", `BUILD: ${owner.identity.plan}`);
-				runtime.lastOutcome = { status: "routed", phase: "build", summary: "Default branch advanced; final evidence was invalidated." };
-				return ctx.ui.notify("Default branch advanced; final evidence was invalidated and workflow returned to BUILD", "warning");
+				runtime.modifyingBusy = false;
+                runtime.modifyingCommandAbort = undefined;
+                if (!startBuildPhase) throw new Error("BUILD driver is unavailable");
+                return await startBuildPhase("", ctx);
 			}
 			const humanAcceptanceRequired = requiresHumanAcceptance(status.humanAcceptanceRequired);
 			if (humanAcceptanceRequired) {
@@ -502,7 +508,7 @@ export function registerPhaseDrivers(deps: any) {
 	};
 	runAcceptPhase = async (args, ctx) => {
 		const inheritedAbort = runtime.modifyingCommandAbort;
-		const commandAbort = inheritedAbort ?? new AbortController();
+		const commandAbort = inheritedAbort ?? newAbort(ctx);
 		const ownsRuntime = !inheritedAbort;
 		if (ownsRuntime) {
 			if (runtime.cancelling || runtime.modifyingBusy || runtime.modifyingChild) return ctx.ui.notify("A modifying workflow role is already active", "error");

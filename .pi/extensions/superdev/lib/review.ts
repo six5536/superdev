@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { StringEnum } from "@earendil-works/pi-ai";
 import { Type } from "typebox";
 
-export const roles = ["scope", "requirements-review", "build", "code-review", "accept", "file"] as const;
+export const roles = ["scope", "requirements-review", "build", "code-review", "accept"] as const;
 export type Role = typeof roles[number];
 export type FindingClassification = "mechanical" | "substantive" | "correctable-within-scope" | "requires-scope";
 
@@ -73,7 +73,6 @@ const allowed: Record<Role, RoleResult["status"][]> = {
 	build: ["complete", "rescope", "blocked"],
 	"code-review": ["clean", "findings"],
 	accept: ["complete", "findings", "blocked"],
-	file: ["complete", "duplicate", "blocked"],
 };
 
 export function validateRoleResult(role: Role, value: unknown, limits?: { maxBytes: number; maxFindings: number }): RoleResult {

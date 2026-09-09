@@ -249,7 +249,7 @@ fn validate_returns_the_one_it_declares_on_an_error() {
 fn every_declared_exit_code_is_probed_or_named_undrivable() {
     // A code a probe cannot reach from a clean checkout without changing the
     // repository. Each names why, so the list cannot quietly grow.
-    const UNDRIVABLE: [(&str, i64, &str); 47] = [
+    const UNDRIVABLE: [(&str, i64, &str); 45] = [
         ("superdev init", 0, "would set this repository up"),
         ("superdev init", 2, "would write into this repository"),
         (
@@ -415,22 +415,10 @@ fn every_declared_exit_code_is_probed_or_named_undrivable() {
         ),
         ("superdev mcp sokf", 0, "serves until stdin closes"),
         ("superdev mcp sokf", 2, "serves until stdin closes"),
-        (
-            "superdev file",
-            0,
-            "covered by the managed-repository filing journey",
-        ),
-        (
-            "superdev file",
-            2,
-            "covered by the managed-repository filing journey",
-        ),
     ];
     // Pairs a test of its own drives, because they need stdin or a
     // temporary knowledge rather than a bare invocation.
-    const ELSEWHERE: [(&str, i64); 17] = [
-        ("superdev file", 0),
-        ("superdev file", 2),
+    const ELSEWHERE: [(&str, i64); 15] = [
         ("superdev hook validate", 0),
         ("superdev hook validate", 2),
         ("superdev validate", 1),

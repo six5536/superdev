@@ -1,8 +1,7 @@
 ---
 name: accept
-description: Reconstruct the reviewed candidate context, run Superdev ACCEPT, and explain approval or routing. Invoke explicitly with /skill:accept.
-disable-model-invocation: true
-allowed-tools: read sokf_search sokf_graph superdev_run_phase
+description: Reconstruct the reviewed candidate context, run Superdev ACCEPT, and explain approval or routing. Use for matching user intent or invoke with /skill:accept.
+allowed-tools: read sokf_search sokf_graph superdev_run_phase superdev_ask
 ---
 
 # Superdev ACCEPT
@@ -17,7 +16,7 @@ Examples:
 
 Assume no earlier workflow discussion is present. Pi appends text after `/skill:accept` as a final `User:` line below this skill. Treat that line as optional assessment guidance, never as authority to weaken the approved plan or acceptance criteria.
 
-ACCEPT assesses the immutable candidate produced by BUILD. The canonical plan and linked issue define what must be accepted. The deterministic tool owns candidate identity, evidence, phase transitions, trusted confirmation, and local integration.
+ACCEPT assesses the immutable candidate produced by BUILD. The canonical plan and linked issue define what must be accepted. The deterministic tool owns candidate identity, evidence, phase transitions, trusted confirmation, and accepted closure.
 
 ## Reconstruct context
 
@@ -42,7 +41,7 @@ Interpret tool results as follows:
 - `findings`: inspect persistent questions and discuss one finding at a time with a recommended response.
 - `paused`, `blocked`, or `failed`: explain the stage, diagnostic or artifact path, preserved-work state, recommendation, and valid recovery operations.
 - `ready-for-approval`: summarize the assessment and ask whether to accept or request one routed change.
-- `accepted`: report that deterministic local integration completed. Do not claim a push, release, or branch deletion.
+- `accepted`: report that deterministic accepted closure completed. Do not claim a push, release, or branch deletion.
 - `busy`: wait or offer cancellation; do not start another phase run.
 
 At `ready-for-approval`:

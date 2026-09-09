@@ -124,6 +124,11 @@ pub struct Transaction<'a> {
 }
 
 impl Transaction<'_> {
+    /// Acquire ownership while keeping the repository transaction locked.
+    pub fn bind(&mut self, state: &WorkflowCache) -> Result<()> {
+        bind_unlocked(self.files, state)
+    }
+
     /// Read transient ownership without reacquiring the transaction lock.
     pub fn load(&self) -> Result<Option<WorkflowCache>> {
         load_unlocked(self.files)
@@ -216,6 +221,10 @@ fn load_unlocked(files: &CacheFiles) -> Result<Option<WorkflowCache>> {
 
 /// Acquire unowned state or resume it with the same session and identity.
 pub fn bind(root: &Path, cache: &WorkflowCache) -> Result<()> {
+    locked(root, |files| bind_unlocked(files, cache))
+}
+
+fn bind_unlocked(files: &CacheFiles, cache: &WorkflowCache) -> Result<()> {
     if cache.version != 1
         || cache.session_id.trim().is_empty()
         || cache.authority_digest.len() != 64
@@ -229,18 +238,16 @@ pub fn bind(root: &Path, cache: &WorkflowCache) -> Result<()> {
                 .into(),
         });
     }
-    locked(root, |files| {
-        if let Some(owner) = load_unlocked(files)?
-            && (owner.session_id != cache.session_id
-                || owner.identity != cache.identity
-                || owner.authority_digest != cache.authority_digest)
-        {
-            return Err(Error::Manifest {
-                message: format!("workflow is owned by Pi session `{}`", owner.session_id),
-            });
-        }
-        save_unlocked(files, cache)
-    })
+    if let Some(owner) = load_unlocked(files)?
+        && (owner.session_id != cache.session_id
+            || owner.identity != cache.identity
+            || owner.authority_digest != cache.authority_digest)
+    {
+        return Err(Error::Manifest {
+            message: format!("workflow is owned by Pi session `{}`", owner.session_id),
+        });
+    }
+    save_unlocked(files, cache)
 }
 
 /// Compare-and-swap transient state for the owning session and plan revision.

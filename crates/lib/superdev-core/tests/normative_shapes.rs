@@ -1077,26 +1077,20 @@ fn a_nested_criterion_is_held_to_the_promises_verb_rules() {
     assert_eq!(found.len(), 2, "{found:#?}");
 }
 
-/// Covers I052 AC_contract-criteria-optional: the contracts on file, none
-/// nesting a criterion, pass the live schema set unchanged.
+/// All live contracts pass the schema, with or without optional nested criteria.
 #[test]
-fn every_contract_on_file_passes_without_nested_criteria() {
+fn every_contract_on_file_passes_the_live_schema() {
     let mut paths = Vec::new();
     files_with(&repo("knowledge/contracts"), "md", &mut paths);
     let contracts: Vec<PathBuf> = paths
         .into_iter()
         .filter(|p| p.file_name().is_some_and(|n| n != "index.md"))
         .collect();
-    assert_eq!(contracts.len(), 10, "{contracts:#?}");
+    assert!(!contracts.is_empty(), "no contracts were discovered");
     for path in contracts {
         let text = std::fs::read_to_string(&path).unwrap();
         let found = findings_of("Contract", path.to_str().unwrap(), &text);
         assert!(found.is_empty(), "{}: {found:#?}", path.display());
-        assert!(
-            !same(&text).contains("\n  - `AC_"),
-            "{} nests a criterion",
-            path.display()
-        );
     }
 }
 
@@ -1691,7 +1685,7 @@ fn packed_pi_assets_and_their_lock_hashes_are_synchronized() {
         "extensions/superdev/prompts/accept.md",
         "extensions/superdev/prompts/build.md",
         "extensions/superdev/prompts/code-review.md",
-        "extensions/superdev/prompts/file.md",
+        "extensions/superdev/skills/file/SKILL.md",
         "extensions/superdev/prompts/orchestrator.md",
         "extensions/superdev/prompts/requirements-review.md",
         "extensions/superdev/prompts/scope.md",
@@ -1821,7 +1815,8 @@ fn assert_retired_skill(name: &str) {
     );
 }
 /// The source instructions and rendered aggregator name the authoritative
-/// workflow, its review gates, local integration, and independent `/file`.
+/// workflow, its review gates, and local integration. Filing and abandonment
+/// guidance belongs to the extension's skill and command rather than global prose.
 #[test]
 fn the_workflow_reads_scope_build_accept() {
     for p in [
@@ -1834,9 +1829,7 @@ fn the_workflow_reads_scope_build_accept() {
             "authority=\"Rust\"",
             "fresh isolated requirements review",
             "Final code review is fresh, isolated, read-only",
-            "git merge --no-ff",
-            "/file is independent",
-            "abandonment is human-only",
+            "Humans merge separately",
         ] {
             assert!(text.contains(required), "{p} lacks `{required}`");
         }
@@ -1844,6 +1837,12 @@ fn the_workflow_reads_scope_build_accept() {
             assert!(!text.contains(&format!("<phase name=\"{retired}\"")));
         }
     }
+    let filing =
+        std::fs::read_to_string(repo(".pi/extensions/superdev/skills/file/SKILL.md")).unwrap();
+    assert!(filing.contains("/skill:file"));
+    assert!(filing.contains("Filing does not start SCOPE or BUILD"));
+    let extension = std::fs::read_to_string(repo(".pi/extensions/superdev/index.ts")).unwrap();
+    assert!(extension.contains("Human-only abandonment with knowledge disposition"));
 }
 
 /// The trees a writer builds against: the live concepts filed directly in

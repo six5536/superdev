@@ -62,11 +62,11 @@ transient session ownership, and Git safety.
 /superdev <request>  # run or continue the complete workflow
 /scope               # requirements, isolated review, explicit approval
 /build               # isolated block loop, evidence, verification, fresh review
-/accept              # configured acceptance and local --no-ff integration
+/accept              # configured acceptance; leave the branch for a human merge
 /superdev-resume     # reconstruct state from the canonical plan
 /superdev-cancel     # pause and release transient ownership
 /superdev-abandon    # explicit human-only abandonment
-/file <item>         # capture an issue or idea; not a workflow phase
+/skill:file <item>   # LLM-authored issue or idea on the default branch; worktree when elsewhere
 ```
 
 Every plan implements exactly one issue and uses the matching

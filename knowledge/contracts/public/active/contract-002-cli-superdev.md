@@ -97,8 +97,6 @@ enum Command {
     /// SOKF knowledge commands
     #[command(subcommand)]
     Sokf(sokf_cli::SokfCommand),
-    /// File a human-confirmed issue or idea on the local default branch
-    File(workflow_cli::FileArgs),
     /// Drive the local SCOPE → BUILD → ACCEPT workflow
     #[command(subcommand)]
     Workflow(workflow_cli::WorkflowCommand),
@@ -316,38 +314,13 @@ pub enum SokfCommand {
 
 <!-- sokf:include /crates/app/superdev/src/workflow_cli.rs#cli -->
 ```rust
-/// Human-confirmed out-of-band issue or idea filing.
-#[derive(Args)]
-pub struct FileArgs {
-    /// Record kind
-    #[arg(long, value_enum, default_value = "issue")]
-    kind: FilingKindName,
-    /// Short human title
-    #[arg(long)]
-    title: String,
-    /// Human description to preserve in the record
-    #[arg(long)]
-    description: String,
-    /// Local default branch to advance
-    #[arg(long, default_value = "main")]
-    default_branch: String,
-    /// Confirmation supplied only after the human approves the bounded diff
-    #[arg(long)]
-    human_approved: bool,
-}
-
-/// CLI spelling of fileable record kinds.
-#[derive(Clone, Copy, ValueEnum)]
-enum FilingKindName {
-    Issue,
-    Idea,
-}
-
 /// Versioned workflow operations used by the Pi adapter.
 #[derive(Subcommand)]
 pub enum WorkflowCommand {
     /// Acquire a workflow for an issue, plan, and reserved work branch
     Start(BindArgs),
+    /// Validate the service attestation above the immutable reviewed candidate
+    Assess(RevisionArgs),
     /// Report transient ownership and canonical identity
     Status {
         /// Emit the versioned JSON protocol response
@@ -389,7 +362,7 @@ pub enum WorkflowCommand {
 }
 
 /// Stable workflow identity and Pi ownership arguments.
-#[derive(Args)]
+#[derive(Args, Clone)]
 pub struct BindArgs {
     /// Owning Pi session ID
     #[arg(long)]
@@ -404,7 +377,7 @@ pub struct BindArgs {
     #[arg(long)]
     work_branch: String,
     /// Local default branch
-    #[arg(long, default_value = "main")]
+    #[arg(long, default_value = "")]
     default_branch: String,
 }
 
@@ -457,9 +430,9 @@ pub struct ScopeBaselineArgs {
     /// Expected current plan content revision
     #[arg(long)]
     expected_revision: String,
-    /// Expected current work-branch tip
+    /// Expected work-branch tip; omitted callers use the owned tip under the repository lock
     #[arg(long)]
-    expected_work: String,
+    expected_work: Option<String>,
 }
 
 /// Session and plan compare-and-swap arguments.
@@ -732,11 +705,6 @@ usage errors and the side effects.
   `superdev-workflow/v2`.
 - `P_workflow-owned-transitions` [ubiquitous] A mutating `workflow`
   command SHALL require the owning session and expected plan revision.
-- `P_workflow-scope-baseline` [event] WHEN `workflow scope-baseline` succeeds,
-  it SHALL require the owned SCOPE work branch, compare-and-swap the expected
-  current work tip, reject uncommitted paths outside `knowledge/`, and record
-  that tip as the attempt's `scope_base_revision` without granting review,
-  approval, or a phase transition.
 - `P_workflow-cancel-pauses` [event] WHEN `workflow cancel` succeeds,
   it SHALL release transient ownership without changing canonical phase.
 - `P_workflow-local-integration` [ubiquitous] After clean-tree and expected-tip
@@ -747,10 +715,9 @@ usage errors and the side effects.
 - `P_workflow-integration-bound` [ubiquitous] `workflow integrate` SHALL
   require the bound issue, plan, refs, reviewed candidate, verified default
   tip, done closure, and administrative-only descendants to agree.
-- `P_file-default-branch` [ubiquitous] `file` SHALL create and validate one
-  human-confirmed issue or idea in an isolated temporary worktree, commit only
-  knowledge, and compare-and-swap the local default branch without changing an
-  active workflow worktree.
+- `P_workflow-manual-merge` [event] WHEN ACCEPT closes the issue and plan, the service SHALL release ownership and leave the accepted work branch checked out without merging. `workflow integrate` remains an explicit low-level operation, not an acceptance step.
+- `P_workflow-assess` [ubiquitous] `workflow assess` SHALL require the owned clean ACCEPT revision and administrative-only changes above reviewed candidate H.
+- `P_workflow-default-recovery` [ubiquitous] Startup SHALL discover and persist the default branch, reserve independent issue and plan numbers under the repository lock before switching branches, and recover unfinished plans from their local work-branch snapshots.
 - `P_sokf-index-rebuilds-in-full` [ubiquitous] `sokf index` SHALL
   rebuild the index in full.
 - `P_sokf-index-says-lexical-only` [event] WHEN no embedding model
@@ -856,18 +823,14 @@ the invoking adapter.
 | `superdev sokf edit` | 2 | malformed input or a failed precondition left the target unchanged |
 | `superdev sokf write` | 0 | the mutation was applied, including an invalid or unknown resulting state |
 | `superdev sokf write` | 2 | malformed input or a failed precondition left the target unchanged |
-| `superdev file` | 0 | a confirmed issue or idea was committed on the default branch |
-| `superdev file` | 2 | confirmation, validation, duplicate, worktree, or compare-and-swap checks failed |
 | `superdev workflow` | 2 | no subcommand named |
-| `superdev workflow start` | 0 | validated LLM-authored issue and plan records are published, their issue-derived work branch is created, and ownership is acquired |
-| `superdev workflow start` | 2 | authored records, relationship, independent identities, ownership, issue-derived branch, unrelated tree state, or validation is invalid |
+| `superdev workflow start` | 0 | ownership, a work branch, and an initial canonical SCOPE plan are created |
+| `superdev workflow start` | 2 | identity, ownership, issue, branch, tree, or plan state is invalid |
 | `superdev workflow status` | 0 | canonical and transient state is reported |
 | `superdev workflow bind` | 0 | transient ownership is acquired |
 | `superdev workflow bind` | 2 | identity, revision, branch, or ownership is invalid |
 | `superdev workflow transition` | 0 | the gated transition is persisted, including primary-issue discovery preservation when returning to SCOPE |
 | `superdev workflow transition` | 2 | ownership, revision, phase, required feedback, or evidence is invalid |
-| `superdev workflow scope-baseline` | 0 | the current committed SCOPE work-branch tip is recorded as the attempt baseline |
-| `superdev workflow scope-baseline` | 2 | ownership, plan revision, expected work tip, branch, phase, or uncommitted path scope is invalid |
 | `superdev workflow scope-checkpoint` | 0 | one valid knowledge-only SCOPE proposal is committed for immutable review |
 | `superdev workflow scope-checkpoint` | 2 | ownership, revision, identity, branch, phase, canonical validation, or path scope is invalid |
 | `superdev workflow block` | 0 | the newly completed BUILD block passes dependency and executable checks and its path-scoped checkpoint is committed |
@@ -882,8 +845,8 @@ the invoking adapter.
 | `superdev workflow evidence` | 2 | ownership, revision, identity, branch, or phase is invalid |
 | `superdev workflow sync` | 0 | the expected default tip is incorporated into the BUILD branch, or was already present |
 | `superdev workflow sync` | 2 | ownership, phase, revision, tree, ref, expected tip, or conflict checks failed |
-| `superdev workflow resume` | 0 | a clean worktree is switched to the canonical work branch when required, canonical state is reconstructed, and ownership is acquired |
-| `superdev workflow resume` | 2 | canonical identity, branch, phase, worktree, or ownership is invalid |
+| `superdev workflow resume` | 0 | canonical state is reconstructed and ownership acquired |
+| `superdev workflow resume` | 2 | canonical identity, branch, phase, or ownership is invalid |
 | `superdev workflow cancel` | 0 | transient ownership is released |
 | `superdev workflow cancel` | 2 | another session owns the workflow |
 | `superdev workflow abandon` | 0 | approved abandonment is persisted |
@@ -987,9 +950,6 @@ reaches the network unasked, to find the newest pack release.
 - `P_sokf-mutations-write-knowledge-only` [ubiquitous] `sokf edit` and `sokf
   write` SHALL write only inside the resolved knowledge directory.
 - `P_workflow-side-effects-bounded` [ubiquitous] `workflow` SHALL write only its transient cache, bound canonical records and indexes, product paths declared by the current BUILD block, and, for integration, the explicitly validated local refs and merge commit.
-- `P_file-side-effects-bounded` [ubiquitous] `file` SHALL write one canonical
-  record and generated index changes in a temporary worktree, then advance
-  only the validated local default ref.
 
 ## Stability
 
