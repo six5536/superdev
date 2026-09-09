@@ -323,6 +323,17 @@ digest is kept; a pack that failed verification leaves nothing behind.
 
 # Outside the repo
 
+The Pi runner (`.pi/extensions/superdev/lib/process.ts`) retains owner-only
+temporary artifacts for isolated roles. Its `diagnostic.json` records launch
+bindings, the requested tool list, the role-prompt SHA-256 digest, and the last
+assistant's provider, model, stop reason, text, and tool-call names.
+The text summary keeps at most 2,048 bytes and 20 lines before a truncation notice.
+The summary excludes reasoning, signatures, and tool arguments and survives
+truncation of the separately retained raw `events.jsonl` stream. Raw events can
+contain sensitive payloads; artifacts follow configured retention limits.
+A textual imitation of `superdev_submit_result` remains a protocol failure,
+not an accepted review. Role prompts require an actual, separate tool call.
+
 - `.mcp.json` at the repo root registers the MCP servers: the canonical knowledge
   knowledge under `mcpServers.superdev-sokf`, and — with code-index enabled —
   codegraph's under `mcpServers.codegraph`, launched through `mise exec`

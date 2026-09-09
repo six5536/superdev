@@ -163,6 +163,7 @@ export async function isolated(
 		let turns = 0;
 		let assistantEnds = 0;
 		let lastAssistantStopReason: string | undefined;
+		let lastAssistant: Record<string, unknown> | undefined;
 		let lastEventType: string | undefined;
 		const eventCounts: Record<string, number> = {};
 		const toolStarts: Record<string, number> = {};
@@ -182,6 +183,7 @@ export async function isolated(
 		const writeDiagnostic = async (outcome: string, code: number | null, error?: unknown) => artifact.writeDiagnostic({
 			version: 1,
 			role,
+			launch: { cwd, model, tools: isolatedTools(role), base, candidate, promptSha256: createHash("sha256").update(rolePrompt).digest("hex") },
 			outcome,
 			exitCode: code,
 			timedOut,
@@ -197,6 +199,7 @@ export async function isolated(
 			assistantEnds,
 			...(lastAssistantStopReason ? { lastAssistantStopReason } : {}),
 			lastEventType,
+			lastAssistant,
 			submission: { starts: submissionStarts, ends: submissionEnds, successful: submissions, errors: submissionErrors, duplicates: submissionDuplicates, payloadPresent: submission !== undefined, diagnostics: submissionDiagnostics },
 			terminalTimeline,
 			events: artifact.stdoutSummary(),
@@ -224,6 +227,23 @@ export async function isolated(
 			if (event.type === "message_end" && event.message?.role === "assistant") {
 				assistantEnds += 1;
 				if (typeof event.message.stopReason === "string") lastAssistantStopReason = event.message.stopReason.slice(0, 160);
+				// Keep terminal evidence independently of the prefix-bounded raw event log.
+				// Exclude reasoning, tool arguments, and signatures from this summary.
+				const content = Array.isArray(event.message.content) ? event.message.content : [];
+				const text = content.filter((part: any) => part?.type === "text" && typeof part.text === "string").map((part: any) => part.text).join("\n");
+				const calls = content.filter((part: any) => part?.type === "toolCall");
+				lastAssistant = {
+					sequence: parsedEvents,
+					stopReason: lastAssistantStopReason,
+					provider: String(event.message.provider ?? "unknown").slice(0, 160),
+					model: String(event.message.model ?? "unknown").slice(0, 160),
+					textBytes: Buffer.byteLength(text),
+					text: boundedText(text, { ...policy, maxContextBytes: 2_048, maxContextLines: 20 }),
+					toolCallCount: calls.length,
+					toolCalls: calls.slice(0, 16).map((part: any) => String(part.name ?? "unknown").slice(0, 80)),
+					error: typeof event.message.errorMessage === "string" ? event.message.errorMessage.slice(0, 512) : undefined,
+				};
+				recordTerminalEvent({ type: "assistant-end", stopReason: lastAssistantStopReason, textBytes: Buffer.byteLength(text), toolCallCount: calls.length });
 			}
 			if (event.type === "tool_execution_start") {
 				increment(toolStarts, event.toolName);

@@ -4,4 +4,4 @@ Review correctness, regressions, security, contract/ADR and generated-definition
 
 Every finding must have a stable ID; classification `correctable-within-scope` or `requires-scope`; summary; evidence; impact; dependencies; and an exact path/location/requirement when known. Return `clean` only after required immutable-diff coverage is complete and no actionable finding remains.
 
-After every diff page and other tool call has finished, call `superdev_submit_result` exactly once as the only tool call in the final assistant turn. Never batch it with review, search, or graph calls. Free-form final text is not authoritative.
+After every diff page and other tool call has finished, call `superdev_submit_result` exactly once as the only tool call in a separate tool-call message. Never batch it with review, search, or graph calls. Invoke the actual tool; do not write its name, a simulated invocation, or the result as final text. The tool terminates the role after accepting the result.
