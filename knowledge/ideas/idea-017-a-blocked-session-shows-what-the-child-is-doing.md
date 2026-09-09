@@ -2,7 +2,7 @@
 type: Idea
 id: idea-017-a-blocked-session-shows-what-the-child-is-doing
 title: A blocked session shows what the child is doing
-description: While an isolated role holds the session, show enough of its reasoning and actions for the user to judge whether it is on track, rather than a timer and a tool name.
+description: While an isolated role runs, show enough of its reasoning and actions for a user to judge whether it is on track, and let any session answer that question about a role another session owns.
 status: draft
 ---
 
@@ -38,6 +38,35 @@ failure diagnostic and the artifact, and none of it reaches the user while the
 run is in progress. Only `onActivity` is forwarded live, carrying one
 sanitized tool name and path.
 
+One episode on 2026-09-09 confirms both which facts answer the question and
+how expensive they currently are to obtain. A `requirements-review` role for
+`plan-077-sokf-file-tool-parity` had run for 14 minutes and the user asked
+whether to let it continue. Answering took reading `/proc` for the child's
+process state, then parsing a 2.6 MB `events.jsonl` artifact by hand.
+
+Three facts settled the question, and each was already parsed in the running
+parent:
+
+- The role's own narration, three lines across 18 turns: it read the issue and
+  plan, then the contracts, ADR, and originating idea. That is the role stating
+  its plan in its own words.
+- The tool trajectory: 27 reads, 6 searches, one graph traversal, no errors and
+  no repeats, so not stalled and not looping.
+- The trajectory's direction. The most recent reads had left the plan's subject
+  for Pi's installed package internals, and two searches named repository-root
+  discovery, which issue 77 does not ask about. That drift was the only
+  actionable signal in fourteen minutes, and it was invisible.
+
+Elapsed time said none of this. The narration and the trajectory did, and both
+were in memory the whole time.
+
+The same episode showed a second gap. The role belonged to a different Pi
+session, and the asking session had no way to see its state. It reconstructed
+the answer from the transient claim on disk, `/proc`, and a private artifact
+directory. `superdev workflow status` reports the owning session, the child
+role, and the child process, which is enough to know a role is running and
+whether it is alive, and nothing about what it is doing.
+
 ## Sketch
 
 Forward more of what the stream already yields, rather than parsing anything
@@ -62,6 +91,21 @@ An expansion control would let the default stay compact: one line while the
 user is content, more on request. Pi's keybinding and component facilities
 supply that without a new mechanism.
 
+The cross-session case wants the same facts through a different door. A
+running role already writes its event stream to an artifact directory, and the
+service already records which session owns it and which process is running it.
+A read-only status view could summarize that stream for whoever asks: the
+role, its elapsed time, its turn and tool counts, its recent tool targets, and
+its latest narration, without joining or disturbing the run.
+
+Where the summary is produced matters more than where it is shown. The parent
+that owns the child has the parse in memory but cannot be interrupted while
+blocked. A second session has neither the parse nor any right to the artifact,
+which is owner-private today. Either the owner publishes a bounded rolling
+summary that any session may read, or the service learns to summarize the
+artifact on demand. The first keeps parsing in one place; the second keeps the
+owner free of a duty it cannot perform while blocked.
+
 ## Trade-offs
 
 - Streaming a role's intermediate reasoning invites the user to intervene on a
@@ -76,6 +120,12 @@ supply that without a new mechanism.
   settles on.
 - Showing the child's text raises the chance a user acts on an intermediate
   claim that never became part of the typed result.
+- A cross-session status view widens what a non-owning session may read. The
+  artifact is owner-private today, and a rolling summary that any session can
+  read is a deliberate relaxation rather than a free addition.
+- A summary produced by the owner is cheap but unavailable exactly when the
+  owner is blocked, which is when it is wanted. A summary produced on demand
+  by the service duplicates parsing that already happens once.
 
 ## Open questions
 
@@ -89,6 +139,14 @@ supply that without a new mechanism.
   judging belongs to the role that performs it?
 - Does this belong to the progress panel's shape, filed as its own issue, or
   is it separate enough to stand alone?
+- Should the owning parent publish a rolling summary, or should the service
+  summarize the artifact when a session asks?
+- Does a running role's narration belong in `superdev workflow status`, or in
+  a separate read-only inspection surface?
+- What may a non-owning session read? The artifact is owner-private, and
+  widening that is a decision rather than a detail.
+- Is drift from the plan's subject something the parent can report, or only
+  something a human recognises from the trajectory?
 
 ## Next step
 
@@ -96,3 +154,8 @@ Decide the unit before the surface. If a completed assistant turn is the right
 granularity, the parser already produces it and the remaining work is
 presentation. If it is not, the terminating-tool vocabulary changes first and
 the display follows.
+
+The confirming episode suggests the unit: narration plus the recent tool
+targets answered the question, and neither needed a new event. Deciding
+whether the owner publishes that or the service derives it settles the
+cross-session half at the same time.
