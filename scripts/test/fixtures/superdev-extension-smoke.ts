@@ -12,7 +12,7 @@ import { pinService } from "../../../.pi/extensions/superdev/lib/service-pin.ts"
 import { registerIntakeTools } from "../../../.pi/extensions/superdev/lib/intake.ts";
 import { withProgress } from "../../../.pi/extensions/superdev/lib/progress.ts";
 import { registerWorkflowQuestions } from "../../../.pi/extensions/superdev/lib/questions.ts";
-import { findingFingerprint, validateRoleResult, type ReviewFinding } from "../../../.pi/extensions/superdev/lib/review.ts";
+import { findingFingerprint, roleResultSchemaFor, roles, validateRoleResult, type ReviewFinding } from "../../../.pi/extensions/superdev/lib/review.ts";
 
 async function smoke() {
 	if (process.platform === "linux") {
@@ -88,7 +88,7 @@ async function smoke() {
 	} finally { await rm(skillAgentDir, { recursive: true, force: true }); }
 	for (const role of ["scope", "requirements-review", "build", "code-review", "accept"]) {
 		const prompt = await readFile(join(process.cwd(), ".pi", "extensions", "superdev", "prompts", `${role}.md`), "utf8");
-		if (!prompt.includes("only tool call in a separate tool-call message") || !prompt.includes("exactly once") || !prompt.includes("Invoke the actual tool") || prompt.includes("final assistant turn")) {
+		if (!prompt.includes("only tool call in a separate tool-call message") || !prompt.includes("exactly one accepted result") || !prompt.includes("submit again") || !prompt.includes("Invoke the actual tool") || prompt.includes("final assistant turn")) {
 			throw new Error(`${role} prompt does not keep terminal submission separate and singular`);
 		}
 	}
@@ -114,15 +114,52 @@ async function smoke() {
 	}
 	if (!tools.includes("superdev_run_phase")) throw new Error("missing generic phase tool");
 	if (tools.includes("superdev_file_issue") || !tools.includes("superdev_ask")) throw new Error("filing must be skill-only; questions remain available");
+	for (const role of roles) {
+		const schema = roleResultSchemaFor(role);
+		if (Boolean(schema.properties.findings) !== schema.properties.status.enum.includes("findings") || schema.additionalProperties !== false) throw new Error(`${role} advertises contradictory result fields`);
+	}
 	const priorChildRole = process.env.SUPERDEV_CHILD_ROLE;
 	process.env.SUPERDEV_CHILD_ROLE = "scope";
 	try {
 		const childTools = new Map<string, any>();
-		superdev({ on() {}, registerCommand() {}, registerTool(tool: any) { childTools.set(tool.name, tool); } } as never);
+		const childHooks = new Map<string, any[]>();
+		const repairs: any[] = [];
+		let childActiveTools = ["read", "edit", "superdev_submit_result"];
+		superdev({
+			on(name: string, handler: any) { childHooks.set(name, [...(childHooks.get(name) ?? []), handler]); },
+			registerCommand() {}, registerTool(tool: any) { childTools.set(tool.name, tool); },
+			setActiveTools(tools: string[]) { childActiveTools = tools; },
+			sendMessage(message: any, options: any) { repairs.push({ message, options }); },
+		} as never);
 		const submit = childTools.get("superdev_submit_result");
+		if (submit.parameters.properties.findings || submit.parameters.properties.status.enum.join(",") !== "complete,blocked") throw new Error("SCOPE submission schema invites reviewer findings or invalid statuses");
+		try {
+			await submit.execute("rejected", { status: "complete", summary: "Resolved correction", findings: [{ id: "resolved" }] });
+			throw new Error("contradictory SCOPE result was accepted");
+		} catch (error) {
+			if (!String(error).includes("No result was accepted") || !String(error).includes("submit again")) throw error;
+		}
+		const end = async (stopReason: string, aborted = false) => {
+			const controller = new AbortController();
+			if (aborted) controller.abort();
+			for (const hook of childHooks.get("agent_end") ?? []) await hook({ messages: [{ role: "assistant", stopReason }] }, { signal: controller.signal });
+		};
+		await end("aborted", true);
+		await end("error");
+		if (repairs.length) throw new Error("terminal repair continued cancellation or provider failure");
+		await end("stop");
+		if (repairs.length !== 1 || childActiveTools.join(",") !== "superdev_submit_result" || repairs[0].options.deliverAs !== "followUp" || !repairs[0].message.content.includes("contradictory status complete")) throw new Error("stopped child did not receive one terminal-only repair with its rejection");
+		await end("stop");
+		if (repairs.length !== 1) throw new Error("terminal repair loop is unbounded");
+		for (const toolName of ["read", "edit", "superdev_run_phase"]) {
+			const blocks = await Promise.all((childHooks.get("tool_call") ?? []).map((hook) => hook({ toolName, input: {} })));
+			if (!blocks.some((block) => block?.block && block.terminate)) throw new Error("terminal repair allowed repeated work");
+		}
 		const first = await submit.execute("first", { status: "complete", summary: "Scoped once" });
 		const duplicate = await submit.execute("duplicate", { status: "complete", summary: "Scoped twice" });
 		if (first.details?.superdevResult?.summary !== "Scoped once" || first.terminate !== true) throw new Error("first terminal result was not accepted");
+		await end("stop");
+		if (repairs.length !== 1) throw new Error("accepted result triggered terminal repair");
 		if (duplicate.details?.superdevDuplicate !== true || duplicate.details?.superdevResult !== undefined || duplicate.terminate !== true) {
 			throw new Error("duplicate terminal result was not terminated without replacing authority");
 		}
@@ -253,6 +290,7 @@ async function smoke() {
 		} catch (error) {
 			const match = String(error).match(/diagnostics: (\/[^\s]+)/);
 			if (!match) throw error;
+			if (!String(error).includes("summary is required")) throw new Error("parent failure hid the submission rejection");
 			diagnosticDirectory = dirname(match[1]);
 			const diagnostic = JSON.parse(await readFile(match[1], "utf8"));
 			if (diagnostic.outcome !== "terminal-protocol-failure" || diagnostic.submission.starts !== 1 || diagnostic.submission.ends !== 1 || diagnostic.submission.errors !== 1 || diagnostic.assistantEnds !== 1) {
@@ -498,8 +536,16 @@ async function smoke() {
     const queue = registerWorkflowQuestions(questionPi, { exposeTool: false, maxBytes: () => 262144, maxFindings: () => 100, onSubmit: async () => {} });
     queue.begin({ version: 1, workflow: "plan-smoke", candidate: "queue-revision", status: "active", findings: [{ id: "choice", classification: "substantive", summary: "Choose", evidence: "Evidence", impact: "Impact", question: "Which?", recommendation: "First", choices: [{ label: "First" }, { label: "Second" }] }], answers: {} });
     registerPhaseTool({ pi: questionPi, workflowStatus: async () => ({ owner: { session_id: "session-smoke", last_plan_revision: "queue-revision", identity: { plan: "plan-smoke" } }, phase: "scope" }), questions: queue, runtime: {}, policyFrom: () => ({ maxContextBytes: 8192, maxContextLines: 200 }), phaseContinuations: {} });
+    queue.begin({ ...queue.current()!, findings: [...queue.current()!.findings, { ...queue.current()!.findings[0], id: "later", dependsOn: ["choice"] }] });
+    for (const findingIds of [undefined, [], ["missing"], ["choice", "missing"], ["later"]]) {
+        const selection = await publicTools.get("superdev_run_phase").execute("ask", { phase: "scope", action: "ask", findingIds }, undefined, undefined, questionCtx);
+        if (selection.details?.status !== "finding-selection-required" || !selection.details?.eligibleFindingIds.includes("choice") || Object.keys(queue.current()!.answers).length || selectedChoices.length) throw new Error("missing or invalid ask ID failed the workflow or selected silently");
+    }
     const asked = await publicTools.get("superdev_run_phase").execute("ask", { phase: "scope", action: "ask", findingIds: ["choice"] }, undefined, undefined, questionCtx);
     if (!asked.details?.answered?.includes("choice") || !selectedChoices.includes("Type another answer") || !selectedChoices.includes("Discuss")) throw new Error("Public phase tool cannot reach the question selector");
+    const answeredSelection = await publicTools.get("superdev_run_phase").execute("ask", { phase: "scope", action: "ask", findingIds: ["choice"] }, undefined, undefined, questionCtx);
+    if (answeredSelection.details?.status !== "finding-selection-required" || answeredSelection.details?.eligibleFindingIds.join(",") !== "later") throw new Error("ask did not preserve answered/dependency eligibility");
+    await publicTools.get("superdev_run_phase").execute("ask", { phase: "scope", action: "ask", findingIds: ["later"] }, undefined, undefined, questionCtx);
     await queue.operate({ action: "submit" }, questionCtx);
     const revised = await publicTools.get("superdev_run_phase").execute("change", { phase: "scope", action: "record-answer", answer: "A later human revision" }, undefined, undefined, questionCtx);
     if (revised.details?.status !== "answer-recorded") throw new Error("A submitted prior batch blocked a later human revision");

@@ -16,7 +16,7 @@ export function registerPhaseTool(deps: any) {
 			plan: Type.Optional(Type.String()),
 			workBranch: Type.Optional(Type.String()),
 			defaultBranch: Type.Optional(Type.String()),
-			findingIds: Type.Optional(Type.Array(Type.String())),
+			findingIds: Type.Optional(Type.Array(Type.String(), { description: "For ask, supply exactly one dependency-eligible finding ID from inspect. For record-answer, name every finding the answer covers." })),
 			answer: Type.Optional(Type.String()),
 			destination: Type.Optional(StringEnum(["scope", "build"] as const)),
 			offset: Type.Optional(Type.Number({ minimum: 0 })),
@@ -97,7 +97,17 @@ export function registerPhaseTool(deps: any) {
 				}
 				if (!pending || (pending.originPhase ?? "scope") !== input.phase) throw new Error(`no ${input.phase.toUpperCase()} question queue is active`);
 				if (input.action === "ask") {
-                    const result = await questions.operate({ action: "ask", findingId: input.findingIds?.[0] }, ctx);
+					const eligible = pending.findings.filter((finding) => !pending.answers[finding.id]
+						&& (finding.dependsOn ?? []).every((id) => pending.answers[id]));
+					if (input.findingIds?.length !== 1 || !eligible.some((finding) => finding.id === input.findingIds[0])) {
+						return respond({
+							status: "finding-selection-required", phase: input.phase,
+							eligibleFindingIds: eligible.slice(0, 20).map((finding) => finding.id),
+							eligibleTotal: eligible.length,
+							recommendation: "Inspect the queue, then call ask with findingIds containing exactly one unanswered, dependency-eligible ID. If all answers are confirmed, use submit-answers; use revise-answer to reopen an answer.",
+						});
+					}
+                    const result = await questions.operate({ action: "ask", findingId: input.findingIds[0] }, ctx);
                     return result;
                 }
                 if (input.action === "revise-answer") {

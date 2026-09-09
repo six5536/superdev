@@ -59,12 +59,17 @@ const checklistSchema = Type.Object({
 	evidence: Type.String(),
 });
 
-export const roleResultSchema = Type.Object({
-	status: StringEnum(["complete", "clean", "findings", "rescope", "duplicate", "blocked"] as const),
-	summary: Type.String(),
-	findings: Type.Optional(Type.Array(findingSchema)),
-	checklist: Type.Optional(Type.Array(checklistSchema)),
-});
+/** Match the advertised result fields to the role's runtime acceptance rules. */
+export function roleResultSchemaFor(role: Role) {
+	return Type.Object({
+		status: StringEnum(allowed[role]),
+		summary: Type.String({ description: "Outcome, completed corrections, and any blocker. Describe resolved findings here, not in findings." }),
+		...(allowed[role].includes("findings") ? {
+			findings: Type.Optional(Type.Array(findingSchema, { description: "Unresolved actionable findings only; nonempty only with status findings. Never list resolved corrections." })),
+		} : {}),
+		checklist: Type.Optional(Type.Array(checklistSchema)),
+	}, { additionalProperties: false });
+}
 
 const reviewRoles = new Set<Role>(["requirements-review", "code-review", "accept"]);
 const allowed: Record<Role, RoleResult["status"][]> = {

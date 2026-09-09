@@ -69,7 +69,8 @@ Interpret tool results as follows:
 
 - `selection-required`: select the exact workflow semantically; do not guess.
 - `routed`: invoke the skill named by the returned phase.
-- `findings`: inspect the persistent questions, call `ask` with the next dependency-eligible finding ID to show choices and the recommendation. If the user chooses discussion, chat and then use `record-answer` for the confirmed proposal.
+- `findings`: inspect the persistent questions, then call `ask` with `findingIds: ["<exact ID from inspect>"]` for one unanswered, dependency-eligible finding. The tool shows choices and the recommendation. If the user chooses discussion, chat and then use `record-answer` for the confirmed proposal.
+- `finding-selection-required`: no workflow failed. Inspect the queue and supply exactly one eligible ID in `findingIds`; do not retry the phase or repeat review.
 - `paused`, `blocked`, or `failed`: explain the returned stage, diagnostic path, preserved-work state, recommendation, and valid recovery operations before asking what to do. Never recommend retry while the reported precondition remains unresolved. `cancel` pauses and releases ownership; it never abandons the workflow.
 - `approved`: offer `/skill:build`; approval does not start implementation without user intent.
 - `ready-for-approval`: summarize the reviewed scope and ask whether to approve or request one revision.

@@ -183,7 +183,7 @@ export async function isolated(
 		const writeDiagnostic = async (outcome: string, code: number | null, error?: unknown) => artifact.writeDiagnostic({
 			version: 1,
 			role,
-			launch: { cwd, model, tools: isolatedTools(role), base, candidate, promptSha256: createHash("sha256").update(rolePrompt).digest("hex") },
+			launch: { cwd, model: model ? { provider: model.provider, id: model.id } : undefined, tools: isolatedTools(role), base, candidate, promptSha256: createHash("sha256").update(rolePrompt).digest("hex") },
 			outcome,
 			exitCode: code,
 			timedOut,
@@ -330,7 +330,9 @@ export async function isolated(
 				return reject(new Error(`${diagnostic}; diagnostics: ${artifact.diagnosticPath}`));
 			}
 			if (submissions !== 1 || submission === undefined) {
-				const reason = submissions !== 1 ? `observed ${submissions} successful terminal submissions` : "successful submission omitted its typed payload";
+				const reason = submissions !== 1
+					? `observed ${submissions} successful terminal submissions${submissionErrors ? `; ${submissionErrors} rejected; last rejection: ${submissionDiagnostics.at(-1)}` : ""}`
+					: "successful submission omitted its typed payload";
 				await writeDiagnostic("terminal-protocol-failure", code, reason);
 				return reject(new Error(`${role} must submit exactly one typed terminal result (${reason}); diagnostics: ${artifact.diagnosticPath}`));
 			}
