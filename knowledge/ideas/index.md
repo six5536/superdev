@@ -20,6 +20,7 @@ it stays on file, linked from the issue that took it up.
 * [Workflow commits name their phase and plan][sokf:idea-013-workflow-commits-name-their-phase-and-plan] - replace generic workflow commit subjects with phase-specific subjects that identify the plan and describe the recorded change.
 * [Superdev subprocess workflows stay visible and resumable][sokf:idea-014-superdev-subprocesses-show-progress-and-control] - expose progress, batch mechanical fixes, and present each complete substantive review as one user questionnaire before correction and re-review.
 * [Scoped workflows feed independent build batches][sokf:idea-015-scoped-workflows-feed-independent-build-batches] - let users scope several issues independently, then build the ready workflows sequentially or in configurable parallel batches without one stopped workflow stopping the others.
+* [A dead session claim always releases][sokf:idea-016-a-dead-session-claim-always-releases] - record the owner process for every workflow claim, and let cancel release a claim that a stopped Pi session left behind.
 
 <!-- sokf:links -->
 [sokf:idea-001-schemas-carry-a-reading-reminder]: /knowledge/ideas/idea-001-schemas-carry-a-reading-reminder.md
@@ -37,3 +38,4 @@ it stays on file, linked from the issue that took it up.
 [sokf:idea-013-workflow-commits-name-their-phase-and-plan]: /knowledge/ideas/idea-013-workflow-commits-name-their-phase-and-plan.md
 [sokf:idea-014-superdev-subprocesses-show-progress-and-control]: /knowledge/ideas/idea-014-superdev-subprocesses-show-progress-and-control.md
 [sokf:idea-015-scoped-workflows-feed-independent-build-batches]: /knowledge/ideas/idea-015-scoped-workflows-feed-independent-build-batches.md
+[sokf:idea-016-a-dead-session-claim-always-releases]: /knowledge/ideas/idea-016-a-dead-session-claim-always-releases.md

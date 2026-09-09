@@ -2147,6 +2147,7 @@ dependencies = [
  "pulldown-cmark",
  "regex",
  "rmcp",
+ "rustix",
  "serde",
  "serde_json",
  "serde_yaml_ng",

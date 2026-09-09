@@ -13,6 +13,7 @@ use superdev_core::sokf::{
 use superdev_core::workflow::abandonment;
 use superdev_core::workflow::cache;
 use superdev_core::workflow::git;
+use superdev_core::workflow::process;
 use superdev_core::workflow::{
     GateEvidence, Phase, Transition, WORKFLOW_PROTOCOL, WorkflowCache, WorkflowIdentity,
     apply_transition,
@@ -66,6 +67,9 @@ pub struct BindArgs {
     /// Local default branch
     #[arg(long, default_value = "")]
     default_branch: String,
+    /// Owning Pi process ID, so an abandoned claim becomes decidable
+    #[arg(long)]
+    owner_pid: Option<u32>,
 }
 
 /// Active parent and child process identity.
@@ -83,15 +87,9 @@ pub struct ActivityStartArgs {
     /// Owning Pi process ID.
     #[arg(long)]
     owner_pid: u32,
-    /// OS process-start identity for the owning Pi.
-    #[arg(long)]
-    owner_started: String,
     /// Isolated child process ID.
     #[arg(long)]
     child_pid: u32,
-    /// OS process-start identity for the child.
-    #[arg(long)]
-    child_started: String,
 }
 
 /// One committed workflow checkpoint on the owned work branch.
@@ -125,6 +123,9 @@ pub struct SessionArgs {
     /// Owning Pi session ID
     #[arg(long)]
     session: String,
+    /// Release a claim whose owner cannot be proven live, on human authority
+    #[arg(long)]
+    human_release: bool,
 }
 
 /// Typed phase transition names.

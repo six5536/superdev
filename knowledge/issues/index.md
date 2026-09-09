@@ -77,6 +77,10 @@ places it.
 
 * [Workflow progress repeats the plan and stage][sokf:issue-078-workflow-progress-repeats-plan-and-stage] - superdev_run_phase displays the same SCOPE plan title and requirements-review stage in both its progress panel and status line, duplicating information during an active review.
 
+* [Esc does not stop a running workflow phase][sokf:issue-079-esc-does-not-stop-a-running-phase] - The progress panel invites the user to press Esc to stop a running phase, but the key is matched by a raw byte comparison that misses the terminal's actual escape sequences, so the phase continues.
+
+* [The phase progress panel is hand-rolled instead of framed like the rest of Pi][sokf:issue-080-the-phase-progress-panel-is-hand-rolled] - superdev_run_phase draws its own unframed stack of lines with no spinner and a hardcoded key hint, so a running phase looks unlike every other Pi activity display and reads as loose text above the prompt.
+
 * [The workflow cannot deliver a feature unattended][sokf:issue-024-the-workflow-cannot-run-unattended] - every phase boundary stops and waits for the user, no feature gets a branch of its own, a plan models no slice dependencies, and integrate leaves its record edits uncommitted.
 
 * [Run the next real feature through /execute-feature-plan and record the outcome][sokf:issue-026-rehearse-the-driver-on-a-real-feature] - the loop's machinery is tested and was rehearsed with shell steps, but the driver's prose — slice picking, the retry bound, deferral, the end-of-run queue — has not driven a real multi-slice plan; the next feature is the rehearsal.
@@ -195,3 +199,5 @@ places it.
 [sokf:issue-076-historical-content-packs]: /knowledge/issues/done/issue-076-historical-content-packs.md
 [sokf:issue-077-sokf-file-tool-parity]: /knowledge/issues/open/issue-077-sokf-file-tool-parity.md
 [sokf:issue-078-workflow-progress-repeats-plan-and-stage]: /knowledge/issues/open/issue-078-workflow-progress-repeats-plan-and-stage.md
+[sokf:issue-079-esc-does-not-stop-a-running-phase]: /knowledge/issues/open/issue-079-esc-does-not-stop-a-running-phase.md
+[sokf:issue-080-the-phase-progress-panel-is-hand-rolled]: /knowledge/issues/open/issue-080-the-phase-progress-panel-is-hand-rolled.md
