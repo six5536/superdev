@@ -335,8 +335,8 @@ mod tests {
 ### Module boundaries
 
 - `P_rust-authority` [ubiquitous] The Rust workflow service SHALL validate every durable phase transition, plan revision comparison, ownership comparison, and automatic Git operation.
-- `P_pi-orchestrates` [ubiquitous] Pi SHALL orchestrate discoverable issue, scope, build, and accept skills through typed tools while withholding direct shell and Git access from children and resolving BUILD's executable and digest together at invocation time.
-- `P_extension-skills` [ubiquitous] The pack SHALL install self-contained issue, scope, build, and accept skills in `.pi/skills/` for native Pi discovery without requiring an extension callback.
+- `P_pi-orchestrates` [ubiquitous] Pi SHALL orchestrate discoverable scope, build, and accept skills through typed tools while withholding direct shell and Git access from children and resolving BUILD's executable and digest together at invocation time.
+- `P_extension-skills` [ubiquitous] The Superdev extension SHALL register its bundled file, scope, build, and accept skills from `.pi/extensions/superdev/skills/` through Pi's `resources_discover` event on startup and reload, exposing native `/skill:*` commands without copies in `.pi/skills/`.
 - `P_service-snapshot` [event] WHEN Pi initializes its workflow service, the adapter SHALL bootstrap the trusted launcher in place and retain a private native executable snapshot independent of subsequent checkout switches and rebuilds.
 - `P_baseline-compatible` [event] WHEN a SCOPE baseline caller omits its optional expected work tip, Rust SHALL resolve the owned work-branch tip under the repository lock while retaining session, plan-revision, phase, and checkout checks. Explicit expected tips retain compare-and-swap rejection.
 - `P_skill-cold-start` [event] WHEN a workflow skill starts, the skill SHALL reconstruct canonical identity and phase before mutation.
@@ -356,7 +356,9 @@ mod tests {
 - `P_identity-reservation` [event] WHEN an issue or initial plan reserves a numeric identity, the service SHALL refuse a number already held by another canonical identity in the local repository.
 - `P_default-recovery` [event] WHEN a workflow resumes, the service SHALL recover the recorded default branch and current plan from its work-branch snapshot before binding the shared checkout.
 - `P_one-checkout-owner` [ubiquitous] The service SHALL permit only one executing workflow owner per checkout.
-- `P_issue-capture` [event] WHEN issue capture runs, the service SHALL require an unowned clean default-branch checkout and preserve the selected bug, feature, or chore kind.
+- `P_issue-capture` [event] WHEN `/skill:file` captures an issue or idea, the skill SHALL direct the LLM to choose an unused number, author the schema-conforming record and index entry, validate, and commit only those paths on the discovered default branch without pausing active work.
+- `P_file-skill-only` [ubiquitous] Pi SHALL expose capture only through the native `file` skill, without issue or file command aliases, a dedicated filing tool, or a filing child role.
+- `P_file-skill-worktree` [event] WHEN capture starts outside the default branch, the skill SHALL direct the LLM to use an existing or temporary default-branch worktree through ordinary tools while preserving the caller's branch, pending edits, and workflow ownership.
 - `P_accept-stale-default` [event] WHEN the verified default revision advances before closure, the service SHALL invalidate final evidence and return the same plan to BUILD without preparing DONE records.
 - `P_ui-authority-service` [event] WHEN scope approval, configured human acceptance, rejection, or abandonment changes durable state, the service SHALL require the owning Pi UI's unpersisted capability.
 - `P_ui-authority-adapter` [event] WHEN an action requires human authority, Pi SHALL expose its capability to the service only after interactive confirmation.

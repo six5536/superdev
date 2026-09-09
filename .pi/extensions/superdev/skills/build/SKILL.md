@@ -1,7 +1,7 @@
 ---
 name: build
 description: Reconstruct the approved workflow context and run Superdev BUILD strictly within its canonical plan. Use for matching user intent or invoke with /skill:build.
-allowed-tools: read sokf_search sokf_graph superdev_run_phase superdev_ask superdev_file_issue
+allowed-tools: read sokf_search sokf_graph superdev_run_phase superdev_ask
 ---
 
 # Superdev BUILD

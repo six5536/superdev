@@ -1691,7 +1691,7 @@ fn packed_pi_assets_and_their_lock_hashes_are_synchronized() {
         "extensions/superdev/prompts/accept.md",
         "extensions/superdev/prompts/build.md",
         "extensions/superdev/prompts/code-review.md",
-        "extensions/superdev/prompts/file.md",
+        "extensions/superdev/skills/file/SKILL.md",
         "extensions/superdev/prompts/orchestrator.md",
         "extensions/superdev/prompts/requirements-review.md",
         "extensions/superdev/prompts/scope.md",
@@ -1821,7 +1821,7 @@ fn assert_retired_skill(name: &str) {
     );
 }
 /// The source instructions and rendered aggregator name the authoritative
-/// workflow, its review gates, local integration, and independent `/file`.
+/// workflow, its review gates, local integration, and independent `/skill:file`.
 #[test]
 fn the_workflow_reads_scope_build_accept() {
     for p in [
@@ -1835,7 +1835,7 @@ fn the_workflow_reads_scope_build_accept() {
             "fresh isolated requirements review",
             "Final code review is fresh, isolated, read-only",
             "Humans merge separately",
-            "/issue and its /file alias",
+            "/skill:file lets the LLM",
             "abandonment is human-only",
         ] {
             assert!(text.contains(required), "{p} lacks `{required}`");

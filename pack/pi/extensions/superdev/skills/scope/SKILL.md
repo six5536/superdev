@@ -1,7 +1,7 @@
 ---
 name: scope
 description: Interpret a user request, establish or revise one canonical issue and linked plan, and run exhaustive Superdev SCOPE review. Use for matching user intent or invoke with /skill:scope.
-allowed-tools: read write edit sokf_search sokf_graph superdev_run_phase superdev_ask superdev_file_issue
+allowed-tools: read write edit bash sokf_search sokf_graph superdev_run_phase superdev_ask
 ---
 
 # Superdev SCOPE
@@ -49,7 +49,7 @@ Discuss one unresolved decision at a time. Recommend one answer. Use `superdev_a
 
 After confirmation only:
 
-1. Read `sokf:schema-issue` and `sokf:schema-plan`. If creating an issue, use `superdev_file_issue` to allocate and commit it on the default branch, then inspect again.
+1. Read `sokf:schema-issue` and `sokf:schema-plan`. If creating an issue, read `../file/SKILL.md` and follow that skill to author and commit it on the default branch, then inspect again.
 2. Use SOKF-aware `write` or `edit` to create or revise the exact confirmed plan. Initial issue and plan reservation occurs on the default branch before starting the work branch. Existing workflow revisions occur on their checked-out work branch.
 3. Choose each collision-free ID independently from the default-branch index. Never derive a plan ID from an issue ID. Rust rejects reused numbers under the repository publication lock; refresh and choose again after a collision. Never overwrite an existing plan to reuse its number.
 4. Declare focused commands as `- Verification:` in each work block. Declare complete suites as `- Final verification:` under Documentation changes; they run only after all blocks are complete. Include required contract changes, tests and documentation surfaces.
@@ -79,4 +79,4 @@ Use `revise-answer` to reopen a saved answer and `submit-answers` only after all
 
 Call `approve` only after the user explicitly chooses approval. The tool then asks for authoritative confirmation in trusted Pi UI.
 
-Use only `superdev_run_phase` for workflow status, answers, retry, approval, and cancellation. Do not invoke isolated phase roles, low-level workflow-control tools, or Git mutation commands.
+Use only `superdev_run_phase` for workflow status, answers, retry, approval, and cancellation. Do not invoke isolated phase roles or low-level workflow-control tools. Git mutation commands are permitted only while following `../file/SKILL.md` to file the confirmed issue; workflow transitions remain service-owned.

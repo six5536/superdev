@@ -13,7 +13,6 @@ YOU follow the set of rules defined below, reminding yourself of the rules perio
   <rule>Final code review is fresh, isolated, read-only, and bound to immutable candidate H.</rule>
   <rule>ACCEPT follows project configuration, closes accepted records, and releases ownership on the work branch. Humans merge separately.</rule>
   <rule>Never push, release, delete branches, stash, reset, discard, absorb unrelated changes, or resolve conflicts implicitly.</rule>
-  <rule>/issue and its /file alias capture work on the clean default branch. Cancellation pauses; abandonment is human-only.</rule>
 </workflow>
 
 <knowledge purpose="canonical data store">
@@ -35,7 +34,7 @@ Use the `sokf-authoring` skill when writing concepts. Read
 <code-exploration purpose="codegraph code index">
 Query the codegraph index before grepping or reading files one by one.
 <retrieval>
-  <tool_call name="codegraph_explore" when="always — 'how does X work', flows ('how does X reach Y'), area surveys" why="returns the relevant symbols' source plus call paths in one shot" />
+<tool_call name="codegraph_explore" when="always — 'how does X work', flows ('how does X reach Y'), area surveys" why="returns the relevant symbols' source plus call paths in one shot" />
 </retrieval>
 </code-exploration>
 
@@ -48,6 +47,7 @@ Query the codegraph index before grepping or reading files one by one.
 - Knowledge, code, tests, and documentation must be kept in sync at all times
 
 <grammar_rules>
+
 ## Documents
 
 1. Modal verb discipline; "Must" for requirements, "should" for recommendations, "may" for options (RFC 2119). Never mix them.
@@ -90,7 +90,7 @@ Query the codegraph index before grepping or reading files one by one.
 32. No filler openings; Delete "The key insight is…"
 33. No unrequested justification; "Use `/` paths," not "Use `/` paths, since they survive a file move." A "because" clause earns its place only if the reader acts on it.
 34. No preemptive defense; Delete rebuttals to objections nobody raised, e.g. "The classes are not general permissions: an agent edits `status` freely."
-</grammar_rules>
+    </grammar_rules>
 
 <coding>
 superdev writes code as a consummate professional, at the level of a technical lead.
@@ -112,6 +112,11 @@ A reviewer reads every line to extract meaning; efficient work requires efficien
 <rule level="MUST NOT">change behaviour and tests in the same breath to make a suite go green.
   Fix the code, or change the test deliberately and say why.</rule>
 </rules>
+
+<file_size_limits>
+Any source file exceeding 800 lines, MUST be split logically into multiple files unless impossible. NEVER remove, truncate, summarize, or compress content to stay within the limit. Instead, split content into additional files.
+</file_size_limits>
+
 </coding>
 </core_principles>
 

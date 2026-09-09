@@ -11,8 +11,8 @@ use superdev_core::manifest::Manifest;
 use superdev_core::sokf::{
     EditRequest, ExactEdit, IndexDir, MutationPolicy, SokfService, parse_concept,
 };
+use superdev_core::workflow::abandonment;
 use superdev_core::workflow::cache;
-use superdev_core::workflow::filing::{self, FilingKind, FilingRequest};
 use superdev_core::workflow::git;
 use superdev_core::workflow::retry::{self, RetryState};
 use superdev_core::workflow::{
@@ -21,36 +21,6 @@ use superdev_core::workflow::{
 };
 
 // sokf:begin cli
-/// Human-confirmed out-of-band issue or idea filing.
-#[derive(Args)]
-pub struct FileArgs {
-    /// Record kind
-    #[arg(long, value_enum, default_value = "issue")]
-    kind: FilingKindName,
-    /// Issue category (independent of issue versus idea capture)
-    #[arg(long, value_parser = ["bug", "feature", "chore"], default_value = "feature")]
-    issue_kind: String,
-    /// Short human title
-    #[arg(long)]
-    title: String,
-    /// Human description to preserve in the record
-    #[arg(long)]
-    description: String,
-    /// Local default branch to advance
-    #[arg(long, default_value = "")]
-    default_branch: String,
-    /// Confirmation supplied only after the human approves the bounded diff
-    #[arg(long)]
-    human_approved: bool,
-}
-
-/// CLI spelling of fileable record kinds.
-#[derive(Clone, Copy, ValueEnum)]
-enum FilingKindName {
-    Issue,
-    Idea,
-}
-
 /// Versioned workflow operations used by the Pi adapter.
 #[derive(Subcommand)]
 pub enum WorkflowCommand {
@@ -377,4 +347,4 @@ mod records;
 use records::*;
 #[cfg(test)]
 mod tests;
-pub use dispatch::{run, run_file};
+pub use dispatch::run;

@@ -24,6 +24,7 @@ Pi's installed `createReadTool()`, `createEditTool()`, `createWriteTool()`, diff
 A caller using a physical path or an equivalent SOKF identity observes the same Pi file-tool contract except for concise, actionable SOKF policy rejections.
 
 - SOKF-routed reads return exact UTF-8 source and preserve built-in pagination, truncation, details, errors, cancellation, metadata, and rendering.
+- Section-qualified reads return the exact contiguous source lines for that section, with pagination applied within the source slice.
 - SOKF-routed edits preserve built-in argument preparation, matching, uniqueness, overlap, byte preservation, queueing, errors, concise content, compact details, metadata, and rendering.
 - SOKF-routed writes preserve built-in parameters, parent creation, queueing, errors, cancellation, concise content, undefined details, metadata, and rendering.
 - Virtual and physical aliases serialize on the same physical mutation-queue key.

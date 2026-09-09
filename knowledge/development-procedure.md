@@ -17,13 +17,16 @@ no Node.
 # Workflow
 
 1. Significant changes run through Pi's project extension as exactly
-   `SCOPE → BUILD → ACCEPT`. `/file` is an independent capture utility.
+   `SCOPE → BUILD → ACCEPT`. `/skill:file` is an independent LLM-driven capture skill.
    Every plan implements exactly one issue and uses its matching
    `work/<issue-number>-<slug>` branch. Reserve the issue and independently
    numbered plan on the discovered default branch before switching the shared
    checkout. Only one workflow executes per checkout; parent and children write
-   sequentially. Use `/issue` (or `/file`) on an unowned clean default branch
-   to capture unrelated work.
+   sequentially. Use `/skill:file` from any checkout to capture an issue or idea
+   without pausing work. The LLM chooses the next unused number, authors the
+   record and index entry, validates, and commits those paths on the default branch.
+   Off that branch, it uses an existing or temporary default-branch worktree,
+   preserving unrelated edits. No dedicated filing service or aliases are involved.
 2. SCOPE settles requirements, contracts, ADRs, documentation obligations,
    stable blocks, and executable evidence; a fresh isolated read-only review
    and explicit human approval are mandatory. BUILD delegates to one isolated

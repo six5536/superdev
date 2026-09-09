@@ -28,7 +28,11 @@ try {
 	await git("add", "-A");
 	await git("commit", "-qm", "initial scaffold");
 	const pinned = await ensureParentService(root);
-	await service("file", "--title", "Canonical recovery", "--description", "Service survives checkout changes", "--human-approved");
+	const issue = await readFile(new URL("../../../crates/app/superdev/tests/fixtures/workflow-issue.md", import.meta.url), "utf8");
+	await mkdir(join(root, "knowledge/issues/open"), { recursive: true });
+	await writeFile(join(root, "knowledge/issues/open/issue-001-canonical-recovery.md"), issue);
+	await git("add", "knowledge");
+	await git("commit", "-qm", "docs: file canonical recovery");
 	const plan = await readFile(new URL("../../../crates/app/superdev/tests/fixtures/workflow-plan.md", import.meta.url), "utf8");
 	await mkdir(join(root, "knowledge/plans/open"), { recursive: true });
 	await writeFile(join(root, "knowledge/plans/open/plan-042-canonical-recovery.md"), plan);

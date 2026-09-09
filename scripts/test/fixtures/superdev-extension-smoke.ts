@@ -58,18 +58,35 @@ async function smoke() {
 	superdev(fake as never);
 	const skillAgentDir = await mkdtemp(join(tmpdir(), "superdev-skill-discovery-"));
 	try {
-		const discovered = loadSkills({ cwd: process.cwd(), agentDir: skillAgentDir, skillPaths: [], includeDefaults: true });
+		const defaults = loadSkills({ cwd: process.cwd(), agentDir: skillAgentDir, skillPaths: [], includeDefaults: true });
+		if (defaults.skills.some((skill) => ["file", "scope", "build", "accept"].includes(skill.name))) throw new Error("Superdev skills leaked into general Pi discovery");
+		const discover = eventHandlers.get("resources_discover");
+		if (!discover) throw new Error("extension did not register its skills");
+		const startup = await discover({ cwd: skillAgentDir, reason: "startup" });
+		const reloaded = await discover({ cwd: skillAgentDir, reason: "reload" });
+		if (JSON.stringify(startup) !== JSON.stringify(reloaded)) throw new Error("skill registration differs on reload");
+		const discovered = loadSkills({ cwd: skillAgentDir, agentDir: skillAgentDir, skillPaths: startup.skillPaths, includeDefaults: false });
 		const prompt = formatSkillsForPrompt(discovered.skills);
-		for (const name of ["issue", "scope", "build", "accept"]) {
+		if (discovered.skills.some((skill) => skill.name === "issue")) throw new Error("retired issue skill remains discoverable");
+		const filing = await readFile(join(process.cwd(), ".pi/extensions/superdev/skills/file/SKILL.md"), "utf8");
+		for (const instruction of ["Choose the next unused number", "If already on the default branch", "worktree on the default branch", "superdev validate --fix", "Commit only the authored record", "preserve unfinished files", "refuse pre-existing edits", "read-only `superdev validate`", "git commit --only", "../../../../skills/sokf-authoring/SKILL.md"]) {
+			if (!filing.includes(instruction)) throw new Error(`file skill omitted ${instruction}`);
+		}
+		if (filing.includes("superdev_file_issue") || filing.includes("superdev_run_phase")) throw new Error("file skill still depends on deterministic filing or workflow state");
+		const scopeSkill = await readFile(join(process.cwd(), ".pi/extensions/superdev/skills/scope/SKILL.md"), "utf8");
+		if (!scopeSkill.includes("Git mutation commands are permitted only while following `../file/SKILL.md`") || !scopeSkill.split("\n").find((line) => line.startsWith("allowed-tools:"))?.split(" ").includes("bash")) {
+			throw new Error("SCOPE cannot delegate issue creation to the native file skill");
+		}
+		for (const name of ["file", "scope", "build", "accept"]) {
 			const skill = discovered.skills.find((skill) => skill.name === name);
-			if (!skill || skill.disableModelInvocation || !skill.filePath.endsWith(`/.pi/skills/${name}/SKILL.md`) || !prompt.includes(`<name>${name}</name>`)) {
+			if (!skill || skill.disableModelInvocation || !skill.filePath.endsWith(`/.pi/extensions/superdev/skills/${name}/SKILL.md`) || !prompt.includes(`<name>${name}</name>`)) {
 				throw new Error(`native Pi discovery omitted ${name} from its prompt`);
 			}
-			const packed = await readFile(join(process.cwd(), "pack/pi/skills", name, "SKILL.md"), "utf8");
+			const packed = await readFile(join(process.cwd(), "pack/pi/extensions/superdev/skills", name, "SKILL.md"), "utf8");
 			if (packed !== await readFile(skill.filePath, "utf8")) throw new Error(`${name} skill pack differs`);
 		}
 	} finally { await rm(skillAgentDir, { recursive: true, force: true }); }
-	for (const role of ["scope", "requirements-review", "build", "code-review", "accept", "file"]) {
+	for (const role of ["scope", "requirements-review", "build", "code-review", "accept"]) {
 		const prompt = await readFile(join(process.cwd(), ".pi", "extensions", "superdev", "prompts", `${role}.md`), "utf8");
 		if (!prompt.includes("only tool call in the final assistant turn") || !prompt.includes("exactly once")) {
 			throw new Error(`${role} prompt does not keep terminal submission separate and singular`);
@@ -79,15 +96,11 @@ async function smoke() {
 	if (!scopePrompt.includes("primary issue and canonical plan named by the task") || !scopePrompt.includes("Keep their established identities")) {
 		throw new Error("SCOPE prompt permits identity drift");
 	}
-	const filePrompt = await readFile(join(process.cwd(), ".pi", "extensions", "superdev", "prompts", "file.md"), "utf8");
-	if (!filePrompt.includes("Do not write files, invoke the filing service") || !filePrompt.includes("parent presents that proposal")) {
-		throw new Error("filing child prompt exceeds its read-only preparation role");
-	}
 	const phaseSource = await readFile(join(process.cwd(), ".pi", "extensions", "superdev", "lib", "phases.ts"), "utf8");
 	for (const identityTask of ["Prepare issue ${initial.owner.identity.issue} and plan ${initial.owner.identity.plan}", "Review issue ${owner.identity.issue} and plan ${owner.identity.plan}", "Build issue ${owner.identity.issue} from approved plan ${owner.identity.plan}", "Assess whether issue ${owner.identity.issue} and plan ${owner.identity.plan}"]) {
 		if (!phaseSource.includes(identityTask)) throw new Error(`phase task omits canonical identity: ${identityTask}`);
 	}
-	for (const removed of ["scope", "build", "accept"]) {
+	for (const removed of ["scope", "build", "accept", "issue", "file"]) {
 		if (commands.includes(removed)) throw new Error(`legacy phase command ${removed} remains public`);
 	}
 	for (const command of [
@@ -96,12 +109,11 @@ async function smoke() {
 		"superdev-resume",
 		"superdev-cancel",
 		"superdev-abandon",
-		"file",
 	]) {
 		if (!commands.includes(command)) throw new Error(`missing command ${command}`);
 	}
 	if (!tools.includes("superdev_run_phase")) throw new Error("missing generic phase tool");
-	if (!tools.includes("superdev_file_issue") || !tools.includes("superdev_ask")) throw new Error("missing typed issue/intake tools");
+	if (tools.includes("superdev_file_issue") || !tools.includes("superdev_ask")) throw new Error("filing must be skill-only; questions remain available");
 	const priorChildRole = process.env.SUPERDEV_CHILD_ROLE;
 	process.env.SUPERDEV_CHILD_ROLE = "scope";
 	try {
@@ -470,7 +482,7 @@ async function smoke() {
     await queue.operate({ action: "submit" }, questionCtx);
     const revised = await publicTools.get("superdev_run_phase").execute("change", { phase: "scope", action: "record-answer", answer: "A later human revision" }, undefined, undefined, questionCtx);
     if (revised.details?.status !== "answer-recorded") throw new Error("A submitted prior batch blocked a later human revision");
-    registerIntakeTools({ pi: questionPi, here: "/repo", runtime: {}, workflowStatus: async () => ({ defaultBranch: "trunk" }) });
+    registerIntakeTools({ pi: questionPi });
     const intake = await publicTools.get("superdev_ask").execute("intake", { question: "Choose scope", choices: ["Small", "Large"], recommendation: "Small" }, undefined, undefined, questionCtx);
     if (intake.details?.answer !== "Small" || !selectedChoices.includes("Discuss in chat")) throw new Error("Intake choices are unavailable");
 

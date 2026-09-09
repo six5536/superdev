@@ -22,9 +22,11 @@ export { isolated, isolatedTools, isolatedRoleMayNotRun, parseRoleResult, runPin
 const here = dirname(fileURLToPath(import.meta.url));
 export default function superdev(pi: ExtensionAPI) {
 	const childRoleValue = process.env.SUPERDEV_CHILD_ROLE;
-	const childRole = childRoleValue && ["scope", "requirements-review", "build", "code-review", "accept", "file"].includes(childRoleValue)
+	const childRole = childRoleValue && ["scope", "requirements-review", "build", "code-review", "accept"].includes(childRoleValue)
 		? childRoleValue as Role
 		: undefined;
+	// Pi exposes these extension-owned resources as native /skill:* commands.
+	if (!childRole) pi.on("resources_discover", () => ({ skillPaths: [join(here, "skills")] }));
 	const reviewPaths = new Set<string>();
 	const reviewOffsets = new Map<string, number>();
 	let inventoryLoaded = false;
@@ -520,5 +522,5 @@ export default function superdev(pi: ExtensionAPI) {
             ctx.ui.notify("Workflow abandoned; partial product work remains on its branch", "info");
         },
     });
-    registerIntakeTools({ pi, workflowStatus, runSuperdev, authority, runtime, here });
+    registerIntakeTools({ pi });
 }

@@ -97,8 +97,6 @@ enum Command {
     /// SOKF knowledge commands
     #[command(subcommand)]
     Sokf(sokf_cli::SokfCommand),
-    /// File a human-confirmed issue or idea on the local default branch
-    File(workflow_cli::FileArgs),
     /// Drive the local SCOPE → BUILD → ACCEPT workflow
     #[command(subcommand)]
     Workflow(workflow_cli::WorkflowCommand),
@@ -144,7 +142,6 @@ fn run(cli: &Cli) -> Result<u8> {
         Some(Command::Template(cmd)) => manage::template(cmd),
         Some(Command::Mcp(cmd)) => sokf_cli::run_mcp(cmd, &root()?),
         Some(Command::Sokf(cmd)) => sokf_cli::run_sokf(cmd, &root()?),
-        Some(Command::File(args)) => workflow_cli::run_file(args, &root()?),
         Some(Command::Workflow(cmd)) => workflow_cli::run(cmd, &root()?),
         Some(Command::Hook(cmd)) => validate_cli::run_hook(cmd, &root()?),
         Some(Command::Completions { shell }) => {

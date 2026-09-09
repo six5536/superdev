@@ -9,33 +9,6 @@ pub(super) struct Response<T: Serialize> {
     pub(super) result: T,
 }
 
-pub fn run_file(args: &FileArgs, root: &Path) -> Result<u8> {
-    if !args.human_approved {
-        return Err(Error::Manifest {
-            message: "filing requires explicit human confirmation".into(),
-        });
-    }
-    let root = git::repository_root(root)?;
-    let result = filing::file(
-        &root,
-        &FilingRequest {
-            kind: match args.kind {
-                FilingKindName::Issue => FilingKind::Issue,
-                FilingKindName::Idea => FilingKind::Idea,
-            },
-            issue_kind: match args.issue_kind.as_str() {
-                "bug" => filing::IssueKind::Bug,
-                "chore" => filing::IssueKind::Chore,
-                _ => filing::IssueKind::Feature,
-            },
-            title: args.title.clone(),
-            description: args.description.clone(),
-            default_branch: git::default_branch(&root, Some(&args.default_branch))?,
-        },
-    )?;
-    emit("file", &result)
-}
-
 pub fn run(command: &WorkflowCommand, root: &Path) -> Result<u8> {
     let root = git::repository_root(root)?;
     match command {
@@ -143,7 +116,7 @@ pub fn run(command: &WorkflowCommand, root: &Path) -> Result<u8> {
         WorkflowCommand::ActivityStart(args) => {
             if !matches!(
                 args.role.as_str(),
-                "scope" | "requirements-review" | "build" | "code-review" | "accept" | "file"
+                "scope" | "requirements-review" | "build" | "code-review" | "accept"
             ) || args.owner_pid == 0
                 || args.child_pid == 0
                 || args.owner_started.trim().is_empty()

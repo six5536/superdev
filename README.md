@@ -66,7 +66,7 @@ transient session ownership, and Git safety.
 /superdev-resume     # reconstruct state from the canonical plan
 /superdev-cancel     # pause and release transient ownership
 /superdev-abandon    # explicit human-only abandonment
-/file <item>         # capture an issue or idea; not a workflow phase
+/skill:file <item>   # LLM-authored issue or idea on the default branch; worktree when elsewhere
 ```
 
 Every plan implements exactly one issue and uses the matching

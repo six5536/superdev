@@ -58,21 +58,22 @@ fn trunk_reserves_independent_plans_and_recovers_each_branch_without_cache() {
         ),
         ("002", "Second issue", "second-issue", "043", "chore"),
     ] {
-        let filed = service(
-            root,
-            &[
-                "file",
-                "--title",
-                title,
-                "--description",
-                "Exercise workflow recovery.",
-                "--issue-kind",
-                kind,
-                "--human-approved",
-            ],
-        );
-        assert_eq!(filed["result"]["id"], format!("issue-{number}-{slug}"));
-        assert_eq!(git::current_branch(root).unwrap(), "trunk");
+        let issue = include_str!("fixtures/workflow-issue.md")
+            .replace("001-canonical-recovery", &format!("{number}-{slug}"))
+            .replace("Canonical recovery", title)
+            .replace("kind: feature", &format!("kind: {kind}"))
+            .replace(
+                "# Feature:",
+                if kind == "bug" { "# Bug:" } else { "# Chore:" },
+            );
+        fs::create_dir_all(root.join("knowledge/issues/open")).unwrap();
+        fs::write(
+            root.join(format!("knowledge/issues/open/issue-{number}-{slug}.md")),
+            issue,
+        )
+        .unwrap();
+        command(root, &["add", "knowledge"]);
+        command(root, &["commit", "-qm", "docs: file issue"]);
         let issue = fs::read_to_string(
             root.join(format!("knowledge/issues/open/issue-{number}-{slug}.md")),
         )
@@ -249,37 +250,4 @@ fn trunk_reserves_independent_plans_and_recovers_each_branch_without_cache() {
         "trunk"
     );
     service(root, &["workflow", "cancel", "--session", "new-session"]);
-    // Neither paused work nor a dirty checkout permits an implicit filing switch.
-    Command::cargo_bin("superdev")
-        .unwrap()
-        .current_dir(root)
-        .args([
-            "file",
-            "--title",
-            "Refused",
-            "--description",
-            "Do not switch",
-            "--human-approved",
-        ])
-        .assert()
-        .failure();
-    command(root, &["switch", "trunk"]);
-    fs::write(root.join("unrelated"), "preserve").unwrap();
-    Command::cargo_bin("superdev")
-        .unwrap()
-        .current_dir(root)
-        .args([
-            "file",
-            "--title",
-            "Refused",
-            "--description",
-            "Do not absorb",
-            "--human-approved",
-        ])
-        .assert()
-        .failure();
-    assert_eq!(
-        fs::read_to_string(root.join("unrelated")).unwrap(),
-        "preserve"
-    );
 }

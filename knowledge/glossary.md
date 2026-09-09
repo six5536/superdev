@@ -47,9 +47,11 @@ status: stable
   merging the rendered template into the existing shape with the user
   deciding each collision, then recording `[template]` after the fact. From
   then on the repo updates like a seeded one.
-- **Pi skill** — an independently invocable capability under `.pi/skills/`.
-  The first-party pack ships `sokf-authoring`; workflow roles remain private
-  extension prompts and are not skills.
+- **Pi skill** — an independently invocable capability discovered from a
+  skills directory or registered by an extension. Superdev bundles `file`,
+  `scope`, `build`, and `accept` under its extension and registers them through
+  `resources_discover`; `sokf-authoring` lives under `.pi/skills/`.
+  Isolated child roles use private extension prompts.
 - **Pi extension** — an owned TypeScript adapter under `.pi/extensions/`.
   The Superdev extension orchestrates roles while Rust owns durable workflow
   transitions and Git safety.
@@ -112,8 +114,8 @@ status: stable
   `.superdev/cache/workflow.toml`. Absence means unowned, never complete;
   canonical progress remains in the plan.
 
-Terms from the workflow, which is SCOPE → BUILD → ACCEPT. `/file` is an
-independent capture utility ([ADR-052][sokf:adr-052-the-workflow-is-scope-build-accept-under-a-durable-core]):
+Terms from the workflow, which is SCOPE → BUILD → ACCEPT. `/skill:file` is an
+independent LLM-driven capture skill ([ADR-052][sokf:adr-052-the-workflow-is-scope-build-accept-under-a-durable-core]):
 
 - **Scope** — the phase that settles requirements, contract and ADR changes,
   documentation impact, and stable work blocks. A fresh isolated requirements

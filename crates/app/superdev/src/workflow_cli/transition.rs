@@ -342,7 +342,7 @@ pub(super) fn transition_locked(
         git::commit_knowledge_changes(root, commit_message)?;
     }
     if matches!(transition, Transition::Abandon) {
-        filing::publish_abandonment(
+        abandonment::publish_abandonment(
             root,
             &state.identity.default_branch,
             &state.identity.issue,

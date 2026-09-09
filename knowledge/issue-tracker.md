@@ -9,8 +9,9 @@ status: stable
 Issues live as markdown files in this knowledge, not on GitHub. Plans
 already live here; issues follow the same conventions. The
 workflow skills read this concept to learn where to publish and fetch:
-`/file` files an issue here in the user's words, `/accept` files gap
-issues here, and `/maintain` audits them.
+`/skill:file` lets the LLM number and author an issue or idea in the user's
+words, validate it, and commit it on the default branch. From another branch,
+it uses a default-branch worktree without pausing active work.
 
 # Conventions
 

@@ -1,7 +1,7 @@
 ---
 name: accept
 description: Reconstruct the reviewed candidate context, run Superdev ACCEPT, and explain approval or routing. Use for matching user intent or invoke with /skill:accept.
-allowed-tools: read sokf_search sokf_graph superdev_run_phase superdev_ask superdev_file_issue
+allowed-tools: read sokf_search sokf_graph superdev_run_phase superdev_ask
 ---
 
 # Superdev ACCEPT

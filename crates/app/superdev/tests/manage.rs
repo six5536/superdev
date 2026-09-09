@@ -250,7 +250,6 @@ fn init_materializes_pi_workflow_without_claude_assets() {
         ".pi/extensions/superdev/prompts/build.md",
         ".pi/extensions/superdev/prompts/code-review.md",
         ".pi/extensions/superdev/prompts/accept.md",
-        ".pi/extensions/superdev/prompts/file.md",
         ".pi/skills/sokf-authoring/SKILL.md",
         ".pi/extensions/superdev/skills/scope/SKILL.md",
         ".pi/extensions/superdev/skills/build/SKILL.md",
@@ -268,8 +267,11 @@ fn init_materializes_pi_workflow_without_claude_assets() {
     assert!(lock.contains(".pi/extensions/superdev/skills/build/SKILL.md"));
     assert!(lock.contains(".pi/extensions/superdev/skills/accept/SKILL.md"));
     assert!(!repo.join(".pi/skills/scope").exists());
-    assert!(!repo.join(".pi/skills/build").exists());
-    assert!(!repo.join(".pi/skills/accept").exists());
+    assert!(
+        repo.join(".pi/extensions/superdev/skills/file/SKILL.md")
+            .is_file()
+    );
+    assert!(lock.contains(".pi/extensions/superdev/skills/file/SKILL.md"));
     assert!(!lock.contains(".claude/skills"));
     assert!(!lock.contains("superdev hook run"));
     for (skill, command) in [
@@ -341,6 +343,10 @@ fn init_materializes_pi_workflow_without_claude_assets() {
     let converged_lock = sb.read(".superdev/lock.toml");
     assert!(!converged_lock.contains(".claude/skills/build"));
     assert!(!converged_lock.contains(".pi/skills/scope"));
+    assert!(
+        repo.join(".pi/extensions/superdev/skills/scope/SKILL.md")
+            .is_file()
+    );
 }
 
 #[test]
@@ -366,19 +372,15 @@ fn workflow_start_adopts_an_llm_authored_independently_numbered_plan() {
         .success();
     git(&["add", "-A"]);
     git(&["commit", "-q", "-m", "init"]);
-    Command::cargo_bin("superdev")
-        .unwrap()
-        .current_dir(dir.path())
-        .args([
-            "file",
-            "--title",
-            "Canonical recovery",
-            "--description",
-            "Create and recover one canonical workflow.",
-            "--human-approved",
-        ])
-        .assert()
-        .success();
+    fs::create_dir_all(dir.path().join("knowledge/issues/open")).unwrap();
+    fs::write(
+        dir.path()
+            .join("knowledge/issues/open/issue-001-canonical-recovery.md"),
+        include_str!("fixtures/workflow-issue.md"),
+    )
+    .unwrap();
+    git(&["add", "knowledge"]);
+    git(&["commit", "-qm", "docs: file canonical recovery"]);
 
     let plan = dir
         .path()
@@ -1326,25 +1328,33 @@ fn workflow_start_adopts_an_llm_authored_independently_numbered_plan() {
         .assert()
         .failure();
 
-    Command::cargo_bin("superdev")
-        .unwrap()
-        .current_dir(dir.path())
-        .args([
-            "file",
-            "--title",
-            "Default branch advance",
-            "--description",
-            "Exercise BUILD synchronization with a concurrent knowledge filing.",
-            "--human-approved",
-        ])
-        .assert()
-        .failure();
-    // Simulate an explicit external upstream commit, not background issue filing.
-    git(&["switch", "main"]);
-    fs::write(dir.path().join("upstream.txt"), "upstream change\n").unwrap();
-    git(&["add", "upstream.txt"]);
-    git(&["commit", "-m", "upstream advance"]);
-    git(&["switch", "work/001-canonical-recovery"]);
+    // Independently filed knowledge advances main while BUILD remains active.
+    let capture = tempfile::tempdir().unwrap();
+    let capture_root = capture.path().join("main");
+    git(&["worktree", "add", capture_root.to_str().unwrap(), "main"]);
+    fs::write(
+        capture_root.join("capture.md"),
+        "An independently captured thought.\n",
+    )
+    .unwrap();
+    for args in [
+        vec!["add", "capture.md"],
+        vec!["commit", "-qm", "docs: capture thought"],
+    ] {
+        assert!(
+            std::process::Command::new("git")
+                .args(args)
+                .current_dir(&capture_root)
+                .status()
+                .unwrap()
+                .success()
+        );
+    }
+    git(&["worktree", "remove", capture_root.to_str().unwrap()]);
+    assert_eq!(
+        git::current_branch(dir.path()).unwrap(),
+        "work/001-canonical-recovery"
+    );
     let owner = cache::load(dir.path()).unwrap().unwrap();
     let expected_default = git::revision(dir.path(), "main").unwrap();
     let expected_work = git::revision(dir.path(), "work/001-canonical-recovery").unwrap();
@@ -1689,188 +1699,4 @@ fn workflow_start_adopts_an_llm_authored_independently_numbered_plan() {
         !default_product.status.success(),
         "partial product reached main"
     );
-}
-
-#[test]
-fn file_commits_on_default_without_a_workflow_branch() {
-    let dir = tempfile::tempdir().unwrap();
-    let git = |args: &[&str]| {
-        let status = std::process::Command::new("git")
-            .args(args)
-            .current_dir(dir.path())
-            .status()
-            .unwrap();
-        assert!(status.success(), "git {args:?}");
-    };
-    git(&["init", "-q", "-b", "main"]);
-    git(&["config", "user.email", "test@example.com"]);
-    git(&["config", "user.name", "Test"]);
-    git(&["config", "commit.gpgsign", "false"]);
-    Command::cargo_bin("superdev")
-        .unwrap()
-        .current_dir(dir.path())
-        .args(["init", "--no-frontend", "--no-code-index"])
-        .assert()
-        .success();
-    git(&["add", "-A"]);
-    git(&["commit", "-q", "-m", "init"]);
-
-    Command::cargo_bin("superdev")
-        .unwrap()
-        .current_dir(dir.path())
-        .args([
-            "file",
-            "--kind",
-            "issue",
-            "--title",
-            "Safe filing works",
-            "--description",
-            "Capture this request without creating a workflow branch.",
-            "--human-approved",
-        ])
-        .assert()
-        .success();
-
-    assert!(
-        dir.path()
-            .join("knowledge/issues/open/issue-001-safe-filing-works.md")
-            .is_file()
-    );
-    let message = std::process::Command::new("git")
-        .args(["log", "-1", "--pretty=%s"])
-        .current_dir(dir.path())
-        .output()
-        .unwrap();
-    assert_eq!(
-        String::from_utf8_lossy(&message.stdout).trim(),
-        "docs: file issue-001-safe-filing-works"
-    );
-
-    git(&["switch", "-q", "-c", "work/001-active"]);
-    let work_tip = std::process::Command::new("git")
-        .args(["rev-parse", "HEAD"])
-        .current_dir(dir.path())
-        .output()
-        .unwrap()
-        .stdout;
-    Command::cargo_bin("superdev")
-        .unwrap()
-        .current_dir(dir.path())
-        .args([
-            "file",
-            "--kind",
-            "idea",
-            "--title",
-            "An independent thought",
-            "--description",
-            "Keep this idea on the default branch while BUILD is active.",
-            "--human-approved",
-        ])
-        .assert()
-        .failure();
-    assert_eq!(git::current_branch(dir.path()).unwrap(), "work/001-active");
-    let after = std::process::Command::new("git")
-        .args(["rev-parse", "HEAD"])
-        .current_dir(dir.path())
-        .output()
-        .unwrap()
-        .stdout;
-    assert_eq!(after, work_tip);
-    assert!(git::revision(dir.path(), "main").is_ok());
-
-    git(&["switch", "-q", "main"]);
-    let binary = assert_cmd::cargo::cargo_bin("superdev");
-    let mut first = std::process::Command::new(&binary);
-    first.current_dir(dir.path()).args([
-        "file",
-        "--kind",
-        "issue",
-        "--title",
-        "Concurrent filing one",
-        "--description",
-        "The filing lock must allocate this independently.",
-        "--human-approved",
-    ]);
-    let mut second = std::process::Command::new(&binary);
-    second.current_dir(dir.path()).args([
-        "file",
-        "--kind",
-        "issue",
-        "--title",
-        "Concurrent filing two",
-        "--description",
-        "The filing lock must serialize this allocation.",
-        "--human-approved",
-    ]);
-    let first = first.spawn().unwrap();
-    let second = second.spawn().unwrap();
-    assert!(first.wait_with_output().unwrap().status.success());
-    assert!(second.wait_with_output().unwrap().status.success());
-    assert!(
-        git::file_at_revision(
-            dir.path(),
-            "main",
-            "knowledge/issues/open/issue-002-concurrent-filing-one.md"
-        )
-        .is_ok()
-            || git::file_at_revision(
-                dir.path(),
-                "main",
-                "knowledge/issues/open/issue-003-concurrent-filing-one.md"
-            )
-            .is_ok()
-    );
-    assert!(
-        git::file_at_revision(
-            dir.path(),
-            "main",
-            "knowledge/issues/open/issue-002-concurrent-filing-two.md"
-        )
-        .is_ok()
-            || git::file_at_revision(
-                dir.path(),
-                "main",
-                "knowledge/issues/open/issue-003-concurrent-filing-two.md"
-            )
-            .is_ok()
-    );
-    assert_eq!(git::current_branch(dir.path()).unwrap(), "main");
-    let after_concurrent = std::process::Command::new("git")
-        .args(["rev-parse", "HEAD"])
-        .current_dir(dir.path())
-        .output()
-        .unwrap()
-        .stdout;
-    assert_ne!(after_concurrent, work_tip);
-    assert_eq!(
-        git::revision(dir.path(), "work/001-active").unwrap(),
-        String::from_utf8(work_tip).unwrap().trim()
-    );
-    let cache_entries = fs::read_dir(dir.path().join(".superdev/cache"))
-        .unwrap()
-        .map(|entry| entry.unwrap().file_name().to_string_lossy().into_owned())
-        .collect::<Vec<_>>();
-    assert!(
-        cache_entries
-            .iter()
-            .all(|entry| !entry.starts_with("filing-worktree-")),
-        "stale filing worktree: {cache_entries:?}"
-    );
-
-    Command::cargo_bin("superdev")
-        .unwrap()
-        .current_dir(dir.path())
-        .args([
-            "file",
-            "--kind",
-            "issue",
-            "--title",
-            "SAFE FILING WORKS",
-            "--description",
-            "A differently cased duplicate must not allocate another record.",
-            "--human-approved",
-        ])
-        .assert()
-        .failure();
-    assert_eq!(git::current_branch(dir.path()).unwrap(), "main");
 }

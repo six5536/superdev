@@ -13,7 +13,7 @@ import { pinService } from "./service-pin.ts";
 
 const here = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const schema = Type.Object({
-	role: StringEnum(["scope", "requirements-review", "build", "code-review", "accept", "file"] as const),
+	role: StringEnum(["scope", "requirements-review", "build", "code-review", "accept"] as const),
 	task: Type.String({ description: "Bounded task and all input the isolated role needs" }),
 	base: Type.Optional(Type.String({ description: "Immutable review base" })),
 	candidate: Type.Optional(Type.String({ description: "Immutable review candidate" })),
@@ -86,7 +86,6 @@ export function requiresHumanAcceptance(value: boolean | undefined): boolean {
 export function isolatedTools(role: Input["role"]): string {
 	if (role === "code-review") return "superdev_review_diff,sokf_search,sokf_graph,superdev_submit_result";
 	if (readOnly.has(role)) return "read,sokf_search,sokf_graph,superdev_submit_result";
-	if (role === "file") return "read,sokf_search,sokf_graph,superdev_submit_result";
 	if (role === "build") return "read,edit,write,sokf_search,sokf_graph,superdev_build_exec,superdev_submit_result";
 	return "read,edit,write,sokf_search,sokf_graph,superdev_submit_result";
 }

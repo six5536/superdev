@@ -130,15 +130,23 @@ Pi is installed. Its sandbox checks virtual retrieval,
 structured edit results, subdirectory physical writes, applied-invalid
 handling, and bounded validation feedback without making a model call.
 
-`.pi/extensions/superdev/index.ts` registers `/superdev`, phase commands,
-resume, cancellation, human-only abandonment, and independent `/file`. Its
+`.pi/extensions/superdev/index.ts` registers `/superdev`,
+resume, cancellation, and human-only abandonment. Its
 private Markdown prompts are appended to fresh child Pi processes with fixed
 modifying or read-only tool sets. The extension delegates all durable changes
 to the versioned Rust workflow CLI.
 
 `.pi/skills/sokf-authoring/SKILL.md` is a genuine independently invocable Pi
-skill around SOKF-aware tools and is mirrored in `pack/pi/skills/`. Workflow
-roles are deliberately not Pi skills. All former Claude workflow skills and
+skill around SOKF-aware tools and is mirrored in `pack/pi/skills/`.
+Superdev's `file`, `scope`, `build`, and `accept` skills live under
+`.pi/extensions/superdev/skills/`, mirrored in `pack/pi/extensions/superdev/skills/`.
+The extension registers that directory through `resources_discover` on startup
+and reload; Pi exposes the resources as native `/skill:*` commands and model
+prompt entries. No copies live in the general `.pi/skills/` directory.
+The `scope`, `build`, and `accept` skills invoke the typed workflow tools. The native
+`file` skill lets the LLM choose an issue or idea number, author and validate the
+record, and commit it on the default branch through ordinary tools, using a
+worktree when elsewhere. Filing has no dedicated command, tool, or child role. All former Claude workflow skills and
 providers are retained only under `archive/claude-code/`.
 
 `.pi/extensions/system-prompt.ts` registers `/system-prompt` for inspecting the

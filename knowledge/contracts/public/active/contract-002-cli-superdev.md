@@ -97,8 +97,6 @@ enum Command {
     /// SOKF knowledge commands
     #[command(subcommand)]
     Sokf(sokf_cli::SokfCommand),
-    /// File a human-confirmed issue or idea on the local default branch
-    File(workflow_cli::FileArgs),
     /// Drive the local SCOPE → BUILD → ACCEPT workflow
     #[command(subcommand)]
     Workflow(workflow_cli::WorkflowCommand),
@@ -316,36 +314,6 @@ pub enum SokfCommand {
 
 <!-- sokf:include /crates/app/superdev/src/workflow_cli.rs#cli -->
 ```rust
-/// Human-confirmed out-of-band issue or idea filing.
-#[derive(Args)]
-pub struct FileArgs {
-    /// Record kind
-    #[arg(long, value_enum, default_value = "issue")]
-    kind: FilingKindName,
-    /// Issue category (independent of issue versus idea capture)
-    #[arg(long, value_parser = ["bug", "feature", "chore"], default_value = "feature")]
-    issue_kind: String,
-    /// Short human title
-    #[arg(long)]
-    title: String,
-    /// Human description to preserve in the record
-    #[arg(long)]
-    description: String,
-    /// Local default branch to advance
-    #[arg(long, default_value = "")]
-    default_branch: String,
-    /// Confirmation supplied only after the human approves the bounded diff
-    #[arg(long)]
-    human_approved: bool,
-}
-
-/// CLI spelling of fileable record kinds.
-#[derive(Clone, Copy, ValueEnum)]
-enum FilingKindName {
-    Issue,
-    Idea,
-}
-
 /// Versioned workflow operations used by the Pi adapter.
 #[derive(Subcommand)]
 pub enum WorkflowCommand {
@@ -747,7 +715,6 @@ usage errors and the side effects.
 - `P_workflow-integration-bound` [ubiquitous] `workflow integrate` SHALL
   require the bound issue, plan, refs, reviewed candidate, verified default
   tip, done closure, and administrative-only descendants to agree.
-- `P_file-default-branch` [ubiquitous] `file` SHALL require an unowned clean checkout of the discovered default branch, preserve the human-confirmed issue category, and publish one validated issue or idea under the repository allocation lock. Temporary staging does not route active workflow edits.
 - `P_workflow-manual-merge` [event] WHEN ACCEPT closes the issue and plan, the service SHALL release ownership and leave the accepted work branch checked out without merging. `workflow integrate` remains an explicit low-level operation, not an acceptance step.
 - `P_workflow-assess` [ubiquitous] `workflow assess` SHALL require the owned clean ACCEPT revision and administrative-only changes above reviewed candidate H.
 - `P_workflow-default-recovery` [ubiquitous] Startup SHALL discover and persist the default branch, reserve independent issue and plan numbers under the repository lock before switching branches, and recover unfinished plans from their local work-branch snapshots.
@@ -856,8 +823,6 @@ the invoking adapter.
 | `superdev sokf edit` | 2 | malformed input or a failed precondition left the target unchanged |
 | `superdev sokf write` | 0 | the mutation was applied, including an invalid or unknown resulting state |
 | `superdev sokf write` | 2 | malformed input or a failed precondition left the target unchanged |
-| `superdev file` | 0 | a confirmed issue or idea was committed on the default branch |
-| `superdev file` | 2 | confirmation, validation, duplicate, worktree, or compare-and-swap checks failed |
 | `superdev workflow` | 2 | no subcommand named |
 | `superdev workflow start` | 0 | ownership, a work branch, and an initial canonical SCOPE plan are created |
 | `superdev workflow start` | 2 | identity, ownership, issue, branch, tree, or plan state is invalid |
@@ -985,9 +950,6 @@ reaches the network unasked, to find the newest pack release.
 - `P_sokf-mutations-write-knowledge-only` [ubiquitous] `sokf edit` and `sokf
   write` SHALL write only inside the resolved knowledge directory.
 - `P_workflow-side-effects-bounded` [ubiquitous] `workflow` SHALL write only its transient cache, bound canonical records and indexes, product paths declared by the current BUILD block, and, for integration, the explicitly validated local refs and merge commit.
-- `P_file-side-effects-bounded` [ubiquitous] `file` SHALL write one canonical
-  record and generated index changes in a temporary worktree, then advance
-  only the validated local default ref.
 
 ## Stability
 
