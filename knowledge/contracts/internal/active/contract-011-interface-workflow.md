@@ -124,7 +124,11 @@ pub struct WorkflowCache {
     /// The capability itself is never persisted; only this one-way digest is exposed.
     #[serde(default)]
     pub authority_digest: String,
-    /// Owning Pi process ID while an isolated child is active.
+    /// Owning Pi process ID, recorded whenever the owner supplies one.
+    ///
+    /// An owner that records no process is unfalsifiable, so its claim is
+    /// never reclaimed. Recording this at acquisition, rather than only while
+    /// an isolated child runs, is what makes an abandoned claim decidable.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub owner_pid: Option<u32>,
     /// OS-specific owning Pi process start identity, guarding PID reuse.
@@ -339,12 +343,19 @@ mod tests {
 - `P_identity-reservation` [event] WHEN an issue or initial plan reserves a numeric identity, the service SHALL refuse a number already held by another canonical identity in the local repository.
 - `P_default-recovery` [event] WHEN a workflow resumes, the service SHALL recover the recorded default branch and current plan from its work-branch snapshot before binding the shared checkout.
 - `P_one-checkout-owner` [ubiquitous] The service SHALL permit only one executing workflow owner per checkout.
+- `P_owner-process-recorded` [event] WHEN a session acquires ownership, the service SHALL record the owning process identity supplied by that session.
+- `P_service-derives-identity` [ubiquitous] The service SHALL derive every process start identity itself rather than accept one computed by a caller.
+- `P_abandoned-claim-reclaimed` [event] WHEN a recorded owner process is contradicted by the running system, the service SHALL report the checkout as unowned, permit acquisition over the claim, and permit any session to release it.
+- `P_liveness-favours-incumbent` [ubiquitous] The service SHALL treat an owner whose liveness cannot be determined as still executing, leaving its claim in place without human authority.
 - `P_issue-capture` [event] WHEN `/skill:file` captures an issue or idea, the skill SHALL direct the LLM to choose an unused number, author the schema-conforming record and index entry, validate, and commit only those paths on the discovered default branch without pausing active work.
 - `P_file-skill-only` [ubiquitous] Pi SHALL expose capture only through the native `file` skill, without issue or file command aliases, a dedicated filing tool, or a filing child role.
 - `P_file-skill-worktree` [event] WHEN capture starts outside the default branch, the skill SHALL direct the LLM to use an existing or temporary default-branch worktree through ordinary tools while preserving the caller's branch, pending edits, and workflow ownership.
 - `P_ui-authority-service` [event] WHEN scope approval, configured human acceptance, rejection, or abandonment changes durable state, the service SHALL require the owning Pi UI's unpersisted capability.
 - `P_ui-authority-adapter` [event] WHEN an action requires human authority, Pi SHALL expose its capability to the service only after interactive confirmation.
 - `P_cancel-pauses` [event] WHEN cancellation occurs, the service SHALL release transient ownership without changing the canonical phase or deleting uncommitted SCOPE drafts.
+- `P_cancel-always-available` [ubiquitous] Pi SHALL permit cancellation regardless of which session holds the claim, so that no recorded claim can leave a checkout without a recovery path.
+- `P_human-release` [event] WHEN a claim cannot be proven abandoned and its session is not the caller, the service SHALL require the interactive Pi UI's capability before releasing it.
+- `P_human-release-confirmed` [event] WHEN Pi releases a claim held by another session, Pi SHALL obtain explicit human confirmation first.
 - `P_abandon-human-only` [event] WHEN abandonment is requested, the service SHALL require interactive human approval while excluding partial product work from integration.
 - `P_abandon-default-records` [event] WHEN abandonment closes the workflow, the service SHALL publish the closed issue and plan in a detached worktree and compare-and-swap the local default ref without carrying work-branch product history.
 - `P_progress-unparsed` [ubiquitous] The service SHALL NOT parse plan prose. Work-block progress, verification, and completion evidence are written and read by the workflow roles as advisory records.

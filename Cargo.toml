@@ -34,6 +34,10 @@ pulldown-cmark = { version = "0.13.4", default-features = false }
 # written for this dialect, which is why the format has no lookaround.
 regex = "1.13.1"
 rmcp = { version = "3.1.2", features = ["server", "transport-io"] }
+# Process liveness on Unix platforms without a `/proc` filesystem. Already in
+# the tree through cap-std, so declaring it adds nothing to the build; it
+# supplies a safe `kill(pid, 0)` wrapper rather than a raw `unsafe` libc call.
+rustix = { version = "1.1.4", features = ["process"] }
 serde = { version = "1.0.229", features = ["derive"] }
 serde_json = "1"
 serde_yaml_ng = "0.10.0"

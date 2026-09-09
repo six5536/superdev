@@ -44,8 +44,11 @@ export function registerPhaseTool(deps: any) {
 			try {
 				status = await workflowStatus(ctx.cwd);
             if (status.busy) return respond({ status: "busy", phase: input.phase });
-            if (input.action !== "inspect" && status.owner && status.owner.session_id !== ctx.sessionManager.getSessionId()) {
-                throw new Error("This checkout is owned by another Pi session; pause that session first.");
+            // Cancel is the recovery path out of a foreign claim, so it runs
+            // ahead of the ownership guard. Blocking it here is what leaves a
+            // claim from a stopped session with no way out.
+            if (!["inspect", "cancel"].includes(input.action) && status.owner && status.owner.session_id !== ctx.sessionManager.getSessionId()) {
+                throw new Error(`This checkout is claimed by Pi session ${status.owner.session_id}, which is still running or cannot be proven stopped. Cancel to release the claim, then run the phase again.`);
             }
 			if (input.action === "inspect") {
 				const questionState = questions.snapshot(input.offset, input.limit);
@@ -66,6 +69,17 @@ export function registerPhaseTool(deps: any) {
 					return respond({ status: "paused", phase: input.phase, partialWorkPreserved: true });
 				}
 				if (!status.owner) return respond({ status: "idle", phase: null });
+				// A claim the service could not prove abandoned, held by a session
+				// that is not this one, is decided by the human. Releasing it only
+				// pauses: the phase, the plan, and every commit stay in Git.
+				if (status.owner.session_id !== ctx.sessionManager.getSessionId()) {
+					if (!ctx.hasUI) return respond({ status: "human-input-required", phase: status.phase, recommendation: "Releasing another Pi session's claim requires an interactive Pi session." });
+					if (!(await ctx.ui.confirm("Release the other Pi session's claim?", `${status.owner.identity.plan} is claimed by Pi session ${status.owner.session_id}, which cannot be proven to be running. Releasing pauses the workflow; no canonical work is lost.`))) {
+						return respond({ status: "approval-declined", phase: status.phase });
+					}
+					await runSuperdev(["workflow", "cancel", "--session", status.owner.session_id, "--human-release"], ctx.cwd, authority);
+					return respond({ status: "paused", phase: status.phase, partialWorkPreserved: true });
+				}
 				await runSuperdev(["workflow", "cancel", "--session", status.owner.session_id], ctx.cwd, authority);
 				return respond({ status: "paused", phase: status.phase, partialWorkPreserved: true });
 			}
@@ -144,7 +158,10 @@ export function registerPhaseTool(deps: any) {
 				});
 				const existing = status.openWorkflows?.find((workflow) => workflow.issue === requested.issue && workflow.plan === requested.plan && workflow.work_branch === requested.work_branch);
 				if (!existing && input.phase !== "scope") throw new Error("Only SCOPE can establish a new workflow.");
-				const identity = ["--session", ctx.sessionManager.getSessionId(), "--issue", requested.issue, "--plan", requested.plan, "--work-branch", requested.work_branch, "--default-branch", existing?.default_branch ?? requested.default_branch];
+				// Record this Pi process with the claim, so a session that exits
+				// without pausing leaves a decidably abandoned claim rather than one
+				// that blocks the checkout forever.
+				const identity = ["--session", ctx.sessionManager.getSessionId(), "--issue", requested.issue, "--plan", requested.plan, "--work-branch", requested.work_branch, "--default-branch", existing?.default_branch ?? requested.default_branch, "--owner-pid", String(process.pid)];
 				try {
 					await runSuperdev(["workflow", existing ? "resume" : "start", ...identity], ctx.cwd, authority);
 					status = await workflowStatus(ctx.cwd);

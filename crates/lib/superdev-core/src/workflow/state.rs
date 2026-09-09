@@ -94,7 +94,11 @@ pub struct WorkflowCache {
     /// The capability itself is never persisted; only this one-way digest is exposed.
     #[serde(default)]
     pub authority_digest: String,
-    /// Owning Pi process ID while an isolated child is active.
+    /// Owning Pi process ID, recorded whenever the owner supplies one.
+    ///
+    /// An owner that records no process is unfalsifiable, so its claim is
+    /// never reclaimed. Recording this at acquisition, rather than only while
+    /// an isolated child runs, is what makes an abandoned claim decidable.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub owner_pid: Option<u32>,
     /// OS-specific owning Pi process start identity, guarding PID reuse.

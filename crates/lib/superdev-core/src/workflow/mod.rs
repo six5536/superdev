@@ -6,6 +6,7 @@
 pub mod abandonment;
 pub mod cache;
 pub mod git;
+pub mod process;
 mod state;
 mod transition;
 

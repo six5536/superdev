@@ -21,7 +21,27 @@ pub fn run(command: &WorkflowCommand, root: &Path) -> Result<u8> {
         }
         WorkflowCommand::Resume(args) => resume(&root, &resolved_identity(&root, args)?),
         WorkflowCommand::Status { json: _ } => {
+            // A claim whose owner no longer runs is reported as unowned, so
+            // every consumer observes one answer and none re-derives liveness.
+            // The claim itself is reported separately, because recovering it
+            // may still require terminating a child its owner left behind.
+            let mut abandoned_owner = None;
             let owner = match cache::try_load(&root)? {
+                cache::CacheSnapshot::Owned(owner) if cache::abandoned(&owner) => {
+                    // Whether the orphaned child still runs is decided here for
+                    // the same reason its parent's liveness is: one component
+                    // owns process identity, so no adapter re-derives it.
+                    let child_running =
+                        process::liveness(owner.child_pid, owner.child_started.as_deref())
+                            == process::Liveness::Live;
+                    let mut report =
+                        serde_json::to_value(&*owner).map_err(|error| Error::Manifest {
+                            message: format!("workflow ownership did not serialize: {error}"),
+                        })?;
+                    report["child_running"] = serde_json::Value::Bool(child_running);
+                    abandoned_owner = Some(report);
+                    None
+                }
                 cache::CacheSnapshot::Owned(owner) => Some(*owner),
                 cache::CacheSnapshot::Unowned => None,
                 cache::CacheSnapshot::Busy => {
@@ -35,6 +55,7 @@ pub fn run(command: &WorkflowCommand, root: &Path) -> Result<u8> {
                         &serde_json::json!({
                             "busy": true,
                             "owner": null,
+                            "abandonedOwner": null,
                             "phase": null,
                             "canonicalPlanRevision": null,
                             "maxFinalCorrectionCycles": workflow_config.max_final_correction_cycles,
@@ -73,6 +94,7 @@ pub fn run(command: &WorkflowCommand, root: &Path) -> Result<u8> {
                 "status",
                 &serde_json::json!({
                     "owner": owner,
+                    "abandonedOwner": abandoned_owner,
                     "defaultBranch": git::default_branch(&root, None)?,
                     "defaultRevision": git::revision(&root, &git::default_branch(&root, None)?)?,
                     "phase": phase,
@@ -94,36 +116,40 @@ pub fn run(command: &WorkflowCommand, root: &Path) -> Result<u8> {
             )
         }
         WorkflowCommand::ActivityStart(args) => {
+            // Start identities are derived here rather than supplied, so one
+            // component owns their format. A caller-supplied identity computed
+            // by a second implementation could disagree with the liveness check
+            // that later reads it, and a live owner judged dead would let two
+            // sessions own one checkout.
+            let (owner_pid, owner_started) = process::record(Some(args.owner_pid));
+            let (child_pid, child_started) = process::record(Some(args.child_pid));
             if !matches!(
                 args.role.as_str(),
                 "scope" | "requirements-review" | "build" | "code-review" | "accept"
-            ) || args.owner_pid == 0
-                || args.child_pid == 0
-                || args.owner_started.trim().is_empty()
-                || args.child_started.trim().is_empty()
+            ) || owner_pid.is_none()
+                || child_pid.is_none()
             {
                 return Err(Error::Manifest {
-                    message:
-                        "workflow activity requires a known role and complete process identity"
-                            .into(),
+                    message: "workflow activity requires a known role and two process IDs".into(),
                 });
             }
             let state =
                 cache::compare_and_swap(&root, &args.session, &args.expected_revision, |state| {
-                    state.owner_pid = Some(args.owner_pid);
-                    state.owner_started = Some(args.owner_started.clone());
+                    state.owner_pid = owner_pid;
+                    state.owner_started = owner_started;
                     state.child_role = Some(args.role.clone());
-                    state.child_pid = Some(args.child_pid);
-                    state.child_started = Some(args.child_started.clone());
+                    state.child_pid = child_pid;
+                    state.child_started = child_started;
                     state.cancelled = false;
                 })?;
             emit("activity-start", &serde_json::json!({ "state": state }))
         }
         WorkflowCommand::ActivityFinish(args) => {
+            // Only the child ends here. The owner outlives its children, so
+            // clearing its recorded process would make the still-live owner
+            // unfalsifiable and its claim unreclaimable once it does exit.
             let state =
                 cache::compare_and_swap(&root, &args.session, &args.expected_revision, |state| {
-                    state.owner_pid = None;
-                    state.owner_started = None;
                     state.child_role = None;
                     state.child_pid = None;
                     state.child_started = None;
@@ -131,7 +157,16 @@ pub fn run(command: &WorkflowCommand, root: &Path) -> Result<u8> {
             emit("activity-finish", &serde_json::json!({ "state": state }))
         }
         WorkflowCommand::Cancel(args) => {
-            cache::release(&root, &args.session)?;
+            // A claim recording no process is unfalsifiable, so no session can
+            // prove it abandoned and none can release it. A human is then the
+            // only remaining judge, and their decision arrives through the
+            // interactive UI's capability rather than through a bare flag.
+            if args.human_release {
+                ui_authority_capability()?;
+                cache::release_any(&root)?;
+            } else {
+                cache::release(&root, &args.session)?;
+            }
             emit(
                 "cancel",
                 &serde_json::json!({"phaseChanged": false, "ownershipReleased": true}),

@@ -11,6 +11,7 @@ use cap_std::fs::{Dir, OpenOptions};
 use fs2::FileExt;
 use sha2::{Digest, Sha256};
 
+use super::process::{Liveness, liveness};
 use super::{WORKFLOW_CACHE_PATH, WorkflowCache};
 use crate::error::{Error, Result};
 
@@ -146,7 +147,7 @@ impl Transaction<'_> {
 
     /// Release matching ownership while retaining the transaction lock.
     pub fn release(&mut self, session: &str) -> Result<()> {
-        release_unlocked(self.root, self.files, session)
+        release_unlocked(self.root, self.files, Some(session))
     }
 }
 
@@ -168,6 +169,21 @@ pub enum CacheSnapshot {
     Unowned,
     /// Another workflow transaction currently owns the repository lock.
     Busy,
+}
+
+/// Whether a recorded claim was left behind by a process that no longer runs.
+///
+/// Ownership is transient, so a session that exits without releasing its claim
+/// leaves one behind. Such a claim names no executing owner and must not block
+/// the checkout forever.
+///
+/// This is deliberately narrow. Only a claim whose recorded process is
+/// contradicted by the running system is abandoned; an owner that recorded no
+/// process, or one whose process still runs, is left alone. Reclaiming a claim
+/// that might still be executing would break the single-owner rule, so
+/// uncertainty always favours the incumbent.
+pub fn abandoned(cache: &WorkflowCache) -> bool {
+    liveness(cache.owner_pid, cache.owner_started.as_deref()) == Liveness::Dead
 }
 
 /// Read transient ownership. Absence means unowned, never complete.
@@ -238,10 +254,14 @@ fn bind_unlocked(files: &CacheFiles, cache: &WorkflowCache) -> Result<()> {
                 .into(),
         });
     }
+    // An abandoned claim names no executing owner, so acquiring over it
+    // restores the single-owner rule rather than breaking it. A claim whose
+    // owner still runs, or whose liveness is unknowable, still refuses.
     if let Some(owner) = load_unlocked(files)?
         && (owner.session_id != cache.session_id
             || owner.identity != cache.identity
             || owner.authority_digest != cache.authority_digest)
+        && !abandoned(&owner)
     {
         return Err(Error::Manifest {
             message: format!("workflow is owned by Pi session `{}`", owner.session_id),
@@ -288,14 +308,33 @@ fn compare_and_swap_unlocked(
 
 /// Release ownership for the matching session without touching canonical state.
 pub fn release(root: &Path, session: &str) -> Result<()> {
-    locked(root, |files| release_unlocked(root, files, session))
+    locked(root, |files| release_unlocked(root, files, Some(session)))
 }
 
-fn release_unlocked(root: &Path, files: &CacheFiles, session: &str) -> Result<()> {
+/// Release ownership whichever session recorded it.
+///
+/// A claim that records no process is unfalsifiable, so no session can prove it
+/// abandoned and no session can release it. That leaves a human as the only
+/// remaining judge, and this is the path their decision takes.
+///
+/// Releasing ownership is safe to authorize because ownership is transient:
+/// the phase, the plan, and every commit stay in Git, so the workflow is
+/// paused rather than lost.
+pub fn release_any(root: &Path) -> Result<()> {
+    locked(root, |files| release_unlocked(root, files, None))
+}
+
+fn release_unlocked(root: &Path, files: &CacheFiles, session: Option<&str>) -> Result<()> {
     let Some(cache) = load_unlocked(files)? else {
         return Ok(());
     };
-    if cache.session_id != session {
+    // Releasing an abandoned claim is the recovery path for a session that
+    // exited without pausing. Without it, the only session able to release the
+    // claim is the one that no longer exists.
+    if let Some(session) = session
+        && cache.session_id != session
+        && !abandoned(&cache)
+    {
         return Err(Error::Manifest {
             message: format!("workflow is owned by Pi session `{}`", cache.session_id),
         });
@@ -372,6 +411,112 @@ mod tests {
             child_started: None,
             cancelled: false,
         }
+    }
+
+    /// One live process to stand in for an owner that is still running.
+    ///
+    /// Only a platform that exposes process inspection can produce this, so
+    /// every test using it is gated on Unix.
+    #[cfg(unix)]
+    fn live() -> (u32, String) {
+        let pid = std::process::id();
+        (pid, crate::workflow::process::start_identity(pid).unwrap())
+    }
+
+    /// One process that has certainly exited, standing in for a Pi session
+    /// that stopped without pausing its workflow.
+    #[cfg(unix)]
+    fn exited() -> (u32, Option<String>) {
+        let mut child = std::process::Command::new("true").spawn().unwrap();
+        let pid = child.id();
+        let started = crate::workflow::process::start_identity(pid);
+        // A zombie keeps its entry until reaped, so the claim only becomes
+        // decidably abandoned after the wait.
+        child.wait().unwrap();
+        (pid, started)
+    }
+
+    #[test]
+    fn a_claim_recording_no_process_is_never_treated_as_abandoned() {
+        // Uncertainty favours the incumbent, so an unfalsifiable claim keeps
+        // the checkout and only a human can release it.
+        assert!(!abandoned(&state("a")));
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn a_live_owner_keeps_its_claim_against_another_session() {
+        let root = tempfile::tempdir().unwrap();
+        let (pid, started) = live();
+        let mut owner = state("a");
+        owner.owner_pid = Some(pid);
+        owner.owner_started = Some(started);
+        bind(root.path(), &owner).unwrap();
+        assert!(!abandoned(&owner));
+
+        let mut intruder = state("b");
+        intruder.owner_pid = owner.owner_pid;
+        intruder.owner_started.clone_from(&owner.owner_started);
+        assert!(bind(root.path(), &intruder).is_err());
+        assert!(release(root.path(), "b").is_err());
+        assert_eq!(load(root.path()).unwrap().unwrap().session_id, "a");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn a_claim_whose_owner_exited_is_reclaimed_by_the_next_session() {
+        let root = tempfile::tempdir().unwrap();
+        let (pid, started) = exited();
+        let mut owner = state("gone");
+        owner.owner_pid = Some(pid);
+        owner.owner_started = started;
+        bind(root.path(), &owner).unwrap();
+
+        assert!(abandoned(&load(root.path()).unwrap().unwrap()));
+        // The successor acquires without any manual deletion, and the identity
+        // it records is its own.
+        bind(root.path(), &state("next")).unwrap();
+        assert_eq!(load(root.path()).unwrap().unwrap().session_id, "next");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn an_abandoned_claim_releases_through_cancel_from_any_session() {
+        let root = tempfile::tempdir().unwrap();
+        let (pid, started) = exited();
+        let mut owner = state("gone");
+        owner.owner_pid = Some(pid);
+        owner.owner_started = started;
+        bind(root.path(), &owner).unwrap();
+
+        release(root.path(), "a-different-session").unwrap();
+        assert!(load(root.path()).unwrap().is_none());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn a_human_releases_a_claim_that_cannot_be_proven_abandoned() {
+        let root = tempfile::tempdir().unwrap();
+        let (pid, started) = live();
+        let mut owner = state("a");
+        owner.owner_pid = Some(pid);
+        owner.owner_started = Some(started);
+        bind(root.path(), &owner).unwrap();
+
+        // The session check refuses, because the owner is provably running.
+        assert!(release(root.path(), "b").is_err());
+        // The human path is the last resort and pauses rather than destroys:
+        // only the transient claim is removed.
+        release_any(root.path()).unwrap();
+        assert!(load(root.path()).unwrap().is_none());
+    }
+
+    #[test]
+    fn releasing_an_unowned_workflow_succeeds_without_a_claim_to_remove() {
+        let root = tempfile::tempdir().unwrap();
+        release_any(root.path()).unwrap();
+        release(root.path(), "a").unwrap();
+        assert!(load(root.path()).unwrap().is_none());
     }
 
     #[test]

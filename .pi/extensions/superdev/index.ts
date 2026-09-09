@@ -221,6 +221,20 @@ export default function superdev(pi: ExtensionAPI) {
 
 	type WorkflowStatus = {
 		busy?: boolean;
+		/**
+		 * A claim whose owning process no longer runs. The service reports it
+		 * separately from `owner`, which stays absent, so a workflow is never
+		 * blocked by a session that has exited. Recovering it may still require
+		 * terminating a child the dead owner left behind.
+		 */
+		abandonedOwner?: {
+			session_id: string;
+			last_plan_revision: string;
+			child_pid?: number;
+			/** Whether the orphaned child still runs, as decided by the service. */
+			child_running?: boolean;
+			identity: { issue: string; plan: string; work_branch: string; default_branch: string };
+		} | null;
 		owner?: {
 			session_id: string;
 			last_plan_revision: string;
@@ -301,6 +315,7 @@ export default function superdev(pi: ExtensionAPI) {
 				"workflow", "resume", "--session", ctx.sessionManager.getSessionId(),
 				"--issue", workflow.issue, "--plan", workflow.plan,
 				"--work-branch", workflow.work_branch, "--default-branch", workflow.default_branch,
+				"--owner-pid", String(process.pid),
 			], ctx.cwd, authority);
 		},
 		onSubmit: async (state, ctx) => {
@@ -310,25 +325,15 @@ export default function superdev(pi: ExtensionAPI) {
 			await phaseContinuations.continueScopeFromAnswers(state, ctx);
 		},
 	});
-	const processStartIdentity = async (pid: number): Promise<string> => {
-		if (process.platform !== "linux") return String(pid);
-		const fields = (await readFile(`/proc/${pid}/stat`, "utf8")).trim().split(" ");
-		return fields[21] ?? `${pid}:unknown`;
-	};
-	const processMatches = async (pid: number | undefined, started: string | undefined): Promise<boolean> => {
-		if (!pid || !started) return false;
-		try {
-			if (process.platform !== "linux") { process.kill(pid, 0); return started === String(pid); }
-			return await processStartIdentity(pid) === started;
-		} catch { return false; }
-	};
+	// Process start identity is derived by the service alone. A second
+	// implementation here could disagree with the liveness check that reads it,
+	// and a live owner judged dead would let two sessions own one checkout.
 	const recordChildStart = async (cwd: string, status: WorkflowStatus, role: Role, child: ChildProcess) => {
 		if (!status.owner || !child.pid) return;
 		await runSuperdev([
 			"workflow", "activity-start", "--session", status.owner.session_id,
 			"--expected-revision", status.owner.last_plan_revision, "--role", role,
-			"--owner-pid", String(process.pid), "--owner-started", await processStartIdentity(process.pid),
-			"--child-pid", String(child.pid), "--child-started", await processStartIdentity(child.pid),
+			"--owner-pid", String(process.pid), "--child-pid", String(child.pid),
 		], cwd, authority);
 	};
 	const recordChildFinish = async (cwd: string, expectedPid: number | undefined) => {
@@ -378,13 +383,17 @@ export default function superdev(pi: ExtensionAPI) {
 	pi.on("session_before_fork", async (_event, ctx) => protectOwnedWorkflow(ctx));
 	pi.on("session_start", async (_event, ctx) => {
 		const status = await workflowStatus(ctx.cwd);
-		if (status.owner?.child_pid && !(await processMatches(status.owner.owner_pid, status.owner.owner_started))) {
-			if (await processMatches(status.owner.child_pid, status.owner.child_started)) killProcessTree(status.owner.child_pid);
-			await runSuperdev(["workflow", "activity-finish", "--session", status.owner.session_id, "--expected-revision", status.owner.last_plan_revision], ctx.cwd, authority);
-			await runSuperdev(["workflow", "cancel", "--session", status.owner.session_id], ctx.cwd, authority);
-			ctx.ui.notify("Recovered an orphaned isolated role. Partial work was preserved; resume explicitly when ready.", "warning");
-			status.owner = undefined;
-			status.phase = undefined;
+		// The service decides abandonment, so recovery runs for every claim whose
+		// owner has exited, whether or not it left a child behind. Releasing the
+		// claim here keeps the checkout resumable; the workflow itself is durable
+		// in Git and is never abandoned by this path.
+		if (status.abandonedOwner) {
+			const abandoned = status.abandonedOwner;
+			if (abandoned.child_running && abandoned.child_pid) killProcessTree(abandoned.child_pid);
+			if (abandoned.child_pid) await runSuperdev(["workflow", "activity-finish", "--session", abandoned.session_id, "--expected-revision", abandoned.last_plan_revision], ctx.cwd, authority);
+			await runSuperdev(["workflow", "cancel", "--session", abandoned.session_id], ctx.cwd, authority);
+			ctx.ui.notify(`Released ${abandoned.identity.plan} from a Pi session that exited without pausing. Partial work was preserved; resume when ready.`, "warning");
+			status.abandonedOwner = null;
 		}
 		const internalTools = new Set(["superdev_workflow_control", "superdev_workflow_questions"]);
 		pi.setActiveTools(pi.getActiveTools().filter((tool: string) => !internalTools.has(tool)));
@@ -491,6 +500,7 @@ export default function superdev(pi: ExtensionAPI) {
 				"workflow", "resume", "--session", ctx.sessionManager.getSessionId(),
 				"--issue", workflow.issue, "--plan", workflow.plan,
 				"--work-branch", workflow.work_branch, "--default-branch", workflow.default_branch,
+				"--owner-pid", String(process.pid),
 			], ctx.cwd, authority);
 			if (questions.current()?.status === "paused") await questions.resume(ctx);
 			const resumed = await workflowStatus(ctx.cwd);
@@ -522,8 +532,16 @@ export default function superdev(pi: ExtensionAPI) {
 			}
 			if (runtime.modifyingBusy) return ctx.ui.notify("Could not safely pause while a modifying command is still shutting down", "error");
 			const session = ctx.sessionManager.getSessionId();
+			const status = await workflowStatus(ctx.cwd);
+			// A claim held by another session releases only on human authority,
+			// because the service could not prove that session stopped. Releasing
+			// pauses the workflow; the phase, plan, and commits stay in Git.
+			const foreign = status.owner && status.owner.session_id !== session;
+			if (foreign && !(await ctx.ui.confirm("Release the other Pi session's claim?", `${status.owner!.identity.plan} is claimed by Pi session ${status.owner!.session_id}, which cannot be proven to be running. Releasing pauses the workflow; no canonical work is lost.`))) return;
 			try {
-				await runSuperdev(["workflow", "cancel", "--session", session], ctx.cwd, authority);
+				await runSuperdev(foreign
+					? ["workflow", "cancel", "--session", status.owner!.session_id, "--human-release"]
+					: ["workflow", "cancel", "--session", session], ctx.cwd, authority);
 				ctx.ui.notify("Workflow paused; canonical phase unchanged", "info");
 			} catch (error) {
 				ctx.ui.notify(String(error), "error");

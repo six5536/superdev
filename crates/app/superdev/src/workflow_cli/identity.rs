@@ -201,16 +201,23 @@ pub(super) fn resume(root: &Path, args: &BindArgs) -> Result<u8> {
     cache::transaction(root, |transaction| {
         let capability = ui_authority_capability()?;
         if let Some(owner) = transaction.load()? {
-            if owner.session_id != args.session
-                || owner.identity.work_branch != args.work_branch
-                || owner.identity.plan != args.plan
+            // A claim left behind by a process that no longer runs blocks
+            // nothing, so resume reclaims it. Its authority belonged to a UI
+            // that is gone, so the incoming session supplies its own.
+            let reclaimable = cache::abandoned(&owner);
+            if !reclaimable
+                && (owner.session_id != args.session
+                    || owner.identity.work_branch != args.work_branch
+                    || owner.identity.plan != args.plan)
             {
                 return Err(Error::Manifest {
                     message: "another workflow owns this checkout; pause it before switching"
                         .into(),
                 });
             }
-            cache::verify_authority(&owner, &capability)?;
+            if !reclaimable {
+                cache::verify_authority(&owner, &capability)?;
+            }
         }
         let text = git::file_at_revision(
             root,
@@ -246,6 +253,10 @@ pub(super) fn bind_with_revision(root: &Path, args: &BindArgs, revision: String)
 
 pub(super) fn workflow_cache(args: &BindArgs, revision: String) -> Result<WorkflowCache> {
     let capability = ui_authority_capability()?;
+    // Record the owning process at acquisition, not only while an isolated
+    // child runs. An owner that records nothing stays unfalsifiable, and its
+    // claim is never reclaimed.
+    let (owner_pid, owner_started) = process::record(args.owner_pid);
     Ok(WorkflowCache {
         version: 1,
         session_id: args.session.clone(),
@@ -257,8 +268,8 @@ pub(super) fn workflow_cache(args: &BindArgs, revision: String) -> Result<Workfl
         },
         last_plan_revision: revision,
         authority_digest: cache::authority_digest(&capability)?,
-        owner_pid: None,
-        owner_started: None,
+        owner_pid,
+        owner_started,
         child_role: None,
         child_pid: None,
         child_started: None,
