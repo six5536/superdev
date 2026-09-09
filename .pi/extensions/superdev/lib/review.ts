@@ -1,4 +1,3 @@
-import { createHash } from "node:crypto";
 import { StringEnum } from "@earendil-works/pi-ai";
 import { Type } from "typebox";
 
@@ -39,9 +38,10 @@ const choiceSchema = Type.Object({
 	label: Type.String(),
 	description: Type.Optional(Type.String()),
 });
-const findingSchema = Type.Object({
-	id: Type.String(),
-	classification: StringEnum(["mechanical", "substantive", "correctable-within-scope", "requires-scope"] as const),
+function findingSchemaFor(role: Role) {
+	return Type.Object({
+	id: Type.String({ description: "Stable ID; other findings reference it through dependsOn" }),
+	classification: StringEnum(classifications[role]),
 	summary: Type.String(),
 	path: Type.Optional(Type.String()),
 	location: Type.Optional(Type.String()),
@@ -51,8 +51,9 @@ const findingSchema = Type.Object({
 	question: Type.Optional(Type.String()),
 	choices: Type.Optional(Type.Array(choiceSchema)),
 	recommendation: Type.Optional(Type.String()),
-	dependsOn: Type.Optional(Type.Array(Type.String())),
-});
+	dependsOn: Type.Optional(Type.Array(Type.String(), { description: "IDs in this same set that must be answered first" })),
+	});
+}
 const checklistSchema = Type.Object({
 	area: StringEnum(["requirements", "contracts", "architecture", "tests", "documentation", "scope", "consistency"] as const),
 	complete: Type.Boolean(),
@@ -65,13 +66,20 @@ export function roleResultSchemaFor(role: Role) {
 		status: StringEnum(allowed[role]),
 		summary: Type.String({ description: "Outcome, completed corrections, and any blocker. Describe resolved findings here, not in findings." }),
 		...(allowed[role].includes("findings") ? {
-			findings: Type.Optional(Type.Array(findingSchema, { description: "Unresolved actionable findings only; nonempty only with status findings. Never list resolved corrections." })),
+			findings: Type.Optional(Type.Array(findingSchemaFor(role), { description: "Unresolved actionable findings only; nonempty only with status findings. Never list resolved corrections." })),
 		} : {}),
 		checklist: Type.Optional(Type.Array(checklistSchema)),
 	}, { additionalProperties: false });
 }
 
-const reviewRoles = new Set<Role>(["requirements-review", "code-review", "accept"]);
+/** Classifications the parent can route for each role; the schema declares them. */
+const classifications: Record<Role, FindingClassification[]> = {
+	scope: ["mechanical", "substantive"],
+	"requirements-review": ["mechanical", "substantive"],
+	build: ["correctable-within-scope", "requires-scope"],
+	"code-review": ["correctable-within-scope", "requires-scope"],
+	accept: ["correctable-within-scope", "requires-scope"],
+};
 const allowed: Record<Role, RoleResult["status"][]> = {
 	scope: ["complete", "blocked"],
 	"requirements-review": ["clean", "findings"],
@@ -80,9 +88,15 @@ const allowed: Record<Role, RoleResult["status"][]> = {
 	accept: ["complete", "findings", "blocked"],
 };
 
+/**
+ * Decode one terminal result. This checks only what the parent must decode or
+ * route: shape, configured bounds, and a traversable finding graph. Judging a
+ * finding's quality or a review's completeness belongs to the role that wrote
+ * it, so neither is grounds for discarding a completed run.
+ */
 export function validateRoleResult(role: Role, value: unknown, limits?: { maxBytes: number; maxFindings: number }): RoleResult {
 	if (!value || typeof value !== "object") throw new Error(`${role} returned an invalid terminal result`);
-	const result = value as RoleResult;
+	let result = value as RoleResult;
 	if (!allowed[role].includes(result.status) || typeof result.summary !== "string" || !result.summary.trim()) {
 		throw new Error(`${role} returned an invalid terminal result`);
 	}
@@ -91,31 +105,24 @@ export function validateRoleResult(role: Role, value: unknown, limits?: { maxByt
 	if (result.findings && limits && result.findings.length > limits.maxFindings) {
 		throw new Error(`${role} returned more than ${limits.maxFindings} findings`);
 	}
-	if (result.status === "findings" && (!Array.isArray(result.findings) || result.findings.length === 0)) {
-		throw new Error(`${role} reported findings without structured findings`);
+	if (result.findings?.length && !allowed[role].includes("findings")) {
+		// The role has no findings channel; its summary carries completed work.
+		const { findings: _unrouted, ...rest } = result;
+		result = rest;
+	} else if (result.findings?.length && result.status !== "findings") {
+		// Route the findings rather than discarding a completed review over a
+		// status the author contradicted.
+		result = { ...result, status: "findings" };
 	}
-	if (result.status !== "findings" && result.findings?.length) {
-		throw new Error(`${role} returned findings with contradictory status ${result.status}`);
+	if (result.status === "findings" && !result.findings?.length) {
+		throw new Error(`${role} reported findings without structured findings`);
 	}
 	if (result.findings) {
 		const ids = new Set<string>();
 		for (const finding of result.findings) {
+			// The question queue is keyed by ID, so duplicates lose a finding.
 			if (!finding.id?.trim() || ids.has(finding.id)) throw new Error(`${role} returned missing or duplicate finding IDs`);
 			ids.add(finding.id);
-			if (!finding.summary?.trim() || !finding.evidence?.trim() || !finding.impact?.trim()) throw new Error(`${role} returned an incomplete finding`);
-			if (role === "requirements-review" && !["mechanical", "substantive"].includes(finding.classification)) {
-				throw new Error("requirements-review finding omitted its mechanical/substantive classification");
-			}
-			if (role === "requirements-review" && finding.classification === "substantive"
-				&& (!finding.question?.trim() || !finding.recommendation?.trim())) {
-				throw new Error("substantive SCOPE finding omitted its user question or recommendation");
-			}
-			if (role === "code-review" && !["correctable-within-scope", "requires-scope"].includes(finding.classification)) {
-				throw new Error("code-review finding omitted its routing classification");
-			}
-			if (role === "accept" && !["correctable-within-scope", "requires-scope"].includes(finding.classification)) {
-				throw new Error("ACCEPT finding omitted its routing classification");
-			}
 		}
 		for (const finding of result.findings) {
 			for (const dependency of finding.dependsOn ?? []) if (!ids.has(dependency) || dependency === finding.id) {
@@ -135,16 +142,6 @@ export function validateRoleResult(role: Role, value: unknown, limits?: { maxByt
 		};
 		for (const id of ids) visit(id);
 	}
-	if (reviewRoles.has(role) && result.status !== "blocked") {
-		const expected = new Set(["requirements", "contracts", "architecture", "tests", "documentation", "scope", "consistency"]);
-		const seen = new Set<string>();
-		for (const item of result.checklist ?? []) {
-			if (!item.complete || !item.evidence?.trim() || seen.has(item.area)) throw new Error(`${role} returned an incomplete or duplicate review checklist`);
-			seen.add(item.area);
-			expected.delete(item.area);
-		}
-		if (expected.size) throw new Error(`${role} omitted review checklist areas: ${[...expected].join(", ")}`);
-	}
 	return result;
 }
 
@@ -161,17 +158,4 @@ export function parseLegacyRoleResult(role: Role, answer: string): RoleResult {
 	}
 }
 
-export function findingFingerprint(finding: ReviewFinding): string {
-	const normalized = [
-		finding.classification,
-		finding.path ?? "",
-		finding.location ?? "",
-		finding.requirement ?? "",
-		finding.summary,
-		finding.impact,
-		finding.question ?? "",
-		JSON.stringify(finding.choices ?? []),
-		JSON.stringify(finding.dependsOn ?? []),
-	].map((part) => part.toLowerCase().replace(/\s+/g, " ").trim()).join("\n");
-	return createHash("sha256").update(normalized).digest("hex");
-}
+

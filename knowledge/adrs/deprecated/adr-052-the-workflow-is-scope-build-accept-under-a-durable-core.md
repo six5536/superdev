@@ -3,7 +3,7 @@ type: Decision
 id: adr-052-the-workflow-is-scope-build-accept-under-a-durable-core
 title: The workflow is SCOPE, BUILD, ACCEPT under a durable core
 description: Superdev's one workflow is SCOPE → BUILD → ACCEPT; plans carry durable progress, the Rust core enforces transitions, Pi orchestrates isolated roles, and project-declared documentation is build evidence.
-lifecycle: active
+lifecycle: deprecated
 links:
   - rel: supersedes
     to: adr-018-loop-in-the-skill-enforcement-in-the-hook

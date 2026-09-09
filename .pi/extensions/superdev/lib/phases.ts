@@ -2,7 +2,7 @@ import { randomBytes } from "node:crypto";
 import { isAbsolute } from "node:path";
 import { boundedText } from "./output.ts";
 import { withProgress } from "./progress.ts";
-import { findingFingerprint, type ReviewFinding } from "./review.ts";
+import type { ReviewFinding } from "./review.ts";
 import type { QuestionState } from "./questions.ts";
 
 export type PhaseRuntime = {
@@ -113,7 +113,7 @@ export function registerPhaseDrivers(deps: any) {
 					firstBase = initial.owner.scope_base_revision;
 				}
 				const task = correction
-					? `Apply this complete SCOPE correction batch for issue ${initial.owner.identity.issue} and plan ${initial.owner.identity.plan}. Mechanical findings: ${JSON.stringify(correction.mechanicalFindings ?? [])}. Confirmed human answers: ${JSON.stringify(correction.answers)}.`
+					? `Apply this complete SCOPE correction batch for issue ${initial.owner.identity.issue} and plan ${initial.owner.identity.plan}. Answered findings: ${JSON.stringify(correction.findings ?? [])}. Confirmed human answers: ${JSON.stringify(correction.answers)}. Remaining mechanical findings: ${JSON.stringify(correction.mechanicalFindings ?? [])}. Resolve every finding in one pass and honour each finding's dependsOn order.`
 					: `Prepare issue ${initial.owner.identity.issue} and plan ${initial.owner.identity.plan} from canonical state.${args ? ` Confirmed intent: ${args}` : ""}`;
 				runtime.currentStage = correction ? "scope batched correction" : "scope authoring";
 				const scoped = await withProgress(ctx, { key: "superdev-workflow", title: `SCOPE ${initial.owner.identity.plan}`, stage: correction ? "batched correction" : "scope authoring" },
@@ -151,33 +151,14 @@ export function registerPhaseDrivers(deps: any) {
 				if (headAfter.code !== 0 || cleanAfter.code !== 0 || cleanAfter.stdout.trim() || headAfter.stdout.trim() !== candidate) {
 					throw new Error("candidate changed during requirements review; result discarded");
 				}
-				const completedCorrection = correction;
 				if (correction) { cycle += 1; correction = undefined; }
 				if (reviewed.status === "findings") {
 					const substantive = (reviewed.findings ?? []).filter((finding) => finding.classification === "substantive");
 					const mechanical = (reviewed.findings ?? []).filter((finding) => finding.classification === "mechanical");
-                    if (substantive.length && mechanical.length && cycle < (status.maxScopeReviewCycles ?? 3)) {
-                        correction = { version: 1, workflow: owner.identity.plan, candidate: status.canonicalPlanRevision,
-                            status: "submitted", findings: [], mechanicalFindings: mechanical, cycle, answers: {} };
-                        continue;
-                    }
 					if (substantive.length) {
-						const reused: QuestionState["answers"] = {};
-						for (const finding of substantive) {
-							const previous = completedCorrection?.findings.find((candidate) => findingFingerprint(candidate) === findingFingerprint(finding));
-							const answer = previous && completedCorrection?.answers[previous.id];
-							if (answer) reused[finding.id] = { ...answer, findingIds: [finding.id] };
-						}
-						if (substantive.every((finding) => reused[finding.id])) {
-							if (cycle >= (status.maxScopeReviewCycles ?? 3)) {
-								questions.begin({ version: 1, workflow: owner.identity.plan, candidate: status.canonicalPlanRevision, status: "active", findings: substantive, mechanicalFindings: mechanical, cycle, answers: reused });
-								ctx.ui.notify(`SCOPE correction limit exhausted: ${reviewed.summary}. Review the preserved answers, then explicitly submit them to authorize one retry cycle or pause for discussion.`, "error");
-								return;
-							}
-							correction = { version: 1, workflow: owner.identity.plan, candidate: status.canonicalPlanRevision, status: "submitted", findings: substantive, mechanicalFindings: mechanical, cycle, answers: reused };
-							continue;
-						}
-						questions.begin({ version: 1, workflow: owner.identity.plan, candidate: status.canonicalPlanRevision, status: "active", findings: substantive, mechanicalFindings: mechanical, cycle, answers: reused });
+						// One substantive finding blocks the whole set, because a mechanical
+						// finding may declare one as a dependency. Ask before correcting anything.
+						questions.begin({ version: 1, workflow: owner.identity.plan, candidate: status.canonicalPlanRevision, status: "active", findings: substantive, mechanicalFindings: mechanical, cycle, answers: {} });
 						ctx.ui.notify(`Requirements review found ${substantive.length} substantive and ${mechanical.length} mechanical findings. Discuss or answer them one at a time.`, "warning");
 						return;
 					}

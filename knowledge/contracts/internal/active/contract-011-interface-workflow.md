@@ -404,4 +404,4 @@ fails explicitly.
 
 <!-- sokf:links -->
 [sokf:adr-042-a-contracts-definition-is-materialized-from-source]: /knowledge/adrs/active/adr-042-a-contracts-definition-is-materialized-from-source.md
-[sokf:adr-052-the-workflow-is-scope-build-accept-under-a-durable-core]: /knowledge/adrs/active/adr-052-the-workflow-is-scope-build-accept-under-a-durable-core.md
+[sokf:adr-052-the-workflow-is-scope-build-accept-under-a-durable-core]: /knowledge/adrs/deprecated/adr-052-the-workflow-is-scope-build-accept-under-a-durable-core.md

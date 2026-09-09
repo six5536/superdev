@@ -12,7 +12,7 @@ import { pinService } from "../../../.pi/extensions/superdev/lib/service-pin.ts"
 import { registerIntakeTools } from "../../../.pi/extensions/superdev/lib/intake.ts";
 import { withProgress } from "../../../.pi/extensions/superdev/lib/progress.ts";
 import { registerWorkflowQuestions } from "../../../.pi/extensions/superdev/lib/questions.ts";
-import { findingFingerprint, roleResultSchemaFor, roles, validateRoleResult, type ReviewFinding } from "../../../.pi/extensions/superdev/lib/review.ts";
+import { roleResultSchemaFor, roles, validateRoleResult, type ReviewFinding } from "../../../.pi/extensions/superdev/lib/review.ts";
 
 async function smoke() {
 	if (process.platform === "linux") {
@@ -134,8 +134,8 @@ async function smoke() {
 		const submit = childTools.get("superdev_submit_result");
 		if (submit.parameters.properties.findings || submit.parameters.properties.status.enum.join(",") !== "complete,blocked") throw new Error("SCOPE submission schema invites reviewer findings or invalid statuses");
 		try {
-			await submit.execute("rejected", { status: "complete", summary: "Resolved correction", findings: [{ id: "resolved" }] });
-			throw new Error("contradictory SCOPE result was accepted");
+			await submit.execute("rejected", { status: "complete", summary: "   " });
+			throw new Error("an undecodable SCOPE result was accepted");
 		} catch (error) {
 			if (!String(error).includes("No result was accepted") || !String(error).includes("submit again")) throw error;
 		}
@@ -148,7 +148,7 @@ async function smoke() {
 		await end("error");
 		if (repairs.length) throw new Error("terminal repair continued cancellation or provider failure");
 		await end("stop");
-		if (repairs.length !== 1 || childActiveTools.join(",") !== "superdev_submit_result" || repairs[0].options.deliverAs !== "followUp" || !repairs[0].message.content.includes("contradictory status complete")) throw new Error("stopped child did not receive one terminal-only repair with its rejection");
+		if (repairs.length !== 1 || childActiveTools.join(",") !== "superdev_submit_result" || repairs[0].options.deliverAs !== "followUp" || !repairs[0].message.content.includes("invalid terminal result")) throw new Error("stopped child did not receive one terminal-only repair with its rejection");
 		await end("stop");
 		if (repairs.length !== 1) throw new Error("terminal repair loop is unbounded");
 		for (const toolName of ["read", "edit", "superdev_run_phase"]) {
@@ -241,14 +241,25 @@ async function smoke() {
 		if (!String(error).includes("more than 1")) throw error;
 	}
 	const finding: ReviewFinding = { id: "f1", classification: "substantive", summary: "Choose policy", evidence: "Policy is absent", impact: "Behavior is unsettled", question: "Which policy?", recommendation: "Use the safe policy" };
-	if (findingFingerprint(finding) === findingFingerprint({ ...finding, impact: "Different behavior" })) throw new Error("semantic fingerprint ignored impact");
+	// A completed review that contradicted its own status is routed, not discarded.
+	const routed = validateRoleResult("code-review", { status: "clean", summary: "contradiction", findings: [{ ...finding, classification: "correctable-within-scope" }] }, { maxBytes: 100_000, maxFindings: 100 });
+	if (routed.status !== "findings" || routed.findings?.length !== 1) throw new Error("a contradicted status discarded a completed review");
+	// A role without a findings channel reports completed work in its summary alone.
+	const unrouted = validateRoleResult("scope", { status: "complete", summary: "resolved corrections", findings: [{ ...finding }] }, { maxBytes: 100_000, maxFindings: 100 });
+	if (unrouted.status !== "complete" || unrouted.findings) throw new Error("an unroutable finding set was not dropped from a completed result");
+	// Quality and completeness belong to the author; only decodability is enforced.
+	const sparse = validateRoleResult("code-review", { status: "findings", summary: "sparse", findings: [{ id: "only-id", classification: "requires-scope", summary: "", evidence: "", impact: "" }] }, { maxBytes: 100_000, maxFindings: 100 });
+	if (sparse.findings?.length !== 1) throw new Error("an incomplete finding was discarded instead of routed");
+	if (validateRoleResult("code-review", { status: "clean", summary: "no checklist" }, { maxBytes: 100_000, maxFindings: 100 }).status !== "clean") {
+		throw new Error("a clean review required a checklist the parent never reads");
+	}
 	for (const [label, result] of [
-		["contradictory status", { status: "complete", summary: "contradiction", findings: [{ ...finding, classification: "correctable-within-scope" }], checklist }],
+		["duplicate finding IDs", { status: "findings", summary: "duplicate", findings: [{ ...finding, id: "a", classification: "requires-scope" }, { ...finding, id: "a", classification: "requires-scope" }] }],
 		["cyclic dependencies", { status: "findings", summary: "cycle", findings: [
 			{ ...finding, id: "a", classification: "correctable-within-scope", dependsOn: ["b"] },
 			{ ...finding, id: "b", classification: "correctable-within-scope", dependsOn: ["a"] },
-		], checklist }],
-		["duplicate checklist", { status: "clean", summary: "duplicate", checklist: [...checklist, checklist[0]] }],
+		] }],
+		["unknown dependency", { status: "findings", summary: "dangling", findings: [{ ...finding, id: "a", classification: "requires-scope", dependsOn: ["missing"] }] }],
 	] as const) {
 		try {
 			validateRoleResult("code-review", result, { maxBytes: 100_000, maxFindings: 100 });
@@ -410,6 +421,8 @@ async function smoke() {
 	const runtime: PhaseRuntime = { cancelling: false, modifyingBusy: false };
 	let roleFailure: string | undefined;
 	let blockedRole: string | undefined;
+	let reviewFindings: any[] | undefined;
+	const isolatedTasks: Array<{ role: string; task: string }> = [];
 	let cancellableRole: string | undefined;
 	let cancelNextProgress = false;
 	const owner = () => owned ? {
@@ -472,7 +485,8 @@ async function smoke() {
 		authority: "authority",
 		policyFrom: () => ({ timeoutSeconds: 1, maxContextBytes: 8192, maxContextLines: 200, maxReviewStateBytes: 262144, maxReviewFindings: 100, maxArtifactBytes: 10485760, maxArtifacts: 20, retentionHours: 24 }),
 		questions: { begin(state: any) { pendingPhaseQuestions = state; }, current() { return pendingPhaseQuestions; } },
-		isolated: async (role: string, _task: string, _cwd: string, _model: unknown, signal: AbortSignal, _spawn: any, _close: any, _base: any, _candidate: any, executable: any, digest: any) => {
+		isolated: async (role: string, task: string, _cwd: string, _model: unknown, signal: AbortSignal, _spawn: any, _close: any, _base: any, _candidate: any, executable: any, digest: any) => {
+			isolatedTasks.push({ role, task });
             if (role === "build" && (executable !== "/service" || digest !== "digest")) throw new Error("BUILD did not use its invocation-time executable pin");
 			if (roleFailure === role) throw new Error(`${role} timed out after 1s; diagnostics: /tmp/${role}-diagnostic.json`);
 			if (cancellableRole === role) return await new Promise((_resolve, reject) => {
@@ -481,6 +495,7 @@ async function smoke() {
 				else signal.addEventListener("abort", cancelled, { once: true });
 			});
 			if (blockedRole === role) return { status: "blocked", summary: `${role} blocked`, artifactPath: `/tmp/${role}-result.json` };
+			if (role === "requirements-review" && reviewFindings) return { status: "findings", summary: "mixed findings", findings: reviewFindings, checklist };
 			return role === "scope" || role === "build"
 				? { status: "complete", summary: `${role} complete` }
 				: { status: role === "accept" ? "complete" : "clean", summary: `${role} clean`, checklist };
@@ -525,6 +540,29 @@ async function smoke() {
 	await phaseDrivers.runBuildPhase("", phaseCtx);
 	if (pendingPhaseQuestions?.originPhase !== "build" || pendingPhaseQuestions?.candidate !== revision) {
 		throw new Error("exhausted BUILD did not preserve a revision-bound human decision queue");
+	}
+
+	// A mixed requirements review must ask before correcting anything, because a
+	// mechanical finding may declare an unanswered substantive finding as a dependency.
+	owned = true; phase = "scope"; revision = "revision-mixed"; finalCorrections = 0;
+	pendingPhaseQuestions = undefined; runtime.lastOutcome = undefined;
+	reviewFindings = [
+		{ id: "sub-1", classification: "substantive", summary: "Choose the policy", evidence: "absent", impact: "unsettled", question: "Which policy?", recommendation: "The safe one" },
+		{ id: "mech-1", classification: "mechanical", summary: "Update the map", evidence: "absent", impact: "drift", dependsOn: ["sub-1"] },
+	];
+	const tasksBeforeMixed = isolatedTasks.length;
+	await phaseDrivers.runScopePhase("", phaseCtx);
+	if (pendingPhaseQuestions?.findings?.length !== 1 || pendingPhaseQuestions?.mechanicalFindings?.length !== 1) {
+		throw new Error("mixed requirements review did not preserve the complete finding set for one decision batch");
+	}
+	if (isolatedTasks.slice(tasksBeforeMixed).some((entry) => entry.task.includes("correction batch"))) {
+		throw new Error("mixed requirements review corrected a dependent finding before its substantive answer");
+	}
+	reviewFindings = undefined;
+	await phaseDrivers.continueScopeFromAnswers({ ...pendingPhaseQuestions, status: "submitted", answers: { "sub-1": { answer: "Use the safe policy", findingIds: ["sub-1"], confirmedAt: "now" } } }, phaseCtx);
+	const correctionTask = isolatedTasks.findLast((entry) => entry.task.includes("correction batch"))?.task ?? "";
+	for (const required of ["sub-1", "mech-1", "Use the safe policy", "dependsOn"]) {
+		if (!correctionTask.includes(required)) throw new Error(`SCOPE correction batch omitted ${required}`);
 	}
 
     {
