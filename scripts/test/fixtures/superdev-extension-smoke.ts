@@ -88,7 +88,7 @@ async function smoke() {
 	} finally { await rm(skillAgentDir, { recursive: true, force: true }); }
 	for (const role of ["scope", "requirements-review", "build", "code-review", "accept"]) {
 		const prompt = await readFile(join(process.cwd(), ".pi", "extensions", "superdev", "prompts", `${role}.md`), "utf8");
-		if (!prompt.includes("only tool call in the final assistant turn") || !prompt.includes("exactly once")) {
+		if (!prompt.includes("only tool call in a separate tool-call message") || !prompt.includes("exactly once") || !prompt.includes("Invoke the actual tool") || prompt.includes("final assistant turn")) {
 			throw new Error(`${role} prompt does not keep terminal submission separate and singular`);
 		}
 	}
@@ -263,6 +263,24 @@ async function smoke() {
 			}
 			const trace = await readFile(diagnostic.events.path, "utf8");
 			if (!trace.includes('"toolName":"superdev_submit_result"')) throw new Error("raw isolated trace omitted terminal events");
+		}
+		for (const text of ["to=functions.superdev_submit_result ... wait tool target commentary not final?", "界".repeat(10_000)]) {
+			await writeFile(fakePi, `#!/usr/bin/env node\nif (${text.length < 100}) { for (let i = 0; i < 3000; i++) console.log(JSON.stringify({type:"padding",text:"x".repeat(4096)})); }\nconsole.log(JSON.stringify({type:"message_end",message:{role:"assistant",stopReason:"stop",provider:"test-provider",model:"test-model",content:[{type:"text",text:${JSON.stringify(text)}},{type:"thinking",thinking:"private reasoning"}]}}));\n`);
+			try {
+				await isolated("scope", "exercise prose-only submission", process.cwd());
+				throw new Error("prose-only submission was accepted");
+			} catch (error) {
+				const match = String(error).match(/diagnostics: (\/[^\s]+)/);
+				if (!match) throw error;
+				const diagnostic = JSON.parse(await readFile(match[1], "utf8"));
+				const last = diagnostic.lastAssistant;
+				if (diagnostic.outcome !== "terminal-protocol-failure" || diagnostic.submission.starts !== 0 || last.toolCallCount !== 0 || last.textBytes !== Buffer.byteLength(text)) throw new Error("prose-only diagnostics omitted terminal evidence");
+				if (last.model !== "test-model" || last.provider !== "test-provider" || !diagnostic.launch.tools.includes("superdev_submit_result") || !/^[a-f0-9]{64}$/.test(diagnostic.launch.promptSha256)) throw new Error("diagnostics omitted launch/model identity");
+				if (text.length < 100 && (last.text !== text || diagnostic.events.discardedBytes === 0)) throw new Error("diagnostics lost the simulated invocation after raw trace truncation");
+				if (Buffer.byteLength(last.text) > 2_300 || JSON.stringify(diagnostic).includes("private reasoning")) throw new Error("assistant diagnostic was unbounded or leaked reasoning");
+				if (!diagnostic.terminalTimeline.some((event: any) => event.type === "assistant-end")) throw new Error("timeline omitted assistant completion");
+				await rm(dirname(match[1]), { recursive: true, force: true });
+			}
 		}
 		await writeFile(fakePi, `#!/usr/bin/env node\nconst result={status:"complete",summary:"accepted once"};\nconsole.log(JSON.stringify({type:"turn_start"}));\nconsole.log(JSON.stringify({type:"tool_execution_start",toolName:"superdev_submit_result",args:result}));\nconsole.log(JSON.stringify({type:"tool_execution_end",toolName:"superdev_submit_result",isError:false,result:{details:{superdevResult:result}}}));\nconsole.log(JSON.stringify({type:"tool_execution_start",toolName:"superdev_submit_result",args:result}));\nconsole.log(JSON.stringify({type:"tool_execution_end",toolName:"superdev_submit_result",isError:false,result:{details:{superdevDuplicate:true}}}));\n`, { mode: 0o700 });
 		const accepted = await isolated("scope", "exercise duplicate suppression", process.cwd());

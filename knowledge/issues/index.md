@@ -75,6 +75,8 @@ places it.
 
 ## The workflow
 
+* [Workflow progress repeats the plan and stage][sokf:issue-078-workflow-progress-repeats-plan-and-stage] - superdev_run_phase displays the same SCOPE plan title and requirements-review stage in both its progress panel and status line, duplicating information during an active review.
+
 * [The workflow cannot deliver a feature unattended][sokf:issue-024-the-workflow-cannot-run-unattended] - every phase boundary stops and waits for the user, no feature gets a branch of its own, a plan models no slice dependencies, and integrate leaves its record edits uncommitted.
 
 * [Run the next real feature through /execute-feature-plan and record the outcome][sokf:issue-026-rehearse-the-driver-on-a-real-feature] - the loop's machinery is tested and was rehearsed with shell steps, but the driver's prose — slice picking, the retry bound, deferral, the end-of-run queue — has not driven a real multi-slice plan; the next feature is the rehearsal.
@@ -192,3 +194,4 @@ places it.
 [sokf:issue-075-historical-flatten-crate-api]: /knowledge/issues/open/issue-075-historical-flatten-crate-api.md
 [sokf:issue-076-historical-content-packs]: /knowledge/issues/done/issue-076-historical-content-packs.md
 [sokf:issue-077-sokf-file-tool-parity]: /knowledge/issues/open/issue-077-sokf-file-tool-parity.md
+[sokf:issue-078-workflow-progress-repeats-plan-and-stage]: /knowledge/issues/open/issue-078-workflow-progress-repeats-plan-and-stage.md
