@@ -38,6 +38,8 @@ places it.
 
 ## The authoring format
 
+* [SOKF-routed file tools diverge from Pi's built-in contracts][sokf:issue-077-sokf-file-tool-parity] - SOKF-routed read, edit, and write return different source, result, error, diff, rendering, and prompt behaviour from Pi's built-in file tools, making targeted knowledge edits fragile and expensive in model context.
+
 * [The format the agent must write in has no document, and the renderer that would produce one has no consumer][sokf:issue-017-the-format-has-no-agent-facing-document] - every skill and schema is written in superdev-format, and the only statement of it is a 700-line grammar file the agent is never pointed at; the doc renderer ported for exactly this now exists in the binary with nothing calling it but a flag nobody runs.
 
 ## The schema layer
@@ -189,3 +191,4 @@ places it.
 [sokf:issue-074-historical-persistent-mcp-transport-for-pi-sokf]: /knowledge/issues/done/issue-074-historical-persistent-mcp-transport-for-pi-sokf.md
 [sokf:issue-075-historical-flatten-crate-api]: /knowledge/issues/open/issue-075-historical-flatten-crate-api.md
 [sokf:issue-076-historical-content-packs]: /knowledge/issues/done/issue-076-historical-content-packs.md
+[sokf:issue-077-sokf-file-tool-parity]: /knowledge/issues/open/issue-077-sokf-file-tool-parity.md

@@ -1,10 +1,9 @@
 //! Human-confirmed issue/idea filing on the local default branch.
 
-use std::fs::{self, OpenOptions};
+use std::fs;
 use std::path::Path;
 use std::process::{Command, Output};
 
-use fs2::FileExt;
 use serde::{Deserialize, Serialize};
 
 use super::git;
@@ -22,11 +21,35 @@ pub enum FilingKind {
     Idea,
 }
 
+/// Issue category, independent of the issue/idea record kind.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum IssueKind {
+    /// A defect in existing behavior.
+    Bug,
+    /// A new user-visible capability.
+    Feature,
+    /// Maintenance without a new user capability.
+    Chore,
+}
+
+impl IssueKind {
+    fn text(self) -> &'static str {
+        match self {
+            Self::Bug => "bug",
+            Self::Feature => "feature",
+            Self::Chore => "chore",
+        }
+    }
+}
+
 /// One confirmed filing request.
 #[derive(Debug, Clone)]
 pub struct FilingRequest {
     /// Record kind.
     pub kind: FilingKind,
+    /// Category of a new issue.
+    pub issue_kind: IssueKind,
     /// Human title, preserved in frontmatter and the heading.
     pub title: String,
     /// Human description, preserved as the record body.
@@ -68,16 +91,10 @@ fn file_locked(
 ) -> Result<FilingResult> {
     let default_tip = git::revision(root, &request.default_branch)?;
     let current = git::current_branch(root)?;
-    if current == request.default_branch {
-        git::require_clean(root)?;
-    } else if branch_checked_out_elsewhere(root, &request.default_branch)? {
-        return Err(Error::Manifest {
-            message: format!(
-                "default branch `{}` is checked out in another worktree",
-                request.default_branch
-            ),
-        });
+    if current != request.default_branch {
+        return Err(Error::Manifest { message: "issue creation requires the checked-out default branch; pause work and switch explicitly".into() });
     }
+    git::require_clean(root)?;
 
     let worktree = root
         .join(".superdev/cache")
@@ -97,7 +114,13 @@ fn file_locked(
             &default_tip,
         ],
     )?;
-    let result = prepare_commit(&worktree, request.kind, title, description);
+    let result = prepare_commit(
+        &worktree,
+        request.kind,
+        request.issue_kind,
+        title,
+        description,
+    );
     let cleanup = run_git(
         root,
         &["worktree", "remove", "--force", worktree.to_str().unwrap()],
@@ -110,6 +133,12 @@ fn file_locked(
             message: "default branch moved during filing; no ref was advanced".into(),
         });
     }
+    if git::current_branch(root)? != current {
+        return Err(Error::Manifest {
+            message: "checkout changed during filing; no ref was advanced".into(),
+        });
+    }
+    git::require_clean(root)?;
     if current == request.default_branch {
         run_git(root, &["merge", "--ff-only", &prepared.commit])?;
     } else {
@@ -129,12 +158,21 @@ fn file_locked(
 fn prepare_commit(
     worktree: &Path,
     kind: FilingKind,
+    issue_kind: IssueKind,
     title: &str,
     description: &str,
 ) -> Result<FilingResult> {
     reject_duplicate(worktree, title)?;
     let (directory, prefix, heading) = match kind {
-        FilingKind::Issue => ("knowledge/issues/open", "issue", "Feature"),
+        FilingKind::Issue => (
+            "knowledge/issues/open",
+            "issue",
+            match issue_kind {
+                IssueKind::Bug => "Bug",
+                IssueKind::Feature => "Feature",
+                IssueKind::Chore => "Chore",
+            },
+        ),
         FilingKind::Idea => ("knowledge/ideas", "idea", "Idea"),
     };
     let number = next_number(&worktree.join("knowledge"), prefix)?;
@@ -150,7 +188,8 @@ fn prepare_commit(
     let yaml_description = serde_json::to_string(description).expect("description serializes");
     let body = match kind {
         FilingKind::Issue => format!(
-            "---\ntype: Issue\nid: {id}\ntitle: {yaml_title}\ndescription: {yaml_description}\nkind: feature\nlifecycle: open\n---\n\n# {heading}: {}\n\n## Summary\n\n{description}\n\n## Context\n\nFiled from the human request for later SCOPE review.\n\n## Behaviour\n\n{description}\n\n## Comments\n\nCaptured without creating a plan or work branch.\n",
+            "---\ntype: Issue\nid: {id}\ntitle: {yaml_title}\ndescription: {yaml_description}\nkind: {}\nlifecycle: open\n---\n\n# {heading}: {}\n\n## Summary\n\n{description}\n\n## Context\n\nFiled from the human request for later SCOPE review.\n\n## Behaviour\n\n{description}\n\n## Comments\n\nCaptured without creating a plan or work branch.\n",
+            issue_kind.text(),
             title.to_lowercase()
         ),
         FilingKind::Idea => format!(
@@ -217,6 +256,8 @@ fn prepare_commit(
         &[
             "-c",
             "commit.gpgsign=false",
+            "-c",
+            "core.hooksPath=/dev/null",
             "commit",
             "-m",
             &format!("docs: file {id}"),
@@ -236,7 +277,7 @@ pub fn publish_abandonment(
     plan: &str,
 ) -> Result<String> {
     git::validate_ref(default_branch)?;
-    with_lock(root, || {
+    (|| {
         let default_tip = git::revision(root, default_branch)?;
         if branch_checked_out_elsewhere(root, default_branch)? {
             return Err(Error::Manifest {
@@ -288,7 +329,7 @@ pub fn publish_abandonment(
             ],
         )?;
         Ok(commit)
-    })
+    })()
 }
 
 fn prepare_abandonment(source: &Path, worktree: &Path, issue: &str, plan: &str) -> Result<String> {
@@ -459,28 +500,14 @@ fn branch_checked_out_elsewhere(root: &Path, branch: &str) -> Result<bool> {
 }
 
 fn with_lock<T>(root: &Path, operation: impl FnOnce() -> Result<T>) -> Result<T> {
-    let path = root.join(".superdev/cache/filing.lock");
-    fs::create_dir_all(path.parent().unwrap()).map_err(|source| Error::Io {
-        path: path.parent().unwrap().into(),
-        source,
-    })?;
-    let file = OpenOptions::new()
-        .create(true)
-        .truncate(false)
-        .read(true)
-        .write(true)
-        .open(&path)
-        .map_err(|source| Error::Io {
-            path: path.clone(),
-            source,
-        })?;
-    file.lock_exclusive().map_err(|source| Error::Io {
-        path: path.clone(),
-        source,
-    })?;
-    let result = operation();
-    FileExt::unlock(&file).map_err(|source| Error::Io { path, source })?;
-    result
+    super::cache::transaction(root, |transaction| {
+        if transaction.load()?.is_some() {
+            return Err(Error::Manifest {
+                message: "pause the active workflow before creating another issue".into(),
+            });
+        }
+        operation()
+    })
 }
 
 fn run_git(root: &Path, args: &[&str]) -> Result<Output> {

@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 /// Version returned by every workflow adapter response.
-pub const WORKFLOW_PROTOCOL: &str = "superdev-workflow/v1";
+pub const WORKFLOW_PROTOCOL: &str = "superdev-workflow/v2";
 /// Transient, gitignored session ownership. Canonical progress remains in the plan.
 pub const WORKFLOW_CACHE_PATH: &str = ".superdev/cache/workflow.toml";
 
@@ -32,6 +32,8 @@ pub enum Transition {
     RecordBuildProgress,
     /// Return a human rejection to SCOPE as a discovery.
     RejectAcceptance,
+    /// Return ACCEPT findings that preserve approved intent to BUILD.
+    ReturnToBuild,
     /// Accept the immutable candidate under project policy.
     Accept,
     /// Reopen a prepared closure when the default branch became stale.
@@ -102,6 +104,12 @@ pub struct WorkflowCache {
     /// Default-branch tip incorporated before candidate verification.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub verified_default_revision: Option<String>,
+    /// Owning Pi process ID while an isolated child is active.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub owner_pid: Option<u32>,
+    /// OS-specific owning Pi process start identity, guarding PID reuse.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub owner_started: Option<String>,
     /// Active isolated child role, when one exists.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub child_role: Option<String>,

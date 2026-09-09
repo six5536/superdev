@@ -1,10 +1,18 @@
 //! Shell-free Git operations and invariants used by workflow transitions.
 
+use std::collections::BTreeSet;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output, Stdio};
 
 use crate::error::{Error, Result};
+
+mod identity;
+mod integration;
+pub use identity::{
+    default_branch, local_branches, paths_at_revision, require_unique_record_number,
+};
+pub use integration::integrate_no_ff;
 
 /// Fixed service-owned subject for immutable SCOPE proposal checkpoints.
 pub const SCOPE_CHECKPOINT_MESSAGE: &str = "docs(workflow): checkpoint scope proposal";
@@ -246,17 +254,23 @@ fn git_with_index(root: &Path, index: &Path, args: &[&str]) -> Result<Output> {
     }
 }
 
-/// Commit only canonical knowledge changes produced after a clean-tree preflight.
-pub fn commit_knowledge_changes(root: &Path, message: &str) -> Result<String> {
-    let paths = worktree_paths(root)?;
-    if paths
+/// Require every current worktree change to remain in canonical knowledge.
+pub fn require_knowledge_only_worktree(root: &Path) -> Result<()> {
+    if worktree_paths(root)?
         .iter()
         .any(|path| !valid_path(path) || !path.starts_with("knowledge/"))
     {
         return Err(Error::Manifest {
-            message: "workflow commit refused changes outside canonical knowledge".into(),
+            message: "SCOPE attempt requires only canonical knowledge worktree changes".into(),
         });
     }
+    Ok(())
+}
+
+/// Commit only canonical knowledge changes produced after a clean-tree preflight.
+pub fn commit_knowledge_changes(root: &Path, message: &str) -> Result<String> {
+    require_knowledge_only_worktree(root)?;
+    let paths = worktree_paths(root)?;
     commit_paths(root, message, &paths, None)
 }
 
@@ -312,11 +326,45 @@ pub fn validate_block_paths(root: &Path, allowed_areas: &[String]) -> Result<()>
     Ok(())
 }
 
+/// Return whether a validated local work branch exists.
+pub fn local_work_branch_exists(root: &Path, branch: &str) -> Result<bool> {
+    validate_work_branch(branch)?;
+    let reference = format!("refs/heads/{branch}");
+    let output = Command::new("git")
+        .args(["show-ref", "--verify", "--quiet", &reference])
+        .current_dir(root)
+        .output()
+        .map_err(|source| Error::Command {
+            command: format!("git show-ref --verify --quiet {reference}"),
+            status: None,
+            stderr: source.to_string(),
+        })?;
+    match output.status.code() {
+        Some(0) => Ok(true),
+        Some(1) => Ok(false),
+        status => Err(Error::Command {
+            command: format!("git show-ref --verify --quiet {reference}"),
+            status,
+            stderr: String::from_utf8_lossy(&output.stderr)
+                .chars()
+                .take(8_000)
+                .collect(),
+        }),
+    }
+}
+
 /// Create and check out a validated work branch from the current revision.
 pub fn create_work_branch(root: &Path, branch: &str) -> Result<()> {
     validate_work_branch(branch)?;
     require_clean(root)?;
     git(root, &["switch", "-c", branch]).map(|_| ())
+}
+
+/// Check out an existing validated work branch without carrying local changes.
+pub fn checkout_work_branch(root: &Path, branch: &str) -> Result<()> {
+    validate_work_branch(branch)?;
+    require_clean(root)?;
+    git(root, &["switch", branch]).map(|_| ())
 }
 
 /// Return whether `ancestor` is reachable from `descendant`.
@@ -353,6 +401,25 @@ pub fn merge_base(root: &Path, left: &str, right: &str) -> Result<String> {
     Ok(revision)
 }
 
+/// Return every tracked or untracked working-tree path without invoking a shell.
+pub fn working_paths(root: &Path) -> Result<Vec<String>> {
+    let mut paths = BTreeSet::new();
+    for args in [
+        ["diff", "--name-only", "--"].as_slice(),
+        ["diff", "--cached", "--name-only", "--"].as_slice(),
+        ["ls-files", "--others", "--exclude-standard"].as_slice(),
+    ] {
+        let output = git(root, args)?;
+        paths.extend(
+            String::from_utf8_lossy(&output.stdout)
+                .lines()
+                .filter(|path| !path.is_empty())
+                .map(str::to_string),
+        );
+    }
+    Ok(paths.into_iter().collect())
+}
+
 /// Paths changed between two revisions, without invoking a shell.
 pub fn changed_paths(root: &Path, from: &str, to: &str) -> Result<Vec<String>> {
     validate_ref(from)?;
@@ -382,7 +449,9 @@ pub fn scope_base_from_history(root: &Path, work_branch: &str, plan_path: &Path)
         let subject = String::from_utf8_lossy(&subject.stdout);
         if !matches!(
             subject.trim(),
-            "chore(workflow): start scope" | "chore(workflow): return to scope"
+            "chore(workflow): start scope"
+                | "chore(workflow): return to scope"
+                | SCOPE_CHECKPOINT_MESSAGE
         ) {
             continue;
         }
@@ -399,6 +468,9 @@ pub fn scope_base_from_history(root: &Path, work_branch: &str, plan_path: &Path)
         let scoped = file_at_revision(root, commit, plan_path)?;
         if !scoped.lines().any(|line| line == "phase: scope") {
             continue;
+        }
+        if subject.trim() == SCOPE_CHECKPOINT_MESSAGE {
+            return Ok(parent);
         }
         let parent_plan = file_at_revision(root, &parent, plan_path);
         if subject.trim() == "chore(workflow): start scope" && parent_plan.is_err() {
@@ -571,161 +643,6 @@ pub fn synchronize_default(
     Ok(commit)
 }
 
-fn branch_checked_out_elsewhere(root: &Path, branch: &str) -> Result<bool> {
-    let output = git(root, &["worktree", "list", "--porcelain"])?;
-    let root = std::fs::canonicalize(root).map_err(|source| Error::Io {
-        path: root.into(),
-        source,
-    })?;
-    let mut worktree = None;
-    for line in String::from_utf8_lossy(&output.stdout).lines() {
-        if let Some(path) = line.strip_prefix("worktree ") {
-            worktree = Some(PathBuf::from(path));
-        } else if line == format!("branch refs/heads/{branch}") {
-            let Some(path) = worktree.as_ref() else {
-                continue;
-            };
-            let path = std::fs::canonicalize(path).map_err(|source| Error::Io {
-                path: path.clone(),
-                source,
-            })?;
-            if path != root {
-                return Ok(true);
-            }
-        }
-    }
-    Ok(false)
-}
-
-/// Merge a prepared work branch into the checked-out default branch.
-///
-/// Both tips are compare-and-swapped immediately before `git merge --no-ff`.
-pub fn integrate_no_ff(
-    root: &Path,
-    default_branch: &str,
-    expected_default: &str,
-    work_branch: &str,
-    expected_work: &str,
-) -> Result<()> {
-    validate_ref(default_branch)?;
-    validate_work_branch(work_branch)?;
-    require_clean(root)?;
-    let original_branch = current_branch(root)?;
-    if branch_checked_out_elsewhere(root, default_branch)? {
-        return Err(Error::Manifest {
-            message: format!(
-                "default branch `{default_branch}` is checked out in another worktree"
-            ),
-        });
-    }
-    if revision(root, default_branch)? != expected_default {
-        return Err(Error::Manifest {
-            message: "default branch moved; return the prepared closure to BUILD".into(),
-        });
-    }
-    if revision(root, work_branch)? != expected_work {
-        return Err(Error::Manifest {
-            message: "work branch moved after acceptance attestation".into(),
-        });
-    }
-    let temporary = tempfile::tempdir().map_err(|source| Error::Io {
-        path: root.into(),
-        source,
-    })?;
-    let worktree = temporary.path().join("integration");
-    let worktree_text = worktree.to_string_lossy().into_owned();
-    git(
-        root,
-        &[
-            "worktree",
-            "add",
-            "--detach",
-            &worktree_text,
-            expected_default,
-        ],
-    )?;
-    let prepared = git(
-        &worktree,
-        &[
-            "-c",
-            "core.hooksPath=/dev/null",
-            "-c",
-            "commit.gpgsign=false",
-            "merge",
-            "--no-ff",
-            "--no-edit",
-            "-m",
-            "chore(workflow): integrate accepted work",
-            expected_work,
-        ],
-    )
-    .and_then(|_| revision(&worktree, "HEAD"));
-    let cleanup = git(root, &["worktree", "remove", "--force", &worktree_text]);
-    cleanup?;
-    let prepared = prepared?;
-
-    if original_branch == default_branch {
-        git(
-            root,
-            &["-c", "core.hooksPath=/dev/null", "switch", work_branch],
-        )?;
-    } else if original_branch != work_branch {
-        return Err(Error::Manifest {
-            message: "integration requires the checked-out work or default branch".into(),
-        });
-    }
-    let reservation = temporary.path().join("default-reservation");
-    let reservation_text = reservation.to_string_lossy().into_owned();
-    if let Err(error) = git(
-        root,
-        &[
-            "worktree",
-            "add",
-            "--quiet",
-            &reservation_text,
-            default_branch,
-        ],
-    ) {
-        if original_branch == default_branch {
-            let _ = git(
-                root,
-                &["-c", "core.hooksPath=/dev/null", "switch", default_branch],
-            );
-        }
-        return Err(error);
-    }
-    git(
-        root,
-        &[
-            "-c",
-            "core.hooksPath=/dev/null",
-            "switch",
-            "--detach",
-            &prepared,
-        ],
-    )?;
-    let default_ref = format!("refs/heads/{default_branch}");
-    git(root, &["symbolic-ref", "HEAD", &default_ref])?;
-    git(root, &["worktree", "remove", "--force", &reservation_text])?;
-
-    let transaction = format!(
-        "start\nverify refs/heads/{work_branch} {expected_work}\nupdate refs/heads/{default_branch} {prepared} {expected_default}\nprepare\ncommit\n"
-    );
-    match git_with_input(root, &["update-ref", "--stdin"], &transaction) {
-        Ok(_) => Ok(()),
-        Err(error) => {
-            // Publication did not occur. Restore a coherent checkout before
-            // reporting the compare-and-swap failure.
-            git(root, &["update-ref", "--no-deref", "HEAD", &prepared])?;
-            git(
-                root,
-                &["-c", "core.hooksPath=/dev/null", "switch", &original_branch],
-            )?;
-            Err(error)
-        }
-    }
-}
-
 /// Refuse option-like, traversal-like, or syntactically invalid refs.
 pub fn validate_ref(reference: &str) -> Result<()> {
     if reference == "HEAD" {
@@ -783,320 +700,4 @@ pub fn validate_work_branch(branch: &str) -> Result<()> {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    fn command(root: &Path, args: &[&str]) {
-        let status = Command::new("git")
-            .args(args)
-            .current_dir(root)
-            .status()
-            .expect("git runs");
-        assert!(status.success(), "git {args:?}");
-    }
-
-    fn repository() -> tempfile::TempDir {
-        let dir = tempfile::tempdir().unwrap();
-        command(dir.path(), &["init", "-q", "-b", "main"]);
-        command(dir.path(), &["config", "user.email", "test@example.com"]);
-        command(dir.path(), &["config", "user.name", "Test"]);
-        command(dir.path(), &["config", "commit.gpgsign", "false"]);
-        command(dir.path(), &["config", "merge.gpgsign", "false"]);
-        std::fs::write(dir.path().join("file"), "base\n").unwrap();
-        command(dir.path(), &["add", "file"]);
-        command(dir.path(), &["commit", "-q", "-m", "base"]);
-        dir
-    }
-
-    #[test]
-    fn canonical_knowledge_commit_refuses_unrelated_changes() {
-        let dir = repository();
-        std::fs::create_dir_all(dir.path().join("knowledge")).unwrap();
-        std::fs::write(dir.path().join("knowledge/plan.md"), "plan\n").unwrap();
-        let revision = commit_knowledge_changes(dir.path(), "chore: record evidence").unwrap();
-        assert_eq!(revision, super::revision(dir.path(), "HEAD").unwrap());
-        assert!(
-            String::from_utf8_lossy(
-                &git(dir.path(), &["show", "--format=", "--name-only", "HEAD"])
-                    .unwrap()
-                    .stdout
-            )
-            .contains("knowledge/plan.md")
-        );
-
-        std::fs::write(dir.path().join("knowledge/plan.md"), "changed\n").unwrap();
-        std::fs::write(dir.path().join("unrelated"), "must remain\n").unwrap();
-        assert!(commit_knowledge_changes(dir.path(), "chore: unsafe").is_err());
-        assert!(
-            !git(dir.path(), &["status", "--porcelain=v1"])
-                .unwrap()
-                .stdout
-                .is_empty()
-        );
-    }
-
-    #[test]
-    fn scope_baseline_is_recovered_from_transition_history_not_plan_prose() {
-        let dir = repository();
-        let root = dir.path();
-        let baseline = revision(root, "HEAD").unwrap();
-        command(root, &["switch", "-q", "-c", "work/001-history"]);
-        std::fs::create_dir_all(root.join("knowledge/plans/open")).unwrap();
-        let plan = root.join("knowledge/plans/open/plan-001-history.md");
-        std::fs::write(&plan, "phase: scope\n").unwrap();
-        command(root, &["add", "knowledge"]);
-        command(
-            root,
-            &["commit", "-q", "-m", "chore(workflow): start scope"],
-        );
-        std::fs::write(root.join("file"), "forbidden product\n").unwrap();
-        std::fs::write(&plan, "phase: scope\nScope product baseline: HEAD.\n").unwrap();
-        command(root, &["add", "."]);
-        command(
-            root,
-            &["commit", "-q", "-m", "chore(workflow): return to scope"],
-        );
-
-        assert_eq!(
-            scope_base_from_history(root, "work/001-history", &plan).unwrap(),
-            baseline
-        );
-    }
-
-    #[test]
-    fn expected_parent_refuses_a_racing_commit_without_publishing() {
-        let dir = repository();
-        let root = dir.path();
-        let stale_parent = revision(root, "HEAD").unwrap();
-        std::fs::create_dir_all(root.join("knowledge")).unwrap();
-        std::fs::write(root.join("knowledge/plan.md"), "first\n").unwrap();
-        let current = commit_knowledge_changes(root, "docs: concurrent change").unwrap();
-        std::fs::write(root.join("knowledge/plan.md"), "approval\n").unwrap();
-
-        assert!(commit_knowledge_changes_at(root, "docs: approve", &stale_parent).is_err());
-        assert_eq!(revision(root, "HEAD").unwrap(), current);
-        assert_eq!(
-            std::fs::read_to_string(root.join("knowledge/plan.md")).unwrap(),
-            "approval\n"
-        );
-    }
-
-    #[test]
-    fn failed_commit_construction_preserves_head_index_and_worktree() {
-        let dir = repository();
-        let root = dir.path();
-        let head = revision(root, "HEAD").unwrap();
-        std::fs::create_dir_all(root.join("knowledge")).unwrap();
-        std::fs::write(root.join("knowledge/record.md"), "pending\n").unwrap();
-        command(root, &["config", "user.name", ""]);
-        command(root, &["config", "user.email", ""]);
-
-        assert!(commit_knowledge_changes(root, "chore: must fail").is_err());
-        assert_eq!(revision(root, "HEAD").unwrap(), head);
-        assert_eq!(
-            std::fs::read_to_string(root.join("knowledge/record.md")).unwrap(),
-            "pending\n"
-        );
-        assert!(
-            Command::new("git")
-                .args(["diff", "--cached", "--quiet"])
-                .current_dir(root)
-                .status()
-                .unwrap()
-                .success()
-        );
-    }
-
-    #[test]
-    fn block_commit_accepts_declared_product_and_knowledge_paths() {
-        let dir = repository();
-        let root = dir.path();
-        std::fs::create_dir_all(root.join("knowledge/plans/open")).unwrap();
-        std::fs::create_dir_all(root.join("src")).unwrap();
-        std::fs::write(root.join("knowledge/plans/open/plan.md"), "done\n").unwrap();
-        std::fs::write(root.join("src/lib.rs"), "pub fn built() {}\n").unwrap();
-        let areas = vec!["knowledge/plans".into(), "src".into()];
-        commit_block_changes(root, "feat: checkpoint block", &areas).unwrap();
-        require_clean(root).unwrap();
-    }
-
-    #[test]
-    fn block_commit_refuses_and_preserves_out_of_scope_changes() {
-        let dir = repository();
-        let root = dir.path();
-        std::fs::create_dir_all(root.join("src")).unwrap();
-        std::fs::write(root.join("src/lib.rs"), "pub fn built() {}\n").unwrap();
-        std::fs::write(root.join("unrelated"), "leave me\n").unwrap();
-        assert!(commit_block_changes(root, "feat: unsafe", &["src".into()]).is_err());
-        assert!(root.join("unrelated").exists());
-        assert!(
-            !git(root, &["status", "--porcelain=v1"])
-                .unwrap()
-                .stdout
-                .is_empty()
-        );
-    }
-
-    #[test]
-    fn work_branch_validation_is_strict() {
-        assert!(validate_work_branch("work/059-scope-build-accept").is_ok());
-        for bad in [
-            "main",
-            "work/59-x",
-            "work/059-X",
-            "work/059-../main",
-            "--help",
-        ] {
-            assert!(validate_work_branch(bad).is_err(), "{bad}");
-        }
-    }
-
-    #[test]
-    fn synchronization_merges_expected_tips_without_exposing_conflicts() {
-        let dir = repository();
-        let root = dir.path();
-        create_work_branch(root, "work/059-test").unwrap();
-        std::fs::write(root.join("work-file"), "work\n").unwrap();
-        command(root, &["add", "work-file"]);
-        command(root, &["commit", "-q", "-m", "work"]);
-        let work = revision(root, "work/059-test").unwrap();
-        command(root, &["switch", "-q", "main"]);
-        std::fs::write(root.join("default-file"), "default\n").unwrap();
-        command(root, &["add", "default-file"]);
-        command(root, &["commit", "-q", "-m", "default"]);
-        let default = revision(root, "main").unwrap();
-        command(root, &["switch", "-q", "work/059-test"]);
-
-        let synchronized =
-            synchronize_default(root, "main", &default, "work/059-test", &work).unwrap();
-        assert_eq!(revision(root, "work/059-test").unwrap(), synchronized);
-        assert!(is_ancestor(root, &default, &synchronized).unwrap());
-        assert!(root.join("default-file").is_file());
-        require_clean(root).unwrap();
-
-        command(root, &["switch", "-q", "main"]);
-        std::fs::write(root.join("file"), "default conflict\n").unwrap();
-        command(root, &["commit", "-q", "-am", "default conflict"]);
-        let conflicting_default = revision(root, "main").unwrap();
-        command(root, &["switch", "-q", "work/059-test"]);
-        std::fs::write(root.join("file"), "work conflict\n").unwrap();
-        command(root, &["commit", "-q", "-am", "work conflict"]);
-        let conflicting_work = revision(root, "work/059-test").unwrap();
-
-        assert!(
-            synchronize_default(
-                root,
-                "main",
-                &conflicting_default,
-                "work/059-test",
-                &conflicting_work,
-            )
-            .is_err()
-        );
-        assert_eq!(revision(root, "work/059-test").unwrap(), conflicting_work);
-        require_clean(root).unwrap();
-    }
-
-    #[test]
-    fn synchronization_refuses_dirty_or_stale_tips_without_moving_the_branch() {
-        let dir = repository();
-        let root = dir.path();
-        let default = revision(root, "main").unwrap();
-        create_work_branch(root, "work/059-test").unwrap();
-        std::fs::write(root.join("work-file"), "work\n").unwrap();
-        command(root, &["add", "work-file"]);
-        command(root, &["commit", "-q", "-m", "work"]);
-        let work = revision(root, "work/059-test").unwrap();
-
-        std::fs::write(root.join("dirty"), "leave this alone\n").unwrap();
-        assert!(synchronize_default(root, "main", &default, "work/059-test", &work).is_err());
-        assert_eq!(revision(root, "work/059-test").unwrap(), work);
-        assert!(root.join("dirty").is_file());
-        std::fs::remove_file(root.join("dirty")).unwrap();
-
-        assert!(synchronize_default(root, "main", &work, "work/059-test", &work).is_err());
-        assert!(synchronize_default(root, "main", &default, "work/059-test", &default).is_err());
-        assert_eq!(revision(root, "work/059-test").unwrap(), work);
-        require_clean(root).unwrap();
-    }
-
-    #[test]
-    fn integration_creates_a_no_ff_merge_commit() {
-        let dir = repository();
-        let root = dir.path();
-        let default = revision(root, "main").unwrap();
-        create_work_branch(root, "work/059-test").unwrap();
-        std::fs::write(root.join("file"), "work\n").unwrap();
-        command(root, &["commit", "-q", "-am", "work"]);
-        let work = revision(root, "work/059-test").unwrap();
-        let hook = root.join(".git/hooks/pre-merge-commit");
-        std::fs::write(&hook, "#!/bin/sh\nexit 1\n").unwrap();
-        #[cfg(unix)]
-        {
-            use std::os::unix::fs::PermissionsExt;
-            let mut permissions = std::fs::metadata(&hook).unwrap().permissions();
-            permissions.set_mode(0o755);
-            std::fs::set_permissions(&hook, permissions).unwrap();
-        }
-        command(root, &["config", "commit.gpgsign", "true"]);
-        command(root, &["switch", "-q", "main"]);
-
-        integrate_no_ff(root, "main", &default, "work/059-test", &work).unwrap();
-        assert_eq!(current_branch(root).unwrap(), "main");
-        assert_eq!(
-            std::fs::read_to_string(root.join("file")).unwrap(),
-            "work\n"
-        );
-
-        let parents = git(root, &["rev-list", "--parents", "-n", "1", "HEAD"]).unwrap();
-        assert_eq!(
-            String::from_utf8_lossy(&parents.stdout)
-                .split_whitespace()
-                .count(),
-            3
-        );
-    }
-
-    #[test]
-    fn integration_refuses_a_default_checked_out_in_another_worktree() {
-        let dir = repository();
-        let root = dir.path();
-        let default = revision(root, "main").unwrap();
-        create_work_branch(root, "work/059-test").unwrap();
-        std::fs::write(root.join("file"), "work\n").unwrap();
-        command(root, &["commit", "-q", "-am", "work"]);
-        let work = revision(root, "work/059-test").unwrap();
-        let linked_parent = tempfile::tempdir().unwrap();
-        let linked = linked_parent.path().join("default");
-        command(
-            root,
-            &["worktree", "add", "-q", linked.to_str().unwrap(), "main"],
-        );
-
-        assert!(integrate_no_ff(root, "main", &default, "work/059-test", &work).is_err());
-        assert_eq!(revision(root, "main").unwrap(), default);
-        assert_eq!(revision(root, "work/059-test").unwrap(), work);
-        command(
-            root,
-            &["worktree", "remove", "--force", linked.to_str().unwrap()],
-        );
-    }
-
-    #[test]
-    fn integration_refuses_dirty_or_stale_tips() {
-        let dir = repository();
-        let root = dir.path();
-        let default = revision(root, "main").unwrap();
-        create_work_branch(root, "work/059-test").unwrap();
-        std::fs::write(root.join("file"), "work\n").unwrap();
-        command(root, &["commit", "-q", "-am", "work"]);
-        let work = revision(root, "work/059-test").unwrap();
-        command(root, &["switch", "-q", "main"]);
-
-        std::fs::write(root.join("unrelated"), "dirty\n").unwrap();
-        assert!(integrate_no_ff(root, "main", &default, "work/059-test", &work).is_err());
-        std::fs::remove_file(root.join("unrelated")).unwrap();
-        assert!(integrate_no_ff(root, "main", "0000000", "work/059-test", &work).is_err());
-        assert!(integrate_no_ff(root, "main", &default, "work/059-test", &default).is_err());
-    }
-}
+mod tests;

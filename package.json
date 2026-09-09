@@ -24,7 +24,7 @@
     "coverage:summary": "cargo +nightly llvm-cov nextest --workspace --summary-only",
     "coverage:check": "cargo +nightly llvm-cov clean --workspace && cargo +nightly llvm-cov nextest --workspace --no-report && cargo +nightly llvm-cov report --summary-only --ignore-filename-regex 'crates/app' --fail-under-lines 90 && cargo +nightly llvm-cov report --summary-only --ignore-filename-regex 'crates/lib' --fail-under-lines 90",
     "test:launcher": "node --test packages/superdev/test/*.test.js",
-    "test:scripts": "node --test scripts/test/*.test.mjs",
+    "test:scripts": "node --test --test-concurrency=1 scripts/test/*.test.mjs",
     "eval:sokf": "node scripts/sokf-eval.mjs",
     "smoke": "node scripts/release-smoke.mjs",
     "smoke:launcher": "node scripts/launcher-smoke.mjs",
@@ -37,6 +37,7 @@
   },
   "devDependencies": {
     "@earendil-works/pi-ai": "^0.85.1",
+    "@earendil-works/pi-coding-agent": "0.85.1",
     "@ncoderz/awa": "^1.10.3",
     "@types/node": "^26.1.2",
     "typebox": "^1.3.28"

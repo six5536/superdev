@@ -322,6 +322,9 @@ pub struct FileArgs {
     /// Record kind
     #[arg(long, value_enum, default_value = "issue")]
     kind: FilingKindName,
+    /// Issue category (independent of issue versus idea capture)
+    #[arg(long, value_parser = ["bug", "feature", "chore"], default_value = "feature")]
+    issue_kind: String,
     /// Short human title
     #[arg(long)]
     title: String,
@@ -329,7 +332,7 @@ pub struct FileArgs {
     #[arg(long)]
     description: String,
     /// Local default branch to advance
-    #[arg(long, default_value = "main")]
+    #[arg(long, default_value = "")]
     default_branch: String,
     /// Confirmation supplied only after the human approves the bounded diff
     #[arg(long)]
@@ -348,6 +351,8 @@ enum FilingKindName {
 pub enum WorkflowCommand {
     /// Acquire a workflow for an issue, plan, and reserved work branch
     Start(BindArgs),
+    /// Validate the service attestation above the immutable reviewed candidate
+    Assess(RevisionArgs),
     /// Report transient ownership and canonical identity
     Status {
         /// Emit the versioned JSON protocol response
@@ -358,6 +363,8 @@ pub enum WorkflowCommand {
     Bind(BindArgs),
     /// Apply one typed phase transition after checking supplied evidence
     Transition(TransitionArgs),
+    /// Adopt the current committed work tip as the next SCOPE attempt baseline
+    ScopeBaseline(ScopeBaselineArgs),
     /// Commit one review-ready, knowledge-only SCOPE proposal
     ScopeCheckpoint(RevisionArgs),
     /// Commit a validated BUILD block checkpoint
@@ -374,6 +381,10 @@ pub enum WorkflowCommand {
     Sync(SyncArgs),
     /// Reconstruct and acquire ownership for a known workflow
     Resume(BindArgs),
+    /// Record one active isolated child for cross-instance status and recovery
+    ActivityStart(ActivityStartArgs),
+    /// Clear the active isolated child after exit
+    ActivityFinish(RevisionArgs),
     /// Pause by releasing transient ownership without changing plan phase
     Cancel(SessionArgs),
     /// Apply the human-only abandonment transition
@@ -383,7 +394,7 @@ pub enum WorkflowCommand {
 }
 
 /// Stable workflow identity and Pi ownership arguments.
-#[derive(Args)]
+#[derive(Args, Clone)]
 pub struct BindArgs {
     /// Owning Pi session ID
     #[arg(long)]
@@ -398,8 +409,34 @@ pub struct BindArgs {
     #[arg(long)]
     work_branch: String,
     /// Local default branch
-    #[arg(long, default_value = "main")]
+    #[arg(long, default_value = "")]
     default_branch: String,
+}
+
+/// Active parent and child process identity.
+#[derive(Args)]
+pub struct ActivityStartArgs {
+    /// Owning Pi session ID.
+    #[arg(long)]
+    session: String,
+    /// Expected current plan content revision.
+    #[arg(long)]
+    expected_revision: String,
+    /// Isolated workflow role.
+    #[arg(long)]
+    role: String,
+    /// Owning Pi process ID.
+    #[arg(long)]
+    owner_pid: u32,
+    /// OS process-start identity for the owning Pi.
+    #[arg(long)]
+    owner_started: String,
+    /// Isolated child process ID.
+    #[arg(long)]
+    child_pid: u32,
+    /// OS process-start identity for the child.
+    #[arg(long)]
+    child_started: String,
 }
 
 /// Arguments common to compare-and-swap progress events.
@@ -414,6 +451,20 @@ pub struct ProgressArgs {
     /// New plan content revision after the Rust-owned mutation
     #[arg(long)]
     revision: String,
+}
+
+/// Compare-and-swap arguments for a SCOPE attempt baseline.
+#[derive(Args)]
+pub struct ScopeBaselineArgs {
+    /// Owning Pi session ID
+    #[arg(long)]
+    session: String,
+    /// Expected current plan content revision
+    #[arg(long)]
+    expected_revision: String,
+    /// Expected current work-branch tip
+    #[arg(long)]
+    expected_work: String,
 }
 
 /// Session and plan compare-and-swap arguments.
@@ -531,6 +582,8 @@ pub enum TransitionName {
     ReturnToScope,
     /// ACCEPT to SCOPE
     RejectAcceptance,
+    /// ACCEPT findings within approved intent to BUILD
+    ReturnToBuild,
     /// ACCEPT to DONE
     Accept,
     /// Prepared DONE to BUILD after default branch drift
@@ -681,7 +734,7 @@ usage errors and the side effects.
   `--fix`.
 - `P_workflow-versioned-json` [ubiquitous] Every successful `workflow`
   command SHALL return one JSON object carrying protocol
-  `superdev-workflow/v1`.
+  `superdev-workflow/v2`.
 - `P_workflow-owned-transitions` [ubiquitous] A mutating `workflow`
   command SHALL require the owning session and expected plan revision.
 - `P_workflow-cancel-pauses` [event] WHEN `workflow cancel` succeeds,
@@ -694,10 +747,10 @@ usage errors and the side effects.
 - `P_workflow-integration-bound` [ubiquitous] `workflow integrate` SHALL
   require the bound issue, plan, refs, reviewed candidate, verified default
   tip, done closure, and administrative-only descendants to agree.
-- `P_file-default-branch` [ubiquitous] `file` SHALL create and validate one
-  human-confirmed issue or idea in an isolated temporary worktree, commit only
-  knowledge, and compare-and-swap the local default branch without changing an
-  active workflow worktree.
+- `P_file-default-branch` [ubiquitous] `file` SHALL require an unowned clean checkout of the discovered default branch, preserve the human-confirmed issue category, and publish one validated issue or idea under the repository allocation lock. Temporary staging does not route active workflow edits.
+- `P_workflow-manual-merge` [event] WHEN ACCEPT closes the issue and plan, the service SHALL release ownership and leave the accepted work branch checked out without merging. `workflow integrate` remains an explicit low-level operation, not an acceptance step.
+- `P_workflow-assess` [ubiquitous] `workflow assess` SHALL require the owned clean ACCEPT revision and administrative-only changes above reviewed candidate H.
+- `P_workflow-default-recovery` [ubiquitous] Startup SHALL discover and persist the default branch, reserve independent issue and plan numbers under the repository lock before switching branches, and recover unfinished plans from their local work-branch snapshots.
 - `P_sokf-index-rebuilds-in-full` [ubiquitous] `sokf index` SHALL
   rebuild the index in full.
 - `P_sokf-index-says-lexical-only` [event] WHEN no embedding model

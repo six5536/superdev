@@ -231,6 +231,8 @@ fn a_failed_init_reports_the_manifest_it_leaves_behind() {
     sb.superdev().arg("sync").assert().success();
 }
 
+/// contract-011-interface-workflow P_extension-skills
+/// contract-011-interface-workflow P_skill-cold-start
 #[test]
 fn init_materializes_pi_workflow_without_claude_assets() {
     let sb = Sandbox::new();
@@ -242,6 +244,7 @@ fn init_materializes_pi_workflow_without_claude_assets() {
     let repo = sb.repo();
     for path in [
         ".pi/extensions/superdev/index.ts",
+        ".pi/extensions/superdev/lib/phases.ts",
         ".pi/extensions/superdev/prompts/scope.md",
         ".pi/extensions/superdev/prompts/requirements-review.md",
         ".pi/extensions/superdev/prompts/build.md",
@@ -249,6 +252,9 @@ fn init_materializes_pi_workflow_without_claude_assets() {
         ".pi/extensions/superdev/prompts/accept.md",
         ".pi/extensions/superdev/prompts/file.md",
         ".pi/skills/sokf-authoring/SKILL.md",
+        ".pi/extensions/superdev/skills/scope/SKILL.md",
+        ".pi/extensions/superdev/skills/build/SKILL.md",
+        ".pi/extensions/superdev/skills/accept/SKILL.md",
     ] {
         assert!(repo.join(path).is_file(), "{path} was not materialized");
     }
@@ -256,34 +262,89 @@ fn init_materializes_pi_workflow_without_claude_assets() {
     assert!(!repo.join(".claude/settings.json").exists());
     let lock = sb.read(".superdev/lock.toml");
     assert!(lock.contains(".pi/extensions/superdev/index.ts"));
+    assert!(lock.contains(".pi/extensions/superdev/lib/phases.ts"));
     assert!(lock.contains(".pi/skills/sokf-authoring/SKILL.md"));
+    assert!(lock.contains(".pi/extensions/superdev/skills/scope/SKILL.md"));
+    assert!(lock.contains(".pi/extensions/superdev/skills/build/SKILL.md"));
+    assert!(lock.contains(".pi/extensions/superdev/skills/accept/SKILL.md"));
+    assert!(!repo.join(".pi/skills/scope").exists());
+    assert!(!repo.join(".pi/skills/build").exists());
+    assert!(!repo.join(".pi/skills/accept").exists());
     assert!(!lock.contains(".claude/skills"));
     assert!(!lock.contains("superdev hook run"));
+    for (skill, command) in [
+        ("scope", "/skill:scope"),
+        ("build", "/skill:build"),
+        ("accept", "/skill:accept"),
+    ] {
+        let text = sb.read(&format!(".pi/extensions/superdev/skills/{skill}/SKILL.md"));
+        assert!(!text.contains("disable-model-invocation: true"));
+        assert!(text.contains("superdev_run_phase"));
+        assert!(text.contains(command));
+        assert!(text.contains("Examples:"));
+    }
+    let scope_skill = sb.read(".pi/extensions/superdev/skills/scope/SKILL.md");
+    for instruction in [
+        "Assume no workflow conversation is present in context",
+        "Call `superdev_run_phase` with `phase: \"scope\"` and `action: \"inspect\"",
+        "If the issue exists but no suitable linked plan exists",
+        "Never derive a plan ID from an issue ID",
+        "Discuss one unresolved decision at a time",
+        "Confirm**, **Revise**, or **Cancel",
+    ] {
+        assert!(
+            scope_skill.contains(instruction),
+            "SCOPE skill omitted `{instruction}`"
+        );
+    }
+    let scope_prompt = sb.read(".pi/extensions/superdev/prompts/scope.md");
+    for instruction in [
+        "Keep every plan in `phase: scope`",
+        "Do not claim that requirements review or human scope approval has occurred",
+        "Confirmation supplied in the task authorizes drafting only",
+    ] {
+        assert!(
+            scope_prompt.contains(instruction),
+            "isolated SCOPE prompt omitted `{instruction}`"
+        );
+    }
+    let build_skill = sb.read(".pi/extensions/superdev/skills/build/SKILL.md");
+    assert!(build_skill.contains("Assume no earlier SCOPE or BUILD conversation is present"));
+    assert!(build_skill.contains("before taking any action"));
+    assert!(build_skill.contains("recommend `/skill:scope <requested change>`"));
+    let accept_skill = sb.read(".pi/extensions/superdev/skills/accept/SKILL.md");
+    assert!(accept_skill.contains("Assume no earlier workflow discussion is present"));
+    assert!(accept_skill.contains("before taking any action"));
+    assert!(accept_skill.contains("destination: \"build\""));
+    assert!(accept_skill.contains("destination: \"scope\""));
 
     let retired = b"retired managed workflow skill\n";
     let retired_path = repo.join(".claude/skills/build/SKILL.md");
+    let retired_project_skill = repo.join(".pi/skills/scope/SKILL.md");
     fs::create_dir_all(retired_path.parent().unwrap()).unwrap();
+    fs::create_dir_all(retired_project_skill.parent().unwrap()).unwrap();
     fs::write(&retired_path, retired).unwrap();
+    fs::write(&retired_project_skill, retired).unwrap();
+    let retired_hash = superdev_core::lock::sha256_hex(retired);
     let mut old_lock = lock;
     old_lock = old_lock.replacen(
         "[files]\n",
         &format!(
-            "[files]\n\".claude/skills/build/SKILL.md\" = \"{}\"\n",
-            superdev_core::lock::sha256_hex(retired)
+            "[files]\n\".claude/skills/build/SKILL.md\" = \"{retired_hash}\"\n\".pi/skills/scope/SKILL.md\" = \"{retired_hash}\"\n"
         ),
         1,
     );
     sb.write(".superdev/lock.toml", &old_lock);
     sb.superdev().arg("sync").assert().success();
     assert!(!retired_path.exists());
-    assert!(
-        !sb.read(".superdev/lock.toml")
-            .contains(".claude/skills/build")
-    );
+    assert!(!retired_project_skill.exists());
+    let converged_lock = sb.read(".superdev/lock.toml");
+    assert!(!converged_lock.contains(".claude/skills/build"));
+    assert!(!converged_lock.contains(".pi/skills/scope"));
 }
 
 #[test]
-fn workflow_start_creates_a_canonical_scope_plan_and_resume_adopts_it() {
+fn workflow_start_adopts_an_llm_authored_independently_numbered_plan() {
     let dir = tempfile::tempdir().unwrap();
     let git = |args: &[&str]| {
         let status = std::process::Command::new("git")
@@ -319,13 +380,19 @@ fn workflow_start_creates_a_canonical_scope_plan_and_resume_adopts_it() {
         .assert()
         .success();
 
+    let plan = dir
+        .path()
+        .join("knowledge/plans/open/plan-042-canonical-recovery.md");
+    fs::create_dir_all(plan.parent().unwrap()).unwrap();
+    fs::write(&plan, include_str!("fixtures/workflow-plan.md")).unwrap();
+
     let identity = [
         "--session",
         "pi-a",
         "--issue",
         "issue-001-canonical-recovery",
         "--plan",
-        "plan-001-canonical-recovery",
+        "plan-042-canonical-recovery",
         "--work-branch",
         "work/001-canonical-recovery",
     ];
@@ -338,6 +405,29 @@ fn workflow_start_creates_a_canonical_scope_plan_and_resume_adopts_it() {
         .assert()
         .failure();
     assert!(!git::reference_exists(dir.path(), "work/001-canonical-recovery").unwrap());
+    let status_output = Command::cargo_bin("superdev")
+        .unwrap()
+        .current_dir(dir.path())
+        .args(["workflow", "status", "--json"])
+        .output()
+        .unwrap();
+    assert!(status_output.status.success());
+    let status: serde_json::Value = serde_json::from_slice(&status_output.stdout).unwrap();
+    assert_eq!(status["result"]["openWorkflows"], serde_json::json!([]));
+    git(&["branch", "work/001-canonical-recovery"]);
+    Command::cargo_bin("superdev")
+        .unwrap()
+        .current_dir(dir.path())
+        .env("SUPERDEV_UI_AUTHORITY", "0123456789abcdef0123456789abcdef")
+        .args(start.clone())
+        .assert()
+        .failure();
+    assert!(
+        git::working_paths(dir.path())
+            .unwrap()
+            .contains(&"knowledge/plans/open/plan-042-canonical-recovery.md".into())
+    );
+    git(&["branch", "-D", "work/001-canonical-recovery"]);
     Command::cargo_bin("superdev")
         .unwrap()
         .current_dir(dir.path())
@@ -349,9 +439,6 @@ fn workflow_start_creates_a_canonical_scope_plan_and_resume_adopts_it() {
         git::current_branch(dir.path()).unwrap(),
         "work/001-canonical-recovery"
     );
-    let plan = dir
-        .path()
-        .join("knowledge/plans/open/plan-001-canonical-recovery.md");
     assert!(plan.is_file());
     assert!(fs::read_to_string(&plan).unwrap().contains("phase: scope"));
     let revision = cache::load(dir.path()).unwrap().unwrap().last_plan_revision;
@@ -381,6 +468,7 @@ fn workflow_start_creates_a_canonical_scope_plan_and_resume_adopts_it() {
         .args(["workflow", "cancel", "--session", "pi-a"])
         .assert()
         .success();
+    git(&["switch", "-q", "main"]);
     let mut resume = vec!["workflow", "resume"];
     resume.extend([
         "--session",
@@ -388,7 +476,7 @@ fn workflow_start_creates_a_canonical_scope_plan_and_resume_adopts_it() {
         "--issue",
         "issue-001-canonical-recovery",
         "--plan",
-        "plan-001-canonical-recovery",
+        "plan-042-canonical-recovery",
         "--work-branch",
         "work/001-canonical-recovery",
     ]);
@@ -404,36 +492,30 @@ fn workflow_start_creates_a_canonical_scope_plan_and_resume_adopts_it() {
     let scoped = fs::read_to_string(&plan)
         .unwrap()
         .replace(
-            "SCOPE must replace this initial recovery-safe draft with settled requirements before approval.",
+            "Settle requirements in SCOPE.",
             "Implement one tested source checkpoint.",
         )
         .replace(
-            "SCOPE must identify the exact source declarations and materialized interfaces.",
+            "Settle source surfaces in SCOPE.",
             "Add `src/lib.rs`; no generated interface changes.",
         )
         .replace(
-            "SCOPE must identify normative and current-state knowledge changes.",
+            "Maintain this issue and plan.",
             "Update only this canonical plan.",
         )
         .replace(
-            "SCOPE must map applicable surfaces from the canonical documentation map.",
+            "Settle documentation in SCOPE.",
             "No user-observable documentation surface is affected.",
         )
-        .replace("- Areas: to be settled by SCOPE.", "- Areas: `src`.")
+        .replace("- Areas: pending SCOPE.", "- Areas: `src`.")
+        .replace("- Verification: pending SCOPE.", "- Verification: `true`.")
+        .replace("- Tests: pending SCOPE.", "- Tests: `true`.")
         .replace(
-            "- Verification: executable commands must be settled by SCOPE.",
-            "- Verification: `true`.",
-        )
-        .replace(
-            "- Tests: executable contract evidence must be settled by SCOPE.",
-            "- Tests: `true`.",
-        )
-        .replace(
-            "- Structural evidence: executable structural evidence must be settled by SCOPE.",
+            "- Structural evidence: pending SCOPE.",
             "- Structural evidence: `true`.",
         )
         .replace(
-            "- Documentation: applicable surfaces and commands must be settled by SCOPE.",
+            "- Documentation: pending SCOPE.",
             "- Documentation: none; no user-observable change.",
         );
     fs::write(&plan, &scoped).unwrap();
@@ -474,6 +556,21 @@ fn workflow_start_creates_a_canonical_scope_plan_and_resume_adopts_it() {
         cache::load(dir.path()).unwrap().unwrap().last_plan_revision,
         revision
     );
+    Command::cargo_bin("superdev")
+        .unwrap()
+        .current_dir(dir.path())
+        .args([
+            "workflow",
+            "scope-baseline",
+            "--session",
+            "pi-b",
+            "--expected-revision",
+            &revision,
+            "--expected-work",
+            &before_scope_refusal,
+        ])
+        .assert()
+        .failure();
     assert!(
         std::process::Command::new("git")
             .current_dir(dir.path())
@@ -505,15 +602,56 @@ fn workflow_start_creates_a_canonical_scope_plan_and_resume_adopts_it() {
         .assert()
         .failure();
     assert_eq!(git::revision(dir.path(), "HEAD").unwrap(), product_commit);
-    assert!(
-        std::process::Command::new("git")
-            .current_dir(dir.path())
-            .args(["reset", "--hard", &before_scope_refusal])
-            .status()
-            .unwrap()
-            .success()
-    );
-    fs::write(&plan, &scoped).unwrap();
+    let mut expected_state = cache::load(dir.path()).unwrap().unwrap();
+    Command::cargo_bin("superdev")
+        .unwrap()
+        .current_dir(dir.path())
+        .args([
+            "workflow",
+            "scope-baseline",
+            "--session",
+            "pi-b",
+            "--expected-revision",
+            &revision,
+            "--expected-work",
+            &before_scope_refusal,
+        ])
+        .assert()
+        .failure();
+    assert_eq!(cache::load(dir.path()).unwrap().unwrap(), expected_state);
+    Command::cargo_bin("superdev")
+        .unwrap()
+        .current_dir(dir.path())
+        .args([
+            "workflow",
+            "scope-baseline",
+            "--session",
+            "pi-b",
+            "--expected-revision",
+            &revision,
+            "--expected-work",
+            &product_commit,
+        ])
+        .assert()
+        .success();
+    expected_state.scope_base_revision = Some(product_commit.clone());
+    assert_eq!(cache::load(dir.path()).unwrap().unwrap(), expected_state);
+    Command::cargo_bin("superdev")
+        .unwrap()
+        .current_dir(dir.path())
+        .args([
+            "workflow",
+            "scope-baseline",
+            "--session",
+            "pi-b",
+            "--expected-revision",
+            "stale-plan-revision",
+            "--expected-work",
+            &product_commit,
+        ])
+        .assert()
+        .failure();
+    assert_eq!(cache::load(dir.path()).unwrap().unwrap(), expected_state);
     let cache_dir = dir.path().join(".superdev/cache");
     let mut cache_permissions = fs::metadata(&cache_dir).unwrap().permissions();
     cache_permissions.set_mode(0o555);
@@ -534,10 +672,7 @@ fn workflow_start_creates_a_canonical_scope_plan_and_resume_adopts_it() {
     let mut cache_permissions = fs::metadata(&cache_dir).unwrap().permissions();
     cache_permissions.set_mode(0o755);
     fs::set_permissions(&cache_dir, cache_permissions).unwrap();
-    assert_eq!(
-        git::revision(dir.path(), "HEAD").unwrap(),
-        before_scope_refusal
-    );
+    assert_eq!(git::revision(dir.path(), "HEAD").unwrap(), product_commit);
     assert_eq!(
         cache::load(dir.path()).unwrap().unwrap().last_plan_revision,
         revision
@@ -885,7 +1020,7 @@ fn workflow_start_creates_a_canonical_scope_plan_and_resume_adopts_it() {
         .unwrap();
     let paths = String::from_utf8(paths.stdout).unwrap();
     assert!(paths.contains("src/lib.rs"));
-    assert!(paths.contains("knowledge/plans/open/plan-001-canonical-recovery.md"));
+    assert!(paths.contains("knowledge/plans/open/plan-042-canonical-recovery.md"));
     let checkpointed = fs::read_to_string(&plan).unwrap();
     assert!(checkpointed.contains("Attempts: 0."));
     assert!(checkpointed.contains("Fingerprint: none."));
@@ -954,6 +1089,24 @@ fn workflow_start_creates_a_canonical_scope_plan_and_resume_adopts_it() {
         .assert()
         .success();
     let accepted_owner = cache::load(accepted.path()).unwrap().unwrap();
+    assert_ne!(
+        accepted_owner.candidate_revision.as_deref(),
+        Some(git::revision(accepted.path(), "HEAD").unwrap().as_str())
+    );
+    Command::cargo_bin("superdev")
+        .unwrap()
+        .current_dir(accepted.path())
+        .env("SUPERDEV_UI_AUTHORITY", "fedcba9876543210fedcba9876543210")
+        .args([
+            "workflow",
+            "assess",
+            "--session",
+            "pi-b",
+            "--expected-revision",
+            &accepted_owner.last_plan_revision,
+        ])
+        .assert()
+        .success();
     Command::cargo_bin("superdev")
         .unwrap()
         .current_dir(accepted.path())
@@ -973,27 +1126,32 @@ fn workflow_start_creates_a_canonical_scope_plan_and_resume_adopts_it() {
         .assert()
         .success();
     let closure = git::revision(accepted.path(), "HEAD").unwrap();
-    Command::cargo_bin("superdev")
-        .unwrap()
-        .current_dir(accepted.path())
-        .args([
-            "workflow",
-            "integrate",
-            "--session",
-            "pi-b",
-            "--default-branch",
-            "main",
-            "--expected-default",
-            &accepted_default,
-            "--work-branch",
-            "work/001-canonical-recovery",
-            "--expected-work",
-            &closure,
-        ])
-        .assert()
-        .success();
     assert!(cache::load(accepted.path()).unwrap().is_none());
-    assert_eq!(git::current_branch(accepted.path()).unwrap(), "main");
+    assert_eq!(
+        git::revision(accepted.path(), "main").unwrap(),
+        accepted_default
+    );
+    assert_eq!(
+        git::current_branch(accepted.path()).unwrap(),
+        "work/001-canonical-recovery"
+    );
+    // Acceptance does not merge: only an explicit human Git operation publishes closure.
+    assert!(
+        std::process::Command::new("git")
+            .args(["switch", "main"])
+            .current_dir(accepted.path())
+            .status()
+            .unwrap()
+            .success()
+    );
+    assert!(
+        std::process::Command::new("git")
+            .args(["merge", "--no-ff", "--no-edit", &closure])
+            .current_dir(accepted.path())
+            .status()
+            .unwrap()
+            .success()
+    );
     let parents = std::process::Command::new("git")
         .args(["rev-list", "--parents", "-n", "1", "HEAD"])
         .current_dir(accepted.path())
@@ -1010,7 +1168,7 @@ fn workflow_start_creates_a_canonical_scope_plan_and_resume_adopts_it() {
             .args([
                 "cat-file",
                 "-e",
-                "main:knowledge/plans/done/plan-001-canonical-recovery.md",
+                "main:knowledge/plans/done/plan-042-canonical-recovery.md",
             ])
             .current_dir(accepted.path())
             .status()
@@ -1018,7 +1176,9 @@ fn workflow_start_creates_a_canonical_scope_plan_and_resume_adopts_it() {
             .success()
     );
 
-    for cycle in 1..=3 {
+    // The first finding schedules a correction without consuming the budget. Each
+    // subsequent complete valid review consumes the preceding correction cycle.
+    for cycle in 1..=4 {
         let owner = cache::load(dir.path()).unwrap().unwrap();
         let candidate = git::revision(dir.path(), "HEAD").unwrap();
         Command::cargo_bin("superdev")
@@ -1060,7 +1220,12 @@ fn workflow_start_creates_a_canonical_scope_plan_and_resume_adopts_it() {
             ])
             .assert()
             .success();
-        if cycle <= 2 {
+        assert!(
+            fs::read_to_string(&plan)
+                .unwrap()
+                .contains(&format!("Final corrections: {}.", cycle - 1))
+        );
+        if cycle <= 3 {
             let correction_owner = cache::load(dir.path()).unwrap().unwrap();
             if cycle == 1 {
                 let pending_candidate = git::revision(dir.path(), "HEAD").unwrap();
@@ -1131,7 +1296,7 @@ fn workflow_start_creates_a_canonical_scope_plan_and_resume_adopts_it() {
             assert!(
                 fs::read_to_string(&plan)
                     .unwrap()
-                    .contains("Blocker: none.")
+                    .contains("Blocker: final correction awaiting review.")
             );
         }
     }
@@ -1159,30 +1324,7 @@ fn workflow_start_creates_a_canonical_scope_plan_and_resume_adopts_it() {
             &candidate,
         ])
         .assert()
-        .success();
-    let verified = cache::load(dir.path()).unwrap().unwrap();
-    let before_refusal = git::revision(dir.path(), "HEAD").unwrap();
-    Command::cargo_bin("superdev")
-        .unwrap()
-        .current_dir(dir.path())
-        .env("SUPERDEV_UI_AUTHORITY", "fedcba9876543210fedcba9876543210")
-        .args([
-            "workflow",
-            "correction",
-            "--session",
-            "pi-b",
-            "--expected-revision",
-            &verified.last_plan_revision,
-            "--candidate",
-            &candidate,
-            "--review-session",
-            "review-final-exhausted",
-            "--summary",
-            "Must not exceed project policy",
-        ])
-        .assert()
         .failure();
-    assert_eq!(git::revision(dir.path(), "HEAD").unwrap(), before_refusal);
 
     Command::cargo_bin("superdev")
         .unwrap()
@@ -1196,7 +1338,13 @@ fn workflow_start_creates_a_canonical_scope_plan_and_resume_adopts_it() {
             "--human-approved",
         ])
         .assert()
-        .success();
+        .failure();
+    // Simulate an explicit external upstream commit, not background issue filing.
+    git(&["switch", "main"]);
+    fs::write(dir.path().join("upstream.txt"), "upstream change\n").unwrap();
+    git(&["add", "upstream.txt"]);
+    git(&["commit", "-m", "upstream advance"]);
+    git(&["switch", "work/001-canonical-recovery"]);
     let owner = cache::load(dir.path()).unwrap().unwrap();
     let expected_default = git::revision(dir.path(), "main").unwrap();
     let expected_work = git::revision(dir.path(), "work/001-canonical-recovery").unwrap();
@@ -1333,7 +1481,7 @@ fn workflow_start_creates_a_canonical_scope_plan_and_resume_adopts_it() {
         .success();
     let approved = fs::read_to_string(&plan).unwrap();
     assert!(approved.contains("phase: build"));
-    assert!(approved.contains("Final corrections: 3."));
+    assert!(approved.contains("Final corrections: 0."));
     assert!(approved.contains("Scope product baseline:"));
     assert!(approved.contains("Scope requirements review: clean"));
     assert!(approved.contains("Human scope approval: approved"));
@@ -1381,10 +1529,100 @@ fn workflow_start_creates_a_canonical_scope_plan_and_resume_adopts_it() {
         .success();
     let accepted = fs::read_to_string(&plan).unwrap();
     assert!(accepted.contains("phase: accept"));
-    assert!(accepted.contains("Final corrections: 3."));
+    assert!(accepted.contains("Final corrections: 0."));
     assert!(accepted.contains("Scope product baseline:"));
     assert!(accepted.contains("Scope requirements review: clean"));
     assert!(accepted.contains("Human scope approval: approved"));
+
+    let revision = cache::load(dir.path()).unwrap().unwrap().last_plan_revision;
+    Command::cargo_bin("superdev")
+        .unwrap()
+        .current_dir(dir.path())
+        .env("SUPERDEV_UI_AUTHORITY", "fedcba9876543210fedcba9876543210")
+        .args([
+            "workflow",
+            "transition",
+            "--session",
+            "pi-b",
+            "--expected-revision",
+            &revision,
+            "--phase",
+            "accept",
+            "--transition",
+            "return-to-build",
+            "--feedback",
+            "One within-scope ACCEPT defect",
+        ])
+        .assert()
+        .success();
+    assert!(
+        fs::read_to_string(&plan)
+            .unwrap()
+            .contains("Blocker: final correction pending: One within-scope ACCEPT defect.")
+    );
+    let owner = cache::load(dir.path()).unwrap().unwrap();
+    fs::write(
+        dir.path().join("src/lib.rs"),
+        "pub fn checkpointed() { /* accept correction */ }\n",
+    )
+    .unwrap();
+    Command::cargo_bin("superdev")
+        .unwrap()
+        .current_dir(dir.path())
+        .args([
+            "workflow",
+            "correction-checkpoint",
+            "--session",
+            "pi-b",
+            "--expected-revision",
+            &owner.last_plan_revision,
+        ])
+        .assert()
+        .success();
+    let owner = cache::load(dir.path()).unwrap().unwrap();
+    let candidate = git::revision(dir.path(), "HEAD").unwrap();
+    Command::cargo_bin("superdev")
+        .unwrap()
+        .current_dir(dir.path())
+        .env("SUPERDEV_UI_AUTHORITY", "fedcba9876543210fedcba9876543210")
+        .args([
+            "workflow",
+            "evidence",
+            "--session",
+            "pi-b",
+            "--expected-revision",
+            &owner.last_plan_revision,
+            "--kind",
+            "verification",
+            "--candidate",
+            &candidate,
+        ])
+        .assert()
+        .success();
+    let owner = cache::load(dir.path()).unwrap().unwrap();
+    Command::cargo_bin("superdev")
+        .unwrap()
+        .current_dir(dir.path())
+        .env("SUPERDEV_UI_AUTHORITY", "fedcba9876543210fedcba9876543210")
+        .args([
+            "workflow",
+            "evidence",
+            "--session",
+            "pi-b",
+            "--expected-revision",
+            &owner.last_plan_revision,
+            "--kind",
+            "final",
+            "--review-session",
+            "review-clean-after-accept-correction",
+            "--candidate",
+            &candidate,
+        ])
+        .assert()
+        .success();
+    let corrected = fs::read_to_string(&plan).unwrap();
+    assert!(corrected.contains("Final corrections: 1."));
+    assert!(corrected.contains("Blocker: none."));
 
     let revision = cache::load(dir.path()).unwrap().unwrap().last_plan_revision;
     Command::cargo_bin("superdev")
@@ -1431,7 +1669,7 @@ fn workflow_start_creates_a_canonical_scope_plan_and_resume_adopts_it() {
     let default_plan = std::process::Command::new("git")
         .args([
             "show",
-            "main:knowledge/plans/abandoned/plan-001-canonical-recovery.md",
+            "main:knowledge/plans/abandoned/plan-042-canonical-recovery.md",
         ])
         .current_dir(dir.path())
         .output()
@@ -1529,7 +1767,7 @@ fn file_commits_on_default_without_a_workflow_branch() {
             "--human-approved",
         ])
         .assert()
-        .success();
+        .failure();
     assert_eq!(git::current_branch(dir.path()).unwrap(), "work/001-active");
     let after = std::process::Command::new("git")
         .args(["rev-parse", "HEAD"])
@@ -1540,6 +1778,7 @@ fn file_commits_on_default_without_a_workflow_branch() {
     assert_eq!(after, work_tip);
     assert!(git::revision(dir.path(), "main").is_ok());
 
+    git(&["switch", "-q", "main"]);
     let binary = assert_cmd::cargo::cargo_bin("superdev");
     let mut first = std::process::Command::new(&binary);
     first.current_dir(dir.path()).args([
@@ -1595,14 +1834,18 @@ fn file_commits_on_default_without_a_workflow_branch() {
             )
             .is_ok()
     );
-    assert_eq!(git::current_branch(dir.path()).unwrap(), "work/001-active");
+    assert_eq!(git::current_branch(dir.path()).unwrap(), "main");
     let after_concurrent = std::process::Command::new("git")
         .args(["rev-parse", "HEAD"])
         .current_dir(dir.path())
         .output()
         .unwrap()
         .stdout;
-    assert_eq!(after_concurrent, work_tip);
+    assert_ne!(after_concurrent, work_tip);
+    assert_eq!(
+        git::revision(dir.path(), "work/001-active").unwrap(),
+        String::from_utf8(work_tip).unwrap().trim()
+    );
     let cache_entries = fs::read_dir(dir.path().join(".superdev/cache"))
         .unwrap()
         .map(|entry| entry.unwrap().file_name().to_string_lossy().into_owned())
@@ -1629,5 +1872,5 @@ fn file_commits_on_default_without_a_workflow_branch() {
         ])
         .assert()
         .failure();
-    assert_eq!(git::current_branch(dir.path()).unwrap(), "work/001-active");
+    assert_eq!(git::current_branch(dir.path()).unwrap(), "main");
 }

@@ -46,19 +46,9 @@ test("the Pi adapter preserves CLI and built-in tool semantics", { timeout: 180_
   assert.match(`${stdout}\n${stderr}`, /No models matching/);
 });
 
-test("the Superdev Pi extension loads and registers its complete surface", { timeout: 180_000 }, async (t) => {
-  await run(process.execPath, ["--check", resolve(repository, ".pi/extensions/superdev/index.ts")], {
-    cwd: repository,
+test("the Superdev Pi extension executes its complete surface", { timeout: 180_000 }, async () => {
+  const { stdout } = await run(process.execPath, ["--experimental-transform-types", workflowFixture], {
+    cwd: repository, timeout: 170_000,
   });
-  if (!(await commandExists("pi"))) {
-    t.skip("pi is not installed");
-    return;
-  }
-
-  const { stdout, stderr } = await run(
-    "pi",
-    ["--no-extensions", "--offline", "-e", workflowFixture, "--list-models", "__superdev_smoke_no_model__"],
-    { cwd: repository, timeout: 170_000 },
-  );
-  assert.match(`${stdout}\n${stderr}`, /No models matching/);
+  assert.match(stdout, /SUPERDEV_WORKFLOW_SMOKE_PASS/);
 });

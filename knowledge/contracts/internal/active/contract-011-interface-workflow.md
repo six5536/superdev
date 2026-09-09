@@ -31,7 +31,7 @@ materialization follows
 use serde::{Deserialize, Serialize};
 
 /// Version returned by every workflow adapter response.
-pub const WORKFLOW_PROTOCOL: &str = "superdev-workflow/v1";
+pub const WORKFLOW_PROTOCOL: &str = "superdev-workflow/v2";
 /// Transient, gitignored session ownership. Canonical progress remains in the plan.
 pub const WORKFLOW_CACHE_PATH: &str = ".superdev/cache/workflow.toml";
 
@@ -62,6 +62,8 @@ pub enum Transition {
     RecordBuildProgress,
     /// Return a human rejection to SCOPE as a discovery.
     RejectAcceptance,
+    /// Return ACCEPT findings that preserve approved intent to BUILD.
+    ReturnToBuild,
     /// Accept the immutable candidate under project policy.
     Accept,
     /// Reopen a prepared closure when the default branch became stale.
@@ -132,6 +134,12 @@ pub struct WorkflowCache {
     /// Default-branch tip incorporated before candidate verification.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub verified_default_revision: Option<String>,
+    /// Owning Pi process ID while an isolated child is active.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub owner_pid: Option<u32>,
+    /// OS-specific owning Pi process start identity, guarding PID reuse.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub owner_started: Option<String>,
     /// Active isolated child role, when one exists.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub child_role: Option<String>,
@@ -188,7 +196,7 @@ pub fn apply_transition(
     use Phase::{Abandoned, Accept, Build, Done, Scope};
     use Transition::{
         Abandon, Accept as AcceptTransition, ApproveScope, RecordBuildProgress,
-        RecoverStaleDefault, RejectAcceptance, ReturnToScope,
+        RecoverStaleDefault, RejectAcceptance, ReturnToBuild, ReturnToScope,
     };
 
     match (phase, transition) {
@@ -203,6 +211,7 @@ pub fn apply_transition(
         (Build, ReturnToScope) => Ok(Scope),
         (Build, RecordBuildProgress) => Ok(Build),
         (Accept, RejectAcceptance) => Ok(Scope),
+        (Accept, ReturnToBuild) => Ok(Build),
         (Accept, AcceptTransition) => {
             if config.human_acceptance_required {
                 require(
@@ -233,8 +242,7 @@ mod tests {
     fn config(human: bool) -> WorkflowConfig {
         WorkflowConfig {
             human_acceptance_required: human,
-            max_stalled_block_attempts: 3,
-            max_final_correction_cycles: 3,
+            ..WorkflowConfig::default()
         }
     }
 
@@ -267,6 +275,19 @@ mod tests {
                 Transition::ApproveScope,
                 &gates,
                 &config(true)
+            ),
+            Ok(Phase::Build)
+        );
+    }
+
+    #[test]
+    fn within_scope_accept_findings_return_to_build() {
+        assert_eq!(
+            apply_transition(
+                Phase::Accept,
+                Transition::ReturnToBuild,
+                &GateEvidence::default(),
+                &config(true),
             ),
             Ok(Phase::Build)
         );
@@ -314,13 +335,26 @@ mod tests {
 ### Module boundaries
 
 - `P_rust-authority` [ubiquitous] The Rust workflow service SHALL validate every durable phase transition, plan revision comparison, ownership comparison, and automatic Git operation.
-- `P_pi-orchestrates` [ubiquitous] Pi SHALL orchestrate interaction and isolated roles through typed workflow commands while withholding direct shell and Git access from every child, giving BUILD only its Rust-owned checkpoint, attempt, correction-checkpoint, and status operations through the parent-pinned executable and digest, and blocking isolated invocations of authoritative workflow operations.
+- `P_pi-orchestrates` [ubiquitous] Pi SHALL orchestrate discoverable issue, scope, build, and accept skills through typed tools while withholding direct shell and Git access from children and resolving BUILD's executable and digest together at invocation time.
+- `P_extension-skills` [ubiquitous] The extension SHALL contribute self-contained workflow skills through resource discovery.
+- `P_skill-cold-start` [event] WHEN a workflow skill starts, the skill SHALL reconstruct canonical identity and phase before mutation.
+- `P_questions-persisted` [event] WHEN review requires intent, Pi SHALL persist post-transition revision-bound questions and confirmed answers for one batched correction and re-review.
+- `P_questions-ui` [event] WHEN a skill asks a question, Pi SHALL offer concrete choices, a recommendation, a typed answer, and chat discussion through the public typed tool.
+- `P_typed-role-result` [ubiquitous] Isolated roles SHALL terminate with one validated bounded typed result and exhaustive reviewer checklist.
+- `P_isolated-trace` [ubiquitous] Pi SHALL retain bounded isolated output and diagnostics in private temporary artifacts with their paths reported on failure.
 
 ### Key flows
 
 - `P_scope-gate` [event] WHEN SCOPE enters BUILD, the service SHALL require explicit human scope approval and a clean isolated requirements review.
 - `P_build-gate` [event] WHEN BUILD enters ACCEPT, the service SHALL require complete blocks, current executable and documentation evidence, no affected pending promise, and a clean fresh isolated final review.
-- `P_accept-policy` [event] WHEN ACCEPT decides a candidate, the service SHALL derive human acceptance solely from project configuration before merging an accepted closure locally with a hook-free, signing-free `git merge --no-ff`.
+- `P_accept-policy` [event] WHEN ACCEPT decides a candidate, the service SHALL derive human acceptance solely from project configuration before committing accepted closure on the work branch and releasing ownership without merging.
+- `P_accept-assessment` [event] WHEN ACCEPT assesses reviewed candidate H, the service SHALL validate the current plan revision and allow only administrative record differences between H and the clean checked-out attestation snapshot.
+- `P_accept-routes-findings` [event] WHEN ACCEPT reports findings, Pi SHALL automatically return within-scope corrections to BUILD and route intent-changing findings to human SCOPE discussion.
+- `P_scope-bootstrap` [event] WHEN a new workflow starts, the service SHALL validate and commit the initial issue and independently numbered plan on the default branch under the repository lock before switching the shared checkout to the work branch.
+- `P_identity-reservation` [event] WHEN an issue or initial plan reserves a numeric identity, the service SHALL refuse a number already held by another canonical identity in the local repository.
+- `P_default-recovery` [event] WHEN a workflow resumes, the service SHALL recover the recorded default branch and current plan from its work-branch snapshot before binding the shared checkout.
+- `P_one-checkout-owner` [ubiquitous] The service SHALL permit only one executing workflow owner per checkout.
+- `P_issue-capture` [event] WHEN issue capture runs, the service SHALL require an unowned clean default-branch checkout and preserve the selected bug, feature, or chore kind.
 - `P_accept-stale-default` [event] WHEN the verified default revision advances before closure, the service SHALL invalidate final evidence and return the same plan to BUILD without preparing DONE records.
 - `P_ui-authority-service` [event] WHEN scope approval, configured human acceptance, rejection, or abandonment changes durable state, the service SHALL require the owning Pi UI's unpersisted capability.
 - `P_ui-authority-adapter` [event] WHEN an action requires human authority, Pi SHALL expose its capability to the service only after interactive confirmation.
@@ -332,8 +366,9 @@ mod tests {
 - `P_attestation-atomic` [event] WHEN verified BUILD receives a clean final review, the evidence command SHALL record candidate-bound evidence and enter ACCEPT in one administrative attestation commit.
 - `P_discoveries-resolved` [event] WHEN BUILD requests final attestation, the service SHALL refuse any unchecked discovery on the primary issue.
 - `P_build-synchronizes-default` [event] WHEN BUILD finalizes a candidate, the service SHALL compare expected default and work tips, prove a conflict-free merge without touching the worktree, and incorporate the default through a hook-free fast-forward before verification.
-- `P_verification-executed` [event] WHEN BUILD requests verification evidence before final review, the service SHALL execute every backtick command declared by plan Verification entries while withholding the Pi UI authority capability, mark the subprocess so nested Pi adapters do not reenter the held workflow transaction, and reject failures, candidate movement, or a dirty result.
-- `P_final-correction-service` [event] WHEN immutable final review reports findings, the service SHALL durably count the correction, invalidate that candidate's final evidence, require a successful correction checkpoint before fresh verification, and have that checkpoint rerun approved Verification commands and commit correction changes only within the union of SCOPE-approved block Areas.
+- `P_verification-executed` [event] WHEN all blocks are complete and BUILD requests verification evidence, the service SHALL execute approved Verification and Final verification commands without UI authority and reject failures, candidate movement, or a dirty result.
+- `P_verification-staged` [event] WHEN BUILD checkpoints a block, the service SHALL execute that block's focused Verification commands without executing the separate Final verification entries declared for complete suites.
+- `P_final-correction-service` [event] WHEN immutable final review reports findings, the service SHALL schedule a bounded correction, invalidate candidate evidence, require a checkpoint within approved Areas, and count the cycle after correction and complete valid re-review.
 - `P_final-correction-adapter` [event] WHEN a final correction remains within the configured limit, Pi SHALL schedule correction, verification, and a fresh immutable review.
 - `P_gates-derived` [ubiquitous] Phase transitions SHALL calculate non-human gates from canonical evidence and repository state rather than caller-provided boolean flags.
 - `P_resume-recovers-evidence` [event] WHEN ownership resumes, the service SHALL reconstruct the SCOPE product baseline from service-owned Git transition history and candidate and verified-default revisions from canonical Completion evidence rather than treating cache loss as evidence loss.
@@ -361,7 +396,7 @@ mod tests {
 Internal and unreleased; the protocol is versioned so adapter incompatibility
 fails explicitly.
 
-- `P_versioned` [ubiquitous] Every machine-readable workflow response SHALL name `superdev-workflow/v1`.
+- `P_versioned` [ubiquitous] Every machine-readable workflow response SHALL name `superdev-workflow/v2`.
 
 <!-- sokf:links -->
 [sokf:adr-042-a-contracts-definition-is-materialized-from-source]: /knowledge/adrs/active/adr-042-a-contracts-definition-is-materialized-from-source.md

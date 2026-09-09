@@ -1834,8 +1834,8 @@ fn the_workflow_reads_scope_build_accept() {
             "authority=\"Rust\"",
             "fresh isolated requirements review",
             "Final code review is fresh, isolated, read-only",
-            "git merge --no-ff",
-            "/file is independent",
+            "Humans merge separately",
+            "/issue and its /file alias",
             "abandonment is human-only",
         ] {
             assert!(text.contains(required), "{p} lacks `{required}`");

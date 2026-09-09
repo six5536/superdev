@@ -822,6 +822,21 @@ mod tests {
         manifest.configs_mut(capability)[0].version = version.map(str::to_string);
     }
 
+    fn materialize_pi_repo_assets(root: &Path) {
+        for (kind, directory) in [
+            (ItemKind::PiExtension, ".pi/extensions"),
+            (ItemKind::PiSkill, ".pi/skills"),
+        ] {
+            for item in content::test_snapshot().items_of(Owner::Repo, kind) {
+                for (relative, body) in &item.files {
+                    let path = root.join(directory).join(&item.name).join(relative);
+                    std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+                    std::fs::write(path, body).unwrap();
+                }
+            }
+        }
+    }
+
     #[test]
     fn any_locked_pin_off_the_default_is_stale() {
         for capability in locked_capabilities() {
@@ -929,22 +944,7 @@ mod tests {
         }
         std::fs::write(dir.path().join(".gitignore"), ".superdev/cache/\n").unwrap();
         std::fs::write(dir.path().join("AGENTS.md"), "@.agents/superdev.md\n").unwrap();
-        let extension = content::test_snapshot()
-            .item(Owner::Repo, ItemKind::PiExtension, "superdev")
-            .unwrap();
-        for (relative, body) in &extension.files {
-            let path = dir.path().join(".pi/extensions/superdev").join(relative);
-            std::fs::create_dir_all(path.parent().unwrap()).unwrap();
-            std::fs::write(path, body).unwrap();
-        }
-        let skill = content::test_snapshot()
-            .item(Owner::Repo, ItemKind::PiSkill, "sokf-authoring")
-            .unwrap();
-        for (relative, body) in &skill.files {
-            let path = dir.path().join(".pi/skills/sokf-authoring").join(relative);
-            std::fs::create_dir_all(path.parent().unwrap()).unwrap();
-            std::fs::write(path, body).unwrap();
-        }
+        materialize_pi_repo_assets(dir.path());
         let fake = FakeRunner::new();
         settle_sokf(dir.path(), &manifest, &fake);
         let mut plan = plan_repo(
@@ -1176,22 +1176,7 @@ mod tests {
         for path in rule_scaffold_paths() {
             std::fs::write(dir.path().join(path), "adapted by the user\n").unwrap();
         }
-        let extension = content::test_snapshot()
-            .item(Owner::Repo, ItemKind::PiExtension, "superdev")
-            .unwrap();
-        for (relative, body) in &extension.files {
-            let path = dir.path().join(".pi/extensions/superdev").join(relative);
-            std::fs::create_dir_all(path.parent().unwrap()).unwrap();
-            std::fs::write(path, body).unwrap();
-        }
-        let skill = content::test_snapshot()
-            .item(Owner::Repo, ItemKind::PiSkill, "sokf-authoring")
-            .unwrap();
-        for (relative, body) in &skill.files {
-            let path = dir.path().join(".pi/skills/sokf-authoring").join(relative);
-            std::fs::create_dir_all(path.parent().unwrap()).unwrap();
-            std::fs::write(path, body).unwrap();
-        }
+        materialize_pi_repo_assets(dir.path());
         assert!(
             repo_entry(dir.path(), &manifest, content::test_snapshot())
                 .unwrap()

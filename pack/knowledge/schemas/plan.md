@@ -27,7 +27,9 @@ completed migrated records may preserve old manual-case text only under an expli
 ````yaml
 description: >
   One issue's approved scope, stable work blocks, durable progress, executable
-  evidence, review, acceptance, and integration history.
+  evidence, review, acceptance, and manual integration history. Declare focused
+  commands under each block's Verification bullet. Declare complete suites under
+  Final verification; run those only after every block is done.
 line-limit: 1500
 variant-key: lifecycle
 frontmatter:
@@ -125,7 +127,7 @@ sections:
     level: 2
     required: true
     content: prose
-    description: Scope approval, block checks, candidate verification and review, acceptance, and integration evidence.
+    description: Persisted default branch, scope approval, block checks, reviewed product candidate and administrative attestation, acceptance, and optional human integration evidence.
 example:
   open: |
     ---
@@ -343,5 +345,5 @@ example:
 
     ## Completion evidence
 
-    Human abandonment approval and knowledge-only integration are recorded.
+    Human abandonment approval is recorded; partial work remains unmerged.
 ````

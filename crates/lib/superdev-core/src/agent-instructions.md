@@ -11,9 +11,9 @@ YOU follow the set of rules defined below, reminding yourself of the rules perio
   <rule>SCOPE requires fresh isolated requirements review and explicit human approval.</rule>
   <rule>BUILD owns blocks, executable evidence, documentation, verification, and corrections.</rule>
   <rule>Final code review is fresh, isolated, read-only, and bound to immutable candidate H.</rule>
-  <rule>ACCEPT follows project configuration and integrates locally with git merge --no-ff.</rule>
+  <rule>ACCEPT follows project configuration, closes accepted records, and releases ownership on the work branch. Humans merge separately.</rule>
   <rule>Never push, release, delete branches, stash, reset, discard, absorb unrelated changes, or resolve conflicts implicitly.</rule>
-  <rule>/file is independent; cancellation pauses; abandonment is human-only.</rule>
+  <rule>/issue and its /file alias capture work on the clean default branch. Cancellation pauses; abandonment is human-only.</rule>
 </workflow>
 
 <knowledge purpose="canonical data store">
