@@ -441,6 +441,24 @@ export default function (pi: ExtensionAPI) {
 
 The `sokf-validation-state` non-context entry carries one closed `ValidationStateSnapshot` payload. Every variant rejects additional properties and identifies the repository with its canonical absolute root. `Finding` has the exact closed shape bound by `contract-003-api-sokf P_routed-schemas`. Degraded mode exists only in repository-scoped memory. It carries the intended durable state and a `validationDue` flag.
 
+- `P_worktree-isolation` [ubiquitous] The adapter SHALL
+  PENDING(plan-077/block-3) scope every SOKF operation and validation sequence
+  to the canonical active checkout root, including a linked Git worktree.
+  - `AC_worktree-discovery` [event] WHEN Pi starts at a linked worktree root or
+    its descendant, the adapter SHALL PENDING(plan-077/block-1) recognize its
+    `.git` pointer file and select that worktree rather than the shared Git
+    directory or main checkout.
+  - `AC_worktree-all-operations` [state] WHILE a linked worktree is active,
+    routed file tools, semantic retrieval, search, graph traversal, MCP process
+    and index activity, mutation, repair, refiling, and validation SHALL
+    PENDING(plan-077/block-3) use that worktree.
+  - `AC_worktree-state-isolated` [event] WHEN one process serves multiple
+    checkout roots, each checkout SHALL PENDING(plan-077/block-3) have a
+    distinct MCP client, canonical queue targets, validation-state root,
+    follow-up count, changed paths, findings, and validation execution.
+  - `AC_worktree-cross-checkout-refused` [event] WHEN a routed path escapes
+    into another checkout, the adapter SHALL PENDING(plan-077/block-1) reject
+    it before access or mutation.
 - `P_source-routing` [ubiquitous] The adapter SHALL PENDING(plan-077/block-1) resolve a routed argument to one logical knowledge ingress and one canonical repository-contained target before invoking a Pi file-tool factory.
   - `AC_source-existing` [event] WHEN an identity or physical knowledge path names an existing regular file, the adapter SHALL PENDING(plan-077/block-1) execute against its canonical target.
   - `AC_source-missing` [event] WHEN a physical knowledge path names a missing destination, the adapter SHALL PENDING(plan-077/block-1) canonicalize its nearest existing ancestor and append the normalized missing suffix.

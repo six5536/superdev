@@ -204,6 +204,16 @@ authoritativePath: string, authoritativeRegion?: string }`. A `Finding` is
   error while the MCP process remains available.
 - `P_lazy-embedding` [ubiquitous] The MCP server SHALL retain one lazily
   initialized embedder result for its process lifetime.
+- `P_active-worktree-root` [ubiquitous] The MCP server SHALL
+  PENDING(plan-077/block-1) treat the canonical active checkout root as its
+  repository, including when `.git` is a linked-worktree pointer file.
+  - `AC_worktree-local-surfaces` [event] WHEN the server runs in a linked
+    worktree, source resolution, semantic retrieval, search, graph traversal,
+    index activity, mutation, repair, refiling, and validation SHALL
+    PENDING(plan-077/block-3) use only that worktree's files and cache.
+  - `AC_worktree-other-checkout-refused` [event] WHEN a routed path enters
+    another checkout, including the main checkout, the server SHALL
+    PENDING(plan-077/block-1) reject it as outside the active worktree.
 - `P_direct-does-not-load` [event] WHEN only source resolution, direct semantic
   retrieval, or graph calls have run, the MCP server SHALL PENDING(plan-077/block-1)
   leave the embedder uninitialized.

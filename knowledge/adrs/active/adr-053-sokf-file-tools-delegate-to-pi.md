@@ -22,6 +22,8 @@ SOKF still owns identity resolution, repository containment, generated ownership
 
 We will resolve SOKF identities before execution, then delegate file semantics and presentation to Pi 0.85.1 factories and exported helpers. A narrow adapter is permitted only where package exports expose no preparation or presentation seam, and paired tests will prove that adapter byte-for-byte against Pi's operation boundaries.
 
+We will follow Pi's working-directory scope in normal checkouts and linked Git worktrees. The canonical active checkout root, discovered from either a `.git` directory or worktree pointer file, is the repository boundary; Git's shared common directory and main checkout do not replace it. Every SOKF operation, MCP client and index, mutation queue target, validation run, and persisted follow-up sequence remains isolated by that active root. Another checkout is outside its containment boundary.
+
 We will queue virtual and physical aliases by canonical physical target. Edits will persist through an agent-safe compare-and-swap source transport that re-resolves the logical ingress and rejects target drift. A missing physical destination will canonicalize through its nearest existing ancestor. Repository-contained symlink targets are accepted, including targets outside `knowledge/`; repository escapes are rejected.
 
 A repository-contained file or directory symlink below `knowledge/` makes each reachable eligible Markdown file an SOKF member under a logical `knowledge/` ingress. SOKF will process each canonical file once across loading, identity resolution, search, graph traversal, repair, refiling, and validation. A direct ingress wins; otherwise the lexically first symlink ingress wins. Canonical directory identities break cycles. Repair changes the canonical file without replacing ingress symlinks. Refiling moves a selected file-symlink directory entry without moving its canonical target. A wrong-location member reached only beneath a directory symlink stays in place with an actionable finding because it has no independently movable alias. A repository file with no logical `knowledge/` ingress is not SOKF knowledge.
@@ -40,7 +42,8 @@ The unreleased MCP surface will replace `sokf_read` with `sokf_resolve_source` a
 
 | Option | Pros | Cons |
 |--------|------|------|
-| Delegate to Pi factories with narrow byte-proven adapters | Exact parity and one file-tool experience | Couples parity tests to pinned Pi 0.85.1 |
+| Delegate to Pi factories with narrow byte-proven adapters and active-worktree isolation | Exact parity, one file-tool experience, and checkout-local behavior | Couples parity tests to pinned Pi 0.85.1 and requires multi-worktree fixtures |
+| Scope all worktrees by Git's shared common directory | One process-level repository identity | Can read, mutate, or validate the wrong checkout and merge unrelated follow-up state |
 | Reimplement Pi file algorithms in the extension | Full local control | Creates an approximate fork that drifts |
 | Keep rendered virtual reads and mutation envelopes | Smallest source change | Preserves the current contract divergence |
 | Roll back after repair or validation findings | Leaves only valid knowledge | Loses acknowledged work and forces expensive rewrites |
@@ -50,6 +53,7 @@ The unreleased MCP surface will replace `sokf_read` with `sokf_resolve_source` a
 ## Consequences
 
 - Positive: physical paths and equivalent SOKF identities share Pi's tested file semantics, results, metadata, and rendering.
+- Positive: normal checkouts and linked worktrees keep independent SOKF files, MCP activity, mutations, validation, and follow-up state.
 - Positive: SOKF safety, repair, refiling, and validation remain authoritative without replacing successful file-tool results.
 - Positive: logical-ingress membership gives contained symlink targets one deterministic identity across every SOKF surface.
 - Positive: bounded follow-ups retain enough active-branch state to prevent lifecycle events from resetting the correction cap.
