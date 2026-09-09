@@ -70,12 +70,6 @@ pub(super) fn record_scope_checkpoint(root: &Path, args: &RevisionArgs) -> Resul
             })?;
         let head = git::revision(root, &owner.identity.work_branch)?;
         git::require_knowledge_only_since(root, scope_base, &head)?;
-        let (_, observed) = plan_revision(root, &owner.identity.plan)?;
-        if observed == args.expected_revision {
-            return Err(Error::Manifest {
-                message: "SCOPE checkpoint requires a changed canonical plan".into(),
-            });
-        }
         let grammar = superdev_core::validate::schema::load_grammar(root)?;
         let report =
             superdev_core::validate::validate_repo(root, &root.join("knowledge"), &[], &grammar)?;
@@ -85,8 +79,7 @@ pub(super) fn record_scope_checkpoint(root: &Path, args: &RevisionArgs) -> Resul
             });
         }
         let parent = head;
-        let commit =
-            git::commit_knowledge_changes_at(root, git::SCOPE_CHECKPOINT_MESSAGE, &parent)?;
+        let commit = git::commit_scope_checkpoint(root, &parent)?;
         let revision = plan_revision(root, &owner.identity.plan)?.1;
         let state =
             match transaction.compare_and_swap(&args.session, &args.expected_revision, |state| {

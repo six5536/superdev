@@ -325,3 +325,48 @@ fn integration_refuses_dirty_or_stale_tips() {
     assert!(integrate_no_ff(root, "main", "0000000", "work/059-test", &work).is_err());
     assert!(integrate_no_ff(root, "main", &default, "work/059-test", &default).is_err());
 }
+
+#[test]
+fn empty_commits_are_allowed_only_for_scope_snapshots() {
+    let dir = repository();
+    let root = dir.path();
+    let before = revision(root, "HEAD").unwrap();
+    assert!(commit_knowledge_changes(root, "empty evidence").is_err());
+    assert!(commit_knowledge_changes_at(root, "empty knowledge", &before).is_err());
+    // No signing executable is available; commit-tree does not invoke it.
+    command(root, &["config", "commit.gpgsign", "true"]);
+    command(root, &["config", "gpg.program", "/nonexistent/signer"]);
+    let checkpoint = commit_scope_checkpoint(root, &before).unwrap();
+    assert_ne!(checkpoint, before);
+    assert!(
+        changed_paths(root, &before, &checkpoint)
+            .unwrap()
+            .is_empty()
+    );
+    assert!(
+        commit_scope_checkpoint(root, &before).is_err(),
+        "stale parent accepted"
+    );
+    assert_eq!(revision(root, "HEAD").unwrap(), checkpoint);
+    require_clean(root).unwrap();
+}
+
+#[test]
+fn scope_snapshot_requires_the_plan_and_excludes_product_changes() {
+    let dir = repository();
+    let root = dir.path();
+    let plan = root.join("knowledge/plans/open/plan-001-snapshot.md");
+    std::fs::create_dir_all(plan.parent().unwrap()).unwrap();
+    std::fs::write(&plan, "phase: scope\n").unwrap();
+    commit_knowledge_changes(root, "initial plan").unwrap();
+    let parent = revision(root, "HEAD").unwrap();
+    let checkpoint = commit_scope_checkpoint(root, &parent).unwrap();
+    require_scope_checkpoint(root, &checkpoint, &plan).unwrap();
+    assert!(
+        require_scope_checkpoint(root, &checkpoint, &root.join("knowledge/missing.md")).is_err()
+    );
+    std::fs::write(root.join("file"), "product change\n").unwrap();
+    command(root, &["add", "file"]);
+    command(root, &["commit", "-qm", SCOPE_CHECKPOINT_MESSAGE]);
+    assert!(require_scope_checkpoint(root, &revision(root, "HEAD").unwrap(), &plan).is_err());
+}

@@ -56,6 +56,22 @@ try {
 	assert.equal((await git("branch", "--show-current")).stdout.trim(), "work/001-canonical-recovery");
 	assert.equal((await git("rev-parse", "trunk")).stdout.trim(), defaultBefore);
 	assert.equal((await git("status", "--porcelain")).stdout.trim(), "");
+	// An unchanged proposal must checkpoint and bind review evidence through the
+	// same pinned service even though the branch-local launcher is unusable.
+	const planPath = join(root, "knowledge/plans/open/plan-042-canonical-recovery.md");
+	const planBefore = await readFile(planPath, "utf8");
+	const checkpoint = await service("workflow", "scope-checkpoint", "--session", "checkout-test",
+		"--expected-revision", status.result.owner.last_plan_revision);
+	assert.equal(checkpoint.result.revision, status.result.owner.last_plan_revision);
+	assert.equal(await readFile(planPath, "utf8"), planBefore);
+	assert.notEqual(checkpoint.result.commit, baseline.result.baseline);
+	assert.equal((await git("diff", "--name-only", baseline.result.baseline, checkpoint.result.commit)).stdout.trim(), "");
+	await service("workflow", "evidence", "--session", "checkout-test",
+		"--expected-revision", checkpoint.result.revision, "--revision", checkpoint.result.revision,
+		"--kind", "scope-review", "--review-session", "isolated-unchanged-review", "--candidate", checkpoint.result.commit);
+	assert.match(await readFile(planPath, "utf8"), /Scope requirements review: clean by isolated session isolated-unchanged-review\./);
+	assert.equal((await git("status", "--porcelain")).stdout.trim(), "");
+	assert.equal((await git("rev-parse", "trunk")).stdout.trim(), defaultBefore);
 	await service("workflow", "cancel", "--session", "checkout-test");
 	console.log("SUPERDEV_SERVICE_CHECKOUT_PASS");
 } finally {

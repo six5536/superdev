@@ -178,6 +178,7 @@ fn commit_paths(
     message: &str,
     paths: &[String],
     expected_parent: Option<&str>,
+    allow_empty: bool,
 ) -> Result<String> {
     if message.trim().is_empty() || message.contains(['\n', '\r', '\0']) {
         return Err(Error::Manifest {
@@ -185,9 +186,12 @@ fn commit_paths(
         });
     }
     if paths.is_empty() {
-        return Err(Error::Manifest {
-            message: "workflow mutation produced no commit changes".into(),
-        });
+        if !allow_empty {
+            return Err(Error::Manifest {
+                message: "workflow mutation produced no commit changes".into(),
+            });
+        }
+        require_clean(root)?;
     }
 
     // Build the commit through an isolated index. A failed add/tree/commit/ref
@@ -204,9 +208,11 @@ fn commit_paths(
     })?;
     let index = temporary.path().join("index");
     git_with_index(root, &index, &["read-tree", &parent])?;
-    let mut add = vec!["add", "--all", "--"];
-    add.extend(paths.iter().map(String::as_str));
-    git_with_index(root, &index, &add)?;
+    if !paths.is_empty() {
+        let mut add = vec!["add", "--all", "--"];
+        add.extend(paths.iter().map(String::as_str));
+        git_with_index(root, &index, &add)?;
+    }
     let tree_output = git_with_index(root, &index, &["write-tree"])?;
     let tree = String::from_utf8_lossy(&tree_output.stdout)
         .trim()
@@ -256,7 +262,7 @@ fn git_with_index(root: &Path, index: &Path, args: &[&str]) -> Result<Output> {
 
 /// Require every current worktree change to remain in canonical knowledge.
 pub fn require_knowledge_only_worktree(root: &Path) -> Result<()> {
-    if worktree_paths(root)?
+    if working_paths(root)?
         .iter()
         .any(|path| !valid_path(path) || !path.starts_with("knowledge/"))
     {
@@ -271,7 +277,7 @@ pub fn require_knowledge_only_worktree(root: &Path) -> Result<()> {
 pub fn commit_knowledge_changes(root: &Path, message: &str) -> Result<String> {
     require_knowledge_only_worktree(root)?;
     let paths = worktree_paths(root)?;
-    commit_paths(root, message, &paths, None)
+    commit_paths(root, message, &paths, None, false)
 }
 
 /// Commit canonical knowledge only if the checked-out branch still has the expected parent.
@@ -290,7 +296,22 @@ pub fn commit_knowledge_changes_at(
             message: "workflow commit refused changes outside canonical knowledge".into(),
         });
     }
-    commit_paths(root, message, &paths, Some(expected_parent))
+    commit_paths(root, message, &paths, Some(expected_parent), false)
+}
+
+/// Publish an immutable SCOPE snapshot, including an empty administrative commit
+/// when the valid proposal is already committed. Other workflow commits still
+/// require changes. The caller holds the ownership transaction and validates SCOPE.
+pub fn commit_scope_checkpoint(root: &Path, expected_parent: &str) -> Result<String> {
+    validate_ref(expected_parent)?;
+    require_knowledge_only_worktree(root)?;
+    commit_paths(
+        root,
+        SCOPE_CHECKPOINT_MESSAGE,
+        &worktree_paths(root)?,
+        Some(expected_parent),
+        true,
+    )
 }
 
 /// Commit one product-bearing BUILD checkpoint without absorbing paths outside
@@ -302,7 +323,7 @@ pub fn commit_block_changes(
 ) -> Result<String> {
     validate_block_paths(root, allowed_areas)?;
     let paths = worktree_paths(root)?;
-    commit_paths(root, message, &paths, None)
+    commit_paths(root, message, &paths, None, false)
 }
 
 /// Refuse a BUILD checkpoint's current changes before any service-owned edit.
@@ -442,7 +463,8 @@ pub fn scope_base_from_history(root: &Path, work_branch: &str, plan_path: &Path)
         .ok_or_else(|| Error::Manifest {
             message: "SCOPE baseline plan path is invalid".into(),
         })?;
-    let history = git(root, &["log", "--format=%H", work_branch, "--", plan_path])?;
+    // Empty and issue-only checkpoints do not appear in path-filtered history.
+    let history = git(root, &["log", "--first-parent", "--format=%H", work_branch])?;
     for commit in String::from_utf8_lossy(&history.stdout).lines() {
         validate_ref(commit)?;
         let subject = git(root, &["show", "-s", "--format=%s", commit])?;
@@ -508,7 +530,8 @@ pub fn require_knowledge_only_since(root: &Path, baseline: &str, candidate: &str
     Ok(())
 }
 
-/// Require that `candidate` is the service-owned knowledge commit that last changed the plan.
+/// Require a service-owned knowledge-only SCOPE snapshot containing the plan.
+/// A checkpoint need not change the plan or any files.
 pub fn require_scope_checkpoint(root: &Path, candidate: &str, plan_path: &Path) -> Result<()> {
     validate_ref(candidate)?;
     let plan_path = plan_path
@@ -529,7 +552,8 @@ pub fn require_scope_checkpoint(root: &Path, candidate: &str, plan_path: &Path) 
     let parent = git(root, &["rev-parse", "--verify", &parent_expression])?;
     let parent = String::from_utf8_lossy(&parent.stdout).trim().to_string();
     let paths = changed_paths(root, &parent, candidate)?;
-    if !paths.iter().any(|path| path == plan_path)
+    let plan = file_at_revision(root, candidate, plan_path)?;
+    if !plan.lines().any(|line| line == "phase: scope")
         || paths
             .iter()
             .any(|path| !valid_path(path) || !path.starts_with("knowledge/"))

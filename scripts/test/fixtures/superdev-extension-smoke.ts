@@ -381,7 +381,8 @@ async function smoke() {
 	};
 	const runService = async (args: string[]) => {
 		serviceCalls.push(args);
-		if (args.includes("scope-checkpoint")) revision = "revision-2";
+		// The authoring role leaves the valid plan unchanged; checkpointing must
+		// still reach requirements review with the same canonical revision.
 		if (args.includes("scope-review")) revision = "revision-3";
 		if (args.includes("approve-scope")) { phase = "build"; revision = "revision-4"; }
 		if (args.includes("final")) { phase = "accept"; revision = "revision-5"; candidateEvidence = true; attested = true; }
@@ -433,6 +434,8 @@ async function smoke() {
 	});
 	await phaseDrivers.runScopePhase("", phaseCtx);
 	if (runtime.lastOutcome?.status !== "ready-for-approval" || phase !== "scope") throw new Error("SCOPE did not return a typed approval gate to its skill");
+	const scopeEvidence = serviceCalls.find((args) => args.includes("scope-review"));
+	if (!scopeEvidence || scopeEvidence[scopeEvidence.indexOf("--revision") + 1] !== "revision-1") throw new Error("unchanged SCOPE did not bind review to the original plan revision");
 	phase = "build"; revision = "revision-4"; runtime.lastOutcome = undefined; lateDigest = "digest";
 	await phaseDrivers.runBuildPhase("", phaseCtx);
 	if (owned || serviceCalls.some((args) => args.includes("integrate"))) throw new Error("BUILD did not finish at the manual merge boundary");
