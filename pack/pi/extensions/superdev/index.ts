@@ -535,6 +535,7 @@ export default function superdev(pi: ExtensionAPI) {
 			// because the service could not prove that session stopped. Releasing
 			// pauses the workflow; the phase, plan, and commits stay in Git.
 			const foreign = status.owner && status.owner.session_id !== session;
+			if (foreign && !ctx.hasUI) return ctx.ui.notify("Releasing another Pi session's claim requires an interactive Pi session", "warning");
 			if (foreign && !(await ctx.ui.confirm("Release the other Pi session's claim?", `${status.owner!.identity.plan} is claimed by Pi session ${status.owner!.session_id}, which cannot be proven to be running. Releasing pauses the workflow; no canonical work is lost.`))) return;
 			try {
 				await runSuperdev(foreign
