@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { loadSkills, formatSkillsForPrompt } from "@earendil-works/pi-coding-agent";
 import { chmod, copyFile, mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
@@ -55,10 +56,19 @@ async function smoke() {
 		},
 	};
 	superdev(fake as never);
-	const discovered = await eventHandlers.get("resources_discover")?.({ cwd: "/repo", reason: "startup" }, {});
-	if (!discovered?.skillPaths?.some((path: string) => path.endsWith("/.pi/extensions/superdev/skills"))) {
-		throw new Error("workflow skills were not discovered from inside the Superdev extension");
-	}
+	const skillAgentDir = await mkdtemp(join(tmpdir(), "superdev-skill-discovery-"));
+	try {
+		const discovered = loadSkills({ cwd: process.cwd(), agentDir: skillAgentDir, skillPaths: [], includeDefaults: true });
+		const prompt = formatSkillsForPrompt(discovered.skills);
+		for (const name of ["issue", "scope", "build", "accept"]) {
+			const skill = discovered.skills.find((skill) => skill.name === name);
+			if (!skill || skill.disableModelInvocation || !skill.filePath.endsWith(`/.pi/skills/${name}/SKILL.md`) || !prompt.includes(`<name>${name}</name>`)) {
+				throw new Error(`native Pi discovery omitted ${name} from its prompt`);
+			}
+			const packed = await readFile(join(process.cwd(), "pack/pi/skills", name, "SKILL.md"), "utf8");
+			if (packed !== await readFile(skill.filePath, "utf8")) throw new Error(`${name} skill pack differs`);
+		}
+	} finally { await rm(skillAgentDir, { recursive: true, force: true }); }
 	for (const role of ["scope", "requirements-review", "build", "code-review", "accept", "file"]) {
 		const prompt = await readFile(join(process.cwd(), ".pi", "extensions", "superdev", "prompts", `${role}.md`), "utf8");
 		if (!prompt.includes("only tool call in the final assistant turn") || !prompt.includes("exactly once")) {

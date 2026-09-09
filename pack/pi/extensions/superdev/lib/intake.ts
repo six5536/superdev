@@ -47,7 +47,7 @@ export function registerIntakeTools({ pi, workflowStatus, runSuperdev, authority
         description: name === "issue" ? "Create a canonical issue on the default branch" : "Alias for /issue",
         handler: async (args: string, ctx: any) => {
             if (!ctx.isIdle()) return ctx.ui.notify("Issue capture requires an idle session", "warning");
-            const skill = await readFile(resolve(here, "skills/issue/SKILL.md"), "utf8");
+            const skill = await readFile(resolve(here, "../../skills/issue/SKILL.md"), "utf8");
             pi.sendUserMessage(`${skill}\n\nUser: ${args}`);
         },
     });
