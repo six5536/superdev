@@ -112,7 +112,9 @@ sections:
     level: 2
     required: true
     content: prose
-    description: Machine-maintained current block, attempts, fingerprints, correction count, and blocker state.
+    description: >
+      BUILD-maintained progress: the current block, what remains, and any
+      blocker. Written and read by the workflow roles; nothing parses it.
   - heading: "Implementation decisions"
     level: 2
     required: true

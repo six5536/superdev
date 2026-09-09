@@ -360,14 +360,23 @@ function policyTimeoutMs(policy: OutputPolicy & { timeoutSeconds?: number }): nu
 }
 
 export function isolatedRoleMayNotRun(command: string): boolean {
-	return /\bsuperdev\s+workflow\s+(?:start|resume|cancel|record-evidence|evidence|scope-baseline|scope-checkpoint|sync|correction(?!-checkpoint)|transition|integrate|abandon)\b/.test(command)
+	return /\bsuperdev\s+workflow\s+(?:start|resume|bind|cancel|transition|abandon|activity-start|activity-finish)\b/.test(command)
 		|| /\bgit\s+(?:add|commit|update-ref|reset|switch|checkout|merge|rebase|cherry-pick|branch|tag|stash|clean|restore|rm|mv)\b/.test(command);
 }
+
+/**
+ * Verbs the BUILD child may run through the pinned service.
+ *
+ * Committing its own work is BUILD's job, because only BUILD knows which block
+ * it just finished. Every other workflow verb changes durable phase or
+ * ownership and stays with the parent.
+ */
+export const buildCommands = ["commit", "status"] as const;
 
 export function buildCommandAllowed(command: string, args: string[]): boolean {
 	return command === "superdev"
 		&& args[0] === "workflow"
-		&& ["block", "attempt", "correction-checkpoint", "status"].includes(args[1] ?? "");
+		&& (buildCommands as readonly string[]).includes(args[1] ?? "");
 }
 
 type ExecResult = { code: number; stdout: string; stderr: string };

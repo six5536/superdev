@@ -17,7 +17,7 @@ import { registerWorkflowQuestions, type QuestionState } from "./lib/questions.t
 import { parseLegacyRoleResult, roleResultSchemaFor, validateRoleResult, type Role, type RoleResult } from "./lib/review.ts";
 
 import { killProcessTree, stopProcess, ensureParentService, runSuperdev, readOnly, defaultOutputPolicy, isolated, runGuardedBuildCommand, runPinnedSuperdev, requiresHumanAcceptance, isolatedRoleMayNotRun } from "./lib/process.ts";
-export { isolated, isolatedTools, isolatedRoleMayNotRun, parseRoleResult, runPinnedSuperdev, runGuardedBuildCommand, requiresHumanAcceptance, buildCommandAllowed } from "./lib/process.ts";
+export { isolated, isolatedTools, isolatedRoleMayNotRun, parseRoleResult, runPinnedSuperdev, runGuardedBuildCommand, requiresHumanAcceptance, buildCommandAllowed, buildCommands } from "./lib/process.ts";
 
 const here = dirname(fileURLToPath(import.meta.url));
 export default function superdev(pi: ExtensionAPI) {
@@ -238,7 +238,6 @@ export default function superdev(pi: ExtensionAPI) {
 		canonicalPlanRevision?: string;
 		openWorkflows?: Array<{ issue: string; plan: string; work_branch: string; default_branch: string }>;
 		buildState?: { currentBlock: number; attempts: number; finalCorrections: number; fingerprint?: string; blocker: string };
-		maxStalledBlockAttempts?: number;
 		maxFinalCorrectionCycles?: number;
 		maxScopeReviewCycles?: number;
 		isolatedRoleTimeoutSeconds?: number;

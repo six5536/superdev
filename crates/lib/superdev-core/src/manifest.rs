@@ -63,8 +63,6 @@ pub struct KnowledgeConfig {
 pub struct WorkflowConfig {
     /// Require an interactive human decision before local integration.
     pub human_acceptance_required: bool,
-    /// Attempts with an unchanged failure fingerprint before BUILD pauses.
-    pub max_stalled_block_attempts: u32,
     /// Maximum final review correction cycles before BUILD pauses.
     pub max_final_correction_cycles: u32,
     /// Maximum batched correction/re-review cycles during SCOPE.
@@ -128,7 +126,6 @@ impl Default for WorkflowConfig {
     fn default() -> Self {
         Self {
             human_acceptance_required: true,
-            max_stalled_block_attempts: 3,
             max_final_correction_cycles: 3,
             max_scope_review_cycles: default_max_scope_review_cycles(),
             isolated_role_timeout_seconds: default_isolated_role_timeout_seconds(),
@@ -146,10 +143,6 @@ impl Default for WorkflowConfig {
 impl WorkflowConfig {
     fn validate(&self) -> Result<()> {
         let positive = [
-            (
-                "max_stalled_block_attempts",
-                self.max_stalled_block_attempts,
-            ),
             (
                 "max_final_correction_cycles",
                 self.max_final_correction_cycles,
@@ -819,7 +812,6 @@ mod tests {
                 "blueprint = \"0.1.0\"\n\n[knowledge]\ncustom = [\"maintain\"]\n\n",
                 "[workflow]\n",
                 "human_acceptance_required = true\n",
-                "max_stalled_block_attempts = 3\n",
                 "max_final_correction_cycles = 3\n",
                 "max_scope_review_cycles = 3\n",
                 "isolated_role_timeout_seconds = 1200\n",
@@ -869,23 +861,19 @@ mod tests {
         assert_eq!(
             manifest.to_toml(),
             format!(
-                "{written}\n[workflow]\nhuman_acceptance_required = true\nmax_stalled_block_attempts = 3\nmax_final_correction_cycles = 3\nmax_scope_review_cycles = 3\nisolated_role_timeout_seconds = 1200\nmax_isolated_context_bytes = 8192\nmax_isolated_context_lines = 200\nmax_review_state_bytes = 262144\nmax_review_findings = 100\nmax_isolated_artifact_bytes = 10485760\nmax_isolated_artifacts_per_session = 20\nisolated_artifact_retention_hours = 24\n"
+                "{written}\n[workflow]\nhuman_acceptance_required = true\nmax_final_correction_cycles = 3\nmax_scope_review_cycles = 3\nisolated_role_timeout_seconds = 1200\nmax_isolated_context_bytes = 8192\nmax_isolated_context_lines = 200\nmax_review_state_bytes = 262144\nmax_review_findings = 100\nmax_isolated_artifact_bytes = 10485760\nmax_isolated_artifacts_per_session = 20\nisolated_artifact_retention_hours = 24\n"
             )
         );
     }
 
     #[test]
     fn workflow_retry_limits_must_be_positive() {
-        for (key, stalled, corrections) in [
-            ("max_stalled_block_attempts", 0, 3),
-            ("max_final_correction_cycles", 3, 0),
-        ] {
-            let written = format!(
-                "blueprint = \"0.2.0\"\n[workflow]\nhuman_acceptance_required = true\nmax_stalled_block_attempts = {stalled}\nmax_final_correction_cycles = {corrections}\n"
-            );
-            let err = Manifest::parse(&written).unwrap_err();
-            assert!(err.to_string().contains(key), "{err}");
-        }
+        let written = "blueprint = \"0.2.0\"\n[workflow]\nhuman_acceptance_required = true\nmax_final_correction_cycles = 0\n";
+        let err = Manifest::parse(written).unwrap_err();
+        assert!(
+            err.to_string().contains("max_final_correction_cycles"),
+            "{err}"
+        );
     }
 
     /// `packs` is a top-level array, not a capability table: it must not be

@@ -4,7 +4,7 @@ import { chmod, copyFile, mkdtemp, readFile, rm, stat, writeFile } from "node:fs
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 
-import superdev, { buildCommandAllowed, isolated, isolatedRoleMayNotRun, isolatedTools, parseRoleResult, requiresHumanAcceptance, runGuardedBuildCommand, runPinnedSuperdev } from "../../../.pi/extensions/superdev/index.ts";
+import superdev, { buildCommandAllowed, buildCommands, isolated, isolatedRoleMayNotRun, isolatedTools, parseRoleResult, requiresHumanAcceptance, runGuardedBuildCommand, runPinnedSuperdev } from "../../../.pi/extensions/superdev/index.ts";
 import { IsolatedArtifact, boundedText } from "../../../.pi/extensions/superdev/lib/output.ts";
 import { registerPhaseDrivers, type PhaseRuntime } from "../../../.pi/extensions/superdev/lib/phases.ts";
 import { registerPhaseTool } from "../../../.pi/extensions/superdev/lib/phase-tool.ts";
@@ -196,13 +196,11 @@ async function smoke() {
 		if (!String(error).includes("omitted")) throw error;
 	}
 	for (const command of [
-		"superdev workflow evidence",
-		"superdev workflow scope-baseline",
-		"superdev workflow scope-checkpoint",
-		"superdev workflow correction",
-		"superdev workflow sync",
+		"superdev workflow start",
+		"superdev workflow resume",
+		"superdev workflow cancel",
 		"superdev workflow transition",
-		"superdev workflow integrate",
+		"superdev workflow abandon",
 	]) {
 		if (!isolatedRoleMayNotRun(command)) throw new Error(`isolated role may bypass ${command}`);
 	}
@@ -214,18 +212,18 @@ async function smoke() {
 	if (!isolatedTools("code-review").split(",").includes("superdev_submit_result")) throw new Error("reviewer lacks typed terminal submission");
 	if (!isolatedTools("build").split(",").includes("superdev_build_exec")) throw new Error("BUILD child cannot execute bounded evidence");
 	if (buildCommandAllowed("sh", ["-c", "mutate Git"])) throw new Error("BUILD can escape through a shell");
-	if (buildCommandAllowed("cargo", ["test"])) throw new Error("BUILD can bypass Rust-owned verification");
 	if (buildCommandAllowed("git", ["diff", "--check"])) throw new Error("BUILD can invoke Git directly");
-	if (!buildCommandAllowed("superdev", ["workflow", "block"])) throw new Error("BUILD cannot publish a block checkpoint");
 	if (buildCommandAllowed("superdev", ["file"])) throw new Error("BUILD can escape through an unrelated service command");
 	if (buildCommandAllowed("superdev", ["workflow", "transition"])) throw new Error("BUILD can transition workflow state");
-	for (const command of [
-		"superdev workflow block",
-		"superdev workflow attempt",
-		"superdev workflow correction-checkpoint",
-		"superdev workflow status",
-	]) {
-		if (isolatedRoleMayNotRun(command)) throw new Error(`isolated role cannot perform ${command}`);
+	// BUILD commits its own blocks, because only BUILD knows which one it finished.
+	if (!buildCommandAllowed("superdev", ["workflow", "commit"])) throw new Error("BUILD cannot commit its own block");
+	if (!buildCommandAllowed("superdev", ["workflow", "status"])) throw new Error("BUILD cannot read canonical status");
+	// Every permitted verb must still exist, or BUILD stalls at its first checkpoint.
+	const workflowCli = await readFile(join(process.cwd(), "crates/app/superdev/src/workflow_cli.rs"), "utf8");
+	for (const verb of buildCommands) {
+		const variant = verb.split("-").map((part) => part[0].toUpperCase() + part.slice(1)).join("");
+		if (!new RegExp(`^\\s+${variant}\\s*[({]`, "m").test(workflowCli)) throw new Error(`BUILD may run removed verb ${verb}`);
+		if (isolatedRoleMayNotRun(`superdev workflow ${verb}`)) throw new Error(`isolated role cannot perform ${verb}`);
 	}
 	const checklist = ["requirements", "contracts", "architecture", "tests", "documentation", "scope", "consistency"]
 		.map((area) => ({ area, complete: true, evidence: `${area} checked` }));
@@ -380,9 +378,9 @@ async function smoke() {
 		if (String(error).includes("unstructured review was accepted")) throw error;
 	}
 	const checkpoint = await runGuardedBuildCommand(async (command, args, cwd) => {
-		if (command !== "superdev" || args.join(" ") !== "workflow block" || cwd !== "/repo") throw new Error("BUILD service command changed");
+		if (command !== "superdev" || args.join(" ") !== "workflow commit" || cwd !== "/repo") throw new Error("BUILD service command changed");
 		return { code: 0, stdout: "checkpointed\n", stderr: "" };
-	}, "superdev", ["workflow", "block"], "/repo");
+	}, "superdev", ["workflow", "commit"], "/repo");
 	if (checkpoint.stdout !== "checkpointed\n") throw new Error("BUILD checkpoint result was lost");
 	try {
 		await runGuardedBuildCommand(async () => ({ code: 0, stdout: "", stderr: "" }), "cargo", ["test"], "/repo");
