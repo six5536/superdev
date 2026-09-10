@@ -205,100 +205,73 @@ authoritativePath: string, authoritativeRegion?: string }`. A `Finding` is
 - `P_lazy-embedding` [ubiquitous] The MCP server SHALL retain one lazily
   initialized embedder result for its process lifetime.
 - `P_active-worktree-root` [ubiquitous] The MCP server SHALL
-  PENDING(plan-077/block-1) treat the canonical active checkout root as its
+  PENDING(issue-077) treat the canonical active checkout root as its
   repository, including when `.git` is a linked-worktree pointer file.
   - `AC_worktree-local-surfaces` [event] WHEN the server runs in a linked
     worktree, source resolution, semantic retrieval, search, graph traversal,
     index activity, mutation, repair, refiling, and validation SHALL
-    PENDING(plan-077/block-3) use only that worktree's files and cache.
+    PENDING(issue-083) use only that worktree's files and cache.
   - `AC_worktree-other-checkout-refused` [event] WHEN a routed path enters
     another checkout, including the main checkout, the server SHALL
-    PENDING(plan-077/block-1) reject it as outside the active worktree.
+    PENDING(issue-077) reject it as outside the active worktree.
 - `P_direct-does-not-load` [event] WHEN only source resolution, direct semantic
-  retrieval, or graph calls have run, the MCP server SHALL PENDING(plan-077/block-1)
+  retrieval, or graph calls have run, the MCP server SHALL PENDING(issue-077)
   leave the embedder uninitialized.
 - `P_first-index-call-loads` [event] WHEN the first search or semantic overview
-  retrieval runs, the MCP server SHALL PENDING(plan-077/block-1) initialize the
+  retrieval runs, the MCP server SHALL PENDING(issue-077) initialize the
   configured embedder once.
 - `P_later-index-call-reuses` [state] WHILE the embedder result is initialized,
   later index-dependent calls SHALL reuse that result.
 - `P_routed-schemas` [ubiquitous] The routed MCP operations SHALL
-  PENDING(plan-077/block-3) expose only the closed request and success-result
+  PENDING(issue-082) expose only the closed request and success-result
   schemas specified below.
   - `AC_resolve-schema` [ubiquitous] `sokf_resolve_source` SHALL
-    PENDING(plan-077/block-1) accept `{ path: string }` and return structured
+    PENDING(issue-077) accept `{ path: string }` and return structured
     content `{ ingressPath: string, canonicalPath: string, exists: boolean,
     generatedRegions: GeneratedRegion[] }`.
   - `AC_retrieve-schema` [ubiquitous] `sokf_retrieve` SHALL
-    PENDING(plan-077/block-1) accept `{ path: string, offset?: integer >= 1,
+    PENDING(issue-077) accept `{ path: string, offset?: integer >= 1,
     limit?: integer >= 1 }` and return one text content item with no structured
     content.
   - `AC_edit-schema` [ubiquitous] `sokf_edit` SHALL
-    PENDING(plan-077/block-2) accept `{ ingressPath: string,
+    PENDING(issue-082) accept `{ ingressPath: string,
     expectedCanonicalPath: string, expectedContent: string, content: string }`.
   - `AC_write-schema` [ubiquitous] `sokf_write` SHALL
-    PENDING(plan-077/block-3) accept `{ ingressPath: string,
+    PENDING(issue-082) accept `{ ingressPath: string,
     expectedCanonicalPath: string, content: string }`.
   - `AC_mutation-result-schema` [ubiquitous] A successful `sokf_edit` or
-    `sokf_write` SHALL PENDING(plan-077/block-3) return structured content
+    `sokf_write` SHALL PENDING(issue-082) return structured content
     `{ applied: true, validation: "valid" | "invalid" | "unknown",
     resolvedPath: string, finalPath: string, changedPaths: string[], findings:
     Finding[], diagnosticsTruncated: boolean }`.
 - `P_source-resolution` [ubiquitous] `sokf_resolve_source` SHALL
-  PENDING(plan-077/block-1) return one logical `knowledge/` ingress, canonical
+  PENDING(issue-077) return one logical `knowledge/` ingress, canonical
   repository-relative target, existence flag, and generated-region metadata
   without semantic content.
   - `AC_source-identity` [event] WHEN the resolver receives an unqualified
-    `sokf:<id>` or physical knowledge path, it SHALL PENDING(plan-077/block-1)
+    `sokf:<id>` or physical knowledge path, it SHALL PENDING(issue-077)
     resolve the corresponding source and refuse missing identities, overview
     addresses, section-qualified addresses, directories, and direct paths
     outside `knowledge/`.
   - `AC_source-contained` [event] WHEN resolution encounters an existing target
-    or nearest existing ancestor, the resolver SHALL PENDING(plan-077/block-1)
+    or nearest existing ancestor, the resolver SHALL PENDING(issue-077)
     accept only a canonical target inside the repository, including a contained
     symlink target outside `knowledge/` and a normalized missing suffix.
   - `AC_source-section-refused` [event] WHEN source resolution receives an
     overview or section-qualified address, the resolver SHALL
-    PENDING(plan-077/block-1) return concise guidance to semantic retrieval.
+    PENDING(issue-077) return concise guidance to semantic retrieval.
 - `P_semantic-retrieve` [ubiquitous] `sokf_retrieve` SHALL
-  PENDING(plan-077/block-1) retain semantic overview, rendered-concept,
+  PENDING(issue-077) retain semantic overview, rendered-concept,
   section, and one-indexed line-window behavior.
   - `AC_semantic-addresses` [event] WHEN `sokf_retrieve` receives `sokf:`,
-    `sokf:<id>`, or `sokf:<id>#<heading>`, it SHALL PENDING(plan-077/block-1)
+    `sokf:<id>`, or `sokf:<id>#<heading>`, it SHALL PENDING(issue-077)
     return the corresponding semantic rendering.
   - `AC_semantic-physical-refused` [event] WHEN `sokf_retrieve` receives a
-    physical path, it SHALL PENDING(plan-077/block-1) refuse the path.
+    physical path, it SHALL PENDING(issue-077) refuse the path.
 - `P_no-read-alias` [ubiquitous] The MCP tool list SHALL NOT
-  PENDING(plan-077/block-1) expose `sokf_read`.
-- `P_symlink-membership` [event] WHEN an eligible Markdown file is reachable
-  from `knowledge/` through a repository-contained file or directory symlink,
-  SOKF SHALL PENDING(plan-077/block-1) treat the canonical file as knowledge
-  under one selected logical ingress.
-  - `AC_symlink-member-surfaces` [event] WHEN SOKF selects a symlink ingress,
-    bundle loading, identity resolution, search, graph traversal, repair,
-    refiling, and validation SHALL PENDING(plan-077/block-1) use its logical
-    `knowledge/` path.
-  - `AC_symlink-member-once` [event] WHEN multiple ingresses reach one canonical
-    file, SOKF SHALL PENDING(plan-077/block-1) process it once, prefer a direct
-    ingress, and otherwise select the lexically first symlink ingress.
-  - `AC_symlink-cycle` [event] WHEN a directory symlink forms a canonical
-    cycle, SOKF SHALL PENDING(plan-077/block-1) stop traversal at the repeated
-    canonical directory identity.
-  - `AC_symlink-nonmember` [event] WHEN a target escapes the repository or has
-    no logical ingress from `knowledge/`, SOKF SHALL PENDING(plan-077/block-1)
-    exclude it from knowledge and refuse an escaping ingress.
-  - `AC_symlink-repair-location` [event] WHEN repair changes a selected symlink
-    member, SOKF SHALL PENDING(plan-077/block-1) write the canonical file and
-    preserve every ingress symlink.
-  - `AC_file-symlink-refiling` [event] WHEN refiling changes a member selected
-    through a file symlink, SOKF SHALL PENDING(plan-077/block-1) move the logical
-    symlink directory entry without moving its canonical target.
-  - `AC_directory-symlink-refiling` [event] WHEN a wrong-location member is
-    reachable only beneath a directory symlink, SOKF SHALL
-    PENDING(plan-077/block-1) leave the canonical target and ancestor symlink
-    unchanged and return an actionable finding.
+  PENDING(issue-077) expose `sokf_read`.
 - `P_direct-retrieval-skips-index` [event] WHEN source resolution or direct
-  semantic retrieval runs, the MCP server SHALL PENDING(plan-077/block-1)
+  semantic retrieval runs, the MCP server SHALL PENDING(issue-077)
   answer without opening or rewriting the search index.
 - `P_graph-skips-index` [ubiquitous] `sokf_graph` SHALL parse current knowledge
   without opening or rewriting the search index.
@@ -324,13 +297,13 @@ A tool failure is an MCP error payload, never a process exit.
   validation, the server SHALL index and serve it.
 - `P_mutation-precondition-error` [event] WHEN a routed mutation fails source
   resolution, compare-and-swap, policy, generated ownership, or cancellation
-  before dispatch, the server SHALL PENDING(plan-077/block-2) return an MCP
+  before dispatch, the server SHALL PENDING(issue-082) return an MCP
   error result without changing any target.
 - `P_applied-invalid-result` [state] WHILE an applied mutation leaves the
   knowledge invalid or its validation unknown, the server SHALL return a
   successful structured result with `applied: true` rather than an error.
 - `P_parse-error-quoted` [event] WHEN a semantic concept address resolves to a
-  file the parser rejected, `sokf_retrieve` SHALL PENDING(plan-077/block-1)
+  file the parser rejected, `sokf_retrieve` SHALL PENDING(issue-077)
   quote the parse error instead of guessing at near misses.
 
 ### Mutations
@@ -338,55 +311,55 @@ A tool failure is an MCP error payload, never a process exit.
 - `P_mutation-agent-safe` [ubiquitous] `sokf_edit` and `sokf_write` SHALL use
   `MutationPolicy::AgentSafe` with no caller override.
 - `P_edit-compare-and-swap` [ubiquitous] `sokf_edit` SHALL
-  PENDING(plan-077/block-2) accept only ingress path, expected canonical path,
+  PENDING(issue-082) accept only ingress path, expected canonical path,
   exact expected source, and complete replacement source as its private routed
   transport.
   - `AC_edit-stale-source-refused` [event] WHEN the canonical target drifts or
     current source differs byte-for-byte from expected source, `sokf_edit`
-    SHALL PENDING(plan-077/block-2) reject the request before persistence.
+    SHALL PENDING(issue-082) reject the request before persistence.
 - `P_write-whole-path-create` [ubiquitous] `sokf_write` SHALL
-  PENDING(plan-077/block-3) replace a complete existing concept or create one
+  PENDING(issue-082) replace a complete existing concept or create one
   from a physical `.md` ingress while preserving recursive parent creation.
   - `AC_write-routed-shape` [event] WHEN the Pi adapter invokes `sokf_write`,
-    the tool SHALL PENDING(plan-077/block-3) accept only ingress path, expected
+    the tool SHALL PENDING(issue-082) accept only ingress path, expected
     canonical path, and complete content as its private routed transport.
 - `P_mutation-contained` [ubiquitous] Routed mutation tools SHALL
-  PENDING(plan-077/block-2) require a logical ingress under `knowledge/`,
+  PENDING(issue-082) require a logical ingress under `knowledge/`,
   re-resolve it at dispatch, and write only to its repository-contained
   canonical target.
   - `AC_mutation-target-drift` [event] WHEN dispatch-time resolution differs
     from the expected canonical target, the mutation tool SHALL
-    PENDING(plan-077/block-2) reject the request before persistence.
+    PENDING(issue-082) reject the request before persistence.
 - `P_mutation-repair-validation` [event] WHEN a mutation is applied, the tool
   SHALL run automatic repair, refiling, and validation while retaining the
   tool-call lock.
 - `P_mutation-outcome-boundary` [ubiquitous] Routed mutation tools SHALL
-  PENDING(plan-077/block-2) treat authoritative `applied: true` as successful
+  PENDING(issue-082) treat authoritative `applied: true` as successful
   persistence and later repair, refiling, validation, lifecycle, or
   cancellation problems as findings.
   - `AC_pre-persistence-failure` [event] WHEN a failure occurs before requested
     persistence or an authoritative response establishes no apply, the tool
-    SHALL PENDING(plan-077/block-2) return an error without applied state.
+    SHALL PENDING(issue-082) return an error without applied state.
   - `AC_acknowledged-request-retained` [event] WHEN requested persistence is
-    acknowledged with `applied: true`, the tool SHALL PENDING(plan-077/block-2)
+    acknowledged with `applied: true`, the tool SHALL PENDING(issue-082)
     retain the requested bytes without rollback.
   - `AC_successful-repairs-retained` [event] WHEN repair or refiling persists
-    before a later finding, the tool SHALL PENDING(plan-077/block-2) retain each
+    before a later finding, the tool SHALL PENDING(issue-082) retain each
     successful change.
   - `AC_indeterminate-outcome-guidance` [event] WHEN local transport fails
     without an authoritative response after bytes may have changed, the tool
-    SHALL PENDING(plan-077/block-3) direct target inspection and `superdev
+    SHALL PENDING(issue-082) direct target inspection and `superdev
     validate` without durable outcome reconciliation.
   - `AC_post-persistence-findings` [event] WHEN repair or validation reports a
-    problem after apply, the tool SHALL PENDING(plan-077/block-3) return
+    problem after apply, the tool SHALL PENDING(issue-082) return
     `applied: true` with an actionable finding.
 - `P_mutation-result-shape` [ubiquitous] A routed mutation result SHALL
-  PENDING(plan-077/block-3) carry literal applied state, validation state,
+  PENDING(issue-082) carry literal applied state, validation state,
   resolved and final paths, unique repository-relative changed paths in lexical
   order, actionable findings, and an explicit diagnostic-truncation flag as
   specified by `AC_mutation-result-schema`.
 - `P_mutation-diagnostics-bounded` [ubiquitous] Routed mutation results SHALL
-  PENDING(plan-077/block-3) omit patches and mutation envelopes and stop
+  PENDING(issue-082) omit patches and mutation envelopes and stop
   diagnostics at 200 lines or 8 KiB.
 
 ### Limits
@@ -409,7 +382,7 @@ reads exactly what matched.
 - `P_graph-group-cap` [ubiquitous] `sokf_graph` SHALL cap each group at
   30 lines and then say how many it dropped.
 - `P_overview-warning-cap` [event] WHEN `sokf_retrieve` receives the `sokf:`
-  overview address, it SHALL PENDING(plan-077/block-1) list at most 10 warnings
+  overview address, it SHALL PENDING(issue-077) list at most 10 warnings
   and then say how many more there are.
 
 ### Versioning

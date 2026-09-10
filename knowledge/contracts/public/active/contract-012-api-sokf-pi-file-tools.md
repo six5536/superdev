@@ -439,116 +439,98 @@ export default function (pi: ExtensionAPI) {
 
 ### Transport
 
-The `sokf-validation-state` non-context entry carries one closed `ValidationStateSnapshot` payload. Every variant rejects additional properties and identifies the repository with its canonical absolute root. `Finding` has the exact closed shape bound by `contract-003-api-sokf P_routed-schemas`. Degraded mode exists only in repository-scoped memory. It carries the intended durable state and a `validationDue` flag.
+Validation follow-up state is session memory keyed by canonical repository root. `Finding` has the exact closed shape bound by `contract-003-api-sokf P_routed-schemas`. The adapter persists no follow-up state, so a new session starts with none.
 
 - `P_worktree-isolation` [ubiquitous] The adapter SHALL
-  PENDING(plan-077/block-3) scope every SOKF operation and validation sequence
+  PENDING(issue-083) scope every SOKF operation and validation sequence
   to the canonical active checkout root, including a linked Git worktree.
   - `AC_worktree-discovery` [event] WHEN Pi starts at a linked worktree root or
-    its descendant, the adapter SHALL PENDING(plan-077/block-1) recognize its
+    its descendant, the adapter SHALL PENDING(issue-077) recognize its
     `.git` pointer file and select that worktree rather than the shared Git
     directory or main checkout.
   - `AC_worktree-all-operations` [state] WHILE a linked worktree is active,
     routed file tools, semantic retrieval, search, graph traversal, MCP process
     and index activity, mutation, repair, refiling, and validation SHALL
-    PENDING(plan-077/block-3) use that worktree.
+    PENDING(issue-083) use that worktree.
   - `AC_worktree-state-isolated` [event] WHEN one process serves multiple
-    checkout roots, each checkout SHALL PENDING(plan-077/block-3) have a
-    distinct MCP client, canonical queue targets, validation-state root,
-    follow-up count, changed paths, findings, and validation execution.
+    checkout roots, each checkout SHALL PENDING(issue-083) have a
+    distinct MCP client, canonical queue targets, pending flag, findings,
+    and validation execution.
   - `AC_worktree-cross-checkout-refused` [event] WHEN a routed path escapes
-    into another checkout, the adapter SHALL PENDING(plan-077/block-1) reject
+    into another checkout, the adapter SHALL PENDING(issue-077) reject
     it before access or mutation.
-- `P_source-routing` [ubiquitous] The adapter SHALL PENDING(plan-077/block-1) resolve a routed argument to one logical knowledge ingress and one canonical repository-contained target before invoking a Pi file-tool factory.
-  - `AC_source-existing` [event] WHEN an identity or physical knowledge path names an existing regular file, the adapter SHALL PENDING(plan-077/block-1) execute against its canonical target.
-  - `AC_source-missing` [event] WHEN a physical knowledge path names a missing destination, the adapter SHALL PENDING(plan-077/block-1) canonicalize its nearest existing ancestor and append the normalized missing suffix.
-  - `AC_source-nested-cwd` [event] WHEN Pi starts at the repository root or a nested working directory, the adapter SHALL PENDING(plan-077/block-1) resolve equivalent arguments to the same target.
-  - `AC_source-pi-preparation` [event] WHEN Pi prepares leading `@`, `~`, Unicode-space, macOS AM/PM, NFD, curly-quote, combined, or cwd-relative path spelling, the adapter SHALL PENDING(plan-077/block-1) pass the byte-equivalent candidate observed at Pi 0.85.1 operation boundaries.
-  - `AC_source-contained-symlink` [event] WHEN a knowledge ingress symlink resolves inside the repository, the adapter SHALL PENDING(plan-077/block-1) accept its canonical target even when that target lies outside `knowledge/` and preserve the selected logical ingress from `contract-003-api-sokf P_symlink-membership`.
-  - `AC_source-closed-schema` [ubiquitous] The adapter SHALL PENDING(plan-077/block-3) send and validate the exact closed resolver, retrieval, edit, write, and mutation-result schemas in `contract-003-api-sokf P_routed-schemas` without accepting missing or additional fields.
-  - `AC_source-escaping-symlink` [event] WHEN an existing or ancestor symlink resolves outside the repository, the adapter SHALL PENDING(plan-077/block-1) reject the argument before file access or mutation.
-  - `AC_source-target-drift` [event] WHEN an ingress resolves to a different canonical target at mutation dispatch, the adapter SHALL PENDING(plan-077/block-2) reject the mutation before persistence.
-- `P_read-parity` [ubiquitous] Routed `read` SHALL PENDING(plan-077/block-1) preserve Pi 0.85.1 content, offset, limit, truncation, continuation, details, errors, cancellation, metadata, and rendering.
-  - `AC_read-exact-source` [event] WHEN `read` receives an unqualified `sokf:<id>`, the adapter SHALL PENDING(plan-077/block-1) return exact UTF-8 source through Pi's built-in read operation.
-  - `AC_read-semantic-refused` [event] WHEN Pi file `read` receives `sokf:` or a section-qualified address, the adapter SHALL PENDING(plan-077/block-1) reject it with concise semantic-retrieval guidance.
-  - `AC_read-copied-edit` [event] WHEN a caller copies a routed excerpt including frontmatter, routed `edit` SHALL PENDING(plan-077/block-2) accept the unchanged excerpt as `oldText`.
-- `P_edit-parity` [ubiquitous] Routed `edit` SHALL PENDING(plan-077/block-2) preserve Pi 0.85.1 schema, argument preparation, matching, uniqueness, overlap, byte-order mark, line endings, errors, success content, compact details, metadata, and rendering.
-  - `AC_edit-pi-diffs` [event] WHEN a routed edit applies, its details SHALL PENDING(plan-077/block-2) contain Pi's display diff, unified patch, and first changed line for the requested edit.
-  - `AC_edit-result-size` [event] WHEN one line changes in a large concept, routed edit content SHALL PENDING(plan-077/block-3) equal paired built-in content after path normalization.
-- `P_write-parity` [ubiquitous] Routed `write` SHALL PENDING(plan-077/block-3) preserve Pi 0.85.1 parameters, recursive parent creation, errors, cancellation, success content, undefined details, metadata, and rendering.
-  - `AC_write-identical-applies` [event] WHEN write content equals existing target bytes, the adapter SHALL PENDING(plan-077/block-3) persist and acknowledge the write and schedule final validation.
-- `P_alias-queue` [ubiquitous] Virtual and physical aliases SHALL PENDING(plan-077/block-2) serialize on Pi's mutation queue keyed by canonical physical target through persistence, repair, refiling, and mutation-state capture.
-- `P_agent-safe-routing` [ubiquitous] Routed mutations SHALL PENDING(plan-077/block-2) preserve stable identity, existing verification bytes, generated ownership, repository containment, repair, refiling, and validation under agent-safe policy.
-  - `AC_generated-authority` [event] WHEN a mutation intersects generated content, the adapter SHALL PENDING(plan-077/block-2) reject it before persistence and name the authoritative source.
-  - `AC_no-whole-file-recovery` [event] WHEN a targeted edit fails, the adapter SHALL NOT PENDING(plan-077/block-2) perform or recommend an automatic whole-file fallback.
-- `P_mutation-outcome-boundary` [ubiquitous] The adapter SHALL PENDING(plan-077/block-2) use authoritative `applied: true` as the boundary between a file-tool failure and Pi's normal successful result.
-  - `AC_pre-persistence-abort` [event] WHEN cancellation occurs before persistence dispatch, the adapter SHALL PENDING(plan-077/block-2) leave every target unchanged and create no applied state.
-  - `AC_pre-persistence-failure` [event] WHEN resolution, preparation, matching, compare-and-swap, policy, ownership, or authoritative persistence fails before apply, the adapter SHALL PENDING(plan-077/block-2) return an applicable tool error and schedule no final validation.
-  - `AC_edit-persisted-success` [event] WHEN MCP acknowledges an edit with `applied: true`, the adapter SHALL PENDING(plan-077/block-2) return Pi's unchanged edit success content and details.
-  - `AC_write-persisted-success` [event] WHEN MCP acknowledges a write with `applied: true`, the adapter SHALL PENDING(plan-077/block-3) return Pi's unchanged write success content and undefined details.
-  - `AC_late-abort-keeps-success` [event] WHEN cancellation occurs after persistence dispatch and MCP acknowledges `applied: true`, the adapter SHALL PENDING(plan-077/block-2) retain persisted changes and return success.
-  - `AC_successful-repairs-survive` [event] WHEN repair or refiling persists before a later finding, the adapter SHALL PENDING(plan-077/block-2) retain every successful persisted change.
-  - `AC_indeterminate-outcome-guidance` [event] WHEN local MCP transport fails without an authoritative outcome after bytes may have changed, the adapter SHALL PENDING(plan-077/block-3) return a tool error directing target inspection and `superdev validate`.
-  - `AC_failed-persistence-not-dirty` [event] WHEN authoritative persistence establishes that apply did not occur, the adapter SHALL PENDING(plan-077/block-2) create no applied state or validation schedule.
-- `P_validation-state-schema` [ubiquitous] Each `sokf-validation-state` entry SHALL PENDING(plan-077/block-3) carry exactly one versioned closed `ValidationStateSnapshot` variant.
-  - `AC_clean-state-schema` [event] WHEN the repository state is clean, the snapshot SHALL PENDING(plan-077/block-3) equal `{ version: 1, repositoryRoot: string, state: "clean" }`.
-  - `AC_pending-auto-state-schema` [event] WHEN automatic validation is pending, the snapshot SHALL PENDING(plan-077/block-3) equal `{ version: 1, repositoryRoot: string, state: "pending-auto", followUpCount: 0 | 1 | 2, changedPaths: string[], findings: Finding[], diagnosticsTruncated: boolean }`.
-  - `AC_manual-state-schema` [event] WHEN the repository has reached the automatic cap, the snapshot SHALL PENDING(plan-077/block-3) equal `{ version: 1, repositoryRoot: string, state: "manual", changedPaths: string[], findings: Finding[], diagnosticsTruncated: boolean }`.
-  - `AC_pending-manual-state-schema` [event] WHEN one manual-state validation is pending, the snapshot SHALL PENDING(plan-077/block-3) equal `{ version: 1, repositoryRoot: string, state: "pending-manual", changedPaths: string[], findings: Finding[], diagnosticsTruncated: boolean }`.
-  - `AC_degraded-ephemeral` [state] WHILE snapshot persistence is degraded, the adapter SHALL PENDING(plan-077/block-3) keep `degraded`, its intended durable state, and `validationDue` only in repository-scoped memory.
-  - `AC_invalid-state-entry` [event] WHEN recovery encounters an unsupported version, unknown state, missing field, or additional field, the adapter SHALL PENDING(plan-077/block-3) enter degraded mode, preserve any in-memory state, suppress triggered follow-ups, and emit bounded non-triggering inspection and `superdev validate` guidance without resetting inherited state.
-- `P_validation-follow-up` [ubiquitous] The adapter SHALL PENDING(plan-077/block-3) keep post-persistence findings outside file-tool results in a repository-scoped bounded persisted follow-up sequence.
-  - `AC_initial-pending` [event] WHEN a clean repository records `applied: true`, the adapter SHALL PENDING(plan-077/block-3) enter `pending-auto(0)` with changed paths and findings.
-  - `AC_turn-end-validation-once` [state] WHILE validation is pending, one eligible `turn_end` SHALL PENDING(plan-077/block-3) run final validation exactly once.
-  - `AC_visible-separate-follow-up` [event] WHEN final validation remains invalid or unknown before the cap, the adapter SHALL PENDING(plan-077/block-3) send one visible triggering `sokf-validation` follow-up separate from file-tool content.
-  - `AC_two-triggered-corrections` [state] WHILE an unresolved sequence has sent fewer than two triggered follow-ups, the adapter SHALL PENDING(plan-077/block-3) trigger at most one next correction turn per validation.
-  - `AC_manual-cap` [event] WHEN validation still fails after the second correction turn, the adapter SHALL PENDING(plan-077/block-3) enter `manual` and send non-triggering guidance.
-  - `AC_unresolved-mutation-no-reset` [event] WHEN another mutation joins an unresolved sequence, the adapter SHALL NOT PENDING(plan-077/block-3) reset its follow-up count.
-  - `AC_manual-mutation-no-reset` [event] WHEN a mutation occurs in `manual`, the adapter SHALL PENDING(plan-077/block-3) enter `pending-manual` without restoring automatic turns.
-  - `AC_valid-reset` [event] WHEN final validation succeeds, the adapter SHALL PENDING(plan-077/block-3) enter `clean` and clear count, paths, and findings.
-  - `AC_active-branch-recovery` [event] WHEN reload, resume, fork, compaction, or tree navigation reconstructs an active branch, the adapter SHALL PENDING(plan-077/block-3) restore its latest durable follow-up state without duplicating a sent message.
-  - `AC_pending-shutdown-recovery` [event] WHEN a pending snapshot survives shutdown, the adapter SHALL PENDING(plan-077/block-3) validate it at the next eligible `turn_end`.
-  - `AC_snapshot-failure-degraded` [event] WHEN any required snapshot append fails, the adapter SHALL PENDING(plan-077/block-3) enter repository-scoped in-memory degraded mode with the intended durable state and `validationDue`, suppress triggered follow-ups, and send one bounded non-triggering guidance message for that transition.
-  - `AC_degraded-trigger-suppressed` [event] WHEN the successor append fails before a triggered correction, the adapter SHALL PENDING(plan-077/block-3) keep the prior follow-up count, set `validationDue` to false, and omit the triggering message.
-  - `AC_degraded-manual-transition` [event] WHEN the successor append fails while entering `manual` or returning from `pending-manual`, the adapter SHALL PENDING(plan-077/block-3) retain intended `manual`, set `validationDue` to false, and replace the nominal manual message with snapshot-failure guidance.
-  - `AC_degraded-clean-transition` [event] WHEN the clean append fails after valid validation, the adapter SHALL PENDING(plan-077/block-3) retain intended `clean`, set `validationDue` to false, and report that the durable reset failed.
-  - `AC_degraded-validation-due` [event] WHEN an applied-mutation append fails, the adapter SHALL PENDING(plan-077/block-3) preserve file-tool success, merge diagnostics in memory, set `validationDue` to true, and consume one validation at the next eligible `turn_end`.
-  - `AC_degraded-mutation` [event] WHEN an applied mutation joins degraded mode, the adapter SHALL PENDING(plan-077/block-3) merge diagnostics, set `validationDue` to true, preserve any unresolved count, and leave degraded mode only after the exact intended snapshot appends.
-  - `AC_follow-up-bounded` [ubiquitous] Each visible follow-up and non-context snapshot SHALL PENDING(plan-077/block-3) stop at 200 lines or 8 KiB, omit patches and mutation envelopes, and direct truncated output to `superdev validate`.
-- `P_context-shape` [ubiquitous] An acknowledged mutation result SHALL PENDING(plan-077/block-3) keep mutation envelopes, repair reports, validation findings, and duplicate patches outside model-visible file-tool content and details.
-- `P_prompt-ownership` [ubiquitous] The extension SHALL PENDING(plan-077/block-4) retain Pi's built-in file-tool metadata and add only the specified flat SOKF routing rules.
-  - `AC_discovery-wording` [ubiquitous] `sokf_search` and `sokf_graph` SHALL PENDING(plan-077/block-4) own canonical-knowledge discovery wording.
+- `P_source-routing` [ubiquitous] The adapter SHALL PENDING(issue-077) resolve a routed argument to one logical knowledge ingress and one canonical repository-contained target before invoking a Pi file-tool factory.
+  - `AC_source-existing` [event] WHEN an identity or physical knowledge path names an existing regular file, the adapter SHALL PENDING(issue-077) execute against its canonical target.
+  - `AC_source-missing` [event] WHEN a physical knowledge path names a missing destination, the adapter SHALL PENDING(issue-077) canonicalize its nearest existing ancestor and append the normalized missing suffix.
+  - `AC_source-nested-cwd` [event] WHEN Pi starts at the repository root or a nested working directory, the adapter SHALL PENDING(issue-077) resolve equivalent arguments to the same target.
+  - `AC_source-pi-preparation` [event] WHEN Pi prepares a path argument, the adapter SHALL PENDING(issue-077) pass the byte-equivalent candidate observed at the Pi 0.85.1 operation boundary.
+  - `AC_source-contained-symlink` [event] WHEN a knowledge ingress symlink resolves inside the repository, the adapter SHALL PENDING(issue-077) accept its canonical target even when that target lies outside `knowledge/`.
+  - `AC_source-closed-schema` [ubiquitous] The adapter SHALL PENDING(issue-082) send and validate the exact closed resolver, retrieval, edit, write, and mutation-result schemas in `contract-003-api-sokf P_routed-schemas` without accepting missing or additional fields.
+  - `AC_source-escaping-symlink` [event] WHEN an existing or ancestor symlink resolves outside the repository, the adapter SHALL PENDING(issue-077) reject the argument before file access or mutation.
+  - `AC_source-target-drift` [event] WHEN an ingress resolves to a different canonical target at mutation dispatch, the adapter SHALL PENDING(issue-082) reject the mutation before persistence.
+- `P_read-parity` [ubiquitous] Routed `read` SHALL PENDING(issue-077) preserve Pi 0.85.1 content, offset, limit, truncation, continuation, details, errors, cancellation, metadata, and rendering.
+  - `AC_read-exact-source` [event] WHEN `read` receives an unqualified `sokf:<id>`, the adapter SHALL PENDING(issue-077) return exact UTF-8 source through Pi's built-in read operation.
+  - `AC_read-semantic-refused` [event] WHEN Pi file `read` receives `sokf:` or a section-qualified address, the adapter SHALL PENDING(issue-077) reject it with concise semantic-retrieval guidance.
+  - `AC_read-copied-edit` [event] WHEN a caller copies a routed excerpt including frontmatter, routed `edit` SHALL PENDING(issue-082) accept the unchanged excerpt as `oldText`.
+- `P_edit-parity` [ubiquitous] Routed `edit` SHALL PENDING(issue-082) preserve Pi 0.85.1 schema, argument preparation, matching, uniqueness, overlap, byte-order mark, line endings, errors, success content, compact details, metadata, and rendering.
+  - `AC_edit-pi-diffs` [event] WHEN a routed edit applies, its details SHALL PENDING(issue-082) contain Pi's display diff, unified patch, and first changed line for the requested edit.
+- `P_write-parity` [ubiquitous] Routed `write` SHALL PENDING(issue-082) preserve Pi 0.85.1 parameters, recursive parent creation, errors, cancellation, success content, undefined details, metadata, and rendering.
+  - `AC_write-identical-applies` [event] WHEN write content equals existing target bytes, the adapter SHALL PENDING(issue-082) persist and acknowledge the write and schedule final validation.
+- `P_alias-queue` [ubiquitous] Virtual and physical aliases SHALL PENDING(issue-082) serialize on Pi's mutation queue keyed by canonical physical target through persistence, repair, refiling, and mutation-state capture.
+- `P_agent-safe-routing` [ubiquitous] Routed mutations SHALL PENDING(issue-082) preserve stable identity, existing verification bytes, generated ownership, repository containment, repair, refiling, and validation under agent-safe policy.
+  - `AC_generated-authority` [event] WHEN a mutation intersects generated content, the adapter SHALL PENDING(issue-082) reject it before persistence and name the authoritative source.
+  - `AC_no-whole-file-recovery` [event] WHEN a targeted edit fails, the adapter SHALL NOT PENDING(issue-082) perform or recommend an automatic whole-file fallback.
+- `P_mutation-outcome-boundary` [ubiquitous] The adapter SHALL PENDING(issue-082) use authoritative `applied: true` as the boundary between a file-tool failure and Pi's normal successful result.
+  - `AC_pre-persistence-abort` [event] WHEN cancellation occurs before persistence dispatch, the adapter SHALL PENDING(issue-082) leave every target unchanged and create no applied state.
+  - `AC_pre-persistence-failure` [event] WHEN resolution, preparation, matching, compare-and-swap, policy, ownership, or authoritative persistence fails before apply, the adapter SHALL PENDING(issue-082) return an applicable tool error and schedule no final validation.
+  - `AC_edit-persisted-success` [event] WHEN MCP acknowledges an edit with `applied: true`, the adapter SHALL PENDING(issue-082) return Pi's unchanged edit success content and details.
+  - `AC_write-persisted-success` [event] WHEN MCP acknowledges a write with `applied: true`, the adapter SHALL PENDING(issue-082) return Pi's unchanged write success content and undefined details.
+  - `AC_late-abort-keeps-success` [event] WHEN cancellation occurs after persistence dispatch and MCP acknowledges `applied: true`, the adapter SHALL PENDING(issue-082) retain persisted changes and return success.
+  - `AC_successful-repairs-survive` [event] WHEN repair or refiling persists before a later finding, the adapter SHALL PENDING(issue-082) retain every successful persisted change.
+  - `AC_indeterminate-outcome-guidance` [event] WHEN local MCP transport fails without an authoritative outcome after bytes may have changed, the adapter SHALL PENDING(issue-082) return a tool error directing target inspection and `superdev validate`.
+  - `AC_failed-persistence-not-dirty` [event] WHEN authoritative persistence establishes that apply did not occur, the adapter SHALL PENDING(issue-082) create no applied state or validation schedule.
+- `P_validation-follow-up` [ubiquitous] The adapter SHALL PENDING(issue-083) report post-persistence validation findings outside file-tool results.
+  - `AC_turn-end-validation` [event] WHEN a turn ends after an applied mutation, the adapter SHALL PENDING(issue-083) run final validation once.
+  - `AC_findings-fresh` [event] WHEN the adapter prepares a validation message, it SHALL PENDING(issue-083) report only findings that the current working tree still carries.
+  - `AC_valid-clears` [event] WHEN final validation succeeds, the adapter SHALL PENDING(issue-083) clear its pending flag and send no message.
+  - `AC_first-report-triggers` [event] WHEN validation first reports findings for a pending sequence, the adapter SHALL PENDING(issue-083) send one visible triggering `sokf-validation` follow-up separate from file-tool content and details.
+  - `AC_later-report-does-not-trigger` [event] WHEN validation reports findings again after a correction turn, the adapter SHALL PENDING(issue-083) send one visible non-triggering message.
+  - `AC_session-scoped` [ubiquitous] The adapter SHALL PENDING(issue-083) hold follow-up state in session memory alone and persist no snapshot.
+  - `AC_follow-up-bounded` [ubiquitous] Each visible follow-up SHALL PENDING(issue-083) stop at 200 lines or 8 KiB, omit patches and mutation envelopes, and direct truncated output to `superdev validate`.
+- `P_context-shape` [ubiquitous] An acknowledged mutation result SHALL PENDING(issue-082) keep mutation envelopes, repair reports, validation findings, and duplicate patches outside model-visible file-tool content and details.
+- `P_prompt-ownership` [ubiquitous] The extension SHALL PENDING(issue-083) retain Pi's built-in file-tool metadata and add only the specified flat SOKF routing rules.
+  - `AC_discovery-wording` [ubiquitous] `sokf_search` and `sokf_graph` SHALL PENDING(issue-083) own canonical-knowledge discovery wording.
 
 ### Authentication
 
 No credential crosses this local adapter boundary.
 
-- `P_local-authority` [ubiquitous] Routed mutations SHALL PENDING(plan-077/block-2) use mandatory agent-safe authority with no model-facing override.
+- `P_local-authority` [ubiquitous] Routed mutations SHALL PENDING(issue-082) use mandatory agent-safe authority with no model-facing override.
 
 ### Errors
 
-- `P_pi-errors` [event] WHEN SOKF policy does not intervene, routed file-tool failure wording SHALL PENDING(plan-077/block-3) match paired Pi 0.85.1 behavior.
-- `P_policy-errors` [event] WHEN SOKF policy rejects a mutation before persistence, the adapter SHALL PENDING(plan-077/block-2) return a concise actionable tool error.
-- `P_post-persistence-findings` [event] WHEN repair, validation, lifecycle, or cancellation reports a problem after acknowledged apply, the adapter SHALL PENDING(plan-077/block-3) preserve success and report the problem separately.
+- `P_pi-errors` [event] WHEN SOKF policy does not intervene, routed file-tool failure wording SHALL PENDING(issue-082) match paired Pi 0.85.1 behavior.
+- `P_policy-errors` [event] WHEN SOKF policy rejects a mutation before persistence, the adapter SHALL PENDING(issue-082) return a concise actionable tool error.
+- `P_post-persistence-findings` [event] WHEN repair, validation, lifecycle, or cancellation reports a problem after acknowledged apply, the adapter SHALL PENDING(issue-083) preserve success and report the problem separately.
 
 ### Limits
 
-- `P_validation-diagnostic-limit` [ubiquitous] Each extension-side validation diagnostic SHALL PENDING(plan-077/block-3) stop at 200 lines or 8 KiB.
+- `P_validation-diagnostic-limit` [ubiquitous] Each extension-side validation diagnostic SHALL PENDING(issue-083) stop at 200 lines or 8 KiB.
 
 ### Versioning
 
-- `P_pinned-pi` [ubiquitous] Paired evidence SHALL PENDING(plan-077/block-1) load the pinned `@earendil-works/pi-coding-agent` 0.85.1 test dependency and fail when Pi is absent.
+- `P_pinned-pi` [ubiquitous] Paired evidence SHALL PENDING(issue-077) load the pinned `@earendil-works/pi-coding-agent` 0.85.1 test dependency and fail when Pi is absent.
 
 ### Resources and prompts
 
-- `P_file-prompt-rules` [ubiquitous] File-tool prompt metadata SHALL PENDING(plan-077/block-4) add only identity-read, identity-edit, and physical-path-create routing guidance.
+- `P_file-prompt-rules` [ubiquitous] File-tool prompt metadata SHALL PENDING(issue-083) add only identity-read, identity-edit, and physical-path-create routing guidance.
 
 ## Stability
 
 Project-local and pinned to Pi 0.85.1.
 
 - `P_project-local` [ubiquitous] The SOKF adapter MAY change with this repository.
-- `P_contract-synchronized` [ubiquitous] The adapter contract SHALL PENDING(plan-077/block-5) remain synchronized with paired evidence.
+- `P_contract-synchronized` [ubiquitous] The adapter contract SHALL PENDING(issue-083) remain synchronized with paired evidence.
 
 <!-- sokf:links -->
 [sokf:adr-053-sokf-file-tools-delegate-to-pi]: /knowledge/adrs/active/adr-053-sokf-file-tools-delegate-to-pi.md

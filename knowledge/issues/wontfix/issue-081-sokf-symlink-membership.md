@@ -4,7 +4,7 @@ id: issue-081-sokf-symlink-membership
 title: A knowledge file reached through a contained symlink is not SOKF knowledge
 description: SOKF loading, identity resolution, search, graph traversal, repair, refiling, and validation ignore an eligible Markdown file that `knowledge/` reaches only through a repository-contained file or directory symlink, so a deduplicated or aliased concept is invisible to every SOKF surface.
 kind: feature
-lifecycle: open
+lifecycle: wontfix
 links:
   - rel: references
     to: issue-077-sokf-file-tool-parity
@@ -81,6 +81,22 @@ SOKF membership through repository-contained symlinks.
 - Out: the general filesystem walk owned by
   [issue-031][sokf:issue-031-validate-follows-symlinks-out-of-the-repo].
 - Out: any relaxation of repository containment.
+
+## Resolution
+
+Declined during the scope revision that split issue-077. Nobody reported this
+gap; it surfaced because the source resolver had to decide something about
+symlinks, and the answer grew into a membership model with ingress selection,
+cycle detection, and deterministic duplicate resolution.
+
+Resolution needs one rule, and
+[issue-077][sokf:issue-077-sokf-file-tool-parity] already carries it: a
+repository-contained target is accepted, a target that escapes the repository is
+refused. `contract-003-api-sokf P_symlink-membership` and its seven criteria, and
+`contract-012-api-sokf-pi-file-tools AC_source-selected-ingress`, are removed.
+
+Reopen this issue if an author places a symlink below `knowledge/` and reports
+the resulting concept as missing.
 
 ## Comments
 

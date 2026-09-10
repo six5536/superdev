@@ -207,6 +207,6 @@ places it.
 [sokf:issue-078-workflow-progress-repeats-plan-and-stage]: /knowledge/issues/open/issue-078-workflow-progress-repeats-plan-and-stage.md
 [sokf:issue-079-esc-does-not-stop-a-running-phase]: /knowledge/issues/open/issue-079-esc-does-not-stop-a-running-phase.md
 [sokf:issue-080-the-phase-progress-panel-is-hand-rolled]: /knowledge/issues/open/issue-080-the-phase-progress-panel-is-hand-rolled.md
-[sokf:issue-081-sokf-symlink-membership]: /knowledge/issues/open/issue-081-sokf-symlink-membership.md
+[sokf:issue-081-sokf-symlink-membership]: /knowledge/issues/wontfix/issue-081-sokf-symlink-membership.md
 [sokf:issue-082-sokf-mutation-parity]: /knowledge/issues/open/issue-082-sokf-mutation-parity.md
 [sokf:issue-083-sokf-validation-follow-ups]: /knowledge/issues/open/issue-083-sokf-validation-follow-ups.md
