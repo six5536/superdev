@@ -91,6 +91,8 @@ places it.
 
 * [SCOPE reauthors a plan it already committed when review fails][sokf:issue-085-scope-reauthors-a-plan-it-already-committed] - a requirements review that times out or fails discards a committed authoring pass, so the next SCOPE run reauthors the plan and may review a different candidate than the one that failed.
 
+* [A recommended answer is prose beside the choices rather than a marked choice][sokf:issue-086-a-recommended-choice-is-prose-not-a-choice] - the question UI prints its recommendation as a paragraph above an unordered choice list, so the user reads justification prose to work out which listed choice is being recommended.
+
 * [The workflow cannot deliver a feature unattended][sokf:issue-024-the-workflow-cannot-run-unattended] - every phase boundary stops and waits for the user, no feature gets a branch of its own, a plan models no slice dependencies, and integrate leaves its record edits uncommitted.
 
 * [Run the next real feature through /execute-feature-plan and record the outcome][sokf:issue-026-rehearse-the-driver-on-a-real-feature] - the loop's machinery is tested and was rehearsed with shell steps, but the driver's prose — slice picking, the retry bound, deferral, the end-of-run queue — has not driven a real multi-slice plan; the next feature is the rehearsal.
@@ -216,3 +218,4 @@ places it.
 [sokf:issue-083-sokf-validation-follow-ups]: /knowledge/issues/open/issue-083-sokf-validation-follow-ups.md
 [sokf:issue-084-a-blocking-review-finding-names-what-it-fails]: /knowledge/issues/open/issue-084-a-blocking-review-finding-names-what-it-fails.md
 [sokf:issue-085-scope-reauthors-a-plan-it-already-committed]: /knowledge/issues/open/issue-085-scope-reauthors-a-plan-it-already-committed.md
+[sokf:issue-086-a-recommended-choice-is-prose-not-a-choice]: /knowledge/issues/open/issue-086-a-recommended-choice-is-prose-not-a-choice.md
