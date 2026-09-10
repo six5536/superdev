@@ -104,7 +104,7 @@ places it.
 
 * [A requirements review has no declared surface][sokf:issue-092-a-requirements-review-has-no-declared-surface] - the review prompt directs a transitive closure with no fixed point, so a review reads the whole subsystem instead of the change in its context, and its cost is bounded only by the deadline that kills it.
 
-* [A human cannot force the next phase][sokf:issue-093-a-human-cannot-force-the-next-phase] - the adapter refuses approval while review findings are open and offers no override, so a gate the contract assigns to the human is held by a reviewer that may never report clean.
+* [A human cannot force the next phase][sokf:issue-093-a-human-cannot-force-the-next-phase] - the adapter refused approval while review findings were open and offered no override, so a gate the contract assigns to the human was held by a reviewer that may never report clean; done in aa59df6, which adds the human-typed `/superdev-force`, records the forced decision in the plan, and leaves the phase tool refusing as before.
 
 * [The workflow cannot deliver a feature unattended][sokf:issue-024-the-workflow-cannot-run-unattended] - every phase boundary stops and waits for the user, no feature gets a branch of its own, a plan models no slice dependencies, and integrate leaves its record edits uncommitted.
 
@@ -238,5 +238,5 @@ places it.
 [sokf:issue-090-search-callers-never-use-its-precision-controls]: /knowledge/issues/open/issue-090-search-callers-never-use-its-precision-controls.md
 [sokf:issue-091-an-isolated-role-loses-everything-at-its-deadline]: /knowledge/issues/open/issue-091-an-isolated-role-loses-everything-at-its-deadline.md
 [sokf:issue-092-a-requirements-review-has-no-declared-surface]: /knowledge/issues/open/issue-092-a-requirements-review-has-no-declared-surface.md
-[sokf:issue-093-a-human-cannot-force-the-next-phase]: /knowledge/issues/open/issue-093-a-human-cannot-force-the-next-phase.md
+[sokf:issue-093-a-human-cannot-force-the-next-phase]: /knowledge/issues/done/issue-093-a-human-cannot-force-the-next-phase.md
 [sokf:issue-094-every-search-process-reloads-the-embedding-model]: /knowledge/issues/open/issue-094-every-search-process-reloads-the-embedding-model.md

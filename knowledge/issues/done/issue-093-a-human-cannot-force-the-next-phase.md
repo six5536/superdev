@@ -4,7 +4,7 @@ id: issue-093-a-human-cannot-force-the-next-phase
 title: A human cannot force the next phase
 description: The adapter refuses approval while review findings are open and offers no override, so a gate the contract assigns to the human is held by a reviewer that may never report clean.
 kind: feature
-lifecycle: open
+lifecycle: done
 links:
   - rel: references
     to: issue-092-a-requirements-review-has-no-declared-surface
@@ -115,6 +115,38 @@ Whether a human can advance a phase the workflow is refusing to advance.
   cause.
 - Out: abandonment, which is already a human-only path and already available.
 
+## Resolution
+
+Done in `aa59df6` on the default branch. A human forces a refused gate by
+typing `/superdev-force`, with an optional reason as the command's argument.
+The command names every unresolved item, requires a typed reason and an
+interactive confirmation, supersedes the question queue with that reason, and
+records the decision in the plan's completion evidence through the service's
+new `--override-note`, which `workflow transition` accepts only at
+`approve-scope` and `accept` and refuses elsewhere.
+
+The override is a typed command rather than a tool action. `superdev_run_phase`
+still refuses approval while review findings are active or an acceptance
+assessment is absent, and no tool schema, skill, or prompt names the command,
+so no model can invoke or learn of it. Documenting the exit where a model reads
+it would have handed that model the escape the guard exists to deny it.
+
+The unreachable exhaustion gate is reachable: SCOPE consults the review-cycle
+budget on every review outcome, so a review returning substantive findings
+reaches the same terminating decision as one returning mechanical findings
+alone.
+
+Bound by `P_gate-forceable`, `P_force-human-only`, `P_approval-tool-strict`,
+`P_forced-gate-recorded`, `P_forced-gate-preserves-findings` and
+`P_scope-review-bounded` on
+[the workflow interface contract][sokf:contract-011-interface-workflow], and by
+`P_workflow-override-note` and `P_workflow-override-note-refused` on
+[the CLI contract][sokf:contract-002-cli-superdev]. The Rust test
+`a_forced_human_gate_is_recorded_and_refused_elsewhere` proves the record is
+written at the scope gate and the note refused at `complete-build`; the
+extension smoke fails if the override reaches the phase tool's schema, any
+skill or prompt, or if either approval refusal leaves the phase tool.
+
 ## Comments
 
 Filed from a live session after four requirements reviews of one plan produced
@@ -128,4 +160,6 @@ exists by accident. That it works through session state rather than through a
 decision is itself an argument for an explicit override.
 
 <!-- sokf:links -->
+[sokf:contract-002-cli-superdev]: /knowledge/contracts/public/active/contract-002-cli-superdev.md
+[sokf:contract-011-interface-workflow]: /knowledge/contracts/internal/active/contract-011-interface-workflow.md
 [sokf:issue-092-a-requirements-review-has-no-declared-surface]: /knowledge/issues/open/issue-092-a-requirements-review-has-no-declared-surface.md
