@@ -99,6 +99,8 @@ places it.
 
 * [A re-review is not told what changed][sokf:issue-088-a-re-review-is-not-told-what-changed] - every requirements review receives the same task string, so a review following a correction cannot tell which findings were corrected or what the human decided, and rediscovers the plan from nothing.
 
+* [An isolated role loses everything at its deadline][sokf:issue-091-an-isolated-role-loses-everything-at-its-deadline] - a role that reaches its timeout is killed with SIGKILL and returns nothing, so twenty minutes of completed work is discarded and the only recovery is to raise the timeout and repeat the same work from the start.
+
 * [The workflow cannot deliver a feature unattended][sokf:issue-024-the-workflow-cannot-run-unattended] - every phase boundary stops and waits for the user, no feature gets a branch of its own, a plan models no slice dependencies, and integrate leaves its record edits uncommitted.
 
 * [Run the next real feature through /execute-feature-plan and record the outcome][sokf:issue-026-rehearse-the-driver-on-a-real-feature] - the loop's machinery is tested and was rehearsed with shell steps, but the driver's prose — slice picking, the retry bound, deferral, the end-of-run queue — has not driven a real multi-slice plan; the next feature is the rehearsal.
@@ -229,3 +231,4 @@ places it.
 [sokf:issue-088-a-re-review-is-not-told-what-changed]: /knowledge/issues/open/issue-088-a-re-review-is-not-told-what-changed.md
 [sokf:issue-089-an-exact-identifier-does-not-win-its-own-search]: /knowledge/issues/open/issue-089-an-exact-identifier-does-not-win-its-own-search.md
 [sokf:issue-090-search-callers-never-use-its-precision-controls]: /knowledge/issues/open/issue-090-search-callers-never-use-its-precision-controls.md
+[sokf:issue-091-an-isolated-role-loses-everything-at-its-deadline]: /knowledge/issues/open/issue-091-an-isolated-role-loses-everything-at-its-deadline.md
