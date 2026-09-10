@@ -21,6 +21,7 @@ it stays on file, linked from the issue that took it up.
 * [Superdev subprocess workflows stay visible and resumable][sokf:idea-014-superdev-subprocesses-show-progress-and-control] - expose progress, batch mechanical fixes, and present each complete substantive review as one user questionnaire before correction and re-review.
 * [Scoped workflows feed independent build batches][sokf:idea-015-scoped-workflows-feed-independent-build-batches] - let users scope several issues independently, then build the ready workflows sequentially or in configurable parallel batches without one stopped workflow stopping the others.
 * [A dead session claim always releases][sokf:idea-016-a-dead-session-claim-always-releases] - record the owner process for every workflow claim, and let cancel release a claim that a stopped Pi session left behind.
+* [A blocked session shows what the child is doing][sokf:idea-017-a-blocked-session-shows-what-the-child-is-doing] - while an isolated role runs, show enough of its reasoning and actions for a user to judge whether it is on track, and let any session answer that question about a role another session owns.
 
 <!-- sokf:links -->
 [sokf:idea-001-schemas-carry-a-reading-reminder]: /knowledge/ideas/idea-001-schemas-carry-a-reading-reminder.md
@@ -39,3 +40,4 @@ it stays on file, linked from the issue that took it up.
 [sokf:idea-014-superdev-subprocesses-show-progress-and-control]: /knowledge/ideas/idea-014-superdev-subprocesses-show-progress-and-control.md
 [sokf:idea-015-scoped-workflows-feed-independent-build-batches]: /knowledge/ideas/idea-015-scoped-workflows-feed-independent-build-batches.md
 [sokf:idea-016-a-dead-session-claim-always-releases]: /knowledge/ideas/idea-016-a-dead-session-claim-always-releases.md
+[sokf:idea-017-a-blocked-session-shows-what-the-child-is-doing]: /knowledge/ideas/idea-017-a-blocked-session-shows-what-the-child-is-doing.md
