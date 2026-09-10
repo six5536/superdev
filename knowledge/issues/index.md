@@ -95,6 +95,8 @@ places it.
 
 * [A correction pass is told to author a plan][sokf:issue-087-a-correction-pass-is-told-to-author-a-plan] - the batched correction role runs the full SCOPE authoring prompt, so it resurveys every record and source file before applying findings that already name the exact path, location, and requirement to change.
 
+* [A re-review is not told what changed][sokf:issue-088-a-re-review-is-not-told-what-changed] - every requirements review receives the same task string, so a review following a correction cannot tell which findings were corrected or what the human decided, and rediscovers the plan from nothing.
+
 * [The workflow cannot deliver a feature unattended][sokf:issue-024-the-workflow-cannot-run-unattended] - every phase boundary stops and waits for the user, no feature gets a branch of its own, a plan models no slice dependencies, and integrate leaves its record edits uncommitted.
 
 * [Run the next real feature through /execute-feature-plan and record the outcome][sokf:issue-026-rehearse-the-driver-on-a-real-feature] - the loop's machinery is tested and was rehearsed with shell steps, but the driver's prose — slice picking, the retry bound, deferral, the end-of-run queue — has not driven a real multi-slice plan; the next feature is the rehearsal.
@@ -222,3 +224,4 @@ places it.
 [sokf:issue-085-scope-reauthors-a-plan-it-already-committed]: /knowledge/issues/open/issue-085-scope-reauthors-a-plan-it-already-committed.md
 [sokf:issue-086-a-recommended-choice-is-prose-not-a-choice]: /knowledge/issues/open/issue-086-a-recommended-choice-is-prose-not-a-choice.md
 [sokf:issue-087-a-correction-pass-is-told-to-author-a-plan]: /knowledge/issues/open/issue-087-a-correction-pass-is-told-to-author-a-plan.md
+[sokf:issue-088-a-re-review-is-not-told-what-changed]: /knowledge/issues/open/issue-088-a-re-review-is-not-told-what-changed.md
