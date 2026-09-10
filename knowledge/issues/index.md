@@ -101,6 +101,10 @@ places it.
 
 * [An isolated role loses everything at its deadline][sokf:issue-091-an-isolated-role-loses-everything-at-its-deadline] - a role that reaches its timeout is killed with SIGKILL and returns nothing, so twenty minutes of completed work is discarded and the only recovery is to raise the timeout and repeat the same work from the start.
 
+* [A requirements review has no declared surface][sokf:issue-092-a-requirements-review-has-no-declared-surface] - the review prompt directs a transitive closure with no fixed point, so a review reads the whole subsystem instead of the change in its context, and its cost is bounded only by the deadline that kills it.
+
+* [A human cannot force the next phase][sokf:issue-093-a-human-cannot-force-the-next-phase] - the adapter refuses approval while review findings are open and offers no override, so a gate the contract assigns to the human is held by a reviewer that may never report clean.
+
 * [The workflow cannot deliver a feature unattended][sokf:issue-024-the-workflow-cannot-run-unattended] - every phase boundary stops and waits for the user, no feature gets a branch of its own, a plan models no slice dependencies, and integrate leaves its record edits uncommitted.
 
 * [Run the next real feature through /execute-feature-plan and record the outcome][sokf:issue-026-rehearse-the-driver-on-a-real-feature] - the loop's machinery is tested and was rehearsed with shell steps, but the driver's prose — slice picking, the retry bound, deferral, the end-of-run queue — has not driven a real multi-slice plan; the next feature is the rehearsal.
@@ -232,3 +236,5 @@ places it.
 [sokf:issue-089-an-exact-identifier-does-not-win-its-own-search]: /knowledge/issues/open/issue-089-an-exact-identifier-does-not-win-its-own-search.md
 [sokf:issue-090-search-callers-never-use-its-precision-controls]: /knowledge/issues/open/issue-090-search-callers-never-use-its-precision-controls.md
 [sokf:issue-091-an-isolated-role-loses-everything-at-its-deadline]: /knowledge/issues/open/issue-091-an-isolated-role-loses-everything-at-its-deadline.md
+[sokf:issue-092-a-requirements-review-has-no-declared-surface]: /knowledge/issues/open/issue-092-a-requirements-review-has-no-declared-surface.md
+[sokf:issue-093-a-human-cannot-force-the-next-phase]: /knowledge/issues/open/issue-093-a-human-cannot-force-the-next-phase.md
