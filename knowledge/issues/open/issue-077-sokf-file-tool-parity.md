@@ -10,9 +10,6 @@ links:
     to: idea-012-sokf-mutations-survive-validation-failures
     note: Originating mutation-survival idea; issue-082 and issue-083 settle its mutation and follow-up behaviour.
   - rel: references
-    to: issue-081-sokf-symlink-membership
-    note: Source resolution accepts a contained symlink target; membership selects which ingress owns it.
-  - rel: references
     to: issue-082-sokf-mutation-parity
     note: Routed mutation reuses this resolver and the pinned paired harness.
 ---
@@ -97,9 +94,9 @@ Routed read behaviour and the MCP operations it depends on.
   `adr-053-sokf-file-tools-delegate-to-pi`.
 - Out: routed edit and write behaviour and the mutation outcome boundary, owned
   by [issue-082][sokf:issue-082-sokf-mutation-parity].
-- Out: SOKF membership through contained symlinks, owned by
-  [issue-081][sokf:issue-081-sokf-symlink-membership]. This issue resolves a
-  contained symlink to its canonical target without deciding membership.
+- Out: SOKF membership through contained symlinks. This issue resolves a
+  contained symlink to its canonical target and refuses an escaping one; no
+  membership question is decided or deferred.
 - Out: the validation follow-up state machine and file-tool prompt metadata,
   owned by [issue-083][sokf:issue-083-sokf-validation-follow-ups].
 - Out: a semantic retrieval dialect in the Pi `read` slot, changes to semantic
@@ -111,14 +108,13 @@ Routed read behaviour and the MCP operations it depends on.
 
 Originally scoped as one issue covering read, mutation, symlink membership, and
 validation follow-ups. Its requirements review exceeded the isolated-role timeout
-at 1200 s without submitting a result, so the scope was split into this issue and
-[issue-081][sokf:issue-081-sokf-symlink-membership],
+at 1200 s without submitting a result, so the scope was split into this issue,
 [issue-082][sokf:issue-082-sokf-mutation-parity], and
-[issue-083][sokf:issue-083-sokf-validation-follow-ups]. Deferral markers on the
-shared contracts name the issue that settles each promise.
+[issue-083][sokf:issue-083-sokf-validation-follow-ups]. A fourth slice covering
+symlink membership was declined. Deferral markers on the shared contracts name
+the issue that settles each promise.
 
 <!-- sokf:links -->
 [sokf:idea-012-sokf-mutations-survive-validation-failures]: /knowledge/ideas/idea-012-sokf-mutations-survive-validation-failures.md
-[sokf:issue-081-sokf-symlink-membership]: /knowledge/issues/wontfix/issue-081-sokf-symlink-membership.md
 [sokf:issue-082-sokf-mutation-parity]: /knowledge/issues/open/issue-082-sokf-mutation-parity.md
 [sokf:issue-083-sokf-validation-follow-ups]: /knowledge/issues/open/issue-083-sokf-validation-follow-ups.md
