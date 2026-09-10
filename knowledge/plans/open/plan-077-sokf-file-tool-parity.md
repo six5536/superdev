@@ -4,7 +4,7 @@ id: plan-077-sokf-file-tool-parity
 title: SOKF-routed reads match Pi's built-in read contract
 description: Split the mixed MCP read operation into source resolution and semantic retrieval, then route Pi's built-in read through the resolved canonical target.
 lifecycle: open
-phase: scope
+phase: build
 branch: work/077-sokf-file-tool-parity
 links:
   - rel: implements
