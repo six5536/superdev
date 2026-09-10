@@ -228,7 +228,9 @@ authoritativePath: string, authoritativeRegion?: string }`. A `Finding` is
   - `AC_resolve-schema` [ubiquitous] `sokf_resolve_source` SHALL
     PENDING(issue-077) accept `{ path: string }` and return structured
     content `{ ingressPath: string, canonicalPath: string, exists: boolean,
-    generatedRegions: GeneratedRegion[] }`.
+    generatedRegions: GeneratedRegion[] }` together with exactly one
+    `{ type: "text", text: string }` content item carrying the pretty-printed
+    JSON of that structured content and nothing else.
   - `AC_retrieve-schema` [ubiquitous] `sokf_retrieve` SHALL
     PENDING(issue-077) accept `{ path: string, offset?: integer >= 1,
     limit?: integer >= 1 }` and return one text content item with no structured
@@ -270,6 +272,10 @@ authoritativePath: string, authoritativeRegion?: string }`. A `Finding` is
     physical path, it SHALL PENDING(issue-077) refuse the path.
 - `P_no-read-alias` [ubiquitous] The MCP tool list SHALL NOT
   PENDING(issue-077) expose `sokf_read`.
+  - `AC_instructions-name-served-tools` [ubiquitous] The server's
+    initialization instructions SHALL PENDING(issue-077) name only served
+    tools, excluding `sokf_read` and any directed file read of the `sokf:`
+    overview address.
 - `P_direct-retrieval-skips-index` [event] WHEN source resolution or direct
   semantic retrieval runs, the MCP server SHALL PENDING(issue-077)
   answer without opening or rewriting the search index.

@@ -448,6 +448,11 @@ Validation follow-up state is session memory keyed by canonical repository root.
     its descendant, the adapter SHALL PENDING(issue-077) recognize its
     `.git` pointer file and select that worktree rather than the shared Git
     directory or main checkout.
+  - `AC_worktree-git-precedence` [event] WHEN the upward walk from the working
+    directory finds no `.git` directory or pointer file, the adapter SHALL
+    PENDING(issue-077) select the nearest ancestor carrying
+    `.superdev/config.toml`, so a managed non-Git repository keeps SOKF routing
+    while any `.git` marker on the walk always wins.
   - `AC_worktree-all-operations` [state] WHILE a linked worktree is active,
     routed file tools, semantic retrieval, search, graph traversal, MCP process
     and index activity, mutation, repair, refiling, and validation SHALL

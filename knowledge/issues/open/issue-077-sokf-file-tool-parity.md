@@ -61,7 +61,9 @@ Pi read contract.
 - The MCP contract replaces the mixed-purpose `sokf_read` operation with a source
   resolver for file routing and a semantic `sokf_retrieve` operation for
   overviews, rendered concepts, and sections. The change requires no
-  compatibility alias or deprecation path.
+  compatibility alias or deprecation path. No model-visible surface keeps the old
+  name: the server's initialization instructions name only the tools it serves
+  and stop directing a file read at the `sokf:` overview address.
 - Source resolution accepts existing and missing contained physical paths,
   repository-root and nested-working-directory spellings, and Pi's accepted path
   preparation, including one leading `@`. A direct physical argument must enter
@@ -70,10 +72,17 @@ Pi read contract.
   repository escapes and reports generated-region authority.
 - The replacement operations expose exact closed request and structured-result
   schemas. Source resolution returns `ingressPath`, `canonicalPath`, `exists`,
-  and line-bounded `generatedRegions`, and carries no semantic content.
+  and line-bounded `generatedRegions`, and carries no semantic content. It mirrors
+  that structured content as one pretty-printed JSON text item, the convention the
+  mutation tools already follow, so any MCP client reading text alone still
+  receives the machine result.
 - The entire SOKF adapter and its MCP server use the canonical active checkout
   root rather than Git's shared common directory or main checkout. A routed path
-  entering another checkout fails before access.
+  entering another checkout fails before access. Discovery ranks its markers: a
+  `.git` directory or worktree pointer file anywhere on the upward walk wins, and
+  the existing `.superdev/config.toml` marker still selects the root when the
+  walk finds no `.git` marker, so a managed non-Git repository keeps the routing
+  it has today.
 - A copied routed excerpt, including frontmatter, matches the source it came
   from, so it works unchanged as an exact-replacement anchor.
 - A paired characterization harness compares built-in and routed results, errors,
