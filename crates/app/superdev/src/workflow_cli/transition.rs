@@ -1,6 +1,47 @@
 //! Durable phase transitions and their human-authority gates.
 use super::*;
 
+/// The recorded evidence line for a gate a human forced past open review
+/// findings, or `None` when no override was requested.
+///
+/// Forcing exercises a legal transition without a precondition an adapter
+/// added, so it is accepted only at a gate the human already holds and only
+/// under the same interactive authority that gate demands.
+fn override_note(
+    args: &TransitionArgs,
+    transition: Transition,
+    human_authorized: bool,
+) -> Result<Option<String>> {
+    let Some(note) = args
+        .override_note
+        .as_deref()
+        .map(str::trim)
+        .filter(|note| !note.is_empty())
+    else {
+        return Ok(None);
+    };
+    if !human_authorized || !matches!(transition, Transition::ApproveScope | Transition::Accept) {
+        return Err(Error::Manifest {
+            message:
+                "an override note is accepted only at a human-gated scope or acceptance transition"
+                    .into(),
+        });
+    }
+    let label = if matches!(transition, Transition::ApproveScope) {
+        "Scope approval forced by the human"
+    } else {
+        "Acceptance forced by the human"
+    };
+    Ok(Some(format!(
+        "{label}: {}",
+        note.lines()
+            .map(str::trim)
+            .filter(|line| !line.is_empty())
+            .collect::<Vec<_>>()
+            .join(" ")
+    )))
+}
+
 pub(super) fn transition(
     root: &Path,
     args: &TransitionArgs,
@@ -98,6 +139,7 @@ pub(super) fn transition_locked(
     if human_authorized {
         cache::verify_authority(&state, &ui_authority_capability()?)?;
     }
+    let override_note = override_note(args, transition, human_authorized)?;
     let gates = GateEvidence {
         human_scope_approved: human_authorized && matches!(transition, Transition::ApproveScope),
         human_acceptance_approved: human_authorized && matches!(transition, Transition::Accept),
@@ -123,8 +165,25 @@ pub(super) fn transition_locked(
             new_text: format!("lifecycle: {}", phase_text(next)),
         });
     }
+    // A forced gate differs from a clean one, so the difference is recorded
+    // where the later phases read it rather than left in session memory.
+    if let Some(note) = override_note.as_deref()
+        && !matches!(next, Phase::Done | Phase::Abandoned)
+    {
+        let text = fs::read_to_string(&path).map_err(|source| Error::Io {
+            path: path.clone(),
+            source,
+        })?;
+        edits.push(completion_evidence_edit(&text, &[note.to_owned()])?);
+    }
     if matches!(next, Phase::Done | Phase::Abandoned) {
-        close_records(root, &state.identity, next, abandonment_reason)?;
+        close_records(
+            root,
+            &state.identity,
+            next,
+            abandonment_reason,
+            override_note.as_deref(),
+        )?;
     } else if let Some(feedback) = rescope_feedback {
         let issue_path = root
             .join("knowledge/issues/open")

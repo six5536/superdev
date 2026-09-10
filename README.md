@@ -66,6 +66,7 @@ transient session ownership, and Git safety.
 /superdev-resume     # reconstruct state from the canonical plan
 /superdev-cancel     # pause and release transient ownership
 /superdev-abandon    # explicit human-only abandonment
+/superdev-force      # human-only override of a SCOPE or ACCEPT gate the workflow refuses
 /skill:file <item>   # LLM-authored issue or idea on the default branch; worktree when elsewhere
 ```
 

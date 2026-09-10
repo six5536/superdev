@@ -1843,6 +1843,10 @@ fn the_workflow_reads_scope_build_accept() {
     assert!(filing.contains("Filing does not start SCOPE or BUILD"));
     let extension = std::fs::read_to_string(repo(".pi/extensions/superdev/index.ts")).unwrap();
     assert!(extension.contains("Human-only abandonment with knowledge disposition"));
+    assert!(
+        extension
+            .contains("Human-only override of a SCOPE or ACCEPT gate the workflow is refusing")
+    );
 }
 
 /// The trees a writer builds against: the live concepts filed directly in

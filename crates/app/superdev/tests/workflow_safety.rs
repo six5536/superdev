@@ -393,3 +393,75 @@ fn trunk_reserves_independent_plans_and_recovers_each_branch_without_cache() {
     );
     service(root, &["workflow", "cancel", "--session", "new-session"]);
 }
+
+/// A gate the contract assigns to the human is theirs to force. The service
+/// records the decision at that gate alone, and refuses the note anywhere else.
+#[test]
+fn a_forced_human_gate_is_recorded_and_refused_elsewhere() {
+    let directory = tempfile::tempdir().unwrap();
+    let root = directory.path();
+    managed_repository(root);
+    let plan = root.join("knowledge/plans/open/plan-042-canonical-recovery.md");
+    let revision = || cache::load(root).unwrap().unwrap().last_plan_revision;
+
+    let mut start = vec!["workflow".to_owned(), "start".to_owned()];
+    start.extend(identity("pi-force"));
+    let started: Vec<&str> = start.iter().map(String::as_str).collect();
+    service(root, &started);
+
+    service(
+        root,
+        &[
+            "workflow",
+            "transition",
+            "--session",
+            "pi-force",
+            "--expected-revision",
+            &revision(),
+            "--phase",
+            "scope",
+            "--transition",
+            "approve-scope",
+            "--override-note",
+            "Good enough to build; 2 unanswered review findings (sub-1, mech-1)",
+        ],
+    );
+    let approved = fs::read_to_string(&plan).unwrap();
+    assert!(approved.contains("phase: build"), "the gate advanced");
+    assert!(
+        approved.contains(
+            "Scope approval forced by the human: Good enough to build; 2 unanswered review findings (sub-1, mech-1)"
+        ),
+        "the forced gate left no record:\n{approved}"
+    );
+
+    // BUILD's completion edge belongs to the service, not the human, so it
+    // carries no override record.
+    refuse(
+        root,
+        &[
+            "workflow",
+            "transition",
+            "--session",
+            "pi-force",
+            "--expected-revision",
+            &revision(),
+            "--phase",
+            "build",
+            "--transition",
+            "complete-build",
+            "--override-note",
+            "forced past the code review",
+        ],
+    );
+    let after = fs::read_to_string(&plan).unwrap();
+    assert!(
+        after.contains("phase: build"),
+        "a refused override changed the phase"
+    );
+    assert!(
+        !after.contains("forced past the code review"),
+        "a refused override still reached the plan"
+    );
+    service(root, &["workflow", "cancel", "--session", "pi-force"]);
+}

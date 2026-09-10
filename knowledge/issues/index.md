@@ -78,6 +78,9 @@ places it.
 
 * [Pin node in the managed repo so codegraph's npm-backed pin can install and run][sokf:issue-051-pin-node-in-the-managed-repo] - codegraph was pinned through mise's npm backend, which needs an npm to install and a node to run its shim; pinning node in the managed repo's .mise.toml would have supplied both.
 * [A claimed file superdev never wrote has no lock hash, so its first rewrite misreports as a user edit][sokf:issue-025-a-claim-never-written-gets-no-lock-hash] - the lock reconcile refreshes existing entries and never adds one for a claim already satisfied on disk, so all 53 shipped schemas were unrecorded and each first rewrite reports "overwrote a user-edited file" and spawns a backup.
+* [An exact identifier does not win its own search][sokf:issue-089-an-exact-identifier-does-not-win-its-own-search] - a query naming a concept by its identifier ranks that concept sixth behind topical neighbours, because rank fusion spreads scores too narrowly, no field boosts an identifier match, and settled reports carry no lifecycle to downrank.
+* [Search callers never use its precision controls][sokf:issue-090-search-callers-never-use-its-precision-controls] - isolated roles write keyword-soup queries and used no type, tag, or lifecycle filter in fourteen observed searches, because nothing tells them the search is semantic or that the filters exist.
+* [Every search process reloads the embedding model][sokf:issue-094-every-search-process-reloads-the-embedding-model] - a search or overview costs about 2.2 seconds of compute before it answers, because each process loads the 125 MB local embedding model afresh, and the script test suite pays that cost repeatedly.
 
 ## The workflow
 
@@ -86,6 +89,22 @@ places it.
 * [Esc does not stop a running workflow phase][sokf:issue-079-esc-does-not-stop-a-running-phase] - The progress panel invites the user to press Esc to stop a running phase, but the key is matched by a raw byte comparison that misses the terminal's actual escape sequences, so the phase continues.
 
 * [The phase progress panel is hand-rolled instead of framed like the rest of Pi][sokf:issue-080-the-phase-progress-panel-is-hand-rolled] - superdev_run_phase draws its own unframed stack of lines with no spinner and a hardcoded key hint, so a running phase looks unlike every other Pi activity display and reads as loose text above the prompt.
+
+* [A blocking review finding names what it fails][sokf:issue-084-a-blocking-review-finding-names-what-it-fails] - the review prompts ban speculative improvements as a category the reviewer classifies itself into, so a reviewer convinced its finding matters never applies the rule; require every blocking finding to cite the objective it fails instead.
+
+* [SCOPE reauthors a plan it already committed when review fails][sokf:issue-085-scope-reauthors-a-plan-it-already-committed] - a requirements review that times out or fails discards a committed authoring pass, so the next SCOPE run reauthors the plan and may review a different candidate than the one that failed.
+
+* [A recommended answer is prose beside the choices rather than a marked choice][sokf:issue-086-a-recommended-choice-is-prose-not-a-choice] - the question UI prints its recommendation as a paragraph above an unordered choice list, so the user reads justification prose to work out which listed choice is being recommended.
+
+* [A correction pass is told to author a plan][sokf:issue-087-a-correction-pass-is-told-to-author-a-plan] - the batched correction role runs the full SCOPE authoring prompt, so it resurveys every record and source file before applying findings that already name the exact path, location, and requirement to change.
+
+* [A re-review is not told what changed][sokf:issue-088-a-re-review-is-not-told-what-changed] - every requirements review receives the same task string, so a review following a correction cannot tell which findings were corrected or what the human decided, and rediscovers the plan from nothing.
+
+* [An isolated role loses everything at its deadline][sokf:issue-091-an-isolated-role-loses-everything-at-its-deadline] - a role that reaches its timeout is killed with SIGKILL and returns nothing, so twenty minutes of completed work is discarded and the only recovery is to raise the timeout and repeat the same work from the start.
+
+* [A requirements review has no declared surface][sokf:issue-092-a-requirements-review-has-no-declared-surface] - the review prompt directed a transitive closure with no fixed point, so a review read the whole subsystem instead of the change in its context, and its cost was bounded only by the deadline that killed it; done by pointing the reviewer at what the plan names and letting it read further only for a specific finding.
+
+* [A human cannot force the next phase][sokf:issue-093-a-human-cannot-force-the-next-phase] - the adapter refused approval while review findings were open and offered no override, so a gate the contract assigns to the human was held by a reviewer that may never report clean; done in aa59df6, which adds the human-typed `/superdev-force`, records the forced decision in the plan, and leaves the phase tool refusing as before.
 
 * [The workflow cannot deliver a feature unattended][sokf:issue-024-the-workflow-cannot-run-unattended] - every phase boundary stops and waits for the user, no feature gets a branch of its own, a plan models no slice dependencies, and integrate leaves its record edits uncommitted.
 
@@ -210,3 +229,14 @@ places it.
 [sokf:issue-081-sokf-symlink-membership]: /knowledge/issues/wontfix/issue-081-sokf-symlink-membership.md
 [sokf:issue-082-sokf-mutation-parity]: /knowledge/issues/open/issue-082-sokf-mutation-parity.md
 [sokf:issue-083-sokf-validation-follow-ups]: /knowledge/issues/open/issue-083-sokf-validation-follow-ups.md
+[sokf:issue-084-a-blocking-review-finding-names-what-it-fails]: /knowledge/issues/open/issue-084-a-blocking-review-finding-names-what-it-fails.md
+[sokf:issue-085-scope-reauthors-a-plan-it-already-committed]: /knowledge/issues/open/issue-085-scope-reauthors-a-plan-it-already-committed.md
+[sokf:issue-086-a-recommended-choice-is-prose-not-a-choice]: /knowledge/issues/open/issue-086-a-recommended-choice-is-prose-not-a-choice.md
+[sokf:issue-087-a-correction-pass-is-told-to-author-a-plan]: /knowledge/issues/open/issue-087-a-correction-pass-is-told-to-author-a-plan.md
+[sokf:issue-088-a-re-review-is-not-told-what-changed]: /knowledge/issues/open/issue-088-a-re-review-is-not-told-what-changed.md
+[sokf:issue-089-an-exact-identifier-does-not-win-its-own-search]: /knowledge/issues/open/issue-089-an-exact-identifier-does-not-win-its-own-search.md
+[sokf:issue-090-search-callers-never-use-its-precision-controls]: /knowledge/issues/open/issue-090-search-callers-never-use-its-precision-controls.md
+[sokf:issue-091-an-isolated-role-loses-everything-at-its-deadline]: /knowledge/issues/open/issue-091-an-isolated-role-loses-everything-at-its-deadline.md
+[sokf:issue-092-a-requirements-review-has-no-declared-surface]: /knowledge/issues/done/issue-092-a-requirements-review-has-no-declared-surface.md
+[sokf:issue-093-a-human-cannot-force-the-next-phase]: /knowledge/issues/done/issue-093-a-human-cannot-force-the-next-phase.md
+[sokf:issue-094-every-search-process-reloads-the-embedding-model]: /knowledge/issues/open/issue-094-every-search-process-reloads-the-embedding-model.md

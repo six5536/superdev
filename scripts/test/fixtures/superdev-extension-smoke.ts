@@ -109,8 +109,20 @@ async function smoke() {
 		"superdev-resume",
 		"superdev-cancel",
 		"superdev-abandon",
+		"superdev-force",
 	]) {
 		if (!commands.includes(command)) throw new Error(`missing command ${command}`);
+	}
+	// The override is the human's alone. A tool action, or a mention in what the
+	// model reads, would hand the model the exit the guard exists to deny it.
+	if (JSON.stringify(toolDefinitions.get("superdev_run_phase")?.parameters).includes("force")) throw new Error("the human override leaked into the phase tool");
+	for (const name of ["skills/scope/SKILL.md", "skills/accept/SKILL.md", "skills/build/SKILL.md", "skills/file/SKILL.md", "prompts/scope.md", "prompts/accept.md", "prompts/build.md", "prompts/orchestrator.md", "prompts/requirements-review.md", "prompts/code-review.md"]) {
+		const text = await readFile(join(process.cwd(), ".pi/extensions/superdev", name), "utf8");
+		if (text.includes("superdev-force")) throw new Error(`${name} tells the model the workflow can be forced`);
+	}
+	const phaseToolSource = await readFile(join(process.cwd(), ".pi/extensions/superdev/lib/phase-tool.ts"), "utf8");
+	if (!phaseToolSource.includes("Resolve the active review findings before approval.") || !phaseToolSource.includes("Run the current ACCEPT assessment before approving it.")) {
+		throw new Error("the phase tool no longer refuses approval over unresolved review");
 	}
 	if (!tools.includes("superdev_run_phase")) throw new Error("missing generic phase tool");
 	if (tools.includes("superdev_file_issue") || !tools.includes("superdev_ask")) throw new Error("filing must be skill-only; questions remain available");

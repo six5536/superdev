@@ -13,6 +13,13 @@ publish a version it cannot find a heading for.
 
 ### Added
 
+- **A human can force a gate the workflow is refusing.** `/superdev-force`
+  advances a SCOPE or ACCEPT gate over unanswered review findings or a missing
+  acceptance assessment. It names what is unresolved, requires a typed reason
+  and an interactive confirmation, preserves the findings, and records the
+  decision in the plan's completion evidence. The override is a typed command
+  alone: no tool, skill, or prompt exposes it, and the phase tool still refuses
+  approval while review is unresolved.
 - **The local workflow is now `SCOPE → BUILD → ACCEPT`.** A Pi extension
   registers phase, recovery, cancellation, abandonment, and independent filing
   commands; private prompts run modifying and read-only roles in fresh Pi

@@ -163,6 +163,10 @@ pub struct TransitionArgs {
     /// BUILD discovery or human rejection preserved verbatim on the primary issue
     #[arg(long)]
     feedback: Option<String>,
+    /// One line recording that a human forced this gate, kept in the plan's
+    /// completion evidence. Accepted only for a transition the human gates.
+    #[arg(long)]
+    override_note: Option<String>,
 }
 
 /// CLI spelling of durable phases.

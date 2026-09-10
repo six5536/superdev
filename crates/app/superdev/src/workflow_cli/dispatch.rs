@@ -220,6 +220,7 @@ pub fn run(command: &WorkflowCommand, root: &Path) -> Result<u8> {
                 phase: args.phase,
                 transition: TransitionName::Accept,
                 feedback: None,
+                override_note: None,
             },
             true,
             Some(&args.reason),

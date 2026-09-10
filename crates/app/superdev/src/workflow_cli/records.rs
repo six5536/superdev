@@ -141,6 +141,7 @@ pub(super) fn close_records(
     identity: &WorkflowIdentity,
     next: Phase,
     abandonment_reason: Option<&str>,
+    override_note: Option<&str>,
 ) -> Result<()> {
     // Build and validate the complete closure away from the live knowledge
     // tree. A failed mutation, repair, or validation therefore leaves the
@@ -180,6 +181,15 @@ pub(super) fn close_records(
         &format!("phase: {current_phase}"),
         &format!("phase: {}", phase_text(next)),
     )?;
+    // A closure a human forced records that decision beside the acceptance it
+    // stands in for, because the plan is where BUILD and ACCEPT read history.
+    let plan = match override_note {
+        Some(note) => {
+            let edit = completion_evidence_edit(&plan, &[note.to_owned()])?;
+            replace_once(&plan, &edit.old_text, &edit.new_text)?
+        }
+        None => plan,
+    };
     fs::write(&plan_path, plan).map_err(|source| Error::Io {
         path: plan_path,
         source,
