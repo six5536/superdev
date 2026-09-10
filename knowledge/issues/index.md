@@ -87,6 +87,8 @@ places it.
 
 * [The phase progress panel is hand-rolled instead of framed like the rest of Pi][sokf:issue-080-the-phase-progress-panel-is-hand-rolled] - superdev_run_phase draws its own unframed stack of lines with no spinner and a hardcoded key hint, so a running phase looks unlike every other Pi activity display and reads as loose text above the prompt.
 
+* [A blocking review finding names what it fails][sokf:issue-084-a-blocking-review-finding-names-what-it-fails] - the review prompts ban speculative improvements as a category the reviewer classifies itself into, so a reviewer convinced its finding matters never applies the rule; require every blocking finding to cite the objective it fails instead.
+
 * [The workflow cannot deliver a feature unattended][sokf:issue-024-the-workflow-cannot-run-unattended] - every phase boundary stops and waits for the user, no feature gets a branch of its own, a plan models no slice dependencies, and integrate leaves its record edits uncommitted.
 
 * [Run the next real feature through /execute-feature-plan and record the outcome][sokf:issue-026-rehearse-the-driver-on-a-real-feature] - the loop's machinery is tested and was rehearsed with shell steps, but the driver's prose — slice picking, the retry bound, deferral, the end-of-run queue — has not driven a real multi-slice plan; the next feature is the rehearsal.
@@ -210,3 +212,4 @@ places it.
 [sokf:issue-081-sokf-symlink-membership]: /knowledge/issues/wontfix/issue-081-sokf-symlink-membership.md
 [sokf:issue-082-sokf-mutation-parity]: /knowledge/issues/open/issue-082-sokf-mutation-parity.md
 [sokf:issue-083-sokf-validation-follow-ups]: /knowledge/issues/open/issue-083-sokf-validation-follow-ups.md
+[sokf:issue-084-a-blocking-review-finding-names-what-it-fails]: /knowledge/issues/open/issue-084-a-blocking-review-finding-names-what-it-fails.md
