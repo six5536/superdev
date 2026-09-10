@@ -80,6 +80,7 @@ places it.
 * [A claimed file superdev never wrote has no lock hash, so its first rewrite misreports as a user edit][sokf:issue-025-a-claim-never-written-gets-no-lock-hash] - the lock reconcile refreshes existing entries and never adds one for a claim already satisfied on disk, so all 53 shipped schemas were unrecorded and each first rewrite reports "overwrote a user-edited file" and spawns a backup.
 * [An exact identifier does not win its own search][sokf:issue-089-an-exact-identifier-does-not-win-its-own-search] - a query naming a concept by its identifier ranks that concept sixth behind topical neighbours, because rank fusion spreads scores too narrowly, no field boosts an identifier match, and settled reports carry no lifecycle to downrank.
 * [Search callers never use its precision controls][sokf:issue-090-search-callers-never-use-its-precision-controls] - isolated roles write keyword-soup queries and used no type, tag, or lifecycle filter in fourteen observed searches, because nothing tells them the search is semantic or that the filters exist.
+* [Every search process reloads the embedding model][sokf:issue-094-every-search-process-reloads-the-embedding-model] - a search or overview costs about 2.2 seconds of compute before it answers, because each process loads the 125 MB local embedding model afresh, and the script test suite pays that cost repeatedly.
 
 ## The workflow
 
@@ -238,3 +239,4 @@ places it.
 [sokf:issue-091-an-isolated-role-loses-everything-at-its-deadline]: /knowledge/issues/open/issue-091-an-isolated-role-loses-everything-at-its-deadline.md
 [sokf:issue-092-a-requirements-review-has-no-declared-surface]: /knowledge/issues/open/issue-092-a-requirements-review-has-no-declared-surface.md
 [sokf:issue-093-a-human-cannot-force-the-next-phase]: /knowledge/issues/open/issue-093-a-human-cannot-force-the-next-phase.md
+[sokf:issue-094-every-search-process-reloads-the-embedding-model]: /knowledge/issues/open/issue-094-every-search-process-reloads-the-embedding-model.md
