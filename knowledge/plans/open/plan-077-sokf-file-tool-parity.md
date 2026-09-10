@@ -51,7 +51,13 @@ The implementation must satisfy the following settled requirements.
   head truncation, continuation messages, `ReadToolDetails.truncation`, access
   errors, out-of-range errors, cancellation, metadata, and rendering.
 - Pi's file `read` must reject `sokf:` overview and section-qualified addresses
-  with concise guidance toward semantic retrieval.
+  with concise guidance naming `sokf_search`, the semantic tool the session
+  already registers.
+- The routed `read` description and prompt guidance must stop advertising the
+  refused overview and section address forms. That correction states implemented
+  behavior and must not settle `contract-012-api-sokf-pi-file-tools
+  P_prompt-ownership` or `P_file-prompt-rules`, which remain
+  `PENDING(issue-083)`.
 - The adapter must discover the canonical active checkout root from either a
   `.git` directory or a linked-worktree `.git` pointer file, from the checkout
   root or any descendant. That root must own source containment, MCP process
@@ -102,11 +108,13 @@ The implementation must satisfy the following settled requirements.
   corresponding source range, so it works unchanged as an exact-replacement
   anchor.
 - A paired harness must compare built-in and routed content, details, thrown
-  errors, and renderer inputs exactly. The repository must pin
-  `@earendil-works/pi-coding-agent` 0.85.1 as a test dependency, and absence of Pi
-  must fail rather than skip parity tests. The harness may normalize only
-  unavoidable canonical-physical-versus-virtual target spelling. It must execute
-  from both the repository root and a nested working directory.
+  errors, and renderer inputs exactly. The repository already pins
+  `@earendil-works/pi-coding-agent` 0.85.1 as a test dependency; BUILD must keep
+  that exact pin, load the pinned package rather than a `pi` executable on
+  `PATH`, and fail rather than skip parity tests when it cannot load. The
+  harness may normalize only unavoidable canonical-physical-versus-virtual
+  target spelling. It must execute from both the repository root and a nested
+  working directory.
 - Routed edit and write must keep their current behavior until
   [issue-082][sokf:issue-082-sokf-mutation-parity] changes it. This plan must not
   regress the existing mutation path while replacing the read path.
@@ -136,10 +144,13 @@ The implementation must satisfy the following settled requirements.
   `P_source-routing`, `AC_source-existing`, `AC_source-missing`,
   `AC_source-nested-cwd`, `AC_source-pi-preparation`,
   `AC_source-contained-symlink`, `AC_source-escaping-symlink`, `P_read-parity`,
-  `AC_read-exact-source`, `AC_read-semantic-refused`, and `P_pinned-pi`. BUILD
-  must replace its whole-source include with a narrow marked source region and
-  materialize the changed declaration. Retain every marker naming issue-082 or
-  issue-083.
+  `AC_read-exact-source`, `AC_read-semantic-refused`,
+  `AC_read-description-accurate`, and `P_pinned-pi`. BUILD must replace its
+  whole-source include with a narrow marked source region and materialize the
+  changed declaration. Retain every marker naming issue-082 or
+  issue-083; BUILD may correct the routed `read` description text that advertises
+  refused address forms without settling `P_prompt-ownership` or
+  `P_file-prompt-rules`.
 
 ## ADR decisions
 
@@ -180,19 +191,22 @@ factory operation boundaries. The adapter must join the resolver's canonical
 repository-relative target to the repository root and pass that absolute canonical
 execution target to the read factory. A narrow presentation wrapper must restore
 the caller's path spelling in Pi's model-visible read notices without changing
-other result bytes. The existing `edit` and `write` registrations keep their
-current MCP calls; only their repository discovery changes with the shared root
-helper.
+other result bytes. The routed `read` registration must describe only the
+address forms it accepts and must point a refused overview or section address at
+`sokf_search`. The existing `edit` and `write` registrations keep their current
+MCP calls; only their repository discovery changes with the shared root helper.
 
 `.pi/extensions/sokf-mcp.ts` must adopt the renamed retrieval and typed
 source-resolution transports. Its process reuse, restart, abort, and shutdown
 contracts remain unchanged.
 
 The contract Definition blocks must materialize the marked Rust and TypeScript
-source declarations through `cargo run -- validate --fix`. BUILD must add the
-exact `@earendil-works/pi-coding-agent` 0.85.1 test-dependency pin in
-`package.json` and `package-lock.json`; the command-line interface, its request
-and output types, and the generated CLI reference must remain unchanged.
+source declarations through `cargo run -- validate --fix`. `package.json` and
+`package-lock.json` already carry the exact `@earendil-works/pi-coding-agent`
+0.85.1 test-dependency pin, so BUILD must preserve it rather than add one and
+must make the paired harness import that pinned package. The command-line
+interface, its request and output types, and the generated CLI reference must
+remain unchanged.
 
 Primary implementation and evidence files are `.pi/extensions/sokf.ts`,
 `.pi/extensions/sokf-mcp.ts`, `crates/lib/superdev-core/src/sokf/mcp.rs`,
@@ -200,23 +214,24 @@ Primary implementation and evidence files are `.pi/extensions/sokf.ts`,
 `crates/lib/superdev-core/tests/mcp_tools.rs`,
 `scripts/test/fixtures/sokf-mcp-fake.mjs`,
 `scripts/test/fixtures/sokf-pi-adapter-smoke.ts`,
-`scripts/test/sokf-pi-adapter.test.mjs`, `scripts/test/sokf-mcp-client.test.mjs`,
-`package.json`, and `package-lock.json`.
+`scripts/test/sokf-pi-adapter.test.mjs`, and
+`scripts/test/sokf-mcp-client.test.mjs`.
 
 ## Knowledge changes
 
 BUILD must narrow and materialize the adapter contract Definition, settle every
 `PENDING(issue-077)` promise on both contracts, and update `architecture`,
-`software-components`, `testing-strategy`, and `security-requirements` for the
-`sokf_resolve_source` and `sokf_retrieve` split, the removal of `sokf_read`, exact
-source reads, active-checkout containment, and the resolver's
-nearest-existing-ancestor and contained-symlink rules. No document may retain the
-old rendered-virtual-read behavior, the mixed `sokf_read` operation, or a
-canonical-knowledge-root-only target rule. Documents must continue to describe
-mutation and validation behavior as the later issues define it. Keep
-the issue and this plan current through BUILD evidence and acceptance. Let
-validation regenerate contract, issue, and plan indexes and all source include and
-link blocks.
+`software-components`, `testing-strategy`, `security-requirements`, and
+`development-commands` for the `sokf_resolve_source` and `sokf_retrieve` split,
+the removal of `sokf_read`, exact source reads, active-checkout containment, and
+the resolver's nearest-existing-ancestor and contained-symlink rules. No
+document may retain the old rendered-virtual-read behavior, the mixed
+`sokf_read` operation, a canonical-knowledge-root-only target rule, or the claim
+that paired adapter evidence runs only when `pi` is on `PATH`. Documents must
+continue to describe mutation and validation behavior as the later issues define
+it. Keep the issue and this plan current through BUILD evidence and acceptance.
+Let validation regenerate contract, issue, and plan indexes and all source
+include and link blocks.
 
 ## Documentation changes
 
@@ -225,9 +240,11 @@ The documentation map triggers the following surfaces.
 - `readme`: update `/README.md` because the MCP tool names, tool count, retrieval
   guidance, and routed read behavior are user-visible. Verify with
   `npm run check:docs`.
-- `contributor-guide`: update `/CONTRIBUTING.md` to name the paired adapter
-  harness and the pinned Pi 0.85.1 test dependency within `npm run test:scripts`.
-  Verify with `npm run check:docs`.
+- `contributor-guide`: update `/CONTRIBUTING.md` and
+  `/knowledge/development-commands.md` to name the paired adapter harness and the
+  pinned Pi 0.85.1 test dependency within `npm run test:scripts`, and to drop the
+  claim that the harness runs only when `pi` is on `PATH`. Verify with
+  `npm run check:docs`.
 - `canonical-knowledge`: update the contracts, architecture, components, tests,
   and security requirements listed above. Generate with
   `cargo run -- validate --fix` and verify with `npm run check:validate`.
@@ -249,7 +266,7 @@ The documentation map triggers the following surfaces.
 
 - [ ] Done.
 - Dependencies: none.
-- Areas: `contract-003-api-sokf`, `crates/lib/superdev-core/src/sokf/mcp.rs`, `crates/lib/superdev-core/src/sokf/mutation.rs`, `crates/lib/superdev-core/tests/mcp_tools.rs`, and `scripts/test/sokf-mcp-client.test.mjs`.
+- Areas: `contract-003-api-sokf`, `crates/lib/superdev-core/src/sokf/mcp.rs`, `crates/lib/superdev-core/src/sokf/mutation.rs`, `crates/lib/superdev-core/tests/mcp_tools.rs`, `scripts/test/fixtures/sokf-mcp-fake.mjs`, and `scripts/test/sokf-mcp-client.test.mjs`.
 - Outcome: `sokf_resolve_source` returns a canonical physical target with generated authority, `sokf_retrieve` owns semantic overview, concept, and section behavior, `sokf_read` is absent, and the MCP server binds itself to the canonical active checkout root.
 - Verification: `cargo test -p superdev-core sokf && cargo test -p superdev-core --test mcp_tools && node --test scripts/test/sokf-mcp-client.test.mjs`.
 - Tests: table-driven MCP cases cover `contract-003-api-sokf AC_resolve-schema`, `AC_retrieve-schema`, `P_active-worktree-root`, `AC_worktree-other-checkout-refused`, `P_source-resolution`, `AC_source-identity`, `AC_source-contained`, `AC_source-section-refused`, `P_semantic-retrieve`, `AC_semantic-addresses`, `AC_semantic-physical-refused`, `P_no-read-alias`, `P_direct-does-not-load`, `P_first-index-call-loads`, `P_direct-retrieval-skips-index`, `P_parse-error-quoted`, and `P_overview-warning-cap`. Tool-list schemas assert exact required fields, optional fields, integer minima, and `additionalProperties: false`; runtime cases reject one unknown property per request and each missing required property. An existing file returns its canonical repository-relative path and `exists: true`; a missing file below an existing contained ancestor returns the normalized destination and `exists: false`; an existing file symlink and a missing path below a directory symlink canonicalize to contained targets; file and directory symlinks that land elsewhere inside the repository canonicalize successfully; file and directory symlinks that escape the repository fail before read; a missing suffix below contained and escaping symlinks respectively succeeds and fails; and a generated projection returns exact inclusive lines, authoritative path, and region.
@@ -260,11 +277,11 @@ The documentation map triggers the following surfaces.
 
 - [ ] Done.
 - Dependencies: Block 1.
-- Areas: `contract-012-api-sokf-pi-file-tools`, `.pi/extensions/sokf.ts`, `.pi/extensions/sokf-mcp.ts`, `scripts/test/fixtures/sokf-pi-adapter-smoke.ts`, `scripts/test/sokf-pi-adapter.test.mjs`, `package.json`, `package-lock.json`, `/README.md`, `/CONTRIBUTING.md`, `/CHANGELOG.md`, `architecture`, `software-components`, `testing-strategy`, and `security-requirements`.
+- Areas: `contract-012-api-sokf-pi-file-tools`, `.pi/extensions/sokf.ts`, `.pi/extensions/sokf-mcp.ts`, `scripts/test/fixtures/sokf-pi-adapter-smoke.ts`, `scripts/test/sokf-pi-adapter.test.mjs`, `/README.md`, `/CONTRIBUTING.md`, `/CHANGELOG.md`, `architecture`, `software-components`, `testing-strategy`, `security-requirements`, and `development-commands`.
 - Outcome: routed Pi read behavior matches the paired built-in exactly, the adapter selects the canonical active checkout root, public and canonical documentation describe the implemented behavior, and focused plus complete suites pass.
 - Verification: `cargo test -p superdev-core sokf && cargo test -p superdev-core --test mcp_tools && node --test scripts/test/sokf-pi-adapter.test.mjs && node --test scripts/test/sokf-mcp-client.test.mjs && npm run check:docs && npm run check:validate && npm run check:blueprint`.
-- Tests: paired adapter cases cover `contract-012-api-sokf-pi-file-tools P_source-routing`, `AC_source-existing`, `AC_source-missing`, `AC_source-nested-cwd`, `AC_source-pi-preparation`, `AC_source-contained-symlink`, `AC_source-escaping-symlink`, `P_read-parity`, `AC_read-exact-source`, `AC_read-semantic-refused`, `AC_worktree-discovery`, `AC_worktree-cross-checkout-refused`, and `P_pinned-pi`. Paired read cases cover success, access and out-of-range failures, 1-indexed offset and limit, 2,000-line and 50 KB truncation, one oversized line, continuation text, cancellation, exact details and errors, and renderer inputs. Path-preparation cases prove leading `@`, `~`, Unicode-space, macOS AM/PM, NFD, curly-quote, and combined variants resolve exactly as Pi does. Repository-root and nested-working-directory spellings resolve identically.
-- Structural evidence: the paired test fails when pinned Pi 0.85.1 cannot load; it never skips. The path-preparation adapter is proven byte-for-byte against the values observed at Pi 0.85.1 operation boundaries, and no test or source deep-imports unexported package internals. A routed excerpt copied with frontmatter is byte-identical to the same source range read by the built-in tool. A linked-worktree fixture proves the adapter selects the worktree root from its `.git` pointer file, reads only that checkout's bytes, and rejects a path into the main checkout. Existing routed edit and write cases still pass unchanged. `cargo run -- validate` runs twice with a clean second pass and proves every Block 2 `PENDING(issue-077)` marker is removed while each issue-082 and issue-083 marker remains.
+- Tests: paired adapter cases cover `contract-012-api-sokf-pi-file-tools P_source-routing`, `AC_source-existing`, `AC_source-missing`, `AC_source-nested-cwd`, `AC_source-pi-preparation`, `AC_source-contained-symlink`, `AC_source-escaping-symlink`, `P_read-parity`, `AC_read-exact-source`, `AC_read-semantic-refused`, `AC_read-description-accurate`, `AC_worktree-discovery`, `AC_worktree-cross-checkout-refused`, and `P_pinned-pi`. Paired read cases cover success, access and out-of-range failures, 1-indexed offset and limit, 2,000-line and 50 KB truncation, one oversized line, continuation text, cancellation, exact details and errors, and renderer inputs. Path-preparation cases prove leading `@`, `~`, Unicode-space, macOS AM/PM, NFD, curly-quote, and combined variants resolve exactly as Pi does. Repository-root and nested-working-directory spellings resolve identically. The refusal message names `sokf_search`, and the registered `read` description advertises no refused address form.
+- Structural evidence: the paired test imports the pinned Pi 0.85.1 test dependency rather than a `pi` executable on `PATH`, fails when that dependency cannot load, and never skips. The path-preparation adapter is proven byte-for-byte against the values observed at Pi 0.85.1 operation boundaries, and no test or source deep-imports unexported package internals. A routed excerpt copied with frontmatter is byte-identical to the same source range read by the built-in tool. A linked-worktree fixture proves the adapter selects the worktree root from its `.git` pointer file, reads only that checkout's bytes, and rejects a path into the main checkout. Existing routed edit and write cases still pass unchanged. `cargo run -- validate` runs twice with a clean second pass and proves every Block 2 `PENDING(issue-077)` marker is removed while each issue-082 and issue-083 marker remains.
 - Documentation: update `/README.md`, `/CONTRIBUTING.md`, `/CHANGELOG.md`, and the canonical knowledge listed above, run `cargo run -- validate --fix` twice, then run `npm run check:docs`, `npm run check:validate`, and `npm run check:blueprint`.
 
 ## Build state
@@ -280,8 +297,11 @@ none. BUILD records only local choices that do not change the approved contracts
 Routed mutation parity and the persistence outcome boundary remain in
 [issue-082][sokf:issue-082-sokf-mutation-parity]. Validation follow-up delivery,
 file-tool prompt metadata, and removal of `/SOKF-EDIT-RELIABILITY-PLAN.md` remain
-in [issue-083][sokf:issue-083-sokf-validation-follow-ups]. SOKF membership through
-contained symlinks was declined in
+in [issue-083][sokf:issue-083-sokf-validation-follow-ups]. This plan leaves
+`sokf_retrieve` an MCP-only operation, so a Pi session reaches canonical
+knowledge through exact source, `sokf_search`, and `sokf_graph`; registering a
+Pi-side retrieval tool for rendered concepts and the `sokf:` overview requires a
+separate issue. SOKF membership through contained symlinks was declined in
 [issue-081][sokf:issue-081-sokf-symlink-membership]; resolution accepts a
 contained target and refuses an escaping one, which this plan already covers. The
 general validator symlink walk remains in issue-031. Any change to semantic

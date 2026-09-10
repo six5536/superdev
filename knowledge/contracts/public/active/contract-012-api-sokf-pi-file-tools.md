@@ -470,7 +470,8 @@ Validation follow-up state is session memory keyed by canonical repository root.
   - `AC_source-target-drift` [event] WHEN an ingress resolves to a different canonical target at mutation dispatch, the adapter SHALL PENDING(issue-082) reject the mutation before persistence.
 - `P_read-parity` [ubiquitous] Routed `read` SHALL PENDING(issue-077) preserve Pi 0.85.1 content, offset, limit, truncation, continuation, details, errors, cancellation, metadata, and rendering.
   - `AC_read-exact-source` [event] WHEN `read` receives an unqualified `sokf:<id>`, the adapter SHALL PENDING(issue-077) return exact UTF-8 source through Pi's built-in read operation.
-  - `AC_read-semantic-refused` [event] WHEN Pi file `read` receives `sokf:` or a section-qualified address, the adapter SHALL PENDING(issue-077) reject it with concise semantic-retrieval guidance.
+  - `AC_read-semantic-refused` [event] WHEN Pi file `read` receives `sokf:` or a section-qualified address, the adapter SHALL PENDING(issue-077) reject it with concise guidance naming `sokf_search`.
+  - `AC_read-description-accurate` [ubiquitous] The routed `read` registration SHALL PENDING(issue-077) describe only the address forms it accepts and advertise no refused overview or section address.
   - `AC_read-copied-edit` [event] WHEN a caller copies a routed excerpt including frontmatter, routed `edit` SHALL PENDING(issue-082) accept the unchanged excerpt as `oldText`.
 - `P_edit-parity` [ubiquitous] Routed `edit` SHALL PENDING(issue-082) preserve Pi 0.85.1 schema, argument preparation, matching, uniqueness, overlap, byte-order mark, line endings, errors, success content, compact details, metadata, and rendering.
   - `AC_edit-pi-diffs` [event] WHEN a routed edit applies, its details SHALL PENDING(issue-082) contain Pi's display diff, unified patch, and first changed line for the requested edit.
@@ -519,7 +520,7 @@ No credential crosses this local adapter boundary.
 
 ### Versioning
 
-- `P_pinned-pi` [ubiquitous] Paired evidence SHALL PENDING(issue-077) load the pinned `@earendil-works/pi-coding-agent` 0.85.1 test dependency and fail when Pi is absent.
+- `P_pinned-pi` [ubiquitous] Paired evidence SHALL PENDING(issue-077) load the pinned `@earendil-works/pi-coding-agent` 0.85.1 test dependency rather than an executable on `PATH`, and fail rather than skip when that dependency cannot load.
 
 ### Resources and prompts
 

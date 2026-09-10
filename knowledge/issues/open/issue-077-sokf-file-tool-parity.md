@@ -56,8 +56,8 @@ Pi read contract.
   2,000-line and 50 KB truncation, continuation text, details, errors,
   cancellation, metadata, and rendering.
 - The Pi `read` slot treats `sokf:<id>` as a file identity. It rejects the `sokf:`
-  overview address and section-qualified addresses with concise guidance toward
-  semantic retrieval.
+  overview address and section-qualified addresses with concise guidance naming
+  `sokf_search`, and its own description stops advertising those refused forms.
 - The MCP contract replaces the mixed-purpose `sokf_read` operation with a source
   resolver for file routing and a semantic `sokf_retrieve` operation for
   overviews, rendered concepts, and sections. The change requires no
@@ -77,8 +77,9 @@ Pi read contract.
 - A copied routed excerpt, including frontmatter, matches the source it came
   from, so it works unchanged as an exact-replacement anchor.
 - A paired characterization harness compares built-in and routed results, errors,
-  details, and rendering inputs across success and edge cases, and pins
-  `@earendil-works/pi-coding-agent` 0.85.1 as a test dependency.
+  details, and rendering inputs across success and edge cases. It loads the
+  already pinned `@earendil-works/pi-coding-agent` 0.85.1 test dependency and
+  fails rather than skips when that dependency cannot load.
 
 ## Scope
 
@@ -99,6 +100,8 @@ Routed read behaviour and the MCP operations it depends on.
   membership question is decided or deferred.
 - Out: the validation follow-up state machine and file-tool prompt metadata,
   owned by [issue-083][sokf:issue-083-sokf-validation-follow-ups].
+- Out: a Pi-registered tool for semantic overview and section retrieval, which
+  stays an MCP-only operation until a separate issue asks for it.
 - Out: a semantic retrieval dialect in the Pi `read` slot, changes to semantic
   ranking or rendered retrieval content, unrelated MCP transport lifecycle
   changes, approximate forks of Pi's algorithms, the general validator symlink
