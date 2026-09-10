@@ -162,4 +162,4 @@ decision is itself an argument for an explicit override.
 <!-- sokf:links -->
 [sokf:contract-002-cli-superdev]: /knowledge/contracts/public/active/contract-002-cli-superdev.md
 [sokf:contract-011-interface-workflow]: /knowledge/contracts/internal/active/contract-011-interface-workflow.md
-[sokf:issue-092-a-requirements-review-has-no-declared-surface]: /knowledge/issues/open/issue-092-a-requirements-review-has-no-declared-surface.md
+[sokf:issue-092-a-requirements-review-has-no-declared-surface]: /knowledge/issues/done/issue-092-a-requirements-review-has-no-declared-surface.md

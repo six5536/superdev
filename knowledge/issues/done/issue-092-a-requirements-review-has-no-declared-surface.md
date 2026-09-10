@@ -4,7 +4,7 @@ id: issue-092-a-requirements-review-has-no-declared-surface
 title: A requirements review has no declared surface
 description: The review prompt directs a transitive closure with no fixed point, so a review reads the whole subsystem instead of the change in its context, and its cost is bounded only by the deadline that kills it.
 kind: feature
-lifecycle: open
+lifecycle: done
 links:
   - rel: references
     to: issue-091-an-isolated-role-loses-everything-at-its-deadline
@@ -20,7 +20,7 @@ every affected contract, source file, test obligation, and documentation
 surface. Each thing it reads names more things, so the instruction describes a
 closure that terminates at the repository boundary. The review reconstructs the
 subsystem rather than examining the change in the context of what exists, and
-what stops it is the deadline. Give the review a surface it can finish.
+what stops it is the deadline. Point the review at what the plan names.
 
 ## Context
 
@@ -81,23 +81,31 @@ closure instruction.
 
 ## Behaviour
 
-A requirements review knows which surface it is answerable for before it
-begins, and that surface is finite.
+The reviewer is pointed at what the plan names, and reads further only when a
+specific finding needs it.
 
-The plan already names it. A review directed at the work blocks' declared areas,
-the contracts and ADR the plan changes, and the documentation surfaces its
-documentation map triggers has a definite extent, and a reviewer can report
-having covered it.
+The plan already names that reading. It states the contracts and ADRs it
+changes, its work blocks list the files each one touches, and its documentation
+map names the surfaces it updates. The reviewer is handed that document and is
+then told to inspect every affected thing, so what the plan names reads as a
+starting point rather than as a boundary.
 
-Reading beyond that surface stays available, because a finding sometimes
-depends on something the plan failed to name, and a plan that omits an affected
-file is itself a finding. What changes is that the wider reading serves a
-question rather than a survey, and that the reviewer can distinguish the two.
+Reading further stays available and unrestricted. A finding sometimes depends
+on something the plan failed to name, and a plan that omits an affected file is
+itself a finding. What changes is that the wider reading serves a finding the
+reviewer is writing rather than a survey it is conducting. The reviewer judges
+what a finding needs, and no rule decides that for it.
 
-A review that cannot cover its declared surface within its budget should report
-that rather than be killed mid-survey. What it covered and what it did not is
-more useful than nothing, and it names the real problem, which is that the
-surface and the budget disagree.
+The instruction to discover every actionable finding in one pass goes too. It
+presses in the same direction as the closure, and the correction loop already
+tolerates a partial set: a finding missed in one pass is found in the next,
+within the configured review-cycle budget.
+
+The shape this needs is already in the family. `accept.md` permits one hop and
+then closes it: "Assess only that candidate and its canonical records."
+`build.md` closes its own with "Never broaden approved Areas merely to absorb a
+change." `requirements-review.md` is the only prompt of the five that opens
+such a reading and never closes it.
 
 The relationship to the deadline is worth stating plainly. Raising
 `isolated_role_timeout_seconds` from 1200 to 2400 was tried and produced a
@@ -115,18 +123,55 @@ reasonably carry rather than for how a review is directed.
 
 What a requirements review is told to read.
 
-- In: the reviewer's instructions, the task string that carries the plan's
-  declared surface, and whether the reviewer reports coverage of that surface.
-- In: what a review returns when its surface exceeds its budget.
+- In: the wording of `requirements-review.md`.
+- Out: the task string, which already names the two records the reviewer reads
+  first and needs nothing added.
+- Out: whether the reviewer reports coverage of what it read. The checklist
+  already requires evidence for each of its seven areas.
+- Out: a rule deciding which reads are permitted. The prompt states a
+  preference, and the reviewer judges what a finding needs.
+- Out: what a review returns when its budget runs out. The parent holds the
+  timeout and terminates the child from outside, so a review is never told its
+  deadline and cannot report on its own termination.
 - Out: the deadline's value, which raising has already been shown not to fix.
 - Out: keeping partial work when a role is killed, which
   [the deadline issue][sokf:issue-091-an-isolated-role-loses-everything-at-its-deadline]
   covers. That issue makes a deadline survivable; this one makes it
   unnecessary.
-- Out: `code-review`, whose bounded diff surface is the design this issue asks
-  requirements review to acquire.
+- Out: `code-review`, whose enumerated diff surface is a stronger design than
+  this issue adopts, and `scope.md` and `build.md`, whose reading instructions
+  carry no unbounded closure.
 - Out: what makes a finding worth blocking on, which is a separate question
   about the bar rather than the surface.
+
+## Resolution
+
+Done by rewording `requirements-review.md`. The closure instruction is replaced
+by two sentences:
+
+```text
+Read those two records, the contracts and ADRs the plan changes, the files its
+work blocks list, and the documentation it updates. Only read anything else
+when a specific finding needs it.
+```
+
+The seven concerns the deleted list enumerated were already stated in the
+prompt's second paragraph, which requires a completed checklist for each. The
+deleted copy added no obligation and set a reading order with no floor.
+
+`Do not fail fast. Discover every actionable finding in this pass.` is deleted
+with it, for pressing in the same direction. A finding missed in one pass is
+found in the next, within the configured review-cycle budget.
+
+No rule decides which reads are permitted, and no coverage is enforced. The
+reviewer judges what a finding needs; the prompt states a preference. Neither
+the task string, the tool set, nor the deadline changed.
+
+The fix is unmeasured. The evidence here is two reviews of one plan, and the
+next real requirements review is the test of whether the wording holds. If a
+review still runs long, the remaining lever is the structural amplifier this
+issue names and excludes: a plan whose work blocks list twenty files has a
+twenty-file reading whatever the prompt says.
 
 ## Comments
 

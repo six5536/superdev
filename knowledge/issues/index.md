@@ -102,7 +102,7 @@ places it.
 
 * [An isolated role loses everything at its deadline][sokf:issue-091-an-isolated-role-loses-everything-at-its-deadline] - a role that reaches its timeout is killed with SIGKILL and returns nothing, so twenty minutes of completed work is discarded and the only recovery is to raise the timeout and repeat the same work from the start.
 
-* [A requirements review has no declared surface][sokf:issue-092-a-requirements-review-has-no-declared-surface] - the review prompt directs a transitive closure with no fixed point, so a review reads the whole subsystem instead of the change in its context, and its cost is bounded only by the deadline that kills it.
+* [A requirements review has no declared surface][sokf:issue-092-a-requirements-review-has-no-declared-surface] - the review prompt directed a transitive closure with no fixed point, so a review read the whole subsystem instead of the change in its context, and its cost was bounded only by the deadline that killed it; done by pointing the reviewer at what the plan names and letting it read further only for a specific finding.
 
 * [A human cannot force the next phase][sokf:issue-093-a-human-cannot-force-the-next-phase] - the adapter refused approval while review findings were open and offered no override, so a gate the contract assigns to the human was held by a reviewer that may never report clean; done in aa59df6, which adds the human-typed `/superdev-force`, records the forced decision in the plan, and leaves the phase tool refusing as before.
 
@@ -237,6 +237,6 @@ places it.
 [sokf:issue-089-an-exact-identifier-does-not-win-its-own-search]: /knowledge/issues/open/issue-089-an-exact-identifier-does-not-win-its-own-search.md
 [sokf:issue-090-search-callers-never-use-its-precision-controls]: /knowledge/issues/open/issue-090-search-callers-never-use-its-precision-controls.md
 [sokf:issue-091-an-isolated-role-loses-everything-at-its-deadline]: /knowledge/issues/open/issue-091-an-isolated-role-loses-everything-at-its-deadline.md
-[sokf:issue-092-a-requirements-review-has-no-declared-surface]: /knowledge/issues/open/issue-092-a-requirements-review-has-no-declared-surface.md
+[sokf:issue-092-a-requirements-review-has-no-declared-surface]: /knowledge/issues/done/issue-092-a-requirements-review-has-no-declared-surface.md
 [sokf:issue-093-a-human-cannot-force-the-next-phase]: /knowledge/issues/done/issue-093-a-human-cannot-force-the-next-phase.md
 [sokf:issue-094-every-search-process-reloads-the-embedding-model]: /knowledge/issues/open/issue-094-every-search-process-reloads-the-embedding-model.md
