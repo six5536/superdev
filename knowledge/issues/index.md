@@ -40,6 +40,12 @@ places it.
 
 * [SOKF-routed file tools diverge from Pi's built-in contracts][sokf:issue-077-sokf-file-tool-parity] - SOKF-routed read, edit, and write return different source, result, error, diff, rendering, and prompt behaviour from Pi's built-in file tools, making targeted knowledge edits fragile and expensive in model context.
 
+* [A knowledge file reached through a contained symlink is not SOKF knowledge][sokf:issue-081-sokf-symlink-membership] - SOKF loading, identity resolution, search, graph traversal, repair, refiling, and validation ignore an eligible Markdown file that `knowledge/` reaches only through a repository-contained file or directory symlink, so a deduplicated or aliased concept is invisible to every SOKF surface.
+
+* [SOKF-routed edits and writes diverge from Pi's built-in mutation contracts][sokf:issue-082-sokf-mutation-parity] - a routed edit or write returns mutation JSON instead of Pi's success content, reconstructs a whole-file diff, and can report a tool error after the bytes already persisted, so targeted knowledge mutation is fragile and expensive in model context.
+
+* [SOKF validation findings ride inside file-tool results and reset their own retry cap][sokf:issue-083-sokf-validation-follow-ups] - validation feedback after a knowledge mutation is delivered as file-tool content and counted in a variable that every reload, resume, fork, or compaction clears, so an agent reads mutation internals and can be asked to correct the same failure without bound.
+
 * [The format the agent must write in has no document, and the renderer that would produce one has no consumer][sokf:issue-017-the-format-has-no-agent-facing-document] - every skill and schema is written in superdev-format, and the only statement of it is a 700-line grammar file the agent is never pointed at; the doc renderer ported for exactly this now exists in the binary with nothing calling it but a flag nobody runs.
 
 ## The schema layer
@@ -201,3 +207,6 @@ places it.
 [sokf:issue-078-workflow-progress-repeats-plan-and-stage]: /knowledge/issues/open/issue-078-workflow-progress-repeats-plan-and-stage.md
 [sokf:issue-079-esc-does-not-stop-a-running-phase]: /knowledge/issues/open/issue-079-esc-does-not-stop-a-running-phase.md
 [sokf:issue-080-the-phase-progress-panel-is-hand-rolled]: /knowledge/issues/open/issue-080-the-phase-progress-panel-is-hand-rolled.md
+[sokf:issue-081-sokf-symlink-membership]: /knowledge/issues/open/issue-081-sokf-symlink-membership.md
+[sokf:issue-082-sokf-mutation-parity]: /knowledge/issues/open/issue-082-sokf-mutation-parity.md
+[sokf:issue-083-sokf-validation-follow-ups]: /knowledge/issues/open/issue-083-sokf-validation-follow-ups.md
