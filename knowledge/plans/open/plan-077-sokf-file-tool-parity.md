@@ -149,8 +149,7 @@ The implementation must satisfy the following settled requirements.
   symlink, and unreleased-MCP-break decisions. The ADR remains `draft` because
   [issue-083][sokf:issue-083-sokf-validation-follow-ups] settles its last
   decisions. BUILD must not stabilize it in this plan and must not remove or
-  reword the mutation, membership, or validation-state decisions that the later
-  issues own.
+  reword the mutation or validation-state decisions that the later issues own.
 
 ## Source and interface changes
 
@@ -214,7 +213,7 @@ source reads, active-checkout containment, and the resolver's
 nearest-existing-ancestor and contained-symlink rules. No document may retain the
 old rendered-virtual-read behavior, the mixed `sokf_read` operation, or a
 canonical-knowledge-root-only target rule. Documents must continue to describe
-mutation, membership, and validation behavior as the later issues define it. Keep
+mutation and validation behavior as the later issues define it. Keep
 the issue and this plan current through BUILD evidence and acceptance. Let
 validation regenerate contract, issue, and plan indexes and all source include and
 link blocks.
