@@ -138,7 +138,8 @@ The implementation must satisfy the following settled requirements.
 ## Contract changes
 
 - `contract-003-api-sokf`: settle every `PENDING(issue-077)` promise, including
-  the new `AC_instructions-name-served-tools`. Replace the
+  `AC_instructions-name-served-tools`, which the contract already declares.
+  Replace the
   mixed-purpose `sokf_read` definition with materialized `sokf_resolve_source` and
   `sokf_retrieve` definitions. Bind the resolver and retrieval requests and
   results under `P_routed-schemas`, `AC_resolve-schema`, and `AC_retrieve-schema`;
@@ -206,6 +207,11 @@ region's inclusive line bounds, authoritative repository-relative path, and
 optional source-region name so the resolver can report generated authority. Its
 mutation behavior is otherwise unchanged in this plan.
 
+`crates/lib/superdev-core/src/sokf/mod.rs` must re-export every new public
+resolver type through the crate's flat SOKF surface, as
+[coding-standards][sokf:coding-standards] requires, and must keep its existing
+exports unchanged.
+
 `.pi/extensions/sokf.ts` must discover the canonical active checkout root from
 either a `.git` directory or a linked-worktree pointer file, including from a
 nested working directory, and must key MCP clients by that root. `findRepository()`
@@ -244,6 +250,7 @@ remain unchanged.
 Primary implementation and evidence files are `.pi/extensions/sokf.ts`,
 `.pi/extensions/sokf-mcp.ts`, `crates/lib/superdev-core/src/sokf/mcp.rs`,
 `crates/lib/superdev-core/src/sokf/mutation.rs`,
+`crates/lib/superdev-core/src/sokf/mod.rs`,
 `crates/lib/superdev-core/tests/mcp_tools.rs`,
 `scripts/test/fixtures/sokf-mcp-fake.mjs`,
 `scripts/test/fixtures/sokf-pi-adapter-smoke.ts`,
@@ -254,15 +261,20 @@ Primary implementation and evidence files are `.pi/extensions/sokf.ts`,
 
 BUILD must narrow and materialize the adapter contract Definition, settle every
 `PENDING(issue-077)` promise on both contracts, and update `architecture`,
-`software-components`, `testing-strategy`, `security-requirements`, and
-`development-commands` for the `sokf_resolve_source` and `sokf_retrieve` split,
-the removal of `sokf_read`, exact source reads, active-checkout containment, the
-ranked `.git`-then-`.superdev/config.toml` discovery ordering, and the
-resolver's nearest-existing-ancestor and contained-symlink rules. No document
-may retain the old rendered-virtual-read behavior, the mixed `sokf_read`
-operation, a canonical-knowledge-root-only target rule, a claim that discovery
-accepts either marker without precedence, or the claim that paired adapter
-evidence runs only when `pi` is on `PATH`. Documents must
+`software-components`, `testing-strategy`, `security-requirements`,
+`development-commands`, and the `contract-003-api-sokf` entry in
+`/knowledge/contracts/index.md` for the `sokf_resolve_source` and
+`sokf_retrieve` split, the removal of `sokf_read`, the resulting served-tool
+names and count, exact source reads, active-checkout containment, the ranked
+`.git`-then-`.superdev/config.toml` discovery ordering, and the resolver's
+nearest-existing-ancestor and contained-symlink rules. No document may retain
+the old rendered-virtual-read behavior, the mixed `sokf_read` operation, a
+served-tool count or list that predates the split, a
+canonical-knowledge-root-only target rule, a claim that discovery accepts either
+marker without precedence, or the claim that paired adapter evidence runs only
+when `pi` is on `PATH`. Adding the absent `contract-011-interface-workflow` and
+`contract-012-api-sokf-pi-file-tools` entries to that contracts index is out of
+scope; only the stale `contract-003-api-sokf` entry changes. Documents must
 continue to describe mutation and validation behavior as the later issues define
 it. Keep the issue and this plan current through BUILD evidence and acceptance.
 Let validation regenerate contract, issue, and plan indexes and all source
@@ -301,7 +313,7 @@ The documentation map triggers the following surfaces.
 
 - [ ] Done.
 - Dependencies: none.
-- Areas: `contract-003-api-sokf`, `crates/lib/superdev-core/src/sokf/mcp.rs`, `crates/lib/superdev-core/src/sokf/mutation.rs`, `crates/lib/superdev-core/tests/mcp_tools.rs`, `scripts/test/fixtures/sokf-mcp-fake.mjs`, and `scripts/test/sokf-mcp-client.test.mjs`.
+- Areas: `contract-003-api-sokf`, `crates/lib/superdev-core/src/sokf/mcp.rs`, `crates/lib/superdev-core/src/sokf/mutation.rs`, `crates/lib/superdev-core/src/sokf/mod.rs`, `crates/lib/superdev-core/tests/mcp_tools.rs`, `scripts/test/fixtures/sokf-mcp-fake.mjs`, and `scripts/test/sokf-mcp-client.test.mjs`.
 - Outcome: `sokf_resolve_source` returns a canonical physical target with generated authority and its mirrored text item, `sokf_retrieve` owns semantic overview, concept, and section behavior, `sokf_read` is absent from both the tool list and the server instructions, and the MCP server binds itself to the canonical active checkout root.
 - Verification: `cargo test -p superdev-core sokf && cargo test -p superdev-core --test mcp_tools && node --test scripts/test/sokf-mcp-client.test.mjs`.
 - Tests: table-driven MCP cases cover `contract-003-api-sokf AC_resolve-schema`, `AC_retrieve-schema`, `P_active-worktree-root`, `AC_worktree-other-checkout-refused`, `P_source-resolution`, `AC_source-identity`, `AC_source-contained`, `AC_source-section-refused`, `P_semantic-retrieve`, `AC_semantic-addresses`, `AC_semantic-physical-refused`, `P_no-read-alias`, `AC_instructions-name-served-tools`, `P_direct-does-not-load`, `P_first-index-call-loads`, `P_direct-retrieval-skips-index`, `P_parse-error-quoted`, and `P_overview-warning-cap`. Tool-list schemas assert exact required fields, optional fields, integer minima, and `additionalProperties: false`; one case asserts that a successful `sokf_resolve_source` result carries exactly one text item whose bytes equal the pretty-printed JSON of its structured content; one case asserts the `get_info()` instruction string names each served tool and contains neither `sokf_read` nor a directed read of the `sokf:` overview address; runtime cases reject one unknown property per request and each missing required property. An existing file returns its canonical repository-relative path and `exists: true`; a missing file below an existing contained ancestor returns the normalized destination and `exists: false`; an existing file symlink and a missing path below a directory symlink canonicalize to contained targets; file and directory symlinks that land elsewhere inside the repository canonicalize successfully; file and directory symlinks that escape the repository fail before read; a missing suffix below contained and escaping symlinks respectively succeeds and fails; and a generated projection returns exact inclusive lines, authoritative path, and region.
@@ -312,11 +324,11 @@ The documentation map triggers the following surfaces.
 
 - [ ] Done.
 - Dependencies: Block 1.
-- Areas: `contract-012-api-sokf-pi-file-tools` including its new marked `tools` region, `.pi/extensions/sokf.ts`, `.pi/extensions/sokf-mcp.ts`, `scripts/test/fixtures/sokf-pi-adapter-smoke.ts`, `scripts/test/sokf-pi-adapter.test.mjs`, `/README.md`, `/CONTRIBUTING.md`, `/CHANGELOG.md`, `architecture`, `software-components`, `testing-strategy`, `security-requirements`, and `development-commands`.
+- Areas: `contract-012-api-sokf-pi-file-tools` including its new marked `tools` region, `.pi/extensions/sokf.ts`, `.pi/extensions/sokf-mcp.ts`, `scripts/test/fixtures/sokf-pi-adapter-smoke.ts`, `scripts/test/sokf-pi-adapter.test.mjs`, `/README.md`, `/CONTRIBUTING.md`, `/CHANGELOG.md`, `/knowledge/contracts/index.md`, `architecture`, `software-components`, `testing-strategy`, `security-requirements`, and `development-commands`.
 - Outcome: routed Pi read behavior matches the paired built-in exactly, the adapter selects the canonical active checkout root, public and canonical documentation describe the implemented behavior, and focused plus complete suites pass.
 - Verification: `cargo test -p superdev-core sokf && cargo test -p superdev-core --test mcp_tools && node --test scripts/test/sokf-pi-adapter.test.mjs && node --test scripts/test/sokf-mcp-client.test.mjs && npm run check:docs && npm run check:validate && npm run check:blueprint`.
 - Tests: paired adapter cases cover `contract-012-api-sokf-pi-file-tools P_source-routing`, `AC_source-existing`, `AC_source-missing`, `AC_source-nested-cwd`, `AC_source-pi-preparation`, `AC_source-contained-symlink`, `AC_source-escaping-symlink`, `P_read-parity`, `AC_read-exact-source`, `AC_read-semantic-refused`, `AC_read-description-accurate`, `AC_worktree-discovery`, `AC_worktree-git-precedence`, `AC_worktree-cross-checkout-refused`, and `P_pinned-pi`. Paired read cases cover success, access and out-of-range failures, 1-indexed offset and limit, 2,000-line and 50 KB truncation, one oversized line, continuation text, cancellation, exact details and errors, and renderer inputs. Path-preparation cases prove leading `@`, `~`, Unicode-space, macOS AM/PM, NFD, curly-quote, and combined variants resolve exactly as Pi does. Repository-root and nested-working-directory spellings resolve identically. The refusal message names `sokf_search`, and the registered `read` description advertises no refused address form.
-- Structural evidence: the paired test imports the pinned Pi 0.85.1 test dependency rather than a `pi` executable on `PATH`, fails when that dependency cannot load, and never skips. The path-preparation adapter is proven byte-for-byte against the values observed at Pi 0.85.1 operation boundaries, and no test or source deep-imports unexported package internals. A routed excerpt copied with frontmatter is byte-identical to the same source range read by the built-in tool. A linked-worktree fixture proves the adapter selects the worktree root from its `.git` pointer file, reads only that checkout's bytes, and rejects a path into the main checkout. A fixture whose tree carries `.superdev/config.toml` and no `.git` marker still resolves and routes, and a fixture carrying both markers at different depths selects the `.git` ancestor. Existing routed edit and write cases still pass unchanged. `cargo run -- validate` runs twice with a clean second pass and proves every Block 2 `PENDING(issue-077)` marker is removed while each issue-082 and issue-083 marker remains.
+- Structural evidence: the paired test imports the pinned Pi 0.85.1 test dependency rather than a `pi` executable on `PATH`, fails when that dependency cannot load, and never skips. The path-preparation adapter is proven byte-for-byte against the values observed at Pi 0.85.1 operation boundaries, and no SOKF adapter source or SOKF parity test deep-imports unexported package internals. A routed excerpt copied with frontmatter is byte-identical to the same source range read by the built-in tool. A linked-worktree fixture proves the adapter selects the worktree root from its `.git` pointer file, reads only that checkout's bytes, and rejects a path into the main checkout. A fixture whose tree carries `.superdev/config.toml` and no `.git` marker still resolves and routes, and a fixture carrying both markers at different depths selects the `.git` ancestor. Existing routed edit and write cases still pass unchanged. `cargo run -- validate` runs twice with a clean second pass and proves every Block 2 `PENDING(issue-077)` marker is removed while each issue-082 and issue-083 marker remains.
 - Documentation: update `/README.md`, `/CONTRIBUTING.md`, `/CHANGELOG.md`, and the canonical knowledge listed above, run `cargo run -- validate --fix` twice, then run `npm run check:docs`, `npm run check:validate`, and `npm run check:blueprint`.
 
 ## Build state
@@ -352,6 +364,7 @@ checkpoint before BUILD starts.
 Workflow default branch: main.
 
 <!-- sokf:links -->
+[sokf:coding-standards]: /knowledge/coding-standards.md
 [sokf:issue-077-sokf-file-tool-parity]: /knowledge/issues/open/issue-077-sokf-file-tool-parity.md
 [sokf:issue-081-sokf-symlink-membership]: /knowledge/issues/wontfix/issue-081-sokf-symlink-membership.md
 [sokf:issue-082-sokf-mutation-parity]: /knowledge/issues/open/issue-082-sokf-mutation-parity.md
