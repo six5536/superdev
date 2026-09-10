@@ -78,6 +78,8 @@ places it.
 
 * [Pin node in the managed repo so codegraph's npm-backed pin can install and run][sokf:issue-051-pin-node-in-the-managed-repo] - codegraph was pinned through mise's npm backend, which needs an npm to install and a node to run its shim; pinning node in the managed repo's .mise.toml would have supplied both.
 * [A claimed file superdev never wrote has no lock hash, so its first rewrite misreports as a user edit][sokf:issue-025-a-claim-never-written-gets-no-lock-hash] - the lock reconcile refreshes existing entries and never adds one for a claim already satisfied on disk, so all 53 shipped schemas were unrecorded and each first rewrite reports "overwrote a user-edited file" and spawns a backup.
+* [An exact identifier does not win its own search][sokf:issue-089-an-exact-identifier-does-not-win-its-own-search] - a query naming a concept by its identifier ranks that concept sixth behind topical neighbours, because rank fusion spreads scores too narrowly, no field boosts an identifier match, and settled reports carry no lifecycle to downrank.
+* [Search callers never use its precision controls][sokf:issue-090-search-callers-never-use-its-precision-controls] - isolated roles write keyword-soup queries and used no type, tag, or lifecycle filter in fourteen observed searches, because nothing tells them the search is semantic or that the filters exist.
 
 ## The workflow
 
@@ -225,3 +227,5 @@ places it.
 [sokf:issue-086-a-recommended-choice-is-prose-not-a-choice]: /knowledge/issues/open/issue-086-a-recommended-choice-is-prose-not-a-choice.md
 [sokf:issue-087-a-correction-pass-is-told-to-author-a-plan]: /knowledge/issues/open/issue-087-a-correction-pass-is-told-to-author-a-plan.md
 [sokf:issue-088-a-re-review-is-not-told-what-changed]: /knowledge/issues/open/issue-088-a-re-review-is-not-told-what-changed.md
+[sokf:issue-089-an-exact-identifier-does-not-win-its-own-search]: /knowledge/issues/open/issue-089-an-exact-identifier-does-not-win-its-own-search.md
+[sokf:issue-090-search-callers-never-use-its-precision-controls]: /knowledge/issues/open/issue-090-search-callers-never-use-its-precision-controls.md
