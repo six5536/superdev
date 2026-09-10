@@ -457,6 +457,10 @@ pub struct TransitionArgs {
     /// BUILD discovery or human rejection preserved verbatim on the primary issue
     #[arg(long)]
     feedback: Option<String>,
+    /// One line recording that a human forced this gate, kept in the plan's
+    /// completion evidence. Accepted only for a transition the human gates.
+    #[arg(long)]
+    override_note: Option<String>,
 }
 
 /// CLI spelling of durable phases.
@@ -573,6 +577,12 @@ usage errors and the side effects.
   session, the expected plan revision, and the checked-out work branch, then
   commit the present worktree under the caller's message without pushing,
   merging, deleting branches, stashing, resetting, or discarding.
+- `P_workflow-override-note` [event] WHEN `workflow transition` carries
+  `--override-note` for a human-gated `approve-scope` or `accept`
+  transition, it SHALL record the note in the plan's completion evidence.
+- `P_workflow-override-note-refused` [event] WHEN `workflow transition`
+  carries `--override-note` for any other transition, it SHALL refuse the
+  note.
 - `P_workflow-manual-merge` [event] WHEN ACCEPT closes the issue and plan, the service SHALL release ownership and leave the accepted work branch checked out without merging. The service never merges a work branch.
 - `P_workflow-default-recovery` [ubiquitous] Startup SHALL discover and persist the default branch, reserve independent issue and plan numbers under the repository lock before switching branches, and recover unfinished plans from their local work-branch snapshots.
 - `P_sokf-index-rebuilds-in-full` [ubiquitous] `sokf index` SHALL

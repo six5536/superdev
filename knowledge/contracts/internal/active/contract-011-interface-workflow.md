@@ -335,7 +335,7 @@ mod tests {
 
 ### Key flows
 
-- `P_scope-gate` [event] WHEN SCOPE enters BUILD, the service SHALL require explicit human scope approval.
+- `P_scope-gate` [event] WHEN SCOPE enters BUILD, the service SHALL require explicit human scope approval, which is the only precondition on that transition.
 - `P_build-gate` [event] WHEN BUILD enters ACCEPT, the service SHALL apply the explicit completion transition from the BUILD phase alone, without judging the work it carries.
 - `P_accept-policy` [event] WHEN ACCEPT decides a candidate, the service SHALL derive human acceptance solely from project configuration before committing accepted closure on the work branch and releasing ownership without merging.
 - `P_accept-routes-findings` [event] WHEN ACCEPT reports findings, Pi SHALL automatically return within-scope corrections to BUILD and route intent-changing findings to human SCOPE discussion.
@@ -364,6 +364,12 @@ mod tests {
 - `P_build-commits-blocks` [event] WHEN BUILD completes a block, the BUILD role SHALL run that block's declared verification and commit the block through the service before starting the next one.
 - `P_final-correction-adapter` [event] WHEN a final correction remains within the configured limit, Pi SHALL schedule one correction carrying the complete finding set and a fresh immutable review.
 - `P_gates-human-only` [ubiquitous] Phase transitions SHALL gate on recorded human authority alone. Judging a review's quality belongs to the role that performed it.
+- `P_gate-forceable` [event] WHEN a human types `/superdev-force` at a SCOPE or ACCEPT gate the adapter is refusing, Pi SHALL name every unresolved item, require an explicit typed reason and interactive confirmation, and then apply the same legal transition without adding a precondition of its own.
+- `P_force-human-only` [ubiquitous] Pi SHALL expose the override only as a typed command, keeping it absent from every tool, skill, and prompt the model reads, so that no model can invoke or learn of it.
+- `P_approval-tool-strict` [event] WHEN the phase tool reaches a SCOPE or ACCEPT approval while review findings are active or an acceptance assessment is absent, it SHALL refuse.
+- `P_forced-gate-recorded` [event] WHEN a human forces a gate, the service SHALL record the reason and what was unresolved in the plan's completion evidence.
+- `P_forced-gate-preserves-findings` [event] WHEN a human forces a gate, Pi SHALL preserve the finding set rather than discard it.
+- `P_scope-review-bounded` [event] WHEN a requirements review returns findings, Pi SHALL consult the configured review-cycle budget on every outcome, so a review returning substantive findings reaches the same terminating decision as one returning mechanical findings alone.
 - `P_closure-transactional` [event] WHEN acceptance or abandonment closes records, the service SHALL stage, repair, and validate the complete knowledge closure before publishing it.
 - `P_service-owned-commits` [event] WHEN canonical evidence or a durable transition is published after a clean-tree preflight, the service SHALL create a knowledge-only commit through an isolated index without invoking hooks or signing, leaving the live index, worktree, and HEAD unchanged if commit construction fails.
 - `P_rescope-preserves-identity` [event] WHEN BUILD returns a discovery to SCOPE, the service SHALL preserve it verbatim on the primary issue and retain the same issue, plan, and branch.

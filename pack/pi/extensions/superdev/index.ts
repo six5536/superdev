@@ -565,5 +565,59 @@ export default function superdev(pi: ExtensionAPI) {
             ctx.ui.notify("Workflow abandoned; partial product work remains on its branch", "info");
         },
     });
+    // A gate the contract assigns to the human is theirs to force. This lives
+    // as a typed command rather than a tool action, so the decision belongs to
+    // the person at the keyboard and no model can reach it: `superdev_run_phase`
+    // still refuses approval over open findings, and nothing the model reads
+    // mentions this exit.
+    pi.registerCommand("superdev-force", {
+        description: "Human-only override of a SCOPE or ACCEPT gate the workflow is refusing",
+        handler: async (args, ctx) => {
+            if (runtime.cancelling || runtime.modifyingBusy || runtime.modifyingChild) return ctx.ui.notify("Cancel the running workflow child before forcing a gate", "warning");
+            if (!ctx.hasUI) return;
+            const status = await workflowStatus(ctx.cwd);
+            const owner = status.owner;
+            if (!owner || owner.session_id !== ctx.sessionManager.getSessionId()) return ctx.ui.notify("Resume this workflow before forcing its gate", "warning");
+            if (status.phase !== "scope" && status.phase !== "accept") return ctx.ui.notify(`${status.phase?.toUpperCase() ?? "This phase"} has no human gate to force; only SCOPE and ACCEPT do`, "warning");
+            // Name what the ordinary path is waiting on. The friction exists
+            // because approving unread findings is a real mistake, so the
+            // override states the mistake rather than hiding it.
+            const pending = questions.current();
+            const open = pending && ["active", "paused"].includes(pending.status)
+                ? pending.findings.filter((finding) => !finding.id.startsWith("human-") && !pending.answers[finding.id])
+                : [];
+            const unresolved: string[] = [];
+            if (open.length) unresolved.push(`${open.length} unanswered review finding${open.length === 1 ? "" : "s"} (${open.slice(0, 5).map((finding) => finding.id).join(", ")}${open.length > 5 ? ", …" : ""})`);
+            if (status.phase === "accept" && (runtime.lastOutcome?.status !== "ready-for-approval" || runtime.lastOutcome?.expectedRevision !== owner.last_plan_revision)) {
+                unresolved.push("no current acceptance assessment for this candidate");
+            }
+            if (!unresolved.length) return ctx.ui.notify(`${status.phase.toUpperCase()} has nothing blocking approval; approve it through /skill:${status.phase}`, "warning");
+            const reason = args.trim() || (await ctx.ui.input("Why force this gate?", unresolved.join("; ")))?.trim();
+            if (!reason) return;
+            if (!(await ctx.ui.confirm(
+                `Force ${status.phase.toUpperCase()} past unresolved review?`,
+                `${status.phase === "scope" ? `Approve ${owner.identity.plan} and advance it to BUILD` : `Accept ${owner.identity.plan} and leave the branch ready for your merge`}.\n\nUnresolved: ${unresolved.join("; ")}.\nReason: ${reason}\n\nThe findings are preserved and the forced decision is recorded in the plan.`,
+            ))) return;
+            const note = `${reason} [unresolved: ${unresolved.join("; ")}]`;
+            try {
+                if (status.phase === "scope") {
+                    await runSuperdev([
+                        "workflow", "transition", "--session", owner.session_id,
+                        "--expected-revision", owner.last_plan_revision, "--phase", "scope",
+                        "--transition", "approve-scope", "--override-note", note,
+                    ], ctx.cwd, authority);
+                    questions.supersede(`the human forced scope approval: ${reason}`);
+                    ctx.ui.setStatus("superdev-workflow", `BUILD: ${owner.identity.plan}`);
+                    runtime.lastOutcome = { status: "approved", phase: "build", workflow: owner.identity, forced: true, unresolved };
+                    return ctx.ui.notify(`Forced scope approval over ${unresolved.join("; ")}. The decision is recorded in ${owner.identity.plan}.`, "warning");
+                }
+                await phaseContinuations.approveAccept(status, ctx, note);
+                questions.supersede(`the human forced acceptance: ${reason}`);
+                runtime.lastOutcome = { status: "accepted", phase: null, workflow: owner.identity, forced: true, unresolved };
+            } catch (error) {
+                ctx.ui.notify(String(error), "error");
+            }
+        },
+    });
     registerIntakeTools({ pi });
 }

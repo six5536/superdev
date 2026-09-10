@@ -151,26 +151,26 @@ export function registerPhaseDrivers(deps: any) {
 				if (reviewed.status === "findings") {
 					const substantive = (reviewed.findings ?? []).filter((finding) => finding.classification === "substantive");
 					const mechanical = (reviewed.findings ?? []).filter((finding) => finding.classification === "mechanical");
-					if (substantive.length) {
-						// One substantive finding blocks the whole set, because a mechanical
-						// finding may declare one as a dependency. Ask before correcting anything.
-						questions.begin({ version: 1, workflow: owner.identity.plan, candidate: status.canonicalPlanRevision, status: "active", findings: substantive, mechanicalFindings: mechanical, cycle, answers: {} });
-						ctx.ui.notify(`Requirements review found ${substantive.length} substantive and ${mechanical.length} mechanical findings. Discuss or answer them one at a time.`, "warning");
-						return;
-					}
-					if (cycle >= (status.maxScopeReviewCycles ?? 3)) {
-						const exhaustion: ReviewFinding = {
+					// The budget bounds review itself, not only the mechanical
+					// correct-and-re-review loop. A review that keeps returning
+					// substantive findings reaches the same terminating decision.
+					const exhausted = cycle >= (status.maxScopeReviewCycles ?? 3);
+					if (substantive.length || exhausted) {
+						const exhaustion: ReviewFinding[] = exhausted ? [{
 							id: "scope-correction-limit-exhausted",
 							classification: "substantive",
 							summary: reviewed.summary,
-							evidence: `${mechanical.length} actionable findings remain after ${cycle} complete correction and review cycles.`,
+							evidence: `${substantive.length + mechanical.length} actionable findings remain after ${cycle} complete correction and review cycles.`,
 							impact: "No further model correction runs automatically; the findings and retry decision must remain available for human discussion.",
 							question: "Should SCOPE run one explicitly authorized retry cycle, revise intent, or remain paused?",
 							choices: [{ label: "Retry one cycle" }, { label: "Revise scope intent" }],
-							recommendation: "Retry one cycle only when the remaining fixes are still deterministic under approved intent.",
-						};
-						questions.begin({ version: 1, workflow: owner.identity.plan, candidate: status.canonicalPlanRevision, status: "active", findings: [exhaustion], mechanicalFindings: mechanical, cycle, answers: {} });
-						ctx.ui.notify(`SCOPE correction limit exhausted: ${reviewed.summary}. Findings were preserved for discussion, explicit retry, or pause.`, "error");
+							recommendation: "Retry one cycle only when the remaining fixes are still deterministic under approved intent; otherwise revise the scope intent.",
+						}] : [];
+						// One substantive finding blocks the whole set, because a mechanical
+						// finding may declare one as a dependency. Ask before correcting anything.
+						questions.begin({ version: 1, workflow: owner.identity.plan, candidate: status.canonicalPlanRevision, status: "active", findings: [...exhaustion, ...substantive], mechanicalFindings: mechanical, cycle, answers: {} });
+						if (exhausted) ctx.ui.notify(`SCOPE review limit exhausted: ${reviewed.summary}. Findings were preserved for discussion, explicit retry, approval, or pause.`, "error");
+						else ctx.ui.notify(`Requirements review found ${substantive.length} substantive and ${mechanical.length} mechanical findings. Discuss or answer them one at a time.`, "warning");
 						return;
 					}
 					correction = { version: 1, workflow: owner.identity.plan, candidate: status.canonicalPlanRevision, status: "submitted", findings: [], mechanicalFindings: mechanical, cycle, answers: {} };
@@ -331,13 +331,16 @@ export function registerPhaseDrivers(deps: any) {
 		if (!revision) throw new Error("BUILD-to-SCOPE exhaustion routing omitted the new plan revision");
 		return await runScopePhase("", ctx, { ...state, candidate: revision, originPhase: "scope", status: "submitted" });
 	};
-	const approveAccept = async (status: any, ctx: any) => {
+	// `overrideNote` names what was unresolved when a human forced this gate.
+	// It is recorded in the plan's completion evidence, never silently dropped.
+	const approveAccept = async (status: any, ctx: any, overrideNote?: string) => {
 		runtime.currentStage = "acceptance closure";
 		const owner = status.owner;
 		if (!owner || status.phase !== "accept") throw new Error("an owned ACCEPT workflow is required");
 		await runSuperdev([
 			"workflow", "transition", "--session", owner.session_id,
 			"--expected-revision", owner.last_plan_revision, "--phase", "accept", "--transition", "accept",
+			...(overrideNote ? ["--override-note", overrideNote] : []),
 		], ctx.cwd, authority);
         ctx.ui.setStatus("superdev-workflow", undefined);
         ctx.ui.notify(`Accepted ${owner.identity.work_branch}. The branch remains checked out; review and merge it when ready. Nothing was merged or pushed.`, "info");
