@@ -294,6 +294,8 @@ Scope requirements review and explicit human approval are pending. The parent
 workflow must publish the approved knowledge-only scope as the immutable SCOPE
 checkpoint before BUILD starts.
 
+Workflow default branch: main.
+
 <!-- sokf:links -->
 [sokf:issue-077-sokf-file-tool-parity]: /knowledge/issues/open/issue-077-sokf-file-tool-parity.md
 [sokf:issue-081-sokf-symlink-membership]: /knowledge/issues/wontfix/issue-081-sokf-symlink-membership.md
