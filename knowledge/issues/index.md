@@ -79,6 +79,8 @@ places it.
 
 ## The engine
 
+* [Pi does not load Superdev instructions through the AGENTS.md import][sokf:issue-097-pi-does-not-load-the-agents-import] - AGENTS.md imports .agents/superdev.md with Claude Code syntax that Pi does not expand, so Superdev instructions must be embedded before existing user content.
+
 * [Pin node in the managed repo so codegraph's npm-backed pin can install and run][sokf:issue-051-pin-node-in-the-managed-repo] - codegraph was pinned through mise's npm backend, which needs an npm to install and a node to run its shim; pinning node in the managed repo's .mise.toml would have supplied both.
 * [A claimed file superdev never wrote has no lock hash, so its first rewrite misreports as a user edit][sokf:issue-025-a-claim-never-written-gets-no-lock-hash] - the lock reconcile refreshes existing entries and never adds one for a claim already satisfied on disk, so all 53 shipped schemas were unrecorded and each first rewrite reports "overwrote a user-edited file" and spawns a backup.
 * [An exact identifier does not win its own search][sokf:issue-089-an-exact-identifier-does-not-win-its-own-search] - a query naming a concept by its identifier ranks that concept sixth behind topical neighbours, because rank fusion spreads scores too narrowly, no field boosts an identifier match, and settled reports carry no lifecycle to downrank.
@@ -245,3 +247,4 @@ places it.
 [sokf:issue-094-every-search-process-reloads-the-embedding-model]: /knowledge/issues/open/issue-094-every-search-process-reloads-the-embedding-model.md
 [sokf:issue-095-sokf-stops-intercepting-file-tools]: /knowledge/issues/done/issue-095-sokf-stops-intercepting-file-tools.md
 [sokf:issue-096-a-reused-region-name-silently-refills-a-contract]: /knowledge/issues/open/issue-096-a-reused-region-name-silently-refills-a-contract.md
+[sokf:issue-097-pi-does-not-load-the-agents-import]: /knowledge/issues/open/issue-097-pi-does-not-load-the-agents-import.md
