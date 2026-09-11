@@ -1,4 +1,4 @@
-import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -22,75 +22,51 @@ export default async function () {
 		},
 	} as any);
 
-	for (const name of ["read", "edit", "write", "sokf_search", "sokf_graph"]) {
+	for (const name of ["sokf_search", "sokf_graph", "sokf_overview"]) {
 		if (!tools.has(name)) throw new Error(`SOKF Pi adapter did not register ${name}`);
+	}
+	// The extension serves what a file tool cannot, and nothing else: a
+	// session keeps Pi's own file tools on physical paths.
+	for (const name of ["read", "edit", "write"]) {
+		if (tools.has(name)) throw new Error(`SOKF Pi adapter registered ${name}, which it must not`);
+	}
+	if (tools.size !== 3) {
+		throw new Error(`SOKF Pi adapter registered ${tools.size} tools rather than 3`);
 	}
 
 	const projectContext = { cwd: repository, ui: { notify() {} } };
-	// A routed read returns the source exactly: the first line of a concept
-	// file is its frontmatter fence, not a rendered heading.
-	const read = await tools
-		.get("read")
-		.execute("read", { path: "sokf:architecture", limit: 1 }, undefined, undefined, projectContext);
-	if (read.content[0]?.type !== "text" || !read.content[0].text.startsWith("---")) {
-		throw new Error("SOKF routed read did not return exact source through Pi's read");
-	}
 	const search = await tools
 		.get("sokf_search")
 		.execute("search", { query: "safe mutation", limit: 1 }, undefined, undefined, projectContext);
 	if (search.content[0]?.type !== "text") throw new Error("SOKF search did not return text content");
-	await tools
-		.get("sokf_search")
-		.execute("search-again", { query: "safe mutation", limit: 1 }, undefined, undefined, projectContext);
-	await tools
-		.get("sokf_search")
-		.execute("search-third", { query: "safe mutation", limit: 1 }, undefined, undefined, projectContext);
-	for (const refused of ["sokf:not-a-concept", "sokf:", "sokf:architecture#Approach"]) {
-		await tools
-			.get("read")
-			.execute("refused", { path: refused }, undefined, undefined, projectContext)
-			.then(
-				() => {
-					throw new Error(`SOKF read accepted \`${refused}\` instead of refusing it`);
-				},
-				() => undefined,
-			);
+	const graph = await tools
+		.get("sokf_graph")
+		.execute("graph", { id: "architecture" }, undefined, undefined, projectContext);
+	// A traversal reaches a source file without a second lookup, so every
+	// concept the graph names carries its repository-relative path.
+	if (!graph.content[0]?.text?.includes("knowledge/architecture.md")) {
+		throw new Error("SOKF graph did not carry the repository-relative path of a concept");
 	}
+	const overview = await tools
+		.get("sokf_overview")
+		.execute("overview", {}, undefined, undefined, projectContext);
+	if (overview.content[0]?.type !== "text") throw new Error("SOKF overview did not return text content");
 
 	const sandbox = mkdtempSync(join(tmpdir(), "sokf-pi-adapter-"));
 	try {
 		mkdirSync(join(sandbox, ".git"));
 		mkdirSync(join(sandbox, "knowledge"));
 		writeFileSync(join(sandbox, "knowledge", "manifest.sokf.yaml"), 'sokf: "0.1"\nname: smoke\n');
-		writeFileSync(join(sandbox, "knowledge", "a.md"), "---\ntype: T\nid: alpha\n---\nOld.\n");
+		writeFileSync(join(sandbox, "knowledge", "a.md"), "---\ntype: T\nid: alpha\n---\nAlpha.\n");
 		const context = { cwd: join(sandbox, "knowledge"), ui: { notify() {} } };
 
-		const edit = await tools
-			.get("edit")
-			.execute(
-				"edit",
-				{ path: "sokf:alpha", edits: [{ oldText: "Old.", newText: "New." }] },
-				undefined,
-				undefined,
-				context,
-			);
-		if (!edit.details?.patch || !readFileSync(join(sandbox, "knowledge", "a.md"), "utf8").includes("New.")) {
-			throw new Error("SOKF virtual edit did not preserve Pi's edit details");
-		}
-
-		await tools.get("write").execute(
-			"write",
-			{
-				path: "knowledge/b.md",
-				content: "---\ntype: T\nid: beta\nlinks:\n  - rel: depends-on\n    to: missing\n---\nBeta.\n",
-			},
-			undefined,
-			undefined,
-			context,
+		// Written the way anything else writes: directly, with no SOKF tool
+		// involved. The turn-end check is what makes the knowledge consistent,
+		// whatever wrote it.
+		writeFileSync(
+			join(sandbox, "knowledge", "b.md"),
+			"---\ntype: T\nid: beta\nlinks:\n  - rel: depends-on\n    to: missing\n---\nBeta.\n",
 		);
-		if (!readFileSync(join(sandbox, "knowledge", "b.md"), "utf8").includes("Beta.")) {
-			throw new Error("SOKF physical write was not routed from a subdirectory");
-		}
 
 		const turnEnd = handlers.get("turn_end");
 		// `b.md` links to a concept that does not exist, so the tree fails

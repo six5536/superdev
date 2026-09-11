@@ -10,7 +10,8 @@ holds the history.
 ## Public
 
 * [CLI contract for superdev][sokf:contract-002-cli-superdev] - the superdev command line — every command, argument and flag as clap declares it, the exit codes and streams each command promises, and what may change.
-* [API contract for sokf over MCP][sokf:contract-003-api-sokf] - the SOKF knowledge served to agents — four retrieval and two agent-safe mutation tools over stdio, and what each call promises beyond its signature.
+* [API contract for sokf over MCP][sokf:contract-003-api-sokf] - the SOKF knowledge served to agents through semantic search, graph traversal, and an orienting overview over stdio, and what each call promises beyond its signature.
+* [API contract for SOKF-routed Pi file tools][sokf:contract-012-api-sokf-pi-file-tools] - the record of the routed read, edit, and write tools — the repository they were confined to, the routing and read behaviour that was delivered, and the mutation parity that never was.
 * [Config contract for superdev][sokf:contract-004-config-superdev] - what a managed repo supplies to superdev — the manifest as the reader declares it, the four environment variables, which source defines what, and what an unknown or invalid setting does.
 * [Format contract for pack.toml][sokf:contract-005-format-pack] - what a content pack must look like for superdev to read it — pack.toml as the reader declares it, the tree that names each item, and what is refused.
 * [Format contract for lock.toml][sokf:contract-006-format-lock] - what superdev records of the last apply — lock.toml as the writer declares it, the per-capability components, the file hashes, the resolved packs — and what a reader may conclude from it.
@@ -24,6 +25,8 @@ holds the history.
 
 * [Interface contract for document schemas][sokf:contract-010-interface-document-schemas] - the declaration vocabulary a document schema may carry — frontmatter constraints, section rules and content kinds — and what each declaration obliges the validator to check.
 
+* [Interface contract for the SOKF Pi extension][sokf:contract-013-interface-sokf-pi-extension] - the turn-end repair-and-validate pass that makes canonical knowledge consistent whatever wrote it, its bounded session-scoped reporting, and the repository root every SOKF operation is confined to.
+
 <!-- sokf:links -->
 [sokf:contract-002-cli-superdev]: /knowledge/contracts/public/active/contract-002-cli-superdev.md
 [sokf:contract-003-api-sokf]: /knowledge/contracts/public/active/contract-003-api-sokf.md
@@ -34,3 +37,5 @@ holds the history.
 [sokf:contract-008-format-template]: /knowledge/contracts/public/active/contract-008-format-template.md
 [sokf:contract-009-interface-run-state]: /knowledge/contracts/internal/deprecated/contract-009-interface-run-state.md
 [sokf:contract-010-interface-document-schemas]: /knowledge/contracts/internal/active/contract-010-interface-document-schemas.md
+[sokf:contract-012-api-sokf-pi-file-tools]: /knowledge/contracts/public/deprecated/contract-012-api-sokf-pi-file-tools.md
+[sokf:contract-013-interface-sokf-pi-extension]: /knowledge/contracts/internal/active/contract-013-interface-sokf-pi-extension.md

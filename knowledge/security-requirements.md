@@ -29,20 +29,16 @@ only (pre-1.0, no backports).
 - **Destructive writes are recoverable.** Every file superdev overwrites or
   removes is backed up under `.superdev/cache/backup/<timestamp>/` first,
   and a failed apply unwinds ([configuration][sokf:configuration]).
-- **MCP mutations have knowledge-only, agent-safe authority.** `superdev mcp
-  sokf` exposes four retrieval and two mutation tools over local stdio. The
-  mutation tools can write only under the canonical knowledge root, reject
-  path and symlink escapes, preserve existing identity and verification bytes,
-  reject stamped fields, write atomically, and run repair plus validation.
-  Their machine schema carries no human override. Source resolution is bounded
-  by the canonical active checkout: a direct physical argument must enter
-  through `knowledge/`, a symlink may canonicalize anywhere inside that
-  checkout, and a target resolving outside it — including into another
-  checkout, and including below a missing suffix — is refused before the file
-  is opened. The Pi extension adds no
-  authority of its own: it forwards SOKF requests to one session-scoped local
-  MCP process and delegates non-knowledge paths to Pi's built-in tools
-  ([contract-003-api-sokf][sokf:contract-003-api-sokf]).
+- **The MCP server reads and writes nothing.** `superdev mcp sokf` exposes
+  three read-only tools over local stdio and serves no file tool, so there is
+  no write authority to bound. Knowledge mutation is a CLI verb: `superdev
+  sokf edit` and `sokf write` write only under the canonical knowledge root,
+  reject path and symlink escapes, preserve existing identity and verification
+  bytes, reject stamped fields, write atomically, and run repair plus
+  validation. Their machine schema carries no human override. The Pi extension
+  adds no authority of its own: it forwards the three read requests to one
+  session-scoped local MCP process and leaves every file operation to Pi's own
+  tools ([contract-003-api-sokf][sokf:contract-003-api-sokf]).
 - **Workflow Git operations are local, shell-free, and compare-and-swapped.**
   Rust validates branch names and exact tips, requires a clean tree, and invokes
   `git merge --no-ff` without a shell. Automatic workflow paths never push,

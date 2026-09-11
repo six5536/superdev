@@ -80,10 +80,10 @@ npm run coverage:summary # coverage summary in the terminal
 npm run coverage:check   # enforce the gate: line coverage >= 90% per crate
 
 npm run test:launcher   # node test for the npm launcher shim
-npm run test:scripts    # node tests for the release scripts, and the paired
-                        # SOKF/Pi harness proving routed reads match Pi's
-                        # built-in read; it loads the pinned
-                        # @earendil-works/pi-coding-agent 0.85.1 test
+npm run test:scripts    # node tests for the release scripts, and the SOKF/Pi
+                        # harness proving the extension serves three tools, no
+                        # file tool, and one turn-end check; it loads the
+                        # pinned @earendil-works/pi-coding-agent 0.85.1 test
                         # dependency rather than a `pi` on PATH, and fails
                         # rather than skips when that cannot load
 

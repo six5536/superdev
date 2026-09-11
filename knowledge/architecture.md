@@ -33,28 +33,26 @@ validator's repair pass, and reports the final validation state plus requested
 and generated diffs. MCP exposes those two mutations only under the agent-safe
 policy; the deliberate human override remains CLI-only. The `validate`
 subsystem remains the check both paths share. The MCP tools are in
-[contract-003-api-sokf][sokf:contract-003-api-sokf]. Reading and retrieval are
-separate operations: `sokf_resolve_source` locates the source file behind an
-identity or a contained physical path and reports its generated regions, while
-`sokf_retrieve` renders the `sokf:` overview, a concept, or one section.
-Pi's project extension maps its familiar `read`, `edit` and `write` tools plus
-`sokf_search` and `sokf_graph` onto those MCP operations. A routed `read`
-resolves the identity, then delegates to Pi's own read factory against the
-canonical target, so a concept returns exact UTF-8 source and a copied excerpt
-still matches the file it came from; the overview and section addresses are
-refused and point at `sokf_search`. It lazily starts one
-MCP process per repository and reuses it for the Pi session, while delegating
-every ordinary path to Pi unchanged. That repository is the canonical active
+[contract-003-api-sokf][sokf:contract-003-api-sokf]. The server serves three
+read-only tools — `sokf_search`, `sokf_graph` and `sokf_overview` — and serves
+no file tool: an agent reads and edits knowledge with its own `read`, `edit`
+and `write` on physical paths, and every result the server returns carries the
+repository-relative path of the concept it names
+([ADR-055][sokf:adr-055-sokf-does-not-intercept-file-tools]).
+Pi's project extension registers those three tools and nothing else. It lazily
+starts one MCP process per repository and reuses it for the Pi session, while
+leaving every file operation to Pi. That repository is the canonical active
 checkout root: any `.git` directory or worktree pointer file on the upward walk
 wins, and `.superdev/config.toml` selects the root only when the walk finds no
-`.git` marker at all. Calls are serialized on that root. A turn
-that mutates knowledge ends with one-shot CLI validation and at most two
-automatic repair-feedback turns. Format-sensitive authoring instructions
+`.git` marker at all. Calls are serialized on that root. Every turn ends with
+one unconditional `validate --fix`, so a write through `bash` or a patch is
+covered as a tool call is; the run re-reads the tree before reporting and sends
+at most one message. Format-sensitive authoring instructions
 remain out of the standing prompt and load from the `sokf-authoring` skill on
-demand. Freshness is lazy: search and the `sokf:` overview read re-hash the
+demand. Freshness is lazy: search and the overview re-hash the
 canonical knowledge and sync only what changed. The process initializes its
-embedder on the first such call and reuses it; direct concept reads and graph
-traversal parse current files without opening the index or loading embeddings.
+embedder on the first such call and reuses it; graph
+traversal parses current files without opening the index or loading embeddings.
 No repository daemon persists beyond the Pi session.
 
 # Content resolves before planning
@@ -134,6 +132,7 @@ and a disabled capability's pins all follow one rule.
 <!-- sokf:links -->
 [sokf:adr-002-resolve-before-plan]: /knowledge/adrs/active/adr-002-resolve-before-plan.md
 [sokf:adr-003-items-by-layout]: /knowledge/adrs/active/adr-003-items-by-layout.md
+[sokf:adr-055-sokf-does-not-intercept-file-tools]: /knowledge/adrs/active/adr-055-sokf-does-not-intercept-file-tools.md
 [sokf:configuration]: /knowledge/configuration.md
 [sokf:contract-002-cli-superdev]: /knowledge/contracts/public/active/contract-002-cli-superdev.md
 [sokf:contract-003-api-sokf]: /knowledge/contracts/public/active/contract-003-api-sokf.md

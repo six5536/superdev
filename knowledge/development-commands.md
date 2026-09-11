@@ -31,13 +31,15 @@ What the annotated list does not say:
   one or creates it at a physical path. Both repair and validate automatically,
   default to preserving `id` and `verified`, and report applied-but-invalid
   intermediate states without turning them into retryable command failures.
-  Pi auto-loads `.pi/extensions/sokf.ts`, which maps its built-in file-tool
-  shapes plus `sokf_search` and `sokf_graph` onto one lazily started
-  `superdev mcp sokf` process per repository. The MCP process initializes the
-  embedder on its first search or `sokf:` overview read and reuses it until Pi
-  session shutdown. The adapter performs final validation after mutation turns
-  through a one-shot CLI call and limits automatic repair feedback to two
-  follow-up turns. `node --test scripts/test/sokf-mcp-client.test.mjs` checks
+  Pi auto-loads `.pi/extensions/sokf.ts`, which serves `sokf_search`,
+  `sokf_graph` and `sokf_overview` over one lazily started
+  `superdev mcp sokf` process per repository, and leaves every file operation
+  to Pi's own tools on physical paths. The MCP process initializes the
+  embedder on its first search or overview and reuses it until Pi
+  session shutdown. Every turn ends with one unconditional `validate --fix`
+  through a one-shot CLI call, so a write through `bash` or a patch is covered
+  as a tool call is; the first report of a sequence triggers a turn and later
+  ones stay visible. `node --test scripts/test/sokf-mcp-client.test.mjs` checks
   MCP framing, process reuse, restart and shutdown without a model call. Load
   Pi's native `/skill:sokf-authoring` for format-sensitive knowledge changes.
   Run `/system-prompt` in Pi to refresh
@@ -93,12 +95,11 @@ Two traps:
   version consistency, and the coverage gate. The script tests also protect
   the `sokf-behavior/v1` fixture roster and shape. The same command loads the
   real SOKF extension against the pinned `@earendil-works/pi-coding-agent`
-  0.85.1 test dependency — not a `pi` on `PATH` — and exercises retrieval,
-  mutation-result parity, subdirectory routing, and bounded validation feedback
-  in a temporary repository. Its paired harness compares routed reads against
-  Pi's built-in read case by case and fails, rather than skipping, when that
-  dependency cannot load. Behavioral scoring still requires a separate
-  model-session evaluator.
+  0.85.1 test dependency — not a `pi` on `PATH` — and exercises the three
+  served tools, the absence of any registered file tool, paths in graph
+  results, and the turn-end repair-and-validate sequence in a temporary
+  repository. It fails, rather than skipping, when that dependency cannot load.
+  Behavioral scoring still requires a separate model-session evaluator.
   Before a PR, run the full list in CONTRIBUTING, not the dailies.
 - Only the launcher package is an npm workspace. The five platform-binary
   packages deliberately are not (npm enforces their `os`/`cpu` fields on

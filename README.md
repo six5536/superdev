@@ -46,13 +46,11 @@ superdev validate        # check it against the SOKF spec and the schemas
 superdev sokf index      # rebuild the search index from scratch
 ```
 
-The server offers four read-only tools — search, resolve-source, retrieve and
-graph — plus two agent-safe mutations. Locating a file and rendering knowledge
-are separate questions: `sokf_resolve_source` says where a concept's source is
-and which of its lines are generated, while `sokf_retrieve` renders the
-overview, a concept, or one section. In a Pi session the ordinary `read` tool
-accepts `sokf:<id>` and returns that file's exact bytes, so an excerpt you copy
-still matches the file you copied it from. The server keeps itself current:
+The server offers three read-only tools: `sokf_search` finds knowledge,
+`sokf_graph` follows links, and `sokf_overview` shows the knowledge at a
+glance. Each result carries the repository-relative path of the concept it
+names, so you read and edit that path with your ordinary file tools — the
+server answers only what a file tool cannot. The server keeps itself current:
 every indexed call re-hashes the canonical knowledge and reindexes only what
 changed. Search is hybrid, combining a BM25 index with a
 small embedding model downloaded once per machine, and falls back to

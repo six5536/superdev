@@ -63,24 +63,21 @@ gate are in [CONTRIBUTING](/CONTRIBUTING.md).[^contributing]
   the only
   thing stubbed. Assertions cover locators, line numbers, group truncation and
   the lexical-only degradation. A `FakeEmbedder` keeps vector results
-  deterministic; no test downloads the real model. Source resolution asserts
-  the whole matrix a caller can reach: identity and physical spellings of one
-  target, a missing destination below a contained ancestor, contained and
-  escaping symlinks with and without a missing suffix, and generated regions
-  against the lines they actually span. A real Git fixture builds a main
-  checkout and a linked worktree carrying different bytes for one identity, and
-  proves the server answers from the active checkout alone and refuses a path
-  into the other.
-- **Routed Pi file tools.** `scripts/test/sokf-pi-adapter.test.mjs` loads the
+  deterministic; no test downloads the real model. The roster is asserted
+  exactly — three tools, and no file tool behind a removed name. A real Git
+  fixture builds a main checkout and a linked worktree carrying different bytes
+  for one identity, and proves the server answers from the active checkout
+  alone and writes its index there.
+- **The SOKF Pi extension.** `scripts/test/sokf-pi-adapter.test.mjs` loads the
   extension against the pinned `@earendil-works/pi-coding-agent` 0.85.1 test
-  dependency rather than a `pi` on `PATH`, so parity evidence fails rather than
-  skips when Pi cannot load. Its paired harness runs each read case twice —
-  built-in against the physical file, routed against the equivalent SOKF
-  argument — and compares results, thrown errors and details exactly, covering
-  offset and limit, line and byte truncation, an oversized line, continuation
-  text, out-of-range and missing-file errors, cancellation, and nested working
-  directories. Path preparation is proven against the value observed at Pi's
-  own operation boundary rather than against a reading of its source.
+  dependency rather than a `pi` on `PATH`, so the evidence fails rather than
+  skips when Pi cannot load. It proves the session receives exactly three
+  tools and no `read`, `edit` or `write`, that a graph result carries the
+  repository-relative path of a concept, and that the turn-end check behaves:
+  a file written directly — by nothing the extension registered — is still
+  found, the first report triggers one turn, later reports stay visible and
+  non-triggering, a valid tree sends nothing, and a clean run resets the
+  sequence.
 - **npm launcher.** A JS test that resolves + spawns a stub binary, and
   errors cleanly when no platform package matches.
 - **Release smoke.** `scripts/release-smoke.mjs` runs a compiled release

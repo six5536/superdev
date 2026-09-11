@@ -572,7 +572,7 @@ fn mcp_with_an_unusable_index_defers_failure_to_an_index_call() {
         "\n",
         r#"{"jsonrpc":"2.0","method":"notifications/initialized"}"#,
         "\n",
-        r#"{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"sokf_retrieve","arguments":{"path":"sokf:module-a"}}}"#,
+        r#"{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"sokf_graph","arguments":{"id":"module-a"}}}"#,
         "\n",
         r#"{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"sokf_search","arguments":{"query":"alpha"}}}"#,
         "\n",
@@ -588,7 +588,10 @@ fn mcp_with_an_unusable_index_defers_failure_to_an_index_call() {
         .stdout
         .clone();
     let stdout = String::from_utf8(output).unwrap();
-    assert!(stdout.contains("Module A"), "{stdout}");
+    // The graph parses current knowledge, so it answers while the index is
+    // unusable; the search that needs the index returns the failure as a tool
+    // error, and the process stays up to serve both.
+    assert!(stdout.contains("module-a"), "{stdout}");
     assert!(stdout.contains("isError"), "{stdout}");
 }
 
@@ -599,7 +602,7 @@ const MCP_REQUESTS: &str = concat!(
     "\n",
     r#"{"jsonrpc":"2.0","method":"notifications/initialized"}"#,
     "\n",
-    r#"{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"sokf_retrieve","arguments":{"path":"sokf:"}}}"#,
+    r#"{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"sokf_overview","arguments":{}}}"#,
     "\n",
 );
 
@@ -1944,7 +1947,8 @@ fn contract_drift_in_scratch(contract: &str, include: &str, from: &str, to: &str
 }
 
 /// Covers I049 criteria 2, 4 and 23 (ADR-042): the CLI contract's
-/// definition is the `cli` regions, so a flag added to `ValidateArgs` fails
+/// definition is the `cli` regions plus the request types the
+/// `--request-json` forms accept, so a flag added to `ValidateArgs` fails
 /// `validate` naming the contract's include, and `--fix` writes the flag
 /// into the contract.
 #[test]
@@ -1957,8 +1961,8 @@ fn a_flag_added_to_validate_args_fails_validate_and_fix_writes_it_into_the_contr
     );
     assert_eq!(
         run.includes.len(),
-        5,
-        "the live contract includes one region per source file: {:?}",
+        6,
+        "the live contract includes one region per source file, and the\n         mutation request types the `--request-json` forms accept: {:?}",
         run.includes
     );
     assert!(run.text.contains("pub nothing: bool"), "{}", run.text);

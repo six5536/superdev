@@ -6,7 +6,7 @@
 //! retrieval, graph traversal, and mutations do not initialize or open it.
 
 use std::collections::{BTreeMap, HashMap};
-use std::path::{Component, Path, PathBuf};
+use std::path::{Path, PathBuf};
 
 use rmcp::ServerHandler;
 use rmcp::handler::server::router::tool::ToolRouter;
@@ -14,17 +14,14 @@ use rmcp::handler::server::wrapper::Parameters;
 use rmcp::model::{CallToolResult, ContentBlock, ServerCapabilities, ServerInfo};
 use rmcp::schemars::JsonSchema;
 use rmcp::{tool, tool_handler, tool_router};
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 
 use super::bundle::{Bundle, load_bundle};
 use super::concept::{Concept, Status};
 use super::embed::Embedder;
 use super::graph::{Edge, Graph, inverse_rel};
 use super::index::{Hit, Index, IndexDir, SearchOpts, SyncStats};
-use super::mutation::{
-    self, EditRequest, GeneratedRegion, MutationPolicy, MutationResult, WriteRequest,
-    generated_regions,
-};
+use super::mutation::{self, EditRequest, MutationPolicy, MutationResult, WriteRequest};
 use crate::error::Error;
 use crate::validate::sokf::validate;
 
@@ -140,46 +137,6 @@ pub struct SearchRequest {
     pub lifecycle: Option<Vec<String>>,
 }
 
-/// Arguments of `sokf_resolve_source`.
-#[derive(Debug, Deserialize, JsonSchema)]
-#[serde(deny_unknown_fields)]
-#[schemars(crate = "rmcp::schemars")]
-pub struct ResolveSourceRequest {
-    /// An unqualified `sokf:<id>`, or a physical path entering `knowledge/`.
-    pub path: String,
-}
-
-/// Where one source is, and which of its lines are generated. Carries no
-/// semantic content: `sokf_retrieve` answers for rendered knowledge.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, JsonSchema)]
-#[serde(rename_all = "camelCase")]
-#[schemars(crate = "rmcp::schemars")]
-pub struct SourceResolution {
-    /// Repository-relative `knowledge/` path the request entered through.
-    pub ingress_path: String,
-    /// Repository-relative canonical target, contained by the active checkout.
-    pub canonical_path: String,
-    /// Whether the canonical target is an existing regular file.
-    pub exists: bool,
-    /// Generated spans of the target, in line order.
-    pub generated_regions: Vec<GeneratedRegion>,
-}
-
-/// Arguments of `sokf_retrieve`.
-#[derive(Debug, Deserialize, JsonSchema)]
-#[serde(deny_unknown_fields)]
-#[schemars(crate = "rmcp::schemars")]
-struct RetrieveArgs {
-    /// `sokf:` for the overview, `sokf:<id>`, or `sokf:<id>#<heading>`.
-    path: String,
-    /// First rendered line to return, starting at 1.
-    #[schemars(range(min = 1))]
-    offset: Option<u32>,
-    /// Most rendered lines to return.
-    #[schemars(range(min = 1))]
-    limit: Option<u32>,
-}
-
 /// Arguments of `sokf_graph`.
 #[derive(Debug, Deserialize, JsonSchema)]
 #[schemars(crate = "rmcp::schemars")]
@@ -263,139 +220,6 @@ impl SokfService {
             message: format!("no concept for `{identity}`"),
         })?;
         render_concept(concept, &identity, heading).map_err(|message| Error::Sokf { message })
-    }
-
-    /// Render the overview, one concept, or one of its sections.
-    ///
-    /// Semantic addresses only: a physical path is `sokf_resolve_source`'s
-    /// question, and answering it here would put a second result dialect
-    /// behind one operation.
-    pub fn retrieve(
-        &self,
-        path: &str,
-        offset: Option<usize>,
-        limit: Option<usize>,
-    ) -> crate::error::Result<String> {
-        let Some(address) = path.strip_prefix("sokf:") else {
-            return sokf_error(format!(
-                "`{path}` is a file path; sokf_retrieve answers `sokf:`, `sokf:<id>`, \
-                 and `sokf:<id>#<heading>` — use sokf_resolve_source for a file"
-            ));
-        };
-        let text = if address.is_empty() {
-            self.overview()?
-        } else {
-            let (id, heading) = match address.split_once('#') {
-                Some((id, heading)) if !id.is_empty() && !heading.is_empty() => (id, Some(heading)),
-                Some(_) => return sokf_error(format!("invalid SOKF address `{path}`")),
-                None => (address, None),
-            };
-            self.read(id, heading)?
-        };
-        line_window(&text, offset, limit)
-    }
-
-    /// Locate the source behind one identity or contained physical path.
-    ///
-    /// The answer is a canonical target inside the active checkout, whether
-    /// or not it exists yet, plus the generated spans a caller must not
-    /// author by hand. Nothing is read for content.
-    pub fn resolve_source(&self, path: &str) -> crate::error::Result<SourceResolution> {
-        let bundle_dir = std::fs::canonicalize(&self.bundle_dir).map_err(|source| Error::Io {
-            path: self.bundle_dir.clone(),
-            source,
-        })?;
-        let repo_root = std::fs::canonicalize(&self.repo_root).map_err(|source| Error::Io {
-            path: self.repo_root.clone(),
-            source,
-        })?;
-
-        let mut bundle = None;
-        let ingress = if let Some(address) = path.strip_prefix("sokf:") {
-            if address.is_empty() || address.contains('#') {
-                return sokf_error(format!(
-                    "`{path}` addresses rendered knowledge, not a source file — \
-                     use sokf_retrieve for the overview and for sections"
-                ));
-            }
-            let loaded = bundle.insert(load_bundle(&self.bundle_dir)?);
-            let graph = Graph::build(loaded);
-            let identity = resolve(&graph, address)
-                .map_err(|message| broken_file_error(loaded, address).unwrap_or(message))
-                .map_err(|message| Error::Sokf { message })?;
-            let concept = concept_of(loaded, &identity).ok_or_else(|| Error::Sokf {
-                message: format!("no concept for `{identity}`"),
-            })?;
-            bundle_dir.join(&concept.path)
-        } else {
-            let asked = Path::new(path);
-            let candidate = if asked.is_absolute() {
-                asked.to_path_buf()
-            } else {
-                repo_root.join(asked)
-            };
-            let normalized = lexical(&candidate).ok_or_else(|| Error::Sokf {
-                message: format!("source path `{path}` escapes the repository"),
-            })?;
-            // The ingress is judged by name, before any symlink is followed:
-            // a direct physical argument has to enter through `knowledge/`.
-            // An absolute argument may spell the root differently from its
-            // canonical form, so both spellings name the same ingress.
-            let under = [bundle_dir.as_path(), self.bundle_dir.as_path()]
-                .into_iter()
-                .find_map(|root| normalized.strip_prefix(root).ok());
-            let Some(relative) = under else {
-                return sokf_error(format!(
-                    "source path `{path}` is outside `{}`",
-                    display_path(&repo_root, &bundle_dir)
-                ));
-            };
-            bundle_dir.join(relative)
-        };
-
-        // Follow symlinks as far as the filesystem goes, then re-attach
-        // whatever does not exist yet. Containment is judged on the result,
-        // so a link out of the checkout fails before anything is opened.
-        let canonical = nearest_canonical(&ingress).ok_or_else(|| Error::Sokf {
-            message: format!("cannot safely resolve `{path}`"),
-        })?;
-        if !canonical.starts_with(&repo_root) {
-            return sokf_error(format!(
-                "source path `{path}` resolves outside the active checkout at {}",
-                repo_root.display()
-            ));
-        }
-        if canonical.is_dir() {
-            return sokf_error(format!("`{path}` is a directory, not a source file"));
-        }
-
-        let exists = canonical.is_file();
-        let regions = if exists {
-            let text = std::fs::read_to_string(&canonical).map_err(|source| Error::Io {
-                path: canonical.clone(),
-                source,
-            })?;
-            // A block naming a concept reports the file that authors it, so
-            // the bundle is needed here — but only for a file that has one.
-            let known = match bundle {
-                Some(loaded) => Some(loaded),
-                None if text.contains("sokf:include") => Some(load_bundle(&self.bundle_dir)?),
-                None => None,
-            };
-            generated_regions(&text, |id| {
-                let concept = concept_of(known.as_ref()?, id)?;
-                Some(display_path(&repo_root, &bundle_dir.join(&concept.path)))
-            })
-        } else {
-            Vec::new()
-        };
-
-        Ok(SourceResolution {
-            ingress_path: display_path(&repo_root, &ingress),
-            canonical_path: display_path(&repo_root, &canonical),
-            exists,
-            generated_regions: regions,
-        })
     }
 
     /// Apply exact replacements to an existing concept, then repair and validate.
@@ -510,56 +334,6 @@ impl SokfServer {
             .map_err(tool_error)
     }
 
-    /// Locate the source file behind one `sokf:<id>` identity or contained
-    /// physical knowledge path, and report what of it is generated.
-    #[tool]
-    async fn sokf_resolve_source(
-        &self,
-        Parameters(args): Parameters<ResolveSourceRequest>,
-    ) -> ToolResult {
-        let _guard = self.exclusive();
-        match self.service.resolve_source(&args.path) {
-            Ok(resolution) => structured_result(&resolution),
-            Err(error) => Err(tool_error(error)),
-        }
-    }
-
-    /// Render the `sokf:` overview, one concept, or one of its sections.
-    #[tool]
-    async fn sokf_retrieve(&self, Parameters(args): Parameters<RetrieveArgs>) -> ToolResult {
-        let _guard = self.exclusive();
-        self.service
-            .retrieve(
-                &args.path,
-                args.offset.map(|offset| offset as usize),
-                args.limit.map(|limit| limit as usize),
-            )
-            .map(text)
-            .map_err(tool_error)
-    }
-
-    /// Apply atomic exact replacements to one existing concept. Identity and
-    /// verification are protected; automatic repair and validation follow.
-    #[tool]
-    async fn sokf_edit(&self, Parameters(args): Parameters<EditRequest>) -> ToolResult {
-        let _guard = self.exclusive();
-        match self.service.edit(args, MutationPolicy::AgentSafe) {
-            Ok(result) => mutation_result(result),
-            Err(error) => Err(tool_error(error)),
-        }
-    }
-
-    /// Replace one complete concept, or create one at a physical `.md` path.
-    /// Identity and verification are protected; repair and validation follow.
-    #[tool]
-    async fn sokf_write(&self, Parameters(args): Parameters<WriteRequest>) -> ToolResult {
-        let _guard = self.exclusive();
-        match self.service.write(args, MutationPolicy::AgentSafe) {
-            Ok(result) => mutation_result(result),
-            Err(error) => Err(tool_error(error)),
-        }
-    }
-
     /// Show the link graph: the whole edge map, or one concept's neighbours
     /// in both directions. Every concept carries the path to read next.
     #[tool]
@@ -617,12 +391,10 @@ impl SokfServer {
 impl ServerHandler for SokfServer {
     fn get_info(&self) -> ServerInfo {
         ServerInfo::new(ServerCapabilities::builder().enable_tools().build()).with_instructions(
-            "Access to this repository's canonical SOKF knowledge. Use sokf_search to find \
-             project knowledge, sokf_overview to see the knowledge at a glance, \
-             sokf_retrieve for the `sokf:` overview, a rendered concept or one section, \
-             sokf_resolve_source to locate a concept's source file, sokf_graph to follow \
-             links, and sokf_edit or sokf_write for agent-safe mutations. Mutations repair \
-             and validate automatically.",
+            "Access to this repository's canonical SOKF knowledge. Use sokf_overview to see \
+             the knowledge at a glance, sokf_search to find project knowledge, and sokf_graph \
+             to follow links. Each result carries the repository-relative path of the concept \
+             it names; read and edit that path with your own file tools.",
         )
     }
 }
@@ -669,65 +441,6 @@ fn hit_limit(requested: Option<u32>) -> usize {
 /// One text block, the only shape these tools return.
 fn text(body: String) -> CallToolResult {
     CallToolResult::success(vec![ContentBlock::text(body)])
-}
-
-/// A machine result is MCP structured content, mirrored as one text item
-/// holding the same JSON — so a text-only client reads the same answer.
-fn structured_result(result: &impl Serialize) -> ToolResult {
-    let value = serde_json::to_value(result).map_err(|error| error.to_string())?;
-    let rendered = serde_json::to_string_pretty(&value).map_err(|error| error.to_string())?;
-    let mut output = CallToolResult::success(vec![ContentBlock::text(rendered)]);
-    output.structured_content = Some(value);
-    Ok(output)
-}
-
-/// A successful mutation is both readable text and MCP structured content.
-fn mutation_result(result: MutationResult) -> ToolResult {
-    structured_result(&result)
-}
-
-/// `path` with `.` and `..` resolved by name alone, or `None` when it walks
-/// above the root. Nothing is read: this fixes the logical ingress before
-/// the filesystem gets a say in where it points.
-fn lexical(path: &Path) -> Option<PathBuf> {
-    let mut out = PathBuf::new();
-    for part in path.components() {
-        match part {
-            Component::CurDir => {}
-            Component::ParentDir => {
-                if !out.pop() {
-                    return None;
-                }
-            }
-            other => out.push(other.as_os_str()),
-        }
-    }
-    Some(out)
-}
-
-/// `path` canonicalized, or its nearest existing ancestor canonicalized with
-/// the missing tail re-attached. Symlinks resolve on the existing part, so a
-/// missing file below an escaping link still lands outside the repository.
-fn nearest_canonical(path: &Path) -> Option<PathBuf> {
-    if let Ok(exact) = std::fs::canonicalize(path) {
-        return Some(exact);
-    }
-    let mut tail = Vec::new();
-    let mut here = path.to_path_buf();
-    let base = loop {
-        if let Ok(base) = std::fs::canonicalize(&here) {
-            break base;
-        }
-        tail.push(here.file_name()?.to_owned());
-        if !here.pop() {
-            return None;
-        }
-    };
-    let mut resolved = base;
-    for part in tail.iter().rev() {
-        resolved.push(part);
-    }
-    Some(resolved)
 }
 
 /// A repository-relative, slash-separated path for a caller to act on.
@@ -1318,10 +1031,9 @@ mod tests {
             },
         );
 
-        // Source resolution and direct retrieval are the operations the
-        // contract names, so they are what this asserts on.
-        service.resolve_source("sokf:alpha").unwrap();
-        service.retrieve("sokf:alpha", None, None).unwrap();
+        // Reading one concept and walking the graph parse current knowledge
+        // and answer from it, so neither needs an embedder.
+        service.read("alpha", None).unwrap();
         service.graph(Some("alpha")).unwrap();
         assert_eq!(calls.load(std::sync::atomic::Ordering::SeqCst), 0);
 
@@ -1331,13 +1043,14 @@ mod tests {
                 ..SearchRequest::default()
             })
             .unwrap();
-        // The overview is retrieval's one index-dependent address.
-        service.retrieve("sokf:", None, None).unwrap();
+        // The overview syncs the index, so it initializes the same embedder
+        // rather than a second one.
+        service.overview().unwrap();
         assert_eq!(calls.load(std::sync::atomic::Ordering::SeqCst), 1);
     }
 
     #[test]
-    fn source_resolution_and_direct_retrieval_do_not_open_the_search_index() {
+    fn reading_a_concept_and_walking_the_graph_do_not_open_the_search_index() {
         let (bundle, dir) = bundle_with(&[("alpha.md", ALPHA), ("beta.md", BETA)]);
         drop(bundle);
         // A file where the index directory belongs: anything that opens the
@@ -1350,13 +1063,9 @@ mod tests {
             IndexDir(unusable_index),
             None,
         );
-        assert_eq!(
-            service.resolve_source("sokf:alpha").unwrap().canonical_path,
-            "alpha.md"
-        );
         assert!(
             service
-                .retrieve("sokf:alpha", None, None)
+                .read("alpha", None)
                 .unwrap()
                 .contains("Alpha does the work")
         );
