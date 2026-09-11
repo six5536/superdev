@@ -82,16 +82,23 @@ All domain logic; no argument parsing. One module per concern:
   reaches the binary without a Rust edit; the contents are still `include_str!`
   literals, and only the list of them is generated.
 
-The MCP server exposes three retrieval tools over stdio — `sokf_search`,
-`sokf_read` and `sokf_graph` — plus mandatory-agent-safe `sokf_edit` and
-`sokf_write` (see [contract-003-api-sokf][sokf:contract-003-api-sokf]).
-`sokf_read` uses coding-tool-shaped path and line-window arguments; `sokf:` is
-the overview address. The server holds one index directory and serialises its
+The MCP server exposes four retrieval tools over stdio — `sokf_search`,
+`sokf_resolve_source`, `sokf_retrieve` and `sokf_graph` — plus
+mandatory-agent-safe `sokf_edit` and `sokf_write` (see
+[contract-003-api-sokf][sokf:contract-003-api-sokf]).
+`sokf_resolve_source` answers where a source is, not what it says: it takes an
+unqualified `sokf:<id>` or a physical path entering `knowledge/` and returns the
+ingress path, the canonical repository-relative target, whether it exists, and
+its generated regions. `sokf_retrieve` owns the semantic side, taking `sokf:`,
+`sokf:<id>` or `sokf:<id>#<heading>` with a line window and refusing physical
+paths. The server treats the canonical active checkout root as its repository,
+including when `.git` is a worktree pointer file, and refuses a path entering
+another checkout. It holds one index directory and serialises its
 tool calls: a call keeps the index open while another call's sync could rebuild
 that directory. Search is hybrid — tantivy BM25 and cosine over section
 embeddings, fused by reciprocal rank fusion — and drops to lexical-only when no
 model loads. MCP initializes the configured embedder on the first search or
-overview read and reuses that result for the process lifetime.
+semantic overview retrieval and reuses that result for the process lifetime.
 
 # `crates/app/superdev` (binary)
 
@@ -115,20 +122,30 @@ not a second SOKF implementation. It overrides Pi's `read`, `edit`, and `write`
 slots only for virtual `sokf:` addresses or physical paths under the
 repository's knowledge root, delegates all other paths to fresh built-in tool
 instances rooted at the current working directory, and registers `sokf_search`
-and `sokf_graph`. `.pi/extensions/sokf-mcp.ts` lazily starts and initializes one
+and `sokf_graph`. Routed `read` spreads Pi's own read definition, resolves the
+argument through `sokf_resolve_source`, and executes Pi's read factory against
+the canonical target, so schema, truncation, errors, details and rendering stay
+Pi's; the `sokf:` overview and section addresses are refused with guidance
+naming `sokf_search`. `.pi/extensions/sokf-mcp.ts` lazily starts and initializes one
 narrow MCP stdio client per repository, serializes calls, reuses the child for
 the session, bounds protocol diagnostics, restarts after failure and closes it
 at session shutdown. Mutation responses convert standard MCP
 `structuredContent` into Pi's built-in result shapes. The extension walks to
-the repository root before spawning `superdev`, so it also works when Pi starts
-in a subdirectory. After a turn mutates knowledge, the extension runs final
+the canonical active checkout root before spawning `superdev`, so it also works
+when Pi starts in a subdirectory or a linked worktree: a `.git` directory or
+pointer file anywhere on the walk wins, and `.superdev/config.toml` selects the
+root only when no `.git` marker exists. After a turn mutates knowledge, the extension runs final
 validation through a one-shot CLI call. A failure queues at most two repair
 turns with the validator report; a persistent failure stops automatic feedback
 and waits for manual continuation.
-`scripts/test/sokf-pi-adapter.test.mjs` loads the real extension through Pi when
-Pi is installed. Its sandbox checks virtual retrieval,
+`scripts/test/sokf-pi-adapter.test.mjs` loads the real extension through the
+pinned Pi 0.85.1 test dependency. Its sandbox checks routed retrieval,
 structured edit results, subdirectory physical writes, applied-invalid
-handling, and bounded validation feedback without making a model call.
+handling, and bounded validation feedback without making a model call. Its
+paired harness runs every read case twice — once through Pi's built-in read
+against the physical file, once through the routed tool against the equivalent
+SOKF argument — and requires the two results, errors and details to agree
+exactly.
 
 `.pi/extensions/superdev/index.ts` registers `/superdev`,
 resume, cancellation, and human-only abandonment. Its

@@ -13,6 +13,29 @@ publish a version it cannot find a heading for.
 
 ### Added
 
+- **A SOKF-routed read returns the file, not a rendering of it.** `read
+  sokf:<id>` now resolves the identity and delegates to Pi's own built-in read
+  against that source, so content, offset and limit, truncation and
+  continuation notices, details, errors, cancellation and rendering are Pi's
+  unchanged. An excerpt copied from a routed read — frontmatter included —
+  matches the file it came from and works as an exact-replacement anchor. The
+  `sokf:` overview and `sokf:<id>#<heading>` addresses are refused with
+  guidance naming `sokf_search`, and the tool's description no longer
+  advertises them.
+- **Locating a source and rendering knowledge are separate MCP operations.**
+  The mixed `sokf_read` tool is replaced by `sokf_resolve_source`, which
+  returns a concept's ingress path, canonical repository-relative target,
+  existence and generated regions without semantic content, and
+  `sokf_retrieve`, which keeps the overview, rendered-concept, section and
+  line-window behaviour and refuses physical paths. Both use exact closed
+  schemas. The unreleased MCP surface takes no compatibility alias, and the
+  server's initialization instructions now name only the tools it serves.
+- **SOKF is bounded by the active checkout.** Discovery ranks its markers: a
+  `.git` directory or linked-worktree pointer file anywhere on the upward walk
+  wins, and `.superdev/config.toml` selects the root only when no `.git` marker
+  exists, so a managed non-Git repository keeps the routing it had. A linked
+  worktree therefore reads, resolves and validates its own files, and a path
+  entering another checkout is refused before the file is opened.
 - **A human can force a gate the workflow is refusing.** `/superdev-force`
   advances a SCOPE or ACCEPT gate over unanswered review findings or a missing
   acceptance assessment. It names what is unresolved, requires a typed reason

@@ -56,12 +56,14 @@ Pi read contract.
   2,000-line and 50 KB truncation, continuation text, details, errors,
   cancellation, metadata, and rendering.
 - The Pi `read` slot treats `sokf:<id>` as a file identity. It rejects the `sokf:`
-  overview address and section-qualified addresses with concise guidance toward
-  semantic retrieval.
+  overview address and section-qualified addresses with concise guidance naming
+  `sokf_search`, and its own description stops advertising those refused forms.
 - The MCP contract replaces the mixed-purpose `sokf_read` operation with a source
   resolver for file routing and a semantic `sokf_retrieve` operation for
   overviews, rendered concepts, and sections. The change requires no
-  compatibility alias or deprecation path.
+  compatibility alias or deprecation path. No model-visible surface keeps the old
+  name: the server's initialization instructions name only the tools it serves
+  and stop directing a file read at the `sokf:` overview address.
 - Source resolution accepts existing and missing contained physical paths,
   repository-root and nested-working-directory spellings, and Pi's accepted path
   preparation, including one leading `@`. A direct physical argument must enter
@@ -70,15 +72,23 @@ Pi read contract.
   repository escapes and reports generated-region authority.
 - The replacement operations expose exact closed request and structured-result
   schemas. Source resolution returns `ingressPath`, `canonicalPath`, `exists`,
-  and line-bounded `generatedRegions`, and carries no semantic content.
+  and line-bounded `generatedRegions`, and carries no semantic content. It mirrors
+  that structured content as one pretty-printed JSON text item, the convention the
+  mutation tools already follow, so any MCP client reading text alone still
+  receives the machine result.
 - The entire SOKF adapter and its MCP server use the canonical active checkout
   root rather than Git's shared common directory or main checkout. A routed path
-  entering another checkout fails before access.
+  entering another checkout fails before access. Discovery ranks its markers: a
+  `.git` directory or worktree pointer file anywhere on the upward walk wins, and
+  the existing `.superdev/config.toml` marker still selects the root when the
+  walk finds no `.git` marker, so a managed non-Git repository keeps the routing
+  it has today.
 - A copied routed excerpt, including frontmatter, matches the source it came
   from, so it works unchanged as an exact-replacement anchor.
 - A paired characterization harness compares built-in and routed results, errors,
-  details, and rendering inputs across success and edge cases, and pins
-  `@earendil-works/pi-coding-agent` 0.85.1 as a test dependency.
+  details, and rendering inputs across success and edge cases. It loads the
+  already pinned `@earendil-works/pi-coding-agent` 0.85.1 test dependency and
+  fails rather than skips when that dependency cannot load.
 
 ## Scope
 
@@ -99,6 +109,8 @@ Routed read behaviour and the MCP operations it depends on.
   membership question is decided or deferred.
 - Out: the validation follow-up state machine and file-tool prompt metadata,
   owned by [issue-083][sokf:issue-083-sokf-validation-follow-ups].
+- Out: a Pi-registered tool for semantic overview and section retrieval, which
+  stays an MCP-only operation until a separate issue asks for it.
 - Out: a semantic retrieval dialect in the Pi `read` slot, changes to semantic
   ranking or rendered retrieval content, unrelated MCP transport lifecycle
   changes, approximate forks of Pi's algorithms, the general validator symlink

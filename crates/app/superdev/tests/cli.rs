@@ -572,7 +572,7 @@ fn mcp_with_an_unusable_index_defers_failure_to_an_index_call() {
         "\n",
         r#"{"jsonrpc":"2.0","method":"notifications/initialized"}"#,
         "\n",
-        r#"{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"sokf_read","arguments":{"path":"sokf:module-a"}}}"#,
+        r#"{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"sokf_retrieve","arguments":{"path":"sokf:module-a"}}}"#,
         "\n",
         r#"{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"sokf_search","arguments":{"query":"alpha"}}}"#,
         "\n",
@@ -599,7 +599,7 @@ const MCP_REQUESTS: &str = concat!(
     "\n",
     r#"{"jsonrpc":"2.0","method":"notifications/initialized"}"#,
     "\n",
-    r#"{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"sokf_read","arguments":{"path":"sokf:"}}}"#,
+    r#"{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"sokf_retrieve","arguments":{"path":"sokf:"}}}"#,
     "\n",
 );
 

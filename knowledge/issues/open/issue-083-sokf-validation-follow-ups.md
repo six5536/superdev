@@ -99,6 +99,12 @@ Post-persistence validation delivery and file-tool prompt metadata.
 
 ## Comments
 
+Routed reads restore the caller's spelling in Pi's oversized-line notice, so the
+notice suggests `sed -n '<line>p' sokf:<id>` — a command no shell resolves. Pi's
+unrouted notice is equally unrunnable for a relative path. This issue decides
+whether a routed notice keeps the caller's address, names the canonical physical
+path, or drops the suggested command.
+
 Separated from [issue-077][sokf:issue-077-sokf-file-tool-parity] because its
 requirements review exceeded the isolated-role timeout.
 

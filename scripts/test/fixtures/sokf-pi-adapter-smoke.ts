@@ -27,11 +27,13 @@ export default async function () {
 	}
 
 	const projectContext = { cwd: repository, ui: { notify() {} } };
+	// A routed read returns the source exactly: the first line of a concept
+	// file is its frontmatter fence, not a rendered heading.
 	const read = await tools
 		.get("read")
 		.execute("read", { path: "sokf:architecture", limit: 1 }, undefined, undefined, projectContext);
-	if (read.content[0]?.type !== "text" || !read.content[0].text.includes("architecture")) {
-		throw new Error("SOKF virtual read did not preserve Pi's text result shape");
+	if (read.content[0]?.type !== "text" || !read.content[0].text.startsWith("---")) {
+		throw new Error("SOKF routed read did not return exact source through Pi's read");
 	}
 	const search = await tools
 		.get("sokf_search")
@@ -43,15 +45,17 @@ export default async function () {
 	await tools
 		.get("sokf_search")
 		.execute("search-third", { query: "safe mutation", limit: 1 }, undefined, undefined, projectContext);
-	await tools
-		.get("read")
-		.execute("missing", { path: "sokf:not-a-concept" }, undefined, undefined, projectContext)
-		.then(
-			() => {
-				throw new Error("SOKF MCP tool error was returned as successful text");
-			},
-			() => undefined,
-		);
+	for (const refused of ["sokf:not-a-concept", "sokf:", "sokf:architecture#Approach"]) {
+		await tools
+			.get("read")
+			.execute("refused", { path: refused }, undefined, undefined, projectContext)
+			.then(
+				() => {
+					throw new Error(`SOKF read accepted \`${refused}\` instead of refusing it`);
+				},
+				() => undefined,
+			);
+	}
 
 	const sandbox = mkdtempSync(join(tmpdir(), "sokf-pi-adapter-"));
 	try {

@@ -67,6 +67,24 @@ pub struct WriteRequest {
     /// Complete replacement document.
     pub content: String,
 }
+
+/// One generated span of a resolved source, and where its content is authored.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+#[schemars(crate = "rmcp::schemars")]
+pub struct GeneratedRegion {
+    /// First generated line of the target, starting at 1.
+    #[schemars(range(min = 1))]
+    pub start_line: u32,
+    /// Last generated line of the target, inclusive.
+    #[schemars(range(min = 1))]
+    pub end_line: u32,
+    /// Repository-relative path the region is generated from.
+    pub authoritative_path: String,
+    /// Region of the authoritative source, when the block names one.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub authoritative_region: Option<String>,
+}
 ```
 <!-- /sokf:include -->
 
@@ -89,17 +107,44 @@ pub struct SearchRequest {
     pub lifecycle: Option<Vec<String>>,
 }
 
-/// Arguments of `sokf_read`, shaped like a familiar coding read tool.
+/// Arguments of `sokf_resolve_source`.
 #[derive(Debug, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
 #[schemars(crate = "rmcp::schemars")]
-struct ReadArgs {
-    /// `sokf:`, a virtual concept address, or a physical path inside knowledge.
+pub struct ResolveSourceRequest {
+    /// An unqualified `sokf:<id>`, or a physical path entering `knowledge/`.
+    pub path: String,
+}
+
+/// Where one source is, and which of its lines are generated. Carries no
+/// semantic content: `sokf_retrieve` answers for rendered knowledge.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+#[schemars(crate = "rmcp::schemars")]
+pub struct SourceResolution {
+    /// Repository-relative `knowledge/` path the request entered through.
+    pub ingress_path: String,
+    /// Repository-relative canonical target, contained by the active checkout.
+    pub canonical_path: String,
+    /// Whether the canonical target is an existing regular file.
+    pub exists: bool,
+    /// Generated spans of the target, in line order.
+    pub generated_regions: Vec<GeneratedRegion>,
+}
+
+/// Arguments of `sokf_retrieve`.
+#[derive(Debug, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+#[schemars(crate = "rmcp::schemars")]
+struct RetrieveArgs {
+    /// `sokf:` for the overview, `sokf:<id>`, or `sokf:<id>#<heading>`.
     path: String,
-    /// First rendered or physical line to return, starting at 1.
-    offset: Option<usize>,
-    /// Most lines to return.
-    limit: Option<usize>,
+    /// First rendered line to return, starting at 1.
+    #[schemars(range(min = 1))]
+    offset: Option<u32>,
+    /// Most rendered lines to return.
+    #[schemars(range(min = 1))]
+    limit: Option<u32>,
 }
 
 /// Arguments of `sokf_graph`.
@@ -127,12 +172,30 @@ struct GraphArgs {
             .map_err(tool_error)
     }
 
-    /// Read an overview, concept, section, or contained physical knowledge file.
+    /// Locate the source file behind one `sokf:<id>` identity or contained
+    /// physical knowledge path, and report what of it is generated.
     #[tool]
-    async fn sokf_read(&self, Parameters(args): Parameters<ReadArgs>) -> ToolResult {
+    async fn sokf_resolve_source(
+        &self,
+        Parameters(args): Parameters<ResolveSourceRequest>,
+    ) -> ToolResult {
+        let _guard = self.exclusive();
+        match self.service.resolve_source(&args.path) {
+            Ok(resolution) => structured_result(&resolution),
+            Err(error) => Err(tool_error(error)),
+        }
+    }
+
+    /// Render the `sokf:` overview, one concept, or one of its sections.
+    #[tool]
+    async fn sokf_retrieve(&self, Parameters(args): Parameters<RetrieveArgs>) -> ToolResult {
         let _guard = self.exclusive();
         self.service
-            .read_path(&args.path, args.offset, args.limit)
+            .retrieve(
+                &args.path,
+                args.offset.map(|offset| offset as usize),
+                args.limit.map(|limit| limit as usize),
+            )
             .map(text)
             .map_err(tool_error)
     }
@@ -205,7 +268,7 @@ authoritativePath: string, authoritativeRegion?: string }`. A `Finding` is
 - `P_lazy-embedding` [ubiquitous] The MCP server SHALL retain one lazily
   initialized embedder result for its process lifetime.
 - `P_active-worktree-root` [ubiquitous] The MCP server SHALL
-  PENDING(issue-077) treat the canonical active checkout root as its
+  treat the canonical active checkout root as its
   repository, including when `.git` is a linked-worktree pointer file.
   - `AC_worktree-local-surfaces` [event] WHEN the server runs in a linked
     worktree, source resolution, semantic retrieval, search, graph traversal,
@@ -213,12 +276,12 @@ authoritativePath: string, authoritativeRegion?: string }`. A `Finding` is
     PENDING(issue-083) use only that worktree's files and cache.
   - `AC_worktree-other-checkout-refused` [event] WHEN a routed path enters
     another checkout, including the main checkout, the server SHALL
-    PENDING(issue-077) reject it as outside the active worktree.
+    reject it as outside the active worktree.
 - `P_direct-does-not-load` [event] WHEN only source resolution, direct semantic
-  retrieval, or graph calls have run, the MCP server SHALL PENDING(issue-077)
+  retrieval, or graph calls have run, the MCP server SHALL
   leave the embedder uninitialized.
 - `P_first-index-call-loads` [event] WHEN the first search or semantic overview
-  retrieval runs, the MCP server SHALL PENDING(issue-077) initialize the
+  retrieval runs, the MCP server SHALL initialize the
   configured embedder once.
 - `P_later-index-call-reuses` [state] WHILE the embedder result is initialized,
   later index-dependent calls SHALL reuse that result.
@@ -226,11 +289,13 @@ authoritativePath: string, authoritativeRegion?: string }`. A `Finding` is
   PENDING(issue-082) expose only the closed request and success-result
   schemas specified below.
   - `AC_resolve-schema` [ubiquitous] `sokf_resolve_source` SHALL
-    PENDING(issue-077) accept `{ path: string }` and return structured
+    accept `{ path: string }` and return structured
     content `{ ingressPath: string, canonicalPath: string, exists: boolean,
-    generatedRegions: GeneratedRegion[] }`.
+    generatedRegions: GeneratedRegion[] }` together with exactly one
+    `{ type: "text", text: string }` content item carrying the pretty-printed
+    JSON of that structured content and nothing else.
   - `AC_retrieve-schema` [ubiquitous] `sokf_retrieve` SHALL
-    PENDING(issue-077) accept `{ path: string, offset?: integer >= 1,
+    accept `{ path: string, offset?: integer >= 1,
     limit?: integer >= 1 }` and return one text content item with no structured
     content.
   - `AC_edit-schema` [ubiquitous] `sokf_edit` SHALL
@@ -245,33 +310,37 @@ authoritativePath: string, authoritativeRegion?: string }`. A `Finding` is
     resolvedPath: string, finalPath: string, changedPaths: string[], findings:
     Finding[], diagnosticsTruncated: boolean }`.
 - `P_source-resolution` [ubiquitous] `sokf_resolve_source` SHALL
-  PENDING(issue-077) return one logical `knowledge/` ingress, canonical
+  return one logical `knowledge/` ingress, canonical
   repository-relative target, existence flag, and generated-region metadata
   without semantic content.
   - `AC_source-identity` [event] WHEN the resolver receives an unqualified
-    `sokf:<id>` or physical knowledge path, it SHALL PENDING(issue-077)
+    `sokf:<id>` or physical knowledge path, it SHALL
     resolve the corresponding source and refuse missing identities, overview
     addresses, section-qualified addresses, directories, and direct paths
     outside `knowledge/`.
   - `AC_source-contained` [event] WHEN resolution encounters an existing target
-    or nearest existing ancestor, the resolver SHALL PENDING(issue-077)
+    or nearest existing ancestor, the resolver SHALL
     accept only a canonical target inside the repository, including a contained
     symlink target outside `knowledge/` and a normalized missing suffix.
   - `AC_source-section-refused` [event] WHEN source resolution receives an
     overview or section-qualified address, the resolver SHALL
-    PENDING(issue-077) return concise guidance to semantic retrieval.
+    return concise guidance to semantic retrieval.
 - `P_semantic-retrieve` [ubiquitous] `sokf_retrieve` SHALL
-  PENDING(issue-077) retain semantic overview, rendered-concept,
+  retain semantic overview, rendered-concept,
   section, and one-indexed line-window behavior.
   - `AC_semantic-addresses` [event] WHEN `sokf_retrieve` receives `sokf:`,
-    `sokf:<id>`, or `sokf:<id>#<heading>`, it SHALL PENDING(issue-077)
+    `sokf:<id>`, or `sokf:<id>#<heading>`, it SHALL
     return the corresponding semantic rendering.
   - `AC_semantic-physical-refused` [event] WHEN `sokf_retrieve` receives a
-    physical path, it SHALL PENDING(issue-077) refuse the path.
+    physical path, it SHALL refuse the path.
 - `P_no-read-alias` [ubiquitous] The MCP tool list SHALL NOT
-  PENDING(issue-077) expose `sokf_read`.
+  expose `sokf_read`.
+  - `AC_instructions-name-served-tools` [ubiquitous] The server's
+    initialization instructions SHALL name only served
+    tools, excluding `sokf_read` and any directed file read of the `sokf:`
+    overview address.
 - `P_direct-retrieval-skips-index` [event] WHEN source resolution or direct
-  semantic retrieval runs, the MCP server SHALL PENDING(issue-077)
+  semantic retrieval runs, the MCP server SHALL
   answer without opening or rewriting the search index.
 - `P_graph-skips-index` [ubiquitous] `sokf_graph` SHALL parse current knowledge
   without opening or rewriting the search index.
@@ -303,7 +372,7 @@ A tool failure is an MCP error payload, never a process exit.
   knowledge invalid or its validation unknown, the server SHALL return a
   successful structured result with `applied: true` rather than an error.
 - `P_parse-error-quoted` [event] WHEN a semantic concept address resolves to a
-  file the parser rejected, `sokf_retrieve` SHALL PENDING(issue-077)
+  file the parser rejected, `sokf_retrieve` SHALL
   quote the parse error instead of guessing at near misses.
 
 ### Mutations
@@ -382,7 +451,7 @@ reads exactly what matched.
 - `P_graph-group-cap` [ubiquitous] `sokf_graph` SHALL cap each group at
   30 lines and then say how many it dropped.
 - `P_overview-warning-cap` [event] WHEN `sokf_retrieve` receives the `sokf:`
-  overview address, it SHALL PENDING(issue-077) list at most 10 warnings
+  overview address, it SHALL list at most 10 warnings
   and then say how many more there are.
 
 ### Versioning

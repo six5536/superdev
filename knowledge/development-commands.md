@@ -91,10 +91,13 @@ Two traps:
   `--all-targets -- -D warnings` plus fmt-check, doctests, rustdoc `-D
   warnings`, launcher tests, release-script tests (`npm run test:scripts`),
   version consistency, and the coverage gate. The script tests also protect
-  the `sokf-behavior/v1` fixture roster and shape. When `pi` is on `PATH`, the
-  same command loads the real SOKF extension and exercises retrieval,
+  the `sokf-behavior/v1` fixture roster and shape. The same command loads the
+  real SOKF extension against the pinned `@earendil-works/pi-coding-agent`
+  0.85.1 test dependency — not a `pi` on `PATH` — and exercises retrieval,
   mutation-result parity, subdirectory routing, and bounded validation feedback
-  in a temporary repository. Behavioral scoring still requires a separate
+  in a temporary repository. Its paired harness compares routed reads against
+  Pi's built-in read case by case and fails, rather than skipping, when that
+  dependency cannot load. Behavioral scoring still requires a separate
   model-session evaluator.
   Before a PR, run the full list in CONTRIBUTING, not the dailies.
 - Only the launcher package is an npm workspace. The five platform-binary
