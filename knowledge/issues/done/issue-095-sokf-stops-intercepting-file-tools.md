@@ -4,7 +4,7 @@ id: issue-095-sokf-stops-intercepting-file-tools
 title: SOKF intercepts the file tools to guard writes it cannot see
 description: Routed read, edit, and write add an identity layer over paths that already describe themselves, and enforce policy on one of several ways an agent writes knowledge, so the cost is permanent and the guarantee is partial.
 kind: feature
-lifecycle: open
+lifecycle: done
 links:
   - rel: supersedes
     to: issue-082-sokf-mutation-parity
@@ -115,6 +115,19 @@ The agent-facing SOKF surface and where knowledge is made consistent.
   observes the tree at turn end covers every writer; a check on one tool does
   not.
 
+## Resolution
+
+Implemented by [plan-078][sokf:plan-078-sokf-stops-intercepting-file-tools] and
+integrated into `main` by signed merge `30329f6`. Pi keeps its own file tools;
+SOKF serves search, graph and overview, and repairs knowledge at turn end.
+CLI and library mutations retain their inline repair.
+
+Closed manually after integration, outside the workflow at the user's direction.
+Workflow approval and isolated review were skipped, not satisfied. The existing
+application coverage failure remains recorded in the plan. The include-binding
+hazard remains open as
+[issue-096][sokf:issue-096-a-reused-region-name-silently-refills-a-contract].
+
 ## Comments
 
 Implementation is complete under
@@ -139,8 +152,13 @@ serves none of them: it adds a second interface over the file tools, makes a
 `knowledge/` path behave unlike every other path, and guards a fraction of the
 writes.
 
+After merge `30329f6`, the user directed continuation and the issue and plan
+were closed manually. The earlier open-state comment records the pre-closure
+state; no workflow acceptance was run.
+
 <!-- sokf:links -->
 [sokf:issue-077-sokf-file-tool-parity]: /knowledge/issues/done/issue-077-sokf-file-tool-parity.md
 [sokf:issue-082-sokf-mutation-parity]: /knowledge/issues/wontfix/issue-082-sokf-mutation-parity.md
 [sokf:issue-083-sokf-validation-follow-ups]: /knowledge/issues/wontfix/issue-083-sokf-validation-follow-ups.md
-[sokf:plan-078-sokf-stops-intercepting-file-tools]: /knowledge/plans/open/plan-078-sokf-stops-intercepting-file-tools.md
+[sokf:issue-096-a-reused-region-name-silently-refills-a-contract]: /knowledge/issues/open/issue-096-a-reused-region-name-silently-refills-a-contract.md
+[sokf:plan-078-sokf-stops-intercepting-file-tools]: /knowledge/plans/done/plan-078-sokf-stops-intercepting-file-tools.md

@@ -3,8 +3,8 @@ type: Plan
 id: plan-078-sokf-stops-intercepting-file-tools
 title: SOKF stops intercepting the file tools
 description: Remove routed read, edit, and write, serve search, graph, and overview alone, and make one repair-and-validate at turn end the single point where knowledge becomes consistent.
-lifecycle: open
-phase: scope
+lifecycle: done
+phase: done
 branch: work/095-sokf-stops-intercepting-file-tools
 links:
   - rel: implements
@@ -449,10 +449,10 @@ The documentation map triggers the following surfaces.
 
 ## Build state
 
-All four blocks are implemented outside the workflow at the user's direction.
-The workflow phase remains the last service-recorded phase; it does not imply
-that implementation is pending. Final verification passed except for the
-pre-existing application coverage failure (72.39% against 90%).
+All four blocks are complete and integrated into `main`. Closure is manual,
+outside the workflow at the user's direction. The terminal phase records that
+disposition, not a successful workflow gate. Final verification passed except
+for the pre-existing application coverage failure (72.39% against 90%).
 
 ## Implementation decisions
 
@@ -478,7 +478,7 @@ their outcomes, and all sandboxes and acceptance thresholds are unchanged.
 
 ## Follow-up issues
 
-`issue-096-a-reused-region-name-silently-refills-a-contract` was filed on
+[issue-096][sokf:issue-096-a-reused-region-name-silently-refills-a-contract] was filed on
 `main` in signed commit `1723172`. A reused region name silently refilled
 contract 012 from the wrong source; this implementation corrects that include,
 while prevention remains separate work. No rendered-concept replacement or
@@ -517,9 +517,17 @@ passed at 93.96%; application line coverage failed at 72.39% against its 90%
 gate, unchanged from the recorded baseline. This failure is not waived or
 reported as a passing gate.
 
+Block 4 landed in signed commit `1ba81b8`. Signed merge `30329f6` integrated
+the work into `main` with `--no-ff`; nothing was pushed. Post-merge validation
+passed for 281 concepts, and blueprint and documentation checks passed.
+The user then directed continuation; issue 095 and this plan were closed
+manually on `main`. No SCOPE approval, isolated final review or ACCEPT run is
+claimed by this closure. Issue 096 remains open for the include-binding hazard.
+
 Workflow default branch: main.
 
 <!-- sokf:links -->
 [sokf:adr-055-sokf-does-not-intercept-file-tools]: /knowledge/adrs/active/adr-055-sokf-does-not-intercept-file-tools.md
 [sokf:issue-077-sokf-file-tool-parity]: /knowledge/issues/done/issue-077-sokf-file-tool-parity.md
-[sokf:issue-095-sokf-stops-intercepting-file-tools]: /knowledge/issues/open/issue-095-sokf-stops-intercepting-file-tools.md
+[sokf:issue-095-sokf-stops-intercepting-file-tools]: /knowledge/issues/done/issue-095-sokf-stops-intercepting-file-tools.md
+[sokf:issue-096-a-reused-region-name-silently-refills-a-contract]: /knowledge/issues/open/issue-096-a-reused-region-name-silently-refills-a-contract.md

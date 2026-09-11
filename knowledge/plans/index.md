@@ -69,4 +69,4 @@ work blocks that deliver it; scope writes it and build works it.
 [sokf:plan-028-persistent-mcp-transport-for-pi-sokf]: /knowledge/plans/done/plan-028-persistent-mcp-transport-for-pi-sokf.md
 [sokf:plan-059-scope-build-accept-workflow]: /knowledge/plans/done/plan-059-scope-build-accept-workflow.md
 [sokf:plan-077-sokf-file-tool-parity]: /knowledge/plans/done/plan-077-sokf-file-tool-parity.md
-[sokf:plan-078-sokf-stops-intercepting-file-tools]: /knowledge/plans/open/plan-078-sokf-stops-intercepting-file-tools.md
+[sokf:plan-078-sokf-stops-intercepting-file-tools]: /knowledge/plans/done/plan-078-sokf-stops-intercepting-file-tools.md

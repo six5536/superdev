@@ -103,4 +103,4 @@ deterministic — the workflow transitions depend on them — and
 <!-- sokf:links -->
 [sokf:adr-053-sokf-file-tools-delegate-to-pi]: /knowledge/adrs/deprecated/adr-053-sokf-file-tools-delegate-to-pi.md
 [sokf:issue-077-sokf-file-tool-parity]: /knowledge/issues/done/issue-077-sokf-file-tool-parity.md
-[sokf:issue-095-sokf-stops-intercepting-file-tools]: /knowledge/issues/open/issue-095-sokf-stops-intercepting-file-tools.md
+[sokf:issue-095-sokf-stops-intercepting-file-tools]: /knowledge/issues/done/issue-095-sokf-stops-intercepting-file-tools.md

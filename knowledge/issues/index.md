@@ -243,5 +243,5 @@ places it.
 [sokf:issue-092-a-requirements-review-has-no-declared-surface]: /knowledge/issues/done/issue-092-a-requirements-review-has-no-declared-surface.md
 [sokf:issue-093-a-human-cannot-force-the-next-phase]: /knowledge/issues/done/issue-093-a-human-cannot-force-the-next-phase.md
 [sokf:issue-094-every-search-process-reloads-the-embedding-model]: /knowledge/issues/open/issue-094-every-search-process-reloads-the-embedding-model.md
-[sokf:issue-095-sokf-stops-intercepting-file-tools]: /knowledge/issues/open/issue-095-sokf-stops-intercepting-file-tools.md
+[sokf:issue-095-sokf-stops-intercepting-file-tools]: /knowledge/issues/done/issue-095-sokf-stops-intercepting-file-tools.md
 [sokf:issue-096-a-reused-region-name-silently-refills-a-contract]: /knowledge/issues/open/issue-096-a-reused-region-name-silently-refills-a-contract.md
