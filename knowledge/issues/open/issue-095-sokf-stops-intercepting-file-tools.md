@@ -68,9 +68,11 @@ knowledge is repaired and checked once per turn.
 - `sokf_overview` returns the knowledge name, concept count, tree, and index
   state. It carries no rendered concept and no section addressing; `read` and
   `sokf_search` cover those.
-- When a turn ends after the knowledge changed by any means — a file tool,
-  `bash`, a patch — the extension repairs the knowledge once and validates the
-  result.
+- Every turn ends with one repair-and-validate pass, run unconditionally. The
+  extension does not first decide whether the knowledge changed: a write through
+  `bash`, a patch, or `git checkout` reaches no tool it registers, so any change
+  signal would be wrong on exactly the cases this issue exists to cover. A turn
+  that touched no knowledge leaves the tree byte-identical.
 - Findings are re-checked against the working tree immediately before they are
   sent, and only those the tree still carries are reported. A report that
   survives no finding sends no message.

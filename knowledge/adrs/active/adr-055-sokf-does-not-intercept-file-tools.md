@@ -49,8 +49,12 @@ routed mutation are removed. Graph results will carry each concept's
 repository-relative path, so a traversal reaches a file without a second lookup.
 
 Consistency will be established once per turn. At `turn_end` the extension
-repairs the knowledge and validates the result, so every writer is covered by
-one mechanism at one moment. Findings are re-checked against the working tree
+repairs the knowledge and validates the result unconditionally, without first
+deciding whether anything changed, so every writer is covered by one mechanism at
+one moment. A conditional run would need a signal, and no signal the extension
+can keep observes a write through `bash`; an unconditional one needs none to be
+right, and costs a bounded second or so while writing nothing when the knowledge
+is already valid. Findings are re-checked against the working tree
 before they are sent; the first report for a pending sequence triggers one
 correction turn and later reports are visible but non-triggering; state is
 session memory keyed by repository root.
@@ -89,6 +93,9 @@ deterministic — the workflow transitions depend on them — and
 - Negative: an agent reaching knowledge semantically must follow a search or
   graph result to a path before reading it, rather than addressing a concept
   directly.
+- Negative: every turn pays the repair-and-validate cost, including turns that
+  touched no knowledge. Correctness is bought with a fixed cost rather than a
+  signal that can be wrong.
 - Follow-ups: [issue-095][sokf:issue-095-sokf-stops-intercepting-file-tools]
   implements this decision. Semantic ranking, index lifecycle, and MCP transport
   are unaffected and require separate issues.

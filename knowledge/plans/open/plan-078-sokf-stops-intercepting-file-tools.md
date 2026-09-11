@@ -68,12 +68,16 @@ The implementation must satisfy the following settled requirements.
   the MCP process per repository root. The ranked `.git`-then-`.superdev/config.toml`
   walk is retained for that purpose and must keep working from a nested working
   directory and a linked worktree.
-- When a turn ends after the knowledge changed, the extension must run
-  `superdev validate --fix` once, so repair covers knowledge written by a file
-  tool, `bash`, a heredoc, `sed`, a patch, or `git checkout` alike.
-- The extension must detect that knowledge changed by observing the tree rather
-  than by counting its own tool calls, because a write through `bash` passes
-  through no tool it registers.
+- When a turn ends, the extension must run `superdev validate --fix` once,
+  unconditionally, without first deciding whether the knowledge changed. A write
+  through `bash`, a heredoc, `sed`, a patch, or `git checkout` reaches no tool
+  the extension registers, so any change signal it could keep would be wrong on
+  exactly the cases this issue exists to cover. An unconditional run needs no
+  signal to be right.
+- The unconditional run must leave the tree byte-identical when the knowledge is
+  already valid. Against this repository's 279 concepts it costs about 1.3
+  seconds in a debug build and reports `repaired: 0 file(s)`, so a turn that
+  touched no knowledge pays a bounded cost and changes nothing.
 - Before sending any message, the extension must re-check its findings against
   the current working tree and report only those the tree still carries. A report
   that survives no finding must send no message.
@@ -173,10 +177,11 @@ remain, serving MCP client keying and the working directory of the `superdev`
 child process.
 
 The `turn_end` handler must run `superdev validate --fix` rather than bare
-`validate`, and must run when the knowledge changed by any means. BUILD must
-choose a tree-observing change signal and record it under Implementation
-decisions; a flag set by the extension's own tool calls is not sufficient,
-because the registrations that set it are being removed. After the run, the
+`validate`, on every turn, with no precondition. The `knowledgeMutated` flag and
+every assignment to it must be removed: the registrations that set it are going,
+and a flag only the extension's own tools can set cannot observe a write through
+`bash`. Replacing it with a cleverer signal would reintroduce the same class of
+miss, so nothing replaces it. After the run, the
 handler must re-read the reported paths and drop findings the tree no longer
 carries, then send at most one message: triggering for the first report of a
 pending sequence, visible and non-triggering afterwards. State must be a map
@@ -263,10 +268,10 @@ The documentation map triggers the following surfaces.
 - [ ] Done.
 - Dependencies: none.
 - Areas: `.pi/extensions/sokf.ts`, `scripts/test/sokf-pi-adapter.test.mjs`, and `scripts/test/fixtures/sokf-pi-adapter-smoke.ts`.
-- Outcome: a turn that changed knowledge by any means ends with one `validate --fix`, a freshness re-check, and at most one bounded message. This lands before Block 3 removes mutation-time repair, so no intermediate state leaves the knowledge unrepaired.
+- Outcome: every turn ends with one `validate --fix`, a freshness re-check, and at most one bounded message. This lands before Block 3 removes mutation-time repair, so no intermediate state leaves the knowledge unrepaired.
 - Verification: `node --test scripts/test/sokf-pi-adapter.test.mjs`.
-- Tests: cases prove that a knowledge change made without any registered tool — written directly to the fixture tree — triggers the turn-end run; that `validate --fix` is the command invoked; that a finding resolved between the run and the send is not reported; that a report surviving no finding sends no message; that the first report of a sequence triggers a turn and a later one does not; that state is keyed by repository root and two roots do not share it; and that a message over 200 lines or 8 KiB is truncated and names `superdev validate`.
-- Structural evidence: the change signal reads the working tree rather than counting the extension's own tool calls, and a test proves it by changing a file through neither `edit` nor `write`. The freshness re-check reads the reported paths again after validation rather than filtering a captured report. Follow-up state is held in a session-scoped map and no file is written, asserted by comparing the fixture tree before and after a reporting turn.
+- Tests: cases prove that the run happens on a turn that changed nothing, on a turn that changed knowledge through a registered tool, and on a turn that changed knowledge by writing directly to the fixture tree; that `validate --fix` is the command invoked; that a finding resolved between the run and the send is not reported; that a report surviving no finding sends no message; that the first report of a sequence triggers a turn and a later one does not; that state is keyed by repository root and two roots do not share it; and that a message over 200 lines or 8 KiB is truncated and names `superdev validate`.
+- Structural evidence: no `knowledgeMutated` flag or equivalent precondition remains in the handler, and a test proves the run happens after a turn in which none of the extension's own tools were called. A turn that touched no knowledge leaves the fixture tree byte-identical, so the unconditional run performs no spurious write. The freshness re-check reads the reported paths again after validation rather than filtering a captured report. Follow-up state is held in a session-scoped map and no file is written, asserted by comparing the fixture tree before and after a reporting turn.
 - Documentation: none in this block; the surfaces change with Block 3.
 
 ### Block 3: Stop intercepting the file tools and remove the routed operations
@@ -287,7 +292,7 @@ Current block: 1. Attempts: 0. Final corrections: 0. Blocker: none.
 ## Implementation decisions
 
 none. BUILD records only local choices that do not change the approved contracts
-or ADR. The turn-end change signal is expected to need one such record.
+or ADR.
 
 ## Follow-up issues
 
