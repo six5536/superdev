@@ -237,6 +237,7 @@ async fn the_tool_roster_splits_source_resolution_from_semantic_retrieval() {
         [
             "sokf_edit",
             "sokf_graph",
+            "sokf_overview",
             "sokf_resolve_source",
             "sokf_retrieve",
             "sokf_search",
@@ -265,6 +266,23 @@ async fn the_tool_roster_splits_source_resolution_from_semantic_retrieval() {
     assert_eq!(properties.len(), 1);
     assert_eq!(properties["path"]["type"], "string");
 
+    // The knowledge is the whole subject, so the overview narrows by nothing
+    // and its request has no property to supply.
+    let overview = schema("sokf_overview");
+    assert_eq!(overview["additionalProperties"], false);
+    assert!(
+        overview
+            .get("properties")
+            .is_none_or(|p| p.as_object().unwrap().is_empty()),
+        "{overview}"
+    );
+    assert!(
+        overview
+            .get("required")
+            .is_none_or(|r| r.as_array().unwrap().is_empty()),
+        "{overview}"
+    );
+
     let retrieve = schema("sokf_retrieve");
     assert_eq!(retrieve["additionalProperties"], false);
     assert_eq!(retrieve["required"], serde_json::json!(["path"]));
@@ -292,6 +310,7 @@ async fn the_tool_roster_splits_source_resolution_from_semantic_retrieval() {
             serde_json::json!({"path": "sokf:spec-a", "heading": "Format"}),
         ),
         ("sokf_retrieve", serde_json::json!({"offset": 1})),
+        ("sokf_overview", serde_json::json!({"path": "sokf:"})),
     ] {
         let result = call(&client, rejected.0, rejected.1.clone()).await;
         assert_eq!(
@@ -654,18 +673,36 @@ async fn graph_map_and_neighbours() {
 
     let map = text_of(&call(&client, "sokf_graph", serde_json::json!({})).await);
     assert!(
-        map.contains("module-a --depends-on--> spec-a  (Reads the mappings.)"),
+        map.contains("--depends-on--> spec-a  knowledge/spec.md"),
         "{map}"
     );
+    assert!(map.contains("(Reads the mappings.)"), "{map}");
+    // The source is named once, with the path a reader opens next.
+    assert!(map.contains("module-a  knowledge/module-a.md"), "{map}");
 
     let neighbours =
         text_of(&call(&client, "sokf_graph", serde_json::json!({"id": "spec-a"})).await);
     // spec-a declares nothing; the hop is the inverse of module-a's edge.
     assert!(
-        neighbours.contains("<--depends-on-- module-a"),
+        neighbours.contains("<--depends-on-- module-a  knowledge/module-a.md"),
         "{neighbours}"
     );
     assert!(neighbours.contains("Pure planning stage"), "{neighbours}");
+    assert!(
+        neighbours.starts_with("spec-a  knowledge/spec.md"),
+        "{neighbours}"
+    );
+
+    // Every path a traversal reports names a file it can open, spelled
+    // repository-relative from components rather than by substring luck.
+    let expected = Path::new("knowledge").join("module-a.md");
+    let expected = expected.to_string_lossy().replace('\\', "/");
+    assert!(map.contains(&expected), "{map}");
+    for rendered in [&map, &neighbours] {
+        for token in rendered.split_whitespace().filter(|t| t.ends_with(".md")) {
+            assert!(repo.path().join(token).is_file(), "{token}");
+        }
+    }
     client.cancel().await.unwrap();
 }
 
@@ -674,14 +711,7 @@ async fn overview_orients_and_warns() {
     let repo = fixture();
     let client = serve_and_client(repo.path()).await;
 
-    let text = text_of(
-        &call(
-            &client,
-            "sokf_retrieve",
-            serde_json::json!({"path": "sokf:"}),
-        )
-        .await,
-    );
+    let text = text_of(&call(&client, "sokf_overview", serde_json::json!({})).await);
     assert!(text.contains("fixture-knowledge"), "{text}");
     assert!(text.contains("4 concepts"), "{text}");
     assert!(text.contains("notes/"), "{text}");
@@ -689,6 +719,31 @@ async fn overview_orients_and_warns() {
     assert!(text.contains("warnings:"), "{text}");
     assert!(text.contains("missing.md"), "{text}");
     assert!(text.contains("lexical only"), "{text}");
+
+    // One rendering, not two: the dedicated tool answers with what the
+    // retrieval address answered with. The `synced:` line reports what that
+    // call's sync did and is absent once the index is warm, so it is dropped
+    // from both sides rather than asserted equal across a warm and a cold
+    // call.
+    let through_retrieve = text_of(
+        &call(
+            &client,
+            "sokf_retrieve",
+            serde_json::json!({"path": "sokf:"}),
+        )
+        .await,
+    );
+    let without_sync = |rendered: &str| {
+        rendered
+            .lines()
+            .filter(|line| !line.starts_with("synced: "))
+            .collect::<Vec<_>>()
+            .join("\n")
+    };
+    assert_eq!(without_sync(&text), without_sync(&through_retrieve));
+
+    // Orientation only: no concept body reaches the overview.
+    assert!(!text.contains("Pure planning stage in prose"), "{text}");
     client.cancel().await.unwrap();
 }
 

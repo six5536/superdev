@@ -187,6 +187,13 @@ struct GraphArgs {
     /// One concept's neighbours; omit for the whole edge map.
     id: Option<String>,
 }
+
+/// Arguments of `sokf_overview`: none. The knowledge is the whole subject,
+/// so the request carries nothing to narrow it.
+#[derive(Debug, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+#[schemars(crate = "rmcp::schemars")]
+struct OverviewArgs {}
 // sokf:end tools
 
 impl SokfService {
@@ -415,13 +422,18 @@ impl SokfService {
         let bundle = load_bundle(&self.bundle_dir)?;
         let graph = Graph::build(&bundle);
         let Some(id) = id else {
-            return Ok(render_edges(&graph.edge_map()));
+            return Ok(render_edges(&graph.edge_map(), &bundle, &self.repo_root));
         };
         let identity = resolve(&graph, id).map_err(|message| Error::Sokf { message })?;
         let hops = graph.neighbours(&identity).map_err(|unknown| Error::Sokf {
             message: format!("unknown id `{}`", unknown.asked),
         })?;
-        Ok(render_neighbours(&bundle, &identity, &hops))
+        Ok(render_neighbours(
+            &bundle,
+            &identity,
+            &hops,
+            &self.repo_root,
+        ))
     }
 
     /// Render the knowledge name, size, tree, index state, and findings.
@@ -549,7 +561,7 @@ impl SokfServer {
     }
 
     /// Show the link graph: the whole edge map, or one concept's neighbours
-    /// in both directions.
+    /// in both directions. Every concept carries the path to read next.
     #[tool]
     async fn sokf_graph(&self, Parameters(args): Parameters<GraphArgs>) -> ToolResult {
         let _guard = self.exclusive();
@@ -557,6 +569,14 @@ impl SokfServer {
             .graph(args.id.as_deref())
             .map(text)
             .map_err(tool_error)
+    }
+
+    /// Show the knowledge at a glance: its name, how many concepts it holds,
+    /// the tree of them, the index state, and anything wrong with it.
+    #[tool]
+    async fn sokf_overview(&self, Parameters(_): Parameters<OverviewArgs>) -> ToolResult {
+        let _guard = self.exclusive();
+        self.service.overview().map(text).map_err(tool_error)
     }
 
     // sokf:end tools
@@ -598,10 +618,11 @@ impl ServerHandler for SokfServer {
     fn get_info(&self) -> ServerInfo {
         ServerInfo::new(ServerCapabilities::builder().enable_tools().build()).with_instructions(
             "Access to this repository's canonical SOKF knowledge. Use sokf_search to find \
-             project knowledge, sokf_retrieve for the `sokf:` overview, a rendered concept \
-             or one section, sokf_resolve_source to locate a concept's source file, \
-             sokf_graph to follow links, and sokf_edit or sokf_write for agent-safe \
-             mutations. Mutations repair and validate automatically.",
+             project knowledge, sokf_overview to see the knowledge at a glance, \
+             sokf_retrieve for the `sokf:` overview, a rendered concept or one section, \
+             sokf_resolve_source to locate a concept's source file, sokf_graph to follow \
+             links, and sokf_edit or sokf_write for agent-safe mutations. Mutations repair \
+             and validate automatically.",
         )
     }
 }
@@ -780,12 +801,41 @@ fn descriptions(bundle: &Bundle) -> HashMap<String, String> {
         .collect()
 }
 
+/// Every concept identity paired with the repository-relative path of its
+/// file, so a traversal reaches a file without a second lookup.
+fn paths(bundle: &Bundle, repo_root: &Path) -> HashMap<String, String> {
+    bundle
+        .concepts
+        .iter()
+        .map(|c| {
+            (
+                c.id.clone().unwrap_or_else(|| c.path.clone()),
+                display_path(repo_root, &bundle.root.join(&c.path)),
+            )
+        })
+        .collect()
+}
+
 /// `identity — description`, or the identity alone when there is none.
 fn named(identity: &str, description: &str) -> String {
     if description.is_empty() {
         identity.to_string()
     } else {
         format!("{identity} — {description}")
+    }
+}
+
+/// `identity  path — description`: the same line, carrying the file to open
+/// next. An identity the bundle does not hold has no path and reads as
+/// [`named`] does, so an unresolved target is not given one it cannot have.
+fn named_at(identity: &str, paths: &HashMap<String, String>, description: &str) -> String {
+    let Some(path) = paths.get(identity) else {
+        return named(identity, description);
+    };
+    if description.is_empty() {
+        format!("{identity}  {path}")
+    } else {
+        format!("{identity}  {path} — {description}")
     }
 }
 
@@ -970,11 +1020,15 @@ fn matches_heading(heading_path: &[String], wanted: &str) -> bool {
             .is_some_and(|last| last.to_lowercase() == wanted)
 }
 
-/// The declared edge map, grouped by source concept.
-fn render_edges(edges: &[Edge]) -> String {
+/// The declared edge map, grouped by source concept. Each group opens with
+/// its source and that source's path, so the identity is stated once and
+/// every concept named carries the file to read next.
+fn render_edges(edges: &[Edge], bundle: &Bundle, repo_root: &Path) -> String {
     if edges.is_empty() {
         return "no links declared".to_string();
     }
+    let paths = paths(bundle, repo_root);
+    let descriptions = descriptions(bundle);
     // BTreeMap so sources come out in a stable, readable order.
     let mut groups: BTreeMap<&str, Vec<(String, String)>> = BTreeMap::new();
     for edge in edges {
@@ -984,27 +1038,34 @@ fn render_edges(edges: &[Edge]) -> String {
             .note
             .as_ref()
             .map_or(String::new(), |n| format!("  ({n})"));
+        let target = descriptions.get(&edge.to).map_or("", String::as_str);
         groups.entry(&edge.from).or_default().push((
-            format!("{} --{rel}--> {}{unresolved}{note}", edge.from, edge.to),
+            format!(
+                "  --{rel}--> {}{unresolved}{note}",
+                named_at(&edge.to, &paths, target)
+            ),
             edge.rel.clone(),
         ));
     }
 
     let mut lines = Vec::new();
-    for entries in groups.into_values() {
+    for (from, entries) in groups {
         if !lines.is_empty() {
             lines.push(String::new());
         }
+        let description = descriptions.get(from).map_or("", String::as_str);
+        lines.push(named_at(from, &paths, description));
         lines.extend(capped(entries));
     }
     lines.join("\n")
 }
 
 /// One concept's hops, outgoing then incoming.
-fn render_neighbours(bundle: &Bundle, identity: &str, hops: &[Edge]) -> String {
+fn render_neighbours(bundle: &Bundle, identity: &str, hops: &[Edge], repo_root: &Path) -> String {
     let descriptions = descriptions(bundle);
+    let paths = paths(bundle, repo_root);
     let description = descriptions.get(identity).map_or("", String::as_str);
-    let mut lines = vec![named(identity, description)];
+    let mut lines = vec![named_at(identity, &paths, description)];
     if hops.is_empty() {
         lines.push("no links".to_string());
         return lines.join("\n");
@@ -1020,12 +1081,18 @@ fn render_neighbours(bundle: &Bundle, identity: &str, hops: &[Edge]) -> String {
             // the rel the lines show, not the stored one.
             let declared = inverse_rel(rel);
             (
-                format!("<--{declared}-- {}{unresolved}", named(&edge.to, target)),
+                format!(
+                    "<--{declared}-- {}{unresolved}",
+                    named_at(&edge.to, &paths, target)
+                ),
                 declared.to_string(),
             )
         } else {
             (
-                format!("--{rel}--> {}{unresolved}", named(&edge.to, target)),
+                format!(
+                    "--{rel}--> {}{unresolved}",
+                    named_at(&edge.to, &paths, target)
+                ),
                 edge.rel.clone(),
             )
         }
@@ -1153,24 +1220,32 @@ mod tests {
                 )
             })
             .collect();
-        let rendered = render_edges(&edges);
+        let (bundle, dir) = bundle_with(&[]);
+        let rendered = render_edges(&edges, &bundle, dir.path());
         let lines: Vec<&str> = rendered.lines().collect();
-        assert_eq!(lines.len(), GROUP_CAP + 1);
-        assert_eq!(lines[0], "alpha --depends-on--> target-0");
-        assert_eq!(lines[GROUP_CAP], "  +5 more (rels: depends-on, references)");
+        // One source header, then the capped group and its summary.
+        assert_eq!(lines.len(), GROUP_CAP + 2);
+        assert_eq!(lines[0], "alpha");
+        assert_eq!(lines[1], "  --depends-on--> target-0");
+        assert_eq!(
+            lines[GROUP_CAP + 1],
+            "  +5 more (rels: depends-on, references)"
+        );
     }
 
     #[test]
     fn a_short_group_is_untouched() {
         let edges: Vec<Edge> = (0..3).map(|i| edge(i, "part-of")).collect();
-        let rendered = render_edges(&edges);
-        assert_eq!(rendered.lines().count(), 3);
+        let (bundle, dir) = bundle_with(&[]);
+        let rendered = render_edges(&edges, &bundle, dir.path());
+        assert_eq!(rendered.lines().count(), 4);
         assert!(!rendered.contains("more (rels"));
     }
 
     #[test]
     fn an_empty_map_says_so() {
-        assert_eq!(render_edges(&[]), "no links declared");
+        let (bundle, dir) = bundle_with(&[]);
+        assert_eq!(render_edges(&[], &bundle, dir.path()), "no links declared");
     }
 
     #[test]
@@ -1178,10 +1253,39 @@ mod tests {
         let mut e = edge(0, "");
         e.resolved = false;
         e.note = Some("why".to_string());
+        let (bundle, dir) = bundle_with(&[]);
         assert_eq!(
-            render_edges(&[e]),
-            "alpha --?--> target-0  [unresolved]  (why)"
+            render_edges(&[e], &bundle, dir.path()),
+            "alpha\n  --?--> target-0  [unresolved]  (why)"
         );
+    }
+
+    #[test]
+    fn the_edge_map_carries_the_path_of_every_concept_it_names() {
+        let (bundle, dir) = bundle_with(&[("alpha.md", ALPHA), ("beta.md", BETA)]);
+        let graph = Graph::build(&bundle);
+        let rendered = render_edges(&graph.edge_map(), &bundle, dir.path());
+        // The source is named once with its path, and the resolved target
+        // carries the path a reader opens next.
+        assert!(rendered.starts_with("alpha  alpha.md — The one."));
+        assert!(rendered.contains("  --depends-on--> beta  beta.md"));
+        // Every path names a file that exists, so a traversal can open it.
+        for line in rendered.lines() {
+            for token in line.split_whitespace().filter(|t| t.ends_with(".md")) {
+                assert!(dir.path().join(token).is_file(), "{token}");
+            }
+        }
+    }
+
+    #[test]
+    fn an_unresolved_target_is_named_without_a_path_it_does_not_have() {
+        let mut e = edge(0, "references");
+        e.resolved = false;
+        let (bundle, dir) = bundle_with(&[("alpha.md", ALPHA)]);
+        let rendered = render_edges(&[e], &bundle, dir.path());
+        assert!(rendered.contains("--references--> target-0  [unresolved]"));
+        assert!(!rendered.contains("target-0  \u{2014}"));
+        assert!(!rendered.contains("target-0.md"));
     }
 
     fn bundle_with(files: &[(&str, &str)]) -> (Bundle, tempfile::TempDir) {
@@ -1310,8 +1414,8 @@ mod tests {
                 synthesised: true,
             })
             .collect();
-        let (bundle, _dir) = bundle_with(&[("beta.md", BETA)]);
-        let rendered = render_neighbours(&bundle, "beta", &hops);
+        let (bundle, dir) = bundle_with(&[("beta.md", BETA)]);
+        let rendered = render_neighbours(&bundle, "beta", &hops, dir.path());
         assert!(rendered.contains("<--depends-on-- alpha-0"));
         assert!(rendered.contains("+5 more (rels: depends-on)"));
     }
@@ -1335,16 +1439,32 @@ mod tests {
 
     #[test]
     fn neighbours_render_both_directions_and_say_when_there_are_none() {
-        let (bundle, _dir) = bundle_with(&[("alpha.md", ALPHA), ("beta.md", BETA)]);
+        let (bundle, dir) = bundle_with(&[("alpha.md", ALPHA), ("beta.md", BETA)]);
         let graph = Graph::build(&bundle);
-        let outgoing = render_neighbours(&bundle, "alpha", &graph.neighbours("alpha").unwrap());
-        assert!(outgoing.contains("--depends-on--> beta"));
-        let incoming = render_neighbours(&bundle, "beta", &graph.neighbours("beta").unwrap());
-        assert!(incoming.contains("<--depends-on-- alpha — The one."));
+        let outgoing = render_neighbours(
+            &bundle,
+            "alpha",
+            &graph.neighbours("alpha").unwrap(),
+            dir.path(),
+        );
+        assert!(outgoing.starts_with("alpha  alpha.md — The one."));
+        assert!(outgoing.contains("--depends-on--> beta  beta.md"));
+        let incoming = render_neighbours(
+            &bundle,
+            "beta",
+            &graph.neighbours("beta").unwrap(),
+            dir.path(),
+        );
+        assert!(incoming.contains("<--depends-on-- alpha  alpha.md — The one."));
 
-        let (lone, _dir) = bundle_with(&[("beta.md", BETA)]);
+        let (lone, dir) = bundle_with(&[("beta.md", BETA)]);
         let graph = Graph::build(&lone);
-        let none = render_neighbours(&lone, "beta", &graph.neighbours("beta").unwrap());
+        let none = render_neighbours(
+            &lone,
+            "beta",
+            &graph.neighbours("beta").unwrap(),
+            dir.path(),
+        );
         assert!(none.ends_with("no links"));
     }
 

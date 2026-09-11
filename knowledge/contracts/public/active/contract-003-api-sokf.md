@@ -155,6 +155,13 @@ struct GraphArgs {
     id: Option<String>,
 }
 
+/// Arguments of `sokf_overview`: none. The knowledge is the whole subject,
+/// so the request carries nothing to narrow it.
+#[derive(Debug, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+#[schemars(crate = "rmcp::schemars")]
+struct OverviewArgs {}
+
     /// Search the bundle. Returns the best sections, grouped by concept, each
     /// with a `path:start-end` locator to read next.
     #[tool]
@@ -223,7 +230,7 @@ struct GraphArgs {
     }
 
     /// Show the link graph: the whole edge map, or one concept's neighbours
-    /// in both directions.
+    /// in both directions. Every concept carries the path to read next.
     #[tool]
     async fn sokf_graph(&self, Parameters(args): Parameters<GraphArgs>) -> ToolResult {
         let _guard = self.exclusive();
@@ -231,6 +238,14 @@ struct GraphArgs {
             .graph(args.id.as_deref())
             .map(text)
             .map_err(tool_error)
+    }
+
+    /// Show the knowledge at a glance: its name, how many concepts it holds,
+    /// the tree of them, the index state, and anything wrong with it.
+    #[tool]
+    async fn sokf_overview(&self, Parameters(_): Parameters<OverviewArgs>) -> ToolResult {
+        let _guard = self.exclusive();
+        self.service.overview().map(text).map_err(tool_error)
     }
 
 ```
@@ -344,6 +359,27 @@ authoritativePath: string, authoritativeRegion?: string }`. A `Finding` is
   answer without opening or rewriting the search index.
 - `P_graph-skips-index` [ubiquitous] `sokf_graph` SHALL parse current knowledge
   without opening or rewriting the search index.
+- `P_graph-carries-paths` [ubiquitous] `sokf_graph` SHALL name each concept it
+  reports with the repository-relative path of that concept's file, so a
+  traversal reaches a source file without a second lookup.
+  - `AC_graph-carries-paths` [event] WHEN `sokf_graph` names a concept the
+    knowledge holds, in the edge map or in one concept's neighbours, it SHALL
+    render that concept's repository-relative path beside its identity.
+  - `AC_graph-unresolved-has-no-path` [event] WHEN a declared link names a
+    target the knowledge does not hold, `sokf_graph` SHALL name the target
+    without a path.
+- `P_overview-tool` [ubiquitous] `sokf_overview` SHALL return the knowledge
+  name, its concept count, the tree of its concepts, the index state, and its
+  capped validation warnings.
+  - `AC_overview-content` [ubiquitous] The overview SHALL carry the knowledge
+    name, the concept count, one entry per directory holding concepts, and the
+    lexical-or-embedded index state.
+  - `AC_overview-orients-only` [ubiquitous] The overview SHALL carry no
+    rendered concept body.
+  - `AC_overview-empty-request` [ubiquitous] `sokf_overview` SHALL accept an
+    empty closed request object carrying no property.
+  - `AC_overview-rejects-a-property` [event] WHEN a `sokf_overview` request
+    carries any property, the server SHALL refuse it.
 
 ### Authentication
 
@@ -450,9 +486,9 @@ reads exactly what matched.
   sort below live knowledge without leaving the results.
 - `P_graph-group-cap` [ubiquitous] `sokf_graph` SHALL cap each group at
   30 lines and then say how many it dropped.
-- `P_overview-warning-cap` [event] WHEN `sokf_retrieve` receives the `sokf:`
-  overview address, it SHALL list at most 10 warnings
-  and then say how many more there are.
+- `P_overview-warning-cap` [event] WHEN the knowledge overview is rendered, for
+  `sokf_overview` or the `sokf:` retrieval address alike, it SHALL list at most
+  10 warnings and then say how many more there are.
 
 ### Versioning
 
