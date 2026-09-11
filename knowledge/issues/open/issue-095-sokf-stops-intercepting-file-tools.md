@@ -117,6 +117,12 @@ The agent-facing SOKF surface and where knowledge is made consistent.
 
 ## Comments
 
+Implementation is complete under
+[plan-078][sokf:plan-078-sokf-stops-intercepting-file-tools], outside the workflow
+at the user's direction. The plan records executable verification, the skipped
+approval and review gates, and the unchanged application coverage failure.
+The issue remains open; implementation evidence is not workflow acceptance.
+
 Supersedes [issue-082][sokf:issue-082-sokf-mutation-parity], whose premise was
 that routed mutation continues and should match Pi's contracts, and
 [issue-083][sokf:issue-083-sokf-validation-follow-ups], whose freshness and
@@ -137,3 +143,4 @@ writes.
 [sokf:issue-077-sokf-file-tool-parity]: /knowledge/issues/done/issue-077-sokf-file-tool-parity.md
 [sokf:issue-082-sokf-mutation-parity]: /knowledge/issues/wontfix/issue-082-sokf-mutation-parity.md
 [sokf:issue-083-sokf-validation-follow-ups]: /knowledge/issues/wontfix/issue-083-sokf-validation-follow-ups.md
+[sokf:plan-078-sokf-stops-intercepting-file-tools]: /knowledge/plans/open/plan-078-sokf-stops-intercepting-file-tools.md

@@ -18,8 +18,8 @@ links:
 # API contract: sokf over MCP
 
 The SOKF knowledge served to agents through semantic search, graph traversal,
-and an orienting overview over stdio. The server reads; it writes nothing, and
-serves no file tool.
+and an orienting overview over stdio. The server leaves canonical knowledge
+unchanged, maintains its search index, and serves no file tool.
 
 The Definition is the server's argument structs and tool methods as the source
 declares them. A doc comment on a struct field or a tool method is the
@@ -135,12 +135,8 @@ candidate or broken file.
   treat the canonical active checkout root as its
   repository, including when `.git` is a linked-worktree pointer file.
   - `AC_worktree-local-surfaces` [event] WHEN the server runs in a linked
-    worktree, source resolution, semantic retrieval, search, graph traversal,
-    index activity, mutation, repair, refiling, and validation SHALL
-    PENDING(issue-083) use only that worktree's files and cache.
-  - `AC_worktree-other-checkout-refused` [event] WHEN a routed path enters
-    another checkout, including the main checkout, the server SHALL
-    reject it as outside the active worktree.
+    worktree, search, graph traversal, overview, and index activity SHALL
+    use only that worktree's files and cache.
 - `P_direct-does-not-load` [event] WHEN only graph calls have run, the MCP
   server SHALL leave the embedder uninitialized.
 - `P_first-index-call-loads` [event] WHEN the first search or overview call
@@ -184,8 +180,8 @@ candidate or broken file.
 
 None. The harness that spawns the server is the caller; there is no
 credential to present and no role to distinguish. The server answers questions
-about the knowledge and changes nothing, so there is no write authority to
-bound.
+about the knowledge without editing it, so there is no knowledge-write
+authority to bound.
 
 - `P_trusts-stdin` [ubiquitous] The server SHALL trust whatever
   reaches its stdin.
@@ -223,9 +219,8 @@ reads exactly what matched.
   sort below live knowledge without leaving the results.
 - `P_graph-group-cap` [ubiquitous] `sokf_graph` SHALL cap each group at
   30 lines and then say how many it dropped.
-- `P_overview-warning-cap` [event] WHEN the knowledge overview is rendered, for
-  `sokf_overview` or the `sokf:` retrieval address alike, it SHALL list at most
-  10 warnings and then say how many more there are.
+- `P_overview-warning-cap` [event] WHEN `sokf_overview` renders validation
+  warnings, it SHALL list at most 10 and then say how many more there are.
 
 ### Versioning
 

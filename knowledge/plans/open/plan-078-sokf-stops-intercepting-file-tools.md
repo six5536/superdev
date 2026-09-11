@@ -405,7 +405,7 @@ The documentation map triggers the following surfaces.
 
 ### Block 1: Serve an overview tool and put paths in graph results
 
-- [ ] Done.
+- [x] Done.
 - Dependencies: none.
 - Areas: `crates/lib/superdev-core/src/sokf/mcp.rs`, `crates/lib/superdev-core/tests/mcp_tools.rs`, and `contract-003-api-sokf`.
 - Outcome: MCP serves `sokf_overview` alongside its existing tools, and every concept a graph result names carries its repository-relative path. Nothing is removed, so the extension keeps working throughout.
@@ -416,7 +416,7 @@ The documentation map triggers the following surfaces.
 
 ### Block 2: Turn end repairs, re-checks, and reports
 
-- [ ] Done.
+- [x] Done.
 - Dependencies: none.
 - Areas: `.pi/extensions/sokf.ts`, `contract-013-interface-sokf-pi-extension`, `scripts/test/sokf-pi-adapter.test.mjs`, and `scripts/test/fixtures/sokf-pi-adapter-smoke.ts`.
 - Outcome: every turn ends with one `validate --fix`, a freshness re-check, and at most one bounded message, and `contract-013-interface-sokf-pi-extension` binds that behaviour. This lands before Block 3 removes mutation-time repair, so no intermediate state leaves the knowledge unrepaired and no interval leaves the turn-end mechanism uncontracted.
@@ -427,7 +427,7 @@ The documentation map triggers the following surfaces.
 
 ### Block 3: Stop intercepting the file tools and remove the routed operations
 
-- [ ] Done.
+- [x] Done.
 - Dependencies: Block 1, Block 2.
 - Areas: `.pi/extensions/sokf.ts`, `.pi/extensions/sokf-mcp.ts`, `/archive/pi/sokf-file-tools.ts`, `crates/lib/superdev-core/src/sokf/mcp.rs`, `crates/lib/superdev-core/src/sokf/mod.rs`, `crates/lib/superdev-core/src/sokf/mutation.rs`, `crates/lib/superdev-core/tests/mcp_tools.rs`, `crates/app/superdev/tests/cli.rs`, `scripts/test/fixtures/sokf-pi-paired.ts`, `scripts/test/fixtures/sokf-pi-adapter-smoke.ts`, `scripts/test/fixtures/sokf-mcp-fake.mjs`, `scripts/test/sokf-pi-adapter.test.mjs`, `scripts/test/sokf-mcp-client.test.mjs`, `contract-002-cli-superdev`, `contract-003-api-sokf`, `contract-012-api-sokf-pi-file-tools`, `/README.md`, `/CONTRIBUTING.md`, `/CHANGELOG.md`, `/knowledge/contracts/index.md`, `architecture`, `software-components`, `testing-strategy`, `security-requirements`, and `development-commands`.
 - Outcome: a Pi session gets Pi's own file tools and exactly three SOKF tools, MCP serves nothing else, and the documentation describes the implemented behaviour.
@@ -438,7 +438,7 @@ The documentation map triggers the following surfaces.
 
 ### Block 4: Retire the routed-authoring guidance
 
-- [ ] Done.
+- [x] Done.
 - Dependencies: Block 3.
 - Areas: `crates/lib/superdev-core/src/agent-instructions.md`, `/.agents/superdev.md`, `.pi/skills/sokf-authoring/SKILL.md`, `pack/pi/skills/sokf-authoring/SKILL.md`, `evals/sokf/behavioral.json`, `scripts/test/sokf-behavior-fixtures.test.mjs`, and `development-commands`.
 - Outcome: the standing instruction, the authoring skill, and the behaviour evaluations direct an agent at a physical `knowledge/` path and at one turn-end repair, so no guidance survives that names an operation the session no longer serves. It follows Block 3 because guidance describes delivered behaviour; between the two blocks the guidance is stale but nothing is broken, and no release sits between them.
@@ -449,23 +449,73 @@ The documentation map triggers the following surfaces.
 
 ## Build state
 
-Current block: 1. Attempts: 0. Final corrections: 0. Blocker: none.
+All four blocks are implemented outside the workflow at the user's direction.
+The workflow phase remains the last service-recorded phase; it does not imply
+that implementation is pending. Final verification passed except for the
+pre-existing application coverage failure (72.39% against 90%).
 
 ## Implementation decisions
 
-none. BUILD records only local choices that do not change the approved contracts
-or ADR.
+Block 4 also corrected omissions found during final verification. Contract 013
+includes the separate `turn-end` and `tools` regions, keeping both surfaces
+materialised without moving either registration region. Contracts 002 and 003
+now distinguish retained CLI mutation and read operations from the three MCP
+tools; no promise defers to declined issues 082 or 083.
+
+The adapter test now invokes each fixture factory explicitly against the pinned
+Pi package. The former `--list-models` invocation returned success without
+executing the fixture, so its earlier reported passes were not adapter evidence.
+The executable fixture exposed two defects: symlink spellings split a repository's
+follow-up state, and report headings and notices exceeded the line cap. Root
+discovery now canonicalises its starting directory, and truncation reserves
+space for the entire message. A deterministic validator-process stub tests
+freshness, root isolation and both caps; real Pi tools and the real validator
+test unmodified file operations, deferred repair and byte-identical clean turns.
+
+The evaluation runner enables `sokf_overview` alongside the other two SOKF tools.
+Only `unknown-concept-id` changes intent; the other six changed scenarios retain
+their outcomes, and all sandboxes and acceptance thresholds are unchanged.
 
 ## Follow-up issues
 
-none. Registering a Pi-side tool for rendered concepts or section addressing, if
-the removal proves to have cost something, requires a separate issue. Semantic
-ranking, index lifecycle, MCP transport, and search behaviour are unaffected and
-require separate issues.
+`issue-096-a-reused-region-name-silently-refills-a-contract` was filed on
+`main` in signed commit `1723172`. A reused region name silently refilled
+contract 012 from the wrong source; this implementation corrects that include,
+while prevention remains separate work. No rendered-concept replacement or
+semantic-ranking change is introduced here.
 
 ## Completion evidence
 
-Scope review and approval are pending; BUILD evidence is pending.
+Implemented outside SCOPE → BUILD → ACCEPT at the user's explicit direction
+after the isolated correction role timed out. Scope approval and isolated final
+review were skipped, not satisfied. No workflow acceptance is claimed.
+
+Block 1 landed in `a7b7a1e`, Block 2 in `12dde7e`, and Block 3 in `4a3904b`.
+Block 4 replaces routed instructions and all seven evaluation paths, regenerates
+`.agents/superdev.md` through `cargo run -- sync`, and keeps the skill's pack
+mirror byte-identical. The generation and skill shape tests now assert physical
+paths and turn-end repair rather than the removed adapter.
+
+Final executable verification: `cargo fmt --all -- --check`,
+`cargo clippy --workspace --all-targets -- -D warnings`,
+`cargo nextest run --workspace --no-fail-fast` (867 passed),
+`cargo test --doc --workspace` (1 passed), and
+`RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps` passed.
+`npm run test:launcher` passed 9 tests; `npm run test:scripts` passed 37,
+including the now-executed adapter fixtures. `npm run check:docs`,
+`npm run check:blueprint`, and `npm run eval:sokf` passed. The evaluation command
+checks fixture shape only; no model-session acceptance score is claimed.
+
+Two consecutive `cargo run -- validate --fix` runs passed with zero findings
+and zero repaired files. Structural checks found no routed file-tool guidance
+in the standing instructions, skills or evaluations, no Pi file-tool factory
+in the SOKF extension, and no pending 082/083 contract promise. Historical
+mentions in plans remain history.
+
+`npm run coverage:check` ran all 867 tests successfully. Library line coverage
+passed at 93.96%; application line coverage failed at 72.39% against its 90%
+gate, unchanged from the recorded baseline. This failure is not waived or
+reported as a passing gate.
 
 Workflow default branch: main.
 

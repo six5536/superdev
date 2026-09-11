@@ -63,8 +63,7 @@ description: Open questions, none of them decided.
 Nothing decided yet.
 "#;
 
-/// A concept whose body carries both include-block kinds, so a resolver
-/// answer has generated regions to report.
+/// A concept carrying both include-block kinds for overview validation.
 const RENDERED: &str = r#"---
 type: Reference
 id: rendered-d
@@ -259,7 +258,12 @@ async fn the_server_serves_three_tools_and_no_file_tool() {
     );
 
     // A closed schema is a runtime promise, not only a published one.
-    let rejected = call(&client, "sokf_overview", serde_json::json!({"path": "sokf:"})).await;
+    let rejected = call(
+        &client,
+        "sokf_overview",
+        serde_json::json!({"path": "sokf:"}),
+    )
+    .await;
     assert_eq!(rejected.is_error, Some(true), "{}", text_of(&rejected));
 
     // A removed operation is not merely absent from the roster: naming one
@@ -289,7 +293,15 @@ async fn the_server_instructions_name_only_the_tools_it_serves() {
             tool.name
         );
     }
-    assert!(!instructions.contains("sokf_read"), "{instructions}");
+    for removed in [
+        "sokf_read",
+        "sokf_resolve_source",
+        "sokf_retrieve",
+        "sokf_edit",
+        "sokf_write",
+    ] {
+        assert!(!instructions.contains(removed), "{instructions}");
+    }
     // No client is directed to read the overview address as a file.
     assert!(!instructions.contains("Read `sokf:`"), "{instructions}");
     client.cancel().await.unwrap();
@@ -350,7 +362,8 @@ async fn overview_orients_and_warns() {
     assert!(text.contains("lexical only"), "{text}");
 
     // Orientation only: no concept body reaches the overview.
-    assert!(!text.contains("Pure planning stage in prose"), "{text}");
+    assert!(!text.contains("The planning stage reads"), "{text}");
+    assert!(!text.contains("Mappings are pairs of paths."), "{text}");
     client.cancel().await.unwrap();
 }
 

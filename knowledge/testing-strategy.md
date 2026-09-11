@@ -77,7 +77,11 @@ gate are in [CONTRIBUTING](/CONTRIBUTING.md).[^contributing]
   a file written directly — by nothing the extension registered — is still
   found, the first report triggers one turn, later reports stay visible and
   non-triggering, a valid tree sends nothing, and a clean run resets the
-  sequence.
+  sequence. The runner explicitly invokes each fixture factory; `--list-models`
+  can exit without running one. A deterministic process stub proves freshness
+  after an intervening write, separate state per canonical root, and message
+  caps including headings and truncation notices. Real Pi file tools prove
+  read-to-edit anchors, no inline repair, and a byte-identical clean turn.
 - **npm launcher.** A JS test that resolves + spawns a stub binary, and
   errors cleanly when no platform package matches.
 - **Release smoke.** `scripts/release-smoke.mjs` runs a compiled release

@@ -1,10 +1,18 @@
-import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import assert from "node:assert/strict";
+import { mkdtempSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { createReadTool, createEditTool, createWriteTool } from "@earendil-works/pi-coding-agent";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import sokf from "../../../.pi/extensions/sokf.ts";
 
 const repository = resolve(dirname(fileURLToPath(import.meta.url)), "../../..");
+
+function snapshot(root: string): unknown[] {
+	return readdirSync(root, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name))
+		.map((entry) => [entry.name, entry.isDirectory()
+			? snapshot(join(root, entry.name)) : readFileSync(join(root, entry.name))]);
+}
 
 export default async function () {
 	const tools = new Map<string, any>();
@@ -59,6 +67,29 @@ export default async function () {
 		writeFileSync(join(sandbox, "knowledge", "manifest.sokf.yaml"), 'sokf: "0.1"\nname: smoke\n');
 		writeFileSync(join(sandbox, "knowledge", "a.md"), "---\ntype: T\nid: alpha\n---\nAlpha.\n");
 		const context = { cwd: join(sandbox, "knowledge"), ui: { notify() {} } };
+		const turnEnd = handlers.get("turn_end");
+		// Pi's own tools return physical bytes, including frontmatter, and
+		// accept an unchanged read excerpt as an edit anchor.
+		const path = "knowledge/a.md";
+		const bytes = readFileSync(join(sandbox, path), "utf8");
+		const read = await createReadTool(sandbox).execute("read", { path });
+		assert.equal(read.content[0]?.type, "text");
+		assert.equal((read.content[0] as any).text, bytes);
+		await createEditTool(sandbox).execute("edit", {
+			path, edits: [{ oldText: bytes, newText: bytes.replace("Alpha.", "Changed.") }],
+		});
+		assert.equal(readFileSync(join(sandbox, path), "utf8"), bytes.replace("Alpha.", "Changed."));
+		const linked = "---\ntype: T\nid: gamma\n---\n[Alpha](a.md)\n";
+		await createWriteTool(sandbox).execute("write", { path: "knowledge/c.md", content: linked });
+		assert.equal(readFileSync(join(sandbox, "knowledge/c.md"), "utf8"), linked,
+			"write repaired knowledge before turn end");
+		await turnEnd({}, context);
+		assert.match(readFileSync(join(sandbox, "knowledge/c.md"), "utf8"), /\[sokf:alpha\]/);
+		assert.equal(messages.length, 0);
+		const valid = snapshot(sandbox);
+		await turnEnd({}, context);
+		assert.deepEqual(snapshot(sandbox), valid, "a clean turn changed the tree");
+		assert.equal(messages.length, 0);
 
 		// Written the way anything else writes: directly, with no SOKF tool
 		// involved. The turn-end check is what makes the knowledge consistent,
@@ -68,12 +99,13 @@ export default async function () {
 			"---\ntype: T\nid: beta\nlinks:\n  - rel: depends-on\n    to: missing\n---\nBeta.\n",
 		);
 
-		const turnEnd = handlers.get("turn_end");
 		// `b.md` links to a concept that does not exist, so the tree fails
 		// validation and every turn end reports it.
 		await turnEnd({}, context);
+		const failing = snapshot(sandbox);
 		await turnEnd({}, context);
 		await turnEnd({}, context);
+		assert.deepEqual(snapshot(sandbox), failing, "follow-up state was persisted");
 		const triggering = messages.filter(({ options }) => options.triggerTurn);
 		if (triggering.length !== 1) {
 			throw new Error(

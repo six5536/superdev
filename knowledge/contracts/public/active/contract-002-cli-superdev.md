@@ -629,8 +629,10 @@ usage errors and the side effects.
 - `P_sokf-index-says-lexical-only` [event] WHEN no embedding model
   loaded, `sokf index` SHALL say the index is lexical-only.
 - `P_sokf-retrieval-shares-service` [ubiquitous] `sokf overview`,
-  `search`, `read` and `graph` SHALL return the same rendered information as
-  the corresponding shared-service and MCP operations.
+  `search`, `read` and `graph` SHALL return the corresponding shared-service
+  rendering.
+  - `AC_sokf-mcp-correspondence` [ubiquitous] `sokf overview`, `search`, and
+    `graph` SHALL return the same rendered information as their MCP counterparts.
 - `P_sokf-direct-retrieval-skips-embeddings` [ubiquitous] `sokf read` and
   `sokf graph` SHALL parse current knowledge without loading an embedding model
   or opening the search index.

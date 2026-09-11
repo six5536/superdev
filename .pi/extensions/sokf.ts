@@ -1,5 +1,5 @@
 import { spawn } from "node:child_process";
-import { existsSync } from "node:fs";
+import { existsSync, realpathSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import {
 	DEFAULT_MAX_BYTES,
@@ -25,7 +25,7 @@ const graphSchema = Type.Object({
 });
 
 // The knowledge is the whole subject, so the request narrows by nothing.
-const overviewSchema = Type.Object({});
+const overviewSchema = Type.Object({}, { additionalProperties: false });
 
 type SearchInput = Static<typeof searchSchema>;
 type GraphInput = Static<typeof graphSchema>;
@@ -44,10 +44,10 @@ type ToolEnvelope = {
  * upward walk always wins, so Pi's working-directory scope and SOKF's
  * containment boundary are the same checkout. Only when the walk finds no
  * `.git` marker at all does `.superdev/config.toml` select the root, which
- * keeps a managed non-Git repository routing as it does today.
+ * keeps a managed non-Git repository discoverable.
  */
 export function findRepository(start: string): string | undefined {
-	let current = resolve(start);
+	let current = realpathSync(start);
 	let configured: string | undefined;
 	while (true) {
 		if (existsSync(resolve(current, ".git"))) return current;
@@ -59,9 +59,6 @@ export function findRepository(start: string): string | undefined {
 		current = parent;
 	}
 }
-
-
-
 
 type ProcessResult = { stdout: string; stderr: string; code: number | null };
 
@@ -126,17 +123,23 @@ function boundedResult(envelope: ToolEnvelope) {
 }
 
 
-function validationFeedback(result: ProcessResult): string {
-	const raw = [result.stdout.trim(), result.stderr.trim()].filter(Boolean).join("\n");
-	const report = raw || `superdev validate exited ${String(result.code)}`;
-	const truncation = truncateHead(report, { maxLines: 200, maxBytes: 8_000 });
-	return truncation.truncated
-		? `${truncation.content}\n[Validation output truncated; run superdev validate for the complete report.]`
-		: truncation.content;
+function validationFeedback(report: string, first: boolean): string {
+	const heading = first
+		? "SOKF validation fails after automatic repair. Fix these findings."
+		: "SOKF validation still fails after automatic repair.";
+	const content = `${heading}\n\n${report}`;
+	const notice = "\n[Validation output truncated; run superdev validate for the complete report.]";
+	const truncation = truncateHead(content, { maxLines: 200, maxBytes: 8 * 1024 });
+	if (!truncation.truncated) return content;
+	// Reserve room for the notice inside the cap, not after it.
+	return truncateHead(content, {
+		maxLines: 199,
+		maxBytes: 8 * 1024 - Buffer.byteLength(notice),
+	}).content + notice;
 }
 
 /**
- * The bounded report of what the working tree still fails on, or `undefined`
+ * The current report of what the working tree still fails on, or `undefined`
  * when it now passes.
  *
  * This is a second read of the tree rather than a filter over the first
@@ -147,7 +150,9 @@ function validationFeedback(result: ProcessResult): string {
  */
 async function stillFailing(cwd: string): Promise<string | undefined> {
 	const result = await runSuperdev(cwd, ["validate"]);
-	return result.code === 0 ? undefined : validationFeedback(result);
+	if (result.code === 0) return undefined;
+	return [result.stdout.trim(), result.stderr.trim()].filter(Boolean).join("\n")
+		|| `superdev validate exited ${String(result.code)}`;
 }
 
 export default function (pi: ExtensionAPI) {
@@ -212,11 +217,7 @@ export default function (pi: ExtensionAPI) {
 		pi.sendMessage(
 			{
 				customType: "sokf-validation",
-				content: `${
-					first
-						? "SOKF validation fails after automatic repair. Fix these findings."
-						: "SOKF validation still fails after automatic repair."
-				}\n\n${surviving}`,
+				content: validationFeedback(surviving, first),
 				display: true,
 			},
 			// The first report of a sequence gets the agent one prompted chance to

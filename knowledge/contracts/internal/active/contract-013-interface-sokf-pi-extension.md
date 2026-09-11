@@ -12,7 +12,7 @@ links:
     note: The decision this contract binds — knowledge is made consistent once per turn rather than at each mutation.
   - rel: references
     to: adr-042-a-contracts-definition-is-materialized-from-source
-    note: The Definition is materialised from the `turn-end` region rather than authored.
+    note: The Definition is materialised from the `turn-end` and `tools` regions rather than authored.
   - rel: references
     to: contract-003-api-sokf
     note: The MCP server the extension calls; this contract binds the extension, not the server.
@@ -22,7 +22,7 @@ links:
 
 The extension that gives a Pi session its SOKF tools, and makes the canonical
 knowledge consistent when a turn ends. The Definition is the `turn_end` handler
-as the source declares it.
+and three tool registrations as the source declares them.
 
 [ADR-055][sokf:adr-055-sokf-does-not-intercept-file-tools] decided that
 consistency is established once per turn rather than at each mutation, because
@@ -30,7 +30,7 @@ an agent writes knowledge through `bash`, a heredoc, `sed`, a patch, or
 `git checkout` as readily as through a file tool. This contract binds that
 mechanism. [contract-003][sokf:contract-003-api-sokf] binds the MCP server the
 extension calls; the two are separate surfaces. The Definition is materialised
-from the `turn-end` region rather than authored, under
+from the `turn-end` and `tools` regions rather than authored, under
 [ADR-042][sokf:adr-042-a-contracts-definition-is-materialized-from-source].
 
 ## Definition
@@ -68,11 +68,7 @@ from the `turn-end` region rather than authored, under
 		pi.sendMessage(
 			{
 				customType: "sokf-validation",
-				content: `${
-					first
-						? "SOKF validation fails after automatic repair. Fix these findings."
-						: "SOKF validation still fails after automatic repair."
-				}\n\n${surviving}`,
+				content: validationFeedback(surviving, first),
 				display: true,
 			},
 			// The first report of a sequence gets the agent one prompted chance to
@@ -81,6 +77,51 @@ from the `turn-end` region rather than authored, under
 			first ? { deliverAs: "followUp", triggerTurn: true } : { deliverAs: "nextTurn" },
 		);
 	});
+```
+<!-- /sokf:include -->
+
+<!-- sokf:include /.pi/extensions/sokf.ts#tools -->
+```typescript
+	pi.registerTool({
+		name: "sokf_search",
+		label: "SOKF search",
+		description: "Search SOKF whenever project knowledge is needed. Returns matching sections and locators.",
+		promptSnippet: "Search the canonical SOKF project knowledge semantically",
+		promptGuidelines: ["Use sokf_search whenever project knowledge is needed and no concept ID is already known."],
+		parameters: searchSchema,
+		async execute(_toolCallId, params: SearchInput, signal, _onUpdate, ctx) {
+			return boundedResult(
+				await invokeMcp(ctx.cwd, "sokf_search", { ...params }, signal),
+			);
+		},
+	});
+
+	pi.registerTool({
+		name: "sokf_graph",
+		label: "SOKF graph",
+		description: "Follow typed relationships in the canonical SOKF project knowledge, or show its complete edge map.",
+		promptSnippet: "Traverse relationships in the canonical SOKF project knowledge",
+		parameters: graphSchema,
+		async execute(_toolCallId, params: GraphInput, signal, _onUpdate, ctx) {
+			return boundedResult(await invokeMcp(ctx.cwd, "sokf_graph", { ...params }, signal));
+		},
+	});
+
+	pi.registerTool({
+		name: "sokf_overview",
+		label: "SOKF overview",
+		description:
+			"Show the canonical SOKF project knowledge at a glance: its name, how many concepts it holds, the tree of them, the index state, and anything wrong with it.",
+		promptSnippet: "See the canonical SOKF project knowledge at a glance",
+		promptGuidelines: [
+			"Use sokf_overview to orient in an unfamiliar repository's knowledge before searching it.",
+		],
+		parameters: overviewSchema,
+		async execute(_toolCallId, _params, signal, _onUpdate, ctx) {
+			return boundedResult(await invokeMcp(ctx.cwd, "sokf_overview", {}, signal));
+		},
+	});
+
 ```
 <!-- /sokf:include -->
 
@@ -110,9 +151,13 @@ else.
   follow-up entry SHALL be keyed by the canonical active checkout root.
   - `AC_roots-do-not-share-state` [event] WHEN one session serves two checkout
     roots, each root SHALL carry its own client and its own follow-up entry.
+- `P_three-knowledge-tools` [ubiquitous] The extension SHALL register exactly
+  `sokf_search`, `sokf_graph`, and `sokf_overview`.
+  - `AC_no-file-tool-registration` [ubiquitous] The extension SHALL NOT register
+    `read`, `edit`, or `write`.
 - `P_no-knowledge-semantics` [ubiquitous] The extension SHALL delegate
-  resolution, retrieval, search, graph traversal, repair, and validation to the
-  `superdev` binary.
+  search, graph traversal, overview, repair, and validation to the `superdev`
+  binary.
 
 ### Key flows
 

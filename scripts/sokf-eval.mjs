@@ -145,7 +145,7 @@ async function runScenario(scenario) {
     "--mode",
     "json",
     "--tools",
-    "read,edit,write,sokf_search,sokf_graph",
+    "read,edit,write,sokf_search,sokf_graph,sokf_overview",
     "--thinking",
     "minimal",
   ];

@@ -41,7 +41,9 @@ What the annotated list does not say:
   as a tool call is; the first report of a sequence triggers a turn and later
   ones stay visible. `node --test scripts/test/sokf-mcp-client.test.mjs` checks
   MCP framing, process reuse, restart and shutdown without a model call. Load
-  Pi's native `/skill:sokf-authoring` for format-sensitive knowledge changes.
+  Pi's native `/skill:sokf-authoring` for format-sensitive knowledge changes:
+  it guides schema-first reads and edits on physical `knowledge/` paths, with
+  generated blocks repaired once at turn end rather than during each write.
   Run `/system-prompt` in Pi to refresh
   the ignored `.pi/current-system-prompt.md` when inspecting effective
   instructions.

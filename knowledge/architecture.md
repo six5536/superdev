@@ -30,14 +30,14 @@ serves it through MCP (`superdev mcp sokf`) and the `superdev sokf overview`,
 instead of preloading every concept. The same service backs CLI `edit` and
 `write`: it resolves identities, applies atomic agent-safe mutations, runs the
 validator's repair pass, and reports the final validation state plus requested
-and generated diffs. MCP exposes those two mutations only under the agent-safe
-policy; the deliberate human override remains CLI-only. The `validate`
-subsystem remains the check both paths share. The MCP tools are in
+and generated diffs. Those mutation operations remain CLI and library calls;
+MCP exposes neither. The deliberate human override remains CLI-only. The
+`validate` subsystem supplies their repair and the Pi turn-end check. The MCP tools are in
 [contract-003-api-sokf][sokf:contract-003-api-sokf]. The server serves three
 read-only tools — `sokf_search`, `sokf_graph` and `sokf_overview` — and serves
 no file tool: an agent reads and edits knowledge with its own `read`, `edit`
-and `write` on physical paths, and every result the server returns carries the
-repository-relative path of the concept it names
+and `write` on physical paths. Search and graph results carry paths to the
+concepts they name
 ([ADR-055][sokf:adr-055-sokf-does-not-intercept-file-tools]).
 Pi's project extension registers those three tools and nothing else. It lazily
 starts one MCP process per repository and reuses it for the Pi session, while
