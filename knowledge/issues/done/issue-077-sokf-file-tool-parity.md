@@ -151,5 +151,5 @@ the issue that settles each promise.
 
 <!-- sokf:links -->
 [sokf:idea-012-sokf-mutations-survive-validation-failures]: /knowledge/ideas/idea-012-sokf-mutations-survive-validation-failures.md
-[sokf:issue-082-sokf-mutation-parity]: /knowledge/issues/open/issue-082-sokf-mutation-parity.md
-[sokf:issue-083-sokf-validation-follow-ups]: /knowledge/issues/open/issue-083-sokf-validation-follow-ups.md
+[sokf:issue-082-sokf-mutation-parity]: /knowledge/issues/wontfix/issue-082-sokf-mutation-parity.md
+[sokf:issue-083-sokf-validation-follow-ups]: /knowledge/issues/wontfix/issue-083-sokf-validation-follow-ups.md

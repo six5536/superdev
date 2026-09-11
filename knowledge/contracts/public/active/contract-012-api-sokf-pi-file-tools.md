@@ -252,4 +252,4 @@ Project-local and pinned to Pi 0.85.1.
 - `P_contract-synchronized` [ubiquitous] The adapter contract SHALL PENDING(issue-083) remain synchronized with paired evidence.
 
 <!-- sokf:links -->
-[sokf:adr-053-sokf-file-tools-delegate-to-pi]: /knowledge/adrs/active/adr-053-sokf-file-tools-delegate-to-pi.md
+[sokf:adr-053-sokf-file-tools-delegate-to-pi]: /knowledge/adrs/deprecated/adr-053-sokf-file-tools-delegate-to-pi.md

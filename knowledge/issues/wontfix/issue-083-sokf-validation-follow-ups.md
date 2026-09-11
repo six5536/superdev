@@ -4,7 +4,7 @@ id: issue-083-sokf-validation-follow-ups
 title: SOKF validation findings ride inside file-tool results and can report a repository state that no longer exists
 description: Validation feedback after a knowledge mutation is delivered as file-tool content and captured before the message is sent, so an agent reads mutation internals and can be asked to correct findings that the working tree has already resolved.
 kind: feature
-lifecycle: open
+lifecycle: wontfix
 links:
   - rel: references
     to: issue-082-sokf-mutation-parity
@@ -97,6 +97,20 @@ Post-persistence validation delivery and file-tool prompt metadata.
 - Out: validation content inside file-tool results, rollback after acknowledged
   persistence, and a new extension packaging model.
 
+## Resolution
+
+Declined on 2026-09-11 in favour of
+[issue-095][sokf:issue-095-sokf-stops-intercepting-file-tools], which carries
+this issue's substance forward under a simpler premise.
+
+The freshness re-check, the session-scoped pending flag, the one triggering
+report, and the bounded message all survive there, and turn end additionally
+repairs before it validates, so knowledge is made consistent once per turn
+whatever wrote it. What does not survive is the file-tool prompt metadata half:
+issue-095 stops SOKF registering `read`, `edit`, and `write` at all, so there is
+no routed prompt metadata left to own. The oversized-line notice question in
+Comments dissolves with the routing that raised it.
+
 ## Comments
 
 Routed reads restore the caller's spelling in Pi's oversized-line notice, so the
@@ -119,4 +133,5 @@ triggered report.
 <!-- sokf:links -->
 [sokf:idea-012-sokf-mutations-survive-validation-failures]: /knowledge/ideas/idea-012-sokf-mutations-survive-validation-failures.md
 [sokf:issue-077-sokf-file-tool-parity]: /knowledge/issues/done/issue-077-sokf-file-tool-parity.md
-[sokf:issue-082-sokf-mutation-parity]: /knowledge/issues/open/issue-082-sokf-mutation-parity.md
+[sokf:issue-082-sokf-mutation-parity]: /knowledge/issues/wontfix/issue-082-sokf-mutation-parity.md
+[sokf:issue-095-sokf-stops-intercepting-file-tools]: /knowledge/issues/open/issue-095-sokf-stops-intercepting-file-tools.md

@@ -426,5 +426,5 @@ Workflow default branch: main.
 [sokf:coding-standards]: /knowledge/coding-standards.md
 [sokf:issue-077-sokf-file-tool-parity]: /knowledge/issues/done/issue-077-sokf-file-tool-parity.md
 [sokf:issue-081-sokf-symlink-membership]: /knowledge/issues/wontfix/issue-081-sokf-symlink-membership.md
-[sokf:issue-082-sokf-mutation-parity]: /knowledge/issues/open/issue-082-sokf-mutation-parity.md
-[sokf:issue-083-sokf-validation-follow-ups]: /knowledge/issues/open/issue-083-sokf-validation-follow-ups.md
+[sokf:issue-082-sokf-mutation-parity]: /knowledge/issues/wontfix/issue-082-sokf-mutation-parity.md
+[sokf:issue-083-sokf-validation-follow-ups]: /knowledge/issues/wontfix/issue-083-sokf-validation-follow-ups.md

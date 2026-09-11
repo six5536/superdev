@@ -46,6 +46,8 @@ places it.
 
 * [SOKF validation findings ride inside file-tool results and reset their own retry cap][sokf:issue-083-sokf-validation-follow-ups] - validation feedback after a knowledge mutation is delivered as file-tool content and counted in a variable that every reload, resume, fork, or compaction clears, so an agent reads mutation internals and can be asked to correct the same failure without bound.
 
+* [SOKF intercepts the file tools to guard writes it cannot see][sokf:issue-095-sokf-stops-intercepting-file-tools] - routed read, edit, and write add an identity layer over paths that already describe themselves, and enforce policy on one of several ways an agent writes knowledge, so the cost is permanent and the guarantee is partial.
+
 * [The format the agent must write in has no document, and the renderer that would produce one has no consumer][sokf:issue-017-the-format-has-no-agent-facing-document] - every skill and schema is written in superdev-format, and the only statement of it is a 700-line grammar file the agent is never pointed at; the doc renderer ported for exactly this now exists in the binary with nothing calling it but a flag nobody runs.
 
 ## The schema layer
@@ -227,8 +229,8 @@ places it.
 [sokf:issue-079-esc-does-not-stop-a-running-phase]: /knowledge/issues/open/issue-079-esc-does-not-stop-a-running-phase.md
 [sokf:issue-080-the-phase-progress-panel-is-hand-rolled]: /knowledge/issues/open/issue-080-the-phase-progress-panel-is-hand-rolled.md
 [sokf:issue-081-sokf-symlink-membership]: /knowledge/issues/wontfix/issue-081-sokf-symlink-membership.md
-[sokf:issue-082-sokf-mutation-parity]: /knowledge/issues/open/issue-082-sokf-mutation-parity.md
-[sokf:issue-083-sokf-validation-follow-ups]: /knowledge/issues/open/issue-083-sokf-validation-follow-ups.md
+[sokf:issue-082-sokf-mutation-parity]: /knowledge/issues/wontfix/issue-082-sokf-mutation-parity.md
+[sokf:issue-083-sokf-validation-follow-ups]: /knowledge/issues/wontfix/issue-083-sokf-validation-follow-ups.md
 [sokf:issue-084-a-blocking-review-finding-names-what-it-fails]: /knowledge/issues/open/issue-084-a-blocking-review-finding-names-what-it-fails.md
 [sokf:issue-085-scope-reauthors-a-plan-it-already-committed]: /knowledge/issues/open/issue-085-scope-reauthors-a-plan-it-already-committed.md
 [sokf:issue-086-a-recommended-choice-is-prose-not-a-choice]: /knowledge/issues/open/issue-086-a-recommended-choice-is-prose-not-a-choice.md
@@ -240,3 +242,4 @@ places it.
 [sokf:issue-092-a-requirements-review-has-no-declared-surface]: /knowledge/issues/done/issue-092-a-requirements-review-has-no-declared-surface.md
 [sokf:issue-093-a-human-cannot-force-the-next-phase]: /knowledge/issues/done/issue-093-a-human-cannot-force-the-next-phase.md
 [sokf:issue-094-every-search-process-reloads-the-embedding-model]: /knowledge/issues/open/issue-094-every-search-process-reloads-the-embedding-model.md
+[sokf:issue-095-sokf-stops-intercepting-file-tools]: /knowledge/issues/open/issue-095-sokf-stops-intercepting-file-tools.md

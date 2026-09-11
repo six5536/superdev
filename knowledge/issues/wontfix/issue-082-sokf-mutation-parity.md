@@ -4,7 +4,7 @@ id: issue-082-sokf-mutation-parity
 title: SOKF-routed edits and writes diverge from Pi's built-in mutation contracts
 description: A routed edit or write returns mutation JSON instead of Pi's success content, reconstructs a whole-file diff, and can report a tool error after the bytes already persisted, so targeted knowledge mutation is fragile and expensive in model context.
 kind: feature
-lifecycle: open
+lifecycle: wontfix
 links:
   - rel: references
     to: issue-077-sokf-file-tool-parity
@@ -113,6 +113,21 @@ Routed mutation behaviour and the persistence outcome boundary.
 - Out: the command-line `superdev sokf edit` and `superdev sokf write` request
   and output shapes, which stay byte-compatible.
 
+## Resolution
+
+Declined on 2026-09-11 in favour of
+[issue-095][sokf:issue-095-sokf-stops-intercepting-file-tools], which removes
+routed mutation rather than bringing it to parity. This issue assumed SOKF keeps
+intercepting `edit` and `write`; the question that settled it was whether that
+interception earns its cost at all.
+
+It does not. An agent writes knowledge through `bash`, a heredoc, `sed`, a
+patch, or `git checkout` as readily as through a file tool, so mutation-time
+policy guards one door of several. The policy itself protects `id`, `verified`,
+and `generated`, and no concept in this repository carries a `verified` or
+`generated` stamp. A check that observes the tree when the turn ends covers
+every writer, which is where issue-095 puts it.
+
 ## Comments
 
 Separated from [issue-077][sokf:issue-077-sokf-file-tool-parity] because its
@@ -122,3 +137,4 @@ on issue-077's resolver and must follow it.
 <!-- sokf:links -->
 [sokf:idea-012-sokf-mutations-survive-validation-failures]: /knowledge/ideas/idea-012-sokf-mutations-survive-validation-failures.md
 [sokf:issue-077-sokf-file-tool-parity]: /knowledge/issues/done/issue-077-sokf-file-tool-parity.md
+[sokf:issue-095-sokf-stops-intercepting-file-tools]: /knowledge/issues/open/issue-095-sokf-stops-intercepting-file-tools.md

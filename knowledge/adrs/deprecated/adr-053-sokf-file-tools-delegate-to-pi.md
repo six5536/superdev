@@ -3,7 +3,7 @@ type: Decision
 id: adr-053-sokf-file-tools-delegate-to-pi
 title: SOKF file tools delegate semantics and presentation to Pi
 description: SOKF resolves and protects canonical knowledge targets while Pi 0.85.1 remains authoritative for file-tool semantics, results, and rendering.
-lifecycle: active
+lifecycle: deprecated
 status: draft
 ---
 

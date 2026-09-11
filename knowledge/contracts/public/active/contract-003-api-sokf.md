@@ -479,4 +479,4 @@ Unreleased.
 <!-- sokf:links -->
 [sokf:adr-033-a-contract-defines-its-interface]: /knowledge/adrs/active/adr-033-a-contract-defines-its-interface.md
 [sokf:adr-042-a-contracts-definition-is-materialized-from-source]: /knowledge/adrs/active/adr-042-a-contracts-definition-is-materialized-from-source.md
-[sokf:adr-053-sokf-file-tools-delegate-to-pi]: /knowledge/adrs/active/adr-053-sokf-file-tools-delegate-to-pi.md
+[sokf:adr-053-sokf-file-tools-delegate-to-pi]: /knowledge/adrs/deprecated/adr-053-sokf-file-tools-delegate-to-pi.md
