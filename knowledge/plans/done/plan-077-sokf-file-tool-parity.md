@@ -3,8 +3,8 @@ type: Plan
 id: plan-077-sokf-file-tool-parity
 title: SOKF-routed reads match Pi's built-in read contract
 description: Split the mixed MCP read operation into source resolution and semantic retrieval, then route Pi's built-in read through the resolved canonical target.
-lifecycle: open
-phase: build
+lifecycle: done
+phase: done
 branch: work/077-sokf-file-tool-parity
 links:
   - rel: implements
@@ -424,7 +424,7 @@ Workflow default branch: main.
 
 <!-- sokf:links -->
 [sokf:coding-standards]: /knowledge/coding-standards.md
-[sokf:issue-077-sokf-file-tool-parity]: /knowledge/issues/open/issue-077-sokf-file-tool-parity.md
+[sokf:issue-077-sokf-file-tool-parity]: /knowledge/issues/done/issue-077-sokf-file-tool-parity.md
 [sokf:issue-081-sokf-symlink-membership]: /knowledge/issues/wontfix/issue-081-sokf-symlink-membership.md
 [sokf:issue-082-sokf-mutation-parity]: /knowledge/issues/open/issue-082-sokf-mutation-parity.md
 [sokf:issue-083-sokf-validation-follow-ups]: /knowledge/issues/open/issue-083-sokf-validation-follow-ups.md

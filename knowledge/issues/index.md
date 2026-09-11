@@ -222,7 +222,7 @@ places it.
 [sokf:issue-074-historical-persistent-mcp-transport-for-pi-sokf]: /knowledge/issues/done/issue-074-historical-persistent-mcp-transport-for-pi-sokf.md
 [sokf:issue-075-historical-flatten-crate-api]: /knowledge/issues/open/issue-075-historical-flatten-crate-api.md
 [sokf:issue-076-historical-content-packs]: /knowledge/issues/done/issue-076-historical-content-packs.md
-[sokf:issue-077-sokf-file-tool-parity]: /knowledge/issues/open/issue-077-sokf-file-tool-parity.md
+[sokf:issue-077-sokf-file-tool-parity]: /knowledge/issues/done/issue-077-sokf-file-tool-parity.md
 [sokf:issue-078-workflow-progress-repeats-plan-and-stage]: /knowledge/issues/open/issue-078-workflow-progress-repeats-plan-and-stage.md
 [sokf:issue-079-esc-does-not-stop-a-running-phase]: /knowledge/issues/open/issue-079-esc-does-not-stop-a-running-phase.md
 [sokf:issue-080-the-phase-progress-panel-is-hand-rolled]: /knowledge/issues/open/issue-080-the-phase-progress-panel-is-hand-rolled.md

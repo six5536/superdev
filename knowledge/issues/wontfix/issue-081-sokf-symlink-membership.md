@@ -106,4 +106,4 @@ requirements review exceeded the isolated-role timeout. Membership is
 
 <!-- sokf:links -->
 [sokf:issue-031-validate-follows-symlinks-out-of-the-repo]: /knowledge/issues/open/issue-031-validate-follows-symlinks-out-of-the-repo.md
-[sokf:issue-077-sokf-file-tool-parity]: /knowledge/issues/open/issue-077-sokf-file-tool-parity.md
+[sokf:issue-077-sokf-file-tool-parity]: /knowledge/issues/done/issue-077-sokf-file-tool-parity.md

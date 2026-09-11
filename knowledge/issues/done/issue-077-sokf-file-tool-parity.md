@@ -4,7 +4,7 @@ id: issue-077-sokf-file-tool-parity
 title: SOKF-routed reads diverge from Pi's built-in read contract
 description: A SOKF-routed read returns a rendered concept instead of exact source, and one mixed-purpose MCP operation serves both file reading and semantic retrieval, so a copied excerpt cannot be edited back and the read slot carries a second result dialect.
 kind: feature
-lifecycle: open
+lifecycle: done
 links:
   - rel: references
     to: idea-012-sokf-mutations-survive-validation-failures
@@ -115,6 +115,29 @@ Routed read behaviour and the MCP operations it depends on.
   ranking or rendered retrieval content, unrelated MCP transport lifecycle
   changes, approximate forks of Pi's algorithms, the general validator symlink
   walk tracked by issue-031, and any weakening of SOKF safety.
+
+## Resolution
+
+Done in `b0fcb8b`, merged to the default branch in `fc6d48e`. A routed
+`read sokf:<id>` resolves the identity and delegates to Pi's own built-in read
+against that source, so content, offset and limit, truncation and continuation
+notices, details, errors, cancellation and rendering are Pi's unchanged, and a
+copied excerpt works as an exact-replacement anchor. The mixed `sokf_read` MCP
+operation was replaced by `sokf_resolve_source` and `sokf_retrieve` under exact
+closed schemas, with no compatibility alias. Discovery ranks its markers, so a
+linked worktree serves its own checkout and refuses another. Evidence is a
+paired harness that runs every read case twice and compares the results exactly,
+loading the pinned Pi 0.85.1 test dependency rather than a `pi` on `PATH`.
+
+Every `PENDING(issue-077)` promise on `contract-003-api-sokf` and
+`contract-012-api-sokf-pi-file-tools` is settled. Routed edit and write are
+unchanged and remain [issue-082][sokf:issue-082-sokf-mutation-parity]'s work.
+
+Built and merged outside the workflow at the maintainer's direction, because the
+workflow is not yet ready to run itself: no SCOPE checkpoint was published, no
+requirements review ran, and the approval gate was skipped rather than
+satisfied. Acceptance rests on the verification recorded in the plan's Build
+state, not on a review that never happened.
 
 ## Comments
 
