@@ -84,6 +84,21 @@ The adapter preserves Pi 0.85.1 file-tool behavior under [ADR-053][sokf:adr-053-
 	});
 
 	pi.registerTool({
+		name: "sokf_overview",
+		label: "SOKF overview",
+		description:
+			"Show the canonical SOKF project knowledge at a glance: its name, how many concepts it holds, the tree of them, the index state, and anything wrong with it.",
+		promptSnippet: "See the canonical SOKF project knowledge at a glance",
+		promptGuidelines: [
+			"Use sokf_overview to orient in an unfamiliar repository's knowledge before searching it.",
+		],
+		parameters: overviewSchema,
+		async execute(_toolCallId, _params, signal, _onUpdate, ctx) {
+			return boundedResult(await invokeMcp(ctx.cwd, "sokf_overview", {}, signal));
+		},
+	});
+
+	pi.registerTool({
 		name: "edit",
 		label: "edit",
 		description:
@@ -107,7 +122,6 @@ The adapter preserves Pi 0.85.1 file-tool behavior under [ADR-053][sokf:adr-053-
 					signal,
 				);
 				const details = mutationDetails(envelope);
-				knowledgeMutated = true;
 				return {
 					content: envelope.content,
 					details: editDetails(details),
@@ -140,7 +154,6 @@ The adapter preserves Pi 0.85.1 file-tool behavior under [ADR-053][sokf:adr-053-
 					signal,
 				);
 				mutationDetails(envelope);
-				knowledgeMutated = true;
 				return { content: envelope.content, details: undefined };
 			});
 		},

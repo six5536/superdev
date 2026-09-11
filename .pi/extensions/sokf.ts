@@ -33,6 +33,9 @@ const graphSchema = Type.Object({
 	id: Type.Optional(Type.String({ description: "Concept ID; omit for the complete edge map" })),
 });
 
+// The knowledge is the whole subject, so the request narrows by nothing.
+const overviewSchema = Type.Object({});
+
 type SearchInput = Static<typeof searchSchema>;
 type GraphInput = Static<typeof graphSchema>;
 
@@ -366,10 +369,27 @@ function validationFeedback(result: ProcessResult): string {
 		: truncation.content;
 }
 
+/**
+ * The bounded report of what the working tree still fails on, or `undefined`
+ * when it now passes.
+ *
+ * This is a second read of the tree rather than a filter over the first
+ * report. Repair, a later write, or a merge can settle a finding between the
+ * run that produced it and the moment a message is sent, and reporting a
+ * finding the tree no longer carries costs the agent a turn and teaches it to
+ * distrust the channel.
+ */
+async function stillFailing(cwd: string): Promise<string | undefined> {
+	const result = await runSuperdev(cwd, ["validate"]);
+	return result.code === 0 ? undefined : validationFeedback(result);
+}
+
 export default function (pi: ExtensionAPI) {
-	let knowledgeMutated = false;
-	let validationFollowUps = 0;
-	const maxValidationFollowUps = 2;
+	// Whether a repository's pending sequence has already had its one
+	// triggering report. Session memory keyed by canonical repository root:
+	// nothing persists, so a new session starts with none and no lifecycle
+	// event needs a recovery rule.
+	const reported = new Set<string>();
 	const clients = new Map<string, SokfMcpClient>();
 
 	async function invokeMcp(
@@ -394,42 +414,52 @@ export default function (pi: ExtensionAPI) {
 		await Promise.allSettled(closing);
 	});
 
+	// sokf:begin turn-end
 	pi.on("turn_end", async (_event, ctx) => {
-		if (!knowledgeMutated) return;
-		const result = await runSuperdev(ctx.cwd, ["validate"]);
+		const repository = findRepository(ctx.cwd);
+		if (!repository) return;
+
+		// Unconditional: no precondition, and no flag deciding whether the
+		// knowledge changed. A write through `bash`, a heredoc, `sed`, a patch,
+		// or `git checkout` reaches no tool this extension registers, so any
+		// signal it could keep would be wrong on exactly the cases this check
+		// exists to cover. `--fix` repairs first, so the findings that survive
+		// are the ones repair could not settle.
+		const result = await runSuperdev(ctx.cwd, ["validate", "--fix"]);
 		if (result.code === 0) {
-			knowledgeMutated = false;
-			validationFollowUps = 0;
+			reported.delete(repository);
 			return;
 		}
 
-		const report = validationFeedback(result);
-		if (validationFollowUps < maxValidationFollowUps) {
-			validationFollowUps += 1;
-			pi.sendMessage(
-				{
-					customType: "sokf-validation",
-					content: `Final SOKF validation failed after a knowledge mutation. Fix these findings without retrying mutations that already report applied: true.\n\n${report}`,
-					display: true,
-					details: { attempt: validationFollowUps, maximum: maxValidationFollowUps },
-				},
-				{ deliverAs: "followUp", triggerTurn: true },
-			);
+		// Validation ran against the tree as it was; repair, a later write, or a
+		// merge can settle a finding between that run and this send. Read the
+		// tree again and report only what it still carries, so a resolved
+		// finding never costs a turn.
+		const surviving = await stillFailing(ctx.cwd);
+		if (!surviving) {
+			reported.delete(repository);
 			return;
 		}
 
-		knowledgeMutated = false;
-		validationFollowUps = 0;
+		const first = !reported.has(repository);
+		reported.add(repository);
 		pi.sendMessage(
 			{
 				customType: "sokf-validation",
-				content: `SOKF validation still fails after ${maxValidationFollowUps} automatic repair turns. Manual continuation is required.\n\n${report}`,
+				content: `${
+					first
+						? "SOKF validation fails after automatic repair. Fix these findings."
+						: "SOKF validation still fails after automatic repair."
+				}\n\n${surviving}`,
 				display: true,
 			},
-			{ deliverAs: "nextTurn" },
+			// The first report of a sequence gets the agent one prompted chance to
+			// correct. A later one is visible and leaves the decision to it: an
+			// agent that reads a repeated report can check the tree itself.
+			first ? { deliverAs: "followUp", triggerTurn: true } : { deliverAs: "nextTurn" },
 		);
-		ctx.ui.notify("SOKF validation still fails; automatic repair feedback stopped", "error");
 	});
+	// sokf:end turn-end
 
 	// The adapter contract's definition (contract-012): the five tool
 	// registrations whose interfaces its promises govern.
@@ -498,6 +528,21 @@ export default function (pi: ExtensionAPI) {
 	});
 
 	pi.registerTool({
+		name: "sokf_overview",
+		label: "SOKF overview",
+		description:
+			"Show the canonical SOKF project knowledge at a glance: its name, how many concepts it holds, the tree of them, the index state, and anything wrong with it.",
+		promptSnippet: "See the canonical SOKF project knowledge at a glance",
+		promptGuidelines: [
+			"Use sokf_overview to orient in an unfamiliar repository's knowledge before searching it.",
+		],
+		parameters: overviewSchema,
+		async execute(_toolCallId, _params, signal, _onUpdate, ctx) {
+			return boundedResult(await invokeMcp(ctx.cwd, "sokf_overview", {}, signal));
+		},
+	});
+
+	pi.registerTool({
 		name: "edit",
 		label: "edit",
 		description:
@@ -521,7 +566,6 @@ export default function (pi: ExtensionAPI) {
 					signal,
 				);
 				const details = mutationDetails(envelope);
-				knowledgeMutated = true;
 				return {
 					content: envelope.content,
 					details: editDetails(details),
@@ -554,7 +598,6 @@ export default function (pi: ExtensionAPI) {
 					signal,
 				);
 				mutationDetails(envelope);
-				knowledgeMutated = true;
 				return { content: envelope.content, details: undefined };
 			});
 		},

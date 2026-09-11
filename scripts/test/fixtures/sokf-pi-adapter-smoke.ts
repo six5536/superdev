@@ -93,14 +93,43 @@ export default async function () {
 		}
 
 		const turnEnd = handlers.get("turn_end");
+		// `b.md` links to a concept that does not exist, so the tree fails
+		// validation and every turn end reports it.
 		await turnEnd({}, context);
 		await turnEnd({}, context);
 		await turnEnd({}, context);
-		if (messages.filter(({ options }) => options.triggerTurn).length !== 2) {
-			throw new Error("SOKF repair feedback was not bounded at two turns");
+		const triggering = messages.filter(({ options }) => options.triggerTurn);
+		if (triggering.length !== 1) {
+			throw new Error(
+				`The first report of a sequence triggers exactly one turn; got ${triggering.length}`,
+			);
 		}
-		if (messages.at(-1)?.options.deliverAs !== "nextTurn") {
-			throw new Error("A persistent SOKF validation failure was not deferred for manual continuation");
+		if (messages.length !== 3) {
+			throw new Error(`Every failing turn end reports; got ${messages.length} of 3`);
+		}
+		if (messages.slice(1).some(({ options }) => options.deliverAs !== "nextTurn")) {
+			throw new Error("A later report must be visible and non-triggering");
+		}
+
+		// The run is unconditional: a turn that called none of this extension's
+		// tools still validates, so a write through `bash` is covered. Fixing
+		// the tree by hand and ending a turn must clear the sequence.
+		const before = messages.length;
+		writeFileSync(join(sandbox, "knowledge", "b.md"), "---\ntype: T\nid: beta\n---\nBeta.\n");
+		await turnEnd({}, context);
+		if (messages.length !== before) {
+			throw new Error("A turn end on a valid tree must send no message");
+		}
+
+		// The sequence reset, so the next failure triggers again rather than
+		// staying silent for the rest of the session.
+		writeFileSync(
+			join(sandbox, "knowledge", "b.md"),
+			"---\ntype: T\nid: beta\nlinks:\n  - rel: depends-on\n    to: missing\n---\nBeta.\n",
+		);
+		await turnEnd({}, context);
+		if (messages.at(-1)?.options.triggerTurn !== true) {
+			throw new Error("A clean run must reset the sequence so a later failure triggers again");
 		}
 	} finally {
 		await handlers.get("session_shutdown")?.({}, projectContext);
