@@ -56,10 +56,11 @@ async function smoke() {
 		},
 	};
 	superdev(fake as never);
+	const skillNames = ["file", "scope", "build", "accept", "grill-me", "double-check"];
 	const skillAgentDir = await mkdtemp(join(tmpdir(), "superdev-skill-discovery-"));
 	try {
 		const defaults = loadSkills({ cwd: process.cwd(), agentDir: skillAgentDir, skillPaths: [], includeDefaults: true });
-		if (defaults.skills.some((skill) => ["file", "scope", "build", "accept"].includes(skill.name))) throw new Error("Superdev skills leaked into general Pi discovery");
+		if (defaults.skills.some((skill) => skillNames.includes(skill.name))) throw new Error("Superdev skills leaked into general Pi discovery");
 		const discover = eventHandlers.get("resources_discover");
 		if (!discover) throw new Error("extension did not register its skills");
 		const startup = await discover({ cwd: skillAgentDir, reason: "startup" });
@@ -77,7 +78,8 @@ async function smoke() {
 		if (!scopeSkill.includes("Git mutation commands are permitted only while following `../file/SKILL.md`") || !scopeSkill.split("\n").find((line) => line.startsWith("allowed-tools:"))?.split(" ").includes("bash")) {
 			throw new Error("SCOPE cannot delegate issue creation to the native file skill");
 		}
-		for (const name of ["file", "scope", "build", "accept"]) {
+		for (const name of skillNames) {
+			if (discovered.skills.filter((skill) => skill.name === name).length !== 1) throw new Error(`expected exactly one ${name} skill`);
 			const skill = discovered.skills.find((skill) => skill.name === name);
 			if (!skill || skill.disableModelInvocation || !skill.filePath.endsWith(`/.pi/extensions/superdev/skills/${name}/SKILL.md`) || !prompt.includes(`<name>${name}</name>`)) {
 				throw new Error(`native Pi discovery omitted ${name} from its prompt`);
@@ -116,7 +118,7 @@ async function smoke() {
 	// The override is the human's alone. A tool action, or a mention in what the
 	// model reads, would hand the model the exit the guard exists to deny it.
 	if (JSON.stringify(toolDefinitions.get("superdev_run_phase")?.parameters).includes("force")) throw new Error("the human override leaked into the phase tool");
-	for (const name of ["skills/scope/SKILL.md", "skills/accept/SKILL.md", "skills/build/SKILL.md", "skills/file/SKILL.md", "prompts/scope.md", "prompts/accept.md", "prompts/build.md", "prompts/orchestrator.md", "prompts/requirements-review.md", "prompts/code-review.md"]) {
+	for (const name of [...skillNames.map((name) => `skills/${name}/SKILL.md`), "prompts/scope.md", "prompts/accept.md", "prompts/build.md", "prompts/orchestrator.md", "prompts/requirements-review.md", "prompts/code-review.md"]) {
 		const text = await readFile(join(process.cwd(), ".pi/extensions/superdev", name), "utf8");
 		if (text.includes("superdev-force")) throw new Error(`${name} tells the model the workflow can be forced`);
 	}

@@ -325,7 +325,7 @@ mod tests {
 
 - `P_rust-authority` [ubiquitous] The Rust workflow service SHALL validate every durable phase transition, plan revision comparison, ownership comparison, and automatic Git operation.
 - `P_pi-orchestrates` [ubiquitous] Pi SHALL orchestrate discoverable scope, build, and accept skills through typed tools while withholding direct shell and Git access from children and resolving BUILD's executable and digest together at invocation time.
-- `P_extension-skills` [ubiquitous] The Superdev extension SHALL register its bundled file, scope, build, and accept skills from `.pi/extensions/superdev/skills/` through Pi's `resources_discover` event on startup and reload, exposing native `/skill:*` commands without copies in `.pi/skills/`.
+- `P_extension-skills` [ubiquitous] The Superdev extension SHALL register its bundled file, scope, build, accept, grill-me, and double-check skills from `.pi/extensions/superdev/skills/` through Pi's `resources_discover` event on startup and reload, exposing native `/skill:*` commands without copies in `.pi/skills/`.
 - `P_service-snapshot` [event] WHEN Pi initializes its workflow service, the adapter SHALL bootstrap the trusted launcher in place and retain a private native executable snapshot independent of subsequent checkout switches and rebuilds.
 - `P_skill-cold-start` [event] WHEN a workflow skill starts, the skill SHALL reconstruct canonical identity and phase before mutation.
 - `P_questions-persisted` [event] WHEN review requires intent, Pi SHALL persist post-transition revision-bound questions and confirmed answers for one batched correction and re-review.
