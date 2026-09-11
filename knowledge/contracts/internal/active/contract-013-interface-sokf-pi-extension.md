@@ -84,13 +84,28 @@ from the `turn-end` and `tools` regions rather than authored, under
 <!-- sokf:include /.pi/extensions/sokf.ts#tools -->
 ```typescript
 	pi.registerTool({
+		name: "sokf_overview",
+		label: "SOKF overview",
+		description:
+			"Show the canonical SOKF project knowledge at a glance: its name, how many concepts it holds, the tree of them, the index state, and anything wrong with it.",
+		promptSnippet: "Show the knowledge structure, concept count, index status, and validation findings.",
+		promptGuidelines: [
+			"Use sokf_overview before searching SOKF if you are unfamiliar with the repository's knowledge.",
+		],
+		parameters: overviewSchema,
+		async execute(_toolCallId, _params, signal, _onUpdate, ctx) {
+			return boundedResult(await invokeMcp(ctx.cwd, "sokf_overview", {}, signal));
+		},
+	});
+
+	pi.registerTool({
 		name: "sokf_search",
 		label: "SOKF search",
 		description: "Search SOKF whenever project knowledge is needed. Returns matching sections and locators.",
-		promptSnippet: "Search the canonical SOKF project knowledge semantically",
+		promptSnippet: "Find relevant sections in canonical project knowledge with semantic search.",
 		promptGuidelines: [
-			"Use sokf_search whenever project knowledge is needed and no concept ID is already known.",
-			"Resolve sokf_search locators under the repository's knowledge/ directory; sokf_graph paths are repository-relative.",
+			"Use sokf_search to find relevant project knowledge when its concept ID and physical path are unknown.",
+			"Resolve file paths in sokf_search locators relative to knowledge/; resolve sokf_graph paths relative to the repository root.",
 		],
 		parameters: searchSchema,
 		async execute(_toolCallId, params: SearchInput, signal, _onUpdate, ctx) {
@@ -104,25 +119,10 @@ from the `turn-end` and `tools` regions rather than authored, under
 		name: "sokf_graph",
 		label: "SOKF graph",
 		description: "Follow typed relationships in the canonical SOKF project knowledge, or show its complete edge map.",
-		promptSnippet: "Traverse relationships in the canonical SOKF project knowledge",
+		promptSnippet: "Show a concept's relationships and file paths, or the complete relationship map.",
 		parameters: graphSchema,
 		async execute(_toolCallId, params: GraphInput, signal, _onUpdate, ctx) {
 			return boundedResult(await invokeMcp(ctx.cwd, "sokf_graph", { ...params }, signal));
-		},
-	});
-
-	pi.registerTool({
-		name: "sokf_overview",
-		label: "SOKF overview",
-		description:
-			"Show the canonical SOKF project knowledge at a glance: its name, how many concepts it holds, the tree of them, the index state, and anything wrong with it.",
-		promptSnippet: "See the canonical SOKF project knowledge at a glance",
-		promptGuidelines: [
-			"Use sokf_overview to orient in an unfamiliar repository's knowledge before searching it.",
-		],
-		parameters: overviewSchema,
-		async execute(_toolCallId, _params, signal, _onUpdate, ctx) {
-			return boundedResult(await invokeMcp(ctx.cwd, "sokf_overview", {}, signal));
 		},
 	});
 

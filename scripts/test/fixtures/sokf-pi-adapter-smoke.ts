@@ -47,7 +47,16 @@ export default async function () {
 		.get("sokf_search")
 		.execute("search", { query: "safe mutation", limit: 1 }, undefined, undefined, projectContext);
 	if (search.content[0]?.type !== "text") throw new Error("SOKF search did not return text content");
-	assert.ok(tools.get("sokf_search").promptGuidelines.some((line: string) => line.includes("repository's knowledge/ directory")));
+	assert.deepEqual([...tools.values()].flatMap((tool) => tool.promptGuidelines ?? []), [
+		"Use sokf_overview before searching SOKF if you are unfamiliar with the repository's knowledge.",
+		"Use sokf_search to find relevant project knowledge when its concept ID and physical path are unknown.",
+		"Resolve file paths in sokf_search locators relative to knowledge/; resolve sokf_graph paths relative to the repository root.",
+	]);
+	assert.deepEqual([...tools.values()].map((tool) => tool.promptSnippet), [
+		"Show the knowledge structure, concept count, index status, and validation findings.",
+		"Find relevant sections in canonical project knowledge with semantic search.",
+		"Show a concept's relationships and file paths, or the complete relationship map.",
+	]);
 	const locator = search.content[0].text.match(/^\s+([^:\n]+\.md):\d+-\d+/m);
 	assert.ok(locator, "search returned no file locator");
 	await createReadTool(repository).execute("search-read", { path: join("knowledge", locator[1]) });
