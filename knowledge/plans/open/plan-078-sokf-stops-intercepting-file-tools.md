@@ -305,8 +305,6 @@ require separate issues.
 
 Scope review and approval are pending; BUILD evidence is pending.
 
-Workflow default branch: main.
-
 <!-- sokf:links -->
 [sokf:adr-055-sokf-does-not-intercept-file-tools]: /knowledge/adrs/active/adr-055-sokf-does-not-intercept-file-tools.md
 [sokf:issue-077-sokf-file-tool-parity]: /knowledge/issues/done/issue-077-sokf-file-tool-parity.md
