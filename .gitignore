@@ -36,5 +36,10 @@ __old/
 # Pi inspection output is local session state; extensions themselves are shared.
 /.pi/current-system-prompt.md
 
+# Core dumps. A crashing test or tool (llvm-cov has done it) drops one at the
+# repository root; it is process memory, not source.
+/core
+core.[0-9]*
+
 # Custom
 /cc-bench

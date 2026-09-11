@@ -58,12 +58,29 @@ gate are in [CONTRIBUTING](/CONTRIBUTING.md).[^contributing]
   reworded message is the diff working, while a moved severity or a finding
   that appears or vanishes is a behaviour change and wants the argument one
   deserves.
-- **MCP integration.** A real rmcp client drives all four tools over an
+- **MCP integration.** A real rmcp client drives every tool over an
   in-process duplex pipe against fixture knowledge trees — the transport is
   the only
   thing stubbed. Assertions cover locators, line numbers, group truncation and
   the lexical-only degradation. A `FakeEmbedder` keeps vector results
-  deterministic; no test downloads the real model.
+  deterministic; no test downloads the real model. Source resolution asserts
+  the whole matrix a caller can reach: identity and physical spellings of one
+  target, a missing destination below a contained ancestor, contained and
+  escaping symlinks with and without a missing suffix, and generated regions
+  against the lines they actually span. A real Git fixture builds a main
+  checkout and a linked worktree carrying different bytes for one identity, and
+  proves the server answers from the active checkout alone and refuses a path
+  into the other.
+- **Routed Pi file tools.** `scripts/test/sokf-pi-adapter.test.mjs` loads the
+  extension against the pinned `@earendil-works/pi-coding-agent` 0.85.1 test
+  dependency rather than a `pi` on `PATH`, so parity evidence fails rather than
+  skips when Pi cannot load. Its paired harness runs each read case twice —
+  built-in against the physical file, routed against the equivalent SOKF
+  argument — and compares results, thrown errors and details exactly, covering
+  offset and limit, line and byte truncation, an oversized line, continuation
+  text, out-of-range and missing-file errors, cancellation, and nested working
+  directories. Path preparation is proven against the value observed at Pi's
+  own operation boundary rather than against a reading of its source.
 - **npm launcher.** A JS test that resolves + spawns a stub binary, and
   errors cleanly when no platform package matches.
 - **Release smoke.** `scripts/release-smoke.mjs` runs a compiled release

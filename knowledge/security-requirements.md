@@ -30,11 +30,16 @@ only (pre-1.0, no backports).
   removes is backed up under `.superdev/cache/backup/<timestamp>/` first,
   and a failed apply unwinds ([configuration][sokf:configuration]).
 - **MCP mutations have knowledge-only, agent-safe authority.** `superdev mcp
-  sokf` exposes three retrieval and two mutation tools over local stdio. The
+  sokf` exposes four retrieval and two mutation tools over local stdio. The
   mutation tools can write only under the canonical knowledge root, reject
   path and symlink escapes, preserve existing identity and verification bytes,
   reject stamped fields, write atomically, and run repair plus validation.
-  Their machine schema carries no human override. The Pi extension adds no
+  Their machine schema carries no human override. Source resolution is bounded
+  by the canonical active checkout: a direct physical argument must enter
+  through `knowledge/`, a symlink may canonicalize anywhere inside that
+  checkout, and a target resolving outside it — including into another
+  checkout, and including below a missing suffix — is refused before the file
+  is opened. The Pi extension adds no
   authority of its own: it forwards SOKF requests to one session-scoped local
   MCP process and delegates non-knowledge paths to Pi's built-in tools
   ([contract-003-api-sokf][sokf:contract-003-api-sokf]).

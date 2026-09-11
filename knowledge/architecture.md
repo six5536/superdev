@@ -33,13 +33,21 @@ validator's repair pass, and reports the final validation state plus requested
 and generated diffs. MCP exposes those two mutations only under the agent-safe
 policy; the deliberate human override remains CLI-only. The `validate`
 subsystem remains the check both paths share. The MCP tools are in
-[contract-003-api-sokf][sokf:contract-003-api-sokf]. Its `sokf_read`
-uses familiar path, offset and limit semantics: virtual addresses render
-concepts or overview, while contained physical paths return exact UTF-8 text.
+[contract-003-api-sokf][sokf:contract-003-api-sokf]. Reading and retrieval are
+separate operations: `sokf_resolve_source` locates the source file behind an
+identity or a contained physical path and reports its generated regions, while
+`sokf_retrieve` renders the `sokf:` overview, a concept, or one section.
 Pi's project extension maps its familiar `read`, `edit` and `write` tools plus
-`sokf_search` and `sokf_graph` onto those MCP operations. It lazily starts one
+`sokf_search` and `sokf_graph` onto those MCP operations. A routed `read`
+resolves the identity, then delegates to Pi's own read factory against the
+canonical target, so a concept returns exact UTF-8 source and a copied excerpt
+still matches the file it came from; the overview and section addresses are
+refused and point at `sokf_search`. It lazily starts one
 MCP process per repository and reuses it for the Pi session, while delegating
-every ordinary path to Pi unchanged. Calls are serialized on that root. A turn
+every ordinary path to Pi unchanged. That repository is the canonical active
+checkout root: any `.git` directory or worktree pointer file on the upward walk
+wins, and `.superdev/config.toml` selects the root only when the walk finds no
+`.git` marker at all. Calls are serialized on that root. A turn
 that mutates knowledge ends with one-shot CLI validation and at most two
 automatic repair-feedback turns. Format-sensitive authoring instructions
 remain out of the standing prompt and load from the `sokf-authoring` skill on

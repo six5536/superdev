@@ -311,7 +311,7 @@ The documentation map triggers the following surfaces.
 
 ### Block 1: Split MCP retrieval from source resolution
 
-- [ ] Done.
+- [x] Done.
 - Dependencies: none.
 - Areas: `contract-003-api-sokf`, `crates/lib/superdev-core/src/sokf/mcp.rs`, `crates/lib/superdev-core/src/sokf/mutation.rs`, `crates/lib/superdev-core/src/sokf/mod.rs`, `crates/lib/superdev-core/tests/mcp_tools.rs`, `scripts/test/fixtures/sokf-mcp-fake.mjs`, and `scripts/test/sokf-mcp-client.test.mjs`.
 - Outcome: `sokf_resolve_source` returns a canonical physical target with generated authority and its mirrored text item, `sokf_retrieve` owns semantic overview, concept, and section behavior, `sokf_read` is absent from both the tool list and the server instructions, and the MCP server binds itself to the canonical active checkout root.
@@ -322,7 +322,7 @@ The documentation map triggers the following surfaces.
 
 ### Block 2: Route Pi's built-in read and verify the repository
 
-- [ ] Done.
+- [x] Done.
 - Dependencies: Block 1.
 - Areas: `contract-012-api-sokf-pi-file-tools` including its new marked `tools` region, `.pi/extensions/sokf.ts`, `.pi/extensions/sokf-mcp.ts`, `scripts/test/fixtures/sokf-pi-adapter-smoke.ts`, `scripts/test/sokf-pi-adapter.test.mjs`, `/README.md`, `/CONTRIBUTING.md`, `/CHANGELOG.md`, `/knowledge/contracts/index.md`, `architecture`, `software-components`, `testing-strategy`, `security-requirements`, and `development-commands`.
 - Outcome: routed Pi read behavior matches the paired built-in exactly, the adapter selects the canonical active checkout root, public and canonical documentation describe the implemented behavior, and focused plus complete suites pass.
@@ -333,7 +333,58 @@ The documentation map triggers the following surfaces.
 
 ## Build state
 
-Current block: 1. Attempts: 0. Final corrections: 0. Blocker: scope requirements review and human approval pending.
+Current block: complete. Attempts: 1. Final corrections: 2. Blocker: none.
+
+Both blocks are implemented and verified. `cargo nextest run --workspace` passes
+871 tests, `npm run test:scripts` passes 35 including the new paired harness, and
+`cargo run -- validate` passes twice with a clean second pass. Every
+`PENDING(issue-077)` marker is removed from `contract-003-api-sokf` and
+`contract-012-api-sokf-pi-file-tools`; 19 issue-082 and 1 issue-083 markers
+remain on the former, and 24 issue-082 and 17 issue-083 markers on the latter.
+
+A review pass after the first attempt found and corrected four defects:
+
+- The unit tests proving `P_direct-does-not-load` and
+  `P_direct-retrieval-skips-index` still called the removed `read()` path, so
+  neither promise was proven against the `resolve_source()` and `retrieve()`
+  operations it names. Both now assert on the new operations.
+- `AC_worktree-discovery` names a `.git` pointer file, but every `.git` in the
+  paired harness was a directory, so the adapter half of that promise was
+  unproven. The harness now builds a pointer-file worktree and selects it from
+  the root and a descendant. The escape fixture is now a second checkout, so it
+  also proves `AC_worktree-cross-checkout-refused` at the adapter.
+- The oversized-line rows never reached Pi's first-line-exceeds-limit notice —
+  frontmatter made line 1 small, so Pi truncated by bytes — leaving
+  `restoreSpelling()` entirely unexercised. Two offset rows now land on that
+  notice, and the guard was retightened from matching notice wording to reading
+  Pi's `truncation.firstLineExceedsLimit` flag, so file content that merely
+  resembles a notice is never rewritten.
+- `cargo fmt --all -- --check` was in fact failing; the earlier run reported the
+  exit code of a pipeline stage rather than of fmt. Formatting is now clean and
+  the check verified on its own exit code.
+
+A second review pass found two more, both in the linked-worktree fixture:
+
+- That test is not `#[cfg(unix)]`-gated and CI runs `cargo nextest run
+  --workspace` on `windows-latest`, but it passed `/dev/null` as
+  `GIT_CONFIG_GLOBAL` and built the climbing path by string interpolation.
+  Neither is portable, so the test would have failed on Windows alone. The
+  hermetic sentinel is now a path that does not exist — verified to suppress a
+  real global `commit.gpgsign` and to create nothing — and the climb is spelled
+  with path components.
+- The cross-checkout rows asserted only that an error occurred, which a
+  mis-spelled or nonexistent path would satisfy just as well. They now assert
+  the containment reason and that the other checkout's bytes are unchanged. A
+  separate probe confirmed the climb resolves onto the main checkout's real
+  file, so the case is not vacuous.
+
+Two pre-existing failures are unrelated to this work and were confirmed by
+stashing every change and re-running: `npm run verify-version` cannot read a
+version from the `[skills]` entries of `.superdev/config.toml` and
+`.superdev/lock.toml`, and the `crates/app` half of `npm run coverage:check`
+reports 72.39% against a 90% gate. The `crates/lib` half passes at 94.22%
+against 94.23% at baseline. `cargo deny` is not installed in this container and
+no dependency changed.
 
 ## Implementation decisions
 
@@ -348,7 +399,12 @@ in [issue-083][sokf:issue-083-sokf-validation-follow-ups]. This plan leaves
 `sokf_retrieve` an MCP-only operation, so a Pi session reaches canonical
 knowledge through exact source, `sokf_search`, and `sokf_graph`; registering a
 Pi-side retrieval tool for rendered concepts and the `sokf:` overview requires a
-separate issue. SOKF membership through contained symlinks was declined in
+separate issue. Restoring the caller's spelling leaves Pi's oversized-line
+notice suggesting `sed -n '<line>p' sokf:<id>`, which no shell resolves; Pi's
+unrouted notice is equally unrunnable for a relative path. That notice wording
+belongs to the file-tool prompt metadata in
+[issue-083][sokf:issue-083-sokf-validation-follow-ups]. SOKF membership through
+contained symlinks was declined in
 [issue-081][sokf:issue-081-sokf-symlink-membership]; resolution accepts a
 contained target and refuses an escaping one, which this plan already covers. The
 general validator symlink walk remains in issue-031. Any change to semantic
@@ -357,9 +413,12 @@ behavior requires a separate issue.
 
 ## Completion evidence
 
-Scope requirements review and explicit human approval are pending. The parent
-workflow must publish the approved knowledge-only scope as the immutable SCOPE
-checkpoint before BUILD starts.
+This plan was built and merged outside the workflow at the maintainer's
+direction, because the workflow is not yet ready to run itself. No SCOPE
+checkpoint was published, no requirements review ran, and the human approval
+gate was deliberately skipped rather than satisfied. The implementation and its
+evidence stand on the verification recorded in Build state; the process record
+does not claim a review that never happened.
 
 Workflow default branch: main.
 

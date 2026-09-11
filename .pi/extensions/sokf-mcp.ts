@@ -24,6 +24,22 @@ export type McpToolResult = {
 	isError?: boolean;
 };
 
+/** One generated span of a resolved source, and where its content is authored. */
+export type GeneratedRegion = {
+	startLine: number;
+	endLine: number;
+	authoritativePath: string;
+	authoritativeRegion?: string;
+};
+
+/** The structured result of `sokf_resolve_source`; paths are repository-relative. */
+export type SourceResolution = {
+	ingressPath: string;
+	canonicalPath: string;
+	exists: boolean;
+	generatedRegions: GeneratedRegion[];
+};
+
 export type McpProcessOptions = {
 	command?: string;
 	args?: string[];
