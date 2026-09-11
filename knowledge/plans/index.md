@@ -36,6 +36,7 @@ work blocks that deliver it; scope writes it and build works it.
 * [Persistent MCP transport for Pi SOKF][sokf:plan-028-persistent-mcp-transport-for-pi-sokf] - SOKF MCP adopts familiar coding-tool semantics and Pi reuses one repository-scoped server so frequent semantic searches load the local embedding model once.
 * [Scope build accept workflow][sokf:plan-059-scope-build-accept-workflow] - replace contradictory agent workflows with one durable Rust-owned SCOPE to BUILD to ACCEPT process orchestrated by Pi.
 * [SOKF-routed file tools match Pi's built-in contracts][sokf:plan-077-sokf-file-tool-parity] - Route SOKF identities through Pi-compatible read, edit, and write behavior while preserving agent-safe repair, validation, and bounded diagnostics.
+* [SOKF stops intercepting the file tools][sokf:plan-078-sokf-stops-intercepting-file-tools] - Remove routed read, edit, and write, serve search, graph, and overview alone, and make one repair-and-validate at turn end the single point where knowledge becomes consistent.
 
 <!-- sokf:links -->
 [sokf:plan-001-flatten-crate-api]: /knowledge/plans/open/plan-001-flatten-crate-api.md
@@ -68,3 +69,4 @@ work blocks that deliver it; scope writes it and build works it.
 [sokf:plan-028-persistent-mcp-transport-for-pi-sokf]: /knowledge/plans/done/plan-028-persistent-mcp-transport-for-pi-sokf.md
 [sokf:plan-059-scope-build-accept-workflow]: /knowledge/plans/done/plan-059-scope-build-accept-workflow.md
 [sokf:plan-077-sokf-file-tool-parity]: /knowledge/plans/done/plan-077-sokf-file-tool-parity.md
+[sokf:plan-078-sokf-stops-intercepting-file-tools]: /knowledge/plans/open/plan-078-sokf-stops-intercepting-file-tools.md
