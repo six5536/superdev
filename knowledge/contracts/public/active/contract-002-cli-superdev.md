@@ -548,8 +548,18 @@ usage errors and the side effects.
 - `P_init-manifest-first` [ubiquitous] `init` SHALL write the manifest
   before applying, so a failed run leaves the file the retry resumes
   from.
-- `P_init-agents-chain` [ubiquitous] `init` SHALL ensure `AGENTS.md`
-  carries `@.agents/superdev.md`, appending to an existing file.
+- `P_init-agents-chain` [ubiquitous] `init` SHALL embed the complete
+  Superdev instructions in a managed block at the start of `AGENTS.md`.
+- `P_sync-agent-instructions` [ubiquitous] `sync` SHALL maintain one current
+  Superdev instruction block at the start of `AGENTS.md`.
+- `P_agents-preserves-user-content` [ubiquitous] The instruction update SHALL
+  preserve every byte outside the managed block except exact standalone
+  `@.agents/superdev.md` import lines and their line terminators.
+- `P_agents-markers-refused` [event] WHEN instruction markers are unmatched,
+  reversed, nested, or repeated, the instruction update SHALL refuse without
+  changing `AGENTS.md`.
+- `P_agents-shared-file` [ubiquitous] The instruction update SHALL NOT claim
+  or hash the whole `AGENTS.md` file.
 - `P_init-releases-managed-name` [event] WHEN the repo already has a
   skill under a managed name, `init` SHALL release that skill into
   `custom` before anything is written.

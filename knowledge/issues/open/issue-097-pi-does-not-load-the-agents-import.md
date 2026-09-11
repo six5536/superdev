@@ -47,4 +47,19 @@ context loader are outside scope.
 ## Comments
 
 The user confirmed this scope, including the managed block and preservation of
-existing content, before filing.
+existing content, before filing. The user then requested direct implementation
+without the workflow; no plan or workflow was started for this issue.
+
+Implemented in the working tree. The shared renderer preserves user bytes,
+rejects ambiguous markers, and runs again at apply time to retain edits made
+after planning. The engine journals the write without claiming `AGENTS.md`.
+Sync regenerated this repository's entry file. Evaluation sandboxes now use
+inline instructions rather than an import plus separate prompt injection.
+
+Verification passed: pipeline tests (19), engine tests (37), manage CLI tests
+(5), Clippy with warnings denied, doctests, script tests (40), documentation,
+blueprint drift, and knowledge validation. The full Rust suite passed 872 of
+873 tests; `each_harness_receives_its_own_sokf_authoring_skill` still asserts
+wording removed by the earlier skill simplification. That unrelated test was
+left unchanged. The user requested a commit of the relevant implementation and
+instruction edits; no workflow acceptance is claimed.

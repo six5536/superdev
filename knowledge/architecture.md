@@ -114,16 +114,22 @@ machine state and is gitignored. Their shape is in
 [configuration][sokf:configuration]; the code implementing them is listed in
 [software-components][sokf:software-components].
 
-Two things superdev keeps are lines in files it does not own: the `.gitignore`
-entries for machine state and `@.agents/superdev.md` in AGENTS.md. They are
-added when missing, never rewritten, and never hashed.
+Superdev adds missing `.gitignore` entries for machine state without owning
+or hashing that file.
 
-AGENTS.md is the user's file: superdev's guidance sits behind that one import
-in the owned `.agents/superdev.md`. The source is
-`crates/lib/superdev-core/src/agent-instructions.md`; the pipeline expands its
-code-index region only when that capability is enabled. Rust owns composition,
-not the instruction prose. The enabled code-index capability also carries the
-`mcpServers.codegraph` registration that serves the index over MCP.
+`AGENTS.md` is shared: `init` and `sync` put the complete instructions between
+`<!-- superdev:instructions -->` and `<!-- /superdev:instructions -->` at its
+start. Pi reads that content directly, without Claude Code's import syntax.
+The update removes exact standalone `@.agents/superdev.md` lines and preserves
+all other bytes outside the block. Invalid or repeated markers cause refusal.
+The engine composes against the file at apply time and journals the write for
+rollback; it does not claim or hash the whole file.
+
+`crates/lib/superdev-core/src/agent-instructions.md` remains the canonical
+source, copied verbatim into the block and the owned `.agents/superdev.md`,
+independent of enabled capabilities. Rust owns composition, not instruction
+prose. The enabled code-index capability also carries the `mcpServers.codegraph`
+registration that serves the index over MCP.
 
 Migrations are derived, not scripted: what the lock records minus what the
 components claim is what `sync` removes, so a dropped file, a rename's old copy

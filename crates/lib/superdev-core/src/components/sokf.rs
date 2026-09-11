@@ -242,15 +242,15 @@ mod tests {
 
     #[test]
     fn agents_md_is_never_planned_and_the_grammar_matches_the_validator() {
-        // AGENTS.md is the user's file: the repo-level entry ensures its one
-        // import line; this component must not touch it.
+        // The repo-level entry manages the AGENTS.md instruction prefix;
+        // this component must not touch that shared file.
         let dir = tempfile::tempdir().unwrap();
         let actions = plan_in(dir.path());
         assert!(
-            !actions.iter().any(|a| matches!(
-                a,
-                Action::WriteFile { path, .. } if path == "AGENTS.md"
-            )),
+            !actions.iter().any(|a| {
+                matches!(a, Action::EnsureAgentInstructions { .. })
+                    || matches!(a, Action::WriteFile { path, .. } if path == "AGENTS.md")
+            }),
             "AGENTS.md planned by the SOKF component"
         );
         let grammar = actions

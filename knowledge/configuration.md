@@ -376,11 +376,13 @@ restarting review. Inspect the queue before selecting a finding.
   own keys and leaves the rest alone, the same rule it applies to
   `.mise.toml`. A managed repo gets `superdev mcp sokf`; in this repo the
   dev shim makes that resolve to `cargo run` against the working tree.
-- AGENTS.md carries one ensured line, `@.agents/superdev.md`, and is
-  otherwise the user's. The aggregator it imports and the per-capability
-  instruction files beside it (`.agents/sokf.md`, `.agents/codegraph.md`)
-  are owned files; the general rules (`.agents/professionalism.md`, `.agents/process.md`,
-  `.agents/coding.md`) are write-once scaffolds, the user's to adapt.
+- `AGENTS.md` starts with a managed Superdev instruction block, updated by
+  `init` and `sync`. Existing user content follows unchanged, except that the
+  obsolete standalone `@.agents/superdev.md` import is removed. The file is
+  not claimed or hashed as a whole. `.agents/superdev.md` remains an owned
+  copy of the same canonical instructions; the general rules
+  (`.agents/professionalism.md`, `.agents/process.md`, `.agents/coding.md`)
+  are write-once scaffolds, the user's to adapt.
 - `.pi/extensions/superdev/` holds the workflow adapter and its private role
   prompts. `.pi/skills/sokf-authoring/` holds the independently invocable SOKF
   authoring skill. Both are owned pack content with ordinary lock and drift

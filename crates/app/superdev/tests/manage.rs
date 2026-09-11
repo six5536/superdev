@@ -228,6 +228,40 @@ fn a_failed_init_reports_the_manifest_it_leaves_behind() {
     sb.superdev().arg("sync").assert().success();
 }
 
+/// contract-002-cli-superdev P_init-agents-chain, P_sync-agent-instructions.
+#[test]
+fn agent_instructions_are_inline_and_user_content_survives_init_and_sync() {
+    for user in [None, Some("# Local rules\r\nKeep this tail")] {
+        let sb = Sandbox::new();
+        if let Some(user) = user {
+            sb.write("AGENTS.md", user);
+        }
+        sb.superdev()
+            .args(["init", "--no-skills", "--no-code-index", "--no-frontend"])
+            .assert()
+            .success();
+        let expected = format!(
+            "<!-- superdev:instructions -->\n{}<!-- /superdev:instructions -->\n{}",
+            sb.read(".agents/superdev.md"),
+            user.unwrap_or_default()
+        );
+        assert_eq!(sb.read("AGENTS.md"), expected);
+
+        let legacy = format!("@.agents/superdev.md\n{}", user.unwrap_or_default());
+        sb.write("AGENTS.md", &legacy);
+        // Both status and dry-run observe drift without applying the migration.
+        sb.superdev().args(["status", "--drift"]).assert().code(1);
+        sb.superdev().args(["sync", "--dry-run"]).assert().success();
+        assert_eq!(sb.read("AGENTS.md"), legacy);
+        sb.superdev().arg("sync").assert().success();
+        assert_eq!(sb.read("AGENTS.md"), expected);
+        sb.superdev().arg("sync").assert().success();
+        assert_eq!(sb.read("AGENTS.md"), expected);
+        sb.superdev().args(["status", "--drift"]).assert().success();
+        assert!(!sb.read(".superdev/lock.toml").contains("\"AGENTS.md\""));
+    }
+}
+
 /// contract-011-interface-workflow P_extension-skills
 /// contract-011-interface-workflow P_skill-cold-start
 #[test]

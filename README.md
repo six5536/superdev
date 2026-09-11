@@ -35,6 +35,12 @@ superdev update    # bring pins current, then sync
 be repaired by `sync`. A file you have edited is never overwritten in silence: `status`
 reports it, and `sync` backs it up before writing.
 
+`init` and `sync` put Superdev's full instructions at the start of `AGENTS.md`
+in a managed block, so Pi loads them directly. Existing content stays after
+that block unchanged, except for removal of the old `@.agents/superdev.md`
+import line. Keep custom instructions outside the block; later syncs update
+only Superdev's block. `.agents/superdev.md` remains available as a separate copy.
+
 ## Usage
 
 It also registers an MCP server for the canonical knowledge, so agents

@@ -451,15 +451,8 @@ fn claim_collision(claims_by_component: &[(Option<Capability>, String, Vec<Claim
     Ok(())
 }
 
-/// Where superdev's agent instructions live: the aggregator AGENTS.md
-/// imports, owned and rewritten when the canonical source changes.
+/// The owned copy of the instructions also embedded at the start of AGENTS.md.
 const AGGREGATOR_PATH: &str = ".agents/superdev.md";
-/// The one line superdev keeps in the user's AGENTS.md.
-const AGENTS_IMPORT_LINE: &str = "@.agents/superdev.md";
-/// Reported once, when the line is appended to an AGENTS.md that already
-/// existed — the repos migrating off the old superdev-written scaffold.
-const AGENTS_TRIM_HINT: &str = "AGENTS.md is yours — superdev's guidance moved behind @.agents/superdev.md; \
-     trim any old superdev-written sections";
 
 /// Canonical agent instructions are copied verbatim, independent of the
 /// enabled capabilities. The source no longer carries expansion markers.
@@ -475,7 +468,7 @@ fn read_or_empty(path: std::path::PathBuf) -> Result<String> {
 }
 
 /// The repo-level entry no capability owns: the `.gitignore` lines, the
-/// ensured AGENTS.md import, and the instructions aggregator it points at.
+/// managed AGENTS.md prefix, and the standalone instruction copy.
 fn repo_entry(root: &Path, manifest: &Manifest, content: &ContentSet) -> Result<Option<Planned>> {
     let gitignore = read_or_empty(root.join(".gitignore"))?;
     let mut wanted = vec![(".superdev/cache/".to_string(), "ignore machine state")];
@@ -492,12 +485,10 @@ fn repo_entry(root: &Path, manifest: &Manifest, content: &ContentSet) -> Result<
             append_note: None,
         })
         .collect();
-    if !crate::fsutil::has_line(&read_or_empty(root.join("AGENTS.md"))?, AGENTS_IMPORT_LINE) {
-        actions.push(Action::EnsureLine {
-            path: "AGENTS.md".into(),
-            line: AGENTS_IMPORT_LINE.into(),
-            reason: "make agents read superdev's instructions".into(),
-            append_note: Some(AGENTS_TRIM_HINT.into()),
+    let agents = read_or_empty(root.join(crate::agent_file::PATH))?;
+    if crate::agent_file::render(&agents, AGGREGATOR_TEMPLATE)? != agents {
+        actions.push(Action::EnsureAgentInstructions {
+            content: AGGREGATOR_TEMPLATE.into(),
         });
     }
     let aggregator = AGGREGATOR_TEMPLATE.to_string();
@@ -783,5 +774,7 @@ fn rule_scaffold_paths() -> Vec<String> {
         .collect()
 }
 
+#[cfg(test)]
+mod agent_tests;
 #[cfg(test)]
 mod tests;

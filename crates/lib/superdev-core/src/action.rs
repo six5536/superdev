@@ -26,6 +26,12 @@ pub enum Action {
         /// Short human reason, shown in plans.
         reason: String,
     },
+    /// Maintain the instruction block at the start of the user-owned AGENTS.md.
+    /// Removes the legacy import and preserves all content outside the block.
+    EnsureAgentInstructions {
+        /// Canonical instructions to embed, without the managed markers.
+        content: String,
+    },
     /// Append a line unless the file already contains it.
     EnsureLine {
         /// Target path.
@@ -96,6 +102,9 @@ impl Action {
     pub fn describe(&self) -> String {
         match self {
             Action::WriteFile { path, reason, .. } => format!("write {path} ({reason})"),
+            Action::EnsureAgentInstructions { .. } => {
+                "ensure AGENTS.md starts with superdev's instructions".into()
+            }
             Action::EnsureLine { path, line, .. } => {
                 format!("ensure {path} contains `{line}`")
             }
@@ -137,6 +146,14 @@ mod tests {
             reason: "SOKF spec".into(),
         };
         assert_eq!(a.describe(), "write .agents/sokf/SPEC.md (SOKF spec)");
+
+        let a = Action::EnsureAgentInstructions {
+            content: "instructions".into(),
+        };
+        assert_eq!(
+            a.describe(),
+            "ensure AGENTS.md starts with superdev's instructions"
+        );
 
         let a = Action::SetMisePin {
             tool: "http:codegraph".into(),

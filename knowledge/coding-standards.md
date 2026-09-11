@@ -22,9 +22,9 @@ The behavioural rules are in the `core_coding_rules` block of
 [superdev.md](/.agents/superdev.md): apply DRY, KISS and YAGNI, consider edge
 cases, and test the requirements.[^coding]
 
-**Never edit `.agents/superdev.md`.** It is the Prime Directive, the one file
-every session loads, and the binary copies
-`crates/lib/superdev-core/src/agent-instructions.md` to it verbatim on sync. Where a skill or a
+**Never edit `.agents/superdev.md` or the managed instruction block in
+`AGENTS.md`.** Sync copies `crates/lib/superdev-core/src/agent-instructions.md`
+verbatim to both; Pi loads the inline `AGENTS.md` content. Where a skill or a
 concept says the same thing as one of its blocks, the duplication is resolved
 by rewriting the other occurrence into a reference — `core's <block> block`,
 which the validator checks against the blocks core actually defines. The

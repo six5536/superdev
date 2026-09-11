@@ -17,7 +17,10 @@ gate are in [CONTRIBUTING](/CONTRIBUTING.md).[^contributing]
 
 - **Unit.** Per-crate `#[cfg(test)]` tests, plus rustdoc examples as
   doctests. Planning is pure, so most of these feed a temp-dir repo and a
-  manifest in and assert on the action list that comes out.
+  manifest in and assert on the action list that comes out. The agent-entry
+  cases also apply the plan: instructions come first, user bytes survive
+  migration and updates (including CRLF and a missing final newline), repeated
+  syncs converge, malformed markers refuse, and failed applies roll back.
 - **Fake runner.** Every process spawn goes through `CommandRunner`; the
   test-only `FakeRunner` records each command line, and the `RunOptions` that
   came with it, and scripts outcomes,

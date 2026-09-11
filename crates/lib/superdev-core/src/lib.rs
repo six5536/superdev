@@ -27,6 +27,7 @@ pub mod content;
 pub mod engine;
 pub mod error;
 
+pub(crate) mod agent_file;
 pub(crate) mod fsutil;
 pub(crate) mod json_edit;
 pub mod lock;

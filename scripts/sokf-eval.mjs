@@ -34,7 +34,7 @@ function copyRepository(destination, withoutKnowledge) {
     },
   });
   mkdirSync(join(destination, ".git"), { recursive: true });
-  writeFileSync(join(destination, "AGENTS.md"), "@.agents/superdev.md\n");
+  writeFileSync(join(destination, "AGENTS.md"), withoutInstruction ? instructionsWithoutKnowledge : agentInstructions);
 }
 
 function globMatches(pattern, value) {
@@ -151,7 +151,6 @@ async function runScenario(scenario) {
   ];
   if (provider) args.push("--provider", provider);
   if (model) args.push("--model", model);
-  args.push("--append-system-prompt", withoutInstruction ? instructionsWithoutKnowledge : agentInstructions);
   args.push("-p", scenario.prompt);
 
   try {

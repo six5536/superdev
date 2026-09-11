@@ -93,6 +93,13 @@ test("a missing knowledge path requires semantic recovery, not a filesystem scan
   assert.deepEqual(scenario.expect.forbiddenTools, ["edit", "write"]);
 });
 
+test("evaluation instructions use AGENTS.md without duplicate prompt injection", async () => {
+  const runner = await readFile(new URL("../sokf-eval.mjs", import.meta.url), "utf8");
+  assert.ok(runner.includes('writeFileSync(join(destination, "AGENTS.md"), withoutInstruction ? instructionsWithoutKnowledge : agentInstructions)'));
+  assert.ok(!runner.includes("@.agents/superdev.md"));
+  assert.ok(!runner.includes("--append-system-prompt"));
+});
+
 test("fixtures distinguish SOKF-worthy work from a code-local task", () => {
   const byId = new Map(fixture.scenarios.map((scenario) => [scenario.id, scenario]));
   assert.equal(byId.get("known-project-question").expect.orderedCalls[0].tool, "sokf_search");

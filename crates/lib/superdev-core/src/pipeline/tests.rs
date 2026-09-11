@@ -135,7 +135,11 @@ fn a_provisioning_run_is_work_to_do_but_not_drift() {
         std::fs::write(dir.path().join(scaffold), "the user's now\n").unwrap();
     }
     std::fs::write(dir.path().join(".gitignore"), ".superdev/cache/\n").unwrap();
-    std::fs::write(dir.path().join("AGENTS.md"), "@.agents/superdev.md\n").unwrap();
+    std::fs::write(
+        dir.path().join("AGENTS.md"),
+        crate::agent_file::render("", AGGREGATOR_TEMPLATE).unwrap(),
+    )
+    .unwrap();
     materialize_pi_repo_assets(dir.path());
     let fake = FakeRunner::new();
     settle_sokf(dir.path(), &manifest, &fake);
@@ -305,7 +309,7 @@ fn agent_instructions_match_canonical_source_for_every_enabled_set() {
 }
 
 #[test]
-fn repo_entry_plans_the_import_line_and_the_aggregator_once() {
+fn repo_entry_plans_the_instruction_prefix_and_the_aggregator_once() {
     let dir = tempfile::tempdir().unwrap();
     let manifest = Manifest::default_for("0.1.0", &[]);
     let entry = repo_entry(dir.path(), &manifest, content::test_snapshot())
@@ -315,7 +319,7 @@ fn repo_entry_plans_the_import_line_and_the_aggregator_once() {
     assert!(
         descs
             .iter()
-            .any(|d| d.contains("ensure AGENTS.md contains `@.agents/superdev.md`")),
+            .any(|d| d == "ensure AGENTS.md starts with superdev's instructions"),
         "{descs:?}"
     );
     assert!(
@@ -339,7 +343,7 @@ fn repo_entry_plans_the_import_line_and_the_aggregator_once() {
     .unwrap();
     std::fs::write(
         dir.path().join("AGENTS.md"),
-        "# Mine\n@.agents/superdev.md\n",
+        crate::agent_file::render("# Mine\n", AGGREGATOR_TEMPLATE).unwrap(),
     )
     .unwrap();
     std::fs::create_dir_all(dir.path().join(".agents")).unwrap();

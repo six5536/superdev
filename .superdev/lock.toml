@@ -10,7 +10,7 @@ version = "1.5.0"
 [files]
 ".agents/sokf/SPEC.md" = "f0a49f468a6e5258192458bdfa63f32341f045314d48df6b9a96d8cbd1258631"
 ".agents/sokf/grammar.yaml" = "f10d397c50446e48c29bd76f657a1c0a237a487c2e5d48d86b1dd1077210f286"
-".agents/superdev.md" = "f912d4085919e57023ca7840d8b23e5c1a4341b7b88306945b44e2c96f9cff87"
+".agents/superdev.md" = "91ab101e351fe13a897313f7f77a43350e9a3c2997245cf5360e9610aca987ce"
 ".mcp.json:mcpServers.codegraph" = "e0b059437b618fb326f87d47078490f74cd2459e45fc2b8414fe211dc023f45d"
 ".mise.toml:http:codegraph" = "e4be6ff16fe91dc165523e8762aa56b0ec9f99e244e396006499017dcf0a3377"
 ".pi/extensions/superdev/index.ts" = "926426ad2c1170c2728eca62f9bc3dff12cd506852f2ffaf7c6330b7facf7194"

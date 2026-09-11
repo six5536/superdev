@@ -249,6 +249,11 @@ publish a version it cannot find a heading for.
 
 ### Fixed
 
+- **Pi receives Superdev instructions directly from `AGENTS.md`.** `init` and
+  `sync` embed the complete instructions in a managed block at the start,
+  remove the obsolete `@.agents/superdev.md` import line, and preserve all
+  other existing content. Later syncs update the block without duplicating it;
+  malformed markers cause an error instead of risking user content.
 - **A list kind needs a top-level item, and an item ends at a heading.**
   `content: bullet-list` or `numbered-list` is satisfied only by a
   top-level item as the item declarations read one — a bullet nested
