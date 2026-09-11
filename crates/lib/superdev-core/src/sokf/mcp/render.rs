@@ -109,12 +109,13 @@ fn capped(entries: Vec<(String, String)>) -> Vec<String> {
     lines
 }
 
-/// Search hits, grouped by concept in score order.
+/// Search hits, grouped by concept in retrieval order.
 pub(super) fn render_hits(
     bundle: &Bundle,
     query: &str,
     hits: &[Hit],
     lexical_only: bool,
+    warnings: &[String],
 ) -> String {
     let descriptions = descriptions(bundle);
     let mut lines = Vec::new();
@@ -124,8 +125,8 @@ pub(super) fn render_hits(
         lines.push(format!("{} sections for `{query}`", hits.len()));
     }
 
-    // Groups keep the order of their best hit, so the strongest concept
-    // leads.
+    // Groups keep the order of their first hit: direct addresses already
+    // lead hybrid relevance before rendering.
     let mut order: Vec<String> = Vec::new();
     let mut groups: HashMap<String, Vec<&Hit>> = HashMap::new();
     for hit in hits {
@@ -142,10 +143,11 @@ pub(super) fn render_hits(
         lines.push(named(identity, description));
         for hit in &groups[identity] {
             lines.push(format!(
-                "  {}:{}-{}  [{}]  {}",
+                "  {}:{}-{} {{match: {}}}  [{}]  {}",
                 hit.path,
                 hit.start_line,
                 hit.end_line,
+                hit.match_kind.label(),
                 heading_label(&hit.heading_path),
                 hit.snippet
             ));
@@ -155,6 +157,9 @@ pub(super) fn render_hits(
     if lexical_only {
         lines.push(String::new());
         lines.push("note: semantic search unavailable (lexical only)".to_string());
+    }
+    for warning in warnings {
+        lines.push(format!("note: query syntax recovered: {warning}"));
     }
     lines.join("\n")
 }

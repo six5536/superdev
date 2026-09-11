@@ -114,3 +114,16 @@ plan in one domain establish that identifier-anchored queries rank badly; they
 do not establish how the ranking behaves across the corpus generally. No
 counterfactual was run, so what a lexical-only or semantic-only search would
 have returned for the same queries is unknown.
+
+The development experiment in
+[issue-090][sokf:issue-090-search-callers-never-use-its-precision-controls]
+now covers the identity failure with a frozen corpus and LLM-generated queries.
+Direct ID/path priority restores both missing targets without tuning RRF or
+changing historical-work penalties. Full IDs, unambiguous numbered shorthands
+and complete knowledge paths lead results, still subject to explicit filters.
+The title case already ranks first. This addresses the exact-identifier overlap;
+it does not establish that title boosts, another fusion constant or a new
+settled-report policy would help across the corpus.
+
+<!-- sokf:links -->
+[sokf:issue-090-search-callers-never-use-its-precision-controls]: /knowledge/issues/open/issue-090-search-callers-never-use-its-precision-controls.md

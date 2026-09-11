@@ -223,6 +223,36 @@ fn a_capped_incoming_group_summarises_the_rels_it_showed() {
 }
 
 #[test]
+fn search_reports_actual_query_recovery_without_discarding_hits() {
+    let (bundle, dir) = bundle_with(&[("alpha.md", ALPHA)]);
+    let service = SokfService::new(
+        bundle.root,
+        dir.path().to_path_buf(),
+        IndexDir(dir.path().join("index")),
+        None,
+    );
+    let recovered = service
+        .search(SearchRequest {
+            query: "\"alpha".into(),
+            ..SearchRequest::default()
+        })
+        .unwrap();
+    assert!(recovered.contains("alpha.md:"), "{recovered}");
+    assert!(
+        recovered.contains("note: query syntax recovered:"),
+        "{recovered}"
+    );
+    let ordinary = service
+        .search(SearchRequest {
+            query: "alpha.md".into(),
+            ..SearchRequest::default()
+        })
+        .unwrap();
+    assert!(ordinary.contains("{match: path}"), "{ordinary}");
+    assert!(!ordinary.contains("query syntax recovered"), "{ordinary}");
+}
+
+#[test]
 fn a_search_limit_is_bounded_at_both_ends() {
     assert_eq!(hit_limit(None), SearchOpts::default().limit);
     assert_eq!(hit_limit(Some(3)), 3);

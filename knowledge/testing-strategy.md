@@ -88,6 +88,15 @@ gate are in [CONTRIBUTING](/CONTRIBUTING.md).[^contributing]
   A scripted provider drives the real Pi loop without network calls: first
   reports arrive before subsequent tool turns, and later reports are visible
   without waiting for another user prompt or triggering another turn.
+- **LLM search development experiment.** `scripts/sokf-search-eval.mjs` uses
+  six tasks from `evals/sokf/search.json`. Luna composes search requests and
+  selects evidence from actual CLI results; expected concepts are hidden.
+  Frozen corpus/binary comparisons and verbatim request replay separate
+  guidance, ranking and labels. The script is opt-in, has no tools or hidden
+  repository instructions in model calls, and records token/cost estimates.
+  `scripts/test/sokf-search-eval.test.mjs` checks its scorer and failure paths
+  offline. This sample does not measure final answer quality or adaptive agent
+  retries, and is not a statistical acceptance gate.
 - **npm launcher.** A JS test that resolves + spawns a stub binary, and
   errors cleanly when no platform package matches.
 - **Release smoke.** `scripts/release-smoke.mjs` runs a compiled release

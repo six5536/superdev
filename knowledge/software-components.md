@@ -86,14 +86,17 @@ The MCP server exposes three read-only tools over stdio — `sokf_search`,
 `sokf_graph` and `sokf_overview` (see
 [contract-003-api-sokf][sokf:contract-003-api-sokf]). It serves no file tool
 and performs no mutation: an agent reads and edits knowledge with its own
-tools on physical paths, and every concept the server names carries the
-repository-relative path of its file. The server treats the canonical active
+tools on physical paths. Search locators are knowledge-relative; graph paths
+are repository-relative. The server treats the canonical active
 checkout root as its repository, including when `.git` is a worktree pointer
 file. It holds one index directory and serialises its
 tool calls: a call keeps the index open while another call's sync could rebuild
-that directory. Search is hybrid — tantivy BM25 and cosine over section
-embeddings, fused by reciprocal rank fusion — and drops to lexical-only when no
-model loads. MCP initializes the configured embedder on the first search or
+that directory. Exact concept IDs, unambiguous numbered shorthands and paths
+lead hybrid relevance, subject to the same filters. Other results combine
+tantivy BM25 and cosine over section embeddings by reciprocal rank fusion,
+with lexical-only fallback when no model loads. Each section labels its
+retrieval source; labels are not confidence estimates. The index's storage,
+retrieval and direct-address matching live in separate named source files. MCP initializes the configured embedder on the first search or
 overview and reuses that result for the process lifetime.
 
 # `crates/app/superdev` (binary)

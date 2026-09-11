@@ -53,6 +53,22 @@ What the annotated list does not say:
   `--without-instruction` for the comparison arm or `--scenario=<id>` for one
   case. Progress goes to stderr and a `sokf-evaluation-result/v1` report goes
   to stdout.
+- `node scripts/sokf-search-eval.mjs` checks six search-experiment tasks
+  without network calls. To run the small Luna experiment, freeze a copy of
+  `knowledge/` and `.superdev/config.toml` in a scratch directory and copy the
+  baseline binary before changing retrieval code. Supply
+  `--run --corpus=<scratch> --binary=<binary> --output=<report.json>`.
+  `--guidance-source=<mcp.rs>` uses a saved version of the tool documentation;
+  `--queries-from=<report.json>` replays requests to isolate ranking changes;
+  `--without-labels` isolates result labels. Keep the corpus unchanged between
+  arms. Knowledge, configuration and binary hashes are checked through each
+  task; replays also require the same configuration and retrieval model. A
+  change aborts the run rather than producing a misleading comparison. Each
+  full run makes at most two tool-free Luna calls per task, with a
+  two-minute subprocess deadline and no retries; a replay uses one per task.
+  A model-reported $0.25 estimate stops subsequent calls, not a request already
+  in flight. Reports retain requests, choices, results and usage estimates,
+  including reported usage for a model response whose JSON is malformed.
 - `cargo run -- validate --fix` is the same check with its repairs applied
   first: a link naming a concept by path becomes the id form, every
   `<!-- sokf:links -->` block is regenerated, and every include block is

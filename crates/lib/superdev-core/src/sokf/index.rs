@@ -9,24 +9,27 @@
 //! Retrieval runs both stores and fuses their rankings; [`Index::search`] is
 //! the whole of the read side.
 
-use std::collections::{BTreeMap, HashMap, HashSet};
+use std::collections::{BTreeMap, HashSet};
 use std::fs;
 use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
-use tantivy::collector::{DocSetCollector, TopDocs};
-use tantivy::query::{BooleanQuery, Query, QueryParser, TermQuery};
-use tantivy::schema::{Field, INDEXED, IndexRecordOption, STORED, STRING, Schema, TEXT};
-use tantivy::{
-    DocAddress, Index as Tantivy, IndexReader, IndexWriter, ReloadPolicy, Searcher,
-    TantivyDocument, Term,
-};
+use tantivy::schema::{Field, INDEXED, STORED, STRING, Schema, TEXT};
+use tantivy::{Index as Tantivy, IndexReader, IndexWriter, ReloadPolicy, TantivyDocument, Term};
 
 use super::bundle::Bundle;
 use super::concept::{Concept, Status};
 use super::embed::Embedder;
 use crate::error::{Error, Result};
 use crate::lock::sha256_hex;
+
+mod direct;
+mod search;
+pub use direct::MatchKind;
+#[cfg(test)]
+mod direct_tests;
+#[cfg(test)]
+mod tests;
 
 /// Layout version of the index. Bump it when the tantivy schema or the vector
 /// file changes shape; a stored index at another version is rebuilt.
@@ -103,8 +106,20 @@ pub struct Hit {
     /// The section's opening text, whitespace collapsed onto one line and cut
     /// to roughly 200 characters.
     pub snippet: String,
-    /// Fused score. Comparable within one result list and nowhere else.
+    /// Fused score within a retrieval tier, not a confidence or probability.
     pub score: f32,
+    /// Why this section was returned. Direct identity or path matches sort
+    /// ahead of hybrid relevance, independent of the fused score.
+    pub match_kind: MatchKind,
+}
+
+/// Search sections and recoverable query-parser diagnostics.
+#[derive(Debug, Clone, PartialEq)]
+pub struct SearchReport {
+    /// Matching sections in retrieval order.
+    pub hits: Vec<Hit>,
+    /// Query syntax recovered by the lenient lexical parser.
+    pub warnings: Vec<String>,
 }
 
 /// What to retrieve, beyond the query text.
@@ -167,7 +182,7 @@ impl SectionDoc {
 }
 
 impl SectionDoc {
-    fn hit(&self, score: f32) -> Hit {
+    fn hit(&self, score: f32, match_kind: MatchKind) -> Hit {
         Hit {
             path: self.path.clone(),
             concept_id: self.concept_id.clone(),
@@ -176,6 +191,7 @@ impl SectionDoc {
             end_line: self.end_line,
             snippet: self.snippet.clone(),
             score,
+            match_kind,
         }
     }
 }
@@ -186,6 +202,10 @@ pub struct Index {
     reader: IndexReader,
     vectors: Vec<VectorRecord>,
     manifest: IndexManifest,
+    // Current bundle identities, not a persisted second index. Sync already
+    // loads these concepts; exact lookup need not search body prose.
+    identities: BTreeMap<String, Option<String>>,
+    bundle_root: PathBuf,
 }
 
 impl Index {
@@ -239,157 +259,6 @@ impl Index {
     /// The embedder the vectors were built with; `None` when lexical-only.
     pub fn model_id(&self) -> Option<&str> {
         self.manifest.model_id.as_deref()
-    }
-
-    /// Hybrid search over the indexed sections.
-    ///
-    /// Lexical retrieval always runs: BM25 over the section text, terms ANDed,
-    /// re-run as a disjunction only when the conjunction finds nothing.
-    /// Semantic retrieval — cosine over the section vectors — joins it when
-    /// the index has vectors and `embedder` is the one that built them; pass
-    /// the embedder the sync used. Anything else, including `None`, leaves
-    /// search lexical.
-    ///
-    /// [`SearchOpts::kinds`], [`SearchOpts::tags`] and
-    /// [`SearchOpts::lifecycle`] filter both lists before they are fused by
-    /// reciprocal rank fusion, so a filtered concept cannot re-enter through
-    /// the other list.
-    ///
-    /// Sections of settled work — a `lifecycle` value that is not a live
-    /// one, or a `deprecated` concept — are down-ranked after fusion, so
-    /// finished plans, issues and maps sort below live knowledge without
-    /// leaving the results.
-    ///
-    /// The result is a flat list, best first; grouping by concept belongs to
-    /// the caller.
-    ///
-    /// # Errors
-    ///
-    /// Returns [`Error::Index`] when tantivy fails, and whatever the embedder
-    /// returns for the query.
-    pub fn search(
-        &self,
-        query: &str,
-        embedder: Option<&dyn Embedder>,
-        opts: &SearchOpts,
-    ) -> Result<Vec<Hit>> {
-        if opts.limit == 0 {
-            return Ok(Vec::new());
-        }
-        let searcher = self.reader.searcher();
-        let (_, fields) = schema();
-        // Every pass that reads a document keeps it here, so the last step
-        // re-reads only the sections semantic retrieval found on its own.
-        let mut docs: HashMap<DocKey, SectionDoc> = HashMap::new();
-
-        let lexical = lexical_keys(&searcher, &fields, query, opts, &mut docs)?;
-        let semantic = self.semantic_keys(&searcher, &fields, query, embedder, opts, &mut docs)?;
-        let mut fused = rrf(&[lexical, semantic]);
-        self.read_missing(&searcher, &fields, &fused, &mut docs)?;
-        downrank(&mut fused, &docs);
-        fused.truncate(opts.limit);
-        Ok(fused
-            .into_iter()
-            .filter_map(|(key, score)| docs.get(&key).map(|doc| doc.hit(score)))
-            .collect())
-    }
-
-    /// The semantic candidates: sections whose vector points the same way as
-    /// the query's, best first.
-    ///
-    /// Empty — leaving search lexical — without an embedder, without vectors,
-    /// or when the embedder is not the one the vectors were built with, since
-    /// two models' vectors say nothing about each other.
-    fn semantic_keys(
-        &self,
-        searcher: &Searcher,
-        fields: &Fields,
-        query: &str,
-        embedder: Option<&dyn Embedder>,
-        opts: &SearchOpts,
-        docs: &mut HashMap<DocKey, SectionDoc>,
-    ) -> Result<Vec<DocKey>> {
-        let Some(embedder) = embedder else {
-            return Ok(Vec::new());
-        };
-        if self.vectors.is_empty() || self.manifest.model_id != Some(embedder.model_id()) {
-            return Ok(Vec::new());
-        }
-        let embedded = embedder.embed(&[query.to_string()])?;
-        let Some(query_vector) = embedded.first() else {
-            return Ok(Vec::new());
-        };
-        // Only built when something is filtered, because it reads every
-        // document the filter matches.
-        let allowed = match filter_query(fields, opts) {
-            Some(filter) => Some(collect_keys(searcher, fields, filter.as_ref(), docs)?),
-            None => None,
-        };
-
-        let mut scored: Vec<(DocKey, f32)> = self
-            .vectors
-            .iter()
-            .filter(|record| record.vector.len() == query_vector.len())
-            .map(|record| {
-                let key = DocKey {
-                    path_hash: record.path_hash,
-                    ordinal: record.ordinal,
-                };
-                (key, cosine(&record.vector, query_vector))
-            })
-            // A similarity at or below zero is not evidence of anything; such
-            // a record would only add noise to the fusion.
-            .filter(|(key, score)| {
-                *score > 0.0 && allowed.as_ref().is_none_or(|allowed| allowed.contains(key))
-            })
-            .collect();
-        // The key breaks ties, so the ranking never depends on the order the
-        // vector file happens to be in.
-        scored.sort_by(|a, b| b.1.total_cmp(&a.1).then(a.0.cmp(&b.0)));
-        scored.truncate(candidates(opts));
-        Ok(scored.into_iter().map(|(key, _)| key).collect())
-    }
-
-    /// Read the documents behind `fused` that no earlier pass read — the
-    /// sections only semantic retrieval found — the lexical pass reads its
-    /// own. A vector record knows its
-    /// path's hash and its ordinal, which together name exactly one document.
-    fn read_missing(
-        &self,
-        searcher: &Searcher,
-        fields: &Fields,
-        fused: &[(DocKey, f32)],
-        docs: &mut HashMap<DocKey, SectionDoc>,
-    ) -> Result<()> {
-        let missing: Vec<&DocKey> = fused
-            .iter()
-            .map(|(key, _)| key)
-            .filter(|key| !docs.contains_key(key))
-            .collect();
-        if missing.is_empty() {
-            return Ok(());
-        }
-        let by_hash: HashMap<u64, &String> = self
-            .manifest
-            .files
-            .keys()
-            .map(|path| (path_hash(path), path))
-            .collect();
-        let clauses: Vec<Box<dyn Query>> = missing
-            .into_iter()
-            .filter_map(|key| {
-                let path = by_hash.get(&key.path_hash)?;
-                Some(Box::new(BooleanQuery::intersection(vec![
-                    term_query(Term::from_field_text(fields.path, path)),
-                    term_query(Term::from_field_u64(fields.ordinal, u64::from(key.ordinal))),
-                ])) as Box<dyn Query>)
-            })
-            .collect();
-        if clauses.is_empty() {
-            return Ok(());
-        }
-        collect_keys(searcher, fields, &BooleanQuery::union(clauses), docs)?;
-        Ok(())
     }
 }
 
@@ -521,6 +390,8 @@ fn rebuild(
         reader: reader(&tantivy)?,
         vectors,
         manifest,
+        identities: identities(bundle),
+        bundle_root: bundle.root.clone(),
     };
     let stats = SyncStats {
         reindexed: concepts.len(),
@@ -632,6 +503,8 @@ fn update(
         reader,
         vectors,
         manifest,
+        identities: identities(bundle),
+        bundle_root: bundle.root.clone(),
     };
     let stats = SyncStats {
         reindexed: changed.len(),
@@ -822,847 +695,16 @@ fn read_vectors(path: &Path) -> Option<Vec<VectorRecord>> {
     Some(records)
 }
 
-/// The lexical candidates: BM25 over the section text, best first.
-///
-/// The query is parsed twice at most — all terms required, then any term —
-/// because a user's phrasing usually names more than one section's worth of
-/// words, and an empty answer is worse than a loose one.
-fn lexical_keys(
-    searcher: &Searcher,
-    fields: &Fields,
-    query: &str,
-    opts: &SearchOpts,
-    docs: &mut HashMap<DocKey, SectionDoc>,
-) -> Result<Vec<DocKey>> {
-    let filter = filter_query(fields, opts);
-    let mut conjunction = QueryParser::for_index(searcher.index(), vec![fields.text]);
-    conjunction.set_conjunction_by_default();
-    let disjunction = QueryParser::for_index(searcher.index(), vec![fields.text]);
-
-    for parser in [&conjunction, &disjunction] {
-        // Lenient, because the query is prose a user typed, not a query
-        // language: an unbalanced quote should still search for the words.
-        let (parsed, _) = parser.parse_query_lenient(query);
-        let query: Box<dyn Query> = match &filter {
-            Some(filter) => Box::new(BooleanQuery::intersection(vec![parsed, filter.box_clone()])),
-            None => parsed,
-        };
-        let top = searcher
-            .search(
-                &query,
-                &TopDocs::with_limit(candidates(opts)).order_by_score(),
-            )
-            .map_err(index_error)?;
-        if top.is_empty() {
-            continue;
-        }
-        let mut keys = Vec::with_capacity(top.len());
-        for (_, address) in top {
-            let (key, doc) = read_doc(searcher, fields, address)?;
-            docs.insert(key, doc);
-            keys.push(key);
-        }
-        return Ok(keys);
-    }
-    Ok(Vec::new())
-}
-
-/// Reciprocal rank fusion: each list gives a section `1 / (k + rank)`, and the
-/// scores add up.
-///
-/// Rank is what fuses, never score: BM25 and cosine are on unrelated scales,
-/// so the only comparable thing the two lists produce is their ordering.
-/// Scale down the fused score of settled sections and re-sort. Stable, so
-/// sections on equal scores keep their fused order.
-fn downrank(fused: &mut [(DocKey, f32)], docs: &HashMap<DocKey, SectionDoc>) {
-    let mut touched = false;
-    for (key, score) in fused.iter_mut() {
-        if docs.get(key).is_some_and(SectionDoc::settled) {
-            *score *= DOWNRANK_FACTOR;
-            touched = true;
-        }
-    }
-    if touched {
-        fused.sort_by(|a, b| b.1.total_cmp(&a.1));
-    }
-}
-
-pub(crate) fn rrf(lists: &[Vec<DocKey>]) -> Vec<(DocKey, f32)> {
-    let mut scores: HashMap<DocKey, f32> = HashMap::new();
-    let mut order: Vec<DocKey> = Vec::new();
-    for list in lists {
-        for (rank, key) in list.iter().enumerate() {
-            let score = 1.0 / (RRF_K + rank as f32);
-            scores
-                .entry(*key)
-                .and_modify(|total| *total += score)
-                .or_insert_with(|| {
-                    order.push(*key);
-                    score
-                });
-        }
-    }
-    let mut scored: Vec<(DocKey, f32)> = order.iter().map(|key| (*key, scores[key])).collect();
-    // A stable sort, so sections on equal scores keep the order the lists
-    // first offered them in.
-    scored.sort_by(|a, b| b.1.total_cmp(&a.1));
-    scored
-}
-
-/// The `kinds`/`tags`/`lifecycle` filter as a query: any of the kinds, any of
-/// the tags, and any of the lifecycle values. `None` when nothing was
-/// filtered.
-fn filter_query(fields: &Fields, opts: &SearchOpts) -> Option<Box<dyn Query>> {
-    let any = |field: Field, values: &[String]| -> Option<Box<dyn Query>> {
-        let clauses: Vec<Box<dyn Query>> = values
-            .iter()
-            .map(|value| term_query(Term::from_field_text(field, value)))
-            .collect();
-        (!clauses.is_empty()).then(|| Box::new(BooleanQuery::union(clauses)) as Box<dyn Query>)
-    };
-    let groups: Vec<Box<dyn Query>> = [
-        any(fields.kind, &opts.kinds),
-        any(fields.tags, &opts.tags),
-        any(fields.lifecycle, &opts.lifecycle),
-    ]
-    .into_iter()
-    .flatten()
-    .collect();
-    (!groups.is_empty()).then(|| Box::new(BooleanQuery::intersection(groups)) as Box<dyn Query>)
-}
-
-/// Every document `query` matches, keyed and cached. Unscored: the caller
-/// wants the set, not a ranking.
-fn collect_keys(
-    searcher: &Searcher,
-    fields: &Fields,
-    query: &dyn Query,
-    docs: &mut HashMap<DocKey, SectionDoc>,
-) -> Result<HashSet<DocKey>> {
-    let mut keys = HashSet::new();
-    for address in searcher
-        .search(query, &DocSetCollector)
-        .map_err(index_error)?
-    {
-        let (key, doc) = read_doc(searcher, fields, address)?;
-        docs.insert(key, doc);
-        keys.insert(key);
-    }
-    Ok(keys)
-}
-
-/// Read one section document's stored fields.
-fn read_doc(
-    searcher: &Searcher,
-    fields: &Fields,
-    address: DocAddress,
-) -> Result<(DocKey, SectionDoc)> {
-    // Scoped: the trait's `as_str` would otherwise shadow `String::as_str`
-    // for the rest of the module.
-    use tantivy::schema::Value as _;
-
-    let doc: TantivyDocument = searcher.doc(address).map_err(index_error)?;
-    let text = |field| doc.get_first(field).and_then(|value| value.as_str());
-    let number = |field| doc.get_first(field).and_then(|value| value.as_u64());
-    let path = text(fields.path).unwrap_or_default().to_string();
-    let key = DocKey {
-        path_hash: path_hash(&path),
-        ordinal: number(fields.ordinal).unwrap_or_default() as u32,
-    };
-    let section = SectionDoc {
-        concept_id: text(fields.concept_id).map(str::to_string),
-        heading_path: text(fields.heading_path)
-            .filter(|joined| !joined.is_empty())
-            .map(|joined| joined.split(" > ").map(str::to_string).collect())
-            .unwrap_or_default(),
-        start_line: number(fields.start_line).unwrap_or_default() as usize,
-        end_line: number(fields.end_line).unwrap_or_default() as usize,
-        snippet: snippet(text(fields.text).unwrap_or_default()),
-        status: text(fields.status).unwrap_or("stable").to_string(),
-        lifecycle: text(fields.lifecycle).map(str::to_string),
-        path,
-    };
-    Ok((key, section))
-}
-
-/// A section's opening text on one line, cut to [`SNIPPET_CHARS`].
-fn snippet(text: &str) -> String {
-    let single = text.split_whitespace().collect::<Vec<&str>>().join(" ");
-    match single.char_indices().nth(SNIPPET_CHARS) {
-        Some((at, _)) => format!("{}…", single[..at].trim_end()),
-        None => single,
-    }
-}
-
-/// Cosine similarity. The embedders normalise, which makes this a dot
-/// product, but nothing enforces that, so the norms are computed.
-fn cosine(a: &[f32], b: &[f32]) -> f32 {
-    let dot: f32 = a.iter().zip(b).map(|(x, y)| x * y).sum();
-    let norm = |v: &[f32]| v.iter().map(|x| x * x).sum::<f32>().sqrt();
-    let scale = norm(a) * norm(b);
-    if scale == 0.0 { 0.0 } else { dot / scale }
-}
-
-/// How many candidates one retrieval list may offer.
-fn candidates(opts: &SearchOpts) -> usize {
-    opts.limit.saturating_mul(CANDIDATE_FACTOR)
-}
-
-fn term_query(term: Term) -> Box<dyn Query> {
-    Box::new(TermQuery::new(term, IndexRecordOption::Basic))
+fn identities(bundle: &Bundle) -> BTreeMap<String, Option<String>> {
+    bundle
+        .concepts
+        .iter()
+        .map(|concept| (concept.path.clone(), concept.id.clone()))
+        .collect()
 }
 
 fn index_error(e: impl std::fmt::Display) -> Error {
     Error::Index {
         message: e.to_string(),
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use std::fs;
-    use std::path::Path;
-
-    use tempfile::TempDir;
-
-    use super::*;
-    use crate::sokf::bundle::{Bundle, load_bundle};
-    use crate::sokf::embed::FakeEmbedder;
-
-    /// Two headings, so this concept contributes three sections after the edit
-    /// in `edited_file_reindexes_only_that_file` and two before it.
-    const ALPHA: &str = "---\ntype: Module\nid: alpha\ntags: [core]\n---\nPlanning, before any heading.\n\n# Details\n\nThe planning stage never writes.\n";
-    const BETA: &str = "---\ntype: Spec\nid: beta\n---\nBeta has no headings at all.\n";
-
-    /// A tempdir holding `bundle/` (two concepts, three sections) and room for
-    /// `idx/` beside it.
-    fn fixture() -> (TempDir, Bundle) {
-        let dir = tempfile::tempdir().unwrap();
-        let bundle_dir = dir.path().join("bundle");
-        fs::create_dir(&bundle_dir).unwrap();
-        fs::write(bundle_dir.join("alpha.md"), ALPHA).unwrap();
-        fs::write(bundle_dir.join("beta.md"), BETA).unwrap();
-        let bundle = load_bundle(&bundle_dir).unwrap();
-        (dir, bundle)
-    }
-
-    /// Re-read the bundle after a test edits it on disk.
-    fn reload(dir: &Path) -> Bundle {
-        load_bundle(&dir.join("bundle")).unwrap()
-    }
-
-    /// Two concepts with no shared vocabulary: `release` owns "tag-driven
-    /// pipeline", `testing` owns "nextest".
-    const RELEASE: &str = "---\ntype: Reference\nid: release\ntags: [process]\n---\nReleases are cut from main.\n\n# Pipeline\n\nThe release pipeline is tag-driven: pushing a tag triggers the publish.\n";
-    const TESTING: &str = "---\ntype: Spec\nid: testing\ntags: [quality]\n---\nTests run under nextest.\n\n# Layers\n\nUnit tests and end-to-end tests, run on every commit.\n";
-
-    /// An index over [`RELEASE`] and [`TESTING`]. The tempdir comes back with
-    /// it: dropping it would delete the index under the reader.
-    fn search_fixture(embedder: Option<&dyn Embedder>) -> (TempDir, Index) {
-        let dir = tempfile::tempdir().unwrap();
-        let bundle_dir = dir.path().join("bundle");
-        fs::create_dir(&bundle_dir).unwrap();
-        fs::write(bundle_dir.join("release.md"), RELEASE).unwrap();
-        fs::write(bundle_dir.join("testing.md"), TESTING).unwrap();
-        let bundle = load_bundle(&bundle_dir).unwrap();
-        let (index, _) =
-            Index::open_and_sync(&IndexDir(dir.path().join("idx")), &bundle, embedder).unwrap();
-        (dir, index)
-    }
-
-    #[test]
-    fn lexical_search_finds_the_right_section() {
-        let (_dir, idx) = search_fixture(None);
-        let hits = idx
-            .search("tag-driven release pipeline", None, &SearchOpts::default())
-            .unwrap();
-        // Only the Pipeline section carries every term, so the AND pass
-        // answers the query on its own.
-        assert_eq!(hits.len(), 1);
-        assert_eq!(hits[0].concept_id.as_deref(), Some("release"));
-        assert_eq!(hits[0].path, "release.md");
-        assert_eq!(hits[0].heading_path, vec!["Pipeline".to_string()]);
-        assert!(hits[0].start_line > 0 && hits[0].end_line >= hits[0].start_line);
-        // The heading line through to the end of the file.
-        assert_eq!((hits[0].start_line, hits[0].end_line), (8, 10));
-        assert!(hits[0].snippet.contains("tag-driven"));
-        assert!(!hits[0].snippet.contains('\n'));
-
-        // A caller that asks for nothing gets nothing.
-        let none = SearchOpts {
-            limit: 0,
-            ..SearchOpts::default()
-        };
-        assert!(idx.search("release", None, &none).unwrap().is_empty());
-    }
-
-    /// Body-only concepts, so a section's text is exactly its one body line
-    /// and a query can be made byte-identical to it.
-    const EXACT: &str = "---\ntype: Note\nid: exact\n---\nzephyr quartz lantern meadow\n";
-    const DENSE: &str = "---\ntype: Note\nid: dense\n---\nzephyr zephyr zephyr quartz quartz quartz lantern lantern lantern meadow meadow meadow\n";
-
-    #[test]
-    fn semantic_contributes_when_vectors_exist() {
-        let dir = tempfile::tempdir().unwrap();
-        let bundle_dir = dir.path().join("bundle");
-        fs::create_dir(&bundle_dir).unwrap();
-        fs::write(bundle_dir.join("exact.md"), EXACT).unwrap();
-        fs::write(bundle_dir.join("dense.md"), DENSE).unwrap();
-        let bundle = load_bundle(&bundle_dir).unwrap();
-        let (idx, _) = Index::open_and_sync(
-            &IndexDir(dir.path().join("idx")),
-            &bundle,
-            Some(&FakeEmbedder),
-        )
-        .unwrap();
-
-        // The embedder hashes whole texts, so cosine here is an exact-text
-        // test: the query is `exact`'s only section verbatim, and `dense` —
-        // the same words three times over — points somewhere else entirely.
-        let query = "zephyr quartz lantern meadow";
-        let dense_text = &bundle.concepts[0].sections[0].text;
-        assert_eq!(bundle.concepts[0].id.as_deref(), Some("dense"));
-        let vectors = FakeEmbedder
-            .embed(&[query.to_string(), dense_text.clone()])
-            .unwrap();
-        let cosine: f32 = vectors[0].iter().zip(&vectors[1]).map(|(a, b)| a * b).sum();
-        assert!(
-            cosine <= 0.0,
-            "fixture assumes `dense` is far off: {cosine}"
-        );
-
-        // `dense` repeats every term, so it leads BM25; `exact` trails it
-        // there but tops the semantic list. Two ranks beat one.
-        let hits = idx
-            .search(query, Some(&FakeEmbedder), &SearchOpts::default())
-            .unwrap();
-        assert_eq!(hits.len(), 2);
-        assert_eq!(hits[0].concept_id.as_deref(), Some("exact"));
-        assert_eq!(hits[1].concept_id.as_deref(), Some("dense"));
-        assert!(hits[0].score > hits[1].score);
-        assert!((hits[0].score - (1.0 / 60.0 + 1.0 / 61.0)).abs() < 1e-6);
-        assert!((hits[1].score - 1.0 / 60.0).abs() < 1e-6);
-
-        // Lexical alone reverses them, which is what the semantic list had to
-        // overturn.
-        let lexical = idx.search(query, None, &SearchOpts::default()).unwrap();
-        assert_eq!(lexical[0].concept_id.as_deref(), Some("dense"));
-        // An embedder the index was not built with is ignored: its vectors
-        // cannot be compared with the stored ones.
-        let mismatched = idx
-            .search(query, Some(&RaggedEmbedder), &SearchOpts::default())
-            .unwrap();
-        assert_eq!(mismatched, lexical);
-    }
-
-    /// Six concepts sharing one vocabulary; only their settledness differs.
-    /// `finished`, `closed` and `framed-issue` settle by `lifecycle`,
-    /// `retired` by the SOKF `status` the kinds outside the lifecycle
-    /// directories still use, and `open-issue` carries a live `lifecycle`
-    /// value.
-    const LIVE: &str = "---\ntype: Note\nid: live\n---\nquartz lantern meadow guide\n";
-    const FINISHED: &str =
-        "---\ntype: Plan\nid: finished\nlifecycle: abandoned\n---\nquartz lantern meadow guide\n";
-    const RETIRED: &str =
-        "---\ntype: Spec\nid: retired\nstatus: deprecated\n---\nquartz lantern meadow guide\n";
-    const CLOSED: &str =
-        "---\ntype: Issue\nid: closed\nlifecycle: done\n---\nquartz lantern meadow guide\n";
-    const OPEN_ISSUE: &str =
-        "---\ntype: Issue\nid: open-issue\nlifecycle: open\n---\nquartz lantern meadow guide\n";
-    /// The retired `framed` state (ADR-048, superseded by ADR-050): a value
-    /// outside `LIVE_LIFECYCLES`, so it ranks settled.
-    const FRAMED_ISSUE: &str =
-        "---\ntype: Issue\nid: framed-issue\nlifecycle: framed\n---\nquartz lantern meadow guide\n";
-
-    /// Covers I052 AC_live-lifecycles: `open` and `active` rank live and
-    /// no other value does — the retired `framed` ranks settled with `done`.
-    #[test]
-    fn settled_work_is_downranked_not_dropped() {
-        let dir = tempfile::tempdir().unwrap();
-        let bundle_dir = dir.path().join("bundle");
-        fs::create_dir(&bundle_dir).unwrap();
-        fs::write(bundle_dir.join("finished.md"), FINISHED).unwrap();
-        fs::write(bundle_dir.join("retired.md"), RETIRED).unwrap();
-        fs::write(bundle_dir.join("closed.md"), CLOSED).unwrap();
-        fs::write(bundle_dir.join("open-issue.md"), OPEN_ISSUE).unwrap();
-        fs::write(bundle_dir.join("framed-issue.md"), FRAMED_ISSUE).unwrap();
-        fs::write(bundle_dir.join("live.md"), LIVE).unwrap();
-        let bundle = load_bundle(&bundle_dir).unwrap();
-        let (idx, _) =
-            Index::open_and_sync(&IndexDir(dir.path().join("idx")), &bundle, None).unwrap();
-
-        let hits = idx.search("quartz", None, &SearchOpts::default()).unwrap();
-        // Identical text, so ranking is decided by settledness alone: the
-        // live concepts first — an open issue among them (ADR-050) — the
-        // settled four down-ranked behind them, but still present.
-        assert_eq!(hits.len(), 6);
-        let leading: HashSet<_> = hits[..2]
-            .iter()
-            .map(|hit| hit.concept_id.clone().unwrap())
-            .collect();
-        assert_eq!(
-            leading,
-            HashSet::from(["live".to_string(), "open-issue".to_string()])
-        );
-        assert!(hits[2].score < hits[1].score);
-        let trailing: HashSet<_> = hits[2..]
-            .iter()
-            .map(|hit| hit.concept_id.clone().unwrap())
-            .collect();
-        assert_eq!(
-            trailing,
-            HashSet::from([
-                "finished".to_string(),
-                "retired".to_string(),
-                "closed".to_string(),
-                "framed-issue".to_string()
-            ])
-        );
-    }
-
-    #[test]
-    fn the_lifecycle_filter_keeps_only_the_named_values() {
-        let dir = tempfile::tempdir().unwrap();
-        let bundle_dir = dir.path().join("bundle");
-        fs::create_dir(&bundle_dir).unwrap();
-        fs::write(bundle_dir.join("closed.md"), CLOSED).unwrap();
-        fs::write(bundle_dir.join("open-issue.md"), OPEN_ISSUE).unwrap();
-        fs::write(bundle_dir.join("live.md"), LIVE).unwrap();
-        let bundle = load_bundle(&bundle_dir).unwrap();
-        let (idx, _) =
-            Index::open_and_sync(&IndexDir(dir.path().join("idx")), &bundle, None).unwrap();
-
-        let opts = SearchOpts {
-            lifecycle: vec!["open".to_string()],
-            ..SearchOpts::default()
-        };
-        let hits = idx.search("quartz", None, &opts).unwrap();
-        // The open issue alone: the done one is filtered out, and so is
-        // the concept carrying no lifecycle at all.
-        assert_eq!(hits.len(), 1);
-        assert_eq!(hits[0].concept_id.as_deref(), Some("open-issue"));
-    }
-
-    #[test]
-    fn filters_restrict_kinds_and_tags() {
-        let (_dir, idx) = search_fixture(Some(&FakeEmbedder));
-        let opts = |kinds: &[&str], tags: &[&str]| SearchOpts {
-            kinds: kinds.iter().map(|s| (*s).to_string()).collect(),
-            tags: tags.iter().map(|s| (*s).to_string()).collect(),
-            ..SearchOpts::default()
-        };
-        let search = |opts: &SearchOpts| {
-            idx.search("release pipeline tests layers", Some(&FakeEmbedder), opts)
-                .unwrap()
-        };
-
-        // Unfiltered, both concepts answer.
-        let all = search(&SearchOpts::default());
-        assert!(all.iter().any(|h| h.path == "release.md"));
-        assert!(all.iter().any(|h| h.path == "testing.md"));
-
-        // Filters apply to the semantic list as well as the lexical one, so a
-        // vectored index cannot smuggle an excluded concept back in.
-        let spec = search(&opts(&["Spec"], &[]));
-        assert!(!spec.is_empty());
-        assert!(spec.iter().all(|h| h.path == "testing.md"));
-        let process = search(&opts(&[], &["process"]));
-        assert!(!process.is_empty());
-        assert!(process.iter().all(|h| h.path == "release.md"));
-
-        // Kinds and tags are ANDed: no Spec is tagged `process`.
-        assert!(search(&opts(&["Spec"], &["process"])).is_empty());
-        // An unknown value matches nothing rather than everything.
-        assert!(search(&opts(&["Nope"], &[])).is_empty());
-    }
-
-    #[test]
-    fn fusion_maths() {
-        let key = |path_hash| DocKey {
-            path_hash,
-            ordinal: 0,
-        };
-        let (both, single, tail) = (key(1), key(2), key(3));
-        let scored = rrf(&[vec![both, tail], vec![single, both]]);
-        assert_eq!(scored.len(), 3);
-        // Ranks 0 and 1 across the two lists.
-        assert_eq!(scored[0].0, both);
-        assert!((scored[0].1 - (1.0 / 60.0 + 1.0 / 61.0)).abs() < 1e-6);
-        // Rank 0 of one list only.
-        assert_eq!(scored[1].0, single);
-        assert!((scored[1].1 - 1.0 / 60.0).abs() < 1e-6);
-        assert_eq!(scored[2].0, tail);
-        assert!((scored[2].1 - 1.0 / 61.0).abs() < 1e-6);
-        assert!(rrf(&[]).is_empty());
-    }
-
-    #[test]
-    fn a_query_no_section_answers_in_full_falls_back_to_or() {
-        let (_dir, idx) = search_fixture(None);
-        // No section carries both terms, so the AND pass finds nothing and the
-        // OR pass answers.
-        let hits = idx
-            .search("pipeline nextest", None, &SearchOpts::default())
-            .unwrap();
-        assert_eq!(hits.len(), 2);
-        let mut ids: Vec<&str> = hits
-            .iter()
-            .filter_map(|h| h.concept_id.as_deref())
-            .collect();
-        ids.sort_unstable();
-        assert_eq!(ids, vec!["release", "testing"]);
-        // A word in neither concept finds nothing rather than everything.
-        assert!(
-            idx.search("kryptonite", None, &SearchOpts::default())
-                .unwrap()
-                .is_empty()
-        );
-    }
-
-    #[test]
-    fn a_semantic_hit_joins_back_to_its_section() {
-        let (_dir, idx) = search_fixture(Some(&FakeEmbedder));
-        // No section carries this word, so lexical retrieval returns nothing
-        // and every hit comes from the vector store — each one looked up by
-        // its path hash and ordinal.
-        assert!(
-            idx.search("kryptonite", None, &SearchOpts::default())
-                .unwrap()
-                .is_empty()
-        );
-        let hits = idx
-            .search("kryptonite", Some(&FakeEmbedder), &SearchOpts::default())
-            .unwrap();
-
-        // Three of the four sections; the fourth's vector points away from the
-        // query, and a cosine at or below zero is not a hit.
-        assert_eq!(hits.len(), 3);
-        assert!(
-            hits.iter()
-                .all(|h| h.heading_path != vec!["Pipeline".to_string()])
-        );
-        // Every field of a semantic-only hit comes from the joined document.
-        assert_eq!(hits[0].path, "testing.md");
-        assert_eq!(hits[0].concept_id.as_deref(), Some("testing"));
-        assert_eq!(hits[0].heading_path, vec!["Layers".to_string()]);
-        assert_eq!((hits[0].start_line, hits[0].end_line), (8, 10));
-        assert!(hits[0].snippet.contains("Unit tests"));
-        // A root section has no heading path.
-        assert_eq!(hits[1].heading_path, Vec::<String>::new());
-        assert_eq!(hits[1].start_line, 1);
-        // One list, so the scores are the bare reciprocal ranks.
-        assert!((hits[0].score - 1.0 / 60.0).abs() < 1e-6);
-        assert!((hits[2].score - 1.0 / 62.0).abs() < 1e-6);
-    }
-
-    #[test]
-    fn snippets_are_one_line_and_bounded() {
-        let long = format!("# Heading\n\n{}", "word ".repeat(80));
-        let short = snippet(&long);
-        assert!(short.chars().count() <= 201);
-        assert!(short.ends_with('…'));
-        assert!(!short.contains('\n'));
-        // Whitespace of every kind collapses to single spaces.
-        assert_eq!(snippet("  a\n\n\tb  "), "a b");
-    }
-
-    #[test]
-    fn first_open_indexes_everything() {
-        let (dir, bundle) = fixture();
-        let idx = IndexDir(dir.path().join("idx"));
-        let (index, stats) = Index::open_and_sync(&idx, &bundle, Some(&FakeEmbedder)).unwrap();
-        assert!(stats.full_rebuild);
-        assert_eq!(stats.reindexed, 2);
-        assert_eq!(stats.removed, 0);
-        assert!(!stats.lexical_only);
-        assert_eq!(index.section_count(), 3);
-        assert_eq!(index.vector_count(), 3);
-        assert_eq!(index.model_id(), Some("fake:8"));
-        assert_eq!(
-            format!("{index:?}"),
-            "Index { sections: 3, vectors: 3, model_id: Some(\"fake:8\") }"
-        );
-    }
-
-    #[test]
-    fn stored_vectors_round_trip_intact() {
-        let (dir, bundle) = fixture();
-        let idx = IndexDir(dir.path().join("idx"));
-        Index::open_and_sync(&idx, &bundle, Some(&FakeEmbedder)).unwrap();
-
-        // Read the file back through the codec and check one known record end
-        // to end: a transposed field or a flipped byte order would show here
-        // and nowhere else.
-        let records = read_vectors(&idx.0.join("vectors.bin")).unwrap();
-        assert_eq!(records.len(), 3);
-        let beta = &bundle.concepts[1];
-        assert_eq!(beta.path, "beta.md");
-        let record = records
-            .iter()
-            .find(|r| r.path_hash == path_hash("beta.md") && r.ordinal == 0)
-            .expect("beta's only section");
-        let expected = FakeEmbedder
-            .embed(&[beta.sections[0].text.clone()])
-            .unwrap();
-        assert_eq!(record.vector, expected[0]);
-        // Two files, three sections: alpha owns the other two ordinals.
-        let mut alpha: Vec<u32> = records
-            .iter()
-            .filter(|r| r.path_hash == path_hash("alpha.md"))
-            .map(|r| r.ordinal)
-            .collect();
-        alpha.sort_unstable();
-        assert_eq!(alpha, vec![0, 1]);
-    }
-
-    #[test]
-    fn unchanged_bundle_syncs_nothing() {
-        let (dir, bundle) = fixture();
-        let idx = IndexDir(dir.path().join("idx"));
-        let (first, _) = Index::open_and_sync(&idx, &bundle, Some(&FakeEmbedder)).unwrap();
-        drop(first);
-
-        let (index, stats) = Index::open_and_sync(&idx, &bundle, Some(&FakeEmbedder)).unwrap();
-        assert!(!stats.full_rebuild);
-        assert_eq!(stats.reindexed, 0);
-        assert_eq!(stats.removed, 0);
-        assert_eq!(index.section_count(), 3);
-        assert_eq!(index.vector_count(), 3);
-    }
-
-    #[test]
-    fn edited_file_reindexes_only_that_file() {
-        let (dir, bundle) = fixture();
-        let idx = IndexDir(dir.path().join("idx"));
-        let (first, _) = Index::open_and_sync(&idx, &bundle, Some(&FakeEmbedder)).unwrap();
-        drop(first);
-
-        // A second heading, so the file goes from two sections to three: the
-        // old documents must be deleted, not merely joined by the new ones.
-        fs::write(
-            dir.path().join("bundle/alpha.md"),
-            format!("{ALPHA}\n# Extra\n\nA newly written section.\n"),
-        )
-        .unwrap();
-        let edited = reload(dir.path());
-        let (index, stats) = Index::open_and_sync(&idx, &edited, Some(&FakeEmbedder)).unwrap();
-        assert!(!stats.full_rebuild);
-        assert_eq!(stats.reindexed, 1);
-        assert_eq!(stats.removed, 0);
-        assert_eq!(index.section_count(), 4);
-        assert_eq!(index.vector_count(), 4);
-    }
-
-    #[test]
-    fn deleted_file_is_removed() {
-        let (dir, bundle) = fixture();
-        let idx = IndexDir(dir.path().join("idx"));
-        let (first, _) = Index::open_and_sync(&idx, &bundle, Some(&FakeEmbedder)).unwrap();
-        drop(first);
-
-        fs::remove_file(dir.path().join("bundle/beta.md")).unwrap();
-        let smaller = reload(dir.path());
-        let (index, stats) = Index::open_and_sync(&idx, &smaller, Some(&FakeEmbedder)).unwrap();
-        assert!(!stats.full_rebuild);
-        assert_eq!(stats.reindexed, 0);
-        assert_eq!(stats.removed, 1);
-        // Only alpha's two sections survive, in both stores.
-        assert_eq!(index.section_count(), 2);
-        assert_eq!(index.vector_count(), 2);
-        // And beta's text no longer answers a query made of it.
-        assert!(
-            index
-                .search("Beta has no headings at all", None, &SearchOpts::default())
-                .unwrap()
-                .is_empty()
-        );
-    }
-
-    #[test]
-    fn force_rebuild_reindexes_everything() {
-        let (dir, bundle) = fixture();
-        let idx = IndexDir(dir.path().join("idx"));
-        let (first, _) = Index::open_and_sync(&idx, &bundle, Some(&FakeEmbedder)).unwrap();
-        drop(first);
-
-        let (index, stats) = Index::force_rebuild(&idx, &bundle, Some(&FakeEmbedder)).unwrap();
-        assert!(stats.full_rebuild);
-        assert_eq!(stats.reindexed, 2);
-        assert_eq!(index.section_count(), 3);
-    }
-
-    #[test]
-    fn an_unusable_cache_is_rebuilt() {
-        let (dir, bundle) = fixture();
-        let idx = IndexDir(dir.path().join("idx"));
-
-        // Each of these leaves the manifest intact, so only the damaged part
-        // can send the sync down the rebuild path. The last is a well-formed
-        // but empty vector file: no longer one vector per section.
-        let damage: [&dyn Fn(&Path); 3] = [
-            &|root| fs::remove_dir_all(root.join("tantivy")).unwrap(),
-            &|root| fs::write(root.join("vectors.bin"), b"short").unwrap(),
-            &|root| fs::write(root.join("vectors.bin"), [0u8; 8]).unwrap(),
-        ];
-        for damage in damage {
-            let (first, _) = Index::open_and_sync(&idx, &bundle, Some(&FakeEmbedder)).unwrap();
-            drop(first);
-            damage(&idx.0);
-            let (index, stats) = Index::open_and_sync(&idx, &bundle, Some(&FakeEmbedder)).unwrap();
-            assert!(stats.full_rebuild);
-            assert_eq!(index.section_count(), 3);
-            assert_eq!(index.vector_count(), 3);
-        }
-
-        // A manifest that is not an index manifest reads as no index at all.
-        fs::write(idx.0.join("manifest.json"), "{ not json").unwrap();
-        let (_, stats) = Index::open_and_sync(&idx, &bundle, Some(&FakeEmbedder)).unwrap();
-        assert!(stats.full_rebuild);
-    }
-
-    /// Names itself as [`FakeEmbedder`] does, so the manifest gate lets an
-    /// incremental sync through, but embeds twice as wide.
-    struct WiderEmbedder;
-
-    impl Embedder for WiderEmbedder {
-        fn model_id(&self) -> String {
-            "fake:8".into()
-        }
-
-        fn embed(&self, texts: &[String]) -> Result<Vec<Vec<f32>>> {
-            Ok(texts.iter().map(|_| vec![0.25; 16]).collect())
-        }
-    }
-
-    #[test]
-    fn a_change_of_vector_width_rebuilds_rather_than_failing() {
-        let (dir, bundle) = fixture();
-        let idx = IndexDir(dir.path().join("idx"));
-        let (first, _) = Index::open_and_sync(&idx, &bundle, Some(&FakeEmbedder)).unwrap();
-        drop(first);
-
-        // One changed file, so the sync would mix kept 8-wide records with
-        // fresh 16-wide ones.
-        fs::write(
-            dir.path().join("bundle/alpha.md"),
-            format!("{ALPHA}\nA newly written line.\n"),
-        )
-        .unwrap();
-        let edited = reload(dir.path());
-        let (index, stats) = Index::open_and_sync(&idx, &edited, Some(&WiderEmbedder)).unwrap();
-        assert!(stats.full_rebuild);
-        assert_eq!(stats.reindexed, 2);
-        assert_eq!(index.vector_count(), 3);
-        // Every record is the new width, so nothing of the old index survived.
-        let records = read_vectors(&idx.0.join("vectors.bin")).unwrap();
-        assert!(records.iter().all(|r| r.vector.len() == 16));
-    }
-
-    #[test]
-    fn gaining_an_embedder_forces_a_full_rebuild() {
-        let (dir, bundle) = fixture();
-        let idx = IndexDir(dir.path().join("idx"));
-        let (first, stats) = Index::open_and_sync(&idx, &bundle, None).unwrap();
-        assert!(stats.lexical_only);
-        assert_eq!(first.vector_count(), 0);
-        drop(first);
-
-        let (index, stats) = Index::open_and_sync(&idx, &bundle, Some(&FakeEmbedder)).unwrap();
-        assert!(stats.full_rebuild);
-        assert!(!stats.lexical_only);
-        assert_eq!(stats.reindexed, 2);
-        assert_eq!(index.vector_count(), 3);
-        assert_eq!(index.model_id(), Some("fake:8"));
-    }
-
-    #[test]
-    fn an_index_from_another_schema_version_is_rebuilt() {
-        let (dir, bundle) = fixture();
-        let idx = IndexDir(dir.path().join("idx"));
-        let (first, _) = Index::open_and_sync(&idx, &bundle, Some(&FakeEmbedder)).unwrap();
-        drop(first);
-
-        let manifest = idx.0.join("manifest.json");
-        let text = fs::read_to_string(&manifest).unwrap();
-        fs::write(
-            &manifest,
-            text.replace(
-                &format!("\"schema_version\": {SCHEMA_VERSION}"),
-                "\"schema_version\": 99",
-            ),
-        )
-        .unwrap();
-        assert!(fs::read_to_string(&manifest).unwrap().contains("99"));
-
-        let (index, stats) = Index::open_and_sync(&idx, &bundle, Some(&FakeEmbedder)).unwrap();
-        assert!(stats.full_rebuild);
-        assert_eq!(stats.reindexed, 2);
-        assert_eq!(index.section_count(), 3);
-        assert_eq!(
-            read_manifest(&idx.0).unwrap().schema_version,
-            SCHEMA_VERSION
-        );
-    }
-
-    /// Returns one vector per text, but of two different widths.
-    struct RaggedEmbedder;
-
-    impl Embedder for RaggedEmbedder {
-        fn model_id(&self) -> String {
-            "ragged".into()
-        }
-
-        fn embed(&self, texts: &[String]) -> Result<Vec<Vec<f32>>> {
-            Ok(texts
-                .iter()
-                .enumerate()
-                .map(|(i, _)| vec![1.0; i + 1])
-                .collect())
-        }
-    }
-
-    /// Returns fewer vectors than it was given texts.
-    struct ShortEmbedder;
-
-    impl Embedder for ShortEmbedder {
-        fn model_id(&self) -> String {
-            "short".into()
-        }
-
-        fn embed(&self, _texts: &[String]) -> Result<Vec<Vec<f32>>> {
-            Ok(vec![vec![1.0]])
-        }
-    }
-
-    #[test]
-    fn a_misbehaving_embedder_is_an_index_error() {
-        let (dir, bundle) = fixture();
-        let idx = IndexDir(dir.path().join("idx"));
-        let ragged = Index::open_and_sync(&idx, &bundle, Some(&RaggedEmbedder)).unwrap_err();
-        assert!(matches!(ragged, Error::Index { .. }));
-        assert!(ragged.to_string().contains("differing widths"));
-
-        let short = Index::open_and_sync(&idx, &bundle, Some(&ShortEmbedder)).unwrap_err();
-        assert_eq!(
-            short.to_string(),
-            "index: embedder returned 1 vectors for 3 sections"
-        );
-    }
-
-    #[test]
-    fn model_change_forces_full_rebuild() {
-        let (dir, bundle) = fixture();
-        let idx = IndexDir(dir.path().join("idx"));
-        let (first, _) = Index::open_and_sync(&idx, &bundle, Some(&FakeEmbedder)).unwrap();
-        drop(first);
-
-        let (index, stats) = Index::open_and_sync(&idx, &bundle, None).unwrap();
-        assert!(stats.full_rebuild);
-        assert!(stats.lexical_only);
-        assert_eq!(stats.reindexed, 2);
-        assert_eq!(index.section_count(), 3);
-        // No embedder, so no vectors — and the manifest says so.
-        assert_eq!(index.vector_count(), 0);
-        assert_eq!(index.model_id(), None);
     }
 }

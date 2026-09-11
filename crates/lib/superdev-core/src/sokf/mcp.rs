@@ -123,16 +123,18 @@ impl std::fmt::Debug for SokfServer {
 #[derive(Debug, Default, Deserialize, JsonSchema)]
 #[schemars(crate = "rmcp::schemars")]
 pub struct SearchRequest {
-    /// What to look for, in the caller's own words.
+    /// A short question or phrase describing what you need. Preserve known
+    /// concept IDs, titles or paths; do not add instructions about searching.
     pub query: String,
     /// Most hits to return; 8 by default.
     pub limit: Option<u32>,
-    /// Keep only concepts of these frontmatter `type`s.
+    /// Narrow by known frontmatter type, e.g. `["Contract"]` for a contract
+    /// or `["Decision"]` for an architectural decision. Omit for broad discovery.
     pub types: Option<Vec<String>>,
-    /// Keep only concepts carrying one of these tags.
+    /// Narrow by existing tags. Do not invent tag names from query keywords.
     pub tags: Option<Vec<String>>,
-    /// Keep only concepts whose `lifecycle` is one of these values, e.g.
-    /// `["open"]` for live issues and plans.
+    /// Narrow by lifecycle when the task asks for it, e.g. `["open"]` for
+    /// open work. Omit otherwise: many relevant concepts have no lifecycle.
     pub lifecycle: Option<Vec<String>>,
 }
 
@@ -199,12 +201,13 @@ impl SokfService {
             tags: request.tags.unwrap_or_default(),
             lifecycle: request.lifecycle.unwrap_or_default(),
         };
-        let hits = index.search(&request.query, embedder, &opts)?;
+        let report = index.search_report(&request.query, embedder, &opts)?;
         Ok(render_hits(
             &bundle,
             &request.query,
-            &hits,
+            &report.hits,
             stats.lexical_only,
+            &report.warnings,
         ))
     }
 
@@ -316,8 +319,11 @@ impl SokfServer {
     }
     // sokf:begin tools
 
-    /// Search the bundle. Returns the best sections, grouped by concept, each
-    /// with a `path:start-end` locator to read next.
+    /// Find knowledge using lexical terms and semantic similarity when available.
+    /// Use a short question or phrase, preserving known IDs, titles or paths.
+    /// Narrow with types for a document kind, lifecycle for an explicit work
+    /// state, and tags only when their values are known. Omit uncertain filters.
+    /// Returns sections grouped by concept with `path:start-end` locators.
     #[tool]
     async fn sokf_search(&self, Parameters(args): Parameters<SearchRequest>) -> ToolResult {
         let _guard = self.exclusive();
@@ -399,7 +405,10 @@ impl ServerHandler for SokfServer {
             format!(
                 "Access to this repository's canonical SOKF knowledge. Use sokf_overview to see \
                  the knowledge at a glance, sokf_search to find project knowledge, and sokf_graph \
-                 to follow links. Search locators are relative to `{knowledge}/`; graph paths \
+                 to follow links. Search accepts a question or phrase with known IDs or paths. \
+                 Its types, tags and lifecycle filters narrow explicit scope; omit unknown values. \
+                 Exact IDs and paths lead results. Match labels describe retrieval, not confidence. \
+                 Search locators are relative to `{knowledge}/`; graph paths \
                  are repository-relative. Resolve them to physical paths for your own file tools."
             ),
         )

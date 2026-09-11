@@ -40,16 +40,18 @@ answers only what a file tool cannot.
 #[derive(Debug, Default, Deserialize, JsonSchema)]
 #[schemars(crate = "rmcp::schemars")]
 pub struct SearchRequest {
-    /// What to look for, in the caller's own words.
+    /// A short question or phrase describing what you need. Preserve known
+    /// concept IDs, titles or paths; do not add instructions about searching.
     pub query: String,
     /// Most hits to return; 8 by default.
     pub limit: Option<u32>,
-    /// Keep only concepts of these frontmatter `type`s.
+    /// Narrow by known frontmatter type, e.g. `["Contract"]` for a contract
+    /// or `["Decision"]` for an architectural decision. Omit for broad discovery.
     pub types: Option<Vec<String>>,
-    /// Keep only concepts carrying one of these tags.
+    /// Narrow by existing tags. Do not invent tag names from query keywords.
     pub tags: Option<Vec<String>>,
-    /// Keep only concepts whose `lifecycle` is one of these values, e.g.
-    /// `["open"]` for live issues and plans.
+    /// Narrow by lifecycle when the task asks for it, e.g. `["open"]` for
+    /// open work. Omit otherwise: many relevant concepts have no lifecycle.
     pub lifecycle: Option<Vec<String>>,
 }
 
@@ -68,8 +70,11 @@ struct GraphArgs {
 #[schemars(crate = "rmcp::schemars")]
 struct OverviewArgs {}
 
-    /// Search the bundle. Returns the best sections, grouped by concept, each
-    /// with a `path:start-end` locator to read next.
+    /// Find knowledge using lexical terms and semantic similarity when available.
+    /// Use a short question or phrase, preserving known IDs, titles or paths.
+    /// Narrow with types for a document kind, lifecycle for an explicit work
+    /// state, and tags only when their values are known. Omit uncertain filters.
+    /// Returns sections grouped by concept with `path:start-end` locators.
     #[tool]
     async fn sokf_search(&self, Parameters(args): Parameters<SearchRequest>) -> ToolResult {
         let _guard = self.exclusive();
@@ -202,21 +207,41 @@ A tool failure is an MCP error payload, never a process exit.
 
 ### Limits
 
-Every hit carries the locator set — knowledge-relative path, concept
-id, heading path, line range, snippet and score — so the next call
-reads exactly what matched.
+Every library hit carries the knowledge-relative path, concept ID, heading
+path, line range, snippet, fused score and match kind. The served text includes
+locators and match labels, not numeric scores. A direct address selects identity;
+other results retain hybrid relevance order. Labels describe retrieval evidence,
+not confidence in the document or its claims. A path containing spaces is
+written as the whole query or quoted when embedded in prose.
 
 - `P_limit-clamped` [event] WHEN `limit` is outside 1..50,
   `sokf_search` SHALL clamp it into 1..50 rather than refuse.
 - `P_limit-default` [event] WHEN `limit` is absent, `sokf_search`
   SHALL default it to 8.
 - `P_filters-before-fusion` [ubiquitous] `sokf_search` SHALL apply
-  `types`, `tags` and `lifecycle` before fusion, so a filtered concept
-  cannot re-enter through the other ranking.
+  `types`, `tags` and `lifecycle` to every retrieval route, including direct
+  addresses, so an excluded concept cannot re-enter through another route.
+- `P_exact-address-priority` [event] WHEN a query names an exact concept ID,
+  unambiguous numbered shorthand or complete knowledge-relative or physical
+  path, `sokf_search` SHALL rank its permitted matches before hybrid relevance.
+  - `AC_complete-path` [event] WHEN a complete path is the whole query or
+    quoted in prose, direct-path matching SHALL preserve spaces and filename
+    punctuation rather than match its fragments.
+  - `AC_single-word-id` [conditional] IF an ID is a single word,
+    direct-ID priority SHALL apply only when it is the whole query.
+  - `AC_ambiguous-shorthand` [conditional] IF a numbered shorthand names
+    multiple concepts, `sokf_search` SHALL leave it to hybrid retrieval.
+- `P_match-provenance` [ubiquitous] `sokf_search` SHALL label each section
+  with its direct identifier/path match or lexical, semantic, or combined
+  retrieval provenance.
+- `P_query-recovery-visible` [event] WHEN the lenient lexical parser reports
+  recovered syntax, `sokf_search` SHALL include its diagnostics alongside the
+  recovered results.
+  - `AC_query-recovery-bounded` [ubiquitous] Query-recovery notes SHALL contain
+    at most three distinct diagnostics.
 - `P_settled-down-ranked` [ubiquitous] `sokf_search` SHALL down-rank
-  settled work — a `deprecated` concept, or one tagged `done`,
-  `resolved` or `wontfix` — after fusion, so finished plans and issues
-  sort below live knowledge without leaving the results.
+  settled work within hybrid relevance — a `deprecated` status or a declared
+  lifecycle other than `open` or `active` — without dropping it from results.
 - `P_graph-group-cap` [ubiquitous] `sokf_graph` SHALL cap each group at
   30 lines and then say how many it dropped.
 - `P_overview-warning-cap` [event] WHEN `sokf_overview` renders validation

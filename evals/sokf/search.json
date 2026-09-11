@@ -1,0 +1,35 @@
+{
+  "protocol": "sokf-search-experiment/v1",
+  "cases": [
+    {
+      "id": "identifier",
+      "task": "Find the normative CLI contract contract-002, rather than a discussion of that contract.",
+      "relevant": ["contract-002-cli-superdev"]
+    },
+    {
+      "id": "title",
+      "task": "Find Coding Standards for the repository's Rust module organisation rules.",
+      "relevant": ["coding-standards"]
+    },
+    {
+      "id": "path",
+      "task": "Locate the document knowledge/security-requirements.md, not another document that links to it.",
+      "relevant": ["security-requirements"]
+    },
+    {
+      "id": "semantic",
+      "task": "Where was it decided that agents should use ordinary file operations and knowledge consistency is repaired later, even for shell writes? Find the architectural decision.",
+      "relevant": ["adr-055-sokf-does-not-intercept-file-tools"]
+    },
+    {
+      "id": "live-work",
+      "task": "Find the open issue about a source include silently changing meaning when a region name is reused.",
+      "relevant": ["issue-096-a-reused-region-name-silently-refills-a-contract"]
+    },
+    {
+      "id": "absent",
+      "task": "Locate contract-999 for the approved quantum teleportation deployment procedure. If the results do not contain that contract, report no matching evidence.",
+      "relevant": []
+    }
+  ]
+}

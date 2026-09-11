@@ -54,13 +54,15 @@ superdev sokf index      # rebuild the search index from scratch
 
 The server offers three read-only tools: `sokf_search` finds knowledge,
 `sokf_graph` follows links, and `sokf_overview` shows the knowledge at a
-glance. Each result carries the repository-relative path of the concept it
-names, so you read and edit that path with your ordinary file tools — the
-server answers only what a file tool cannot. The server keeps itself current:
+glance. Search locators are relative to `knowledge/`; graph paths are relative
+to the repository root. Resolve them for your ordinary file tools — the server
+answers only what a file tool cannot. The server keeps itself current:
 every indexed call re-hashes the canonical knowledge and reindexes only what
 changed. Search is hybrid, combining a BM25 index with a
 small embedding model downloaded once per machine, and falls back to
-keyword-only if that model is unavailable.
+keyword-only if that model is unavailable. Exact IDs and paths lead the
+results without bypassing filters. Per-section labels explain how matches
+were found; type, tag and lifecycle filters narrow explicit scope.
 
 ### The workflow
 

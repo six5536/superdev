@@ -1,0 +1,1033 @@
+{
+  "protocol": "sokf-search-experiment-results/v1",
+  "scope": "Six development tasks, one stochastic query and evidence-selection trial per variant; not a significance claim, end-to-end agent benchmark, or answer-quality score.",
+  "model": "openai-codex/gpt-5.6-luna",
+  "costBasis": "Model-reported estimated USD, not a billing receipt. Excludes pre-evaluation availability probes.",
+  "totalCalls": 54,
+  "totalEstimatedCost": 0.0121086,
+  "scoring": "An unambiguous numbered shorthand counts only when its full concept is present in the returned results. Null is correct only for the predeclared absent target.",
+  "runs": [
+    {
+      "protocol": "sokf-search-experiment/v1",
+      "provider": "openai-codex",
+      "model": "gpt-5.6-luna",
+      "fixturesHash": "a292680cfeb0fe55292fdaba1d5a5cd768df8054d861571312c60bdce2378592",
+      "binaryHash": "8de8562ccc19dc1261a9139cb123aaa9ad0f20eff6938af96088ac65ddbe4c1d",
+      "guidance": "Search the bundle. Returns the best sections, grouped by concept, each\nwith a `path:start-end` locator to read next.\n\nRequest fields:\n/// What to look for, in the caller's own words.\n    pub query: String,\n    /// Most hits to return; 8 by default.\n    pub limit: Option<u32>,\n    /// Keep only concepts of these frontmatter `type`s.\n    pub types: Option<Vec<String>>,\n    /// Keep only concepts carrying one of these tags.\n    pub tags: Option<Vec<String>>,\n    /// Keep only concepts whose `lifecycle` is one of these values, e.g.\n    /// `[\"open\"]` for live issues and plans.\n    pub lifecycle: Option<Vec<String>>,",
+      "queriesFrom": null,
+      "withoutLabels": false,
+      "calls": 12,
+      "tokens": 8713,
+      "estimatedCost": 0.0026606000000000004,
+      "results": [
+        {
+          "id": "identifier",
+          "request": {
+            "query": "Find the normative CLI contract contract-002 itself, not discussions, references, or commentary about it.",
+            "limit": 8
+          },
+          "found": [
+            "code-review-005-normative-shape-enforcement",
+            "adr-054-the-workflow-core-owns-state-branch-and-refusals",
+            "adr-004-base-pack-identity",
+            "issue-089-an-exact-identifier-does-not-win-its-own-search",
+            "adr-013-update-proves-a-pin-before-it-writes-it",
+            "adr-033-a-contract-defines-its-interface",
+            "code-review-008-a-contract-includes-its-definition",
+            "schema-contract"
+          ],
+          "selected": {
+            "concept": "contract-002",
+            "reason": "The normative contract is identified by the active document `knowledge/contracts/public/active/contract-002-cli-superdev.md`, rather than the reviews and ADRs discussing it."
+          },
+          "firstRelevantRank": null,
+          "reciprocalRank": 0,
+          "selectedCorrectly": false,
+          "falseSelection": true,
+          "renderedResultHash": "42a51941e3f044b5eda6ca22217027da107c3d80f98466f49f08d8866f1ec0fa"
+        },
+        {
+          "id": "title",
+          "request": {
+            "query": "Find the repository's coding standards for Rust module organisation rules, including module layout, file structure, mod declarations, and naming conventions.",
+            "limit": 8
+          },
+          "found": [
+            "coding-standards",
+            "schema-coding-standards",
+            "contract-010-interface-document-schemas",
+            "schema-directory-structure",
+            "directory-structure",
+            "plan-001-flatten-crate-api"
+          ],
+          "selected": {
+            "concept": "coding-standards",
+            "reason": "It directly contains the repository\u2019s Rust conventions, including module organisation and naming rules."
+          },
+          "firstRelevantRank": 1,
+          "reciprocalRank": 1,
+          "selectedCorrectly": true,
+          "falseSelection": false,
+          "renderedResultHash": "c4bfa3a1360eba063f80cbc3c4310850957a6570435ae5c3d39fe6bbab6d43c1"
+        },
+        {
+          "id": "path",
+          "request": {
+            "query": "Locate the document at knowledge/security-requirements.md itself, not documents that link to it.",
+            "limit": 8
+          },
+          "found": [
+            "schema-security-requirements",
+            "adr-025-an-examples-links-bind-by-form-and-never-resolve",
+            "issue-023-a-concept-path-written-outside-the-knowledge-is-checked-by-nothing",
+            "issue-011-index-shape-is-described-but-not-enforced",
+            "code-review-005-normative-shape-enforcement",
+            "adr-014-a-symlink-in-a-pack-is-refused"
+          ],
+          "selected": {
+            "concept": null,
+            "reason": "The results reference knowledge/security-requirements.md but do not include the document itself."
+          },
+          "firstRelevantRank": null,
+          "reciprocalRank": 0,
+          "selectedCorrectly": false,
+          "falseSelection": false,
+          "renderedResultHash": "ae2ddac61580cd4ddd1eb5c2b92b56ac625ec5c2a32d7cc0fbddf5c2feee7ae8"
+        },
+        {
+          "id": "semantic",
+          "request": {
+            "query": "Find the architectural decision stating that agents should use ordinary file operations, with knowledge consistency repaired later, including for shell writes.",
+            "limit": 8
+          },
+          "found": [
+            "adr-055-sokf-does-not-intercept-file-tools",
+            "adr-054-the-workflow-core-owns-state-branch-and-refusals",
+            "idea-015-scoped-workflows-feed-independent-build-batches",
+            "idea-011-define-an-agent-learnings-document-model",
+            "idea-010-a-pi-extension-runs-the-superdev-process"
+          ],
+          "selected": {
+            "concept": "adr-055-sokf-does-not-intercept-file-tools",
+            "reason": "It explicitly decides that agents use ordinary physical file operations and that consistency is repaired at turn end for every writer, including shell writes."
+          },
+          "firstRelevantRank": 1,
+          "reciprocalRank": 1,
+          "selectedCorrectly": true,
+          "falseSelection": false,
+          "renderedResultHash": "c64ef8b589975e4d9d78b601f855dbb2ea5f8a9e8457df58a49521dce29f7c49"
+        },
+        {
+          "id": "live-work",
+          "request": {
+            "query": "open issue about a source include silently changing meaning when a region name is reused",
+            "limit": 8,
+            "lifecycle": [
+              "open"
+            ]
+          },
+          "found": [
+            "issue-096-a-reused-region-name-silently-refills-a-contract",
+            "issue-049-a-contract-cannot-point-at-its-definition",
+            "issue-097-pi-does-not-load-the-agents-import",
+            "issue-023-a-concept-path-written-outside-the-knowledge-is-checked-by-nothing"
+          ],
+          "selected": {
+            "concept": "issue-096",
+            "reason": "It directly describes a source include silently changing meaning when a reused region name causes validation to refill a contract from the wrong source."
+          },
+          "firstRelevantRank": 1,
+          "reciprocalRank": 1,
+          "selectedCorrectly": true,
+          "falseSelection": false,
+          "renderedResultHash": "c9fe3f0c4ba1af6f767aaec00bf154ae09ea7aedc325f7d6333f68555772e298"
+        },
+        {
+          "id": "absent",
+          "request": {
+            "query": "Locate contract-999 and the approved quantum teleportation deployment procedure. If absent, identify no matching evidence.",
+            "limit": 8
+          },
+          "found": [
+            "contract-011-interface-workflow",
+            "plan-001-flatten-crate-api",
+            "issue-056-three-active-adrs-decide-in-terms-of-retired-skills",
+            "schema-release-procedure",
+            "schema-plan",
+            "schema-documentation",
+            "code-review-005-normative-shape-enforcement"
+          ],
+          "selected": {
+            "concept": null,
+            "reason": "No search result contains contract-999 or approved quantum teleportation deployment procedure evidence."
+          },
+          "firstRelevantRank": null,
+          "reciprocalRank": 0,
+          "selectedCorrectly": true,
+          "falseSelection": false,
+          "renderedResultHash": "44b5d9b6a2b96a1bb840fe40c00d512129ecb32f2886a7a027db2268055e1e92"
+        }
+      ],
+      "summary": {
+        "correctSelections": 4,
+        "falseSelections": 1,
+        "meanReciprocalRank": 0.6
+      },
+      "scoringNote": "An unambiguous numbered shorthand is accepted only when its full concept is present in the returned results. Raw model replies are unchanged.",
+      "name": "baseline",
+      "corpusHash": "7f7c1bf6e5d5c6da427425a4bd01b6ede20569a458b200a0b2ac2a5a5494ec1d",
+      "configHash": "07707139357ab83c280290601062c73ebec6fa1d54f910081ecd8faa6cef0417",
+      "retrievalModel": "model2vec:minishlab/potion-retrieval-32M@6fc8051fab2a1e0ee76689cf08c853792ac285e7",
+      "indexSchemaVersion": 3
+    },
+    {
+      "protocol": "sokf-search-experiment/v1",
+      "provider": "openai-codex",
+      "model": "gpt-5.6-luna",
+      "fixturesHash": "a292680cfeb0fe55292fdaba1d5a5cd768df8054d861571312c60bdce2378592",
+      "binaryHash": "8de8562ccc19dc1261a9139cb123aaa9ad0f20eff6938af96088ac65ddbe4c1d",
+      "guidance": "Find knowledge using lexical terms and semantic similarity when available.\nUse a short question or phrase, preserving known IDs, titles or paths.\nNarrow with types for a document kind, lifecycle for an explicit work\nstate, and tags only when their values are known. Omit uncertain filters.\nReturns sections grouped by concept with `path:start-end` locators.\n\nRequest fields:\n/// A short question or phrase describing what you need. Preserve known\n    /// concept IDs, titles or paths; do not add instructions about searching.\n    pub query: String,\n    /// Most hits to return; 8 by default.\n    pub limit: Option<u32>,\n    /// Narrow by known frontmatter type, e.g. `[\"Contract\"]` for a contract\n    /// or `[\"ADR\"]` for an architectural decision. Omit for broad discovery.\n    pub types: Option<Vec<String>>,\n    /// Narrow by existing tags. Do not invent tag names from query keywords.\n    pub tags: Option<Vec<String>>,\n    /// Narrow by lifecycle when the task asks for it, e.g. `[\"open\"]` for\n    /// open work. Omit otherwise: many relevant concepts have no lifecycle.\n    pub lifecycle: Option<Vec<String>>,",
+      "corpusHash": "7f7c1bf6e5d5c6da427425a4bd01b6ede20569a458b200a0b2ac2a5a5494ec1d",
+      "queriesFrom": null,
+      "withoutLabels": false,
+      "calls": 12,
+      "tokens": 7490,
+      "estimatedCost": 0.0024080000000000004,
+      "results": [
+        {
+          "id": "identifier",
+          "request": {
+            "query": "normative CLI contract contract-002",
+            "limit": 8,
+            "types": [
+              "Contract"
+            ]
+          },
+          "found": [
+            "contract-011-interface-workflow",
+            "contract-002-cli-superdev",
+            "contract-008-format-template",
+            "contract-013-interface-sokf-pi-extension",
+            "contract-006-format-lock",
+            "contract-004-config-superdev"
+          ],
+          "selected": {
+            "concept": "contract-002-cli-superdev",
+            "reason": "The search results directly identify the normative CLI contract at contracts/public/active/contract-002-cli-superdev.md."
+          },
+          "firstRelevantRank": 2,
+          "reciprocalRank": 0.5,
+          "selectedCorrectly": true,
+          "falseSelection": false,
+          "renderedResultHash": "21e80a24b0c602106209ddad1669da2e31aaa4776d092c1bc84787cbada185d6"
+        },
+        {
+          "id": "title",
+          "request": {
+            "query": "Coding Standards Rust module organisation rules",
+            "limit": 8
+          },
+          "found": [
+            "coding-standards",
+            "schema-coding-standards",
+            "plan-001-flatten-crate-api",
+            "schema-technology-stack",
+            "issue-011-index-shape-is-described-but-not-enforced"
+          ],
+          "selected": {
+            "concept": "coding-standards",
+            "reason": "It directly contains the repository\u2019s Rust conventions, including the module organisation rules."
+          },
+          "firstRelevantRank": 1,
+          "reciprocalRank": 1,
+          "selectedCorrectly": true,
+          "falseSelection": false,
+          "renderedResultHash": "c7a12fbd1b835bbe0ad20753f289feb545890e44c07d1e5535da834549af20a7"
+        },
+        {
+          "id": "path",
+          "request": {
+            "query": "knowledge/security-requirements.md",
+            "limit": 8
+          },
+          "found": [
+            "schema-security-requirements",
+            "security-requirements",
+            "adr-010-concepts-entry-is-the-item",
+            "schema-architecture",
+            "idea-007-a-knowledge-capture-skill",
+            "schema-project-overview"
+          ],
+          "selected": {
+            "concept": "security-requirements",
+            "reason": "The search results directly identify security-requirements.md itself at the repository root, rather than a document merely linking to it."
+          },
+          "firstRelevantRank": 2,
+          "reciprocalRank": 0.5,
+          "selectedCorrectly": true,
+          "falseSelection": false,
+          "renderedResultHash": "df0cb10c2a77523130e7ac32a0d46e390f8b62336e39cdc491aa4b0e8f74077b"
+        },
+        {
+          "id": "semantic",
+          "request": {
+            "query": "architectural decision agents use ordinary file operations knowledge consistency repaired later shell writes",
+            "limit": 8,
+            "types": [
+              "ADR"
+            ]
+          },
+          "found": [],
+          "selected": {
+            "concept": null,
+            "reason": "No matching architectural decision or concept ID was found in the provided search evidence."
+          },
+          "firstRelevantRank": null,
+          "reciprocalRank": 0,
+          "selectedCorrectly": false,
+          "falseSelection": false,
+          "renderedResultHash": "6749b68c4cc7790d8560e0cd58a417aaf030392259c757213ab97500c8492b7c"
+        },
+        {
+          "id": "live-work",
+          "request": {
+            "query": "source include silently changing meaning when a region name is reused",
+            "limit": 8,
+            "lifecycle": [
+              "open"
+            ]
+          },
+          "found": [
+            "issue-096-a-reused-region-name-silently-refills-a-contract",
+            "issue-049-a-contract-cannot-point-at-its-definition",
+            "issue-097-pi-does-not-load-the-agents-import"
+          ],
+          "selected": {
+            "concept": "issue-096",
+            "reason": "It directly describes a reused region name causing an include to silently refill a contract from the wrong source."
+          },
+          "firstRelevantRank": 1,
+          "reciprocalRank": 1,
+          "selectedCorrectly": true,
+          "falseSelection": false,
+          "renderedResultHash": "5acd4d73070ac42fe7e801dac7794776e799d4e57a93bccc9b9241482fba4915"
+        },
+        {
+          "id": "absent",
+          "request": {
+            "query": "contract-999 approved quantum teleportation deployment procedure",
+            "limit": 8,
+            "types": [
+              "Contract"
+            ]
+          },
+          "found": [
+            "contract-011-interface-workflow",
+            "contract-002-cli-superdev",
+            "contract-007-interface-pack-resolution"
+          ],
+          "selected": {
+            "concept": null,
+            "reason": "No search result contains contract-999 or evidence of an approved quantum teleportation deployment procedure."
+          },
+          "firstRelevantRank": null,
+          "reciprocalRank": 0,
+          "selectedCorrectly": true,
+          "falseSelection": false,
+          "renderedResultHash": "a827affda3bf9a064e6a8ac8e573e7d2b7171a52402e0d10467dbffda357d5fa"
+        }
+      ],
+      "summary": {
+        "correctSelections": 5,
+        "falseSelections": 0,
+        "meanReciprocalRank": 0.6
+      },
+      "name": "guidance",
+      "configHash": "07707139357ab83c280290601062c73ebec6fa1d54f910081ecd8faa6cef0417",
+      "retrievalModel": "model2vec:minishlab/potion-retrieval-32M@6fc8051fab2a1e0ee76689cf08c853792ac285e7",
+      "indexSchemaVersion": 3
+    },
+    {
+      "protocol": "sokf-search-experiment/v1",
+      "provider": "openai-codex",
+      "model": "gpt-5.6-luna",
+      "fixturesHash": "a292680cfeb0fe55292fdaba1d5a5cd768df8054d861571312c60bdce2378592",
+      "binaryHash": "8de8562ccc19dc1261a9139cb123aaa9ad0f20eff6938af96088ac65ddbe4c1d",
+      "guidance": "Find knowledge using lexical terms and semantic similarity when available.\nUse a short question or phrase, preserving known IDs, titles or paths.\nNarrow with types for a document kind, lifecycle for an explicit work\nstate, and tags only when their values are known. Omit uncertain filters.\nReturns sections grouped by concept with `path:start-end` locators.\n\nRequest fields:\n/// A short question or phrase describing what you need. Preserve known\n    /// concept IDs, titles or paths; do not add instructions about searching.\n    pub query: String,\n    /// Most hits to return; 8 by default.\n    pub limit: Option<u32>,\n    /// Narrow by known frontmatter type, e.g. `[\"Contract\"]` for a contract\n    /// or `[\"Decision\"]` for an architectural decision. Omit for broad discovery.\n    pub types: Option<Vec<String>>,\n    /// Narrow by existing tags. Do not invent tag names from query keywords.\n    pub tags: Option<Vec<String>>,\n    /// Narrow by lifecycle when the task asks for it, e.g. `[\"open\"]` for\n    /// open work. Omit otherwise: many relevant concepts have no lifecycle.\n    pub lifecycle: Option<Vec<String>>,",
+      "corpusHash": "7f7c1bf6e5d5c6da427425a4bd01b6ede20569a458b200a0b2ac2a5a5494ec1d",
+      "queriesFrom": null,
+      "withoutLabels": false,
+      "calls": 12,
+      "tokens": 8328,
+      "estimatedCost": 0.0024066,
+      "results": [
+        {
+          "id": "identifier",
+          "request": {
+            "query": "contract-002 normative CLI contract",
+            "limit": 8,
+            "types": [
+              "Contract"
+            ]
+          },
+          "found": [
+            "contract-011-interface-workflow",
+            "contract-002-cli-superdev",
+            "contract-008-format-template",
+            "contract-013-interface-sokf-pi-extension",
+            "contract-006-format-lock",
+            "contract-004-config-superdev"
+          ],
+          "selected": {
+            "concept": "contract-002",
+            "reason": "The search results directly identify contracts/public/active/contract-002-cli-superdev.md as the normative CLI contract for superdev."
+          },
+          "firstRelevantRank": 2,
+          "reciprocalRank": 0.5,
+          "selectedCorrectly": true,
+          "falseSelection": false,
+          "renderedResultHash": "f93a23814253ce4292917a369050b16724137a49f4298c2016bc1b4dfea1a821"
+        },
+        {
+          "id": "title",
+          "request": {
+            "query": "Coding Standards Rust module organisation rules",
+            "limit": 8
+          },
+          "found": [
+            "coding-standards",
+            "schema-coding-standards",
+            "plan-001-flatten-crate-api",
+            "schema-technology-stack",
+            "issue-011-index-shape-is-described-but-not-enforced"
+          ],
+          "selected": {
+            "concept": "coding-standards",
+            "reason": "It is the canonical concept containing the repository\u2019s Rust conventions and module organisation rules."
+          },
+          "firstRelevantRank": 1,
+          "reciprocalRank": 1,
+          "selectedCorrectly": true,
+          "falseSelection": false,
+          "renderedResultHash": "c7a12fbd1b835bbe0ad20753f289feb545890e44c07d1e5535da834549af20a7"
+        },
+        {
+          "id": "path",
+          "request": {
+            "query": "knowledge/security-requirements.md",
+            "limit": 8
+          },
+          "found": [
+            "schema-security-requirements",
+            "security-requirements",
+            "adr-010-concepts-entry-is-the-item",
+            "schema-architecture",
+            "idea-007-a-knowledge-capture-skill",
+            "schema-project-overview"
+          ],
+          "selected": {
+            "concept": "security-requirements",
+            "reason": "The search results directly identify security-requirements.md and provide its document content, unlike the other results that only reference or describe it."
+          },
+          "firstRelevantRank": 2,
+          "reciprocalRank": 0.5,
+          "selectedCorrectly": true,
+          "falseSelection": false,
+          "renderedResultHash": "df0cb10c2a77523130e7ac32a0d46e390f8b62336e39cdc491aa4b0e8f74077b"
+        },
+        {
+          "id": "semantic",
+          "request": {
+            "query": "architectural decision ordinary file operations knowledge consistency repaired later shell writes",
+            "limit": 8,
+            "types": [
+              "Decision"
+            ]
+          },
+          "found": [
+            "adr-054-the-workflow-core-owns-state-branch-and-refusals",
+            "adr-055-sokf-does-not-intercept-file-tools",
+            "adr-039-a-decidable-finding-is-an-error-and-the-turn-is-the-gate",
+            "adr-010-concepts-entry-is-the-item",
+            "adr-025-an-examples-links-bind-by-form-and-never-resolve"
+          ],
+          "selected": {
+            "concept": "adr-055",
+            "reason": "ADR-055 explicitly decides that agents use ordinary file tools on physical paths and that knowledge consistency is repaired and validated at turn end, covering all writers including shell writes."
+          },
+          "firstRelevantRank": 2,
+          "reciprocalRank": 0.5,
+          "selectedCorrectly": true,
+          "falseSelection": false,
+          "renderedResultHash": "2a98ea75b4907f54e2869a78e1cf7a04a6a9ff26d55639a83043de3b31f23ee5"
+        },
+        {
+          "id": "live-work",
+          "request": {
+            "query": "source include silently changing meaning when a region name is reused",
+            "limit": 8,
+            "lifecycle": [
+              "open"
+            ]
+          },
+          "found": [
+            "issue-096-a-reused-region-name-silently-refills-a-contract",
+            "issue-049-a-contract-cannot-point-at-its-definition",
+            "issue-097-pi-does-not-load-the-agents-import"
+          ],
+          "selected": {
+            "concept": "issue-096",
+            "reason": "It directly describes a reused region name silently causing an include to refill from the wrong source."
+          },
+          "firstRelevantRank": 1,
+          "reciprocalRank": 1,
+          "selectedCorrectly": true,
+          "falseSelection": false,
+          "renderedResultHash": "5acd4d73070ac42fe7e801dac7794776e799d4e57a93bccc9b9241482fba4915"
+        },
+        {
+          "id": "absent",
+          "request": {
+            "query": "contract-999 approved quantum teleportation deployment procedure",
+            "limit": 8,
+            "types": [
+              "Contract"
+            ]
+          },
+          "found": [
+            "contract-011-interface-workflow",
+            "contract-002-cli-superdev",
+            "contract-007-interface-pack-resolution"
+          ],
+          "selected": {
+            "concept": null,
+            "reason": "No search result contains contract-999 or evidence of an approved quantum teleportation deployment procedure."
+          },
+          "firstRelevantRank": null,
+          "reciprocalRank": 0,
+          "selectedCorrectly": true,
+          "falseSelection": false,
+          "renderedResultHash": "a827affda3bf9a064e6a8ac8e573e7d2b7171a52402e0d10467dbffda357d5fa"
+        }
+      ],
+      "summary": {
+        "correctSelections": 6,
+        "falseSelections": 0,
+        "meanReciprocalRank": 0.7
+      },
+      "name": "guidance-corrected",
+      "configHash": "07707139357ab83c280290601062c73ebec6fa1d54f910081ecd8faa6cef0417",
+      "retrievalModel": "model2vec:minishlab/potion-retrieval-32M@6fc8051fab2a1e0ee76689cf08c853792ac285e7",
+      "indexSchemaVersion": 3
+    },
+    {
+      "protocol": "sokf-search-experiment/v1",
+      "provider": "openai-codex",
+      "model": "gpt-5.6-luna",
+      "fixturesHash": "a292680cfeb0fe55292fdaba1d5a5cd768df8054d861571312c60bdce2378592",
+      "binaryHash": "281791232d3e0633550636c15a1567490e6bda19b0e11e096637975c029160ae",
+      "guidance": "Find knowledge using lexical terms and semantic similarity when available.\nUse a short question or phrase, preserving known IDs, titles or paths.\nNarrow with types for a document kind, lifecycle for an explicit work\nstate, and tags only when their values are known. Omit uncertain filters.\nReturns sections grouped by concept with `path:start-end` locators.\n\nRequest fields:\n/// A short question or phrase describing what you need. Preserve known\n    /// concept IDs, titles or paths; do not add instructions about searching.\n    pub query: String,\n    /// Most hits to return; 8 by default.\n    pub limit: Option<u32>,\n    /// Narrow by known frontmatter type, e.g. `[\"Contract\"]` for a contract\n    /// or `[\"Decision\"]` for an architectural decision. Omit for broad discovery.\n    pub types: Option<Vec<String>>,\n    /// Narrow by existing tags. Do not invent tag names from query keywords.\n    pub tags: Option<Vec<String>>,\n    /// Narrow by lifecycle when the task asks for it, e.g. `[\"open\"]` for\n    /// open work. Omit otherwise: many relevant concepts have no lifecycle.\n    pub lifecycle: Option<Vec<String>>,",
+      "corpusHash": "7f7c1bf6e5d5c6da427425a4bd01b6ede20569a458b200a0b2ac2a5a5494ec1d",
+      "queriesFrom": "guidance-corrected",
+      "withoutLabels": false,
+      "calls": 6,
+      "tokens": 5961,
+      "estimatedCost": 0.0015412,
+      "results": [
+        {
+          "id": "identifier",
+          "request": {
+            "query": "contract-002 normative CLI contract",
+            "limit": 8,
+            "types": [
+              "Contract"
+            ]
+          },
+          "found": [
+            "contract-002-cli-superdev"
+          ],
+          "selected": {
+            "concept": "contract-002-cli-superdev",
+            "reason": "The search result identifies contracts/public/active/contract-002-cli-superdev.md as the normative CLI contract containing the command definition and behavior."
+          },
+          "firstRelevantRank": 1,
+          "reciprocalRank": 1,
+          "selectedCorrectly": true,
+          "falseSelection": false,
+          "renderedResultHash": "91d5f4946216cfec3277618a8fa7d39cb1052d835256a44db132adbb4d3fb6e4"
+        },
+        {
+          "id": "title",
+          "request": {
+            "query": "Coding Standards Rust module organisation rules",
+            "limit": 8
+          },
+          "found": [
+            "coding-standards",
+            "schema-coding-standards",
+            "plan-001-flatten-crate-api",
+            "schema-technology-stack",
+            "issue-011-index-shape-is-described-but-not-enforced"
+          ],
+          "selected": {
+            "concept": "coding-standards",
+            "reason": "The search results directly identify coding-standards.md as containing the repository\u2019s Rust conventions, including module organisation rules."
+          },
+          "firstRelevantRank": 1,
+          "reciprocalRank": 1,
+          "selectedCorrectly": true,
+          "falseSelection": false,
+          "renderedResultHash": "ccf96e6636080564425249b415c677f41778583913ef616ffd2c642bdcf73c2b"
+        },
+        {
+          "id": "path",
+          "request": {
+            "query": "knowledge/security-requirements.md",
+            "limit": 8
+          },
+          "found": [
+            "security-requirements",
+            "schema-security-requirements",
+            "adr-010-concepts-entry-is-the-item",
+            "schema-architecture",
+            "idea-007-a-knowledge-capture-skill",
+            "schema-project-overview"
+          ],
+          "selected": {
+            "concept": "security-requirements",
+            "reason": "The search result directly identifies security-requirements.md as the canonical document, unlike the other results that only reference or discuss it."
+          },
+          "firstRelevantRank": 1,
+          "reciprocalRank": 1,
+          "selectedCorrectly": true,
+          "falseSelection": false,
+          "renderedResultHash": "665e367f483ebc595d561cf15b954835e66033ceb797eb4aae5aebadb4bc27cb"
+        },
+        {
+          "id": "semantic",
+          "request": {
+            "query": "architectural decision ordinary file operations knowledge consistency repaired later shell writes",
+            "limit": 8,
+            "types": [
+              "Decision"
+            ]
+          },
+          "found": [
+            "adr-054-the-workflow-core-owns-state-branch-and-refusals",
+            "adr-055-sokf-does-not-intercept-file-tools",
+            "adr-039-a-decidable-finding-is-an-error-and-the-turn-is-the-gate",
+            "adr-010-concepts-entry-is-the-item",
+            "adr-025-an-examples-links-bind-by-form-and-never-resolve"
+          ],
+          "selected": {
+            "concept": "adr-055",
+            "reason": "ADR-055 explicitly decides that agents use Pi\u2019s ordinary file tools on physical paths, while SOKF repairs and validates knowledge consistency at turn end, including shell writes."
+          },
+          "firstRelevantRank": 2,
+          "reciprocalRank": 0.5,
+          "selectedCorrectly": true,
+          "falseSelection": false,
+          "renderedResultHash": "24118cea4574aeb8f18f0da71210740726e7d7c603b0dad5815b782c50ef5953"
+        },
+        {
+          "id": "live-work",
+          "request": {
+            "query": "source include silently changing meaning when a region name is reused",
+            "limit": 8,
+            "lifecycle": [
+              "open"
+            ]
+          },
+          "found": [
+            "issue-096-a-reused-region-name-silently-refills-a-contract",
+            "issue-049-a-contract-cannot-point-at-its-definition",
+            "issue-097-pi-does-not-load-the-agents-import"
+          ],
+          "selected": {
+            "concept": "issue-096-a-reused-region-name-silently-refills-a-contract",
+            "reason": "It directly describes a reused region name silently causing an include to refill a contract from the wrong source."
+          },
+          "firstRelevantRank": 1,
+          "reciprocalRank": 1,
+          "selectedCorrectly": true,
+          "falseSelection": false,
+          "renderedResultHash": "e0d24e6981608bd26686c7ff6b33c1d799397ef4368a18e101e867d4d1dc0d3b"
+        },
+        {
+          "id": "absent",
+          "request": {
+            "query": "contract-999 approved quantum teleportation deployment procedure",
+            "limit": 8,
+            "types": [
+              "Contract"
+            ]
+          },
+          "found": [
+            "contract-011-interface-workflow",
+            "contract-002-cli-superdev",
+            "contract-007-interface-pack-resolution"
+          ],
+          "selected": {
+            "concept": null,
+            "reason": "No search result contains contract-999; the results only identify contracts 011, 002, and 007."
+          },
+          "firstRelevantRank": null,
+          "reciprocalRank": 0,
+          "selectedCorrectly": true,
+          "falseSelection": false,
+          "renderedResultHash": "563633ef5dd06dfa75934d9e05d41d00557a2dab7430ad9a2ba059cc75c6af9e"
+        }
+      ],
+      "summary": {
+        "correctSelections": 6,
+        "falseSelections": 0,
+        "meanReciprocalRank": 0.9
+      },
+      "name": "direct-labelled",
+      "configHash": "07707139357ab83c280290601062c73ebec6fa1d54f910081ecd8faa6cef0417",
+      "retrievalModel": "model2vec:minishlab/potion-retrieval-32M@6fc8051fab2a1e0ee76689cf08c853792ac285e7",
+      "indexSchemaVersion": 3
+    },
+    {
+      "protocol": "sokf-search-experiment/v1",
+      "provider": "openai-codex",
+      "model": "gpt-5.6-luna",
+      "fixturesHash": "a292680cfeb0fe55292fdaba1d5a5cd768df8054d861571312c60bdce2378592",
+      "binaryHash": "281791232d3e0633550636c15a1567490e6bda19b0e11e096637975c029160ae",
+      "guidance": "Find knowledge using lexical terms and semantic similarity when available.\nUse a short question or phrase, preserving known IDs, titles or paths.\nNarrow with types for a document kind, lifecycle for an explicit work\nstate, and tags only when their values are known. Omit uncertain filters.\nReturns sections grouped by concept with `path:start-end` locators.\n\nRequest fields:\n/// A short question or phrase describing what you need. Preserve known\n    /// concept IDs, titles or paths; do not add instructions about searching.\n    pub query: String,\n    /// Most hits to return; 8 by default.\n    pub limit: Option<u32>,\n    /// Narrow by known frontmatter type, e.g. `[\"Contract\"]` for a contract\n    /// or `[\"Decision\"]` for an architectural decision. Omit for broad discovery.\n    pub types: Option<Vec<String>>,\n    /// Narrow by existing tags. Do not invent tag names from query keywords.\n    pub tags: Option<Vec<String>>,\n    /// Narrow by lifecycle when the task asks for it, e.g. `[\"open\"]` for\n    /// open work. Omit otherwise: many relevant concepts have no lifecycle.\n    pub lifecycle: Option<Vec<String>>,",
+      "corpusHash": "7f7c1bf6e5d5c6da427425a4bd01b6ede20569a458b200a0b2ac2a5a5494ec1d",
+      "queriesFrom": "guidance-corrected",
+      "withoutLabels": true,
+      "calls": 6,
+      "tokens": 5683,
+      "estimatedCost": 0.0015036000000000001,
+      "results": [
+        {
+          "id": "identifier",
+          "request": {
+            "query": "contract-002 normative CLI contract",
+            "limit": 8,
+            "types": [
+              "Contract"
+            ]
+          },
+          "found": [
+            "contract-002-cli-superdev"
+          ],
+          "selected": {
+            "concept": "contract-002-cli-superdev",
+            "reason": "The search results identify the normative CLI contract at contracts/public/active/contract-002-cli-superdev.md."
+          },
+          "firstRelevantRank": 1,
+          "reciprocalRank": 1,
+          "selectedCorrectly": true,
+          "falseSelection": false,
+          "renderedResultHash": "95c7dcbabcfa634d3fc50b4bb22c91a91c9499cef1217f5792bc9a71e7ba09e2"
+        },
+        {
+          "id": "title",
+          "request": {
+            "query": "Coding Standards Rust module organisation rules",
+            "limit": 8
+          },
+          "found": [
+            "coding-standards",
+            "schema-coding-standards",
+            "plan-001-flatten-crate-api",
+            "schema-technology-stack",
+            "issue-011-index-shape-is-described-but-not-enforced"
+          ],
+          "selected": {
+            "concept": "coding-standards",
+            "reason": "It is the canonical document containing the repository\u2019s Rust conventions and module organisation rules."
+          },
+          "firstRelevantRank": 1,
+          "reciprocalRank": 1,
+          "selectedCorrectly": true,
+          "falseSelection": false,
+          "renderedResultHash": "c7a12fbd1b835bbe0ad20753f289feb545890e44c07d1e5535da834549af20a7"
+        },
+        {
+          "id": "path",
+          "request": {
+            "query": "knowledge/security-requirements.md",
+            "limit": 8
+          },
+          "found": [
+            "security-requirements",
+            "schema-security-requirements",
+            "adr-010-concepts-entry-is-the-item",
+            "schema-architecture",
+            "idea-007-a-knowledge-capture-skill",
+            "schema-project-overview"
+          ],
+          "selected": {
+            "concept": "security-requirements",
+            "reason": "The search results identify security-requirements.md itself as the canonical document at the requested path."
+          },
+          "firstRelevantRank": 1,
+          "reciprocalRank": 1,
+          "selectedCorrectly": true,
+          "falseSelection": false,
+          "renderedResultHash": "3998f14112344af75e383f3cf82afbcf5fb29fb2436db37396957b51088fb0a1"
+        },
+        {
+          "id": "semantic",
+          "request": {
+            "query": "architectural decision ordinary file operations knowledge consistency repaired later shell writes",
+            "limit": 8,
+            "types": [
+              "Decision"
+            ]
+          },
+          "found": [
+            "adr-054-the-workflow-core-owns-state-branch-and-refusals",
+            "adr-055-sokf-does-not-intercept-file-tools",
+            "adr-039-a-decidable-finding-is-an-error-and-the-turn-is-the-gate",
+            "adr-010-concepts-entry-is-the-item",
+            "adr-025-an-examples-links-bind-by-form-and-never-resolve"
+          ],
+          "selected": {
+            "concept": "adr-055-sokf-does-not-intercept-file-tools",
+            "reason": "ADR-055 decides that agents use ordinary file tools on physical paths and that SOKF repairs and validates knowledge consistency at turn end, including shell writes."
+          },
+          "firstRelevantRank": 2,
+          "reciprocalRank": 0.5,
+          "selectedCorrectly": true,
+          "falseSelection": false,
+          "renderedResultHash": "2a98ea75b4907f54e2869a78e1cf7a04a6a9ff26d55639a83043de3b31f23ee5"
+        },
+        {
+          "id": "live-work",
+          "request": {
+            "query": "source include silently changing meaning when a region name is reused",
+            "limit": 8,
+            "lifecycle": [
+              "open"
+            ]
+          },
+          "found": [
+            "issue-096-a-reused-region-name-silently-refills-a-contract",
+            "issue-049-a-contract-cannot-point-at-its-definition",
+            "issue-097-pi-does-not-load-the-agents-import"
+          ],
+          "selected": {
+            "concept": "issue-096",
+            "reason": "It directly describes a reused region name silently refilling a contract from the wrong source."
+          },
+          "firstRelevantRank": 1,
+          "reciprocalRank": 1,
+          "selectedCorrectly": true,
+          "falseSelection": false,
+          "renderedResultHash": "5acd4d73070ac42fe7e801dac7794776e799d4e57a93bccc9b9241482fba4915"
+        },
+        {
+          "id": "absent",
+          "request": {
+            "query": "contract-999 approved quantum teleportation deployment procedure",
+            "limit": 8,
+            "types": [
+              "Contract"
+            ]
+          },
+          "found": [
+            "contract-011-interface-workflow",
+            "contract-002-cli-superdev",
+            "contract-007-interface-pack-resolution"
+          ],
+          "selected": {
+            "concept": null,
+            "reason": "No search result contains contract-999 or evidence of an approved quantum teleportation deployment procedure."
+          },
+          "firstRelevantRank": null,
+          "reciprocalRank": 0,
+          "selectedCorrectly": true,
+          "falseSelection": false,
+          "renderedResultHash": "a827affda3bf9a064e6a8ac8e573e7d2b7171a52402e0d10467dbffda357d5fa"
+        }
+      ],
+      "summary": {
+        "correctSelections": 6,
+        "falseSelections": 0,
+        "meanReciprocalRank": 0.9
+      },
+      "name": "direct-unlabelled",
+      "configHash": "07707139357ab83c280290601062c73ebec6fa1d54f910081ecd8faa6cef0417",
+      "retrievalModel": "model2vec:minishlab/potion-retrieval-32M@6fc8051fab2a1e0ee76689cf08c853792ac285e7",
+      "indexSchemaVersion": 3
+    },
+    {
+      "protocol": "sokf-search-experiment/v1",
+      "provider": "openai-codex",
+      "model": "gpt-5.6-luna",
+      "fixturesHash": "a292680cfeb0fe55292fdaba1d5a5cd768df8054d861571312c60bdce2378592",
+      "binaryHash": "281791232d3e0633550636c15a1567490e6bda19b0e11e096637975c029160ae",
+      "guidance": "Find knowledge using lexical terms and semantic similarity when available.\nUse a short question or phrase, preserving known IDs, titles or paths.\nNarrow with types for a document kind, lifecycle for an explicit work\nstate, and tags only when their values are known. Omit uncertain filters.\nReturns sections grouped by concept with `path:start-end` locators.\n\nRequest fields:\n/// A short question or phrase describing what you need. Preserve known\n    /// concept IDs, titles or paths; do not add instructions about searching.\n    pub query: String,\n    /// Most hits to return; 8 by default.\n    pub limit: Option<u32>,\n    /// Narrow by known frontmatter type, e.g. `[\"Contract\"]` for a contract\n    /// or `[\"Decision\"]` for an architectural decision. Omit for broad discovery.\n    pub types: Option<Vec<String>>,\n    /// Narrow by existing tags. Do not invent tag names from query keywords.\n    pub tags: Option<Vec<String>>,\n    /// Narrow by lifecycle when the task asks for it, e.g. `[\"open\"]` for\n    /// open work. Omit otherwise: many relevant concepts have no lifecycle.\n    pub lifecycle: Option<Vec<String>>,",
+      "corpusHash": "7f7c1bf6e5d5c6da427425a4bd01b6ede20569a458b200a0b2ac2a5a5494ec1d",
+      "queriesFrom": "baseline",
+      "withoutLabels": false,
+      "calls": 6,
+      "tokens": 6313,
+      "estimatedCost": 0.0015886000000000003,
+      "results": [
+        {
+          "id": "identifier",
+          "request": {
+            "query": "Find the normative CLI contract contract-002 itself, not discussions, references, or commentary about it.",
+            "limit": 8
+          },
+          "found": [
+            "contract-002-cli-superdev"
+          ],
+          "selected": {
+            "concept": "contract-002-cli-superdev",
+            "reason": "The search results identify the normative contract file contracts/public/active/contract-002-cli-superdev.md, containing the CLI definition and behavior."
+          },
+          "firstRelevantRank": 1,
+          "reciprocalRank": 1,
+          "selectedCorrectly": true,
+          "falseSelection": false,
+          "renderedResultHash": "d25e37383cf608b218ac178e22f5d8a2ba2eac1cc63ec9f7298d6b9824e73548"
+        },
+        {
+          "id": "title",
+          "request": {
+            "query": "Find the repository's coding standards for Rust module organisation rules, including module layout, file structure, mod declarations, and naming conventions.",
+            "limit": 8
+          },
+          "found": [
+            "coding-standards",
+            "schema-coding-standards",
+            "contract-010-interface-document-schemas",
+            "schema-directory-structure",
+            "directory-structure",
+            "plan-001-flatten-crate-api"
+          ],
+          "selected": {
+            "concept": "coding-standards",
+            "reason": "It directly contains the repository\u2019s Rust conventions, including module organisation rules, declarations, file structure, and naming guidance."
+          },
+          "firstRelevantRank": 1,
+          "reciprocalRank": 1,
+          "selectedCorrectly": true,
+          "falseSelection": false,
+          "renderedResultHash": "bb1a4faca1516b05e50baec4dd591bb1734f16b36fc461dc1571dfc662e85a18"
+        },
+        {
+          "id": "path",
+          "request": {
+            "query": "Locate the document at knowledge/security-requirements.md itself, not documents that link to it.",
+            "limit": 8
+          },
+          "found": [
+            "security-requirements",
+            "schema-security-requirements",
+            "adr-025-an-examples-links-bind-by-form-and-never-resolve",
+            "issue-023-a-concept-path-written-outside-the-knowledge-is-checked-by-nothing",
+            "issue-011-index-shape-is-described-but-not-enforced",
+            "code-review-005-normative-shape-enforcement"
+          ],
+          "selected": {
+            "concept": "security-requirements",
+            "reason": "The search result directly identifies knowledge/security-requirements.md itself and shows its document content."
+          },
+          "firstRelevantRank": 1,
+          "reciprocalRank": 1,
+          "selectedCorrectly": true,
+          "falseSelection": false,
+          "renderedResultHash": "dd14a2a53885ef32815f7d04a7f8356f6f181a65d8061363819e04216ebc0973"
+        },
+        {
+          "id": "semantic",
+          "request": {
+            "query": "Find the architectural decision stating that agents should use ordinary file operations, with knowledge consistency repaired later, including for shell writes.",
+            "limit": 8
+          },
+          "found": [
+            "adr-055-sokf-does-not-intercept-file-tools",
+            "adr-054-the-workflow-core-owns-state-branch-and-refusals",
+            "idea-015-scoped-workflows-feed-independent-build-batches",
+            "idea-011-define-an-agent-learnings-document-model",
+            "idea-010-a-pi-extension-runs-the-superdev-process"
+          ],
+          "selected": {
+            "concept": "adr-055-sokf-does-not-intercept-file-tools",
+            "reason": "It explicitly decides that agents use ordinary physical file operations and that consistency is repaired and validated at turn end for every writer, including bash."
+          },
+          "firstRelevantRank": 1,
+          "reciprocalRank": 1,
+          "selectedCorrectly": true,
+          "falseSelection": false,
+          "renderedResultHash": "a6919663ef630255749360b6678af34928b860ebf9d6df9262aa030c304e88ed"
+        },
+        {
+          "id": "live-work",
+          "request": {
+            "query": "open issue about a source include silently changing meaning when a region name is reused",
+            "limit": 8,
+            "lifecycle": [
+              "open"
+            ]
+          },
+          "found": [
+            "issue-096-a-reused-region-name-silently-refills-a-contract",
+            "issue-049-a-contract-cannot-point-at-its-definition",
+            "issue-097-pi-does-not-load-the-agents-import",
+            "issue-023-a-concept-path-written-outside-the-knowledge-is-checked-by-nothing"
+          ],
+          "selected": {
+            "concept": "issue-096",
+            "reason": "It directly describes a source include silently changing meaning when a reused region name causes validation to refill from the wrong source."
+          },
+          "firstRelevantRank": 1,
+          "reciprocalRank": 1,
+          "selectedCorrectly": true,
+          "falseSelection": false,
+          "renderedResultHash": "2a764a50568e63c67ebda6b6d7a9a147ece77cef3dd23fab6521fb62d3a973cf"
+        },
+        {
+          "id": "absent",
+          "request": {
+            "query": "Locate contract-999 and the approved quantum teleportation deployment procedure. If absent, identify no matching evidence.",
+            "limit": 8
+          },
+          "found": [
+            "contract-011-interface-workflow",
+            "plan-001-flatten-crate-api",
+            "issue-056-three-active-adrs-decide-in-terms-of-retired-skills",
+            "schema-release-procedure",
+            "schema-plan",
+            "schema-documentation",
+            "code-review-005-normative-shape-enforcement"
+          ],
+          "selected": {
+            "concept": null,
+            "reason": "No search result contains contract-999 or evidence of an approved quantum teleportation deployment procedure."
+          },
+          "firstRelevantRank": null,
+          "reciprocalRank": 0,
+          "selectedCorrectly": true,
+          "falseSelection": false,
+          "renderedResultHash": "36f60cb968d31f3a058fa7dbf3f1c8f99d0546bbc14f7f4e6aabeec08f279ea9"
+        }
+      ],
+      "summary": {
+        "correctSelections": 6,
+        "falseSelections": 0,
+        "meanReciprocalRank": 1
+      },
+      "name": "direct-baseline-queries",
+      "configHash": "07707139357ab83c280290601062c73ebec6fa1d54f910081ecd8faa6cef0417",
+      "retrievalModel": "model2vec:minishlab/potion-retrieval-32M@6fc8051fab2a1e0ee76689cf08c853792ac285e7",
+      "indexSchemaVersion": 3
+    }
+  ],
+  "retrievalModel": "model2vec:minishlab/potion-retrieval-32M@6fc8051fab2a1e0ee76689cf08c853792ac285e7",
+  "indexSchemaVersion": 3,
+  "snapshotNote": "Missing snapshot metadata was read after the runs from the unchanged frozen inputs; configuration hashes were added during double-check. No measured outcomes were changed.",
+  "rankingUnit": "Concept groups, not individual sections.",
+  "review": {
+    "renderedReplayCasesUnchanged": 12,
+    "additionalLlmCalls": 0
+  }
+}

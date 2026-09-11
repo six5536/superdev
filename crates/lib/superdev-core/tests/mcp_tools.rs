@@ -179,6 +179,7 @@ async fn search_returns_locators() {
     assert_ne!(result.is_error, Some(true), "{text}");
     assert!(text.contains("module-a.md:"), "{text}");
     assert!(has_locator(&text, "module-a.md"), "{text}");
+    assert!(text.contains("{match: lexical}"), "{text}");
     // The concept line leads its group.
     assert!(text.contains("module-a — Pure planning stage"), "{text}");
     // No embedder was passed, so the caller is told search is lexical.
@@ -215,6 +216,19 @@ async fn the_server_serves_three_tools_and_no_file_tool() {
     let tools = client.list_all_tools().await.unwrap();
     let names: Vec<&str> = tools.iter().map(|tool| tool.name.as_ref()).collect();
     assert_eq!(names, ["sokf_graph", "sokf_overview", "sokf_search"]);
+    let search = tools
+        .iter()
+        .find(|tool| tool.name == "sokf_search")
+        .unwrap();
+    let description = search.description.as_deref().unwrap();
+    for word in ["semantic", "types", "lifecycle", "tags"] {
+        assert!(description.contains(word), "{description}");
+    }
+    assert!(
+        serde_json::to_string(&search.input_schema)
+            .unwrap()
+            .contains("Decision")
+    );
     // The server answers what a file tool cannot, and serves no file tool:
     // an agent reads and edits knowledge with its own tools on physical
     // paths. No compatibility alias stands behind a removed operation.

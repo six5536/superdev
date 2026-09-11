@@ -13,11 +13,11 @@ import { type Static, Type } from "typebox";
 import { SokfMcpClient, type McpToolResult } from "./sokf-mcp.ts";
 
 const searchSchema = Type.Object({
-	query: Type.String({ description: "What to find in the canonical project knowledge" }),
+	query: Type.String({ description: "A short question or phrase. Preserve known concept IDs, titles or paths; do not add instructions about searching." }),
 	limit: Type.Optional(Type.Integer({ minimum: 1, description: "Most sections to return" })),
-	types: Type.Optional(Type.Array(Type.String({ description: "Concept type" }))),
-	tags: Type.Optional(Type.Array(Type.String({ description: "Concept tag" }))),
-	lifecycle: Type.Optional(Type.Array(Type.String({ description: "Lifecycle value" }))),
+	types: Type.Optional(Type.Array(Type.String({ description: "Known frontmatter type, e.g. Contract or Decision. Omit for broad discovery." }))),
+	tags: Type.Optional(Type.Array(Type.String({ description: "Existing tag; do not invent tags from query keywords." }))),
+	lifecycle: Type.Optional(Type.Array(Type.String({ description: "Explicitly requested state, e.g. open. Omit otherwise: many concepts have no lifecycle." }))),
 });
 
 const graphSchema = Type.Object({
@@ -251,11 +251,12 @@ export default function (pi: ExtensionAPI) {
 	pi.registerTool({
 		name: "sokf_search",
 		label: "SOKF search",
-		description: "Search SOKF whenever project knowledge is needed. Returns matching sections and locators.",
+		description: "Search SOKF using lexical terms and semantic similarity when available. Preserve known IDs or paths. Narrow with types for document kind, lifecycle for an explicit work state, and known tags; omit uncertain filters. Returns labelled sections and locators.",
 		promptSnippet: "Find relevant sections in canonical project knowledge with semantic search.",
 		promptGuidelines: [
 			"Use sokf_search to find relevant project knowledge when its concept ID and physical path are unknown.",
 			"Resolve file paths in sokf_search locators relative to knowledge/; resolve sokf_graph paths relative to the repository root.",
+			"Exact IDs, unambiguous numbered IDs and paths lead search results. Match labels explain retrieval, not confidence; check the evidence.",
 		],
 		parameters: searchSchema,
 		async execute(_toolCallId, params: SearchInput, signal, _onUpdate, ctx) {

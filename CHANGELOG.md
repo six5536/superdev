@@ -13,6 +13,13 @@ publish a version it cannot find a heading for.
 
 ### Added
 
+- **SOKF search explains its results and honours named targets.** Exact IDs,
+  unambiguous numbered shorthands and knowledge paths lead hybrid relevance,
+  without bypassing filters. Sections carry identifier/path/lexical/semantic
+  match labels. Tool guidance explains existing precision controls, and lenient
+  query recovery reports parser diagnostics without refusing the search.
+  A small opt-in Luna experiment separates guidance, ranking and labels;
+  its results do not claim statistical significance (issue-090).
 - **SOKF does not intercept the file tools.** A Pi session keeps its own
   `read`, `edit` and `write`, acting on physical `knowledge/` paths unchanged.
   The MCP server serves three read-only tools — `sokf_search`, `sokf_graph` and
