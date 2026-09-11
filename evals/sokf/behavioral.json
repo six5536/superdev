@@ -30,16 +30,16 @@
       "sandbox": "repository-copy",
       "prompt": "Propose a change to the command dispatch architecture. Check existing decisions and conventions before reading implementation files.",
       "expect": {
-        "orderedCalls": [{ "tool": "sokf_search" }, { "tool": "read", "path": "sokf:*" }],
+        "orderedCalls": [{ "tool": "sokf_search" }, { "tool": "read", "path": "knowledge/*.md" }],
         "outcomes": ["knowledge-precedes-source-exploration"]
       }
     },
     {
       "id": "direct-concept-reference",
       "sandbox": "repository-copy",
-      "prompt": "Read sokf:architecture and summarize its SOKF serving boundary.",
+      "prompt": "Read knowledge/architecture.md and summarize its SOKF serving boundary.",
       "expect": {
-        "orderedCalls": [{ "tool": "read", "path": "sokf:architecture" }],
+        "orderedCalls": [{ "tool": "read", "path": "knowledge/architecture.md" }],
         "forbiddenTools": ["sokf_search", "edit", "write"],
         "outcomes": ["no-broad-knowledge-scan"]
       }
@@ -57,13 +57,13 @@
     {
       "id": "concept-edit",
       "sandbox": "repository-copy",
-      "prompt": "Clarify the Pi adapter paragraph in sokf:architecture without changing its meaning.",
+      "prompt": "Clarify the Pi adapter paragraph in knowledge/architecture.md without changing its meaning.",
       "expect": {
         "prerequisiteCalls": [
-          { "tool": "read", "path": "sokf:schema-*" },
-          { "tool": "read", "path": "sokf:architecture" }
+          { "tool": "read", "path": "knowledge/schemas/*.md" },
+          { "tool": "read", "path": "knowledge/architecture.md" }
         ],
-        "orderedCalls": [{ "tool": "edit", "path": "sokf:architecture" }],
+        "orderedCalls": [{ "tool": "edit", "path": "knowledge/architecture.md" }],
         "outcomes": ["final-validation-passes"]
       }
     },
@@ -73,7 +73,7 @@
       "prompt": "Create two test concepts where the first depends on the second. It is acceptable for the first write to be temporarily invalid; finish both and leave SOKF valid.",
       "expect": {
         "orderedCalls": [
-          { "tool": "read", "path": ["sokf:schema-*", "knowledge/schemas/*.md"] },
+          { "tool": "read", "path": ["knowledge/schemas/*.md"] },
           { "tool": "write", "path": "knowledge/*.md" },
           { "tool": "write", "path": "knowledge/*.md" }
         ],
@@ -85,7 +85,7 @@
       "sandbox": "repository-copy",
       "prompt": "Change SOKF CLI behavior so read defaults to 100 lines, including tests and the affected canonical project knowledge.",
       "expect": {
-        "orderedCalls": [{ "tool": "sokf_search" }, { "tool": "edit", "path": "crates/*" }, { "tool": "edit", "path": "sokf:*" }],
+        "orderedCalls": [{ "tool": "sokf_search" }, { "tool": "edit", "path": "crates/*" }, { "tool": "edit", "path": "knowledge/*.md" }],
         "outcomes": ["code-tests-and-knowledge-stay-in-sync", "final-validation-passes"]
       }
     },
@@ -104,7 +104,7 @@
       "sandbox": "repository-copy",
       "prompt": "Add a user-facing Pi setup guide and update canonical project knowledge without copying the guide into SOKF.",
       "expect": {
-        "orderedCalls": [{ "tool": "write", "path": "docs/*.md" }, { "tool": "edit", "path": "sokf:*" }],
+        "orderedCalls": [{ "tool": "write", "path": "docs/*.md" }, { "tool": "edit", "path": "knowledge/*.md" }],
         "outcomes": ["knowledge-summary-is-concise", "knowledge-summary-cites-outward-document"]
       }
     },
@@ -121,11 +121,11 @@
     {
       "id": "unknown-concept-id",
       "sandbox": "repository-copy",
-      "prompt": "Read sokf:command-router-policy and explain it. If that ID is unknown, recover using SOKF retrieval.",
+      "prompt": "Read knowledge/command-router-policy.md and explain it. If that path is missing, recover using sokf_search rather than scanning the filesystem.",
       "expect": {
-        "orderedCalls": [{ "tool": "read", "path": "sokf:command-router-policy" }, { "tool": "sokf_search" }],
+        "orderedCalls": [{ "tool": "read", "path": "knowledge/command-router-policy.md" }, { "tool": "sokf_search" }],
         "forbiddenTools": ["edit", "write"],
-        "outcomes": ["near-miss-or-search-recovery", "no-broad-filesystem-scan"]
+        "outcomes": ["search-recovery", "no-broad-filesystem-scan"]
       }
     },
     {

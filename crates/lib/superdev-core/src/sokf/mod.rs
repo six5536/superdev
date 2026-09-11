@@ -24,10 +24,8 @@ pub use embed::{
 };
 pub use graph::{Edge, Graph, UnknownId, inverse_rel};
 pub use index::{Hit, Index, IndexDir, SCHEMA_VERSION, SearchOpts, SyncStats};
-pub use mcp::{
-    ResolveSourceRequest, SearchRequest, SokfServer, SokfService, SourceResolution, line_window,
-};
+pub use mcp::{SearchRequest, SokfServer, SokfService, line_window};
 pub use mutation::{
-    ChangeSource, EditRequest, ExactEdit, GeneratedRegion, MutationChange, MutationFinding,
-    MutationPolicy, MutationResult, ValidationState, WriteRequest,
+    ChangeSource, EditRequest, ExactEdit, MutationChange, MutationFinding, MutationPolicy,
+    MutationResult, ValidationState, WriteRequest,
 };

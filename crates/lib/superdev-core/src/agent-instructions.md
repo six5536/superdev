@@ -17,18 +17,20 @@ YOU follow the set of rules defined below, reminding yourself of the rules perio
 
 <knowledge purpose="canonical data store">
 SOKF under `knowledge/` is the canonical store for all project knowledge.
-Use SOKF whenever project knowledge is needed. Read known concepts with
-`read path="sokf:<id>"`; do not search before reading an ID already named.
-Use `sokf_search` when the concept ID is unknown.
+Use SOKF whenever project knowledge is needed. Read a known physical
+`knowledge/` path directly with Pi's `read`. Use `sokf_graph` for a known
+concept ID or `sokf_search` for an unknown concept to obtain its path.
+Use `sokf_overview` for orientation. Edit and write physical paths with Pi's
+own file tools.
 Write new project knowledge there and keep affected concepts current.
 Only outward-facing project information belongs outside SOKF. Summarize and
 cite that information in SOKF instead of duplicating it.
 Use the `sokf-authoring` skill when writing concepts. Read
 `.agents/sokf/SPEC.md` only when the task depends on format semantics.
-<validation when="if anything under `knowledge/`, `.pi/`, or `.agents/` changed"
-  until="the validator reports PASS">
-  <tool_call name="superdev validate --fix" when="always" />
-</validation>
+The SOKF Pi extension runs one unconditional `superdev validate --fix` at
+turn end, including after changes through Bash or patches. Resolve reported
+findings; the first report triggers a follow-up turn, and later reports stay
+visible without triggering another turn. A clean run resets the sequence.
 </knowledge>
 
 {{superdev:code-index}}

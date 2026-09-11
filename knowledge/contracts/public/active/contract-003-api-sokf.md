@@ -3,7 +3,7 @@ type: Contract
 id: contract-003-api-sokf
 kind: api
 title: API contract for sokf over MCP
-description: The SOKF knowledge served to agents through semantic search, source resolution, semantic retrieval, graph traversal, and agent-safe mutations over stdio.
+description: The SOKF knowledge served to agents through semantic search, graph traversal, and an orienting overview over stdio.
 lifecycle: active
 resource: /crates/lib/superdev-core/src/sokf/mcp.rs
 links:
@@ -12,15 +12,14 @@ links:
   - rel: references
     to: adr-042-a-contracts-definition-is-materialized-from-source
   - rel: references
-    to: adr-053-sokf-file-tools-delegate-to-pi
+    to: adr-055-sokf-does-not-intercept-file-tools
 ---
 
 # API contract: sokf over MCP
 
-The SOKF knowledge served to agents through semantic search, source
-resolution, semantic retrieval, graph traversal, and two agent-safe mutation
-tools over stdio. The Definition remains the current source declaration until
-BUILD implements and materializes the pending interface.
+The SOKF knowledge served to agents through semantic search, graph traversal,
+and an orienting overview over stdio. The server leaves canonical knowledge
+unchanged, maintains its search index, and serves no file tool.
 
 The Definition is the server's argument structs and tool methods as the source
 declares them. A doc comment on a struct field or a tool method is the
@@ -28,65 +27,12 @@ description the client sees and the promise the server keeps. Behaviour
 carries what the source cannot say: transport, errors, limits, and retrieval
 ranking. [ADR-033][sokf:adr-033-a-contract-defines-its-interface] and
 [ADR-042][sokf:adr-042-a-contracts-definition-is-materialized-from-source]
-govern the contract form. [ADR-053][sokf:adr-053-sokf-file-tools-delegate-to-pi]
-governs the pending source-routing and mutation boundary.
+govern the contract form. [ADR-055][sokf:adr-055-sokf-does-not-intercept-file-tools]
+decided that the server serves no file tool: an agent reads and edits knowledge
+with Pi's own `read`, `edit`, and `write` on physical paths, and this server
+answers only what a file tool cannot.
 
 ## Definition
-
-<!-- sokf:include /crates/lib/superdev-core/src/sokf/mutation.rs#tools -->
-```rust
-/// One exact replacement, evaluated against the original file.
-#[derive(Debug, Clone, Deserialize, JsonSchema)]
-#[serde(rename_all = "camelCase", deny_unknown_fields)]
-#[schemars(crate = "rmcp::schemars")]
-pub struct ExactEdit {
-    /// Text that must occur exactly once in the original file.
-    pub old_text: String,
-    /// Text that replaces the matched bytes.
-    pub new_text: String,
-}
-
-/// The machine request accepted by the edit adapters.
-#[derive(Debug, Clone, Deserialize, JsonSchema)]
-#[serde(deny_unknown_fields)]
-#[schemars(crate = "rmcp::schemars")]
-pub struct EditRequest {
-    /// Existing concept ID, virtual address, or physical knowledge path.
-    pub path: String,
-    /// Non-overlapping replacements evaluated against one original file.
-    pub edits: Vec<ExactEdit>,
-}
-
-/// The machine request accepted by the write adapters.
-#[derive(Debug, Clone, Deserialize, JsonSchema)]
-#[serde(deny_unknown_fields)]
-#[schemars(crate = "rmcp::schemars")]
-pub struct WriteRequest {
-    /// Existing concept identity, or a physical path for creation.
-    pub path: String,
-    /// Complete replacement document.
-    pub content: String,
-}
-
-/// One generated span of a resolved source, and where its content is authored.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, JsonSchema)]
-#[serde(rename_all = "camelCase")]
-#[schemars(crate = "rmcp::schemars")]
-pub struct GeneratedRegion {
-    /// First generated line of the target, starting at 1.
-    #[schemars(range(min = 1))]
-    pub start_line: u32,
-    /// Last generated line of the target, inclusive.
-    #[schemars(range(min = 1))]
-    pub end_line: u32,
-    /// Repository-relative path the region is generated from.
-    pub authoritative_path: String,
-    /// Region of the authoritative source, when the block names one.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub authoritative_region: Option<String>,
-}
-```
-<!-- /sokf:include -->
 
 <!-- sokf:include /crates/lib/superdev-core/src/sokf/mcp.rs#tools -->
 ```rust
@@ -107,46 +53,6 @@ pub struct SearchRequest {
     pub lifecycle: Option<Vec<String>>,
 }
 
-/// Arguments of `sokf_resolve_source`.
-#[derive(Debug, Deserialize, JsonSchema)]
-#[serde(deny_unknown_fields)]
-#[schemars(crate = "rmcp::schemars")]
-pub struct ResolveSourceRequest {
-    /// An unqualified `sokf:<id>`, or a physical path entering `knowledge/`.
-    pub path: String,
-}
-
-/// Where one source is, and which of its lines are generated. Carries no
-/// semantic content: `sokf_retrieve` answers for rendered knowledge.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, JsonSchema)]
-#[serde(rename_all = "camelCase")]
-#[schemars(crate = "rmcp::schemars")]
-pub struct SourceResolution {
-    /// Repository-relative `knowledge/` path the request entered through.
-    pub ingress_path: String,
-    /// Repository-relative canonical target, contained by the active checkout.
-    pub canonical_path: String,
-    /// Whether the canonical target is an existing regular file.
-    pub exists: bool,
-    /// Generated spans of the target, in line order.
-    pub generated_regions: Vec<GeneratedRegion>,
-}
-
-/// Arguments of `sokf_retrieve`.
-#[derive(Debug, Deserialize, JsonSchema)]
-#[serde(deny_unknown_fields)]
-#[schemars(crate = "rmcp::schemars")]
-struct RetrieveArgs {
-    /// `sokf:` for the overview, `sokf:<id>`, or `sokf:<id>#<heading>`.
-    path: String,
-    /// First rendered line to return, starting at 1.
-    #[schemars(range(min = 1))]
-    offset: Option<u32>,
-    /// Most rendered lines to return.
-    #[schemars(range(min = 1))]
-    limit: Option<u32>,
-}
-
 /// Arguments of `sokf_graph`.
 #[derive(Debug, Deserialize, JsonSchema)]
 #[schemars(crate = "rmcp::schemars")]
@@ -154,6 +60,13 @@ struct GraphArgs {
     /// One concept's neighbours; omit for the whole edge map.
     id: Option<String>,
 }
+
+/// Arguments of `sokf_overview`: none. The knowledge is the whole subject,
+/// so the request carries nothing to narrow it.
+#[derive(Debug, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+#[schemars(crate = "rmcp::schemars")]
+struct OverviewArgs {}
 
     /// Search the bundle. Returns the best sections, grouped by concept, each
     /// with a `path:start-end` locator to read next.
@@ -172,58 +85,8 @@ struct GraphArgs {
             .map_err(tool_error)
     }
 
-    /// Locate the source file behind one `sokf:<id>` identity or contained
-    /// physical knowledge path, and report what of it is generated.
-    #[tool]
-    async fn sokf_resolve_source(
-        &self,
-        Parameters(args): Parameters<ResolveSourceRequest>,
-    ) -> ToolResult {
-        let _guard = self.exclusive();
-        match self.service.resolve_source(&args.path) {
-            Ok(resolution) => structured_result(&resolution),
-            Err(error) => Err(tool_error(error)),
-        }
-    }
-
-    /// Render the `sokf:` overview, one concept, or one of its sections.
-    #[tool]
-    async fn sokf_retrieve(&self, Parameters(args): Parameters<RetrieveArgs>) -> ToolResult {
-        let _guard = self.exclusive();
-        self.service
-            .retrieve(
-                &args.path,
-                args.offset.map(|offset| offset as usize),
-                args.limit.map(|limit| limit as usize),
-            )
-            .map(text)
-            .map_err(tool_error)
-    }
-
-    /// Apply atomic exact replacements to one existing concept. Identity and
-    /// verification are protected; automatic repair and validation follow.
-    #[tool]
-    async fn sokf_edit(&self, Parameters(args): Parameters<EditRequest>) -> ToolResult {
-        let _guard = self.exclusive();
-        match self.service.edit(args, MutationPolicy::AgentSafe) {
-            Ok(result) => mutation_result(result),
-            Err(error) => Err(tool_error(error)),
-        }
-    }
-
-    /// Replace one complete concept, or create one at a physical `.md` path.
-    /// Identity and verification are protected; repair and validation follow.
-    #[tool]
-    async fn sokf_write(&self, Parameters(args): Parameters<WriteRequest>) -> ToolResult {
-        let _guard = self.exclusive();
-        match self.service.write(args, MutationPolicy::AgentSafe) {
-            Ok(result) => mutation_result(result),
-            Err(error) => Err(tool_error(error)),
-        }
-    }
-
     /// Show the link graph: the whole edge map, or one concept's neighbours
-    /// in both directions.
+    /// in both directions. Every concept carries the path to read next.
     #[tool]
     async fn sokf_graph(&self, Parameters(args): Parameters<GraphArgs>) -> ToolResult {
         let _guard = self.exclusive();
@@ -233,6 +96,14 @@ struct GraphArgs {
             .map_err(tool_error)
     }
 
+    /// Show the knowledge at a glance: its name, how many concepts it holds,
+    /// the tree of them, the index state, and anything wrong with it.
+    #[tool]
+    async fn sokf_overview(&self, Parameters(_): Parameters<OverviewArgs>) -> ToolResult {
+        let _guard = self.exclusive();
+        self.service.overview().map(text).map_err(tool_error)
+    }
+
 ```
 <!-- /sokf:include -->
 
@@ -240,21 +111,14 @@ struct GraphArgs {
 
 ### Transport
 
-The server reads the index at `.superdev/cache/sokf-index/`. Search and
-semantic overview retrieval sync it lazily. Source resolution, direct semantic
-retrieval, and graph traversal parse current knowledge without opening the
-index. There is no watcher or daemon state.
+The server reads the index at `.superdev/cache/sokf-index/`. Search and the
+overview sync it lazily; graph traversal parses current knowledge without
+opening it. There is no watcher or daemon state.
 
-The routed schema notation below names JSON objects. `?` marks an optional
-field. Every object is closed to additional properties. Every path is a
-repository-relative slash-separated string. A symlink-reached Markdown file is
-eligible when its selected logical path has no hidden directory component and
-its final name ends in `.md`; `index.md` remains a reserved index and every
-other eligible file remains a concept candidate or broken file. A `GeneratedRegion` is
-`{ startLine: integer >= 1, endLine: integer >= startLine,
-authoritativePath: string, authoritativeRegion?: string }`. A `Finding` is
-`{ severity: "error" | "warning", path?: string, location?: { line: integer
->= 1, column?: integer >= 1 }, message: string, action: string }`.
+A symlink-reached Markdown file is eligible when its selected logical path has
+no hidden directory component and its final name ends in `.md`; `index.md`
+remains a reserved index and every other eligible file remains a concept
+candidate or broken file.
 
 - `P_speaks-mcp-over-stdio` [ubiquitous] `superdev mcp sokf` SHALL
   speak the MCP protocol over stdin and stdout, serving one client.
@@ -271,85 +135,53 @@ authoritativePath: string, authoritativeRegion?: string }`. A `Finding` is
   treat the canonical active checkout root as its
   repository, including when `.git` is a linked-worktree pointer file.
   - `AC_worktree-local-surfaces` [event] WHEN the server runs in a linked
-    worktree, source resolution, semantic retrieval, search, graph traversal,
-    index activity, mutation, repair, refiling, and validation SHALL
-    PENDING(issue-083) use only that worktree's files and cache.
-  - `AC_worktree-other-checkout-refused` [event] WHEN a routed path enters
-    another checkout, including the main checkout, the server SHALL
-    reject it as outside the active worktree.
-- `P_direct-does-not-load` [event] WHEN only source resolution, direct semantic
-  retrieval, or graph calls have run, the MCP server SHALL
-  leave the embedder uninitialized.
-- `P_first-index-call-loads` [event] WHEN the first search or semantic overview
-  retrieval runs, the MCP server SHALL initialize the
+    worktree, search, graph traversal, overview, and index activity SHALL
+    use only that worktree's files and cache.
+- `P_direct-does-not-load` [event] WHEN only graph calls have run, the MCP
+  server SHALL leave the embedder uninitialized.
+- `P_first-index-call-loads` [event] WHEN the first search or overview call
+  runs, the MCP server SHALL initialize the
   configured embedder once.
 - `P_later-index-call-reuses` [state] WHILE the embedder result is initialized,
   later index-dependent calls SHALL reuse that result.
-- `P_routed-schemas` [ubiquitous] The routed MCP operations SHALL
-  PENDING(issue-082) expose only the closed request and success-result
-  schemas specified below.
-  - `AC_resolve-schema` [ubiquitous] `sokf_resolve_source` SHALL
-    accept `{ path: string }` and return structured
-    content `{ ingressPath: string, canonicalPath: string, exists: boolean,
-    generatedRegions: GeneratedRegion[] }` together with exactly one
-    `{ type: "text", text: string }` content item carrying the pretty-printed
-    JSON of that structured content and nothing else.
-  - `AC_retrieve-schema` [ubiquitous] `sokf_retrieve` SHALL
-    accept `{ path: string, offset?: integer >= 1,
-    limit?: integer >= 1 }` and return one text content item with no structured
-    content.
-  - `AC_edit-schema` [ubiquitous] `sokf_edit` SHALL
-    PENDING(issue-082) accept `{ ingressPath: string,
-    expectedCanonicalPath: string, expectedContent: string, content: string }`.
-  - `AC_write-schema` [ubiquitous] `sokf_write` SHALL
-    PENDING(issue-082) accept `{ ingressPath: string,
-    expectedCanonicalPath: string, content: string }`.
-  - `AC_mutation-result-schema` [ubiquitous] A successful `sokf_edit` or
-    `sokf_write` SHALL PENDING(issue-082) return structured content
-    `{ applied: true, validation: "valid" | "invalid" | "unknown",
-    resolvedPath: string, finalPath: string, changedPaths: string[], findings:
-    Finding[], diagnosticsTruncated: boolean }`.
-- `P_source-resolution` [ubiquitous] `sokf_resolve_source` SHALL
-  return one logical `knowledge/` ingress, canonical
-  repository-relative target, existence flag, and generated-region metadata
-  without semantic content.
-  - `AC_source-identity` [event] WHEN the resolver receives an unqualified
-    `sokf:<id>` or physical knowledge path, it SHALL
-    resolve the corresponding source and refuse missing identities, overview
-    addresses, section-qualified addresses, directories, and direct paths
-    outside `knowledge/`.
-  - `AC_source-contained` [event] WHEN resolution encounters an existing target
-    or nearest existing ancestor, the resolver SHALL
-    accept only a canonical target inside the repository, including a contained
-    symlink target outside `knowledge/` and a normalized missing suffix.
-  - `AC_source-section-refused` [event] WHEN source resolution receives an
-    overview or section-qualified address, the resolver SHALL
-    return concise guidance to semantic retrieval.
-- `P_semantic-retrieve` [ubiquitous] `sokf_retrieve` SHALL
-  retain semantic overview, rendered-concept,
-  section, and one-indexed line-window behavior.
-  - `AC_semantic-addresses` [event] WHEN `sokf_retrieve` receives `sokf:`,
-    `sokf:<id>`, or `sokf:<id>#<heading>`, it SHALL
-    return the corresponding semantic rendering.
-  - `AC_semantic-physical-refused` [event] WHEN `sokf_retrieve` receives a
-    physical path, it SHALL refuse the path.
-- `P_no-read-alias` [ubiquitous] The MCP tool list SHALL NOT
-  expose `sokf_read`.
+- `P_serves-three-tools` [ubiquitous] The MCP tool list SHALL expose exactly
+  `sokf_search`, `sokf_graph`, and `sokf_overview`.
+  - `AC_no-file-tool-served` [ubiquitous] The tool list SHALL NOT expose
+    `sokf_read`, `sokf_resolve_source`, `sokf_retrieve`, `sokf_edit`, or
+    `sokf_write`.
   - `AC_instructions-name-served-tools` [ubiquitous] The server's
     initialization instructions SHALL name only served
-    tools, excluding `sokf_read` and any directed file read of the `sokf:`
-    overview address.
-- `P_direct-retrieval-skips-index` [event] WHEN source resolution or direct
-  semantic retrieval runs, the MCP server SHALL
-  answer without opening or rewriting the search index.
+    tools, naming no removed operation and no file read of a `sokf:` address.
 - `P_graph-skips-index` [ubiquitous] `sokf_graph` SHALL parse current knowledge
   without opening or rewriting the search index.
+- `P_graph-carries-paths` [ubiquitous] `sokf_graph` SHALL name each concept it
+  reports with the repository-relative path of that concept's file, so a
+  traversal reaches a source file without a second lookup.
+  - `AC_graph-carries-paths` [event] WHEN `sokf_graph` names a concept the
+    knowledge holds, in the edge map or in one concept's neighbours, it SHALL
+    render that concept's repository-relative path beside its identity.
+  - `AC_graph-unresolved-has-no-path` [event] WHEN a declared link names a
+    target the knowledge does not hold, `sokf_graph` SHALL name the target
+    without a path.
+- `P_overview-tool` [ubiquitous] `sokf_overview` SHALL return the knowledge
+  name, its concept count, the tree of its concepts, the index state, and its
+  capped validation warnings.
+  - `AC_overview-content` [ubiquitous] The overview SHALL carry the knowledge
+    name, the concept count, one entry per directory holding concepts, and the
+    lexical-or-embedded index state.
+  - `AC_overview-orients-only` [ubiquitous] The overview SHALL carry no
+    rendered concept body.
+  - `AC_overview-empty-request` [ubiquitous] `sokf_overview` SHALL accept an
+    empty closed request object carrying no property.
+  - `AC_overview-rejects-a-property` [event] WHEN a `sokf_overview` request
+    carries any property, the server SHALL refuse it.
 
 ### Authentication
 
 None. The harness that spawns the server is the caller; there is no
-credential to present and no role to distinguish. Mutation authority is
-bounded by the mandatory agent-safe policy rather than caller identity.
+credential to present and no role to distinguish. The server answers questions
+about the knowledge without editing it, so there is no knowledge-write
+authority to bound.
 
 - `P_trusts-stdin` [ubiquitous] The server SHALL trust whatever
   reaches its stdin.
@@ -364,72 +196,9 @@ A tool failure is an MCP error payload, never a process exit.
   id, the server SHALL answer with near-miss candidates.
 - `P_invalid-knowledge-served` [state] WHILE the knowledge fails
   validation, the server SHALL index and serve it.
-- `P_mutation-precondition-error` [event] WHEN a routed mutation fails source
-  resolution, compare-and-swap, policy, generated ownership, or cancellation
-  before dispatch, the server SHALL PENDING(issue-082) return an MCP
-  error result without changing any target.
-- `P_applied-invalid-result` [state] WHILE an applied mutation leaves the
-  knowledge invalid or its validation unknown, the server SHALL return a
-  successful structured result with `applied: true` rather than an error.
-- `P_parse-error-quoted` [event] WHEN a semantic concept address resolves to a
-  file the parser rejected, `sokf_retrieve` SHALL
+- `P_parse-error-quoted` [event] WHEN a concept address resolves to a file the
+  parser rejected, the server SHALL
   quote the parse error instead of guessing at near misses.
-
-### Mutations
-
-- `P_mutation-agent-safe` [ubiquitous] `sokf_edit` and `sokf_write` SHALL use
-  `MutationPolicy::AgentSafe` with no caller override.
-- `P_edit-compare-and-swap` [ubiquitous] `sokf_edit` SHALL
-  PENDING(issue-082) accept only ingress path, expected canonical path,
-  exact expected source, and complete replacement source as its private routed
-  transport.
-  - `AC_edit-stale-source-refused` [event] WHEN the canonical target drifts or
-    current source differs byte-for-byte from expected source, `sokf_edit`
-    SHALL PENDING(issue-082) reject the request before persistence.
-- `P_write-whole-path-create` [ubiquitous] `sokf_write` SHALL
-  PENDING(issue-082) replace a complete existing concept or create one
-  from a physical `.md` ingress while preserving recursive parent creation.
-  - `AC_write-routed-shape` [event] WHEN the Pi adapter invokes `sokf_write`,
-    the tool SHALL PENDING(issue-082) accept only ingress path, expected
-    canonical path, and complete content as its private routed transport.
-- `P_mutation-contained` [ubiquitous] Routed mutation tools SHALL
-  PENDING(issue-082) require a logical ingress under `knowledge/`,
-  re-resolve it at dispatch, and write only to its repository-contained
-  canonical target.
-  - `AC_mutation-target-drift` [event] WHEN dispatch-time resolution differs
-    from the expected canonical target, the mutation tool SHALL
-    PENDING(issue-082) reject the request before persistence.
-- `P_mutation-repair-validation` [event] WHEN a mutation is applied, the tool
-  SHALL run automatic repair, refiling, and validation while retaining the
-  tool-call lock.
-- `P_mutation-outcome-boundary` [ubiquitous] Routed mutation tools SHALL
-  PENDING(issue-082) treat authoritative `applied: true` as successful
-  persistence and later repair, refiling, validation, lifecycle, or
-  cancellation problems as findings.
-  - `AC_pre-persistence-failure` [event] WHEN a failure occurs before requested
-    persistence or an authoritative response establishes no apply, the tool
-    SHALL PENDING(issue-082) return an error without applied state.
-  - `AC_acknowledged-request-retained` [event] WHEN requested persistence is
-    acknowledged with `applied: true`, the tool SHALL PENDING(issue-082)
-    retain the requested bytes without rollback.
-  - `AC_successful-repairs-retained` [event] WHEN repair or refiling persists
-    before a later finding, the tool SHALL PENDING(issue-082) retain each
-    successful change.
-  - `AC_indeterminate-outcome-guidance` [event] WHEN local transport fails
-    without an authoritative response after bytes may have changed, the tool
-    SHALL PENDING(issue-082) direct target inspection and `superdev
-    validate` without durable outcome reconciliation.
-  - `AC_post-persistence-findings` [event] WHEN repair or validation reports a
-    problem after apply, the tool SHALL PENDING(issue-082) return
-    `applied: true` with an actionable finding.
-- `P_mutation-result-shape` [ubiquitous] A routed mutation result SHALL
-  PENDING(issue-082) carry literal applied state, validation state,
-  resolved and final paths, unique repository-relative changed paths in lexical
-  order, actionable findings, and an explicit diagnostic-truncation flag as
-  specified by `AC_mutation-result-schema`.
-- `P_mutation-diagnostics-bounded` [ubiquitous] Routed mutation results SHALL
-  PENDING(issue-082) omit patches and mutation envelopes and stop
-  diagnostics at 200 lines or 8 KiB.
 
 ### Limits
 
@@ -450,9 +219,8 @@ reads exactly what matched.
   sort below live knowledge without leaving the results.
 - `P_graph-group-cap` [ubiquitous] `sokf_graph` SHALL cap each group at
   30 lines and then say how many it dropped.
-- `P_overview-warning-cap` [event] WHEN `sokf_retrieve` receives the `sokf:`
-  overview address, it SHALL list at most 10 warnings
-  and then say how many more there are.
+- `P_overview-warning-cap` [event] WHEN `sokf_overview` renders validation
+  warnings, it SHALL list at most 10 and then say how many more there are.
 
 ### Versioning
 
@@ -479,4 +247,4 @@ Unreleased.
 <!-- sokf:links -->
 [sokf:adr-033-a-contract-defines-its-interface]: /knowledge/adrs/active/adr-033-a-contract-defines-its-interface.md
 [sokf:adr-042-a-contracts-definition-is-materialized-from-source]: /knowledge/adrs/active/adr-042-a-contracts-definition-is-materialized-from-source.md
-[sokf:adr-053-sokf-file-tools-delegate-to-pi]: /knowledge/adrs/deprecated/adr-053-sokf-file-tools-delegate-to-pi.md
+[sokf:adr-055-sokf-does-not-intercept-file-tools]: /knowledge/adrs/active/adr-055-sokf-does-not-intercept-file-tools.md

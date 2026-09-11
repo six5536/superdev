@@ -19,8 +19,9 @@ links:
 
 The superdev command line: the manage verbs, knowledge verbs, and the
 local workflow adapter. The Definition is the clap tree as the binary declares it,
-one include per source file; a doc comment on a command or flag is its
-help text and its promise. Behaviour carries what the tree cannot say:
+one include per source file, followed by the request types the `--request-json`
+forms of `sokf edit` and `sokf write` accept; a doc comment on a command, a flag,
+or a request field is its help text and its promise. Behaviour carries what the tree cannot say:
 the exit codes, the streams, and each verb's promises across its flags.
 The decisions behind the shape are
 [ADR-033][sokf:adr-033-a-contract-defines-its-interface] and
@@ -493,6 +494,44 @@ pub struct AbandonArgs {
 ```
 <!-- /sokf:include -->
 
+<!-- sokf:include /crates/lib/superdev-core/src/sokf/mutation.rs#tools -->
+```rust
+/// One exact replacement, evaluated against the original file.
+#[derive(Debug, Clone, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+#[schemars(crate = "rmcp::schemars")]
+pub struct ExactEdit {
+    /// Text that must occur exactly once in the original file.
+    pub old_text: String,
+    /// Text that replaces the matched bytes.
+    pub new_text: String,
+}
+
+/// The machine request accepted by the edit adapters.
+#[derive(Debug, Clone, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+#[schemars(crate = "rmcp::schemars")]
+pub struct EditRequest {
+    /// Existing concept ID, virtual address, or physical knowledge path.
+    pub path: String,
+    /// Non-overlapping replacements evaluated against one original file.
+    pub edits: Vec<ExactEdit>,
+}
+
+/// The machine request accepted by the write adapters.
+#[derive(Debug, Clone, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+#[schemars(crate = "rmcp::schemars")]
+pub struct WriteRequest {
+    /// Existing concept identity, or a physical path for creation.
+    pub path: String,
+    /// Complete replacement document.
+    pub content: String,
+}
+
+```
+<!-- /sokf:include -->
+
 ## Behaviour
 
 Every verb acts on the current directory. Every command carries `-h` and
@@ -590,8 +629,10 @@ usage errors and the side effects.
 - `P_sokf-index-says-lexical-only` [event] WHEN no embedding model
   loaded, `sokf index` SHALL say the index is lexical-only.
 - `P_sokf-retrieval-shares-service` [ubiquitous] `sokf overview`,
-  `search`, `read` and `graph` SHALL return the same rendered information as
-  the corresponding shared-service and MCP operations.
+  `search`, `read` and `graph` SHALL return the corresponding shared-service
+  rendering.
+  - `AC_sokf-mcp-correspondence` [ubiquitous] `sokf overview`, `search`, and
+    `graph` SHALL return the same rendered information as their MCP counterparts.
 - `P_sokf-direct-retrieval-skips-embeddings` [ubiquitous] `sokf read` and
   `sokf graph` SHALL parse current knowledge without loading an embedding model
   or opening the search index.

@@ -6,7 +6,7 @@
 //! retrieval, graph traversal, and mutations do not initialize or open it.
 
 use std::collections::{BTreeMap, HashMap};
-use std::path::{Component, Path, PathBuf};
+use std::path::{Path, PathBuf};
 
 use rmcp::ServerHandler;
 use rmcp::handler::server::router::tool::ToolRouter;
@@ -14,17 +14,14 @@ use rmcp::handler::server::wrapper::Parameters;
 use rmcp::model::{CallToolResult, ContentBlock, ServerCapabilities, ServerInfo};
 use rmcp::schemars::JsonSchema;
 use rmcp::{tool, tool_handler, tool_router};
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 
 use super::bundle::{Bundle, load_bundle};
 use super::concept::{Concept, Status};
 use super::embed::Embedder;
 use super::graph::{Edge, Graph, inverse_rel};
 use super::index::{Hit, Index, IndexDir, SearchOpts, SyncStats};
-use super::mutation::{
-    self, EditRequest, GeneratedRegion, MutationPolicy, MutationResult, WriteRequest,
-    generated_regions,
-};
+use super::mutation::{self, EditRequest, MutationPolicy, MutationResult, WriteRequest};
 use crate::error::Error;
 use crate::validate::sokf::validate;
 
@@ -140,46 +137,6 @@ pub struct SearchRequest {
     pub lifecycle: Option<Vec<String>>,
 }
 
-/// Arguments of `sokf_resolve_source`.
-#[derive(Debug, Deserialize, JsonSchema)]
-#[serde(deny_unknown_fields)]
-#[schemars(crate = "rmcp::schemars")]
-pub struct ResolveSourceRequest {
-    /// An unqualified `sokf:<id>`, or a physical path entering `knowledge/`.
-    pub path: String,
-}
-
-/// Where one source is, and which of its lines are generated. Carries no
-/// semantic content: `sokf_retrieve` answers for rendered knowledge.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, JsonSchema)]
-#[serde(rename_all = "camelCase")]
-#[schemars(crate = "rmcp::schemars")]
-pub struct SourceResolution {
-    /// Repository-relative `knowledge/` path the request entered through.
-    pub ingress_path: String,
-    /// Repository-relative canonical target, contained by the active checkout.
-    pub canonical_path: String,
-    /// Whether the canonical target is an existing regular file.
-    pub exists: bool,
-    /// Generated spans of the target, in line order.
-    pub generated_regions: Vec<GeneratedRegion>,
-}
-
-/// Arguments of `sokf_retrieve`.
-#[derive(Debug, Deserialize, JsonSchema)]
-#[serde(deny_unknown_fields)]
-#[schemars(crate = "rmcp::schemars")]
-struct RetrieveArgs {
-    /// `sokf:` for the overview, `sokf:<id>`, or `sokf:<id>#<heading>`.
-    path: String,
-    /// First rendered line to return, starting at 1.
-    #[schemars(range(min = 1))]
-    offset: Option<u32>,
-    /// Most rendered lines to return.
-    #[schemars(range(min = 1))]
-    limit: Option<u32>,
-}
-
 /// Arguments of `sokf_graph`.
 #[derive(Debug, Deserialize, JsonSchema)]
 #[schemars(crate = "rmcp::schemars")]
@@ -187,6 +144,13 @@ struct GraphArgs {
     /// One concept's neighbours; omit for the whole edge map.
     id: Option<String>,
 }
+
+/// Arguments of `sokf_overview`: none. The knowledge is the whole subject,
+/// so the request carries nothing to narrow it.
+#[derive(Debug, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+#[schemars(crate = "rmcp::schemars")]
+struct OverviewArgs {}
 // sokf:end tools
 
 impl SokfService {
@@ -258,139 +222,6 @@ impl SokfService {
         render_concept(concept, &identity, heading).map_err(|message| Error::Sokf { message })
     }
 
-    /// Render the overview, one concept, or one of its sections.
-    ///
-    /// Semantic addresses only: a physical path is `sokf_resolve_source`'s
-    /// question, and answering it here would put a second result dialect
-    /// behind one operation.
-    pub fn retrieve(
-        &self,
-        path: &str,
-        offset: Option<usize>,
-        limit: Option<usize>,
-    ) -> crate::error::Result<String> {
-        let Some(address) = path.strip_prefix("sokf:") else {
-            return sokf_error(format!(
-                "`{path}` is a file path; sokf_retrieve answers `sokf:`, `sokf:<id>`, \
-                 and `sokf:<id>#<heading>` — use sokf_resolve_source for a file"
-            ));
-        };
-        let text = if address.is_empty() {
-            self.overview()?
-        } else {
-            let (id, heading) = match address.split_once('#') {
-                Some((id, heading)) if !id.is_empty() && !heading.is_empty() => (id, Some(heading)),
-                Some(_) => return sokf_error(format!("invalid SOKF address `{path}`")),
-                None => (address, None),
-            };
-            self.read(id, heading)?
-        };
-        line_window(&text, offset, limit)
-    }
-
-    /// Locate the source behind one identity or contained physical path.
-    ///
-    /// The answer is a canonical target inside the active checkout, whether
-    /// or not it exists yet, plus the generated spans a caller must not
-    /// author by hand. Nothing is read for content.
-    pub fn resolve_source(&self, path: &str) -> crate::error::Result<SourceResolution> {
-        let bundle_dir = std::fs::canonicalize(&self.bundle_dir).map_err(|source| Error::Io {
-            path: self.bundle_dir.clone(),
-            source,
-        })?;
-        let repo_root = std::fs::canonicalize(&self.repo_root).map_err(|source| Error::Io {
-            path: self.repo_root.clone(),
-            source,
-        })?;
-
-        let mut bundle = None;
-        let ingress = if let Some(address) = path.strip_prefix("sokf:") {
-            if address.is_empty() || address.contains('#') {
-                return sokf_error(format!(
-                    "`{path}` addresses rendered knowledge, not a source file — \
-                     use sokf_retrieve for the overview and for sections"
-                ));
-            }
-            let loaded = bundle.insert(load_bundle(&self.bundle_dir)?);
-            let graph = Graph::build(loaded);
-            let identity = resolve(&graph, address)
-                .map_err(|message| broken_file_error(loaded, address).unwrap_or(message))
-                .map_err(|message| Error::Sokf { message })?;
-            let concept = concept_of(loaded, &identity).ok_or_else(|| Error::Sokf {
-                message: format!("no concept for `{identity}`"),
-            })?;
-            bundle_dir.join(&concept.path)
-        } else {
-            let asked = Path::new(path);
-            let candidate = if asked.is_absolute() {
-                asked.to_path_buf()
-            } else {
-                repo_root.join(asked)
-            };
-            let normalized = lexical(&candidate).ok_or_else(|| Error::Sokf {
-                message: format!("source path `{path}` escapes the repository"),
-            })?;
-            // The ingress is judged by name, before any symlink is followed:
-            // a direct physical argument has to enter through `knowledge/`.
-            // An absolute argument may spell the root differently from its
-            // canonical form, so both spellings name the same ingress.
-            let under = [bundle_dir.as_path(), self.bundle_dir.as_path()]
-                .into_iter()
-                .find_map(|root| normalized.strip_prefix(root).ok());
-            let Some(relative) = under else {
-                return sokf_error(format!(
-                    "source path `{path}` is outside `{}`",
-                    display_path(&repo_root, &bundle_dir)
-                ));
-            };
-            bundle_dir.join(relative)
-        };
-
-        // Follow symlinks as far as the filesystem goes, then re-attach
-        // whatever does not exist yet. Containment is judged on the result,
-        // so a link out of the checkout fails before anything is opened.
-        let canonical = nearest_canonical(&ingress).ok_or_else(|| Error::Sokf {
-            message: format!("cannot safely resolve `{path}`"),
-        })?;
-        if !canonical.starts_with(&repo_root) {
-            return sokf_error(format!(
-                "source path `{path}` resolves outside the active checkout at {}",
-                repo_root.display()
-            ));
-        }
-        if canonical.is_dir() {
-            return sokf_error(format!("`{path}` is a directory, not a source file"));
-        }
-
-        let exists = canonical.is_file();
-        let regions = if exists {
-            let text = std::fs::read_to_string(&canonical).map_err(|source| Error::Io {
-                path: canonical.clone(),
-                source,
-            })?;
-            // A block naming a concept reports the file that authors it, so
-            // the bundle is needed here — but only for a file that has one.
-            let known = match bundle {
-                Some(loaded) => Some(loaded),
-                None if text.contains("sokf:include") => Some(load_bundle(&self.bundle_dir)?),
-                None => None,
-            };
-            generated_regions(&text, |id| {
-                let concept = concept_of(known.as_ref()?, id)?;
-                Some(display_path(&repo_root, &bundle_dir.join(&concept.path)))
-            })
-        } else {
-            Vec::new()
-        };
-
-        Ok(SourceResolution {
-            ingress_path: display_path(&repo_root, &ingress),
-            canonical_path: display_path(&repo_root, &canonical),
-            exists,
-            generated_regions: regions,
-        })
-    }
-
     /// Apply exact replacements to an existing concept, then repair and validate.
     pub fn edit(
         &self,
@@ -415,13 +246,18 @@ impl SokfService {
         let bundle = load_bundle(&self.bundle_dir)?;
         let graph = Graph::build(&bundle);
         let Some(id) = id else {
-            return Ok(render_edges(&graph.edge_map()));
+            return Ok(render_edges(&graph.edge_map(), &bundle, &self.repo_root));
         };
         let identity = resolve(&graph, id).map_err(|message| Error::Sokf { message })?;
         let hops = graph.neighbours(&identity).map_err(|unknown| Error::Sokf {
             message: format!("unknown id `{}`", unknown.asked),
         })?;
-        Ok(render_neighbours(&bundle, &identity, &hops))
+        Ok(render_neighbours(
+            &bundle,
+            &identity,
+            &hops,
+            &self.repo_root,
+        ))
     }
 
     /// Render the knowledge name, size, tree, index state, and findings.
@@ -498,58 +334,8 @@ impl SokfServer {
             .map_err(tool_error)
     }
 
-    /// Locate the source file behind one `sokf:<id>` identity or contained
-    /// physical knowledge path, and report what of it is generated.
-    #[tool]
-    async fn sokf_resolve_source(
-        &self,
-        Parameters(args): Parameters<ResolveSourceRequest>,
-    ) -> ToolResult {
-        let _guard = self.exclusive();
-        match self.service.resolve_source(&args.path) {
-            Ok(resolution) => structured_result(&resolution),
-            Err(error) => Err(tool_error(error)),
-        }
-    }
-
-    /// Render the `sokf:` overview, one concept, or one of its sections.
-    #[tool]
-    async fn sokf_retrieve(&self, Parameters(args): Parameters<RetrieveArgs>) -> ToolResult {
-        let _guard = self.exclusive();
-        self.service
-            .retrieve(
-                &args.path,
-                args.offset.map(|offset| offset as usize),
-                args.limit.map(|limit| limit as usize),
-            )
-            .map(text)
-            .map_err(tool_error)
-    }
-
-    /// Apply atomic exact replacements to one existing concept. Identity and
-    /// verification are protected; automatic repair and validation follow.
-    #[tool]
-    async fn sokf_edit(&self, Parameters(args): Parameters<EditRequest>) -> ToolResult {
-        let _guard = self.exclusive();
-        match self.service.edit(args, MutationPolicy::AgentSafe) {
-            Ok(result) => mutation_result(result),
-            Err(error) => Err(tool_error(error)),
-        }
-    }
-
-    /// Replace one complete concept, or create one at a physical `.md` path.
-    /// Identity and verification are protected; repair and validation follow.
-    #[tool]
-    async fn sokf_write(&self, Parameters(args): Parameters<WriteRequest>) -> ToolResult {
-        let _guard = self.exclusive();
-        match self.service.write(args, MutationPolicy::AgentSafe) {
-            Ok(result) => mutation_result(result),
-            Err(error) => Err(tool_error(error)),
-        }
-    }
-
     /// Show the link graph: the whole edge map, or one concept's neighbours
-    /// in both directions.
+    /// in both directions. Every concept carries the path to read next.
     #[tool]
     async fn sokf_graph(&self, Parameters(args): Parameters<GraphArgs>) -> ToolResult {
         let _guard = self.exclusive();
@@ -557,6 +343,14 @@ impl SokfServer {
             .graph(args.id.as_deref())
             .map(text)
             .map_err(tool_error)
+    }
+
+    /// Show the knowledge at a glance: its name, how many concepts it holds,
+    /// the tree of them, the index state, and anything wrong with it.
+    #[tool]
+    async fn sokf_overview(&self, Parameters(_): Parameters<OverviewArgs>) -> ToolResult {
+        let _guard = self.exclusive();
+        self.service.overview().map(text).map_err(tool_error)
     }
 
     // sokf:end tools
@@ -597,11 +391,10 @@ impl SokfServer {
 impl ServerHandler for SokfServer {
     fn get_info(&self) -> ServerInfo {
         ServerInfo::new(ServerCapabilities::builder().enable_tools().build()).with_instructions(
-            "Access to this repository's canonical SOKF knowledge. Use sokf_search to find \
-             project knowledge, sokf_retrieve for the `sokf:` overview, a rendered concept \
-             or one section, sokf_resolve_source to locate a concept's source file, \
-             sokf_graph to follow links, and sokf_edit or sokf_write for agent-safe \
-             mutations. Mutations repair and validate automatically.",
+            "Access to this repository's canonical SOKF knowledge. Use sokf_overview to see \
+             the knowledge at a glance, sokf_search to find project knowledge, and sokf_graph \
+             to follow links. Each result carries the repository-relative path of the concept \
+             it names; read and edit that path with your own file tools.",
         )
     }
 }
@@ -648,65 +441,6 @@ fn hit_limit(requested: Option<u32>) -> usize {
 /// One text block, the only shape these tools return.
 fn text(body: String) -> CallToolResult {
     CallToolResult::success(vec![ContentBlock::text(body)])
-}
-
-/// A machine result is MCP structured content, mirrored as one text item
-/// holding the same JSON — so a text-only client reads the same answer.
-fn structured_result(result: &impl Serialize) -> ToolResult {
-    let value = serde_json::to_value(result).map_err(|error| error.to_string())?;
-    let rendered = serde_json::to_string_pretty(&value).map_err(|error| error.to_string())?;
-    let mut output = CallToolResult::success(vec![ContentBlock::text(rendered)]);
-    output.structured_content = Some(value);
-    Ok(output)
-}
-
-/// A successful mutation is both readable text and MCP structured content.
-fn mutation_result(result: MutationResult) -> ToolResult {
-    structured_result(&result)
-}
-
-/// `path` with `.` and `..` resolved by name alone, or `None` when it walks
-/// above the root. Nothing is read: this fixes the logical ingress before
-/// the filesystem gets a say in where it points.
-fn lexical(path: &Path) -> Option<PathBuf> {
-    let mut out = PathBuf::new();
-    for part in path.components() {
-        match part {
-            Component::CurDir => {}
-            Component::ParentDir => {
-                if !out.pop() {
-                    return None;
-                }
-            }
-            other => out.push(other.as_os_str()),
-        }
-    }
-    Some(out)
-}
-
-/// `path` canonicalized, or its nearest existing ancestor canonicalized with
-/// the missing tail re-attached. Symlinks resolve on the existing part, so a
-/// missing file below an escaping link still lands outside the repository.
-fn nearest_canonical(path: &Path) -> Option<PathBuf> {
-    if let Ok(exact) = std::fs::canonicalize(path) {
-        return Some(exact);
-    }
-    let mut tail = Vec::new();
-    let mut here = path.to_path_buf();
-    let base = loop {
-        if let Ok(base) = std::fs::canonicalize(&here) {
-            break base;
-        }
-        tail.push(here.file_name()?.to_owned());
-        if !here.pop() {
-            return None;
-        }
-    };
-    let mut resolved = base;
-    for part in tail.iter().rev() {
-        resolved.push(part);
-    }
-    Some(resolved)
 }
 
 /// A repository-relative, slash-separated path for a caller to act on.
@@ -780,12 +514,41 @@ fn descriptions(bundle: &Bundle) -> HashMap<String, String> {
         .collect()
 }
 
+/// Every concept identity paired with the repository-relative path of its
+/// file, so a traversal reaches a file without a second lookup.
+fn paths(bundle: &Bundle, repo_root: &Path) -> HashMap<String, String> {
+    bundle
+        .concepts
+        .iter()
+        .map(|c| {
+            (
+                c.id.clone().unwrap_or_else(|| c.path.clone()),
+                display_path(repo_root, &bundle.root.join(&c.path)),
+            )
+        })
+        .collect()
+}
+
 /// `identity — description`, or the identity alone when there is none.
 fn named(identity: &str, description: &str) -> String {
     if description.is_empty() {
         identity.to_string()
     } else {
         format!("{identity} — {description}")
+    }
+}
+
+/// `identity  path — description`: the same line, carrying the file to open
+/// next. An identity the bundle does not hold has no path and reads as
+/// [`named`] does, so an unresolved target is not given one it cannot have.
+fn named_at(identity: &str, paths: &HashMap<String, String>, description: &str) -> String {
+    let Some(path) = paths.get(identity) else {
+        return named(identity, description);
+    };
+    if description.is_empty() {
+        format!("{identity}  {path}")
+    } else {
+        format!("{identity}  {path} — {description}")
     }
 }
 
@@ -970,11 +733,15 @@ fn matches_heading(heading_path: &[String], wanted: &str) -> bool {
             .is_some_and(|last| last.to_lowercase() == wanted)
 }
 
-/// The declared edge map, grouped by source concept.
-fn render_edges(edges: &[Edge]) -> String {
+/// The declared edge map, grouped by source concept. Each group opens with
+/// its source and that source's path, so the identity is stated once and
+/// every concept named carries the file to read next.
+fn render_edges(edges: &[Edge], bundle: &Bundle, repo_root: &Path) -> String {
     if edges.is_empty() {
         return "no links declared".to_string();
     }
+    let paths = paths(bundle, repo_root);
+    let descriptions = descriptions(bundle);
     // BTreeMap so sources come out in a stable, readable order.
     let mut groups: BTreeMap<&str, Vec<(String, String)>> = BTreeMap::new();
     for edge in edges {
@@ -984,27 +751,34 @@ fn render_edges(edges: &[Edge]) -> String {
             .note
             .as_ref()
             .map_or(String::new(), |n| format!("  ({n})"));
+        let target = descriptions.get(&edge.to).map_or("", String::as_str);
         groups.entry(&edge.from).or_default().push((
-            format!("{} --{rel}--> {}{unresolved}{note}", edge.from, edge.to),
+            format!(
+                "  --{rel}--> {}{unresolved}{note}",
+                named_at(&edge.to, &paths, target)
+            ),
             edge.rel.clone(),
         ));
     }
 
     let mut lines = Vec::new();
-    for entries in groups.into_values() {
+    for (from, entries) in groups {
         if !lines.is_empty() {
             lines.push(String::new());
         }
+        let description = descriptions.get(from).map_or("", String::as_str);
+        lines.push(named_at(from, &paths, description));
         lines.extend(capped(entries));
     }
     lines.join("\n")
 }
 
 /// One concept's hops, outgoing then incoming.
-fn render_neighbours(bundle: &Bundle, identity: &str, hops: &[Edge]) -> String {
+fn render_neighbours(bundle: &Bundle, identity: &str, hops: &[Edge], repo_root: &Path) -> String {
     let descriptions = descriptions(bundle);
+    let paths = paths(bundle, repo_root);
     let description = descriptions.get(identity).map_or("", String::as_str);
-    let mut lines = vec![named(identity, description)];
+    let mut lines = vec![named_at(identity, &paths, description)];
     if hops.is_empty() {
         lines.push("no links".to_string());
         return lines.join("\n");
@@ -1020,12 +794,18 @@ fn render_neighbours(bundle: &Bundle, identity: &str, hops: &[Edge]) -> String {
             // the rel the lines show, not the stored one.
             let declared = inverse_rel(rel);
             (
-                format!("<--{declared}-- {}{unresolved}", named(&edge.to, target)),
+                format!(
+                    "<--{declared}-- {}{unresolved}",
+                    named_at(&edge.to, &paths, target)
+                ),
                 declared.to_string(),
             )
         } else {
             (
-                format!("--{rel}--> {}{unresolved}", named(&edge.to, target)),
+                format!(
+                    "--{rel}--> {}{unresolved}",
+                    named_at(&edge.to, &paths, target)
+                ),
                 edge.rel.clone(),
             )
         }
@@ -1153,24 +933,32 @@ mod tests {
                 )
             })
             .collect();
-        let rendered = render_edges(&edges);
+        let (bundle, dir) = bundle_with(&[]);
+        let rendered = render_edges(&edges, &bundle, dir.path());
         let lines: Vec<&str> = rendered.lines().collect();
-        assert_eq!(lines.len(), GROUP_CAP + 1);
-        assert_eq!(lines[0], "alpha --depends-on--> target-0");
-        assert_eq!(lines[GROUP_CAP], "  +5 more (rels: depends-on, references)");
+        // One source header, then the capped group and its summary.
+        assert_eq!(lines.len(), GROUP_CAP + 2);
+        assert_eq!(lines[0], "alpha");
+        assert_eq!(lines[1], "  --depends-on--> target-0");
+        assert_eq!(
+            lines[GROUP_CAP + 1],
+            "  +5 more (rels: depends-on, references)"
+        );
     }
 
     #[test]
     fn a_short_group_is_untouched() {
         let edges: Vec<Edge> = (0..3).map(|i| edge(i, "part-of")).collect();
-        let rendered = render_edges(&edges);
-        assert_eq!(rendered.lines().count(), 3);
+        let (bundle, dir) = bundle_with(&[]);
+        let rendered = render_edges(&edges, &bundle, dir.path());
+        assert_eq!(rendered.lines().count(), 4);
         assert!(!rendered.contains("more (rels"));
     }
 
     #[test]
     fn an_empty_map_says_so() {
-        assert_eq!(render_edges(&[]), "no links declared");
+        let (bundle, dir) = bundle_with(&[]);
+        assert_eq!(render_edges(&[], &bundle, dir.path()), "no links declared");
     }
 
     #[test]
@@ -1178,10 +966,39 @@ mod tests {
         let mut e = edge(0, "");
         e.resolved = false;
         e.note = Some("why".to_string());
+        let (bundle, dir) = bundle_with(&[]);
         assert_eq!(
-            render_edges(&[e]),
-            "alpha --?--> target-0  [unresolved]  (why)"
+            render_edges(&[e], &bundle, dir.path()),
+            "alpha\n  --?--> target-0  [unresolved]  (why)"
         );
+    }
+
+    #[test]
+    fn the_edge_map_carries_the_path_of_every_concept_it_names() {
+        let (bundle, dir) = bundle_with(&[("alpha.md", ALPHA), ("beta.md", BETA)]);
+        let graph = Graph::build(&bundle);
+        let rendered = render_edges(&graph.edge_map(), &bundle, dir.path());
+        // The source is named once with its path, and the resolved target
+        // carries the path a reader opens next.
+        assert!(rendered.starts_with("alpha  alpha.md — The one."));
+        assert!(rendered.contains("  --depends-on--> beta  beta.md"));
+        // Every path names a file that exists, so a traversal can open it.
+        for line in rendered.lines() {
+            for token in line.split_whitespace().filter(|t| t.ends_with(".md")) {
+                assert!(dir.path().join(token).is_file(), "{token}");
+            }
+        }
+    }
+
+    #[test]
+    fn an_unresolved_target_is_named_without_a_path_it_does_not_have() {
+        let mut e = edge(0, "references");
+        e.resolved = false;
+        let (bundle, dir) = bundle_with(&[("alpha.md", ALPHA)]);
+        let rendered = render_edges(&[e], &bundle, dir.path());
+        assert!(rendered.contains("--references--> target-0  [unresolved]"));
+        assert!(!rendered.contains("target-0  \u{2014}"));
+        assert!(!rendered.contains("target-0.md"));
     }
 
     fn bundle_with(files: &[(&str, &str)]) -> (Bundle, tempfile::TempDir) {
@@ -1214,10 +1031,9 @@ mod tests {
             },
         );
 
-        // Source resolution and direct retrieval are the operations the
-        // contract names, so they are what this asserts on.
-        service.resolve_source("sokf:alpha").unwrap();
-        service.retrieve("sokf:alpha", None, None).unwrap();
+        // Reading one concept and walking the graph parse current knowledge
+        // and answer from it, so neither needs an embedder.
+        service.read("alpha", None).unwrap();
         service.graph(Some("alpha")).unwrap();
         assert_eq!(calls.load(std::sync::atomic::Ordering::SeqCst), 0);
 
@@ -1227,13 +1043,14 @@ mod tests {
                 ..SearchRequest::default()
             })
             .unwrap();
-        // The overview is retrieval's one index-dependent address.
-        service.retrieve("sokf:", None, None).unwrap();
+        // The overview syncs the index, so it initializes the same embedder
+        // rather than a second one.
+        service.overview().unwrap();
         assert_eq!(calls.load(std::sync::atomic::Ordering::SeqCst), 1);
     }
 
     #[test]
-    fn source_resolution_and_direct_retrieval_do_not_open_the_search_index() {
+    fn reading_a_concept_and_walking_the_graph_do_not_open_the_search_index() {
         let (bundle, dir) = bundle_with(&[("alpha.md", ALPHA), ("beta.md", BETA)]);
         drop(bundle);
         // A file where the index directory belongs: anything that opens the
@@ -1246,13 +1063,9 @@ mod tests {
             IndexDir(unusable_index),
             None,
         );
-        assert_eq!(
-            service.resolve_source("sokf:alpha").unwrap().canonical_path,
-            "alpha.md"
-        );
         assert!(
             service
-                .retrieve("sokf:alpha", None, None)
+                .read("alpha", None)
                 .unwrap()
                 .contains("Alpha does the work")
         );
@@ -1310,8 +1123,8 @@ mod tests {
                 synthesised: true,
             })
             .collect();
-        let (bundle, _dir) = bundle_with(&[("beta.md", BETA)]);
-        let rendered = render_neighbours(&bundle, "beta", &hops);
+        let (bundle, dir) = bundle_with(&[("beta.md", BETA)]);
+        let rendered = render_neighbours(&bundle, "beta", &hops, dir.path());
         assert!(rendered.contains("<--depends-on-- alpha-0"));
         assert!(rendered.contains("+5 more (rels: depends-on)"));
     }
@@ -1335,16 +1148,32 @@ mod tests {
 
     #[test]
     fn neighbours_render_both_directions_and_say_when_there_are_none() {
-        let (bundle, _dir) = bundle_with(&[("alpha.md", ALPHA), ("beta.md", BETA)]);
+        let (bundle, dir) = bundle_with(&[("alpha.md", ALPHA), ("beta.md", BETA)]);
         let graph = Graph::build(&bundle);
-        let outgoing = render_neighbours(&bundle, "alpha", &graph.neighbours("alpha").unwrap());
-        assert!(outgoing.contains("--depends-on--> beta"));
-        let incoming = render_neighbours(&bundle, "beta", &graph.neighbours("beta").unwrap());
-        assert!(incoming.contains("<--depends-on-- alpha — The one."));
+        let outgoing = render_neighbours(
+            &bundle,
+            "alpha",
+            &graph.neighbours("alpha").unwrap(),
+            dir.path(),
+        );
+        assert!(outgoing.starts_with("alpha  alpha.md — The one."));
+        assert!(outgoing.contains("--depends-on--> beta  beta.md"));
+        let incoming = render_neighbours(
+            &bundle,
+            "beta",
+            &graph.neighbours("beta").unwrap(),
+            dir.path(),
+        );
+        assert!(incoming.contains("<--depends-on-- alpha  alpha.md — The one."));
 
-        let (lone, _dir) = bundle_with(&[("beta.md", BETA)]);
+        let (lone, dir) = bundle_with(&[("beta.md", BETA)]);
         let graph = Graph::build(&lone);
-        let none = render_neighbours(&lone, "beta", &graph.neighbours("beta").unwrap());
+        let none = render_neighbours(
+            &lone,
+            "beta",
+            &graph.neighbours("beta").unwrap(),
+            dir.path(),
+        );
         assert!(none.ends_with("no links"));
     }
 

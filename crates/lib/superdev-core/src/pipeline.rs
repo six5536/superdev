@@ -1101,9 +1101,14 @@ mod tests {
             all.contains("SOKF under `knowledge/` is the canonical store"),
             "{all}"
         );
-        assert!(all.contains("`read path=\"sokf:<id>\"`"), "{all}");
+        assert!(!all.contains("path=\"sokf:"), "{all}");
         assert!(
-            all.contains("do not search before reading an ID already named"),
+            all.contains("`knowledge/` path directly with Pi's `read`"),
+            "{all}"
+        );
+        assert!(all.contains("Use `sokf_graph` for a known"), "{all}");
+        assert!(
+            all.contains("unconditional `superdev validate --fix`"),
             "{all}"
         );
         assert!(all.contains("`sokf-authoring` skill"), "{all}");

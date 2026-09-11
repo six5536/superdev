@@ -1713,7 +1713,7 @@ fn each_harness_receives_its_own_sokf_authoring_skill() {
         .expect("the pack carries Pi's authoring skill");
     assert_eq!(same(&pi), same(&packed));
     assert!(
-        pi.contains("If `schema-{type}` does not exist"),
+        pi.contains("If the type has no schema"),
         "{} does not create missing type schemas",
         pi_path.display()
     );
@@ -1728,9 +1728,14 @@ fn each_harness_receives_its_own_sokf_authoring_skill() {
         pi_path.display()
     );
     assert!(
-        pi.contains("edit path=\"sokf:<id>\""),
-        "{} does not use Pi's SOKF edit adapter",
+        pi.contains("Pi's own `read`, `edit`, and `write` on physical `knowledge/` paths"),
+        "{} does not direct authoring to Pi's own file tools",
         pi_path.display()
+    );
+    assert!(!pi.contains("path=\"sokf:"), "{pi}");
+    assert!(
+        pi.contains("one unconditional `superdev validate --fix` at turn end"),
+        "{pi}"
     );
     assert!(
         !repo(".pi/settings.json").exists(),

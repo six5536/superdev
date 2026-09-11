@@ -9,7 +9,7 @@ use rmcp::schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use super::bundle::load_bundle;
-use super::concept::{IncludeTarget, include_blocks, parse_concept};
+use super::concept::parse_concept;
 use super::graph::Graph;
 use crate::error::{Error, Result};
 use crate::validate;
@@ -58,63 +58,7 @@ pub struct WriteRequest {
     pub content: String,
 }
 
-/// One generated span of a resolved source, and where its content is authored.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, JsonSchema)]
-#[serde(rename_all = "camelCase")]
-#[schemars(crate = "rmcp::schemars")]
-pub struct GeneratedRegion {
-    /// First generated line of the target, starting at 1.
-    #[schemars(range(min = 1))]
-    pub start_line: u32,
-    /// Last generated line of the target, inclusive.
-    #[schemars(range(min = 1))]
-    pub end_line: u32,
-    /// Repository-relative path the region is generated from.
-    pub authoritative_path: String,
-    /// Region of the authoritative source, when the block names one.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub authoritative_region: Option<String>,
-}
 // sokf:end tools
-
-/// Every generated region of `text`, in line order.
-///
-/// An include block naming a concept reports the file that authors it, which
-/// `concept_path` answers for; one naming a source path reports that path and
-/// the region it names. A block carrying nothing generates no lines and so
-/// reports no region.
-pub(super) fn generated_regions(
-    text: &str,
-    concept_path: impl Fn(&str) -> Option<String>,
-) -> Vec<GeneratedRegion> {
-    let (blocks, _faults) = include_blocks(text);
-    blocks
-        .iter()
-        .filter_map(|block| {
-            let (authoritative_path, authoritative_region) = match &block.target {
-                IncludeTarget::Concept(id) => (concept_path(id)?, None),
-                IncludeTarget::Source { path, region } => {
-                    (path.trim_start_matches('/').to_string(), region.clone())
-                }
-            };
-            let start_line = line_number(text, block.content_start);
-            // `content_end` opens the close marker's line, so the last
-            // generated line is the one above it.
-            let end_line = line_number(text, block.content_end).saturating_sub(1);
-            (end_line >= start_line).then_some(GeneratedRegion {
-                start_line,
-                end_line,
-                authoritative_path,
-                authoritative_region,
-            })
-        })
-        .collect()
-}
-
-/// The 1-indexed line the byte offset `at` begins.
-fn line_number(text: &str, at: usize) -> u32 {
-    u32::try_from(text[..at].matches('\n').count() + 1).unwrap_or(u32::MAX)
-}
 
 /// Whether validation could establish the state left on disk.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]

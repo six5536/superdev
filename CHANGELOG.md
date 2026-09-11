@@ -13,23 +13,20 @@ publish a version it cannot find a heading for.
 
 ### Added
 
-- **A SOKF-routed read returns the file, not a rendering of it.** `read
-  sokf:<id>` now resolves the identity and delegates to Pi's own built-in read
-  against that source, so content, offset and limit, truncation and
-  continuation notices, details, errors, cancellation and rendering are Pi's
-  unchanged. An excerpt copied from a routed read — frontmatter included —
-  matches the file it came from and works as an exact-replacement anchor. The
-  `sokf:` overview and `sokf:<id>#<heading>` addresses are refused with
-  guidance naming `sokf_search`, and the tool's description no longer
-  advertises them.
-- **Locating a source and rendering knowledge are separate MCP operations.**
-  The mixed `sokf_read` tool is replaced by `sokf_resolve_source`, which
-  returns a concept's ingress path, canonical repository-relative target,
-  existence and generated regions without semantic content, and
-  `sokf_retrieve`, which keeps the overview, rendered-concept, section and
-  line-window behaviour and refuses physical paths. Both use exact closed
-  schemas. The unreleased MCP surface takes no compatibility alias, and the
-  server's initialization instructions now name only the tools it serves.
+- **SOKF does not intercept the file tools.** A Pi session keeps its own
+  `read`, `edit` and `write`, acting on physical `knowledge/` paths unchanged.
+  The MCP server serves three read-only tools — `sokf_search`, `sokf_graph` and
+  `sokf_overview` — and answers only what a file tool cannot. Every concept the
+  graph names carries the repository-relative path of its file, so a traversal
+  reaches a source without a second lookup. Routing guarded one door of
+  several — a write through `bash`, a patch or `git checkout` never passed
+  through it — so the knowledge is now made consistent once at turn end
+  instead, whatever wrote it (ADR-055).
+- **A turn ends with one repair-and-validate pass.** The extension runs
+  `superdev validate --fix` unconditionally when a turn ends, re-reads the tree
+  before reporting, and sends at most one message: triggering for the first
+  report of a sequence, visible and non-triggering afterwards. A valid run
+  leaves the tree byte-identical, sends nothing, and resets the sequence.
 - **SOKF is bounded by the active checkout.** Discovery ranks its markers: a
   `.git` directory or linked-worktree pointer file anywhere on the upward walk
   wins, and `.superdev/config.toml` selects the root only when no `.git` marker
@@ -62,18 +59,14 @@ publish a version it cannot find a heading for.
   whole-document replacement or path-based creation. Both enforce agent-safe
   identity and verification rules by default, support a deliberate CLI human
   override, run automatic repair, and return requested and repair diffs with
-  the resulting validation state. MCP exposes the same operations as
-  mandatory agent-safe `sokf_edit` and `sokf_write` tools. Its `sokf_read`
-  uses familiar path, offset, and limit semantics for virtual SOKF addresses
-  and contained physical files; `sokf:` replaces the separate overview tool.
-- **Pi uses SOKF through familiar coding tools.** The project extension routes
-  `read path="sokf:<id>"`, SOKF `edit`, and physical knowledge `write` calls
-  through one repository-scoped MCP process while ordinary file operations
-  retain Pi's built-in implementations. It also adds `sokf_search` and
-  `sokf_graph`; calls are serialized by repository, the configured embedder is
-  initialized on the first search or overview read and reused until session
-  shutdown, and a failed process restarts on the next call. Mutation turns
-  receive final validation with at most two automatic repair follow-ups. The concise standing instruction
+  the resulting validation state. These remain CLI verbs; the MCP server
+  serves no mutation.
+- **Pi reaches SOKF through three tools.** The project extension registers
+  `sokf_search`, `sokf_graph` and `sokf_overview` over one repository-scoped
+  MCP process, and leaves every file operation to Pi. Calls are serialized by
+  repository, the configured embedder is initialized on the first search or
+  overview and reused until session shutdown, and a failed process restarts on
+  the next call. The concise standing instruction
   loads format details through a Pi-native `sokf-authoring` skill; Pi does not
   link Claude's skill directory. Authoring creates and indexes a schema before
   introducing a previously unknown concept type. A companion
