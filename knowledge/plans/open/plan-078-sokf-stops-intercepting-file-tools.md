@@ -51,9 +51,9 @@ The implementation must satisfy the following settled requirements.
   `sokf_write` must be absent from the tool list, and `get_info()` must name only
   served tools.
 - `sokf_overview` must accept no required argument and return the knowledge name,
-  concept count, tree, and index state — the output `SokfService::overview()`
-  already produces. It must carry no rendered concept, no section addressing, and
-  no line window.
+  concept count, tree, index state, and capped validation warnings — the output
+  `SokfService::overview()` already produces. It must carry no rendered concept,
+  no section addressing, and no line window.
 - `sokf_graph` must return each named concept's repository-relative path beside
   its identity and description, so a traversal reaches a file without a second
   lookup, as `sokf_search` results already allow.
@@ -74,10 +74,10 @@ The implementation must satisfy the following settled requirements.
   the extension registers, so any change signal it could keep would be wrong on
   exactly the cases this issue exists to cover. An unconditional run needs no
   signal to be right.
-- The unconditional run must leave the tree byte-identical when the knowledge is
-  already valid. Against this repository's 279 concepts it costs about 1.3
-  seconds in a debug build and reports `repaired: 0 file(s)`, so a turn that
-  touched no knowledge pays a bounded cost and changes nothing.
+- The unconditional run must leave the tree byte-identical and report
+  `repaired: 0 file(s)` when the knowledge is already valid, so a turn that
+  touched no knowledge changes nothing. It must cost one `validate --fix` over
+  the canonical knowledge, with no second pass and no retry.
 - Before sending any message, the extension must re-check its findings against
   the current working tree and report only those the tree still carries. A report
   that survives no finding must send no message.
@@ -95,14 +95,35 @@ The implementation must satisfy the following settled requirements.
   behave exactly as they do today, including inline repair, refiling, and the
   `validation` gate. Their output must stay byte-compatible.
 - `contract-012-api-sokf-pi-file-tools` must become `deprecated`, because the
-  adapter interface it defines ceases to exist.
+  adapter interface it defines ceases to exist. Its Definition must keep
+  materializing from source, so the removed registrations must survive as an
+  archived file the contract includes, as `contract-009-interface-run-state`
+  includes `/archive/claude-code/run.rs`. A Definition carrying no include fails
+  the contract schema's `content: include` rule, so dropping the include without
+  replacing it is not available.
 - The routed promises on `contract-003-api-sokf` must be removed rather than left
   describing absent operations, and its retained promises must be accurate
   against the three served tools.
+- `contract-003-api-sokf` must stop defining the mutation request types, because
+  MCP accepts no mutation request. Those types must keep a contract, because
+  `superdev sokf edit --request-json` and `sokf write --request-json` remain
+  public callers of them, so `contract-002-cli-superdev` must define them.
 - No pack copy or `.superdev/lock.toml` claim exists for `.pi/extensions/sokf.ts`,
-  so `sync` will not overwrite it; the `pack/` mirror of
-  `.pi/skills/sokf-authoring/SKILL.md` must stay byte-identical to its source if
-  that skill changes.
+  so `sync` will not overwrite it.
+- The standing agent instruction must stop directing an agent at
+  `read path="sokf:<id>"`, because no tool answers that address any more. Its
+  source is `crates/lib/superdev-core/src/agent-instructions.md`, and
+  `.agents/superdev.md` must be regenerated from that source by
+  `cargo run -- sync` rather than hand-edited, so `npm run check:blueprint`
+  stays clean.
+- The `sokf-authoring` skill must stop describing the SOKF adapter, routed
+  `edit path="sokf:<id>"`, mutation-tool repair of generated blocks,
+  `applied: true`, and two automatic repair follow-ups. The `pack/pi/skills/`
+  mirror must stay byte-identical to it.
+- `evals/sokf/behavioral.json` must stop asserting tool calls no session can
+  make. Three scenarios name a `sokf:` path for `read` or `edit`, and each must
+  name a physical `knowledge/` path instead, while the scenario roster, the
+  acceptance threshold, and every scenario's intent stay unchanged.
 
 ## Contract changes
 
@@ -124,12 +145,34 @@ The implementation must satisfy the following settled requirements.
   lifecycle, search, graph, and safety promise unaffected by the removal. Every
   remaining `PENDING(issue-082)` and `PENDING(issue-083)` marker must go with the
   promise that carries it or be settled by removal, leaving no marker naming a
-  declined issue.
-- `contract-012-api-sokf-pi-file-tools`: move `lifecycle` to `deprecated`. The
-  contract defined the routed adapter interface, and no adapter remains to
-  define. Its `tools` source region in `.pi/extensions/sokf.ts` disappears with
-  the registrations, so BUILD must remove the Definition include rather than
-  leave it naming an absent region.
+  declined issue. Retarget the frontmatter `description`, the introductory
+  prose, and the `references` link from `adr-053` to `adr-055`, so the contract
+  names the decision it implements rather than the one that decision superseded.
+  Drop the `/crates/lib/superdev-core/src/sokf/mutation.rs#tools` include from
+  the Definition: MCP accepts no mutation request, so those request types stop
+  being this contract's to define.
+- `contract-002-cli-superdev`: add the released
+  `/crates/lib/superdev-core/src/sokf/mutation.rs#tools` include to the
+  Definition, because `superdev sokf edit --request-json` and
+  `sokf write --request-json` become the only public callers of `ExactEdit`,
+  `EditRequest`, and `WriteRequest`, and `P_sokf-request-policy-fixed` and
+  `P_sokf-mutation-json-shape` bind a shape no contract would otherwise define.
+  Reword `P_sokf-retrieval-shares-service` so `sokf read` is bound to the shared
+  service alone, while `sokf overview`, `search`, and `graph` keep their MCP
+  correspondence. No command, argument, exit code, or stream changes.
+- `contract-012-api-sokf-pi-file-tools`: move `lifecycle` to `deprecated`, and
+  add a `references` link to `adr-055` beside the existing `adr-053` link. The
+  contract recorded the routed adapter interface, and no live adapter remains.
+  Its `tools` source region leaves `.pi/extensions/sokf.ts` with the
+  registrations, so retarget `resource` and the Definition include at
+  `/archive/pi/sokf-file-tools.ts`, which preserves those registrations
+  verbatim. Remove every promise and criterion carrying `PENDING(issue-082)` or
+  `PENDING(issue-083)`: each describes adapter behaviour that was never built
+  and now never will be, and a deprecated contract must not defer to a declined
+  issue. Retain the promises the delivered adapter kept — worktree discovery and
+  precedence, cross-checkout refusal, source routing and its built criteria,
+  read parity and its built criteria, the pinned-Pi evidence promise, and the
+  stability promises — as the record of what the adapter did.
 
 ## ADR decisions
 
@@ -202,8 +245,38 @@ tools and assert that the session registers no `read`, `edit`, or `write`.
 `scripts/test/sokf-mcp-client.test.mjs` must follow the changed tool set.
 `crates/app/superdev/tests/cli.rs` must assert the new served roster.
 
-The command-line interface, its request and output types, and the generated CLI
-reference must remain unchanged.
+The command-line interface, its arguments, its output, and its exit codes must
+remain unchanged. `crates/lib/superdev-core/src/sokf/mutation.rs` must keep
+`ExactEdit`, `EditRequest`, and `WriteRequest` inside a marked region, because
+the `--request-json` forms of `superdev sokf edit` and `sokf write` remain their
+public callers; the include of that region moves from `contract-003-api-sokf` to
+`contract-002-cli-superdev`. `GeneratedRegion` leaves the region with the
+resolver it served.
+
+The removed registrations must be preserved verbatim as
+`/archive/pi/sokf-file-tools.ts`, carrying the `tools` region
+`contract-012-api-sokf-pi-file-tools` includes, as `/archive/claude-code/run.rs`
+preserves `contract-009-interface-run-state`'s definition. No extension, build,
+or test may load or reference the archived file.
+
+`crates/lib/superdev-core/src/agent-instructions.md` must stop directing an agent
+at `read path="sokf:<id>"` and must instead name a physical `knowledge/` path
+reached from a `sokf_search` or `sokf_graph` result. `.agents/superdev.md` must
+be regenerated from it by `cargo run -- sync`, never hand-edited, because the
+sokf component owns and lock-claims that file.
+
+`.pi/skills/sokf-authoring/SKILL.md` must stop describing the SOKF adapter,
+routed `edit path="sokf:<id>"`, mutation-tool repair of generated blocks,
+`applied: true`, and two automatic repair follow-ups. It must describe reading
+and writing physical `knowledge/` paths with Pi's own tools, and one
+repair-and-validate pass at turn end. `pack/pi/skills/sokf-authoring/SKILL.md`
+must stay byte-identical to it.
+
+`evals/sokf/behavioral.json` must name a physical `knowledge/` path wherever a
+scenario names a `sokf:` path for `read`, `edit`, or `write` —
+`direct-concept-reference`, `architecture-decision`, and `concept-edit` — while
+the roster, the acceptance threshold, each sandbox, and each scenario's intent
+stay unchanged. `scripts/test/sokf-behavior-fixtures.test.mjs` must follow it.
 
 ## Knowledge changes
 
@@ -217,6 +290,10 @@ knowledge mutation passes through an agent-safe MCP path, a claim that a
 `sokf:<id>` address is how an agent reads a concept, or a reference to the
 deleted paired read harness. `development-commands` and `testing-strategy` must
 describe the changed script suite.
+
+No document may describe the standing instruction or the `sokf-authoring` skill
+as directing an agent at a `sokf:` address, and `development-commands` must
+describe the skill's changed guidance.
 
 Documents must continue to describe `superdev sokf edit`, `superdev sokf write`,
 and their inline repair accurately, because those are unchanged. Keep the issue
@@ -240,14 +317,18 @@ The documentation map triggers the following surfaces.
 - `changelog`: add the removal under `/CHANGELOG.md` `[Unreleased]`, naming the
   replaced MCP tools as a breaking change to an unreleased surface. Verify with
   `npm run check:docs`.
-- `cli-reference`: not triggered because command, argument, help, exit-code,
-  stream, and workflow protocol shapes are unchanged. Confirm with
-  `npm run check:docs`.
+- `cli-reference`: triggered because `contract-002-cli-superdev`'s materialized
+  Definition gains the mutation request region `contract-003-api-sokf` releases.
+  Command, argument, help, exit-code, stream, and workflow protocol shapes stay
+  unchanged. Generate with `cargo run -- validate --fix` and verify with
+  `cargo test -p superdev --test cli` and `npm run check:validate`.
 - `documentation-site`: not triggered because the repository has no site source
   or renderer. Confirm with `npm run check:docs`.
-- Packaging copies: not triggered unless BUILD changes
-  `.pi/skills/sokf-authoring/SKILL.md`, whose `pack/pi/skills/` mirror must then
-  stay byte-identical. Confirm with `npm run check:blueprint`.
+- Packaging copies: triggered because `.pi/skills/sokf-authoring/SKILL.md`
+  changes in Block 4 and its `pack/pi/skills/` mirror must stay byte-identical,
+  and because `.agents/superdev.md` must be regenerated from
+  `crates/lib/superdev-core/src/agent-instructions.md`. Generate with
+  `cargo run -- sync` and verify with `npm run check:blueprint`.
 - Final verification: `cargo fmt --all -- --check && cargo clippy --workspace --all-targets -- -D warnings && cargo nextest run --workspace && cargo test --doc --workspace && RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps && npm run test:launcher && npm run test:scripts && npm run check:docs && npm run check:validate && npm run check:blueprint && npm run coverage:check`.
 
 ## Work blocks
@@ -270,7 +351,7 @@ The documentation map triggers the following surfaces.
 - Areas: `.pi/extensions/sokf.ts`, `scripts/test/sokf-pi-adapter.test.mjs`, and `scripts/test/fixtures/sokf-pi-adapter-smoke.ts`.
 - Outcome: every turn ends with one `validate --fix`, a freshness re-check, and at most one bounded message. This lands before Block 3 removes mutation-time repair, so no intermediate state leaves the knowledge unrepaired.
 - Verification: `node --test scripts/test/sokf-pi-adapter.test.mjs`.
-- Tests: cases prove that the run happens on a turn that changed nothing, on a turn that changed knowledge through a registered tool, and on a turn that changed knowledge by writing directly to the fixture tree; that `validate --fix` is the command invoked; that a finding resolved between the run and the send is not reported; that a report surviving no finding sends no message; that the first report of a sequence triggers a turn and a later one does not; that state is keyed by repository root and two roots do not share it; and that a message over 200 lines or 8 KiB is truncated and names `superdev validate`.
+- Tests: cases prove that the run happens on a turn that changed nothing, on a turn that changed knowledge through a file tool, and on a turn that changed knowledge by writing directly to the fixture tree; that `validate --fix` is the command invoked; that a finding resolved between the run and the send is not reported; that a report surviving no finding sends no message; that the first report of a sequence triggers a turn and a later one does not; that state is keyed by repository root and two roots do not share it; and that a message over 200 lines or 8 KiB is truncated and names `superdev validate`.
 - Structural evidence: no `knowledgeMutated` flag or equivalent precondition remains in the handler, and a test proves the run happens after a turn in which none of the extension's own tools were called. A turn that touched no knowledge leaves the fixture tree byte-identical, so the unconditional run performs no spurious write. The freshness re-check reads the reported paths again after validation rather than filtering a captured report. Follow-up state is held in a session-scoped map and no file is written, asserted by comparing the fixture tree before and after a reporting turn.
 - Documentation: none in this block; the surfaces change with Block 3.
 
@@ -278,12 +359,23 @@ The documentation map triggers the following surfaces.
 
 - [ ] Done.
 - Dependencies: Block 1, Block 2.
-- Areas: `.pi/extensions/sokf.ts`, `.pi/extensions/sokf-mcp.ts`, `crates/lib/superdev-core/src/sokf/mcp.rs`, `crates/lib/superdev-core/src/sokf/mod.rs`, `crates/lib/superdev-core/src/sokf/mutation.rs`, `crates/lib/superdev-core/tests/mcp_tools.rs`, `crates/app/superdev/tests/cli.rs`, `scripts/test/fixtures/sokf-pi-paired.ts`, `scripts/test/fixtures/sokf-pi-adapter-smoke.ts`, `scripts/test/fixtures/sokf-mcp-fake.mjs`, `scripts/test/sokf-pi-adapter.test.mjs`, `scripts/test/sokf-mcp-client.test.mjs`, `contract-003-api-sokf`, `contract-012-api-sokf-pi-file-tools`, `/README.md`, `/CONTRIBUTING.md`, `/CHANGELOG.md`, `/knowledge/contracts/index.md`, `architecture`, `software-components`, `testing-strategy`, `security-requirements`, and `development-commands`.
+- Areas: `.pi/extensions/sokf.ts`, `.pi/extensions/sokf-mcp.ts`, `/archive/pi/sokf-file-tools.ts`, `crates/lib/superdev-core/src/sokf/mcp.rs`, `crates/lib/superdev-core/src/sokf/mod.rs`, `crates/lib/superdev-core/src/sokf/mutation.rs`, `crates/lib/superdev-core/tests/mcp_tools.rs`, `crates/app/superdev/tests/cli.rs`, `scripts/test/fixtures/sokf-pi-paired.ts`, `scripts/test/fixtures/sokf-pi-adapter-smoke.ts`, `scripts/test/fixtures/sokf-mcp-fake.mjs`, `scripts/test/sokf-pi-adapter.test.mjs`, `scripts/test/sokf-mcp-client.test.mjs`, `contract-002-cli-superdev`, `contract-003-api-sokf`, `contract-012-api-sokf-pi-file-tools`, `/README.md`, `/CONTRIBUTING.md`, `/CHANGELOG.md`, `/knowledge/contracts/index.md`, `architecture`, `software-components`, `testing-strategy`, `security-requirements`, and `development-commands`.
 - Outcome: a Pi session gets Pi's own file tools and exactly three SOKF tools, MCP serves nothing else, and the documentation describes the implemented behaviour.
 - Verification: `cargo test -p superdev-core sokf && cargo test -p superdev-core --test mcp_tools && cargo test -p superdev --test cli && node --test scripts/test/sokf-pi-adapter.test.mjs && node --test scripts/test/sokf-mcp-client.test.mjs && npm run check:docs && npm run check:validate && npm run check:blueprint`.
 - Tests: MCP cases assert the served roster is exactly `sokf_graph`, `sokf_overview`, and `sokf_search`, and that a call naming a removed tool fails as unknown. One case asserts the `get_info()` instruction string names those three and contains none of `sokf_read`, `sokf_resolve_source`, `sokf_retrieve`, `sokf_edit`, or `sokf_write`, reading the value the method returns rather than a copy. Adapter cases assert the session registers exactly those three tools and registers no `read`, `edit`, or `write`. A case proves a `knowledge/` path read through Pi's built-in returns the file's exact bytes including frontmatter, and that an excerpt copied from it works unchanged as an `edit` anchor. Command-line cases prove `superdev sokf edit` and `superdev sokf write` retain their applied, validation, resolved, final, and diff output.
-- Structural evidence: no SOKF source imports a Pi file-tool factory; `rg` over `.pi/extensions/` finds no `createReadTool`, `createEditTool`, `createWriteTool`, `createReadToolDefinition`, or `withFileMutationQueue`. `scripts/test/fixtures/sokf-pi-paired.ts` is deleted rather than disabled. A workflow-transition test still passes unchanged, proving `SokfService::edit` kept its inline repair and refiling. `cargo run -- validate` runs twice with a clean second pass, proves `contract-012` is `deprecated` and carries no include naming an absent region, and proves no `PENDING(issue-082)` or `PENDING(issue-083)` marker remains anywhere in canonical knowledge.
+- Structural evidence: no SOKF source imports a Pi file-tool factory; `rg` over `.pi/extensions/` finds no `createReadTool`, `createEditTool`, `createWriteTool`, `createReadToolDefinition`, or `withFileMutationQueue`. `scripts/test/fixtures/sokf-pi-paired.ts` is deleted rather than disabled. A workflow-transition test still passes unchanged, proving `SokfService::edit` kept its inline repair and refiling. `cargo run -- validate` runs twice with a clean second pass, proves `contract-012` is `deprecated` and materializes its Definition from `/archive/pi/sokf-file-tools.ts`, proves `contract-002-cli-superdev` materializes the released mutation request region, and proves no `PENDING(issue-082)` or `PENDING(issue-083)` marker remains anywhere in canonical knowledge.
 - Documentation: update `/README.md`, `/CONTRIBUTING.md`, `/CHANGELOG.md`, and the canonical knowledge listed above, run `cargo run -- validate --fix` twice, then run `npm run check:docs`, `npm run check:validate`, and `npm run check:blueprint`.
+
+### Block 4: Retire the routed-authoring guidance
+
+- [ ] Done.
+- Dependencies: Block 3.
+- Areas: `crates/lib/superdev-core/src/agent-instructions.md`, `/.agents/superdev.md`, `.pi/skills/sokf-authoring/SKILL.md`, `pack/pi/skills/sokf-authoring/SKILL.md`, `evals/sokf/behavioral.json`, `scripts/test/sokf-behavior-fixtures.test.mjs`, and `development-commands`.
+- Outcome: the standing instruction, the authoring skill, and the behaviour evaluations direct an agent at a physical `knowledge/` path and at one turn-end repair, so no guidance survives that names an operation the session no longer serves. It follows Block 3 because guidance describes delivered behaviour; between the two blocks the guidance is stale but nothing is broken, and no release sits between them.
+- Verification: `cargo run -- sync && npm run check:blueprint && node --test scripts/test/sokf-behavior-fixtures.test.mjs && npm run check:validate`.
+- Tests: the fixture test asserts the scenario roster, the sandboxes, and the acceptance threshold are unchanged, and that no scenario names a `sokf:` path for `read`, `edit`, or `write`. One case asserts `direct-concept-reference` names a physical `knowledge/` path and still forbids `sokf_search`, so the scenario keeps measuring direct addressing rather than a broad scan. One case asserts `concept-edit` edits a physical `knowledge/` path and still requires its schema read first.
+- Structural evidence: `rg` over `/.agents/`, `.pi/skills/`, `pack/pi/skills/`, and `evals/` finds no `read path="sokf:`, no `edit path="sokf:`, and no promise of two automatic repair follow-ups. `.agents/superdev.md` differs from its previous revision only where `cargo run -- sync` regenerated it from the edited source, and `npm run check:blueprint` exits 0. `pack/pi/skills/sokf-authoring/SKILL.md` is byte-identical to `.pi/skills/sokf-authoring/SKILL.md`, compared as bytes rather than by rendering.
+- Documentation: update `development-commands` for the skill's changed guidance, run `cargo run -- validate --fix`, then run `npm run check:validate` and `npm run check:blueprint`.
 
 ## Build state
 

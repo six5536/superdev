@@ -65,9 +65,9 @@ knowledge is repaired and checked once per turn.
 - `sokf_graph` returns each concept's repository-relative path beside its
   identity, so a traversal reaches a file without a second lookup, as
   `sokf_search` already does.
-- `sokf_overview` returns the knowledge name, concept count, tree, and index
-  state. It carries no rendered concept and no section addressing; `read` and
-  `sokf_search` cover those.
+- `sokf_overview` returns the knowledge name, concept count, tree, index state,
+  and capped validation warnings. It carries no rendered concept and no section
+  addressing; `read` and `sokf_search` cover those.
 - Every turn ends with one repair-and-validate pass, run unconditionally. The
   extension does not first decide whether the knowledge changed: a write through
   `bash`, a patch, or `git checkout` reaches no tool it registers, so any change
@@ -85,6 +85,11 @@ knowledge is repaired and checked once per turn.
 - The command-line `superdev sokf edit` and `superdev sokf write`, and the
   workflow transitions that call the mutation service directly, behave exactly
   as they do today.
+- The agent-facing guidance stops describing routing. The standing instruction,
+  the `sokf-authoring` skill, and the SOKF behaviour evaluations name a physical
+  `knowledge/` path where they name a `sokf:` address today, and name one
+  turn-end repair where they promise two automatic repair follow-ups. Guidance
+  that directs an agent at an operation nothing serves is worse than none.
 
 ## Scope
 
@@ -96,6 +101,9 @@ The agent-facing SOKF surface and where knowledge is made consistent.
 - In: retiring `contract-012-api-sokf-pi-file-tools`, removing the routed
   promises from `contract-003-api-sokf`, and superseding
   `adr-053-sokf-file-tools-delegate-to-pi`.
+- In: the standing agent instruction, the `sokf-authoring` skill and its pack
+  mirror, and the SOKF behaviour evaluation fixtures, each of which directs an
+  agent at a routed address today.
 - Out: `superdev sokf edit`, `superdev sokf write`, and `SokfService::edit` and
   `write` as library calls. Workflow transitions depend on them, their callers
   are deterministic rather than agents, and `contract-002-cli-superdev` settles
