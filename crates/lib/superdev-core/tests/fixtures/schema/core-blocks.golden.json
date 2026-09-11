@@ -3,11 +3,6 @@
   "findings": [
     {
       "file": "superdev.md",
-      "message": "core: missing H1",
-      "severity": "error"
-    },
-    {
-      "file": "superdev.md",
       "message": "core: unbalanced </superdev>",
       "severity": "error"
     }

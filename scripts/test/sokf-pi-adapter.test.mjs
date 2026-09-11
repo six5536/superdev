@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { delimiter, dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -40,6 +40,51 @@ test("turn-end reports are fresh, bounded, and keyed by canonical root", { timeo
     fixtureArguments(resolve(here, "fixtures/sokf-turn-end.ts")),
     { cwd: repository, timeout: 25_000 });
   assert.match(stdout, /SOKF_FIXTURE_PASS/);
+});
+
+async function reportSession(scenario) {
+  const directory = await mkdtemp(join(tmpdir(), "sokf-report-delivery-"));
+  try {
+    await mkdir(join(directory, ".git"));
+    await mkdir(join(directory, "knowledge"));
+    await writeFile(join(directory, "knowledge/manifest.sokf.yaml"), 'sokf: "0.1"\nname: report-test\n');
+    await writeFile(join(directory, "knowledge/a.md"), "---\ntype: T\nid: alpha\n---\n[Missing](missing.md)\n");
+    const child = run(process.execPath, [
+      resolve(repository, "node_modules/@earendil-works/pi-coding-agent/dist/bundle/cli.js"),
+      "--offline", "--no-extensions", "--no-skills", "--no-session", "--approve", "--mode", "json", "-p",
+      "-e", resolve(here, "fixtures/sokf-report-provider.ts"),
+      "--provider", "sokf-report-test", "--model", "scripted", "--tools", "read,write", "Check reporting",
+    ], {
+      cwd: directory, timeout: 50_000, maxBuffer: 2 * 1024 * 1024,
+      env: { ...process.env, PI_CODING_AGENT_DIR: join(directory, "agent"), SOKF_REPORT_SCENARIO: scenario,
+        PATH: `${resolve(repository, "scripts")}${delimiter}${process.env.PATH ?? ""}` },
+    });
+    child.child.stdin.end();
+    const { stdout } = await child;
+    return stdout.trim().split("\n").map((line) => JSON.parse(line));
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+}
+
+test("Pi displays later reports immediately without starting another turn", { timeout: 60_000 }, async () => {
+  const events = await reportSession("unresolved");
+  assert.equal(events.filter((event) => event.type === "turn_start").length, 2,
+    "only the first failure triggers another turn");
+  const reports = events.filter((event) => event.type === "message_end"
+    && event.message?.customType === "sokf-validation");
+  assert.equal(reports.length, 2, "the second report is hidden until a new user prompt");
+  assert.ok(reports.every((event) => event.message.display && event.message.content.includes("missing.md")));
+});
+
+test("the first report reaches Pi before further tool turns can make it stale", { timeout: 60_000 }, async () => {
+  const events = await reportSession("repair");
+  const report = events.findIndex((event) => event.type === "message_end"
+    && event.message?.customType === "sokf-validation");
+  const repair = events.findIndex((event) => event.type === "tool_execution_start" && event.toolName === "write");
+  assert.ok(report >= 0 && repair > report, "the initial report arrived after the finding was repaired");
+  assert.equal(events.filter((event) => event.type === "turn_start").length, 3,
+    "a queued stale report triggered an extra turn after repair");
 });
 
 test("the pinned workflow service resumes an older work branch without merging", { timeout: 180_000 }, async (t) => {

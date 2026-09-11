@@ -76,7 +76,8 @@ export default async function () {
 		await end(second);
 		assert.equal(messages.at(-1)?.options.triggerTurn, true, "roots share follow-up state");
 		await end(first);
-		assert.notEqual(messages.at(-1)?.options.triggerTurn, true);
+		assert.equal(messages.at(-1)?.options.triggerTurn, false);
+		assert.notEqual(messages.at(-1)?.options.deliverAs, "nextTurn");
 
 		// Symlink spellings of one root share both its process and its sequence.
 		if (process.platform !== "win32") {

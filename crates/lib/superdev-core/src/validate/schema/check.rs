@@ -1216,17 +1216,17 @@ mod tests {
         let blocks = check_core(&text, &mut errs, &grammar());
         assert!(errs.is_empty(), "{errs:?}");
         assert!(blocks.contains("workflow"), "{blocks:?}");
-        assert!(blocks.contains("core_principles"), "{blocks:?}");
+        assert!(blocks.contains("prime_directive"), "{blocks:?}");
+        assert!(blocks.contains("core_grammar_rules"), "{blocks:?}");
+        assert!(blocks.contains("core_coding_rules"), "{blocks:?}");
     }
 
     #[test]
     fn a_core_with_no_h1_and_an_unclosed_block_is_reported() {
         let mut errs = Vec::new();
-        check_core(
-            "<superdev>\n<workflow>\n</superdev>\n",
-            &mut errs,
-            &grammar(),
-        );
+        let mut grammar = grammar();
+        grammar.kinds.core.require_h1 = true;
+        check_core("<superdev>\n<workflow>\n</superdev>\n", &mut errs, &grammar);
         assert_eq!(errs, ["core: missing H1", "core: unbalanced </superdev>"]);
     }
 

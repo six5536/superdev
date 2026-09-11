@@ -82,6 +82,9 @@ gate are in [CONTRIBUTING](/CONTRIBUTING.md).[^contributing]
   after an intervening write, separate state per canonical root, and message
   caps including headings and truncation notices. Real Pi file tools prove
   read-to-edit anchors, no inline repair, and a byte-identical clean turn.
+  A scripted provider drives the real Pi loop without network calls: first
+  reports arrive before subsequent tool turns, and later reports are visible
+  without waiting for another user prompt or triggering another turn.
 - **npm launcher.** A JS test that resolves + spawns a stub binary, and
   errors cleanly when no platform package matches.
 - **Release smoke.** `scripts/release-smoke.mjs` runs a compiled release

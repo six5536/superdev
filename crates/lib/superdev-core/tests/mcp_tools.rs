@@ -302,6 +302,14 @@ async fn the_server_instructions_name_only_the_tools_it_serves() {
     ] {
         assert!(!instructions.contains(removed), "{instructions}");
     }
+    assert!(
+        instructions.contains("Search locators are relative to `knowledge/`"),
+        "{instructions}"
+    );
+    assert!(
+        instructions.contains("graph paths are repository-relative"),
+        "{instructions}"
+    );
     // No client is directed to read the overview address as a file.
     assert!(!instructions.contains("Read `sokf:`"), "{instructions}");
     client.cancel().await.unwrap();

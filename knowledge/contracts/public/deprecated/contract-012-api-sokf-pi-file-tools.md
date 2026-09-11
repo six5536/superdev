@@ -185,8 +185,9 @@ by policy rather than caller identity.
 
 ### Errors
 
-A routed failure was a Pi tool error. SOKF policy rejections were phrased by the
-adapter; everything else was Pi's own wording. Reporting a post-persistence
+A routed failure was a Pi tool error. Routed read errors used Pi's wording
+except where SOKF policy intervened; mutation errors never reached Pi parity.
+Reporting a post-persistence
 finding separately from the successful result was the intent of the declined
 issue-083 and was never built: an acknowledged mutation carried its repair and
 validation findings in model-visible content to the end.
@@ -195,9 +196,10 @@ validation findings in model-visible content to the end.
   wording SHALL match paired Pi 0.85.1 behavior.
 - `P_policy-errors` [event] WHEN SOKF policy rejected a routed `read` argument
   before access, the adapter SHALL return a concise actionable tool error.
-- `P_post-persistence-findings` [event] WHEN repair or validation reported a
-  problem after an acknowledged apply, the adapter SHALL carry that finding in
-  the file-tool result rather than beside it.
+- `P_post-persistence-findings` [event] WHEN repair or validation reports a
+  problem after an acknowledged apply, the adapter SHALL report it beside the
+  successful tool result. This was the unbuilt intent of declined issue-083,
+  not delivered behaviour.
 
 ### Limits
 

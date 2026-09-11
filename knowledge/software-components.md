@@ -143,7 +143,8 @@ modifying or read-only tool sets. The extension delegates all durable changes
 to the versioned Rust workflow CLI.
 
 `.pi/skills/sokf-authoring/SKILL.md` is a genuine independently invocable Pi
-skill around SOKF-aware tools and is mirrored in `pack/pi/skills/`.
+skill for authoring physical knowledge paths with Pi's own file tools, mirrored
+in `pack/pi/skills/`.
 Superdev's `file`, `scope`, `build`, and `accept` skills live under
 `.pi/extensions/superdev/skills/`, mirrored in `pack/pi/extensions/superdev/skills/`.
 The extension registers that directory through `resources_discover` on startup

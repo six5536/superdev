@@ -47,6 +47,10 @@ export default async function () {
 		.get("sokf_search")
 		.execute("search", { query: "safe mutation", limit: 1 }, undefined, undefined, projectContext);
 	if (search.content[0]?.type !== "text") throw new Error("SOKF search did not return text content");
+	assert.ok(tools.get("sokf_search").promptGuidelines.some((line: string) => line.includes("repository's knowledge/ directory")));
+	const locator = search.content[0].text.match(/^\s+([^:\n]+\.md):\d+-\d+/m);
+	assert.ok(locator, "search returned no file locator");
+	await createReadTool(repository).execute("search-read", { path: join("knowledge", locator[1]) });
 	const graph = await tools
 		.get("sokf_graph")
 		.execute("graph", { id: "architecture" }, undefined, undefined, projectContext);
@@ -115,7 +119,7 @@ export default async function () {
 		if (messages.length !== 3) {
 			throw new Error(`Every failing turn end reports; got ${messages.length} of 3`);
 		}
-		if (messages.slice(1).some(({ options }) => options.deliverAs !== "nextTurn")) {
+		if (messages.slice(1).some(({ options }) => options.triggerTurn !== false || options.deliverAs === "nextTurn")) {
 			throw new Error("A later report must be visible and non-triggering");
 		}
 

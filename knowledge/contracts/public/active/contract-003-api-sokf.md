@@ -152,6 +152,9 @@ candidate or broken file.
   - `AC_instructions-name-served-tools` [ubiquitous] The server's
     initialization instructions SHALL name only served
     tools, naming no removed operation and no file read of a `sokf:` address.
+  - `AC_instructions-name-locator-roots` [ubiquitous] The initialization
+    instructions SHALL distinguish knowledge-relative search locators from
+    repository-relative graph paths.
 - `P_graph-skips-index` [ubiquitous] `sokf_graph` SHALL parse current knowledge
   without opening or rewriting the search index.
 - `P_graph-carries-paths` [ubiquitous] `sokf_graph` SHALL name each concept it
@@ -196,9 +199,6 @@ A tool failure is an MCP error payload, never a process exit.
   id, the server SHALL answer with near-miss candidates.
 - `P_invalid-knowledge-served` [state] WHILE the knowledge fails
   validation, the server SHALL index and serve it.
-- `P_parse-error-quoted` [event] WHEN a concept address resolves to a file the
-  parser rejected, the server SHALL
-  quote the parse error instead of guessing at near misses.
 
 ### Limits
 

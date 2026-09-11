@@ -25,14 +25,16 @@ publish a version it cannot find a heading for.
 - **A turn ends with one repair-and-validate pass.** The extension runs
   `superdev validate --fix` unconditionally when a turn ends, re-reads the tree
   before reporting, and sends at most one message: triggering for the first
-  report of a sequence, visible and non-triggering afterwards. A valid run
+  report of a sequence at the next turn boundary, visible and non-triggering
+  at the current boundary afterwards. Reports do not wait for agent idle or
+  another user prompt, where they could arrive stale. A valid run
   leaves the tree byte-identical, sends nothing, and resets the sequence.
 - **SOKF is bounded by the active checkout.** Discovery ranks its markers: a
   `.git` directory or linked-worktree pointer file anywhere on the upward walk
   wins, and `.superdev/config.toml` selects the root only when no `.git` marker
-  exists, so a managed non-Git repository keeps the routing it had. A linked
-  worktree therefore reads, resolves and validates its own files, and a path
-  entering another checkout is refused before the file is opened.
+  exists, so a managed non-Git repository remains discoverable. Each linked
+  worktree gets its own MCP process, validation and follow-up state. Pi's file
+  tools remain unchanged; SOKF imposes no file-access containment policy.
 - **A human can force a gate the workflow is refusing.** `/superdev-force`
   advances a SCOPE or ACCEPT gate over unanswered review findings or a missing
   acceptance assessment. It names what is unresolved, requires a typed reason

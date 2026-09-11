@@ -1819,9 +1819,9 @@ fn assert_retired_skill(name: &str) {
         "the lock still claims the {name} skill"
     );
 }
-/// The source instructions and rendered aggregator name the authoritative
-/// workflow, its review gates, and local integration. Filing and abandonment
-/// guidance belongs to the extension's skill and command rather than global prose.
+/// The canonical source and its verbatim local copy name the workflow and
+/// the user's option to skip it. Filing and abandonment guidance remains in
+/// the extension's skill and command.
 #[test]
 fn the_workflow_reads_scope_build_accept() {
     for p in [
@@ -1830,11 +1830,9 @@ fn the_workflow_reads_scope_build_accept() {
     ] {
         let text = std::fs::read_to_string(repo(p)).expect("the file is on file");
         for required in [
-            "<flow>SCOPE → BUILD → ACCEPT</flow>",
-            "authority=\"Rust\"",
-            "fresh isolated requirements review",
-            "Final code review is fresh, isolated, read-only",
-            "Humans merge separately",
+            "SCOPE → BUILD → ACCEPT",
+            "Each phase of the workflow is started via a skill.",
+            "The workflow may be skipped at user discretion.",
         ] {
             assert!(text.contains(required), "{p} lacks `{required}`");
         }

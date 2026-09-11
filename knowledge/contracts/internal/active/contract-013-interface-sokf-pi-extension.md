@@ -71,10 +71,11 @@ from the `turn-end` and `tools` regions rather than authored, under
 				content: validationFeedback(surviving, first),
 				display: true,
 			},
-			// The first report of a sequence gets the agent one prompted chance to
-			// correct. A later one is visible and leaves the decision to it: an
-			// agent that reads a repeated report can check the tree itself.
-			first ? { deliverAs: "followUp", triggerTurn: true } : { deliverAs: "nextTurn" },
+			// Steer at this turn boundary: waiting for agent idle would retain a
+			// report that later tool turns could resolve before its delivery.
+			// Explicit false makes later reports visible now without continuing
+			// the agent; `nextTurn` would retain them until another user prompt.
+			first ? { deliverAs: "steer", triggerTurn: true } : { triggerTurn: false },
 		);
 	});
 ```
@@ -87,7 +88,10 @@ from the `turn-end` and `tools` regions rather than authored, under
 		label: "SOKF search",
 		description: "Search SOKF whenever project knowledge is needed. Returns matching sections and locators.",
 		promptSnippet: "Search the canonical SOKF project knowledge semantically",
-		promptGuidelines: ["Use sokf_search whenever project knowledge is needed and no concept ID is already known."],
+		promptGuidelines: [
+			"Use sokf_search whenever project knowledge is needed and no concept ID is already known.",
+			"Resolve sokf_search locators under the repository's knowledge/ directory; sokf_graph paths are repository-relative.",
+		],
 		parameters: searchSchema,
 		async execute(_toolCallId, params: SearchInput, signal, _onUpdate, ctx) {
 			return boundedResult(
@@ -186,9 +190,15 @@ else.
 - `P_one-triggering-report` [event] WHEN validation first reports for a pending
   sequence, the extension SHALL send one visible triggering `sokf-validation`
   follow-up.
+  - `AC_first-report-at-turn-boundary` [ubiquitous] The first report SHALL
+    reach the next model turn before further tools can make it stale, rather
+    than wait for the agent to become idle.
   - `AC_later-report-does-not-trigger` [event] WHEN validation reports again in
     the same sequence, the extension SHALL send one visible non-triggering
     message.
+  - `AC_later-report-visible-now` [ubiquitous] A later report SHALL become
+    visible at the current turn boundary rather than wait for another user
+    prompt.
   - `AC_clean-run-resets` [event] WHEN a later run passes, the extension SHALL
     clear the sequence so a subsequent failure triggers once again.
 
