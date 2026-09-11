@@ -101,6 +101,14 @@ The implementation must satisfy the following settled requirements.
   includes `/archive/claude-code/run.rs`. A Definition carrying no include fails
   the contract schema's `content: include` rule, so dropping the include without
   replacing it is not available.
+- The surviving `.pi/extensions/sokf.ts` behaviour must be bound by a contract
+  rather than by tests alone. `contract-003-api-sokf` binds the MCP server and
+  `contract-011-interface-workflow` binds `.pi/extensions/superdev/`; neither
+  reaches this file, so deprecating `contract-012` would leave the turn-end
+  mechanism — the only thing guaranteeing that knowledge is consistent when a
+  turn ends — with no promise a future change could break. A new
+  `contract-013-interface-sokf-pi-extension` must bind it, and must land in
+  Block 2 with the behaviour rather than in Block 3 with the removal.
 - The routed promises on `contract-003-api-sokf` must be removed rather than left
   describing absent operations, and its retained promises must be accurate
   against the three served tools.
@@ -121,9 +129,23 @@ The implementation must satisfy the following settled requirements.
   `applied: true`, and two automatic repair follow-ups. The `pack/pi/skills/`
   mirror must stay byte-identical to it.
 - `evals/sokf/behavioral.json` must stop asserting tool calls no session can
-  make. Three scenarios name a `sokf:` path for `read` or `edit`, and each must
-  name a physical `knowledge/` path instead, while the scenario roster, the
-  acceptance threshold, and every scenario's intent stay unchanged.
+  make. Seven scenarios name a `sokf:` path for `read` or `edit`, not three:
+  `architecture-decision`, `direct-concept-reference`, `concept-edit`,
+  `multi-step-knowledge-change`, `knowledge-producing-code-change`,
+  `outward-facing-documentation`, and `unknown-concept-id`. The scenario roster,
+  each sandbox, and the acceptance threshold stay unchanged.
+- Six of those seven are path substitutions that keep their intent exactly:
+  each names a physical `knowledge/` path where it names a `sokf:` address.
+  `unknown-concept-id` is not, and must be re-aimed. It scores
+  `near-miss-or-search-recovery` on a routed read of an unknown identity, and an
+  unrouted `read path="sokf:command-router-policy"` is an ordinary missing-file
+  read, so the behaviour it measures ceases to exist. It must instead name a
+  missing `knowledge/` path and score recovery through `sokf_search`, keeping
+  what the scenario protected — an agent that recovers semantically rather than
+  scanning the filesystem — under an address that still resolves. That is the
+  one intent change in this plan, and BUILD must not extend it to another
+  scenario. `unknown-concept-id` is absent from `safetyCriticalScenarios`, so
+  the safety-critical set is untouched.
 
 ## Contract changes
 
@@ -173,6 +195,38 @@ The implementation must satisfy the following settled requirements.
   precedence, cross-checkout refusal, source routing and its built criteria,
   read parity and its built criteria, the pinned-Pi evidence promise, and the
   stability promises — as the record of what the adapter did.
+  That blanket removal applies only to sections the contract schema does not
+  require. `Authentication`, `Errors`, and `Limits` are `required: true` for an
+  `api` contract and hold nothing but PENDING promises today, so removing them
+  wholesale would starve three required sections. Each promise in those three
+  keeps its key, drops its PENDING marker, and is rewritten to record what the
+  adapter actually did — not what the declined issues proposed. `P_local-authority`
+  and `P_validation-diagnostic-limit` were built and are restated as delivered:
+  mandatory agent-safe mutation authority with no model-facing override, and the
+  200-line or 8-KiB extension-side diagnostic cap. `P_pi-errors` and
+  `P_policy-errors` held only for routed `read` after issue-077 and never for
+  routed `edit` or `write`, so each narrows to the read path and says so.
+  `P_post-persistence-findings` was never built — mutation envelopes stayed
+  model-visible file-tool content to the end — so it is restated as the unbuilt
+  intent it was, attributed to the declined `issue-083`. No promise may be
+  invented to fill a required section, and no unbuilt promise may be recorded as
+  delivered.
+- `contract-013-interface-sokf-pi-extension`: new internal interface contract with
+  `resource: /.pi/extensions/sokf.ts`, matching the kind of the repository's
+  other interface contracts. Its Definition materializes the three tool
+  registrations and the `turn_end` handler from one marked source region. It must
+  promise the unconditional turn-end `validate --fix`, that a valid run leaves
+  the tree byte-identical and sends nothing, the freshness re-check against the
+  working tree before sending, the first-report-triggers and later-report-does-not
+  sequence with where that sequence resets, session-memory follow-up state keyed
+  by canonical repository root with nothing persisted, the 200-line or 8-KiB
+  message cap directing truncated output to `superdev validate`, the three
+  registered tools and the absence of any `read`, `edit`, or `write`
+  registration, and repository discovery and containment across a nested working
+  directory and a linked worktree. It inherits the substance of
+  `contract-012`'s `P_validation-follow-up`, `P_worktree-isolation`, and
+  `P_validation-diagnostic-limit`, which retire with that contract; it must not
+  reuse their keys, because a removed key is not reused.
 
 ## ADR decisions
 
@@ -273,10 +327,26 @@ repair-and-validate pass at turn end. `pack/pi/skills/sokf-authoring/SKILL.md`
 must stay byte-identical to it.
 
 `evals/sokf/behavioral.json` must name a physical `knowledge/` path wherever a
-scenario names a `sokf:` path for `read`, `edit`, or `write` —
-`direct-concept-reference`, `architecture-decision`, and `concept-edit` — while
-the roster, the acceptance threshold, each sandbox, and each scenario's intent
-stay unchanged. `scripts/test/sokf-behavior-fixtures.test.mjs` must follow it.
+scenario names a `sokf:` path for `read`, `edit`, or `write`. Seven scenarios do:
+`architecture-decision` and `direct-concept-reference` (`read`), `concept-edit`,
+`knowledge-producing-code-change`, and `outward-facing-documentation` (`edit`),
+`multi-step-knowledge-change` (a `read` whose path array carries both a `sokf:`
+glob and a `knowledge/` glob, from which the `sokf:` alternative is dropped), and
+`unknown-concept-id`. The first six keep their intent exactly. `unknown-concept-id`
+is re-aimed: its prompt and `orderedCalls` must name a missing `knowledge/` path
+rather than `sokf:command-router-policy`, and it must still require `sokf_search`
+recovery and still forbid a broad filesystem scan, so it measures semantic
+recovery from an unresolved concept instead of near-miss recovery on a routed
+read. The roster, each sandbox, the acceptance threshold, and
+`safetyCriticalScenarios` stay unchanged.
+`scripts/test/sokf-behavior-fixtures.test.mjs` must follow it.
+
+`contract-013-interface-sokf-pi-extension` must be authored in Block 2, when the
+turn-end behaviour lands, so the mechanism is bound before Block 3 removes the
+mutation-time repair it replaces. Its Definition materializes from a marked
+region in `.pi/extensions/sokf.ts` spanning the three `pi.registerTool({...})`
+calls and the `pi.on("turn_end", ...)` handler, and excludes the MCP transport
+helpers, which `contract-003-api-sokf` already governs.
 
 ## Knowledge changes
 
@@ -348,12 +418,12 @@ The documentation map triggers the following surfaces.
 
 - [ ] Done.
 - Dependencies: none.
-- Areas: `.pi/extensions/sokf.ts`, `scripts/test/sokf-pi-adapter.test.mjs`, and `scripts/test/fixtures/sokf-pi-adapter-smoke.ts`.
-- Outcome: every turn ends with one `validate --fix`, a freshness re-check, and at most one bounded message. This lands before Block 3 removes mutation-time repair, so no intermediate state leaves the knowledge unrepaired.
+- Areas: `.pi/extensions/sokf.ts`, `contract-013-interface-sokf-pi-extension`, `scripts/test/sokf-pi-adapter.test.mjs`, and `scripts/test/fixtures/sokf-pi-adapter-smoke.ts`.
+- Outcome: every turn ends with one `validate --fix`, a freshness re-check, and at most one bounded message, and `contract-013-interface-sokf-pi-extension` binds that behaviour. This lands before Block 3 removes mutation-time repair, so no intermediate state leaves the knowledge unrepaired and no interval leaves the turn-end mechanism uncontracted.
 - Verification: `node --test scripts/test/sokf-pi-adapter.test.mjs`.
 - Tests: cases prove that the run happens on a turn that changed nothing, on a turn that changed knowledge through a file tool, and on a turn that changed knowledge by writing directly to the fixture tree; that `validate --fix` is the command invoked; that a finding resolved between the run and the send is not reported; that a report surviving no finding sends no message; that the first report of a sequence triggers a turn and a later one does not; that state is keyed by repository root and two roots do not share it; and that a message over 200 lines or 8 KiB is truncated and names `superdev validate`.
 - Structural evidence: no `knowledgeMutated` flag or equivalent precondition remains in the handler, and a test proves the run happens after a turn in which none of the extension's own tools were called. A turn that touched no knowledge leaves the fixture tree byte-identical, so the unconditional run performs no spurious write. The freshness re-check reads the reported paths again after validation rather than filtering a captured report. Follow-up state is held in a session-scoped map and no file is written, asserted by comparing the fixture tree before and after a reporting turn.
-- Documentation: none in this block; the surfaces change with Block 3.
+- Documentation: author `contract-013-interface-sokf-pi-extension`, add the marked source region it includes, then run `cargo run -- validate --fix` followed by `npm run check:validate`. The remaining surfaces change with Block 3.
 
 ### Block 3: Stop intercepting the file tools and remove the routed operations
 
@@ -373,7 +443,7 @@ The documentation map triggers the following surfaces.
 - Areas: `crates/lib/superdev-core/src/agent-instructions.md`, `/.agents/superdev.md`, `.pi/skills/sokf-authoring/SKILL.md`, `pack/pi/skills/sokf-authoring/SKILL.md`, `evals/sokf/behavioral.json`, `scripts/test/sokf-behavior-fixtures.test.mjs`, and `development-commands`.
 - Outcome: the standing instruction, the authoring skill, and the behaviour evaluations direct an agent at a physical `knowledge/` path and at one turn-end repair, so no guidance survives that names an operation the session no longer serves. It follows Block 3 because guidance describes delivered behaviour; between the two blocks the guidance is stale but nothing is broken, and no release sits between them.
 - Verification: `cargo run -- sync && npm run check:blueprint && node --test scripts/test/sokf-behavior-fixtures.test.mjs && npm run check:validate`.
-- Tests: the fixture test asserts the scenario roster, the sandboxes, and the acceptance threshold are unchanged, and that no scenario names a `sokf:` path for `read`, `edit`, or `write`. One case asserts `direct-concept-reference` names a physical `knowledge/` path and still forbids `sokf_search`, so the scenario keeps measuring direct addressing rather than a broad scan. One case asserts `concept-edit` edits a physical `knowledge/` path and still requires its schema read first.
+- Tests: the fixture test asserts the scenario roster, the sandboxes, the acceptance threshold, and `safetyCriticalScenarios` are unchanged, and that no scenario names a `sokf:` path for `read`, `edit`, or `write` — an assertion all seven converted scenarios must satisfy, not three. One case asserts `direct-concept-reference` names a physical `knowledge/` path and still forbids `sokf_search`, so the scenario keeps measuring direct addressing rather than a broad scan. One case asserts `concept-edit` edits a physical `knowledge/` path and still requires its schema read first. One case asserts `multi-step-knowledge-change` keeps its `knowledge/schemas/*.md` read alternative and no longer offers a `sokf:` one. One case asserts the re-aimed `unknown-concept-id` names a missing `knowledge/` path, still requires `sokf_search` after the failed read, and still forbids a broad filesystem scan, so it measures semantic recovery rather than the near-miss behaviour the routed read used to provide.
 - Structural evidence: `rg` over `/.agents/`, `.pi/skills/`, `pack/pi/skills/`, and `evals/` finds no `read path="sokf:`, no `edit path="sokf:`, and no promise of two automatic repair follow-ups. `.agents/superdev.md` differs from its previous revision only where `cargo run -- sync` regenerated it from the edited source, and `npm run check:blueprint` exits 0. `pack/pi/skills/sokf-authoring/SKILL.md` is byte-identical to `.pi/skills/sokf-authoring/SKILL.md`, compared as bytes rather than by rendering.
 - Documentation: update `development-commands` for the skill's changed guidance, run `cargo run -- validate --fix`, then run `npm run check:validate` and `npm run check:blueprint`.
 
