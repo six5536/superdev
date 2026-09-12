@@ -42,19 +42,47 @@ publish a version it cannot find a heading for.
   exists, so a managed non-Git repository remains discoverable. Each linked
   worktree gets its own MCP process, validation and follow-up state. Pi's file
   tools remain unchanged; SOKF imposes no file-access containment policy.
-- **A human can force a gate the workflow is refusing.** `/superdev-force`
-  advances a SCOPE or ACCEPT gate over unanswered review findings or a missing
-  acceptance assessment. It names what is unresolved, requires a typed reason
-  and an interactive confirmation, preserves the findings, and records the
-  decision in the plan's completion evidence. The override is a typed command
-  alone: no tool, skill, or prompt exposes it, and the phase tool still refuses
-  approval while review is unresolved.
-- **The local workflow is now `SCOPE → BUILD → ACCEPT`.** A Pi extension
-  registers phase, recovery, cancellation, abandonment, and independent filing
-  commands; private prompts run modifying and read-only roles in fresh Pi
-  processes. Rust owns versioned transitions, transient ownership,
-  compare-and-swap plan revisions, configured acceptance policy, and safe local
-  `git merge --no-ff` integration.
+- **The local workflow is now `SCOPE → BUILD → ACCEPT`, with SCOPE led by the
+  human.** SCOPE runs in the controlling conversation and invokes `grill-me` and
+  `double-check` there, with no child roles. It asks permission for each step,
+  accepts a named group of steps, and records repeated and skipped work as what
+  it was rather than reporting a skipped check as passed. Discussion neither
+  advances state nor approves anything, and a human may approve a document over
+  open findings. There is no gate to force, so the override command is gone.
+- **Approval is bound to the revision the human read, and is local to the
+  checkout.** Progress and approval live in `.superdev/workflows/`, excluded
+  from Git. An approval names the document's exact bytes and the human input
+  that authorised it; a plan approval also names its issue revision. An
+  unexplained edit suspends the approval until the diff is assessed: a
+  formatting-only diff keeps the original approval, and a substantive one clears
+  it while keeping recorded progress. Nothing in a document — its lifecycle, its
+  prose, or its history — confers approval, so a fresh clone asks again.
+  Each approved document is published on its own commit, prepared before the
+  branch moves so an interrupted publication is completed by verification rather
+  than assumed.
+- **BUILD and ACCEPT run in one persistent worker session.** Approving a plan
+  starts nothing; BUILD begins on separate human input and creates the work
+  branch then. The worker keeps its identity across stages, pauses, and
+  restarts, and resets its own context between stages so review and acceptance
+  judge the candidate rather than the conversation that produced it. It holds no
+  controller capability, so it can neither approve a document nor claim
+  ownership, and its questions reach the human through the controller. One
+  writer owns the checkout at a time. Correction budgets are consumed durably,
+  so a reset, pause, or restart grants no further attempt. A block commit is
+  bounded to the areas its plan declares, and acceptance never merges, pushes,
+  releases, or deletes the branch.
+- **The workflow CLI is `apply` and `status` under `superdev-workflow/v3`.** The
+  v2 mutation verbs are removed rather than aliased, so an obsolete caller fails
+  explicitly. `apply` reads one typed JSON request and requires the controller's
+  private capability; no flag, request field, or model argument confers human
+  authority. `status` reports local records, approval validity, ownership,
+  branch discovery, and the acceptance policy without acquiring ownership.
+- **Workflow configuration carries only what it controls.** `[workflow]` keeps
+  `human_acceptance_required`, `max_final_correction_cycles`, and
+  `max_scope_review_cycles`, and the two limits are now genuinely applied to the
+  durable correction budgets. The isolated-role deadline, context, review-state,
+  and artifact fields are removed with the runtime they configured; a manifest
+  still carrying them loads, and the next managed rewrite drops them.
 - **Pi workflow assets are first-class pack items.** Sync materializes and
   hashes `.pi/extensions/superdev/` and the genuine
   `.pi/skills/sokf-authoring/` capability.

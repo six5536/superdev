@@ -12,10 +12,16 @@ Every plan links to exactly one primary issue with `rel: implements`; incoming
 relationships provide the issue's plan history. Open plans are mutable only by
 the phase owner declared below. Done and abandoned plans are immutable history.
 
-SCOPE owns sections 1–8. The Rust workflow service alone updates completion and
-evidence fields in Work blocks, Build state, and Completion evidence. BUILD may
-append Implementation decisions and Follow-up issues. Re-scoping may revise the
-approved specification but never erase execution history.
+SCOPE owns sections 1–8. BUILD maintains Work blocks, Build state,
+Implementation decisions, Follow-up issues, and Completion evidence as advisory
+records; nothing parses them. Re-scoping may revise the approved specification
+but never erases execution history.
+
+The `phase` field describes where the work has reached. It is not authority
+(ADR-056): approval and durable progress live in the checkout-local record under
+`.superdev/workflows/`, which is excluded from Git. A copied, restored, or
+freshly cloned plan therefore states a phase it cannot act on, and the workflow
+asks for approval again rather than reading one from this document.
 
 A work block has a stable number and title, done checkbox, dependencies,
 affected areas, required outcome, focused commands, tests bound to contract

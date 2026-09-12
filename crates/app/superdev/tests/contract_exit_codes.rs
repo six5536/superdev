@@ -9,8 +9,7 @@
 //! for that command — so the probe and the contract cannot drift apart
 //! either.
 
-use std::collections::BTreeMap;
-use std::path::Path;
+use std::{collections::BTreeMap, path::Path};
 
 use assert_cmd::Command;
 
@@ -249,7 +248,7 @@ fn validate_returns_the_one_it_declares_on_an_error() {
 fn every_declared_exit_code_is_probed_or_named_undrivable() {
     // A code a probe cannot reach from a clean checkout without changing the
     // repository. Each names why, so the list cannot quietly grow.
-    const UNDRIVABLE: [(&str, i64, &str); 31] = [
+    const UNDRIVABLE: [(&str, i64, &str); 15] = [
         ("superdev init", 0, "would set this repository up"),
         ("superdev init", 2, "would write into this repository"),
         (
@@ -271,74 +270,6 @@ fn every_declared_exit_code_is_probed_or_named_undrivable() {
         ("superdev sokf index", 0, "rebuilds the index"),
         ("superdev sokf index", 2, "rebuilds the index"),
         (
-            "superdev workflow start",
-            0,
-            "covered by the managed-repository workflow journey",
-        ),
-        (
-            "superdev workflow start",
-            2,
-            "requires a managed Git fixture",
-        ),
-        (
-            "superdev workflow commit",
-            0,
-            "covered by the managed-repository workflow journey",
-        ),
-        (
-            "superdev workflow commit",
-            2,
-            "covered by the managed-repository workflow journey",
-        ),
-        (
-            "superdev workflow resume",
-            0,
-            "covered by the managed-repository workflow journey",
-        ),
-        (
-            "superdev workflow resume",
-            2,
-            "requires a managed Git fixture",
-        ),
-        ("superdev workflow bind", 0, "writes transient ownership"),
-        (
-            "superdev workflow bind",
-            2,
-            "requires a canonical plan fixture",
-        ),
-        (
-            "superdev workflow transition",
-            0,
-            "mutates a canonical plan",
-        ),
-        (
-            "superdev workflow transition",
-            2,
-            "requires an owned plan fixture",
-        ),
-        ("superdev workflow cancel", 0, "writes transient ownership"),
-        (
-            "superdev workflow cancel",
-            2,
-            "requires conflicting ownership",
-        ),
-        ("superdev workflow abandon", 0, "mutates a canonical plan"),
-        (
-            "superdev workflow abandon",
-            2,
-            "requires an owned plan fixture",
-        ),
-        (
-            "superdev workflow integrate",
-            0,
-            "creates a local merge commit",
-        ),
-        (
-            "superdev workflow integrate",
-            2,
-            "requires an owned git fixture",
-        ),
-        (
             "superdev status",
             1,
             "driven by its own probe, which tolerates either code",
@@ -348,7 +279,13 @@ fn every_declared_exit_code_is_probed_or_named_undrivable() {
     ];
     // Pairs a test of its own drives, because they need stdin or a
     // temporary knowledge rather than a bare invocation.
-    const ELSEWHERE: [(&str, i64); 15] = [
+    const ELSEWHERE: [(&str, i64); 18] = [
+        // tests/workflow_safety.rs drives these against a managed Git fixture:
+        // a bare invocation cannot supply the controller capability a mutation
+        // requires, nor the local records `status` reports.
+        ("superdev workflow apply", 0),
+        ("superdev workflow apply", 2),
+        ("superdev workflow status", 2),
         ("superdev hook validate", 0),
         ("superdev hook validate", 2),
         ("superdev validate", 1),
@@ -410,7 +347,7 @@ fn a_usage_error_is_two_from_every_command() {
     for args in [
         &["nonsense"] as &[&str],
         &["status", "--nonsense"],
-        &["workflow", "transition"],
+        &["workflow", "apply"],
         &["template", "render"],
     ] {
         run(args, 2);

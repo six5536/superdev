@@ -49,12 +49,18 @@ status: stable
   then on the repo updates like a seeded one.
 - **Pi skill** — an independently invocable capability discovered from a
   skills directory or registered by an extension. Superdev bundles `file`,
-  `scope`, `build`, and `accept` under its extension and registers them through
-  `resources_discover`; `sokf-authoring` lives under `.pi/skills/`.
-  Isolated child roles use private extension prompts.
+  `scope`, `build`, `accept`, `grill-me`, and `double-check` under its extension
+  and registers them through `resources_discover`; `sokf-authoring` lives under
+  `.pi/skills/`. Each skill carries its own checklist, so no separate role
+  prompt can drift from it.
 - **Pi extension** — an owned TypeScript adapter under `.pi/extensions/`.
-  The Superdev extension orchestrates roles while Rust owns durable workflow
-  transitions and Git safety.
+  The Superdev extension owns human interaction and the worker's lifecycle,
+  while Rust owns durable transitions, document approval, and Git safety.
+- **Controller** — the Pi conversation holding the private workflow capability.
+  It alone receives human approval and decides what the service is asked to do.
+- **Worker** — the one persistent Pi session that executes BUILD and ACCEPT. It
+  holds no capability, so it can neither approve a document nor claim checkout
+  ownership, and its questions reach the human through the controller.
 - **Content pack** — a versioned set of superdev's prose content: skills,
   document templates, project templates, knowledge skeletons and the
   general-rules scaffolds. A pack is resolved from a pinned source and

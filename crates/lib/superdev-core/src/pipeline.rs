@@ -6,27 +6,29 @@
 //! and the orphan pass plans last (removals run after every component write).
 //! The binary loads, calls, renders and turns facts into exit codes.
 
-use std::io;
-use std::path::Path;
-
-use crate::action::Action;
-use crate::capability::Capability;
-use crate::component::{Claim, Ctx};
-use crate::components::codegraph::CODEGRAPH_INDEX_DIR;
-use crate::components::{skillpack, sokf};
-use crate::content::{self, ContentSet, ItemKind, Origin, Owner};
-use crate::engine::Planned;
-use crate::error::{Error, Result};
-use crate::lock::{Lock, PackLock};
-use crate::manifest::{Manifest, PackEntry};
-use crate::orphan::OrphanPlan;
-use crate::pack;
-use crate::registry::{self, Pinned};
-use crate::runner::CommandRunner;
-use crate::{components, engine, orphan, report};
+use std::{io, path::Path};
 
 /// Provider name for repo-level actions no capability owns.
 use crate::engine::REPO_PROVIDER;
+use crate::{
+    action::Action,
+    capability::Capability,
+    component::{Claim, Ctx},
+    components,
+    components::{codegraph::CODEGRAPH_INDEX_DIR, skillpack, sokf},
+    content::{self, ContentSet, ItemKind, Origin, Owner},
+    engine,
+    engine::Planned,
+    error::{Error, Result},
+    lock::{Lock, PackLock},
+    manifest::{Manifest, PackEntry},
+    orphan,
+    orphan::OrphanPlan,
+    pack,
+    registry::{self, Pinned},
+    report,
+    runner::CommandRunner,
+};
 
 /// How the pipeline treats a manifest pinned off the registry default.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -471,7 +473,13 @@ fn read_or_empty(path: std::path::PathBuf) -> Result<String> {
 /// managed AGENTS.md prefix, and the standalone instruction copy.
 fn repo_entry(root: &Path, manifest: &Manifest, content: &ContentSet) -> Result<Option<Planned>> {
     let gitignore = read_or_empty(root.join(".gitignore"))?;
-    let mut wanted = vec![(".superdev/cache/".to_string(), "ignore machine state")];
+    let mut wanted = vec![
+        (".superdev/cache/".to_string(), "ignore machine state"),
+        (
+            ".superdev/workflows/".to_string(),
+            "ignore local workflow authority",
+        ),
+    ];
     if manifest.enabled(Capability::CodeIndex) {
         wanted.push((format!("{CODEGRAPH_INDEX_DIR}/"), "ignore the code index"));
     }

@@ -51,7 +51,6 @@ export default async function () {
 		"Use sokf_overview before searching SOKF if you are unfamiliar with the repository's knowledge.",
 		"Use sokf_search to find relevant project knowledge when its concept ID and physical path are unknown.",
 		"Resolve file paths in sokf_search locators relative to knowledge/; resolve sokf_graph paths relative to the repository root.",
-		"Exact IDs, unambiguous numbered IDs and paths lead search results. Match labels explain retrieval, not confidence; check the evidence.",
 	]);
 	assert.deepEqual([...tools.values()].map((tool) => tool.promptSnippet), [
 		"Show the knowledge structure, concept count, index status, and validation findings.",

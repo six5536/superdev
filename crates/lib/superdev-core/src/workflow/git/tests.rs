@@ -370,3 +370,58 @@ fn scope_snapshot_requires_the_plan_and_excludes_product_changes() {
     command(root, &["commit", "-qm", SCOPE_CHECKPOINT_MESSAGE]);
     assert!(require_scope_checkpoint(root, &revision(root, "HEAD").unwrap(), &plan).is_err());
 }
+
+/// The assessment boundary: any change to the checkout is visible in the
+/// fingerprint, whatever produced it. A command list cannot say the same,
+/// because a shell reaches the same effect through a variable or a script.
+#[test]
+fn worktree_state_changes_with_every_kind_of_checkout_change() {
+    let dir = repository();
+    let root = dir.path();
+    let start = worktree_state(root).unwrap();
+    assert_eq!(
+        worktree_state(root).unwrap(),
+        start,
+        "reading the state changed it"
+    );
+
+    // An untracked scratch file is a changed checkout: it is what would later
+    // refuse a clean-tree preflight, so an assessment must not leave one.
+    std::fs::write(root.join("scratch.txt"), "notes\n").unwrap();
+    let scratched = worktree_state(root).unwrap();
+    assert_ne!(scratched, start, "an untracked file left no trace");
+    std::fs::remove_file(root.join("scratch.txt")).unwrap();
+    assert_eq!(
+        worktree_state(root).unwrap(),
+        start,
+        "removing the file did not restore the state"
+    );
+
+    // An edit to a tracked file.
+    std::fs::write(root.join("file"), "changed\n").unwrap();
+    assert_ne!(worktree_state(root).unwrap(), start);
+    command(root, &["checkout", "--", "file"]);
+    assert_eq!(worktree_state(root).unwrap(), start);
+
+    // Staging alone, with the worktree bytes unchanged.
+    std::fs::write(root.join("file"), "staged\n").unwrap();
+    command(root, &["add", "file"]);
+    let staged = worktree_state(root).unwrap();
+    assert_ne!(staged, start, "a staged change left no trace");
+
+    // A commit: HEAD moves even though the worktree is clean again.
+    command(root, &["commit", "-q", "-m", "committed"]);
+    let committed = worktree_state(root).unwrap();
+    assert_ne!(committed, start, "a commit left no trace");
+    assert_ne!(committed, staged);
+
+    // A branch switch, with identical content on both sides.
+    command(root, &["switch", "-q", "-c", "other"]);
+    assert_ne!(
+        worktree_state(root).unwrap(),
+        committed,
+        "a branch switch left no trace"
+    );
+    command(root, &["switch", "-q", "main"]);
+    assert_eq!(worktree_state(root).unwrap(), committed);
+}

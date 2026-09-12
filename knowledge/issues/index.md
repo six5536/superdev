@@ -99,13 +99,13 @@ places it.
 
 * [SCOPE reauthors a plan it already committed when review fails][sokf:issue-085-scope-reauthors-a-plan-it-already-committed] - a requirements review that times out or fails discards a committed authoring pass, so the next SCOPE run reauthors the plan and may review a different candidate than the one that failed.
 
-* [A recommended answer is prose beside the choices rather than a marked choice][sokf:issue-086-a-recommended-choice-is-prose-not-a-choice] - the question UI prints its recommendation as a paragraph above an unordered choice list, so the user reads justification prose to work out which listed choice is being recommended.
+* [A recommended answer is prose beside the choices rather than a marked choice][sokf:issue-086-a-recommended-choice-is-prose-not-a-choice] - the question UI printed its recommendation as a paragraph above an unordered choice list, so the user read justification prose to work out which listed choice was recommended; done by the workflow redesign, where a recommendation names a stable choice ID, validation refuses one that names no supplied choice, and the UI sorts that choice first and marks it without changing the recorded answer.
 
 * [A correction pass is told to author a plan][sokf:issue-087-a-correction-pass-is-told-to-author-a-plan] - the batched correction role runs the full SCOPE authoring prompt, so it resurveys every record and source file before applying findings that already name the exact path, location, and requirement to change.
 
 * [A re-review is not told what changed][sokf:issue-088-a-re-review-is-not-told-what-changed] - every requirements review receives the same task string, so a review following a correction cannot tell which findings were corrected or what the human decided, and rediscovers the plan from nothing.
 
-* [An isolated role loses everything at its deadline][sokf:issue-091-an-isolated-role-loses-everything-at-its-deadline] - a role that reaches its timeout is killed with SIGKILL and returns nothing, so twenty minutes of completed work is discarded and the only recovery is to raise the timeout and repeat the same work from the start.
+* [An isolated role loses everything at its deadline][sokf:issue-091-an-isolated-role-loses-everything-at-its-deadline] - a role that reached its timeout was killed with SIGKILL and returned nothing, so completed work was discarded and the only recovery was to raise the timeout and repeat it; done by the workflow redesign, which removes the deadline-killed role entirely: one persistent worker keeps its session across stages and restarts, each block is committed on its own, and the durable record carries the stage, completed blocks, and consumed budgets to resume from.
 
 * [A requirements review has no declared surface][sokf:issue-092-a-requirements-review-has-no-declared-surface] - the review prompt directed a transitive closure with no fixed point, so a review read the whole subsystem instead of the change in its context, and its cost was bounded only by the deadline that killed it; done by pointing the reviewer at what the plan names and letting it read further only for a specific finding.
 
@@ -236,12 +236,12 @@ places it.
 [sokf:issue-083-sokf-validation-follow-ups]: /knowledge/issues/wontfix/issue-083-sokf-validation-follow-ups.md
 [sokf:issue-084-a-blocking-review-finding-names-what-it-fails]: /knowledge/issues/open/issue-084-a-blocking-review-finding-names-what-it-fails.md
 [sokf:issue-085-scope-reauthors-a-plan-it-already-committed]: /knowledge/issues/open/issue-085-scope-reauthors-a-plan-it-already-committed.md
-[sokf:issue-086-a-recommended-choice-is-prose-not-a-choice]: /knowledge/issues/open/issue-086-a-recommended-choice-is-prose-not-a-choice.md
+[sokf:issue-086-a-recommended-choice-is-prose-not-a-choice]: /knowledge/issues/done/issue-086-a-recommended-choice-is-prose-not-a-choice.md
 [sokf:issue-087-a-correction-pass-is-told-to-author-a-plan]: /knowledge/issues/open/issue-087-a-correction-pass-is-told-to-author-a-plan.md
 [sokf:issue-088-a-re-review-is-not-told-what-changed]: /knowledge/issues/open/issue-088-a-re-review-is-not-told-what-changed.md
 [sokf:issue-089-an-exact-identifier-does-not-win-its-own-search]: /knowledge/issues/open/issue-089-an-exact-identifier-does-not-win-its-own-search.md
 [sokf:issue-090-search-callers-never-use-its-precision-controls]: /knowledge/issues/open/issue-090-search-callers-never-use-its-precision-controls.md
-[sokf:issue-091-an-isolated-role-loses-everything-at-its-deadline]: /knowledge/issues/open/issue-091-an-isolated-role-loses-everything-at-its-deadline.md
+[sokf:issue-091-an-isolated-role-loses-everything-at-its-deadline]: /knowledge/issues/done/issue-091-an-isolated-role-loses-everything-at-its-deadline.md
 [sokf:issue-092-a-requirements-review-has-no-declared-surface]: /knowledge/issues/done/issue-092-a-requirements-review-has-no-declared-surface.md
 [sokf:issue-093-a-human-cannot-force-the-next-phase]: /knowledge/issues/done/issue-093-a-human-cannot-force-the-next-phase.md
 [sokf:issue-094-every-search-process-reloads-the-embedding-model]: /knowledge/issues/open/issue-094-every-search-process-reloads-the-embedding-model.md

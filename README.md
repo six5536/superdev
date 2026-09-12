@@ -66,26 +66,35 @@ were found; type, tag and lifecycle filters narrow explicit scope.
 
 ### The workflow
 
-Pi's project extension orchestrates exactly `SCOPE → BUILD → ACCEPT`; durable
-state remains in one canonical issue and plan while Rust owns legal transitions,
-transient session ownership, and Git safety.
+Pi's project extension runs exactly `SCOPE → BUILD → ACCEPT`. SCOPE is a
+conversation with you; BUILD and ACCEPT execute automatically. Rust owns legal
+transitions, document approval, session ownership, and Git safety.
 
 ```
-/superdev <request>  # run or continue the complete workflow
-/scope               # requirements, isolated review, explicit approval
-/build               # isolated block loop, evidence, verification, fresh review
-/accept              # configured acceptance; leave the branch for a human merge
-/superdev-resume     # reconstruct state from the canonical plan
-/superdev-cancel     # pause and release transient ownership
+/superdev <request>  # invoke the human-led SCOPE checklist
+/skill:build         # implement the approved plan, block by block
+/skill:accept        # assess the candidate; leave the branch for a human merge
+/superdev-status     # local progress and current approval validity
+/superdev-resume     # resume saved progress, asking fresh step permission
+/superdev-cancel     # pause without discarding progress or valid approval
 /superdev-abandon    # explicit human-only abandonment
-/superdev-force      # human-only override of a SCOPE or ACCEPT gate the workflow refuses
 /skill:file <item>   # LLM-authored issue or idea on the default branch; worktree when elsewhere
 ```
 
-Every plan implements exactly one issue and uses the matching
-`work/<issue-number>-<slug>` branch. ACCEPT never pushes, releases, deletes the
-branch, or runs remote CI. Human acceptance is controlled only by
-`.superdev/config.toml`.
+SCOPE asks your permission for each step, and records repeated and skipped work
+as what it was. Approval binds the exact revision you read: an edit afterwards
+suspends it until the diff is assessed. Progress and approval live in
+`.superdev/workflows/`, which is local to the checkout and excluded from Git, so
+a fresh clone asks for approval again. Nothing in a document — its lifecycle,
+its prose, or its history — grants approval.
+
+Approving a plan starts nothing. BUILD begins on a separate request and creates
+the `work/<issue-number>-<slug>` branch then. BUILD and ACCEPT run in one
+persistent worker session that resets its own context between stages, so review
+and acceptance judge the candidate rather than the conversation that produced
+it. Correction budgets are durable: a reset or restart never grants another
+attempt. ACCEPT never pushes, releases, merges, or deletes the branch. Human
+acceptance is controlled only by `.superdev/config.toml`.
 
 ### Where the content comes from
 

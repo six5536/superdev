@@ -53,6 +53,8 @@
 * [Keys and EARS live in the contracts, and the workflow is file, scope, build, accept][sokf:adr-050-keys-and-ears-live-in-the-contracts-and-the-workflow-is-file-scope-build-accept] - keys and EARS are demanded of contracts alone, whose promises may nest keyed criteria; an issue is one plain template with kind and an open, done or wontfix lifecycle; a plan is one document holding the contract changes and the work blocks; the workflow is file, scope — which writes the plan and makes the contract changes through its sub-skills — build, which runs each block's tests and the full suite once, and an optional manual accept carrying the code review; the issues and plans on file are rewritten.
 * [A section rule declares nested items and an optional key][sokf:adr-051-a-section-rule-declares-nested-items-and-an-optional-key] - a section rule carries `nested`, the rule for the items one level below its own — `item-key`, `item-pattern`, `item-prohibited-pattern`, `required` and its own `nested`, to any depth — and `item-key-optional`, under which an item matching `item-key` is held to the keyed form and one not matching it is a plain item; keys are unique across every level of a document.
 
+* [SCOPE is human-led and approval is checkout-local][sokf:adr-056-scope-is-human-led-and-approval-is-checkout-local] - SCOPE runs in the controlling conversation with explicit per-step human permission and no child roles; durable progress and revision-bound document approval live in Git-ignored checkout-local records rather than in the plan; and BUILD and ACCEPT execute in one persistent worker session that resets its own context between stages without refilling a correction budget.
+
 <!-- sokf:links -->
 [sokf:adr-001-packs-manifest-section]: /knowledge/adrs/active/adr-001-packs-manifest-section.md
 [sokf:adr-002-resolve-before-plan]: /knowledge/adrs/active/adr-002-resolve-before-plan.md
@@ -105,3 +107,4 @@
 [sokf:adr-049-a-heading-is-declared-per-variant]: /knowledge/adrs/active/adr-049-a-heading-is-declared-per-variant.md
 [sokf:adr-050-keys-and-ears-live-in-the-contracts-and-the-workflow-is-file-scope-build-accept]: /knowledge/adrs/deprecated/adr-050-keys-and-ears-live-in-the-contracts-and-the-workflow-is-file-scope-build-accept.md
 [sokf:adr-051-a-section-rule-declares-nested-items-and-an-optional-key]: /knowledge/adrs/active/adr-051-a-section-rule-declares-nested-items-and-an-optional-key.md
+[sokf:adr-056-scope-is-human-led-and-approval-is-checkout-local]: /knowledge/adrs/active/adr-056-scope-is-human-led-and-approval-is-checkout-local.md

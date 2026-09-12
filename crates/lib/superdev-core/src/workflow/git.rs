@@ -1,18 +1,25 @@
 //! Shell-free Git operations and invariants used by workflow transitions.
 
-use std::collections::BTreeSet;
-use std::io::Write;
-use std::path::{Path, PathBuf};
-use std::process::{Command, Output, Stdio};
+use std::{
+    collections::BTreeSet,
+    io::Write,
+    path::{Path, PathBuf},
+    process::{Command, Output, Stdio},
+};
 
 use crate::error::{Error, Result};
 
 mod identity;
 mod integration;
+mod publication;
 pub use identity::{
     default_branch, local_branches, paths_at_revision, require_unique_record_number,
 };
 pub use integration::integrate_no_ff;
+pub use publication::{
+    PreparedPublication, finish_document_publication, prepare_document_publication,
+    require_local_state_ignored,
+};
 
 /// Fixed service-owned subject for immutable SCOPE proposal checkpoints.
 pub const SCOPE_CHECKPOINT_MESSAGE: &str = "docs(workflow): checkpoint scope proposal";
@@ -137,6 +144,27 @@ pub fn reference_exists(root: &Path, reference: &str) -> Result<bool> {
 pub fn current_branch(root: &Path) -> Result<String> {
     let output = git(root, &["symbolic-ref", "--short", "HEAD"])?;
     Ok(String::from_utf8_lossy(&output.stdout).trim().to_string())
+}
+
+/// Fingerprint the complete Git state: branch, HEAD, and every pending change.
+///
+/// Two equal fingerprints mean the checkout is in the same state. This is what
+/// an assessment stage is held to: it may run whatever it needs, and the
+/// question asked afterwards is whether anything actually changed. Enumerating
+/// the commands that could change something is not a boundary, because a shell
+/// reaches the same effect through a variable, a script, or a build tool.
+pub fn worktree_state(root: &Path) -> Result<String> {
+    let head = git(root, &["rev-parse", "--verify", "HEAD"])?;
+    let branch = git(root, &["symbolic-ref", "--quiet", "--short", "HEAD"])
+        .map(|output| output.stdout)
+        .unwrap_or_default();
+    // Untracked files count: a scratch file left behind is a changed checkout,
+    // and it is what would later refuse a clean-tree preflight.
+    let status = git(root, &["status", "--porcelain=v1", "--untracked-files=all"])?;
+    let mut bytes = head.stdout;
+    bytes.extend_from_slice(&branch);
+    bytes.extend_from_slice(&status.stdout);
+    Ok(crate::lock::sha256_hex(&bytes))
 }
 
 /// Fail unless tracked and untracked status is empty.

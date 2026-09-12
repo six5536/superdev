@@ -1,6 +1,6 @@
 ---
 name: file
-description: Quickly file an issue or idea on the default branch from any checkout without interrupting active work. Use when the user asks to capture a bug, feature, chore, or idea for later. Invoke with /skill:file.
+description: Use when the user asks to capture a bug, feature, chore or idea for later.
 allowed-tools: read edit write bash sokf_search sokf_graph superdev_ask
 ---
 

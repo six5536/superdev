@@ -1,274 +1,126 @@
-import { StringEnum } from "@earendil-works/pi-ai";
-import { Type } from "typebox";
-import type { ReviewFinding } from "./review.ts";
+import { randomUUID } from "node:crypto";
+import type { ExtensionContext, InputEvent } from "@earendil-works/pi-coding-agent";
 
-export type ConfirmedAnswer = { answer: string; findingIds: string[]; confirmedAt: string };
-export type QuestionState = {
-	version: 1;
-	workflow: string;
-	candidate: string;
-	originPhase?: "scope" | "build" | "accept";
-	status: "active" | "paused" | "submitted" | "superseded";
-	findings: ReviewFinding[];
-	mechanicalFindings?: ReviewFinding[];
-	cycle?: number;
-	answers: Record<string, ConfirmedAnswer>;
-	reason?: string;
+export type Choice = { id: string; label: string };
+export type Question = {
+	question: string;
+	choices: Choice[];
+	recommendation: { choiceId: string; reason: string };
+};
+export type HumanInput = { session: string; event: string; text: string };
+export type Reply =
+	| { status: "answered"; answer: string; choiceId?: string; input: HumanInput }
+	| { status: "discuss" | "other-action" | "paused"; text?: string };
+export type ApprovalTarget = { kind: "issue" | "plan"; id: string; hash: string };
+type Pending = {
+	id: string;
+	question: Question;
+	target?: ApprovalTarget;
+	respond: (reply: Reply, ctx: ExtensionContext) => Promise<unknown>;
 };
 
-export const QUESTION_ENTRY = "superdev-workflow-questions-v1";
+const controls = ["Type an answer", "Discuss", "Do something else", "Pause"];
+const normalise = (text: string) => text.trim().toLowerCase().replace(/[.!]$/, "");
 
-export function registerWorkflowQuestions(
-	pi: any,
-	options: {
-		maxBytes: () => number;
-		maxFindings: () => number;
-		onSubmit: (state: QuestionState, ctx: any) => Promise<void>;
-		onPause?: (state: QuestionState, ctx: any) => Promise<void>;
-		onResume?: (state: QuestionState, ctx: any) => Promise<void>;
-		exposeTool?: boolean;
-	},
-) {
-	let state: QuestionState | undefined;
-	let restoreIssue: string | undefined;
-	let priorTools: string[] | undefined;
-	const stateIssue = (value: Partial<QuestionState>): string | undefined => {
-		if (value.version !== 1 || typeof value.workflow !== "string" || typeof value.candidate !== "string"
-			|| !["active", "paused", "submitted", "superseded"].includes(String(value.status))
-			|| !Array.isArray(value.findings) || value.findings.length > options.maxFindings()
-			|| value.answers === null || typeof value.answers !== "object") return "saved workflow question state is corrupt or exceeds configured limits";
-		const ids = new Set<string>();
-		for (const finding of value.findings) {
-			if (!finding || typeof finding !== "object" || typeof finding.id !== "string" || !finding.id.trim()
-				|| ids.has(finding.id) || typeof finding.summary !== "string" || typeof finding.evidence !== "string"
-				|| typeof finding.impact !== "string" || !Array.isArray(finding.dependsOn ?? [])) {
-				return "saved workflow question state contains malformed findings";
-			}
-			ids.add(finding.id);
+/** Validate identities before adding presentation markers or reordering choices. */
+export function validateQuestion(question: Question): void {
+	if (!question.question.trim() || question.choices.length < 1 || question.choices.length > 8) {
+		throw new Error("A question requires text and one to eight choices");
+	}
+	const ids = new Set<string>();
+	const labels = new Set<string>();
+	for (const choice of question.choices) {
+		const label = normalise(choice.label);
+		if (!/^[a-z][a-z0-9-]*$/.test(choice.id) || ["discuss", "pause", "cancel", "other-action"].includes(choice.id) || ids.has(choice.id) || !label || labels.has(label)
+			|| controls.some((control) => normalise(control) === label) || choice.label.includes("[Recommended]")) {
+			throw new Error("Choice IDs and labels must be unique and must not contain control or presentation markers");
 		}
-		const byId = new Map(value.findings.map((finding) => [finding.id, finding]));
-		const visiting = new Set<string>();
-		const visited = new Set<string>();
-		const visit = (id: string): boolean => {
-			if (visiting.has(id)) return false;
-			if (visited.has(id)) return true;
-			visiting.add(id);
-			for (const dependency of byId.get(id)?.dependsOn ?? []) {
-				if (!ids.has(dependency) || dependency === id || !visit(dependency)) return false;
-			}
-			visiting.delete(id);
-			visited.add(id);
-			return true;
-		};
-		for (const id of ids) if (!visit(id)) return "saved workflow question state contains invalid or cyclic dependencies";
-		for (const [id, answer] of Object.entries(value.answers ?? {})) {
-			if (!ids.has(id) || !answer || typeof answer.answer !== "string" || !answer.answer.trim()
-				|| !Array.isArray(answer.findingIds) || !answer.findingIds.includes(id)
-				|| answer.findingIds.some((covered) => !ids.has(covered))) return "saved workflow question state contains malformed answers";
-			for (const covered of answer.findingIds) {
-				const peer = value.answers?.[covered];
-				if (!peer || peer.answer !== answer.answer || peer.findingIds.join("\0") !== answer.findingIds.join("\0")) {
-					return "saved workflow question state contains inconsistent multi-finding answers";
-				}
-			}
-		}
-		if (Buffer.byteLength(JSON.stringify(value)) > options.maxBytes()) return "saved workflow question state is corrupt or exceeds configured limits";
-	};
-	const persist = () => {
-		if (!state) return;
-		const issue = stateIssue(state);
-		if (issue) throw new Error(issue);
-		pi.appendEntry(QUESTION_ENTRY, state);
-	};
-	const activate = () => {
-		if (!priorTools) priorTools = pi.getActiveTools();
-		const allowed = new Set(["read", "sokf_search", "sokf_graph", "superdev_run_phase", "superdev_ask", ...(options.exposeTool === false ? [] : ["superdev_workflow_questions"])]);
-		pi.setActiveTools([...new Set([...priorTools.filter((tool: string) => allowed.has(tool)), ...(options.exposeTool === false ? [] : ["superdev_workflow_questions"])])]);
-	};
-	const deactivate = () => {
-		if (priorTools) pi.setActiveTools(priorTools);
-		priorTools = undefined;
-	};
-	const restore = (entries: any[]) => {
-		let candidate: unknown;
-		for (const entry of entries) if (entry.type === "custom" && entry.customType === QUESTION_ENTRY) candidate = entry.data;
-		if (candidate !== undefined) {
-			const value = candidate as Partial<QuestionState>;
-			restoreIssue = stateIssue(value);
-			if (!restoreIssue) state = value as QuestionState;
-		}
-		if (state?.status === "active") {
-			state.status = "paused";
-			state.reason = "restored after session restart; explicit resume required";
-			persist();
-		}
-		return state;
-	};
-	const begin = (next: QuestionState) => { state = next; persist(); activate(); };
-	const current = () => state;
-	const resume = async (ctx: any) => {
-		if (!state || state.status !== "paused") throw new Error("no paused workflow question queue is available");
-		await options.onResume?.(state, ctx);
-		state.status = "active"; persist(); activate();
-	};
-	const supersede = (reason: string) => {
-		if (!state) return;
-		state.status = "superseded";
-		state.reason = reason;
-		persist();
-		deactivate();
-	};
+		ids.add(choice.id); labels.add(label);
+	}
+	if (!ids.has(question.recommendation.choiceId) || !question.recommendation.reason.trim()) {
+		throw new Error("The recommendation must name a supplied choice and explain it");
+	}
+}
 
-	const snapshot = (offsetInput = 0, limitInput = 20) => {
-		if (!state || state.status === "superseded") return undefined;
-		const offset = Math.max(0, Math.floor(offsetInput));
-		const limit = Math.min(20, Math.max(1, Math.floor(limitInput)));
-		const page = state.findings.slice(offset, offset + limit);
-		return {
-			workflow: state.workflow,
-			candidate: state.candidate,
-			phase: state.originPhase ?? "scope",
-			status: state.status,
-			offset,
-			total: state.findings.length,
-			nextOffset: offset + page.length < state.findings.length ? offset + page.length : undefined,
-			findings: page.map((finding) => ({ ...finding, dependsOn: finding.dependsOn ?? [], answered: Boolean(state!.answers[finding.id]) })),
-		};
-	};
+/** A single transient question. It is not an approval ledger or a saved permission grant. */
+export class HumanQuestions {
+	private pending?: Pending;
+	constructor(private readonly report: (value: unknown, ctx: ExtensionContext) => void) {}
 
-	const questionTool = {
-		name: "superdev_workflow_questions",
-		label: "Superdev workflow questions",
-		description: "Inspect, ask, confirm, revise, pause, resume, or submit the active revision-bound workflow decision queue",
-		parameters: Type.Object({
-			action: StringEnum(["inspect", "ask", "propose-answer", "revise", "submit", "pause", "resume"] as const),
-			findingId: Type.Optional(Type.String()),
-			findingIds: Type.Optional(Type.Array(Type.String())),
-			proposedAnswer: Type.Optional(Type.String()),
-			offset: Type.Optional(Type.Number({ minimum: 0 })),
-			limit: Type.Optional(Type.Number({ minimum: 1, maximum: 20 })),
-		}),
-		executionMode: "sequential",
-		execute: async (_id: string, input: any, _signal: AbortSignal, _update: unknown, ctx: any) => {
-			if (!state || state.status === "superseded") throw new Error("no active workflow question queue");
-			if (input.action === "inspect") {
-				return {
-					content: [{ type: "text", text: JSON.stringify(snapshot(input.offset, input.limit)) }],
-					details: { questionState: true },
-				};
-			}
-			if (input.action === "pause") {
-				state.status = "paused"; persist();
-				await options.onPause?.(state, ctx);
-				deactivate();
-				return { content: [{ type: "text", text: "Workflow questions paused and ownership released. Say ‘resume workflow questions’ to continue." }], details: { paused: true } };
-			}
-			if (input.action === "resume") {
-				await resume(ctx);
-				return { content: [{ type: "text", text: "Workflow questions resumed. Inspect the queue and ask the next dependency-eligible finding." }], details: { resumed: true } };
-			}
-			if (state.status !== "active") throw new Error(`workflow question queue is ${state.status}`);
-			if (input.action === "revise") {
-				if (!input.findingId || !state.answers[input.findingId]) throw new Error("revise requires one answered finding ID");
-				const affected = new Set(state.answers[input.findingId].findingIds);
-                let changed = true;
-                while (changed) {
-                    changed = false;
-                    for (const finding of state.findings) {
-                        if ((finding.dependsOn ?? []).some(id => affected.has(id)) && !affected.has(finding.id)) {
-                            affected.add(finding.id);
-                            for (const id of state.answers[finding.id]?.findingIds ?? []) affected.add(id);
-                            changed = true;
-                        }
-                    }
-                }
-                const covered = [...affected];
-				for (const id of covered) delete state.answers[id];
-				persist();
-				return { content: [{ type: "text", text: `Reopened ${covered.join(", ")}. Discuss or ask it again.` }], details: { reopened: covered } };
-			}
-			if (input.action === "ask") {
-				const finding = state.findings.find((candidate) => candidate.id === input.findingId);
-				if (!finding) throw new Error("ask requires a finding from the active queue");
-				if (state.answers[finding.id]) throw new Error("answered findings must be reopened with revise before asking again");
-				const unresolved = (finding.dependsOn ?? []).filter((id) => !state!.answers[id]);
-				if (unresolved.length) throw new Error(`finding depends on unresolved answers: ${unresolved.join(", ")}`);
-				if (!ctx.hasUI) {
-					state.status = "paused"; persist();
-					await options.onPause?.(state, ctx);
-					deactivate();
-					return { content: [{ type: "text", text: JSON.stringify({ status: "human-input-required", workflow: state.workflow, phase: state.originPhase ?? "scope", pendingAction: `answer ${finding.id}`, resume: "Resume workflow questions in an interactive session" }) }], details: { humanInputRequired: true } };
-				}
-				const choices = [...(finding.choices ?? []).map((choice) => choice.label), "Type another answer", "Back", "Discuss", "Pause workflow questions"];
-				const selected = await ctx.ui.select(`${finding.question ?? finding.summary}\nRecommendation: ${finding.recommendation ?? "Discuss before deciding."}`, choices);
-				if (!selected || selected === "Discuss") return { content: [{ type: "text", text: `Discuss finding ${finding.id}: ${finding.summary}\n${finding.evidence}\nImpact: ${finding.impact}` }], details: { discuss: finding.id } };
-				if (selected === "Back") return { content: [{ type: "text", text: "Choose another dependency-eligible finding or revise an earlier answer." }], details: { back: true } };
-				if (selected === "Pause workflow questions") {
-					state.status = "paused"; persist();
-					await options.onPause?.(state, ctx);
-					deactivate();
-					return { content: [{ type: "text", text: "Workflow questions paused and ownership released." }], details: { paused: true } };
-				}
-				let answer = selected;
-				if (selected === "Type another answer") answer = (await ctx.ui.input("Your answer", finding.question ?? finding.summary))?.trim();
-				if (!answer) throw new Error("answer was empty");
-				const confirmed: ConfirmedAnswer = { answer, findingIds: [finding.id], confirmedAt: new Date().toISOString() };
-				state.answers[finding.id] = confirmed; persist();
-				return { content: [{ type: "text", text: `Confirmed provisional answer for ${finding.id}: ${answer}. Choose the next question dynamically.` }], details: { answered: [finding.id] } };
-			}
-			if (input.action === "propose-answer") {
-				const ids = input.findingIds?.length ? input.findingIds : input.findingId ? [input.findingId] : [];
-				if (!ids.length || !input.proposedAnswer?.trim()) throw new Error("propose-answer requires finding IDs and a proposed answer");
-				const findings = ids.map((id: string) => state!.findings.find((finding) => finding.id === id));
-				if (findings.some((finding: ReviewFinding | undefined) => !finding)) throw new Error("proposed answer names an unknown finding");
-				const unresolved = findings.flatMap((finding: ReviewFinding) => (finding.dependsOn ?? []).filter(id => !state!.answers[id] && !ids.includes(id)));
-                if (unresolved.length) throw new Error(`finding depends on unresolved answers: ${unresolved.join(", ")}`);
-                const impact = findings.map((finding: ReviewFinding) => `${finding.id}: ${finding.summary}`).join("\n");
-				if (!ctx.hasUI) {
-					state.status = "paused"; persist();
-					await options.onPause?.(state, ctx);
-					deactivate();
-					return { content: [{ type: "text", text: JSON.stringify({ status: "human-input-required", workflow: state.workflow, phase: state.originPhase ?? "scope", pendingAction: `confirm answer for ${ids.join(", ")}`, resume: "Resume workflow questions in an interactive session" }) }], details: { humanInputRequired: true, confirmed: false } };
-				}
-				if (!(await ctx.ui.confirm("Confirm proposed workflow answer?", `${input.proposedAnswer}\n\nCovers:\n${impact}`))) {
-					return { content: [{ type: "text", text: "Proposed answer was not confirmed; continue discussion." }], details: { confirmed: false } };
-				}
-				const replacedGroups = new Set(ids.flatMap((id: string) => state!.answers[id]?.findingIds ?? []));
-				for (const [id, answer] of Object.entries(state.answers)) {
-					if (answer.findingIds.some((covered) => ids.includes(covered)) || replacedGroups.has(id)) delete state.answers[id];
-				}
-				const confirmed: ConfirmedAnswer = { answer: input.proposedAnswer.trim(), findingIds: ids, confirmedAt: new Date().toISOString() };
-				for (const id of ids) state.answers[id] = confirmed;
-				persist();
-				return { content: [{ type: "text", text: `Confirmed provisional answer covering ${ids.join(", ")}.` }], details: { confirmed: true, answered: ids } };
-			}
-			const unanswered = state.findings.filter((finding) => !state!.answers[finding.id]);
-			if (unanswered.length) throw new Error(`cannot submit; unanswered findings: ${unanswered.map((finding) => finding.id).join(", ")}`);
-			const groups = new Map<string, ConfirmedAnswer>();
-			for (const answer of Object.values(state.answers)) groups.set(`${answer.findingIds.join("\0")}\0${answer.answer}`, answer);
-			const summary = [...groups.values()].map((answer) => `${answer.findingIds.join(", ")}: ${answer.answer}`).join("\n");
-			if (!ctx.hasUI) {
-				state.status = "paused"; persist();
-				await options.onPause?.(state, ctx);
-				deactivate();
-				return { content: [{ type: "text", text: JSON.stringify({ status: "human-input-required", workflow: state.workflow, phase: state.originPhase ?? "scope", pendingAction: "submit all confirmed answers", resume: "Resume workflow questions in an interactive session" }) }], details: { humanInputRequired: true, submitted: false } };
-			}
-			if (!(await ctx.ui.confirm("Submit all workflow answers?", summary))) {
-				return { content: [{ type: "text", text: "Answers remain provisional and editable." }], details: { submitted: false } };
-			}
-			state.status = "submitted"; persist(); deactivate();
-			try {
-				await options.onSubmit(state, ctx);
-			} catch (error) {
-				state.status = "paused";
-				state.reason = `continuation failed: ${String(error)}`;
-				persist();
-				throw error;
-			}
-			return { content: [{ type: "text", text: "Submitted the complete confirmed answer set for one batched correction." }], details: { submitted: true } };
-		},
-	};
-	if (options.exposeTool !== false) pi.registerTool(questionTool);
-	const operate = (input: any, ctx: any) => questionTool.execute("internal", input, new AbortController().signal, undefined, ctx);
-	return { begin, current, snapshot, resume, restore, restoreIssue: () => restoreIssue, activate, deactivate, supersede, operate };
+	view() {
+		if (!this.pending) return undefined;
+		return { id: this.pending.id, ...this.pending.question, target: this.pending.target };
+	}
+
+	clear() { this.pending = undefined; }
+
+	async ask(question: Question, ctx: ExtensionContext,
+		respond: Pending["respond"], target?: ApprovalTarget): Promise<unknown> {
+		validateQuestion(question);
+		if (this.pending) throw new Error("A question is still pending; answer it, discuss it, choose another action, or pause");
+		const pending: Pending = { id: randomUUID(), question, respond, target };
+		this.pending = pending;
+		if (!ctx.hasUI || ctx.mode !== "tui") {
+			return { status: "human-input-required", pending: this.view() };
+		}
+		const ordered = [...question.choices].sort((a, b) => Number(b.id === question.recommendation.choiceId) - Number(a.id === question.recommendation.choiceId));
+		const labels = ordered.map((choice) => `${choice.label}${choice.id === question.recommendation.choiceId ? " [Recommended]" : ""}`);
+		const selected = await ctx.ui.select(`${question.question}\n${question.recommendation.reason}`, [...labels, ...controls]);
+		if (this.pending !== pending) return { status: "question-already-resolved" };
+		if (!selected || selected === "Pause") return this.finish(pending, { status: "paused" }, ctx);
+		if (selected === "Discuss") return this.finish(pending, { status: "discuss" }, ctx);
+		if (selected === "Do something else") return this.finish(pending, { status: "other-action" }, ctx);
+		if (selected === "Type an answer") {
+			const text = await ctx.ui.input(question.question);
+			if (!text?.trim()) return this.finish(pending, { status: "paused" }, ctx);
+			const reply = this.parse(text, pending, ctx, true);
+			return reply ? this.finish(pending, reply, ctx) : this.finish(pending, { status: "discuss", text }, ctx);
+		}
+		const choice = ordered[labels.indexOf(selected)];
+		if (!choice) throw new Error("The UI returned a choice outside the pending question");
+		return this.finish(pending, this.answer(choice.label, ctx, choice.id), ctx);
+	}
+
+	/** Pi's existing interactive path (including earlier transformers) is trusted.
+	 * Extension/worker input, RPC, and model arguments cannot call this path. */
+	async onInput(event: InputEvent, ctx: ExtensionContext) {
+		const pending = this.pending;
+		if (!pending || event.source !== "interactive" || ctx.mode !== "tui") return { action: "continue" as const };
+		const reply = this.parse(event.text, pending, ctx, false);
+		if (!reply) return { action: "continue" as const }; // Ordinary discussion leaves the question intact.
+		try { this.report(await this.finish(pending, reply, ctx), ctx); }
+		catch (error) { this.report({ status: "failed", diagnostic: String(error), partialWorkPreserved: true }, ctx); }
+		return { action: "handled" as const };
+	}
+
+	private answer(text: string, ctx: ExtensionContext, choiceId?: string): Reply {
+		return { status: "answered", answer: text, choiceId,
+			input: { session: ctx.sessionManager.getSessionId(), event: randomUUID(), text } };
+	}
+
+	private parse(text: string, pending: Pending, ctx: ExtensionContext, typed: boolean): Reply | undefined {
+		const value = normalise(text);
+		if (value === "pause" || value === "cancel") return { status: "paused" };
+		if (value === "discuss") return { status: "discuss" };
+		if (value === "do something else") return { status: "other-action" };
+		if (pending.target) {
+			const target = pending.target;
+			const phrases = ["approve", "i approve", `approve ${target.id}`, `i approve ${target.id}`,
+				`approve the ${target.kind}`, `i approve the ${target.kind}`, `approve this ${target.kind}`, `i approve this ${target.kind}`];
+			return phrases.includes(value) ? this.answer(text, ctx, "approve") : undefined;
+		}
+		const choice = pending.question.choices.find((choice) => value === normalise(choice.id) || value === normalise(choice.label));
+		if (choice) return this.answer(text, ctx, choice.id);
+		if (typed) return this.answer(text.trim(), ctx);
+		if (/^answer:\s*\S/i.test(text)) return this.answer(text.replace(/^answer:\s*/i, "").trim(), ctx);
+		return undefined;
+	}
+
+	private async finish(pending: Pending, reply: Reply, ctx: ExtensionContext): Promise<unknown> {
+		if (this.pending !== pending) return { status: "question-already-resolved" };
+		// Consume before any asynchronous write. A UI reply and a chat reply
+		// cannot authorise the same action twice. Discussion retains the question.
+		if (reply.status !== "discuss") this.pending = undefined;
+		return pending.respond(reply, ctx);
+	}
 }

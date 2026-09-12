@@ -187,4 +187,4 @@ plans. The mechanism, however, is in the prompt rather than in the plan, so it
 applies wherever the closure is followed.
 
 <!-- sokf:links -->
-[sokf:issue-091-an-isolated-role-loses-everything-at-its-deadline]: /knowledge/issues/open/issue-091-an-isolated-role-loses-everything-at-its-deadline.md
+[sokf:issue-091-an-isolated-role-loses-everything-at-its-deadline]: /knowledge/issues/done/issue-091-an-isolated-role-loses-everything-at-its-deadline.md

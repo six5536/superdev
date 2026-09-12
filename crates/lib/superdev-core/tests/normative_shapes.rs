@@ -1682,13 +1682,10 @@ fn packed_pi_assets_and_their_lock_hashes_are_synchronized() {
     let lock = superdev_core::lock::Lock::load(&repo(".")).unwrap();
     for relative in [
         "extensions/superdev/index.ts",
-        "extensions/superdev/prompts/accept.md",
-        "extensions/superdev/prompts/build.md",
-        "extensions/superdev/prompts/code-review.md",
         "extensions/superdev/skills/file/SKILL.md",
-        "extensions/superdev/prompts/orchestrator.md",
-        "extensions/superdev/prompts/requirements-review.md",
-        "extensions/superdev/prompts/scope.md",
+        "extensions/superdev/skills/scope/SKILL.md",
+        "extensions/superdev/skills/build/SKILL.md",
+        "extensions/superdev/skills/accept/SKILL.md",
         "skills/sokf-authoring/SKILL.md",
     ] {
         let live_path = format!(".pi/{relative}");
@@ -1722,20 +1719,28 @@ fn each_harness_receives_its_own_sokf_authoring_skill() {
         "{} does not allocate identity before creation",
         pi_path.display()
     );
-    assert!(
-        pi.contains("sokf_search"),
-        "{} is not Pi-specific",
-        pi_path.display()
-    );
-    assert!(
-        pi.contains("Pi's own `read`, `edit`, and `write` on physical `knowledge/` paths"),
-        "{} does not direct authoring to Pi's own file tools",
-        pi_path.display()
-    );
     assert!(!pi.contains("path=\"sokf:"), "{pi}");
+    // Tool selection and turn-end repair each have one authored home, so the
+    // skill no longer repeats them. Check those homes instead of accepting
+    // that the guidance vanished.
+    let extension = std::fs::read_to_string(repo(".pi/extensions/sokf.ts")).unwrap();
     assert!(
-        pi.contains("one unconditional `superdev validate --fix` at turn end"),
-        "{pi}"
+        extension.contains("Use sokf_search to find relevant project knowledge"),
+        "the Pi extension no longer tells a session when to search SOKF"
+    );
+    assert!(
+        extension.contains("`read`, `edit`, and `write` are Pi's"),
+        "the Pi extension no longer leaves knowledge paths to Pi's own file tools"
+    );
+    let instructions =
+        std::fs::read_to_string(repo("crates/lib/superdev-core/src/agent-instructions.md")).unwrap();
+    assert!(
+        instructions.contains("Read and modify known physical `knowledge/` path directly"),
+        "the canonical instructions no longer direct authoring to physical paths"
+    );
+    assert!(
+        instructions.contains("superdev validate --fix"),
+        "the canonical instructions no longer describe turn-end repair"
     );
     assert!(
         !repo(".pi/settings.json").exists(),
@@ -1842,13 +1847,16 @@ fn the_workflow_reads_scope_build_accept() {
     }
     let filing =
         std::fs::read_to_string(repo(".pi/extensions/superdev/skills/file/SKILL.md")).unwrap();
-    assert!(filing.contains("/skill:file"));
+    assert!(filing.contains("name: file"), "the filing skill lost its invocable name");
     assert!(filing.contains("Filing does not start SCOPE or BUILD"));
     let extension = std::fs::read_to_string(repo(".pi/extensions/superdev/index.ts")).unwrap();
     assert!(extension.contains("Human-only abandonment with knowledge disposition"));
+    // The retired force command had one purpose: overriding a SCOPE or ACCEPT
+    // gate. Human-led SCOPE has no review barrier to override, so an override
+    // path would now only weaken the human's own decision.
     assert!(
-        extension
-            .contains("Human-only override of a SCOPE or ACCEPT gate the workflow is refusing")
+        !extension.contains("Human-only override"),
+        "a gate-override command returned to a workflow that no longer refuses the human"
     );
 }
 

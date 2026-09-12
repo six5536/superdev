@@ -136,4 +136,4 @@ touches from the presentation side. Whether a correction pass should receive
 more of the deciding context is a separate question from what its prompt says.
 
 <!-- sokf:links -->
-[sokf:issue-086-a-recommended-choice-is-prose-not-a-choice]: /knowledge/issues/open/issue-086-a-recommended-choice-is-prose-not-a-choice.md
+[sokf:issue-086-a-recommended-choice-is-prose-not-a-choice]: /knowledge/issues/done/issue-086-a-recommended-choice-is-prose-not-a-choice.md

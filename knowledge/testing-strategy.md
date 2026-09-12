@@ -8,6 +8,18 @@ sources:
   - id: contributing
     resource: /CONTRIBUTING.md
     title: Contributing guide (test layers and commands)
+  - id: workflow-runtime
+    resource: /scripts/test/superdev-workflow-runtime.test.mjs
+    title: Pinned Pi runtime proof and input-provenance characterisation
+  - id: workflow-scope
+    resource: /scripts/test/superdev-workflow-scope.test.mjs
+    title: Human-led SCOPE against the real extension, Rust service, and Git
+  - id: workflow-execution
+    resource: /scripts/test/superdev-workflow-execution.test.mjs
+    title: BUILD and ACCEPT against the real extension, Rust service, and Git
+  - id: pi-input-source
+    resource: https://github.com/earendil-works/pi/blob/v0.85.1/packages/coding-agent/src/core/extensions/runner.ts
+    title: Pi 0.85.1 input-handler ordering and source labels
 ---
 
 Tests run under `cargo-nextest` (`npm test`); the commands and the coverage
@@ -88,6 +100,50 @@ gate are in [CONTRIBUTING](/CONTRIBUTING.md).[^contributing]
   A scripted provider drives the real Pi loop without network calls: first
   reports arrive before subsequent tool turns, and later reports are visible
   without waiting for another user prompt or triggering another turn.
+- **Workflow runtime.**
+  `node --test scripts/test/superdev-workflow-runtime.test.mjs` drives the pinned
+  Pi SDK in temporary directories with a scripted provider and no network
+  model calls. It checks same-session clean-context navigation, process restart,
+  removal of old compaction summaries, assessment tool lists, checkpoint and
+  navigation failures, pending tools, and input-source handling. It also drives
+  the shipped `WorkerSession` and worker host — not a re-implementation —
+  through consecutive stages in one session, a reset that removes the
+  implementation conversation, a worker question answered by the controller, a
+  refused question that does not strand the worker, a refused second worker,
+  orderly stop, restart reusing the same session file, an interrupted stage
+  reported as interrupted, and termination of an unresponsive process tree.
+  The approved design trusts Pi's existing
+  interactive-input path and installed input transformers. Pi passes transformed
+  text to later handlers while retaining the input channel; the test records
+  this accepted trust boundary, not proof of original pre-transform text or a
+  reason to modify Pi.[^pi-input-source] The probe rejects extension/worker and
+  RPC input, model approval flags, stale revisions, and approval reuse. Direct
+  discussion does not approve anything; an explicit approval needs no second
+  confirmation. All tests use the unmodified pinned SDK. No terminal UI
+  rehearsal is claimed by this suite.[^workflow-runtime]
+- **Human-led SCOPE.**[^workflow-scope] `node --test scripts/test/superdev-workflow-scope.test.mjs`
+  runs the production extension inside a real pinned Pi session against the real
+  Rust service and Git. It proves wrong-branch refusal before anything is
+  created, that `sendUserMessage` and RPC input reserve, permit, and approve
+  nothing, drafting guards, repeated interviews with an intervening discussion,
+  skipped steps recorded as skipped, open findings retained through repeated
+  checks, a pause ending an unused permission while approvals and saved
+  discussion survive, refusal of stale bytes and of a model approval flag,
+  acceptance of a trusted interactive transform, publication exactly once under
+  replay, and plan approval that creates no branch. A separate fixture proves
+  stable choice identities, reserved control words, and that discussion keeps a
+  question pending.
+- **BUILD and ACCEPT.**[^workflow-execution]
+  `node --test scripts/test/superdev-workflow-execution.test.mjs` drives the same
+  production surface through execution: operations refused before BUILD starts,
+  the handoff creating the work branch, a current-session stage disclosing its
+  absent context reset, a block commit refused for reaching outside its declared
+  areas with history unchanged, a block committed once, exhausted and unbudgeted
+  retries, `complete-build` refused on a dirty worktree, acceptance refused
+  without a readable policy, ACCEPT findings returning to BUILD and superseding
+  the candidate while preserving approval and consumed retries, and human
+  acceptance closing the workflow without merging, pushing, or moving the
+  branch.
 - **LLM search development experiment.** `scripts/sokf-search-eval.mjs` uses
   six tasks from `evals/sokf/search.json`. Luna composes search requests and
   selects evidence from actual CLI results; expected concepts are hidden.
@@ -130,6 +186,10 @@ Tests run on **Linux, macOS, and Windows** — see
 [software-components][sokf:software-components] for the workflow layout.
 
 [^contributing]: Contributing guide (test layers and commands)
+[^workflow-runtime]: Pinned Pi runtime proof, persistent worker, and accepted interactive-input trust boundary
+[^workflow-scope]: Human-led SCOPE against the real extension, Rust service, and Git
+[^workflow-execution]: BUILD and ACCEPT against the real extension, Rust service, and Git
+[^pi-input-source]: The checked upstream handler chain replaces current text while retaining its input channel
 
 <!-- sokf:links -->
 [sokf:architecture]: /knowledge/architecture.md

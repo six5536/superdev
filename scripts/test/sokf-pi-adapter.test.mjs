@@ -105,37 +105,6 @@ test("the pinned workflow service resumes an older work branch without merging",
   assert.match(stdout, /SUPERDEV_SERVICE_CHECKOUT_PASS/);
 });
 
-test("the real Pi child repairs terminal submission once without repeating work", { timeout: 60_000 }, async () => {
-  const directory = await mkdtemp(join(tmpdir(), "superdev-terminal-lifecycle-"));
-  try {
-    for (const scenario of ["accepted", "rejected", "rejected-runtime", "missing", "unrepaired"]) {
-      const childRun = run(process.execPath, [
-        resolve(repository, "node_modules/@earendil-works/pi-coding-agent/dist/bundle/cli.js"),
-        "--offline", "--no-extensions", "--no-skills", "--no-session", "--approve", "--mode", "json", "-p",
-        "-e", resolve(here, "fixtures/superdev-terminal-provider.ts"),
-        "--provider", "superdev-terminal-test", "--model", "scripted",
-        "--tools", "read,edit,superdev_submit_result", "Exercise terminal repair",
-      ], {
-        cwd: directory, timeout: 15_000, maxBuffer: 2 * 1024 * 1024,
-        env: { ...process.env, PI_CODING_AGENT_DIR: join(directory, "agent"), SUPERDEV_CHILD_ROLE: "scope", SUPERDEV_VERIFICATION_ACTIVE: "1", SUPERDEV_TERMINAL_SCENARIO: scenario },
-      });
-      childRun.child.stdin.end();
-      const { stdout } = await childRun;
-      const events = stdout.trim().split("\n").map((line) => JSON.parse(line));
-      const results = events.filter((event) => event.type === "tool_execution_end");
-      const accepted = results.filter((event) => !event.isError && event.result?.details?.superdevResult);
-      assert.equal(accepted.length, scenario === "unrepaired" ? 0 : 1, scenario);
-      const rejected = scenario.startsWith("rejected");
-      assert.equal(results.filter((event) => event.isError).length, rejected ? 1 : 0, scenario);
-      const repairs = events.filter((event) => event.type === "message_start" && event.message?.customType === "superdev-terminal-repair");
-      assert.equal(repairs.length, scenario === "accepted" ? 0 : 1, scenario);
-      if (rejected) assert.ok(repairs[0].message.content.includes(results[0].result.content[0].text), "repair omitted the rejection reason");
-      assert.equal(events.filter((event) => event.type === "turn_start").length, scenario === "accepted" ? 1 : rejected ? 3 : 2, scenario);
-      assert.ok(results.every((event) => event.toolName === "superdev_submit_result"));
-    }
-  } finally { await rm(directory, { recursive: true, force: true }); }
-});
-
 test("the Superdev Pi extension executes its complete surface", { timeout: 180_000 }, async () => {
   const { stdout } = await run(process.execPath, ["--experimental-transform-types", workflowFixture], {
     cwd: repository, timeout: 170_000,

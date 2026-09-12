@@ -139,11 +139,13 @@ that no `read`, `edit` or `write` is registered, that the graph carries paths,
 and that the turn-end sequence triggers once, stays visible, and resets —
 without making a model call.
 
-`.pi/extensions/superdev/index.ts` registers `/superdev`,
-resume, cancellation, and human-only abandonment. Its
-private Markdown prompts are appended to fresh child Pi processes with fixed
-modifying or read-only tool sets. The extension delegates all durable changes
-to the versioned Rust workflow CLI.
+`.pi/extensions/superdev/index.ts` registers `/superdev`, status, resume,
+cancellation, and human-only abandonment, plus the `superdev_run_phase` and
+`superdev_ask` tools. `lib/scope.ts` drives the human-led SCOPE checklist,
+`lib/execution.ts` drives BUILD and ACCEPT, and `lib/worker.ts` with
+`lib/worker-host.ts` run at most one persistent worker process over Node's IPC
+channel. The worker holds no controller capability. The extension delegates
+every durable change to the versioned Rust workflow CLI.
 
 `.pi/skills/sokf-authoring/SKILL.md` is a genuine independently invocable Pi
 skill for authoring physical knowledge paths with Pi's own file tools, mirrored
@@ -153,7 +155,9 @@ Superdev's `file`, `scope`, `build`, and `accept` skills live under
 The extension registers that directory through `resources_discover` on startup
 and reload; Pi exposes the resources as native `/skill:*` commands and model
 prompt entries. No copies live in the general `.pi/skills/` directory.
-The `scope`, `build`, and `accept` skills invoke the typed workflow tools. The native
+The `scope`, `build`, and `accept` skills invoke the typed workflow tools and
+carry their own stage checklists; `grill-me` and `double-check` are invoked
+within the SCOPE conversation rather than delegated to a child. The native
 `file` skill lets the LLM choose an issue or idea number, author and validate the
 record, and commit it on the default branch through ordinary tools, using a
 worktree when elsewhere. Filing has no dedicated command, tool, or child role. All former Claude workflow skills and

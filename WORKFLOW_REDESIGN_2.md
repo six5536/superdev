@@ -1,7 +1,8 @@
 # Workflow redesign 2
 
-Status: design draft, double-checked; open design questions remain. This is not
-an approved implementation plan.
+Status: redesign requirements, double-checked. The user authorised the linked
+[implementation plan](WORKFLOW_REDESIGN_2_PLAN.md) and accepted the existing Pi
+interactive-input trust boundary. Pi remains unchanged; block 2 can proceed.
 
 This document records a redesign discussed outside the existing workflow. No
 SCOPE, BUILD, or ACCEPT phase is started by writing it. The `<superdev>` prompt
@@ -43,8 +44,12 @@ Select/create issue
 - Each step transition needs human permission. Permission can cover an explicit
   group of named steps, such as "write the issue and double-check it".
 - Explicit chat approval or an approval choice in the ask tool counts. Do not
-  require a second confirmation dialog. Clarify ambiguous instructions rather
-  than infer approval from general agreement.
+  require a second confirmation dialog. Trust Pi's existing interactive-input
+  path, including installed input transformers, to preserve approval intent.
+  Still reject extension/worker messages and model approval claims, and bind
+  approval to the named document revision. Do not modify Pi or require a new
+  input interface. Clarify ambiguous instructions rather than infer approval
+  from general agreement.
 - At each decision point, show the current step, recommend the next action,
   and offer Continue, Discuss, Do something else, and Pause.
 - Accept typed instructions, including requests to repeat or skip steps. The
@@ -465,5 +470,6 @@ claims must be checked against that dependency, not inferred from documentation
 alone.
 
 No worker prototype, context-reset integration test, workflow migration, or
-product implementation was run. This is a document/design review, not evidence
-that the redesign already works.
+product implementation was run during this design review. The linked
+implementation plan now records the subsequent SDK proof and the accepted
+interactive-input trust boundary. The redesign is not implemented.

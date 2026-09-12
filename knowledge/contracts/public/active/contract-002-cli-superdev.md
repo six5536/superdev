@@ -315,182 +315,29 @@ pub enum SokfCommand {
 
 <!-- sokf:include /crates/app/superdev/src/workflow_cli.rs#cli -->
 ```rust
-/// Versioned workflow operations used by the Pi adapter.
+/// Local workflow operations. Legacy phase-in-plan mutation commands are removed.
 #[derive(Subcommand)]
 pub enum WorkflowCommand {
-    /// Acquire a workflow for an issue, plan, and reserved work branch
-    Start(BindArgs),
-    /// Report transient ownership and canonical identity
+    /// Apply one typed JSON request from standard input, on controller authority
+    Apply(ControllerArgs),
+    /// Report local records, current approval validity, and transient ownership
     Status {
-        /// Emit the versioned JSON protocol response
+        /// Emit the versioned JSON response (also the default)
         #[arg(long)]
         json: bool,
     },
-    /// Acquire or resume ownership with the same identity
-    Bind(BindArgs),
-    /// Apply one typed phase transition after checking supplied evidence
-    Transition(TransitionArgs),
-    /// Commit the current owned work-branch changes under one message
-    Commit(CommitArgs),
-    /// Reconstruct and acquire ownership for a known workflow
-    Resume(BindArgs),
-    /// Record one active isolated child for cross-instance status and recovery
-    ActivityStart(ActivityStartArgs),
-    /// Clear the active isolated child after exit
-    ActivityFinish(RevisionArgs),
-    /// Pause by releasing transient ownership without changing plan phase
-    Cancel(SessionArgs),
-    /// Apply the human-only abandonment transition
-    Abandon(AbandonArgs),
 }
 
-/// Stable workflow identity and Pi ownership arguments.
-#[derive(Args, Clone)]
-pub struct BindArgs {
-    /// Owning Pi session ID
-    #[arg(long)]
-    session: String,
-    /// Primary issue ID
-    #[arg(long)]
-    issue: String,
-    /// Implementing plan ID
-    #[arg(long)]
-    plan: String,
-    /// Reserved work branch
-    #[arg(long)]
-    work_branch: String,
-    /// Local default branch
-    #[arg(long, default_value = "")]
-    default_branch: String,
-    /// Owning Pi process ID, so an abandoned claim becomes decidable
-    #[arg(long)]
-    owner_pid: Option<u32>,
-}
-
-/// Active parent and child process identity.
+/// Private controller invocation; neither credentials nor approval flags are model arguments.
 #[derive(Args)]
-pub struct ActivityStartArgs {
-    /// Owning Pi session ID.
+pub struct ControllerArgs {
+    /// Long-lived controlling Pi session ID
     #[arg(long)]
     session: String,
-    /// Expected current plan content revision.
-    #[arg(long)]
-    expected_revision: String,
-    /// Isolated workflow role.
-    #[arg(long)]
-    role: String,
-    /// Owning Pi process ID.
+    /// Long-lived controller process, not this service process
     #[arg(long)]
     owner_pid: u32,
-    /// Isolated child process ID.
-    #[arg(long)]
-    child_pid: u32,
 }
-
-/// One committed workflow checkpoint on the owned work branch.
-#[derive(Args)]
-pub struct CommitArgs {
-    /// Owning Pi session ID
-    #[arg(long)]
-    session: String,
-    /// Expected current plan content revision
-    #[arg(long)]
-    expected_revision: String,
-    /// Single-line commit message
-    #[arg(long)]
-    message: String,
-}
-
-/// Session and plan compare-and-swap arguments.
-#[derive(Args)]
-pub struct RevisionArgs {
-    /// Owning Pi session ID
-    #[arg(long)]
-    session: String,
-    /// Expected current plan content revision
-    #[arg(long)]
-    expected_revision: String,
-}
-
-/// Session ownership argument.
-#[derive(Args)]
-pub struct SessionArgs {
-    /// Owning Pi session ID
-    #[arg(long)]
-    session: String,
-    /// Release a claim whose owner cannot be proven live, on human authority
-    #[arg(long)]
-    human_release: bool,
-}
-
-/// Typed phase transition names.
-#[derive(Clone, Copy, ValueEnum)]
-pub enum TransitionName {
-    /// SCOPE to BUILD
-    ApproveScope,
-    /// BUILD to SCOPE
-    ReturnToScope,
-    /// ACCEPT to SCOPE
-    RejectAcceptance,
-    /// ACCEPT findings within approved intent to BUILD
-    ReturnToBuild,
-    /// BUILD to ACCEPT once the reviewed candidate is ready
-    CompleteBuild,
-    /// ACCEPT to DONE
-    Accept,
-}
-
-/// Compare-and-swap transition and gate evidence.
-#[derive(Args)]
-pub struct TransitionArgs {
-    /// Owning Pi session ID
-    #[arg(long)]
-    session: String,
-    /// Expected current plan content revision
-    #[arg(long)]
-    expected_revision: String,
-    /// Expected current phase
-    #[arg(long, value_enum)]
-    phase: PhaseName,
-    /// Enumerated transition
-    #[arg(long, value_enum)]
-    transition: TransitionName,
-    /// BUILD discovery or human rejection preserved verbatim on the primary issue
-    #[arg(long)]
-    feedback: Option<String>,
-    /// One line recording that a human forced this gate, kept in the plan's
-    /// completion evidence. Accepted only for a transition the human gates.
-    #[arg(long)]
-    override_note: Option<String>,
-}
-
-/// CLI spelling of durable phases.
-#[derive(Clone, Copy, ValueEnum)]
-pub enum PhaseName {
-    Scope,
-    Build,
-    Accept,
-    Done,
-    Abandoned,
-}
-
-/// Human-only abandonment request.
-#[derive(Args)]
-pub struct AbandonArgs {
-    /// Owning Pi session ID
-    #[arg(long)]
-    session: String,
-    /// Expected current plan content revision
-    #[arg(long)]
-    expected_revision: String,
-    /// Expected current phase
-    #[arg(long, value_enum)]
-    phase: PhaseName,
-    /// Human-approved disposition recorded on the issue
-    #[arg(long)]
-    reason: String,
-}
-
 ```
 <!-- /sokf:include -->
 
@@ -617,22 +464,43 @@ usage errors and the side effects.
   `--fix`.
 - `P_workflow-versioned-json` [ubiquitous] Every successful `workflow`
   command SHALL return one JSON object carrying protocol
-  `superdev-workflow/v2`.
-- `P_workflow-owned-transitions` [ubiquitous] A mutating `workflow`
-  command SHALL require the owning session and expected plan revision.
-- `P_workflow-cancel-pauses` [event] WHEN `workflow cancel` succeeds,
-  it SHALL release transient ownership without changing canonical phase.
-- `P_workflow-commit` [ubiquitous] `workflow commit` SHALL require the owning
-  session, the expected plan revision, and the checked-out work branch, then
-  commit the present worktree under the caller's message without pushing,
-  merging, deleting branches, stashing, resetting, or discarding.
-- `P_workflow-override-note` [event] WHEN `workflow transition` carries
-  `--override-note` for a human-gated `approve-scope` or `accept`
-  transition, it SHALL record the note in the plan's completion evidence.
-- `P_workflow-override-note-refused` [event] WHEN `workflow transition`
-  carries `--override-note` for any other transition, it SHALL refuse the
-  note.
+  `superdev-workflow/v3`.
+- `P_workflow-two-verbs` [ubiquitous] The `workflow` surface SHALL expose
+  `apply` and `status` alone. The v2 mutation verbs are removed rather than
+  aliased, so an obsolete caller fails explicitly.
+- `P_workflow-apply-typed-request` [ubiquitous] `workflow apply` SHALL read one
+  typed JSON request from standard input, refuse unknown fields, and refuse a
+  request above its size limit.
+- `P_workflow-controller-capability` [ubiquitous] `workflow apply` SHALL require
+  the controller's private capability from the environment.
+- `P_workflow-authority-not-an-argument` [ubiquitous] No command-line flag,
+  request field, or model argument SHALL confer human authority.
+- `P_workflow-names-its-revision` [ubiquitous] A request that changes an
+  existing workflow SHALL name its internal ID and last observed revision.
+- `P_workflow-stale-revision-refused` [event] WHEN a change request names a
+  revision that is no longer current, the service SHALL refuse it.
+- `P_workflow-status-observational` [ubiquitous] `workflow status` SHALL report
+  local records, current approval validity, transient ownership, branch
+  discovery, and the configured acceptance policy without acquiring ownership.
+- `P_workflow-acceptance-policy-reported` [event] WHEN the manifest cannot be
+  read, `workflow status` SHALL report no acceptance policy rather than report
+  that human acceptance is unnecessary.
+- `P_workflow-pause-preserves` [event] WHEN a pause request succeeds, it SHALL
+  release transient ownership without changing phase, progress, approvals, or
+  consumed retries.
+- `P_workflow-block-commit-bounded` [event] WHEN BUILD commits a work block, the
+  service SHALL commit only paths inside that block's declared areas.
+- `P_workflow-block-commit-refuses-strays` [event] WHEN a work block's changes
+  reach outside its declared areas, the service SHALL refuse the commit rather
+  than absorb them.
+- `P_workflow-no-implicit-git` [ubiquitous] No `workflow` command SHALL push,
+  merge, release, delete a branch, stash, reset, or discard.
 - `P_workflow-manual-merge` [event] WHEN ACCEPT closes the issue and plan, the service SHALL release ownership and leave the accepted work branch checked out without merging. The service never merges a work branch.
+- `P_workflow-local-authority` [ubiquitous] Durable progress and approvals SHALL
+  live in checkout-local records under `.superdev/workflows/`, excluded from Git.
+- `P_workflow-approval-not-inferred` [ubiquitous] Neither document lifecycle,
+  plan prose, nor Git history SHALL confer approval, so a fresh clone needs
+  fresh approval before BUILD.
 - `P_workflow-default-recovery` [ubiquitous] Startup SHALL discover and persist the default branch, reserve independent issue and plan numbers under the repository lock before switching branches, and recover unfinished plans from their local work-branch snapshots.
 - `P_sokf-index-rebuilds-in-full` [ubiquitous] `sokf index` SHALL
   rebuild the index in full.
@@ -742,21 +610,10 @@ the invoking adapter.
 | `superdev sokf write` | 0 | the mutation was applied, including an invalid or unknown resulting state |
 | `superdev sokf write` | 2 | malformed input or a failed precondition left the target unchanged |
 | `superdev workflow` | 2 | no subcommand named |
-| `superdev workflow start` | 0 | ownership, a work branch, and an initial canonical SCOPE plan are created |
-| `superdev workflow start` | 2 | identity, ownership, issue, branch, tree, or plan state is invalid |
-| `superdev workflow status` | 0 | canonical and transient state is reported |
-| `superdev workflow bind` | 0 | transient ownership is acquired |
-| `superdev workflow bind` | 2 | identity, revision, branch, or ownership is invalid |
-| `superdev workflow transition` | 0 | the gated transition is persisted, including primary-issue discovery preservation when returning to SCOPE |
-| `superdev workflow transition` | 2 | ownership, revision, phase, required feedback, or evidence is invalid |
-| `superdev workflow commit` | 0 | the present worktree is committed on the owned work branch |
-| `superdev workflow commit` | 2 | ownership, revision, identity, branch, or path scope is invalid |
-| `superdev workflow resume` | 0 | canonical state is reconstructed and ownership acquired |
-| `superdev workflow resume` | 2 | canonical identity, branch, phase, or ownership is invalid |
-| `superdev workflow cancel` | 0 | transient ownership is released |
-| `superdev workflow cancel` | 2 | another session owns the workflow |
-| `superdev workflow abandon` | 0 | approved abandonment is persisted |
-| `superdev workflow abandon` | 2 | ownership, revision, phase, or approval is invalid |
+| `superdev workflow apply` | 0 | the typed request was applied and the resulting local record is reported |
+| `superdev workflow apply` | 2 | the capability, request, revision, ownership, branch, tree, approval, or budget is invalid |
+| `superdev workflow status` | 0 | local records, approval validity, ownership, branch discovery, and acceptance policy are reported |
+| `superdev workflow status` | 2 | the repository or its local state is unreadable |
 | `superdev hook` | 2 | no subcommand named |
 | `superdev hook validate` | 0 | the edited path is outside the governed trees, or the repo still validates |
 | `superdev hook validate` | 2 | findings on stderr, or a payload it cannot read |
@@ -829,7 +686,7 @@ read for themselves.
 - `P_hook-resolves-working-dir` [conditional] IF `CLAUDE_PROJECT_DIR`
   is unset, `hook validate` SHALL resolve the repository from the working
   directory.
-- `P_workflow-ui-authority-env` [event] WHEN Pi establishes workflow ownership or performs a human-gated transition, the command SHALL verify `SUPERDEV_UI_AUTHORITY` against the owning session's digest.
+- `P_workflow-ui-authority-env` [event] WHEN `workflow apply` changes durable state, the command SHALL verify `SUPERDEV_UI_AUTHORITY` against the owning claim's digest.
 
 ### Usage errors
 
@@ -853,7 +710,7 @@ reaches the network unasked, to find the newest pack release.
 - `P_fix-idempotent` [ubiquitous] `validate --fix` SHALL be idempotent.
 - `P_sokf-mutations-write-knowledge-only` [ubiquitous] `sokf edit` and `sokf
   write` SHALL write only inside the resolved knowledge directory.
-- `P_workflow-side-effects-bounded` [ubiquitous] `workflow` SHALL write only its transient cache, the bound canonical records and indexes, and the owned work branch it commits to.
+- `P_workflow-side-effects-bounded` [ubiquitous] `workflow` SHALL write only its checkout-local records and cache, the approved documents and indexes it publishes, and the owned work branch it commits to.
 
 ## Stability
 

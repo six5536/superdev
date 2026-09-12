@@ -21,20 +21,28 @@ no Node.
    Every plan implements exactly one issue and uses its matching
    `work/<issue-number>-<slug>` branch. Reserve the issue and independently
    numbered plan on the discovered default branch before switching the shared
-   checkout. Only one workflow executes per checkout; parent and children write
-   sequentially. Use `/skill:file` from any checkout to capture an issue or idea
+   checkout. Only one writer owns a checkout at a time: while the worker runs,
+   the controller does not write. Use `/skill:file` from any checkout to capture an issue or idea
    without pausing work. The LLM chooses the next unused number, authors the
    record and index entry, validates, and commits those paths on the default branch.
    Off that branch, it uses an existing or temporary default-branch worktree,
    preserving unrelated edits. No dedicated filing service or aliases are involved.
-2. SCOPE settles requirements, contracts, ADRs, documentation obligations,
-   stable blocks, and executable evidence; a fresh isolated read-only review
-   and explicit human approval are mandatory. BUILD delegates to one isolated
-   modifying child, owns block commits and evidence, then runs complete local
-   verification and a fresh isolated read-only code review. ACCEPT follows
-   `.superdev/config.toml` policy, closes accepted records, and releases ownership.
-   The work branch stays checked out for a human merge. It never pushes, releases, deletes the branch, stashes,
+2. SCOPE is a conversation with the human, not a child role. It settles
+   requirements, contracts, ADRs, documentation obligations, stable blocks, and
+   executable evidence, asking permission for each step and invoking `grill-me`
+   and `double-check` in the same conversation. Approval binds the exact
+   document revision the human read; a later edit suspends it until the diff is
+   assessed. Approving a plan starts nothing: BUILD begins on separate human
+   input and creates the work branch then. BUILD and ACCEPT run in one
+   persistent worker session that resets its context between stages, so review
+   and acceptance judge the candidate rather than the implementation
+   conversation. Correction budgets are durable, so a reset or restart grants no
+   further attempt. ACCEPT follows `.superdev/config.toml` policy, closes
+   accepted records, and releases ownership. The work branch stays checked out
+   for a human merge. It never pushes, releases, deletes the branch, stashes,
    resets, discards, or resolves conflicts implicitly.
+   Progress and approval live in `.superdev/workflows/`, local to the checkout
+   and excluded from Git, so a fresh clone needs fresh approval before BUILD.
 3. Implement with focused commits, using
    [Conventional Commits](https://www.conventionalcommits.org/) (`feat:`,
    `fix:`, `docs:`, `test:`, `refactor:`, `chore:`).

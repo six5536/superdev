@@ -1,8 +1,8 @@
 use serde::{Deserialize, Serialize};
 
 /// Version returned by every workflow adapter response.
-pub const WORKFLOW_PROTOCOL: &str = "superdev-workflow/v2";
-/// Transient, gitignored session ownership. Canonical progress remains in the plan.
+pub const WORKFLOW_PROTOCOL: &str = "superdev-workflow/v3";
+/// Legacy ownership file, retained only for stopped-writer migration.
 pub const WORKFLOW_CACHE_PATH: &str = ".superdev/cache/workflow.toml";
 
 /// The only durable workflow phases.
@@ -24,8 +24,6 @@ pub enum Phase {
 /// A typed transition request. No stringly-typed arbitrary target is accepted.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Transition {
-    /// Record explicit scope approval after requirements review.
-    ApproveScope,
     /// Return BUILD discoveries to SCOPE without replacing the plan.
     ReturnToScope,
     /// Persist block progress while remaining in BUILD.
@@ -58,15 +56,13 @@ pub enum AcceptanceMode {
 /// Judging a review's quality belongs to the role that performed it.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct GateEvidence {
-    /// Whether the human approved the complete SCOPE diff.
-    pub human_scope_approved: bool,
     /// Whether the interactive human accepted the candidate.
     pub human_acceptance_approved: bool,
     /// Whether the interactive human approved abandonment and disposition.
     pub human_abandonment_approved: bool,
 }
 
-/// Stable identifiers for one open workflow.
+/// Legacy document-bound identity, read during migration; not local approval.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct WorkflowIdentity {
     /// Canonical primary issue ID.
@@ -79,7 +75,7 @@ pub struct WorkflowIdentity {
     pub default_branch: String,
 }
 
-/// Transient session ownership; absence means unowned, never complete.
+/// Legacy transient ownership, preserved before local-record migration.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct WorkflowCache {
     /// Cache format version.

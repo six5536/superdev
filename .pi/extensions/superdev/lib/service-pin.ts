@@ -15,7 +15,7 @@ export async function pinService(launcher: string, cwd: string) {
 		cwd, env: environment, timeout: 120_000, maxBuffer: 1_048_576, encoding: "utf8",
 	});
 	const response = JSON.parse(stdout);
-	if (response.protocol !== "superdev-workflow/v2") throw new Error(`Unsupported workflow service protocol: ${response.protocol}`);
+	if (response.protocol !== "superdev-workflow/v3") throw new Error(`Unsupported workflow service protocol: ${response.protocol}`);
 	const executable = response.result?.executable;
 	if (typeof executable !== "string" || !isAbsolute(executable)) throw new Error("Workflow status omitted its absolute native executable path");
 	const bytes = await readFile(executable);

@@ -251,12 +251,11 @@ export default function (pi: ExtensionAPI) {
 	pi.registerTool({
 		name: "sokf_search",
 		label: "SOKF search",
-		description: "Search SOKF using lexical terms and semantic similarity when available. Preserve known IDs or paths. Narrow with types for document kind, lifecycle for an explicit work state, and known tags; omit uncertain filters. Returns labelled sections and locators.",
+		description: "Search SOKF using lexical terms and semantic similarity when available. Preserve known IDs or paths. Narrow with types for document kind, lifecycle for an explicit work state, and known tags; omit uncertain filters. Exact ID, unambiguous numbered shorthand and path matches rank first. Returns section locators and labels identifying retrieval methods, not confidence.",
 		promptSnippet: "Find relevant sections in canonical project knowledge with semantic search.",
 		promptGuidelines: [
 			"Use sokf_search to find relevant project knowledge when its concept ID and physical path are unknown.",
 			"Resolve file paths in sokf_search locators relative to knowledge/; resolve sokf_graph paths relative to the repository root.",
-			"Exact IDs, unambiguous numbered IDs and paths lead search results. Match labels explain retrieval, not confidence; check the evidence.",
 		],
 		parameters: searchSchema,
 		async execute(_toolCallId, params: SearchInput, signal, _onUpdate, ctx) {

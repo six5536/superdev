@@ -35,15 +35,11 @@ pub fn apply_transition(
 ) -> Result<Phase, TransitionError> {
     use Phase::{Abandoned, Accept, Build, Done, Scope};
     use Transition::{
-        Abandon, Accept as AcceptTransition, ApproveScope, CompleteBuild, RecordBuildProgress,
-        RejectAcceptance, ReturnToBuild, ReturnToScope,
+        Abandon, Accept as AcceptTransition, CompleteBuild, RecordBuildProgress, RejectAcceptance,
+        ReturnToBuild, ReturnToScope,
     };
 
     match (phase, transition) {
-        (Scope, ApproveScope) => {
-            require(gates.human_scope_approved, "scope approval is absent")?;
-            Ok(Build)
-        }
         (Build, ReturnToScope) => Ok(Scope),
         (Build, RecordBuildProgress) => Ok(Build),
         (Build, CompleteBuild) => Ok(Accept),
@@ -83,27 +79,23 @@ mod tests {
     }
 
     #[test]
-    fn scope_requires_human_approval() {
-        let mut gates = GateEvidence::default();
-        assert!(
-            apply_transition(
-                Phase::Scope,
-                Transition::ApproveScope,
-                &gates,
-                &config(true)
-            )
-            .is_err()
-        );
-        gates.human_scope_approved = true;
-        assert_eq!(
-            apply_transition(
-                Phase::Scope,
-                Transition::ApproveScope,
-                &gates,
-                &config(true)
-            ),
-            Ok(Phase::Build)
-        );
+    fn execution_transitions_cannot_bypass_local_scope_approval_and_startup() {
+        for transition in [
+            Transition::RecordBuildProgress,
+            Transition::CompleteBuild,
+            Transition::ReturnToBuild,
+            Transition::Accept,
+        ] {
+            assert!(
+                apply_transition(
+                    Phase::Scope,
+                    transition,
+                    &GateEvidence::default(),
+                    &config(false),
+                )
+                .is_err()
+            );
+        }
     }
 
     #[test]

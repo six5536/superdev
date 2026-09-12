@@ -5,9 +5,15 @@
 
 pub mod abandonment;
 pub mod cache;
+pub mod claim;
+mod documents;
 pub mod git;
+pub mod local;
 pub mod process;
+pub mod request;
+pub mod service;
 mod state;
+pub mod store;
 mod transition;
 
 pub use state::{

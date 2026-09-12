@@ -76,68 +76,23 @@ pub struct KnowledgeConfig {
 
 /// `[workflow]` — project-wide policy for the local SCOPE → BUILD → ACCEPT
 /// workflow. Models, plans, and adapters may read but cannot override it.
+///
+/// Unknown keys are ignored rather than refused, so a manifest written for the
+/// retired isolated-role runtime still loads and the next managed rewrite drops
+/// its dead keys. Every key below is read by the running workflow.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
 pub struct WorkflowConfig {
     /// Require an interactive human decision before local integration.
     pub human_acceptance_required: bool,
-    /// Maximum final review correction cycles before BUILD pauses.
+    /// Maximum final review correction cycles, spanning BUILD through ACCEPT.
     pub max_final_correction_cycles: u32,
-    /// Maximum batched correction/re-review cycles during SCOPE.
+    /// Maximum correction/re-review cycles during SCOPE.
     #[serde(default = "default_max_scope_review_cycles")]
     pub max_scope_review_cycles: u32,
-    /// Deadline for one isolated model role.
-    #[serde(default = "default_isolated_role_timeout_seconds")]
-    pub isolated_role_timeout_seconds: u32,
-    /// Maximum isolated-role bytes exposed to parent model context.
-    #[serde(default = "default_max_isolated_context_bytes")]
-    pub max_isolated_context_bytes: u32,
-    /// Maximum isolated-role lines exposed to parent model context.
-    #[serde(default = "default_max_isolated_context_lines")]
-    pub max_isolated_context_lines: u32,
-    /// Maximum serialized review/checklist/question state.
-    #[serde(default = "default_max_review_state_bytes")]
-    pub max_review_state_bytes: u32,
-    /// Maximum findings returned by one review.
-    #[serde(default = "default_max_review_findings")]
-    pub max_review_findings: u32,
-    /// Maximum bytes retained in one isolated diagnostic artifact.
-    #[serde(default = "default_max_isolated_artifact_bytes")]
-    pub max_isolated_artifact_bytes: u32,
-    /// Maximum isolated diagnostic artifacts retained per session.
-    #[serde(default = "default_max_isolated_artifacts_per_session")]
-    pub max_isolated_artifacts_per_session: u32,
-    /// Maximum isolated diagnostic artifact age.
-    #[serde(default = "default_isolated_artifact_retention_hours")]
-    pub isolated_artifact_retention_hours: u32,
 }
 
 const fn default_max_scope_review_cycles() -> u32 {
     3
-}
-const fn default_isolated_role_timeout_seconds() -> u32 {
-    1_200
-}
-const fn default_max_isolated_context_bytes() -> u32 {
-    8_192
-}
-const fn default_max_isolated_context_lines() -> u32 {
-    200
-}
-const fn default_max_review_state_bytes() -> u32 {
-    262_144
-}
-const fn default_max_review_findings() -> u32 {
-    100
-}
-const fn default_max_isolated_artifact_bytes() -> u32 {
-    10_485_760
-}
-const fn default_max_isolated_artifacts_per_session() -> u32 {
-    20
-}
-const fn default_isolated_artifact_retention_hours() -> u32 {
-    24
 }
 
 impl Default for WorkflowConfig {
@@ -146,14 +101,6 @@ impl Default for WorkflowConfig {
             human_acceptance_required: true,
             max_final_correction_cycles: 3,
             max_scope_review_cycles: default_max_scope_review_cycles(),
-            isolated_role_timeout_seconds: default_isolated_role_timeout_seconds(),
-            max_isolated_context_bytes: default_max_isolated_context_bytes(),
-            max_isolated_context_lines: default_max_isolated_context_lines(),
-            max_review_state_bytes: default_max_review_state_bytes(),
-            max_review_findings: default_max_review_findings(),
-            max_isolated_artifact_bytes: default_max_isolated_artifact_bytes(),
-            max_isolated_artifacts_per_session: default_max_isolated_artifacts_per_session(),
-            isolated_artifact_retention_hours: default_isolated_artifact_retention_hours(),
         }
     }
 }
@@ -166,77 +113,11 @@ impl WorkflowConfig {
                 self.max_final_correction_cycles,
             ),
             ("max_scope_review_cycles", self.max_scope_review_cycles),
-            (
-                "isolated_role_timeout_seconds",
-                self.isolated_role_timeout_seconds,
-            ),
-            (
-                "max_isolated_context_bytes",
-                self.max_isolated_context_bytes,
-            ),
-            (
-                "max_isolated_context_lines",
-                self.max_isolated_context_lines,
-            ),
-            ("max_review_state_bytes", self.max_review_state_bytes),
-            ("max_review_findings", self.max_review_findings),
-            (
-                "max_isolated_artifact_bytes",
-                self.max_isolated_artifact_bytes,
-            ),
-            (
-                "max_isolated_artifacts_per_session",
-                self.max_isolated_artifacts_per_session,
-            ),
-            (
-                "isolated_artifact_retention_hours",
-                self.isolated_artifact_retention_hours,
-            ),
         ];
         for (field, value) in positive {
             if value == 0 {
                 return Err(Error::Manifest {
                     message: format!("workflow.{field} must be a positive integer"),
-                });
-            }
-        }
-        let ceilings = [
-            (
-                "max_isolated_context_bytes",
-                self.max_isolated_context_bytes,
-                51_200,
-            ),
-            (
-                "max_isolated_context_lines",
-                self.max_isolated_context_lines,
-                2_000,
-            ),
-            (
-                "max_review_state_bytes",
-                self.max_review_state_bytes,
-                1_048_576,
-            ),
-            ("max_review_findings", self.max_review_findings, 1_000),
-            (
-                "max_isolated_artifact_bytes",
-                self.max_isolated_artifact_bytes,
-                104_857_600,
-            ),
-            (
-                "max_isolated_artifacts_per_session",
-                self.max_isolated_artifacts_per_session,
-                100,
-            ),
-            (
-                "isolated_artifact_retention_hours",
-                self.isolated_artifact_retention_hours,
-                168,
-            ),
-        ];
-        for (field, value, ceiling) in ceilings {
-            if value > ceiling {
-                return Err(Error::Manifest {
-                    message: format!("workflow.{field} must not exceed {ceiling}"),
                 });
             }
         }

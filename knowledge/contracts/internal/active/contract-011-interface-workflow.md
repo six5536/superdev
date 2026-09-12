@@ -31,8 +31,8 @@ materialization follows
 use serde::{Deserialize, Serialize};
 
 /// Version returned by every workflow adapter response.
-pub const WORKFLOW_PROTOCOL: &str = "superdev-workflow/v2";
-/// Transient, gitignored session ownership. Canonical progress remains in the plan.
+pub const WORKFLOW_PROTOCOL: &str = "superdev-workflow/v3";
+/// Legacy ownership file, retained only for stopped-writer migration.
 pub const WORKFLOW_CACHE_PATH: &str = ".superdev/cache/workflow.toml";
 
 /// The only durable workflow phases.
@@ -54,8 +54,6 @@ pub enum Phase {
 /// A typed transition request. No stringly-typed arbitrary target is accepted.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Transition {
-    /// Record explicit scope approval after requirements review.
-    ApproveScope,
     /// Return BUILD discoveries to SCOPE without replacing the plan.
     ReturnToScope,
     /// Persist block progress while remaining in BUILD.
@@ -88,15 +86,13 @@ pub enum AcceptanceMode {
 /// Judging a review's quality belongs to the role that performed it.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct GateEvidence {
-    /// Whether the human approved the complete SCOPE diff.
-    pub human_scope_approved: bool,
     /// Whether the interactive human accepted the candidate.
     pub human_acceptance_approved: bool,
     /// Whether the interactive human approved abandonment and disposition.
     pub human_abandonment_approved: bool,
 }
 
-/// Stable identifiers for one open workflow.
+/// Legacy document-bound identity, read during migration; not local approval.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct WorkflowIdentity {
     /// Canonical primary issue ID.
@@ -109,7 +105,7 @@ pub struct WorkflowIdentity {
     pub default_branch: String,
 }
 
-/// Transient session ownership; absence means unowned, never complete.
+/// Legacy transient ownership, preserved before local-record migration.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct WorkflowCache {
     /// Cache format version.
@@ -189,15 +185,11 @@ pub fn apply_transition(
 ) -> Result<Phase, TransitionError> {
     use Phase::{Abandoned, Accept, Build, Done, Scope};
     use Transition::{
-        Abandon, Accept as AcceptTransition, ApproveScope, CompleteBuild, RecordBuildProgress,
-        RejectAcceptance, ReturnToBuild, ReturnToScope,
+        Abandon, Accept as AcceptTransition, CompleteBuild, RecordBuildProgress, RejectAcceptance,
+        ReturnToBuild, ReturnToScope,
     };
 
     match (phase, transition) {
-        (Scope, ApproveScope) => {
-            require(gates.human_scope_approved, "scope approval is absent")?;
-            Ok(Build)
-        }
         (Build, ReturnToScope) => Ok(Scope),
         (Build, RecordBuildProgress) => Ok(Build),
         (Build, CompleteBuild) => Ok(Accept),
@@ -237,27 +229,23 @@ mod tests {
     }
 
     #[test]
-    fn scope_requires_human_approval() {
-        let mut gates = GateEvidence::default();
-        assert!(
-            apply_transition(
-                Phase::Scope,
-                Transition::ApproveScope,
-                &gates,
-                &config(true)
-            )
-            .is_err()
-        );
-        gates.human_scope_approved = true;
-        assert_eq!(
-            apply_transition(
-                Phase::Scope,
-                Transition::ApproveScope,
-                &gates,
-                &config(true)
-            ),
-            Ok(Phase::Build)
-        );
+    fn execution_transitions_cannot_bypass_local_scope_approval_and_startup() {
+        for transition in [
+            Transition::RecordBuildProgress,
+            Transition::CompleteBuild,
+            Transition::ReturnToBuild,
+            Transition::Accept,
+        ] {
+            assert!(
+                apply_transition(
+                    Phase::Scope,
+                    transition,
+                    &GateEvidence::default(),
+                    &config(false),
+                )
+                .is_err()
+            );
+        }
     }
 
     #[test]
@@ -323,74 +311,96 @@ mod tests {
 
 ### Module boundaries
 
-- `P_rust-authority` [ubiquitous] The Rust workflow service SHALL validate every durable phase transition, plan revision comparison, ownership comparison, and automatic Git operation.
-- `P_pi-orchestrates` [ubiquitous] Pi SHALL orchestrate discoverable scope, build, and accept skills through typed tools while withholding direct shell and Git access from children and resolving BUILD's executable and digest together at invocation time.
-- `P_extension-skills` [ubiquitous] The Superdev extension SHALL register its bundled file, scope, build, accept, grill-me, and double-check skills from `.pi/extensions/superdev/skills/` through Pi's `resources_discover` event on startup and reload, exposing native `/skill:*` commands without copies in `.pi/skills/`.
-- `P_service-snapshot` [event] WHEN Pi initializes its workflow service, the adapter SHALL bootstrap the trusted launcher in place and retain a private native executable snapshot independent of subsequent checkout switches and rebuilds.
-- `P_skill-cold-start` [event] WHEN a workflow skill starts, the skill SHALL reconstruct canonical identity and phase before mutation.
-- `P_questions-persisted` [event] WHEN review requires intent, Pi SHALL persist post-transition revision-bound questions and confirmed answers for one batched correction and re-review.
-- `P_questions-ui` [event] WHEN a skill asks a question, Pi SHALL offer concrete choices, a recommendation, a typed answer, and chat discussion through the public typed tool.
-- `P_typed-role-result` [ubiquitous] Isolated roles SHALL terminate with one validated bounded typed result and exhaustive reviewer checklist.
-- `P_isolated-trace` [ubiquitous] Pi SHALL retain bounded isolated output and diagnostics in private temporary artifacts with their paths reported on failure.
+- `P_rust-authority` [ubiquitous] The Rust workflow service SHALL own every durable phase transition, document approval, ownership comparison, and automatic Git operation.
+- `P_local-records` [ubiquitous] Durable progress and approvals SHALL live in checkout-local records under `.superdev/workflows/`, excluded from Git.
+- `P_cache-transient` [ubiquitous] The transient cache SHALL carry only the live claim, so its absence means unowned rather than complete.
+- `P_controller-orchestrates` [ubiquitous] The Pi controller SHALL own human interaction, question handling, and worker lifecycle without owning phase state or Git policy.
+- `P_extension-skills` [ubiquitous] The Superdev extension SHALL register its bundled file, scope, build, accept, grill-me, and double-check skills from `.pi/extensions/superdev/skills/` through Pi's `resources_discover` event, exposing native `/skill:*` commands without copies in `.pi/skills/`.
+- `P_skills-own-checklists` [ubiquitous] Each invoked skill SHALL carry its own stage checklist, so no separate role prompt can drift from it.
+- `P_service-snapshot` [event] WHEN Pi initializes its workflow service, the adapter SHALL retain a private verified native executable snapshot independent of subsequent checkout switches and rebuilds.
+- `P_skill-cold-start` [event] WHEN a workflow skill starts, the skill SHALL reconstruct identity, phase, and saved progress from the service before acting.
+- `P_questions-ui` [event] WHEN a skill asks a question, the controller SHALL offer stable choice identities, a separately identified recommended choice, a typed answer, and Continue, Discuss, Do something else, and Pause controls.
+- `P_question-single-use` [event] WHEN a pending question resolves, the controller SHALL consume it before any asynchronous mutation, so one action cannot be authorised twice.
+- `P_discussion-preserves-question` [event] WHEN a human discusses a pending question, the controller SHALL retain that question rather than reopen or discard it.
 
 ### Key flows
 
-- `P_scope-gate` [event] WHEN SCOPE enters BUILD, the service SHALL require explicit human scope approval, which is the only precondition on that transition.
-- `P_build-gate` [event] WHEN BUILD enters ACCEPT, the service SHALL apply the explicit completion transition from the BUILD phase alone, without judging the work it carries.
-- `P_accept-policy` [event] WHEN ACCEPT decides a candidate, the service SHALL derive human acceptance solely from project configuration before committing accepted closure on the work branch and releasing ownership without merging.
-- `P_accept-routes-findings` [event] WHEN ACCEPT reports findings, Pi SHALL automatically return within-scope corrections to BUILD and route intent-changing findings to human SCOPE discussion.
-- `P_scope-bootstrap` [event] WHEN a new workflow starts, the service SHALL validate and commit the initial issue and independently numbered plan on the default branch under the repository lock before switching the shared checkout to the work branch.
-- `P_identity-reservation` [event] WHEN an issue or initial plan reserves a numeric identity, the service SHALL refuse a number already held by another canonical identity in the local repository.
-- `P_default-recovery` [event] WHEN a workflow resumes, the service SHALL recover the recorded default branch and current plan from its work-branch snapshot before binding the shared checkout.
-- `P_one-checkout-owner` [ubiquitous] The service SHALL permit only one executing workflow owner per checkout.
-- `P_owner-process-recorded` [event] WHEN a session acquires ownership, the service SHALL record the owning process identity supplied by that session.
-- `P_service-derives-identity` [ubiquitous] The service SHALL derive every process start identity itself rather than accept one computed by a caller.
-- `P_abandoned-claim-reclaimed` [event] WHEN a recorded owner process is contradicted by the running system, the service SHALL report the checkout as unowned, permit acquisition over the claim, and permit any session to release it.
-- `P_liveness-favours-incumbent` [ubiquitous] The service SHALL treat an owner whose liveness cannot be determined as still executing, leaving its claim in place without human authority.
-- `P_issue-capture` [event] WHEN `/skill:file` captures an issue or idea, the skill SHALL direct the LLM to choose an unused number, author the schema-conforming record and index entry, validate, and commit only those paths on the discovered default branch without pausing active work.
-- `P_file-skill-only` [ubiquitous] Pi SHALL expose capture only through the native `file` skill, without issue or file command aliases, a dedicated filing tool, or a filing child role.
-- `P_file-skill-worktree` [event] WHEN capture starts outside the default branch, the skill SHALL direct the LLM to use an existing or temporary default-branch worktree through ordinary tools while preserving the caller's branch, pending edits, and workflow ownership.
-- `P_ui-authority-service` [event] WHEN scope approval, configured human acceptance, rejection, or abandonment changes durable state, the service SHALL require the owning Pi UI's unpersisted capability.
-- `P_ui-authority-adapter` [event] WHEN an action requires human authority, Pi SHALL expose its capability to the service only after interactive confirmation.
-- `P_cancel-pauses` [event] WHEN cancellation occurs, the service SHALL release transient ownership without changing the canonical phase or deleting uncommitted SCOPE drafts.
-- `P_cancel-always-available` [ubiquitous] Pi SHALL permit cancellation regardless of which session holds the claim, so that no recorded claim can leave a checkout without a recovery path.
-- `P_human-release` [event] WHEN a claim cannot be proven abandoned and its session is not the caller, the service SHALL require the interactive Pi UI's capability before releasing it.
-- `P_human-release-names-claim` [event] WHEN a human authorizes a release, the service SHALL release only the claim whose session the human was shown, refusing any claim that replaced it.
-- `P_human-release-confirmed` [event] WHEN Pi releases a claim held by another session, Pi SHALL obtain explicit human confirmation first.
-- `P_abandon-human-only` [event] WHEN abandonment is requested, the service SHALL require interactive human approval while excluding partial product work from integration.
-- `P_abandon-default-records` [event] WHEN abandonment closes the workflow, the service SHALL publish the closed issue and plan in a detached worktree and compare-and-swap the local default ref without carrying work-branch product history.
-- `P_progress-unparsed` [ubiquitous] The service SHALL NOT parse plan prose. Work-block progress, verification, and completion evidence are written and read by the workflow roles as advisory records.
-- `P_commit-caller-scoped` [event] WHEN a role commits, the service SHALL require the owning session, the expected plan revision, and the checked-out work branch, then commit the present worktree under the caller's message; choosing what belongs in that commit is the caller's judgement.
-- `P_build-commits-blocks` [event] WHEN BUILD completes a block, the BUILD role SHALL run that block's declared verification and commit the block through the service before starting the next one.
-- `P_final-correction-adapter` [event] WHEN a final correction remains within the configured limit, Pi SHALL schedule one correction carrying the complete finding set and a fresh immutable review.
-- `P_gates-human-only` [ubiquitous] Phase transitions SHALL gate on recorded human authority alone. Judging a review's quality belongs to the role that performed it.
-- `P_gate-forceable` [event] WHEN a human types `/superdev-force` at a SCOPE or ACCEPT gate the adapter is refusing, Pi SHALL name every unresolved item, require an explicit typed reason and interactive confirmation, and then apply the same legal transition without adding a precondition of its own.
-- `P_force-human-only` [ubiquitous] Pi SHALL expose the override only as a typed command, keeping it absent from every tool, skill, and prompt the model reads, so that no model can invoke or learn of it.
-- `P_approval-tool-strict` [event] WHEN the phase tool reaches a SCOPE or ACCEPT approval while review findings are active or an acceptance assessment is absent, it SHALL refuse.
-- `P_forced-gate-recorded` [event] WHEN a human forces a gate, the service SHALL record the reason and what was unresolved in the plan's completion evidence.
-- `P_forced-gate-preserves-findings` [event] WHEN a human forces a gate, Pi SHALL preserve the finding set rather than discard it.
-- `P_scope-review-bounded` [event] WHEN a requirements review returns findings, Pi SHALL consult the configured review-cycle budget on every outcome, so a review returning substantive findings reaches the same terminating decision as one returning mechanical findings alone.
-- `P_closure-transactional` [event] WHEN acceptance or abandonment closes records, the service SHALL stage, repair, and validate the complete knowledge closure before publishing it.
-- `P_service-owned-commits` [event] WHEN canonical evidence or a durable transition is published after a clean-tree preflight, the service SHALL create a knowledge-only commit through an isolated index without invoking hooks or signing, leaving the live index, worktree, and HEAD unchanged if commit construction fails.
-- `P_rescope-preserves-identity` [event] WHEN BUILD returns a discovery to SCOPE, the service SHALL preserve it verbatim on the primary issue and retain the same issue, plan, and branch.
-- `P_rejection-preserves-feedback` [event] WHEN a human rejects a candidate, the service SHALL return the same plan to SCOPE and preserve the verbatim feedback as an unresolved primary-issue discovery.
-- `P_transition-atomic` [ubiquitous] Commit, transition, and closure operations SHALL hold the repository workflow lock through canonical publication and the ownership compare-and-swap.
+- `P_scope-in-conversation` [ubiquitous] SCOPE SHALL run in the controlling conversation, invoking the grill-me and double-check skills there rather than delegating them to child sessions.
+- `P_step-permission` [event] WHEN SCOPE advances to a drafting, interview, or review action, the controller SHALL hold explicit human permission naming that action or its group.
+- `P_permission-not-durable` [ubiquitous] Step permission SHALL belong to the current continuation alone, so a pause or resume asks again while valid document approvals remain.
+- `P_skips-recorded-honestly` [event] WHEN a human skips or repeats an action, the service SHALL record its actual disposition rather than report a skipped action as passed.
+- `P_discussion-not-approval` [ubiquitous] Discussion and ambiguous agreement SHALL neither advance state nor approve a document.
+- `P_human-input-only` [ubiquitous] Approval SHALL come only from Pi's interactive input path or its ask UI, so extension, worker, and RPC messages and model flags confer no authority.
+- `P_approval-binds-revision` [event] WHEN a human approves a document, the service SHALL bind that approval to its exact byte revision and refuse a revision that changed after the question was asked.
+- `P_plan-binds-issue` [event] WHEN a plan is approved, the service SHALL also bind the approved issue revision it implements.
+- `P_independent-identities` [ubiquitous] Issue and plan numbers SHALL be reserved independently, so neither is derived from the other.
+- `P_publication-scoped` [event] WHEN an approved document is published, the service SHALL commit only that document and its required generated indexes.
+- `P_publication-recoverable` [event] WHEN publication is interrupted, the service SHALL verify the saved parent, paths, bytes, and branch before completing it, so a failure leaves approval absent rather than assumed.
+- `P_unexplained-edit-suspends` [event] WHEN an approved document changes without assessment, the service SHALL suspend use of its approval until the actual diff is assessed.
+- `P_formatting-diff-preserves` [event] WHEN an assessed diff changes formatting alone, the service SHALL retain the original human input and record the new compatible revision.
+- `P_substantive-diff-clears` [event] WHEN an assessed diff changes meaning, the service SHALL clear the affected approvals while retaining recorded progress.
+- `P_branch-switch-requested` [event] WHEN SCOPE begins on a branch other than the default, the service SHALL refuse and ask the human to switch rather than create a worktree or branch.
+
+- `P_explicit-build-start` [event] WHEN BUILD starts, the service SHALL require separate human input, valid approvals, the expected branch, and a clean worktree.
+- `P_branch-at-startup` [ubiquitous] The work branch SHALL be created at BUILD startup alone, so plan approval by itself starts nothing.
+- `P_startup-recoverable` [event] WHEN branch creation is interrupted, the service SHALL recover only that authorised startup rather than adopt an independently existing branch.
+- `P_one-worker` [ubiquitous] At most one worker SHALL execute per checkout.
+- `P_worker-session-persists` [ubiquitous] A worker's session identity SHALL persist across stages, pauses, and restarts.
+- `P_single-writer` [event] WHEN a worker is running, the service SHALL refuse controller writes to the checkout.
+- `P_worker-has-no-authority` [ubiquitous] The worker SHALL hold no controller capability, so it can neither approve documents nor claim ownership.
+- `P_worker-questions-routed` [event] WHEN the worker asks a question, the controller SHALL present it to the human and return the human's own control over their private channel.
+- `P_control-not-invented` [event] WHEN a question is discussed, paused, or not put to the human, the controller SHALL report that outcome rather than deliver a fabricated answer.
+- `P_stage-owns-instructions` [ubiquitous] Each stage turn SHALL carry its own checklist and the durable facts it rebuilds from, because a reset leaves no conversation to recover them from.
+- `P_assessment-may-inspect` [ubiquitous] Review and acceptance SHALL keep the tools needed to inspect a candidate, including a shell, because an assessment that cannot run a diff or a check is made by reading alone.
+- `P_assessment-bounded-by-state` [event] WHEN an assessment stage finishes, the controller SHALL compare the checkout's complete Git state with the state it started from.
+- `P_changed-checkout-voids-assessment` [event] WHEN that comparison differs, or either state cannot be read, the controller SHALL record the assessment as void with its diagnostic rather than report a pass.
+- `P_stage-reset` [event] WHEN a stage boundary is reached, the worker SHALL reset context to its own anchor so review and acceptance do not inherit the implementation conversation or its verdicts.
+- `P_reset-on-request` [event] WHEN a completed block or a filling context requires it, BUILD SHALL be able to reset mid-stage as well as at a stage boundary.
+- `P_reset-only-when-settled` [ubiquitous] Context reset SHALL occur only at a settled tool boundary.
+- `P_current-mode-discloses` [event] WHEN execution runs in the controlling conversation, the controller SHALL disclose that no context reset is available rather than imply clean assessment context.
+- `P_checkpoint-before-reset` [event] WHEN context is reset, the service SHALL already hold the stage, completed blocks, unfinished work, and evidence needed to resume.
+- `P_progress-is-recordable` [event] WHEN a stage runs, its caller SHALL be able to record partial work and verification evidence durably, so a later reset or crash resumes from facts rather than from an empty checkpoint.
+- `P_assessment-findings-durable` [event] WHEN an assessment stage finishes, its own report SHALL be saved with the progress it belongs to, because the conversation that received it does not survive a compaction, a reset, or a closed session.
+- `P_assessment-report-bound` [ubiquitous] A saved report SHALL name the candidate it judged, so a reader can tell whether it still describes the current one.
+- `P_findings-outlive-their-candidate` [event] WHEN a correction supersedes the candidate, the report SHALL be retained, because those findings are what the correction works from; only a newer report replaces it.
+- `P_block-commit-bounded` [event] WHEN BUILD commits a work block, the service SHALL commit only paths inside that block's declared areas.
+- `P_block-commit-refuses-strays` [event] WHEN changes reach outside a block's declared areas, the service SHALL refuse rather than absorb them.
+- `P_block-committed-once` [event] WHEN a block is already recorded complete, the service SHALL refuse to record it again.
+- `P_bounded-retries` [ubiquitous] Correction budgets SHALL be consumed durably, so a reset, pause, worker restart, or controller restart grants no further attempt.
+- `P_complete-build-needs-clean` [event] WHEN BUILD completes, the service SHALL require a clean worktree before moving the candidate to ACCEPT.
+- `P_accept-policy` [event] WHEN ACCEPT decides a candidate, the service SHALL derive human acceptance solely from project configuration.
+- `P_absent-policy-refuses` [event] WHEN the acceptance policy cannot be read, the service SHALL refuse acceptance rather than treat it as automatic.
+- `P_candidate-must-be-current` [event] WHEN the candidate changed after its assessment, the service SHALL refuse acceptance until it is reassessed.
+- `P_accept-does-not-integrate` [event] WHEN acceptance succeeds, the service SHALL leave the work branch checked out without merging, pushing, releasing, or deleting it.
+- `P_accept-routes-findings` [event] WHEN ACCEPT returns within-scope findings, the service SHALL return the workflow to BUILD and supersede the candidate so stale acceptance evidence cannot outlive the correction.
+- `P_rescope-preserves-work` [event] WHEN changed intent returns a workflow to SCOPE, the service SHALL retain its branch, approvals, checkpoint, and consumed retries.
+- `P_abandon-human-only` [event] WHEN abandonment is requested, the service SHALL require authenticated human input and a stated reason.
+- `P_abandon-preserves-work` [event] WHEN abandonment closes a workflow, the service SHALL leave partial product work on its branch without merging or deleting it.
+- `P_no-model-override` [ubiquitous] Abandonment SHALL exist only as a typed human command, absent from every tool, skill, and prompt the model reads.
 
 ### Cross-cutting concerns
 
+- `P_records-are-local` [ubiquitous] A local record SHALL name its checkout, so a clone or copied record inherits no approval.
+- `P_missing-state-refuses` [event] WHEN local state is absent, the service SHALL require human reconstruction rather than infer permission from document lifecycle, plan prose, or Git history.
+- `P_unknown-version-refuses` [event] WHEN a local record names an unsupported version, the service SHALL preserve it and refuse rather than guess its meaning.
+- `P_migration-preserves-legacy` [event] WHEN legacy ownership is migrated, the service SHALL archive its exact bytes before retirement and import reconstructed progress as unapproved inspection facts.
+- `P_migration-refuses-live-writer` [event] WHEN a legacy writer is live or its liveness is unknown, the service SHALL refuse migration.
+- `P_liveness-favours-incumbent` [ubiquitous] The service SHALL treat a writer whose liveness cannot be determined as still executing.
+- `P_worker-shutdown-bounded` [event] WHEN a worker is stopped, the controller SHALL request an orderly stop, wait a bounded time, and then terminate its process tree.
+- `P_disconnect-pauses` [event] WHEN the worker loses its controller, it SHALL let the running turn reach its own boundary within a bounded wait before ending, rather than cutting it off.
+- `P_interrupted-is-not-complete` [event] WHEN a stage is interrupted, the controller SHALL report it as interrupted rather than as finished work.
 - `P_git-preserves-unrelated` [ubiquitous] Automatic Git operations SHALL NOT stash, reset, discard, absorb, or implicitly resolve unrelated changes.
 - `P_git-no-shell` [ubiquitous] Workflow Git operations SHALL validate refs and invoke Git with argument arrays without a shell.
-- `P_bounded-retries` [ubiquitous] Retry and correction limits SHALL be positive project configuration values that plans, prompts, adapters, and models cannot override.
-- `P_cache-transient` [ubiquitous] Absence of `.superdev/cache/workflow.toml` SHALL mean unowned rather than complete.
-- `P_status-during-transaction` [event] WHEN observational status encounters a held workflow transaction, it SHALL return an explicit busy snapshot without waiting or representing that state as unowned.
-- `P_compaction-reloads-state` [ubiquitous] Before every parent agent turn, Pi SHALL reload canonical phase, identity, and plan revision from Rust into the turn context rather than rely on conversation or compaction summaries.
+- `P_transition-atomic` [ubiquitous] Publication, transition, and closure operations SHALL hold the repository workflow lock through their durable write.
+- `P_state-injected-as-data` [ubiquitous] Before every controller turn, current workflow state SHALL be injected as data rather than recovered from conversation or compaction summaries.
+- `P_transcripts-private` [ubiquitous] Worker transcripts SHALL stay in ignored local storage as recovery data, never as approval or progress authority.
 
 ## Stability
 
 Internal and unreleased; the protocol is versioned so adapter incompatibility
 fails explicitly.
 
-- `P_versioned` [ubiquitous] Every machine-readable workflow response SHALL name `superdev-workflow/v2`.
+- `P_versioned` [ubiquitous] Every machine-readable workflow response SHALL name `superdev-workflow/v3`.
 
 <!-- sokf:links -->
 [sokf:adr-042-a-contracts-definition-is-materialized-from-source]: /knowledge/adrs/active/adr-042-a-contracts-definition-is-materialized-from-source.md

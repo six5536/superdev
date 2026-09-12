@@ -12,7 +12,7 @@ sources:
 
 ```
 pack/                     # the content superdev ships, in pack layout
-pack/pi/extensions/      # owned Pi extensions and private role prompts
+pack/pi/extensions/      # owned Pi extensions and their bundled skills
 pack/pi/skills/          # independently invocable Pi skills
 pack/knowledge/concepts/  # the knowledge scaffolds, mirroring the repo's knowledge/
 pack/knowledge/templates/ # the document templates

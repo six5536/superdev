@@ -1,6 +1,6 @@
 ---
 name: sokf-authoring
-description: Create or revise SOKF concepts, schemas, metadata, and relationships; resolve validation findings.
+description: Use when creating or revising SOKF concepts or schemas, or resolving SOKF validation findings.
 ---
 
 # SOKF authoring

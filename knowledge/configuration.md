@@ -31,31 +31,27 @@ provider = "frontend-design"
 human_acceptance_required = true
 max_final_correction_cycles = 3
 max_scope_review_cycles = 3
-isolated_role_timeout_seconds = 1200
-max_isolated_context_bytes = 8192
-max_isolated_context_lines = 200
-max_review_state_bytes = 262144
-max_review_findings = 100
-max_isolated_artifact_bytes = 10485760
-max_isolated_artifacts_per_session = 20
-isolated_artifact_retention_hours = 24
 ```
 
 The `[workflow]` table is required from blueprint 0.2.0 onward. Omitted policy
-fields receive the defaults above, and a managed rewrite materializes them. All
-numeric limits must be positive. Fixed safety ceilings are 50 KiB and 2,000
-lines for parent-model context, 1 MiB and 1,000 findings for review state, 100
-MiB per isolated artifact, 100 artifacts per session, and 168 retention hours.
-Models, plans, and commands cannot override project policy; omitting the table
-after migration is an error.
+fields receive the defaults above, and a managed rewrite materializes them. Both
+limits must be positive. Models, plans, adapters, and commands cannot override
+project policy; omitting the table after migration is an error.
 
-One isolated role receives the configured deadline. Oversized final results and
-review state fail closed; diagnostic stderr may be capped without invalidating
-an otherwise valid role result. Full bounded diagnostics live temporarily
-outside model context and are available through ordinary bounded file reads.
-The SCOPE review limit counts completed batched correction plus complete
-re-review cycles. The final correction limit spans the complete BUILD-to-ACCEPT
-run rather than resetting at the phase boundary.
+`human_acceptance_required` alone decides whether a human must confirm
+acceptance. An unreadable manifest reports no policy and acceptance refuses,
+rather than treating an absent policy as automatic.
+
+The two limits are correction budgets, consumed in the workflow's own
+checkout-local record. `max_scope_review_cycles` counts SCOPE correction and
+re-review cycles. `max_final_correction_cycles` spans the complete
+BUILD-to-ACCEPT run rather than resetting at the phase boundary. Because the
+count is durable, a context reset, a pause, a worker restart, or a controller
+restart never grants a further attempt.
+
+Keys this table no longer carries are ignored rather than refused, so a manifest
+written for the retired isolated-role runtime still loads and the next managed
+rewrite drops its dead keys.
 
 A `[[packs]]` array names the content packs to layer, in layer order, and is
 absent from the manifest above because absence is the default:
@@ -342,26 +338,17 @@ digest is kept; a pack that failed verification leaves nothing behind.
 
 # Outside the repo
 
-The Pi runner (`.pi/extensions/superdev/lib/process.ts`) retains owner-only
-temporary artifacts for isolated roles. Its `diagnostic.json` records launch
-bindings, the requested tool list, the role-prompt SHA-256 digest, and the last
-assistant's provider, model, stop reason, text, and tool-call names.
-The text summary keeps at most 2,048 bytes and 20 lines before a truncation notice.
-The summary excludes reasoning, signatures, and tool arguments and survives
-truncation of the separately retained raw `events.jsonl` stream. Raw events can
-contain sensitive payloads; artifacts follow configured retention limits.
-A textual imitation of `superdev_submit_result` remains a protocol failure,
-not an accepted review. Role prompts require an actual, separate tool call.
-Each role receives a result schema with only its allowed statuses and fields.
-SCOPE and BUILD report resolved corrections in `summary`, not reviewer `findings`.
-Rejected submissions do not count as acceptance; the child can correct and
-resubmit the payload. If the child stops normally without an accepted result,
-the extension queues at most 1 terminal-repair prompt in that same child.
-Only `superdev_submit_result` remains available during repair. The parent keeps
-the original deadline, candidate, and review checks; repair cannot repeat file
-mutations or workflow operations. Cancellation, provider errors, and terminating
-tool batches do not trigger repair. A remaining failure surfaces the last
-submission rejection alongside the diagnostic path.
+The persistent BUILD and ACCEPT worker writes its Pi session transcript under
+`.superdev/cache/workers/`, which is ignored by Git. That transcript is recovery
+and debugging data: it is never approval evidence or progress authority, and the
+durable record in `.superdev/workflows/` remains the only source of either. A
+transcript can contain whatever the work touched, so it stays local and
+uncommitted.
+
+The worker process holds no controller capability, so nothing it writes or says
+can approve a document or claim checkout ownership. Its questions reach the
+human through the controlling conversation, and the controller alone receives
+interactive input.
 
 A phase `ask` request must name exactly 1 unanswered, dependency-eligible ID in
 `findingIds`. Missing or ineligible IDs return `finding-selection-required` with

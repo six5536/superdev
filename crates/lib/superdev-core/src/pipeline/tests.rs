@@ -1,6 +1,5 @@
 use super::*;
-use crate::lock::sha256_hex;
-use crate::runner::FakeRunner;
+use crate::{lock::sha256_hex, runner::FakeRunner};
 
 /// Every capability whose default entry is registry-locked, derived so
 /// no test re-encodes the list the registry owns.
@@ -134,7 +133,11 @@ fn a_provisioning_run_is_work_to_do_but_not_drift() {
     for scaffold in rule_scaffold_paths() {
         std::fs::write(dir.path().join(scaffold), "the user's now\n").unwrap();
     }
-    std::fs::write(dir.path().join(".gitignore"), ".superdev/cache/\n").unwrap();
+    std::fs::write(
+        dir.path().join(".gitignore"),
+        ".superdev/cache/\n.superdev/workflows/\n",
+    )
+    .unwrap();
     std::fs::write(
         dir.path().join("AGENTS.md"),
         crate::agent_file::render("", AGGREGATOR_TEMPLATE).unwrap(),
@@ -338,7 +341,7 @@ fn repo_entry_plans_the_instruction_prefix_and_the_aggregator_once() {
     // settled whatever their content, because they are the user's.
     std::fs::write(
         dir.path().join(".gitignore"),
-        ".superdev/cache/\n.codegraph/\n",
+        ".superdev/cache/\n.superdev/workflows/\n.codegraph/\n",
     )
     .unwrap();
     std::fs::write(

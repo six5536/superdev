@@ -25,6 +25,7 @@
 # Spelled without a leading slash: that is the literal the `repo` component
 # looks for, and it re-appends the entry otherwise.
 .superdev/cache/
+.superdev/workflows/
 
 # Coverage artifacts (cargo-llvm-cov)
 /target/llvm-cov

@@ -2,6 +2,11 @@
 
 **Status:** Proposed standalone engineering plan.
 
+## IMPORTANT NOTE
+
+The only surviving part of this plan is to consolidate sokf into one extension named 'sokf'.
+Most of the details below are out of date. The behaviour of the extension must not be changed.
+
 ## Purpose
 
 Ship one Pi extension named `sokf` that owns:

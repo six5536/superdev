@@ -2,18 +2,28 @@
 
 #[cfg(test)]
 use std::fs;
-use std::io::{Read, Write};
-use std::path::{Path, PathBuf};
-use std::sync::atomic::{AtomicU64, Ordering};
+use std::{
+    io::{Read, Write},
+    path::{Path, PathBuf},
+    sync::atomic::{AtomicU64, Ordering},
+};
 
-use cap_std::ambient_authority;
-use cap_std::fs::{Dir, OpenOptions};
+use cap_std::{
+    ambient_authority,
+    fs::{Dir, OpenOptions},
+};
 use fs2::FileExt;
-use sha2::{Digest, Sha256};
 
-use super::process::{Liveness, liveness};
-use super::{WORKFLOW_CACHE_PATH, WorkflowCache};
-use crate::error::{Error, Result};
+mod legacy;
+
+use super::{
+    WORKFLOW_CACHE_PATH, WorkflowCache,
+    process::{Liveness, liveness},
+};
+use crate::{
+    error::{Error, Result},
+    lock::sha256_hex as content_digest,
+};
 
 fn path(root: &Path) -> PathBuf {
     root.join(WORKFLOW_CACHE_PATH)
@@ -70,10 +80,7 @@ pub fn authority_digest(capability: &str) -> Result<String> {
             message: "workflow UI authority capability is absent or too short".into(),
         });
     }
-    Ok(Sha256::digest(capability.as_bytes())
-        .iter()
-        .map(|byte| format!("{byte:02x}"))
-        .collect())
+    Ok(content_digest(capability.as_bytes()))
 }
 
 /// Verify UI authority without exposing or persisting the capability itself.
@@ -663,8 +670,7 @@ mod tests {
 
     #[test]
     fn a_repository_transaction_serializes_publication_and_cache_cas() {
-        use std::sync::mpsc;
-        use std::time::Duration;
+        use std::{sync::mpsc, time::Duration};
 
         let root = std::sync::Arc::new(tempfile::tempdir().unwrap());
         bind(root.path(), &state("a")).unwrap();

@@ -33,10 +33,12 @@ SOKF under `knowledge/` is the canonical store for all project knowledge.
 
 <core_grammar_rules>
 
-- Use ASD-STE100 Simplified Technical English with the following exceptions unless otherwise directed
-- Allow exceptions where meaning would otherwise change or is not describable in ASD-STE100
-- Keep all machine readable structure; so meaning and machine-readable parts do not change
-- Do not be unclear about your certainty: write "I do not know," not "This might potentially cause issues in some cases."
+- Write and converse in ASD-STE100 Simplified Technical English.
+- Apply STE rigorously to sentence length (25 words) and lists of things (use bullets).
+- STE does not apply to: machine-readable structure; identifiers, file paths, commands, and product names; quoted text; words that set requirement strength (must, shall, never, may, should); and terms of art with no approved equivalent.
+- Do not simplify a word if the simpler word changes what is required or permitted.
+- State certainty plainly. Write "I do not know," not "This might potentially
+  cause issues in some cases."
 - Do not use informal, friendly language
 
 Conversation Only:

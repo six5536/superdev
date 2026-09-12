@@ -6,12 +6,13 @@
 //! `FakeRunner`. The fakes are shell scripts, so Windows runs `tests/cli.rs`
 //! only.
 
-use std::fs;
-use std::os::unix::fs::PermissionsExt;
-use std::path::{Path, PathBuf};
+use std::{
+    fs,
+    os::unix::fs::PermissionsExt,
+    path::{Path, PathBuf},
+};
 
 use assert_cmd::Command;
-use superdev_core::workflow::{cache, git};
 
 /// A temp git repo plus a bin dir of fake `mise`/`claude`/`codegraph`.
 struct Sandbox {
@@ -275,12 +276,13 @@ fn init_materializes_pi_workflow_without_claude_assets() {
     let repo = sb.repo();
     for path in [
         ".pi/extensions/superdev/index.ts",
-        ".pi/extensions/superdev/lib/phases.ts",
-        ".pi/extensions/superdev/prompts/scope.md",
-        ".pi/extensions/superdev/prompts/requirements-review.md",
-        ".pi/extensions/superdev/prompts/build.md",
-        ".pi/extensions/superdev/prompts/code-review.md",
-        ".pi/extensions/superdev/prompts/accept.md",
+        ".pi/extensions/superdev/lib/scope.ts",
+        ".pi/extensions/superdev/lib/client.ts",
+        ".pi/extensions/superdev/lib/questions.ts",
+        ".pi/extensions/superdev/lib/service-exec.ts",
+        ".pi/extensions/superdev/lib/worker.ts",
+        ".pi/extensions/superdev/lib/worker-host.ts",
+        ".pi/extensions/superdev/lib/execution.ts",
         ".pi/skills/sokf-authoring/SKILL.md",
         ".pi/extensions/superdev/skills/scope/SKILL.md",
         ".pi/extensions/superdev/skills/build/SKILL.md",
@@ -292,7 +294,8 @@ fn init_materializes_pi_workflow_without_claude_assets() {
     assert!(!repo.join(".claude/settings.json").exists());
     let lock = sb.read(".superdev/lock.toml");
     assert!(lock.contains(".pi/extensions/superdev/index.ts"));
-    assert!(lock.contains(".pi/extensions/superdev/lib/phases.ts"));
+    assert!(lock.contains(".pi/extensions/superdev/lib/scope.ts"));
+    assert!(lock.contains(".pi/extensions/superdev/lib/client.ts"));
     assert!(lock.contains(".pi/skills/sokf-authoring/SKILL.md"));
     assert!(lock.contains(".pi/extensions/superdev/skills/scope/SKILL.md"));
     assert!(lock.contains(".pi/extensions/superdev/skills/build/SKILL.md"));
@@ -313,43 +316,73 @@ fn init_materializes_pi_workflow_without_claude_assets() {
         let text = sb.read(&format!(".pi/extensions/superdev/skills/{skill}/SKILL.md"));
         assert!(!text.contains("disable-model-invocation: true"));
         assert!(text.contains("superdev_run_phase"));
-        assert!(text.contains(command));
-        assert!(text.contains("Examples:"));
+        // An execution checklist routes a changed intent back to human-led
+        // SCOPE. SCOPE itself is the destination, so it names no command.
+        if skill != "scope" {
+            assert!(
+                text.contains("/skill:scope"),
+                "{skill} skill offers no route back to SCOPE ({command})"
+            );
+        }
+        // The retired v2 question/routing interface must not be described.
+        for retired in [
+            "record-answer",
+            "submit-answers",
+            "revise-answer",
+            "`routed`",
+        ] {
+            assert!(
+                !text.contains(retired),
+                "{skill} skill still describes the retired `{retired}` interface"
+            );
+        }
     }
     let scope_skill = sb.read(".pi/extensions/superdev/skills/scope/SKILL.md");
     for instruction in [
-        "Assume no workflow conversation is present in context",
-        "Call `superdev_run_phase` with `phase: \"scope\"` and `action: \"inspect\"",
-        "If the issue exists but no suitable linked plan exists",
-        "Never derive a plan ID from an issue ID",
-        "Discuss one unresolved decision at a time",
-        "Confirm**, **Revise**, or **Cancel",
+        "action: \"inspect\"",
+        "../grill-me/SKILL.md",
+        "../double-check/SKILL.md",
+        "Choose the plan ID independently",
+        "approve-issue",
+        "approve-plan",
     ] {
         assert!(
             scope_skill.contains(instruction),
             "SCOPE skill omitted `{instruction}`"
         );
     }
-    let scope_prompt = sb.read(".pi/extensions/superdev/prompts/scope.md");
+    // Every retired isolated-role prompt is gone: the invoked skills own the
+    // stage checklists, so no separate role prompt remains to drift from them.
+    assert!(!repo.join(".pi/extensions/superdev/prompts").exists());
+    assert!(!repo.join(".pi/extensions/superdev/lib/phases.ts").exists());
+    let build_skill = sb.read(".pi/extensions/superdev/skills/build/SKILL.md");
     for instruction in [
-        "Keep every plan in `phase: scope`",
-        "Do not claim that requirements review or human scope approval has occurred",
-        "Confirmation supplied in the task authorizes drafting only",
+        "action: \"inspect\"",
+        "commit-block",
+        "consume-retry",
+        "complete-build",
+        "recommend `/skill:scope <requested change>`",
+        "Reset context after every completed block",
+        "does not grant another attempt",
     ] {
         assert!(
-            scope_prompt.contains(instruction),
-            "isolated SCOPE prompt omitted `{instruction}`"
+            build_skill.contains(instruction),
+            "BUILD skill omitted `{instruction}`"
         );
     }
-    let build_skill = sb.read(".pi/extensions/superdev/skills/build/SKILL.md");
-    assert!(build_skill.contains("Assume no earlier SCOPE or BUILD conversation is present"));
-    assert!(build_skill.contains("before taking any action"));
-    assert!(build_skill.contains("recommend `/skill:scope <requested change>`"));
     let accept_skill = sb.read(".pi/extensions/superdev/skills/accept/SKILL.md");
-    assert!(accept_skill.contains("Assume no earlier workflow discussion is present"));
-    assert!(accept_skill.contains("before taking any action"));
-    assert!(accept_skill.contains("destination: \"build\""));
-    assert!(accept_skill.contains("destination: \"scope\""));
+    for instruction in [
+        "action: \"inspect\"",
+        "return-to-build",
+        "rescope",
+        "Project policy alone decides",
+        "does not merge, push, release, or delete",
+    ] {
+        assert!(
+            accept_skill.contains(instruction),
+            "ACCEPT skill omitted `{instruction}`"
+        );
+    }
 
     let retired = b"retired managed workflow skill\n";
     let retired_path = repo.join(".claude/skills/build/SKILL.md");
@@ -381,306 +414,28 @@ fn init_materializes_pi_workflow_without_claude_assets() {
 }
 
 #[test]
-fn workflow_start_adopts_an_llm_authored_independently_numbered_plan() {
-    let dir = tempfile::tempdir().unwrap();
-    let root = dir.path();
-    let git = |args: &[&str]| {
-        let status = std::process::Command::new("git")
-            .args(args)
-            .current_dir(root)
-            .status()
-            .unwrap();
-        assert!(status.success(), "git {args:?}");
-    };
-    let service = |authority: &str, args: &[&str]| {
-        Command::cargo_bin("superdev")
-            .unwrap()
-            .current_dir(root)
-            .env("SUPERDEV_UI_AUTHORITY", authority)
-            .args(args)
-            .assert()
-            .success();
-    };
-    let refuse = |authority: &str, args: &[&str]| {
-        Command::cargo_bin("superdev")
-            .unwrap()
-            .current_dir(root)
-            .env("SUPERDEV_UI_AUTHORITY", authority)
-            .args(args)
-            .assert()
-            .failure();
-    };
-    let owner_authority = "0123456789abcdef0123456789abcdef";
-    let revision = || cache::load(root).unwrap().unwrap().last_plan_revision;
-
-    git(&["init", "-q", "-b", "main"]);
-    git(&["config", "user.email", "test@example.com"]);
-    git(&["config", "user.name", "Test"]);
-    git(&["config", "commit.gpgsign", "false"]);
-    Command::cargo_bin("superdev")
-        .unwrap()
-        .current_dir(root)
+fn init_and_sync_keep_local_workflow_authority_out_of_git() {
+    let sb = Sandbox::new();
+    sb.superdev()
         .args(["init", "--no-frontend", "--no-code-index"])
         .assert()
         .success();
-    git(&["add", "-A"]);
-    git(&["commit", "-q", "-m", "init"]);
-    fs::create_dir_all(root.join("knowledge/issues/open")).unwrap();
-    fs::write(
-        root.join("knowledge/issues/open/issue-001-canonical-recovery.md"),
-        include_str!("fixtures/workflow-issue.md"),
-    )
-    .unwrap();
-    git(&["add", "knowledge"]);
-    git(&["commit", "-qm", "docs: file canonical recovery"]);
-
-    let plan = root.join("knowledge/plans/open/plan-042-canonical-recovery.md");
-    fs::create_dir_all(plan.parent().unwrap()).unwrap();
-    fs::write(&plan, include_str!("fixtures/workflow-plan.md")).unwrap();
-
-    let identity = [
-        "--session",
-        "pi-a",
-        "--issue",
-        "issue-001-canonical-recovery",
-        "--plan",
-        "plan-042-canonical-recovery",
-        "--work-branch",
-        "work/001-canonical-recovery",
-    ];
-    let mut start = vec!["workflow", "start"];
-    start.extend(identity);
-
-    // Ownership originates in the interactive UI, so a start without that
-    // capability reserves nothing.
-    Command::cargo_bin("superdev")
-        .unwrap()
-        .current_dir(root)
-        .args(start.clone())
-        .assert()
-        .failure();
-    assert!(!git::reference_exists(root, "work/001-canonical-recovery").unwrap());
-
-    // An existing branch means another workflow already reserved this identity.
-    git(&["branch", "work/001-canonical-recovery"]);
-    refuse(owner_authority, &start);
-    assert!(
-        git::working_paths(root)
-            .unwrap()
-            .contains(&"knowledge/plans/open/plan-042-canonical-recovery.md".into()),
-        "a refused start kept the authored plan"
-    );
-    git(&["branch", "-D", "work/001-canonical-recovery"]);
-
-    service(owner_authority, &start);
-    assert_eq!(
-        git::current_branch(root).unwrap(),
-        "work/001-canonical-recovery"
-    );
-    assert!(fs::read_to_string(&plan).unwrap().contains("phase: scope"));
-    assert!(
-        git::file_at_revision(
-            root,
-            "main",
-            "knowledge/plans/open/plan-042-canonical-recovery.md",
-        )
-        .is_ok(),
-        "the initial plan is reserved on the default branch"
-    );
-
-    // Scope approval is a human decision, so a foreign capability cannot make it.
-    refuse(
-        "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-        &[
-            "workflow",
-            "transition",
-            "--session",
-            "pi-a",
-            "--expected-revision",
-            &revision(),
-            "--phase",
-            "scope",
-            "--transition",
-            "approve-scope",
-        ],
-    );
-    assert!(fs::read_to_string(&plan).unwrap().contains("phase: scope"));
-
-    // Cancellation releases ownership and preserves the checkout.
-    service(
-        owner_authority,
-        &["workflow", "cancel", "--session", "pi-a"],
-    );
-    assert!(cache::load(root).unwrap().is_none());
-    git(&["switch", "-q", "main"]);
-
-    let resume_authority = "fedcba9876543210fedcba9876543210";
-    service(
-        resume_authority,
-        &[
-            "workflow",
-            "resume",
-            "--session",
-            "pi-b",
-            "--issue",
-            "issue-001-canonical-recovery",
-            "--plan",
-            "plan-042-canonical-recovery",
-            "--work-branch",
-            "work/001-canonical-recovery",
-        ],
-    );
-    assert_eq!(
-        git::current_branch(root).unwrap(),
-        "work/001-canonical-recovery"
-    );
-
-    // The scoping role authors the proposal; the core only publishes it.
-    let scoped = fs::read_to_string(&plan).unwrap().replace(
-        "Settle requirements in SCOPE.",
-        "Implement one tested source checkpoint.",
-    );
-    fs::write(&plan, &scoped).unwrap();
-    let before_refusal = git::revision(root, "HEAD").unwrap();
-    for (session, expected) in [("pi-b", "stale"), ("intruder", &*revision())] {
-        refuse(
-            resume_authority,
-            &[
-                "workflow",
-                "commit",
-                "--session",
-                session,
-                "--expected-revision",
-                expected,
-                "--message",
-                "docs(workflow): checkpoint scope proposal",
-            ],
+    for line in [".superdev/cache/", ".superdev/workflows/"] {
+        assert!(
+            sb.read(".gitignore")
+                .lines()
+                .any(|existing| existing == line)
         );
     }
-    assert_eq!(git::revision(root, "HEAD").unwrap(), before_refusal);
-    service(
-        resume_authority,
-        &[
-            "workflow",
-            "commit",
-            "--session",
-            "pi-b",
-            "--expected-revision",
-            &revision(),
-            "--message",
-            "docs(workflow): checkpoint scope proposal",
-        ],
-    );
-    assert_ne!(git::revision(root, "HEAD").unwrap(), before_refusal);
-    assert!(git::working_paths(root).unwrap().is_empty());
-
-    service(
-        resume_authority,
-        &[
-            "workflow",
-            "transition",
-            "--session",
-            "pi-b",
-            "--expected-revision",
-            &revision(),
-            "--phase",
-            "scope",
-            "--transition",
-            "approve-scope",
-        ],
-    );
-    assert!(fs::read_to_string(&plan).unwrap().contains("phase: build"));
-
-    // BUILD commits product work through the same generic verb.
-    fs::create_dir_all(root.join("src")).unwrap();
-    fs::write(root.join("src/lib.rs"), "pub fn built() {}\n").unwrap();
-    service(
-        resume_authority,
-        &[
-            "workflow",
-            "commit",
-            "--session",
-            "pi-b",
-            "--expected-revision",
-            &revision(),
-            "--message",
-            "feat: implement the approved block",
-        ],
-    );
-
-    // BUILD reaches ACCEPT through an explicit edge rather than a side effect.
-    refuse(
-        resume_authority,
-        &[
-            "workflow",
-            "transition",
-            "--session",
-            "pi-b",
-            "--expected-revision",
-            &revision(),
-            "--phase",
-            "scope",
-            "--transition",
-            "complete-build",
-        ],
-    );
-    service(
-        resume_authority,
-        &[
-            "workflow",
-            "transition",
-            "--session",
-            "pi-b",
-            "--expected-revision",
-            &revision(),
-            "--phase",
-            "build",
-            "--transition",
-            "complete-build",
-        ],
-    );
-    assert!(fs::read_to_string(&plan).unwrap().contains("phase: accept"));
-
-    // Acceptance closes the records and releases ownership without merging.
-    let default_before = git::revision(root, "main").unwrap();
-    service(
-        resume_authority,
-        &[
-            "workflow",
-            "transition",
-            "--session",
-            "pi-b",
-            "--expected-revision",
-            &revision(),
-            "--phase",
-            "accept",
-            "--transition",
-            "accept",
-        ],
-    );
-    assert!(cache::load(root).unwrap().is_none());
+    fs::create_dir_all(sb.repo().join(".superdev/workflows")).unwrap();
+    sb.write(".superdev/workflows/local.json", "private approval state\n");
+    let before = sb.read(".superdev/workflows/local.json");
+    sb.superdev().arg("sync").assert().success();
+    assert_eq!(sb.read(".superdev/workflows/local.json"), before);
     assert_eq!(
-        git::current_branch(root).unwrap(),
-        "work/001-canonical-recovery",
-        "the accepted branch stays checked out for a human merge"
-    );
-    assert_eq!(
-        git::revision(root, "main").unwrap(),
-        default_before,
-        "acceptance never merges"
-    );
-    assert!(
-        !std::process::Command::new("git")
-            .args(["cat-file", "-e", "main:src/lib.rs"])
-            .current_dir(root)
-            .output()
-            .unwrap()
-            .status
-            .success(),
-        "partial product reached the default branch"
-    );
-    assert!(
-        root.join("knowledge/plans/done/plan-042-canonical-recovery.md")
-            .is_file()
+        sb.read(".gitignore")
+            .matches(".superdev/workflows/")
+            .count(),
+        1
     );
 }
