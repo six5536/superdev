@@ -899,7 +899,7 @@ mod tests {
             ("beta.md", B),
             (
                 "dup.md",
-                "---\ntype: T\nid: beta\nverified:\n  - by: human:rsewell\n    at: 2026-08-04T09:00:00Z\n  - by: process:x\n    at: \"2026-13-45\"\n  - \"not a mapping\"\nlinks: nope\n---\nx\n",
+                "---\ntype: T\nid: beta\nverified:\n  - by: human:alice\n    at: 2026-08-04T09:00:00Z\n  - by: process:x\n    at: \"2026-13-45\"\n  - \"not a mapping\"\nlinks: nope\n---\nx\n",
             ),
             (
                 "other.md",

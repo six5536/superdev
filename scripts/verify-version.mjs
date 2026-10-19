@@ -10,7 +10,7 @@
 // checks everything matches that version — this is how the release workflow
 // verifies a tag against the tree.
 
-import { readFileSync, readdirSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 
@@ -71,7 +71,9 @@ for (const [key, entry] of Object.entries(npmLock.packages ?? {})) {
 
 // --- .superdev: this repo's own skills pin ----------------------------------
 // The skills component's version is CARGO_PKG_VERSION, so a pin left behind by
-// a bump makes `superdev status` report drift.
+// a bump makes `superdev status` report drift. The pin is this repository's own
+// configuration, which the public mirror doesn't carry, so a tree without it
+// has nothing to check here.
 for (const [file, label, re] of [
   [".superdev/config.toml", "[skills] version", /\[skills\][^[]*?version = "([^"]*)"/],
   [
@@ -80,6 +82,7 @@ for (const [file, label, re] of [
     /\[components\.skills\][^[]*?version = "([^"]*)"/,
   ],
 ]) {
+  if (!existsSync(join(root, file))) continue;
   record(`${file} ${label}`, readFileSync(join(root, file), "utf8").match(re)?.[1]);
 }
 

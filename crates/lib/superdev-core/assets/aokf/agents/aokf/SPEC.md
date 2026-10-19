@@ -231,7 +231,7 @@ mapping is read as a one-element list.
 
 ```yaml
 verified:
-  - { by: human:rsewell, at: 2026-08-04T09:00:00Z }
+  - { by: human:alice, at: 2026-08-04T09:00:00Z }
   - { by: process:link-checker, at: 2026-08-04T02:00:00Z }
 ```
 

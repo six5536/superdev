@@ -48,9 +48,8 @@ binary for your platform; the crate builds one.
 
 ## Development
 
-See [CONTRIBUTING](CONTRIBUTING.md) for setup, everyday commands, and the
-release procedure. Project design and conventions live in the
-[`knowledge/`](knowledge/index.md) bundle.
+See [CONTRIBUTING](CONTRIBUTING.md) for the setup, and for how to report a
+bug or ask for a feature.
 
 ## License
 
